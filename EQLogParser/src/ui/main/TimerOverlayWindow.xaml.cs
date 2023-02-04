@@ -81,7 +81,7 @@ namespace EQLogParser
           TimerBarCreateOrder.ForEach(timerBar => timerBar.SetStandardTime(max));
         }
 
-        AddTimerBar(timerBar);
+        Dispatcher.InvokeAsync(() => AddTimerBar(timerBar), System.Windows.Threading.DispatcherPriority.Render);
       }
     }
 
@@ -102,7 +102,7 @@ namespace EQLogParser
             TimerBarCreateOrder.ForEach(timerBar => timerBar.SetStandardTime(max));
           }
 
-          Dispatcher.InvokeAsync(() => AddTimerBar(timerBar));
+          Dispatcher.InvokeAsync(() => AddTimerBar(timerBar), System.Windows.Threading.DispatcherPriority.Render);
         });
       }
       else
@@ -196,7 +196,7 @@ namespace EQLogParser
       reposition.ForEach(bar =>
       {
         content.Children.Remove(bar);
-        Dispatcher.InvokeAsync(() => AddTimerBar(bar));
+        Dispatcher.InvokeAsync(() => AddTimerBar(bar), System.Windows.Threading.DispatcherPriority.Render);
       });
 
       removeList.ForEach(timerBar =>
@@ -240,7 +240,10 @@ namespace EQLogParser
     {
       if (CurrentOrder == 0)
       {
-        content.Children.Add(timerBar);
+        if (!content.Children.Contains(timerBar))
+        {
+          content.Children.Add(timerBar);
+        }
       }
       else
       {
@@ -258,43 +261,46 @@ namespace EQLogParser
 
     private void InsertTimerBar(TimerBar timerBar)
     {
-      var found = -1;
-      var activeBar = !timerBar.IsCooldown() && !timerBar.IsWaiting();
-      var coolBar = timerBar.IsCooldown();
-      var waitingBar = timerBar.IsWaiting();
-      
-      for (int i = 0; i < content.Children.Count; i++)
+      if (!content.Children.Contains(timerBar))
       {
-        if (content.Children[i] is TimerBar current)
-        {
-          var activeCurrent = !current.IsCooldown() && !current.IsWaiting();
-          var coolCurrent = current.IsCooldown();
-          var waitingCurrent = current.IsWaiting();
+        var found = -1;
+        var activeBar = !timerBar.IsCooldown() && !timerBar.IsWaiting();
+        var coolBar = timerBar.IsCooldown();
+        var waitingBar = timerBar.IsWaiting();
 
-          if ((activeBar && activeCurrent) || (coolBar && coolCurrent) || (waitingBar && waitingCurrent))
+        for (int i = 0; i < content.Children.Count; i++)
+        {
+          if (content.Children[i] is TimerBar current)
           {
-            if (timerBar.GetRemainingTime() < current.GetRemainingTime())
+            var activeCurrent = !current.IsCooldown() && !current.IsWaiting();
+            var coolCurrent = current.IsCooldown();
+            var waitingCurrent = current.IsWaiting();
+
+            if ((activeBar && activeCurrent) || (coolBar && coolCurrent) || (waitingBar && waitingCurrent))
+            {
+              if (timerBar.GetRemainingTime() < current.GetRemainingTime())
+              {
+                found = i;
+                break;
+              }
+            }
+            else if (activeBar || (waitingBar && !activeCurrent))
             {
               found = i;
               break;
             }
           }
-          else if (activeBar || (waitingBar && !activeCurrent))
-          {
-            found = i;
-            break;
-          }
         }
-      }
 
-      if (found != -1)
-      {
-        content.Children.Insert(found, timerBar);
-      }
-      else
-      {
-        content.Children.Add(timerBar);
-      }
+        if (found != -1)
+        {
+          content.Children.Insert(found, timerBar);
+        }
+        else
+        {
+          content.Children.Add(timerBar);
+        }
+      }    
     }
 
     private void SaveClick(object sender, RoutedEventArgs e)

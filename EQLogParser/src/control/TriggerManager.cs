@@ -283,9 +283,10 @@ namespace EQLogParser
       if (wrapper.Regex != null)
       {
         matches = wrapper.Regex.Matches(action);
-        if (matches != null && matches.Count > 0)
+        if (matches != null && matches.Count > 0 && TriggerUtil.CheckNumberOptions(wrapper.RegexNOptions, matches))
         {
           found = true;
+          wrapper.RegexMatches = matches;
           UpdateTriggerTime(activeTriggers, node, lineData.BeginTime);
         }
       }
@@ -300,12 +301,14 @@ namespace EQLogParser
 
       if (wrapper.TimerCancellations.Count > 0)
       {
-        bool endEarly = CheckEndEarly(wrapper.EndEarlyRegex, wrapper.ModifiedCancelPattern, action, out MatchCollection earlyMatches);
+        bool endEarly = CheckEndEarly(wrapper.EndEarlyRegex, wrapper.EndEarlyRegexNOptions, wrapper.ModifiedEndEarlyPattern,
+          action, out MatchCollection earlyMatches);
         
         // try 2nd
         if (!endEarly)
         {
-          endEarly = CheckEndEarly(wrapper.EndEarlyRegex2, wrapper.ModifiedCancelPattern2, action, out earlyMatches);
+          endEarly = CheckEndEarly(wrapper.EndEarlyRegex2, wrapper.EndEarlyRegex2NOptions, wrapper.ModifiedEndEarlyPattern2,
+            action, out earlyMatches);
         }
 
         if (endEarly)
@@ -319,6 +322,7 @@ namespace EQLogParser
             Trigger = wrapper.TriggerData,
             Text = wrapper.ModifiedEndSpeak,
             Matches = earlyMatches,
+            OriginalMatches = wrapper.RegexMatches
           });
 
           AddEntry(lineData.Line, wrapper.TriggerData, "Timer End Early", time);
@@ -354,7 +358,8 @@ namespace EQLogParser
       }
     }
 
-    private bool CheckEndEarly(Regex endEarlyRegex, string cancelPattern, string action, out MatchCollection earlyMatches)
+    private bool CheckEndEarly(Regex endEarlyRegex, List<NumberOptions> options, string endEarlyPattern, 
+      string action, out MatchCollection earlyMatches)
     {
       earlyMatches = null;
       bool endEarly = false;
@@ -362,14 +367,14 @@ namespace EQLogParser
       if (endEarlyRegex != null)
       {
         earlyMatches = endEarlyRegex.Matches(action);
-        if (earlyMatches != null && earlyMatches.Count > 0)
+        if (earlyMatches != null && earlyMatches.Count > 0 && TriggerUtil.CheckNumberOptions(options, earlyMatches))
         {
           endEarly = true;
         }
       }
-      else if (!string.IsNullOrEmpty(cancelPattern))
+      else if (!string.IsNullOrEmpty(endEarlyPattern))
       {
-        if (action.Contains(cancelPattern, StringComparison.OrdinalIgnoreCase))
+        if (action.Contains(endEarlyPattern, StringComparison.OrdinalIgnoreCase))
         {
           endEarly = true;
         }
@@ -400,6 +405,11 @@ namespace EQLogParser
               }
 
               var speak = ProcessSpeakDisplayText(result.Text, result.Matches);
+
+              if (result.OriginalMatches != null)
+              {
+                speak = ProcessSpeakDisplayText(speak, result.OriginalMatches);
+              }
 
               if (!string.IsNullOrEmpty(CurrentVoice) && synth.Voice.Name != CurrentVoice)
               {
@@ -562,6 +572,7 @@ namespace EQLogParser
               {
                 Trigger = wrapper.TriggerData,
                 Text = wrapper.ModifiedEndSpeak,
+                OriginalMatches = wrapper.RegexMatches
               });
 
               AddEntry(line, wrapper.TriggerData, "Timer End");
@@ -663,11 +674,12 @@ namespace EQLogParser
               ModifiedTimerName = modifiedTimerName
             };
 
-            pattern = UpdatePattern(trigger.UseRegex, playerName, pattern);
+            pattern = UpdatePattern(trigger.UseRegex, playerName, pattern, out List<NumberOptions> numberOptions);
 
             if (trigger.UseRegex)
             {
               wrapper.Regex = new Regex(pattern, RegexOptions.IgnoreCase);
+              wrapper.RegexNOptions = numberOptions;
             }
             else
             {
@@ -678,29 +690,31 @@ namespace EQLogParser
             {
               if (trigger.EndEarlyPattern is string endEarlyPattern && !string.IsNullOrEmpty(endEarlyPattern))
               {
-                endEarlyPattern = UpdatePattern(trigger.EndUseRegex, playerName, endEarlyPattern);
+                endEarlyPattern = UpdatePattern(trigger.EndUseRegex, playerName, endEarlyPattern, out List<NumberOptions> numberOptions2);
 
                 if (trigger.EndUseRegex)
                 {
                   wrapper.EndEarlyRegex = new Regex(endEarlyPattern, RegexOptions.IgnoreCase);
+                  wrapper.EndEarlyRegexNOptions = numberOptions2;
                 }
                 else
                 {
-                  wrapper.ModifiedCancelPattern = endEarlyPattern;
+                  wrapper.ModifiedEndEarlyPattern = endEarlyPattern;
                 }
               }
 
               if (trigger.EndEarlyPattern2 is string endEarlyPattern2 && !string.IsNullOrEmpty(endEarlyPattern2))
               {
-                endEarlyPattern2 = UpdatePattern(trigger.EndUseRegex2, playerName, endEarlyPattern2);
+                endEarlyPattern2 = UpdatePattern(trigger.EndUseRegex2, playerName, endEarlyPattern2, out List<NumberOptions> numberOptions3);
 
                 if (trigger.EndUseRegex2)
                 {
                   wrapper.EndEarlyRegex2 = new Regex(endEarlyPattern2, RegexOptions.IgnoreCase);
+                  wrapper.EndEarlyRegex2NOptions = numberOptions3;
                 }
                 else
                 {
-                  wrapper.ModifiedCancelPattern2 = endEarlyPattern2;
+                  wrapper.ModifiedEndEarlyPattern2 = endEarlyPattern2;
                 }
               }
             }
@@ -779,17 +793,37 @@ namespace EQLogParser
       }
     }
 
-    private string UpdatePattern(bool useRegex, string playerName, string pattern)
+    private string UpdatePattern(bool useRegex, string playerName, string pattern, out List<NumberOptions> numberOptions)
     {
+      numberOptions = new List<NumberOptions>();
       pattern = pattern.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
 
-      if (useRegex && Regex.Matches(pattern, @"{(s\d?)}", RegexOptions.IgnoreCase) is MatchCollection matches && matches.Count > 0)
+      if (useRegex)
       {
-        foreach (Match match in matches)
+        if (Regex.Matches(pattern, @"{(s\d?)}", RegexOptions.IgnoreCase) is MatchCollection matches && matches.Count > 0)
         {
-          if (match.Groups.Count > 1)
+          foreach (Match match in matches)
           {
-            pattern = pattern.Replace(match.Value, "(?<" + match.Groups[1].Value + ">.+)");
+            if (match.Groups.Count == 2)
+            {
+              pattern = pattern.Replace(match.Value, "(?<" + match.Groups[1].Value + ">.+)");
+            }
+          }
+        }
+        else if (Regex.Matches(pattern, @"{(n\d?)(<=|>=|>|<|=|==)?(\d+)?}", RegexOptions.IgnoreCase) is MatchCollection matches2 && matches2.Count > 0)
+        {
+          foreach (Match match in matches2)
+          {
+            if (match.Groups.Count == 4)
+            {
+              pattern = pattern.Replace(match.Value, "(?<" + match.Groups[1].Value + @">\d+)");
+
+              if (!string.IsNullOrEmpty(match.Groups[2].Value) && !string.IsNullOrEmpty(match.Groups[3].Value) && 
+                uint.TryParse(match.Groups[3].Value, out uint value))
+              {
+                numberOptions.Add(new NumberOptions { Key = match.Groups[1].Value, Op = match.Groups[2].Value, Value = value });
+              }
+            }
           }
         }
       }
@@ -802,6 +836,7 @@ namespace EQLogParser
       public Trigger Trigger { get; set; }
       public string Text { get; set; }
       public MatchCollection Matches { get; set; }
+      public MatchCollection OriginalMatches { get; set; }
     }
 
     private class LowPriData
@@ -820,12 +855,16 @@ namespace EQLogParser
       public string ModifiedPattern { get; set; }
       public string ModifiedEndSpeak { get; set; }
       public string ModifiedWarningSpeak { get; set; }
-      public string ModifiedCancelPattern { get; set; }
-      public string ModifiedCancelPattern2 { get; set; }
+      public string ModifiedEndEarlyPattern { get; set; }
+      public string ModifiedEndEarlyPattern2 { get; set; }
       public string ModifiedTimerName { get; set; }
       public Regex Regex { get; set; }
       public Regex EndEarlyRegex { get; set; }
       public Regex EndEarlyRegex2 { get; set; }
+      public List<NumberOptions> RegexNOptions { get; set; }
+      public List<NumberOptions> EndEarlyRegexNOptions { get; set; }
+      public List<NumberOptions> EndEarlyRegex2NOptions { get; set; }
+      public MatchCollection RegexMatches { get; set; }
       public Trigger TriggerData { get; set; }
     }
   }

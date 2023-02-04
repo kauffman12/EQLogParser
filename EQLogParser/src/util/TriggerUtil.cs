@@ -202,6 +202,57 @@ namespace EQLogParser
       }
     }
 
+    internal static bool CheckNumberOptions(List<NumberOptions> options, MatchCollection matches)
+    {
+      bool passed = true;
+      if (matches.Count > 0)
+      {
+        foreach (var option in options)
+        {
+          foreach (Match match in matches)
+          {
+            if (match.Success)
+            {
+              for (int i = 0; i < match.Groups.Count; i++)
+              {
+                if (match.Groups[i].Name == option.Key && !string.IsNullOrEmpty(option.Op))
+                {
+                  if (StatsUtil.ParseUInt(match.Groups[i].Value) is uint value && value != uint.MaxValue)
+                  {
+                    switch (option.Op)
+                    {
+                      case ">":
+                        passed = (value > option.Value);
+                        break;
+                      case ">=":
+                        passed = (value >= option.Value);
+                        break;
+                      case "<":
+                        passed = (value < option.Value);
+                        break;
+                      case "<=":
+                        passed = (value <= option.Value);
+                        break;
+                      case "=":
+                      case "==":
+                        passed = (value == option.Value);
+                        break;
+                    }
+
+                    if (!passed)
+                    {
+                      return false;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      return passed;
+    }
+
     internal static double GetTimerBarHeight(double fontSize) => fontSize + 2;
 
     internal static void DisableNodes(TriggerNode node)

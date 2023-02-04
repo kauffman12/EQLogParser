@@ -16,6 +16,13 @@ namespace EQLogParser
       bool rankPlayers, bool showSpecial, bool showTime, string customTitle);
   }
 
+  internal class NumberOptions
+  {
+    public uint Value { get; set; }
+    public string Key { get; set; }
+    public string Op { get; set; }
+  }
+
   internal class Overlay : NotificationObject
   {
     public string OverlayComments { get; set; }
