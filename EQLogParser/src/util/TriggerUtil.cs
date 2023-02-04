@@ -1,5 +1,6 @@
 ﻿using Microsoft.Win32;
 using Syncfusion.UI.Xaml.TreeView;
+using Syncfusion.Windows.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -959,13 +960,16 @@ namespace EQLogParser
                 }
                 else
                 {
-                  var pauseTime = (int)(1.0 / (double)list.Count * 1000);
+                  var start = DateTime.Now;
                   foreach (var line in list)
                   {
                     var action = line.Substring(MainWindow.ACTION_INDEX);
                     TriggerManager.Instance.AddAction(new LineData { Line = line, Action = action, BeginTime = nowTime });
-                    Thread.Sleep(pauseTime);
                   }
+
+                  var took = (DateTime.Now - start).Ticks;
+                  long ticks = (long)10000000 - took;
+                  Thread.Sleep(new TimeSpan(ticks));
                 }
               }
 
