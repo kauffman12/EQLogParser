@@ -26,7 +26,22 @@
         <StackPanel Orientation="Horizontal">
           <CheckBox x:Name="CheckBox" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
           <fa:ImageAwesome Margin="5,0,0,0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Font" />
-          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" />
+          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding IsChecked}" Value="True">
+                    <Setter Property="FontStyle" Value="Normal"/>
+                    <Setter Property="FontWeight" Value="DemiBold" />
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding IsChecked}" Value="False">
+                    <Setter Property="FontStyle" Value="Italic"/>
+                    <Setter Property="FontWeight" Value="Normal" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
         </StackPanel>
       </Grid>
     </DataTemplate>
@@ -36,7 +51,22 @@
         <StackPanel Orientation="Horizontal">
           <CheckBox x:Name="CheckBox" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
           <fa:ImageAwesome Margin="5,0,0,0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Clock" />
-          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" />
+          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding IsChecked}" Value="True">
+                    <Setter Property="FontStyle" Value="Normal"/>
+                    <Setter Property="FontWeight" Value="DemiBold" />
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding IsChecked}" Value="False">
+                    <Setter Property="FontStyle" Value="Italic"/>
+                    <Setter Property="FontWeight" Value="Normal" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
         </StackPanel>
       </Grid>
     </DataTemplate>
@@ -45,7 +75,22 @@
       <Grid>
         <StackPanel Orientation="Horizontal">
           <fa:ImageAwesome Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Tasks" />
-          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" />
+          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding IsChecked}" Value="True">
+                    <Setter Property="FontStyle" Value="Normal"/>
+                    <Setter Property="FontWeight" Value="DemiBold" />
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding IsChecked}" Value="False">
+                    <Setter Property="FontStyle" Value="Italic"/>
+                    <Setter Property="FontWeight" Value="Normal" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
         </StackPanel>
       </Grid>
     </DataTemplate>

@@ -173,6 +173,11 @@
                 <fa:ImageAwesome x:Name="triggerLogIcon" Tag="triggerLogWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
+            <MenuItem x:Name="triggerTestMenuItem" Header="Trigger _Tester" Click="MenuItemWindowClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="triggerTestIcon" Tag="triggerTestWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              </MenuItem.Icon>
+            </MenuItem>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="searchView" Header="_Search" Height="24">
@@ -361,6 +366,20 @@
       <ContentControl x:Name="triggerLogWindow" Tag="Hide" syncfusion:DockingManager.Header="Trigger Log" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
                       syncfusion:DockingManager.DesiredHeightInDockedMode="300" syncfusion:DockingManager.CanDocument="False" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="100">
         <local:TriggersLogView />
+      </ContentControl>
+      <ContentControl x:Name="triggerTestWindow" Tag="Hide" syncfusion:DockingManager.Header="Trigger Tester" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
+                      syncfusion:DockingManager.DesiredHeightInDockedMode="300" syncfusion:DockingManager.CanDocument="False" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="100">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="30" />
+            <RowDefinition Height="100*" />
+          </Grid.RowDefinitions>
+          <StackPanel Orientation="Horizontal" Grid.Row="0">
+            <Button Margin="4,3,0,0" VerticalAlignment="Top" Width="70" Height="24" HorizontalAlignment="Left" Click="TestTriggersClick">Run Test</Button>
+          </StackPanel>
+          <syncfusion:EditControl Grid.Row="1" x:Name="testTriggersBox" IsAutoLineNumberAreaWidthEnabled="False" LineNumberAreaWidth="65" EnableIntellisense="False" IsTrackChangesEnabled="False" 
+            ShowFindAndReplace="False" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" ModifiedLineIndicatorBrush="Transparent" ShowBlockIndicatorLine="False" ShowDefaultContextMenu="False" VerticalContentAlignment="Top" FontSize="14" BorderThickness="1" Text="[Fri Feb 03 20:27:50 2023] You paste lines from your log file here and click Run Test."></syncfusion:EditControl>
+        </Grid>
       </ContentControl>
       <ContentControl x:Name="npcWindow" Tag="Hide" Padding="0" Margin="0" syncfusion:DockingManager.Header="Fight List" syncfusion:DockingManager.State="Dock" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="340" syncfusion:DockingManager.DesiredWidthInFloatingMode="340">

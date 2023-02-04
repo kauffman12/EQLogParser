@@ -159,7 +159,7 @@ namespace EQLogParser
       return result;
     }
 
-    private static DateTime CustomDateTimeParser(string dateFormat, string source, int offset = 0)
+    internal static DateTime CustomDateTimeParser(string dateFormat, string source, int offset = 0)
     {
       int year = 0;
       int month = 0;
