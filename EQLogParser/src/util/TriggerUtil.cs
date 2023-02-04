@@ -10,9 +10,11 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Threading;
 using System.Xml;
 
 namespace EQLogParser
@@ -862,6 +864,124 @@ namespace EQLogParser
         {
           HandleGinaTriggerGroups(node.ChildNodes, audioTriggerNodes, added);
         }
+      }
+    }
+
+    internal static void RunTest(string text, bool realTime)
+    {
+      (Application.Current.MainWindow as MainWindow).testButton.IsEnabled = false;
+      if (!realTime)
+      {
+        var allLines = text.Split("\r\n").Where(line => !string.IsNullOrEmpty(line)).ToList();
+        allLines.ForEach(line =>
+        {
+          if (line.Length > MainWindow.ACTION_INDEX)
+          {
+            var dateTime = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", line, 5);
+            if (dateTime != DateTime.MinValue)
+            {
+              var beginTime = DateUtil.ToDouble(dateTime);
+              TriggerManager.Instance.AddAction(new LineData { Line = line, Action = line.Substring(MainWindow.ACTION_INDEX), BeginTime = beginTime });
+            }
+          }
+        });
+
+        (Application.Current.MainWindow as MainWindow).testButton.IsEnabled = true;
+      }
+      else
+      {    
+        Task.Run(() =>
+        {
+          var allLines = text.Split("\r\n").Where(line => !string.IsNullOrEmpty(line) && line.Length > MainWindow.ACTION_INDEX).ToList();
+          var firstDate = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", allLines.First(), 5);
+          var lastDate = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", allLines.Last(), 5);
+          if (firstDate != DateTime.MinValue && lastDate != DateTime.MinValue)
+          {
+            var startTime = DateUtil.ToDouble(firstDate);
+            var endTime = DateUtil.ToDouble(lastDate);
+            var range = (int)(endTime - startTime + 1);
+            var data = new List<string>[range];
+
+            int dataIndex = 0;
+            data[dataIndex] = new List<string>();
+            foreach (var line in allLines)
+            {
+              var current = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", line, 5);
+              if (current != DateTime.MinValue)
+              {
+                var currentTime = DateUtil.ToDouble(current);
+                if (currentTime == startTime)
+                {
+                  data[dataIndex].Add(line);
+                }
+                else
+                {
+                  var diff = (currentTime - startTime);
+                  if (diff == 1)
+                  {
+                    dataIndex++;
+                    data[dataIndex] = new List<string>();
+                    data[dataIndex].Add(line);
+                    startTime++;
+                  }
+                  else if (diff > 1)
+                  {
+                    for (int i = 1; i < diff; i++)
+                    {
+                      dataIndex++;
+                      data[dataIndex] = new List<string>();
+                    }
+
+                    dataIndex++;
+                    data[dataIndex] = new List<string>();
+                    data[dataIndex].Add(line);
+                    startTime += diff;
+                  }
+                }
+              }
+            }
+
+            var nowTime = DateUtil.ToDouble(DateTime.Now);
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+              (Application.Current.MainWindow as MainWindow).testStatus.Text = "| Time Remaining: " + data.Length + " seconds";
+              (Application.Current.MainWindow as MainWindow).testStatus.Visibility = Visibility.Visible;
+            });
+
+            int count = 0;
+            foreach (var list in data)
+            {
+              if (list != null)
+              {
+                if (list.Count == 0)
+                {
+                  Thread.Sleep(1000);
+                }
+                else
+                {
+                  var pauseTime = (int)(1.0 / (double)list.Count * 1000);
+                  foreach (var line in list)
+                  {
+                    var action = line.Substring(MainWindow.ACTION_INDEX);
+                    TriggerManager.Instance.AddAction(new LineData { Line = line, Action = action, BeginTime = nowTime });
+                    Thread.Sleep(pauseTime);
+                  }
+                }
+              }
+
+              nowTime++;
+              count++;
+              var remaining = data.Length - count;
+              Application.Current.Dispatcher.Invoke(() => (Application.Current.MainWindow as MainWindow).testStatus.Text = "| Time Remaining: " +  remaining + " seconds");
+            }
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+              (Application.Current.MainWindow as MainWindow).testStatus.Visibility = Visibility.Collapsed;
+              (Application.Current.MainWindow as MainWindow).testButton.IsEnabled = true;
+            });
+          }
+        });
       }
     }
   }

@@ -2,7 +2,6 @@
 using log4net;
 using log4net.Core;
 using Microsoft.Win32;
-using Syncfusion.UI.Xaml.Diagram;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Shared;
 using Syncfusion.Windows.Tools.Controls;
@@ -859,7 +858,7 @@ namespace EQLogParser
           {
             LOG.Info("Selected Log File: " + theFile);
 
-            var file = Path.GetFileName(theFile);
+            var file = System.IO.Path.GetFileName(theFile);
             var matches = ParseFileName.Matches(file);
             if (matches.Count == 1)
             {
@@ -1037,22 +1036,7 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(testTriggersBox.Text))
       {
-        foreach (string line in testTriggersBox.Text.Split("\r\n"))
-        {
-          if (!string.IsNullOrEmpty(line))
-          {
-            if (line.Length > ACTION_INDEX)
-            {
-              DateTime dateTime = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", line, 5);
-
-              if (dateTime != DateTime.MinValue)
-              {
-                string action = line.Substring(ACTION_INDEX);
-                TriggerManager.Instance.AddAction(new LineData { Action = action, BeginTime = DateUtil.ToDouble(dateTime), Line = line });
-              }
-            }
-          }
-        }
+        TriggerUtil.RunTest(testTriggersBox.Text, realTime.IsChecked == true);
       }
     }
 
