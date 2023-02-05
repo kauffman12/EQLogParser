@@ -367,7 +367,7 @@ namespace EQLogParser
                   needShow = true;
                 }
 
-                if (needShow || (!update && overlay.TimerMode == 0))
+                if (needShow || (!update && (overlay.TimerMode == 0 || (overlay.TimerMode == 1 && trigger.ResetDurationSeconds == 0))))
                 {
                   (window as TimerOverlayWindow).CreateTimer(displayName, endTime, trigger);
                 }

@@ -70,6 +70,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Assign Priority.
+        /// </summary>
+        internal static string ASSIGN_PRIORITY {
+            get {
+                return ResourceManager.GetString("ASSIGN_PRIORITY", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Assign Timer Overlay.
         /// </summary>
         internal static string ASSIGN_TIMER_OVERLAY {
