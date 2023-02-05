@@ -551,6 +551,7 @@ namespace EQLogParser
       {
         var anyTriggers = treeView.SelectedItems.Cast<TriggerTreeViewNode>().Any(node => !node.IsOverlay && node != treeView.Nodes[1]);
         assignOverlayMenuItem.IsEnabled = anyTriggers;
+        assignPriorityMenuItem.IsEnabled = anyTriggers;
         exportMenuItem.IsEnabled = anyTriggers;
         deleteTriggerMenuItem.IsEnabled = (node != treeView.Nodes[0] && node != treeView.Nodes[1]) || count > 1;
         renameMenuItem.IsEnabled = node != treeView.Nodes[0] && node != treeView.Nodes[1] && count == 1;
@@ -565,6 +566,7 @@ namespace EQLogParser
         exportMenuItem.IsEnabled = false;
         newMenuItem.IsEnabled = false;
         assignOverlayMenuItem.IsEnabled = false;
+        assignPriorityMenuItem.IsEnabled = false;
       }
 
       importMenuItem.Header = importMenuItem.IsEnabled ? "Import to Folder (" + node.Content.ToString() + ")" : "Import";
@@ -575,6 +577,25 @@ namespace EQLogParser
         newTrigger.Visibility = node == treeView.Nodes[1] ? Visibility.Collapsed : Visibility.Visible;
         newTimerOverlay.Visibility = node == treeView.Nodes[1] ? Visibility.Visible : Visibility.Collapsed;
         newTextOverlay.Visibility = node == treeView.Nodes[1] ? Visibility.Visible : Visibility.Collapsed;
+      }
+
+      if (assignPriorityMenuItem.IsEnabled)
+      {
+        foreach (var previous in assignPriorityMenuItem.Items)
+        {
+          if (previous is MenuItem m)
+          {
+            m.Click -= AssignPriorityClick;
+          }
+        }
+      }
+
+      assignPriorityMenuItem.Items.Clear();
+      for (int i = 1; i <= 5; i++)
+      {
+        var menuItem = new MenuItem { Header = "Priority " + i, Tag = i };
+        menuItem.Click += AssignPriorityClick;
+        assignPriorityMenuItem.Items.Add(menuItem);
       }
 
       if (assignOverlayMenuItem.IsEnabled)
@@ -611,6 +632,52 @@ namespace EQLogParser
           menuItem.Click += AssignTimerOverlayClick;
           menuItem.Tag = overlay.Id;
           assignTimerOverlaysMenuItem.Items.Add(menuItem);
+        }
+      }
+    }
+
+    private void AssignPriorityClick(object sender, RoutedEventArgs e)
+    {
+      if (sender is MenuItem menuItem && int.TryParse(menuItem.Tag.ToString(), out int newPriority))
+      {
+        var anyFolders = treeView.SelectedItems.Cast<TriggerTreeViewNode>().Any(node => !node.IsOverlay && !node.IsTrigger && node != treeView.Nodes[1]);
+        if (!anyFolders)
+        {
+          treeView.SelectedItems.Cast<TriggerTreeViewNode>().ToList().ForEach(node =>
+          {
+            if (node.IsTrigger && node.SerializedData != null && node.SerializedData.TriggerData != null)
+            {
+              node.SerializedData.TriggerData.Priority = newPriority;
+            }
+          });
+        }
+        else
+        {
+          var msgDialog = new MessageWindow("Are you sure? This will Assign all selected Triggers and those in all sub folders.",
+            EQLogParser.Resource.ASSIGN_PRIORITY, MessageWindow.IconType.Question, "Yes");
+          msgDialog.ShowDialog();
+          if (msgDialog.IsYes1Clicked)
+          {
+            treeView.SelectedItems.Cast<TriggerTreeViewNode>().ToList().ForEach(node => AssignPriority(node.SerializedData, newPriority));
+          }
+        }
+
+        TriggerManager.Instance.UpdateTriggers();
+        SelectionChanged(treeView.SelectedItem as TriggerTreeViewNode);
+      }
+    }
+
+    private void AssignPriority(TriggerNode node, int priority)
+    {
+      if (node != null)
+      {
+        if (node.TriggerData != null)
+        {
+          node.TriggerData.Priority = priority;
+        }
+        else if (node.OverlayData == null)
+        {
+          node?.Nodes.ForEach(node => AssignPriority(node, priority));
         }
       }
     }
@@ -652,16 +719,19 @@ namespace EQLogParser
 
     private void AssignOverlay(TriggerNode node, string id)
     {
-      if (node.TriggerData != null)
+      if (node != null)
       {
-        if (!node.TriggerData.SelectedOverlays.Contains(id))
+        if (node.TriggerData != null)
         {
-          node.TriggerData.SelectedOverlays.Add(id);
+          if (!node.TriggerData.SelectedOverlays.Contains(id))
+          {
+            node.TriggerData.SelectedOverlays.Add(id);
+          }
         }
-      }
-      else if (node.OverlayData == null)
-      {
-        node.Nodes.ForEach(node => AssignOverlay(node, id));
+        else if (node.OverlayData == null)
+        {
+          node?.Nodes.ForEach(node => AssignOverlay(node, id));
+        }
       }
     }
 

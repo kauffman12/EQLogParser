@@ -1034,9 +1034,21 @@ namespace EQLogParser
 
     private void TestTriggersClick(object sender, RoutedEventArgs e)
     {
-      if (!string.IsNullOrEmpty(testTriggersBox.Text))
+      if (testButton.Content.ToString() == "Run Test")
       {
-        TriggerUtil.RunTest(testTriggersBox.Text, realTime.IsChecked == true);
+        if (testTriggersBox.Lines?.Count > 0)
+        {
+          var allLines = testTriggersBox.Lines.Where(line => !string.IsNullOrEmpty(line.Text) && line.Text.Length > ACTION_INDEX)
+            .Select(line => line.Text).ToList();
+          if (allLines.Count > 0)
+          {
+            TriggerUtil.RunTest(allLines, realTime.IsChecked == true);
+          }
+        }
+      }
+      else if (testButton.Content.ToString() == "Stop Test")
+      {
+        testButton.Content = "Stopping Test";
       }
     }
 

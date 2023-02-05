@@ -1,6 +1,5 @@
 ﻿using Microsoft.Win32;
 using Syncfusion.UI.Xaml.TreeView;
-using Syncfusion.Windows.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -647,7 +646,7 @@ namespace EQLogParser
                     gzip.CopyTo(memory);
                     var xml = Encoding.UTF8.GetString(memory.ToArray());
 
-                    if (!string.IsNullOrEmpty(xml) && xml.IndexOf("<a:ChunkData>") is int start && start > -1 
+                    if (!string.IsNullOrEmpty(xml) && xml.IndexOf("<a:ChunkData>") is int start && start > -1
                       && xml.IndexOf("</a:ChunkData>") is int end && end > start)
                     {
                       var encoded = xml.Substring(start + 13, end - start - 13);
@@ -763,7 +762,7 @@ namespace EQLogParser
 
               if (bool.TryParse(Helpers.GetText(triggerNode, "InterruptSpeech"), out bool interrupt))
               {
-                trigger.Priority = interrupt ? 1 : 5;
+                trigger.Priority = interrupt ? 1 : 3;
               }
 
               if ("Timer".Equals(Helpers.GetText(triggerNode, "TimerType")))
@@ -868,12 +867,10 @@ namespace EQLogParser
       }
     }
 
-    internal static void RunTest(string text, bool realTime)
+    internal static void RunTest(List<string> allLines, bool realTime)
     {
-      (Application.Current.MainWindow as MainWindow).testButton.IsEnabled = false;
       if (!realTime)
       {
-        var allLines = text.Split("\r\n").Where(line => !string.IsNullOrEmpty(line)).ToList();
         allLines.ForEach(line =>
         {
           if (line.Length > MainWindow.ACTION_INDEX)
@@ -886,103 +883,126 @@ namespace EQLogParser
             }
           }
         });
-
-        (Application.Current.MainWindow as MainWindow).testButton.IsEnabled = true;
       }
       else
-      {    
+      {
+        (Application.Current.MainWindow as MainWindow).testButton.Content = "Stop Test";
+
         Task.Run(() =>
         {
-          var allLines = text.Split("\r\n").Where(line => !string.IsNullOrEmpty(line) && line.Length > MainWindow.ACTION_INDEX).ToList();
-          var firstDate = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", allLines.First(), 5);
-          var lastDate = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", allLines.Last(), 5);
-          if (firstDate != DateTime.MinValue && lastDate != DateTime.MinValue)
+          try
           {
-            var startTime = DateUtil.ToDouble(firstDate);
-            var endTime = DateUtil.ToDouble(lastDate);
-            var range = (int)(endTime - startTime + 1);
-            var data = new List<string>[range];
-
-            int dataIndex = 0;
-            data[dataIndex] = new List<string>();
-            foreach (var line in allLines)
+            var firstDate = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", allLines.First(), 5);
+            var lastDate = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", allLines.Last(), 5);
+            if (firstDate != DateTime.MinValue && lastDate != DateTime.MinValue)
             {
-              var current = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", line, 5);
-              if (current != DateTime.MinValue)
+              var startTime = DateUtil.ToDouble(firstDate);
+              var endTime = DateUtil.ToDouble(lastDate);
+              var range = (int)(endTime - startTime + 1);
+              var data = new List<string>[range];
+
+              int dataIndex = 0;
+              data[dataIndex] = new List<string>();
+              foreach (var line in allLines)
               {
-                var currentTime = DateUtil.ToDouble(current);
-                if (currentTime == startTime)
+                var current = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", line, 5);
+                if (current != DateTime.MinValue)
                 {
-                  data[dataIndex].Add(line);
-                }
-                else
-                {
-                  var diff = (currentTime - startTime);
-                  if (diff == 1)
+                  var currentTime = DateUtil.ToDouble(current);
+                  if (currentTime == startTime)
                   {
-                    dataIndex++;
-                    data[dataIndex] = new List<string>();
                     data[dataIndex].Add(line);
-                    startTime++;
                   }
-                  else if (diff > 1)
+                  else
                   {
-                    for (int i = 1; i < diff; i++)
+                    var diff = (currentTime - startTime);
+                    if (diff == 1)
                     {
                       dataIndex++;
                       data[dataIndex] = new List<string>();
+                      data[dataIndex].Add(line);
+                      startTime++;
+                    }
+                    else if (diff > 1)
+                    {
+                      for (int i = 1; i < diff; i++)
+                      {
+                        dataIndex++;
+                        data[dataIndex] = new List<string>();
+                      }
+
+                      dataIndex++;
+                      data[dataIndex] = new List<string>();
+                      data[dataIndex].Add(line);
+                      startTime += diff;
+                    }
+                  }
+                }
+              }
+
+              var nowTime = DateUtil.ToDouble(DateTime.Now);
+              Application.Current.Dispatcher.Invoke(() =>
+              {
+                (Application.Current.MainWindow as MainWindow).testStatus.Text = "| Time Remaining: " + data.Length + " seconds";
+                (Application.Current.MainWindow as MainWindow).testStatus.Visibility = Visibility.Visible;
+              });
+
+              int count = 0;
+              bool stop = false;
+              foreach (var list in data)
+              {
+                Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                  var content = (Application.Current.MainWindow as MainWindow).testButton.Content;
+                  if (content.ToString() == "Stopping Test")
+                  {
+                    stop = true;
+                  }
+                });
+
+                if (stop)
+                {
+                  break;
+                }
+
+                if (list != null)
+                {
+                  if (list.Count == 0)
+                  {
+                    Thread.Sleep(1000);
+                  }
+                  else
+                  {
+                    var start = DateTime.Now;
+                    foreach (var line in list)
+                    {
+                      var action = line.Substring(MainWindow.ACTION_INDEX);
+                      TriggerManager.Instance.AddAction(new LineData { Line = line, Action = action, BeginTime = nowTime });
                     }
 
-                    dataIndex++;
-                    data[dataIndex] = new List<string>();
-                    data[dataIndex].Add(line);
-                    startTime += diff;
+                    var took = (DateTime.Now - start).Ticks;
+                    long ticks = (long)10000000 - took;
+                    Thread.Sleep(new TimeSpan(ticks));
                   }
                 }
+
+                nowTime++;
+                count++;
+                var remaining = data.Length - count;
+                Application.Current.Dispatcher.Invoke(() => (Application.Current.MainWindow as MainWindow).testStatus.Text = "| Time Remaining: " + remaining + " seconds");
               }
             }
-
-            var nowTime = DateUtil.ToDouble(DateTime.Now);
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-              (Application.Current.MainWindow as MainWindow).testStatus.Text = "| Time Remaining: " + data.Length + " seconds";
-              (Application.Current.MainWindow as MainWindow).testStatus.Visibility = Visibility.Visible;
-            });
-
-            int count = 0;
-            foreach (var list in data)
-            {
-              if (list != null)
-              {
-                if (list.Count == 0)
-                {
-                  Thread.Sleep(1000);
-                }
-                else
-                {
-                  var start = DateTime.Now;
-                  foreach (var line in list)
-                  {
-                    var action = line.Substring(MainWindow.ACTION_INDEX);
-                    TriggerManager.Instance.AddAction(new LineData { Line = line, Action = action, BeginTime = nowTime });
-                  }
-
-                  var took = (DateTime.Now - start).Ticks;
-                  long ticks = (long)10000000 - took;
-                  Thread.Sleep(new TimeSpan(ticks));
-                }
-              }
-
-              nowTime++;
-              count++;
-              var remaining = data.Length - count;
-              Application.Current.Dispatcher.Invoke(() => (Application.Current.MainWindow as MainWindow).testStatus.Text = "| Time Remaining: " +  remaining + " seconds");
-            }
-
+          }
+          catch (Exception ex)
+          {
+            LOG.Error(ex);
+          }
+          finally
+          {
             Application.Current.Dispatcher.Invoke(() =>
             {
               (Application.Current.MainWindow as MainWindow).testStatus.Visibility = Visibility.Collapsed;
-              (Application.Current.MainWindow as MainWindow).testButton.IsEnabled = true;
+              (Application.Current.MainWindow as MainWindow).testButton.Content = "Run Test";
             });
           }
         });

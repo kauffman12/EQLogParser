@@ -79,6 +79,7 @@
                 <MenuItem x:Name="assignTextOverlaysMenuItem" Header="Text Overlay" />
                 <MenuItem x:Name="assignTimerOverlaysMenuItem" Header="Timer Overlay" />
               </MenuItem>
+              <MenuItem x:Name="assignPriorityMenuItem" Header="Assign Priority to Triggers" />
               <Separator />
               <MenuItem x:Name="collapseMenuItem" Header="Collapse All" Click="CollapseAllClick" />
               <MenuItem x:Name="expandMenuItem" Header="Expand All" Click="ExpandAllClick" />

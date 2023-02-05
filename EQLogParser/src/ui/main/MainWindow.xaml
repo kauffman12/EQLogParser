@@ -375,7 +375,7 @@
             <RowDefinition Height="100*" />
           </Grid.RowDefinitions>
           <StackPanel Orientation="Horizontal" Grid.Row="0">
-            <Button x:Name="testButton" Margin="4,3,0,0" VerticalAlignment="Top" Width="70" Height="24" HorizontalAlignment="Left" Click="TestTriggersClick">Run Test</Button>
+            <Button x:Name="testButton" Margin="4,3,0,0" VerticalAlignment="Top" Width="88" Height="24" HorizontalAlignment="Left" Click="TestTriggersClick">Run Test</Button>
             <CheckBox x:Name="realTime" Margin="8,1,0,0" Content="Real-Time"/>
             <TextBlock x:Name="testStatus" VerticalAlignment="Center" Visibility="Collapsed" Margin="7,1,0,0" Text="" />
           </StackPanel>
