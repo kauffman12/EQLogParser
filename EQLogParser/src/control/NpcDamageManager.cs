@@ -87,12 +87,12 @@ namespace EQLogParser
           if (StatsUtil.IsHitType(processed.Record.Type))
           {
             fight.DamageHits++;
-            fight.Total += processed.Record.Total;
+            fight.DamageTotal += processed.Record.Total;
             isNonTankingFight = fight.DamageHits == 1;
 
             var attacker = processed.Record.AttackerOwner ?? processed.Record.Attacker;
             var validator = new DamageValidator();
-            if (fight.PlayerTotals.TryGetValue(attacker, out FightTotalDamage total))
+            if (fight.PlayerDamageTotals.TryGetValue(attacker, out FightTotalDamage total))
             {
               total.Damage += validator.IsValid(processed.Record) ? processed.Record.Total : 0;
               total.Name = processed.Record.Attacker;
@@ -101,7 +101,7 @@ namespace EQLogParser
             }
             else
             {
-              fight.PlayerTotals[attacker] = new FightTotalDamage
+              fight.PlayerDamageTotals[attacker] = new FightTotalDamage
               {
                 Damage = validator.IsValid(processed.Record) ? processed.Record.Total : 0,
                 Name = processed.Record.Attacker,

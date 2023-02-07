@@ -408,11 +408,11 @@ namespace EQLogParser
     public uint SortId { get; set; }
     public int NonTankingGroupId { get; set; }
     public bool IsInactivity { get; set; } = false;
-    public long Total { get; set; }
+    public long DamageTotal { get; set; }
     public long DamageHits { get; set; }
     public long TankHits { get; set; }
     public string TooltipText { get; set; }
-    public ConcurrentDictionary<string, FightTotalDamage> PlayerTotals { get; } = new ConcurrentDictionary<string, FightTotalDamage>();
+    public ConcurrentDictionary<string, FightTotalDamage> PlayerDamageTotals { get; } = new ConcurrentDictionary<string, FightTotalDamage>();
     public List<ActionBlock> DamageBlocks { get; } = new List<ActionBlock>();
     public Dictionary<string, TimeSegment> DamageSegments { get; } = new Dictionary<string, TimeSegment>();
     public Dictionary<string, Dictionary<string, TimeSegment>> DamageSubSegments { get; } = new Dictionary<string, Dictionary<string, TimeSegment>>();
