@@ -88,7 +88,7 @@ namespace EQLogParser
 
         if (!fight.Dead || mode > 0)
         {
-          foreach (var keypair in fight.PlayerTotals)
+          foreach (var keypair in fight.PlayerDamageTotals)
           {
             var player = UpdateOverlayHasPet(keypair.Key, keypair.Value.PetOwner, playerHasPet, playerTotals);
 
