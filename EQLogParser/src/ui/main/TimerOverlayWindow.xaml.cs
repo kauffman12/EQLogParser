@@ -7,7 +7,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
-using System.Windows.Media;
 
 namespace EQLogParser
 {
@@ -16,10 +15,6 @@ namespace EQLogParser
   /// </summary>
   public partial class TimerOverlayWindow : Window
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
-    private static SolidColorBrush BarelyVisible = new SolidColorBrush { Color = (Color) ColorConverter.ConvertFromString("#01000000") };
-    private static SolidColorBrush BorderColor = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#AA000000") };
     private Dictionary<string, List<TimerBar>> TimerBarCache = new Dictionary<string, List<TimerBar>>();
     private List<TimerBar> TimerBarCreateOrder = new List<TimerBar>();
     private Overlay TheOverlay;
@@ -35,8 +30,7 @@ namespace EQLogParser
     {
       InitializeComponent();
       Preview = preview;
-      TheOverlay = overlay;
-      this.border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
+      TheOverlay = overlay;     
       title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + TheOverlay.Id);
       CurrentOrder = TheOverlay.SortBy;
       CurrentUseStandardTime = TheOverlay.UseStandardTime;
@@ -50,10 +44,14 @@ namespace EQLogParser
       {
         MainActions.SetTheme(this, MainWindow.CurrentTheme);
         this.ResizeMode = ResizeMode.CanResizeWithGrip;
-        this.Background = BarelyVisible;
-        this.BorderBrush = BorderColor;
+        SetResourceReference(Window.BorderBrushProperty, "PreviewBackgroundBrush");
+        SetResourceReference(Window.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
         title.Visibility = Visibility.Visible;
         buttonsPanel.Visibility = Visibility.Visible;
+      }
+      else
+      {
+        this.border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
       }
     }
 
@@ -219,23 +217,6 @@ namespace EQLogParser
 
     private void CloseClick(object sender, RoutedEventArgs e) => TriggerOverlayManager.Instance.ClosePreviewTimerOverlay(TheOverlay.Id);
 
-    private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)
-    {
-      this.DragMove();
-
-      if (!saveButton.IsEnabled)
-      {
-        saveButton.IsEnabled = true;
-        closeButton.IsEnabled = false;
-      }
-
-      if (!cancelButton.IsEnabled)
-      {
-        cancelButton.IsEnabled = true;
-        closeButton.IsEnabled = false;
-      }
-    }
-
     private void AddTimerBar(TimerBar timerBar)
     {
       if (CurrentOrder == 0)
@@ -249,14 +230,6 @@ namespace EQLogParser
       {
         InsertTimerBar(timerBar);
       }
-    }
-
-    private void WindowLoaded(object sender, RoutedEventArgs e)
-    {
-      SavedHeight = this.Height;
-      SavedWidth = this.Width;
-      SavedTop = this.Top;
-      SavedLeft = this.Left;
     }
 
     private void InsertTimerBar(TimerBar timerBar)
@@ -324,6 +297,31 @@ namespace EQLogParser
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
+    }
+
+    private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)
+    {
+      this.DragMove();
+
+      if (!saveButton.IsEnabled)
+      {
+        saveButton.IsEnabled = true;
+        closeButton.IsEnabled = false;
+      }
+
+      if (!cancelButton.IsEnabled)
+      {
+        cancelButton.IsEnabled = true;
+        closeButton.IsEnabled = false;
+      }
+    }
+
+    private void WindowLoaded(object sender, RoutedEventArgs e)
+    {
+      SavedHeight = this.Height;
+      SavedWidth = this.Width;
+      SavedTop = this.Top;
+      SavedLeft = this.Left;
     }
 
     private void WindowSizeChanged(object sender, SizeChangedEventArgs e)

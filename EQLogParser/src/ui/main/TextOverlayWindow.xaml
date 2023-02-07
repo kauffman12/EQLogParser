@@ -49,7 +49,7 @@
     </Grid.RowDefinitions>
     <Viewbox StretchDirection="Both" Stretch="Fill">
       <TextBlock x:Name="title" Grid.Row="0" Visibility="Collapsed" Margin="0,0,0,0" Text="Overlay Title"
-      Foreground="#33FFFFFF" Background="#55000000" TextWrapping="WrapWithOverflow" FontFamily="Consolas" Padding="3,5,3,20" />
+      Foreground="#33FFFFFF" Background="#33000000" TextWrapping="WrapWithOverflow" FontFamily="Consolas" Padding="3,5,3,20" />
     </Viewbox>
     <StackPanel Grid.Row="0" Orientation="Vertical" VerticalAlignment="Bottom" HorizontalAlignment="Center">
       <StackPanel x:Name="buttonsPanel" Visibility="Collapsed" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,6">

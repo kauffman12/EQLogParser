@@ -18,6 +18,9 @@
     <StartAction>Project</StartAction>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Update="src\ui\common\DamageBar.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="src\ui\common\TriggersView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -36,6 +39,9 @@
     <Compile Update="src\ui\log\TauntStatsViewer.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="src\ui\main\DamageOverlayWindow.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="src\ui\main\TextOverlayWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -44,6 +50,9 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Page Update="src\ui\common\DamageBar.xaml">
+      <SubType>Designer</SubType>
+    </Page>
     <Page Update="src\ui\common\TriggersView.xaml">
       <SubType>Designer</SubType>
     </Page>
@@ -62,10 +71,10 @@
     <Page Update="src\ui\log\TauntStatsViewer.xaml">
       <SubType>Designer</SubType>
     </Page>
-    <Page Update="src\ui\main\MessageWindow.xaml">
+    <Page Update="src\ui\main\DamageOverlayWindow.xaml">
       <SubType>Designer</SubType>
     </Page>
-    <Page Update="src\ui\main\DamageOverlayConfig.xaml">
+    <Page Update="src\ui\main\MessageWindow.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\main\TextOverlayWindow.xaml">
