@@ -16,8 +16,6 @@ namespace EQLogParser
   /// </summary>
   public partial class TextOverlayWindow : Window
   {
-    private static SolidColorBrush BarelyVisible = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#01000000") };
-    private static SolidColorBrush BorderColor = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#AA000000") };
     private Overlay TheOverlay;
     private bool Preview = false;
     private double SavedHeight;
@@ -30,7 +28,6 @@ namespace EQLogParser
       InitializeComponent();
       Preview = preview;
       TheOverlay = overlay;
-      this.border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
       title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + TheOverlay.Id);
 
       this.Height = TheOverlay.Height;
@@ -42,10 +39,14 @@ namespace EQLogParser
       {
         MainActions.SetTheme(this, MainWindow.CurrentTheme);
         this.ResizeMode = ResizeMode.CanResizeWithGrip;
-        this.Background = BarelyVisible;
-        this.BorderBrush = BorderColor;
+        SetResourceReference(Window.BorderBrushProperty, "PreviewBackgroundBrush");
+        SetResourceReference(Window.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
         title.Visibility = Visibility.Visible;
         buttonsPanel.Visibility = Visibility.Visible;
+      }
+      else
+      {
+        this.border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
       }
     }
 

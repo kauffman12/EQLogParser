@@ -1,7 +1,6 @@
 ﻿using Syncfusion.UI.Xaml.ProgressBar;
 using System;
 using System.Windows.Controls;
-using static log4net.Appender.RollingFileAppender;
 
 namespace EQLogParser
 {

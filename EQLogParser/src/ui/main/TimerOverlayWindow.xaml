@@ -50,7 +50,7 @@
     </Grid.RowDefinitions>
     <Viewbox StretchDirection="Both" Stretch="Fill">
       <TextBlock x:Name="title" Grid.Row="0" Visibility="Collapsed" Margin="0,0,0,0" Text="Overlay Title"
-      Foreground="#33FFFFFF" Background="#55000000" TextWrapping="WrapWithOverflow" FontFamily="Consolas" Padding="3,10,3,5" />
+      Foreground="#33FFFFFF" Background="#33000000" TextWrapping="WrapWithOverflow" FontFamily="Consolas" Padding="3,10,3,5" />
     </Viewbox>
     <StackPanel Grid.Row="0" Orientation="Vertical">
       <Border x:Name="border" CornerRadius="5">

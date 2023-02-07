@@ -170,7 +170,7 @@ namespace EQLogParser
         enableMapSendToEQIcon.Visibility = IsMapSendToEQEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // Damage Overlay
-        enableDamageOverlayIcon.Visibility = OverlayUtil.LoadSettings() ? Visibility.Visible : Visibility.Hidden;
+        enableDamageOverlayIcon.Visibility = ConfigUtil.IfSet("IsDamageOverlayEnabled") ? Visibility.Visible : Visibility.Hidden;
 
         LOG.Info("Initialized Components");
 
@@ -218,8 +218,6 @@ namespace EQLogParser
 
         // cleanup downloads
         Dispatcher.InvokeAsync(() => MainActions.Cleanup());
-
-        SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
         TriggerManager.Instance.Init();
       }
       catch (Exception e)
@@ -233,21 +231,6 @@ namespace EQLogParser
     {
       var exception = e.ExceptionObject as Exception;
       LOG.Error(exception.Message, exception);
-    }
-
-    private void SystemEvents_PowerModeChanged(object sender, PowerModeChangedEventArgs e)
-    {
-      switch (e.Mode)
-      {
-        case PowerModes.Suspend:
-          LOG.Warn("Suspending");
-          OverlayUtil.CloseDamageOverlay();
-          break;
-        case PowerModes.Resume:
-          LOG.Warn("Resume");
-          OverlayUtil.OpenIfEnabled();
-          break;
-      }
     }
 
     internal void CopyToEQClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEQClick(type);
@@ -448,8 +431,14 @@ namespace EQLogParser
 
     private void ToggleDamageOverlayClick(object sender, RoutedEventArgs e)
     {
-      var enabled = OverlayUtil.ToggleOverlay();
-      enableDamageOverlayIcon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
+      enableDamageOverlayIcon.Visibility = enableDamageOverlayIcon.Visibility == Visibility.Hidden ? Visibility.Visible : Visibility.Hidden;
+      var enabled = (enableDamageOverlayIcon.Visibility == Visibility.Visible);
+      ConfigUtil.SetSetting("IsDamageOverlayEnabled", enabled.ToString());
+
+      if (enabled)
+      {
+        new DamageOverlayWindow(true).Show();
+      }
     }
 
     private void ToggleAssassinateDamageClick(object sender, RoutedEventArgs e)
@@ -742,8 +731,6 @@ namespace EQLogParser
       {
         if (EQLogReader != null)
         {
-          OverlayUtil.CloseDamageOverlay();
-
           var seconds = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds);
           double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
 
@@ -777,8 +764,10 @@ namespace EQLogParser
               Dispatcher.InvokeAsync(() =>
               {
                 // delay opening overlay so group IDs get populated
-                DataManager.Instance.ResetOverlayFights(true);
-                OverlayUtil.OpenIfEnabled();
+                if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
+                {
+                  new DamageOverlayWindow(false).Show();
+                }
               }, DispatcherPriority.Background);
             }));
           }
@@ -898,6 +887,7 @@ namespace EQLogParser
           PlayerChatManager = new ChatManager();
           CurrentLogFile = theFile;
           NpcDamageManager.Reset();
+          DataManager.Instance.ResetOverlayFights(true);
           EQLogReader = new LogReader(theFile, FileLoadingCallback, CurrentLogOption == LogOption.MONITOR, lastMins);
           EQLogReader.Start();
           UpdateLoadingProgress();
@@ -1106,7 +1096,6 @@ namespace EQLogParser
       }
 
       StopProcessing();
-      OverlayUtil.CloseDamageOverlay();
       PlayerChatManager?.Dispose();
       TriggerManager.Instance.Stop(false);
       ConfigUtil.Save();
