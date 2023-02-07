@@ -39,7 +39,6 @@ namespace EQLogParser
     {
       InitializeComponent();
       MainActions.SetTheme(this, MainWindow.CurrentTheme);
-
       Preview = preview;
 
       // dimensions
@@ -108,19 +107,26 @@ namespace EQLogParser
       SavedMiniBars = ConfigUtil.IfSet("OverlayMiniBars");
       UpdateMiniBars(SavedMiniBars);
 
+      UpdateTimer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
+      UpdateTimer.Tick += UpdateTimerTick;
+
       if (preview)
       {
+        UpdateTimer.Stop();
         ResizeMode = ResizeMode.CanResizeWithGrip;
         buttonsPanel.Visibility = Visibility.Visible;
         SetResourceReference(Window.BorderBrushProperty, "PreviewBackgroundBrush");
         SetResourceReference(Window.BackgroundProperty, "PreviewBackgroundBrush");
-        LoadTestData();
+        border.Background = null;
+        LoadTestData(true);
       }
       else
       {
+        ResizeMode = ResizeMode.NoResize;
+        buttonsPanel.Visibility = Visibility.Collapsed;
+        this.BorderBrush = null;
+        this.Background = null;
         border.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, "DamageOverlayBackgroundBrush");
-        UpdateTimer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
-        UpdateTimer.Tick += UpdateTimerTick;
         UpdateTimer.Start();
       }
     }
@@ -239,20 +245,46 @@ namespace EQLogParser
 
         controlPanel.Visibility = Visibility.Collapsed;
         thePopup.IsOpen = false;
+
+        if (!DataManager.Instance.HasOverlayFights())
+        {
+          ((MainWindow)Application.Current.MainWindow).CloseDamageOverlay();
+        }
       }
     }
 
-    private void LoadTestData()
+    private void LoadTestData(bool load)
     {
       for (int i = 0; i < content.Children.Count - 1; i++)
       {
-        (content.Children[i] as DamageBar).Update(ConfigUtil.PlayerName, i + 1 + ". Example Player " + i, "120.50M", "100.10K", "01:02", 120 - (i * 10));
+        if (load)
+        {
+          (content.Children[i] as DamageBar).Update(ConfigUtil.PlayerName, i + 1 + ". Example Player " + i, "120.50M", "100.10K", "01:02", 120 - (i * 10));
+        }
+        else
+        {
+          (content.Children[i] as DamageBar).Update("", "", "", "", "", 0);
+          (content.Children[i] as DamageBar).Visibility = Visibility.Collapsed;
+        }
       }
 
-      (content.Children[content.Children.Count - 1] as DamageBar).Update("", "Example NPC", "500.20M", "490.50K", "03:02", 0);
+      if (load)
+      {
+        (content.Children[content.Children.Count - 1] as DamageBar).Update("", "Example NPC", "500.20M", "490.50K", "03:02", 0);
+      }
+      else
+      {
+        (content.Children[content.Children.Count - 1] as DamageBar).Update("", "", "", "", "", 0);
+        (content.Children[content.Children.Count - 1] as DamageBar).Visibility = Visibility.Collapsed;
+      }
     }
 
-    private void CloseClick(object sender, RoutedEventArgs e) => this.Close();
+    private void CloseClick(object sender, RoutedEventArgs e)
+    {
+      this.Hide();
+      ((MainWindow)Application.Current.MainWindow).CloseDamageOverlay();
+      ((MainWindow)Application.Current.MainWindow).OpenDamageOverlayIfEnabled();
+    }
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
@@ -362,18 +394,9 @@ namespace EQLogParser
          Height = dvalue;
       }
 
-      var margin = SystemParameters.WindowNonClientFrameThickness;
       if (top != null && double.TryParse(top, out dvalue) && !double.IsNaN(dvalue))
       {
-        var test = dvalue - margin.Top;
-        if (test >= SystemParameters.VirtualScreenTop && test < SystemParameters.VirtualScreenHeight)
-        {
-          Top = test;
-        }
-        else
-        {
-          Top = dvalue;
-        }
+        Top = dvalue;
       }
 
       if (left != null && double.TryParse(left, out dvalue) && !double.IsNaN(dvalue))
@@ -412,8 +435,8 @@ namespace EQLogParser
     {
       if (miniBars.IsChecked != null)
       {
-        if ((Application.Current.Resources["DamageOverlayBarHeight"].ToString() == "2.5" && miniBars.IsChecked == false) ||
-          (Application.Current.Resources["DamageOverlayBarHeight"].ToString() != "2.5" && miniBars.IsChecked == true))
+        if ((Application.Current.Resources["DamageOverlayBarHeight"].ToString() == "3" && miniBars.IsChecked == false) ||
+          (Application.Current.Resources["DamageOverlayBarHeight"].ToString() != "3" && miniBars.IsChecked == true))
         {
           UpdateMiniBars(miniBars.IsChecked.Value);
           DataChanged();
@@ -426,7 +449,7 @@ namespace EQLogParser
       double newHeight = 0.0;
       if (isChecked)
       {
-        newHeight = 2.5;
+        newHeight = 3.0;
       }
       else
       {
@@ -580,7 +603,7 @@ namespace EQLogParser
 
       if (Preview)
       {
-        LoadTestData();
+        LoadTestData(Preview);
       }
     }
 
@@ -655,13 +678,13 @@ namespace EQLogParser
     {
       lock (StatsLock)
       {
-        UpdateTimer?.Stop();
+        UpdateTimer.Stop();
         Stats = null;
       }
 
-      Hide();
-      new DamageOverlayWindow(true).Show();
-      Close();
+      this.Hide();
+      ((MainWindow)Application.Current.MainWindow).CloseDamageOverlay();
+      ((MainWindow)Application.Current.MainWindow).OpenDamageOverlayIfEnabled(true);
     }
 
     private void CopyClick(object sender, RoutedEventArgs e)
@@ -696,11 +719,6 @@ namespace EQLogParser
     {
       UpdateTimer?.Stop();
       content.Children.Clear();
-
-      if (Preview)
-      {
-        new DamageOverlayWindow(false).Show();
-      }
     }
 
     private void BorderSizeChanged(object sender, SizeChangedEventArgs e)

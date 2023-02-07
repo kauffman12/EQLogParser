@@ -220,12 +220,12 @@ namespace EQLogParser
         }
       }
 
-      Application.Current.Resources["PreviewBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#DD000000") };
-      Application.Current.Resources["DamageOverlayBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#AA000000") };
+      Application.Current.Resources["PreviewBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#BB000000") };
+      Application.Current.Resources["DamageOverlayBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#99000000") };
       Application.Current.Resources["DamageOverlayTitleBrush"] = new SolidColorBrush(Color.FromRgb(254, 156, 30));
       Application.Current.Resources["DamageOverlayDamageBrush"] = new SolidColorBrush { Color = Colors.White };
       Application.Current.Resources["DamageOverlayProgressBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF1D397E") };
-      Application.Current.Resources["DamageOverlayBarHeight"] = 2.5;
+      Application.Current.Resources["DamageOverlayBarHeight"] = 3.0;
       Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(60.0);
       Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(45.0);
 
