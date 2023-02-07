@@ -68,10 +68,10 @@ namespace EQLogParser
     internal event EventHandler<string> EventsRemovedFight;
     internal event EventHandler<Fight> EventsNewFight;
     internal event EventHandler<Fight> EventsNewNonTankingFight;
-    internal event EventHandler<Fight> EventsNewOverlayFight;
     internal event EventHandler<RandomRecord> EventsNewRandomRecord;
     internal event EventHandler<Fight> EventsUpdateFight;
     internal event EventHandler<bool> EventsClearedActiveData;
+    internal event EventHandler<Fight> EventsNewOverlayFight;
 
     internal const int MAXTIMEOUT = 60;
     internal const int FIGHTTIMEOUT = 30;
@@ -286,7 +286,6 @@ namespace EQLogParser
     internal void AddMiscRecord(IAction action, double beginTime) => Helpers.AddAction(AllMiscBlocks, action, beginTime);
     internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => Helpers.AddAction(AllReceivedSpellBlocks, received, beginTime);
     internal Dictionary<long, Fight> GetOverlayFights() => OverlayFights.ToDictionary(i => i.Key, i => i.Value);
-    internal bool HasOverlayFights() => OverlayFights.Count > 0;
     internal void RemoveOverlayFight(long id) => OverlayFights.TryRemove(id, out _);
     internal List<ActionBlock> GetAllLoot() => AllLootBlocks.ToList();
     internal List<ActionBlock> GetAllRandoms() => AllRandomBlocks.ToList();
@@ -392,6 +391,7 @@ namespace EQLogParser
         if (diff > MAXTIMEOUT || diff > FIGHTTIMEOUT && fight.DamageBlocks.Count > 0)
         {
           RemoveActiveFight(fight.CorrectMapKey);
+          OverlayFights.TryRemove(fight.Id, out _);
         }
       }
     }
@@ -807,6 +807,16 @@ namespace EQLogParser
       return removed;
     }
 
+    internal bool HasOverlayFights()
+    {
+      bool result = false;
+      lock (OverlayFights)
+      {
+        result = OverlayFights.Count > 0;
+      }
+      return result;
+    }
+
     internal void UpdateIfNewFightMap(string name, Fight fight, bool isNonTankingFight)
     {
       LifetimeFights[name] = 1;
@@ -829,9 +839,16 @@ namespace EQLogParser
 
       if (fight.DamageHits > 0)
       {
+        bool needEvent = false;
+        
         lock (OverlayFights)
         {
+          needEvent = (OverlayFights.Count == 0);
           OverlayFights[fight.Id] = fight;
+        }
+        
+        if (needEvent)
+        {
           EventsNewOverlayFight?.Invoke(this, fight);
         }
       }

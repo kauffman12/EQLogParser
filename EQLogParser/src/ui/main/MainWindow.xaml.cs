@@ -63,6 +63,7 @@ namespace EQLogParser
     private static DateTime StartLoadTime;
     private static LogOption CurrentLogOption;
 
+    private DamageOverlayWindow DamageOverlay;
     private readonly DispatcherTimer ComputeStatsTimer;
     private ChatManager PlayerChatManager = null;
     private readonly NpcDamageManager NpcDamageManager = new NpcDamageManager();
@@ -216,6 +217,8 @@ namespace EQLogParser
           ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
         }
 
+        DataManager.Instance.EventsNewOverlayFight += (object sender, Fight e) => Dispatcher.InvokeAsync(() => OpenDamageOverlayIfEnabled());
+ 
         // cleanup downloads
         Dispatcher.InvokeAsync(() => MainActions.Cleanup());
         TriggerManager.Instance.Init();
@@ -246,6 +249,33 @@ namespace EQLogParser
     internal void ShowTriggersEnabled(bool active)
     {
       Dispatcher.InvokeAsync(() => statusTriggersText.Visibility = active ? Visibility.Visible : Visibility.Collapsed);
+    }
+
+    internal void CloseDamageOverlay()
+    {
+      DamageOverlay?.Close();
+      DamageOverlay = null;
+    }
+
+    internal void OpenDamageOverlayIfEnabled(bool configure = false)
+    {
+      // delay opening overlay so group IDs get populated
+      if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
+      {
+        if (configure)
+        {         
+          DamageOverlay = new DamageOverlayWindow(true);
+          DamageOverlay.Show();
+        }
+        else if (DataManager.Instance.HasOverlayFights())
+        {
+          if (DamageOverlay == null)
+          {
+            DamageOverlay = new DamageOverlayWindow(false);
+            DamageOverlay.Show();
+          }
+        }
+      }
     }
 
     private void DockSiteLoaded(object sender, RoutedEventArgs e)
@@ -437,7 +467,11 @@ namespace EQLogParser
 
       if (enabled)
       {
-        new DamageOverlayWindow(true).Show();
+        OpenDamageOverlayIfEnabled(true);
+      }
+      else
+      {
+        CloseDamageOverlay();
       }
     }
 
@@ -764,10 +798,7 @@ namespace EQLogParser
               Dispatcher.InvokeAsync(() =>
               {
                 // delay opening overlay so group IDs get populated
-                if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
-                {
-                  new DamageOverlayWindow(false).Show();
-                }
+                OpenDamageOverlayIfEnabled();
               }, DispatcherPriority.Background);
             }));
           }
@@ -883,6 +914,7 @@ namespace EQLogParser
             PlayerManager.Instance.Init();
           }
 
+          CloseDamageOverlay();
           DataManager.Instance.Clear();
           PlayerChatManager = new ChatManager();
           CurrentLogFile = theFile;
