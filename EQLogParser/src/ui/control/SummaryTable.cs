@@ -1,4 +1,5 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.Grid.Helpers;
 using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
@@ -147,11 +148,11 @@ namespace EQLogParser
 
     internal List<PlayerStats> GetPlayerStats()
     {
-      if (TheDataGrid is SfDataGrid dataGrid)
+      if (TheDataGrid is SfDataGrid dataGrid && dataGrid.View != null && dataGrid.View.Records != null)
       {
         return dataGrid.View.Records.Select(record => record.Data).Cast<PlayerStats>().ToList();
       }
-      else if (TheDataGrid is SfTreeGrid treeGrid)
+      else if (TheDataGrid is SfTreeGrid treeGrid && treeGrid.View != null && treeGrid.View.Nodes != null)
       {
         var results = new List<PlayerStats>();
         foreach (var stats in treeGrid.View.Nodes.Where(node => node.Level == 0).Select(node => node.Item).Cast<PlayerStats>())

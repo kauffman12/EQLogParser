@@ -472,12 +472,18 @@ namespace EQLogParser
 
       if (enabled)
       {
-        OpenDamageOverlayIfEnabled(true);
+        OpenDamageOverlayIfEnabled(false);
       }
       else
       {
         CloseDamageOverlay();
       }
+    }
+
+    private void ConfigureOverlayClick(object sender, RoutedEventArgs e)
+    {
+      CloseDamageOverlay();
+      OpenDamageOverlayIfEnabled(true);
     }
 
     private void ToggleAssassinateDamageClick(object sender, RoutedEventArgs e)
@@ -644,7 +650,7 @@ namespace EQLogParser
     private void OpenDamageChart()
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-      if (Helpers.OpenChart(opened, dockSite, damageChartIcon.Tag as string, DAMAGE_CHOICES, "Damage Chart", ChartTab, true))
+      if (Helpers.OpenChart(opened, dockSite, damageChartIcon.Tag as string, DAMAGE_CHOICES, "DPS Chart", ChartTab, true))
       {
         List<PlayerStats> selected = null;
         if (opened.TryGetValue(damageSummaryIcon.Tag as string, out ContentControl window) && window.Content is DamageSummary summary)
@@ -689,7 +695,7 @@ namespace EQLogParser
     private void OpenDamageSummary()
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-      if (Helpers.OpenWindow(dockSite, opened, out ContentControl control, typeof(DamageSummary), damageSummaryIcon.Tag as string, "Damage Summary"))
+      if (Helpers.OpenWindow(dockSite, opened, out ContentControl control, typeof(DamageSummary), damageSummaryIcon.Tag as string, "DPS Summary"))
       {
         (control.Content as DamageSummary).EventsSelectionChange += DamageSummary_SelectionChanged;
         if (DamageStatsManager.Instance.GetGroupCount() > 0)

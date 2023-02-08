@@ -88,23 +88,18 @@
           <MenuItem Header="E_xit" Height="24" Click="WindowClose" InputGestureText="Alt+F4" />
         </MenuItem>
         <MenuItem Header="_View" Height="30" Width="45">
-          <MenuItem x:Name="damageView" Header="_Damage" Height="24">
+          <MenuItem x:Name="damageView" Header="_DPS" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="damageViewIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Meteor" />
             </MenuItem.Icon>
-            <MenuItem x:Name="damageChartMenuItem" Click="MenuItemWindowClick" Header="Damage _Chart" Height="24">
+            <MenuItem x:Name="damageChartMenuItem" Click="MenuItemWindowClick" Header="DPS _Chart" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="damageChartIcon" Tag="damageChartWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="damageSummaryMenuItem" Click="MenuItemWindowClick" Header="Damage _Summary" Height="24">
+            <MenuItem x:Name="damageSummaryMenuItem" Click="MenuItemWindowClick" Header="DPS _Summary" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="damageSummaryIcon" Tag="damageSummaryWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem x:Name="enableDamageOverlay" Header="Damage _Overlay" Click="ToggleDamageOverlayClick" Height="24">
-              <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="enableDamageOverlayIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
@@ -135,6 +130,22 @@
             <MenuItem x:Name="tankingSummaryMenuItem" Click="MenuItemWindowClick" Header="Tanking _Summary" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="tankingSummaryIcon" Tag="tankingSummaryWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              </MenuItem.Icon>
+            </MenuItem>
+          </MenuItem>
+          <Separator />
+          <MenuItem Header="Damage _Meter" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_ThermometerHalf" />
+            </MenuItem.Icon>
+            <MenuItem x:Name="configureDamageOverlay" Header="Configure" Click="ConfigureOverlayClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="configureDamageOverlayIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Cog" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem x:Name="enableDamageOverlay" Header="Enable" Click="ToggleDamageOverlayClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="enableDamageOverlayIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
