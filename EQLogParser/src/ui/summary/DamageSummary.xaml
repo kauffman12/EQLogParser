@@ -140,12 +140,12 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="menuItemShowBreakdown" IsEnabled="False" Header="Damage Breakdown">
+          <MenuItem x:Name="menuItemShowBreakdown" IsEnabled="False" Header="DPS Breakdown">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="showBreakdownIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Meteor" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="menuItemShowDamageLog" IsEnabled="False" Header="Damage Log" Click="DataGridDamageLogClick">
+          <MenuItem x:Name="menuItemShowDamageLog" IsEnabled="False" Header="DPS Log" Click="DataGridDamageLogClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="showDamageLogIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_File" />
             </MenuItem.Icon>
