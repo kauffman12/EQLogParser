@@ -246,6 +246,11 @@ namespace EQLogParser
       (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected, true);
     }
 
+    internal void AddAndCopyTankParse(CombinedStats combined, List<PlayerStats> selected)
+    {
+      (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.TANKPARSE, TankingStatsManager.Instance, combined, selected, true);
+    }
+
     internal void ShowTriggersEnabled(bool active)
     {
       Dispatcher.InvokeAsync(() => statusTriggersText.Visibility = active ? Visibility.Visible : Visibility.Collapsed);

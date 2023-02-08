@@ -875,6 +875,7 @@ namespace EQLogParser
           if (groupId == -1 || fight.GroupId != groupId)
           {
             fight.PlayerDamageTotals.Clear();
+            fight.PlayerTankTotals.Clear();
             removeList.Add(fight.Id);
           }
         }

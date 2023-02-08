@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,8 +16,10 @@ namespace EQLogParser
   public partial class DamageOverlayWindow : Window
   {
     private static object StatsLock = new object();
+    private static SolidColorBrush ActiveBrush = new SolidColorBrush(Color.FromRgb(254, 156, 30));
+    private static SolidColorBrush InActiveBrush = new SolidColorBrush(Colors.White);
     private readonly DispatcherTimer UpdateTimer;
-    private CombinedStats Stats = null;
+    private DamageOverlayStats Stats = null;
     private bool Preview = false;
     private double SavedHeight;
     private double SavedWidth;
@@ -34,11 +37,15 @@ namespace EQLogParser
     private bool SavedShowCritRate;
     private bool SavedMiniBars;
     private string SavedProgressColor;
+    private bool CurrentShowDps = true;
 
     internal DamageOverlayWindow(bool preview = false)
     {
       InitializeComponent();
+
       MainActions.SetTheme(this, MainWindow.CurrentTheme);
+      dpsButton.Foreground = ActiveBrush;
+      tankButton.Foreground = InActiveBrush;
       Preview = preview;
 
       // dimensions
@@ -107,6 +114,10 @@ namespace EQLogParser
       SavedMiniBars = ConfigUtil.IfSet("OverlayMiniBars");
       UpdateMiniBars(SavedMiniBars);
 
+      CurrentShowDps = ConfigUtil.IfSet("OverlayShowingDps");
+      dpsButton.Foreground = CurrentShowDps ? ActiveBrush : InActiveBrush;
+      tankButton.Foreground = !CurrentShowDps ? ActiveBrush : InActiveBrush;
+
       UpdateTimer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
       UpdateTimer.Tick += UpdateTimerTick;
 
@@ -119,6 +130,7 @@ namespace EQLogParser
         SetResourceReference(Window.BackgroundProperty, "PreviewBackgroundBrush");
         border.Background = null;
         LoadTestData(true);
+        damageContent.Visibility = Visibility.Visible;
       }
       else
       {
@@ -142,100 +154,38 @@ namespace EQLogParser
 
       int maxRows = maxRowsList.SelectedIndex + 5;
 
-      CombinedStats localStats;
+      DamageOverlayStats damageOverlayStats;
       lock (StatsLock)
       {
-        localStats = Stats = DamageStatsManager.ComputeOverlayStats(Stats == null, CurrentDamageMode, maxRows, CurrentSelectedClass);
+        damageOverlayStats = Stats = DamageStatsManager.ComputeOverlayStats(Stats == null, CurrentDamageMode, maxRows, CurrentSelectedClass);
       }
 
-      if (localStats != null)
+      if (damageOverlayStats != null)
       {
-        for (int i = 0; i < content.Children.Count; i++)
+        if (damageOverlayStats.DamageStats != null)
         {
-          var statIndex = i;
-          var damageBar = content.Children[i] as DamageBar;
-          if (localStats.StatsList.Count > statIndex)
-          {
-            var stat = localStats.StatsList[statIndex];
-            var time = new TimeSpan(0, 0, (int)stat.TotalSeconds);
-            var timeString = string.Format("{0:D2}:{1:D2}", time.Minutes, time.Seconds);
-            var barPercent = (statIndex == 0) ? 100.0 : (stat.Total / (double)localStats.StatsList[0].Total) * 100.0;
-
-            string playerName = ConfigUtil.PlayerName;
-            var isMe = !string.IsNullOrEmpty(playerName) && stat.Name.StartsWith(playerName, StringComparison.OrdinalIgnoreCase) &&
-              (playerName.Length >= stat.Name.Length || stat.Name[playerName.Length] == ' ');
-
-            string name;
-            string origName;
-            if (CurrentHideOthers && !isMe)
-            {
-              name = string.Format("{0}. Hidden Player", stat.Rank);
-              origName ="";
-            }
-            else
-            {
-              name = string.Format("{0}. {1}", stat.Rank, stat.Name);
-              origName = stat.OrigName;
-            }
-
-            if (CurrentShowCritRate)
-            {
-              var critMods = new List<string>();
-
-              if (isMe && PlayerManager.Instance.IsDoTClass(stat.ClassName) && DataManager.Instance.MyDoTCritRateMod is uint doTCritRate && doTCritRate > 0)
-              {
-                critMods.Add(string.Format("DoT +{0}", doTCritRate));
-              }
-
-              if (isMe && DataManager.Instance.MyNukeCritRateMod is uint nukeCritRate && nukeCritRate > 0)
-              {
-                critMods.Add(string.Format("Nuke +{0}", nukeCritRate));
-              }
-
-              if (critMods.Count > 0)
-              {
-                name = string.Format("{0}  [{1}]", name, string.Join(", ", critMods));
-              }
-            }
-
-            damageBar.Update(origName, name, StatsUtil.FormatTotals(stat.Total, 2),
-            StatsUtil.FormatTotals(stat.DPS, 2), timeString, barPercent);
-
-            if (damageBar.Visibility == Visibility.Collapsed)
-            {
-              damageBar.Visibility = Visibility.Visible;
-            }
-          }
-          else
-          {
-            if (damageBar.Visibility == Visibility.Visible)
-            {
-              damageBar.Update("", "", "", "", "", 0);
-              damageBar.Visibility = Visibility.Collapsed;
-            }
-          }
+          LoadStats(damageContent.Children, damageOverlayStats.DamageStats);
         }
 
-        var titleBar = content.Children[content.Children.Count - 1] as DamageBar;
-        var titleTime = new TimeSpan(0, 0, (int)localStats.RaidStats.TotalSeconds);
-        var titleTimeString = string.Format("{0:D2}:{1:D2}", titleTime.Minutes, titleTime.Seconds);
-        titleBar.Update("", localStats.TargetTitle, StatsUtil.FormatTotals(localStats.RaidStats.Total, 2),
-          StatsUtil.FormatTotals(localStats.RaidStats.DPS, 2), titleTimeString, 0);
-
-        if (titleBar.Visibility == Visibility.Collapsed)
+        if (damageOverlayStats.TankStats != null)
         {
-          titleBar.Visibility = Visibility.Visible;
+          LoadStats(tankContent.Children, damageOverlayStats.TankStats);
         }
 
-        if (controlPanel.Visibility != Visibility.Visible)
+        if (CurrentShowDps)
         {
-          controlPanel.Visibility = Visibility.Visible;
-          thePopup.IsOpen = true;
+          tankContent.Visibility = Visibility.Collapsed;
+          damageContent.Visibility = Visibility.Visible;
+        }
+        else
+        {
+          damageContent.Visibility = Visibility.Collapsed;
+          tankContent.Visibility = Visibility.Visible;
         }
       }
       else
       {
-        foreach (var child in content.Children)
+        foreach (var child in damageContent.Children)
         {
           if (child is DamageBar damageBar)
           {
@@ -243,6 +193,16 @@ namespace EQLogParser
           }
         }
 
+        foreach (var child in tankContent.Children)
+        {
+          if (child is DamageBar damageBar)
+          {
+            damageBar.Visibility = Visibility.Collapsed;
+          }
+        }
+
+        damageContent.Visibility = Visibility.Collapsed;
+        tankContent.Visibility = Visibility.Collapsed;
         controlPanel.Visibility = Visibility.Collapsed;
         thePopup.IsOpen = false;
 
@@ -253,29 +213,115 @@ namespace EQLogParser
       }
     }
 
-    private void LoadTestData(bool load)
+    private void LoadStats(UIElementCollection children, CombinedStats localStats)
     {
-      for (int i = 0; i < content.Children.Count - 1; i++)
+      for (int i = 0; i < children.Count; i++)
       {
-        if (load)
+        var statIndex = i;
+        var damageBar = children[i] as DamageBar;
+        if (localStats.StatsList.Count > statIndex)
         {
-          (content.Children[i] as DamageBar).Update(ConfigUtil.PlayerName, i + 1 + ". Example Player " + i, "120.50M", "100.10K", "01:02", 120 - (i * 10));
+          var stat = localStats.StatsList[statIndex];
+          var time = new TimeSpan(0, 0, (int)stat.TotalSeconds);
+          var timeString = string.Format("{0:D2}:{1:D2}", time.Minutes, time.Seconds);
+          var barPercent = (statIndex == 0) ? 100.0 : (stat.Total / (double)localStats.StatsList[0].Total) * 100.0;
+
+          string playerName = ConfigUtil.PlayerName;
+          var isMe = !string.IsNullOrEmpty(playerName) && stat.Name.StartsWith(playerName, StringComparison.OrdinalIgnoreCase) &&
+            (playerName.Length >= stat.Name.Length || stat.Name[playerName.Length] == ' ');
+
+          string name;
+          string origName;
+          if (CurrentHideOthers && !isMe)
+          {
+            name = string.Format("{0}. Hidden Player", stat.Rank);
+            origName = "";
+          }
+          else
+          {
+            name = string.Format("{0}. {1}", stat.Rank, stat.Name);
+            origName = stat.OrigName;
+          }
+
+          if (CurrentShowCritRate)
+          {
+            var critMods = new List<string>();
+
+            if (isMe && PlayerManager.Instance.IsDoTClass(stat.ClassName) && DataManager.Instance.MyDoTCritRateMod is uint doTCritRate && doTCritRate > 0)
+            {
+              critMods.Add(string.Format("DoT +{0}", doTCritRate));
+            }
+
+            if (isMe && DataManager.Instance.MyNukeCritRateMod is uint nukeCritRate && nukeCritRate > 0)
+            {
+              critMods.Add(string.Format("Nuke +{0}", nukeCritRate));
+            }
+
+            if (critMods.Count > 0)
+            {
+              name = string.Format("{0}  [{1}]", name, string.Join(", ", critMods));
+            }
+          }
+
+          damageBar.Update(origName, name, StatsUtil.FormatTotals(stat.Total, 2),
+          StatsUtil.FormatTotals(stat.DPS, 2), timeString, barPercent);
+
+          if (damageBar.Visibility == Visibility.Collapsed)
+          {
+            damageBar.Visibility = Visibility.Visible;
+          }
         }
         else
         {
-          (content.Children[i] as DamageBar).Update("", "", "", "", "", 0);
-          (content.Children[i] as DamageBar).Visibility = Visibility.Collapsed;
+          if (damageBar.Visibility == Visibility.Visible)
+          {
+            damageBar.Update("", "", "", "", "", 0);
+            damageBar.Visibility = Visibility.Collapsed;
+          }
+        }
+      }
+
+      var titleBar = children[children.Count - 1] as DamageBar;
+      var titleTime = new TimeSpan(0, 0, (int)localStats.RaidStats.TotalSeconds);
+      var titleTimeString = string.Format("{0:D2}:{1:D2}", titleTime.Minutes, titleTime.Seconds);
+      titleBar.Update("", localStats.TargetTitle, StatsUtil.FormatTotals(localStats.RaidStats.Total, 2),
+        StatsUtil.FormatTotals(localStats.RaidStats.DPS, 2), titleTimeString, 0);
+
+      if (titleBar.Visibility == Visibility.Collapsed)
+      {
+        titleBar.Visibility = Visibility.Visible;
+      }
+
+      if (controlPanel.Visibility != Visibility.Visible)
+      {
+        controlPanel.Visibility = Visibility.Visible;
+        thePopup.IsOpen = true;
+      }
+    }
+
+    private void LoadTestData(bool load)
+    {
+      for (int i = 0; i < damageContent.Children.Count - 1; i++)
+      {
+        if (load)
+        {
+          (damageContent.Children[i] as DamageBar).Update(ConfigUtil.PlayerName, i + 1 + ". Example Player " + i, "120.50M", "100.10K", "01:02", 120 - (i * 10));
+        }
+        else
+        {
+          (damageContent.Children[i] as DamageBar).Update("", "", "", "", "", 0);
+          (damageContent.Children[i] as DamageBar).Visibility = Visibility.Collapsed;
         }
       }
 
       if (load)
       {
-        (content.Children[content.Children.Count - 1] as DamageBar).Update("", "Example NPC", "500.20M", "490.50K", "03:02", 0);
+        (damageContent.Children[damageContent.Children.Count - 1] as DamageBar).Update("", "Example NPC", "500.20M", "490.50K", "03:02", 0);
       }
       else
       {
-        (content.Children[content.Children.Count - 1] as DamageBar).Update("", "", "", "", "", 0);
-        (content.Children[content.Children.Count - 1] as DamageBar).Visibility = Visibility.Collapsed;
+        (damageContent.Children[damageContent.Children.Count - 1] as DamageBar).Update("", "", "", "", "", 0);
+        (damageContent.Children[damageContent.Children.Count - 1] as DamageBar).Visibility = Visibility.Collapsed;
       }
     }
 
@@ -472,7 +518,15 @@ namespace EQLogParser
 
       Application.Current.Resources["DamageOverlayBarHeight"] = newHeight;
 
-      foreach (var child in content.Children)
+      foreach (var child in damageContent.Children)
+      {
+        if (child is DamageBar damageBar)
+        {
+          damageBar.SetMiniBars(isChecked);
+        }
+      }
+
+      foreach (var child in tankContent.Children)
       {
         if (child is DamageBar damageBar)
         {
@@ -582,16 +636,19 @@ namespace EQLogParser
 
     private void UpdateMaxRows(int maxRows)
     {
-      content.Children.Clear();
+      damageContent.Children.Clear();
+      tankContent.Children.Clear();
 
       // damage bars
       for (int i = 0; i < maxRows; i++)
       {
-        content.Children.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", true));
+        damageContent.Children.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", true));
+        tankContent.Children.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", true));
       }
 
       // title bar
-      content.Children.Add(new DamageBar("DamageOverlayTitleBrush", "DamageOverlayTitleBrush", false));
+      damageContent.Children.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", false));
+      tankContent.Children.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", false));
 
       int selectedIndex = maxRows - 5;
       if (maxRowsList.SelectedIndex != selectedIndex)
@@ -653,23 +710,59 @@ namespace EQLogParser
         case 12:
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(60.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(45.0);
-          titleDamage.Margin = new System.Windows.Thickness(0, 5, 42, 0);
-          titleDPS.Margin = new System.Windows.Thickness(0, 5, 20, 0);
-          titleTime.Margin = new System.Windows.Thickness(0, 5, 9, 0);
+          titleDamage.Margin = new System.Windows.Thickness(0, 6, 43, 0);
+          titleDPS.Margin = new System.Windows.Thickness(0, 6, 20, 0);
+          titleTime.Margin = new System.Windows.Thickness(0, 6, 8, 0);
+          titleDamage.FontSize = 13;
+          titleDPS.FontSize = 13;
+          titleTime.FontSize = 13;
+          dpsButton.FontSize = 13;
+          tankButton.FontSize = 13;
+          configButton.FontSize = 11;
+          copyButton.FontSize = 11;
+          resetButton.FontSize = 10;
+          controlPanel.Height = 27;
+          thePopup.Height = 27;
+          rect1.Height = 14;
+          rect2.Height = 14;
           break;
         case 14:
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(70.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(50.0);
-          titleDamage.Margin = new System.Windows.Thickness(0, 5, 52, 0);
-          titleDPS.Margin = new System.Windows.Thickness(0, 5, 24, 0);
-          titleTime.Margin = new System.Windows.Thickness(0, 5, 9, 0);
+          titleDamage.Margin = new System.Windows.Thickness(0, 6, 52, 0);
+          titleDPS.Margin = new System.Windows.Thickness(0, 6, 21, 0);
+          titleTime.Margin = new System.Windows.Thickness(0, 6, 7, 0);
+          titleDamage.FontSize = 15;
+          titleDPS.FontSize = 15;
+          titleTime.FontSize = 15;
+          dpsButton.FontSize = 15;
+          tankButton.FontSize = 15;
+          configButton.FontSize = 13;
+          copyButton.FontSize = 13;
+          resetButton.FontSize = 12;
+          controlPanel.Height = 29;
+          thePopup.Height = 29;
+          rect1.Height = 16;
+          rect2.Height = 16;
           break;
         case 16:
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(75.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(55.0);
-          titleDamage.Margin = new System.Windows.Thickness(0, 5, 58, 0);
-          titleDPS.Margin = new System.Windows.Thickness(0, 5, 30, 0);
-          titleTime.Margin = new System.Windows.Thickness(0, 5, 9, 0);
+          titleDamage.Margin = new System.Windows.Thickness(0, 6, 54, 0);
+          titleDPS.Margin = new System.Windows.Thickness(0, 6, 22, 0);
+          titleTime.Margin = new System.Windows.Thickness(0, 6, 7, 0);
+          titleDamage.FontSize = 17;
+          titleDPS.FontSize = 17;
+          titleTime.FontSize = 17;
+          dpsButton.FontSize = 17;
+          tankButton.FontSize = 17;
+          configButton.FontSize = 15;
+          copyButton.FontSize = 15;
+          resetButton.FontSize = 14;
+          controlPanel.Height = 31;
+          thePopup.Height = 31;
+          rect1.Height = 18;
+          rect2.Height = 18;
           break;
       }
     }
@@ -691,8 +784,39 @@ namespace EQLogParser
     {
       lock (StatsLock)
       {
-        (Application.Current.MainWindow as MainWindow)?.AddAndCopyDamageParse(Stats, Stats.StatsList);
+        if (CurrentShowDps)
+        {
+          if (Stats.DamageStats != null)
+          {
+            (Application.Current.MainWindow as MainWindow)?.AddAndCopyDamageParse(Stats.DamageStats, Stats.DamageStats.StatsList);
+          }
+        }
+        else
+        {
+          if (Stats.TankStats != null)
+          {
+            (Application.Current.MainWindow as MainWindow)?.AddAndCopyTankParse(Stats.TankStats, Stats.TankStats.StatsList);
+          }
+        }
       }
+    }
+
+    private void DPSClick(object sender, RoutedEventArgs e)
+    {
+      dpsButton.Foreground = ActiveBrush;
+      tankButton.Foreground = InActiveBrush;
+      CurrentShowDps = true;
+      ConfigUtil.SetSetting("OverlayShowingDps", CurrentShowDps.ToString());
+      UpdateTimerTick(null, null);
+    }
+
+    private void TankClick(object sender, RoutedEventArgs e)
+    {
+      dpsButton.Foreground = InActiveBrush;
+      tankButton.Foreground = ActiveBrush;
+      CurrentShowDps = false;
+      ConfigUtil.SetSetting("OverlayShowingDps", CurrentShowDps.ToString());
+      UpdateTimerTick(null, null);
     }
 
     private void ResetClick(object sender, RoutedEventArgs e)
@@ -701,6 +825,7 @@ namespace EQLogParser
       {
         Stats = null;
         DataManager.Instance.ResetOverlayFights();
+        ((MainWindow)Application.Current.MainWindow).CloseDamageOverlay();
       }
     }
 
@@ -718,7 +843,8 @@ namespace EQLogParser
     private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
     {
       UpdateTimer?.Stop();
-      content.Children.Clear();
+      damageContent.Children.Clear();
+      tankContent.Children.Clear();
     }
 
     private void BorderSizeChanged(object sender, SizeChangedEventArgs e)

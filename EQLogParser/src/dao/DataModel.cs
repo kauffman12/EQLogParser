@@ -409,15 +409,17 @@ namespace EQLogParser
     public int NonTankingGroupId { get; set; }
     public bool IsInactivity { get; set; } = false;
     public long DamageTotal { get; set; }
+    public long TankTotal { get; set; }
     public long DamageHits { get; set; }
     public long TankHits { get; set; }
     public string TooltipText { get; set; }
     public ConcurrentDictionary<string, FightTotalDamage> PlayerDamageTotals { get; } = new ConcurrentDictionary<string, FightTotalDamage>();
+    public ConcurrentDictionary<string, FightTotalDamage> PlayerTankTotals { get; } = new ConcurrentDictionary<string, FightTotalDamage>();
     public List<ActionBlock> DamageBlocks { get; } = new List<ActionBlock>();
     public Dictionary<string, TimeSegment> DamageSegments { get; } = new Dictionary<string, TimeSegment>();
     public Dictionary<string, Dictionary<string, TimeSegment>> DamageSubSegments { get; } = new Dictionary<string, Dictionary<string, TimeSegment>>();
-    public Dictionary<string, TimeSegment> InitialTankSegments { get; } = new Dictionary<string, TimeSegment>();
-    public Dictionary<string, Dictionary<string, TimeSegment>> InitialTankSubSegments { get; } = new Dictionary<string, Dictionary<string, TimeSegment>>();
+    public Dictionary<string, TimeSegment> TankSegments { get; } = new Dictionary<string, TimeSegment>();
+    public Dictionary<string, Dictionary<string, TimeSegment>> TankSubSegments { get; } = new Dictionary<string, Dictionary<string, TimeSegment>>();
     public List<ActionBlock> TankingBlocks { get; } = new List<ActionBlock>();
     public List<ActionBlock> TauntBlocks { get; } = new List<ActionBlock>();
     public Dictionary<string, SpellDamageStats> DoTDamage { get; } = new Dictionary<string, SpellDamageStats>();
@@ -428,7 +430,6 @@ namespace EQLogParser
   internal class FightTotalDamage
   {
     public long Damage { get; set; }
-    public string Name { get; set; }
     public string PetOwner { get; set; }
     public double UpdateTime { get; set; }
     public double BeginTime { get; set; }
@@ -523,6 +524,12 @@ namespace EQLogParser
     public PlayerStats RaidStats { get; set; }
     public Dictionary<string, byte> UniqueClasses { get; } = new Dictionary<string, byte>();
     public Dictionary<string, List<PlayerStats>> Children { get; } = new Dictionary<string, List<PlayerStats>>();
+  }
+
+  internal class DamageOverlayStats
+  {
+    public CombinedStats DamageStats { get; set; }
+    public CombinedStats TankStats { get; set; }
   }
 
   internal class StatsSummary
