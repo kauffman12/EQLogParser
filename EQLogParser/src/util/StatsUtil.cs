@@ -126,28 +126,15 @@ namespace EQLogParser
       return y;
     }
 
-    internal static void UpdateRaidTimeRanges(Fight fight, ConcurrentDictionary<string, TimeRange> playerTimeRanges,
-      ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges, bool includeInitialTanking = false)
+    internal static void UpdateRaidTimeRanges(Dictionary<string, TimeSegment> segments, Dictionary<string, Dictionary<string, TimeSegment>> subSegments,
+    ConcurrentDictionary<string, TimeRange> playerTimeRanges, ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges)
     {
-      if (includeInitialTanking)
-      {
-        foreach (ref var entry in fight.InitialTankSegments.ToArray().AsSpan())
-        {
-          AddTimeEntry(playerTimeRanges, entry);
-        }
-
-        foreach (ref var subEntry in fight.InitialTankSubSegments.ToArray().AsSpan())
-        {
-          AddSubTimeEntry(playerSubTimeRanges, subEntry);
-        }
-      }
-
-      foreach (ref var entry in fight.DamageSegments.ToArray().AsSpan())
+      foreach (ref var entry in segments.ToArray().AsSpan())
       {
         AddTimeEntry(playerTimeRanges, entry);
       }
 
-      foreach (ref var subEntry in fight.DamageSubSegments.ToArray().AsSpan())
+      foreach (ref var subEntry in subSegments.ToArray().AsSpan())
       {
         AddSubTimeEntry(playerSubTimeRanges, subEntry);
       }

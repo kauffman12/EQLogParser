@@ -80,7 +80,7 @@ namespace EQLogParser
         if (defender)
         {
           Helpers.AddAction(fight.DamageBlocks, processed.Record, processed.BeginTime);
-          AddPlayerTime(fight, processed.Record, processed.Record.Attacker, processed.BeginTime);
+          AddPlayerTime(fight.DamageSegments, fight.DamageSubSegments, processed.Record, processed.Record.Attacker, processed.BeginTime);
           fight.BeginDamageTime = double.IsNaN(fight.BeginDamageTime) ? processed.BeginTime : fight.BeginDamageTime;
           fight.LastDamageTime = processed.BeginTime;
 
@@ -95,7 +95,6 @@ namespace EQLogParser
             if (fight.PlayerDamageTotals.TryGetValue(attacker, out FightTotalDamage total))
             {
               total.Damage += validator.IsValid(processed.Record) ? processed.Record.Total : 0;
-              total.Name = processed.Record.Attacker;
               total.PetOwner = total.PetOwner ?? processed.Record.AttackerOwner;
               total.UpdateTime = processed.BeginTime;
             }
@@ -104,7 +103,6 @@ namespace EQLogParser
               fight.PlayerDamageTotals[attacker] = new FightTotalDamage
               {
                 Damage = validator.IsValid(processed.Record) ? processed.Record.Total : 0,
-                Name = processed.Record.Attacker,
                 PetOwner = processed.Record.AttackerOwner,
                 UpdateTime = processed.BeginTime,
                 BeginTime = processed.BeginTime
@@ -156,22 +154,33 @@ namespace EQLogParser
         else
         {
           Helpers.AddAction(fight.TankingBlocks, processed.Record, processed.BeginTime);
-          AddPlayerTime(fight, processed.Record, processed.Record.Defender, processed.BeginTime);
+          AddPlayerTime(fight.TankSegments, fight.TankSubSegments, processed.Record, processed.Record.Defender, processed.BeginTime);
           fight.BeginTankingTime = double.IsNaN(fight.BeginTankingTime) ? processed.BeginTime : fight.BeginTankingTime;
           fight.LastTankingTime = processed.BeginTime;
 
-          if (StatsUtil.IsHitType(processed.Record.Type))
+          fight.TankHits++;
+          fight.TankTotal += processed.Record.Total;
+
+          if (fight.PlayerTankTotals.TryGetValue(processed.Record.Defender, out FightTotalDamage total))
           {
-            fight.TankHits++;
+            total.Damage += processed.Record.Total;
+            total.UpdateTime = processed.BeginTime;
+          }
+          else
+          {
+            fight.PlayerTankTotals[processed.Record.Defender] = new FightTotalDamage
+            {
+              Damage = processed.Record.Total,
+              UpdateTime = processed.BeginTime,
+              BeginTime = processed.BeginTime
+            };
           }
         }
 
         fight.LastTime = processed.BeginTime;
         LastFightProcessTime = processed.BeginTime;
-
         var ttl = fight.LastTime - fight.BeginTime + 1;
         fight.TooltipText = string.Format("#Hits To Players: {0}, #Hits From Players: {1}, Time Alive: {2}s", fight.TankHits, fight.DamageHits, ttl);
-
         DataManager.Instance.UpdateIfNewFightMap(fight.CorrectMapKey, fight, isNonTankingFight);
       }
     }
@@ -203,11 +212,9 @@ namespace EQLogParser
       };
     }
 
-    private static void AddPlayerTime(Fight fight, DamageRecord record, string player, double time)
+    private static void AddPlayerTime(Dictionary<string, TimeSegment> segments, Dictionary<string, Dictionary<string, TimeSegment>> subSegments,
+      DamageRecord record, string player, double time)
     {
-      var isInitialTanking = fight.DamageBlocks.Count == 0;
-      var segments = isInitialTanking ? fight.InitialTankSegments : fight.DamageSegments;
-      var subSegments = isInitialTanking ? fight.InitialTankSubSegments : fight.DamageSubSegments;
       StatsUtil.UpdateTimeSegments(segments, subSegments, Helpers.CreateRecordKey(record.Type, record.SubType), player, time);
     }
 

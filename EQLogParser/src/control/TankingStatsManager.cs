@@ -83,7 +83,7 @@ namespace EQLogParser
             }
 
             RaidTotals.Ranges.Add(new TimeSegment(fight.BeginTankingTime, fight.LastTankingTime));
-            StatsUtil.UpdateRaidTimeRanges(fight, PlayerTimeRanges, PlayerSubTimeRanges, true);
+            StatsUtil.UpdateRaidTimeRanges(fight.TankSegments, fight.TankSubSegments, PlayerTimeRanges, PlayerSubTimeRanges);
           });
 
           damageBlocks.Sort((a, b) => a.BeginTime.CompareTo(b.BeginTime));
