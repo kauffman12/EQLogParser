@@ -138,14 +138,19 @@
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_ThermometerHalf" />
             </MenuItem.Icon>
-            <MenuItem x:Name="configureDamageOverlay" Header="Configure" Click="ConfigureOverlayClick" Height="24">
+            <MenuItem Header="_Configure" Click="ConfigureOverlayClick" Height="24">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="configureDamageOverlayIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Cog" />
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Cog" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="enableDamageOverlay" Header="Enable" Click="ToggleDamageOverlayClick" Height="24">
+            <MenuItem x:Name="enableDamageOverlay" Header="_Enable" Click="ToggleDamageOverlayClick" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="enableDamageOverlayIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Reset Position" Click="ResetOverlayClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_LocationArrow" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>

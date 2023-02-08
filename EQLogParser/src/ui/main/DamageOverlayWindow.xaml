@@ -19,7 +19,7 @@
         Topmost="True"
         MaxWidth="1500"
         MaxHeight="1000"
-        MinWidth="365"
+        MinWidth="360"
         MinHeight="180"
         Height="400"
         MouseLeftButtonDown="OverlayMouseLeftDown"

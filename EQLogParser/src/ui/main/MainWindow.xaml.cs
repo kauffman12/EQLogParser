@@ -264,15 +264,15 @@ namespace EQLogParser
 
     internal void OpenDamageOverlayIfEnabled(bool configure = false)
     {
-      // delay opening overlay so group IDs get populated
-      if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
+      if (configure)
       {
-        if (configure)
-        {         
-          DamageOverlay = new DamageOverlayWindow(true);
-          DamageOverlay.Show();
-        }
-        else if (DataManager.Instance.HasOverlayFights())
+        DamageOverlay = new DamageOverlayWindow(true);
+        DamageOverlay.Show();
+      }
+      // delay opening overlay so group IDs get populated
+      else if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
+      {
+        if (DataManager.Instance.HasOverlayFights())
         {
           if (DamageOverlay == null)
           {
@@ -474,15 +474,19 @@ namespace EQLogParser
       {
         OpenDamageOverlayIfEnabled(false);
       }
-      else
-      {
-        CloseDamageOverlay();
-      }
     }
 
     private void ConfigureOverlayClick(object sender, RoutedEventArgs e)
     {
       CloseDamageOverlay();
+      OpenDamageOverlayIfEnabled(true);
+    }
+
+    private void ResetOverlayClick(object sender, RoutedEventArgs e)
+    {
+      CloseDamageOverlay();
+      ConfigUtil.SetSetting("OverlayTop", "");
+      ConfigUtil.SetSetting("OverlayLeft", "");
       OpenDamageOverlayIfEnabled(true);
     }
 
