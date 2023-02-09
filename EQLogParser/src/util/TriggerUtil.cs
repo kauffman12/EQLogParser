@@ -123,6 +123,10 @@ namespace EQLogParser
         toOverlay.FadeDelay = fromOverlay.FadeDelay;
         toOverlay.IsTimerOverlay = fromOverlay.IsTimerOverlay;
         toOverlay.IsTextOverlay = fromOverlay.IsTextOverlay;
+        toOverlay.Left = fromOverlay.Left;
+        toOverlay.Top = fromOverlay.Top;
+        toOverlay.Height = fromOverlay.Height;
+        toOverlay.Width = fromOverlay.Width;
 
         if (toOverlay is TimerOverlayPropertyModel toModel)
         {

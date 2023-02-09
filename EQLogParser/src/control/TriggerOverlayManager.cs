@@ -14,6 +14,7 @@ namespace EQLogParser
   class TriggerOverlayManager
   {
     internal static TriggerOverlayManager Instance = new TriggerOverlayManager();
+    internal event EventHandler<Overlay> EventsSelectOverlay;
 
     private readonly string OVERLAY_FILE = "triggerOverlays.json";
     private readonly TriggerNode OverlayNodes;
@@ -53,6 +54,7 @@ namespace EQLogParser
     internal TriggerTreeViewNode GetOverlayTreeView() => TriggerUtil.GetTreeView(OverlayNodes, "Overlays");
     internal ObservableCollection<ComboBoxItemDetails> GetTextOverlayItems(List<string> overlayIds) => GetOverlayItems(overlayIds, true);
     internal ObservableCollection<ComboBoxItemDetails> GetTimerOverlayItems(List<string> overlayIds) => GetOverlayItems(overlayIds, false);
+    internal void Select(Overlay overlay) => EventsSelectOverlay?.Invoke(this, overlay);
 
     internal void Start()
     {
@@ -93,6 +95,38 @@ namespace EQLogParser
         {
           textWindow.Close();
         }
+      }
+    }
+
+    internal void UpdatePreviewPosition(Overlay model)
+    {
+      Window window = null;
+      var overlay = GetTextOverlayById(model.Id, out _);
+      if (overlay != null)
+      {
+        if (PreviewTextWindows.TryGetValue(overlay.Id, out TextOverlayWindow textWindow))
+        {
+          window = textWindow;
+        }
+      }
+      else
+      {
+        overlay = GetTimerOverlayById(model.Id, out _);
+        if (overlay != null)
+        {
+          if (PreviewTimerWindows.TryGetValue(overlay.Id, out TimerOverlayWindow timerWindow))
+          {
+            window = timerWindow;
+          }
+        }
+      }
+
+      if (window != null)
+      {
+        window.Top = model.Top;
+        window.Left = model.Left;
+        window.Height= model.Height;
+        window.Width  = model.Width;
       }
     }
 

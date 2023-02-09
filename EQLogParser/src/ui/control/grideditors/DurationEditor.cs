@@ -32,18 +32,39 @@ namespace EQLogParser
     {
       var timeSpan = new TimeSpanEdit
       {
+        IncrementOnScrolling = false,
         MinValue = new System.TimeSpan(0, 0, 0),
         Format = "mm:ss"
       };
 
       TheTimeSpans.Add(timeSpan);
+      timeSpan.GotFocus += TimeSpanGotFocus;
+      timeSpan.LostFocus += TimeSpanLostFocus;
       return timeSpan;
+    }
+
+    private void TimeSpanLostFocus(object sender, System.Windows.RoutedEventArgs e)
+    {
+      if (sender is TimeSpanEdit edit)
+      {
+        edit.IncrementOnScrolling = false;
+      }
+    }
+
+    private void TimeSpanGotFocus(object sender, System.Windows.RoutedEventArgs e)
+    {
+      if (sender is TimeSpanEdit edit)
+      {
+        edit.IncrementOnScrolling = true;
+      }
     }
 
     public void Detach(PropertyViewItem property)
     {
       TheTimeSpans.ForEach(timeSpan =>
       {
+        timeSpan.GotFocus -= TimeSpanGotFocus;
+        timeSpan.LostFocus -= TimeSpanLostFocus;
         BindingOperations.ClearAllBindings(timeSpan);
         timeSpan?.Dispose();
       });

@@ -152,6 +152,10 @@
             <syncfusion:PropertyGridItem x:Name="fontSizeItem" CategoryName="Overlay" PropertyName="FontSize" DisplayName="Font Size" Visibility="Collapsed" Description="Font Size used to display the Text on this Overlay."/>
             <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="Id" DisplayName="Id" IsReadOnly="True" Visibility="Collapsed" Description="Unique ID for this Overlay. Assigned when it is created." />
             <syncfusion:PropertyGridItem x:Name="overlayBrushItem" CategoryName="Overlay" PropertyName="OverlayBrush" DisplayName="Overlay Color" Visibility="Collapsed" Description="Color used for the background of this Overlay."/>
+            <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="Left" DisplayName="Positon Left" IsReadOnly="False" Visibility="Collapsed" Description="Left most position for the Overlay Window." />
+            <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="Top" DisplayName="Positon Top" IsReadOnly="False" Visibility="Collapsed" Description="Top most position for the Overlay Window." />
+            <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="Height" DisplayName="Position Height" IsReadOnly="False" Visibility="Collapsed" Description="Height for the Overlay Window." />
+            <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="Width" DisplayName="Position Width" IsReadOnly="False" Visibility="Collapsed" Description="Width for the Overlay Window." />
             <syncfusion:PropertyGridItem CategoryName="Timer Overlay" PropertyName="TimerMode" DisplayName="Mode" Visibility="Collapsed" Description="Standard Mode Overlays will countdown for the Duration and be removed. Cooldown Mode Overlays will restart the Timer after the Reset Time while showing progress."/>
             <syncfusion:PropertyGridItem CategoryName="Timer Overlay" PropertyName="TimerBarPreview" DisplayName="Preview" IsReadOnly="True" Visibility="Collapsed" Description="Example Timer Bar based on these settings." />
             <syncfusion:PropertyGridItem x:Name="backgroundBrushItem" CategoryName="Timer Overlay" PropertyName="BackgroundBrush" DisplayName="Background Color" Visibility="Collapsed" Description="Color used for the Timer Bars representing the time used." />
@@ -163,7 +167,7 @@
           </syncfusion:PropertyGrid.Items>
         </syncfusion:PropertyGrid>
           <StackPanel Grid.Row="0" Orientation="Horizontal">
-            <Button x:Name="showButton" Visibility="Collapsed" Margin="8,2,0,0" VerticalAlignment="Top" IsEnabled="True" Width="106" Height="24" HorizontalAlignment="Left" Click="ShowClick">Position Overlay</Button>
+            <Button x:Name="showButton" Visibility="Collapsed" Margin="8,2,0,0" VerticalAlignment="Top" IsEnabled="True" Width="106" Height="24" HorizontalAlignment="Left" Click="ShowClick">Preview Overlay</Button>
             <Button x:Name="saveButton" Margin="4,2,0,0" VerticalAlignment="Top" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
             <Button x:Name="cancelButton" Margin="4,2,0,0" VerticalAlignment="Top" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
           </StackPanel>
