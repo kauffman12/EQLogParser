@@ -318,7 +318,7 @@ namespace EQLogParser
           speechChannel.Writer.WriteAsync(new Speak
           {
             Trigger = wrapper.TriggerData,
-            Text = wrapper.ModifiedEndSpeak,
+            Text = !string.IsNullOrEmpty(wrapper.ModifiedEndEarlySpeak) ? wrapper.ModifiedEndEarlySpeak : wrapper.ModifiedEndSpeak,
             Matches = earlyMatches,
             OriginalMatches = wrapper.RegexMatches
           });
@@ -658,6 +658,8 @@ namespace EQLogParser
               trigger.TextToSpeak.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
             var modifiedEndSpeak = string.IsNullOrEmpty(trigger.EndTextToSpeak) ? null :
               trigger.EndTextToSpeak.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
+            var modifiedEndEarlySpeak = string.IsNullOrEmpty(trigger.EndEarlyTextToSpeak) ? null :
+              trigger.EndEarlyTextToSpeak.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
             var modifiedWarningSpeak = string.IsNullOrEmpty(trigger.WarningTextToSpeak) ? null :
               trigger.WarningTextToSpeak.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
             var modifiedTimerName = string.IsNullOrEmpty(trigger.AltTimerName) ? trigger.Name :
@@ -669,6 +671,7 @@ namespace EQLogParser
               ModifiedSpeak = modifiedSpeak,
               ModifiedWarningSpeak = modifiedWarningSpeak,
               ModifiedEndSpeak = modifiedEndSpeak,
+              ModifiedEndEarlySpeak = modifiedEndEarlySpeak,
               ModifiedTimerName = modifiedTimerName
             };
 
@@ -852,6 +855,7 @@ namespace EQLogParser
       public string ModifiedSpeak { get; set; }
       public string ModifiedPattern { get; set; }
       public string ModifiedEndSpeak { get; set; }
+      public string ModifiedEndEarlySpeak { get; set; }
       public string ModifiedWarningSpeak { get; set; }
       public string ModifiedEndEarlyPattern { get; set; }
       public string ModifiedEndEarlyPattern2 { get; set; }

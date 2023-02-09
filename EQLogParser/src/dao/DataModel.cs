@@ -54,6 +54,7 @@ namespace EQLogParser
     public bool EnableTimer { get; set; }
     public string EndEarlyPattern { get; set; }
     public string EndEarlyPattern2 { get; set; }
+    public string EndEarlyTextToSpeak { get; set; }
     public string EndTextToSpeak { get; set; }
     public bool EndUseRegex { get; set; }
     public bool EndUseRegex2 { get; set; }
