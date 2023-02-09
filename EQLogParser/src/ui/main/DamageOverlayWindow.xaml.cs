@@ -174,13 +174,27 @@ namespace EQLogParser
 
         if (CurrentShowDps)
         {
-          tankContent.Visibility = Visibility.Collapsed;
-          damageContent.Visibility = Visibility.Visible;
+          if (tankContent.Visibility != Visibility.Collapsed)
+          {
+            tankContent.Visibility = Visibility.Collapsed;
+          }
+
+          if (damageContent.Visibility != Visibility.Visible)
+          {
+            damageContent.Visibility = Visibility.Visible;
+          }
         }
         else
         {
-          damageContent.Visibility = Visibility.Collapsed;
-          tankContent.Visibility = Visibility.Visible;
+          if (tankContent.Visibility != Visibility.Visible)
+          {
+            tankContent.Visibility = Visibility.Visible;
+          }
+
+          if (damageContent.Visibility != Visibility.Collapsed)
+          {
+            damageContent.Visibility = Visibility.Collapsed;
+          }
         }
       }
       else
@@ -222,8 +236,6 @@ namespace EQLogParser
         if (localStats.StatsList.Count > statIndex)
         {
           var stat = localStats.StatsList[statIndex];
-          var time = new TimeSpan(0, 0, (int)stat.TotalSeconds);
-          var timeString = string.Format("{0:D2}:{1:D2}", time.Minutes, time.Seconds);
           var barPercent = (statIndex == 0) ? 100.0 : (stat.Total / (double)localStats.StatsList[0].Total) * 100.0;
 
           string playerName = ConfigUtil.PlayerName;
@@ -263,8 +275,8 @@ namespace EQLogParser
             }
           }
 
-          damageBar.Update(origName, name, StatsUtil.FormatTotals(stat.Total, 2),
-          StatsUtil.FormatTotals(stat.DPS, 2), timeString, barPercent);
+          damageBar.Update(origName, name, StatsUtil.FormatTotals(stat.Total, 1),
+          StatsUtil.FormatTotals(stat.DPS, 1), stat.TotalSeconds.ToString(), barPercent);
 
           if (damageBar.Visibility == Visibility.Collapsed)
           {
@@ -282,10 +294,8 @@ namespace EQLogParser
       }
 
       var titleBar = children[children.Count - 1] as DamageBar;
-      var titleTime = new TimeSpan(0, 0, (int)localStats.RaidStats.TotalSeconds);
-      var titleTimeString = string.Format("{0:D2}:{1:D2}", titleTime.Minutes, titleTime.Seconds);
-      titleBar.Update("", localStats.TargetTitle, StatsUtil.FormatTotals(localStats.RaidStats.Total, 2),
-        StatsUtil.FormatTotals(localStats.RaidStats.DPS, 2), titleTimeString, 0);
+      titleBar.Update("", localStats.TargetTitle, StatsUtil.FormatTotals(localStats.RaidStats.Total, 1),
+        StatsUtil.FormatTotals(localStats.RaidStats.DPS, 1), localStats.RaidStats.TotalSeconds.ToString(), 0);
 
       if (titleBar.Visibility == Visibility.Collapsed)
       {
@@ -305,7 +315,7 @@ namespace EQLogParser
       {
         if (load)
         {
-          (damageContent.Children[i] as DamageBar).Update(ConfigUtil.PlayerName, i + 1 + ". Example Player " + i, "120.50M", "100.10K", "01:02", 120 - (i * 10));
+          (damageContent.Children[i] as DamageBar).Update(ConfigUtil.PlayerName, i + 1 + ". Example Player " + i, "120.5M", "100.1K", "123", 120 - (i * 10));
         }
         else
         {
@@ -316,7 +326,7 @@ namespace EQLogParser
 
       if (load)
       {
-        (damageContent.Children[damageContent.Children.Count - 1] as DamageBar).Update("", "Example NPC", "500.20M", "490.50K", "03:02", 0);
+        (damageContent.Children[damageContent.Children.Count - 1] as DamageBar).Update("", "Example NPC", "500.2M", "490.5K", "456", 0);
       }
       else
       {
@@ -710,9 +720,9 @@ namespace EQLogParser
         case 12:
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(60.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(45.0);
-          titleDamage.Margin = new System.Windows.Thickness(0, 6, 43, 0);
-          titleDPS.Margin = new System.Windows.Thickness(0, 6, 20, 0);
-          titleTime.Margin = new System.Windows.Thickness(0, 6, 8, 0);
+          titleDamage.Margin = new System.Windows.Thickness(0, 5, 27, 0);
+          titleDPS.Margin = new System.Windows.Thickness(0, 5, 18, 0);
+          titleTime.Margin = new System.Windows.Thickness(0, 5, 6, 0);
           titleDamage.FontSize = 13;
           titleDPS.FontSize = 13;
           titleTime.FontSize = 13;
@@ -729,9 +739,9 @@ namespace EQLogParser
         case 14:
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(70.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(50.0);
-          titleDamage.Margin = new System.Windows.Thickness(0, 6, 52, 0);
-          titleDPS.Margin = new System.Windows.Thickness(0, 6, 21, 0);
-          titleTime.Margin = new System.Windows.Thickness(0, 6, 7, 0);
+          titleDamage.Margin = new System.Windows.Thickness(0, 5, 33, 0);
+          titleDPS.Margin = new System.Windows.Thickness(0, 5, 18, 0);
+          titleTime.Margin = new System.Windows.Thickness(0, 5, 6, 0);
           titleDamage.FontSize = 15;
           titleDPS.FontSize = 15;
           titleTime.FontSize = 15;
@@ -748,9 +758,9 @@ namespace EQLogParser
         case 16:
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(75.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(55.0);
-          titleDamage.Margin = new System.Windows.Thickness(0, 6, 54, 0);
-          titleDPS.Margin = new System.Windows.Thickness(0, 6, 22, 0);
-          titleTime.Margin = new System.Windows.Thickness(0, 6, 7, 0);
+          titleDamage.Margin = new System.Windows.Thickness(0, 5, 34, 0);
+          titleDPS.Margin = new System.Windows.Thickness(0, 5, 18, 0);
+          titleTime.Margin = new System.Windows.Thickness(0, 5, 6, 0);
           titleDamage.FontSize = 17;
           titleDPS.FontSize = 17;
           titleTime.FontSize = 17;

@@ -37,20 +37,20 @@
           <ColumnDefinition Width="{DynamicResource DamageOverlayDamageColDef1}" />
           <ColumnDefinition Width="{DynamicResource DamageOverlayDamageColDef2}" />
         </Grid.ColumnDefinitions>
-        <TextBlock x:Name="damage" Grid.Column="0" Text="200.21M" VerticalAlignment="Center" TextAlignment="Right" 
-          FontSize="{DynamicResource DamageOverlayFontSize}" FontFamily="Consolas" Foreground="White" Margin="0,0,0,2">
+        <TextBlock x:Name="damage" Grid.Column="0" Text="200.2M" VerticalAlignment="Center" TextAlignment="Right" 
+          FontSize="{DynamicResource DamageOverlayFontSize}" Foreground="White" Margin="0,0,0,2">
           <TextBlock.Effect>
             <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.5" BlurRadius="3"/>
           </TextBlock.Effect>
         </TextBlock>
-        <TextBlock x:Name="dps" Grid.Column="1" Text="100.21K" VerticalAlignment="Center" TextAlignment="Right" 
-          FontSize="{DynamicResource DamageOverlayFontSize}" FontFamily="Consolas" Foreground="White" Margin="0,0,0,2">
+        <TextBlock x:Name="dps" Grid.Column="1" Text="100.2K" VerticalAlignment="Center" TextAlignment="Right" 
+          FontSize="{DynamicResource DamageOverlayFontSize}" Foreground="White" Margin="0,0,0,2">
           <TextBlock.Effect>
             <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.5" BlurRadius="3"/>
           </TextBlock.Effect>
         </TextBlock>
         <TextBlock x:Name="time" Grid.Column="2" Text="12456" VerticalAlignment="Center" TextAlignment="Right" 
-          FontSize="{DynamicResource DamageOverlayFontSize}" FontFamily="Consolas" Foreground="White" Margin="0,0,0,2">
+          FontSize="{DynamicResource DamageOverlayFontSize}" Foreground="White" Margin="0,0,0,2">
           <TextBlock.Effect>
             <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.5" BlurRadius="3"/>
           </TextBlock.Effect>

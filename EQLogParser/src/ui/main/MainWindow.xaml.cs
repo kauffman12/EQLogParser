@@ -218,8 +218,6 @@ namespace EQLogParser
           ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
         }
 
-        DataManager.Instance.EventsNewOverlayFight += (object sender, Fight e) => Dispatcher.InvokeAsync(() => OpenDamageOverlayIfEnabled());
- 
         // cleanup downloads
         Dispatcher.InvokeAsync(() => MainActions.Cleanup());
         TriggerManager.Instance.Init();
@@ -229,6 +227,17 @@ namespace EQLogParser
         LOG.Error(e);
         throw;
       }
+    }
+
+    private void EventsNewOverlayFight(object sender, Fight e)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        if (DamageOverlay == null)
+        {
+          OpenDamageOverlayIfEnabled();
+        }
+      });
     }
 
     private void DomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
@@ -832,8 +841,9 @@ namespace EQLogParser
               EventsLogLoadingComplete?.Invoke(this, true);
               Dispatcher.InvokeAsync(() =>
               {
-                // delay opening overlay so group IDs get populated
+                DataManager.Instance.ResetOverlayFights(true);
                 OpenDamageOverlayIfEnabled();
+                DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
               }, DispatcherPriority.Background);
             }));
           }
@@ -949,12 +959,12 @@ namespace EQLogParser
             PlayerManager.Instance.Init();
           }
 
+          DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
           CloseDamageOverlay();
           DataManager.Instance.Clear();
           PlayerChatManager = new ChatManager();
           CurrentLogFile = theFile;
           NpcDamageManager.Reset();
-          DataManager.Instance.ResetOverlayFights(true);
           EQLogReader = new LogReader(theFile, FileLoadingCallback, CurrentLogOption == LogOption.MONITOR, lastMins);
           EQLogReader.Start();
           UpdateLoadingProgress();
