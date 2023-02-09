@@ -19,7 +19,7 @@
         Topmost="True"
         MaxWidth="1500"
         MaxHeight="1000"
-        MinWidth="360"
+        MinWidth="345"
         MinHeight="180"
         Height="400"
         MouseLeftButtonDown="OverlayMouseLeftDown"
@@ -54,9 +54,9 @@
         <StackPanel Orientation="Vertical">
           <StackPanel x:Name="controlPanel" Orientation="Vertical" Height="25" Visibility="Collapsed">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-              <TextBlock x:Name="titleDamage" Text="Total" FontSize="14" FontFamily="Consolas" Foreground="White" />
-              <TextBlock x:Name="titleDPS" Text="DPS" FontSize="14" FontFamily="Consolas" Foreground="White" />
-              <TextBlock x:Name="titleTime" Text="Time" FontSize="14" FontFamily="Consolas" Foreground="White" />
+              <TextBlock x:Name="titleDamage" Text="Damage" FontSize="14" Foreground="White" />
+              <TextBlock x:Name="titleDPS" Text="DPS" FontSize="14" Foreground="White" />
+              <TextBlock x:Name="titleTime" Text="Time" FontSize="14" Foreground="White" />
             </StackPanel>
             <Popup x:Name="thePopup" IsOpen="False" Placement="Relative" AllowsTransparency="True" Height="25">
               <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
@@ -64,9 +64,9 @@
                 <Button x:Name="copyButton" FontFamily="Segoe MDL2 Assets" Click="CopyClick" Content="&#xE8C8;" FontSize="11" Margin="0,0,0,0" Padding="3" Foreground="White" Background="Transparent" Focusable="False"/>
                 <Button x:Name="resetButton" FontFamily="Segoe MDL2 Assets" Click="ResetClick" Content="&#xE8BB;" FontSize="10" Margin="0,0,0,0" Padding="3" Foreground="White" Background="Transparent" Focusable="False"/>
                 <Rectangle x:Name="rect1" Width="1" Fill="White" Height="14" Margin="4,1,0,0"/>
-                <Button x:Name="dpsButton" Content="DPS" FontFamily="Consolas" Click="DPSClick" Margin="0,0,0,1" Padding="4" FontSize="13" Focusable="False" BorderBrush="Transparent" Foreground="White" Background="Transparent"/>
+                <Button x:Name="dpsButton" Content="DPS" Click="DPSClick" Margin="0,1,0,1" Padding="4" FontSize="13" Focusable="False" BorderBrush="Transparent" Foreground="White" Background="Transparent"/>
                 <Rectangle x:Name="rect2" Width="1" Fill="White" Height="14" Margin="0,1,0,0"/>
-                <Button x:Name="tankButton" Content="Tanking" FontFamily="Consolas" Click="TankClick" Margin="0,0,0,1" Padding="4" FontSize="13" Focusable="False" BorderBrush="Transparent" Foreground="White" Background="Transparent"/>
+                <Button x:Name="tankButton" Content="Tanking" Click="TankClick" Margin="0,1,0,1" Padding="4" FontSize="13" Focusable="False" BorderBrush="Transparent" Foreground="White" Background="Transparent"/>
               </StackPanel>
             </Popup>
           </StackPanel>
