@@ -1,6 +1,4 @@
-﻿using Syncfusion.UI.Xaml.Diagram;
-using System;
-using System.Collections.Concurrent;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Dynamic;

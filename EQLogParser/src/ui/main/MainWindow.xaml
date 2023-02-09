@@ -21,7 +21,7 @@
         StateChanged="WindowStateChanged">
   <syncfusion:ChromelessWindow.LeftHeaderItemsSource>
     <listCollection:ArrayList>
-      <Menu Height="26" FontSize="12" Width="210" Margin="0,0,0,2" VerticalAlignment="Bottom">
+      <Menu Height="26" FontSize="12" Width="285" Margin="0,0,0,2" VerticalAlignment="Bottom">
         <MenuItem Header="_File" Height="30" Width="40">
           <MenuItem Header="Monitor Log File" Height="24" Click="MenuItemSelectMonitorLogFileClick" ToolTip="Monitor Log File for changes">
             <MenuItem.Icon>
@@ -138,12 +138,7 @@
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_ThermometerHalf" />
             </MenuItem.Icon>
-            <MenuItem Header="_Configure" Click="ConfigureOverlayClick" Height="24">
-              <MenuItem.Icon>
-                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Cog" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem x:Name="enableDamageOverlay" Header="_Enable" Click="ToggleDamageOverlayClick" Height="24">
+            <MenuItem x:Name="enableDamageOverlay" Header="Enable _Meter" Click="ToggleDamageOverlayClick" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="enableDamageOverlayIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
@@ -151,6 +146,11 @@
             <MenuItem Header="_Reset Position" Click="ResetOverlayClick" Height="24">
               <MenuItem.Icon>
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_LocationArrow" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Setup" Click="ConfigureOverlayClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Cog" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
@@ -342,7 +342,7 @@
             </MenuItem>
           </MenuItem>
         </MenuItem>
-        <MenuItem Header="_Tools" Height="30" Width="55">
+        <MenuItem Header="_Tools" Height="30" Width="50">
           <MenuItem x:Name="deleteChat" Header="_Clear Chat Archive" IsEnabled="False" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="deleteChatIcon" Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Times" />
@@ -356,6 +356,18 @@
           <MenuItem x:Name="viewErrorLog" Header="View _Error Log" Click="ViewErrorLogClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="viewErrorLogIcon" Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_FileCode" />
+            </MenuItem.Icon>
+          </MenuItem>
+        </MenuItem>
+        <MenuItem Header="_Help" Height="30" Width="50">
+          <MenuItem Header="_Report a Problem" Click="ReportProblemClick" IsEnabled="True" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Bug" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem Header="_View Release Notes" Click="ViewReleaseNotesClick" IsEnabled="True" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Regular_ListAlt" />
             </MenuItem.Icon>
           </MenuItem>
         </MenuItem>

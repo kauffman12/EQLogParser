@@ -121,6 +121,7 @@ namespace EQLogParser
 
       TriggerManager.Instance.EventsUpdateTree += EventsUpdateTriggerTree;
       TriggerManager.Instance.EventsSelectTrigger += EventsSelectTrigger;
+      TriggerOverlayManager.Instance.EventsSelectOverlay += EventsSelectOverlay;
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
     }
 
@@ -129,6 +130,7 @@ namespace EQLogParser
     private void CreateTextOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(false);
     private void CreateTimerOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(true);
     private void EventsSelectTrigger(object sender, Trigger e) => SelectFile(e);
+    private void EventsSelectOverlay(object sender, Overlay e) => SelectFile(e);
     private void EventsUpdateTriggerTree(object sender, bool e) => Dispatcher.InvokeAsync(() => RefreshTriggerNode());
     private void ExportClick(object sender, RoutedEventArgs e) => TriggerUtil.Export(treeView?.Nodes, treeView.SelectedItems?.Cast<TriggerTreeViewNode>().ToList());
     private void ImportClick(object sender, RoutedEventArgs e) => TriggerUtil.Import(treeView?.SelectedItem as TriggerTreeViewNode);
@@ -214,23 +216,8 @@ namespace EQLogParser
     {
       if (file != null)
       {
-        bool selectFile = false;
         bool isTrigger = file is Trigger;
-
-        if (treeView.SelectedItem == null)
-        {
-          selectFile = true;
-        }
-        else if (treeView.SelectedItem is TriggerTreeViewNode node && node.SerializedData != null)
-        {
-          if (node.SerializedData.TriggerData != file && node.SerializedData.OverlayData != file)
-          {
-            selectFile = true;
-          }
-        }
-
-        if (selectFile && 
-          TriggerUtil.FindAndExpandNode(treeView, (isTrigger ? treeView.Nodes[0] : treeView.Nodes[1]) as TriggerTreeViewNode, file) is TriggerTreeViewNode found)
+        if (TriggerUtil.FindAndExpandNode(treeView, (isTrigger ? treeView.Nodes[0] : treeView.Nodes[1]) as TriggerTreeViewNode, file) is TriggerTreeViewNode found)
         {
           treeView.SelectedItems?.Clear();
           treeView.SelectedItem = found;
@@ -1011,11 +998,13 @@ namespace EQLogParser
       {
         TriggerUtil.Copy(textModel.Original, textModel);
         TriggerOverlayManager.Instance.UpdateOverlays();
+        TriggerOverlayManager.Instance.UpdatePreviewPosition(textModel);
       }
       else if (thePropertyGrid.SelectedObject is TimerOverlayPropertyModel timerModel)
       {
         TriggerUtil.Copy(timerModel.Original, timerModel);
         TriggerOverlayManager.Instance.UpdateOverlays();
+        TriggerOverlayManager.Instance.UpdatePreviewPosition(timerModel);
       }
 
       cancelButton.IsEnabled = false;
@@ -1072,6 +1061,7 @@ namespace EQLogParser
         (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventsLogLoadingComplete;
         TriggerManager.Instance.EventsUpdateTree -= EventsUpdateTriggerTree;
         TriggerManager.Instance.EventsSelectTrigger -= EventsSelectTrigger;
+        TriggerOverlayManager.Instance.EventsSelectOverlay -= EventsSelectOverlay;
         treeView.DragDropController.Dispose();
         treeView.Dispose();
         thePropertyGrid?.Dispose();

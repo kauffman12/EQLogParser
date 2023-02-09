@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.0.61" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.1.0" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -68,7 +68,7 @@
       </Dialog>
       <Dialog Id="WhatsNewDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="no">
         <Control Id="WhatsNewText" Type="ScrollableText" X="5" Y="50" Width="358" Height="180" Sunken="yes" TabSkip="no">
-          <Text SourceFile="whatsnew.rtf" />
+          <Text SourceFile="..\EQLogParser\data\releasenotes.rtf" />
         </Control>
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Text="!(loc.WixUINext)">
           <Publish Event="NewDialog" Value="InstallDirDlg">1</Publish>
@@ -166,8 +166,14 @@
       <Component Win64="yes" Id="DotLiquid.dll" Guid="C7818EAF-8DF1-4411-8821-FC66BFB42AB2">
         <File CompanionFile="EQLogParser.dll" Id="DotLiquid.dll" Name="DotLiquid.dll" Source="$(var.EQLogParser.TargetDir)DotLiquid.dll" />
       </Component>
+      <Component Win64="yes" Id="Syncfusion.Compression.Base.dll" Guid="9CB53E4C-9D9E-431F-BC2B-3342D39E63A2">
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Compression.Base.dll" Name="Syncfusion.Compression.Base.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Compression.Base.dll" />
+      </Component>
       <Component Win64="yes" Id="Syncfusion.Data.WPF.dll" Guid="29B0F002-C736-4787-A07A-4AD3C895CBF7">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Data.WPF.dll" Name="Syncfusion.Data.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Data.WPF.dll" />
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.DocIO.Base.dll" Guid="A022E8EA-40AB-41E9-A3C1-A041A5F08939">
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.DocIO.Base.dll" Name="Syncfusion.DocIO.Base.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.DocIO.Base.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.Edit.WPF.dll" Guid="5089E626-B2D8-4B55-97D2-2AF59AC148E6">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Edit.WPF.dll" Name="Syncfusion.Edit.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Edit.WPF.dll" />
@@ -177,6 +183,9 @@
       </Component>
       <Component Win64="yes" Id="Syncfusion.Licensing.dll" Guid="508A0992-C1FC-4DE4-8551-98B69669BE43">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Licensing.dll" Name="Syncfusion.Licensing.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Licensing.dll" />
+      </Component> 
+      <Component Win64="yes" Id="Syncfusion.OfficeChart.Base.dll" Guid="B6F2FB27-4445-4C39-9E01-0815E8064CB6">
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.OfficeChart.Base.dll" Name="Syncfusion.OfficeChart.Base.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.OfficeChart.Base.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.PropertyGrid.WPF.dll" Guid="6C4BB5A3-E674-496D-AEC3-7105338554FA">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.PropertyGrid.WPF.dll" Name="Syncfusion.PropertyGrid.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.PropertyGrid.WPF.dll" />
@@ -186,6 +195,9 @@
       </Component> 
       <Component Win64="yes" Id="Syncfusion.SfChart.WPF.dll" Guid="EB9F99E6-52B6-4CB0-BB4A-C18AEA3182B3">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfChart.WPF.dll" Name="Syncfusion.SfChart.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfChart.WPF.dll" />
+      </Component>
+      <Component Win64="yes" Id="Syncfusion.SfRichTextBoxAdv.WPF.dll" Guid="A0F49B7B-5F13-4D38-9ED8-3C64823C7989">
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfRichTextBoxAdv.WPF.dll" Name="Syncfusion.SfRichTextBoxAdv.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfRichTextBoxAdv.WPF.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.SfGrid.WPF.dll" Guid="BFA467E9-11A2-408B-9316-8DB5A4AA1F0A">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfGrid.WPF.dll" Name="Syncfusion.SfGrid.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfGrid.WPF.dll" />
@@ -233,7 +245,10 @@
       </Component>
       <Component Win64="yes" Id="procs.txt" Guid="9E9E4890-EEF7-4C7F-BE9B-E189D7FD6EE5">
         <File Id="procs.txt" Name="procs.txt" Source="$(var.EQLogParser.TargetDir)\data\procs.txt" />
-      </Component>      
+      </Component>
+      <Component Win64="yes" Id="releasenotes.rtf" Guid="593239AC-0F5A-49F7-BBBC-037CDAC6AB8E">
+        <File Id="releasenotes.rtf" Name="releasenotes.rtf" Source="$(var.EQLogParser.TargetDir)\data\releasenotes.rtf" />
+      </Component>
       <Component Win64="yes" Id="spells.txt" Guid="2FC00676-7C5D-4075-9BC7-2C49C977732B">
         <File Id="spells.txt" Name="spells.txt" Source="$(var.EQLogParser.TargetDir)\data\spells.txt" />
       </Component>

@@ -172,6 +172,7 @@ namespace EQLogParser
 
         // Damage Overlay
         enableDamageOverlayIcon.Visibility = ConfigUtil.IfSet("IsDamageOverlayEnabled") ? Visibility.Visible : Visibility.Hidden;
+        enableDamageOverlay.Header = ConfigUtil.IfSet("IsDamageOverlayEnabled") ? "Disable _Meter" : "Enable _Meter";
 
         LOG.Info("Initialized Components");
 
@@ -274,11 +275,13 @@ namespace EQLogParser
       {
         if (DataManager.Instance.HasOverlayFights())
         {
-          if (DamageOverlay == null)
+          if (DamageOverlay != null)
           {
-            DamageOverlay = new DamageOverlayWindow(false);
-            DamageOverlay.Show();
+            DamageOverlay?.Close();
           }
+         
+          DamageOverlay = new DamageOverlayWindow(false);
+          DamageOverlay.Show();
         }
       }
     }
@@ -430,6 +433,21 @@ namespace EQLogParser
       }
     }
 
+    private void ReportProblemClick(object sender, RoutedEventArgs e)
+    {
+      var uri = "http://github.com/kauffman12/EQLogParser/issues";
+      var psi = new System.Diagnostics.ProcessStartInfo();
+      psi.UseShellExecute = true;
+      psi.FileName = uri;
+      System.Diagnostics.Process.Start(psi);
+    }
+
+    private void ViewReleaseNotesClick(object sender, RoutedEventArgs e)
+    {
+      var notesWindow = new DocumentViewer(@"data\releasenotes.rtf");
+      notesWindow.Show();
+    }
+
     private void ToggleHideOnMinimizeClick(object sender, RoutedEventArgs e)
     {
       IsHideOnMinimizeEnabled = !IsHideOnMinimizeEnabled;
@@ -474,6 +492,8 @@ namespace EQLogParser
       {
         OpenDamageOverlayIfEnabled(false);
       }
+
+      enableDamageOverlay.Header = enabled ? "Disable _Meter" : "Enable _Meter";
     }
 
     private void ConfigureOverlayClick(object sender, RoutedEventArgs e)
@@ -1055,7 +1075,7 @@ namespace EQLogParser
 
     private void RemovePetMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is Border border && border.DataContext is ExpandoObject sortable)
+      if (sender is System.Windows.Controls.Border border && border.DataContext is ExpandoObject sortable)
       {
         PlayerManager.Instance.RemoveVerifiedPet(((dynamic)sortable)?.Name);
       }
@@ -1063,7 +1083,7 @@ namespace EQLogParser
 
     private void RemovePlayerMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is Border border && border.DataContext is ExpandoObject sortable)
+      if (sender is System.Windows.Controls.Border border && border.DataContext is ExpandoObject sortable)
       {
         PlayerManager.Instance.RemoveVerifiedPlayer(((dynamic)sortable)?.Name);
       }

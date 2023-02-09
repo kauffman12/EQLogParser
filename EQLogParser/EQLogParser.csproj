@@ -162,6 +162,7 @@
       <Version>2.0.15</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="Syncfusion.DocIO.Wpf" Version="20.4.0.43" />
     <PackageReference Include="Syncfusion.Edit.WPF" Version="20.4.0.43" />
     <PackageReference Include="Syncfusion.SfChart.WPF" Version="20.4.0.43" />
     <PackageReference Include="Syncfusion.SfGrid.WPF" Version="20.4.0.43" />
