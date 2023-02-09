@@ -30,7 +30,7 @@ namespace EQLogParser
     {
       InitializeComponent();
       Preview = preview;
-      TheOverlay = overlay;     
+      TheOverlay = overlay;
       title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + TheOverlay.Id);
       CurrentOrder = TheOverlay.SortBy;
       CurrentUseStandardTime = TheOverlay.UseStandardTime;
@@ -119,7 +119,7 @@ namespace EQLogParser
           timerList[0].EndTimer();
         }
       }
-   }
+    }
 
     [MethodImpl(MethodImplOptions.Synchronized)]
     internal bool Tick()
@@ -273,7 +273,7 @@ namespace EQLogParser
         {
           content.Children.Add(timerBar);
         }
-      }    
+      }
     }
 
     private void SaveClick(object sender, RoutedEventArgs e)

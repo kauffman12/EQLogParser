@@ -1,5 +1,4 @@
 ﻿using Syncfusion.Data.Extensions;
-using Syncfusion.Windows.Controls.Input;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -125,8 +124,8 @@ namespace EQLogParser
       {
         window.Top = model.Top;
         window.Left = model.Left;
-        window.Height= model.Height;
-        window.Width  = model.Width;
+        window.Height = model.Height;
+        window.Width = model.Width;
       }
     }
 
@@ -160,7 +159,7 @@ namespace EQLogParser
           PreviewTimerWindows[overlay.Id] = new TimerOverlayWindow(overlay, true);
           PreviewTimerWindows[overlay.Id].CreateTimer("Example Trigger Name", beginTime + 200, new Trigger { Name = "Trigger Name" }, true);
           PreviewTimerWindows[overlay.Id].CreateTimer("Example Trigger Name #2", beginTime + 100, new Trigger { Name = "Trigger Name 2" }, true);
-          PreviewTimerWindows[overlay.Id].CreateTimer("Example Trigger Name #3", beginTime + 250, new Trigger { Name = "Trigger Name 3" } ,true);
+          PreviewTimerWindows[overlay.Id].CreateTimer("Example Trigger Name #3", beginTime + 250, new Trigger { Name = "Trigger Name 3" }, true);
           PreviewTimerWindows[overlay.Id].Show();
         }
         else
@@ -252,7 +251,7 @@ namespace EQLogParser
       }
       return data;
     }
-    
+
     internal void UpdateOverlays()
     {
       OverlayUpdateTimer.Stop();

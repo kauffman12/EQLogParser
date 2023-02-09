@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -90,8 +89,8 @@ namespace EQLogParser
 
       var list = PlayerManager.Instance.GetClassList();
       list.Insert(0, EQLogParser.Resource.ANY_CLASS);
-      classList.ItemsSource = list;    
-      
+      classList.ItemsSource = list;
+
       // selected class
       string selectedClass = ConfigUtil.GetSetting("OverlaySelectedClass");
       if (selectedClass == null || !PlayerManager.Instance.GetClassList().Contains(selectedClass))
@@ -447,7 +446,7 @@ namespace EQLogParser
 
       if (height != null && double.TryParse(height, out dvalue) && !double.IsNaN(dvalue))
       {
-         Height = dvalue;
+        Height = dvalue;
       }
 
       if (top != null && double.TryParse(top, out dvalue) && !double.IsNaN(dvalue))
@@ -592,7 +591,7 @@ namespace EQLogParser
 
     private void DamageModeChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (damageModeList.SelectedIndex != -1 && e.RemovedItems.Count > 0 && 
+      if (damageModeList.SelectedIndex != -1 && e.RemovedItems.Count > 0 &&
         damageModeList.SelectedItem is ComboBoxItem item && int.TryParse(item.Tag.ToString(), out int value))
       {
         UpdateDamageMode(value);
@@ -607,7 +606,7 @@ namespace EQLogParser
       {
         foreach (var item in damageModeList.Items)
         {
-          if (item is ComboBoxItem comboBoxItem  && comboBoxItem.Tag.Equals(damageMode.ToString()))
+          if (item is ComboBoxItem comboBoxItem && comboBoxItem.Tag.Equals(damageMode.ToString()))
           {
             damageModeList.SelectedItem = comboBoxItem;
           }

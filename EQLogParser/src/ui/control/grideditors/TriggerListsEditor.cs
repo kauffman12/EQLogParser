@@ -12,7 +12,7 @@ namespace EQLogParser
   internal class TriggerListsEditor : ITypeEditor
   {
     private readonly List<ComboBox> TheComboBoxes = new List<ComboBox>();
-    
+
     private static Dictionary<string, List<string>> Options = new Dictionary<string, List<string>>()
     {
       { "TriggerAgainOption", new  List<string>() { "Start Additional Timer", "Restart Timer", "Do Nothing" } },

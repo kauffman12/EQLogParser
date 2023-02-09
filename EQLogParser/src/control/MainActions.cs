@@ -48,7 +48,7 @@ namespace EQLogParser
           var matches = new Regex(@"EQLogParser-((\d)\.(\d)\.(\d?\d?\d)).msi""").Match(request.Result);
           if (matches.Success && matches.Groups.Count == 5 && int.TryParse(matches.Groups[2].Value, out int v1) &&
             int.TryParse(matches.Groups[3].Value, out int v2) && int.TryParse(matches.Groups[4].Value, out int v3)
-            && (v1 > version.Major || (v1 == version.Major && v2 > version.Minor) || 
+            && (v1 > version.Major || (v1 == version.Major && v2 > version.Minor) ||
             (v1 == version.Major && v2 == version.Minor && v3 > version.Build)))
           {
             dispatcher.InvokeAsync(() =>
