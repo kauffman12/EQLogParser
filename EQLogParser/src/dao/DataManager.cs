@@ -840,13 +840,13 @@ namespace EQLogParser
       if (fight.DamageHits > 0)
       {
         bool needEvent = false;
-        
+
         lock (OverlayFights)
         {
           needEvent = (OverlayFights.Count == 0);
           OverlayFights[fight.Id] = fight;
         }
-        
+
         if (needEvent)
         {
           EventsNewOverlayFight?.Invoke(this, fight);

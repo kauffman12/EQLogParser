@@ -301,7 +301,7 @@ namespace EQLogParser
       {
         bool endEarly = CheckEndEarly(wrapper.EndEarlyRegex, wrapper.EndEarlyRegexNOptions, wrapper.ModifiedEndEarlyPattern,
           action, out MatchCollection earlyMatches);
-        
+
         // try 2nd
         if (!endEarly)
         {
@@ -356,7 +356,7 @@ namespace EQLogParser
       }
     }
 
-    private bool CheckEndEarly(Regex endEarlyRegex, List<NumberOptions> options, string endEarlyPattern, 
+    private bool CheckEndEarly(Regex endEarlyRegex, List<NumberOptions> options, string endEarlyPattern,
       string action, out MatchCollection earlyMatches)
     {
       earlyMatches = null;
@@ -816,7 +816,7 @@ namespace EQLogParser
             {
               pattern = pattern.Replace(match.Value, "(?<" + match.Groups[1].Value + @">\d+)");
 
-              if (!string.IsNullOrEmpty(match.Groups[2].Value) && !string.IsNullOrEmpty(match.Groups[3].Value) && 
+              if (!string.IsNullOrEmpty(match.Groups[2].Value) && !string.IsNullOrEmpty(match.Groups[3].Value) &&
                 uint.TryParse(match.Groups[3].Value, out uint value))
               {
                 numberOptions.Add(new NumberOptions { Key = match.Groups[1].Value, Op = match.Groups[2].Value, Value = value });

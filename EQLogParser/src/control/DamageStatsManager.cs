@@ -88,7 +88,7 @@ namespace EQLogParser
 
       var oldestTime = data.UpdateTime;
       Fight oldestFight = null;
-     
+
       foreach (var fightinfo in DataManager.Instance.GetOverlayFights())
       {
         var fight = fightinfo.Value;

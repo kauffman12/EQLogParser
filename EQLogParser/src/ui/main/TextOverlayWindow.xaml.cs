@@ -57,7 +57,7 @@ namespace EQLogParser
       {
         Text = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(text),
         TextAlignment = TextAlignment.Center,
-        Padding = new Thickness(6,0,6,2),
+        Padding = new Thickness(6, 0, 6, 2),
         Margin = new Thickness(0),
         Tag = beginTime + TheOverlay.FadeDelay,
         FontWeight = FontWeights.Bold,
@@ -65,7 +65,7 @@ namespace EQLogParser
       };
 
       var effect = new DropShadowEffect { ShadowDepth = 2, Direction = 330, Color = Colors.Black, Opacity = 0.4, BlurRadius = 2 };
-      block.Effect= effect;
+      block.Effect = effect;
 
       block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + TheOverlay.Id);
       block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + TheOverlay.Id);

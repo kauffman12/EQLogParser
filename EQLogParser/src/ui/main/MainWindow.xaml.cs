@@ -288,7 +288,7 @@ namespace EQLogParser
           {
             DamageOverlay?.Close();
           }
-         
+
           DamageOverlay = new DamageOverlayWindow(false);
           DamageOverlay.Show();
         }
