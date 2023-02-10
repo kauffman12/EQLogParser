@@ -274,7 +274,7 @@ namespace EQLogParser
             }
           }
 
-          damageBar.Update(origName, name, StatsUtil.FormatTotals(stat.Total, 1),
+          damageBar.Update(origName, name, StatsUtil.FormatTotals(stat.Total, 2),
           StatsUtil.FormatTotals(stat.DPS, 1), stat.TotalSeconds.ToString(), barPercent);
 
           if (damageBar.Visibility == Visibility.Collapsed)
@@ -293,7 +293,7 @@ namespace EQLogParser
       }
 
       var titleBar = children[children.Count - 1] as DamageBar;
-      titleBar.Update("", localStats.TargetTitle, StatsUtil.FormatTotals(localStats.RaidStats.Total, 1),
+      titleBar.Update("", localStats.TargetTitle, StatsUtil.FormatTotals(localStats.RaidStats.Total, 2),
         StatsUtil.FormatTotals(localStats.RaidStats.DPS, 1), localStats.RaidStats.TotalSeconds.ToString(), 0);
 
       if (titleBar.Visibility == Visibility.Collapsed)
@@ -720,7 +720,7 @@ namespace EQLogParser
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(60.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(45.0);
           titleDamage.Margin = new System.Windows.Thickness(0, 5, 27, 0);
-          titleDPS.Margin = new System.Windows.Thickness(0, 5, 18, 0);
+          titleDPS.Margin = new System.Windows.Thickness(0, 5, 21, 0);
           titleTime.Margin = new System.Windows.Thickness(0, 5, 6, 0);
           titleDamage.FontSize = 13;
           titleDPS.FontSize = 13;
@@ -738,8 +738,8 @@ namespace EQLogParser
         case 14:
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(70.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(50.0);
-          titleDamage.Margin = new System.Windows.Thickness(0, 5, 33, 0);
-          titleDPS.Margin = new System.Windows.Thickness(0, 5, 18, 0);
+          titleDamage.Margin = new System.Windows.Thickness(0, 5, 35, 0);
+          titleDPS.Margin = new System.Windows.Thickness(0, 5, 21, 0);
           titleTime.Margin = new System.Windows.Thickness(0, 5, 6, 0);
           titleDamage.FontSize = 15;
           titleDPS.FontSize = 15;
@@ -758,7 +758,7 @@ namespace EQLogParser
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(75.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(55.0);
           titleDamage.Margin = new System.Windows.Thickness(0, 5, 34, 0);
-          titleDPS.Margin = new System.Windows.Thickness(0, 5, 18, 0);
+          titleDPS.Margin = new System.Windows.Thickness(0, 5, 25, 0);
           titleTime.Margin = new System.Windows.Thickness(0, 5, 6, 0);
           titleDamage.FontSize = 17;
           titleDPS.FontSize = 17;
