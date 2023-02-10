@@ -111,8 +111,9 @@ namespace EQLogParser
       {
         toOverlay.OverlayComments = fromOverlay.OverlayComments;
         toOverlay.FontColor = fromOverlay.FontColor;
-        toOverlay.PrimaryColor = fromOverlay.PrimaryColor;
-        toOverlay.SecondaryColor = fromOverlay.SecondaryColor;
+        toOverlay.ActiveColor = fromOverlay.ActiveColor;
+        toOverlay.IdleColor = fromOverlay.IdleColor;
+        toOverlay.ResetColor = fromOverlay.ResetColor;
         toOverlay.BackgroundColor = fromOverlay.BackgroundColor;
         toOverlay.OverlayColor = fromOverlay.OverlayColor;
         toOverlay.FontSize = fromOverlay.FontSize;
@@ -145,16 +146,22 @@ namespace EQLogParser
             Application.Current.Resources["TimerBarFontColor-" + toModel.Id] = toModel.FontBrush;
           }
 
-          if (fromOverlay.PrimaryColor is string primary && !string.IsNullOrEmpty(primary))
+          if (fromOverlay.ActiveColor is string active && !string.IsNullOrEmpty(active))
           {
-            toModel.PrimaryBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(primary) };
-            Application.Current.Resources["TimerBarProgressColor-" + toModel.Id] = toModel.PrimaryBrush;
+            toModel.ActiveBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(active) };
+            Application.Current.Resources["TimerBarActiveColor-" + toModel.Id] = toModel.ActiveBrush;
           }
 
-          if (fromOverlay.SecondaryColor is string secondary && !string.IsNullOrEmpty(secondary))
+          if (fromOverlay.IdleColor is string idle && !string.IsNullOrEmpty(idle))
           {
-            toModel.SecondaryBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(secondary) };
-            Application.Current.Resources["TimerBarResetColor-" + toModel.Id] = toModel.SecondaryBrush;
+            toModel.IdleBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(idle) };
+            Application.Current.Resources["TimerBarIdleColor-" + toModel.Id] = toModel.IdleBrush;
+          }
+
+          if (fromOverlay.ResetColor is string reset && !string.IsNullOrEmpty(reset))
+          {
+            toModel.ResetBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(reset) };
+            Application.Current.Resources["TimerBarResetColor-" + toModel.Id] = toModel.ResetBrush;
           }
 
           if (fromOverlay.BackgroundColor is string background && !string.IsNullOrEmpty(background))
@@ -174,9 +181,10 @@ namespace EQLogParser
         {
           toOverlay.OverlayColor = fromModel.OverlayBrush.Color.ToString();
           toOverlay.FontColor = fromModel.FontBrush.Color.ToString();
-          toOverlay.PrimaryColor = fromModel.PrimaryBrush.Color.ToString();
+          toOverlay.ActiveColor = fromModel.ActiveBrush.Color.ToString();
           toOverlay.BackgroundColor = fromModel.BackgroundBrush.Color.ToString();
-          toOverlay.SecondaryColor = fromModel.SecondaryBrush.Color.ToString();
+          toOverlay.IdleColor = fromModel.IdleBrush.Color.ToString();
+          toOverlay.ResetColor = fromModel.ResetBrush.Color.ToString();
         }
         else if (toOverlay is TextOverlayPropertyModel toTextModel)
         {
