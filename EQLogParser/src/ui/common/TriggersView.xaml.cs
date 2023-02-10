@@ -92,7 +92,7 @@ namespace EQLogParser
 
       var colorEditor = new CustomEditor();
       colorEditor.Editor = new ColorEditor();
-      Helpers.AddToCollection(colorEditor.Properties, "OverlayBrush", "FontBrush", "PrimaryBrush", "SecondaryBrush", "BackgroundBrush");
+      Helpers.AddToCollection(colorEditor.Properties, "OverlayBrush", "FontBrush", "ActiveBrush", "IdleBrush", "ResetBrush", "BackgroundBrush");
       thePropertyGrid.CustomEditorCollection.Add(colorEditor);
 
       var overlayEditor = new CustomEditor();
@@ -736,6 +736,7 @@ namespace EQLogParser
       var isTrigger = (node?.IsTrigger == true);
       var isOverlay = (node?.IsOverlay == true);
       var isTimerOverlay = (node?.SerializedData?.OverlayData?.IsTimerOverlay == true);
+      var isCooldownOverlay = isTimerOverlay && (node?.SerializedData?.OverlayData?.TimerMode == 1);
 
       if (isTrigger || isOverlay)
       {
@@ -770,22 +771,23 @@ namespace EQLogParser
 
       if (isTrigger)
       {
-        EnableCategories(true, node.SerializedData.TriggerData.EnableTimer, true, false, false, true, false);
+        EnableCategories(true, node.SerializedData.TriggerData.EnableTimer, true, false, false, true, false, false);
       }
       else if (isOverlay)
       {
         if (isTimerOverlay)
         {
-          EnableCategories(false, false, false, true, true, false, false);
+          EnableCategories(false, false, false, true, true, false, false, isCooldownOverlay);
         }
         else
         {
-          EnableCategories(false, false, false, true, false, false, true);
+          EnableCategories(false, false, false, true, false, false, true, false);
         }
       }
     }
 
-    private void EnableCategories(bool trigger, bool triggerTimer, bool status, bool overlay, bool overlayTimer, bool overlayAssigned, bool overlayText)
+    private void EnableCategories(bool trigger, bool triggerTimer, bool status, bool overlay, bool overlayTimer, 
+      bool overlayAssigned, bool overlayText, bool cooldownTimer)
     {
       PropertyGridUtil.EnableCategories(thePropertyGrid, new[]
       {
@@ -793,7 +795,8 @@ namespace EQLogParser
         new { Name = timerDurationItem.CategoryName, IsEnabled = triggerTimer },
         new { Name = evalTimeItem.CategoryName, IsEnabled = status },
         new { Name = fontSizeItem.CategoryName, IsEnabled = overlay },
-        new { Name = primaryBrushItem.CategoryName, IsEnabled = overlayTimer },
+        new { Name = activeBrushItem.CategoryName, IsEnabled = overlayTimer },
+        new { Name = idleBrushItem.CategoryName, IsEnabled = cooldownTimer },
         new { Name = assignedOverlaysItem.CategoryName, IsEnabled = overlayAssigned },
         new { Name = fadeDelayItem.CategoryName, IsEnabled = overlayText }
       });
@@ -927,15 +930,20 @@ namespace EQLogParser
           timerChange = !(timerOverlay.OverlayBrush.Color == (Color)ColorConverter.ConvertFromString(timerOverlay.Original.OverlayColor));
           Application.Current.Resources["OverlayBrushColor-" + timerOverlay.Id] = timerOverlay.OverlayBrush;
         }
-        else if (args.Property.Name == primaryBrushItem.PropertyName)
+        else if (args.Property.Name == activeBrushItem.PropertyName)
         {
-          timerChange = !(timerOverlay.PrimaryBrush.Color == (Color)ColorConverter.ConvertFromString(timerOverlay.Original.PrimaryColor));
-          Application.Current.Resources["TimerBarProgressColor-" + timerOverlay.Id] = timerOverlay.PrimaryBrush;
+          timerChange = !(timerOverlay.ActiveBrush.Color == (Color)ColorConverter.ConvertFromString(timerOverlay.Original.ActiveColor));
+          Application.Current.Resources["TimerBarActiveColor-" + timerOverlay.Id] = timerOverlay.ActiveBrush;
         }
-        else if (args.Property.Name == secondaryBrushItem.PropertyName)
+        else if (args.Property.Name == idleBrushItem.PropertyName)
         {
-          timerChange = !(timerOverlay.SecondaryBrush.Color == (Color)ColorConverter.ConvertFromString(timerOverlay.Original.SecondaryColor));
-          Application.Current.Resources["TimerBarResetColor-" + timerOverlay.Id] = timerOverlay.SecondaryBrush;
+          timerChange = !(timerOverlay.IdleBrush.Color == (Color)ColorConverter.ConvertFromString(timerOverlay.Original.IdleColor));
+          Application.Current.Resources["TimerBarIdleColor-" + timerOverlay.Id] = timerOverlay.IdleBrush;
+        }
+        else if (args.Property.Name == resetBrushItem.PropertyName)
+        {
+          timerChange = !(timerOverlay.ResetBrush.Color == (Color)ColorConverter.ConvertFromString(timerOverlay.Original.ResetColor));
+          Application.Current.Resources["TimerBarResetColor-" + timerOverlay.Id] = timerOverlay.ResetBrush;
         }
         else if (args.Property.Name == backgroundBrushItem.PropertyName)
         {
@@ -953,6 +961,10 @@ namespace EQLogParser
           timerChange = timerOverlay.FontSize != timerOverlay.Original.FontSize;
           Application.Current.Resources["TimerBarFontSize-" + timerOverlay.Id] = newFontSize;
           Application.Current.Resources["TimerBarHeight-" + timerOverlay.Id] = TriggerUtil.GetTimerBarHeight(newFontSize);
+        }
+        else if (args.Property.Name == timerModeItem.PropertyName)
+        {
+          PropertyGridUtil.EnableCategories(thePropertyGrid, new[] { new { Name = idleBrushItem.CategoryName, IsEnabled = ((int)args.Property.Value == 1) } });
         }
 
         if (timerChange)

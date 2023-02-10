@@ -38,7 +38,7 @@ namespace EQLogParser
       }
       else
       {
-        progress.SetResourceReference(SfLinearProgressBar.ProgressColorProperty, "TimerBarProgressColor-" + OverlayId);
+        progress.SetResourceReference(SfLinearProgressBar.ProgressColorProperty, "TimerBarIdleColor-" + OverlayId);
       }
     }
 
@@ -56,7 +56,7 @@ namespace EQLogParser
       Trigger = trigger;
       OverlayId = overlayId;
       EndEarly = false;
-      progress.SetResourceReference(SfLinearProgressBar.ProgressColorProperty, "TimerBarProgressColor-" + OverlayId);
+      progress.SetResourceReference(SfLinearProgressBar.ProgressColorProperty, "TimerBarActiveColor-" + OverlayId);
       progress.SetResourceReference(SfLinearProgressBar.TrackColorProperty, "TimerBarTrackColor-" + OverlayId);
       progress.SetResourceReference(SfLinearProgressBar.HeightProperty, "TimerBarHeight-" + OverlayId);
       timeText.SetResourceReference(TextBlock.FontSizeProperty, "TimerBarFontSize-" + OverlayId);
@@ -76,7 +76,7 @@ namespace EQLogParser
     {
       CurrentIsCooldown = false;
       CurrentIsWaiting = false;
-      progress.SetResourceReference(SfLinearProgressBar.ProgressColorProperty, "TimerBarProgressColor-" + OverlayId);
+      progress.SetResourceReference(SfLinearProgressBar.ProgressColorProperty, "TimerBarActiveColor-" + OverlayId);
       StartTime = DateUtil.ToDouble(DateTime.Now);
       EndTime = endTime;
       Duration = EndTime - StartTime;
@@ -125,7 +125,7 @@ namespace EQLogParser
               Duration = Trigger.DurationSeconds;
               timeText.Text = DateUtil.FormatSimpleMS(Duration);
               TimeRemaining = Duration;
-              CurrentIsWaiting = true;
+              CurrentIsWaiting = true;              
             }
           }
           else
