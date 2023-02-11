@@ -814,12 +814,12 @@ namespace EQLogParser
 
           if (filePercent < 100)
           {
-            statusText.Text = string.Format(CultureInfo.CurrentCulture, "Reading Log.. {0}% in {1} seconds", filePercent, seconds);
+            statusText.Text = string.Format("Reading Log.. {0}% in {1} seconds", filePercent, seconds);
           }
           else
           {
             var procPercent = Convert.ToInt32(Math.Min(CastProcessor.GetPercentComplete(), DamageProcessor.GetPercentComplete()));
-            statusText.Text = string.Format(CultureInfo.CurrentCulture, "Processing... {0}% in {1} seconds", procPercent, seconds);
+            statusText.Text = string.Format("Processing... {0}% in {1} seconds", procPercent, seconds);
           }
 
           statusText.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;

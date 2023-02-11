@@ -68,53 +68,35 @@ namespace EQLogParser
       treeView.DragDropController.CanAutoExpand = true;
       treeView.DragDropController.AutoExpandDelay = new TimeSpan(0, 0, 1);
 
-      var priorityEditor = new CustomEditor();
-      priorityEditor.Editor = new RangeEditor(1, 5);
-      Helpers.AddToCollection(priorityEditor.Properties, "Priority");
-      thePropertyGrid.CustomEditorCollection.Add(priorityEditor);
-
-      var textWrapEditor = new CustomEditor();
-      textWrapEditor.Editor = new WrapTextEditor();
-      Helpers.AddToCollection(textWrapEditor.Properties, "Comments", "OverlayComments", "Pattern", "EndPattern",
-        "CancelPattern", "EndTextToSpeak", "TextToSpeak", "WarningToSpeak");
-      thePropertyGrid.CustomEditorCollection.Add(textWrapEditor);
-
-      // Need to only have one ErrorEditor since the background is updated
-      var errorEditor = new CustomEditor();
-      errorEditor.Editor = ErrorEditor = new WrapTextEditor();
-      Helpers.AddToCollection(errorEditor.Properties, "Errors");
-      thePropertyGrid.CustomEditorCollection.Add(errorEditor);
-
-      var durationEditor = new CustomEditor();
-      durationEditor.Editor = new DurationEditor();
-      Helpers.AddToCollection(durationEditor.Properties, "DurationTimeSpan", "ResetDurationTimeSpan");
-      thePropertyGrid.CustomEditorCollection.Add(durationEditor);
-
-      var colorEditor = new CustomEditor();
-      colorEditor.Editor = new ColorEditor();
-      Helpers.AddToCollection(colorEditor.Properties, "OverlayBrush", "FontBrush", "ActiveBrush", "IdleBrush", "ResetBrush", "BackgroundBrush");
-      thePropertyGrid.CustomEditorCollection.Add(colorEditor);
-
-      var overlayEditor = new CustomEditor();
-      overlayEditor.Editor = new CheckComboBoxEditor();
-      overlayEditor.Properties.Add("SelectedTextOverlays");
-      overlayEditor.Properties.Add("SelectedTimerOverlays");
-      thePropertyGrid.CustomEditorCollection.Add(overlayEditor);
-
-      var listEditor = new CustomEditor();
-      listEditor.Editor = new TriggerListsEditor();
-      Helpers.AddToCollection(listEditor.Properties, "TriggerAgainOption", "FontSize", "SortBy", "TimerMode");
-      thePropertyGrid.CustomEditorCollection.Add(listEditor);
-
-      var timeEditor = new CustomEditor();
-      timeEditor.Editor = new RangeEditor(1, 60);
-      timeEditor.Properties.Add("FadeDelay");
-      thePropertyGrid.CustomEditorCollection.Add(timeEditor);
-
-      var exampleEditor = new CustomEditor();
-      exampleEditor.Editor = new ExampleTimerBar();
-      exampleEditor.Properties.Add("TimerBarPreview");
-      thePropertyGrid.CustomEditorCollection.Add(exampleEditor);
+      AddEditor(new TextSoundEditor(), "SoundOrText");
+      AddEditor(new TextSoundEditor(), "EndEarlySoundOrText");
+      AddEditor(new TextSoundEditor(), "EndSoundOrText");
+      AddEditor(new TextSoundEditor(), "WarningSoundOrText");
+      AddEditor(new RangeEditor(1, 5), "Priority");
+      AddEditor(new WrapTextEditor(), "Comments");
+      AddEditor(new WrapTextEditor(), "OverlayComments");
+      AddEditor(new WrapTextEditor(), "Pattern");
+      AddEditor(new WrapTextEditor(), "EndEarlyPattern");
+      AddEditor(new WrapTextEditor(), "EndEarlyPattern2");
+      AddEditor(new WrapTextEditor(), "EndPattern");
+      ErrorEditor = new WrapTextEditor();
+      AddEditor(ErrorEditor, "Errors");
+      AddEditor(new DurationEditor(), "DurationTimeSpan");
+      AddEditor(new DurationEditor(), "ResetDurationTimeSpan");
+      AddEditor(new ColorEditor(), "OverlayBrush");
+      AddEditor(new ColorEditor(), "FontBrush");
+      AddEditor(new ColorEditor(), "ActiveBrush");
+      AddEditor(new ColorEditor(), "IdleBrush");
+      AddEditor(new ColorEditor(), "ResetBrush");
+      AddEditor(new ColorEditor(), "BackgroundBrush");
+      AddEditor(new CheckComboBoxEditor(), "SelectedTextOverlays");
+      AddEditor(new CheckComboBoxEditor(), "SelectedTimerOverlays");
+      AddEditor(new TriggerListsEditor(), "TriggerAgainOption");
+      AddEditor(new TriggerListsEditor(), "FontSize");
+      AddEditor(new TriggerListsEditor(), "SortBy");
+      AddEditor(new TriggerListsEditor(), "TimerMode");
+      AddEditor(new RangeEditor(1, 60), "FadeDelay");
+      AddEditor(new ExampleTimerBar(), "TimerBarPreview");
 
       treeView.Nodes.Add(TriggerManager.Instance.GetTriggerTreeView());
       treeView.Nodes.Add(TriggerOverlayManager.Instance.GetOverlayTreeView());
@@ -210,6 +192,13 @@ namespace EQLogParser
           }
         }
       }
+    }
+
+    private void AddEditor(ITypeEditor typeEditor, string propName)
+    {
+      var editor = new CustomEditor { Editor = typeEditor };
+      editor.Properties.Add(propName);
+      thePropertyGrid.CustomEditorCollection.Add(editor);
     }
 
     private void SelectFile(object file)

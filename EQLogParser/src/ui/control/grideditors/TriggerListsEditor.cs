@@ -1,7 +1,6 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,7 +10,8 @@ namespace EQLogParser
 {
   internal class TriggerListsEditor : ITypeEditor
   {
-    private readonly List<ComboBox> TheComboBoxes = new List<ComboBox>();
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private ComboBox TheComboBox;
 
     private static Dictionary<string, List<string>> Options = new Dictionary<string, List<string>>()
     {
@@ -41,38 +41,37 @@ namespace EQLogParser
         ValidatesOnDataErrors = true
       };
 
-      TheComboBoxes.Last().IsEnabled = info.CanWrite;
-      BindingOperations.SetBinding(TheComboBoxes.Last(), Props[info.Name], binding);
+      TheComboBox.IsEnabled = info.CanWrite;
+      BindingOperations.SetBinding(TheComboBox, Props[info.Name], binding);
     }
 
     // Create a custom editor for a normal property
-    public object Create(PropertyInfo info)
-    {
-      var comboBox = new ComboBox();
-      Options[info.Name].ForEach(item => comboBox.Items.Add(item));
-      comboBox.SelectedIndex = 0;
-      TheComboBoxes.Add(comboBox);
-      return comboBox;
-    }
+    public object Create(PropertyInfo info) => Create(info.Name);
 
     // Create a custom editor for a dynamic property
-    public object Create(PropertyDescriptor desc)
+    public object Create(PropertyDescriptor desc) => Create(desc.Name);
+
+    private object Create(string name)
     {
       var comboBox = new ComboBox();
-      Options[desc.Name].ForEach(item => comboBox.Items.Add(item));
+
+      if (Options.ContainsKey(name))
+      {
+        Options[name].ForEach(item => comboBox.Items.Add(item));
+      }
+
       comboBox.SelectedIndex = 0;
-      TheComboBoxes.Add(comboBox);
+      TheComboBox = comboBox;
       return comboBox;
     }
 
     public void Detach(PropertyViewItem property)
     {
-      TheComboBoxes.ForEach(comboBox =>
+      if (TheComboBox != null)
       {
-        BindingOperations.ClearAllBindings(comboBox);
-      });
-
-      TheComboBoxes.Clear();
+        BindingOperations.ClearAllBindings(TheComboBox);
+        TheComboBox = null;
+      }
     }
   }
 }

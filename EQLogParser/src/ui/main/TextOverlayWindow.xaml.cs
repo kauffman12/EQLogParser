@@ -18,10 +18,10 @@ namespace EQLogParser
   {
     private Overlay TheOverlay;
     private bool Preview = false;
-    private double SavedHeight;
-    private double SavedWidth;
-    private double SavedTop = double.NaN;
-    private double SavedLeft = double.NaN;
+    private long SavedHeight;
+    private long SavedWidth;
+    private long SavedTop = long.MaxValue;
+    private long SavedLeft = long.MaxValue;
 
     internal TextOverlayWindow(Overlay overlay, bool preview = false)
     {
@@ -124,18 +124,18 @@ namespace EQLogParser
 
     private void WindowLoaded(object sender, RoutedEventArgs e)
     {
-      SavedHeight = this.Height;
-      SavedWidth = this.Width;
-      SavedTop = this.Top;
-      SavedLeft = this.Left;
+      SavedHeight = (long)this.Height;
+      SavedWidth = (long)this.Width;
+      SavedTop = (long)this.Top;
+      SavedLeft = (long)this.Left;
     }
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
-      TheOverlay.Height = SavedHeight = this.Height;
-      TheOverlay.Width = SavedWidth = this.Width;
-      TheOverlay.Top = SavedTop = this.Top;
-      TheOverlay.Left = SavedLeft = this.Left;
+      TheOverlay.Height = SavedHeight = (long)this.Height;
+      TheOverlay.Width = SavedWidth = (long)this.Width;
+      TheOverlay.Top = SavedTop = (long)this.Top;
+      TheOverlay.Left = SavedLeft = (long)this.Left;
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
@@ -156,7 +156,7 @@ namespace EQLogParser
 
     private void WindowSizeChanged(object sender, SizeChangedEventArgs e)
     {
-      if (!double.IsNaN(SavedTop))
+      if (SavedTop != long.MaxValue)
       {
         if (!saveButton.IsEnabled)
         {

@@ -90,6 +90,10 @@ namespace EQLogParser
         toTrigger.UseRegex = fromTrigger.UseRegex;
         toTrigger.WarningSeconds = fromTrigger.WarningSeconds;
         toTrigger.WarningTextToSpeak = fromTrigger.WarningTextToSpeak;
+        toTrigger.SoundToPlay = fromTrigger.SoundToPlay;
+        toTrigger.EndEarlySoundToPlay = fromTrigger.EndEarlySoundToPlay;
+        toTrigger.EndSoundToPlay = fromTrigger.EndSoundToPlay;
+        toTrigger.WarningSoundToPlay = fromTrigger.WarningSoundToPlay;
 
         if (toTrigger is TriggerPropertyModel toModel)
         {
@@ -97,6 +101,10 @@ namespace EQLogParser
           toModel.SelectedTimerOverlays = TriggerOverlayManager.Instance.GetTimerOverlayItems(toModel.SelectedOverlays);
           toModel.DurationTimeSpan = new TimeSpan(0, 0, (int)toModel.DurationSeconds);
           toModel.ResetDurationTimeSpan = new TimeSpan(0, 0, (int)toModel.ResetDurationSeconds);
+          toModel.SoundOrText = GetCodedSoundOrText(toModel.SoundToPlay, toModel.TextToSpeak, out _);
+          toModel.EndEarlySoundOrText = GetCodedSoundOrText(toModel.EndEarlySoundToPlay, toModel.EndEarlyTextToSpeak, out _);
+          toModel.EndSoundOrText = GetCodedSoundOrText(toModel.EndSoundToPlay, toModel.EndTextToSpeak, out _);
+          toModel.WarningSoundOrText = GetCodedSoundOrText(toModel.WarningSoundToPlay, toModel.WarningTextToSpeak, out _);
         }
         else if (fromTrigger is TriggerPropertyModel fromModel)
         {
@@ -105,6 +113,19 @@ namespace EQLogParser
           toTrigger.SelectedOverlays = selectedOverlays;
           toTrigger.DurationSeconds = fromModel.DurationTimeSpan.TotalSeconds;
           toTrigger.ResetDurationSeconds = fromModel.ResetDurationTimeSpan.TotalSeconds;
+
+          MatchSoundFile(fromModel.SoundOrText, out string soundFile, out string text);
+          toTrigger.SoundToPlay = soundFile;
+          toTrigger.TextToSpeak = text;
+          MatchSoundFile(fromModel.EndEarlySoundOrText, out soundFile, out text);
+          toTrigger.EndEarlySoundToPlay = soundFile;
+          toTrigger.EndEarlyTextToSpeak = text;
+          MatchSoundFile(fromModel.EndSoundOrText, out soundFile, out text);
+          toTrigger.EndSoundToPlay = soundFile;
+          toTrigger.EndTextToSpeak = text;
+          MatchSoundFile(fromModel.WarningSoundOrText, out soundFile, out text);
+          toTrigger.WarningSoundToPlay = soundFile;
+          toTrigger.WarningTextToSpeak = text;
         }
       }
       else if (to is Overlay toOverlay && from is Overlay fromOverlay)
@@ -214,6 +235,52 @@ namespace EQLogParser
           toOverlay.OverlayColor = fromTextModel.OverlayBrush.Color.ToString();
         }
       }
+    }
+
+    internal static string GetCodedSoundOrText(string soundToPlay, string text, out bool isSound)
+    {
+      isSound = false;
+      if (!string.IsNullOrEmpty(soundToPlay) && soundToPlay.EndsWith(".wav"))
+      {
+        isSound = true;
+        return "<<" + soundToPlay + ">>";
+      }
+      else
+      {
+        return text;
+      }
+    }
+
+    internal static string GetDecodedSoundOrText(string soundToPlay, string text, out bool isSound)
+    {
+      isSound = false;
+      if (!string.IsNullOrEmpty(soundToPlay) && soundToPlay.EndsWith(".wav"))
+      {
+        isSound = true;
+        return soundToPlay;
+      }
+      else
+      {
+        return text;
+      }
+    }
+
+    internal static bool MatchSoundFile(string text, out string file, out string notFile)
+    {
+      file = null;
+      notFile = text;
+      bool success = false;
+      if (!string.IsNullOrEmpty(text))
+      {
+        Match match = Regex.Match(text, @"<<(.*\.wav)>>$");
+        if (match.Success)
+        {
+          file = match.Groups[1].Value;
+          notFile = null;
+          success = true;
+        }
+      }
+      return success;
     }
 
     internal static bool CheckNumberOptions(List<NumberOptions> options, MatchCollection matches)

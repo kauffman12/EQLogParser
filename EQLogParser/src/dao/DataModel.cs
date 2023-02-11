@@ -41,10 +41,10 @@ namespace EQLogParser
     public bool IsTimerOverlay { get; set; }
     public bool IsTextOverlay { get; set; }
     public int TimerMode { get; set; } = 0;
-    public double Height { get; set; } = 400.0;
-    public double Width { get; set; } = 300.0;
-    public double Top { get; set; } = 200.0;
-    public double Left { get; set; } = 100.0;
+    public long Height { get; set; } = 400;
+    public long Width { get; set; } = 300;
+    public long Top { get; set; } = 200;
+    public long Left { get; set; } = 100;
   }
 
   internal class Trigger : NotificationObject
@@ -55,8 +55,6 @@ namespace EQLogParser
     public bool EnableTimer { get; set; }
     public string EndEarlyPattern { get; set; }
     public string EndEarlyPattern2 { get; set; }
-    public string EndEarlyTextToSpeak { get; set; }
-    public string EndTextToSpeak { get; set; }
     public bool EndUseRegex { get; set; }
     public bool EndUseRegex2 { get; set; }
     public string Errors { get; set; } = "None";
@@ -65,13 +63,19 @@ namespace EQLogParser
     public string Name { get; set; }
     public string Pattern { get; set; }
     public long Priority { get; set; } = 5;
-    public string TextToSpeak { get; set; }
     public int TriggerAgainOption { get; set; }
     public bool UseRegex { get; set; }
     public List<string> SelectedOverlays { get; set; } = new List<string>();
     public double ResetDurationSeconds { get; set; }
     public long WarningSeconds { get; set; }
+    public string EndEarlyTextToSpeak { get; set; }
+    public string EndTextToSpeak { get; set; }
+    public string TextToSpeak { get; set; }
     public string WarningTextToSpeak { get; set; }
+    public string SoundToPlay { get; set; }
+    public string EndEarlySoundToPlay { get; set; }
+    public string EndSoundToPlay { get; set; }
+    public string WarningSoundToPlay { get; set; }
   }
 
   internal class TimerOverlayPropertyModel : Overlay
@@ -101,6 +105,10 @@ namespace EQLogParser
     public TimeSpan DurationTimeSpan { get; set; }
     public TimeSpan ResetDurationTimeSpan { get; set; }
     public Trigger Original { get; set; }
+    public string SoundOrText { get; set; }
+    public string EndEarlySoundOrText { get; set; }
+    public string EndSoundOrText { get; set; }
+    public string WarningSoundOrText { get; set; }
   }
 
   internal class TriggerNode
