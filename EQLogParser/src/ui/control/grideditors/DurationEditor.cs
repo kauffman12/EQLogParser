@@ -1,8 +1,6 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Shared;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Reflection;
 using System.Windows.Data;
 
@@ -10,7 +8,7 @@ namespace EQLogParser
 {
   internal class DurationEditor : ITypeEditor
   {
-    private readonly List<TimeSpanEdit> TheTimeSpans = new List<TimeSpanEdit>();
+    private TimeSpanEdit TheTimeSpan;
 
     public void Attach(PropertyViewItem property, PropertyItem info)
     {
@@ -22,7 +20,7 @@ namespace EQLogParser
         ValidatesOnDataErrors = true
       };
 
-      BindingOperations.SetBinding(TheTimeSpans.Last(), TimeSpanEdit.ValueProperty, binding);
+      BindingOperations.SetBinding(TheTimeSpan, TimeSpanEdit.ValueProperty, binding);
     }
 
     public object Create(PropertyInfo propertyInfo) => Create();
@@ -37,7 +35,7 @@ namespace EQLogParser
         Format = "mm:ss"
       };
 
-      TheTimeSpans.Add(timeSpan);
+      TheTimeSpan = timeSpan;
       timeSpan.GotFocus += TimeSpanGotFocus;
       timeSpan.LostFocus += TimeSpanLostFocus;
       return timeSpan;
@@ -61,15 +59,14 @@ namespace EQLogParser
 
     public void Detach(PropertyViewItem property)
     {
-      TheTimeSpans.ForEach(timeSpan =>
+      if (TheTimeSpan != null)
       {
-        timeSpan.GotFocus -= TimeSpanGotFocus;
-        timeSpan.LostFocus -= TimeSpanLostFocus;
-        BindingOperations.ClearAllBindings(timeSpan);
-        timeSpan?.Dispose();
-      });
-
-      TheTimeSpans.Clear();
+        TheTimeSpan.GotFocus -= TimeSpanGotFocus;
+        TheTimeSpan.LostFocus -= TimeSpanLostFocus;
+        BindingOperations.ClearAllBindings(TheTimeSpan);
+        TheTimeSpan?.Dispose();
+        TheTimeSpan = null;
+      }
     }
   }
 }

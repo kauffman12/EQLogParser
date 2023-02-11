@@ -1,5 +1,4 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -12,7 +11,7 @@ namespace EQLogParser
 {
   internal class CheckComboBoxEditor : ITypeEditor
   {
-    private readonly List<ComboBox> TheComboBoxes = new List<ComboBox>();
+    private ComboBox TheComboBox;
 
     public void Attach(PropertyViewItem property, PropertyItem info)
     {
@@ -24,7 +23,7 @@ namespace EQLogParser
         ValidatesOnDataErrors = true
       };
 
-      BindingOperations.SetBinding(TheComboBoxes.Last(), ComboBox.ItemsSourceProperty, binding);
+      BindingOperations.SetBinding(TheComboBox, ComboBox.ItemsSourceProperty, binding);
     }
 
     public object Create(PropertyInfo propertyInfo) => Create();
@@ -40,7 +39,7 @@ namespace EQLogParser
       comboBox.DropDownClosed += TheComboBoxDropDownClosed;
       comboBox.DataContextChanged += TheComboBoxDataContextChanged;
 
-      TheComboBoxes.Add(comboBox);
+      TheComboBox = comboBox;
       return comboBox;
     }
 
@@ -87,14 +86,13 @@ namespace EQLogParser
 
     public void Detach(PropertyViewItem property)
     {
-      TheComboBoxes.ForEach(comboBox =>
+      if (TheComboBox != null)
       {
-        comboBox.DropDownClosed -= TheComboBoxDropDownClosed;
-        comboBox.DataContextChanged -= TheComboBoxDataContextChanged;
-        BindingOperations.ClearAllBindings(comboBox);
-      });
-
-      TheComboBoxes.Clear();
+        TheComboBox.DropDownClosed -= TheComboBoxDropDownClosed;
+        TheComboBox.DataContextChanged -= TheComboBoxDataContextChanged;
+        BindingOperations.ClearAllBindings(TheComboBox);
+        TheComboBox = null;
+      }
     }
   }
 }

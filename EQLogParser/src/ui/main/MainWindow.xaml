@@ -373,7 +373,7 @@
         </MenuItem>
       </Menu>
       <TextBlock Margin="35,0,0,0" Visibility="Hidden" Text="" />
-      <TextBlock x:Name="statusTriggersText" Margin="0,0,0,0" Visibility="Collapsed" VerticalAlignment="Center" Text="Triggers Active | " Foreground="{StaticResource EQGoodForegroundBrush}"/>
+      <TextBlock x:Name="statusTriggersText" Margin="0,0,0,0" Visibility="Collapsed" VerticalAlignment="Center" Text="Triggers Active | " Foreground="{DynamicResource EQGoodForegroundBrush}"/>
       <TextBlock x:Name="statusText" Margin="0,0,4,0" VerticalAlignment="Center"/>
       <TextBlock x:Name="fileText" Margin="1,0,4,0" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"/>
     </listCollection:ArrayList>

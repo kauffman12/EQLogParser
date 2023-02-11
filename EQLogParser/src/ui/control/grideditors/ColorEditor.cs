@@ -1,8 +1,6 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Shared;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Reflection;
 using System.Windows.Data;
 
@@ -10,7 +8,7 @@ namespace EQLogParser
 {
   internal class ColorEditor : ITypeEditor
   {
-    private readonly List<ColorPicker> TheColorPickers = new List<ColorPicker>();
+    private ColorPicker TheColorPicker;
 
     public void Attach(PropertyViewItem property, PropertyItem info)
     {
@@ -22,7 +20,7 @@ namespace EQLogParser
         ValidatesOnDataErrors = true
       };
 
-      BindingOperations.SetBinding(TheColorPickers.Last(), ColorPicker.BrushProperty, binding);
+      BindingOperations.SetBinding(TheColorPicker, ColorPicker.BrushProperty, binding);
     }
 
     public object Create(PropertyInfo propertyInfo) => Create();
@@ -31,19 +29,18 @@ namespace EQLogParser
     private object Create()
     {
       var colorPicker = new ColorPicker { EnableSolidToGradientSwitch = false };
-      TheColorPickers.Add(colorPicker);
+      TheColorPicker = colorPicker;
       return colorPicker;
     }
 
     public void Detach(PropertyViewItem property)
     {
-      TheColorPickers.ForEach(colorPicker =>
+      if (TheColorPicker!= null)
       {
-        BindingOperations.ClearAllBindings(colorPicker);
-        colorPicker?.Dispose();
-      });
-
-      TheColorPickers.Clear();
+        BindingOperations.ClearAllBindings(TheColorPicker);
+        TheColorPicker.Dispose();
+        TheColorPicker = null;
+      }
     }
   }
 }

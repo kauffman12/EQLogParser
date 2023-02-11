@@ -10,13 +10,13 @@ namespace EQLogParser
 {
   internal class WrapTextEditor : TextBoxEditor
   {
-    private readonly List<TextBox> TheTextBoxes = new List<TextBox>();
+    private TextBox TheTextBox;
 
     public void SetForeground(string foreground)
     {
       // this only works if there's one reference to this editor...
       // TODO figure out better way
-      TheTextBoxes.Last().SetResourceReference(TextBox.ForegroundProperty, foreground);
+      TheTextBox.SetResourceReference(TextBox.ForegroundProperty, foreground);
     }
 
     public override object Create(PropertyInfo propertyInfo)
@@ -24,7 +24,7 @@ namespace EQLogParser
       var textBox = base.Create(propertyInfo) as TextBox;
       textBox.TextWrapping = System.Windows.TextWrapping.Wrap;
       textBox.Padding = new System.Windows.Thickness(2);
-      TheTextBoxes.Add(textBox);
+      TheTextBox = textBox;
       return textBox;
     }
 
@@ -33,18 +33,17 @@ namespace EQLogParser
       var textBox = base.Create(descriptor) as TextBox;
       textBox.TextWrapping = System.Windows.TextWrapping.Wrap;
       textBox.Padding = new System.Windows.Thickness(2);
-      TheTextBoxes.Add(textBox);
+      TheTextBox = textBox;
       return textBox;
     }
 
     public override void Detach(PropertyViewItem property)
     {
-      TheTextBoxes.ForEach(textBox =>
+      if (TheTextBox != null)
       {
-        BindingOperations.ClearAllBindings(textBox);
-      });
-
-      TheTextBoxes.Clear();
+        BindingOperations.ClearAllBindings(TheTextBox);
+        TheTextBox = null;
+      }
     }
   }
 }

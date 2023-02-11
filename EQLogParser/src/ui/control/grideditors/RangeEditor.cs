@@ -1,7 +1,5 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Shared;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Windows.Data;
 
@@ -9,7 +7,7 @@ namespace EQLogParser
 {
   public class RangeEditor : ITypeEditor
   {
-    private readonly List<IntegerTextBox> TheTextBoxes = new List<IntegerTextBox>();
+    private IntegerTextBox TheTextBox;
     private readonly long Min;
     private readonly long Max;
 
@@ -29,7 +27,7 @@ namespace EQLogParser
         ValidatesOnDataErrors = true
       };
 
-      BindingOperations.SetBinding(TheTextBoxes.Last(), IntegerTextBox.ValueProperty, binding);
+      BindingOperations.SetBinding(TheTextBox, IntegerTextBox.ValueProperty, binding);
     }
 
     public object Create(PropertyInfo propertyInfo)
@@ -42,18 +40,20 @@ namespace EQLogParser
         ShowSpinButton = true
       };
 
-      TheTextBoxes.Add(textBox);
+      textBox.SetResourceReference(IntegerTextBox.PositiveForegroundProperty, "ContentForeground");
+
+      TheTextBox = textBox;
       return textBox;
     }
 
     public void Detach(PropertyViewItem property)
     {
-      TheTextBoxes.ForEach(textBox =>
+      if (TheTextBox != null)
       {
-        BindingOperations.ClearAllBindings(textBox);
-        textBox?.Dispose();
-      });
-      TheTextBoxes.Clear();
+        BindingOperations.ClearAllBindings(TheTextBox);
+        TheTextBox?.Dispose();
+        TheTextBox = null;
+      }
     }
   }
 }

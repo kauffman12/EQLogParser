@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Media;
 using System.Runtime.CompilerServices;
 using System.Speech.Synthesis;
 using System.Text.Json;
@@ -315,10 +317,23 @@ namespace EQLogParser
           wrapper.TriggerData.LongestEvalTime = Math.Max(time, wrapper.TriggerData.LongestEvalTime);
           EventsEndTimer?.Invoke(this, wrapper.TriggerData);
           CleanupFirstTimer(wrapper);
+        
+          string speak;
+          bool isSound;
+          if (!string.IsNullOrEmpty(wrapper.ModifiedEndEarlySpeak))
+          {
+            speak = TriggerUtil.GetDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out isSound);
+          }
+          else
+          {
+            speak = TriggerUtil.GetDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound);
+          }
+          
           speechChannel.Writer.WriteAsync(new Speak
           {
             Trigger = wrapper.TriggerData,
-            Text = !string.IsNullOrEmpty(wrapper.ModifiedEndEarlySpeak) ? wrapper.ModifiedEndEarlySpeak : wrapper.ModifiedEndSpeak,
+            TextOrSound = speak,
+            IsSound = isSound,
             Matches = earlyMatches,
             OriginalMatches = wrapper.RegexMatches
           });
@@ -336,13 +351,14 @@ namespace EQLogParser
 
       if (found)
       {
-        var speak = wrapper.ModifiedSpeak;
+        var speak = TriggerUtil.GetDecodedSoundOrText(wrapper.TriggerData.SoundToPlay, wrapper.ModifiedSpeak, out bool isSound);
         if (!string.IsNullOrEmpty(speak))
         {
           speechChannel.Writer.WriteAsync(new Speak
           {
             Trigger = wrapper.TriggerData,
-            Text = speak,
+            TextOrSound = speak,
+            IsSound = isSound,
             Matches = matches,
           });
         }
@@ -385,42 +401,65 @@ namespace EQLogParser
     {
       var task = Task.Run(async () =>
       {
+        SpeechSynthesizer synth = null;
+        SoundPlayer player = null;
+
         try
         {
-          var synth = new SpeechSynthesizer();
+          synth = new SpeechSynthesizer();
           synth.SetOutputToDefaultAudioDevice();
+          player = new SoundPlayer();
           Trigger previous = null;
 
           while (await speechChannel.Reader.WaitToReadAsync())
           {
             var result = await speechChannel.Reader.ReadAsync();
 
-            if (!string.IsNullOrEmpty(result.Text))
+            if (!string.IsNullOrEmpty(result.TextOrSound))
             {
               if (result.Trigger.Priority < previous?.Priority)
               {
                 synth.SpeakAsyncCancelAll();
               }
 
-              var speak = ProcessSpeakDisplayText(result.Text, result.Matches);
-
-              if (result.OriginalMatches != null)
+              if (result.IsSound)
               {
-                speak = ProcessSpeakDisplayText(speak, result.OriginalMatches);
+                try
+                {
+                  if (File.Exists(@"data\sounds\" + result.TextOrSound))
+                  {
+                    player.SoundLocation = @"data\sounds\" + result.TextOrSound;
+                    player.Play();
+                  }
+                }
+                catch (Exception)
+                {
+                  // ignore
+                }
+              }
+              else
+              {
+                var speak = ProcessSpeakDisplayText(result.TextOrSound, result.Matches);
+
+                if (result.OriginalMatches != null)
+                {
+                  speak = ProcessSpeakDisplayText(speak, result.OriginalMatches);
+                }
+
+                if (!string.IsNullOrEmpty(CurrentVoice) && synth.Voice.Name != CurrentVoice)
+                {
+                  synth.SelectVoice(CurrentVoice);
+                }
+
+                if (CurrentVoiceRate != synth.Rate)
+                {
+                  synth.Rate = CurrentVoiceRate;
+                }
+
+                synth.SpeakAsync(speak);
+                EventsAddText?.Invoke(this, new { Text = speak, result.Trigger });
               }
 
-              if (!string.IsNullOrEmpty(CurrentVoice) && synth.Voice.Name != CurrentVoice)
-              {
-                synth.SelectVoice(CurrentVoice);
-              }
-
-              if (CurrentVoiceRate != synth.Rate)
-              {
-                synth.Rate = CurrentVoiceRate;
-              }
-
-              synth.SpeakAsync(speak);
-              EventsAddText?.Invoke(this, new { Text = speak, result.Trigger });
               previous = result.Trigger;
             }
           }
@@ -429,6 +468,11 @@ namespace EQLogParser
         {
           // channel closed
           LOG.Debug(ex);
+        }
+        finally
+        {
+          synth?.Dispose();
+          player?.Dispose();
         }
       });
     }
@@ -493,7 +537,7 @@ namespace EQLogParser
         if (!(wrapper.TriggerData.TriggerAgainOption == 2 && wrapper.TimerCancellations.Count > 0))
         {
           CancellationTokenSource warningSource = null;
-          if (wrapper.TriggerData.WarningSeconds > 0 && !string.IsNullOrEmpty(wrapper.ModifiedWarningSpeak))
+          if (wrapper.TriggerData.WarningSeconds > 0)
           {
             var diff = wrapper.TriggerData.DurationSeconds - wrapper.TriggerData.WarningSeconds;
             if (diff > 0)
@@ -520,10 +564,12 @@ namespace EQLogParser
 
                 if (proceed)
                 {
+                  var speak = TriggerUtil.GetDecodedSoundOrText(wrapper.TriggerData.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out bool isSound);
                   speechChannel.Writer.WriteAsync(new Speak
                   {
                     Trigger = wrapper.TriggerData,
-                    Text = wrapper.ModifiedWarningSpeak,
+                    TextOrSound = speak,
+                    IsSound = isSound
                   });
 
                   AddEntry(line, wrapper.TriggerData, "Timer Warning");
@@ -566,10 +612,12 @@ namespace EQLogParser
 
             if (proceed)
             {
+              var speak = TriggerUtil.GetDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out bool isSound);
               speechChannel.Writer.WriteAsync(new Speak
               {
                 Trigger = wrapper.TriggerData,
-                Text = wrapper.ModifiedEndSpeak,
+                TextOrSound = speak,
+                IsSound = isSound,
                 OriginalMatches = wrapper.RegexMatches
               });
 
@@ -835,7 +883,8 @@ namespace EQLogParser
     private class Speak
     {
       public Trigger Trigger { get; set; }
-      public string Text { get; set; }
+      public string TextOrSound { get; set; }
+      public bool IsSound { get; set; }
       public MatchCollection Matches { get; set; }
       public MatchCollection OriginalMatches { get; set; }
     }
