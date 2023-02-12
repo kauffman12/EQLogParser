@@ -90,17 +90,27 @@ namespace EQLogParser
       {
         timerList.ForEach(timerBar =>
         {
-          timerBar.Update(endTime);
-          content.Children.Remove(timerBar);
-
-          if (CurrentUseStandardTime)
+          if (trigger.TriggerAgainOption == 2 && timerBar.title.Text != displayName)
           {
-            var currentTime = DateUtil.ToDouble(DateTime.Now);
-            var max = TimerBarCreateOrder.Select(timerBar => timerBar.GetRemainingTime()).Max();
-            TimerBarCreateOrder.ForEach(timerBar => timerBar.SetStandardTime(max));
+            Dispatcher.InvokeAsync(() =>
+            {
+              CreateTimer(displayName, endTime, trigger);
+            }, System.Windows.Threading.DispatcherPriority.Render);
           }
+          else
+          {
+            timerBar.Update(endTime, displayName);
+            content.Children.Remove(timerBar);
 
-          Dispatcher.InvokeAsync(() => AddTimerBar(timerBar), System.Windows.Threading.DispatcherPriority.Render);
+            if (CurrentUseStandardTime)
+            {
+              var currentTime = DateUtil.ToDouble(DateTime.Now);
+              var max = TimerBarCreateOrder.Select(timerBar => timerBar.GetRemainingTime()).Max();
+              TimerBarCreateOrder.ForEach(timerBar => timerBar.SetStandardTime(max));
+            }
+
+            Dispatcher.InvokeAsync(() => AddTimerBar(timerBar), System.Windows.Threading.DispatcherPriority.Render);
+          }
         });
       }
       else

@@ -525,16 +525,16 @@ namespace EQLogParser
       {
         // Restart Timer Option
         bool timerUpdated = false;
-        if (wrapper.TriggerData.TriggerAgainOption == 1)
+        if (wrapper.TriggerData.TriggerAgainOption == 1 || wrapper.TriggerData.TriggerAgainOption == 2)
         {
           CleanupWrapper(wrapper);
           timerUpdated = true;
           EventsUpdateTimer?.Invoke(this, new { Trigger = wrapper.TriggerData, DisplayName = ProcessSpeakDisplayText(wrapper.ModifiedTimerName, matches) });
         }
 
-        // Start a New independent Timer as long as one is not already running when Option 2 is selected
-        // Option 2 is to Do Nothing when a 2nd timer is triggered so you onlu have the original timer running
-        if (!(wrapper.TriggerData.TriggerAgainOption == 2 && wrapper.TimerCancellations.Count > 0))
+        // Start a New independent Timer as long as one is not already running when Option 3 is selected
+        // Option 3 is to Do Nothing when a 2nd timer is triggered so you onlu have the original timer running
+        if (!(wrapper.TriggerData.TriggerAgainOption == 3 && wrapper.TimerCancellations.Count > 0))
         {
           CancellationTokenSource warningSource = null;
           if (wrapper.TriggerData.WarningSeconds > 0)
