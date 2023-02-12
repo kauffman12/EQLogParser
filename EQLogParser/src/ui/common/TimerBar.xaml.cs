@@ -72,8 +72,9 @@ namespace EQLogParser
 
     internal void EndTimer() => EndEarly = true;
 
-    internal void Update(double endTime)
+    internal void Update(double endTime, string displayName)
     {
+      title.Text = displayName;
       CurrentIsCooldown = false;
       CurrentIsWaiting = false;
       progress.SetResourceReference(SfLinearProgressBar.ProgressColorProperty, "TimerBarActiveColor-" + OverlayId);

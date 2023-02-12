@@ -878,11 +878,14 @@ namespace EQLogParser
                 }
                 else if ("RestartTimer".Equals(behavior))
                 {
-                  trigger.TriggerAgainOption = 1;
+                  if (bool.TryParse(Helpers.GetText(triggerNode, "RestartBasedOnTimerName"), out bool onTimerName))
+                  {
+                    trigger.TriggerAgainOption = onTimerName ? 2 : 1;
+                  }
                 }
                 else
                 {
-                  trigger.TriggerAgainOption = 2;
+                  trigger.TriggerAgainOption = 3;
                 }
 
                 if (triggerNode.SelectSingleNode("TimerEndedTrigger") is XmlNode timerEndedNode)
