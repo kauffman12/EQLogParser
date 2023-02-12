@@ -35,10 +35,14 @@ namespace EQLogParser
       var textBox = new IntegerTextBox()
       {
         ApplyZeroColor = false,
-        MinValue = Min,
-        MaxValue = Max,
         ShowSpinButton = true
       };
+
+      if (Min != Max)
+      {
+        textBox.MinValue = Min;
+        textBox.MaxValue = Max;
+      }
 
       textBox.SetResourceReference(IntegerTextBox.PositiveForegroundProperty, "ContentForeground");
 

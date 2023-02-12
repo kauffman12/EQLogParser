@@ -198,7 +198,8 @@ namespace EQLogParser
                 var nextNode = node.Next;
 
                 // if within a month assume handle it right away
-                if ((DateUtil.ToDouble(DateTime.Now) - node.Value.TriggerData.LastTriggered) <= 2628000)
+                // millis in 30 days
+                if ((new TimeSpan(DateTime.Now.Ticks).TotalMilliseconds - node.Value.TriggerData.LastTriggered) <= 2592000000)
                 {
                   HandleTrigger(activeTriggers, node, lineData, speechChannel);
                 }
@@ -287,7 +288,10 @@ namespace EQLogParser
         {
           found = true;
           wrapper.RegexMatches = matches;
-          UpdateTriggerTime(activeTriggers, node, lineData.BeginTime);
+          if (!UpdateTriggerTime(activeTriggers, node))
+          {
+            return;
+          }
         }
       }
       else if (!string.IsNullOrEmpty(wrapper.ModifiedPattern))
@@ -295,7 +299,10 @@ namespace EQLogParser
         if (action.Contains(wrapper.ModifiedPattern, StringComparison.OrdinalIgnoreCase))
         {
           found = true;
-          UpdateTriggerTime(activeTriggers, node, lineData.BeginTime);
+          if (!UpdateTriggerTime(activeTriggers, node))
+          {
+            return;
+          }
         }
       }
 
@@ -414,7 +421,6 @@ namespace EQLogParser
           while (await speechChannel.Reader.WaitToReadAsync())
           {
             var result = await speechChannel.Reader.ReadAsync();
-
             if (!string.IsNullOrEmpty(result.TextOrSound))
             {
               if (result.Trigger.Priority < previous?.Priority)
@@ -643,10 +649,10 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateTriggerTime(LinkedList<TriggerWrapper> activeTriggers, LinkedListNode<TriggerWrapper> node, double beginTime)
+    private bool UpdateTriggerTime(LinkedList<TriggerWrapper> activeTriggers, LinkedListNode<TriggerWrapper> node)
     {
       var previous = node.Value.TriggerData.LastTriggered;
-      node.Value.TriggerData.LastTriggered = beginTime;
+      var newTime = new TimeSpan(DateTime.Now.Ticks).TotalMilliseconds;
 
       // if no data yet then just move to front
       // next client restart will re-order everything
@@ -655,6 +661,13 @@ namespace EQLogParser
         activeTriggers.Remove(node);
         activeTriggers.AddFirst(node);
       }
+      else if ((newTime - previous) <= 400)
+      {
+        return false;
+      }
+
+      node.Value.TriggerData.LastTriggered = newTime;
+      return true;
     }
 
     private void TriggerDataUpdated(object sender, EventArgs e)
