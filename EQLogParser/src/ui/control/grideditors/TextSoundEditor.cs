@@ -2,6 +2,7 @@
 using Syncfusion.Windows.PropertyGrid;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -18,6 +19,12 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private Grid TextSoundGrid;
     private SoundPlayer SoundPlayer;
+    private ObservableCollection<string> FileList;
+
+    public TextSoundEditor(ObservableCollection<string> fileList)
+    {
+      FileList = fileList;
+    }
 
     public void Attach(PropertyViewItem property, PropertyItem info)
     {
@@ -60,15 +67,7 @@ namespace EQLogParser
       soundCombo.SelectedIndex = -1;
       var realTextBox = new TextBox { Name = "Real", Visibility = Visibility.Collapsed };
       realTextBox.TextChanged += RealTextBoxTextChanged;
-
-      try
-      {
-        soundCombo.ItemsSource = Directory.GetFiles(@"data/sounds", "*.wav").Select(file => Path.GetFileName(file)).OrderBy(file => file).ToList();
-      }
-      catch (Exception)
-      {
-        // ignore
-      }
+      soundCombo.ItemsSource = FileList;
 
       grid.Children.Add(realTextBox);
       grid.Children.Add(combo);
