@@ -34,6 +34,7 @@ namespace EQLogParser
       {
         if (child is TextBox textBox && "Real".Equals(textBox.Name))
         {
+          textBox.DataContext = property.DataContext;
           BindingOperations.SetBinding(textBox, TextBox.TextProperty, binding);
         }
       }
@@ -56,23 +57,23 @@ namespace EQLogParser
       textBox.SetValue(Grid.ColumnProperty, 0);
       var soundCombo = new ComboBox { Name = "SoundCombo", Visibility = Visibility.Collapsed, Tag = true };
       soundCombo.SetValue(Grid.ColumnProperty, 0);
-      soundCombo.SelectedIndex = 0;
+      soundCombo.SelectedIndex = -1;
       var realTextBox = new TextBox { Name = "Real", Visibility = Visibility.Collapsed };
       realTextBox.TextChanged += RealTextBoxTextChanged;
 
       try
       {
-        soundCombo.ItemsSource = Directory.GetFiles(@"data/sounds").Select(file => Path.GetFileName(file)).ToList();
+        soundCombo.ItemsSource = Directory.GetFiles(@"data/sounds", "*.wav").Select(file => Path.GetFileName(file)).OrderBy(file => file).ToList();
       }
       catch (Exception)
       {
         // ignore
       }
 
+      grid.Children.Add(realTextBox);
       grid.Children.Add(combo);
       grid.Children.Add(textBox);
       grid.Children.Add(soundCombo);
-      grid.Children.Add(realTextBox);
       TextSoundGrid = grid;
 
       textBox.TextChanged += TextBoxTextChanged;
@@ -92,6 +93,15 @@ namespace EQLogParser
       if (sender is TextBox textBox)
       {
         bool hideText = TriggerUtil.MatchSoundFile(textBox.Text, out string soundFile, out _);
+
+        if (hideText)
+        {
+          if (!File.Exists(@"data/sounds/" + soundFile))
+          {
+            hideText = false;
+            textBox.Text = "";
+          }
+        }
 
         foreach (var child in TextSoundGrid.Children)
         {
@@ -135,17 +145,25 @@ namespace EQLogParser
       {
         bool hideText = combo.SelectedIndex == 0 ? false : true;
 
+        TextBox realTextBox = null;
         foreach (var child in TextSoundGrid.Children)
         {
-          if (child is TextBox textBox && !"Real".Equals(textBox.Name))
+          if (child is TextBox textBox)
           {
-            textBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;
-
-            if (!hideText)
+            if (!"Real".Equals(textBox.Name))
             {
-              var previous = textBox.Text;
-              textBox.Text = previous + "-" + previous;
-              textBox.Text = previous;
+              textBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;
+
+              if (!hideText)
+              {
+                var previous = textBox.Text;
+                textBox.Text = previous + "-" + previous;
+                textBox.Text = previous;
+              }
+            }
+            else
+            {
+              realTextBox = textBox;
             }
           }
           else if (child is ComboBox soundCombo && "SoundCombo".Equals(soundCombo.Name))
@@ -154,9 +172,18 @@ namespace EQLogParser
 
             if (hideText)
             {
-              var previous = soundCombo.SelectedIndex;
+              if (realTextBox != null)
+              {
+                var isSound = TriggerUtil.MatchSoundFile(realTextBox.Text, out string decoded, out string _);
+                if ((!isSound || !soundCombo.Items.Contains(decoded)) || (soundCombo.SelectedValue is string selectedValue &&
+                  !string.IsNullOrEmpty(selectedValue) && selectedValue != realTextBox.Text))
+                {
+                  soundCombo.Tag = null;
+                }
+              }
+
+              var previous = (soundCombo.SelectedIndex == -1) ? 0 : soundCombo.SelectedIndex;
               soundCombo.SelectedIndex = -1;
-              soundCombo.Tag = null;
               soundCombo.SelectedIndex = previous;
             }
           }
@@ -182,18 +209,18 @@ namespace EQLogParser
             {
               LOG.Error("Error playing sound file.", ex);
             }
+
+            var codedName = "<<" + selected + ">>";
+            foreach (var child in TextSoundGrid.Children)
+            {
+              if (child is TextBox textBox && "Real".Equals(textBox.Name) && textBox.Text != codedName)
+              {
+                textBox.Text = codedName;
+              }
+            }
           }
 
           combo.Tag = null;
-          var codedName = "<<" + selected + ">>";
-
-          foreach (var child in TextSoundGrid.Children)
-          {
-            if (child is TextBox textBox && "Real".Equals(textBox.Name) && textBox.Text != codedName)
-            {
-              textBox.Text = codedName;
-            }
-          }
         }
       }
     }
