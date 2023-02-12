@@ -101,10 +101,10 @@ namespace EQLogParser
           toModel.SelectedTimerOverlays = TriggerOverlayManager.Instance.GetTimerOverlayItems(toModel.SelectedOverlays);
           toModel.DurationTimeSpan = new TimeSpan(0, 0, (int)toModel.DurationSeconds);
           toModel.ResetDurationTimeSpan = new TimeSpan(0, 0, (int)toModel.ResetDurationSeconds);
-          toModel.SoundOrText = GetCodedSoundOrText(toModel.SoundToPlay, toModel.TextToSpeak, out _);
-          toModel.EndEarlySoundOrText = GetCodedSoundOrText(toModel.EndEarlySoundToPlay, toModel.EndEarlyTextToSpeak, out _);
-          toModel.EndSoundOrText = GetCodedSoundOrText(toModel.EndSoundToPlay, toModel.EndTextToSpeak, out _);
-          toModel.WarningSoundOrText = GetCodedSoundOrText(toModel.WarningSoundToPlay, toModel.WarningTextToSpeak, out _);
+          toModel.SoundOrText = GetFromCodedSoundOrText(toModel.SoundToPlay, toModel.TextToSpeak, out _);
+          toModel.EndEarlySoundOrText = GetFromCodedSoundOrText(toModel.EndEarlySoundToPlay, toModel.EndEarlyTextToSpeak, out _);
+          toModel.EndSoundOrText = GetFromCodedSoundOrText(toModel.EndSoundToPlay, toModel.EndTextToSpeak, out _);
+          toModel.WarningSoundOrText = GetFromCodedSoundOrText(toModel.WarningSoundToPlay, toModel.WarningTextToSpeak, out _);
         }
         else if (fromTrigger is TriggerPropertyModel fromModel)
         {
@@ -237,7 +237,7 @@ namespace EQLogParser
       }
     }
 
-    internal static string GetCodedSoundOrText(string soundToPlay, string text, out bool isSound)
+    internal static string GetFromCodedSoundOrText(string soundToPlay, string text, out bool isSound)
     {
       isSound = false;
       if (!string.IsNullOrEmpty(soundToPlay) && soundToPlay.EndsWith(".wav"))
@@ -251,7 +251,7 @@ namespace EQLogParser
       }
     }
 
-    internal static string GetDecodedSoundOrText(string soundToPlay, string text, out bool isSound)
+    internal static string GetFromDecodedSoundOrText(string soundToPlay, string text, out bool isSound)
     {
       isSound = false;
       if (!string.IsNullOrEmpty(soundToPlay) && soundToPlay.EndsWith(".wav"))

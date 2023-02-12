@@ -322,11 +322,11 @@ namespace EQLogParser
           bool isSound;
           if (!string.IsNullOrEmpty(wrapper.ModifiedEndEarlySpeak))
           {
-            speak = TriggerUtil.GetDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out isSound);
+            speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out isSound);
           }
           else
           {
-            speak = TriggerUtil.GetDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound);
+            speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound);
           }
           
           speechChannel.Writer.WriteAsync(new Speak
@@ -351,7 +351,7 @@ namespace EQLogParser
 
       if (found)
       {
-        var speak = TriggerUtil.GetDecodedSoundOrText(wrapper.TriggerData.SoundToPlay, wrapper.ModifiedSpeak, out bool isSound);
+        var speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.SoundToPlay, wrapper.ModifiedSpeak, out bool isSound);
         if (!string.IsNullOrEmpty(speak))
         {
           speechChannel.Writer.WriteAsync(new Speak
@@ -564,7 +564,7 @@ namespace EQLogParser
 
                 if (proceed)
                 {
-                  var speak = TriggerUtil.GetDecodedSoundOrText(wrapper.TriggerData.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out bool isSound);
+                  var speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out bool isSound);
                   speechChannel.Writer.WriteAsync(new Speak
                   {
                     Trigger = wrapper.TriggerData,
@@ -612,7 +612,7 @@ namespace EQLogParser
 
             if (proceed)
             {
-              var speak = TriggerUtil.GetDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out bool isSound);
+              var speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out bool isSound);
               speechChannel.Writer.WriteAsync(new Speak
               {
                 Trigger = wrapper.TriggerData,
