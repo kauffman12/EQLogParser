@@ -1,9 +1,12 @@
 ﻿using FontAwesome5;
+using Syncfusion.Data.Extensions;
 using Syncfusion.UI.Xaml.TreeView;
 using Syncfusion.Windows.PropertyGrid;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Speech.Synthesis;
 using System.Windows;
@@ -19,10 +22,12 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+    private readonly ObservableCollection<string> FileList= new ObservableCollection<string>();
     private const string LABEL_NEW_TEXT_OVERLAY = "New Text Overlay";
     private const string LABEL_NEW_TIMER_OVERLAY = "New Timer Overlay";
     private const string LABEL_NEW_TRIGGER = "New Trigger";
     private const string LABEL_NEW_FOLDER = "New Folder";
+    private FileSystemWatcher Watcher;
     private WrapTextEditor ErrorEditor;
     private List<TriggerNode> Removed;
     private SpeechSynthesizer TestSynth = null;
@@ -47,6 +52,21 @@ namespace EQLogParser
         watchGina.IsChecked = true;
       }
 
+      try
+      {
+        LoadFiles();
+        Watcher = new FileSystemWatcher(@"data/sounds");
+        Watcher.Created += WatcherUpdate;
+        Watcher.Deleted += WatcherUpdate;
+        Watcher.Changed += WatcherUpdate;
+        Watcher.Filter = "*.wav";
+        Watcher.EnableRaisingEvents = true;
+      }
+      catch (Exception)
+      {
+        // ignore
+      }
+
       var selectedVoice = TriggerUtil.GetSelectedVoice();
       if (voices.ItemsSource is List<string> populated && populated.IndexOf(selectedVoice) is int found && found > -1)
       {
@@ -68,10 +88,10 @@ namespace EQLogParser
       treeView.DragDropController.CanAutoExpand = true;
       treeView.DragDropController.AutoExpandDelay = new TimeSpan(0, 0, 1);
 
-      AddEditor(new TextSoundEditor(), "SoundOrText");
-      AddEditor(new TextSoundEditor(), "EndEarlySoundOrText");
-      AddEditor(new TextSoundEditor(), "EndSoundOrText");
-      AddEditor(new TextSoundEditor(), "WarningSoundOrText");
+      AddEditor(new TextSoundEditor(FileList), "SoundOrText");
+      AddEditor(new TextSoundEditor(FileList), "EndEarlySoundOrText");
+      AddEditor(new TextSoundEditor(FileList), "EndSoundOrText");
+      AddEditor(new TextSoundEditor(FileList), "WarningSoundOrText");
       AddEditor(new RangeEditor(1, 5), "Priority");
       AddEditor(new WrapTextEditor(), "Comments");
       AddEditor(new WrapTextEditor(), "OverlayComments");
@@ -107,6 +127,7 @@ namespace EQLogParser
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
     }
 
+    private void WatcherUpdate(object sender, FileSystemEventArgs e) => LoadFiles();
     private void AssignTextOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender);
     private void AssignTimerOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender);
     private void CreateTextOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(false);
@@ -192,6 +213,40 @@ namespace EQLogParser
           }
         }
       }
+    }
+
+    private void LoadFiles()
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        try
+        {
+          var current = Directory.GetFiles(@"data/sounds", "*.wav").Select(file => Path.GetFileName(file)).OrderBy(file => file).ToList();
+          for (int i = 0; i < current.Count; i++)
+          {
+            if (i < FileList.Count)
+            {
+              if (FileList[i] != current[i])
+              {
+                FileList[i] = current[i];
+              }
+            }
+            else
+            {
+              FileList.Add(current[i]);
+            }
+          }
+
+          for (int j = FileList.Count - 1; j >= current.Count; j--)
+          {
+            FileList.RemoveAt(j);
+          }
+        }
+        catch (Exception)
+        {
+          // ignore
+        }
+      });
     }
 
     private void AddEditor(ITypeEditor typeEditor, string propName)
@@ -1067,6 +1122,7 @@ namespace EQLogParser
         treeView.Dispose();
         thePropertyGrid?.Dispose();
         TestSynth?.Dispose();
+        Watcher?.Dispose();
         disposedValue = true;
       }
     }
