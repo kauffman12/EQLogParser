@@ -17,6 +17,7 @@
 			<ComponentGroupRef Id="ProductComponents" />
       <ComponentGroupRef Id="ProductDataComponents" />
       <ComponentGroupRef Id="ProductHtmlDataComponents" />
+      <ComponentGroupRef Id="ProductSoundsDataComponents" />
       <ComponentGroupRef Id="RuntimeComponents" />
       <ComponentRef Id="ApplicationShortcut" />
       <ComponentRef Id="ApplicationShortcutDesktop" />
@@ -96,6 +97,7 @@
         <Directory Id="INSTALLFOLDER" Name="EQLogParser">
           <Directory Id="DATAFOLDER" Name="data">
             <Directory Id="HTMLDATAFOLDER" Name="html" />
+            <Directory Id="SOUNDSDATAFOLDER" Name="sounds" />
           </Directory>
           <Directory Id="RTOLDER" Name="runtimes">
             <Directory Id="RTWINFOLDER" Name="win">
@@ -274,6 +276,23 @@
       </Component>
       <Component Win64="yes" Id="footer.html" Guid="5BEC871D-91DA-436B-8D6E-656FDA973A33">
         <File Id="footer.html" Name="footer.html" Source="$(var.EQLogParser.TargetDir)\data\html\footer.html" />
+      </Component>
+    </ComponentGroup>
+    <ComponentGroup Id="ProductSoundsDataComponents" Directory="SOUNDSDATAFOLDER">
+      <Component Win64="yes" Id="alert1.wav" Guid="6ECB3792-D945-4804-9434-872D005154C1">
+        <File Id="alert1.wav" Name="alert1.wav" Source="$(var.EQLogParser.TargetDir)\data\sounds\alert1.wav" />
+      </Component>
+      <Component Win64="yes" Id="alert2.wav" Guid="FF483727-CB14-4EC3-A550-D1459FD36A8B">
+        <File Id="alert2.wav" Name="alert2.wav" Source="$(var.EQLogParser.TargetDir)\data\sounds\alert2.wav" />
+      </Component>
+      <Component Win64="yes" Id="alert3.wav" Guid="7B3F323C-EDA1-4BE7-B3C3-697A56CC3DCC">
+        <File Id="alert3.wav" Name="alert3.wav" Source="$(var.EQLogParser.TargetDir)\data\sounds\alert3.wav" />
+      </Component>
+      <Component Win64="yes" Id="alert4.wav" Guid="51DAE0F7-BDEB-49CE-B7D5-AC7302D84021">
+        <File Id="alert4.wav" Name="alert4.wav" Source="$(var.EQLogParser.TargetDir)\data\sounds\alert4.wav" />
+      </Component>
+      <Component Win64="yes" Id="alert5.wav" Guid="1A00D194-07D6-45D3-AC07-8D245BD8B5E8">
+        <File Id="alert5.wav" Name="alert5.wav" Source="$(var.EQLogParser.TargetDir)\data\sounds\alert5.wav" />
       </Component>
     </ComponentGroup>
     <ComponentGroup Id="RuntimeComponents" Directory="RTWINLIBNETFOLDER">

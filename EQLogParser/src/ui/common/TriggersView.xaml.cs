@@ -93,6 +93,11 @@ namespace EQLogParser
       AddEditor(new TextSoundEditor(FileList), "EndSoundOrText");
       AddEditor(new TextSoundEditor(FileList), "WarningSoundOrText");
       AddEditor(new RangeEditor(1, 5), "Priority");
+      AddEditor(new RangeEditor(0, 99999), "WarningSeconds");
+      AddEditor(new RangeEditor(0, 9999), "Top");
+      AddEditor(new RangeEditor(0, 9999), "Height");
+      AddEditor(new RangeEditor(0, 9999), "Left");
+      AddEditor(new RangeEditor(0, 9999), "Width");
       AddEditor(new WrapTextEditor(), "Comments");
       AddEditor(new WrapTextEditor(), "OverlayComments");
       AddEditor(new WrapTextEditor(), "Pattern");
@@ -837,6 +842,7 @@ namespace EQLogParser
       {
         new { Name = patternItem.CategoryName, IsEnabled = trigger },
         new { Name = timerDurationItem.CategoryName, IsEnabled = triggerTimer },
+        new { Name = endEarlyPatternItem.CategoryName, IsEnabled = triggerTimer },
         new { Name = evalTimeItem.CategoryName, IsEnabled = status },
         new { Name = fontSizeItem.CategoryName, IsEnabled = overlay },
         new { Name = activeBrushItem.CategoryName, IsEnabled = overlayTimer },
