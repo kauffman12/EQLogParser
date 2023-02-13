@@ -17,8 +17,9 @@ namespace EQLogParser
     private static object StatsLock = new object();
     private static SolidColorBrush ActiveBrush = new SolidColorBrush(Color.FromRgb(254, 156, 30));
     private static SolidColorBrush InActiveBrush = new SolidColorBrush(Colors.White);
+    private static DamageOverlayStats Stats = null;
+
     private readonly DispatcherTimer UpdateTimer;
-    private DamageOverlayStats Stats = null;
     private bool Preview = false;
     private double SavedHeight;
     private double SavedWidth;
@@ -58,7 +59,7 @@ namespace EQLogParser
       var fontSizeString = ConfigUtil.GetSetting("OverlayFontSize");
       if (fontSizeString == null || !int.TryParse(fontSizeString, out SavedFontSize) || (SavedFontSize != 12 && SavedFontSize != 14 && SavedFontSize != 16))
       {
-        SavedFontSize = 14;
+        SavedFontSize = 12;
       }
       UpdateFontSize(SavedFontSize);
 
@@ -336,7 +337,6 @@ namespace EQLogParser
 
     private void CloseClick(object sender, RoutedEventArgs e)
     {
-      this.Hide();
       ((MainWindow)Application.Current.MainWindow).CloseDamageOverlay();
       ((MainWindow)Application.Current.MainWindow).OpenDamageOverlayIfEnabled();
     }
@@ -729,7 +729,8 @@ namespace EQLogParser
           tankButton.FontSize = 13;
           configButton.FontSize = 11;
           copyButton.FontSize = 11;
-          resetButton.FontSize = 10;
+          resetButton.FontSize = 13;
+          exitButton.FontSize = 10;
           controlPanel.Height = 27;
           thePopup.Height = 27;
           rect1.Height = 14;
@@ -748,7 +749,8 @@ namespace EQLogParser
           tankButton.FontSize = 15;
           configButton.FontSize = 13;
           copyButton.FontSize = 13;
-          resetButton.FontSize = 12;
+          resetButton.FontSize = 15;
+          exitButton.FontSize = 11;
           controlPanel.Height = 29;
           thePopup.Height = 29;
           rect1.Height = 16;
@@ -767,7 +769,8 @@ namespace EQLogParser
           tankButton.FontSize = 17;
           configButton.FontSize = 15;
           copyButton.FontSize = 15;
-          resetButton.FontSize = 14;
+          resetButton.FontSize = 16;
+          exitButton.FontSize = 13;
           controlPanel.Height = 31;
           thePopup.Height = 31;
           rect1.Height = 18;
@@ -781,7 +784,6 @@ namespace EQLogParser
       lock (StatsLock)
       {
         UpdateTimer.Stop();
-        Stats = null;
       }
 
       this.Hide();
@@ -834,7 +836,6 @@ namespace EQLogParser
       {
         Stats = null;
         DataManager.Instance.ResetOverlayFights();
-        ((MainWindow)Application.Current.MainWindow).CloseDamageOverlay();
       }
     }
 

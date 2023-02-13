@@ -353,9 +353,15 @@
               <fa:ImageAwesome x:Name="restoreTableColumnsIcon" Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Undo" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="viewErrorLog" Header="View _Error Log" Click="ViewErrorLogClick" Height="24">
+          <Separator />
+          <MenuItem Header="_Open Sounds Folder" Click="OpenSoundsFolderClick" Height="24">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="viewErrorLogIcon" Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_FileCode" />
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_FolderOpen" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem Header="View _Error Log" Click="ViewErrorLogClick" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_FileCode" />
             </MenuItem.Icon>
           </MenuItem>
         </MenuItem>
@@ -370,10 +376,15 @@
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Regular_ListAlt" />
             </MenuItem.Icon>
           </MenuItem>
+          <MenuItem Header="_About" Click="AboutClick" IsEnabled="True" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Info" />
+            </MenuItem.Icon>
+          </MenuItem>
         </MenuItem>
       </Menu>
       <TextBlock Margin="35,0,0,0" Visibility="Hidden" Text="" />
-      <TextBlock x:Name="statusTriggersText" Margin="0,0,0,0" Visibility="Collapsed" VerticalAlignment="Center" Text="Triggers Active | " Foreground="{DynamicResource EQGoodForegroundBrush}"/>
+      <TextBlock x:Name="statusTriggersText" Margin="0,0,0,0" Visibility="Collapsed" VerticalAlignment="Center" Text="Triggers Active  " Foreground="{DynamicResource EQGoodForegroundBrush}"/>
       <TextBlock x:Name="statusText" Margin="0,0,4,0" VerticalAlignment="Center"/>
       <TextBlock x:Name="fileText" Margin="1,0,4,0" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"/>
     </listCollection:ArrayList>

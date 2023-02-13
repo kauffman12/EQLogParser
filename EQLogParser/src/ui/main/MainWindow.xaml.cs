@@ -218,6 +218,13 @@ namespace EQLogParser
           ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
         }
 
+        if (ConfigUtil.IfSetOrElse("TriggersEnabled", false))
+        {
+          TriggerManager.Instance.Start();
+        }
+
+        SystemEvents.PowerModeChanged += SystemEventsPowerModeChanged;
+
         // cleanup downloads
         Dispatcher.InvokeAsync(() => MainActions.Cleanup());
         TriggerManager.Instance.Init();
@@ -226,6 +233,24 @@ namespace EQLogParser
       {
         LOG.Error(e);
         throw;
+      }
+    }
+
+    private void SystemEventsPowerModeChanged(object sender, PowerModeChangedEventArgs e)
+    {
+      switch (e.Mode)
+      {
+        case PowerModes.Suspend:
+          LOG.Warn("Suspending");
+          DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
+          CloseDamageOverlay();
+          break;
+        case PowerModes.Resume:
+          LOG.Warn("Resume");
+          DataManager.Instance.ResetOverlayFights(true);
+          OpenDamageOverlayIfEnabled();
+          DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
+          break;
       }
     }
 
@@ -442,9 +467,28 @@ namespace EQLogParser
       }
     }
 
+    private void OpenSoundsFolderClick(object sender, RoutedEventArgs e)
+    {
+      using (Process fileopener = new Process())
+      {
+        fileopener.StartInfo.FileName = "explorer";
+        fileopener.StartInfo.Arguments = "\"" + @"data\sounds" + "\"";
+        fileopener.Start();
+      }
+    }
+
     private void ReportProblemClick(object sender, RoutedEventArgs e)
     {
       var uri = "http://github.com/kauffman12/EQLogParser/issues";
+      var psi = new System.Diagnostics.ProcessStartInfo();
+      psi.UseShellExecute = true;
+      psi.FileName = uri;
+      System.Diagnostics.Process.Start(psi);
+    }
+
+    private void AboutClick(object sender, RoutedEventArgs e)
+    {
+      var uri = "http://github.com/kauffman12/EQLogParser/#readme";
       var psi = new System.Diagnostics.ProcessStartInfo();
       psi.UseShellExecute = true;
       psi.FileName = uri;

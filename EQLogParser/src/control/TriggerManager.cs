@@ -52,7 +52,7 @@ namespace EQLogParser
       CurrentVoice = TriggerUtil.GetSelectedVoice();
       CurrentVoiceRate = TriggerUtil.GetVoiceRate();
 
-      TriggerUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 1) };
+      TriggerUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
       TriggerUpdateTimer.Tick += TriggerDataUpdated;
     }
 
@@ -642,10 +642,6 @@ namespace EQLogParser
         {
           RequestRefresh();
         }
-        else if (ConfigUtil.IfSetOrElse("TriggersEnabled", false))
-        {
-          Start();
-        }
       }
     }
 
@@ -661,7 +657,7 @@ namespace EQLogParser
         activeTriggers.Remove(node);
         activeTriggers.AddFirst(node);
       }
-      else if ((newTime - previous) <= 400)
+      else if ((node.Value.TriggerData.EnableTimer == false) && ((newTime - previous) <= 400))
       {
         return false;
       }
