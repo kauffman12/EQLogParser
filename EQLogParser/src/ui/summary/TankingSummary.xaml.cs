@@ -248,9 +248,9 @@ namespace EQLogParser
             dataGrid.SelectedItems.Clear();
             dataGrid.View?.RefreshFilter();
 
-            if (!MainWindow.IsAoEHealingEnabled)
+            if (e.Limited)
             {
-              title.Content = CurrentStats.FullTitle + " (Not Including AE Healing)";
+              title.Content = CurrentStats.FullTitle + " (Not All Healing Opts Chosen)";
             }
             else
             {
@@ -271,6 +271,7 @@ namespace EQLogParser
               CurrentGroups = e.Groups;
               CurrentGroupCount = e.UniqueGroupCount;
 
+              bool isHealingLimited = false;
               if (CurrentStats == null)
               {
                 title.Content = NODATA_TABLE_LABEL;
@@ -278,13 +279,13 @@ namespace EQLogParser
               else
               {
                 title.Content = CurrentStats.FullTitle;
-                HealingStatsManager.Instance.PopulateHealing(CurrentStats);
+                isHealingLimited = HealingStatsManager.Instance.PopulateHealing(CurrentStats);
                 dataGrid.ItemsSource = CurrentStats.StatsList;
               }
 
-              if (!MainWindow.IsAoEHealingEnabled)
+              if (isHealingLimited)
               {
-                title.Content += " (Not Including AE Healing)";
+                title.Content += " (Not All Healing Opts Chosen)";
               }
 
               CreatePetOwnerMenu();

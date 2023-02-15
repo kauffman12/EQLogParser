@@ -197,10 +197,6 @@ namespace EQLogParser
             {
               PlayerManager.Instance.AddVerifiedPet(healed);
             }
-
-            // dont count swarm pets
-            healer = "";
-            heal = 0;
           }
           // found a bst/mag/nec pet
           else if (!string.IsNullOrEmpty(healer) && !string.IsNullOrEmpty(spell) && spell.StartsWith("Mend Companion", StringComparison.Ordinal))

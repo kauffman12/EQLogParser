@@ -159,9 +159,9 @@ namespace EQLogParser
               dataGrid.ItemsSource = CurrentStats.StatsList;
             }
 
-            if (!MainWindow.IsAoEHealingEnabled)
+            if (e.Limited)
             {
-              title.Content += " (Not Including AE Healing)";
+              title.Content += " (Not All Healing Opts Chosen)";
             }
 
             UpdateDataGridMenuItems();
