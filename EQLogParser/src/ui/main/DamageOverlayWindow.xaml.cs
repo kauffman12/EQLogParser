@@ -495,6 +495,7 @@ namespace EQLogParser
         {
           UpdateMiniBars(miniBars.IsChecked.Value);
           DataChanged();
+          AdjustHeight();
         }
       }
     }
@@ -620,6 +621,7 @@ namespace EQLogParser
       {
         UpdateMaxRows(maxRowsList.SelectedIndex + 5);
         DataChanged();
+        AdjustHeight();
       }
     }
 
@@ -679,6 +681,7 @@ namespace EQLogParser
       {
         UpdateFontSize(value);
         DataChanged();
+        AdjustHeight();
       }
     }
 
@@ -710,6 +713,18 @@ namespace EQLogParser
       }
 
       UpdateMiniBars(miniBars.IsChecked == true);
+    }
+
+    private void AdjustHeight()
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        var needed = damageContent.ActualHeight + buttonsPanel.ActualHeight + 8;
+        if (needed != this.Height)
+        {
+          this.Height = needed;
+        }
+      }, DispatcherPriority.Background);
     }
 
     private void UpdateColumnSizes(int fontSize)
