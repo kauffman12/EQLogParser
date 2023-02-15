@@ -23,7 +23,7 @@
     <listCollection:ArrayList>
       <Menu Height="26" FontSize="12" Width="285" Margin="0,0,0,2" VerticalAlignment="Bottom">
         <MenuItem Header="_File" Height="30" Width="40">
-          <MenuItem Header="Monitor Log File" Height="24" Click="MenuItemSelectMonitorLogFileClick" ToolTip="Monitor Log File for changes">
+          <MenuItem Header="_Monitor Log File" Height="24" Click="MenuItemSelectMonitorLogFileClick" ToolTip="Monitor Log File for changes">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Eye" />
             </MenuItem.Icon>
@@ -175,7 +175,7 @@
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
-          <MenuItem x:Name="triggers" Header="_Triggers" Height="24">
+          <MenuItem x:Name="triggers" Header="T_riggers" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="triggrsViewIcon" Style="{StaticResource EQIconStyle}" Icon="Regular_FileAudio" />
             </MenuItem.Icon>
@@ -272,14 +272,19 @@
               <fa:ImageAwesome x:Name="enableAutoMonitorIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="checkUpdates" Header="Check for Updates at Startup" Click="ToggleCheckUpdatesClick" Height="24">
+          <MenuItem x:Name="checkUpdates" Header="Check for _Updates at Startup" Click="ToggleCheckUpdatesClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="checkUpdatesIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>          
-          <MenuItem x:Name="hideOnMinimize" Header="_Hide Window if Minimized" Click="ToggleHideOnMinimizeClick" Height="24">
+          <MenuItem x:Name="hideOnMinimize" Header="Hide _Window if Minimized" Click="ToggleHideOnMinimizeClick" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableHideOnMinimizeIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="enableMapSendtoEQ" Header="_Send To EQ With Ctrl+C" Click="ToggleMapSendToEQClick" Height="24">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="enableMapSendToEQIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
@@ -318,15 +323,20 @@
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
-          <MenuItem x:Name="enableAoEHealing" Header="Include _AoE Healing" Click="ToggleAoEHealingClick" Height="24">
+          <MenuItem x:Name="healingOptions" Header="_Healing Settings" Height="24">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="enableAoEHealingIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              <fa:ImageAwesome x:Name="healingOptionsIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Heart" />
             </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem x:Name="enableMapSendtoEQ" Header="Send To EQ With Ctrl+C" Click="ToggleMapSendToEQClick" Height="24">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="enableMapSendToEQIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
-            </MenuItem.Icon>
+            <MenuItem x:Name="enableAoEHealing" Header="Include _AoE Healing" Click="ToggleAoEHealingClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="enableAoEHealingIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem x:Name="enableSwarmPetHealing" Header="Include Healing _Swarm Pets" Click="ToggleHealingSwarmPetsClick" Height="24">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="enableHealingSwarmPetsIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              </MenuItem.Icon>
+            </MenuItem>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="themeOptions" Header="_Theme" Height="24">

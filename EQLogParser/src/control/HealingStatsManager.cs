@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Syncfusion.Data.Extensions;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,6 +32,7 @@ namespace EQLogParser
     private PlayerStats RaidTotals;
     private List<Fight> Selected;
     private string Title;
+    private bool IsLimited = false;
 
     internal HealingStatsManager()
     {
@@ -51,23 +53,15 @@ namespace EQLogParser
       }
     }
 
-    internal void RebuildTotalStats(bool updatedAoEOption = false)
+    internal void RebuildTotalStats()
     {
       lock (HealingGroups)
       {
         if (HealingGroups.Count > 0)
         {
-          if (updatedAoEOption)
-          {
-            var newOptions = new GenerateStatsOptions();
-            newOptions.Npcs.AddRange(Selected);
-            BuildTotalStats(newOptions);
-          }
-          else
-          {
-            FireNewStatsEvent();
-            ComputeHealingStats();
-          }
+          var newOptions = new GenerateStatsOptions();
+          newOptions.Npcs.AddRange(Selected);
+          BuildTotalStats(newOptions);
         }
       }
     }
@@ -83,7 +77,8 @@ namespace EQLogParser
 
           Selected = options.Npcs.OrderBy(sel => sel.Id).ToList();
           Title = options.Npcs?.FirstOrDefault()?.Name;
-
+          var healingValidator = new HealingValidator();
+          IsLimited = healingValidator.IsHealingLimited();
           Selected.ForEach(fight => RaidTotals.Ranges.Add(new TimeSegment(fight.BeginTankingTime, fight.LastTankingTime)));
 
           if (RaidTotals.Ranges.TimeSegments.Count > 0)
@@ -99,11 +94,11 @@ namespace EQLogParser
               var healerHealedTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
               var healerSpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
 
-              double currentTime = double.NaN;
-              Dictionary<string, HashSet<string>> currentSpellCounts = new Dictionary<string, HashSet<string>>();
-              Dictionary<double, Dictionary<string, HashSet<string>>> previousSpellCounts = new Dictionary<double, Dictionary<string, HashSet<string>>>();
-              Dictionary<string, byte> ignoreRecords = new Dictionary<string, byte>();
-              List<ActionBlock> filtered = new List<ActionBlock>();
+              var currentTime = double.NaN;
+              var currentSpellCounts = new Dictionary<string, HashSet<string>>();
+              var previousSpellCounts = new Dictionary<double, Dictionary<string, HashSet<string>>>();
+              var ignoreRecords = new Dictionary<string, byte>();
+              var filtered = new List<ActionBlock>();
               DataManager.Instance.GetHealsDuring(segment.BeginTime, segment.EndTime).ForEach(heal =>
               {
                 // copy
@@ -133,63 +128,10 @@ namespace EQLogParser
                 {
                   if (PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Healed) || PlayerManager.IsPossiblePlayerName(record.Healed))
                   {
-                    // if AOEHealing is disabled then filter out AEs
-                    if (!MainWindow.IsAoEHealingEnabled)
+                    if (healingValidator.IsValid(heal, record, currentSpellCounts, previousSpellCounts, ignoreRecords))
                     {
-                      SpellData spellData;
-                      if (record.SubType != null && (spellData = DataManager.Instance.GetHealingSpellByName(record.SubType)) != null)
-                      {
-                        if (spellData.Target == (byte)SpellTarget.TARGETAE || spellData.Target == (byte)SpellTarget.NEARBYPLAYERSAE ||
-                          spellData.Target == (byte)SpellTarget.TARGETRINGAE || spellData.Target == (byte)SpellTarget.CASTERPBPLAYERS)
-                        {
-                          // just skip these entirely if AOEs are turned off
-                          continue;
-                        }
-                        else if ((spellData.Target == (byte)SpellTarget.CASTERGROUP || spellData.Target == (byte)SpellTarget.TARGETGROUP) && spellData.Mgb)
-                        {
-                          // need to count group AEs and if more than 6 are seen we need to ignore those
-                          // casts since they're from MGB and count as an AE
-                          var key = record.Healer + "|" + record.SubType;
-                          if (!currentSpellCounts.TryGetValue(key, out HashSet<string> value))
-                          {
-                            value = new HashSet<string>();
-                            currentSpellCounts[key] = value;
-                          }
-
-                          value.Add(record.Healed);
-
-                          HashSet<string> totals = new HashSet<string>();
-                          List<double> temp = new List<double>();
-                          foreach (var timeKey in previousSpellCounts.Keys)
-                          {
-                            if (previousSpellCounts[timeKey].ContainsKey(key))
-                            {
-                              foreach (var item in previousSpellCounts[timeKey][key])
-                              {
-                                totals.Add(item);
-                              }
-                              temp.Add(timeKey);
-                            }
-                          }
-
-                          foreach (var item in currentSpellCounts[key])
-                          {
-                            totals.Add(item);
-                          }
-
-                          if (totals.Count > 6)
-                          {
-                            ignoreRecords[heal.BeginTime + "|" + key] = 1;
-                            temp.ForEach(timeKey =>
-                            {
-                              ignoreRecords[timeKey + "|" + key] = 1;
-                            });
-                          }
-                        }
-                      }
+                      newBlock.Actions.Add(record);
                     }
-
-                    newBlock.Actions.Add(record);
                   }
                 }
               });
@@ -247,13 +189,20 @@ namespace EQLogParser
       }
     }
 
-    internal void PopulateHealing(CombinedStats combined)
+    internal bool PopulateHealing(CombinedStats combined)
     {
       lock (HealingGroups)
       {
         List<PlayerStats> playerStats = combined.StatsList;
         Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
         Dictionary<string, long> totals = new Dictionary<string, long>();
+
+        // clear out previous
+        playerStats.ForEach(stats =>
+        {
+          stats.Extra = 0;
+          stats.MoreStats = null;
+        });
 
         HealingGroups.ForEach(group =>
         {
@@ -311,6 +260,8 @@ namespace EQLogParser
           }
         });
       }
+
+      return IsLimited;
     }
 
     private void UpdateStats(PlayerStats stats, ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> calc,
@@ -431,7 +382,8 @@ namespace EQLogParser
             {
               Type = Labels.HEALPARSE,
               State = "COMPLETED",
-              CombinedStats = combined
+              CombinedStats = combined,
+              Limited = IsLimited
             };
 
             genEvent.Groups.AddRange(HealingGroups);

@@ -31,6 +31,7 @@ namespace EQLogParser
     // global settings
     internal static string CurrentLogFile;
     internal static bool IsAoEHealingEnabled = true;
+    internal static bool IsHealingSwarmPetsEnabled = true;
     internal static bool IsAssassinateDamageEnabled = true;
     internal static bool IsBaneDamageEnabled = true;
     internal static bool IsDamageShieldDamageEnabled = true;
@@ -137,6 +138,10 @@ namespace EQLogParser
         // AoE healing
         IsAoEHealingEnabled = ConfigUtil.IfSetOrElse("IncludeAoEHealing", IsAoEHealingEnabled);
         enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
+
+        // Healing Swarm Pets
+        IsHealingSwarmPetsEnabled = ConfigUtil.IfSetOrElse("IncludeHealingSwarmPets", IsHealingSwarmPetsEnabled);
+        enableHealingSwarmPetsIcon.Visibility = IsHealingSwarmPetsEnabled? Visibility.Visible : Visibility.Hidden;
 
         // Assassinate Damage
         IsAssassinateDamageEnabled = ConfigUtil.IfSetOrElse("IncludeAssassinateDamage", IsAssassinateDamageEnabled);
@@ -513,7 +518,15 @@ namespace EQLogParser
       IsAoEHealingEnabled = !IsAoEHealingEnabled;
       ConfigUtil.SetSetting("IncludeAoEHealing", IsAoEHealingEnabled.ToString());
       enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
-      Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(true));
+      Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats());
+    }
+
+    private void ToggleHealingSwarmPetsClick(object sender, RoutedEventArgs e)
+    {
+      IsHealingSwarmPetsEnabled = !IsHealingSwarmPetsEnabled;
+      ConfigUtil.SetSetting("IncludeHealingSwarmPets", IsHealingSwarmPetsEnabled.ToString());
+      enableHealingSwarmPetsIcon.Visibility = IsHealingSwarmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
+      Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats());
     }
 
     private void ToggleAutoMonitorClick(object sender, RoutedEventArgs e)
