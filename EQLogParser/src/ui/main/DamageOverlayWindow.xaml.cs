@@ -39,7 +39,7 @@ namespace EQLogParser
     private string SavedProgressColor;
     private bool CurrentShowDps = true;
 
-    internal DamageOverlayWindow(bool preview = false)
+    internal DamageOverlayWindow(bool preview = false, bool reset = false)
     {
       InitializeComponent();
 
@@ -47,6 +47,14 @@ namespace EQLogParser
       dpsButton.Foreground = ActiveBrush;
       tankButton.Foreground = InActiveBrush;
       Preview = preview;
+
+      if (reset)
+      {
+        lock (StatsLock)
+        {
+          Stats = null;
+        }
+      }
 
       // dimensions
       var width = ConfigUtil.GetSetting("OverlayWidth");
@@ -338,7 +346,7 @@ namespace EQLogParser
     private void CloseClick(object sender, RoutedEventArgs e)
     {
       ((MainWindow)Application.Current.MainWindow).CloseDamageOverlay();
-      ((MainWindow)Application.Current.MainWindow).OpenDamageOverlayIfEnabled();
+      ((MainWindow)Application.Current.MainWindow).OpenDamageOverlayIfEnabled(false, false);
     }
 
     private void SaveClick(object sender, RoutedEventArgs e)
@@ -803,7 +811,7 @@ namespace EQLogParser
 
       this.Hide();
       ((MainWindow)Application.Current.MainWindow).CloseDamageOverlay();
-      ((MainWindow)Application.Current.MainWindow).OpenDamageOverlayIfEnabled(true);
+      ((MainWindow)Application.Current.MainWindow).OpenDamageOverlayIfEnabled(false, true);
     }
 
     private void CopyClick(object sender, RoutedEventArgs e)

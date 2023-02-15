@@ -253,7 +253,7 @@ namespace EQLogParser
         case PowerModes.Resume:
           LOG.Warn("Resume");
           DataManager.Instance.ResetOverlayFights(true);
-          OpenDamageOverlayIfEnabled();
+          OpenDamageOverlayIfEnabled(true, false);
           DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
           break;
       }
@@ -265,7 +265,7 @@ namespace EQLogParser
       {
         if (DamageOverlay == null)
         {
-          OpenDamageOverlayIfEnabled();
+          OpenDamageOverlayIfEnabled(false, false);
         }
       });
     }
@@ -302,7 +302,7 @@ namespace EQLogParser
       DamageOverlay = null;
     }
 
-    internal void OpenDamageOverlayIfEnabled(bool configure = false)
+    internal void OpenDamageOverlayIfEnabled(bool reset, bool configure)
     {
       if (configure)
       {
@@ -319,7 +319,7 @@ namespace EQLogParser
             DamageOverlay?.Close();
           }
 
-          DamageOverlay = new DamageOverlayWindow(false);
+          DamageOverlay = new DamageOverlayWindow(false, reset);
           DamageOverlay.Show();
         }
       }
@@ -556,7 +556,7 @@ namespace EQLogParser
 
       if (enabled)
       {
-        OpenDamageOverlayIfEnabled(false);
+        OpenDamageOverlayIfEnabled(false, false);
       }
 
       enableDamageOverlay.Header = enabled ? "Disable _Meter" : "Enable _Meter";
@@ -565,7 +565,7 @@ namespace EQLogParser
     private void ConfigureOverlayClick(object sender, RoutedEventArgs e)
     {
       CloseDamageOverlay();
-      OpenDamageOverlayIfEnabled(true);
+      OpenDamageOverlayIfEnabled(false, true);
     }
 
     private void ResetOverlayClick(object sender, RoutedEventArgs e)
@@ -573,7 +573,7 @@ namespace EQLogParser
       CloseDamageOverlay();
       ConfigUtil.SetSetting("OverlayTop", "");
       ConfigUtil.SetSetting("OverlayLeft", "");
-      OpenDamageOverlayIfEnabled(true);
+      OpenDamageOverlayIfEnabled(false, true);
     }
 
     private void ToggleAssassinateDamageClick(object sender, RoutedEventArgs e)
@@ -899,7 +899,7 @@ namespace EQLogParser
               Dispatcher.InvokeAsync(() =>
               {
                 DataManager.Instance.ResetOverlayFights(true);
-                OpenDamageOverlayIfEnabled();
+                OpenDamageOverlayIfEnabled(true, false);
                 DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
               }, DispatcherPriority.Background);
             }));
