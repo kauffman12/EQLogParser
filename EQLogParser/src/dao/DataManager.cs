@@ -105,16 +105,15 @@ namespace EQLogParser
     private readonly SpellTreeNode LandsOnYouTree = new SpellTreeNode();
     private readonly SpellTreeNode WearOffTree = new SpellTreeNode();
 
+    // locking was causing a problem for OverlayFights? I don't know
+    private readonly Dictionary<long, Fight> OverlayFights = new Dictionary<long, Fight>();
     private readonly ConcurrentDictionary<string, byte> AllNpcs = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>> NpcResistStats = new ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>>();
     private readonly ConcurrentDictionary<string, TotalCount> NpcTotalSpellCounts = new ConcurrentDictionary<string, TotalCount>();
     private readonly ConcurrentDictionary<string, SpellData> SpellsAbbrvDB = new ConcurrentDictionary<string, SpellData>();
     private readonly ConcurrentDictionary<string, SpellClass> SpellsToClass = new ConcurrentDictionary<string, SpellClass>();
-
     private readonly ConcurrentDictionary<string, Fight> ActiveFights = new ConcurrentDictionary<string, Fight>();
     private readonly ConcurrentDictionary<string, byte> LifetimeFights = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<long, Fight> OverlayFights = new ConcurrentDictionary<long, Fight>();
-
     private readonly ConcurrentDictionary<string, string> SpellAbbrvCache = new ConcurrentDictionary<string, string>();
     private readonly ConcurrentDictionary<string, string> RanksCache = new ConcurrentDictionary<string, string>();
     private readonly ConcurrentDictionary<string, string> TitleToClass = new ConcurrentDictionary<string, string>();
@@ -285,8 +284,6 @@ namespace EQLogParser
     internal void AddDeathRecord(DeathRecord record, double beginTime) => Helpers.AddAction(AllDeathBlocks, record, beginTime);
     internal void AddMiscRecord(IAction action, double beginTime) => Helpers.AddAction(AllMiscBlocks, action, beginTime);
     internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => Helpers.AddAction(AllReceivedSpellBlocks, received, beginTime);
-    internal Dictionary<long, Fight> GetOverlayFights() => OverlayFights.ToDictionary(i => i.Key, i => i.Value);
-    internal void RemoveOverlayFight(long id) => OverlayFights.TryRemove(id, out _);
     internal List<ActionBlock> GetAllLoot() => AllLootBlocks.ToList();
     internal List<ActionBlock> GetAllRandoms() => AllRandomBlocks.ToList();
     internal string GetClassFromTitle(string title) => TitleToClass.ContainsKey(title) ? TitleToClass[title] : null;
@@ -391,7 +388,7 @@ namespace EQLogParser
         if (diff > MAXTIMEOUT || diff > FIGHTTIMEOUT && fight.DamageBlocks.Count > 0)
         {
           RemoveActiveFight(fight.CorrectMapKey);
-          OverlayFights.TryRemove(fight.Id, out _);
+          RemoveOverlayFight(fight.Id);
         }
       }
     }
@@ -807,16 +804,6 @@ namespace EQLogParser
       return removed;
     }
 
-    internal bool HasOverlayFights()
-    {
-      bool result = false;
-      lock (OverlayFights)
-      {
-        result = OverlayFights.Count > 0;
-      }
-      return result;
-    }
-
     internal void UpdateIfNewFightMap(string name, Fight fight, bool isNonTankingFight)
     {
       LifetimeFights[name] = 1;
@@ -846,7 +833,7 @@ namespace EQLogParser
           needEvent = (OverlayFights.Count == 0);
           OverlayFights[fight.Id] = fight;
         }
-
+        
         if (needEvent)
         {
           EventsNewOverlayFight?.Invoke(this, fight);
@@ -854,23 +841,58 @@ namespace EQLogParser
       }
     }
 
-    internal void ResetOverlayFights(bool active = false)
+    internal Dictionary<long, Fight> GetOverlayFights()
+    {
+      Dictionary<long, Fight> result;
+      lock (OverlayFights)
+      {
+        result = OverlayFights.ToDictionary(i => i.Key, i => i.Value);
+      }
+      return result;
+    }
+
+    internal void RemoveOverlayFight(long id)
     {
       lock (OverlayFights)
       {
-        var groupId = (active && ActiveFights.Count > 0) ? ActiveFights.Values.First().GroupId : -1;
+        OverlayFights.Remove(id, out _);
+      }
+    }
 
-        // active is used after the log as been loaded. the overlay opening is displayed so that
-        // FightTable has time to populate the GroupIds. if for some reason not enough time has
-        // ellapsed then the IDs will still be 0 so ignore
-        if (groupId == 0)
-        {
-          groupId = -1;
-        }
+    internal bool HasOverlayFights()
+    {
+      bool result = false;
+      lock (OverlayFights)
+      {
+        result = OverlayFights.Count > 0;
+      }
+      return result;
+    }
 
-        var removeList = new List<long>();
+    internal void ResetOverlayFights(bool active = false)
+    {
+      Span<Fight> span;
 
-        foreach (ref var fight in OverlayFights.Values.ToArray().AsSpan())
+      lock (OverlayFights)
+      {
+        span = OverlayFights.Values.ToArray().AsSpan();
+      }
+
+      var groupId = (active && ActiveFights.Count > 0) ? ActiveFights.Values.First().GroupId : -1;
+
+      // active is used after the log as been loaded. the overlay opening is displayed so that
+      // FightTable has time to populate the GroupIds. if for some reason not enough time has
+      // ellapsed then the IDs will still be 0 so ignore
+      if (groupId == 0)
+      {
+        groupId = -1;
+      }
+
+      var removeList = new List<long>();
+
+      foreach (ref var fight in span)
+      {
+        if (fight != null)
         {
           if (groupId == -1 || fight.GroupId != groupId)
           {
@@ -879,9 +901,9 @@ namespace EQLogParser
             removeList.Add(fight.Id);
           }
         }
-
-        removeList.ForEach(id => OverlayFights.TryRemove(id, out _));
       }
+
+      removeList.ForEach(id => RemoveOverlayFight(id));
     }
 
     internal void Clear()
@@ -904,6 +926,7 @@ namespace EQLogParser
         SpellAbbrvCache.Clear();
         NpcTotalSpellCounts.Clear();
         NpcResistStats.Clear();
+        AssignedLoot.Clear();
         ClearActiveAdps();
         EventsClearedActiveData?.Invoke(this, true);
       }
@@ -946,15 +969,19 @@ namespace EQLogParser
           EventsRemovedFight?.Invoke(this, name);
         }
 
+        Span<Fight> overlayFights;
+
         lock (OverlayFights)
         {
-          OverlayFights.Values.ToList().ForEach(fight =>
+          overlayFights = OverlayFights.Values.ToArray().AsSpan();
+        }
+
+        foreach (ref Fight fight in overlayFights)
+        {
+          if (fight.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
           {
-            if (fight.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-            {
-              OverlayFights.TryRemove(fight.Id, out Fight _);
-            }
-          });
+            RemoveOverlayFight(fight.Id);
+          }
         }
       }
     }

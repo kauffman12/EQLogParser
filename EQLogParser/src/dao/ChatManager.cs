@@ -226,7 +226,10 @@ namespace EQLogParser
     {
       lock (LockObject)
       {
-        ChatTypes.Add(chatType);
+        if (chatType != null)
+        {
+          ChatTypes.Add(chatType);
+        }
 
         if (!Running)
         {
@@ -262,23 +265,26 @@ namespace EQLogParser
         double increment = 0.0;
         for (int i = 0; i < working.Count; i++)
         {
-          var chatType = working[i];
-          if (lastTime == chatType.BeginTime)
+          if (working[i] != null)
           {
-            increment += 0.001;
-          }
-          else
-          {
-            increment = 0.0;
-          }
+            var chatType = working[i];
+            if (lastTime == chatType.BeginTime)
+            {
+              increment += 0.001;
+            }
+            else
+            {
+              increment = 0.0;
+            }
 
-          var chatLine = new ChatLine { Line = chatType.Text, BeginTime = chatType.BeginTime + increment };
-          DateTime dateTime = DateTime.MinValue.AddSeconds(chatLine.BeginTime);
-          string year = dateTime.ToString("yyyy", CultureInfo.CurrentCulture);
-          string month = dateTime.ToString("MM", CultureInfo.CurrentCulture);
-          string day = dateTime.ToString("dd", CultureInfo.CurrentCulture);
-          AddToArchive(year, month, day, chatLine, chatType);
-          lastTime = chatType.BeginTime;
+            var chatLine = new ChatLine { Line = chatType.Text, BeginTime = chatType.BeginTime + increment };
+            DateTime dateTime = DateTime.MinValue.AddSeconds(chatLine.BeginTime);
+            string year = dateTime.ToString("yyyy", CultureInfo.CurrentCulture);
+            string month = dateTime.ToString("MM", CultureInfo.CurrentCulture);
+            string day = dateTime.ToString("dd", CultureInfo.CurrentCulture);
+            AddToArchive(year, month, day, chatLine, chatType);
+            lastTime = chatType.BeginTime;
+          }
         }
 
         lock (LockObject)
@@ -313,7 +319,7 @@ namespace EQLogParser
           }
         }
       }
-      catch (ObjectDisposedException ex)
+      catch (Exception ex)
       {
         LOG.Error(ex);
       }
