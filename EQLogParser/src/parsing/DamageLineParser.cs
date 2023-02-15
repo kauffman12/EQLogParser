@@ -138,7 +138,7 @@ namespace EQLogParser
       int byIndex = -1, forIndex = -1, pointsOfIndex = -1, endDamage = -1, byDamage = -1, extraIndex = -1;
       int fromDamage = -1, hasIndex = -1, haveIndex = -1, hitType = -1, hitTypeAdd = -1, slainIndex = -1;
       int takenIndex = -1, tryIndex = -1, yourIndex = -1, isIndex = -1, dsIndex = -1, butIndex = -1;
-      int missType = -1, nonMeleeIndex = -1, attentionIndex = -1, failedIndex = -1;
+      int missType = -1, nonMeleeIndex = -1, attentionIndex = -1, failedIndex = -1, harmedIndex = -1;
       string subType = null;
 
       bool found = false;
@@ -201,6 +201,12 @@ namespace EQLogParser
               if (i == stop)
               {
                 endDamage = i;
+              }
+              break;
+            case "harmed":
+              if (i > 0 && split[i-1] == "has")
+              {
+                harmedIndex = i + 1;
               }
               break;
             case "non-melee":
@@ -341,12 +347,36 @@ namespace EQLogParser
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.DS, Labels.DS);
       }
       // [Tue Mar 26 22:43:47 2019] a wave sentinel has taken an extra 6250000 points of non-melee damage from Kazint's Greater Fetter spell.
+      // [Tue Feb 05 18:48:53 2019] A whorling wildfire has taken an extra 100000000 points of non-melee damage from your Divergent Lightning Rk. III spell.
+      // [Tue Feb 14 23:55:51 2023] Lasassis has harmed a worry wraith. It has taken an extra 100000000 points of non-melee damage from your Color Cloud spell.
       else if (extraIndex > -1 && pointsOfIndex == (extraIndex + 2) && fromDamage == (pointsOfIndex + 3) && split[stop] == "spell.")
       {
-        if (split[fromDamage + 2].EndsWith("'s", StringComparison.OrdinalIgnoreCase))
+        var isExtra = false;
+        var attackerSplit = split[fromDamage + 2];
+        if (attackerSplit.EndsWith("'s", StringComparison.OrdinalIgnoreCase))
         {
           attacker = split[fromDamage + 2].Substring(0, split[fromDamage + 2].Length - 2);
           defender = string.Join(" ", split, 0, takenIndex);
+          isExtra = true;
+        }
+        else if (attackerSplit == "your")
+        {
+          attacker = ConfigUtil.PlayerName;
+
+          if (harmedIndex > -1 && harmedIndex < (takenIndex - 1))
+          {
+            defender = string.Join(" ", split, harmedIndex, takenIndex - harmedIndex - 1).Trim('.');
+          }
+          else
+          {
+            defender = string.Join(" ", split, 0, takenIndex);
+          }
+          
+          isExtra = true;
+        }
+
+        if (isExtra)
+        {        
           uint damage = StatsUtil.ParseUInt(split[extraIndex + 1]);
           string spell = string.Join(" ", split, fromDamage + 3, stop - fromDamage - 3);
           var spellData = DataManager.Instance.GetDamagingSpellByName(spell);

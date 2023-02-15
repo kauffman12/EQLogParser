@@ -30,21 +30,6 @@
         Width="350"
         WindowStyle="None"
         ShowInTaskbar="False">
-  <Window.Resources>
-    <Style TargetType="{x:Type ResizeGrip}">
-      <Setter Property="MinWidth" Value="12"/>
-      <Setter Property="MinHeight" Value="12"/>
-      <Setter Property="Background" Value="#AA000000"/>
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="{x:Type ResizeGrip}">
-            <Grid SnapsToDevicePixels="True" Background="{TemplateBinding Background}" />
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-      <Setter Property="Visibility" Value="Visible"/>
-    </Style>
-  </Window.Resources>
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="200*"></RowDefinition>
