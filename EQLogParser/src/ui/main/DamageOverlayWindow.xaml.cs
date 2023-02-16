@@ -65,7 +65,7 @@ namespace EQLogParser
 
       // fonts
       var fontSizeString = ConfigUtil.GetSetting("OverlayFontSize");
-      if (fontSizeString == null || !int.TryParse(fontSizeString, out SavedFontSize) || (SavedFontSize != 12 && SavedFontSize != 14 && SavedFontSize != 16))
+      if (fontSizeString == null || !int.TryParse(fontSizeString, out SavedFontSize) || (SavedFontSize != 10 && SavedFontSize != 12 && SavedFontSize != 14 && SavedFontSize != 16))
       {
         SavedFontSize = 12;
       }
@@ -521,6 +521,9 @@ namespace EQLogParser
         {
           switch (value)
           {
+            case 10:
+              newHeight = 19.0;
+              break;
             case 12:
               newHeight = 21.0;
               break;
@@ -698,14 +701,17 @@ namespace EQLogParser
       int selectedIndex = -1;
       switch (fontSize)
       {
-        case 12:
+        case 10:
           selectedIndex = 0;
           break;
-        case 14:
+        case 12:
           selectedIndex = 1;
           break;
-        case 16:
+        case 14:
           selectedIndex = 2;
+          break;
+        case 16:
+          selectedIndex = 3;
           break;
       }
 
@@ -739,7 +745,29 @@ namespace EQLogParser
     {
       switch (fontSize)
       {
+        case 10:
+          Application.Current.Resources["DamageOverlayImageSize"] = 12.0;
+          Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(50.0);
+          Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(40.0);
+          titleDamage.Margin = new System.Windows.Thickness(0, 5, 20, 0);
+          titleDPS.Margin = new System.Windows.Thickness(0, 5, 19, 0);
+          titleTime.Margin = new System.Windows.Thickness(0, 5, 6, 0);
+          titleDamage.FontSize = 11;
+          titleDPS.FontSize = 11;
+          titleTime.FontSize = 11;
+          dpsButton.FontSize = 11;
+          tankButton.FontSize = 11;
+          configButton.FontSize = 9;
+          copyButton.FontSize = 9;
+          resetButton.FontSize = 11;
+          exitButton.FontSize = 9;
+          controlPanel.Height = 27;
+          thePopup.Height = 25;
+          rect1.Height = 12;
+          rect2.Height = 12;
+          break;
         case 12:
+          Application.Current.Resources["DamageOverlayImageSize"] = 15.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(60.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(45.0);
           titleDamage.Margin = new System.Windows.Thickness(0, 5, 27, 0);
@@ -760,6 +788,7 @@ namespace EQLogParser
           rect2.Height = 14;
           break;
         case 14:
+          Application.Current.Resources["DamageOverlayImageSize"] = 15.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(70.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(50.0);
           titleDamage.Margin = new System.Windows.Thickness(0, 5, 35, 0);
@@ -780,6 +809,7 @@ namespace EQLogParser
           rect2.Height = 16;
           break;
         case 16:
+          Application.Current.Resources["DamageOverlayImageSize"] = 17.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(75.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(55.0);
           titleDamage.Margin = new System.Windows.Thickness(0, 5, 34, 0);

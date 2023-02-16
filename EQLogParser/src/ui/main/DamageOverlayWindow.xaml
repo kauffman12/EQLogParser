@@ -19,8 +19,8 @@
         Topmost="True"
         MaxWidth="1500"
         MaxHeight="1000"
-        MinWidth="340"
-        MinHeight="180"
+        MinWidth="290"
+        MinHeight="195"
         Height="250"
         MouseLeftButtonDown="OverlayMouseLeftDown"
         SizeChanged="WindowSizeChanged"
@@ -52,7 +52,7 @@
                 <Rectangle x:Name="rect1" Width="1" Fill="White" Height="14" Margin="4,1,0,0"/>
                 <Button x:Name="dpsButton" Content="DPS" Click="DPSClick" Margin="0,1,0,1" Padding="4" FontSize="13" Focusable="False" BorderBrush="Transparent" Foreground="White" Background="Transparent"/>
                 <Rectangle x:Name="rect2" Width="1" Fill="White" Height="14" Margin="0,1,0,0"/>
-                <Button x:Name="tankButton" Content="Tanking" Click="TankClick" Margin="0,1,0,1" Padding="4" FontSize="13" Focusable="False" BorderBrush="Transparent" Foreground="White" Background="Transparent"/>
+                <Button x:Name="tankButton" Content="Tank" Click="TankClick" Margin="0,1,0,1" Padding="4" FontSize="13" Focusable="False" BorderBrush="Transparent" Foreground="White" Background="Transparent"/>
               </StackPanel>
             </Popup>
           </StackPanel>
@@ -62,27 +62,15 @@
       </Border>
       <StackPanel x:Name="buttonsPanel" Visibility="Collapsed" Orientation="Vertical" HorizontalAlignment="Left" Margin="0,4,0,0">
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-          <ComboBox x:Name="maxRowsList" SelectionChanged="MaxRowsChanged" FontStretch="Condensed">
-            <ComboBoxItem>5</ComboBoxItem>
-            <ComboBoxItem>6</ComboBoxItem>
-            <ComboBoxItem>7</ComboBoxItem>
-            <ComboBoxItem>8</ComboBoxItem>
-            <ComboBoxItem>9</ComboBoxItem>
-            <ComboBoxItem>10</ComboBoxItem>
-          </ComboBox>          <ComboBox x:Name="fontList" SelectionChanged="FontSizeChanged" FontStretch="Condensed">
-            <ComboBoxItem Tag="12">12pt</ComboBoxItem>
-            <ComboBoxItem Tag="14">14pt</ComboBoxItem>
-            <ComboBoxItem Tag="16">16pt</ComboBoxItem>
-          </ComboBox>
-          <ComboBox x:Name="showNames" SelectionChanged="ShowNamesChanged" FontStretch="Condensed">
+          <ComboBox x:Name="showNames" SelectionChanged="ShowNamesChanged" FontStretch="Condensed" FontSize="11">
             <ComboBoxItem>All Names</ComboBoxItem>
             <ComboBoxItem>Hide Others</ComboBoxItem>
           </ComboBox>
-          <ComboBox x:Name="showCritRate" SelectionChanged="ShowCritRateChanged" FontStretch="Condensed">
+          <ComboBox x:Name="showCritRate" SelectionChanged="ShowCritRateChanged" FontStretch="Condensed" FontSize="11">
             <ComboBoxItem>Crit% Off</ComboBoxItem>
             <ComboBoxItem>Crit% On</ComboBoxItem>
           </ComboBox>
-          <ComboBox x:Name="damageModeList" SelectionChanged="DamageModeChanged" FontStretch="Condensed"
+          <ComboBox x:Name="damageModeList" SelectionChanged="DamageModeChanged" FontStretch="Condensed" FontSize="11"
             ToolTip="Choose On Kill for the Overlay to reset damage and dps after all NPCs are dead. Otherwise the selected timeout is used.">
             <ComboBoxItem Tag="0">Reset Kill</ComboBoxItem>
             <ComboBoxItem Tag="30">Reset 30s</ComboBoxItem>
@@ -90,14 +78,28 @@
             <ComboBoxItem Tag="50">Reset 50s</ComboBoxItem>
             <ComboBoxItem Tag="60">Reset 60s</ComboBoxItem>
           </ComboBox>
-          <ComboBox x:Name="classList" SelectionChanged="SelectedClassChanged" FontStretch="Condensed"></ComboBox>
+          <ComboBox x:Name="classList" SelectionChanged="SelectedClassChanged" FontStretch="Condensed" FontSize="11"></ComboBox>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Height="30">
-          <CheckBox x:Name="miniBars" Content="Thin Bars" Margin="2,5,2,0" Checked="MiniBarsChecked" Unchecked="MiniBarsChecked"></CheckBox>
-          <syncfusion:ColorPicker x:Name="progressBrush" Margin="0,4,0,0" MaxWidth="120" EnableSolidToGradientSwitch="False" IsGradientPropertyEnabled="False" BorderThickness="0" Background="Transparent" ColorChanged="SelectedProgressBrush"/>
-          <Button x:Name="saveButton" Margin="4,5,0,0" VerticalAlignment="Top" Padding="0" FontSize="12" IsEnabled="False" Height="25" Width="38" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
-          <Button x:Name="cancelButton" Margin="2,5,0,0" VerticalAlignment="Top" Padding="0" FontSize="12" IsEnabled="False" Width="46" Height="25" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
-          <Button x:Name="closeButton" Margin="2,5,0,0" VerticalAlignment="Top" Padding="0" FontSize="12" IsEnabled="True" Width="38" Height="25" HorizontalAlignment="Left" Click="CloseClick">Close</Button>
+          <ComboBox x:Name="maxRowsList" SelectionChanged="MaxRowsChanged" FontStretch="Condensed" FontSize="11">
+            <ComboBoxItem>5</ComboBoxItem>
+            <ComboBoxItem>6</ComboBoxItem>
+            <ComboBoxItem>7</ComboBoxItem>
+            <ComboBoxItem>8</ComboBoxItem>
+            <ComboBoxItem>9</ComboBoxItem>
+            <ComboBoxItem>10</ComboBoxItem>
+          </ComboBox>
+          <ComboBox x:Name="fontList" SelectionChanged="FontSizeChanged" FontStretch="Condensed" FontSize="11">
+            <ComboBoxItem Tag="10">10pt</ComboBoxItem>
+            <ComboBoxItem Tag="12">12pt</ComboBoxItem>
+            <ComboBoxItem Tag="14">14pt</ComboBoxItem>
+            <ComboBoxItem Tag="16">16pt</ComboBoxItem>
+          </ComboBox>
+          <CheckBox x:Name="miniBars" Content="Thin" Margin="2,5,2,0" ToolTip="Thin" Checked="MiniBarsChecked" Unchecked="MiniBarsChecked" FontSize="11"></CheckBox>
+          <syncfusion:ColorPicker x:Name="progressBrush" Margin="2,4,0,0" HeaderTemplate="{DynamicResource ColorPickerMinHeaderTemplate}" EnableSolidToGradientSwitch="False" IsGradientPropertyEnabled="False" BorderThickness="0" Background="Transparent" ColorChanged="SelectedProgressBrush"/>
+          <Button x:Name="saveButton" Margin="0,5,0,0" VerticalAlignment="Top" Padding="0" FontSize="11" IsEnabled="False" Height="25" Width="40" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
+          <Button x:Name="cancelButton" Margin="2,5,0,0" VerticalAlignment="Top" Padding="0" FontSize="11" IsEnabled="False" Width="40" Height="25" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
+          <Button x:Name="closeButton" Margin="2,5,0,0" VerticalAlignment="Top" Padding="0" FontSize="11" IsEnabled="True" Width="40" Height="25" HorizontalAlignment="Left" Click="CloseClick">Close</Button>
         </StackPanel>
       </StackPanel>
     </StackPanel>
