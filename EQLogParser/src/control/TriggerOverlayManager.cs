@@ -354,8 +354,10 @@ namespace EQLogParser
       });
     }
 
-    private void EventsEndTimer(object sender, Trigger trigger)
+    private void EventsEndTimer(object sender, dynamic e)
     {
+      var trigger = e.Trigger as Trigger;
+      var displayName = e.DisplayName;
       Application.Current.Dispatcher.InvokeAsync(() =>
       {
         if (trigger.SelectedOverlays != null)
@@ -367,7 +369,7 @@ namespace EQLogParser
             {
               if (TimerWindows.TryGetValue(overlayId, out Window window))
               {
-                (window as TimerOverlayWindow).EndTimer(trigger);
+                (window as TimerOverlayWindow).EndTimer(trigger, displayName);
               }
             }
           });

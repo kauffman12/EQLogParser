@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Syncfusion.Windows.Controls.Input;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Dynamic;
@@ -28,7 +29,7 @@ namespace EQLogParser
     internal event EventHandler<dynamic> EventsAddText;
     internal event EventHandler<dynamic> EventsNewTimer;
     internal event EventHandler<dynamic> EventsUpdateTimer;
-    internal event EventHandler<Trigger> EventsEndTimer;
+    internal event EventHandler<dynamic> EventsEndTimer;
 
     internal static TriggerManager Instance = new TriggerManager();
     private readonly string TRIGGERS_FILE = "triggers.json";
@@ -315,15 +316,16 @@ namespace EQLogParser
         if (!endEarly)
         {
           endEarly = CheckEndEarly(wrapper.EndEarlyRegex2, wrapper.EndEarlyRegex2NOptions, wrapper.ModifiedEndEarlyPattern2,
-            action, out earlyMatches);
+          action, out earlyMatches);
         }
 
-        if (endEarly)
+        var displayName = ProcessSpeakDisplayText(wrapper.ModifiedTimerName, earlyMatches);
+        if (endEarly && TimerExists(wrapper, displayName))
         {
           time = (long)((DateTime.Now.Ticks - start) / 10);
           wrapper.TriggerData.LongestEvalTime = Math.Max(time, wrapper.TriggerData.LongestEvalTime);
-          EventsEndTimer?.Invoke(this, wrapper.TriggerData);
-          CleanupFirstTimer(wrapper);
+          EventsEndTimer?.Invoke(this, new { Trigger = wrapper.TriggerData, DisplayName = displayName });
+          CleanupNamedTimer(wrapper, displayName);
         
           string speak;
           bool isSound;
@@ -529,13 +531,23 @@ namespace EQLogParser
     {
       Task.Run(() =>
       {
-        // Restart Timer Option
-        bool timerUpdated = false;
-        if (wrapper.TriggerData.TriggerAgainOption == 1 || wrapper.TriggerData.TriggerAgainOption == 2)
+        var timerUpdated = false;
+        var displayName = ProcessSpeakDisplayText(wrapper.ModifiedTimerName, matches);
+
+        // Restart Timer Option so clear out everything
+        if (wrapper.TriggerData.TriggerAgainOption == 1)
         {
           CleanupWrapper(wrapper);
           timerUpdated = true;
-          EventsUpdateTimer?.Invoke(this, new { Trigger = wrapper.TriggerData, DisplayName = ProcessSpeakDisplayText(wrapper.ModifiedTimerName, matches) });
+          EventsUpdateTimer?.Invoke(this, new { Trigger = wrapper.TriggerData, DisplayName = displayName });
+        }
+        else if (wrapper.TriggerData.TriggerAgainOption == 2)
+        {
+          if (CleanupNamedTimer(wrapper, displayName))
+          {
+            timerUpdated = true;
+            EventsUpdateTimer?.Invoke(this, new { Trigger = wrapper.TriggerData, DisplayName = displayName });
+          }
         }
 
         // Start a New independent Timer as long as one is not already running when Option 3 is selected
@@ -552,7 +564,12 @@ namespace EQLogParser
 
               lock (wrapper)
               {
-                wrapper.WarningCancellations.Add(warningSource);
+                if (!wrapper.WarningCancellations.TryGetValue(displayName, out List<CancellationTokenSource> list))
+                {
+                  wrapper.WarningCancellations[displayName] = new List<CancellationTokenSource>();
+                }
+
+                wrapper.WarningCancellations[displayName].Add(warningSource);
               }
 
               Task.Delay((int)diff * 1000).ContinueWith(task =>
@@ -561,9 +578,9 @@ namespace EQLogParser
 
                 lock (wrapper)
                 {
-                  if (wrapper.WarningCancellations.Contains(warningSource))
+                  if (wrapper.WarningCancellations.ContainsKey(displayName))
                   {
-                    wrapper.WarningCancellations.Remove(warningSource);
+                    wrapper.WarningCancellations.Remove(displayName);
                     warningSource?.Dispose();
                   }
                 }
@@ -586,14 +603,19 @@ namespace EQLogParser
 
           if (!timerUpdated)
           {
-            EventsNewTimer?.Invoke(this, new { Trigger = wrapper.TriggerData, DisplayName = ProcessSpeakDisplayText(wrapper.ModifiedTimerName, matches) });
+            EventsNewTimer?.Invoke(this, new { Trigger = wrapper.TriggerData, DisplayName = displayName });
           }
 
           var timerSource = new CancellationTokenSource();
 
           lock (wrapper)
           {
-            wrapper.TimerCancellations.Add(timerSource);
+            if (!wrapper.TimerCancellations.TryGetValue(displayName, out List<CancellationTokenSource> list))
+            {
+              wrapper.TimerCancellations[displayName] = new List<CancellationTokenSource>();
+            }
+
+            wrapper.TimerCancellations[displayName].Add(timerSource);
           }
 
           Task.Delay((int)wrapper.TriggerData.DurationSeconds * 1000).ContinueWith(task =>
@@ -602,18 +624,7 @@ namespace EQLogParser
 
             lock (wrapper)
             {
-              if (wrapper.WarningCancellations.Contains(warningSource))
-              {
-                wrapper.WarningCancellations.Remove(warningSource);
-                warningSource?.Cancel();
-                warningSource?.Dispose();
-              }
-
-              if (wrapper.TimerCancellations.Contains(timerSource))
-              {
-                wrapper.TimerCancellations.Remove(timerSource);
-                timerSource?.Dispose();
-              }
+              CleanupNamedTimer(wrapper, displayName);
             }
 
             if (proceed)
@@ -816,36 +827,83 @@ namespace EQLogParser
       }
     }
 
-    private void CleanupFirstTimer(TriggerWrapper wrapper)
+    private bool TimerExists(TriggerWrapper wrapper, string displayName)
     {
-      lock (wrapper)
-      {
-        if (wrapper.TimerCancellations.Count > 0)
-        {
-          var firstTimerCancel = wrapper.TimerCancellations.First();
-          firstTimerCancel.Cancel();
-          firstTimerCancel.Dispose();
-          wrapper.TimerCancellations.RemoveAt(0);
-        }
+      bool exists = false;
 
-        if (wrapper.WarningCancellations.Count > 0)
+      if (displayName != null)
+      {
+        lock (wrapper)
         {
-          var firstWarningCancel = wrapper.WarningCancellations.First();
-          firstWarningCancel.Cancel();
-          firstWarningCancel.Dispose();
-          wrapper.WarningCancellations.RemoveAt(0);
+          if (wrapper.TimerCancellations.TryGetValue(displayName, out List<CancellationTokenSource> list))
+          {
+            exists = list.Count > 0;
+          }
         }
       }
+      return exists;
+    }
+
+    private bool CleanupNamedTimer(TriggerWrapper wrapper, string displayName)
+    {
+      bool updated = false;
+
+      lock (wrapper)
+      {
+        List<CancellationTokenSource> foundCancelList = null;
+        List<CancellationTokenSource> foundWarningList = null;
+
+        if (displayName != null)
+        {
+          wrapper.TimerCancellations.TryGetValue(displayName, out foundCancelList);
+          wrapper.WarningCancellations.TryGetValue(displayName, out foundWarningList);
+        }
+
+        if (foundCancelList != null)
+        {
+          updated = true;
+          var foundCancel = foundCancelList.First();
+          if (foundCancel != null)
+          {
+            foundCancel.Cancel();
+            foundCancel.Dispose();
+            foundCancelList.Remove(foundCancel);
+          }
+
+          if (foundCancelList.Count == 0)
+          {
+            wrapper.TimerCancellations.Remove(displayName);
+          }
+        }
+
+        if (foundWarningList != null)
+        {
+          var foundWarning = foundWarningList.First();
+          if (foundWarning != null)
+          {
+            foundWarning.Cancel();
+            foundWarning.Dispose();
+            foundWarningList.Remove(foundWarning);
+          }
+
+          if (foundWarningList.Count == 0)
+          {
+            wrapper.WarningCancellations.Remove(displayName);
+          }
+        }
+      }
+
+      return updated;
     }
 
     private void CleanupWrapper(TriggerWrapper wrapper)
     {
       lock (wrapper)
       {
-        wrapper.TimerCancellations.ForEach(source => source.Cancel());
-        wrapper.WarningCancellations.ForEach(source => source.Cancel());
-        wrapper.TimerCancellations.ForEach(source => source.Dispose());
-        wrapper.WarningCancellations.ForEach(source => source.Dispose());
+        wrapper.TimerCancellations.Values.ToList().ForEach(sourceList => sourceList.ForEach(source => source.Cancel()));
+        wrapper.WarningCancellations.Values.ToList().ForEach(sourceList => sourceList.ForEach(source => source.Cancel()));
+        wrapper.TimerCancellations.Values.ToList().ForEach(sourceList => sourceList.ForEach(source => source.Dispose()));
+        wrapper.WarningCancellations.Values.ToList().ForEach(sourceList => sourceList.ForEach(source => source.Dispose()));
         wrapper.TimerCancellations.Clear();
         wrapper.WarningCancellations.Clear();
       }
@@ -908,8 +966,8 @@ namespace EQLogParser
 
     private class TriggerWrapper
     {
-      public List<CancellationTokenSource> TimerCancellations { get; } = new List<CancellationTokenSource>();
-      public List<CancellationTokenSource> WarningCancellations { get; } = new List<CancellationTokenSource>();
+      public Dictionary<string, List<CancellationTokenSource>> TimerCancellations { get; } = new Dictionary<string, List<CancellationTokenSource>>();
+      public Dictionary<string, List<CancellationTokenSource>> WarningCancellations { get; } = new Dictionary<string, List<CancellationTokenSource>>();
       public string ModifiedSpeak { get; set; }
       public string ModifiedPattern { get; set; }
       public string ModifiedEndSpeak { get; set; }
