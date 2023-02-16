@@ -88,30 +88,26 @@ namespace EQLogParser
     {
       if (TimerBarCache.TryGetValue(trigger.Name, out List<TimerBar> timerList))
       {
-        timerList.ForEach(timerBar =>
+        var existingTimerBar = (trigger.TriggerAgainOption == 2) ? timerList.Find(timer => timer.title.Text == displayName) : null;
+        
+        if (existingTimerBar != null || (trigger.TriggerAgainOption != 2 && (existingTimerBar = timerList.First()) != null))
         {
-          if (trigger.TriggerAgainOption == 2 && timerBar.title.Text != displayName)
-          {
-            Dispatcher.InvokeAsync(() =>
-            {
-              CreateTimer(displayName, endTime, trigger);
-            }, System.Windows.Threading.DispatcherPriority.Render);
-          }
-          else
-          {
-            timerBar.Update(endTime, displayName);
-            content.Children.Remove(timerBar);
+          existingTimerBar.Update(endTime, displayName);
+          content.Children.Remove(existingTimerBar);
 
-            if (CurrentUseStandardTime)
-            {
-              var currentTime = DateUtil.ToDouble(DateTime.Now);
-              var max = TimerBarCreateOrder.Select(timerBar => timerBar.GetRemainingTime()).Max();
-              TimerBarCreateOrder.ForEach(timerBar => timerBar.SetStandardTime(max));
-            }
-
-            Dispatcher.InvokeAsync(() => AddTimerBar(timerBar), System.Windows.Threading.DispatcherPriority.Render);
+          if (CurrentUseStandardTime)
+          {
+            var currentTime = DateUtil.ToDouble(DateTime.Now);
+            var max = TimerBarCreateOrder.Select(timerBar => timerBar.GetRemainingTime()).Max();
+            TimerBarCreateOrder.ForEach(timerBar => timerBar.SetStandardTime(max));
           }
-        });
+
+          Dispatcher.InvokeAsync(() => AddTimerBar(existingTimerBar), System.Windows.Threading.DispatcherPriority.Render);
+        }
+        else
+        {
+          Dispatcher.InvokeAsync(() => CreateTimer(displayName, endTime, trigger), System.Windows.Threading.DispatcherPriority.Render);
+        }
       }
       else
       {
@@ -120,13 +116,14 @@ namespace EQLogParser
     }
 
     [MethodImpl(MethodImplOptions.Synchronized)]
-    internal void EndTimer(Trigger trigger)
+    internal void EndTimer(Trigger trigger, string displayName)
     {
       if (TimerBarCache.TryGetValue(trigger.Name, out List<TimerBar> timerList))
       {
-        if (timerList.Count > 0)
+        var found = timerList.Find(timer => timer.title.Text == displayName);
+        if (found != null)
         {
-          timerList[0].EndTimer();
+          found.EndTimer();
         }
       }
     }
