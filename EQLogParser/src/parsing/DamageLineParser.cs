@@ -361,14 +361,14 @@ namespace EQLogParser
         }
         else if (attackerSplit == "your")
         {
-          attacker = ConfigUtil.PlayerName;
-
           if (harmedIndex > -1 && harmedIndex < (takenIndex - 1))
           {
+            attacker = string.Join(" ", split, 0, harmedIndex - 2);
             defender = string.Join(" ", split, harmedIndex, takenIndex - harmedIndex - 1).Trim('.');
           }
           else
           {
+            attacker = ConfigUtil.PlayerName;
             defender = string.Join(" ", split, 0, takenIndex);
           }
           
