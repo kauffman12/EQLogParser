@@ -833,7 +833,7 @@ namespace EQLogParser
           needEvent = (OverlayFights.Count == 0);
           OverlayFights[fight.Id] = fight;
         }
-        
+
         if (needEvent)
         {
           EventsNewOverlayFight?.Invoke(this, fight);

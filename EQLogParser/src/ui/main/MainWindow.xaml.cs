@@ -141,7 +141,7 @@ namespace EQLogParser
 
         // Healing Swarm Pets
         IsHealingSwarmPetsEnabled = ConfigUtil.IfSetOrElse("IncludeHealingSwarmPets", IsHealingSwarmPetsEnabled);
-        enableHealingSwarmPetsIcon.Visibility = IsHealingSwarmPetsEnabled? Visibility.Visible : Visibility.Hidden;
+        enableHealingSwarmPetsIcon.Visibility = IsHealingSwarmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // Assassinate Damage
         IsAssassinateDamageEnabled = ConfigUtil.IfSetOrElse("IncludeAssassinateDamage", IsAssassinateDamageEnabled);

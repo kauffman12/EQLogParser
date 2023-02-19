@@ -1,6 +1,4 @@
-﻿using Windows.System.Update;
-
-namespace EQLogParser
+﻿namespace EQLogParser
 {
   class ChatLineParser
   {

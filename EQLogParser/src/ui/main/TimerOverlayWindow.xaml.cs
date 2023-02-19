@@ -1,9 +1,7 @@
-﻿using Syncfusion.Compression.Zip;
-using Syncfusion.Data.Extensions;
+﻿using Syncfusion.Data.Extensions;
 using Syncfusion.Linq;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;

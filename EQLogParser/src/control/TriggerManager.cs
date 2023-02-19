@@ -58,7 +58,7 @@ namespace EQLogParser
     internal TriggerTreeViewNode GetTriggerTreeView() => TriggerUtil.GetTreeView(TriggerNodes, "Triggers");
     internal void SetVoice(string voice) => CurrentVoice = voice;
     internal void SetVoiceRate(int rate) => CurrentVoiceRate = rate;
-    
+
     internal List<TimerData> GetActiveTimers()
     {
       List<TimerData> result;
@@ -321,7 +321,7 @@ namespace EQLogParser
           }
 
           time = (long)((DateTime.Now.Ticks - start) / 10);
-          wrapper.TriggerData.LongestEvalTime = Math.Max(time, wrapper.TriggerData.LongestEvalTime);
+          wrapper.TriggerData.WorstEvalTime = Math.Max(time, wrapper.TriggerData.WorstEvalTime);
 
           var speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.SoundToPlay, wrapper.ModifiedSpeak, out bool isSound);
           if (!string.IsNullOrEmpty(speak))
@@ -507,7 +507,7 @@ namespace EQLogParser
               if (wrapper.TimerList.ToList().FirstOrDefault(timerData => timerData?.DisplayName == displayName) is TimerData timerData)
               {
                 CleanupTimer(wrapper, timerData);
-               }
+              }
             }
 
             // Start a New independent Timer as long as one is not already running when Option 3 is selected
@@ -515,7 +515,7 @@ namespace EQLogParser
             if (!(wrapper.TriggerData.TriggerAgainOption == 3 && wrapper.TimerList.Count > 0))
             {
               TimerData newTimerData = null;
-              if (wrapper.TriggerData.WarningSeconds > 0 && 
+              if (wrapper.TriggerData.WarningSeconds > 0 &&
                 wrapper.TriggerData.DurationSeconds - wrapper.TriggerData.WarningSeconds is double diff && diff > 0)
               {
                 newTimerData = new TimerData { DisplayName = displayName, WarningSource = new CancellationTokenSource() };
@@ -558,7 +558,7 @@ namespace EQLogParser
               var beginTicks = DateTime.Now.Ticks;
               newTimerData.EndTicks = beginTicks + (TimeSpan.TicksPerSecond * wrapper.TriggerData.DurationSeconds);
               newTimerData.DurationTicks = newTimerData.EndTicks - beginTicks;
-              newTimerData.ResetTicks = wrapper.TriggerData.ResetDurationSeconds > 0 ? 
+              newTimerData.ResetTicks = wrapper.TriggerData.ResetDurationSeconds > 0 ?
                 beginTicks + (TimeSpan.TicksPerSecond * wrapper.TriggerData.ResetDurationSeconds) : 0;
               newTimerData.ResetDurationTicks = newTimerData.ResetTicks - beginTicks;
               newTimerData.SelectedOverlays = wrapper.TriggerData.SelectedOverlays.ToList();

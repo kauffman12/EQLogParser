@@ -1,11 +1,9 @@
-﻿using Syncfusion.Data.Extensions;
-using Syncfusion.Windows.PropertyGrid;
+﻿using Syncfusion.Windows.PropertyGrid;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Media;
 using System.Reflection;
 using System.Windows;

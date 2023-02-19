@@ -35,7 +35,7 @@ namespace EQLogParser
 
     public void Detach(PropertyViewItem property)
     {
-      if (TheColorPicker!= null)
+      if (TheColorPicker != null)
       {
         BindingOperations.ClearAllBindings(TheColorPicker);
         TheColorPicker.Dispose();

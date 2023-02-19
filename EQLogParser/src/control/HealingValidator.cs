@@ -72,7 +72,7 @@ namespace EQLogParser
             if (totals.Count > 6)
             {
               ignoreRecords[heal.BeginTime + "|" + key] = 1;
-              temp.ForEach(timeKey => ignoreRecords[timeKey + "|" + key] = 1);   
+              temp.ForEach(timeKey => ignoreRecords[timeKey + "|" + key] = 1);
             }
           }
         }
