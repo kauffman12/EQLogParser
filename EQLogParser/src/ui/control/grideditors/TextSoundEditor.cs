@@ -46,7 +46,8 @@ namespace EQLogParser
     }
 
     public object Create(PropertyInfo propertyInfo) => Create();
-    public object Create(PropertyDescriptor descriotor) => Create();
+
+    public object Create(PropertyDescriptor descriptor) => Create();
 
     private object Create()
     {
@@ -58,7 +59,17 @@ namespace EQLogParser
       combo.SetValue(Grid.ColumnProperty, 1);
       combo.ItemsSource = new List<string> { "Text to Speak", "Play Sound" };
       combo.SelectedIndex = 0;
-      var textBox = new TextBox { HorizontalAlignment = HorizontalAlignment.Stretch };
+
+      var textBox = new TextBox
+      {
+        HorizontalAlignment = HorizontalAlignment.Stretch,
+        HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+        Padding = new Thickness(0, 2, 0, 2),
+        TextWrapping = TextWrapping.Wrap,
+        VerticalContentAlignment = VerticalAlignment.Center,
+        BorderThickness = new Thickness(0, 0, 0, 0)
+      };
+
       textBox.SetValue(Grid.ColumnProperty, 0);
       var soundCombo = new ComboBox { Name = "SoundCombo", Visibility = Visibility.Collapsed, Tag = true };
       soundCombo.SetValue(Grid.ColumnProperty, 0);

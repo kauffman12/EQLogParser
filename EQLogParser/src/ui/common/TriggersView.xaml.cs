@@ -90,6 +90,10 @@ namespace EQLogParser
       treeView.DragDropController.CanAutoExpand = true;
       treeView.DragDropController.AutoExpandDelay = new TimeSpan(0, 0, 1);
 
+      AddEditor(new WrapTextEditor(), "EndEarlyTextToDisplay");
+      AddEditor(new WrapTextEditor(), "EndTextToDisplay");
+      AddEditor(new WrapTextEditor(), "TextToDisplay");
+      AddEditor(new WrapTextEditor(), "WarningTextToDisplay");
       AddEditor(new TextSoundEditor(FileList), "SoundOrText");
       AddEditor(new TextSoundEditor(FileList), "EndEarlySoundOrText");
       AddEditor(new TextSoundEditor(FileList), "EndSoundOrText");

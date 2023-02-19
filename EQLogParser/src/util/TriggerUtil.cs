@@ -73,21 +73,25 @@ namespace EQLogParser
         toTrigger.Comments = fromTrigger.Comments;
         toTrigger.DurationSeconds = fromTrigger.DurationSeconds;
         toTrigger.EnableTimer = fromTrigger.EnableTimer;
+        toTrigger.Pattern = fromTrigger.Pattern;
         toTrigger.EndEarlyPattern = fromTrigger.EndEarlyPattern;
         toTrigger.EndEarlyPattern2 = fromTrigger.EndEarlyPattern2;
-        toTrigger.EndTextToSpeak = fromTrigger.EndTextToSpeak;
-        toTrigger.EndEarlyTextToSpeak = fromTrigger.EndEarlyTextToSpeak;
         toTrigger.EndUseRegex = fromTrigger.EndUseRegex;
         toTrigger.EndUseRegex2 = fromTrigger.EndUseRegex2;
         toTrigger.WorstEvalTime = fromTrigger.WorstEvalTime;
         toTrigger.ResetDurationSeconds = fromTrigger.ResetDurationSeconds;
-        toTrigger.Pattern = fromTrigger.Pattern;
         toTrigger.Priority = fromTrigger.Priority;
         toTrigger.SelectedOverlays = fromTrigger.SelectedOverlays;
-        toTrigger.TextToSpeak = fromTrigger.TextToSpeak;
         toTrigger.TriggerAgainOption = fromTrigger.TriggerAgainOption;
         toTrigger.UseRegex = fromTrigger.UseRegex;
         toTrigger.WarningSeconds = fromTrigger.WarningSeconds;
+        toTrigger.EndTextToDisplay = fromTrigger.EndTextToDisplay;
+        toTrigger.EndEarlyTextToDisplay = fromTrigger.EndEarlyTextToDisplay;
+        toTrigger.TextToDisplay = fromTrigger.TextToDisplay;
+        toTrigger.WarningTextToDisplay = fromTrigger.WarningTextToDisplay;
+        toTrigger.EndTextToSpeak = fromTrigger.EndTextToSpeak;
+        toTrigger.EndEarlyTextToSpeak = fromTrigger.EndEarlyTextToSpeak;
+        toTrigger.TextToSpeak = fromTrigger.TextToSpeak;
         toTrigger.WarningTextToSpeak = fromTrigger.WarningTextToSpeak;
         toTrigger.SoundToPlay = fromTrigger.SoundToPlay;
         toTrigger.EndEarlySoundToPlay = fromTrigger.EndEarlySoundToPlay;
@@ -830,7 +834,13 @@ namespace EQLogParser
                 trigger.AltTimerName = timerName;
               }
 
-              if (bool.TryParse(Helpers.GetText(triggerNode, "UseTextToVoice"), out bool useText))
+              if (bool.TryParse(Helpers.GetText(triggerNode, "UseText"), out bool _))
+              {
+                goodTrigger = true;
+                trigger.TextToDisplay = Helpers.GetText(triggerNode, "DisplayText");
+              }
+
+              if (bool.TryParse(Helpers.GetText(triggerNode, "UseTextToVoice"), out bool _))
               {
                 goodTrigger = true;
                 trigger.TextToSpeak = Helpers.GetText(triggerNode, "TextToVoiceText");
@@ -858,7 +868,12 @@ namespace EQLogParser
 
                 if (triggerNode.SelectSingleNode("TimerEndingTrigger") is XmlNode timerEndingNode)
                 {
-                  if (bool.TryParse(Helpers.GetText(timerEndingNode, "UseTextToVoice"), out bool useText2))
+                  if (bool.TryParse(Helpers.GetText(timerEndingNode, "UseText"), out bool _))
+                  {
+                    trigger.WarningTextToDisplay = Helpers.GetText(timerEndingNode, "DisplayText");
+                  }
+
+                  if (bool.TryParse(Helpers.GetText(timerEndingNode, "UseTextToVoice"), out bool _))
                   {
                     trigger.WarningTextToSpeak = Helpers.GetText(timerEndingNode, "TextToVoiceText");
                   }
@@ -892,7 +907,12 @@ namespace EQLogParser
 
                 if (triggerNode.SelectSingleNode("TimerEndedTrigger") is XmlNode timerEndedNode)
                 {
-                  if (bool.TryParse(Helpers.GetText(timerEndedNode, "UseTextToVoice"), out bool useText2))
+                  if (bool.TryParse(Helpers.GetText(timerEndedNode, "UseText"), out bool _))
+                  {
+                    trigger.EndTextToDisplay = Helpers.GetText(timerEndedNode, "DisplayText");
+                  }
+
+                  if (bool.TryParse(Helpers.GetText(timerEndedNode, "UseTextToVoice"), out bool _))
                   {
                     trigger.EndTextToSpeak = Helpers.GetText(timerEndedNode, "TextToVoiceText");
                   }
@@ -985,97 +1005,100 @@ namespace EQLogParser
                 var startTime = DateUtil.ToDouble(firstDate);
                 var endTime = DateUtil.ToDouble(lastDate);
                 var range = (int)(endTime - startTime + 1);
-                var data = new List<string>[range];
-
-                int dataIndex = 0;
-                data[dataIndex] = new List<string>();
-                foreach (var line in allLines)
+                if (range > 0)
                 {
-                  var current = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", line, 5);
-                  if (current != DateTime.MinValue)
+                  var data = new List<string>[range];
+
+                  int dataIndex = 0;
+                  data[dataIndex] = new List<string>();
+                  foreach (var line in allLines)
                   {
-                    var currentTime = DateUtil.ToDouble(current);
-                    if (currentTime == startTime)
+                    var current = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", line, 5);
+                    if (current != DateTime.MinValue)
                     {
-                      data[dataIndex].Add(line);
-                    }
-                    else
-                    {
-                      var diff = (currentTime - startTime);
-                      if (diff == 1)
+                      var currentTime = DateUtil.ToDouble(current);
+                      if (currentTime == startTime)
                       {
-                        dataIndex++;
-                        data[dataIndex] = new List<string>();
                         data[dataIndex].Add(line);
-                        startTime++;
                       }
-                      else if (diff > 1)
+                      else
                       {
-                        for (int i = 1; i < diff; i++)
+                        var diff = (currentTime - startTime);
+                        if (diff == 1)
                         {
                           dataIndex++;
                           data[dataIndex] = new List<string>();
+                          data[dataIndex].Add(line);
+                          startTime++;
                         }
+                        else if (diff > 1)
+                        {
+                          for (int i = 1; i < diff; i++)
+                          {
+                            dataIndex++;
+                            data[dataIndex] = new List<string>();
+                          }
 
-                        dataIndex++;
-                        data[dataIndex] = new List<string>();
-                        data[dataIndex].Add(line);
-                        startTime += diff;
+                          dataIndex++;
+                          data[dataIndex] = new List<string>();
+                          data[dataIndex].Add(line);
+                          startTime += diff;
+                        }
                       }
                     }
                   }
-                }
 
-                var nowTime = DateUtil.ToDouble(DateTime.Now);
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                  (Application.Current.MainWindow as MainWindow).testStatus.Text = "| Time Remaining: " + data.Length + " seconds";
-                  (Application.Current.MainWindow as MainWindow).testStatus.Visibility = Visibility.Visible;
-                });
-
-                int count = 0;
-                bool stop = false;
-                foreach (var list in data)
-                {
-                  Application.Current.Dispatcher.InvokeAsync(() =>
+                  var nowTime = DateUtil.ToDouble(DateTime.Now);
+                  Application.Current.Dispatcher.Invoke(() =>
                   {
-                    var content = (Application.Current.MainWindow as MainWindow).testButton.Content;
-                    if (content.ToString() == "Stopping Test")
-                    {
-                      stop = true;
-                    }
+                    (Application.Current.MainWindow as MainWindow).testStatus.Text = "| Time Remaining: " + data.Length + " seconds";
+                    (Application.Current.MainWindow as MainWindow).testStatus.Visibility = Visibility.Visible;
                   });
 
-                  if (stop)
+                  int count = 0;
+                  bool stop = false;
+                  foreach (var list in data)
                   {
-                    break;
-                  }
-
-                  if (list != null)
-                  {
-                    if (list.Count == 0)
+                    Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                      Thread.Sleep(1000);
-                    }
-                    else
-                    {
-                      var start = DateTime.Now;
-                      foreach (var line in list)
+                      var content = (Application.Current.MainWindow as MainWindow).testButton.Content;
+                      if (content.ToString() == "Stopping Test")
                       {
-                        var action = line.Substring(MainWindow.ACTION_INDEX);
-                        TriggerManager.Instance.AddAction(new LineData { Line = line, Action = action, BeginTime = nowTime });
+                        stop = true;
                       }
+                    });
 
-                      var took = (DateTime.Now - start).Ticks;
-                      long ticks = (long)10000000 - took;
-                      Thread.Sleep(new TimeSpan(ticks));
+                    if (stop)
+                    {
+                      break;
                     }
-                  }
 
-                  nowTime++;
-                  count++;
-                  var remaining = data.Length - count;
-                  Application.Current.Dispatcher.Invoke(() => (Application.Current.MainWindow as MainWindow).testStatus.Text = "| Time Remaining: " + remaining + " seconds");
+                    if (list != null)
+                    {
+                      if (list.Count == 0)
+                      {
+                        Thread.Sleep(1000);
+                      }
+                      else
+                      {
+                        var start = DateTime.Now;
+                        foreach (var line in list)
+                        {
+                          var action = line.Substring(MainWindow.ACTION_INDEX);
+                          TriggerManager.Instance.AddAction(new LineData { Line = line, Action = action, BeginTime = nowTime });
+                        }
+
+                        var took = (DateTime.Now - start).Ticks;
+                        long ticks = (long)10000000 - took;
+                        Thread.Sleep(new TimeSpan(ticks));
+                      }
+                    }
+
+                    nowTime++;
+                    count++;
+                    var remaining = data.Length - count;
+                    Application.Current.Dispatcher.Invoke(() => (Application.Current.MainWindow as MainWindow).testStatus.Text = "| Time Remaining: " + remaining + " seconds");
+                  }
                 }
               }
             }
