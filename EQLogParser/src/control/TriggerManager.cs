@@ -329,7 +329,7 @@ namespace EQLogParser
             speechChannel.Writer.WriteAsync(new Speak
             {
               Trigger = wrapper.TriggerData,
-              TextOrSound = speak,
+              TTSOrSound = speak,
               IsSound = isSound,
               Matches = matches,
             });
@@ -340,6 +340,7 @@ namespace EQLogParser
             StartTimer(wrapper, speechChannel, lineData.Line, matches);
           }
 
+          AddTextEvent(wrapper.ModifiedDisplay, wrapper.TriggerData, matches);
           AddEntry(lineData.Line, wrapper.TriggerData, "Trigger", time);
         }
         else
@@ -361,25 +362,29 @@ namespace EQLogParser
               {
                 if (wrapper.TimerList.Find(timerData => timerData.DisplayName == displayName) is TimerData timerData)
                 {
+                  string displayText;
                   string speak;
                   bool isSound;
                   if (!string.IsNullOrEmpty(wrapper.ModifiedEndEarlySpeak))
                   {
+                    displayText = wrapper.ModifiedEndEarlyDisplay;
                     speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out isSound);
                   }
                   else
                   {
+                    displayText = wrapper.ModifiedEndDisplay;
                     speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound);
                   }
 
                   speechChannel.Writer.WriteAsync(new Speak
                   {
                     Trigger = wrapper.TriggerData,
-                    TextOrSound = speak,
+                    TTSOrSound = speak,
                     IsSound = isSound,
                     Matches = earlyMatches,
                   });
 
+                  AddTextEvent(displayText, wrapper.TriggerData, earlyMatches);
                   AddEntry(lineData.Line, wrapper.TriggerData, "Timer End Early", time);
                   CleanupTimer(wrapper, timerData);
                 }
@@ -432,7 +437,7 @@ namespace EQLogParser
           while (await speechChannel.Reader.WaitToReadAsync())
           {
             var result = await speechChannel.Reader.ReadAsync();
-            if (!string.IsNullOrEmpty(result.TextOrSound))
+            if (!string.IsNullOrEmpty(result.TTSOrSound))
             {
               if (result.Trigger.Priority < previous?.Priority)
               {
@@ -443,9 +448,9 @@ namespace EQLogParser
               {
                 try
                 {
-                  if (File.Exists(@"data\sounds\" + result.TextOrSound))
+                  if (File.Exists(@"data\sounds\" + result.TTSOrSound))
                   {
-                    player.SoundLocation = @"data\sounds\" + result.TextOrSound;
+                    player.SoundLocation = @"data\sounds\" + result.TTSOrSound;
                     player.Play();
                   }
                 }
@@ -456,7 +461,7 @@ namespace EQLogParser
               }
               else
               {
-                var speak = ProcessSpeakDisplayText(result.TextOrSound, result.Matches);
+                var speak = ProcessSpeakDisplayText(result.TTSOrSound, result.Matches);
 
                 if (!string.IsNullOrEmpty(CurrentVoice) && synth.Voice.Name != CurrentVoice)
                 {
@@ -469,7 +474,6 @@ namespace EQLogParser
                 }
 
                 synth.SpeakAsync(speak);
-                EventsAddText?.Invoke(this, new { Text = speak, result.Trigger });
               }
 
               previous = result.Trigger;
@@ -539,11 +543,12 @@ namespace EQLogParser
                       speechChannel.Writer.WriteAsync(new Speak
                       {
                         Trigger = wrapper.TriggerData,
-                        TextOrSound = speak,
+                        TTSOrSound = speak,
                         IsSound = isSound,
                         Matches = matches
                       });
 
+                      AddTextEvent(wrapper.ModifiedWarningDisplay, wrapper.TriggerData, matches);
                       AddEntry(line, wrapper.TriggerData, "Timer Warning");
                     }
                   }
@@ -586,11 +591,12 @@ namespace EQLogParser
                     speechChannel.Writer.WriteAsync(new Speak
                     {
                       Trigger = wrapper.TriggerData,
-                      TextOrSound = speak,
+                      TTSOrSound = speak,
                       IsSound = isSound,
                       Matches = matches
                     });
 
+                    AddTextEvent(wrapper.ModifiedEndDisplay, wrapper.TriggerData, matches);
                     AddEntry(line, wrapper.TriggerData, "Timer End");
                   }
                 }
@@ -697,25 +703,18 @@ namespace EQLogParser
         {
           try
           {
-            var modifiedSpeak = string.IsNullOrEmpty(trigger.TextToSpeak) ? null :
-              trigger.TextToSpeak.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
-            var modifiedEndSpeak = string.IsNullOrEmpty(trigger.EndTextToSpeak) ? null :
-              trigger.EndTextToSpeak.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
-            var modifiedEndEarlySpeak = string.IsNullOrEmpty(trigger.EndEarlyTextToSpeak) ? null :
-              trigger.EndEarlyTextToSpeak.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
-            var modifiedWarningSpeak = string.IsNullOrEmpty(trigger.WarningTextToSpeak) ? null :
-              trigger.WarningTextToSpeak.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
-            var modifiedTimerName = string.IsNullOrEmpty(trigger.AltTimerName) ? trigger.Name :
-              trigger.AltTimerName.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
-
             var wrapper = new TriggerWrapper
             {
               TriggerData = trigger,
-              ModifiedSpeak = modifiedSpeak,
-              ModifiedWarningSpeak = modifiedWarningSpeak,
-              ModifiedEndSpeak = modifiedEndSpeak,
-              ModifiedEndEarlySpeak = modifiedEndEarlySpeak,
-              ModifiedTimerName = modifiedTimerName
+              ModifiedSpeak = ModifiedText(trigger.TextToSpeak),
+              ModifiedWarningSpeak = ModifiedText(trigger.WarningTextToSpeak),
+              ModifiedEndSpeak = ModifiedText(trigger.EndTextToSpeak),
+              ModifiedEndEarlySpeak = ModifiedText(trigger.EndEarlyTextToSpeak),
+              ModifiedDisplay = ModifiedText(trigger.TextToDisplay),
+              ModifiedWarningDisplay = ModifiedText(trigger.WarningTextToDisplay),
+              ModifiedEndDisplay = ModifiedText(trigger.EndTextToDisplay),
+              ModifiedEndEarlyDisplay = ModifiedText(trigger.EndEarlyTextToDisplay),
+              ModifiedTimerName = ModifiedText(trigger.AltTimerName)
             };
 
             pattern = UpdatePattern(trigger.UseRegex, playerName, pattern, out List<NumberOptions> numberOptions);
@@ -844,6 +843,21 @@ namespace EQLogParser
       SaveTriggers();
     }
 
+    private string ModifiedText(string text)
+    {
+      return string.IsNullOrEmpty(text) ? null : text.Replace("{c}", ConfigUtil.PlayerName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void AddTextEvent(string text, Trigger data, MatchCollection matches)
+    {
+      if (!string.IsNullOrEmpty(text))
+      {
+        text = ProcessSpeakDisplayText(text, matches);
+        EventsAddText?.Invoke(this, new { Text = text, Trigger = data });
+      }
+
+    }
+
     private void AddEntry(string line, Trigger trigger, string type, long eval = 0)
     {
       _ = Application.Current.Dispatcher.InvokeAsync(() =>
@@ -903,7 +917,7 @@ namespace EQLogParser
     private class Speak
     {
       public Trigger Trigger { get; set; }
-      public string TextOrSound { get; set; }
+      public string TTSOrSound { get; set; }
       public bool IsSound { get; set; }
       public MatchCollection Matches { get; set; }
     }
@@ -919,13 +933,17 @@ namespace EQLogParser
     private class TriggerWrapper
     {
       public List<TimerData> TimerList { get; set; } = new List<TimerData>();
-      public string ModifiedSpeak { get; set; }
       public string ModifiedPattern { get; set; }
+      public string ModifiedEndEarlyPattern { get; set; }
+      public string ModifiedEndEarlyPattern2 { get; set; }
+      public string ModifiedSpeak { get; set; }
       public string ModifiedEndSpeak { get; set; }
       public string ModifiedEndEarlySpeak { get; set; }
       public string ModifiedWarningSpeak { get; set; }
-      public string ModifiedEndEarlyPattern { get; set; }
-      public string ModifiedEndEarlyPattern2 { get; set; }
+      public string ModifiedDisplay { get; set; }
+      public string ModifiedEndDisplay { get; set; }
+      public string ModifiedEndEarlyDisplay { get; set; }
+      public string ModifiedWarningDisplay { get; set; }
       public string ModifiedTimerName { get; set; }
       public Regex Regex { get; set; }
       public Regex EndEarlyRegex { get; set; }

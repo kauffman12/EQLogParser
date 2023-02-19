@@ -1172,7 +1172,7 @@ namespace EQLogParser
             }
           }
         }
-        catch (Exception _)
+        catch (Exception)
         {
           // ignore
         }

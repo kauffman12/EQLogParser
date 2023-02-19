@@ -14,14 +14,17 @@ namespace EQLogParser
     {
       // this only works if there's one reference to this editor...
       // TODO figure out better way
-      TheTextBox.SetResourceReference(TextBox.ForegroundProperty, foreground);
+      if (TheTextBox != null)
+      {
+        TheTextBox.SetResourceReference(TextBox.ForegroundProperty, foreground);
+      }
     }
 
     public override object Create(PropertyInfo propertyInfo)
     {
       var textBox = base.Create(propertyInfo) as TextBox;
       textBox.TextWrapping = System.Windows.TextWrapping.Wrap;
-      textBox.Padding = new System.Windows.Thickness(2);
+      textBox.Padding = new System.Windows.Thickness(0, 2, 0, 2);
       TheTextBox = textBox;
       return textBox;
     }

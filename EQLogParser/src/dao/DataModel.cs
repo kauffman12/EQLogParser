@@ -82,6 +82,10 @@ namespace EQLogParser
     public List<string> SelectedOverlays { get; set; } = new List<string>();
     public double ResetDurationSeconds { get; set; }
     public long WarningSeconds { get; set; }
+    public string EndEarlyTextToDisplay { get; set; }
+    public string EndTextToDisplay { get; set; }
+    public string TextToDisplay { get; set; }
+    public string WarningTextToDisplay { get; set; }
     public string EndEarlyTextToSpeak { get; set; }
     public string EndTextToSpeak { get; set; }
     public string TextToSpeak { get; set; }
