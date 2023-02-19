@@ -1,5 +1,4 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
-using System;
 using System.ComponentModel;
 using System.Reflection;
 
@@ -11,7 +10,9 @@ namespace EQLogParser
 
     public void Attach(PropertyViewItem property, PropertyItem info)
     {
-      TheTimerBar.Init(info.Value as string, "timerKey", "Trigger Name #1", DateUtil.ToDouble(DateTime.Now) + 80, new Trigger(), true);
+      var overlayId = info.Value as string;
+      TheTimerBar.Init(overlayId);
+      TheTimerBar.Update("Example Timer Bar #1", "00:30", 60.0);
     }
 
     public object Create(PropertyInfo propertyInfo) => Create();

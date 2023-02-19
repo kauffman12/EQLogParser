@@ -494,7 +494,17 @@ namespace EQLogParser
       {
         var saveFileDialog = new SaveFileDialog();
         saveFileDialog.Filter = "HTML Files (*.html)|*.html";
-        var fileName = DateUtil.GetCurrentDate("MM-dd-yy") + " " + tables.Values.First().GetTargetTitle();
+        var fileName = DateUtil.GetCurrentDate("MM-dd-yy") + " ";
+
+        if (tables.Values.FirstOrDefault() is SummaryTable summary)
+        {
+          fileName += summary.GetTargetTitle();
+        }
+        else
+        {
+          fileName += "No Summaries Exported";
+        }
+
         saveFileDialog.FileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()));
 
         if (saveFileDialog.ShowDialog().Value)
