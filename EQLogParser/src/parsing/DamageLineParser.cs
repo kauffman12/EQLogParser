@@ -204,7 +204,7 @@ namespace EQLogParser
               }
               break;
             case "harmed":
-              if (i > 0 && split[i-1] == "has")
+              if (i > 0 && split[i - 1] == "has")
               {
                 harmedIndex = i + 1;
               }
@@ -371,12 +371,12 @@ namespace EQLogParser
             attacker = ConfigUtil.PlayerName;
             defender = string.Join(" ", split, 0, takenIndex);
           }
-          
+
           isExtra = true;
         }
 
         if (isExtra)
-        {        
+        {
           uint damage = StatsUtil.ParseUInt(split[extraIndex + 1]);
           string spell = string.Join(" ", split, fromDamage + 3, stop - fromDamage - 3);
           var spellData = DataManager.Instance.GetDamagingSpellByName(spell);

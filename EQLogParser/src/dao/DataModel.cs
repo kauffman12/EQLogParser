@@ -72,9 +72,8 @@ namespace EQLogParser
     public string EndEarlyPattern2 { get; set; }
     public bool EndUseRegex { get; set; }
     public bool EndUseRegex2 { get; set; }
-    public string Errors { get; set; } = "None";
     public double LastTriggered { get; set; }
-    public long LongestEvalTime { get; set; } = -1;
+    public long WorstEvalTime { get; set; } = -1;
     public string Name { get; set; }
     public string Pattern { get; set; }
     public long Priority { get; set; } = 5;

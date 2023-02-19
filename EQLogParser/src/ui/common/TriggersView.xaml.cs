@@ -22,13 +22,15 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private readonly ObservableCollection<string> FileList= new ObservableCollection<string>();
+    private readonly ObservableCollection<string> FileList = new ObservableCollection<string>();
     private const string LABEL_NEW_TEXT_OVERLAY = "New Text Overlay";
     private const string LABEL_NEW_TIMER_OVERLAY = "New Timer Overlay";
     private const string LABEL_NEW_TRIGGER = "New Trigger";
     private const string LABEL_NEW_FOLDER = "New Folder";
     private FileSystemWatcher Watcher;
-    private WrapTextEditor ErrorEditor;
+    private WrapTextEditor PatternEditor;
+    private WrapTextEditor EndEarlyPatternEditor;
+    private WrapTextEditor EndEarlyPattern2Editor;
     private List<TriggerNode> Removed;
     private SpeechSynthesizer TestSynth = null;
 
@@ -100,12 +102,12 @@ namespace EQLogParser
       AddEditor(new RangeEditor(0, 9999), "Width");
       AddEditor(new WrapTextEditor(), "Comments");
       AddEditor(new WrapTextEditor(), "OverlayComments");
-      AddEditor(new WrapTextEditor(), "Pattern");
-      AddEditor(new WrapTextEditor(), "EndEarlyPattern");
-      AddEditor(new WrapTextEditor(), "EndEarlyPattern2");
-      AddEditor(new WrapTextEditor(), "EndPattern");
-      ErrorEditor = new WrapTextEditor();
-      AddEditor(ErrorEditor, "Errors");
+      PatternEditor = new WrapTextEditor();
+      AddEditor(PatternEditor, "Pattern");
+      EndEarlyPatternEditor = new WrapTextEditor();
+      AddEditor(EndEarlyPatternEditor, "EndEarlyPattern");
+      EndEarlyPattern2Editor = new WrapTextEditor();
+      AddEditor(EndEarlyPattern2Editor, "EndEarlyPattern2");
       AddEditor(new DurationEditor(), "DurationTimeSpan");
       AddEditor(new DurationEditor(), "ResetDurationTimeSpan");
       AddEditor(new ColorEditor(), "OverlayBrush");
@@ -835,7 +837,7 @@ namespace EQLogParser
       }
     }
 
-    private void EnableCategories(bool trigger, bool triggerTimer, bool status, bool overlay, bool overlayTimer, 
+    private void EnableCategories(bool trigger, bool triggerTimer, bool status, bool overlay, bool overlayTimer,
       bool overlayAssigned, bool overlayText, bool cooldownTimer)
     {
       PropertyGridUtil.EnableCategories(thePropertyGrid, new[]
@@ -843,7 +845,6 @@ namespace EQLogParser
         new { Name = patternItem.CategoryName, IsEnabled = trigger },
         new { Name = timerDurationItem.CategoryName, IsEnabled = triggerTimer },
         new { Name = endEarlyPatternItem.CategoryName, IsEnabled = triggerTimer },
-        new { Name = evalTimeItem.CategoryName, IsEnabled = status },
         new { Name = fontSizeItem.CategoryName, IsEnabled = overlay },
         new { Name = activeBrushItem.CategoryName, IsEnabled = overlayTimer },
         new { Name = idleBrushItem.CategoryName, IsEnabled = cooldownTimer },
@@ -913,27 +914,19 @@ namespace EQLogParser
 
     private void ValueChanged(object sender, ValueChangedEventArgs args)
     {
-      if (args.Property.Name != errorsItem.PropertyName && args.Property.Name != evalTimeItem.PropertyName &&
+      if (args.Property.Name != evalTimeItem.PropertyName &&
         args.Property.SelectedObject is TriggerPropertyModel trigger)
       {
         var list = thePropertyGrid.Properties.ToList();
-        var errorsProp = PropertyGridUtil.FindProperty(list, errorsItem.PropertyName);
         var longestProp = PropertyGridUtil.FindProperty(list, evalTimeItem.PropertyName);
 
-        bool isValid = trigger.UseRegex ? TestRegexProperty(trigger, trigger.Pattern, errorsProp) : true;
-        isValid = (isValid && trigger.EndUseRegex) ? TestRegexProperty(trigger, trigger.EndEarlyPattern, errorsProp) : isValid;
-        isValid = (isValid && trigger.EndUseRegex2) ? TestRegexProperty(trigger, trigger.EndEarlyPattern2, errorsProp) : isValid;
-
-        if (isValid && trigger.Errors != "None")
-        {
-          trigger.Errors = "None";
-          errorsProp.Value = "None";
-          ErrorEditor.SetForeground("ContentForeground");
-        }
+        bool isValid = trigger.UseRegex ? TestRegexProperty(trigger, trigger.Pattern, PatternEditor) : true;
+        isValid = (isValid && trigger.EndUseRegex) ? TestRegexProperty(trigger, trigger.EndEarlyPattern, EndEarlyPatternEditor) : isValid;
+        isValid = (isValid && trigger.EndUseRegex2) ? TestRegexProperty(trigger, trigger.EndEarlyPattern2, EndEarlyPattern2Editor) : isValid;
 
         if (args.Property.Name == patternItem.PropertyName || args.Property.Name == useRegexItem.PropertyName)
         {
-          trigger.LongestEvalTime = -1;
+          trigger.WorstEvalTime = -1;
           longestProp.Value = -1;
         }
         else if (args.Property.Name == enableTimerItem.PropertyName)
@@ -945,7 +938,7 @@ namespace EQLogParser
           });
         }
 
-        saveButton.IsEnabled = (trigger.Errors == "None");
+        saveButton.IsEnabled = isValid;
         cancelButton.IsEnabled = true;
       }
       else if (args.Property.SelectedObject is TextOverlayPropertyModel textOverlay)
@@ -1029,15 +1022,10 @@ namespace EQLogParser
       }
     }
 
-    private bool TestRegexProperty(Trigger trigger, string pattern, PropertyItem errorsProp)
+    private bool TestRegexProperty(Trigger trigger, string pattern, WrapTextEditor editor)
     {
       bool isValid = TextFormatUtils.IsValidRegex(pattern);
-      if (trigger.Errors == "None" && !isValid)
-      {
-        trigger.Errors = "Invalid Regex";
-        errorsProp.Value = "Invalid Regex";
-        ErrorEditor.SetForeground("EQWarnForegroundBrush");
-      }
+      editor.SetForeground(isValid ? "ContentForeground" : "EQWarnForegroundBrush");
       return isValid;
     }
 

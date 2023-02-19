@@ -79,8 +79,7 @@ namespace EQLogParser
         toTrigger.EndEarlyTextToSpeak = fromTrigger.EndEarlyTextToSpeak;
         toTrigger.EndUseRegex = fromTrigger.EndUseRegex;
         toTrigger.EndUseRegex2 = fromTrigger.EndUseRegex2;
-        toTrigger.Errors = fromTrigger.Errors;
-        toTrigger.LongestEvalTime = fromTrigger.LongestEvalTime;
+        toTrigger.WorstEvalTime = fromTrigger.WorstEvalTime;
         toTrigger.ResetDurationSeconds = fromTrigger.ResetDurationSeconds;
         toTrigger.Pattern = fromTrigger.Pattern;
         toTrigger.Priority = fromTrigger.Priority;
