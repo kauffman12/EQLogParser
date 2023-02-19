@@ -938,7 +938,11 @@ namespace EQLogParser
         }
         else if (args.Property.Name == enableTimerItem.PropertyName)
         {
-          PropertyGridUtil.EnableCategories(thePropertyGrid, new[] { new { Name = timerDurationItem.CategoryName, IsEnabled = (bool)args.Property.Value } });
+          PropertyGridUtil.EnableCategories(thePropertyGrid, new[]
+          {
+            new { Name = timerDurationItem.CategoryName, IsEnabled = (bool)args.Property.Value },
+            new { Name = endEarlyPatternItem.CategoryName, IsEnabled = (bool)args.Property.Value }
+          });
         }
 
         saveButton.IsEnabled = (trigger.Errors == "None");

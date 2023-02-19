@@ -20,7 +20,7 @@
       </syncfusion:SfLinearProgressBar.Effect>
     </syncfusion:SfLinearProgressBar>
     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0">
-      <TextBlock x:Name="timeText" Text="xx:xx" VerticalAlignment="Center" FontSize="14" FontFamily="Consolas" Foreground="White" Margin="8,0,0,0" >
+      <TextBlock x:Name="time" Text="xx:xx" VerticalAlignment="Center" FontSize="14" FontFamily="Consolas" Foreground="White" Margin="8,0,0,0" >
         <TextBlock.Effect>
           <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.5" BlurRadius="3"/>
         </TextBlock.Effect>

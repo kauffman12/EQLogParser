@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Windows.Media;
 
 namespace EQLogParser
@@ -14,6 +15,20 @@ namespace EQLogParser
   {
     StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showPetLabel, bool showDPS, bool showTotals,
       bool rankPlayers, bool showSpecial, bool showTime, string customTitle);
+  }
+
+  internal class TimerData
+  {
+    public CancellationTokenSource CancelSource { get; set; }
+    public CancellationTokenSource WarningSource { get; set; }
+    public string DisplayName { get; set; }
+    public double EndTicks { get; set; }
+    public double ResetTicks { get; set; }
+    public double ResetDurationTicks { get; set; }
+    public double DurationTicks { get; set; }
+    public List<string> SelectedOverlays { get; set; }
+    public int TriggerAgainOption { get; set; }
+    public string Key { get; set; }
   }
 
   internal class NumberOptions

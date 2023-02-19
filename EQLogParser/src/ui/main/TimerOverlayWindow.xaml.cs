@@ -1,8 +1,10 @@
-﻿using Syncfusion.Data.Extensions;
+﻿using Syncfusion.Compression.Zip;
+using Syncfusion.Data.Extensions;
+using Syncfusion.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,16 +17,13 @@ namespace EQLogParser
   /// </summary>
   public partial class TimerOverlayWindow : Window
   {
-    private Dictionary<string, List<TimerBar>> TimerBarCache = new Dictionary<string, List<TimerBar>>();
-    private List<TimerBar> TimerBarCreateOrder = new List<TimerBar>();
     private Overlay TheOverlay;
     private bool Preview = false;
     private long SavedHeight;
     private long SavedWidth;
     private long SavedTop = long.MaxValue;
     private long SavedLeft = long.MaxValue;
-    private int CurrentOrder;
-    private bool CurrentUseStandardTime;
+    private Dictionary<string, TimerData> CooldownTimerData = new Dictionary<string, TimerData>();
 
     internal TimerOverlayWindow(Overlay overlay, bool preview = false)
     {
@@ -32,263 +31,213 @@ namespace EQLogParser
       Preview = preview;
       TheOverlay = overlay;
       title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + TheOverlay.Id);
-      CurrentOrder = TheOverlay.SortBy;
-      CurrentUseStandardTime = TheOverlay.UseStandardTime;
 
-      this.Height = TheOverlay.Height;
-      this.Width = TheOverlay.Width;
-      this.Top = TheOverlay.Top;
-      this.Left = TheOverlay.Left;
+      Height = TheOverlay.Height;
+      Width = TheOverlay.Width;
+      Top = TheOverlay.Top;
+      Left = TheOverlay.Left;
 
       if (preview)
       {
         MainActions.SetTheme(this, MainWindow.CurrentTheme);
-        this.ResizeMode = ResizeMode.CanResizeWithGrip;
-        SetResourceReference(Window.BorderBrushProperty, "PreviewBackgroundBrush");
-        SetResourceReference(Window.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
+        ResizeMode = ResizeMode.CanResizeWithGrip;
+        SetResourceReference(BorderBrushProperty, "PreviewBackgroundBrush");
+        SetResourceReference(BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
         title.Visibility = Visibility.Visible;
         buttonsPanel.Visibility = Visibility.Visible;
       }
       else
       {
-        this.border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
+        border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
       }
-    }
-
-    [MethodImpl(MethodImplOptions.Synchronized)]
-    internal void CreateTimer(string displayName, double endTime, Trigger trigger, bool preview = false)
-    {
-      if (!string.IsNullOrEmpty(trigger.Name))
-      {
-        var timerBar = new TimerBar();
-        timerBar.Init(TheOverlay.Id, trigger.Name, displayName, endTime, trigger, preview);
-
-        if (!TimerBarCache.TryGetValue(trigger.Name, out List<TimerBar> timerList))
-        {
-          timerList = new List<TimerBar>();
-          TimerBarCache[trigger.Name] = timerList;
-        }
-
-        timerList.Add(timerBar);
-        TimerBarCreateOrder.Add(timerBar);
-
-        if (CurrentUseStandardTime)
-        {
-          var currentTime = DateUtil.ToDouble(DateTime.Now);
-          var max = TimerBarCreateOrder.Select(timerBar => timerBar.GetRemainingTime()).Max();
-          TimerBarCreateOrder.ForEach(timerBar => timerBar.SetStandardTime(max));
-        }
-
-        Dispatcher.InvokeAsync(() => AddTimerBar(timerBar), System.Windows.Threading.DispatcherPriority.Render);
-      }
-    }
-
-    [MethodImpl(MethodImplOptions.Synchronized)]
-    internal void ResetTimer(string displayName, double endTime, Trigger trigger)
-    {
-      if (TimerBarCache.TryGetValue(trigger.Name, out List<TimerBar> timerList))
-      {
-        var existingTimerBar = (trigger.TriggerAgainOption == 2) ? timerList.Find(timer => timer.title.Text == displayName) : null;
-        
-        if (existingTimerBar != null || (trigger.TriggerAgainOption != 2 && (existingTimerBar = timerList.First()) != null))
-        {
-          existingTimerBar.Update(endTime, displayName);
-          content.Children.Remove(existingTimerBar);
-
-          if (CurrentUseStandardTime)
-          {
-            var currentTime = DateUtil.ToDouble(DateTime.Now);
-            var max = TimerBarCreateOrder.Select(timerBar => timerBar.GetRemainingTime()).Max();
-            TimerBarCreateOrder.ForEach(timerBar => timerBar.SetStandardTime(max));
-          }
-
-          Dispatcher.InvokeAsync(() => AddTimerBar(existingTimerBar), System.Windows.Threading.DispatcherPriority.Render);
-        }
-        else
-        {
-          Dispatcher.InvokeAsync(() => CreateTimer(displayName, endTime, trigger), System.Windows.Threading.DispatcherPriority.Render);
-        }
-      }
-      else
-      {
-        CreateTimer(displayName, endTime, trigger);
-      }
-    }
-
-    [MethodImpl(MethodImplOptions.Synchronized)]
-    internal void EndTimer(Trigger trigger, string displayName)
-    {
-      if (TimerBarCache.TryGetValue(trigger.Name, out List<TimerBar> timerList))
-      {
-        var found = timerList.Find(timer => timer.title.Text == displayName);
-        if (found != null)
-        {
-          found.EndTimer();
-        }
-      }
-    }
-
-    [MethodImpl(MethodImplOptions.Synchronized)]
-    internal bool Tick()
-    {
-      if (CurrentOrder != TheOverlay.SortBy)
-      {
-        CurrentOrder = TheOverlay.SortBy;
-        content.Children.Clear();
-
-        if (CurrentOrder == 0)
-        {
-          TimerBarCreateOrder.ForEach(timerBar => content.Children.Add(timerBar));
-        }
-        else
-        {
-          TimerBarCreateOrder.ForEach(timerBar => InsertTimerBar(timerBar));
-        }
-      }
-
-      if (CurrentUseStandardTime != TheOverlay.UseStandardTime)
-      {
-        CurrentUseStandardTime = TheOverlay.UseStandardTime;
-        if (CurrentUseStandardTime)
-        {
-          var currentTime = DateUtil.ToDouble(DateTime.Now);
-          var max = TimerBarCreateOrder.Select(timerBar => timerBar.GetRemainingTime()).Max();
-          TimerBarCreateOrder.ForEach(timerBar => timerBar.SetStandardTime(max));
-        }
-        else
-        {
-          TimerBarCreateOrder.ForEach(timerBar => timerBar.SetStandardTime(double.NaN));
-        }
-      }
-
-      bool remaining = false;
-      var removeList = new List<TimerBar>();
-      var reposition = new List<TimerBar>();
-
-      foreach (var child in content.Children)
-      {
-        if (child is TimerBar bar)
-        {
-          if (bar.Tick())
-          {
-            if (TheOverlay.TimerMode == 0 || !bar.CanCooldown())
-            {
-              removeList.Add(bar);
-            }
-            else
-            {
-              if (!bar.IsCooldown() && !bar.IsWaiting())
-              {
-                bar.SetCooldown(true);
-                reposition.Add(bar);
-              }
-              else if (bar.IsCooldown() && bar.IsWaiting())
-              {
-                bar.SetCooldown(false);
-                reposition.Add(bar);
-              }
-
-              remaining = true;
-            }
-          }
-          else
-          {
-            remaining = true;
-          }
-        }
-      }
-
-      reposition.ForEach(bar =>
-      {
-        content.Children.Remove(bar);
-        Dispatcher.InvokeAsync(() => AddTimerBar(bar), System.Windows.Threading.DispatcherPriority.Render);
-      });
-
-      removeList.ForEach(timerBar =>
-      {
-        content.Children.Remove(timerBar);
-        TimerBarCreateOrder.Remove(timerBar);
-        if (TimerBarCache.TryGetValue(timerBar.GetBarKey(), out List<TimerBar> timerList))
-        {
-          timerList.Remove(timerBar);
-
-          if (timerList.Count == 0)
-          {
-            TimerBarCache.Remove(timerBar.GetBarKey());
-          }
-        }
-      });
-
-      return !remaining;
     }
 
     private void CloseClick(object sender, RoutedEventArgs e) => TriggerOverlayManager.Instance.ClosePreviewTimerOverlay(TheOverlay.Id);
 
-    private void AddTimerBar(TimerBar timerBar)
+    internal void CreatePreviewTimer(string displayName, string timeText, double progress)
     {
-      if (CurrentOrder == 0)
-      {
-        if (!content.Children.Contains(timerBar))
-        {
-          content.Children.Add(timerBar);
-        }
-      }
-      else
-      {
-        InsertTimerBar(timerBar);
-      }
+      var timerBar = new TimerBar();
+      timerBar.Init(TheOverlay.Id);
+      timerBar.Update(displayName, timeText, progress);
+      content.Children.Add(timerBar);
     }
 
-    private void InsertTimerBar(TimerBar timerBar)
+    internal bool Tick(List<TimerData> timerList)
     {
-      if (!content.Children.Contains(timerBar))
+      var currentTicks = DateTime.Now.Ticks;
+      double maxDurationTicks = double.NaN;
+      IEnumerable<TimerData> orderedList = null;
+
+      if (timerList.Count > 0)
       {
-        var found = -1;
-        var activeBar = !timerBar.IsCooldown() && !timerBar.IsWaiting();
-        var coolBar = timerBar.IsCooldown();
-        var waitingBar = timerBar.IsWaiting();
-
-        for (int i = 0; i < content.Children.Count; i++)
+        if (TheOverlay.SortBy == 0)
         {
-          if (content.Children[i] is TimerBar current)
-          {
-            var activeCurrent = !current.IsCooldown() && !current.IsWaiting();
-            var coolCurrent = current.IsCooldown();
-            var waitingCurrent = current.IsWaiting();
+          // create order
+          orderedList = timerList.Where(timerData => timerData.SelectedOverlays.Contains(TheOverlay.Id));
+        }
+        else
+        {
+          // remaining order
+          orderedList = timerList.Where(timerData => timerData.SelectedOverlays.Contains(TheOverlay.Id))
+            .OrderBy(timerData => (timerData.EndTicks - currentTicks));
+        }
 
-            if ((activeBar && activeCurrent) || (coolBar && coolCurrent) || (waitingBar && waitingCurrent))
+        if (TheOverlay.UseStandardTime)
+        {
+          if (orderedList.Any())
+          {
+            maxDurationTicks = orderedList.Select(timerData => timerData.DurationTicks).Max();
+          }
+        }
+      }
+
+      var count = 0;
+      var childCount = content.Children.Count;
+      var handledKeys = new Dictionary<string, bool>();
+
+      if (orderedList != null)
+      {
+        foreach (var timerData in orderedList)
+        {
+          var remainingTicks = timerData.EndTicks - currentTicks;
+          remainingTicks = Math.Max(remainingTicks, 0);
+
+          if (TheOverlay.TimerMode == 1 && timerData.TriggerAgainOption == 1 && timerData.ResetTicks > 0)
+          {
+            handledKeys[timerData.Key] = true;
+            CooldownTimerData[timerData.Key] = timerData;
+          }
+
+          TimerBar timerBar;
+          if (count < childCount)
+          {
+            timerBar = content.Children[count] as TimerBar;
+            if (timerBar.Visibility != Visibility.Visible)
             {
-              if (timerBar.GetRemainingTime() < current.GetRemainingTime())
-              {
-                found = i;
-                break;
-              }
+              timerBar.Visibility = Visibility;
             }
-            else if (activeBar || (waitingBar && !activeCurrent))
+          }
+          else
+          {
+            timerBar = new TimerBar();
+            timerBar.Init(TheOverlay.Id);
+            content.Children.Add(timerBar);
+            childCount++;
+          }
+
+          UpdateTimerBar(remainingTicks, timerBar, timerData, maxDurationTicks);
+          count++;
+        }
+      }
+
+      if (TheOverlay.TimerMode == 1)
+      {
+        var idleList = new List<dynamic>();
+        var resetList = new List<dynamic>();
+
+        foreach (var timerData in CooldownTimerData.Values)
+        {
+          if (!handledKeys.ContainsKey(timerData.Key))
+          {
+            var remainingTicks = timerData.ResetTicks - currentTicks;
+            var data = new { RemainingTicks = remainingTicks, TimerData = timerData };
+            if (remainingTicks > 0)
             {
-              found = i;
-              break;
+              resetList.Add(data);
+            }
+            else
+            {
+              idleList.Add(data);
             }
           }
         }
 
-        if (found != -1)
+        foreach (var data in idleList.OrderBy(data => data.TimerData.DurationTicks))
         {
-          content.Children.Insert(found, timerBar);
+          TimerBar timerBar;
+          if (count >= childCount)
+          {
+            timerBar = new TimerBar();
+            timerBar.Init(TheOverlay.Id);
+            content.Children.Add(timerBar);
+            childCount++;
+          }
+          else
+          {
+            timerBar = content.Children[count] as TimerBar;
+          }
+
+          UpdateCooldownTimerBar(data.RemainingTicks, timerBar, data.TimerData);
+          count++;
         }
-        else
+
+        foreach (var data in resetList.OrderBy(data => data.RemainingTicks))
         {
-          content.Children.Add(timerBar);
+          TimerBar timerBar;
+          if (count >= childCount)
+          {
+            timerBar = new TimerBar();
+            timerBar.Init(TheOverlay.Id);
+            content.Children.Add(timerBar);
+            childCount++;
+          }
+          else
+          {
+            timerBar = content.Children[count] as TimerBar;
+          }
+
+          UpdateCooldownTimerBar(data.RemainingTicks, timerBar, data.TimerData);
+          count++;
         }
+      }
+
+      var complete = (TheOverlay.TimerMode == 0) ? (count == 0) : false;
+      while (count < childCount)
+      {
+        if (content.Children[count].Visibility == Visibility.Collapsed)
+        {
+          break;
+        }
+
+        content.Children[count].Visibility = Visibility.Collapsed;
+        count++;
+      }
+
+      return complete;
+    }
+
+    private void UpdateTimerBar(double remainingTicks, TimerBar timerBar, TimerData timerData, double maxDurationTicks)
+    {
+      var endTicks = double.IsNaN(maxDurationTicks) ? timerData.DurationTicks : maxDurationTicks;
+      var progress = remainingTicks / endTicks * 100.0;
+      var timeText = DateUtil.FormatSimpleMS(remainingTicks / TimeSpan.TicksPerSecond);
+      timerBar.SetActive();
+      timerBar.Update(timerData.DisplayName, timeText, progress);
+    }
+
+    private void UpdateCooldownTimerBar(double remainingTicks, TimerBar timerBar, TimerData timerData)
+    {
+      if (remainingTicks > 0)
+      {
+        var progress = 100.0 - (remainingTicks / timerData.ResetDurationTicks * 100.0);
+        var timeText = DateUtil.FormatSimpleMS(remainingTicks / TimeSpan.TicksPerSecond);
+        timerBar.SetReset();
+        timerBar.Update(timerData.DisplayName, timeText, progress);
+      }
+      else
+      {
+        var timeText = DateUtil.FormatSimpleMS(timerData.DurationTicks / TimeSpan.TicksPerSecond);
+        timerBar.SetIdle();
+        timerBar.Update(timerData.DisplayName, timeText, 100.0);
       }
     }
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
-      TheOverlay.Height = SavedHeight = (long)this.Height;
-      TheOverlay.Width = SavedWidth = (long)this.Width;
-      TheOverlay.Top = SavedTop = (long)this.Top;
-      TheOverlay.Left = SavedLeft = (long)this.Left;
+      TheOverlay.Height = SavedHeight = (long)Height;
+      TheOverlay.Width = SavedWidth = (long)Width;
+      TheOverlay.Top = SavedTop = (long)Top;
+      TheOverlay.Left = SavedLeft = (long)Left;
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
@@ -298,10 +247,10 @@ namespace EQLogParser
 
     private void CancelClick(object sender, RoutedEventArgs e)
     {
-      this.Height = SavedHeight;
-      this.Width = SavedWidth;
-      this.Top = SavedTop;
-      this.Left = SavedLeft;
+      Height = SavedHeight;
+      Width = SavedWidth;
+      Top = SavedTop;
+      Left = SavedLeft;
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
@@ -309,7 +258,7 @@ namespace EQLogParser
 
     private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)
     {
-      this.DragMove();
+      DragMove();
 
       if (!saveButton.IsEnabled)
       {
@@ -326,10 +275,10 @@ namespace EQLogParser
 
     private void WindowLoaded(object sender, RoutedEventArgs e)
     {
-      SavedHeight = (long)this.Height;
-      SavedWidth = (long)this.Width;
-      SavedTop = (long)this.Top;
-      SavedLeft = (long)this.Left;
+      SavedHeight = (long)Height;
+      SavedWidth = (long)Width;
+      SavedTop = (long)Top;
+      SavedLeft = (long)Left;
     }
 
     private void WindowSizeChanged(object sender, SizeChangedEventArgs e)
@@ -350,12 +299,7 @@ namespace EQLogParser
       }
     }
 
-    private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
-    {
-      TimerBarCache.Clear();
-      TimerBarCreateOrder.Clear();
-      content.Children.Clear();
-    }
+    private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e) => content.Children.Clear();
 
     protected override void OnSourceInitialized(EventArgs e)
     {

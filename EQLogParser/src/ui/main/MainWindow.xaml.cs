@@ -1160,14 +1160,21 @@ namespace EQLogParser
     {
       if (testButton.Content.ToString() == "Run Test")
       {
-        if (testTriggersBox.Lines?.Count > 0)
+        try
         {
-          var allLines = testTriggersBox.Lines.Where(line => !string.IsNullOrEmpty(line.Text) && line.Text.Length > ACTION_INDEX)
-            .Select(line => line.Text).ToList();
-          if (allLines.Count > 0)
+          if (testTriggersBox.Lines?.Count > 0)
           {
-            TriggerUtil.RunTest(allLines, realTime.IsChecked == true);
+            var allLines = testTriggersBox.Lines.ToList().Where(line => !string.IsNullOrEmpty(line.Text) && line.Text.Length > ACTION_INDEX)
+              .Select(line => line.Text).ToList();
+            if (allLines.Count > 0)
+            {
+              TriggerUtil.RunTest(allLines, realTime.IsChecked == true);
+            }
           }
+        }
+        catch (Exception _)
+        {
+          // ignore
         }
       }
       else if (testButton.Content.ToString() == "Stop Test")
