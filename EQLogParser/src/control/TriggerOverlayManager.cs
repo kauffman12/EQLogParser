@@ -12,8 +12,8 @@ namespace EQLogParser
 {
   class TriggerOverlayManager
   {
-    internal static TriggerOverlayManager Instance = new TriggerOverlayManager();
     internal event EventHandler<Overlay> EventsSelectOverlay;
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private readonly string OVERLAY_FILE = "triggerOverlays.json";
     private readonly TriggerNode OverlayNodes;
     private readonly DispatcherTimer TextOverlayTimer;
@@ -23,12 +23,29 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, Window> TimerWindows = new ConcurrentDictionary<string, Window>();
     private readonly ConcurrentDictionary<string, TextOverlayWindow> PreviewTextWindows = new ConcurrentDictionary<string, TextOverlayWindow>();
     private readonly ConcurrentDictionary<string, TimerOverlayWindow> PreviewTimerWindows = new ConcurrentDictionary<string, TimerOverlayWindow>();
+    internal static TriggerOverlayManager Instance = new TriggerOverlayManager();
 
     public TriggerOverlayManager()
     {
       var json = ConfigUtil.ReadConfigFile(OVERLAY_FILE);
 
-      OverlayNodes = (json != null) ? JsonSerializer.Deserialize<TriggerNode>(json, new JsonSerializerOptions { IncludeFields = true }) : new TriggerNode();
+      if (json != null)
+      {
+        try 
+        {
+          OverlayNodes = JsonSerializer.Deserialize<TriggerNode>(json, new JsonSerializerOptions { IncludeFields = true });
+        }
+        catch (Exception ex)
+        {
+          LOG.Error("Error Reading " + OVERLAY_FILE, ex);
+          OverlayNodes = new TriggerNode();
+        }
+      }
+      else
+      {
+        OverlayNodes = new TriggerNode();
+      }
+
       OverlayNodes.Nodes?.ForEach(node =>
       {
         Application.Current.Resources["OverlayText-" + node.OverlayData.Id] = node.OverlayData.Name;
@@ -49,10 +66,17 @@ namespace EQLogParser
       OverlayUpdateTimer.Tick += OverlayDataUpdated;
     }
 
-    internal TriggerTreeViewNode GetOverlayTreeView() => TriggerUtil.GetTreeView(OverlayNodes, "Overlays");
     internal ObservableCollection<ComboBoxItemDetails> GetTextOverlayItems(List<string> overlayIds) => GetOverlayItems(overlayIds, true);
     internal ObservableCollection<ComboBoxItemDetails> GetTimerOverlayItems(List<string> overlayIds) => GetOverlayItems(overlayIds, false);
     internal void Select(Overlay overlay) => EventsSelectOverlay?.Invoke(this, overlay);
+
+    internal TriggerTreeViewNode GetOverlayTreeView()
+    {
+      lock (OverlayNodes)
+      {
+        return TriggerUtil.GetTreeView(OverlayNodes, "Overlays");
+      }
+    }
 
     internal void Start()
     {
@@ -255,11 +279,21 @@ namespace EQLogParser
 
     internal void SaveOverlays()
     {
-      lock (OverlayNodes)
+      Application.Current.Dispatcher.InvokeAsync(() =>
       {
-        var json = JsonSerializer.Serialize(OverlayNodes, new JsonSerializerOptions { IncludeFields = true });
-        ConfigUtil.WriteConfigFile(OVERLAY_FILE, json);
-      }
+        lock (OverlayNodes)
+        {
+          try
+          {
+            var json = JsonSerializer.Serialize(OverlayNodes, new JsonSerializerOptions { IncludeFields = true });
+            ConfigUtil.WriteConfigFile(OVERLAY_FILE, json);
+          }
+          catch (Exception ex)
+          {
+            LOG.Error("Error Saving " + OVERLAY_FILE, ex);
+          }
+        }
+      });
     }
 
     private void TextTick(object sender, EventArgs e) => WindowTick(TextWindows, TextOverlayTimer);
