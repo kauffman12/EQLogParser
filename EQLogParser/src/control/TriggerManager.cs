@@ -44,7 +44,22 @@ namespace EQLogParser
       BindingOperations.EnableCollectionSynchronization(AlertLog, CollectionLock);
 
       var json = ConfigUtil.ReadConfigFile(TRIGGERS_FILE);
-      TriggerNodes = (json != null) ? JsonSerializer.Deserialize<TriggerNode>(json, new JsonSerializerOptions { IncludeFields = true }) : new TriggerNode();
+      if (json != null)
+      {
+        try
+        {
+          TriggerNodes = JsonSerializer.Deserialize<TriggerNode>(json, new JsonSerializerOptions { IncludeFields = true });
+        }
+        catch (Exception ex)
+        {
+          LOG.Error("Error Parsing " + TRIGGERS_FILE, ex);
+          TriggerNodes = new TriggerNode();
+        }
+      }
+      else
+      {
+        TriggerNodes = new TriggerNode();
+      }
 
       CurrentVoice = TriggerUtil.GetSelectedVoice();
       CurrentVoiceRate = TriggerUtil.GetVoiceRate();
@@ -55,7 +70,6 @@ namespace EQLogParser
 
     internal void Init() => (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
     internal ObservableCollection<dynamic> GetAlertLog() => AlertLog;
-    internal TriggerTreeViewNode GetTriggerTreeView() => TriggerUtil.GetTreeView(TriggerNodes, "Triggers");
     internal void SetVoice(string voice) => CurrentVoice = voice;
     internal void SetVoiceRate(int rate) => CurrentVoiceRate = rate;
 
@@ -67,6 +81,14 @@ namespace EQLogParser
         result = ActiveTimers.ToList();
       }
       return result;
+    }
+
+    internal TriggerTreeViewNode GetTriggerTreeView()
+    {
+      lock (TriggerNodes)
+      {
+        return TriggerUtil.GetTreeView(TriggerNodes, "Triggers");
+      }
     }
 
     internal void AddAction(LineData lineData)
@@ -105,10 +127,9 @@ namespace EQLogParser
           TriggerUtil.DisableNodes(node);
           TriggerUtil.MergeNodes(node.Nodes, parent);
         }
-
-        SaveTriggers();
       }
 
+      SaveTriggers();
       RequestRefresh();
       EventsUpdateTree?.Invoke(this, true);
     }
@@ -121,9 +142,9 @@ namespace EQLogParser
       lock (TriggerNodes)
       {
         TriggerNodes.Nodes.Add(newTriggers);
-        SaveTriggers();
       }
 
+      SaveTriggers();
       RequestRefresh();
       EventsUpdateTree?.Invoke(this, true);
     }
@@ -133,9 +154,9 @@ namespace EQLogParser
       lock (TriggerNodes)
       {
         TriggerUtil.MergeNodes(newTriggers.Nodes, (parent == null) ? TriggerNodes : parent);
-        SaveTriggers();
       }
 
+      SaveTriggers();
       RequestRefresh();
       EventsUpdateTree?.Invoke(this, true);
     }
@@ -903,11 +924,21 @@ namespace EQLogParser
 
     private void SaveTriggers()
     {
-      lock (TriggerNodes)
+      Application.Current.Dispatcher.InvokeAsync(() =>
       {
-        var json = JsonSerializer.Serialize(TriggerNodes, new JsonSerializerOptions { IncludeFields = true });
-        ConfigUtil.WriteConfigFile(TRIGGERS_FILE, json);
-      }
+        lock (TriggerNodes)
+        {
+          try
+          {
+            var json = JsonSerializer.Serialize(TriggerNodes, new JsonSerializerOptions { IncludeFields = true });
+            ConfigUtil.WriteConfigFile(TRIGGERS_FILE, json);
+          }
+          catch (Exception ex)
+          {
+            LOG.Error("Error Saving " + TRIGGERS_FILE, ex);
+          }
+        }
+      });
     }
 
     private class Speak
