@@ -30,15 +30,15 @@ namespace EQLogParser
       TheOverlay = overlay;
       title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + TheOverlay.Id);
 
-      this.Height = TheOverlay.Height;
-      this.Width = TheOverlay.Width;
-      this.Top = TheOverlay.Top;
-      this.Left = TheOverlay.Left;
+      Height = TheOverlay.Height;
+      Width = TheOverlay.Width;
+      Top = TheOverlay.Top;
+      Left = TheOverlay.Left;
 
       if (preview)
       {
         MainActions.SetTheme(this, MainWindow.CurrentTheme);
-        this.ResizeMode = ResizeMode.CanResizeWithGrip;
+        ResizeMode = ResizeMode.CanResizeWithGrip;
         SetResourceReference(Window.BorderBrushProperty, "PreviewBackgroundBrush");
         SetResourceReference(Window.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
         title.Visibility = Visibility.Visible;
@@ -46,7 +46,7 @@ namespace EQLogParser
       }
       else
       {
-        this.border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
+        border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
       }
     }
 
@@ -107,7 +107,7 @@ namespace EQLogParser
 
     private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)
     {
-      this.DragMove();
+      DragMove();
 
       if (!saveButton.IsEnabled)
       {
@@ -145,10 +145,10 @@ namespace EQLogParser
 
     private void CancelClick(object sender, RoutedEventArgs e)
     {
-      this.Height = SavedHeight;
-      this.Width = SavedWidth;
-      this.Top = SavedTop;
-      this.Left = SavedLeft;
+      Height = SavedHeight;
+      Width = SavedWidth;
+      Top = SavedTop;
+      Left = SavedLeft;
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;

@@ -174,7 +174,6 @@ namespace EQLogParser
       {
         if (!PreviewTimerWindows.ContainsKey(overlay.Id))
         {
-          var beginTime = DateUtil.ToDouble(DateTime.Now);
           PreviewTimerWindows[overlay.Id] = new TimerOverlayWindow(overlay, true);
           PreviewTimerWindows[overlay.Id].CreatePreviewTimer("Example Trigger Name", "03:00", 90.0);
           PreviewTimerWindows[overlay.Id].CreatePreviewTimer("Example Trigger Name #2", "02:00", 60.0);
@@ -279,7 +278,7 @@ namespace EQLogParser
 
     internal void SaveOverlays()
     {
-      Application.Current.Dispatcher.InvokeAsync(() =>
+      Application.Current?.Dispatcher.InvokeAsync(() =>
       {
         lock (OverlayNodes)
         {

@@ -924,7 +924,7 @@ namespace EQLogParser
 
     private void SaveTriggers()
     {
-      Application.Current.Dispatcher.InvokeAsync(() =>
+      Application.Current?.Dispatcher.InvokeAsync(() =>
       {
         lock (TriggerNodes)
         {
