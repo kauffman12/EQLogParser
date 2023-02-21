@@ -82,8 +82,9 @@ namespace EQLogParser
         BorderThickness = new Thickness(0, 0, 0, 0),
         Tag = true
       };
+
       TheTextBox.SetValue(Grid.ColumnProperty, 0);
-      TheCheckBox = new CheckBox { Content = "Use Regex " };
+      TheCheckBox = new CheckBox { Content = "Use Regex" };
       TheCheckBox.SetValue(Grid.ColumnProperty, 1);
       TheCheckBox.Checked += TheCheckBoxChecked;
       TheCheckBox.Unchecked += TheCheckBoxChecked;
