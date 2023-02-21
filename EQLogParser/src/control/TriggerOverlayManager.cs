@@ -31,7 +31,7 @@ namespace EQLogParser
 
       if (json != null)
       {
-        try 
+        try
         {
           OverlayNodes = JsonSerializer.Deserialize<TriggerNode>(json, new JsonSerializerOptions { IncludeFields = true });
         }
