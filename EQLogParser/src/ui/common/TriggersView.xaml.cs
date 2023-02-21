@@ -141,8 +141,8 @@ namespace EQLogParser
     }
 
     private void WatcherUpdate(object sender, FileSystemEventArgs e) => LoadFiles();
-    private void AssignTextOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender);
-    private void AssignTimerOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender);
+    private void AssignTextOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender, true);
+    private void AssignTimerOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender, false);
     private void CreateTextOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(false);
     private void CreateTimerOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(true);
     private void EventsSelectTrigger(object sender, Trigger e) => SelectFile(e);
@@ -650,6 +650,10 @@ namespace EQLogParser
           assignTextOverlaysMenuItem.Items.Add(menuItem);
         }
 
+        var removeTextOverlays = new MenuItem { Header = "Unassign All Text Overlays" };
+        removeTextOverlays.Click += AssignTextOverlayClick;
+        assignTextOverlaysMenuItem.Items.Add(removeTextOverlays);
+
         UIElementUtil.ClearMenuEvents(assignTimerOverlaysMenuItem.Items, AssignTimerOverlayClick);
         assignTimerOverlaysMenuItem.Items.Clear();
 
@@ -660,6 +664,10 @@ namespace EQLogParser
           menuItem.Tag = overlay.Id;
           assignTimerOverlaysMenuItem.Items.Add(menuItem);
         }
+
+        var removeTimerOverlays = new MenuItem { Header = "Unassign All Timer Overlays" };
+        removeTimerOverlays.Click += AssignTimerOverlayClick;
+        assignTimerOverlaysMenuItem.Items.Add(removeTimerOverlays);
       }
     }
 
@@ -709,21 +717,33 @@ namespace EQLogParser
       }
     }
 
-    private void AssignOverlay(object sender)
+    private void AssignOverlay(object sender, bool isTextOverlay)
     {
       if (sender is MenuItem menuItem)
       {
-        var id = menuItem.Tag.ToString();
+        string overlayId = menuItem.Tag != null ? menuItem.Tag.ToString() : null;
         var anyFolders = treeView.SelectedItems.Cast<TriggerTreeViewNode>().Any(node => !node.IsOverlay && !node.IsTrigger && node != treeView.Nodes[1]);
+
         if (!anyFolders)
         {
           treeView.SelectedItems.Cast<TriggerTreeViewNode>().ToList().ForEach(node =>
           {
             if (node.IsTrigger && node.SerializedData != null)
             {
-              if (!node.SerializedData.TriggerData.SelectedOverlays.Contains(id))
+              if (overlayId != null)
               {
-                node.SerializedData.TriggerData.SelectedOverlays.Add(id);
+                if (!node.SerializedData.TriggerData.SelectedOverlays.Contains(overlayId))
+                {
+                  node.SerializedData.TriggerData.SelectedOverlays.Add(overlayId);
+                }
+              }
+              else
+              {
+                var overlays = isTextOverlay ? TriggerOverlayManager.Instance.GetTextOverlays() : TriggerOverlayManager.Instance.GetTimerOverlays();
+                foreach (var overlay in overlays)
+                {
+                  node.SerializedData.TriggerData.SelectedOverlays.Remove(overlay.Id);
+                }
               }
             }
           });
@@ -735,7 +755,15 @@ namespace EQLogParser
           msgDialog.ShowDialog();
           if (msgDialog.IsYes1Clicked)
           {
-            treeView.SelectedItems.Cast<TriggerTreeViewNode>().ToList().ForEach(node => AssignOverlay(node.SerializedData, id));
+            if (overlayId != null)
+            {
+              treeView.SelectedItems.Cast<TriggerTreeViewNode>().ToList().ForEach(node => AssignOverlay(node.SerializedData, overlayId));
+            }
+            else
+            {
+              var overlays = isTextOverlay ? TriggerOverlayManager.Instance.GetTextOverlays() : TriggerOverlayManager.Instance.GetTimerOverlays();
+              treeView.SelectedItems.Cast<TriggerTreeViewNode>().ToList().ForEach(node => RemoveOverlays(node.SerializedData, overlays));
+            }
           }
         }
 
@@ -758,6 +786,24 @@ namespace EQLogParser
         else if (node.OverlayData == null)
         {
           node?.Nodes.ForEach(node => AssignOverlay(node, id));
+        }
+      }
+    }
+
+    private void RemoveOverlays(TriggerNode node, List<Overlay> overlays)
+    {
+      if (node != null)
+      {
+        if (node.TriggerData != null)
+        {
+          foreach (var overlay in overlays)
+          {
+            node.TriggerData.SelectedOverlays.Remove(overlay.Id);
+          }
+        }
+        else if (node.OverlayData == null)
+        {
+          node?.Nodes.ForEach(node => RemoveOverlays(node, overlays));
         }
       }
     }

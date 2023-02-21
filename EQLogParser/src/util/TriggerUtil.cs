@@ -780,7 +780,7 @@ namespace EQLogParser
 
     private static TriggerNode ConvertGinaXmlToJson(string xml)
     {
-      TriggerNode result = new TriggerNode();
+      var result = new TriggerNode();
 
       try
       {
