@@ -20,6 +20,17 @@ namespace EQLogParser
       }
     }
 
+    internal static void ClearMenuEvents(ItemCollection collection, RoutedEventHandler func)
+    {
+      foreach (var item in collection)
+      {
+        if (item is MenuItem m)
+        {
+          m.Click -= func;
+        }
+      }
+    }
+
     internal static void SetComboBoxTitle(ComboBox columns, int count, string value, bool hasSelectAll = false)
     {
       if (columns.Items.Count == 0)

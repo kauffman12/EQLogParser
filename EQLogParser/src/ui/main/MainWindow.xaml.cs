@@ -1220,6 +1220,14 @@ namespace EQLogParser
       }
     }
 
+    private void ChromelessWindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
+    {
+      if (testButton.Content.ToString() == "Stop Test")
+      {
+        testButton.Content = "Stopping Test";
+      }
+    }
+
     private void WindowClosed(object sender, EventArgs e)
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
@@ -1269,12 +1277,9 @@ namespace EQLogParser
       }
     }
 
-    private void dockSite_CloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
-
-    private void dockSite_WindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
-
+    private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
+    private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
     private void MenuItemSelectMonitorLogFileClick(object sender, RoutedEventArgs e) => OpenLogFile(LogOption.MONITOR);
-
     private void WindowClose(object sender, EventArgs e) => Close();
 
     #region IDisposable Support

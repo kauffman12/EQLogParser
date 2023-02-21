@@ -5,6 +5,7 @@ using Syncfusion.Windows.PropertyGrid;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -624,16 +625,11 @@ namespace EQLogParser
 
       if (assignPriorityMenuItem.IsEnabled)
       {
-        foreach (var previous in assignPriorityMenuItem.Items)
-        {
-          if (previous is MenuItem m)
-          {
-            m.Click -= AssignPriorityClick;
-          }
-        }
+        UIElementUtil.ClearMenuEvents(assignPriorityMenuItem.Items, AssignPriorityClick);
       }
 
       assignPriorityMenuItem.Items.Clear();
+
       for (int i = 1; i <= 5; i++)
       {
         var menuItem = new MenuItem { Header = "Priority " + i, Tag = i };
@@ -643,15 +639,9 @@ namespace EQLogParser
 
       if (assignOverlayMenuItem.IsEnabled)
       {
-        foreach (var previous in assignTextOverlaysMenuItem.Items)
-        {
-          if (previous is MenuItem m)
-          {
-            m.Click -= AssignTextOverlayClick;
-          }
-        }
-
+        UIElementUtil.ClearMenuEvents(assignTextOverlaysMenuItem.Items, AssignTextOverlayClick);
         assignTextOverlaysMenuItem.Items.Clear();
+
         foreach (var overlay in TriggerOverlayManager.Instance.GetTextOverlays())
         {
           var menuItem = new MenuItem { Header = overlay.Name + " (" + overlay.Id + ")" };
@@ -660,15 +650,9 @@ namespace EQLogParser
           assignTextOverlaysMenuItem.Items.Add(menuItem);
         }
 
-        foreach (var previous in assignTimerOverlaysMenuItem.Items)
-        {
-          if (previous is MenuItem m)
-          {
-            m.Click -= AssignTimerOverlayClick;
-          }
-        }
-
+        UIElementUtil.ClearMenuEvents(assignTimerOverlaysMenuItem.Items, AssignTimerOverlayClick);
         assignTimerOverlaysMenuItem.Items.Clear();
+
         foreach (var overlay in TriggerOverlayManager.Instance.GetTimerOverlays())
         {
           var menuItem = new MenuItem { Header = overlay.Name + " (" + overlay.Id + ")" };
@@ -925,9 +909,9 @@ namespace EQLogParser
         var list = thePropertyGrid.Properties.ToList();
         var longestProp = PropertyGridUtil.FindProperty(list, evalTimeItem.PropertyName);
 
-        bool isValid = trigger.UseRegex ? TestRegexProperty(trigger, trigger.Pattern, PatternEditor) : true;
-        isValid = (isValid && trigger.EndUseRegex) ? TestRegexProperty(trigger, trigger.EndEarlyPattern, EndEarlyPatternEditor) : isValid;
-        isValid = (isValid && trigger.EndUseRegex2) ? TestRegexProperty(trigger, trigger.EndEarlyPattern2, EndEarlyPattern2Editor) : isValid;
+        bool isValid = trigger.UseRegex ? TestRegexProperty(trigger.Pattern, PatternEditor) : true;
+        isValid = (isValid && trigger.EndUseRegex) ? TestRegexProperty(trigger.EndEarlyPattern, EndEarlyPatternEditor) : isValid;
+        isValid = (isValid && trigger.EndUseRegex2) ? TestRegexProperty(trigger.EndEarlyPattern2, EndEarlyPattern2Editor) : isValid;
 
         if (args.Property.Name == patternItem.PropertyName)
         {
@@ -1027,7 +1011,7 @@ namespace EQLogParser
       }
     }
 
-    private bool TestRegexProperty(Trigger trigger, string pattern, PatternEditor editor)
+    private bool TestRegexProperty(string pattern, PatternEditor editor)
     {
       bool isValid = TextFormatUtils.IsValidRegex(pattern);
       editor.SetForeground(isValid ? "ContentForeground" : "EQWarnForegroundBrush");
