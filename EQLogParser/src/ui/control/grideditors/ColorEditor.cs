@@ -28,7 +28,7 @@ namespace EQLogParser
 
     private object Create()
     {
-      var colorPicker = new ColorPicker { EnableSolidToGradientSwitch = false };
+      var colorPicker = new ColorPicker { EnableSolidToGradientSwitch = false, BorderThickness = new System.Windows.Thickness(0, 0, 0, 0) };
       TheColorPicker = colorPicker;
       return colorPicker;
     }

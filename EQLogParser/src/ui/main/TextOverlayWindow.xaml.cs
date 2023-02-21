@@ -51,7 +51,7 @@ namespace EQLogParser
     }
 
     [MethodImpl(MethodImplOptions.Synchronized)]
-    internal void AddTriggerText(string text, double beginTime)
+    internal void AddTriggerText(string text, double beginTime, SolidColorBrush brush)
     {
       var block = new TextBlock
       {
@@ -67,7 +67,15 @@ namespace EQLogParser
       var effect = new DropShadowEffect { ShadowDepth = 2, Direction = 330, Color = Colors.Black, Opacity = 0.4, BlurRadius = 2 };
       block.Effect = effect;
 
-      block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + TheOverlay.Id);
+      if (brush != null)
+      {
+        block.Foreground = brush;
+      }
+      else
+      {
+        block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + TheOverlay.Id);
+      }
+
       block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + TheOverlay.Id);
       content.Children.Add(block);
     }

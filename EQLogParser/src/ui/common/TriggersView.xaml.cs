@@ -121,6 +121,7 @@ namespace EQLogParser
       AddEditor(new ColorEditor(), "IdleBrush");
       AddEditor(new ColorEditor(), "ResetBrush");
       AddEditor(new ColorEditor(), "BackgroundBrush");
+      AddEditor(new OptionalColorEditor(), "TriggerFontBrush");
       AddEditor(new CheckComboBoxEditor(), "SelectedTextOverlays");
       AddEditor(new CheckComboBoxEditor(), "SelectedTimerOverlays");
       AddEditor(new TriggerListsEditor(), "TriggerAgainOption");
@@ -951,6 +952,7 @@ namespace EQLogParser
       if (args.Property.Name != evalTimeItem.PropertyName &&
         args.Property.SelectedObject is TriggerPropertyModel trigger)
       {
+        var triggerChange = true;
         var list = thePropertyGrid.Properties.ToList();
         var longestProp = PropertyGridUtil.FindProperty(list, evalTimeItem.PropertyName);
 
@@ -971,9 +973,25 @@ namespace EQLogParser
             new { Name = endEarlyPatternItem.CategoryName, IsEnabled = (bool)args.Property.Value }
           });
         }
+        else if (args.Property.Name == triggerFontBrushItem.PropertyName)
+        {
+          if (trigger.TriggerFontBrush == null && trigger.Original.FontColor == null)
+          {
+            triggerChange = false;
+          }
+          else
+          {
+            triggerChange = (trigger.TriggerFontBrush == null && trigger.Original.FontColor != null) ||
+              (trigger.TriggerFontBrush != null && trigger.Original.FontColor == null) ||
+              (trigger.TriggerFontBrush.Color != (Color)ColorConverter.ConvertFromString(trigger.Original.FontColor));
+          }
+        }
 
-        saveButton.IsEnabled = isValid;
-        cancelButton.IsEnabled = true;
+        if (triggerChange)
+        {
+          saveButton.IsEnabled = isValid;
+          cancelButton.IsEnabled = true;
+        }
       }
       else if (args.Property.SelectedObject is TextOverlayPropertyModel textOverlay)
       {
