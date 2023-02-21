@@ -79,6 +79,7 @@ namespace EQLogParser
     public long Priority { get; set; } = 5;
     public int TriggerAgainOption { get; set; }
     public bool UseRegex { get; set; }
+    public string FontColor { get; set; } = null;
     public List<string> SelectedOverlays { get; set; } = new List<string>();
     public double ResetDurationSeconds { get; set; }
     public long WarningSeconds { get; set; }
@@ -118,6 +119,7 @@ namespace EQLogParser
 
   internal class TriggerPropertyModel : Trigger
   {
+    public SolidColorBrush TriggerFontBrush { get; set; }
     public ObservableCollection<ComboBoxItemDetails> SelectedTextOverlays { get; set; }
     public ObservableCollection<ComboBoxItemDetails> SelectedTimerOverlays { get; set; }
     public TimeSpan DurationTimeSpan { get; set; }

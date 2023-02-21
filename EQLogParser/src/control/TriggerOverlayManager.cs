@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -23,6 +24,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, Window> TimerWindows = new ConcurrentDictionary<string, Window>();
     private readonly ConcurrentDictionary<string, TextOverlayWindow> PreviewTextWindows = new ConcurrentDictionary<string, TextOverlayWindow>();
     private readonly ConcurrentDictionary<string, TimerOverlayWindow> PreviewTimerWindows = new ConcurrentDictionary<string, TimerOverlayWindow>();
+    private readonly Dictionary<string, SolidColorBrush> BrushCache = new Dictionary<string, SolidColorBrush>();
     internal static TriggerOverlayManager Instance = new TriggerOverlayManager();
 
     public TriggerOverlayManager()
@@ -99,6 +101,7 @@ namespace EQLogParser
       TimerWindows.ForEach(keypair => keypair.Value.Close());
       TimerWindows.Clear();
       SaveOverlays();
+      BrushCache.Clear();
     }
 
     internal void CloseOverlay(string overlayId)
@@ -156,8 +159,8 @@ namespace EQLogParser
         {
           var beginTime = DateUtil.ToDouble(DateTime.Now);
           PreviewTextWindows[overlay.Id] = new TextOverlayWindow(overlay, true);
-          PreviewTextWindows[overlay.Id].AddTriggerText("Example Message", beginTime);
-          PreviewTextWindows[overlay.Id].AddTriggerText("Example Message #2", beginTime);
+          PreviewTextWindows[overlay.Id].AddTriggerText("Example Message", beginTime, null);
+          PreviewTextWindows[overlay.Id].AddTriggerText("Example Message #2", beginTime, null);
           PreviewTextWindows[overlay.Id].Show();
         }
         else
@@ -344,6 +347,7 @@ namespace EQLogParser
     {
       var trigger = e.Trigger as Trigger;
       var beginTime = DateUtil.ToDouble(DateTime.Now);
+      var fontColor = e.CustomFont as string;
       Application.Current.Dispatcher.InvokeAsync(() =>
       {
         if (trigger.SelectedOverlays != null)
@@ -362,7 +366,17 @@ namespace EQLogParser
                   window.Show();
                 }
 
-                (window as TextOverlayWindow).AddTriggerText(e.Text, beginTime);
+                SolidColorBrush brush = null;
+                if (!string.IsNullOrEmpty(fontColor))
+                {
+                  if (!BrushCache.TryGetValue(fontColor, out brush))
+                  {
+                    brush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(fontColor) };
+                    BrushCache[fontColor] = brush;
+                  }
+                }
+
+                (window as TextOverlayWindow).AddTriggerText(e.Text, beginTime, brush);
 
                 if (!TextOverlayTimer.IsEnabled)
                 {

@@ -53,7 +53,7 @@ namespace EQLogParser
 
     private object Create(string name)
     {
-      var comboBox = new ComboBox();
+      var comboBox = new ComboBox { Padding = new Thickness(0) };
 
       if (Options.ContainsKey(name))
       {

@@ -15,6 +15,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -859,7 +860,7 @@ namespace EQLogParser
         Application.Current.Dispatcher.InvokeAsync(() =>
         {
           text = ProcessSpeakDisplayText(text, matches);
-          EventsAddText?.Invoke(this, new { Text = text, Trigger = data });
+          EventsAddText?.Invoke(this, new { Text = text, Trigger = data, CustomFont = data.FontColor });
         }, DispatcherPriority.Render);
       }
     }

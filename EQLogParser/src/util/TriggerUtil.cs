@@ -100,6 +100,11 @@ namespace EQLogParser
 
         if (toTrigger is TriggerPropertyModel toModel)
         {
+          if (fromTrigger.FontColor is string fontColor && !string.IsNullOrEmpty(fontColor))
+          {
+            toModel.TriggerFontBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(fontColor) };
+          }
+
           toModel.SelectedTextOverlays = TriggerOverlayManager.Instance.GetTextOverlayItems(toModel.SelectedOverlays);
           toModel.SelectedTimerOverlays = TriggerOverlayManager.Instance.GetTimerOverlayItems(toModel.SelectedOverlays);
           toModel.DurationTimeSpan = new TimeSpan(0, 0, (int)toModel.DurationSeconds);
@@ -111,6 +116,7 @@ namespace EQLogParser
         }
         else if (fromTrigger is TriggerPropertyModel fromModel)
         {
+          toTrigger.FontColor = (fromModel.TriggerFontBrush == null) ? null : fromModel.TriggerFontBrush.Color.ToString();
           var selectedOverlays = fromModel.SelectedTextOverlays.Where(item => item.IsChecked).Select(item => item.Value).ToList();
           selectedOverlays.AddRange(fromModel.SelectedTimerOverlays.Where(item => item.IsChecked).Select(item => item.Value));
           toTrigger.SelectedOverlays = selectedOverlays;
