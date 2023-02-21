@@ -790,7 +790,7 @@ namespace EQLogParser
         result.Nodes = new List<TriggerNode>();
         var nodeList = doc.DocumentElement.SelectSingleNode("/SharedData");
         var added = new List<Trigger>();
-        HandleGinaTriggerGroups(nodeList.ChildNodes, result.Nodes, added);
+        TextFormatUtils.ParseGinaTriggerGroups(nodeList.ChildNodes, result.Nodes, added);
 
         if (added.Count == 0)
         {
@@ -803,172 +803,6 @@ namespace EQLogParser
       }
 
       return result;
-    }
-
-    internal static void HandleGinaTriggerGroups(XmlNodeList nodeList, List<TriggerNode> audioTriggerNodes, List<Trigger> added)
-    {
-      foreach (XmlNode node in nodeList)
-      {
-        if (node.Name == "TriggerGroup")
-        {
-          var data = new TriggerNode();
-          data.Nodes = new List<TriggerNode>();
-          data.Name = node.SelectSingleNode("Name").InnerText;
-          audioTriggerNodes.Add(data);
-
-          var triggers = new List<TriggerNode>();
-          var triggersList = node.SelectSingleNode("Triggers");
-          if (triggersList != null)
-          {
-            foreach (XmlNode triggerNode in triggersList.SelectNodes("Trigger"))
-            {
-              bool goodTrigger = false;
-              var trigger = new Trigger();
-              trigger.Name = Helpers.GetText(triggerNode, "Name");
-              trigger.Pattern = Helpers.GetText(triggerNode, "TriggerText");
-              trigger.Comments = Helpers.GetText(triggerNode, "Comments");
-
-              var timerName = Helpers.GetText(triggerNode, "TimerName");
-              if (!string.IsNullOrEmpty(timerName) && timerName != trigger.Name)
-              {
-                trigger.AltTimerName = timerName;
-              }
-
-              if (bool.TryParse(Helpers.GetText(triggerNode, "UseText"), out bool _))
-              {
-                goodTrigger = true;
-                trigger.TextToDisplay = Helpers.GetText(triggerNode, "DisplayText");
-              }
-
-              if (bool.TryParse(Helpers.GetText(triggerNode, "UseTextToVoice"), out bool _))
-              {
-                goodTrigger = true;
-                trigger.TextToSpeak = Helpers.GetText(triggerNode, "TextToVoiceText");
-              }
-
-              if (bool.TryParse(Helpers.GetText(triggerNode, "EnableRegex"), out bool regex))
-              {
-                trigger.UseRegex = regex;
-              }
-
-              if (bool.TryParse(Helpers.GetText(triggerNode, "InterruptSpeech"), out bool interrupt))
-              {
-                trigger.Priority = interrupt ? 1 : 3;
-              }
-
-              if ("Timer".Equals(Helpers.GetText(triggerNode, "TimerType")))
-              {
-                goodTrigger = true;
-                trigger.EnableTimer = true;
-
-                if (int.TryParse(Helpers.GetText(triggerNode, "TimerDuration"), out int duration))
-                {
-                  trigger.DurationSeconds = duration;
-                }
-
-                if (triggerNode.SelectSingleNode("TimerEndingTrigger") is XmlNode timerEndingNode)
-                {
-                  if (bool.TryParse(Helpers.GetText(timerEndingNode, "UseText"), out bool _))
-                  {
-                    trigger.WarningTextToDisplay = Helpers.GetText(timerEndingNode, "DisplayText");
-                  }
-
-                  if (bool.TryParse(Helpers.GetText(timerEndingNode, "UseTextToVoice"), out bool _))
-                  {
-                    trigger.WarningTextToSpeak = Helpers.GetText(timerEndingNode, "TextToVoiceText");
-                  }
-                }
-
-                if (int.TryParse(Helpers.GetText(triggerNode, "TimerEndingTime"), out int endTime))
-                {
-                  // GINA defaults to 1 even if there's no text?
-                  if (!string.IsNullOrEmpty(trigger.WarningTextToSpeak) || endTime > 1)
-                  {
-                    trigger.WarningSeconds = endTime;
-                  }
-                }
-
-                var behavior = Helpers.GetText(triggerNode, "TimerStartBehavior");
-                if ("StartNewTimer".Equals(behavior))
-                {
-                  trigger.TriggerAgainOption = 0;
-                }
-                else if ("RestartTimer".Equals(behavior))
-                {
-                  if (bool.TryParse(Helpers.GetText(triggerNode, "RestartBasedOnTimerName"), out bool onTimerName))
-                  {
-                    trigger.TriggerAgainOption = onTimerName ? 2 : 1;
-                  }
-                }
-                else
-                {
-                  trigger.TriggerAgainOption = 3;
-                }
-
-                if (triggerNode.SelectSingleNode("TimerEndedTrigger") is XmlNode timerEndedNode)
-                {
-                  if (bool.TryParse(Helpers.GetText(timerEndedNode, "UseText"), out bool _))
-                  {
-                    trigger.EndTextToDisplay = Helpers.GetText(timerEndedNode, "DisplayText");
-                  }
-
-                  if (bool.TryParse(Helpers.GetText(timerEndedNode, "UseTextToVoice"), out bool _))
-                  {
-                    trigger.EndTextToSpeak = Helpers.GetText(timerEndedNode, "TextToVoiceText");
-                  }
-                }
-
-                if (triggerNode.SelectSingleNode("TimerEarlyEnders") is XmlNode endingEarlyNode)
-                {
-                  if (endingEarlyNode.SelectNodes("EarlyEnder") is XmlNodeList enderNodes)
-                  {
-                    // only take 2 cancel patterns
-                    if (enderNodes.Count > 0)
-                    {
-                      trigger.EndEarlyPattern = Helpers.GetText(enderNodes[0], "EarlyEndText");
-                      if (bool.TryParse(Helpers.GetText(enderNodes[0], "EnableRegex"), out bool regex2))
-                      {
-                        trigger.EndUseRegex = regex2;
-                      }
-                    }
-
-                    if (enderNodes.Count > 1)
-                    {
-                      trigger.EndEarlyPattern2 = Helpers.GetText(enderNodes[1], "EarlyEndText");
-                      if (bool.TryParse(Helpers.GetText(enderNodes[1], "EnableRegex"), out bool regex2))
-                      {
-                        trigger.EndUseRegex2 = regex2;
-                      }
-                    }
-                  }
-                }
-              }
-
-              if (goodTrigger)
-              {
-                triggers.Add(new TriggerNode { Name = trigger.Name, TriggerData = trigger });
-                added.Add(trigger);
-              }
-            }
-          }
-
-          var moreGroups = node.SelectNodes("TriggerGroups");
-          HandleGinaTriggerGroups(moreGroups, data.Nodes, added);
-
-          // GINA UI sorts by default
-          data.Nodes = data.Nodes.OrderBy(n => n.Name).ToList();
-
-          if (triggers.Count > 0)
-          {
-            // GINA UI sorts by default
-            data.Nodes.AddRange(triggers.OrderBy(trigger => trigger.Name).ToList());
-          }
-        }
-        else if (node.Name == "TriggerGroups")
-        {
-          HandleGinaTriggerGroups(node.ChildNodes, audioTriggerNodes, added);
-        }
-      }
     }
 
     internal static void RunTest(List<string> allLines, bool realTime)
@@ -990,7 +824,7 @@ namespace EQLogParser
       }
       else
       {
-        (Application.Current.MainWindow as MainWindow).testButton.Content = "Stop Test";
+        (Application.Current?.MainWindow as MainWindow).testButton.Content = "Stop Test";
 
         Task.Run(() =>
         {
@@ -1097,7 +931,7 @@ namespace EQLogParser
                     nowTime++;
                     count++;
                     var remaining = data.Length - count;
-                    Application.Current.Dispatcher.Invoke(() => (Application.Current.MainWindow as MainWindow).testStatus.Text = "| Time Remaining: " + remaining + " seconds");
+                    Application.Current?.Dispatcher.InvokeAsync(() => (Application.Current.MainWindow as MainWindow).testStatus.Text = "| Time Remaining: " + remaining + " seconds");
                   }
                 }
               }
@@ -1105,11 +939,14 @@ namespace EQLogParser
           }
           catch (Exception ex)
           {
-            LOG.Error(ex);
+            if (Application.Current != null)
+            {
+              LOG.Error(ex);
+            }
           }
           finally
           {
-            Application.Current.Dispatcher.Invoke(() =>
+            Application.Current?.Dispatcher.InvokeAsync(() =>
             {
               (Application.Current.MainWindow as MainWindow).testStatus.Visibility = Visibility.Collapsed;
               (Application.Current.MainWindow as MainWindow).testButton.Content = "Run Test";

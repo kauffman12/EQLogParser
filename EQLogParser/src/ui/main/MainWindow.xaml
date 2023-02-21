@@ -18,6 +18,7 @@
         UseNativeChrome="True"
         TextOptions.TextFormattingMode="Display"
         WindowStartupLocation="Manual"
+        Closing="ChromelessWindowClosing"
         StateChanged="WindowStateChanged">
   <syncfusion:ChromelessWindow.LeftHeaderItemsSource>
     <listCollection:ArrayList>
@@ -407,7 +408,7 @@
   </syncfusion:ChromelessWindow.RightHeaderItemsSource>
   <Grid Margin="0">
     <syncfusion:NotifyIcon x:Name="notifyIcon" ShowInTaskBar="True" Header="NotifyIcon" Text="EQLogParser" Icon="EQLogParser.ico" Click="NotifyIcon_Click"/>
-    <syncfusion:DockingManager x:Name="dockSite" Margin="0" UseDocumentContainer="True" TabGroupCreated="TabGroupCreated" Loaded="DockSiteLoaded" DocumentCloseButtonType="Individual" CloseButtonClick="dockSite_CloseButtonClick" WindowClosing="dockSite_WindowClosing">
+    <syncfusion:DockingManager x:Name="dockSite" Margin="0" UseDocumentContainer="True" TabGroupCreated="TabGroupCreated" Loaded="DockSiteLoaded" DocumentCloseButtonType="Individual" CloseButtonClick="DockSiteCloseButtonClick" WindowClosing="DockSiteWindowClosing">
       <ContentControl x:Name="playerParseTextWindow" Tag="Hide" syncfusion:DockingManager.Header="Preview Parse" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
                       syncfusion:DockingManager.DesiredHeightInDockedMode="150" syncfusion:DockingManager.CanDocument="False" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="150">
         <local:ParsePreview />
