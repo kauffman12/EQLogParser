@@ -29,9 +29,9 @@ namespace EQLogParser
     private const string LABEL_NEW_TRIGGER = "New Trigger";
     private const string LABEL_NEW_FOLDER = "New Folder";
     private FileSystemWatcher Watcher;
-    private WrapTextEditor PatternEditor;
-    private WrapTextEditor EndEarlyPatternEditor;
-    private WrapTextEditor EndEarlyPattern2Editor;
+    private PatternEditor PatternEditor;
+    private PatternEditor EndEarlyPatternEditor;
+    private PatternEditor EndEarlyPattern2Editor;
     private List<TriggerNode> Removed;
     private SpeechSynthesizer TestSynth = null;
 
@@ -107,11 +107,11 @@ namespace EQLogParser
       AddEditor(new RangeEditor(0, 9999), "Width");
       AddEditor(new WrapTextEditor(), "Comments");
       AddEditor(new WrapTextEditor(), "OverlayComments");
-      PatternEditor = new WrapTextEditor();
+      PatternEditor = new PatternEditor();
       AddEditor(PatternEditor, "Pattern");
-      EndEarlyPatternEditor = new WrapTextEditor();
+      EndEarlyPatternEditor = new PatternEditor();
       AddEditor(EndEarlyPatternEditor, "EndEarlyPattern");
-      EndEarlyPattern2Editor = new WrapTextEditor();
+      EndEarlyPattern2Editor = new PatternEditor();
       AddEditor(EndEarlyPattern2Editor, "EndEarlyPattern2");
       AddEditor(new DurationEditor(), "DurationTimeSpan");
       AddEditor(new DurationEditor(), "ResetDurationTimeSpan");
@@ -929,7 +929,7 @@ namespace EQLogParser
         isValid = (isValid && trigger.EndUseRegex) ? TestRegexProperty(trigger, trigger.EndEarlyPattern, EndEarlyPatternEditor) : isValid;
         isValid = (isValid && trigger.EndUseRegex2) ? TestRegexProperty(trigger, trigger.EndEarlyPattern2, EndEarlyPattern2Editor) : isValid;
 
-        if (args.Property.Name == patternItem.PropertyName || args.Property.Name == useRegexItem.PropertyName)
+        if (args.Property.Name == patternItem.PropertyName)
         {
           trigger.WorstEvalTime = -1;
           longestProp.Value = -1;
@@ -1027,7 +1027,7 @@ namespace EQLogParser
       }
     }
 
-    private bool TestRegexProperty(Trigger trigger, string pattern, WrapTextEditor editor)
+    private bool TestRegexProperty(Trigger trigger, string pattern, PatternEditor editor)
     {
       bool isValid = TextFormatUtils.IsValidRegex(pattern);
       editor.SetForeground(isValid ? "ContentForeground" : "EQWarnForegroundBrush");
