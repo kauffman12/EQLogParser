@@ -122,7 +122,7 @@ namespace EQLogParser
       if (TheCheckBox != null)
       {
         TheCheckBox.Checked -= TheCheckBoxChecked;
-        TheCheckBox.Unchecked-= TheCheckBoxChecked;
+        TheCheckBox.Unchecked -= TheCheckBoxChecked;
         BindingOperations.ClearAllBindings(TheCheckBox);
         TheCheckBox = null;
       }

@@ -25,10 +25,10 @@ namespace EQLogParser
     internal event EventHandler<Trigger> EventsSelectTrigger;
     internal event EventHandler<dynamic> EventsAddText;
     internal event EventHandler<Trigger> EventsNewTimer;
+    private const string TRIGGERS_FILE = "triggers.json";
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static object CollectionLock = new object();
     private static object LockObject = new object();
-    private const string TRIGGERS_FILE = "triggers.json";
     private readonly ObservableCollection<dynamic> AlertLog = new ObservableCollection<dynamic>();
     private readonly List<TimerData> ActiveTimers = new List<TimerData>();
     private readonly DispatcherTimer TriggerUpdateTimer;
@@ -70,17 +70,17 @@ namespace EQLogParser
 
     internal void Init() => (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
     internal ObservableCollection<dynamic> GetAlertLog() => AlertLog;
+    private string ModText(string text) => string.IsNullOrEmpty(text) ? null : text.Replace("{c}", ConfigUtil.PlayerName, StringComparison.OrdinalIgnoreCase);
     internal void SetVoice(string voice) => CurrentVoice = voice;
     internal void SetVoiceRate(int rate) => CurrentVoiceRate = rate;
+    internal void Select(Trigger trigger) => EventsSelectTrigger?.Invoke(this, trigger);
 
     internal List<TimerData> GetActiveTimers()
     {
-      List<TimerData> result;
       lock (ActiveTimers)
       {
-        result = ActiveTimers.ToList();
+        return ActiveTimers.ToList();
       }
-      return result;
     }
 
     internal TriggerTreeViewNode GetTriggerTreeView()
@@ -88,6 +88,14 @@ namespace EQLogParser
       lock (TriggerNodes)
       {
         return TriggerUtil.GetTreeView(TriggerNodes, "Triggers");
+      }
+    }
+
+    internal bool IsActive()
+    {
+      lock (LockObject)
+      {
+        return (LogChannel != null);
       }
     }
 
@@ -103,20 +111,6 @@ namespace EQLogParser
         TriggerUtil.CheckGina(lineData);
       }
     }
-
-    internal bool IsActive()
-    {
-      bool active = false;
-
-      lock (LockObject)
-      {
-        active = (LogChannel != null);
-      }
-
-      return active;
-    }
-
-    internal void Select(Trigger trigger) => EventsSelectTrigger?.Invoke(this, trigger);
 
     internal void MergeTriggers(List<TriggerNode> list, TriggerNode parent)
     {
@@ -187,10 +181,10 @@ namespace EQLogParser
         return;
       }
 
-      TriggerOverlayManager.Instance.Start();
-      Channel<LowPriData> lowPriChannel = Channel.CreateUnbounded<LowPriData>();
-      Channel<Speak> speechChannel = Channel.CreateUnbounded<Speak>();
+      var lowPriChannel = Channel.CreateUnbounded<LowPriData>();
+      var speechChannel = Channel.CreateUnbounded<Speak>();
       StartSpeechReader(speechChannel);
+      TriggerOverlayManager.Instance.Start();
       Channel<dynamic> logChannel;
 
       lock (LockObject)
@@ -721,15 +715,15 @@ namespace EQLogParser
             var wrapper = new TriggerWrapper
             {
               TriggerData = trigger,
-              ModifiedSpeak = ModifiedText(trigger.TextToSpeak),
-              ModifiedWarningSpeak = ModifiedText(trigger.WarningTextToSpeak),
-              ModifiedEndSpeak = ModifiedText(trigger.EndTextToSpeak),
-              ModifiedEndEarlySpeak = ModifiedText(trigger.EndEarlyTextToSpeak),
-              ModifiedDisplay = ModifiedText(trigger.TextToDisplay),
-              ModifiedWarningDisplay = ModifiedText(trigger.WarningTextToDisplay),
-              ModifiedEndDisplay = ModifiedText(trigger.EndTextToDisplay),
-              ModifiedEndEarlyDisplay = ModifiedText(trigger.EndEarlyTextToDisplay),
-              ModifiedTimerName = ModifiedText(trigger.AltTimerName ?? trigger.Name)
+              ModifiedSpeak = ModText(trigger.TextToSpeak),
+              ModifiedWarningSpeak = ModText(trigger.WarningTextToSpeak),
+              ModifiedEndSpeak = ModText(trigger.EndTextToSpeak),
+              ModifiedEndEarlySpeak = ModText(trigger.EndEarlyTextToSpeak),
+              ModifiedDisplay = ModText(trigger.TextToDisplay),
+              ModifiedWarningDisplay = ModText(trigger.WarningTextToDisplay),
+              ModifiedEndDisplay = ModText(trigger.EndTextToDisplay),
+              ModifiedEndEarlyDisplay = ModText(trigger.EndEarlyTextToDisplay),
+              ModifiedTimerName = ModText(trigger.AltTimerName ?? trigger.Name)
             };
 
             pattern = UpdatePattern(trigger.UseRegex, playerName, pattern, out List<NumberOptions> numberOptions);
@@ -856,11 +850,6 @@ namespace EQLogParser
       }
 
       SaveTriggers();
-    }
-
-    private string ModifiedText(string text)
-    {
-      return string.IsNullOrEmpty(text) ? null : text.Replace("{c}", ConfigUtil.PlayerName, StringComparison.OrdinalIgnoreCase);
     }
 
     private void AddTextEvent(string text, Trigger data, MatchCollection matches)
