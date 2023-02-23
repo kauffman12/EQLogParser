@@ -1,11 +1,13 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Shared;
+using System.ComponentModel;
 using System.Reflection;
 using System.Windows.Data;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
-  public class RangeEditor : ITypeEditor
+  public class RangeEditor : BaseTypeEditor
   {
     private IntegerTextBox TheTextBox;
     private readonly long Min;
@@ -17,7 +19,7 @@ namespace EQLogParser
       Max = max;
     }
 
-    public void Attach(PropertyViewItem property, PropertyItem info)
+    public override void Attach(PropertyViewItem property, PropertyItem info)
     {
       Binding binding = new Binding("Value")
       {
@@ -30,7 +32,10 @@ namespace EQLogParser
       BindingOperations.SetBinding(TheTextBox, IntegerTextBox.ValueProperty, binding);
     }
 
-    public object Create(PropertyInfo propertyInfo)
+    public override object Create(PropertyDescriptor PropertyDescriptor) => Create();
+    public override object Create(PropertyInfo propertyInfo) => Create();
+
+    public object Create()
     {
       var textBox = new IntegerTextBox()
       {
@@ -50,7 +55,12 @@ namespace EQLogParser
       return textBox;
     }
 
-    public void Detach(PropertyViewItem property)
+    public override bool ShouldPropertyGridTryToHandleKeyDown(Key key)
+    {
+      return false;
+    }
+
+    public override void Detach(PropertyViewItem property)
     {
       if (TheTextBox != null)
       {

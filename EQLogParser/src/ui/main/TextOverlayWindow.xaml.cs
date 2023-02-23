@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Media.Effects;
 
 namespace EQLogParser
 {
@@ -16,6 +13,8 @@ namespace EQLogParser
   /// </summary>
   public partial class TextOverlayWindow : Window
   {
+    private LinkedList<TextData> TextDataList = new LinkedList<TextData>();
+    private int MaxNodes = -1;
     private Overlay TheOverlay;
     private bool Preview = false;
     private long SavedHeight;
@@ -35,12 +34,15 @@ namespace EQLogParser
       Top = TheOverlay.Top;
       Left = TheOverlay.Left;
 
+      // start off with one node
+      content.Children.Add(CreateBlock());
+
       if (preview)
       {
         MainActions.SetTheme(this, MainWindow.CurrentTheme);
         ResizeMode = ResizeMode.CanResizeWithGrip;
-        SetResourceReference(Window.BorderBrushProperty, "PreviewBackgroundBrush");
-        SetResourceReference(Window.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
+        SetResourceReference(BorderBrushProperty, "PreviewBackgroundBrush");
+        SetResourceReference(BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
         title.Visibility = Visibility.Visible;
         buttonsPanel.Visibility = Visibility.Visible;
       }
@@ -50,68 +52,118 @@ namespace EQLogParser
       }
     }
 
-    [MethodImpl(MethodImplOptions.Synchronized)]
-    internal void AddTriggerText(string text, double beginTime, SolidColorBrush brush)
+    internal void AddTriggerText(string text, double beginTicks, SolidColorBrush brush)
     {
-      var block = new TextBlock
+      if (MaxNodes == -1 && content.Children.Count > 0 && content.Children[0] is TextBlock textBlock && textBlock.ActualHeight > 0)
       {
-        Text = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(text),
-        TextAlignment = TextAlignment.Center,
-        Padding = new Thickness(6, 0, 6, 2),
-        Margin = new Thickness(0),
-        Tag = beginTime + TheOverlay.FadeDelay,
-        FontWeight = FontWeights.Bold,
-        TextWrapping = TextWrapping.Wrap
-      };
-
-      var effect = new DropShadowEffect { ShadowDepth = 2, Direction = 330, Color = Colors.Black, Opacity = 0.4, BlurRadius = 2 };
-      block.Effect = effect;
-
-      if (brush != null)
-      {
-        block.Foreground = brush;
-      }
-      else
-      {
-        block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + TheOverlay.Id);
+        MaxNodes = (int)(Height / textBlock.ActualHeight) + 1;
       }
 
-      block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + TheOverlay.Id);
-      content.Children.Add(block);
-    }
-
-    [MethodImpl(MethodImplOptions.Synchronized)]
-    internal bool Tick()
-    {
-      var currentTime = DateUtil.ToDouble(DateTime.Now);
-      var removeList = new List<TextBlock>();
-
-      foreach (var child in content.Children)
+      lock (TextDataList)
       {
-        if (child is TextBlock block && block.Tag is double endTime)
+        TextDataList.AddFirst(new TextData
         {
-          if ((endTime - currentTime) == 1)
-          {
-            block.Opacity = 0.7;
-          }
-          else if (endTime == currentTime)
-          {
-            block.Opacity = 0.3;
-          }
-          else if (currentTime > endTime)
-          {
-            removeList.Add(block);
-          }
+          Text = text,
+          EndTicks = beginTicks + TheOverlay.FadeDelay * TimeSpan.TicksPerSecond,
+          Brush = brush
+        });
+
+        if (TextDataList.Count > MaxNodes)
+        {
+          TextDataList.RemoveLast();
         }
       }
 
-      removeList.ForEach(child => content.Children.Remove(child));
+      if (content.Children.Count < MaxNodes && content.Children.Count < TextDataList.Count)
+      {
+        content.Children.Add(CreateBlock());
+      }
+    }
 
-      // return true if one
-      return content.Children.Count == 0;
+    internal bool Tick()
+    {
+      var currentTicks = DateTime.Now.Ticks;
+      var done = false;
+
+      lock (TextDataList)
+      {
+        var node = TextDataList.First;
+        int lastIndex = content.Children.Count - 1;
+
+        while (node != null)
+        {
+          var nextNode = node.Next;
+          if (lastIndex >= 0 && content.Children[lastIndex] is TextBlock block)
+          {
+            if (node.Value.EndTicks >= currentTicks)
+            {
+              block.Text = node.Value.Text;
+              if (block.Visibility != Visibility.Visible)
+              {
+                block.Visibility = Visibility.Visible;
+              }
+
+              if (node.Value.Brush == null)
+              {
+                block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + TheOverlay.Id);
+              }
+              else
+              {
+                block.Foreground = node.Value.Brush;
+              }
+            }
+            else
+            {
+              TextDataList.Remove(node);
+              block.Visibility = Visibility.Collapsed;
+              block.Text = "";
+            }
+          }
+          else
+          {
+            TextDataList.Remove(node);
+          }
+
+          node = nextNode;
+          lastIndex--;
+        }
+
+        done = TextDataList.Count == 0;
+      }
+
+      if (!done)
+      {
+        if (border.Visibility != Visibility.Visible)
+        {
+          border.Visibility = Visibility.Visible;
+        }
+      }
+      else
+      {
+        border.Visibility = Visibility.Hidden;
+      }
+
+      // return true if done
+      return done;
     }
 
     private void CloseClick(object sender, RoutedEventArgs e) => TriggerOverlayManager.Instance.ClosePreviewTextOverlay(TheOverlay.Id);
+
+    private TextBlock CreateBlock()
+    {
+      var block = new TextBlock
+      {
+        TextAlignment = TextAlignment.Center,
+        Padding = new Thickness(6, 0, 6, 2),
+        Margin = new Thickness(0),
+        FontWeight = FontWeights.Bold,
+        TextWrapping = TextWrapping.Wrap,
+        Visibility = Visibility.Hidden
+      };
+
+      block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + TheOverlay.Id);
+      return block;
+    }
 
     private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)
     {
@@ -132,18 +184,18 @@ namespace EQLogParser
 
     private void WindowLoaded(object sender, RoutedEventArgs e)
     {
-      SavedHeight = (long)this.Height;
-      SavedWidth = (long)this.Width;
-      SavedTop = (long)this.Top;
-      SavedLeft = (long)this.Left;
+      SavedHeight = (long)Height;
+      SavedWidth = (long)Width;
+      SavedTop = (long)Top;
+      SavedLeft = (long)Left;
     }
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
-      TheOverlay.Height = SavedHeight = (long)this.Height;
-      TheOverlay.Width = SavedWidth = (long)this.Width;
-      TheOverlay.Top = SavedTop = (long)this.Top;
-      TheOverlay.Left = SavedLeft = (long)this.Left;
+      TheOverlay.Height = SavedHeight = (long)Height;
+      TheOverlay.Width = SavedWidth = (long)Width;
+      TheOverlay.Top = SavedTop = (long)Top;
+      TheOverlay.Left = SavedLeft = (long)Left;
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
@@ -192,6 +244,13 @@ namespace EQLogParser
         exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
         NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
       }
+    }
+
+    private class TextData
+    {
+      public string Text { get; set; }
+      public double EndTicks { get; set; }
+      public SolidColorBrush Brush { get; set; }
     }
   }
 }

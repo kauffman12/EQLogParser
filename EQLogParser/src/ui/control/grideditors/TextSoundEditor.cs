@@ -9,10 +9,11 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
-  internal class TextSoundEditor : ITypeEditor
+  internal class TextSoundEditor : BaseTypeEditor
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private SoundPlayer SoundPlayer;
@@ -27,7 +28,7 @@ namespace EQLogParser
       FileList = fileList;
     }
 
-    public void Attach(PropertyViewItem property, PropertyItem info)
+    public override void Attach(PropertyViewItem property, PropertyItem info)
     {
       Binding binding = new Binding("Value")
       {
@@ -42,9 +43,9 @@ namespace EQLogParser
       BindingOperations.SetBinding(TheRealTextBox, TextBox.TextProperty, binding);
     }
 
-    public object Create(PropertyInfo propertyInfo) => Create();
+    public override object Create(PropertyInfo propertyInfo) => Create();
 
-    public object Create(PropertyDescriptor descriptor) => Create();
+    public override object Create(PropertyDescriptor descriptor) => Create();
 
     private object Create()
     {
@@ -199,7 +200,12 @@ namespace EQLogParser
       }
     }
 
-    public void Detach(PropertyViewItem property)
+    public override bool ShouldPropertyGridTryToHandleKeyDown(Key key)
+    {
+      return false;
+    }
+
+    public override void Detach(PropertyViewItem property)
     {
       if (TheOptionsCombo != null)
       {

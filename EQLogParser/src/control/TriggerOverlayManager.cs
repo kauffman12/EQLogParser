@@ -157,10 +157,10 @@ namespace EQLogParser
       {
         if (!PreviewTextWindows.ContainsKey(overlay.Id))
         {
-          var beginTime = DateUtil.ToDouble(DateTime.Now);
+          var beginTicks = DateTime.Now.Ticks;
           PreviewTextWindows[overlay.Id] = new TextOverlayWindow(overlay, true);
-          PreviewTextWindows[overlay.Id].AddTriggerText("Example Message", beginTime, null);
-          PreviewTextWindows[overlay.Id].AddTriggerText("Example Message #2", beginTime, null);
+          PreviewTextWindows[overlay.Id].AddTriggerText("Example Message", beginTicks, null);
+          PreviewTextWindows[overlay.Id].AddTriggerText("Example Message #2", beginTicks, null);
           PreviewTextWindows[overlay.Id].Show();
         }
         else
@@ -346,7 +346,7 @@ namespace EQLogParser
     private void EventsAddText(object sender, dynamic e)
     {
       var trigger = e.Trigger as Trigger;
-      var beginTime = DateUtil.ToDouble(DateTime.Now);
+      var beginTicks = DateTime.Now.Ticks;
       var fontColor = e.CustomFont as string;
       Application.Current.Dispatcher.InvokeAsync(() =>
       {
@@ -376,7 +376,7 @@ namespace EQLogParser
                   }
                 }
 
-                (window as TextOverlayWindow).AddTriggerText(e.Text, beginTime, brush);
+                (window as TextOverlayWindow).AddTriggerText(e.Text, beginTicks, brush);
 
                 if (!TextOverlayTimer.IsEnabled)
                 {
@@ -386,7 +386,7 @@ namespace EQLogParser
             }
           });
         }
-      });
+      }, DispatcherPriority.Render);
     }
 
     private void EventsAddTimer(object sender, Trigger trigger)
@@ -417,7 +417,7 @@ namespace EQLogParser
             }
           });
         }
-      });
+      }, DispatcherPriority.Render);
     }
 
     private ObservableCollection<ComboBoxItemDetails> GetOverlayItems(List<string> overlayIds, bool isTextOverlay)
