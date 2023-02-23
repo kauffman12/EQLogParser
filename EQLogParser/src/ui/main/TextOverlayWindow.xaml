@@ -42,8 +42,8 @@
         <Button x:Name="cancelButton" Margin="2,6,0,0" VerticalAlignment="Top" IsEnabled="False" Width="48" MinWidth="48" Height="24" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
         <Button x:Name="closeButton" Margin="2,6,0,0" VerticalAlignment="Top" IsEnabled="True" Width="48" MinWidth="48" Height="24" HorizontalAlignment="Left" Click="CloseClick">Close</Button>
       </StackPanel>
-      <Border x:Name="border" CornerRadius="5">
-        <StackPanel x:Name="content" Orientation="Vertical" />
+      <Border x:Name="border" CornerRadius="5" Visibility="Hidden">
+        <StackPanel x:Name="content" Orientation="Vertical"/>
       </Border>
     </StackPanel>
   </Grid>

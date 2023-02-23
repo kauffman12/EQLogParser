@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Reflection;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -16,7 +17,7 @@ namespace EQLogParser
       // TODO figure out better way
       if (TheTextBox != null)
       {
-        TheTextBox.SetResourceReference(TextBox.ForegroundProperty, foreground);
+        TheTextBox.SetResourceReference(Control.ForegroundProperty, foreground);
       }
     }
 
@@ -36,6 +37,11 @@ namespace EQLogParser
       textBox.Padding = new System.Windows.Thickness(2);
       TheTextBox = textBox;
       return textBox;
+    }
+
+    public override bool ShouldPropertyGridTryToHandleKeyDown(Key key)
+    {
+      return false;
     }
 
     public override void Detach(PropertyViewItem property)

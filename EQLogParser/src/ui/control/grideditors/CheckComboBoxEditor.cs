@@ -6,14 +6,15 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
-  internal class CheckComboBoxEditor : ITypeEditor
+  internal class CheckComboBoxEditor : BaseTypeEditor
   {
     private ComboBox TheComboBox;
 
-    public void Attach(PropertyViewItem property, PropertyItem info)
+    public override void Attach(PropertyViewItem property, PropertyItem info)
     {
       Binding binding = new Binding("Value")
       {
@@ -26,8 +27,8 @@ namespace EQLogParser
       BindingOperations.SetBinding(TheComboBox, ComboBox.ItemsSourceProperty, binding);
     }
 
-    public object Create(PropertyInfo propertyInfo) => Create();
-    public object Create(PropertyDescriptor _) => Create();
+    public override object Create(PropertyInfo propertyInfo) => Create();
+    public override object Create(PropertyDescriptor _) => Create();
 
     private object Create()
     {
@@ -84,7 +85,12 @@ namespace EQLogParser
       }
     }
 
-    public void Detach(PropertyViewItem property)
+    public override bool ShouldPropertyGridTryToHandleKeyDown(Key key)
+    {
+      return false;
+    }
+
+    public override void Detach(PropertyViewItem property)
     {
       if (TheComboBox != null)
       {

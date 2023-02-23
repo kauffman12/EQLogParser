@@ -5,12 +5,12 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
-  internal class TriggerListsEditor : ITypeEditor
+  internal class TriggerListsEditor : BaseTypeEditor
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private ComboBox TheComboBox;
 
     private static Dictionary<string, List<string>> Options = new Dictionary<string, List<string>>()
@@ -31,7 +31,7 @@ namespace EQLogParser
     };
 
 
-    public void Attach(PropertyViewItem property, PropertyItem info)
+    public override void Attach(PropertyViewItem property, PropertyItem info)
     {
       var binding = new Binding("Value")
       {
@@ -46,10 +46,10 @@ namespace EQLogParser
     }
 
     // Create a custom editor for a normal property
-    public object Create(PropertyInfo info) => Create(info.Name);
+    public override object Create(PropertyInfo info) => Create(info.Name);
 
     // Create a custom editor for a dynamic property
-    public object Create(PropertyDescriptor desc) => Create(desc.Name);
+    public override object Create(PropertyDescriptor desc) => Create(desc.Name);
 
     private object Create(string name)
     {
@@ -65,7 +65,12 @@ namespace EQLogParser
       return comboBox;
     }
 
-    public void Detach(PropertyViewItem property)
+    public override bool ShouldPropertyGridTryToHandleKeyDown(Key key)
+    {
+      return false;
+    }
+
+    public override void Detach(PropertyViewItem property)
     {
       if (TheComboBox != null)
       {

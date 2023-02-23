@@ -3,14 +3,15 @@ using Syncfusion.Windows.Shared;
 using System.ComponentModel;
 using System.Reflection;
 using System.Windows.Data;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
-  internal class ColorEditor : ITypeEditor
+  internal class ColorEditor : BaseTypeEditor
   {
     private ColorPicker TheColorPicker;
 
-    public void Attach(PropertyViewItem property, PropertyItem info)
+    public override void Attach(PropertyViewItem property, PropertyItem info)
     {
       Binding binding = new Binding("Value")
       {
@@ -23,8 +24,8 @@ namespace EQLogParser
       BindingOperations.SetBinding(TheColorPicker, ColorPicker.BrushProperty, binding);
     }
 
-    public object Create(PropertyInfo propertyInfo) => Create();
-    public object Create(PropertyDescriptor descriotor) => Create();
+    public override object Create(PropertyInfo propertyInfo) => Create();
+    public override object Create(PropertyDescriptor descriotor) => Create();
 
     private object Create()
     {
@@ -33,7 +34,12 @@ namespace EQLogParser
       return colorPicker;
     }
 
-    public void Detach(PropertyViewItem property)
+    public override bool ShouldPropertyGridTryToHandleKeyDown(Key key)
+    {
+      return false;
+    }
+
+    public override void Detach(PropertyViewItem property)
     {
       if (TheColorPicker != null)
       {

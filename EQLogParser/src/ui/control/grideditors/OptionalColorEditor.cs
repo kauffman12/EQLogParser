@@ -6,16 +6,17 @@ using System.Windows.Data;
 using System.Windows;
 using Syncfusion.Windows.Shared;
 using System.Windows.Media;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
-  internal class OptionalColorEditor : ITypeEditor
+  internal class OptionalColorEditor : BaseTypeEditor
   {
     private TextBox TheTextBox;
     private CheckBox TheCheckBox;
     private ColorPicker TheColorPicker;
 
-    public void Attach(PropertyViewItem property, PropertyItem info)
+    public override void Attach(PropertyViewItem property, PropertyItem info)
     {
       Binding binding = new Binding("Value")
       {
@@ -28,8 +29,8 @@ namespace EQLogParser
       BindingOperations.SetBinding(TheColorPicker, ColorPicker.BrushProperty, binding);
     }
 
-    public object Create(PropertyInfo propertyInfo) => Create();
-    public object Create(PropertyDescriptor descriotor) => Create();
+    public override object Create(PropertyInfo propertyInfo) => Create();
+    public override object Create(PropertyDescriptor descriotor) => Create();
 
     private object Create()
     {
@@ -101,7 +102,12 @@ namespace EQLogParser
       }
     }
 
-    public void Detach(PropertyViewItem property)
+    public override bool ShouldPropertyGridTryToHandleKeyDown(Key key)
+    {
+      return false;
+    }
+
+    public override void Detach(PropertyViewItem property)
     {
       if (TheTextBox != null)
       {

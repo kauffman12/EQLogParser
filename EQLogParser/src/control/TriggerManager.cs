@@ -641,7 +641,7 @@ namespace EQLogParser
           activeTriggers.Remove(node);
           activeTriggers.AddFirst(node);
         }
-        else if ((node.Value.TriggerData.EnableTimer == false) && ((newTime - previous) <= 400))
+        else if (string.IsNullOrEmpty(node.Value.TriggerData.TextToDisplay) && (node.Value.TriggerData.EnableTimer == false) && ((newTime - previous) <= 400))
         {
           return false;
         }
@@ -819,7 +819,8 @@ namespace EQLogParser
             }
           }
         }
-        else if (Regex.Matches(pattern, @"{(n\d?)(<=|>=|>|<|=|==)?(\d+)?}", RegexOptions.IgnoreCase) is MatchCollection matches2 && matches2.Count > 0)
+        
+        if (Regex.Matches(pattern, @"{(n\d?)(<=|>=|>|<|=|==)?(\d+)?}", RegexOptions.IgnoreCase) is MatchCollection matches2 && matches2.Count > 0)
         {
           foreach (Match match in matches2)
           {
