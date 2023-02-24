@@ -457,6 +457,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Unsaved Changes.
+        /// </summary>
+        internal static string UNSAVED {
+            get {
+                return ResourceManager.GetString("UNSAVED", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Unselect All.
         /// </summary>
         internal static string UNSELECT_ALL {

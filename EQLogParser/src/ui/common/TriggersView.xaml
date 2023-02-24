@@ -71,6 +71,7 @@
            PreviewMouseRightButtonDown="TreeViewPreviewMouseRightButtonDown"
            Padding="0"
            SelectionMode="Extended"
+           SelectionChanging="SelectionChanging"
            SelectionChanged="SelectionChanged"
            ShowRootLines="False">
           <syncfusion:SfTreeView.ItemContextMenu>
@@ -142,7 +143,7 @@
             <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="EndSoundOrText" DisplayName="End Sound/Text to Speak"  Visibility="Collapsed" Description="The Phrase to be spoken or sound file to play at completion of the Timer. The text may include {c}, {s} and {n}, as defined by the Pattern. For additional wav files, copy them to Program Files\EQLogParser\data\sounds"/>
             <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="EndTextToDisplay" DisplayName="End Text to Display" Description="The Text to Display in a Text Overlay at completion of the Timer. It may include {c}, {s}, and {n} as defined by the Pattern."/>
             <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="TriggerAgainOption" DisplayName="If Triggered Again" Visibility="Collapsed" Description="What to do if the Trigger is matched a second time but the original Timer has not completed."/>
-            <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="ResetDurationTimeSpan" DisplayName="Reset Duration" Visibility="Collapsed" Description="Number of Minutes/Seconds after the Duration ends when the Timer may be reset if using a Timer Overlay configured as Cooldown." />
+            <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="ResetDurationTimeSpan" DisplayName="Reset Duration" Visibility="Collapsed" Description="Number of Minutes/Seconds required for the Timer to fully Reset if using a Timer Overlay configured as Cooldown. This is generally your cooldown time on an ability." />
             <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="WarningSeconds" DisplayName="Warn With Time Remaining" Visibility="Collapsed" Description="Seconds before Timer ending to warn the user with the Warning Text/Sound."/>
             <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="WarningSoundOrText" DisplayName="Warning Sound/Text to Speak"  Visibility="Collapsed" Description="The Phrase to be spoken or sound file to play at the Warning Time. The text may include {c}, {s} and {n}, as defined by the Pattern. For additional wav files, copy them to Program Files\EQLogParser\data\sounds"/>
             <syncfusion:PropertyGridItem CategoryName="Timer Settings" PropertyName="WarningTextToDisplay" DisplayName="Warning Text to Display" Description="The Text to Display in a Text Overlay at the Warning Time. It may include {c}, {s}, and {n} as defined by the Pattern."/>
@@ -168,6 +169,7 @@
             <syncfusion:PropertyGridItem CategoryName="Timer Overlay" PropertyName="SortBy" DisplayName="Sort By" Visibility="Collapsed" Description="Sort Option for Timer Bars on the Overlay. Either by the time they were initially triggered or by the time each one has remaining."/>
             <syncfusion:PropertyGridItem CategoryName="Timer Overlay" PropertyName="UseStandardTime" DisplayName="Standardize Time" Visibility="Collapsed" Description="If using Standardized Time all Timer Bars will be based on the same/longest timeframe."/>
             <syncfusion:PropertyGridItem x:Name="idleBrushItem" CategoryName="Cooldown Overlay" PropertyName="IdleBrush" DisplayName="Idle Color" Visibility="Collapsed" Description="Color used for the Timer Bars representing time waiting for activation." />
+            <syncfusion:PropertyGridItem CategoryName="Cooldown Overlay" PropertyName="IdleTimeoutTimeSpan" DisplayName="Idle Timeout" Visibility="Collapsed" Description="If specified the Cooldown Timers will be removed once they have all been idle for the configured time." />
             <syncfusion:PropertyGridItem x:Name="resetBrushItem" CategoryName="Cooldown Overlay" PropertyName="ResetBrush" DisplayName="Reset Color" Visibility="Collapsed" Description="Color used for the Timer countdown bars representing the reset time left." />
             <syncfusion:PropertyGridItem x:Name="fadeDelayItem" CategoryName="Text Overlay" PropertyName="FadeDelay" DisplayName="Fade Delay (s)" Visibility="Collapsed" Description="Seconds before Text fades from screen."/>
           </syncfusion:PropertyGrid.Items>

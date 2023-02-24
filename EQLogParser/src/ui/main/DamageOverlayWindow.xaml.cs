@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.Diagram;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,6 +15,7 @@ namespace EQLogParser
   /// </summary>
   public partial class DamageOverlayWindow : Window
   {
+    private static double DAMAGE_MODE_ZERO_TIMEOUT = TimeSpan.TicksPerSecond * 7; // with 3 second slain queue delay
     private static object StatsLock = new object();
     private static SolidColorBrush ActiveBrush = new SolidColorBrush(Color.FromRgb(254, 156, 30));
     private static SolidColorBrush InActiveBrush = new SolidColorBrush(Colors.White);
@@ -165,7 +167,21 @@ namespace EQLogParser
       DamageOverlayStats damageOverlayStats;
       lock (StatsLock)
       {
-        damageOverlayStats = Stats = DamageStatsManager.ComputeOverlayStats(Stats == null, CurrentDamageMode, maxRows, CurrentSelectedClass);
+        damageOverlayStats = Stats;
+        var update = DamageStatsManager.ComputeOverlayStats(Stats == null, CurrentDamageMode, maxRows, CurrentSelectedClass);
+
+        if (update == null)
+        {
+          if (Stats != null && (CurrentDamageMode != 0 || (DateTime.Now.Ticks - Stats.LastUpdateTicks) >= DAMAGE_MODE_ZERO_TIMEOUT))
+          {
+            damageOverlayStats = Stats = null;
+          }
+        }
+        else
+        {
+          update.LastUpdateTicks = DateTime.Now.Ticks;
+          damageOverlayStats = Stats = update;
+        }
       }
 
       if (damageOverlayStats != null)

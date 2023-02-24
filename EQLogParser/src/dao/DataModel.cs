@@ -49,6 +49,7 @@ namespace EQLogParser
     public string IdleColor { get; set; } = "#FF8f1515";
     public string ResetColor { get; set; } = "#FF8f1515";
     public string OverlayColor { get; set; } = "#00000000";
+    public double IdleTimeoutSeconds { get; set; }
     public long FadeDelay { get; set; } = 10;
     public string Name { get; set; }
     public string Id { get; set; }
@@ -99,6 +100,7 @@ namespace EQLogParser
 
   internal class TimerOverlayPropertyModel : Overlay
   {
+    public TimeSpan IdleTimeoutTimeSpan { get; set; }
     public SolidColorBrush FontBrush { get; set; }
     public SolidColorBrush ActiveBrush { get; set; }
     public SolidColorBrush IdleBrush { get; set; }
@@ -561,6 +563,7 @@ namespace EQLogParser
   {
     public CombinedStats DamageStats { get; set; }
     public CombinedStats TankStats { get; set; }
+    public double LastUpdateTicks { get; set; }
   }
 
   internal class StatsSummary

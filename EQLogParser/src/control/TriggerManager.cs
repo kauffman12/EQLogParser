@@ -15,7 +15,6 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
-using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -724,7 +723,7 @@ namespace EQLogParser
               ModifiedWarningDisplay = ModText(trigger.WarningTextToDisplay),
               ModifiedEndDisplay = ModText(trigger.EndTextToDisplay),
               ModifiedEndEarlyDisplay = ModText(trigger.EndEarlyTextToDisplay),
-              ModifiedTimerName = ModText(trigger.AltTimerName ?? trigger.Name)
+              ModifiedTimerName = ModText(string.IsNullOrEmpty(trigger.AltTimerName) ? trigger.Name : trigger.AltTimerName)
             };
 
             pattern = UpdatePattern(trigger.UseRegex, playerName, pattern, out List<NumberOptions> numberOptions);

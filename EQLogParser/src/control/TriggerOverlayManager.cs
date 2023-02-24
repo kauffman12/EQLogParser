@@ -13,7 +13,7 @@ namespace EQLogParser
 {
   class TriggerOverlayManager
   {
-    internal event EventHandler<Overlay> EventsSelectOverlay;
+    internal event EventHandler<Overlay> EventsUpdateOverlay;
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private readonly string OVERLAY_FILE = "triggerOverlays.json";
     private readonly TriggerNode OverlayNodes;
@@ -70,7 +70,7 @@ namespace EQLogParser
 
     internal ObservableCollection<ComboBoxItemDetails> GetTextOverlayItems(List<string> overlayIds) => GetOverlayItems(overlayIds, true);
     internal ObservableCollection<ComboBoxItemDetails> GetTimerOverlayItems(List<string> overlayIds) => GetOverlayItems(overlayIds, false);
-    internal void Select(Overlay overlay) => EventsSelectOverlay?.Invoke(this, overlay);
+    internal void Update(Overlay overlay) => EventsUpdateOverlay?.Invoke(this, overlay);
 
     internal TriggerTreeViewNode GetOverlayTreeView()
     {
