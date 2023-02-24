@@ -19,6 +19,11 @@ namespace EQLogParser
       Max = max;
     }
 
+    public void Update(long value)
+    {
+      TheTextBox.Value = value;
+    }
+
     public override void Attach(PropertyViewItem property, PropertyItem info)
     {
       Binding binding = new Binding("Value")
@@ -26,7 +31,8 @@ namespace EQLogParser
         Mode = info.CanWrite ? BindingMode.TwoWay : BindingMode.OneWay,
         Source = info,
         ValidatesOnExceptions = true,
-        ValidatesOnDataErrors = true
+        ValidatesOnDataErrors = true,
+        UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
       };
 
       BindingOperations.SetBinding(TheTextBox, IntegerTextBox.ValueProperty, binding);
@@ -49,7 +55,7 @@ namespace EQLogParser
         textBox.MaxValue = Max;
       }
 
-      textBox.SetResourceReference(IntegerTextBox.PositiveForegroundProperty, "ContentForeground");
+      textBox.SetResourceReference(EditorBase.PositiveForegroundProperty, "ContentForeground");
 
       TheTextBox = textBox;
       return textBox;

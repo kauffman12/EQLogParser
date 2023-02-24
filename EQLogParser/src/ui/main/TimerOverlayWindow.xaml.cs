@@ -100,7 +100,7 @@ namespace EQLogParser
           var remainingTicks = timerData.EndTicks - currentTicks;
           remainingTicks = Math.Max(remainingTicks, 0);
 
-          if (TheOverlay.TimerMode == 1 && timerData.TriggerAgainOption == 1 && timerData.ResetTicks > 0)
+          if (TheOverlay.TimerMode == 1 && timerData.ResetTicks > 0)
           {
             handledKeys[timerData.Key] = true;
             CooldownTimerData[timerData.Key] = timerData;
@@ -110,10 +110,6 @@ namespace EQLogParser
           if (count < childCount)
           {
             timerBar = content.Children[count] as TimerBar;
-            if (timerBar.Visibility != Visibility.Visible)
-            {
-              timerBar.Visibility = Visibility;
-            }
           }
           else
           {
@@ -128,11 +124,11 @@ namespace EQLogParser
         }
       }
 
+      var oldestIdleTicks = double.NaN;
+      var idleList = new List<dynamic>();
+      var resetList = new List<dynamic>();
       if (TheOverlay.TimerMode == 1)
       {
-        var idleList = new List<dynamic>();
-        var resetList = new List<dynamic>();
-
         foreach (var timerData in CooldownTimerData.Values)
         {
           if (!handledKeys.ContainsKey(timerData.Key))
@@ -145,6 +141,15 @@ namespace EQLogParser
             }
             else
             {
+              if (double.IsNaN(oldestIdleTicks))
+              {
+                oldestIdleTicks = Math.Abs(data.RemainingTicks);
+              }
+              else
+              {
+                oldestIdleTicks = Math.Min(oldestIdleTicks, Math.Abs(data.RemainingTicks));
+              }
+
               idleList.Add(data);
             }
           }
@@ -189,7 +194,16 @@ namespace EQLogParser
         }
       }
 
-      var complete = (TheOverlay.TimerMode == 0) ? (count == 0) : false;
+      var complete = false;
+      if (TheOverlay.TimerMode == 0)
+      {
+        complete = (count == 0);
+      }
+      else if (TheOverlay.IdleTimeoutSeconds > 0)
+      {
+        complete = ((count == idleList.Count) && (oldestIdleTicks > (TheOverlay.IdleTimeoutSeconds * TimeSpan.TicksPerSecond)));
+      }
+
       while (count < childCount)
       {
         if (content.Children[count].Visibility == Visibility.Collapsed)
@@ -211,6 +225,11 @@ namespace EQLogParser
       var timeText = DateUtil.FormatSimpleMS(remainingTicks / TimeSpan.TicksPerSecond);
       timerBar.SetActive();
       timerBar.Update(timerData.DisplayName, timeText, progress);
+
+      if (timerBar.Visibility != Visibility.Visible)
+      {
+        timerBar.Visibility = Visibility;
+      }
     }
 
     private void UpdateCooldownTimerBar(double remainingTicks, TimerBar timerBar, TimerData timerData)
@@ -228,6 +247,11 @@ namespace EQLogParser
         timerBar.SetIdle();
         timerBar.Update(timerData.DisplayName, timeText, 100.0);
       }
+
+      if (timerBar.Visibility != Visibility.Visible)
+      {
+        timerBar.Visibility = Visibility;
+      }
     }
 
     private void SaveClick(object sender, RoutedEventArgs e)
@@ -239,8 +263,8 @@ namespace EQLogParser
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
+      TriggerOverlayManager.Instance.Update(TheOverlay);
       TriggerOverlayManager.Instance.UpdateOverlays();
-      TriggerOverlayManager.Instance.Select(TheOverlay);
     }
 
     private void CancelClick(object sender, RoutedEventArgs e)

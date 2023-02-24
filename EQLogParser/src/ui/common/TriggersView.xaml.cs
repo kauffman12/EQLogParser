@@ -32,6 +32,10 @@ namespace EQLogParser
     private PatternEditor PatternEditor;
     private PatternEditor EndEarlyPatternEditor;
     private PatternEditor EndEarlyPattern2Editor;
+    private RangeEditor TopEditor;
+    private RangeEditor LeftEditor;
+    private RangeEditor HeightEditor;
+    private RangeEditor WidthEditor;
     private List<TriggerNode> Removed;
     private SpeechSynthesizer TestSynth = null;
 
@@ -101,10 +105,14 @@ namespace EQLogParser
       AddEditor(new TextSoundEditor(FileList), "WarningSoundOrText");
       AddEditor(new RangeEditor(1, 5), "Priority");
       AddEditor(new RangeEditor(0, 99999), "WarningSeconds");
-      AddEditor(new RangeEditor(0, 9999), "Top");
-      AddEditor(new RangeEditor(0, 9999), "Height");
-      AddEditor(new RangeEditor(0, 9999), "Left");
-      AddEditor(new RangeEditor(0, 9999), "Width");
+      TopEditor = new RangeEditor(0, 9999);
+      AddEditor(TopEditor, "Top");
+      HeightEditor = new RangeEditor(0, 9999);
+      AddEditor(HeightEditor, "Height");
+      LeftEditor = new RangeEditor(0, 9999);
+      AddEditor(LeftEditor, "Left");
+      WidthEditor = new RangeEditor(0, 9999);
+      AddEditor(WidthEditor, "Width");
       AddEditor(new WrapTextEditor(), "Comments");
       AddEditor(new WrapTextEditor(), "OverlayComments");
       PatternEditor = new PatternEditor();
@@ -115,6 +123,7 @@ namespace EQLogParser
       AddEditor(EndEarlyPattern2Editor, "EndEarlyPattern2");
       AddEditor(new DurationEditor(), "DurationTimeSpan");
       AddEditor(new DurationEditor(), "ResetDurationTimeSpan");
+      AddEditor(new DurationEditor(), "IdleTimeoutTimeSpan");
       AddEditor(new ColorEditor(), "OverlayBrush");
       AddEditor(new ColorEditor(), "FontBrush");
       AddEditor(new ColorEditor(), "ActiveBrush");
@@ -136,7 +145,7 @@ namespace EQLogParser
 
       TriggerManager.Instance.EventsUpdateTree += EventsUpdateTriggerTree;
       TriggerManager.Instance.EventsSelectTrigger += EventsSelectTrigger;
-      TriggerOverlayManager.Instance.EventsSelectOverlay += EventsSelectOverlay;
+      TriggerOverlayManager.Instance.EventsUpdateOverlay += EventsUpdateOverlay;
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
     }
 
@@ -146,11 +155,11 @@ namespace EQLogParser
     private void CreateTextOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(false);
     private void CreateTimerOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(true);
     private void EventsSelectTrigger(object sender, Trigger e) => SelectFile(e);
-    private void EventsSelectOverlay(object sender, Overlay e) => SelectFile(e);
     private void EventsUpdateTriggerTree(object sender, bool e) => Dispatcher.InvokeAsync(() => RefreshTriggerNode());
     private void ExportClick(object sender, RoutedEventArgs e) => TriggerUtil.Export(treeView?.Nodes, treeView.SelectedItems?.Cast<TriggerTreeViewNode>().ToList());
     private void ImportClick(object sender, RoutedEventArgs e) => TriggerUtil.Import(treeView?.SelectedItem as TriggerTreeViewNode);
     private void RenameClick(object sender, RoutedEventArgs e) => treeView?.BeginEdit(treeView.SelectedItem as TriggerTreeViewNode);
+    private void SelectionChanging(object sender, ItemSelectionChangingEventArgs e) => e.Cancel = IsCancelSelection();
 
     private void CollapseAllClick(object sender, RoutedEventArgs e)
     {
@@ -269,9 +278,28 @@ namespace EQLogParser
       thePropertyGrid.CustomEditorCollection.Add(editor);
     }
 
+    private void EventsUpdateOverlay(object sender, Overlay e)
+    {
+      if (thePropertyGrid.SelectedObject is TextOverlayPropertyModel textModel && textModel.Original == e ||
+        thePropertyGrid.SelectedObject is TimerOverlayPropertyModel timerModel && timerModel.Original == e)
+      {
+        var wasEnabled = saveButton.IsEnabled;
+        TopEditor.Update(e.Top);
+        LeftEditor.Update(e.Left);
+        WidthEditor.Update(e.Width);
+        HeightEditor.Update(e.Height);
+
+        if (!wasEnabled)
+        {
+          saveButton.IsEnabled = false;
+          cancelButton.IsEnabled = false;
+        }
+      }
+    }
+
     private void SelectFile(object file)
     {
-      if (file != null)
+      if (file != null && !IsCancelSelection())
       {
         bool isTrigger = file is Trigger;
         if (TriggerUtil.FindAndExpandNode(treeView, (isTrigger ? treeView.Nodes[0] : treeView.Nodes[1]) as TriggerTreeViewNode, file) is TriggerTreeViewNode found)
@@ -808,6 +836,41 @@ namespace EQLogParser
       }
     }
 
+    private bool IsCancelSelection()
+    {
+      bool cancel = false;
+      if (saveButton.IsEnabled)
+      {
+        string name = null;
+        if (thePropertyGrid.SelectedObject is TriggerPropertyModel triggerModel)
+        {
+          name = triggerModel?.Original?.Name;
+        }
+        else if (thePropertyGrid.SelectedObject is TextOverlayPropertyModel textModel)
+        {
+          name = textModel?.Original?.Name;
+        }
+        else if (thePropertyGrid.SelectedObject is TimerOverlayPropertyModel timerModel)
+        {
+          name = timerModel?.Original?.Name;
+        }
+
+        if (!string.IsNullOrEmpty(name))
+        {
+          var msgDialog = new MessageWindow("Do you want to save changes to " + name + "?", EQLogParser.Resource.UNSAVED,
+            MessageWindow.IconType.Question, "Don't Save", "Save");
+          msgDialog.ShowDialog();
+          cancel = !msgDialog.IsYes1Clicked && !msgDialog.IsYes2Clicked;
+          if (msgDialog.IsYes2Clicked)
+          {
+            SaveClick(this, null);
+          }
+        }
+      }
+
+      return cancel;
+    }
+
     private void SelectionChanged(object sender, ItemSelectionChangedEventArgs e)
     {
       if (e.AddedItems.Count > 0 && e.AddedItems[0] is TriggerTreeViewNode node)
@@ -1167,7 +1230,7 @@ namespace EQLogParser
         (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventsLogLoadingComplete;
         TriggerManager.Instance.EventsUpdateTree -= EventsUpdateTriggerTree;
         TriggerManager.Instance.EventsSelectTrigger -= EventsSelectTrigger;
-        TriggerOverlayManager.Instance.EventsSelectOverlay -= EventsSelectOverlay;
+        TriggerOverlayManager.Instance.EventsUpdateOverlay -= EventsUpdateOverlay;
         treeView.DragDropController.Dispose();
         treeView.Dispose();
         thePropertyGrid?.Dispose();

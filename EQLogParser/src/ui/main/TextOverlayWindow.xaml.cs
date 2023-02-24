@@ -199,8 +199,8 @@ namespace EQLogParser
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
+      TriggerOverlayManager.Instance.Update(TheOverlay);
       TriggerOverlayManager.Instance.UpdateOverlays();
-      TriggerOverlayManager.Instance.Select(TheOverlay);
     }
 
     private void CancelClick(object sender, RoutedEventArgs e)

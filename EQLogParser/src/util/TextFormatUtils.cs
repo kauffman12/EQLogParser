@@ -197,6 +197,20 @@ namespace EQLogParser
       File.AppendAllText(selectedFileName, footer);
     }
 
+    internal static string Trim(string value)
+    {
+      if (value != null)
+      {
+        value = value.Trim();
+        if (value.Length == 0)
+        {
+          value = null;
+        }
+      }
+
+      return value;
+    }
+
     internal static void ParseGinaTriggerGroups(XmlNodeList nodeList, List<TriggerNode> audioTriggerNodes, List<Trigger> added)
     {
       foreach (XmlNode node in nodeList)

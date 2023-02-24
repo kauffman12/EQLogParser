@@ -69,13 +69,13 @@ namespace EQLogParser
     {
       if (to is Trigger toTrigger && from is Trigger fromTrigger)
       {
-        toTrigger.AltTimerName = fromTrigger.AltTimerName;
-        toTrigger.Comments = fromTrigger.Comments;
+        toTrigger.AltTimerName = TextFormatUtils.Trim(fromTrigger.AltTimerName);
+        toTrigger.Comments = TextFormatUtils.Trim(fromTrigger.Comments);
         toTrigger.DurationSeconds = fromTrigger.DurationSeconds;
         toTrigger.EnableTimer = fromTrigger.EnableTimer;
-        toTrigger.Pattern = fromTrigger.Pattern;
-        toTrigger.EndEarlyPattern = fromTrigger.EndEarlyPattern;
-        toTrigger.EndEarlyPattern2 = fromTrigger.EndEarlyPattern2;
+        toTrigger.Pattern = TextFormatUtils.Trim(fromTrigger.Pattern);
+        toTrigger.EndEarlyPattern = TextFormatUtils.Trim(fromTrigger.EndEarlyPattern);
+        toTrigger.EndEarlyPattern2 = TextFormatUtils.Trim(fromTrigger.EndEarlyPattern2);
         toTrigger.EndUseRegex = fromTrigger.EndUseRegex;
         toTrigger.EndUseRegex2 = fromTrigger.EndUseRegex2;
         toTrigger.WorstEvalTime = fromTrigger.WorstEvalTime;
@@ -85,18 +85,18 @@ namespace EQLogParser
         toTrigger.TriggerAgainOption = fromTrigger.TriggerAgainOption;
         toTrigger.UseRegex = fromTrigger.UseRegex;
         toTrigger.WarningSeconds = fromTrigger.WarningSeconds;
-        toTrigger.EndTextToDisplay = fromTrigger.EndTextToDisplay;
-        toTrigger.EndEarlyTextToDisplay = fromTrigger.EndEarlyTextToDisplay;
-        toTrigger.TextToDisplay = fromTrigger.TextToDisplay;
-        toTrigger.WarningTextToDisplay = fromTrigger.WarningTextToDisplay;
-        toTrigger.EndTextToSpeak = fromTrigger.EndTextToSpeak;
-        toTrigger.EndEarlyTextToSpeak = fromTrigger.EndEarlyTextToSpeak;
-        toTrigger.TextToSpeak = fromTrigger.TextToSpeak;
-        toTrigger.WarningTextToSpeak = fromTrigger.WarningTextToSpeak;
-        toTrigger.SoundToPlay = fromTrigger.SoundToPlay;
-        toTrigger.EndEarlySoundToPlay = fromTrigger.EndEarlySoundToPlay;
-        toTrigger.EndSoundToPlay = fromTrigger.EndSoundToPlay;
-        toTrigger.WarningSoundToPlay = fromTrigger.WarningSoundToPlay;
+        toTrigger.EndTextToDisplay = TextFormatUtils.Trim(fromTrigger.EndTextToDisplay);
+        toTrigger.EndEarlyTextToDisplay = TextFormatUtils.Trim(fromTrigger.EndEarlyTextToDisplay);
+        toTrigger.TextToDisplay = TextFormatUtils.Trim(fromTrigger.TextToDisplay);
+        toTrigger.WarningTextToDisplay = TextFormatUtils.Trim(fromTrigger.WarningTextToDisplay);
+        toTrigger.EndTextToSpeak = TextFormatUtils.Trim(fromTrigger.EndTextToSpeak);
+        toTrigger.EndEarlyTextToSpeak = TextFormatUtils.Trim(fromTrigger.EndEarlyTextToSpeak);
+        toTrigger.TextToSpeak = TextFormatUtils.Trim(fromTrigger.TextToSpeak);
+        toTrigger.WarningTextToSpeak = TextFormatUtils.Trim(fromTrigger.WarningTextToSpeak);
+        toTrigger.SoundToPlay = TextFormatUtils.Trim(fromTrigger.SoundToPlay);
+        toTrigger.EndEarlySoundToPlay = TextFormatUtils.Trim(fromTrigger.EndEarlySoundToPlay);
+        toTrigger.EndSoundToPlay = TextFormatUtils.Trim(fromTrigger.EndSoundToPlay);
+        toTrigger.WarningSoundToPlay = TextFormatUtils.Trim(fromTrigger.WarningSoundToPlay);
 
         if (toTrigger is TriggerPropertyModel toModel)
         {
@@ -144,6 +144,7 @@ namespace EQLogParser
         toOverlay.ActiveColor = fromOverlay.ActiveColor;
         toOverlay.IdleColor = fromOverlay.IdleColor;
         toOverlay.ResetColor = fromOverlay.ResetColor;
+        toOverlay.IdleTimeoutSeconds = fromOverlay.IdleTimeoutSeconds;
         toOverlay.BackgroundColor = fromOverlay.BackgroundColor;
         toOverlay.OverlayColor = fromOverlay.OverlayColor;
         toOverlay.FontSize = fromOverlay.FontSize;
@@ -162,6 +163,8 @@ namespace EQLogParser
 
         if (toOverlay is TimerOverlayPropertyModel toModel)
         {
+          toModel.IdleTimeoutTimeSpan = new TimeSpan(0, 0, (int)toModel.IdleTimeoutSeconds);
+
           Application.Current.Resources["OverlayText-" + toModel.Id] = toModel.Name;
 
           if (fromOverlay.OverlayColor is string overlayColor && !string.IsNullOrEmpty(overlayColor))
@@ -209,6 +212,7 @@ namespace EQLogParser
         }
         else if (fromOverlay is TimerOverlayPropertyModel fromModel)
         {
+          toOverlay.IdleTimeoutSeconds = fromModel.IdleTimeoutTimeSpan.TotalSeconds;
           toOverlay.OverlayColor = fromModel.OverlayBrush.Color.ToString();
           toOverlay.FontColor = fromModel.FontBrush.Color.ToString();
           toOverlay.ActiveColor = fromModel.ActiveBrush.Color.ToString();
