@@ -20,7 +20,7 @@
         MaxWidth="1500"
         MaxHeight="1000"
         MinWidth="290"
-        MinHeight="195"
+        MinHeight="100"
         Height="250"
         MouseLeftButtonDown="OverlayMouseLeftDown"
         SizeChanged="WindowSizeChanged"
@@ -66,13 +66,14 @@
             <ComboBoxItem>All Names</ComboBoxItem>
             <ComboBoxItem>Hide Others</ComboBoxItem>
           </ComboBox>
-          <ComboBox x:Name="showCritRate" SelectionChanged="ShowCritRateChanged" FontStretch="Condensed" FontSize="11">
+          <ComboBox x:Name="showCritRate" SelectionChanged="ShowCritRateChanged" FontStretch="Condensed" FontSize="11"
+            ToolTip="Displays Additional Crit Rate for DD or DoT based ADPS. Assumes Max Level/AAs.">
             <ComboBoxItem>Crit% Off</ComboBoxItem>
             <ComboBoxItem>Crit% On</ComboBoxItem>
           </ComboBox>
           <ComboBox x:Name="damageModeList" SelectionChanged="DamageModeChanged" FontStretch="Condensed" FontSize="11"
-            ToolTip="Choose On Kill for the Overlay to reset damage and dps after all NPCs are dead. Otherwise the selected timeout is used.">
-            <ComboBoxItem Tag="0">Reset Kill</ComboBoxItem>
+            ToolTip="Choose On Kill for the Damage Meter to reset damage after NPCs are killed. Otherwise the Damage Meter stays up and continues counting until the selected timeout.">
+            <ComboBoxItem Tag="0">Reset On Kill</ComboBoxItem>
             <ComboBoxItem Tag="30">Reset 30s</ComboBoxItem>
             <ComboBoxItem Tag="40">Reset 40s</ComboBoxItem>
             <ComboBoxItem Tag="50">Reset 50s</ComboBoxItem>
@@ -82,6 +83,10 @@
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Height="30">
           <ComboBox x:Name="maxRowsList" SelectionChanged="MaxRowsChanged" FontStretch="Condensed" FontSize="11">
+            <ComboBoxItem>1</ComboBoxItem>
+            <ComboBoxItem>2</ComboBoxItem>
+            <ComboBoxItem>3</ComboBoxItem>
+            <ComboBoxItem>4</ComboBoxItem>
             <ComboBoxItem>5</ComboBoxItem>
             <ComboBoxItem>6</ComboBoxItem>
             <ComboBoxItem>7</ComboBoxItem>

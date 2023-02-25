@@ -1019,9 +1019,9 @@ namespace EQLogParser
         var list = thePropertyGrid.Properties.ToList();
         var longestProp = PropertyGridUtil.FindProperty(list, evalTimeItem.PropertyName);
 
-        bool isValid = trigger.UseRegex ? TestRegexProperty(trigger.Pattern, PatternEditor) : true;
-        isValid = (isValid && trigger.EndUseRegex) ? TestRegexProperty(trigger.EndEarlyPattern, EndEarlyPatternEditor) : isValid;
-        isValid = (isValid && trigger.EndUseRegex2) ? TestRegexProperty(trigger.EndEarlyPattern2, EndEarlyPattern2Editor) : isValid;
+        bool isValid =  TestRegexProperty(trigger.UseRegex, trigger.Pattern, PatternEditor);
+        isValid = isValid && TestRegexProperty(trigger.EndUseRegex, trigger.EndEarlyPattern, EndEarlyPatternEditor);
+        isValid = isValid && TestRegexProperty(trigger.EndUseRegex2, trigger.EndEarlyPattern2, EndEarlyPattern2Editor);
 
         if (args.Property.Name == patternItem.PropertyName)
         {
@@ -1137,9 +1137,9 @@ namespace EQLogParser
       }
     }
 
-    private bool TestRegexProperty(string pattern, PatternEditor editor)
+    private bool TestRegexProperty(bool useRegex, string pattern, PatternEditor editor)
     {
-      bool isValid = TextFormatUtils.IsValidRegex(pattern);
+      bool isValid = useRegex ? TextFormatUtils.IsValidRegex(pattern) : true;
       editor.SetForeground(isValid ? "ContentForeground" : "EQWarnForegroundBrush");
       return isValid;
     }
