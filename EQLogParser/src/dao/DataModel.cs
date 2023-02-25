@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Media;
 
@@ -29,6 +30,13 @@ namespace EQLogParser
     public List<string> SelectedOverlays { get; set; }
     public int TriggerAgainOption { get; set; }
     public string Key { get; set; }
+    public string EndEarlyPattern { get; set; }
+    public string EndEarlyPattern2 { get; set; }
+    public Regex EndEarlyRegex { get; set; }
+    public Regex EndEarlyRegex2 { get; set; }
+    public List<NumberOptions> EndEarlyRegexNOptions { get; set; }
+    public List<NumberOptions> EndEarlyRegex2NOptions { get; set; }
+    public MatchCollection OriginalMatches { get; set; }
   }
 
   internal class NumberOptions

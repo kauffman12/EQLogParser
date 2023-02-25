@@ -162,7 +162,7 @@ namespace EQLogParser
         return;
       }
 
-      int maxRows = maxRowsList.SelectedIndex + 5;
+      int maxRows = maxRowsList.SelectedIndex + 1;
 
       DamageOverlayStats damageOverlayStats;
       lock (StatsLock)
@@ -398,8 +398,8 @@ namespace EQLogParser
       ConfigUtil.SetSetting("OverlayMiniBars", miniBars.IsChecked.Value.ToString());
       SavedMiniBars = miniBars.IsChecked.Value;
 
-      ConfigUtil.SetSetting("OverlayMaxRows", (maxRowsList.SelectedIndex + 5).ToString());
-      SavedMaxRows = (maxRowsList.SelectedIndex + 5);
+      ConfigUtil.SetSetting("OverlayMaxRows", (maxRowsList.SelectedIndex + 1).ToString());
+      SavedMaxRows = (maxRowsList.SelectedIndex + 1);
 
       ConfigUtil.SetSetting("OverlayRankColor", progressBrush.Color.ToString());
       SavedProgressColor = progressBrush.Color.ToString();
@@ -416,7 +416,7 @@ namespace EQLogParser
       this.Top = SavedTop;
       this.Left = SavedLeft;
 
-      if ((maxRowsList.SelectedIndex + 5) != SavedMaxRows)
+      if ((maxRowsList.SelectedIndex + 1) != SavedMaxRows)
       {
         UpdateMaxRows(SavedMaxRows);
       }
@@ -646,7 +646,7 @@ namespace EQLogParser
     {
       if (maxRowsList.SelectedIndex != -1 && e.RemovedItems.Count > 0)
       {
-        UpdateMaxRows(maxRowsList.SelectedIndex + 5);
+        UpdateMaxRows(maxRowsList.SelectedIndex + 1);
         DataChanged();
         AdjustHeight();
       }
@@ -688,7 +688,7 @@ namespace EQLogParser
       damageContent.Children.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", false));
       tankContent.Children.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", false));
 
-      int selectedIndex = maxRows - 5;
+      int selectedIndex = maxRows - 1;
       if (maxRowsList.SelectedIndex != selectedIndex)
       {
         maxRowsList.SelectedIndex = selectedIndex;

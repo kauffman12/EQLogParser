@@ -360,52 +360,47 @@ namespace EQLogParser
         }
         else
         {
-          if (wrapper.TimerList.Count > 0)
+          wrapper.TimerList.ToList().ForEach(timerData =>
           {
             MatchCollection earlyMatches;
-            var endEarly = CheckEndEarly(wrapper.EndEarlyRegex, wrapper.EndEarlyRegexNOptions, wrapper.ModifiedEndEarlyPattern, action, out earlyMatches);
+            var endEarly = CheckEndEarly(timerData.EndEarlyRegex, timerData.EndEarlyRegexNOptions, timerData.EndEarlyPattern, action, out earlyMatches);
 
             // try 2nd
             if (!endEarly)
             {
-              endEarly = CheckEndEarly(wrapper.EndEarlyRegex2, wrapper.EndEarlyRegex2NOptions, wrapper.ModifiedEndEarlyPattern2, action, out earlyMatches);
+              endEarly = CheckEndEarly(timerData.EndEarlyRegex2, timerData.EndEarlyRegex2NOptions, timerData.EndEarlyPattern2, action, out earlyMatches);
             }
 
             if (endEarly)
             {
-              if (ProcessSpeakDisplayText(wrapper.ModifiedTimerName, earlyMatches) is string displayName)
+              string displayText;
+              string speak;
+              bool isSound;
+              if (!string.IsNullOrEmpty(wrapper.ModifiedEndEarlySpeak))
               {
-                if (wrapper.TimerList.Find(timerData => timerData.DisplayName == displayName) is TimerData timerData)
-                {
-                  string displayText;
-                  string speak;
-                  bool isSound;
-                  if (!string.IsNullOrEmpty(wrapper.ModifiedEndEarlySpeak))
-                  {
-                    displayText = wrapper.ModifiedEndEarlyDisplay;
-                    speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out isSound);
-                  }
-                  else
-                  {
-                    displayText = wrapper.ModifiedEndDisplay;
-                    speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound);
-                  }
-
-                  speechChannel.Writer.WriteAsync(new Speak
-                  {
-                    Trigger = wrapper.TriggerData,
-                    TTSOrSound = speak,
-                    IsSound = isSound,
-                    Matches = earlyMatches,
-                  });
-
-                  AddTextEvent(displayText, wrapper.TriggerData, earlyMatches);
-                  AddEntry(lineData.Line, wrapper.TriggerData, "Timer End Early", time);
-                  CleanupTimer(wrapper, timerData);
-                }
+                displayText = wrapper.ModifiedEndEarlyDisplay;
+                speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out isSound);
               }
+              else
+              {
+                displayText = wrapper.ModifiedEndDisplay;
+                speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound);
+              }
+
+              speechChannel.Writer.WriteAsync(new Speak
+              {
+                Trigger = wrapper.TriggerData,
+                TTSOrSound = speak,
+                IsSound = isSound,
+                Matches = earlyMatches,
+                OriginalMatches = timerData.OriginalMatches
+              });
+
+              AddTextEvent(displayText, wrapper.TriggerData, earlyMatches, timerData.OriginalMatches);
+              AddEntry(lineData.Line, wrapper.TriggerData, "Timer End Early", time);
+              CleanupTimer(wrapper, timerData);
             }
-          }
+          });
         }
       }
     }
@@ -476,7 +471,8 @@ namespace EQLogParser
               }
               else
               {
-                var speak = ProcessSpeakDisplayText(result.TTSOrSound, result.Matches);
+                var speak = ProcessText(result.TTSOrSound, result.OriginalMatches, false);
+                speak = ProcessText(speak, result.Matches);
 
                 if (!string.IsNullOrEmpty(CurrentVoice) && synth.Voice.Name != CurrentVoice)
                 {
@@ -510,16 +506,17 @@ namespace EQLogParser
 
     private void StartTimer(TriggerWrapper wrapper, Channel<Speak> speechChannel, string line, MatchCollection matches)
     {
-      if (ProcessSpeakDisplayText(wrapper.ModifiedTimerName, matches) is string displayName)
+      var trigger = wrapper.TriggerData;
+      if (ProcessText(wrapper.ModifiedTimerName, matches) is string displayName && !string.IsNullOrEmpty(displayName))
       {
         // Restart Timer Option so clear out everything
-        if (wrapper.TriggerData.TriggerAgainOption == 1)
+        if (trigger.TriggerAgainOption == 1)
         {
           CleanupWrapper(wrapper);
         }
-        else if (wrapper.TriggerData.TriggerAgainOption == 2)
+        else if (trigger.TriggerAgainOption == 2)
         {
-          if (wrapper.TimerList.ToList().FirstOrDefault(timerData => timerData?.DisplayName == displayName) is TimerData timerData)
+          if (wrapper.TimerList.ToList().FirstOrDefault(timerData => displayName.Equals(timerData?.DisplayName, StringComparison.OrdinalIgnoreCase)) is TimerData timerData)
           {
             CleanupTimer(wrapper, timerData);
           }
@@ -527,11 +524,10 @@ namespace EQLogParser
 
         // Start a New independent Timer as long as one is not already running when Option 3 is selected
         // Option 3 is to Do Nothing when a 2nd timer is triggered so you onlu have the original timer running
-        if (!(wrapper.TriggerData.TriggerAgainOption == 3 && wrapper.TimerList.Count > 0))
+        if (!(trigger.TriggerAgainOption == 3 && wrapper.TimerList.Count > 0))
         {
           TimerData newTimerData = null;
-          if (wrapper.TriggerData.WarningSeconds > 0 &&
-            wrapper.TriggerData.DurationSeconds - wrapper.TriggerData.WarningSeconds is double diff && diff > 0)
+          if (trigger.WarningSeconds > 0 && trigger.DurationSeconds - trigger.WarningSeconds is double diff && diff > 0)
           {
             newTimerData = new TimerData { DisplayName = displayName, WarningSource = new CancellationTokenSource() };
 
@@ -549,18 +545,18 @@ namespace EQLogParser
 
                 if (proceed)
                 {
-                  var speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out bool isSound);
+                  var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out bool isSound);
 
                   speechChannel.Writer.WriteAsync(new Speak
                   {
-                    Trigger = wrapper.TriggerData,
+                    Trigger = trigger,
                     TTSOrSound = speak,
                     IsSound = isSound,
                     Matches = matches
                   });
 
-                  AddTextEvent(wrapper.ModifiedWarningDisplay, wrapper.TriggerData, matches);
-                  AddEntry(line, wrapper.TriggerData, "Timer Warning");
+                  AddTextEvent(wrapper.ModifiedWarningDisplay, trigger, matches);
+                  AddEntry(line, trigger, "Timer Warning");
                 }
               }
             }, newTimerData.WarningSource.Token);
@@ -572,20 +568,53 @@ namespace EQLogParser
           }
 
           var beginTicks = DateTime.Now.Ticks;
-          newTimerData.EndTicks = beginTicks + (TimeSpan.TicksPerSecond * wrapper.TriggerData.DurationSeconds);
+          newTimerData.EndTicks = beginTicks + (TimeSpan.TicksPerSecond * trigger.DurationSeconds);
           newTimerData.DurationTicks = newTimerData.EndTicks - beginTicks;
-          newTimerData.ResetTicks = wrapper.TriggerData.ResetDurationSeconds > 0 ?
-            beginTicks + (TimeSpan.TicksPerSecond * wrapper.TriggerData.ResetDurationSeconds) : 0;
+          newTimerData.ResetTicks = trigger.ResetDurationSeconds > 0 ?
+            beginTicks + (TimeSpan.TicksPerSecond * trigger.ResetDurationSeconds) : 0;
           newTimerData.ResetDurationTicks = newTimerData.ResetTicks - beginTicks;
-          newTimerData.SelectedOverlays = wrapper.TriggerData.SelectedOverlays.ToList();
-          newTimerData.TriggerAgainOption = wrapper.TriggerData.TriggerAgainOption;
-          newTimerData.Key = wrapper.TriggerData.Name;
+          newTimerData.SelectedOverlays = trigger.SelectedOverlays.ToList();
+          newTimerData.TriggerAgainOption = trigger.TriggerAgainOption;
+          newTimerData.OriginalMatches = matches;
+          newTimerData.Key = trigger.Name;
           newTimerData.CancelSource = new CancellationTokenSource();
+
+          if (!string.IsNullOrEmpty(trigger.EndEarlyPattern))
+          {
+            var endEarlyPattern = ProcessText(trigger.EndEarlyPattern, matches, false);
+            endEarlyPattern = UpdatePattern(trigger.EndUseRegex, ConfigUtil.PlayerName, endEarlyPattern, out List<NumberOptions> numberOptions2);
+
+            if (trigger.EndUseRegex)
+            {           
+              newTimerData.EndEarlyRegex = new Regex(endEarlyPattern, RegexOptions.IgnoreCase);
+              newTimerData.EndEarlyRegexNOptions = numberOptions2;
+            }
+            else
+            {
+              newTimerData.EndEarlyPattern = endEarlyPattern;
+            }
+          }
+
+          if (!string.IsNullOrEmpty(trigger.EndEarlyPattern2))
+          {
+            var endEarlyPattern2 = ProcessText(trigger.EndEarlyPattern2, matches, false);
+            endEarlyPattern2 = UpdatePattern(trigger.EndUseRegex2, ConfigUtil.PlayerName, endEarlyPattern2, out List<NumberOptions> numberOptions3);
+
+            if (trigger.EndUseRegex2)
+            {
+              newTimerData.EndEarlyRegex2 = new Regex(endEarlyPattern2, RegexOptions.IgnoreCase);
+              newTimerData.EndEarlyRegex2NOptions = numberOptions3;
+            }
+            else
+            {
+              newTimerData.EndEarlyPattern2 = endEarlyPattern2;
+            }
+          }
 
           wrapper.TimerList.Add(newTimerData);
           bool needEvent = wrapper.TimerList.Count == 1;
 
-          Task.Delay((int)wrapper.TriggerData.DurationSeconds * 1000).ContinueWith(task =>
+          Task.Delay((int)trigger.DurationSeconds * 1000).ContinueWith(task =>
           {
             var proceed = false;
             lock (wrapper)
@@ -593,22 +622,23 @@ namespace EQLogParser
               if (newTimerData.CancelSource != null)
               {
                 proceed = !newTimerData.CancelSource.Token.IsCancellationRequested;
-                CleanupTimer(wrapper, newTimerData);
               }
 
               if (proceed)
               {
-                var speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out bool isSound);
+                var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.EndSoundToPlay, wrapper.ModifiedEndSpeak, out bool isSound);
                 speechChannel.Writer.WriteAsync(new Speak
                 {
-                  Trigger = wrapper.TriggerData,
+                  Trigger = trigger,
                   TTSOrSound = speak,
                   IsSound = isSound,
-                  Matches = matches
+                  Matches = matches,
+                  OriginalMatches = newTimerData.OriginalMatches
                 });
 
-                AddTextEvent(wrapper.ModifiedEndDisplay, wrapper.TriggerData, matches);
-                AddEntry(line, wrapper.TriggerData, "Timer End");
+                AddTextEvent(wrapper.ModifiedEndDisplay, trigger, matches, newTimerData.OriginalMatches);
+                AddEntry(line, trigger, "Timer End");
+                CleanupTimer(wrapper, newTimerData);
               }
             }
           }, newTimerData.CancelSource.Token);
@@ -620,7 +650,7 @@ namespace EQLogParser
 
           if (needEvent)
           {
-            Application.Current.Dispatcher.InvokeAsync(() => EventsNewTimer?.Invoke(this, wrapper.TriggerData), DispatcherPriority.Render);
+            Application.Current.Dispatcher.InvokeAsync(() => EventsNewTimer?.Invoke(this, trigger), DispatcherPriority.Render);
           }
         }
       }
@@ -674,7 +704,7 @@ namespace EQLogParser
       }
     }
 
-    private string ProcessSpeakDisplayText(string text, MatchCollection matches)
+    private string ProcessText(string text, MatchCollection matches, bool display = true)
     {
       if (matches != null && !string.IsNullOrEmpty(text))
       {
@@ -684,9 +714,13 @@ namespace EQLogParser
           {
             if (!string.IsNullOrEmpty(match.Groups[i].Name))
             {
-              // try with and then without $ before {}
               text = text.Replace("${" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
-              text = text.Replace("{" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
+
+              // display text checks for both
+              if (display)
+              {
+                text = text.Replace("{" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
+              }
             }
           }
         }
@@ -736,39 +770,6 @@ namespace EQLogParser
             else
             {
               wrapper.ModifiedPattern = pattern;
-            }
-
-            if (trigger.EnableTimer)
-            {
-              if (trigger.EndEarlyPattern is string endEarlyPattern && !string.IsNullOrEmpty(endEarlyPattern))
-              {
-                endEarlyPattern = UpdatePattern(trigger.EndUseRegex, playerName, endEarlyPattern, out List<NumberOptions> numberOptions2);
-
-                if (trigger.EndUseRegex)
-                {
-                  wrapper.EndEarlyRegex = new Regex(endEarlyPattern, RegexOptions.IgnoreCase);
-                  wrapper.EndEarlyRegexNOptions = numberOptions2;
-                }
-                else
-                {
-                  wrapper.ModifiedEndEarlyPattern = endEarlyPattern;
-                }
-              }
-
-              if (trigger.EndEarlyPattern2 is string endEarlyPattern2 && !string.IsNullOrEmpty(endEarlyPattern2))
-              {
-                endEarlyPattern2 = UpdatePattern(trigger.EndUseRegex2, playerName, endEarlyPattern2, out List<NumberOptions> numberOptions3);
-
-                if (trigger.EndUseRegex2)
-                {
-                  wrapper.EndEarlyRegex2 = new Regex(endEarlyPattern2, RegexOptions.IgnoreCase);
-                  wrapper.EndEarlyRegex2NOptions = numberOptions3;
-                }
-                else
-                {
-                  wrapper.ModifiedEndEarlyPattern2 = endEarlyPattern2;
-                }
-              }
             }
 
             activeTriggers.AddLast(new LinkedListNode<TriggerWrapper>(wrapper));
@@ -853,13 +854,14 @@ namespace EQLogParser
       SaveTriggers();
     }
 
-    private void AddTextEvent(string text, Trigger data, MatchCollection matches)
+    private void AddTextEvent(string text, Trigger data, MatchCollection matches, MatchCollection originalMatches = null)
     {
       if (!string.IsNullOrEmpty(text))
       {
         Application.Current.Dispatcher.InvokeAsync(() =>
         {
-          text = ProcessSpeakDisplayText(text, matches);
+          text = ProcessText(text, originalMatches, true);
+          text = ProcessText(text, matches);
           EventsAddText?.Invoke(this, new { Text = text, Trigger = data, CustomFont = data.FontColor });
         }, DispatcherPriority.Render);
       }
@@ -937,6 +939,7 @@ namespace EQLogParser
       public string TTSOrSound { get; set; }
       public bool IsSound { get; set; }
       public MatchCollection Matches { get; set; }
+      public MatchCollection OriginalMatches { get; set; }
     }
 
     private class LowPriData
@@ -951,8 +954,6 @@ namespace EQLogParser
     {
       public List<TimerData> TimerList { get; set; } = new List<TimerData>();
       public string ModifiedPattern { get; set; }
-      public string ModifiedEndEarlyPattern { get; set; }
-      public string ModifiedEndEarlyPattern2 { get; set; }
       public string ModifiedSpeak { get; set; }
       public string ModifiedEndSpeak { get; set; }
       public string ModifiedEndEarlySpeak { get; set; }
@@ -963,11 +964,7 @@ namespace EQLogParser
       public string ModifiedWarningDisplay { get; set; }
       public string ModifiedTimerName { get; set; }
       public Regex Regex { get; set; }
-      public Regex EndEarlyRegex { get; set; }
-      public Regex EndEarlyRegex2 { get; set; }
       public List<NumberOptions> RegexNOptions { get; set; }
-      public List<NumberOptions> EndEarlyRegexNOptions { get; set; }
-      public List<NumberOptions> EndEarlyRegex2NOptions { get; set; }
       public Trigger TriggerData { get; set; }
     }
   }
