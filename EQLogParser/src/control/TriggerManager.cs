@@ -568,15 +568,16 @@ namespace EQLogParser
           }
 
           var beginTicks = DateTime.Now.Ticks;
-          newTimerData.EndTicks = beginTicks + (TimeSpan.TicksPerSecond * trigger.DurationSeconds);
+          newTimerData.EndTicks = beginTicks + (TimeSpan.TicksPerMillisecond * trigger.DurationSeconds * 1000);
           newTimerData.DurationTicks = newTimerData.EndTicks - beginTicks;
           newTimerData.ResetTicks = trigger.ResetDurationSeconds > 0 ?
             beginTicks + (TimeSpan.TicksPerSecond * trigger.ResetDurationSeconds) : 0;
           newTimerData.ResetDurationTicks = newTimerData.ResetTicks - beginTicks;
           newTimerData.SelectedOverlays = trigger.SelectedOverlays.ToList();
           newTimerData.TriggerAgainOption = trigger.TriggerAgainOption;
+          newTimerData.TimerType = trigger.TimerType;
           newTimerData.OriginalMatches = matches;
-          newTimerData.Key = trigger.Name;
+          newTimerData.Key = trigger.Name + "-" + trigger.Pattern;
           newTimerData.CancelSource = new CancellationTokenSource();
 
           if (!string.IsNullOrEmpty(trigger.EndEarlyPattern))
@@ -614,7 +615,7 @@ namespace EQLogParser
           wrapper.TimerList.Add(newTimerData);
           bool needEvent = wrapper.TimerList.Count == 1;
 
-          Task.Delay((int)trigger.DurationSeconds * 1000).ContinueWith(task =>
+          Task.Delay((int)(trigger.DurationSeconds * 1000)).ContinueWith(task =>
           {
             var proceed = false;
             lock (wrapper)

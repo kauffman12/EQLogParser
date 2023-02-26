@@ -29,6 +29,7 @@ namespace EQLogParser
     public double DurationTicks { get; set; }
     public List<string> SelectedOverlays { get; set; }
     public int TriggerAgainOption { get; set; }
+    public int TimerType { get; set; }
     public string Key { get; set; }
     public string EndEarlyPattern { get; set; }
     public string EndEarlyPattern2 { get; set; }
@@ -73,15 +74,17 @@ namespace EQLogParser
 
   internal class Trigger : NotificationObject
   {
+    // fields to not serialize during export
+    public double LastTriggered;
     public string AltTimerName { get; set; }
     public string Comments { get; set; }
     public double DurationSeconds { get; set; }
     public bool EnableTimer { get; set; }
+    public int TimerType { get; set; }
     public string EndEarlyPattern { get; set; }
     public string EndEarlyPattern2 { get; set; }
     public bool EndUseRegex { get; set; }
     public bool EndUseRegex2 { get; set; }
-    public double LastTriggered { get; set; }
     public long WorstEvalTime { get; set; } = -1;
     public string Name { get; set; }
     public string Pattern { get; set; }

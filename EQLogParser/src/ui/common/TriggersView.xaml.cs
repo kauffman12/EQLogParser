@@ -95,6 +95,7 @@ namespace EQLogParser
       treeView.DragDropController.CanAutoExpand = true;
       treeView.DragDropController.AutoExpandDelay = new TimeSpan(0, 0, 1);
 
+      AddEditor(new RangeEditor(typeof(double), 0.2, 2.0), "DurationSeconds");
       AddEditor(new WrapTextEditor(), "EndEarlyTextToDisplay");
       AddEditor(new WrapTextEditor(), "EndTextToDisplay");
       AddEditor(new WrapTextEditor(), "TextToDisplay");
@@ -103,15 +104,15 @@ namespace EQLogParser
       AddEditor(new TextSoundEditor(FileList), "EndEarlySoundOrText");
       AddEditor(new TextSoundEditor(FileList), "EndSoundOrText");
       AddEditor(new TextSoundEditor(FileList), "WarningSoundOrText");
-      AddEditor(new RangeEditor(1, 5), "Priority");
-      AddEditor(new RangeEditor(0, 99999), "WarningSeconds");
-      TopEditor = new RangeEditor(0, 9999);
+      AddEditor(new RangeEditor(typeof(long), 1, 5), "Priority");
+      AddEditor(new RangeEditor(typeof(long), 0, 99999), "WarningSeconds");
+      TopEditor = new RangeEditor(typeof(long), 0, 9999);
       AddEditor(TopEditor, "Top");
-      HeightEditor = new RangeEditor(0, 9999);
+      HeightEditor = new RangeEditor(typeof(long), 0, 9999);
       AddEditor(HeightEditor, "Height");
-      LeftEditor = new RangeEditor(0, 9999);
+      LeftEditor = new RangeEditor(typeof(long), 0, 9999);
       AddEditor(LeftEditor, "Left");
-      WidthEditor = new RangeEditor(0, 9999);
+      WidthEditor = new RangeEditor(typeof(long), 0, 9999);
       AddEditor(WidthEditor, "Width");
       AddEditor(new WrapTextEditor(), "Comments");
       AddEditor(new WrapTextEditor(), "OverlayComments");
@@ -121,7 +122,7 @@ namespace EQLogParser
       AddEditor(EndEarlyPatternEditor, "EndEarlyPattern");
       EndEarlyPattern2Editor = new PatternEditor();
       AddEditor(EndEarlyPattern2Editor, "EndEarlyPattern2");
-      AddEditor(new DurationEditor(), "DurationTimeSpan");
+      AddEditor(new DurationEditor(2), "DurationTimeSpan");
       AddEditor(new DurationEditor(), "ResetDurationTimeSpan");
       AddEditor(new DurationEditor(), "IdleTimeoutTimeSpan");
       AddEditor(new ColorEditor(), "OverlayBrush");
@@ -137,7 +138,8 @@ namespace EQLogParser
       AddEditor(new TriggerListsEditor(), "FontSize");
       AddEditor(new TriggerListsEditor(), "SortBy");
       AddEditor(new TriggerListsEditor(), "TimerMode");
-      AddEditor(new RangeEditor(1, 60), "FadeDelay");
+      AddEditor(new TriggerListsEditor(), "TimerType");
+      AddEditor(new RangeEditor(typeof(long), 1, 60), "FadeDelay");
       AddEditor(new ExampleTimerBar(), "TimerBarPreview");
 
       treeView.Nodes.Add(TriggerManager.Instance.GetTriggerTreeView());
@@ -920,7 +922,8 @@ namespace EQLogParser
 
       if (isTrigger)
       {
-        EnableCategories(true, node.SerializedData.TriggerData.EnableTimer, true, false, false, true, false, false);
+        int timerType = node.SerializedData.TriggerData.TimerType;
+        EnableCategories(true, timerType > 0, timerType == 2, false, false, true, false, false);
       }
       else if (isOverlay)
       {
@@ -935,20 +938,24 @@ namespace EQLogParser
       }
     }
 
-    private void EnableCategories(bool trigger, bool triggerTimer, bool status, bool overlay, bool overlayTimer,
+    private void EnableCategories(bool trigger, bool basicTimer, bool shortTimer, bool overlay, bool overlayTimer,
       bool overlayAssigned, bool overlayText, bool cooldownTimer)
     {
       PropertyGridUtil.EnableCategories(thePropertyGrid, new[]
       {
         new { Name = patternItem.CategoryName, IsEnabled = trigger },
-        new { Name = timerDurationItem.CategoryName, IsEnabled = triggerTimer },
-        new { Name = endEarlyPatternItem.CategoryName, IsEnabled = triggerTimer },
+        new { Name = timerDurationItem.CategoryName, IsEnabled = basicTimer },
+        new { Name = resetDurationItem.CategoryName, IsEnabled = basicTimer && !shortTimer },
+        new { Name = endEarlyPatternItem.CategoryName, IsEnabled = basicTimer && !shortTimer },
         new { Name = fontSizeItem.CategoryName, IsEnabled = overlay },
         new { Name = activeBrushItem.CategoryName, IsEnabled = overlayTimer },
         new { Name = idleBrushItem.CategoryName, IsEnabled = cooldownTimer },
         new { Name = assignedOverlaysItem.CategoryName, IsEnabled = overlayAssigned },
         new { Name = fadeDelayItem.CategoryName, IsEnabled = overlayText }
       });
+
+      timerDurationItem.Visibility = (basicTimer && !shortTimer) ? Visibility.Visible : Visibility.Collapsed;
+      timerShortDurationItem.Visibility = (shortTimer) ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void NodeChecked(object sender, NodeCheckedEventArgs e)
@@ -1028,13 +1035,9 @@ namespace EQLogParser
           trigger.WorstEvalTime = -1;
           longestProp.Value = -1;
         }
-        else if (args.Property.Name == enableTimerItem.PropertyName)
+        else if (args.Property.Name == timerTypeItem.PropertyName && args.Property.Value is int timerType)
         {
-          PropertyGridUtil.EnableCategories(thePropertyGrid, new[]
-          {
-            new { Name = timerDurationItem.CategoryName, IsEnabled = (bool)args.Property.Value },
-            new { Name = endEarlyPatternItem.CategoryName, IsEnabled = (bool)args.Property.Value }
-          });
+          EnableCategories(true, timerType > 0, timerType == 2, false, false, true, false, false);
         }
         else if (args.Property.Name == triggerFontBrushItem.PropertyName)
         {
@@ -1048,6 +1051,10 @@ namespace EQLogParser
               (trigger.TriggerFontBrush != null && trigger.Original.FontColor == null) ||
               (trigger.TriggerFontBrush.Color != (Color)ColorConverter.ConvertFromString(trigger.Original.FontColor));
           }
+        }
+        else if (args.Property.Name == "DurationTimeSpan" && timerDurationItem.Visibility == Visibility.Collapsed)
+        {
+          triggerChange = false;
         }
 
         if (triggerChange)
@@ -1185,8 +1192,8 @@ namespace EQLogParser
       if (thePropertyGrid.SelectedObject is TriggerPropertyModel triggerModel)
       {
         TriggerUtil.Copy(triggerModel, triggerModel.Original);
-        PropertyGridUtil.EnableCategories(thePropertyGrid,
-          new[] { new { Name = timerDurationItem.CategoryName, IsEnabled = triggerModel.Original.EnableTimer } });
+        var timerType = triggerModel.Original.TimerType;
+        EnableCategories(true, timerType > 0, timerType == 2, false, false, true, false, false);
       }
       else if (thePropertyGrid.SelectedObject is TimerOverlayPropertyModel timerModel)
       {

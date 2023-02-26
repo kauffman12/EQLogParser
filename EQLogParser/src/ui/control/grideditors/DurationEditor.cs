@@ -10,6 +10,12 @@ namespace EQLogParser
   internal class DurationEditor : BaseTypeEditor
   {
     private TimeSpanEdit TheTimeSpan;
+    private int Min;
+
+    public DurationEditor(int min = 0)
+    {
+      Min = min;
+    }
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
     {
@@ -32,7 +38,8 @@ namespace EQLogParser
       var timeSpan = new TimeSpanEdit
       {
         IncrementOnScrolling = false,
-        MinValue = new System.TimeSpan(0, 0, 0),
+        MinValue = new System.TimeSpan(0, 0, Min),
+        MaxValue = new System.TimeSpan(0, 59, 59),
         Format = "mm:ss"
       };
 

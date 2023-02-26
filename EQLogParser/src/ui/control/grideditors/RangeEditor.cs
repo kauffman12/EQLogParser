@@ -1,5 +1,6 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Shared;
+using System;
 using System.ComponentModel;
 using System.Reflection;
 using System.Windows.Data;
@@ -9,19 +10,25 @@ namespace EQLogParser
 {
   public class RangeEditor : BaseTypeEditor
   {
-    private IntegerTextBox TheTextBox;
-    private readonly long Min;
-    private readonly long Max;
+    private IntegerTextBox TheIntTextBox;
+    private DoubleTextBox TheDoubleTextBox;
+    private readonly double Min;
+    private readonly double Max;
+    private readonly Type Type;
 
-    public RangeEditor(long min, long max)
+    public RangeEditor(Type type, double min, double max)
     {
+      Type = type;
       Min = min;
       Max = max;
     }
 
     public void Update(long value)
     {
-      TheTextBox.Value = value;
+      if (TheIntTextBox != null)
+      {
+        TheIntTextBox.Value = value;
+      }
     }
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
@@ -35,7 +42,14 @@ namespace EQLogParser
         UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
       };
 
-      BindingOperations.SetBinding(TheTextBox, IntegerTextBox.ValueProperty, binding);
+      if (Type == typeof(long))
+      {
+        BindingOperations.SetBinding(TheIntTextBox, IntegerTextBox.ValueProperty, binding);
+      }
+      else
+      {
+        BindingOperations.SetBinding(TheDoubleTextBox, DoubleTextBox.ValueProperty, binding);
+      }
     }
 
     public override object Create(PropertyDescriptor PropertyDescriptor) => Create();
@@ -43,22 +57,37 @@ namespace EQLogParser
 
     public object Create()
     {
-      var textBox = new IntegerTextBox()
+      object result;
+      if (Type == typeof(long))
       {
-        ApplyZeroColor = false,
-        ShowSpinButton = true
-      };
+        var intTextBox = new IntegerTextBox() { ApplyZeroColor = false, ShowSpinButton = true };
 
-      if (Min != Max)
+        if (Min != Max)
+        {
+          intTextBox.MinValue = (long)Min;
+          intTextBox.MaxValue = (long)Max;
+        }
+
+        intTextBox.SetResourceReference(EditorBase.PositiveForegroundProperty, "ContentForeground");
+        TheIntTextBox = intTextBox;
+        result = intTextBox;
+      }
+      else
       {
-        textBox.MinValue = Min;
-        textBox.MaxValue = Max;
+        var doubleTextBox = new DoubleTextBox() { ApplyZeroColor = false, ShowSpinButton = true, ScrollInterval = 0.1 };
+
+        if (Min != Max)
+        {
+          doubleTextBox.MinValue = (double)Min;
+          doubleTextBox.MaxValue = (double)Max;
+        }
+
+        doubleTextBox.SetResourceReference(EditorBase.PositiveForegroundProperty, "ContentForeground");
+        TheDoubleTextBox = doubleTextBox;
+        result = doubleTextBox;
       }
 
-      textBox.SetResourceReference(EditorBase.PositiveForegroundProperty, "ContentForeground");
-
-      TheTextBox = textBox;
-      return textBox;
+      return result;
     }
 
     public override bool ShouldPropertyGridTryToHandleKeyDown(Key key)
@@ -68,11 +97,18 @@ namespace EQLogParser
 
     public override void Detach(PropertyViewItem property)
     {
-      if (TheTextBox != null)
+      if (TheIntTextBox != null)
       {
-        BindingOperations.ClearAllBindings(TheTextBox);
-        TheTextBox?.Dispose();
-        TheTextBox = null;
+        BindingOperations.ClearAllBindings(TheIntTextBox);
+        TheIntTextBox?.Dispose();
+        TheIntTextBox = null;
+      }
+
+      if (TheDoubleTextBox != null)
+      {
+        BindingOperations.ClearAllBindings(TheDoubleTextBox);
+        TheDoubleTextBox?.Dispose();
+        TheDoubleTextBox = null;
       }
     }
   }

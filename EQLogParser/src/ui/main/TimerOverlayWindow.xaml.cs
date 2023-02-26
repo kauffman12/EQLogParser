@@ -1,4 +1,5 @@
-﻿using Syncfusion.Data.Extensions;
+﻿using DotLiquid.Util;
+using Syncfusion.Data.Extensions;
 using Syncfusion.Linq;
 using System;
 using System.Collections.Generic;
@@ -22,6 +23,7 @@ namespace EQLogParser
     private long SavedTop = long.MaxValue;
     private long SavedLeft = long.MaxValue;
     private Dictionary<string, TimerData> CooldownTimerData = new Dictionary<string, TimerData>();
+    private Dictionary<string, ShortDurationData> ShortDurationBars = new Dictionary<string, ShortDurationData>();
 
     internal TimerOverlayWindow(Overlay overlay, bool preview = false)
     {
@@ -58,6 +60,27 @@ namespace EQLogParser
       timerBar.Init(TheOverlay.Id);
       timerBar.Update(displayName, timeText, progress);
       content.Children.Add(timerBar);
+    }
+
+    internal void ShortTick(List<TimerData> timerList)
+    {
+      if (timerList.Count > 0)
+      {
+        var currentTicks = DateTime.Now.Ticks;
+        foreach (var timerData in timerList.Where(timerData => timerData.TimerType == 2 && timerData.SelectedOverlays.Contains(TheOverlay.Id)))
+        {
+          if (ShortDurationBars.TryGetValue(timerData.Key, out ShortDurationData value))
+          {
+            var remainingTicks = timerData.EndTicks - currentTicks;
+            UpdateTimerBar(remainingTicks, value.TheTimerBar, timerData, value.MaxDuration, true);
+          }
+          else
+          {
+            Tick(timerList);
+            return;
+          }
+        }
+      }
     }
 
     internal bool Tick(List<TimerData> timerList)
@@ -218,15 +241,39 @@ namespace EQLogParser
       return complete;
     }
 
-    private void UpdateTimerBar(double remainingTicks, TimerBar timerBar, TimerData timerData, double maxDurationTicks)
+    private void UpdateTimerBar(double remainingTicks, TimerBar timerBar, TimerData timerData, double maxDurationTicks, bool shortTick = false)
     {
       var endTicks = double.IsNaN(maxDurationTicks) ? timerData.DurationTicks : maxDurationTicks;
       var progress = remainingTicks / endTicks * 100.0;
-      var timeText = DateUtil.FormatSimpleMS(remainingTicks / TimeSpan.TicksPerSecond);
+      var timeText = timerData.TimerType == 2 ? DateUtil.FormatSimpleMillis((long)remainingTicks) : DateUtil.FormatSimpleMS((long)remainingTicks);
       timerBar.SetActive();
       timerBar.Update(timerData.DisplayName, timeText, progress);
 
-      if (timerBar.Visibility != Visibility.Visible)
+      if (!shortTick)
+      {
+        if (timerData.TimerType == 2)
+        {
+          if (!ShortDurationBars.TryGetValue(timerData.Key, out ShortDurationData value))
+          {
+            value = new ShortDurationData();
+            ShortDurationBars[timerData.Key] = value;
+          }
+
+          value.TheTimerBar = timerBar;
+          value.MaxDuration = maxDurationTicks;
+        }
+      }
+
+      if (remainingTicks < (TimeSpan.TicksPerMillisecond * 60))
+      {
+        timerBar.Visibility = Visibility.Collapsed;
+
+        if (timerData.TimerType == 2)
+        {
+          ShortDurationBars.Remove(timerData.Key);
+        }
+      }
+      else if (timerBar.Visibility != Visibility.Visible)
       {
         timerBar.Visibility = Visibility;
       }
@@ -237,13 +284,13 @@ namespace EQLogParser
       if (remainingTicks > 0)
       {
         var progress = 100.0 - (remainingTicks / timerData.ResetDurationTicks * 100.0);
-        var timeText = DateUtil.FormatSimpleMS(remainingTicks / TimeSpan.TicksPerSecond);
+        var timeText = DateUtil.FormatSimpleMS((long)remainingTicks);
         timerBar.SetReset();
         timerBar.Update(timerData.DisplayName, timeText, progress);
       }
       else
       {
-        var timeText = DateUtil.FormatSimpleMS(timerData.DurationTicks / TimeSpan.TicksPerSecond);
+        var timeText = DateUtil.FormatSimpleMS((long)timerData.DurationTicks);
         timerBar.SetIdle();
         timerBar.Update(timerData.DisplayName, timeText, 100.0);
       }
@@ -321,7 +368,12 @@ namespace EQLogParser
       }
     }
 
-    private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e) => content.Children.Clear();
+    private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
+    {
+      content.Children.Clear();
+      CooldownTimerData.Clear();
+      ShortDurationBars.Clear();
+    }
 
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -335,6 +387,12 @@ namespace EQLogParser
         exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
         NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
       }
+    }
+
+    private class ShortDurationData
+    {
+      public TimerBar TheTimerBar { get; set; }
+      public double MaxDuration { get; set; }
     }
   }
 }
