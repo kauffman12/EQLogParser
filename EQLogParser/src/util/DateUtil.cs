@@ -16,7 +16,15 @@ namespace EQLogParser
     internal static string FormatDate(double seconds) => new DateTime().AddSeconds(seconds).ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
     internal static string FormatSimpleDate(double seconds) => new DateTime().AddSeconds(seconds).ToString("MMM dd HH:mm:ss", CultureInfo.InvariantCulture);
     internal static string FormatSimpleHMS(double seconds) => new DateTime().AddSeconds(seconds).ToString("HH:mm:ss", CultureInfo.InvariantCulture);
-    internal static string FormatSimpleMS(double seconds) => new DateTime().AddSeconds(seconds).ToString("mm:ss", CultureInfo.InvariantCulture);
+    internal static string FormatSimpleMS(long ticks)
+    {
+      return new DateTime(ticks < 0 ? 0 : ticks).ToString("mm:ss", CultureInfo.InvariantCulture);
+    }
+
+    internal static string FormatSimpleMillis(long ticks)
+    {
+      return new DateTime(ticks < 0 ? 0 : ticks).ToString("s.fff", CultureInfo.InvariantCulture);
+    }
 
     internal static string FormatGeneralTime(double seconds, bool showSeconds = false)
     {

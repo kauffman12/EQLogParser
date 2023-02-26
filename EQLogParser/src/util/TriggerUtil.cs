@@ -72,7 +72,6 @@ namespace EQLogParser
         toTrigger.AltTimerName = TextFormatUtils.Trim(fromTrigger.AltTimerName);
         toTrigger.Comments = TextFormatUtils.Trim(fromTrigger.Comments);
         toTrigger.DurationSeconds = fromTrigger.DurationSeconds;
-        toTrigger.EnableTimer = fromTrigger.EnableTimer;
         toTrigger.Pattern = TextFormatUtils.Trim(fromTrigger.Pattern);
         toTrigger.EndEarlyPattern = TextFormatUtils.Trim(fromTrigger.EndEarlyPattern);
         toTrigger.EndEarlyPattern2 = TextFormatUtils.Trim(fromTrigger.EndEarlyPattern2);
@@ -83,6 +82,7 @@ namespace EQLogParser
         toTrigger.Priority = fromTrigger.Priority;
         toTrigger.SelectedOverlays = fromTrigger.SelectedOverlays;
         toTrigger.TriggerAgainOption = fromTrigger.TriggerAgainOption;
+        toTrigger.TimerType = fromTrigger.TimerType;
         toTrigger.UseRegex = fromTrigger.UseRegex;
         toTrigger.WarningSeconds = fromTrigger.WarningSeconds;
         toTrigger.EndTextToDisplay = TextFormatUtils.Trim(fromTrigger.EndTextToDisplay);
@@ -107,12 +107,22 @@ namespace EQLogParser
 
           toModel.SelectedTextOverlays = TriggerOverlayManager.Instance.GetTextOverlayItems(toModel.SelectedOverlays);
           toModel.SelectedTimerOverlays = TriggerOverlayManager.Instance.GetTimerOverlayItems(toModel.SelectedOverlays);
-          toModel.DurationTimeSpan = new TimeSpan(0, 0, (int)toModel.DurationSeconds);
           toModel.ResetDurationTimeSpan = new TimeSpan(0, 0, (int)toModel.ResetDurationSeconds);
           toModel.SoundOrText = GetFromCodedSoundOrText(toModel.SoundToPlay, toModel.TextToSpeak, out _);
           toModel.EndEarlySoundOrText = GetFromCodedSoundOrText(toModel.EndEarlySoundToPlay, toModel.EndEarlyTextToSpeak, out _);
           toModel.EndSoundOrText = GetFromCodedSoundOrText(toModel.EndSoundToPlay, toModel.EndTextToSpeak, out _);
           toModel.WarningSoundOrText = GetFromCodedSoundOrText(toModel.WarningSoundToPlay, toModel.WarningTextToSpeak, out _);
+          
+          if (fromTrigger.EnableTimer && fromTrigger.TimerType == 0)
+          {
+            toModel.TimerType = 1;
+            toModel.Original.TimerType = 1;
+          }
+
+          if (toModel.TimerType == 1)
+          {
+            toModel.DurationTimeSpan = new TimeSpan(0, 0, (int)toModel.DurationSeconds);
+          }
         }
         else if (fromTrigger is TriggerPropertyModel fromModel)
         {
@@ -120,7 +130,6 @@ namespace EQLogParser
           var selectedOverlays = fromModel.SelectedTextOverlays.Where(item => item.IsChecked).Select(item => item.Value).ToList();
           selectedOverlays.AddRange(fromModel.SelectedTimerOverlays.Where(item => item.IsChecked).Select(item => item.Value));
           toTrigger.SelectedOverlays = selectedOverlays;
-          toTrigger.DurationSeconds = fromModel.DurationTimeSpan.TotalSeconds;
           toTrigger.ResetDurationSeconds = fromModel.ResetDurationTimeSpan.TotalSeconds;
 
           MatchSoundFile(fromModel.SoundOrText, out string soundFile, out string text);
@@ -135,6 +144,12 @@ namespace EQLogParser
           MatchSoundFile(fromModel.WarningSoundOrText, out soundFile, out text);
           toTrigger.WarningSoundToPlay = soundFile;
           toTrigger.WarningTextToSpeak = text;
+
+          toTrigger.EnableTimer = fromModel.TimerType > 0;
+          if (fromModel.TimerType == 1)
+          {
+            toTrigger.DurationSeconds = fromModel.DurationTimeSpan.TotalSeconds;
+          }
         }
       }
       else if (to is Overlay toOverlay && from is Overlay fromOverlay)
@@ -538,7 +553,7 @@ namespace EQLogParser
 
           if (exportList.Count > 0)
           {
-            var result = System.Text.Json.JsonSerializer.Serialize(exportList, new JsonSerializerOptions { IncludeFields = true });
+            var result = JsonSerializer.Serialize(exportList);
             SaveFileDialog saveFileDialog = new SaveFileDialog();
             string filter = "Triggers File (*.tgf.gz)|*.tgf.gz";
             saveFileDialog.Filter = filter;

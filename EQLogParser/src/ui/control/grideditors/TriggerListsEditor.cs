@@ -19,7 +19,8 @@ namespace EQLogParser
       { "FontSize", new  List<string>() { "10pt", "11pt", "12pt", "13pt", "14pt", "15pt", "16pt", "17pt",
           "18pt", "20pt", "22pt", "24pt", "26pt", "28pt", "30pt", "34pt", "38pt", "42pt", "46pt", "50pt" } },
       { "SortBy", new List<string>() { "Trigger Time", "Remaining Time" } },
-      { "TimerMode", new List<string>() { "Standard", "Cooldown" } }
+      { "TimerMode", new List<string>() { "Standard", "Cooldown" } },
+      { "TimerType", new List<string>() { "No Timer", "Basic", "Short Duration" } }
     };
 
     private static Dictionary<string, DependencyProperty> Props = new Dictionary<string, DependencyProperty>()
@@ -27,7 +28,8 @@ namespace EQLogParser
       { "TriggerAgainOption", ComboBox.SelectedIndexProperty },
       { "FontSize", ComboBox.SelectedValueProperty },
       { "SortBy", ComboBox.SelectedIndexProperty },
-      { "TimerMode", ComboBox.SelectedIndexProperty }
+      { "TimerMode", ComboBox.SelectedIndexProperty },
+      { "TimerType", ComboBox.SelectedIndexProperty }
     };
 
 
@@ -53,7 +55,7 @@ namespace EQLogParser
 
     private object Create(string name)
     {
-      var comboBox = new ComboBox { Padding = new Thickness(0) };
+      var comboBox = new ComboBox { Padding = new Thickness(0), Margin = new Thickness(2, 0, 0, 0) };
 
       if (Options.ContainsKey(name))
       {

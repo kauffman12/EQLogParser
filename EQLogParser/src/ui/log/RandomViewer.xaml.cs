@@ -182,7 +182,7 @@ namespace EQLogParser
         var duration = DateUtil.ToDouble(DateTime.Now) - section.StartTime;
         if (duration < CurrentTimeLimit)
         {
-          section.Duration = "Remaining: " + DateUtil.FormatSimpleMS(CurrentTimeLimit - duration);
+          section.Duration = "Remaining: " + DateUtil.FormatSimpleMS((long)(CurrentTimeLimit - duration) * TimeSpan.TicksPerSecond);
 
           if (!ReloadTimer.IsEnabled)
           {

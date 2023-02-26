@@ -25,6 +25,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, TextOverlayWindow> PreviewTextWindows = new ConcurrentDictionary<string, TextOverlayWindow>();
     private readonly ConcurrentDictionary<string, TimerOverlayWindow> PreviewTimerWindows = new ConcurrentDictionary<string, TimerOverlayWindow>();
     private readonly Dictionary<string, SolidColorBrush> BrushCache = new Dictionary<string, SolidColorBrush>();
+    private int TimerIncrement = 0;
     internal static TriggerOverlayManager Instance = new TriggerOverlayManager();
 
     public TriggerOverlayManager()
@@ -63,7 +64,7 @@ namespace EQLogParser
       });
 
       TextOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 500) };
-      TimerOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 500) };
+      TimerOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 50) };
       OverlayUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
       OverlayUpdateTimer.Tick += OverlayDataUpdated;
     }
@@ -299,9 +300,18 @@ namespace EQLogParser
     }
 
     private void TextTick(object sender, EventArgs e) => WindowTick(TextWindows, TextOverlayTimer);
-    private void TimerTick(object sender, EventArgs e) => WindowTick(TimerWindows, TimerOverlayTimer);
+    private void TimerTick(object sender, EventArgs e)
+    {
+      TimerIncrement++;
+      WindowTick(TimerWindows, TimerOverlayTimer, TimerIncrement);
 
-    private void WindowTick(ConcurrentDictionary<string, Window> windows, DispatcherTimer dispatchTimer)
+      if (TimerIncrement == 10)
+      {
+        TimerIncrement = 0;
+      }
+    }
+
+    private void WindowTick(ConcurrentDictionary<string, Window> windows, DispatcherTimer dispatchTimer, int increment = 10)
     {
       var removed = new List<string>();
       var data = TriggerManager.Instance.GetActiveTimers();
@@ -314,7 +324,15 @@ namespace EQLogParser
         }
         else if (keypair.Value is TimerOverlayWindow timerWindow)
         {
-          done = timerWindow.Tick(data);
+          // full tick every 500ms
+          if (increment == 10)
+          {
+            done = timerWindow.Tick(data);
+          }
+          else
+          {
+            timerWindow.ShortTick(data);
+          }
         }
 
         if (done)
@@ -407,6 +425,9 @@ namespace EQLogParser
                   window = new TimerOverlayWindow(overlay);
                   TimerWindows[overlayId] = window;
                   window.Show();
+
+                  var data = TriggerManager.Instance.GetActiveTimers();
+                  ((TimerOverlayWindow)window).Tick(data);
                 }
 
                 if (!TimerOverlayTimer.IsEnabled)

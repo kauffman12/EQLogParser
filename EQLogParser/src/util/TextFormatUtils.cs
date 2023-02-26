@@ -267,10 +267,22 @@ namespace EQLogParser
                 goodTrigger = true;
                 trigger.EnableTimer = true;
 
-                if (int.TryParse(Helpers.GetText(triggerNode, "TimerDuration"), out int duration))
+                if (int.TryParse(Helpers.GetText(triggerNode, "TimerDuration"), out int duration) && duration > 0)
                 {
                   trigger.DurationSeconds = duration;
                 }
+
+                if (int.TryParse(Helpers.GetText(triggerNode, "TimerMillisecondDuration"), out int millis) && millis > 0)
+                {
+                  trigger.DurationSeconds = (millis / (double)1000);
+                  if (trigger.DurationSeconds > 0 && trigger.DurationSeconds < 0.2)
+                  {
+                    trigger.DurationSeconds = 0.2;
+                  }
+                }
+
+                // short duration timer <= 2s
+                trigger.TimerType = (trigger.DurationSeconds < 2.0) ? 2 : 1;
 
                 if (triggerNode.SelectSingleNode("TimerEndingTrigger") is XmlNode timerEndingNode)
                 {
