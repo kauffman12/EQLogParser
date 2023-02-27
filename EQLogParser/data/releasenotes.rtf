@@ -1,6 +1,18 @@
 {\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Segoe UI;}{\f1\fnil\fcharset2 Symbol;}}
 {\*\generator Riched20 10.0.19041}\viewkind4\uc1 
-\pard\ul\f0\fs20\lang1033 Updated in Version 2.1.11\par
+\pard\ul\f0\fs20\lang1033 Updated in Version 2.1.12\par
+\ulnone\par
+
+\pard 
+{\pntext\f0 1.\tab}{\*\pn\pnlvlbody\pnf0\pnindent0\pnstart1\pndec{\pntxta.}}
+\fi-360\li720 Now if a higher Priority Tirgger is about to play a sound it also tries to stop playing any previous wav file that might be playing in addition to TTS.\par
+{\pntext\f0 2.\tab}Changed default Trigger Priority to 3 and fixed an issue where sometimes a sound would get cancled/stop playing when it shouldn't. If you have this happen a lot check that your Trigger Priorities make sense and check the Trigger Log. It should show when that happens. Remember that 1 is the highest priority and 5 is the lowest when it comes to canceling speech/sounds.\par
+{\pntext\f0 3.\tab}Made some more performance updates for opening/re-using Timer and Text Overlay windows for a period of time even if they're not displaying anything.\par
+{\pntext\f0 4.\tab}Whenever a configuration setting is changed for Triggers or Overlays it will close all open and active windows including Cooldown Timer Overlays which previously would skip to the cooldown phase for everything when you did that.\par
+{\pntext\f0 5.\tab}Changed to start/stop TriggerManager when the application receives power mode changes. i.e. when a computer is put to sleep. Hopefully, there won't be any issues with things not working if you do that while the parser is running.\par
+
+\pard\par
+\ul Updates in Version 2.1.11\par
 \par
 
 \pard 
