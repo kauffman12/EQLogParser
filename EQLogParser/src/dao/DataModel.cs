@@ -88,7 +88,7 @@ namespace EQLogParser
     public long WorstEvalTime { get; set; } = -1;
     public string Name { get; set; }
     public string Pattern { get; set; }
-    public long Priority { get; set; } = 5;
+    public long Priority { get; set; } = 3;
     public int TriggerAgainOption { get; set; }
     public bool UseRegex { get; set; }
     public string FontColor { get; set; } = null;

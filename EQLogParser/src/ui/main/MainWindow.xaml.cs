@@ -247,6 +247,7 @@ namespace EQLogParser
       {
         case PowerModes.Suspend:
           LOG.Warn("Suspending");
+          TriggerManager.Instance.Stop();
           DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
           CloseDamageOverlay();
           break;
@@ -255,6 +256,11 @@ namespace EQLogParser
           DataManager.Instance.ResetOverlayFights(true);
           OpenDamageOverlayIfEnabled(true, false);
           DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
+
+          if (ConfigUtil.IfSetOrElse("TriggersEnabled", false))
+          {
+            TriggerManager.Instance.Start();
+          }
           break;
       }
     }

@@ -449,8 +449,9 @@ namespace EQLogParser
             var result = await speechChannel.Reader.ReadAsync();
             if (!string.IsNullOrEmpty(result.TTSOrSound))
             {
-              if (result.Trigger.Priority < previous?.Priority)
-              {
+              var cancel = (result.Trigger.Priority < previous?.Priority);
+              if (cancel && synth.State == SynthesizerState.Speaking)
+              {               
                 synth.SpeakAsyncCancelAll();
               }
 
@@ -460,6 +461,11 @@ namespace EQLogParser
                 {
                   if (File.Exists(@"data\sounds\" + result.TTSOrSound))
                   {
+                    if (cancel)
+                    {
+                      player?.Stop();
+                    }
+
                     player.SoundLocation = @"data\sounds\" + result.TTSOrSound;
                     player.Play();
                   }
@@ -486,9 +492,9 @@ namespace EQLogParser
 
                 synth.SpeakAsync(speak);
               }
-
-              previous = result.Trigger;
             }
+
+            previous = result.Trigger;
           }
         }
         catch (Exception ex)
@@ -925,6 +931,7 @@ namespace EQLogParser
           {
             var json = JsonSerializer.Serialize(TriggerNodes, new JsonSerializerOptions { IncludeFields = true });
             ConfigUtil.WriteConfigFile(TRIGGERS_FILE, json);
+            TriggerOverlayManager.Instance.CloseOverlays();
           }
           catch (Exception ex)
           {
