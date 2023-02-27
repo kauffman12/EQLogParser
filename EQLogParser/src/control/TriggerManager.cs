@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Media;
 using System.Runtime.CompilerServices;
+using System.Security.Policy;
 using System.Speech.Synthesis;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -15,6 +16,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -346,7 +348,7 @@ namespace EQLogParser
               Trigger = wrapper.TriggerData,
               TTSOrSound = speak,
               IsSound = isSound,
-              Matches = matches,
+              Matches = matches
             });
           }
 
@@ -397,7 +399,7 @@ namespace EQLogParser
               });
 
               AddTextEvent(displayText, wrapper.TriggerData, earlyMatches, timerData.OriginalMatches);
-              AddEntry(lineData.Line, wrapper.TriggerData, "Timer End Early", time);
+              AddEntry(lineData.Line, wrapper.TriggerData, "Timer End Early");
               CleanupTimer(wrapper, timerData);
             }
           });
@@ -453,6 +455,7 @@ namespace EQLogParser
               if (cancel && synth.State == SynthesizerState.Speaking)
               {               
                 synth.SpeakAsyncCancelAll();
+                AddEntry("", previous, "Speech Canceled");
               }
 
               if (result.IsSound)
@@ -464,6 +467,7 @@ namespace EQLogParser
                     if (cancel)
                     {
                       player?.Stop();
+                      AddEntry("", previous, "Wav Canceled");
                     }
 
                     player.SoundLocation = @"data\sounds\" + result.TTSOrSound;
@@ -885,6 +889,7 @@ namespace EQLogParser
         log.Name = trigger.Name;
         log.Type = type;
         log.Eval = eval;
+        log.Priority = trigger.Priority;
         log.Trigger = trigger;
         AlertLog.Insert(0, log);
 

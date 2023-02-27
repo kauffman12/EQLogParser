@@ -49,6 +49,7 @@
                                    Width="100" TextAlignment="Center" HeaderText="Time" />
         <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" Width="150"/>
         <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" Width="100" />
+        <syncfusion:GridTextColumn MappingName="Priority" HeaderText="Priority" Width="60" />
         <syncfusion:GridTextColumn MappingName="Eval" HeaderText="Eval Time (μs)" Width="100" />
         <syncfusion:GridTextColumn MappingName="Line" HeaderText="Line Matched / Previously Matched if Started Timer" />
       </syncfusion:SfDataGrid.Columns>
