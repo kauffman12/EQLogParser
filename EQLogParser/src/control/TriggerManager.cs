@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Media;
 using System.Runtime.CompilerServices;
-using System.Security.Policy;
 using System.Speech.Synthesis;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -16,7 +15,6 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -935,8 +933,7 @@ namespace EQLogParser
           try
           {
             var json = JsonSerializer.Serialize(TriggerNodes, new JsonSerializerOptions { IncludeFields = true });
-            ConfigUtil.WriteConfigFile(TRIGGERS_FILE, json);
-            TriggerOverlayManager.Instance.CloseOverlays();
+            ConfigUtil.WriteConfigFile(TRIGGERS_FILE, json);           
           }
           catch (Exception ex)
           {
