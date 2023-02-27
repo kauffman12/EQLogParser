@@ -1,4 +1,6 @@
 ﻿using Syncfusion.Data.Extensions;
+using Syncfusion.UI.Xaml.Diagram.Controls;
+using Syncfusion.Windows.Controls.Grid;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -20,8 +22,8 @@ namespace EQLogParser
     private readonly DispatcherTimer TextOverlayTimer;
     private readonly DispatcherTimer TimerOverlayTimer;
     private readonly DispatcherTimer OverlayUpdateTimer;
-    private readonly ConcurrentDictionary<string, Window> TextWindows = new ConcurrentDictionary<string, Window>();
-    private readonly ConcurrentDictionary<string, Window> TimerWindows = new ConcurrentDictionary<string, Window>();
+    private readonly ConcurrentDictionary<string, WindowData> TextWindows = new ConcurrentDictionary<string, WindowData>();
+    private readonly ConcurrentDictionary<string, WindowData> TimerWindows = new ConcurrentDictionary<string, WindowData>();
     private readonly ConcurrentDictionary<string, TextOverlayWindow> PreviewTextWindows = new ConcurrentDictionary<string, TextOverlayWindow>();
     private readonly ConcurrentDictionary<string, TimerOverlayWindow> PreviewTimerWindows = new ConcurrentDictionary<string, TimerOverlayWindow>();
     private readonly Dictionary<string, SolidColorBrush> BrushCache = new Dictionary<string, SolidColorBrush>();
@@ -63,7 +65,7 @@ namespace EQLogParser
         }
       });
 
-      TextOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 500) };
+      TextOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 450) };
       TimerOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 50) };
       OverlayUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
       OverlayUpdateTimer.Tick += OverlayDataUpdated;
@@ -97,10 +99,7 @@ namespace EQLogParser
       TimerOverlayTimer.Stop();
       TextOverlayTimer.Tick -= TextTick;
       TimerOverlayTimer.Tick -= TimerTick;
-      TextWindows.ForEach(keypair => keypair.Value.Close());
-      TextWindows.Clear();
-      TimerWindows.ForEach(keypair => keypair.Value.Close());
-      TimerWindows.Clear();
+      CloseOverlays();
       SaveOverlays();
       BrushCache.Clear();
     }
@@ -109,15 +108,23 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(overlayId))
       {
-        if (TimerWindows.TryRemove(overlayId, out var timerWindow))
+        if (TimerWindows.TryRemove(overlayId, out var timerWindowData))
         {
-          timerWindow.Close();
+          timerWindowData.TheWindow?.Close();
         }
-        else if (TextWindows.TryRemove(overlayId, out var textWindow))
+        else if (TextWindows.TryRemove(overlayId, out var textWindowData))
         {
-          textWindow.Close();
+          textWindowData.TheWindow?.Close();
         }
       }
+    }
+
+    internal void CloseOverlays()
+    {
+      TextWindows.ForEach(keypair => keypair.Value.TheWindow?.Close());
+      TextWindows.Clear();
+      TimerWindows.ForEach(keypair => keypair.Value.TheWindow?.Close());
+      TimerWindows.Clear();
     }
 
     internal void UpdatePreviewPosition(Overlay model)
@@ -311,41 +318,61 @@ namespace EQLogParser
       }
     }
 
-    private void WindowTick(ConcurrentDictionary<string, Window> windows, DispatcherTimer dispatchTimer, int increment = 10)
+    private void WindowTick(ConcurrentDictionary<string, WindowData> windows, DispatcherTimer dispatchTimer, int increment = 10)
     {
-      var removed = new List<string>();
+      var removeList = new List<string>();
       var data = TriggerManager.Instance.GetActiveTimers();
       foreach (var keypair in windows)
       {
         var done = false;
-        if (keypair.Value is TextOverlayWindow textWindow)
+        var shortTick = false;
+        if (keypair.Value is WindowData windowData)
         {
-          done = textWindow.Tick();
-        }
-        else if (keypair.Value is TimerOverlayWindow timerWindow)
-        {
-          // full tick every 500ms
-          if (increment == 10)
+          if (windowData.TheWindow is TextOverlayWindow textWindow)
           {
-            done = timerWindow.Tick(data);
+            done = textWindow.Tick();
           }
-          else
+          else if (windowData.TheWindow is TimerOverlayWindow timerWindow)
           {
-            timerWindow.ShortTick(data);
+            // full tick every 500ms
+            if (increment == 10)
+            {
+              done = timerWindow.Tick(data);
+            }
+            else
+            {
+              timerWindow.ShortTick(data);
+              shortTick = true;
+            }
           }
-        }
 
-        if (done)
-        {
-          removed.Add(keypair.Key);
+          if (!shortTick)
+          {
+            if (done)
+            {
+              var nowTicks = DateTime.Now.Ticks;
+              if (windowData.RemoveTicks == -1)
+              {
+                windowData.RemoveTicks = (nowTicks + (TimeSpan.TicksPerMinute * 2));
+              }
+              else if (nowTicks > windowData.RemoveTicks)
+              {
+                removeList.Add(keypair.Key);
+              }
+            }
+            else
+            {
+              windowData.RemoveTicks = -1;
+            }
+          }
         }
       }
 
-      foreach (var id in removed)
+      foreach (var id in removeList)
       {
-        if (windows.TryRemove(id, out var window))
+        if (windows.TryRemove(id, out var windowData))
         {
-          window.Close();
+          windowData.TheWindow?.Close();
         }
       }
 
@@ -377,11 +404,11 @@ namespace EQLogParser
             {
               if (isEnabled)
               {
-                if (!TextWindows.TryGetValue(overlayId, out Window window))
+                if (!TextWindows.TryGetValue(overlayId, out WindowData windowData))
                 {
-                  window = new TextOverlayWindow(overlay);
-                  TextWindows[overlayId] = window;
-                  window.Show();
+                  windowData = new WindowData { TheWindow = new TextOverlayWindow(overlay) };
+                  TextWindows[overlayId] = windowData;
+                  windowData.TheWindow.Show();
                 }
 
                 SolidColorBrush brush = null;
@@ -394,7 +421,7 @@ namespace EQLogParser
                   }
                 }
 
-                (window as TextOverlayWindow).AddTriggerText(e.Text, beginTicks, brush);
+                (windowData?.TheWindow as TextOverlayWindow).AddTriggerText(e.Text, beginTicks, brush);
 
                 if (!TextOverlayTimer.IsEnabled)
                 {
@@ -420,14 +447,15 @@ namespace EQLogParser
             {
               if (isEnabled)
               {
-                if (!TimerWindows.TryGetValue(overlayId, out Window window))
+                if (!TimerWindows.TryGetValue(overlayId, out WindowData windowData))
                 {
-                  window = new TimerOverlayWindow(overlay);
-                  TimerWindows[overlayId] = window;
-                  window.Show();
+                  windowData = new WindowData { TheWindow = new TimerOverlayWindow(overlay) };
+                  TimerWindows[overlayId] = windowData;
+                  windowData.TheWindow.Show();
 
+                  // tick right away
                   var data = TriggerManager.Instance.GetActiveTimers();
-                  ((TimerOverlayWindow)window).Tick(data);
+                  ((TimerOverlayWindow)windowData?.TheWindow).Tick(data);
                 }
 
                 if (!TimerOverlayTimer.IsEnabled)
@@ -459,6 +487,12 @@ namespace EQLogParser
         }
       }
       return list;
+    }
+
+    private class WindowData 
+    {
+      public Window TheWindow { get; set; }
+      public long RemoveTicks { get; set; } = -1;
     }
   }
 }
