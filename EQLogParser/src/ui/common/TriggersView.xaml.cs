@@ -82,13 +82,13 @@ namespace EQLogParser
 
       rateOption.SelectedIndex = TriggerUtil.GetVoiceRate();
 
-      if (MainWindow.CurrentLogFile == null)
+      if (TriggerManager.Instance.IsActive())
       {
-        SetPlayer("Activate Triggers", "EQDisabledBrush", EFontAwesomeIcon.Solid_Play, false);
+        SetPlayer("Deactivate Triggers", "EQStopForegroundBrush", EFontAwesomeIcon.Solid_Square);
       }
       else
       {
-        EventsLogLoadingComplete(this, true);
+        SetPlayer("Activate Triggers", "EQMenuIconBrush", EFontAwesomeIcon.Solid_Play);
       }
 
       treeView.DragDropController = new TreeViewDragDropController();
@@ -148,7 +148,6 @@ namespace EQLogParser
       TriggerManager.Instance.EventsUpdateTree += EventsUpdateTriggerTree;
       TriggerManager.Instance.EventsSelectTrigger += EventsSelectTrigger;
       TriggerOverlayManager.Instance.EventsUpdateOverlay += EventsUpdateOverlay;
-      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
     }
 
     private void WatcherUpdate(object sender, FileSystemEventArgs e) => LoadFiles();
@@ -185,18 +184,6 @@ namespace EQLogParser
     {
       treeView.Nodes.Remove(treeView.Nodes[1]);
       treeView.Nodes.Add(TriggerOverlayManager.Instance.GetOverlayTreeView());
-    }
-
-    private void EventsLogLoadingComplete(object sender, bool e)
-    {
-      if (TriggerManager.Instance.IsActive())
-      {
-        SetPlayer("Deactivate Triggers", "EQStopForegroundBrush", EFontAwesomeIcon.Solid_Square);
-      }
-      else
-      {
-        SetPlayer("Activate Triggers", "EQMenuIconBrush", EFontAwesomeIcon.Solid_Play);
-      }
     }
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
@@ -1169,6 +1156,9 @@ namespace EQLogParser
       {
         TriggerUtil.Copy(triggerModel.Original, triggerModel);
         TriggerManager.Instance.UpdateTriggers();
+
+        // triggers changed so close overlays just incase
+        TriggerOverlayManager.Instance.CloseOverlays();
       }
       else if (thePropertyGrid.SelectedObject is TextOverlayPropertyModel textModel)
       {
@@ -1234,7 +1224,6 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventsLogLoadingComplete;
         TriggerManager.Instance.EventsUpdateTree -= EventsUpdateTriggerTree;
         TriggerManager.Instance.EventsSelectTrigger -= EventsSelectTrigger;
         TriggerOverlayManager.Instance.EventsUpdateOverlay -= EventsUpdateOverlay;
