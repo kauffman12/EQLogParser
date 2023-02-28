@@ -247,7 +247,7 @@ namespace EQLogParser
       var progress = remainingTicks / endTicks * 100.0;
       var timeText = timerData.TimerType == 2 ? DateUtil.FormatSimpleMillis((long)remainingTicks) : DateUtil.FormatSimpleMS((long)remainingTicks);
       timerBar.SetActive();
-      timerBar.Update(timerData.DisplayName, timeText, progress);
+      timerBar.Update(GetDisplayName(timerData), timeText, progress);
 
       if (!shortTick)
       {
@@ -286,18 +286,30 @@ namespace EQLogParser
         var progress = 100.0 - (remainingTicks / timerData.ResetDurationTicks * 100.0);
         var timeText = DateUtil.FormatSimpleMS((long)remainingTicks);
         timerBar.SetReset();
-        timerBar.Update(timerData.DisplayName, timeText, progress);
+        timerBar.Update(GetDisplayName(timerData), timeText, progress);
       }
       else
       {
         var timeText = DateUtil.FormatSimpleMS((long)timerData.DurationTicks);
         timerBar.SetIdle();
-        timerBar.Update(timerData.DisplayName, timeText, 100.0);
+        timerBar.Update(GetDisplayName(timerData), timeText, 100.0);
       }
 
       if (timerBar.Visibility != Visibility.Visible)
       {
         timerBar.Visibility = Visibility;
+      }
+    }
+
+    private string GetDisplayName(TimerData timerData)
+    {
+      if (timerData.Repeated > -1)
+      {
+        return timerData.DisplayName.Replace("{repeated}", timerData.Repeated.ToString(), StringComparison.OrdinalIgnoreCase);
+      }
+      else
+      {
+        return timerData.DisplayName;
       }
     }
 

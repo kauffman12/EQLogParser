@@ -23,10 +23,10 @@ namespace EQLogParser
     public CancellationTokenSource CancelSource { get; set; }
     public CancellationTokenSource WarningSource { get; set; }
     public string DisplayName { get; set; }
-    public double EndTicks { get; set; }
-    public double ResetTicks { get; set; }
-    public double ResetDurationTicks { get; set; }
-    public double DurationTicks { get; set; }
+    public long EndTicks { get; set; }
+    public long ResetTicks { get; set; }
+    public long ResetDurationTicks { get; set; }
+    public long DurationTicks { get; set; }
     public List<string> SelectedOverlays { get; set; }
     public int TriggerAgainOption { get; set; }
     public int TimerType { get; set; }
@@ -38,6 +38,7 @@ namespace EQLogParser
     public List<NumberOptions> EndEarlyRegexNOptions { get; set; }
     public List<NumberOptions> EndEarlyRegex2NOptions { get; set; }
     public MatchCollection OriginalMatches { get; set; }
+    public int Repeated { get; set; } = -1;
   }
 
   internal class NumberOptions
