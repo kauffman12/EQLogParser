@@ -441,7 +441,7 @@ namespace EQLogParser
         var newNode = new TriggerNode
         {
           Name = label,
-          IsEnabled = true,
+          IsEnabled = node.IsChecked == true,
           OverlayData = new Overlay { Name = label, Id = Guid.NewGuid().ToString(), IsTimerOverlay = isTimer, IsTextOverlay = !isTimer }
         };
 
@@ -454,7 +454,7 @@ namespace EQLogParser
         node.SerializedData.Nodes = (node.SerializedData.Nodes == null) ? new List<TriggerNode>() : node.SerializedData.Nodes;
         node.SerializedData.IsExpanded = true;
         node.SerializedData.Nodes.Add(newNode);
-        node.ChildNodes.Add(new TriggerTreeViewNode { Content = newNode.Name, IsChecked = true, IsOverlay = true, SerializedData = newNode });
+        node.ChildNodes.Add(new TriggerTreeViewNode { Content = newNode.Name, IsChecked = node.IsChecked, IsOverlay = true, SerializedData = newNode });
         TriggerOverlayManager.Instance.UpdateOverlays();
         RefreshOverlayNode();
         SelectFile(newNode.OverlayData);
@@ -465,11 +465,11 @@ namespace EQLogParser
     {
       if (treeView.SelectedItem != null && treeView.SelectedItem is TriggerTreeViewNode node)
       {
-        var newNode = new TriggerNode { Name = LABEL_NEW_TRIGGER, IsEnabled = true, TriggerData = new Trigger { Name = LABEL_NEW_TRIGGER } };
+        var newNode = new TriggerNode { Name = LABEL_NEW_TRIGGER, IsEnabled = node.IsChecked == true, TriggerData = new Trigger { Name = LABEL_NEW_TRIGGER } };
         node.SerializedData.Nodes = (node.SerializedData.Nodes == null) ? new List<TriggerNode>() : node.SerializedData.Nodes;
         node.SerializedData.IsExpanded = true;
         node.SerializedData.Nodes.Add(newNode);
-        node.ChildNodes.Add(new TriggerTreeViewNode { Content = newNode.Name, IsChecked = true, IsTrigger = true, SerializedData = newNode });
+        node.ChildNodes.Add(new TriggerTreeViewNode { Content = newNode.Name, IsChecked = node.IsChecked, IsTrigger = true, SerializedData = newNode });
         TriggerManager.Instance.UpdateTriggers();
         RefreshTriggerNode();
         SelectFile(newNode.TriggerData);
@@ -961,8 +961,14 @@ namespace EQLogParser
           TriggerOverlayManager.Instance.CloseOverlay(node.SerializedData.OverlayData?.Id);
         }
 
-        TriggerManager.Instance.UpdateTriggers();
-        TriggerOverlayManager.Instance.UpdateOverlays();
+        if (node.IsOverlay || node == treeView.Nodes[1])
+        {
+          TriggerOverlayManager.Instance.UpdateOverlays();
+        }
+        else
+        {
+          TriggerManager.Instance.UpdateTriggers();
+        }
       }
     }
 

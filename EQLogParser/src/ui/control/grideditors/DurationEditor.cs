@@ -67,6 +67,13 @@ namespace EQLogParser
 
     public override bool ShouldPropertyGridTryToHandleKeyDown(Key key)
     {
+      if (key == Key.Tab)
+      {
+        if (TheTimeSpan.SelectionStart >= 0 && TheTimeSpan.SelectionStart <= 2)
+        {
+          TheTimeSpan.SelectionStart = 3;
+        }
+      }
       return false;
     }
 
