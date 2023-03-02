@@ -38,6 +38,7 @@ namespace EQLogParser
     private RangeEditor WidthEditor;
     private List<TriggerNode> Removed;
     private SpeechSynthesizer TestSynth = null;
+    private TriggerNode CopiedNode = null;
 
     public TriggersView()
     {
@@ -476,6 +477,39 @@ namespace EQLogParser
       }
     }
 
+    private void CopyClick(object sender, RoutedEventArgs e)
+    {
+      if (treeView.SelectedItem != null && treeView.SelectedItem is TriggerTreeViewNode node)
+      {
+        CopiedNode = node.SerializedData;
+      }
+    }
+
+    private void PasteClick(object sender, RoutedEventArgs e)
+    {
+      if (treeView.SelectedItem != null && treeView.SelectedItem is TriggerTreeViewNode node && !node.IsTrigger && !node.IsOverlay && CopiedNode != null)
+      {
+        var newName = "Copy of " + CopiedNode.Name;
+        var copy = new Trigger();
+        TriggerUtil.Copy(copy, CopiedNode.TriggerData);
+        copy.Name = newName;
+        copy.WorstEvalTime = -1;
+
+        var newTriggerNode = new TriggerNode
+        {
+          IsEnabled = CopiedNode.IsEnabled,
+          IsExpanded = CopiedNode.IsExpanded,
+          Name = newName,
+          TriggerData = copy,
+          Nodes = CopiedNode.Nodes
+        };
+        
+        // need empty parent for some reason
+        TriggerManager.Instance.MergeTriggers(new TriggerNode { Nodes = new List<TriggerNode> { newTriggerNode } }, false, node.SerializedData);
+        CopiedNode = null;
+      }
+    }
+
     private void DeleteClick(object sender, RoutedEventArgs e)
     {
       if (treeView.SelectedItems != null)
@@ -618,6 +652,8 @@ namespace EQLogParser
         renameMenuItem.IsEnabled = node != treeView.Nodes[0] && node != treeView.Nodes[1] && count == 1;
         importMenuItem.IsEnabled = !node.IsTrigger && !node.IsOverlay && node != treeView.Nodes[1] && count == 1;
         newMenuItem.IsEnabled = !node.IsTrigger && !node.IsOverlay && count == 1;
+        copyItem.IsEnabled = node.IsTrigger && count == 1;
+        pasteItem.IsEnabled = !node.IsTrigger && !node.IsOverlay && node != treeView.Nodes[1] && count == 1 && CopiedNode != null;
       }
       else
       {
@@ -628,6 +664,8 @@ namespace EQLogParser
         newMenuItem.IsEnabled = false;
         assignOverlayMenuItem.IsEnabled = false;
         assignPriorityMenuItem.IsEnabled = false;
+        copyItem.IsEnabled = false;
+        pasteItem.IsEnabled = false;
       }
 
       importMenuItem.Header = importMenuItem.IsEnabled ? "Import to Folder (" + node.Content.ToString() + ")" : "Import";

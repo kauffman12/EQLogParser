@@ -400,7 +400,7 @@ namespace EQLogParser
       return result;
     }
 
-    internal static void MergeNodes(List<TriggerNode> newNodes, TriggerNode parent)
+    internal static void MergeNodes(List<TriggerNode> newNodes, TriggerNode parent, bool doSort)
     {
       if (newNodes != null)
       {
@@ -427,7 +427,7 @@ namespace EQLogParser
               }
               else
               {
-                MergeNodes(newNode.Nodes, found);
+                MergeNodes(newNode.Nodes, found, doSort);
               }
             }
             else
@@ -437,7 +437,10 @@ namespace EQLogParser
             }
           }
 
-          needsSort.ForEach(parent => parent.Nodes = parent.Nodes.OrderBy(node => node.Name).ToList());
+          if (doSort)
+          {
+            needsSort.ForEach(parent => parent.Nodes = parent.Nodes.OrderBy(node => node.Name).ToList());
+          }
         }
       }
     }
@@ -662,7 +665,7 @@ namespace EQLogParser
 
                 if (msgDialog.IsYes2Clicked)
                 {
-                  TriggerManager.Instance.MergeTriggers(audioTriggerData);
+                  TriggerManager.Instance.MergeTriggers(audioTriggerData, true);
                 }
                 else if (msgDialog.IsYes1Clicked)
                 {
@@ -697,7 +700,7 @@ namespace EQLogParser
           {
             if (audioTriggerData != null)
             {
-              TriggerManager.Instance.MergeTriggers(audioTriggerData, parent);
+              TriggerManager.Instance.MergeTriggers(audioTriggerData, true, parent);
             }
           });
         }

@@ -4400,8 +4400,8 @@ Remote Healing Surge XIII
 Remote Healing Surge XIV
 Remote Healing Surge XV
 Restless Strike
-Sap III
-Sap IV
+Life Sap III
+Life Sap IV
 Sarnak's Strike
 Scorpion's Agony Poison Strike I
 Scorpion's Agony Poison Strike II

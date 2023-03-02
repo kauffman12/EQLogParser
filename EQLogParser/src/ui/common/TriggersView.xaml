@@ -85,14 +85,17 @@
               <MenuItem x:Name="collapseMenuItem" Header="Collapse All" Click="CollapseAllClick" />
               <MenuItem x:Name="expandMenuItem" Header="Expand All" Click="ExpandAllClick" />
               <Separator />
-              <MenuItem x:Name="newMenuItem" Header="Create New">
+              <MenuItem x:Name="copyItem" Header="Copy" Click="CopyClick" />
+              <MenuItem x:Name="pasteItem" Header="Paste" Click="PasteClick" />
+              <MenuItem x:Name="deleteTriggerMenuItem" Header="Delete" Click="DeleteClick" />
+              <MenuItem x:Name="renameMenuItem" Header="Rename" Click="RenameClick" />
+              <Separator />
+              <MenuItem x:Name="newMenuItem" Header="New">
                 <MenuItem x:Name="newFolder" Header="Folder" Click="CreateNodeClick" />
                 <MenuItem x:Name="newTrigger" Header="Trigger" Click="CreateTriggerClick" />
                 <MenuItem x:Name="newTextOverlay" Header="Text Overlay" Click="CreateTextOverlayClick" />
                 <MenuItem x:Name="newTimerOverlay" Header="Timer Overlay" Click="CreateTimerOverlayClick" />
               </MenuItem>
-              <MenuItem x:Name="deleteTriggerMenuItem" Header="Delete" Click="DeleteClick" />
-              <MenuItem x:Name="renameMenuItem" Header="Rename" Click="RenameClick" />
               <Separator />
               <MenuItem x:Name="exportMenuItem" Header="Export" ToolTip="Exports Selected Folders" Click="ExportClick" />
               <MenuItem x:Name="importMenuItem" Header="Import" ToolTip="Imports and Merges to the Selected Folder" Click="ImportClick" />
