@@ -120,7 +120,7 @@ namespace EQLogParser
         foreach (var node in list)
         {
           TriggerUtil.DisableNodes(node);
-          TriggerUtil.MergeNodes(node.Nodes, parent);
+          TriggerUtil.MergeNodes(node.Nodes, parent, true);
         }
       }
 
@@ -144,11 +144,11 @@ namespace EQLogParser
       EventsUpdateTree?.Invoke(this, true);
     }
 
-    internal void MergeTriggers(TriggerNode newTriggers, TriggerNode parent = null)
+    internal void MergeTriggers(TriggerNode newTriggers,  bool doSort, TriggerNode parent = null)
     {
       lock (TriggerNodes)
       {
-        TriggerUtil.MergeNodes(newTriggers.Nodes, (parent == null) ? TriggerNodes : parent);
+        TriggerUtil.MergeNodes(newTriggers.Nodes, (parent == null) ? TriggerNodes : parent, doSort);
       }
 
       SaveTriggers();
@@ -332,6 +332,8 @@ namespace EQLogParser
         if (found)
         {
           var beginTicks = DateTime.Now.Ticks;
+          node.Value.TriggerData.LastTriggered = new TimeSpan(beginTicks).TotalMilliseconds;
+
           time = (long)((beginTicks - start) / 10);
           wrapper.TriggerData.WorstEvalTime = Math.Max(time, wrapper.TriggerData.WorstEvalTime);
 
