@@ -356,7 +356,7 @@ namespace EQLogParser
               wrapper.TimerCounts[displayName] = new TimerCount { Count = 1, CountTicks = beginTicks };
             }
 
-            if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.DurationSeconds > 0)
+            if (wrapper.TriggerData.TimerType > 0 && wrapper.TriggerData.DurationSeconds > 0)
             {
               StartTimer(wrapper, displayName, beginTicks, speechChannel, lineData.Line, matches);
             }

@@ -38,7 +38,8 @@ namespace EQLogParser
     private RangeEditor WidthEditor;
     private List<TriggerNode> Removed;
     private SpeechSynthesizer TestSynth = null;
-    private TriggerNode CopiedNode = null;
+    private TriggerTreeViewNode CopiedNode = null;
+    private bool CutNode = false;
 
     public TriggersView()
     {
@@ -481,7 +482,17 @@ namespace EQLogParser
     {
       if (treeView.SelectedItem != null && treeView.SelectedItem is TriggerTreeViewNode node)
       {
-        CopiedNode = node.SerializedData;
+        CopiedNode = node;
+        CutNode = false;
+      }
+    }
+
+    private void CutClick(object sender, RoutedEventArgs e)
+    {
+      if (treeView.SelectedItem != null && treeView.SelectedItem is TriggerTreeViewNode node)
+      {
+        CopiedNode = node;
+        CutNode = true;
       }
     }
 
@@ -489,23 +500,30 @@ namespace EQLogParser
     {
       if (treeView.SelectedItem != null && treeView.SelectedItem is TriggerTreeViewNode node && !node.IsTrigger && !node.IsOverlay && CopiedNode != null)
       {
-        var newName = "Copy of " + CopiedNode.Name;
+        var copied = CopiedNode.SerializedData;
+        var newName = CutNode ? copied.Name : "Copy of " + copied.Name;
         var copy = new Trigger();
-        TriggerUtil.Copy(copy, CopiedNode.TriggerData);
+        TriggerUtil.Copy(copy, copied.TriggerData);
         copy.Name = newName;
         copy.WorstEvalTime = -1;
 
         var newTriggerNode = new TriggerNode
         {
-          IsEnabled = CopiedNode.IsEnabled,
-          IsExpanded = CopiedNode.IsExpanded,
+          IsEnabled = node.IsChecked,
+          IsExpanded = node.IsExpanded,
           Name = newName,
           TriggerData = copy,
-          Nodes = CopiedNode.Nodes
+          Nodes = copied.Nodes
         };
         
         // need empty parent for some reason
         TriggerManager.Instance.MergeTriggers(new TriggerNode { Nodes = new List<TriggerNode> { newTriggerNode } }, false, node.SerializedData);
+
+        if (CutNode)
+        {
+          Delete(new List<TriggerTreeViewNode> { CopiedNode });
+        }
+
         CopiedNode = null;
       }
     }
@@ -514,50 +532,55 @@ namespace EQLogParser
     {
       if (treeView.SelectedItems != null)
       {
-        bool updateTriggers = false;
-        bool updateOverlays = false;
-        foreach (var node in treeView.SelectedItems.Cast<TriggerTreeViewNode>())
-        {
-          if (node.ParentNode is TriggerTreeViewNode parent)
-          {
-            parent.SerializedData.Nodes.Remove(node.SerializedData);
-            if (parent.SerializedData.Nodes.Count == 0)
-            {
-              parent.SerializedData.IsEnabled = false;
-              parent.SerializedData.IsExpanded = false;
-            }
+        Delete(treeView.SelectedItems.Cast<TriggerTreeViewNode>().ToList());
+      }
+    }
 
-            if (parent == treeView.Nodes[1])
+    private void Delete(List<TriggerTreeViewNode> nodes)
+    {
+      bool updateTriggers = false;
+      bool updateOverlays = false;
+      foreach (var node in nodes)
+      {
+        if (node.ParentNode is TriggerTreeViewNode parent)
+        {
+          parent.SerializedData.Nodes.Remove(node.SerializedData);
+          if (parent.SerializedData.Nodes.Count == 0)
+          {
+            parent.SerializedData.IsEnabled = false;
+            parent.SerializedData.IsExpanded = false;
+          }
+
+          if (parent == treeView.Nodes[1])
+          {
+            updateOverlays = true;
+            updateTriggers = true;
+            if (node.SerializedData?.OverlayData != null)
             {
-              updateOverlays = true;
-              updateTriggers = true;
-              if (node.SerializedData?.OverlayData != null)
-              {
-                TriggerOverlayManager.Instance.ClosePreviewTimerOverlay(node.SerializedData.OverlayData.Id);
-                RemoveOverlayFromTriggers(treeView.Nodes[0] as TriggerTreeViewNode, node.SerializedData.OverlayData.Id);
-              }
-            }
-            else
-            {
-              updateTriggers = true;
+              TriggerOverlayManager.Instance.ClosePreviewTimerOverlay(node.SerializedData.OverlayData.Id);
+              RemoveOverlayFromTriggers(treeView.Nodes[0] as TriggerTreeViewNode, node.SerializedData.OverlayData.Id);
             }
           }
+          else
+          {
+            updateTriggers = true;
+          }
         }
+      }
 
-        thePropertyGrid.SelectedObject = null;
-        thePropertyGrid.IsEnabled = false;
+      thePropertyGrid.SelectedObject = null;
+      thePropertyGrid.IsEnabled = false;
 
-        if (updateTriggers)
-        {
-          TriggerManager.Instance.UpdateTriggers();
-          RefreshTriggerNode();
-        }
+      if (updateTriggers)
+      {
+        TriggerManager.Instance.UpdateTriggers();
+        RefreshTriggerNode();
+      }
 
-        if (updateOverlays)
-        {
-          TriggerOverlayManager.Instance.UpdateOverlays();
-          RefreshOverlayNode();
-        }
+      if (updateOverlays)
+      {
+        TriggerOverlayManager.Instance.UpdateOverlays();
+        RefreshOverlayNode();
       }
     }
 
@@ -652,7 +675,7 @@ namespace EQLogParser
         renameMenuItem.IsEnabled = node != treeView.Nodes[0] && node != treeView.Nodes[1] && count == 1;
         importMenuItem.IsEnabled = !node.IsTrigger && !node.IsOverlay && node != treeView.Nodes[1] && count == 1;
         newMenuItem.IsEnabled = !node.IsTrigger && !node.IsOverlay && count == 1;
-        copyItem.IsEnabled = node.IsTrigger && count == 1;
+        cutItem.IsEnabled = copyItem.IsEnabled = node.IsTrigger && count == 1;
         pasteItem.IsEnabled = !node.IsTrigger && !node.IsOverlay && node != treeView.Nodes[1] && count == 1 && CopiedNode != null;
       }
       else
@@ -665,6 +688,7 @@ namespace EQLogParser
         assignOverlayMenuItem.IsEnabled = false;
         assignPriorityMenuItem.IsEnabled = false;
         copyItem.IsEnabled = false;
+        cutItem.IsEnabled = false;
         pasteItem.IsEnabled = false;
       }
 
