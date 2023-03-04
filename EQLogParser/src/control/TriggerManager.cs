@@ -762,6 +762,12 @@ namespace EQLogParser
             wrapper.HasRepeated = wrapper.ModifiedTimerName.Contains("{repeated}", StringComparison.OrdinalIgnoreCase); 
             pattern = UpdatePattern(trigger.UseRegex, playerName, pattern, out List<NumberOptions> numberOptions);
 
+            // temp
+            if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.TimerType == 0)
+            {
+              wrapper.TriggerData.TimerType = 1;
+            }
+
             if (trigger.UseRegex)
             {
               wrapper.Regex = new Regex(pattern, RegexOptions.IgnoreCase);
