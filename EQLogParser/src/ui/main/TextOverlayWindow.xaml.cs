@@ -85,6 +85,23 @@ namespace EQLogParser
       var currentTicks = DateTime.Now.Ticks;
       var done = false;
 
+      if (TheOverlay.Width != Width)
+      {
+        Width = TheOverlay.Width;
+      }
+      else if (TheOverlay.Height != Height)
+      {
+        Height = TheOverlay.Height;
+      }
+      else if (TheOverlay.Top != Top)
+      {
+        Top = TheOverlay.Top;
+      }
+      else if (TheOverlay.Left != Left)
+      {
+        Left = TheOverlay.Left;
+      }
+
       lock (TextDataList)
       {
         var node = TextDataList.First;

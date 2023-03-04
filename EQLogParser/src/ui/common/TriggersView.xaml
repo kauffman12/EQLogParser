@@ -86,7 +86,9 @@
               <MenuItem x:Name="expandMenuItem" Header="Expand All" Click="ExpandAllClick" />
               <Separator />
               <MenuItem x:Name="copyItem" Header="Copy" Click="CopyClick" />
+              <MenuItem x:Name="cutItem" Header="Cut" Click="CutClick" />
               <MenuItem x:Name="pasteItem" Header="Paste" Click="PasteClick" />
+              <Separator />
               <MenuItem x:Name="deleteTriggerMenuItem" Header="Delete" Click="DeleteClick" />
               <MenuItem x:Name="renameMenuItem" Header="Rename" Click="RenameClick" />
               <Separator />

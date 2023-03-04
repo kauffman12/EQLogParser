@@ -265,7 +265,6 @@ namespace EQLogParser
               if ("Timer".Equals(Helpers.GetText(triggerNode, "TimerType")))
               {
                 goodTrigger = true;
-                trigger.EnableTimer = true;
 
                 if (int.TryParse(Helpers.GetText(triggerNode, "TimerDuration"), out int duration) && duration > 0)
                 {

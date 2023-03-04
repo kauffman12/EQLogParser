@@ -89,6 +89,23 @@ namespace EQLogParser
       double maxDurationTicks = double.NaN;
       IEnumerable<TimerData> orderedList = null;
 
+      if (TheOverlay.Width != Width)
+      {
+        Width = TheOverlay.Width;
+      }
+      else if (TheOverlay.Height != Height)
+      {
+        Height = TheOverlay.Height;
+      }
+      else if (TheOverlay.Top != Top)
+      {
+        Top = TheOverlay.Top;
+      }
+      else if (TheOverlay.Left != Left)
+      {
+        Left = TheOverlay.Left;
+      }
+
       if (timerList.Count > 0)
       {
         if (TheOverlay.SortBy == 0)
