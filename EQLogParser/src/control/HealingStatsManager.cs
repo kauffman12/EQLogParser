@@ -78,7 +78,7 @@ namespace EQLogParser
           Title = options.Npcs?.FirstOrDefault()?.Name;
           var healingValidator = new HealingValidator();
           IsLimited = healingValidator.IsHealingLimited();
-          Selected.ForEach(fight => RaidTotals.Ranges.Add(new TimeSegment(fight.BeginTankingTime, fight.LastTankingTime)));
+          Selected.ForEach(fight => RaidTotals.Ranges.Add(new TimeSegment(fight.BeginTime, fight.LastTime)));
 
           if (RaidTotals.Ranges.TimeSegments.Count > 0)
           {

@@ -89,6 +89,7 @@
         <syncfusion:TreeGridNumericColumn Width="70" MappingName="SDPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
         <syncfusion:TreeGridNumericColumn Width="55" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
         <syncfusion:TreeGridNumericColumn Width="60" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
+        <syncfusion:TreeGridNumericColumn Width="75" MappingName="Min" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Min Hit" />
         <syncfusion:TreeGridNumericColumn Width="75" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
         <syncfusion:TreeGridNumericColumn Width="65" MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Hit" />
         <syncfusion:TreeGridTextColumn Width="65" MappingName="MeleeAccRate" DisplayBinding="{Binding Path=MeleeAccRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeAccRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Acc" />

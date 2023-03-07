@@ -1,6 +1,4 @@
 ﻿using Syncfusion.Data.Extensions;
-using Syncfusion.UI.Xaml.Diagram.Controls;
-using Syncfusion.Windows.Controls.Grid;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -15,6 +13,7 @@ namespace EQLogParser
 {
   class TriggerOverlayManager
   {
+    internal event EventHandler<bool> EventsUpdateTree;
     internal event EventHandler<Overlay> EventsUpdateOverlay;
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private readonly string OVERLAY_FILE = "triggerOverlays.json";
@@ -279,6 +278,32 @@ namespace EQLogParser
         }
       }
       return data;
+    }
+
+    internal void MergeOverlays(TriggerNode newOverlays, TriggerNode parent = null)
+    {
+      lock (OverlayNodes)
+      {
+        TriggerUtil.MergeNodes(newOverlays.Nodes, (parent == null) ? OverlayNodes : parent, false);
+      }
+
+      SaveOverlays();
+      EventsUpdateTree?.Invoke(this, true);
+    }
+
+    internal void MergeOverlays(List<TriggerNode> list, TriggerNode parent)
+    {
+      lock (OverlayNodes)
+      {
+        foreach (var node in list)
+        {
+          TriggerUtil.DisableNodes(node);
+          TriggerUtil.MergeNodes(node.Nodes, parent, false);
+        }
+      }
+
+      SaveOverlays();
+      EventsUpdateTree?.Invoke(this, true);
     }
 
     internal void UpdateOverlays()

@@ -383,6 +383,7 @@ namespace EQLogParser
     public uint Parries { get; set; }
     public uint Invulnerable { get; set; }
     public uint Max { get; set; }
+    public uint Min { get; set; }
     public uint BaneHits { get; set; }
     public uint Hits { get; set; }
     public uint AssHits { get; set; }
@@ -439,12 +440,11 @@ namespace EQLogParser
     }
 
     public const string BREAKTIME = "Break Time";
-
     public bool Dead { get; set; } = false;
     public double BeginDamageTime { get; set; } = double.NaN;
     public double BeginTankingTime { get; set; } = double.NaN;
-    public double LastDamageTime { get; set; }
-    public double LastTankingTime { get; set; }
+    public double LastDamageTime { get; set; } = double.NaN;
+    public double LastTankingTime { get; set; } = double.NaN;
     public string BeginTimeString { get; set; }
     public string Name { get; set; }
     public long Id { get; set; }

@@ -92,6 +92,7 @@
         <syncfusion:TreeGridNumericColumn Width="70" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="SDPS" HeaderToolTipTemplate="{StaticResource HeaderSHPSTemplateToolTip}" TextAlignment="Right" HeaderText="SHPS" />
         <syncfusion:TreeGridNumericColumn Width="55" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="TotalSeconds" TextAlignment="Right" HeaderText="Sec" />
         <syncfusion:TreeGridNumericColumn Width="65" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Hits" TextAlignment="Right" HeaderText="# Heals" />
+        <syncfusion:TreeGridNumericColumn Width="75" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Min" TextAlignment="Right" HeaderText="Min Heal" />
         <syncfusion:TreeGridNumericColumn Width="75" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Max" TextAlignment="Right" HeaderText="Max Heal" />
         <syncfusion:TreeGridNumericColumn Width="65" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="Avg" TextAlignment="Right" HeaderText="Av Heal" />
         <syncfusion:TreeGridNumericColumn Width="65" NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="AvgCrit" TextAlignment="Right" HeaderText="Av Crit" />

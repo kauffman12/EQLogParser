@@ -1,5 +1,6 @@
 ﻿using Microsoft.Win32;
 using Syncfusion.UI.Xaml.TreeView;
+using Syncfusion.UI.Xaml.TreeView.Engine;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -7,6 +8,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Speech.Recognition;
+using System.Speech.Synthesis;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -24,7 +27,23 @@ namespace EQLogParser
 
     private static ConcurrentDictionary<string, string> GinaCache = new ConcurrentDictionary<string, string>();
 
-    internal static string GetSelectedVoice() => ConfigUtil.GetSetting("TriggersSelectedVoice", "");
+    internal static string GetSelectedVoice()
+    {
+      string defaultVoice = null;
+
+      try
+      {
+        var testSynth = new SpeechSynthesizer();
+        defaultVoice = testSynth.GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList().FirstOrDefault();
+      }
+      catch (Exception)
+      {
+        // ignore
+      }
+
+      defaultVoice = string.IsNullOrEmpty(defaultVoice) ? "" : defaultVoice;
+      return ConfigUtil.GetSetting("TriggersSelectedVoice", defaultVoice);
+    }
 
     internal static int GetVoiceRate()
     {
@@ -366,10 +385,10 @@ namespace EQLogParser
 
     internal static void DisableNodes(TriggerNode node)
     {
+      node.IsEnabled = false;
+      node.IsExpanded = false;
       if (node.TriggerData == null && node.OverlayData == null)
       {
-        node.IsEnabled = false;
-        node.IsExpanded = false;
         if (node.Nodes != null)
         {
           foreach (var child in node.Nodes)
@@ -464,18 +483,21 @@ namespace EQLogParser
       return null;
     }
 
-    internal static void Import(TriggerTreeViewNode node)
+    internal static void Import(TreeViewNodeCollection collection, TriggerTreeViewNode node)
     {
       if (node != null)
       {
         try
         {
+          var defExt = collection[1] == node ? ".ogf.gz" : ".tgf.gz";
+          var filter = collection[1] == node ? "All Supported Files|*.ogf.gz" : "All Supported Files|*.tgf.gz;*.gtp";
+
           // WPF doesn't have its own file chooser so use Win32 Version
           OpenFileDialog dialog = new OpenFileDialog
           {
             // filter to txt files
-            DefaultExt = ".scf.gz",
-            Filter = "All Supported Files|*.tgf.gz;*.gtp"
+            DefaultExt = defExt,
+            Filter = filter
           };
 
           // show dialog and read result
@@ -485,20 +507,28 @@ namespace EQLogParser
             var fileInfo = new FileInfo(dialog.FileName);
             if (fileInfo.Exists && fileInfo.Length < 100000000)
             {
-              if (dialog.FileName.EndsWith("tgf.gz"))
+              if (dialog.FileName.EndsWith("tgf.gz") || dialog.FileName.EndsWith("ogf.gz"))
               {
                 GZipStream decompressionStream = new GZipStream(fileInfo.OpenRead(), CompressionMode.Decompress);
                 var reader = new StreamReader(decompressionStream);
                 string json = reader?.ReadToEnd();
                 reader?.Close();
                 var data = JsonSerializer.Deserialize<List<TriggerNode>>(json, new JsonSerializerOptions { IncludeFields = true });
-                TriggerManager.Instance.MergeTriggers(data, node.SerializedData);
+
+                if (collection[1] == node)
+                {
+                  TriggerOverlayManager.Instance.MergeOverlays(data, node.SerializedData);
+                }
+                else
+                {
+                  TriggerManager.Instance.MergeTriggers(data, node.SerializedData);
+                }
               }
               else if (dialog.FileName.EndsWith(".gtp"))
               {
                 var data = new byte[fileInfo.Length];
                 fileInfo.OpenRead().Read(data);
-                TriggerUtil.ImportFromGina(data, node.SerializedData);
+                ImportFromGina(data, node.SerializedData);
               }
             }
           }
@@ -511,23 +541,21 @@ namespace EQLogParser
       }
     }
 
-    internal static void Export(Syncfusion.UI.Xaml.TreeView.Engine.TreeViewNodeCollection collection, List<TriggerTreeViewNode> nodes)
+    internal static void Export(TreeViewNodeCollection collection, List<TriggerTreeViewNode> nodes)
     {
       if (nodes != null)
       {
         try
         {
+          var isTrigger = true;
           var exportList = new List<TriggerNode>();
           foreach (var selected in nodes)
           {
             // if the root is in there just use it
-            if (selected == collection[0])
+            if (selected == collection[0] || selected == collection[1])
             {
+              isTrigger = (selected == collection[0]);
               exportList = new List<TriggerNode>() { selected.SerializedData };
-              break;
-            }
-            else if (selected.IsOverlay || selected == collection[1])
-            {
               break;
             }
 
@@ -544,6 +572,7 @@ namespace EQLogParser
                 Nodes = new List<TriggerNode>() { child }
               };
 
+              isTrigger = (!start.IsOverlay && start.ParentNode != collection[1]);
               child = newNode;
               start = start.ParentNode as TriggerTreeViewNode;
             }
@@ -558,7 +587,7 @@ namespace EQLogParser
           {
             var result = JsonSerializer.Serialize(exportList);
             SaveFileDialog saveFileDialog = new SaveFileDialog();
-            string filter = "Triggers File (*.tgf.gz)|*.tgf.gz";
+            string filter = isTrigger ? "Triggers File (*.tgf.gz)|*.tgf.gz" : "Overlays File (*.ogf.gz)|*.ogf.gz";
             saveFileDialog.Filter = filter;
             if (saveFileDialog.ShowDialog().Value)
             {
@@ -573,7 +602,7 @@ namespace EQLogParser
         }
         catch (Exception ex)
         {
-          new MessageWindow("Problem Exporting Triggers. Check Error Log for details.", EQLogParser.Resource.EXPORT_ERROR).ShowDialog();
+          new MessageWindow("Problem Exporting Triggers/Overlays. Check Error Log for Details.", EQLogParser.Resource.EXPORT_ERROR).ShowDialog();
           LOG.Error(ex);
         }
       }

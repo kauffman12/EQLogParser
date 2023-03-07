@@ -13,7 +13,7 @@ namespace EQLogParser
 
     public static void Process(LineData lineData)
     {
-      string action = lineData.Action;
+      var action = lineData.Action;
       try
       {
         int index;
@@ -189,6 +189,11 @@ namespace EQLogParser
 
         if (!string.IsNullOrEmpty(healed))
         {
+          if (healed == "You")
+          {
+            healed = ConfigUtil.PlayerName;
+          }
+
           // check for pets
           int possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
           if (possessive > -1)
