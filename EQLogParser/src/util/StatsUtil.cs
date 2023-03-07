@@ -318,6 +318,7 @@ namespace EQLogParser
       {
         stats.Total += record.Total;
         stats.Max = Math.Max(stats.Max, record.Total);
+        stats.Min = GetMin(stats.Min, record.Total);
 
         if (newFrame)
         {
@@ -366,6 +367,7 @@ namespace EQLogParser
         to.TotalSlay += from.TotalSlay;
         to.Hits += from.Hits;
         to.Max = Math.Max(to.Max, from.Max);
+        to.Min = GetMin(to.Min, from.Min);
         to.Extra += from.Extra;
         to.AssHits += from.AssHits;
         to.CritHits += from.CritHits;
@@ -655,6 +657,20 @@ namespace EQLogParser
         }
       }
       return isHitType;
+    }
+
+    private static uint GetMin(uint to, uint from)
+    {
+      if (to == 0 && from > 0)
+      {
+        return from;
+      }
+      else if (from == 0 && to > 0)
+      {
+        return to;
+      }
+
+      return Math.Min(to, from);
     }
   }
 }
