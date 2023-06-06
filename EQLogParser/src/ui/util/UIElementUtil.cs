@@ -1,10 +1,34 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace EQLogParser
 {
   class UIElementUtil
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+    internal static double GetDpi()
+    {
+      var dpi = 96.0;
+      LOG.Warn("Default DPI = " + dpi);
+      PresentationSource source = PresentationSource.FromVisual(Application.Current.MainWindow);
+      if (source != null)
+      {
+        var matrix = source.CompositionTarget.TransformToDevice;
+        dpi = 96.0 * matrix.M11; // DPI X value
+        LOG.Warn("PresentationSource DPI = " + dpi);
+      }
+      else
+      {
+        var dpiTransform = VisualTreeHelper.GetDpi(Application.Current.MainWindow);
+        dpi = dpiTransform.PixelsPerInchX; // DPI X value
+        LOG.Warn("VisualTreeHelper DPI = " + dpi);
+      }
+
+      return dpi;
+    }
+
     internal static void CheckHideTitlePanel(Panel titlePanel, Panel optionsPanel)
     {
       var settingsLoc = optionsPanel.PointToScreen(new Point(0, 0));

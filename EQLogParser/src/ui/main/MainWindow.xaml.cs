@@ -81,10 +81,10 @@ namespace EQLogParser
         domain.UnhandledException += DomainUnhandledException;
 
         // DPI and sizing
-        var dpi = VisualTreeHelper.GetDpi(this);
+        var dpi = UIElementUtil.GetDpi();
         System.Drawing.Rectangle resolution = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
-        var defaultHeight = resolution.Height * 0.75 / dpi.DpiScaleY;
-        var defaultWidth = resolution.Width * 0.85 / dpi.DpiScaleX;
+        var defaultHeight = resolution.Height * 0.75 / dpi;
+        var defaultWidth = resolution.Width * 0.85 / dpi;
         Height = ConfigUtil.GetSettingAsDouble("WindowHeight", defaultHeight);
         Width = ConfigUtil.GetSettingAsDouble("WindowWidth", defaultWidth);
 

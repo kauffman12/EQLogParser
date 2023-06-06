@@ -295,31 +295,31 @@ namespace EQLogParser
           contentLabels.Measure(contentLabels.RenderSize);
           content.Measure(content.RenderSize);
 
-          var dpiScale = VisualTreeHelper.GetDpi(titlePane);
+          var dpiScale = UIElementUtil.GetDpi();
           var titleHeight = titlePane.ActualHeight;
           var titleWidth = titlePane.DesiredSize.Width;
 
           // create title image
           var rtb = new RenderTargetBitmap((int)contentLabels.ActualWidth + (int)content.ActualWidth,
-            (int)titleHeight, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Default);
+            (int)titleHeight, dpiScale, dpiScale, PixelFormats.Default);
           rtb.Render(titlePane);
           var titleImage = BitmapFrame.Create(rtb);
 
           // create content header image
           rtb = new RenderTargetBitmap((int)contentHeader.ActualWidth, (int)contentHeader.ActualHeight,
-            dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Default);
+            dpiScale, dpiScale, PixelFormats.Default);
           rtb.Render(contentHeader);
           var headerImage = BitmapFrame.Create(rtb);
 
           // create labels pane image
           rtb = new RenderTargetBitmap((int)contentLabels.ActualWidth, (int)contentLabels.ActualHeight,
-            dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Default);
+            dpiScale, dpiScale, PixelFormats.Default);
           rtb.Render(contentLabels);
           var labelsImage = BitmapFrame.Create(rtb);
 
           // create content pane image
           rtb = new RenderTargetBitmap((int)content.ActualWidth, (int)content.ActualHeight,
-            dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Default);
+            dpiScale, dpiScale, PixelFormats.Default);
           rtb.Render(content);
           var contentImage = BitmapFrame.Create(rtb);
 
@@ -350,7 +350,7 @@ namespace EQLogParser
             }
           }
 
-          rtb = new RenderTargetBitmap(width, height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Default);
+          rtb = new RenderTargetBitmap(width, height, dpiScale, dpiScale, PixelFormats.Default);
 
           var dv = new DrawingVisual();
           using (DrawingContext ctx = dv.RenderOpen())

@@ -57,8 +57,8 @@ namespace EQLogParser
         var height = (int)content.ActualHeight + (int)titleHeight + (int)titlePadding;
         var width = (int)content.ActualWidth;
 
-        var dpiScale = VisualTreeHelper.GetDpi(content);
-        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height + 20, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Pbgra32);
+        var dpiScale = UIElementUtil.GetDpi();
+        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height + 20, dpiScale, dpiScale, PixelFormats.Pbgra32);
 
         DrawingVisual dv = new DrawingVisual();
         using (DrawingContext ctx = dv.RenderOpen())

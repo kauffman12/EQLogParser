@@ -217,21 +217,21 @@ namespace EQLogParser
 
               var titleHeight = titleLabel.ActualHeight;
               var titleWidth = titleLabel.DesiredSize.Width;
-              var dpiScale = VisualTreeHelper.GetDpi(gridBase);
+              var dpiScale = UIElementUtil.GetDpi();
 
               // create title image
-              RenderTargetBitmap rtb = new RenderTargetBitmap((int)tableWidth, (int)titleHeight, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Default);
+              RenderTargetBitmap rtb = new RenderTargetBitmap((int)tableWidth, (int)titleHeight, dpiScale, dpiScale, PixelFormats.Default);
               rtb.Render(titleLabel);
               var titleImage = BitmapFrame.Create(rtb);
 
               // create table image
-              rtb = new RenderTargetBitmap((int)tableWidth, (int)(tableHeight + titleHeight), dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Default);
+              rtb = new RenderTargetBitmap((int)tableWidth, (int)(tableHeight + titleHeight), dpiScale, dpiScale, PixelFormats.Default);
               rtb.Render(gridBase);
               var tableImage = BitmapFrame.Create(rtb);
 
               // add images together and fix missing background
               rtb = new RenderTargetBitmap((int)tableWidth, (int)(tableHeight + titleHeight),
-                dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, PixelFormats.Default);
+                dpiScale, dpiScale, PixelFormats.Default);
 
               var dv = new DrawingVisual();
               using (DrawingContext ctx = dv.RenderOpen())
