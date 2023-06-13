@@ -11,6 +11,7 @@ namespace EQLogParser
     private bool CurrentShowSpellsChoice = true;
     private List<PlayerStats> PlayerStats = null;
     private string Title;
+    private string Setting;
 
     private readonly List<string> ChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healed" };
     private readonly List<string> ReceivedChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healer" };
@@ -27,8 +28,10 @@ namespace EQLogParser
     {
       Title = currentStats?.ShortTitle;
       PlayerStats = selectedStats;
+      Setting = (received ? "Received" : "") + "HealingBreakdownShowSpells";
+      CurrentShowSpellsChoice = ConfigUtil.IfSet(Setting);
       choicesList.ItemsSource = received ? ReceivedChoicesList : ChoicesList;
-      choicesList.SelectedIndex = 0;
+      choicesList.SelectedIndex = CurrentShowSpellsChoice ? 0 : 1;
       Display();
     }
 
@@ -65,6 +68,7 @@ namespace EQLogParser
         dataGrid.ItemsSource = null;
         dataGrid.IsEnabled = false;
         UIElementUtil.SetEnabled(controlPanel.Children, false);
+        ConfigUtil.SetSetting(Setting, CurrentShowSpellsChoice.ToString());
         Display();
       }
     }

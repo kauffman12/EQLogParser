@@ -123,11 +123,6 @@ namespace EQLogParser
               if (action is SpellCast cast && !cast.Interrupted && cast.Caster == player && cast.SpellData != null && cast.SpellData.Target == (int)SpellTarget.SELF &&
                 cast.SpellData.Adps > 0 && (cast.SpellData.MaxHits > 0 || cast.SpellData.Duration <= 1800) && ClassFilter(cast.SpellData))
               {
-                if (string.IsNullOrEmpty(cast.SpellData.LandsOnOther))
-                {
-                  SelfOnly[cast.SpellData.NameAbbrv] = 1;
-                }
-
                 UpdateSpellRange(cast.SpellData, block.BeginTime, BlockBrushes[i], deathTimes);
               }
               else if (action is ReceivedSpell received && received.Receiver == player)

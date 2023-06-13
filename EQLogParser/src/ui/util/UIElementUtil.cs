@@ -6,27 +6,22 @@ namespace EQLogParser
 {
   class UIElementUtil
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
     internal static double GetDpi()
     {
       var dpi = 96.0;
-      LOG.Warn("Default DPI = " + dpi);
       PresentationSource source = PresentationSource.FromVisual(Application.Current.MainWindow);
       if (source != null)
       {
         var matrix = source.CompositionTarget.TransformToDevice;
         dpi = 96.0 * matrix.M11; // DPI X value
-        LOG.Warn("PresentationSource DPI = " + dpi);
       }
       else
       {
         var dpiTransform = VisualTreeHelper.GetDpi(Application.Current.MainWindow);
         dpi = dpiTransform.PixelsPerInchX; // DPI X value
-        LOG.Warn("VisualTreeHelper DPI = " + dpi);
       }
 
-      return dpi;
+      return 96.0; // workaround since I think the framework is scaling for us. This was breaking with 4K displays (120 DPI)
     }
 
     internal static void CheckHideTitlePanel(Panel titlePanel, Panel optionsPanel)
