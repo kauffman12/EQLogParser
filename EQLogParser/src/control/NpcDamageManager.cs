@@ -142,13 +142,6 @@ namespace EQLogParser
               stats.Max = Math.Max(processed.Record.Total, stats.Max);
               stats.Total += processed.Record.Total;
             }
-
-            // only a pet can 'hit' with a Flurry since players only crush/slash/punch/pierce with main hand weapons
-            if (processed.Record.AttackerOwner == null && processed.Record.Type == Labels.MELEE && processed.Record.SubType == "Hits" &&
-              LineModifiersParser.IsFlurry(processed.Record.ModifiersMask))
-            {
-              PlayerManager.Instance.AddVerifiedPet(processed.Record.Attacker);
-            }
           }
         }
         else
