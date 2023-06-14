@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PublishSingleFile>false</PublishSingleFile>
     <TargetFramework>net6.0-windows10.0.17763.0</TargetFramework>
@@ -175,7 +175,7 @@
     <PackageReference Include="Syncfusion.Tools.WPF" Version="20.4.0.43" />
     <PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="20.4.0.43" />
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.1" />
+    <PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.6" />
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="..\..\..\..\..\..\Program Files %28x86%29\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\System.IO.Compression.dll" />
