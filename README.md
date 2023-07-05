@@ -2,7 +2,7 @@
 Everquest Log Parser for Live/TLP servers with basic support for P99.
 
 Latest Release of EQLogParser:</br>
-https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-2.1.20.msi
+https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-2.1.21.msi
 
 ### IMPORTANT --- If after install the Log Search feature crashes and you're missing Syncfusion.Edit.WPF.dll and Syncfusion.GridCommon.WPF.dll from where you installed  EQLogParser.. try running the installer again and choosing Repair to fix the problem.
 
@@ -11,7 +11,7 @@ Minimum Requirements:
 2. .Net 6.0 Desktop Runtime for x64
 
 .Net 6.0 is provided by Microsoft but is not included with Windows. It can be downloaded from here:</br>
-https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.7-windows-x64-installer
+https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.19-windows-x64-installer
 
 If Everquest is in windowed mode but the Damage Meter gets hidden when you switch to the game. Make sure Overlap with Taskbar is turned off:</br>
 

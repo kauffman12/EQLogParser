@@ -1,6 +1,7 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
 using System.ComponentModel;
 using System.Reflection;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -28,6 +29,11 @@ namespace EQLogParser
     public void Detach(PropertyViewItem property)
     {
       TheTimerBar = null;
+    }
+
+    public bool ShouldPropertyGridTryToHandleKeyDown(Key key)
+    {
+      return false;
     }
   }
 }

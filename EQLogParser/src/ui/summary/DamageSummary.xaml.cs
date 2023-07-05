@@ -270,7 +270,7 @@ namespace EQLogParser
     private void EventsClearedActiveData(object sender, bool cleared)
     {
       CurrentStats = null;
-      dataGrid.ItemsSource = null;
+      dataGrid.ItemsSource = NoResultsList;
       title.Content = DEFAULT_TABLE_LABEL;
     }
 
@@ -281,10 +281,8 @@ namespace EQLogParser
         switch (e.State)
         {
           case "STARTED":
-            prog.Visibility = Visibility.Hidden;
-            SelectionTimer.Stop();
             title.Content = "Calculating DPS...";
-            dataGrid.ItemsSource = null;
+            dataGrid.ItemsSource = NoResultsList;
             break;
           case "COMPLETED":
             CurrentStats = e.CombinedStats;
@@ -329,6 +327,10 @@ namespace EQLogParser
             UpdateDataGridMenuItems();
             break;
         }
+
+        // always stop
+        SelectionTimer.Stop();
+        prog.Visibility = Visibility.Hidden;
       });
     }
 
@@ -391,7 +393,7 @@ namespace EQLogParser
 
     private void RequestTreeItems(object sender, TreeGridRequestTreeItemsEventArgs e)
     {
-      if (dataGrid.ItemsSource is List<PlayerStats> playerList)
+      if (dataGrid.ItemsSource is List<PlayerStats>)
       {
         if (e.ParentItem == null)
         {

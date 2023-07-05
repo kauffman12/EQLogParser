@@ -15,6 +15,7 @@ namespace EQLogParser
   {
     internal const string DEFAULT_TABLE_LABEL = "No NPCs Selected";
     internal const string NODATA_TABLE_LABEL = Labels.NODATA;
+    internal readonly List<PlayerStats> NoResultsList = new List<PlayerStats>();
 
     internal event EventHandler<PlayerStatsSelectionChangedEventArgs> EventsSelectionChange;
 
@@ -50,7 +51,7 @@ namespace EQLogParser
       DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
 
       // workaround to avoid drag/drop failing when grid has no data
-      TheDataGrid.ItemsSource = new List<PlayerStats>();
+      TheDataGrid.ItemsSource = NoResultsList;
     }
 
     internal virtual bool IsPetsCombined() => false;
