@@ -131,7 +131,7 @@ namespace EQLogParser
     private void EventsClearedActiveData(object sender, bool cleared)
     {
       CurrentStats = null;
-      dataGrid.ItemsSource = null;
+      dataGrid.ItemsSource = NoResultsList;
       title.Content = DEFAULT_TABLE_LABEL;
     }
 
@@ -143,7 +143,7 @@ namespace EQLogParser
         {
           case "STARTED":
             title.Content = "Calculating HPS...";
-            dataGrid.ItemsSource = null;
+            dataGrid.ItemsSource = NoResultsList;
             break;
           case "COMPLETED":
             CurrentStats = e.CombinedStats;

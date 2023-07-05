@@ -24,6 +24,7 @@ Glyph of Destruction=15
 Glyph of Ultimate Power V=15
 Illusions of Grandeur=13
 Intensity of the Resolute=50
+Spire of Ancestors=30
 Spire of Necromancy=25
 Spire of the Reavers=25
 Spirit of Vesagran=12
