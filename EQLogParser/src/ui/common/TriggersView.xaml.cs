@@ -697,7 +697,7 @@ namespace EQLogParser
         importMenuItem.IsEnabled = !node.IsTrigger && !node.IsOverlay && count == 1;
         newMenuItem.IsEnabled = !node.IsTrigger && !node.IsOverlay && count == 1;
         cutItem.IsEnabled = copyItem.IsEnabled = (node.IsTrigger || node.IsOverlay) && count == 1;
-        pasteItem.IsEnabled = !node.IsTrigger && !node.IsOverlay && count == 1 && CopiedNode != null && 
+        pasteItem.IsEnabled = !node.IsTrigger && !node.IsOverlay && count == 1 && CopiedNode != null &&
           (CopiedNode.IsOverlay && node == treeView.Nodes[1] || CopiedNode.IsTrigger && node != treeView.Nodes[1]);
       }
       else
@@ -1103,7 +1103,7 @@ namespace EQLogParser
         var list = thePropertyGrid.Properties.ToList();
         var longestProp = PropertyGridUtil.FindProperty(list, evalTimeItem.PropertyName);
 
-        bool isValid =  TestRegexProperty(trigger.UseRegex, trigger.Pattern, PatternEditor);
+        bool isValid = TestRegexProperty(trigger.UseRegex, trigger.Pattern, PatternEditor);
         isValid = isValid && TestRegexProperty(trigger.EndUseRegex, trigger.EndEarlyPattern, EndEarlyPatternEditor);
         isValid = isValid && TestRegexProperty(trigger.EndUseRegex2, trigger.EndEarlyPattern2, EndEarlyPattern2Editor);
 
