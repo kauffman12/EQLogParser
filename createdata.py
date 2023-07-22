@@ -8,13 +8,16 @@ DBSpellsStrFile = 'spells_us_str.txt'
 ADPS_CASTER_VALUE = 1
 ADPS_MELEE_VALUE = 2
 ADPS_TANK_VALUE = 4
-ADPS_ALL_VALUE = ADPS_CASTER_VALUE + ADPS_MELEE_VALUE + ADPS_TANK_VALUE
+ADPS_HEALER_VALUE = 8
+ADPS_ALL_VALUE = ADPS_CASTER_VALUE + ADPS_MELEE_VALUE + ADPS_TANK_VALUE + ADPS_HEALER_VALUE
 ADPS_CASTER = [ 8, 9, 15, 97, 118, 124, 127, 132, 170, 212, 273, 286, 294, 302, 303, 339, 351, 358, 374, 375, 383, 399, 413, 461, 462, 501, 507 ]
 ADPS_MELEE = [ 2, 4, 5, 11, 118, 119, 169, 171, 176, 177, 182, 184, 185, 186, 189, 190, 198, 200, 201, 216, 220, 225, 227, 250, 252, 258, 266, 276, 279, 280, 301, 330, 339, 351, 364, 374, 383, 418, 427, 429, 433, 459, 471, 473, 482, 496, 498, 499, 503 ]
-ADPS_TANK = [ 1, 6, 7, 55, 114, 120, 125, 161, 162, 163, 168, 174, 175, 178, 181, 188, 197, 213, 214, 214, 259, 320, 323, 393, 405, 450, 451, 452, 505, 515, 516 ]
-ADPS_LIST = ADPS_CASTER + ADPS_MELEE + ADPS_TANK
-ADPS_B1_MIN = { 11: 100 }
+ADPS_TANK = [ 1, 6, 7, 55, 114, 120, 125, 147, 161, 162, 163, 168, 172, 173, 174, 175, 178, 181, 188, 197, 213, 214, 214, 259, 320, 323, 393, 405, 450, 451, 452, 505, 515, 516 ]
+ADPS_HEALER = [ 9, 15, 44, 97, 120, 125, 127, 132, 274, 392, 394, 395, 396, 399, 400, 501 ]
+ADPS_LIST = ADPS_CASTER + ADPS_MELEE + ADPS_TANK + ADPS_HEALER
+ADPS_B1_MIN = { 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 11: 100 }
 ADPS_B1_MAX = { 182: 0, 197: 0 }
+ADPS_BEN_DET = [ 399 ]
 IGNORE = [ 'Test Shield', 'SKU', 'SummonTest', ' Test', 'test atk', 'PvPS', 'BetaTestSpell', 'AA_SPELL_PH', 'test speed', ' test', 'Beta ', 'GM ', 'BetaAcrylia', 'NA ', 'MRC -', '- RESERVED', 'N/A', 'SKU27', 'Placeholder', 'Type3', 'Type 3', 'AVCReserved', ' ID Focus ', 'Use Ability', 'Beta Fish' ]
 IS_TARGETRING = [ 'Issuance' ]
 
@@ -368,16 +371,20 @@ def abbreviate(name):
           result = result + ' Root' 
   return result
   
-def getAdpsValueFromSpa(current, spa):
+def getAdpsValueFromSpa(current, spa, requireDet):
   if current == ADPS_ALL_VALUE:
     return current
   updated = 0
   if spa in ADPS_CASTER:
-    updated = ADPS_CASTER_VALUE
+    if spa not in ADPS_BEN_DET or (requireDet == None or requireDet == True):
+      updated = ADPS_CASTER_VALUE
   if spa in ADPS_MELEE:
     updated = updated + ADPS_MELEE_VALUE
   if spa in ADPS_TANK:
     updated = updated + ADPS_TANK_VALUE
+  if spa in ADPS_HEALER:
+    if spa not in ADPS_BEN_DET or (requireDet == None or requireDet == False):
+      updated = updated + ADPS_HEALER_VALUE
   if current > 0:
     updated = updated | current 
   return updated
@@ -521,8 +528,13 @@ if os.path.isfile(DBSpellsFile):
     adps = getAdpsValueFromSkill(0, skill, endurance)
     damaging = 0
     charm = False
+    requireDet = None
     
-    for slot in data[-1].split('$'):
+    # process in reverse order
+    slots = data[-1].split('$')
+    slots.reverse()
+
+    for slot in slots:
       values = slot.split('|')
       if len(values) > 1:
         spa = int(values[1])
@@ -531,6 +543,8 @@ if os.path.isfile(DBSpellsFile):
         
         if spa == 22:
           charm = True
+        if spa == 138:
+          requireDet = (base1 == '0')
 
         if spa == 0 or spa == 79 or spa == 100:
           if int(base1) > 0:
@@ -543,12 +557,12 @@ if os.path.isfile(DBSpellsFile):
         if spa in ADPS_LIST:
           if spa in ADPS_B1_MIN:
             if int(base1) >= ADPS_B1_MIN[spa]:
-              adps = getAdpsValueFromSpa(adps, spa)
+              adps = getAdpsValueFromSpa(adps, spa, requireDet)
           elif spa in ADPS_B1_MAX:
             if int(base1) < ADPS_B1_MAX[spa]:
-              adps = getAdpsValueFromSpa(adps, spa)
+              adps = getAdpsValueFromSpa(adps, spa, requireDet)
           elif int(base1) >= 0:
-            adps = getAdpsValueFromSpa(adps, spa)           
+            adps = getAdpsValueFromSpa(adps, spa, requireDet)
             
         if spa == 339 and int(base2) > 0:
           spa339s[base2] = id

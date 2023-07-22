@@ -224,7 +224,7 @@ namespace EQLogParser
         var main = Application.Current.MainWindow as MainWindow;
         if (Helpers.OpenWindow(main.dockSite, null, out ContentControl timeline, typeof(GanttChart), "defensiveTimeline", "Defensive Timeline"))
         {
-          ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, true);
+          ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 0);
         }
       }
     }

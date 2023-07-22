@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.1.22" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.1.23" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -48,7 +48,7 @@
       <Dialog Id="CheckDotNetDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="no">
         <Control Id="Text1" Type="Text" X="40" Y="74" Width="280" Height="40" TabSkip="no" Text="Microsoft .Net 6.0 Desktop Runtime is now required. It may be downloaded from the link below. After it is installed, try EQLogParser again." />
         <Control Id="Link1" Type="Hyperlink" X="40" Y="116" Width="290" Height="40" Transparent="yes">
-          <Text><![CDATA[<a href="https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.7-windows-x64-installer">https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.7-windows-x64-installer</a>]]></Text>
+          <Text><![CDATA[<a href="https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.19-windows-x64-installer">https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.19-windows-x64-installer</a>]]></Text>
         </Control>     
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
           <Publish Event="NewDialog" Value="WelcomeDlg">1</Publish>
