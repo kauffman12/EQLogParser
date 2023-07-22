@@ -22,8 +22,8 @@ namespace EQLogParser
       { "bash", "bashes" }, { "backstab", "backstabs" }, { "bite", "bites" }, { "claw", "claws" }, { "crush", "crushes" },
       { "frenzy", "frenzies" }, { "gore", "gores" }, { "hit", "hits" }, { "kick", "kicks" }, { "learn", "learns" },
       { "maul", "mauls" }, { "punch", "punches" }, { "pierce", "pierces" }, { "rend", "rends" }, { "shoot", "shoots" },
-      { "slash", "slashes" }, { "slam", "slams" }, { "slice", "slices" }, { "smash", "smashes" }, { "sting", "stings" },
-      { "strike", "strikes" }, { "sweep", "sweeps" }
+      { "slash", "slashes" }, { "slam", "slams" }, { "slice", "slices" }, { "smash", "smashes" }, { "stab", "stabs" },
+      { "sting", "stings" }, { "strike", "strikes" }, { "sweep", "sweeps" }
     };
 
     private static readonly Dictionary<string, string> HitAdditionalMap = new Dictionary<string, string>

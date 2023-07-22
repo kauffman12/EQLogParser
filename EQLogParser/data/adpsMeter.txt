@@ -18,6 +18,7 @@ Spirit of Vesagran=12
 
 #DoTCritRate
 Auspice of the Hunter=33
+Curse of Muram=40
 Destructive Vortex=10
 Fierce Eye=17
 Glyph of Destruction=15

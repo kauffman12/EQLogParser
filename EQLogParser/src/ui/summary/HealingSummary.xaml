@@ -97,6 +97,11 @@
             </MenuItem>
           </MenuItem>
           <Separator />
+          <MenuItem x:Name="menuItemShowHealingTimeline" IsEnabled="False" Header="Healing Timeline" Click="DataGridHealingTimelineClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="showHealingTimelineIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Film" />
+            </MenuItem.Icon>
+          </MenuItem>
           <MenuItem x:Name="menuItemShowSpellCasts" IsEnabled="False" Header="Spell Cast Order">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="showSpellCastsIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_ListOl" />

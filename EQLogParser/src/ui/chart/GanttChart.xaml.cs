@@ -26,7 +26,9 @@ namespace EQLogParser
     private const ushort CASTER_ADPS = 1;
     private const ushort MELEE_ADPS = 2;
     private const ushort TANK_ADPS = 4;
-    private const ushort ANY_ADPS = CASTER_ADPS + MELEE_ADPS + TANK_ADPS;
+    private const ushort HEALING_ADPS = 8;
+    private const ushort ANY_ADPS = CASTER_ADPS + MELEE_ADPS + TANK_ADPS + HEALING_ADPS;
+    private readonly string[] TYPES = new string[] { "Defensive Skills", "ADPS", "Healing Skills" };
 
     private readonly Dictionary<string, SpellRange> SpellRanges = new Dictionary<string, SpellRange>();
     private readonly List<Rectangle> Dividers = new List<Rectangle>();
@@ -37,7 +39,7 @@ namespace EQLogParser
     private double EndTime;
     private double Length;
     private List<PlayerStats> Selected;
-    private bool TankingMode;
+    private int TimelineType;
 
     private bool CurrentShowSelfOnly = false;
     private bool CurrentShowCasterAdps = true;
@@ -48,32 +50,31 @@ namespace EQLogParser
       InitializeComponent();
     }
 
-    internal void Init(CombinedStats currentStats, List<PlayerStats> selected, List<List<ActionBlock>> groups, bool tanking = false)
+    // timelineType 0 = tanking, 1 = dps, 2 = healing
+    internal void Init(CombinedStats currentStats, List<PlayerStats> selected, List<List<ActionBlock>> groups, int timelineType)
     {
-      if (selected != null && selected.Count > 0)
+      if (selected != null && selected.Count > 0 && timelineType >= 0 && timelineType <= 2)
       {
-        TankingMode = tanking;
+        TimelineType = timelineType;
         Selected = selected;
         StartTime = groups.Min(block => block.First().BeginTime) - DataManager.BUFFS_OFFSET;
         EndTime = groups.Max(block => block.Last().BeginTime) + 1;
         Length = EndTime - StartTime;
 
-        string type = TankingMode ? "Defensive Skills" : "ADPS";
         switch (Selected.Count)
         {
           case 1:
-            titleLabel1.Content = Selected[0].OrigName + "'s " + type + " | " + currentStats?.ShortTitle;
+            titleLabel1.Content = Selected[0].OrigName + "'s " + TYPES[TimelineType] + " | " + currentStats?.ShortTitle;
             break;
           case 2:
             titleLabel1.Content = Selected[0].OrigName + " vs ";
             titleLabel2.Content = Selected[1].OrigName + "'s ";
-            titleLabel3.Content = type + " | " + currentStats?.ShortTitle;
+            titleLabel3.Content = TYPES[TimelineType] + " | " + currentStats?.ShortTitle;
             break;
         }
 
-        if (tanking)
+        if (TimelineType == 0 || TimelineType == 2)
         {
-          //showSelfOnly.Visibility = Visibility.Hidden;
           showMeleeAdps.Visibility = Visibility.Hidden;
           showCasterAdps.Visibility = Visibility.Hidden;
         }
@@ -172,7 +173,8 @@ namespace EQLogParser
 
     private bool ClassFilter(SpellData data)
     {
-      return (TankingMode && (data.Adps & TANK_ADPS) != 0) || (!TankingMode && ((data.Adps & CASTER_ADPS) != 0 || (data.Adps & MELEE_ADPS) != 0));
+      return (TimelineType == 0 && (data.Adps & TANK_ADPS) != 0) || (TimelineType == 1 && ((data.Adps & CASTER_ADPS) != 0 || (data.Adps & MELEE_ADPS) != 0)) ||
+        (TimelineType == 2 && (data.Adps & HEALING_ADPS) != 0);
     }
 
     private void UpdateSpellRange(SpellData spellData, double beginTime, string brush, HashSet<double> deathTimes = null)
@@ -377,7 +379,8 @@ namespace EQLogParser
         if ((CurrentShowSelfOnly || !SelfOnly.ContainsKey(key))
           && (CurrentShowCasterAdps && ((spellRange.Adps & CASTER_ADPS) == CASTER_ADPS)
           || CurrentShowMeleeAdps && ((spellRange.Adps & MELEE_ADPS) == MELEE_ADPS)
-          || TankingMode && ((spellRange.Adps & TANK_ADPS) == TANK_ADPS)) && !Ignore.ContainsKey(key))
+          || TimelineType == 0 && ((spellRange.Adps & TANK_ADPS) == TANK_ADPS)
+          || TimelineType == 2 && ((spellRange.Adps & HEALING_ADPS) == HEALING_ADPS)) && !Ignore.ContainsKey(key))
         {
           int hPos = ROW_HEIGHT * row;
           AddGridRow(hPos, key);
@@ -590,7 +593,7 @@ namespace EQLogParser
       int duration = spell.Duration > 0 ? spell.Duration : 6;
 
       // tanking hits happen a lot faster than spell casting so have our guesses be 1/3 as long
-      var mod = TankingMode ? 3 : 1;
+      var mod = TimelineType == 0 ? 3 : 1;
 
       if (spell.MaxHits > 0)
       {
