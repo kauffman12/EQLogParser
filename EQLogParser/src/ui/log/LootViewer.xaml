@@ -35,6 +35,7 @@
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <ComboBox Margin="0,0,0,2" x:Name="playersList" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,0,2" x:Name="itemsList" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,0,2" x:Name="npcsList" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,8,2" x:Name="optionsList" SelectionChanged="OptionsChanged" />
       <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Refresh</Button>
     </StackPanel>

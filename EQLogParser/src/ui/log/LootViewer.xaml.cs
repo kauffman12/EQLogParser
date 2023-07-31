@@ -1,4 +1,5 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -14,6 +15,7 @@ namespace EQLogParser
   /// </summary>
   public partial class LootViewer : UserControl, IDisposable
   {
+    private const string ALLNPCS = "All NPCs";
     private const string ALLPLAYERS = "All Players";
     private const string ALLITEMS = "All Loot";
     private const string ONLYASS = "Only Assigned";
@@ -26,6 +28,7 @@ namespace EQLogParser
     private bool ShowSummaryView = false;
     private string CurrentSelectedItem = ALLITEMS;
     private string CurrentSelectedPlayer = ALLPLAYERS;
+    private string CurrentSelectedNpc = ALLNPCS;
 
     public LootViewer()
     {
@@ -57,6 +60,7 @@ namespace EQLogParser
       List<LootRow> totalRecords = new List<LootRow>();
       Dictionary<string, byte> uniquePlayers = new Dictionary<string, byte>();
       Dictionary<string, byte> uniqueItems = new Dictionary<string, byte>();
+      Dictionary<string, byte> uniqueNpcs = new Dictionary<string, byte>();
 
       List<string> players = new List<string>
       {
@@ -71,6 +75,11 @@ namespace EQLogParser
         ONLYITEMS
       };
 
+      List<string> npcs = new List<string>
+      {
+       ALLNPCS
+      };
+
       DataManager.Instance.GetAllLoot().ForEach(block =>
       {
         // lock since actions can be removed by the parsing thread
@@ -83,6 +92,13 @@ namespace EQLogParser
               IndividualRecords.Add(CreateRow(looted, block.BeginTime));
               UpdateTotals(totalRecords, looted);
               uniquePlayers[looted.Player] = 1;
+
+              // currency loots/splits
+              if (!string.IsNullOrEmpty(looted.Npc))
+              {
+                uniqueNpcs[looted.Npc] = 1;
+              }
+
               if (!looted.IsCurrency)
               {
                 uniqueItems[looted.Item] = 1;
@@ -102,6 +118,11 @@ namespace EQLogParser
         itemNames.Add(item);
       }
 
+      foreach (ref var npc in uniqueNpcs.Keys.OrderBy(npc => npc).ToArray().AsSpan())
+      {
+        npcs.Add(npc);
+      }
+
       foreach (ref var row in totalRecords.OrderByDescending(row => row.Quantity).ToArray().AsSpan())
       {
         TotalRecords.Add(row);
@@ -109,8 +130,10 @@ namespace EQLogParser
 
       itemsList.ItemsSource = itemNames;
       playersList.ItemsSource = players;
+      npcsList.ItemsSource = npcs;
       itemsList.SelectedItem = CurrentSelectedItem;
       playersList.SelectedItem = CurrentSelectedPlayer;
+      npcsList.SelectedItem = CurrentSelectedNpc;
 
       dataGrid?.View?.Refresh();
       UpdateTitle();
@@ -129,6 +152,7 @@ namespace EQLogParser
         ShowSummaryView = optionsList.SelectedIndex != 0;
         CurrentSelectedPlayer = playersList.SelectedItem as string;
         CurrentSelectedItem = itemsList.SelectedItem as string;
+        CurrentSelectedNpc = npcsList.SelectedItem as string;
 
         if (ShowSummaryView && dataGrid.ItemsSource != TotalRecords)
         {
@@ -160,6 +184,8 @@ namespace EQLogParser
           found = (CurrentSelectedItem == ALLITEMS || row.IsCurrency && CurrentSelectedItem == ONLYCURR ||
           !row.IsCurrency && CurrentSelectedItem == ONLYITEMS || CurrentSelectedItem == ONLYASS && !row.IsCurrency && row.Quantity == 0 || CurrentSelectedItem == row.Item) &&
           (CurrentSelectedPlayer == ALLPLAYERS || row.Player == CurrentSelectedPlayer);
+
+          found = found && (CurrentSelectedNpc == ALLNPCS || row.Npc == CurrentSelectedNpc);
         }
 
         return found;

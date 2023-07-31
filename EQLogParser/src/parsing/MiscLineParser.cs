@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows.Documents;
 
 namespace EQLogParser
 {
@@ -33,6 +34,7 @@ namespace EQLogParser
           // [Sun Mar 01 23:51:02 2020] You receive 129 platinum, 2 gold and 1 copper as your split (with a lucky bonus).
           // [Sun Feb 02 22:43:51 2020] You receive 28 platinum, 7 gold, 2 silver and 5 copper as your split.
           // [Sun Feb 02 23:31:23 2020] You receive 57 platinum as your split.
+          // [Tue Jul 25 11:34:22 2023] You receive 112 platinum, 5 gold and 5 silver from the corpse
           // [Fri Feb 07 22:01:20 2020] --Kizant has looted a Lesser Engraved Velium Rune from Velden Dragonbane's corpse.--
           // [Sat Feb 08 01:20:26 2020] --Proximoe has looted a Velium Infused Spider Silk from a restless devourer's corpse.--
           // [Sat Feb 08 21:21:36 2020] --You have looted a Cold-Forged Cudgel from Queen Dracnia's corpse.--
@@ -186,6 +188,12 @@ namespace EQLogParser
                   if (masterLootIndex > -1 && lootedIndex > masterLootIndex && split.Length > lootedIndex + 1 && split.Length > 3)
                   {
                     string name = split[3].TrimEnd(',');
+                    // if master looter is empty then it was the current player who looted
+                    if (string.IsNullOrEmpty(name))
+                    {
+                      name = ConfigUtil.PlayerName;
+                    }
+
                     if (ParseCurrency(split, lootedIndex + 1, i, out string item, out uint count))
                     {
                       PlayerManager.Instance.AddVerifiedPlayer(name, lineData.BeginTime);
@@ -206,6 +214,15 @@ namespace EQLogParser
                     {
                       PlayerManager.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
                       LootRecord record = new LootRecord { Item = item, Player = looter, Quantity = count, IsCurrency = false, Npc = npc };
+                      DataManager.Instance.AddLootRecord(record, lineData.BeginTime);
+                      handled = true;
+                    }
+                  }
+                  else if (receiveIndex > -1 && i > receiveIndex && string.IsNullOrEmpty(looter))
+                  {
+                    if (ParseCurrency(split, 2, i, out string item, out uint count))
+                    {
+                      LootRecord record = new LootRecord { Item = item, Player = ConfigUtil.PlayerName, Quantity = count, IsCurrency = true };
                       DataManager.Instance.AddLootRecord(record, lineData.BeginTime);
                       handled = true;
                     }
