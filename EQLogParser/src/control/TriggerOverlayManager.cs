@@ -514,7 +514,7 @@ namespace EQLogParser
       return list;
     }
 
-    private class WindowData 
+    private class WindowData
     {
       public Window TheWindow { get; set; }
       public long RemoveTicks { get; set; } = -1;

@@ -74,7 +74,7 @@ namespace EQLogParser
         else
         {
           menuItemShowBreakdown.IsEnabled = copyOptions.IsEnabled =
-            menuItemShowHealingLog.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyHealParseToEQClick.IsEnabled = 
+            menuItemShowHealingLog.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyHealParseToEQClick.IsEnabled =
             menuItemShowSpellCasts.IsEnabled = menuItemShowHealingTimeline.IsEnabled = false;
         }
       });
