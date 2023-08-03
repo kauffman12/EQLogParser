@@ -144,7 +144,7 @@ namespace EQLogParser
       EventsUpdateTree?.Invoke(this, true);
     }
 
-    internal void MergeTriggers(TriggerNode newTriggers,  bool doSort, TriggerNode parent = null)
+    internal void MergeTriggers(TriggerNode newTriggers, bool doSort, TriggerNode parent = null)
     {
       lock (TriggerNodes)
       {
@@ -391,7 +391,7 @@ namespace EQLogParser
             }
 
             if (endEarly)
-            {           
+            {
               bool isSound;
               string speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out isSound);
               speak = string.IsNullOrEmpty(speak) ? TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound) : speak;
@@ -461,7 +461,7 @@ namespace EQLogParser
             {
               var cancel = (result.Trigger.Priority < previous?.Priority);
               if (cancel && synth.State == SynthesizerState.Speaking)
-              {               
+              {
                 synth.SpeakAsyncCancelAll();
                 AddEntry("", previous, "Speech Canceled");
               }
@@ -613,7 +613,7 @@ namespace EQLogParser
           endEarlyPattern = UpdatePattern(trigger.EndUseRegex, ConfigUtil.PlayerName, endEarlyPattern, out List<NumberOptions> numberOptions2);
 
           if (trigger.EndUseRegex)
-          {           
+          {
             newTimerData.EndEarlyRegex = new Regex(endEarlyPattern, RegexOptions.IgnoreCase);
             newTimerData.EndEarlyRegexNOptions = numberOptions2;
           }
@@ -759,7 +759,7 @@ namespace EQLogParser
             };
 
             wrapper.ModifiedTimerName = string.IsNullOrEmpty(wrapper.ModifiedTimerName) ? "" : wrapper.ModifiedTimerName;
-            wrapper.HasRepeated = wrapper.ModifiedTimerName.Contains("{repeated}", StringComparison.OrdinalIgnoreCase); 
+            wrapper.HasRepeated = wrapper.ModifiedTimerName.Contains("{repeated}", StringComparison.OrdinalIgnoreCase);
             pattern = UpdatePattern(trigger.UseRegex, playerName, pattern, out List<NumberOptions> numberOptions);
 
             // temp
@@ -825,7 +825,7 @@ namespace EQLogParser
             }
           }
         }
-        
+
         if (Regex.Matches(pattern, @"{(n\d?)(<=|>=|>|<|=|==)?(\d+)?}", RegexOptions.IgnoreCase) is MatchCollection matches2 && matches2.Count > 0)
         {
           foreach (Match match in matches2)
@@ -930,7 +930,7 @@ namespace EQLogParser
           try
           {
             var json = JsonSerializer.Serialize(TriggerNodes, new JsonSerializerOptions { IncludeFields = true });
-            ConfigUtil.WriteConfigFile(TRIGGERS_FILE, json);           
+            ConfigUtil.WriteConfigFile(TRIGGERS_FILE, json);
           }
           catch (Exception ex)
           {

@@ -8,7 +8,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
-using System.Speech.Recognition;
 using System.Speech.Synthesis;
 using System.Text;
 using System.Text.Json;
@@ -131,7 +130,7 @@ namespace EQLogParser
           toModel.EndEarlySoundOrText = GetFromCodedSoundOrText(toModel.EndEarlySoundToPlay, toModel.EndEarlyTextToSpeak, out _);
           toModel.EndSoundOrText = GetFromCodedSoundOrText(toModel.EndSoundToPlay, toModel.EndTextToSpeak, out _);
           toModel.WarningSoundOrText = GetFromCodedSoundOrText(toModel.WarningSoundToPlay, toModel.WarningTextToSpeak, out _);
-          
+
           if (fromTrigger.EnableTimer && fromTrigger.TimerType == 0)
           {
             toModel.TimerType = 1;
