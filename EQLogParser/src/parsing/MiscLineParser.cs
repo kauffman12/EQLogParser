@@ -88,7 +88,7 @@ namespace EQLogParser
                 if (!string.IsNullOrEmpty(className) && !string.IsNullOrEmpty(player))
                 {
                   PlayerManager.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
-                  PlayerManager.Instance.SetPlayerClass(player, className);
+                  PlayerManager.Instance.SetPlayerClass(player, className, "Class chosen from /who list.");
                   handled = true;
                 }
               }

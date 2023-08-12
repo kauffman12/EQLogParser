@@ -4035,6 +4035,7 @@ Contact Poison I
 Contact Poison II
 Contact Poison III
 Contact Poison IV
+Crippling Snare
 Devout Rune
 Devout Rune I
 Devout Rune II
@@ -4065,6 +4066,14 @@ Fire XI
 Fire XII
 Fire XIII
 Fire XIV
+Fiery Strike I
+Fiery Strike II
+Fiery Strike III
+Fiery Strike IV
+Fiery Strike V
+Fiery Strike VI
+Fiery Strike VII
+Fiery Strike VIII
 Flame Strike
 Focused Apothic Healing
 Focused Sarnak's Strike

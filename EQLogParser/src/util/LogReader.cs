@@ -16,15 +16,13 @@ namespace EQLogParser
     private readonly string FileName;
     private readonly ParseLineCallback LoadingCallback;
     private bool Running = false;
-    private readonly bool MonitorOnly;
     private readonly int LastMins;
     private readonly DateUtil DateUtil = new DateUtil();
 
-    public LogReader(string fileName, ParseLineCallback loadingCallback, bool monitorOnly, int lastMins)
+    public LogReader(string fileName, ParseLineCallback loadingCallback, int lastMins)
     {
       FileName = fileName;
       LoadingCallback = loadingCallback;
-      MonitorOnly = monitorOnly;
       LastMins = lastMins;
     }
 
@@ -48,7 +46,7 @@ namespace EQLogParser
           if (!isGzip) // fs.Length works and we can seek properly
           {
             reader = new StreamReader(fs, System.Text.Encoding.UTF8, true, 4096);
-            if (!MonitorOnly && LastMins > -1 && fs.Length > 0)
+            if (LastMins > -1 && fs.Length > 0)
             {
               double now = DateTime.Now.Ticks / TimeSpan.FromSeconds(1).Ticks;
               long position = fs.Length / 2;
@@ -76,20 +74,13 @@ namespace EQLogParser
               reader.DiscardBufferedData();
               reader.ReadLine(); // seek will lead to partial line
             }
-
-            if (MonitorOnly)
-            {
-              fs.Seek(0, SeekOrigin.End);
-              FileLoadComplete = true;
-              LoadingCallback(null, fs.Position, dateTime);
-            }
           }
           else
           {
             gs = new GZipStream(fs, CompressionMode.Decompress);
             reader = new StreamReader(gs, System.Text.Encoding.UTF8, true, 4096);
 
-            if (!MonitorOnly && LastMins > -1 && fs.Length > 0)
+            if (LastMins > -1 && fs.Length > 0)
             {
               double now = DateTime.Now.Ticks / TimeSpan.FromSeconds(1).Ticks;
               while (!reader.EndOfStream)
@@ -105,18 +96,6 @@ namespace EQLogParser
 
               // complete
               LoadingCallback(null, fs.Position, dateTime);
-            }
-
-            if (MonitorOnly)
-            {
-              char[] block = new char[16384];
-              while (!reader.EndOfStream)
-              {
-                reader.ReadBlock(block, 0, block.Length);
-              }
-
-              FileLoadComplete = true;
-              LoadingCallback(null, fs.Position, DateUtil.ToDouble(DateTime.Now));
             }
           }
 

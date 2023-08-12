@@ -16,18 +16,18 @@
     </Grid.RowDefinitions>
     <syncfusion:SfLinearProgressBar Grid.Row="1" x:Name="progress" Height="16" Margin="0,0,2,0" IndicatorCornerRadius="2" Progress="60">
       <syncfusion:SfLinearProgressBar.Effect>
-        <DropShadowEffect ShadowDepth="2" Direction="280" Color="Black" Opacity="0.3" BlurRadius="1"/>
+        <DropShadowEffect ShadowDepth="2" Direction="270" Color="Black" Opacity="0.3" BlurRadius="1"/>
       </syncfusion:SfLinearProgressBar.Effect>
     </syncfusion:SfLinearProgressBar>
     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0">
       <TextBlock x:Name="time" Text="xx:xx" VerticalAlignment="Center" FontSize="14" FontFamily="Consolas" Foreground="White" Margin="3,0,0,0" >
         <TextBlock.Effect>
-          <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.5" BlurRadius="3"/>
+          <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.7" BlurRadius="0"/>
         </TextBlock.Effect>
       </TextBlock>
       <TextBlock x:Name="title" Text="Timer #1" VerticalAlignment="Center" FontSize="14" FontFamily="Consolas" Foreground="White" Margin="6,0,0,0">
         <TextBlock.Effect>
-          <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.5" BlurRadius="3"/>
+          <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.7" BlurRadius="0"/>
         </TextBlock.Effect>
       </TextBlock>
     </StackPanel>

@@ -44,7 +44,6 @@ namespace EQLogParser
     internal static string CurrentTheme = "MaterialDark";
 
     private static readonly ILog LOG = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private enum LogOption { OPEN, MONITOR };
     private static readonly Regex ParseFileName = new Regex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline);
     private static readonly List<string> DAMAGE_CHOICES = new List<string>()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damage", "Aggregate Crit Rate", "Aggregate Twincast Rate", "DPS", "Rolling DPS", "Rolling Damage", "# Attempts", "# Crits", "# Hits", "# Twincasts" };
@@ -62,8 +61,6 @@ namespace EQLogParser
 
     // progress window
     private static DateTime StartLoadTime;
-    private static LogOption CurrentLogOption;
-
     private DamageOverlayWindow DamageOverlay;
     private readonly DispatcherTimer ComputeStatsTimer;
     private ChatManager PlayerChatManager = null;
@@ -198,7 +195,7 @@ namespace EQLogParser
           var previousFile = ConfigUtil.GetSetting("LastOpenedFile");
           if (File.Exists(previousFile))
           {
-            OpenLogFile(LogOption.MONITOR, previousFile);
+            OpenLogFile(previousFile, 0);
           }
         }
         else
@@ -863,7 +860,7 @@ namespace EQLogParser
         lastMins = Convert.ToInt32(item.Tag.ToString(), CultureInfo.CurrentCulture) * 60;
       }
 
-      OpenLogFile(LogOption.OPEN, null, lastMins);
+      OpenLogFile(null, lastMins);
     }
 
     private void UpdateLoadingProgress()
@@ -887,11 +884,10 @@ namespace EQLogParser
 
           statusText.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;
 
-          if (((filePercent >= 100 && CastProcessor.GetPercentComplete() >= 100 && DamageProcessor.GetPercentComplete() >= 100
-            && HealingProcessor.GetPercentComplete() >= 100 && MiscProcessor.GetPercentComplete() >= 100) ||
-            CurrentLogOption == LogOption.MONITOR) && EQLogReader.FileLoadComplete)
+          if ((filePercent >= 100 && CastProcessor.GetPercentComplete() >= 100 && DamageProcessor.GetPercentComplete() >= 100
+            && HealingProcessor.GetPercentComplete() >= 100 && MiscProcessor.GetPercentComplete() >= 100) && EQLogReader.FileLoadComplete)
           {
-            if (filePercent >= 100 || CurrentLogOption == LogOption.MONITOR)
+            if (filePercent >= 100)
             {
               statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
               statusText.Text = "Monitoring Active";
@@ -923,7 +919,7 @@ namespace EQLogParser
       if (sender is SfDataGrid dataGrid && e.RowColumnIndex.RowIndex > 0 && dataGrid.View.GetRecordAt(e.RowColumnIndex.RowIndex - 1).Data is ExpandoObject obj)
       {
         dataGrid.SelectionController.CurrentCellManager.EndEdit();
-        PlayerManager.Instance.SetPlayerClass(((dynamic)obj)?.Name, ((dynamic)obj)?.PlayerClass);
+        PlayerManager.Instance.SetPlayerClass(((dynamic)obj)?.Name, ((dynamic)obj)?.PlayerClass, "Class selected by user.");
       }
     }
 
@@ -936,10 +932,8 @@ namespace EQLogParser
       }
     }
 
-    private void OpenLogFile(LogOption option, string previousFile = null, int lastMins = -1)
+    private void OpenLogFile(string previousFile, int lastMins)
     {
-      CurrentLogOption = option;
-
       try
       {
         string theFile;
@@ -1028,7 +1022,7 @@ namespace EQLogParser
           PlayerChatManager = new ChatManager();
           CurrentLogFile = theFile;
           NpcDamageManager.Reset();
-          EQLogReader = new LogReader(theFile, FileLoadingCallback, CurrentLogOption == LogOption.MONITOR, lastMins);
+          EQLogReader = new LogReader(theFile, FileLoadingCallback, lastMins);
           EQLogReader.Start();
           UpdateLoadingProgress();
         }
@@ -1285,7 +1279,6 @@ namespace EQLogParser
 
     private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
     private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
-    private void MenuItemSelectMonitorLogFileClick(object sender, RoutedEventArgs e) => OpenLogFile(LogOption.MONITOR);
     private void WindowClose(object sender, EventArgs e) => Close();
 
     #region IDisposable Support

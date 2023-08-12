@@ -38,6 +38,8 @@ namespace EQLogParser
 
     internal static bool IsCrit(int mask) => mask > -1 && (mask & CRIT) != 0;
 
+    internal static bool IsDoubleBowShot(int mask) => mask > -1 && (mask & DOUBLEBOW) != 0;
+
     internal static bool IsFinishingBlow(int mask) => mask > -1 && (mask & FINISHING) != 0;
 
     internal static bool IsFlurry(int mask) => mask > -1 && (mask & FLURRY) != 0;
@@ -239,6 +241,27 @@ namespace EQLogParser
           result = BuildVector(player, modifiers, currentTime);
           MaskCache[modifiers] = result;
         }
+
+        if (IsAssassinate(result))
+        {
+          PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
+          PlayerManager.Instance.SetPlayerClass(player, SpellClass.ROG, "Class chosen from use of Assassinate.");
+        }
+        else if (IsDoubleBowShot(result))
+        {
+          PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
+          PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG, "Class chosen from use of Double Bow Shot.");
+        }
+        else if (IsHeadshot(result))
+        {
+          PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
+          PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG, "Class chosen from use of Headshot.");
+        }
+        else if (IsSlayUndead(result))
+        {
+          PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
+          PlayerManager.Instance.SetPlayerClass(player, SpellClass.PAL, "Class closen from use of Slay Undead.");
+        }
       }
 
       return result;
@@ -272,12 +295,12 @@ namespace EQLogParser
             case "Assassinate":
               result |= ASSASSINATE;
               PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-              PlayerManager.Instance.SetPlayerClass(player, SpellClass.ROG);
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.ROG, "Class chosen from use of Assassinate.");
               break;
             case "Double Bow Shot":
               result |= DOUBLEBOW;
               PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-              PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG);
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG, "Class chosen from use of Double Bow Shot.");
               break;
             case "Finishing Blow":
               result |= FINISHING;
@@ -288,7 +311,7 @@ namespace EQLogParser
             case "Headshot":
               result |= HEADSHOT;
               PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-              PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG);
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG, "Class chosen from use of Headshot.");
               break;
             case "Twincast":
               result |= TWINCAST;
@@ -306,7 +329,7 @@ namespace EQLogParser
             case "Slay Undead":
               result |= SLAY;
               PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-              PlayerManager.Instance.SetPlayerClass(player, SpellClass.PAL);
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.PAL, "Class closen from use of Slay Undead.");
               break;
             case "Locked":
               // do nothing for now
