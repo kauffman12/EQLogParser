@@ -407,12 +407,19 @@ namespace EQLogParser
             double parsed = 0d;
             string name;
             string className = null;
+            string reason = "";
             var split = player.Split('=');
             if (split.Length == 2)
             {
               name = split[0];
               var split2 = split[1].Split(',');
-              if (split2.Length == 2)
+              if (split2.Length > 2)
+              {
+                double.TryParse(split2[0], out parsed);
+                className = split2[1];
+                reason = split2[2];
+              }
+              else if (split2.Length == 2)
               {
                 double.TryParse(split2[0], out parsed);
                 className = split2[1];
@@ -431,7 +438,7 @@ namespace EQLogParser
 
             if (className != null)
             {
-              SetPlayerClass(name, className);
+              SetPlayerClass(name, className, reason);
             }
           }
         });
@@ -483,6 +490,7 @@ namespace EQLogParser
                   ClassNames.TryGetValue(value.CurrentClass, out string className))
                 {
                   output += "," + className;
+                  output += "," + value.Reason;
                 }
 
                 list.Add(output);
@@ -497,11 +505,11 @@ namespace EQLogParser
       }
     }
 
-    internal void SetPlayerClass(string player, string className)
+    internal void SetPlayerClass(string player, string className, string reason)
     {
       if (ClassesByName.TryGetValue(className, out SpellClass value))
       {
-        SetPlayerClass(player, value);
+        SetPlayerClass(player, value, reason);
       }
       else
       {
@@ -509,7 +517,7 @@ namespace EQLogParser
       }
     }
 
-    internal void SetPlayerClass(string player, SpellClass theClass)
+    internal void SetPlayerClass(string player, SpellClass theClass, string reason)
     {
       if (!PlayerToClass.TryGetValue(player, out SpellClassCounter counter))
       {
@@ -522,14 +530,18 @@ namespace EQLogParser
 
       lock (counter)
       {
-        if (!theClass.Equals(counter.CurrentClass) || counter.CurrentMax != long.MaxValue)
+        if (!theClass.Equals(counter.CurrentClass) || counter.CurrentMax != long.MaxValue || string.IsNullOrEmpty(counter.Reason))
         {
-          counter.CurrentClass = theClass;
-          counter.Reason = "Class chosen manually or from unique player action.";
-          counter.ClassCounts[theClass] = long.MaxValue;
-          counter.CurrentMax = long.MaxValue;
-          EventsUpdatePlayerClass?.Invoke(player, ClassNames[theClass]);
-          LOG.Debug("Assigning " + player + " as " + theClass.ToString() + " from class specific action");
+          lock (LockObject)
+          {
+            counter.CurrentClass = theClass;
+            counter.Reason = reason;
+            counter.ClassCounts[theClass] = long.MaxValue;
+            counter.CurrentMax = long.MaxValue;
+            EventsUpdatePlayerClass?.Invoke(player, ClassNames[theClass]);
+            LOG.Debug("Assigning " + player + " as " + theClass.ToString() + ". " + reason);
+            PlayersUpdated = true;
+          }
         }
       }
     }
@@ -567,10 +579,14 @@ namespace EQLogParser
             counter.CurrentMax = newValue;
             if (!theClass.Equals(counter.CurrentClass))
             {
-              counter.CurrentClass = theClass;
-              counter.Reason = "Class chosen based on " + cast.Spell + ".";
-              EventsUpdatePlayerClass?.Invoke(cast.Caster, ClassNames[theClass]);
-              LOG.Debug("Assigning " + cast.Caster + " as " + theClass.ToString() + " from " + cast.Spell);
+              lock (LockObject)
+              {
+                counter.CurrentClass = theClass;
+                counter.Reason = "Class chosen based on " + cast.Spell + ".";
+                EventsUpdatePlayerClass?.Invoke(cast.Caster, ClassNames[theClass]);
+                LOG.Debug("Assigning " + cast.Caster + " as " + theClass.ToString() + " from " + cast.Spell);
+                PlayersUpdated = true;
+              }
             }
           }
         }

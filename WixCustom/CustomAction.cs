@@ -1,9 +1,9 @@
-using Microsoft.Deployment.WindowsInstaller;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
+using WixToolset.Dtf.WindowsInstaller;
 
 namespace WixCustom
 {
@@ -55,7 +55,7 @@ namespace WixCustom
           return ActionResult.Success;
         }
       }
-      catch (Exception _)
+      catch (Exception)
       {
         session["DOTNET6INSTALLED"] = "0";
         return ActionResult.Success;

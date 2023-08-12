@@ -24,15 +24,15 @@
     <listCollection:ArrayList>
       <Menu Height="26" FontSize="12" Width="285" Margin="0,0,0,2" VerticalAlignment="Bottom">
         <MenuItem Header="_File" Height="30" Width="40">
-          <MenuItem Header="_Monitor Log File" Height="24" Click="MenuItemSelectMonitorLogFileClick" ToolTip="Monitor Log File for changes">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Eye" />
-            </MenuItem.Icon>
-          </MenuItem>
           <MenuItem Header="Open and Monitor _Log File" Height="24" ToolTip="Open Log File, Archive Chat and Start Monitoring">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_FolderOpen" />
             </MenuItem.Icon>
+            <MenuItem Header="Now" Tag="0" Height="24" Click="MenuItemSelectLogFileClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_CalendarDay" />
+              </MenuItem.Icon>
+            </MenuItem>
             <MenuItem Header="Last Hour" Tag="1" Height="24" Click="MenuItemSelectLogFileClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_CalendarDay" />

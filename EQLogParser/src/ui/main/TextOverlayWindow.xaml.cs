@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 
 namespace EQLogParser
 {
@@ -175,7 +176,8 @@ namespace EQLogParser
         Margin = new Thickness(0),
         FontWeight = FontWeights.Bold,
         TextWrapping = TextWrapping.Wrap,
-        Visibility = Visibility.Hidden
+        Visibility = Visibility.Hidden,
+        Effect = new DropShadowEffect { ShadowDepth = 2, Direction = 330, Color = Colors.Black, Opacity = 0.7, BlurRadius = 0 }
       };
 
       block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + TheOverlay.Id);
