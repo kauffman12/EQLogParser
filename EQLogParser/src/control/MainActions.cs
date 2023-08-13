@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using FontAwesome5;
+using Microsoft.Win32;
 using Syncfusion.SfSkinManager;
 using Syncfusion.Themes.MaterialLight.WPF;
 using Syncfusion.UI.Xaml.Grid;
@@ -45,8 +46,8 @@ namespace EQLogParser
           var request = client.GetStringAsync(@"https://github.com/kauffman12/EQLogParser/blob/master/README.md");
           request.Wait();
 
-          var matches = new Regex(@"EQLogParser-((\d)\.(\d)\.(\d?\d?\d)).msi""").Match(request.Result);
-          if (matches.Success && matches.Groups.Count == 5 && int.TryParse(matches.Groups[2].Value, out int v1) &&
+          var matches = new Regex(@"EQLogParser-((\d)\.(\d)\.(\d?\d?\d))\.(msi|exe)").Match(request.Result);
+          if (matches.Success && matches.Groups.Count == 6 && int.TryParse(matches.Groups[2].Value, out int v1) &&
             int.TryParse(matches.Groups[3].Value, out int v2) && int.TryParse(matches.Groups[4].Value, out int v3)
             && (v1 > version.Major || (v1 == version.Major && v2 > version.Minor) ||
             (v1 == version.Major && v2 == version.Minor && v3 > version.Build)))
@@ -60,7 +61,8 @@ namespace EQLogParser
               if (msg.IsYes1Clicked)
               {
                 HttpClient client = null;
-                var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-" + matches.Groups[1].Value + ".msi";
+                var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-" + 
+                  matches.Groups[1].Value + "." + matches.Groups[5].Value;
 
                 try
                 {
@@ -159,6 +161,26 @@ namespace EQLogParser
       }
     }
 
+    internal static void CreateOpenLogMenuItems(MainWindow main, MenuItem parent, RoutedEventHandler callback)
+    {
+      parent.Items.Add(createMenuItem("Now", "0", callback, EFontAwesomeIcon.Solid_CalendarDay));
+      parent.Items.Add(createMenuItem("Last Hour", "1", callback, EFontAwesomeIcon.Solid_CalendarDay));
+      parent.Items.Add(createMenuItem("Last  8 Hours", "8", callback, EFontAwesomeIcon.Solid_CalendarDay));
+      parent.Items.Add(createMenuItem("Last 24 Hours", "24", callback, EFontAwesomeIcon.Solid_CalendarDay));
+      parent.Items.Add(createMenuItem("Last  7 Days", "168", callback, EFontAwesomeIcon.Solid_CalendarAlt));
+      parent.Items.Add(createMenuItem("Last 14 Days", "336", callback, EFontAwesomeIcon.Solid_CalendarAlt));
+      parent.Items.Add(createMenuItem("Last 30 Days", "720", callback, EFontAwesomeIcon.Solid_CalendarAlt));
+      parent.Items.Add(createMenuItem("Everything", null, callback, EFontAwesomeIcon.Solid_Infinity));
+      MenuItem createMenuItem(string name, string value, RoutedEventHandler handler, EFontAwesomeIcon awesome)
+      {
+        var imageAwesome = new ImageAwesome { Icon = awesome, Style = (Style)main.FindResource("EQIconStyle") };
+        var menuItem = new MenuItem { Header = name, Tag = value, Height = 24 };
+        menuItem.Click += handler;
+        menuItem.Icon = imageAwesome;
+        return menuItem;
+      }
+    }
+
     internal static void SetTheme(Window window, string theme)
     {
       if (window != null)
@@ -174,7 +196,7 @@ namespace EQLogParser
       }
     }
 
-    internal static void LoadTheme(MainWindow window, string theme)
+    internal static void LoadTheme(MainWindow main, string theme)
     {
       if (theme == "MaterialLight")
       {
@@ -188,15 +210,15 @@ namespace EQLogParser
         Application.Current.Resources["EQWarnForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFb02021") };
         Application.Current.Resources["EQStopForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFcc434d") };
         Application.Current.Resources["EQDisabledBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#88000000") };
-        SfSkinManager.SetTheme(window, new Theme("MaterialLight"));
+        SfSkinManager.SetTheme(main, new Theme("MaterialLight"));
         Helpers.LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/MSControl/CheckBox.xaml");
         Helpers.LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/SfDataGrid/SfDataGrid.xaml");
         Helpers.LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/Common/Brushes.xaml");
-        window.BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
+        main.BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
 
-        if (!string.IsNullOrEmpty(window.statusText?.Text))
+        if (!string.IsNullOrEmpty(main.statusText?.Text))
         {
-          window.statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
+          main.statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
         }
       }
       else
@@ -208,15 +230,15 @@ namespace EQLogParser
         Application.Current.Resources["EQWarnForegroundBrush"] = new SolidColorBrush { Color = Colors.Orange };
         Application.Current.Resources["EQStopForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFcc434d") };
         Application.Current.Resources["EQDisabledBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#88FFFFFF") };
-        SfSkinManager.SetTheme(window, new Theme("MaterialDarkCustom;MaterialDark"));
+        SfSkinManager.SetTheme(main, new Theme("MaterialDarkCustom;MaterialDark"));
         Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/CheckBox.xaml");
         Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfDataGrid/SfDataGrid.xaml");
         Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/Brushes.xaml");
-        window.BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
+        main.BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
 
-        if (!string.IsNullOrEmpty(window.statusText?.Text))
+        if (!string.IsNullOrEmpty(main.statusText?.Text))
         {
-          window.statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
+          main.statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
         }
       }
 

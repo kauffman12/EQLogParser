@@ -180,7 +180,7 @@ namespace EQLogParser
         enableDamageOverlay.Header = ConfigUtil.IfSet("IsDamageOverlayEnabled") ? "Disable _Meter" : "Enable _Meter";
 
         // create menu items for reading log files
-        CreateOpenLogMenuItems(fileOpenMenu, MenuItemSelectLogFileClick);
+        MainActions.CreateOpenLogMenuItems(this, fileOpenMenu, MenuItemSelectLogFileClick);
 
         // Load recent files
         if (ConfigUtil.GetSetting("RecentFiles") is string recentFiles && !string.IsNullOrEmpty(recentFiles))
@@ -1182,7 +1182,7 @@ namespace EQLogParser
 
           if (menuItem.Items.Count == 0)
           {
-            CreateOpenLogMenuItems(menuItem, MenuItemSelectLogFileClick);
+            MainActions.CreateOpenLogMenuItems(this, menuItem, MenuItemSelectLogFileClick);
           }
 
           if (count == 0)
@@ -1199,26 +1199,6 @@ namespace EQLogParser
             recentSeparator.Visibility = Visibility.Collapsed;
           }
         }
-      }
-    }
-
-    private void CreateOpenLogMenuItems(MenuItem parent, RoutedEventHandler callback)
-    {
-      parent.Items.Add(createMenuItem("Now", "0", callback, EFontAwesomeIcon.Solid_CalendarDay));
-      parent.Items.Add(createMenuItem("Last Hour", "1", callback, EFontAwesomeIcon.Solid_CalendarDay));
-      parent.Items.Add(createMenuItem("Last  8 Hours", "8", callback, EFontAwesomeIcon.Solid_CalendarDay));
-      parent.Items.Add(createMenuItem("Last 24 Hours", "24", callback, EFontAwesomeIcon.Solid_CalendarDay));
-      parent.Items.Add(createMenuItem("Last  7 Days", "168", callback, EFontAwesomeIcon.Solid_CalendarAlt));
-      parent.Items.Add(createMenuItem("Last 14 Days", "336", callback, EFontAwesomeIcon.Solid_CalendarAlt));
-      parent.Items.Add(createMenuItem("Last 30 Days", "720", callback, EFontAwesomeIcon.Solid_CalendarAlt));
-      parent.Items.Add(createMenuItem("Everything", null, callback, EFontAwesomeIcon.Solid_Infinity));
-      MenuItem createMenuItem(string name, string value, RoutedEventHandler handler, EFontAwesomeIcon awesome)
-      {
-        var imageAwesome = new ImageAwesome { Icon = awesome, Style = (Style) FindResource("EQIconStyle") };
-        var menuItem = new MenuItem { Header = name, Tag = value, Height = 24 };
-        menuItem.Click += handler;
-        menuItem.Icon = imageAwesome;
-        return menuItem;
       }
     }
 

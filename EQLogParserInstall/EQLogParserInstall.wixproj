@@ -49,7 +49,7 @@
     </ProjectReference>
     <ProjectReference Include="..\WixCustom\WixCustom.csproj">
       <Name>WixCustom</Name>
-      <Project>{c8306b69-9b59-4a69-a2ff-59062e796b0f}</Project>
+      <Project>{6b52a5c6-4231-4169-ac36-2848ab591bfd}</Project>
       <Private>True</Private>
       <DoNotHarvest>True</DoNotHarvest>
       <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
