@@ -1,14 +1,17 @@
-﻿<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
-	<Package Name="EQLogParser" Language="1033" Version="2.1.24" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688" InstallerVersion="200">	
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.1.24" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+
     <MajorUpgrade AllowDowngrades="yes" />
     <MediaTemplate EmbedCab="yes" />
 
     <WixVariable Id="WixUIBannerBmp" Value="banner.bmp" />
     <WixVariable Id="WixUIDialogBmp" Value="background.bmp" />
 
-    <Icon Id="icon.ico" SourceFile="$(var.EQLogParser.ProjectDir)\src\ui\main\EQLogParser.ico" />
+    <Icon Id="icon.ico" SourceFile="$(var.EQLogParser.ProjectDir)\src\ui\main\EQLogParser.ico"/>
     <Property Id="ARPPRODUCTICON" Value="icon.ico" />
-    <Property Id="DOTNET6INSTALLED" Value="0" />
+    <Property Id="DOTNET6INSTALLED">0</Property>
 
 		<Feature Id="ProductFeature" Title="EQLogParser" Level="1">
 			<ComponentGroupRef Id="ProductComponents" />
@@ -22,22 +25,22 @@
 		</Feature>
   
     <UI Id="WixUI_Advanced">
-      <ui:WixUI Id="WixUI_InstallDir" />
+      <UIRef Id="WixUI_InstallDir" />
       <DialogRef Id="CheckDotNetDlg" />
       <DialogRef Id="WhatsNewDlg" />
       <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
 
       <!-- Skip license dialog -->
-      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="CheckDotNetDlg" Order="1" Condition="DOTNET6INSTALLED=&quot;0&quot;" />
-      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="WhatsNewDlg" Order="1" Condition="DOTNET6INSTALLED=&quot;1&quot;" />
-      <Publish Dialog="SetupTypeDlg" Control="Back" Event="NewDialog" Value="CheckDotNetDlg" />
-      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WhatsNewDlg" Order="3" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="CheckDotNetDlg" Order="1">DOTNET6INSTALLED="0"</Publish>
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="WhatsNewDlg" Order="1">DOTNET6INSTALLED="1"</Publish>
+      <Publish Dialog="SetupTypeDlg" Control="Back" Event="NewDialog" Value="CheckDotNetDlg">1</Publish>
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WhatsNewDlg" Order="3">1</Publish>
     </UI>
-  </Package>
+  </Product>
 
   <Fragment>
     <Binary Id="CABinary" SourceFile="$(var.WixCustom.TargetDir)WixCustom.CA.dll" />
-    <CustomAction Id="CAID1" DllEntry="CheckDotNetVersion" Execute="firstSequence" BinaryRef="CABinary" />
+    <CustomAction Id="CAID1" BinaryKey="CABinary" DllEntry="CheckDotNetVersion" Execute="firstSequence" />
     <InstallUISequence>
       <Custom Action="CAID1" Before="LaunchConditions" />
     </InstallUISequence>
@@ -45,22 +48,22 @@
       <Dialog Id="CheckDotNetDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="no">
         <Control Id="Text1" Type="Text" X="40" Y="74" Width="280" Height="40" TabSkip="no" Text="Microsoft .Net 6.0 Desktop Runtime is now required. It may be downloaded from the link below. After it is installed, try EQLogParser again." />
         <Control Id="Link1" Type="Hyperlink" X="40" Y="116" Width="290" Height="40" Transparent="yes">
-          <Text Value="&lt;a href=&quot;https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.19-windows-x64-installer&quot;&gt;https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.19-windows-x64-installer&lt;/a&gt;" />
+          <Text><![CDATA[<a href="https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.19-windows-x64-installer">https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.19-windows-x64-installer</a>]]></Text>
         </Control>     
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
-          <Publish Event="NewDialog" Value="WelcomeDlg" />
-          <Publish Event="DoAction" Value="CAID1" />
+          <Publish Event="NewDialog" Value="WelcomeDlg">1</Publish>
+          <Publish Event="DoAction" Value="CAID1">1</Publish>
         </Control>
         <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
-          <Publish Event="SpawnDialog" Value="CancelDlg" />
+          <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
         </Control>
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
         <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
-          <Text Value="Please Install .Net 6.0 and Try Again" />
+          <Text>Please Install .Net 6.0 and Try Again</Text>
         </Control>
         <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
         <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
-          <Text Value="{\WixUI_Font_Title}Missing Required Software" />
+          <Text>{\WixUI_Font_Title}Missing Required Software</Text>
         </Control>
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
       </Dialog>
@@ -69,40 +72,28 @@
           <Text SourceFile="..\EQLogParser\data\releasenotes.rtf" />
         </Control>
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Text="!(loc.WixUINext)">
-          <Publish Event="NewDialog" Value="InstallDirDlg" />
+          <Publish Event="NewDialog" Value="InstallDirDlg">1</Publish>
         </Control>
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
-          <Publish Event="NewDialog" Value="WelcomeDlg" />
+          <Publish Event="NewDialog" Value="WelcomeDlg">1</Publish>
          </Control>
         <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
-          <Publish Event="SpawnDialog" Value="CancelDlg" />
+          <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
         </Control>
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
         <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
         <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
-          <Text Value="{\WixUI_Font_Title}Release Notes" />
+          <Text>{\WixUI_Font_Title}Release Notes</Text>
         </Control>
         <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="What's New in the latest version of EQLogParser." />
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
       </Dialog>      
     </UI>
   </Fragment>
-	<Fragment><DirectoryRef Id="ApplicationProgramsFolder">
-      <Component Id="ApplicationShortcut" Guid="7D5D3FA6-1F71-411B-A1F0-EF477E38B3ED" Bitness="always64">
-        <Shortcut Id="ApplicationStartMenuShortcut" Name="EQ Log Parser" Description="Everquest Log Parser" Target="[INSTALLFOLDER]\EQLogParser.exe" WorkingDirectory="INSTALLFOLDER" />
-        <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
-        <RegistryValue Root="HKCU" Key="Software\Kizant\EQLogParser" Name="installed" Type="integer" Value="1" KeyPath="yes" />
-      </Component>
-    </DirectoryRef>
-    <StandardDirectory Id="DesktopFolder">
-      <Component Id="ApplicationShortcutDesktop" Guid="969EAC06-8AFD-48A9-814C-ADBE6F7C073E" Bitness="always64">
-        <Shortcut Id="ApplicationDesktopShortcut" Name="EQ Log Parser" Icon="icon.ico" Description="Everquest Log Parser" Target="[INSTALLFOLDER]\EQLogParser.exe" WorkingDirectory="INSTALLFOLDER" />
-        <RemoveFolder Id="CleanUpDesktopShortCut" Directory="DesktopFolder" On="uninstall" />
-        <RegistryValue Root="HKCU" Key="Software\Kizant\EQLogParser" Name="installed" Type="integer" Value="1" KeyPath="yes" />
-      </Component>
-    </StandardDirectory>
-      <StandardDirectory Id="DesktopFolder" />
-      <StandardDirectory Id="ProgramFiles64Folder">
+	<Fragment>   
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="DesktopFolder" Name="Desktop" />
+      <Directory Id="ProgramFiles64Folder">
         <Directory Id="INSTALLFOLDER" Name="EQLogParser">
           <Directory Id="DATAFOLDER" Name="data">
             <Directory Id="HTMLDATAFOLDER" Name="html" />
@@ -116,181 +107,196 @@
             </Directory>
           </Directory>
         </Directory>
-      </StandardDirectory>
-      <StandardDirectory Id="AppDataFolder">
+      </Directory>
+      <Directory Id="AppDataFolder">
         <Directory Id="MyAppData" Name="EQLogParser">
           <Directory Id="LogsFolder" Name="logs">
-            <Component Id="Logs" Guid="D3E18092-1C19-4923-ACB0-2ED354653167" Bitness="always64">
-              <RegistryValue Root="HKCU" Key="Software\Kizant\EQLogParser" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+            <Component Win64="yes" Id="Logs" Guid="D3E18092-1C19-4923-ACB0-2ED354653167">
+              <RegistryValue Root="HKCU" Key="Software\Kizant\EQLogParser" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
               <RemoveFile Id="RemoveLogs" Name="*.*" On="uninstall" />
-              <RemoveFolder Id="RemoveLogsFolder" Directory="LogsFolder" On="uninstall" />
-              <RemoveFolder Id="RemoveMyAppData" Directory="MyAppData" On="uninstall" />
+              <RemoveFolder Id="RemoveLogsFolder" Directory="LogsFolder" On="uninstall"/>
+              <RemoveFolder Id="RemoveMyAppData" Directory="MyAppData" On="uninstall"/>
             </Component>
           </Directory>
         </Directory>
-      </StandardDirectory>
-      <StandardDirectory Id="ProgramMenuFolder">
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
         <Directory Id="ApplicationProgramsFolder" Name="EQLogParser" />
-      </StandardDirectory>
-    </Fragment>
+      </Directory>
+    </Directory>
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Win64="yes" Id="ApplicationShortcut" Guid="7D5D3FA6-1F71-411B-A1F0-EF477E38B3ED">
+        <Shortcut Id="ApplicationStartMenuShortcut" Name="EQ Log Parser" Description="Everquest Log Parser" Target="[INSTALLFOLDER]\EQLogParser.exe" WorkingDirectory="INSTALLFOLDER" />
+        <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\Kizant\EQLogParser" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    <DirectoryRef Id="DesktopFolder">
+      <Component Win64="yes" Id="ApplicationShortcutDesktop" Guid="969EAC06-8AFD-48A9-814C-ADBE6F7C073E">
+        <Shortcut Id="ApplicationDesktopShortcut" Name="EQ Log Parser" Icon="icon.ico" Description="Everquest Log Parser" Target="[INSTALLFOLDER]\EQLogParser.exe" WorkingDirectory="INSTALLFOLDER" />
+        <RemoveFolder Id="CleanUpDesktopShortCut" Directory="DesktopFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\Kizant\EQLogParser" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+	</Fragment>
 	<Fragment>
 	  <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
-	    <Component Id="EQLogParser.exe" Guid="77922c99-ebcd-4ef7-ae22-f2c31a9bb63f" Bitness="always64">
+	    <Component Win64="yes" Id="EQLogParser.exe" Guid="77922c99-ebcd-4ef7-ae22-f2c31a9bb63f">
 	      <File Id="EQLogParser.exe" Name="EQLogParser.exe" Source="$(var.EQLogParser.TargetDir)EQLogParser.exe" />
 	    </Component>
-      <Component Id="EQLogParser.dll" Guid="A694871D-64ED-472D-9843-E01086C6F72A" Bitness="always64">
+      <Component Win64="yes" Id="EQLogParser.dll" Guid="A694871D-64ED-472D-9843-E01086C6F72A">
         <File Id="EQLogParser.dll" Name="EQLogParser.dll" Source="$(var.EQLogParser.TargetDir)EQLogParser.dll" />
       </Component>      
-	    <Component Id="EQLogParser.dll.config" Guid="275FC19D-266E-4ADE-A836-AD99E1C40DF7" Bitness="always64">
+	    <Component Win64="yes" Id="EQLogParser.dll.config" Guid="275FC19D-266E-4ADE-A836-AD99E1C40DF7">
 	      <File Id="EQLogParser.dll.config" Name="EQLogParser.dll.config" Source="$(var.EQLogParser.TargetDir)EQLogParser.dll.config" />
 	    </Component>
-      <Component Id="EQLogParser.runtimeconfig.json" Guid="1E4DF525-40F2-43E2-9481-AA5D8E84E07A" Bitness="always64">
+      <Component Win64="yes" Id="EQLogParser.runtimeconfig.json" Guid="1E4DF525-40F2-43E2-9481-AA5D8E84E07A">
         <File Id="EQLogParser.runtimeconfig.json" Name="EQLogParser.runtimeconfig.json" Source="$(var.EQLogParser.TargetDir)EQLogParser.runtimeconfig.json" />
       </Component>
-      <Component Id="EQLogParser.deps.json" Guid="0F544A17-9D4F-4A62-B714-7FEC8174E175" Bitness="always64">
+      <Component Win64="yes" Id="EQLogParser.deps.json" Guid="0F544A17-9D4F-4A62-B714-7FEC8174E175">
         <File CompanionFile="EQLogParser.dll" Id="EQLogParser.deps.json" Name="EQLogParser.deps.json" Source="$(var.EQLogParser.TargetDir)EQLogParser.deps.json" />
       </Component>
-      <Component Id="log4net.dll" Guid="912D9D56-4980-4F05-BB88-02C8AA5A356F" Bitness="always64">
+      <Component Win64="yes" Id="log4net.dll" Guid="912D9D56-4980-4F05-BB88-02C8AA5A356F">
         <File CompanionFile="EQLogParser.dll" Id="log4net.dll" Name="log4net.dll" Source="$(var.EQLogParser.TargetDir)log4net.dll" />
       </Component>
-      <Component Id="FontAwesome5.dll" Guid="8416E883-7350-4D80-B3D1-2965E4C01DB8" Bitness="always64">
+      <Component Win64="yes" Id="FontAwesome5.dll" Guid="8416E883-7350-4D80-B3D1-2965E4C01DB8">
         <File CompanionFile="EQLogParser.dll" Id="FontAwesome5.dll" Name="FontAwesome5.dll" Source="$(var.EQLogParser.TargetDir)FontAwesome5.dll" />
       </Component>
-	    <Component Id="FontAwesome5.Net.dll" Guid="57EB460B-BA13-4DA0-9036-DC113FE8635B" Bitness="always64">
+	    <Component Win64="yes" Id="FontAwesome5.Net.dll" Guid="57EB460B-BA13-4DA0-9036-DC113FE8635B">
 	      <File CompanionFile="EQLogParser.dll" Id="FontAwesome5.Net.dll" Name="FontAwesome5.Net.dll" Source="$(var.EQLogParser.TargetDir)FontAwesome5.Net.dll" />
 	    </Component>		  
-      <Component Id="DotLiquid.dll" Guid="C7818EAF-8DF1-4411-8821-FC66BFB42AB2" Bitness="always64">
+      <Component Win64="yes" Id="DotLiquid.dll" Guid="C7818EAF-8DF1-4411-8821-FC66BFB42AB2">
         <File CompanionFile="EQLogParser.dll" Id="DotLiquid.dll" Name="DotLiquid.dll" Source="$(var.EQLogParser.TargetDir)DotLiquid.dll" />
       </Component>
-      <Component Id="Syncfusion.Compression.Base.dll" Guid="9CB53E4C-9D9E-431F-BC2B-3342D39E63A2" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.Compression.Base.dll" Guid="9CB53E4C-9D9E-431F-BC2B-3342D39E63A2">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Compression.Base.dll" Name="Syncfusion.Compression.Base.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Compression.Base.dll" />
       </Component>
-      <Component Id="Syncfusion.Data.WPF.dll" Guid="29B0F002-C736-4787-A07A-4AD3C895CBF7" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.Data.WPF.dll" Guid="29B0F002-C736-4787-A07A-4AD3C895CBF7">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Data.WPF.dll" Name="Syncfusion.Data.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Data.WPF.dll" />
       </Component>
-      <Component Id="Syncfusion.DocIO.Base.dll" Guid="A022E8EA-40AB-41E9-A3C1-A041A5F08939" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.DocIO.Base.dll" Guid="A022E8EA-40AB-41E9-A3C1-A041A5F08939">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.DocIO.Base.dll" Name="Syncfusion.DocIO.Base.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.DocIO.Base.dll" />
       </Component>
-      <Component Id="Syncfusion.Edit.WPF.dll" Guid="5089E626-B2D8-4B55-97D2-2AF59AC148E6" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.Edit.WPF.dll" Guid="5089E626-B2D8-4B55-97D2-2AF59AC148E6">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Edit.WPF.dll" Name="Syncfusion.Edit.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Edit.WPF.dll" />
       </Component>
-      <Component Id="Syncfusion.GridCommon.WPF.dll" Guid="CBDF14C6-F0D5-420D-88FF-0DD509AB3A36" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.GridCommon.WPF.dll" Guid="CBDF14C6-F0D5-420D-88FF-0DD509AB3A36">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.GridCommon.WPF.dll" Name="Syncfusion.GridCommon.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.GridCommon.WPF.dll" />
       </Component>
-      <Component Id="Syncfusion.Licensing.dll" Guid="508A0992-C1FC-4DE4-8551-98B69669BE43" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.Licensing.dll" Guid="508A0992-C1FC-4DE4-8551-98B69669BE43">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Licensing.dll" Name="Syncfusion.Licensing.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Licensing.dll" />
       </Component> 
-      <Component Id="Syncfusion.OfficeChart.Base.dll" Guid="B6F2FB27-4445-4C39-9E01-0815E8064CB6" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.OfficeChart.Base.dll" Guid="B6F2FB27-4445-4C39-9E01-0815E8064CB6">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.OfficeChart.Base.dll" Name="Syncfusion.OfficeChart.Base.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.OfficeChart.Base.dll" />
       </Component>
-      <Component Id="Syncfusion.PropertyGrid.WPF.dll" Guid="6C4BB5A3-E674-496D-AEC3-7105338554FA" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.PropertyGrid.WPF.dll" Guid="6C4BB5A3-E674-496D-AEC3-7105338554FA">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.PropertyGrid.WPF.dll" Name="Syncfusion.PropertyGrid.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.PropertyGrid.WPF.dll" />
       </Component>
-      <Component Id="Syncfusion.SfBusyIndicator.WPF.dll" Guid="5C2CDF03-73B7-4A0A-9857-945EDB95B07E" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.SfBusyIndicator.WPF.dll" Guid="5C2CDF03-73B7-4A0A-9857-945EDB95B07E">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfBusyIndicator.WPF.dll" Name="Syncfusion.SfBusyIndicator.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfBusyIndicator.WPF.dll" />
       </Component> 
-      <Component Id="Syncfusion.SfChart.WPF.dll" Guid="EB9F99E6-52B6-4CB0-BB4A-C18AEA3182B3" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.SfChart.WPF.dll" Guid="EB9F99E6-52B6-4CB0-BB4A-C18AEA3182B3">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfChart.WPF.dll" Name="Syncfusion.SfChart.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfChart.WPF.dll" />
       </Component>
-      <Component Id="Syncfusion.SfRichTextBoxAdv.WPF.dll" Guid="A0F49B7B-5F13-4D38-9ED8-3C64823C7989" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.SfRichTextBoxAdv.WPF.dll" Guid="A0F49B7B-5F13-4D38-9ED8-3C64823C7989">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfRichTextBoxAdv.WPF.dll" Name="Syncfusion.SfRichTextBoxAdv.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfRichTextBoxAdv.WPF.dll" />
       </Component>
-      <Component Id="Syncfusion.SfGrid.WPF.dll" Guid="BFA467E9-11A2-408B-9316-8DB5A4AA1F0A" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.SfGrid.WPF.dll" Guid="BFA467E9-11A2-408B-9316-8DB5A4AA1F0A">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfGrid.WPF.dll" Name="Syncfusion.SfGrid.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfGrid.WPF.dll" />
       </Component>
-      <Component Id="Syncfusion.SfGridCommon.WPF.dll" Guid="B87A4DAE-FA49-401C-A034-72466EA4D1FA" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.SfGridCommon.WPF.dll" Guid="B87A4DAE-FA49-401C-A034-72466EA4D1FA">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfGridCommon.WPF.dll" Name="Syncfusion.SfGridCommon.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfGridCommon.WPF.dll" />
       </Component>
-      <Component Id="Syncfusion.SfInput.WPF.dll" Guid="478A6221-BB5D-410A-B421-2333CD771152" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.SfInput.WPF.dll" Guid="478A6221-BB5D-410A-B421-2333CD771152">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfInput.WPF.dll" Name="Syncfusion.SfInput.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfInput.WPF.dll" />
       </Component>
-      <Component Id="Syncfusion.SfProgressBar.WPF.dll" Guid="D1722B72-54C1-4F57-97E7-0A0D1C46DF6B" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.SfProgressBar.WPF.dll" Guid="D1722B72-54C1-4F57-97E7-0A0D1C46DF6B">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfProgressBar.WPF.dll" Name="Syncfusion.SfProgressBar.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfProgressBar.WPF.dll" />
       </Component>
-      <Component Id="Syncfusion.SfSkinManager.WPF.dll" Guid="33F08F96-DA5F-471D-88F0-C4E7A5A50621" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.SfSkinManager.WPF.dll" Guid="33F08F96-DA5F-471D-88F0-C4E7A5A50621">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfSkinManager.WPF.dll" Name="Syncfusion.SfSkinManager.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfSkinManager.WPF.dll" />
       </Component>
-      <Component Id="Syncfusion.SfTreeView.WPF.dll" Guid="ADC30862-DF9C-4B73-BE80-3D2C8C8BCA65" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.SfTreeView.WPF.dll" Guid="ADC30862-DF9C-4B73-BE80-3D2C8C8BCA65">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfTreeView.WPF.dll" Name="Syncfusion.SfTreeView.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfTreeView.WPF.dll" />
       </Component>
-      <Component Id="Syncfusion.Shared.WPF.dll" Guid="AF0E3E2F-9188-4C7A-A7EB-11A04F3022D3" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.Shared.WPF.dll" Guid="AF0E3E2F-9188-4C7A-A7EB-11A04F3022D3">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Shared.WPF.dll" Name="Syncfusion.Shared.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Shared.WPF.dll" />
       </Component>   
-      <Component Id="Syncfusion.Themes.MaterialDark.WPF.dll" Guid="3993C944-FB4A-475B-B66A-AA6D15D6DCDD" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.Themes.MaterialDark.WPF.dll" Guid="3993C944-FB4A-475B-B66A-AA6D15D6DCDD">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Themes.MaterialDark.WPF.dll" Name="Syncfusion.Themes.MaterialDark.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.MaterialDark.WPF.dll" />
       </Component>
-      <Component Id="Syncfusion.Themes.MaterialDarkCustom.WPF.dll" Guid="E3042628-C320-47CF-8069-6A85E7EA87FA" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.Themes.MaterialDarkCustom.WPF.dll" Guid="E3042628-C320-47CF-8069-6A85E7EA87FA">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Themes.MaterialDarkCustom.WPF.dll" Name="Syncfusion.Themes.MaterialDarkCustom.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.MaterialDarkCustom.WPF.dll" />
       </Component>
-      <Component Id="Syncfusion.Themes.MaterialLight.WPF.dll" Guid="108AA0E6-409D-4C49-9FEF-84DF04858DB5" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.Themes.MaterialLight.WPF.dll" Guid="108AA0E6-409D-4C49-9FEF-84DF04858DB5">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Themes.MaterialLight.WPF.dll" Name="Syncfusion.Themes.MaterialLight.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Themes.MaterialLight.WPF.dll" />
       </Component>
-      <Component Id="Syncfusion.Tools.WPF.Classic.dll" Guid="BDFC58AB-E906-42A5-B081-402299D84EE1" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.Tools.WPF.Classic.dll" Guid="BDFC58AB-E906-42A5-B081-402299D84EE1">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Tools.WPF.Classic.dll" Name="Syncfusion.Tools.WPF.Classic.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.Classic.dll" />
       </Component>
-      <Component Id="Syncfusion.Tools.WPF.dll" Guid="016ED49A-B740-4F65-82D9-81EC02957E10" Bitness="always64">
+      <Component Win64="yes" Id="Syncfusion.Tools.WPF.dll" Guid="016ED49A-B740-4F65-82D9-81EC02957E10">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Tools.WPF.dll" Name="Syncfusion.Tools.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.dll" />
       </Component>
-      <Component Id="System.Configuration.ConfigurationManager.dll" Guid="82999838-AE52-40E7-8BD7-9B0D7DAC19B3" Bitness="always64">
+      <Component Win64="yes" Id="System.Configuration.ConfigurationManager.dll" Guid="82999838-AE52-40E7-8BD7-9B0D7DAC19B3">
         <File CompanionFile="EQLogParser.dll" Id="System.Configuration.ConfigurationManager.dll" Name="System.Configuration.ConfigurationManager.dll" Source="$(var.EQLogParser.TargetDir)System.Configuration.ConfigurationManager.dll" />
       </Component>
     </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
-      <Component Id="petnames.txt" Guid="92C4F601-A319-424A-A014-B50EC47ADBA6" Bitness="always64">
+      <Component Win64="yes" Id="petnames.txt" Guid="92C4F601-A319-424A-A014-B50EC47ADBA6">
         <File Id="petnames.txt" Name="petnames.txt" Source="$(var.EQLogParser.TargetDir)\data\petnames.txt" />
       </Component>
-      <Component Id="procs.txt" Guid="9E9E4890-EEF7-4C7F-BE9B-E189D7FD6EE5" Bitness="always64">
+      <Component Win64="yes" Id="procs.txt" Guid="9E9E4890-EEF7-4C7F-BE9B-E189D7FD6EE5">
         <File Id="procs.txt" Name="procs.txt" Source="$(var.EQLogParser.TargetDir)\data\procs.txt" />
       </Component>
-      <Component Id="releasenotes.rtf" Guid="593239AC-0F5A-49F7-BBBC-037CDAC6AB8E" Bitness="always64">
+      <Component Win64="yes" Id="releasenotes.rtf" Guid="593239AC-0F5A-49F7-BBBC-037CDAC6AB8E">
         <File Id="releasenotes.rtf" Name="releasenotes.rtf" Source="$(var.EQLogParser.TargetDir)\data\releasenotes.rtf" />
       </Component>
-      <Component Id="spells.txt" Guid="2FC00676-7C5D-4075-9BC7-2C49C977732B" Bitness="always64">
+      <Component Win64="yes" Id="spells.txt" Guid="2FC00676-7C5D-4075-9BC7-2C49C977732B">
         <File Id="spells.txt" Name="spells.txt" Source="$(var.EQLogParser.TargetDir)\data\spells.txt" />
       </Component>
-      <Component Id="oldspells.txt" Guid="3F1F6373-8E8D-4C14-89EB-CD3AF3D6320A" Bitness="always64">
+      <Component Win64="yes" Id="oldspells.txt" Guid="3F1F6373-8E8D-4C14-89EB-CD3AF3D6320A">
         <File Id="oldspells.txt" Name="oldspells.txt" Source="$(var.EQLogParser.TargetDir)\data\oldspells.txt" />
       </Component>
-      <Component Id="npcs.txt" Guid="46C8209D-FDBA-4948-AB7C-699AFD8CDE8A" Bitness="always64">
+      <Component Win64="yes" Id="npcs.txt" Guid="46C8209D-FDBA-4948-AB7C-699AFD8CDE8A">
         <File Id="npcs.txt" Name="npcs.txt" Source="$(var.EQLogParser.TargetDir)\data\npcs.txt" />
       </Component>
-      <Component Id="titles.txt" Guid="AF032020-55D7-4476-8763-9CF2A3171907" Bitness="always64">
+      <Component Win64="yes" Id="titles.txt" Guid="AF032020-55D7-4476-8763-9CF2A3171907">
         <File Id="titles.txt" Name="titles.txt" Source="$(var.EQLogParser.TargetDir)\data\titles.txt" />
       </Component>
-      <Component Id="adpsMeter.txt" Guid="F1428697-7A90-4E37-8894-289D81A5D32E" Bitness="always64">
+      <Component Win64="yes" Id="adpsMeter.txt" Guid="F1428697-7A90-4E37-8894-289D81A5D32E">
         <File Id="adpsMeter.txt" Name="adpsMeter.txt" Source="$(var.EQLogParser.TargetDir)\data\adpsMeter.txt" />
       </Component>
     </ComponentGroup>
     <ComponentGroup Id="ProductHtmlDataComponents" Directory="HTMLDATAFOLDER">
-      <Component Id="content.html" Guid="689B76E0-571D-4F27-B909-B18ABF902346" Bitness="always64">
+      <Component Win64="yes" Id="content.html" Guid="689B76E0-571D-4F27-B909-B18ABF902346">
         <File Id="content.html" Name="content.html" Source="$(var.EQLogParser.TargetDir)\data\html\content.html" />
       </Component>
-      <Component Id="header.html" Guid="73FA53BC-9C50-4992-AFC6-EF583AAE5EC0" Bitness="always64">
+      <Component Win64="yes" Id="header.html" Guid="73FA53BC-9C50-4992-AFC6-EF583AAE5EC0">
         <File Id="header.html" Name="header.html" Source="$(var.EQLogParser.TargetDir)\data\html\header.html" />
       </Component>
-      <Component Id="footer.html" Guid="5BEC871D-91DA-436B-8D6E-656FDA973A33" Bitness="always64">
+      <Component Win64="yes" Id="footer.html" Guid="5BEC871D-91DA-436B-8D6E-656FDA973A33">
         <File Id="footer.html" Name="footer.html" Source="$(var.EQLogParser.TargetDir)\data\html\footer.html" />
       </Component>
     </ComponentGroup>
     <ComponentGroup Id="ProductSoundsDataComponents" Directory="SOUNDSDATAFOLDER">
-      <Component Id="alert1.wav" Guid="6ECB3792-D945-4804-9434-872D005154C1" Bitness="always64">
+      <Component Win64="yes" Id="alert1.wav" Guid="6ECB3792-D945-4804-9434-872D005154C1">
         <File Id="alert1.wav" Name="alert1.wav" Source="$(var.EQLogParser.TargetDir)\data\sounds\alert1.wav" />
       </Component>
-      <Component Id="alert2.wav" Guid="FF483727-CB14-4EC3-A550-D1459FD36A8B" Bitness="always64">
+      <Component Win64="yes" Id="alert2.wav" Guid="FF483727-CB14-4EC3-A550-D1459FD36A8B">
         <File Id="alert2.wav" Name="alert2.wav" Source="$(var.EQLogParser.TargetDir)\data\sounds\alert2.wav" />
       </Component>
-      <Component Id="alert3.wav" Guid="7B3F323C-EDA1-4BE7-B3C3-697A56CC3DCC" Bitness="always64">
+      <Component Win64="yes" Id="alert3.wav" Guid="7B3F323C-EDA1-4BE7-B3C3-697A56CC3DCC">
         <File Id="alert3.wav" Name="alert3.wav" Source="$(var.EQLogParser.TargetDir)\data\sounds\alert3.wav" />
       </Component>
-      <Component Id="alert4.wav" Guid="51DAE0F7-BDEB-49CE-B7D5-AC7302D84021" Bitness="always64">
+      <Component Win64="yes" Id="alert4.wav" Guid="51DAE0F7-BDEB-49CE-B7D5-AC7302D84021">
         <File Id="alert4.wav" Name="alert4.wav" Source="$(var.EQLogParser.TargetDir)\data\sounds\alert4.wav" />
       </Component>
-      <Component Id="alert5.wav" Guid="1A00D194-07D6-45D3-AC07-8D245BD8B5E8" Bitness="always64">
+      <Component Win64="yes" Id="alert5.wav" Guid="1A00D194-07D6-45D3-AC07-8D245BD8B5E8">
         <File Id="alert5.wav" Name="alert5.wav" Source="$(var.EQLogParser.TargetDir)\data\sounds\alert5.wav" />
       </Component>
     </ComponentGroup>
     <ComponentGroup Id="RuntimeComponents" Directory="RTWINLIBNETFOLDER">
-      <Component Id="System.Speech.dll" Guid="7BEDF909-C3DD-4B90-B172-56D880664C1A" Bitness="always64">
+      <Component Win64="yes" Id="System.Speech.dll" Guid="7BEDF909-C3DD-4B90-B172-56D880664C1A">
         <File Id="System.Speech.dll" Name="System.Speech.dll" Source="$(var.EQLogParser.TargetDir)\runtimes\win\lib\net6.0\System.Speech.dll" />
       </Component>  
     </ComponentGroup>
