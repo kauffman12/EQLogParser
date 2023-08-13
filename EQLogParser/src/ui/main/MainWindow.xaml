@@ -24,51 +24,18 @@
     <listCollection:ArrayList>
       <Menu Height="26" FontSize="12" Width="285" Margin="0,0,0,2" VerticalAlignment="Bottom">
         <MenuItem Header="_File" Height="30" Width="40">
-          <MenuItem Header="Open and Monitor _Log File" Height="24" ToolTip="Open Log File, Archive Chat and Start Monitoring">
+          <MenuItem x:Name="fileOpenMenu" Header="Open and Monitor _Log File" Height="24" ToolTip="Open Log File, Archive Chat and Start Monitoring">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_FolderOpen" />
             </MenuItem.Icon>
-            <MenuItem Header="Now" Tag="0" Height="24" Click="MenuItemSelectLogFileClick">
-              <MenuItem.Icon>
-                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_CalendarDay" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem Header="Last Hour" Tag="1" Height="24" Click="MenuItemSelectLogFileClick">
-              <MenuItem.Icon>
-                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_CalendarDay" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem Header="Last  8 Hours" Tag="8" Height="24" Click="MenuItemSelectLogFileClick">
-              <MenuItem.Icon>
-                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_CalendarDay" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem Header="Last 24 Hours" Tag="24 " Height="24" Click="MenuItemSelectLogFileClick">
-              <MenuItem.Icon>
-                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_CalendarDay" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem Header="Last  7 Days" Tag="168" Height="24" Click="MenuItemSelectLogFileClick">
-              <MenuItem.Icon>
-                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_CalendarAlt" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem Header="Last 14 Days" Tag="336" Height="24" Click="MenuItemSelectLogFileClick">
-              <MenuItem.Icon>
-                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_CalendarAlt" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem Header="Last 30 Days" Tag="720" Height="24" Click="MenuItemSelectLogFileClick">
-              <MenuItem.Icon>
-                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_CalendarAlt" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem Header="Everything" Height="24" Click="MenuItemSelectLogFileClick">
-              <MenuItem.Icon>
-                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Infinity" />
-              </MenuItem.Icon>
-            </MenuItem>
           </MenuItem>
+          <Separator x:Name="recentSeparator" Visibility="Collapsed" />
+          <MenuItem x:Name="recent1File" Visibility="Collapsed" Tag="0" />
+          <MenuItem x:Name="recent2File" Visibility="Collapsed" Tag="1" />
+          <MenuItem x:Name="recent3File" Visibility="Collapsed" Tag="2" />
+          <MenuItem x:Name="recent4File" Visibility="Collapsed" Tag="3" />
+          <MenuItem x:Name="recent5File" Visibility="Collapsed" Tag="4" />
+          <MenuItem x:Name="recent6File" Visibility="Collapsed" Tag="5" />
           <Separator/>
           <MenuItem Header="_Save" Height="24">
             <MenuItem.Icon>
@@ -357,6 +324,11 @@
           <MenuItem x:Name="deleteChat" Header="_Clear Chat Archive" IsEnabled="False" Height="24">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="deleteChatIcon" Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Times" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="deleteOpenRecent" Header="_Clear Recent Log Files" Height="24" Click="MenuItemClearOpenRecentClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="deleteOpenRecentIcon" Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Times" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="restoreTableColumns" Header="_Restore Default Table Columns" Click="RestoreTableColumnsClick" Height="24">

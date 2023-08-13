@@ -1,6 +1,7 @@
 ﻿using FontAwesome5;
 using log4net;
 using log4net.Core;
+using Microsoft.VisualBasic.Logging;
 using Microsoft.Win32;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Shared;
@@ -69,6 +70,8 @@ namespace EQLogParser
     private LogReader EQLogReader = null;
     private List<bool> LogWindows = new List<bool>();
     private bool DoneLoading = false;
+
+    private List<string> RecentFiles = new List<string>();
 
     public MainWindow()
     {
@@ -175,6 +178,20 @@ namespace EQLogParser
         // Damage Overlay
         enableDamageOverlayIcon.Visibility = ConfigUtil.IfSet("IsDamageOverlayEnabled") ? Visibility.Visible : Visibility.Hidden;
         enableDamageOverlay.Header = ConfigUtil.IfSet("IsDamageOverlayEnabled") ? "Disable _Meter" : "Enable _Meter";
+
+        // create menu items for reading log files
+        CreateOpenLogMenuItems(fileOpenMenu, MenuItemSelectLogFileClick);
+
+        // Load recent files
+        if (ConfigUtil.GetSetting("RecentFiles") is string recentFiles && !string.IsNullOrEmpty(recentFiles))
+        {
+          var files = recentFiles.Split(',');
+          if (files.Length > 0)
+          {
+            RecentFiles.AddRange(files);
+            UpdateRecentFiles();
+          }
+        }
 
         LOG.Info("Initialized Components");
 
@@ -411,6 +428,13 @@ namespace EQLogParser
         tankingOptions.DamageType = ((TankingSummary)control.Content).DamageType;
       }
       Task.Run(() => TankingStatsManager.Instance.BuildTotalStats(tankingOptions));
+    }
+
+    private void MenuItemClearOpenRecentClick(object sender, RoutedEventArgs e)
+    {
+      RecentFiles.Clear();
+      ConfigUtil.SetSetting("RecentFiles", "");
+      UpdateRecentFiles();
     }
 
     private void MenuItemExportHTMLClick(object sender, RoutedEventArgs e)
@@ -854,13 +878,48 @@ namespace EQLogParser
 
     private void MenuItemSelectLogFileClick(object sender, RoutedEventArgs e)
     {
-      int lastMins = -1;
-      if (sender is MenuItem item && !string.IsNullOrEmpty(item.Tag as string))
+      if (sender is MenuItem item)
       {
-        lastMins = Convert.ToInt32(item.Tag.ToString(), CultureInfo.CurrentCulture) * 60;
-      }
+        var lastMins = -1;
+        string fileName = null;
+        if (!string.IsNullOrEmpty(item.Tag as string))
+        {
+          lastMins = Convert.ToInt32(item.Tag.ToString(), CultureInfo.CurrentCulture) * 60;
+        }
 
-      OpenLogFile(null, lastMins);
+        if (item.Parent == recent1File && RecentFiles.Count > 0)
+        {
+          fileName = RecentFiles[0];
+        }
+        else if (item.Parent == recent2File && RecentFiles.Count > 1)
+        {
+          fileName = RecentFiles[1];
+        }
+        else if (item.Parent == recent3File && RecentFiles.Count > 2)
+        {
+          fileName = RecentFiles[2];
+        }
+        else if (item.Parent == recent4File && RecentFiles.Count > 3)
+        {
+          fileName = RecentFiles[3];
+        }
+        else if (item.Parent == recent5File && RecentFiles.Count > 4)
+        {
+          fileName = RecentFiles[4];
+        }
+        else if (item.Parent == recent6File && RecentFiles.Count > 5)
+        {
+          fileName = RecentFiles[5];
+        }
+
+        if (!string.IsNullOrEmpty(fileName) && !File.Exists(fileName))
+        {
+          new MessageWindow("Log File No Longer Exists!", EQLogParser.Resource.FILEMENU_OPEN_LOG).ShowDialog();
+          return;
+        }
+
+        OpenLogFile(fileName, lastMins);
+      }
     }
 
     private void UpdateLoadingProgress()
@@ -1016,6 +1075,15 @@ namespace EQLogParser
             PlayerManager.Instance.Init();
           }
 
+          if (RecentFiles.Contains(theFile))
+          {
+            RecentFiles.Remove(theFile);
+          }
+
+          RecentFiles.Insert(0, theFile);
+          ConfigUtil.SetSetting("RecentFiles", string.Join(",", RecentFiles));
+          UpdateRecentFiles();
+
           DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
           CloseDamageOverlay();
           DataManager.Instance.Clear();
@@ -1090,6 +1158,67 @@ namespace EQLogParser
       if (splitLine != null)
       {
         FileLoadingCallback(splitLine, position, dateTime);
+      }
+    }
+
+    private void UpdateRecentFiles()
+    {
+      setRecentVisible(recent1File, 0);
+      setRecentVisible(recent2File, 1);
+      setRecentVisible(recent3File, 2);
+      setRecentVisible(recent4File, 3);
+      setRecentVisible(recent5File, 4);
+      setRecentVisible(recent6File, 5);
+
+      void setRecentVisible(MenuItem menuItem, int count)
+      {
+        if (RecentFiles.Count > count)
+        {
+          int m = 75;
+          var theFile = RecentFiles[count].Length > m ? "... " + RecentFiles[count].Substring(RecentFiles[count].Length - m) : RecentFiles[count];
+          var escapedFile = theFile.Replace("_", "__");
+          menuItem.Header = (count + 1) + ": " + escapedFile;
+          menuItem.Visibility = Visibility.Visible;
+
+          if (menuItem.Items.Count == 0)
+          {
+            CreateOpenLogMenuItems(menuItem, MenuItemSelectLogFileClick);
+          }
+
+          if (count == 0)
+          {
+            recentSeparator.Visibility = Visibility.Visible;
+          }
+        }
+        else
+        {
+          menuItem.Visibility = Visibility.Collapsed;
+
+          if (count == 0)
+          {
+            recentSeparator.Visibility = Visibility.Collapsed;
+          }
+        }
+      }
+    }
+
+    private void CreateOpenLogMenuItems(MenuItem parent, RoutedEventHandler callback)
+    {
+      parent.Items.Add(createMenuItem("Now", "0", callback, EFontAwesomeIcon.Solid_CalendarDay));
+      parent.Items.Add(createMenuItem("Last Hour", "1", callback, EFontAwesomeIcon.Solid_CalendarDay));
+      parent.Items.Add(createMenuItem("Last  8 Hours", "8", callback, EFontAwesomeIcon.Solid_CalendarDay));
+      parent.Items.Add(createMenuItem("Last 24 Hours", "24", callback, EFontAwesomeIcon.Solid_CalendarDay));
+      parent.Items.Add(createMenuItem("Last  7 Days", "168", callback, EFontAwesomeIcon.Solid_CalendarAlt));
+      parent.Items.Add(createMenuItem("Last 14 Days", "336", callback, EFontAwesomeIcon.Solid_CalendarAlt));
+      parent.Items.Add(createMenuItem("Last 30 Days", "720", callback, EFontAwesomeIcon.Solid_CalendarAlt));
+      parent.Items.Add(createMenuItem("Everything", null, callback, EFontAwesomeIcon.Solid_Infinity));
+      MenuItem createMenuItem(string name, string value, RoutedEventHandler handler, EFontAwesomeIcon awesome)
+      {
+        var imageAwesome = new ImageAwesome { Icon = awesome, Style = (Style) FindResource("EQIconStyle") };
+        var menuItem = new MenuItem { Header = name, Tag = value, Height = 24 };
+        menuItem.Click += handler;
+        menuItem.Icon = imageAwesome;
+        return menuItem;
       }
     }
 

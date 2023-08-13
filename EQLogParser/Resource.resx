@@ -183,6 +183,9 @@
   <data name="FILEMENU_EXPORT_SUMMARY" xml:space="preserve">
     <value>Can Not Save Summary Data</value>
   </data>
+  <data name="FILEMENU_OPEN_LOG" xml:space="preserve">
+    <value>Open Log File</value>
+  </data>
   <data name="FILEMENU_SAVE_FIGHTS" xml:space="preserve">
     <value>Save Selected Fights</value>
   </data>
