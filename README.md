@@ -34,6 +34,6 @@ The msi installer for EQLogParser has been signed with a certificate. It's recom
 # Damage Meter and Timer Overlay Example
 ![Damage Meter](./examples/example2.png)
 
-<!--
+<samp>
 EQLogParser-2.1.24.msi""
--->
+</samp>
