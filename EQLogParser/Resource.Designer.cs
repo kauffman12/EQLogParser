@@ -259,6 +259,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Open Log File.
+        /// </summary>
+        internal static string FILEMENU_OPEN_LOG {
+            get {
+                return ResourceManager.GetString("FILEMENU_OPEN_LOG", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Save Selected Fights.
         /// </summary>
         internal static string FILEMENU_SAVE_FIGHTS {
