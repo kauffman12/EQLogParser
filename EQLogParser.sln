@@ -5,9 +5,10 @@ VisualStudioVersion = 17.2.32519.379
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EQLogParser", "EQLogParser\EQLogParser.csproj", "{7573C49A-27F2-4053-8E6C-B7687DD9CBDE}"
 EndProject
-Project("{B7DD6F7E-DEF8-4E67-B5B7-07EF123DB6F0}") = "EQLogParserInstall", "EQLogParserInstall\EQLogParserInstall.wixproj", "{EE95A06F-2F3C-4C45-9B7C-853320A1F2C8}"
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "EQLogParserInstall", "EQLogParserInstall\EQLogParserInstall.wixproj", "{EE95A06F-2F3C-4C45-9B7C-853320A1F2C8}"
 	ProjectSection(ProjectDependencies) = postProject
 		{6B52A5C6-4231-4169-AC36-2848AB591BFD} = {6B52A5C6-4231-4169-AC36-2848AB591BFD}
+		{D63F6868-CBA5-487C-939F-D08B09B923B7} = {D63F6868-CBA5-487C-939F-D08B09B923B7}
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{03C52F88-D21A-4CFC-BC77-8CD23312D536}"
@@ -17,7 +18,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Syncfusion.Themes.MaterialDarkCustom.WPF", "MaterialDarkCustom\Syncfusion.Themes.MaterialDarkCustom.WPF.csproj", "{D63F6868-CBA5-487C-939F-D08B09B923B7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WixCustom", "WixCustom\WixCustom.csproj", "{6B52A5C6-4231-4169-AC36-2848AB591BFD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WixCustom", "WixCustom\WixCustom.csproj", "{6B52A5C6-4231-4169-AC36-2848AB591BFD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
