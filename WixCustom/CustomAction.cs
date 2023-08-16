@@ -67,9 +67,9 @@ namespace WixCustom
       var latestLine = runtimesList.Split(new string[] { Environment.NewLine }, StringSplitOptions.None).ToList().Where(x => x.Contains(runtime)).OrderBy(x => x).LastOrDefault();
       if (latestLine != null)
       {
-        Regex pattern = new Regex(@"\d+(\.\d+)+");
-        Match m = pattern.Match(latestLine);
-        string versionValue = m.Value;
+        var pattern = new Regex(@"\d+(\.\d+)+");
+        var m = pattern.Match(latestLine);
+        var versionValue = m.Value;
         if (Version.TryParse(versionValue, out var version))
         {
           return version;

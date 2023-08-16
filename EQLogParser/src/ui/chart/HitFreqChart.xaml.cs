@@ -33,7 +33,7 @@ namespace EQLogParser
     internal void Update(PlayerStats playerStats, CombinedStats combined)
     {
       PlayerData = GetHitFreqValues(playerStats, combined);
-      List<string> players = PlayerData.Keys.ToList();
+      var players = PlayerData.Keys.ToList();
       playerList.ItemsSource = players;
       playerList.SelectedIndex = 0; // triggers event
     }
@@ -44,7 +44,7 @@ namespace EQLogParser
       {
         var header = new List<string> { "Hit Value", "Frequency", "Difference" };
 
-        List<List<object>> data = new List<List<object>>();
+        var data = new List<List<object>>();
         foreach (var column in Columns.ToList())
         {
           data.Add(new List<object> { column.XLongValue, column.Y, column.Diff });
@@ -68,13 +68,13 @@ namespace EQLogParser
         critTypeList.SelectedItem is string critType && player.Length > 0 && type.Length > 0 && critType.Length > 0)
         {
           var data = PlayerData[player];
-          int minFreq = minFreqList.SelectedIndex > -1 ? minFreqList.SelectedIndex : 0;
-          HitFreqChartData first = data.Find(d => d.HitType == type);
+          var minFreq = minFreqList.SelectedIndex > -1 ? minFreqList.SelectedIndex : 0;
+          var first = data.Find(d => d.HitType == type);
           Columns.Clear();
 
           if (critType == CRIT_HITTYPE)
           {
-            for (int i = 0; i < first.CritYValues.Count; i++)
+            for (var i = 0; i < first.CritYValues.Count; i++)
             {
               if (first.CritYValues[i] > minFreq)
               {
@@ -92,7 +92,7 @@ namespace EQLogParser
           }
           else
           {
-            for (int i = 0; i < first.NonCritYValues.Count; i++)
+            for (var i = 0; i < first.NonCritYValues.Count; i++)
             {
               if (first.NonCritYValues[i] > minFreq)
               {
@@ -128,9 +128,9 @@ namespace EQLogParser
     {
       if (Columns.Count > 0)
       {
-        int page = (int)pageSlider.Value;
-        List<ColumnData> onePage = new List<ColumnData>();
-        for (int i = page; i < page + PageSize && i < Columns.Count; i++)
+        var page = (int)pageSlider.Value;
+        var onePage = new List<ColumnData>();
+        for (var i = page; i < page + PageSize && i < Columns.Count; i++)
         {
           onePage.Add(Columns[i]);
         }
@@ -159,14 +159,14 @@ namespace EQLogParser
       {
         PageSize = (int)Math.Round(sfChart.ActualWidth / 60);
         pageSlider.Minimum = 0;
-        int max = Columns.Count <= PageSize ? 0 : Columns.Count - PageSize;
+        var max = Columns.Count <= PageSize ? 0 : Columns.Count - PageSize;
         // happens after resize
         if (pageSlider.Value > max)
         {
           pageSlider.Value = max;
         }
         pageSlider.Maximum = max;
-        pageSlider.IsEnabled = (pageSlider.Maximum > 0);
+        pageSlider.IsEnabled = pageSlider.Maximum > 0;
         if (pageSlider.IsEnabled)
         {
           pageSlider.Focus();
@@ -187,14 +187,14 @@ namespace EQLogParser
 
     private void PlayerListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      string player = playerList?.SelectedItem as string;
+      var player = playerList?.SelectedItem as string;
 
       if (PlayerData.ContainsKey(player))
       {
         var data = PlayerData[player];
 
-        bool canUseCrit = false;
-        List<string> playerCritTypes = new List<string>();
+        var canUseCrit = false;
+        var playerCritTypes = new List<string>();
         if (data.Any(d => d.CritYValues.Count > 0))
         {
           playerCritTypes.Add(CRIT_HITTYPE);
@@ -208,14 +208,14 @@ namespace EQLogParser
 
         critTypeList.ItemsSource = playerCritTypes;
         critTypeList.SelectedIndex = playerCritTypes.Count == 1 ? 0 : canUseCrit ? 1 : 0;
-        UpdateSelectedHitTypes(critTypeList?.SelectedItem as string == NON_CRIT_HITTYPE);
+        UpdateSelectedHitTypes((critTypeList?.SelectedItem as string) == NON_CRIT_HITTYPE);
         UserSelectionChanged();
       }
     }
 
     private void UpdateSelectedHitTypes(bool useNonCrit)
     {
-      string player = playerList?.SelectedItem as string;
+      var player = playerList?.SelectedItem as string;
       if (!string.IsNullOrEmpty(player) && PlayerData.ContainsKey(player))
       {
         var data = PlayerData[player];
@@ -267,7 +267,7 @@ namespace EQLogParser
 
     private static Dictionary<string, List<HitFreqChartData>> GetHitFreqValues(PlayerStats selected, CombinedStats damageStats)
     {
-      Dictionary<string, List<HitFreqChartData>> results = new Dictionary<string, List<HitFreqChartData>>();
+      var results = new Dictionary<string, List<HitFreqChartData>>();
 
       // get chart data for player and pets if available
       if (damageStats?.Children.ContainsKey(selected.Name) == true)
@@ -286,7 +286,7 @@ namespace EQLogParser
         results[stats.Name] = new List<HitFreqChartData>();
         foreach (ref var subStat in stats.SubStats.ToArray().AsSpan())
         {
-          HitFreqChartData chartData = new HitFreqChartData { HitType = subStat.Name };
+          var chartData = new HitFreqChartData { HitType = subStat.Name };
 
           // add crits
           chartData.CritXValues.AddRange(subStat.CritFreqValues.Keys.OrderBy(key => key));

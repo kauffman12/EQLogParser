@@ -22,7 +22,7 @@ namespace EQLogParser
 
     internal void Init(CombinedStats combined, PlayerStats playerStats)
     {
-      int i = 1;
+      var i = 1;
       var list = new List<string>();
       foreach (var death in combined.RaidStats.Deaths.Where(death => death.Killed == playerStats.OrigName))
       {
@@ -68,7 +68,7 @@ namespace EQLogParser
                   if (damage.Defender == CurrentPlayer.OrigName && damage.Total > 0)
                   {
                     var value = damage.Attacker + " attacks " + CurrentPlayer.OrigName + " for " + damage.Total + " (" + damage.SubType + ")";
-                    if (damages.TryGetValue(block.BeginTime, out List<string> values))
+                    if (damages.TryGetValue(block.BeginTime, out var values))
                     {
                       values.Add(value);
                     }
@@ -93,7 +93,7 @@ namespace EQLogParser
           if (heal.Healed == CurrentPlayer.OrigName && heal.Total > 0)
           {
             var value = heal.Healer + " heals " + CurrentPlayer.OrigName + " for " + heal.Total + " (" + heal.SubType + ")";
-            if (heals.TryGetValue(block.BeginTime, out List<string> values))
+            if (heals.TryGetValue(block.BeginTime, out var values))
             {
               values.Add(value);
             }
@@ -119,7 +119,7 @@ namespace EQLogParser
               message += " (" + spell.SpellData.NameAbbrv + ")";
             }
 
-            if (spells.TryGetValue(block.BeginTime, out List<string> values))
+            if (spells.TryGetValue(block.BeginTime, out var values))
             {
               values.Add(message);
             }
@@ -137,7 +137,7 @@ namespace EQLogParser
       foreach (var time in times.Keys.OrderBy(x => x))
       {
         var sub = new List<dynamic>();
-        if (damages.TryGetValue(time, out List<string> damageList))
+        if (damages.TryGetValue(time, out var damageList))
         {
           damageList.ForEach(damage =>
           {
@@ -148,9 +148,9 @@ namespace EQLogParser
           });
         }
 
-        if (heals.TryGetValue(time, out List<string> healList))
+        if (heals.TryGetValue(time, out var healList))
         {
-          int i = 0;
+          var i = 0;
           healList.ForEach(heal =>
           {
             if (sub.Count > i)
@@ -167,9 +167,9 @@ namespace EQLogParser
           });
         }
 
-        if (spells.TryGetValue(time, out List<string> spellList))
+        if (spells.TryGetValue(time, out var spellList))
         {
-          int i = 0;
+          var i = 0;
           spellList.ForEach(spell =>
           {
             if (sub.Count > i)
@@ -192,11 +192,11 @@ namespace EQLogParser
       var combined = death.Message;
       if (!string.IsNullOrEmpty(death.Previous))
       {
-        bool found = false;
-        string[] split = death.Previous.Split(' ');
+        var found = false;
+        var split = death.Previous.Split(' ');
         foreach (var value in split)
         {
-          if (int.TryParse(value, out int result))
+          if (int.TryParse(value, out var result))
           {
             found = false;
             break;

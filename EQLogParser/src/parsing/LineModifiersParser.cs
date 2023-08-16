@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace EQLogParser
 {
-  class LineModifiersParser
+  static class LineModifiersParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -232,7 +232,7 @@ namespace EQLogParser
 
     internal static int Parse(string player, string modifiers, double currentTime)
     {
-      int result = -1;
+      var result = -1;
 
       if (!string.IsNullOrEmpty(modifiers))
       {
@@ -269,13 +269,13 @@ namespace EQLogParser
 
     private static int BuildVector(string player, string modifiers, double currentTime)
     {
-      int result = 0;
+      var result = 0;
 
-      bool lucky = false;
-      bool critical = false;
+      var lucky = false;
+      var critical = false;
 
-      string temp = "";
-      foreach (string modifier in modifiers.Split(' '))
+      var temp = "";
+      foreach (var modifier in modifiers.Split(' '))
       {
         temp += modifier;
         if (ALL_MODIFIERS.ContainsKey(temp))

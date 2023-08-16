@@ -96,7 +96,7 @@ namespace EQLogParser
     {
       lock (LockObject)
       {
-        return (LogChannel != null);
+        return LogChannel != null;
       }
     }
 
@@ -276,9 +276,10 @@ namespace EQLogParser
             HandleTrigger(result.ActiveTriggers, result.Node, result.LineData, result.SpeechChannel);
           }
         }
-        catch (Exception)
+        catch (Exception e)
         {
           // end channel
+          LOG.Debug(e);
         }
       });
 
@@ -314,7 +315,7 @@ namespace EQLogParser
       var start = DateTime.Now.Ticks;
       var action = lineData.Action;
       MatchCollection matches = null;
-      bool found = false;
+      var found = false;
 
       lock (node.Value)
       {
@@ -334,7 +335,7 @@ namespace EQLogParser
           var beginTicks = DateTime.Now.Ticks;
           node.Value.TriggerData.LastTriggered = new TimeSpan(beginTicks).TotalMilliseconds;
 
-          time = (long)((beginTicks - start) / 10);
+          time = (beginTicks - start) / 10;
           wrapper.TriggerData.WorstEvalTime = Math.Max(time, wrapper.TriggerData.WorstEvalTime);
 
           if (ProcessText(wrapper.ModifiedTimerName, matches) is string displayName && !string.IsNullOrEmpty(displayName))
@@ -362,7 +363,7 @@ namespace EQLogParser
             }
           }
 
-          var speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.SoundToPlay, wrapper.ModifiedSpeak, out bool isSound);
+          var speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.SoundToPlay, wrapper.ModifiedSpeak, out var isSound);
           if (!string.IsNullOrEmpty(speak))
           {
             speechChannel.Writer.WriteAsync(new Speak
@@ -393,9 +394,9 @@ namespace EQLogParser
             if (endEarly)
             {
               bool isSound;
-              string speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out isSound);
+              var speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out isSound);
               speak = string.IsNullOrEmpty(speak) ? TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound) : speak;
-              string displayText = string.IsNullOrEmpty(wrapper.ModifiedEndEarlyDisplay) ? wrapper.ModifiedEndDisplay : wrapper.ModifiedEndEarlyDisplay;
+              var displayText = string.IsNullOrEmpty(wrapper.ModifiedEndEarlyDisplay) ? wrapper.ModifiedEndDisplay : wrapper.ModifiedEndEarlyDisplay;
 
               speechChannel.Writer.WriteAsync(new Speak
               {
@@ -419,7 +420,7 @@ namespace EQLogParser
       string action, out MatchCollection earlyMatches)
     {
       earlyMatches = null;
-      bool endEarly = false;
+      var endEarly = false;
 
       if (endEarlyRegex != null)
       {
@@ -459,7 +460,7 @@ namespace EQLogParser
             var result = await speechChannel.Reader.ReadAsync();
             if (!string.IsNullOrEmpty(result.TTSOrSound))
             {
-              var cancel = (result.Trigger.Priority < previous?.Priority);
+              var cancel = result.Trigger.Priority < previous?.Priority;
               if (cancel && synth.State == SynthesizerState.Speaking)
               {
                 synth.SpeakAsyncCancelAll();
@@ -487,9 +488,9 @@ namespace EQLogParser
                     player.Play();
                   }
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                  // ignore
+                  LOG.Debug(e);
                 }
               }
               else
@@ -568,7 +569,7 @@ namespace EQLogParser
 
               if (proceed)
               {
-                var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out bool isSound);
+                var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out var isSound);
 
                 speechChannel.Writer.WriteAsync(new Speak
                 {
@@ -610,7 +611,7 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(trigger.EndEarlyPattern))
         {
           var endEarlyPattern = ProcessText(trigger.EndEarlyPattern, matches);
-          endEarlyPattern = UpdatePattern(trigger.EndUseRegex, ConfigUtil.PlayerName, endEarlyPattern, out List<NumberOptions> numberOptions2);
+          endEarlyPattern = UpdatePattern(trigger.EndUseRegex, ConfigUtil.PlayerName, endEarlyPattern, out var numberOptions2);
 
           if (trigger.EndUseRegex)
           {
@@ -626,7 +627,7 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(trigger.EndEarlyPattern2))
         {
           var endEarlyPattern2 = ProcessText(trigger.EndEarlyPattern2, matches);
-          endEarlyPattern2 = UpdatePattern(trigger.EndUseRegex2, ConfigUtil.PlayerName, endEarlyPattern2, out List<NumberOptions> numberOptions3);
+          endEarlyPattern2 = UpdatePattern(trigger.EndUseRegex2, ConfigUtil.PlayerName, endEarlyPattern2, out var numberOptions3);
 
           if (trigger.EndUseRegex2)
           {
@@ -640,7 +641,7 @@ namespace EQLogParser
         }
 
         wrapper.TimerList.Add(newTimerData);
-        bool needEvent = wrapper.TimerList.Count == 1;
+        var needEvent = wrapper.TimerList.Count == 1;
 
         Task.Delay((int)(trigger.DurationSeconds * 1000)).ContinueWith(task =>
         {
@@ -654,7 +655,7 @@ namespace EQLogParser
 
             if (proceed)
             {
-              var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.EndSoundToPlay, wrapper.ModifiedEndSpeak, out bool isSound);
+              var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.EndSoundToPlay, wrapper.ModifiedEndSpeak, out var isSound);
               speechChannel.Writer.WriteAsync(new Speak
               {
                 Trigger = trigger,
@@ -713,7 +714,7 @@ namespace EQLogParser
       {
         foreach (Match match in matches)
         {
-          for (int i = 1; i < match.Groups.Count; i++)
+          for (var i = 1; i < match.Groups.Count; i++)
           {
             if (!string.IsNullOrEmpty(match.Groups[i].Name))
             {
@@ -760,7 +761,7 @@ namespace EQLogParser
 
             wrapper.ModifiedTimerName = string.IsNullOrEmpty(wrapper.ModifiedTimerName) ? "" : wrapper.ModifiedTimerName;
             wrapper.HasRepeated = wrapper.ModifiedTimerName.Contains("{repeated}", StringComparison.OrdinalIgnoreCase);
-            pattern = UpdatePattern(trigger.UseRegex, playerName, pattern, out List<NumberOptions> numberOptions);
+            pattern = UpdatePattern(trigger.UseRegex, playerName, pattern, out var numberOptions);
 
             // temp
             if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.TimerType == 0)
@@ -835,7 +836,7 @@ namespace EQLogParser
               pattern = pattern.Replace(match.Value, "(?<" + match.Groups[1].Value + @">\d+)");
 
               if (!string.IsNullOrEmpty(match.Groups[2].Value) && !string.IsNullOrEmpty(match.Groups[3].Value) &&
-                uint.TryParse(match.Groups[3].Value, out uint value))
+                uint.TryParse(match.Groups[3].Value, out var value))
               {
                 numberOptions.Add(new NumberOptions { Key = match.Groups[1].Value, Op = match.Groups[2].Value, Value = value });
               }

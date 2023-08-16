@@ -39,7 +39,7 @@ namespace EQLogParser
       (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange += SelectionChange;
 
       // default these columns to descending
-      string[] desc = new string[] { "Avg", "Max", "Total", "Hits" };
+      var desc = new string[] { "Avg", "Max", "Total", "Hits" };
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       Load();
@@ -60,9 +60,9 @@ namespace EQLogParser
 
     private void Load()
     {
-      string selectedSpell = spellList.SelectedItem as string;
-      string selectedPlayer = playerList.SelectedItem as string;
-      bool isPlayerOnly = showPlayers.IsChecked.Value;
+      var selectedSpell = spellList.SelectedItem as string;
+      var selectedPlayer = playerList.SelectedItem as string;
+      var isPlayerOnly = showPlayers.IsChecked.Value;
 
       Spells.Clear();
       Spells.Add("All Spells");
@@ -84,7 +84,7 @@ namespace EQLogParser
         {
           if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(kv.Value.Caster) || PlayerManager.Instance.IsMerc(kv.Value.Caster))
           {
-            if (!playerDDTotals.TryGetValue(kv.Key, out SpellDamageStats ddStats))
+            if (!playerDDTotals.TryGetValue(kv.Key, out var ddStats))
             {
               ddStats = new SpellDamageStats { Caster = kv.Value.Caster, Spell = kv.Value.Spell };
               playerDDTotals[kv.Key] = ddStats;
@@ -102,7 +102,7 @@ namespace EQLogParser
         {
           if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(kv.Value.Caster) || PlayerManager.Instance.IsMerc(kv.Value.Caster))
           {
-            if (!playerDoTTotals.TryGetValue(kv.Key, out SpellDamageStats dotStats))
+            if (!playerDoTTotals.TryGetValue(kv.Key, out var dotStats))
             {
               dotStats = new SpellDamageStats { Caster = kv.Value.Caster, Spell = kv.Value.Spell };
               playerDoTTotals[kv.Key] = dotStats;
@@ -120,7 +120,7 @@ namespace EQLogParser
         {
           if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(kv.Value.Caster) || PlayerManager.Instance.IsMerc(kv.Value.Caster))
           {
-            if (!playerProcTotals.TryGetValue(kv.Key, out SpellDamageStats procStats))
+            if (!playerProcTotals.TryGetValue(kv.Key, out var procStats))
             {
               procStats = new SpellDamageStats { Caster = kv.Value.Caster, Spell = kv.Value.Spell };
               playerProcTotals[kv.Key] = procStats;
@@ -185,7 +185,7 @@ namespace EQLogParser
       {
         dataGrid.View.Filter = (item) =>
         {
-          bool pass = false;
+          var pass = false;
           if (item is IDictionary<string, object> dict)
           {
             pass = !CurrentShowPlayers || PlayerManager.Instance.IsVerifiedPlayer(dict["Caster"] as string) ||
@@ -203,7 +203,7 @@ namespace EQLogParser
     private void UpdateTitle()
     {
       dataGrid?.View?.RefreshFilter();
-      int count = (dataGrid?.View != null) ? dataGrid.View.Records.Count : 0;
+      var count = (dataGrid?.View != null) ? dataGrid.View.Records.Count : 0;
       titleLabel.Content = count == 0 ? "No Spell Data Found" : count + " Spell Entries Found";
     }
 

@@ -52,9 +52,9 @@ namespace EQLogParser
         TestSynth.SetOutputToDefaultAudioDevice();
         voices.ItemsSource = TestSynth.GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList();
       }
-      catch (Exception)
+      catch (Exception e)
       {
-        // may not initialize on all systems
+        LOG.Debug(e);
       }
 
       if (ConfigUtil.IfSetOrElse("TriggersWatchForGINA", false))
@@ -72,9 +72,9 @@ namespace EQLogParser
         Watcher.Filter = "*.wav";
         Watcher.EnableRaisingEvents = true;
       }
-      catch (Exception)
+      catch (Exception e)
       {
-        // ignore
+        LOG.Debug(e);
       }
 
       var selectedVoice = TriggerUtil.GetSelectedVoice();
@@ -241,7 +241,7 @@ namespace EQLogParser
         try
         {
           var current = Directory.GetFiles(@"data/sounds", "*.wav").Select(file => Path.GetFileName(file)).OrderBy(file => file).ToList();
-          for (int i = 0; i < current.Count; i++)
+          for (var i = 0; i < current.Count; i++)
           {
             if (i < FileList.Count)
             {
@@ -256,14 +256,14 @@ namespace EQLogParser
             }
           }
 
-          for (int j = FileList.Count - 1; j >= current.Count; j--)
+          for (var j = FileList.Count - 1; j >= current.Count; j--)
           {
             FileList.RemoveAt(j);
           }
         }
-        catch (Exception)
+        catch (Exception e)
         {
-          // ignore
+          LOG.Debug(e);
         }
       });
     }
@@ -277,8 +277,8 @@ namespace EQLogParser
 
     private void EventsUpdateOverlay(object sender, Overlay e)
     {
-      if (thePropertyGrid.SelectedObject is TextOverlayPropertyModel textModel && textModel.Original == e ||
-        thePropertyGrid.SelectedObject is TimerOverlayPropertyModel timerModel && timerModel.Original == e)
+      if ((thePropertyGrid.SelectedObject is TextOverlayPropertyModel textModel && textModel.Original == e) ||
+        (thePropertyGrid.SelectedObject is TimerOverlayPropertyModel timerModel && timerModel.Original == e))
       {
         var wasEnabled = saveButton.IsEnabled;
         TopEditor.Update(e.Top);
@@ -298,7 +298,7 @@ namespace EQLogParser
     {
       if (file != null && !IsCancelSelection())
       {
-        bool isTrigger = file is Trigger;
+        var isTrigger = file is Trigger;
         if (TriggerUtil.FindAndExpandNode(treeView, (isTrigger ? treeView.Nodes[0] : treeView.Nodes[1]) as TriggerTreeViewNode, file) is TriggerTreeViewNode found)
         {
           treeView.SelectedItems?.Clear();
@@ -357,7 +357,7 @@ namespace EQLogParser
         return;
       }
 
-      if ((target != treeView.Nodes[1] && target.ParentNode != treeView.Nodes[1]) && list.Any(item => item.IsOverlay))
+      if (target != treeView.Nodes[1] && target.ParentNode != treeView.Nodes[1] && list.Any(item => item.IsOverlay))
       {
         e.Handled = true;
         return;
@@ -365,7 +365,7 @@ namespace EQLogParser
 
       e.DraggingNodes.Clear();
       list.ForEach(node => e.DraggingNodes.Add(node));
-      target = ((!target.IsTrigger && !target.IsOverlay) && e.DropPosition == DropPosition.DropAsChild) ? target : target.ParentNode as TriggerTreeViewNode;
+      target = (!target.IsTrigger && !target.IsOverlay && e.DropPosition == DropPosition.DropAsChild) ? target : target.ParentNode as TriggerTreeViewNode;
 
       Removed = new List<TriggerNode>();
       foreach (var node in e.DraggingNodes.Cast<TriggerTreeViewNode>())
@@ -384,7 +384,7 @@ namespace EQLogParser
     private void ItemDropped(object sender, TreeViewItemDroppedEventArgs e)
     {
       var target = e.TargetNode as TriggerTreeViewNode;
-      target = ((!target.IsTrigger && !target.IsOverlay) && e.DropPosition == DropPosition.DropAsChild) ? target : target.ParentNode as TriggerTreeViewNode;
+      target = (!target.IsTrigger && !target.IsOverlay && e.DropPosition == DropPosition.DropAsChild) ? target : target.ParentNode as TriggerTreeViewNode;
 
       if (target.SerializedData != null)
       {
@@ -558,8 +558,8 @@ namespace EQLogParser
 
     private void Delete(List<TriggerTreeViewNode> nodes)
     {
-      bool updateTriggers = false;
-      bool updateOverlays = false;
+      var updateTriggers = false;
+      var updateOverlays = false;
       foreach (var node in nodes)
       {
         if (node != null && node.ParentNode is TriggerTreeViewNode parent)
@@ -698,7 +698,7 @@ namespace EQLogParser
         newMenuItem.IsEnabled = !node.IsTrigger && !node.IsOverlay && count == 1;
         cutItem.IsEnabled = copyItem.IsEnabled = (node.IsTrigger || node.IsOverlay) && count == 1;
         pasteItem.IsEnabled = !node.IsTrigger && !node.IsOverlay && count == 1 && CopiedNode != null &&
-          (CopiedNode.IsOverlay && node == treeView.Nodes[1] || CopiedNode.IsTrigger && node != treeView.Nodes[1]);
+          ((CopiedNode.IsOverlay && node == treeView.Nodes[1]) || (CopiedNode.IsTrigger && node != treeView.Nodes[1]));
       }
       else
       {
@@ -731,7 +731,7 @@ namespace EQLogParser
 
       assignPriorityMenuItem.Items.Clear();
 
-      for (int i = 1; i <= 5; i++)
+      for (var i = 1; i <= 5; i++)
       {
         var menuItem = new MenuItem { Header = "Priority " + i, Tag = i };
         menuItem.Click += AssignPriorityClick;
@@ -774,7 +774,7 @@ namespace EQLogParser
 
     private void AssignPriorityClick(object sender, RoutedEventArgs e)
     {
-      if (sender is MenuItem menuItem && int.TryParse(menuItem.Tag.ToString(), out int newPriority))
+      if (sender is MenuItem menuItem && int.TryParse(menuItem.Tag.ToString(), out var newPriority))
       {
         var anyFolders = treeView.SelectedItems.Cast<TriggerTreeViewNode>().Any(node => !node.IsOverlay && !node.IsTrigger && node != treeView.Nodes[1]);
         if (!anyFolders)
@@ -822,7 +822,7 @@ namespace EQLogParser
     {
       if (sender is MenuItem menuItem)
       {
-        string overlayId = menuItem.Tag != null ? menuItem.Tag.ToString() : null;
+        var overlayId = menuItem.Tag != null ? menuItem.Tag.ToString() : null;
         var anyFolders = treeView.SelectedItems.Cast<TriggerTreeViewNode>().Any(node => !node.IsOverlay && !node.IsTrigger && node != treeView.Nodes[1]);
 
         if (!anyFolders)
@@ -911,7 +911,7 @@ namespace EQLogParser
 
     private bool IsCancelSelection()
     {
-      bool cancel = false;
+      var cancel = false;
       if (saveButton.IsEnabled)
       {
         string name = null;
@@ -955,9 +955,9 @@ namespace EQLogParser
     private void SelectionChanged(TriggerTreeViewNode node)
     {
       dynamic model = null;
-      var isTrigger = (node?.IsTrigger == true);
-      var isOverlay = (node?.IsOverlay == true);
-      var isTimerOverlay = (node?.SerializedData?.OverlayData?.IsTimerOverlay == true);
+      var isTrigger = node?.IsTrigger == true;
+      var isOverlay = node?.IsOverlay == true;
+      var isTimerOverlay = node?.SerializedData?.OverlayData?.IsTimerOverlay == true;
       var isCooldownOverlay = isTimerOverlay && (node?.SerializedData?.OverlayData?.TimerMode == 1);
 
       if (isTrigger || isOverlay)
@@ -987,13 +987,13 @@ namespace EQLogParser
       }
 
       thePropertyGrid.SelectedObject = model;
-      thePropertyGrid.IsEnabled = (thePropertyGrid.SelectedObject != null);
+      thePropertyGrid.IsEnabled = thePropertyGrid.SelectedObject != null;
       thePropertyGrid.DescriptionPanelVisibility = (isTrigger || isOverlay) ? Visibility.Visible : Visibility.Collapsed;
       showButton.Visibility = isOverlay ? Visibility.Visible : Visibility.Collapsed;
 
       if (isTrigger)
       {
-        int timerType = node.SerializedData.TriggerData.TimerType;
+        var timerType = node.SerializedData.TriggerData.TimerType;
         EnableCategories(true, timerType > 0, timerType == 2, false, false, true, false, false);
       }
       else if (isOverlay)
@@ -1026,7 +1026,7 @@ namespace EQLogParser
       });
 
       timerDurationItem.Visibility = (basicTimer && !shortTimer) ? Visibility.Visible : Visibility.Collapsed;
-      timerShortDurationItem.Visibility = (shortTimer) ? Visibility.Visible : Visibility.Collapsed;
+      timerShortDurationItem.Visibility = shortTimer ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void NodeChecked(object sender, NodeCheckedEventArgs e)
@@ -1103,7 +1103,7 @@ namespace EQLogParser
         var list = thePropertyGrid.Properties.ToList();
         var longestProp = PropertyGridUtil.FindProperty(list, evalTimeItem.PropertyName);
 
-        bool isValid = TestRegexProperty(trigger.UseRegex, trigger.Pattern, PatternEditor);
+        var isValid = TestRegexProperty(trigger.UseRegex, trigger.Pattern, PatternEditor);
         isValid = isValid && TestRegexProperty(trigger.EndUseRegex, trigger.EndEarlyPattern, EndEarlyPatternEditor);
         isValid = isValid && TestRegexProperty(trigger.EndUseRegex2, trigger.EndEarlyPattern2, EndEarlyPattern2Editor);
 
@@ -1155,7 +1155,7 @@ namespace EQLogParser
           Application.Current.Resources["TextOverlayFontColor-" + textOverlay.Id] = textOverlay.FontBrush;
         }
         else if (args.Property.Name == fontSizeItem.PropertyName && textOverlay.FontSize.Split("pt") is string[] split && split.Length == 2
-         && double.TryParse(split[0], out double newFontSize))
+         && double.TryParse(split[0], out var newFontSize))
         {
           textChange = textOverlay.FontSize != textOverlay.Original.FontSize;
           Application.Current.Resources["TextOverlayFontSize-" + textOverlay.Id] = newFontSize;
@@ -1202,7 +1202,7 @@ namespace EQLogParser
           Application.Current.Resources["TimerBarFontColor-" + timerOverlay.Id] = timerOverlay.FontBrush;
         }
         else if (args.Property.Name == fontSizeItem.PropertyName && timerOverlay.FontSize.Split("pt") is string[] split && split.Length == 2
-         && double.TryParse(split[0], out double newFontSize))
+         && double.TryParse(split[0], out var newFontSize))
         {
           timerChange = timerOverlay.FontSize != timerOverlay.Original.FontSize;
           Application.Current.Resources["TimerBarFontSize-" + timerOverlay.Id] = newFontSize;
@@ -1210,7 +1210,7 @@ namespace EQLogParser
         }
         else if (args.Property.Name == timerModeItem.PropertyName)
         {
-          PropertyGridUtil.EnableCategories(thePropertyGrid, new[] { new { Name = idleBrushItem.CategoryName, IsEnabled = ((int)args.Property.Value == 1) } });
+          PropertyGridUtil.EnableCategories(thePropertyGrid, new[] { new { Name = idleBrushItem.CategoryName, IsEnabled = (int)args.Property.Value == 1 } });
         }
 
         if (timerChange)
@@ -1223,7 +1223,7 @@ namespace EQLogParser
 
     private bool TestRegexProperty(bool useRegex, string pattern, PatternEditor editor)
     {
-      bool isValid = useRegex ? TextFormatUtils.IsValidRegex(pattern) : true;
+      var isValid = useRegex ? TextFormatUtils.IsValidRegex(pattern) : true;
       editor.SetForeground(isValid ? "ContentForeground" : "EQWarnForegroundBrush");
       return isValid;
     }

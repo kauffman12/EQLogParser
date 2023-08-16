@@ -30,8 +30,8 @@ namespace EQLogParser
       showPets.IsChecked = CurrentPetValue = ConfigUtil.IfSet("TankingSummaryShowPets", null, true);
 
       // default damage types to display
-      string damageType = ConfigUtil.GetSetting("TankingSummaryDamageType");
-      if (!string.IsNullOrEmpty(damageType) && int.TryParse(damageType, out int type) && type > -1 && type < 3)
+      var damageType = ConfigUtil.GetSetting("TankingSummaryDamageType");
+      if (!string.IsNullOrEmpty(damageType) && int.TryParse(damageType, out var type) && type > -1 && type < 3)
       {
         damageTypes.SelectedIndex = type;
       }
@@ -65,7 +65,7 @@ namespace EQLogParser
       if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl breakdown, typeof(TankingBreakdown),
+        if (Helpers.OpenWindow(main.dockSite, null, out var breakdown, typeof(TankingBreakdown),
           "tankingBreakdownWindow", "Tanking Breakdown"))
         {
           (breakdown.Content as TankingBreakdown).Init(CurrentStats, selected);
@@ -78,7 +78,7 @@ namespace EQLogParser
       if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl breakdown, typeof(HealBreakdown),
+        if (Helpers.OpenWindow(main.dockSite, null, out var breakdown, typeof(HealBreakdown),
           "receivedHealingWindow", "Received Healing Breakdown"))
         {
           // healing stats on the tank is stored in MoreStats property
@@ -91,7 +91,7 @@ namespace EQLogParser
 
     override internal void UpdateDataGridMenuItems()
     {
-      string selectedName = "Unknown";
+      var selectedName = "Unknown";
 
       Dispatcher.InvokeAsync(() =>
       {
@@ -112,7 +112,7 @@ namespace EQLogParser
             menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.UNK && playerStats.OrigName != Labels.RS &&
             !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
             selectedName = playerStats.OrigName;
-            menuItemShowDeathLog.IsEnabled = (!string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X"));
+            menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X");
           }
 
           EnableClassMenuItems(menuItemShowHealingBreakdown, dataGrid, CurrentStats?.UniqueClasses);
@@ -156,7 +156,7 @@ namespace EQLogParser
       {
         foreach (var stats in CurrentStats.StatsList.Where(stats => PlayerManager.Instance.IsVerifiedPlayer(stats.OrigName)).OrderBy(stats => stats.OrigName))
         {
-          MenuItem item = new MenuItem { IsEnabled = true, Header = stats.OrigName };
+          var item = new MenuItem { IsEnabled = true, Header = stats.OrigName };
           item.Click += new RoutedEventHandler(AssignOwnerClick);
           menuItemPetOptions.Children.Add(item);
         }
@@ -186,7 +186,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(HitLogViewer), "tankingLogWindow", "Tanking Log"))
+        if (Helpers.OpenWindow(main.dockSite, null, out var log, typeof(HitLogViewer), "tankingLogWindow", "Tanking Log"))
         {
           (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups, true);
         }
@@ -198,7 +198,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
+        if (Helpers.OpenWindow(main.dockSite, null, out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
         {
           (log.Content as DeathLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
         }
@@ -210,7 +210,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems.Count == 1)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl hitFreq, typeof(HitFreqChart), "tankHitFreqChart", "Tanking Hit Frequency"))
+        if (Helpers.OpenWindow(main.dockSite, null, out var hitFreq, typeof(HitFreqChart), "tankHitFreqChart", "Tanking Hit Frequency"))
         {
           (hitFreq.Content as HitFreqChart).Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
         }
@@ -222,7 +222,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl timeline, typeof(GanttChart), "defensiveTimeline", "Defensive Timeline"))
+        if (Helpers.OpenWindow(main.dockSite, null, out var timeline, typeof(GanttChart), "defensiveTimeline", "Defensive Timeline"))
         {
           ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 0);
         }
@@ -271,7 +271,7 @@ namespace EQLogParser
               CurrentGroups = e.Groups;
               CurrentGroupCount = e.UniqueGroupCount;
 
-              bool isHealingLimited = false;
+              var isHealingLimited = false;
               if (CurrentStats == null)
               {
                 title.Content = NODATA_TABLE_LABEL;

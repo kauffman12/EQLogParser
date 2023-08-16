@@ -102,7 +102,7 @@ namespace EQLogParser
       classList.ItemsSource = list;
 
       // selected class
-      string selectedClass = ConfigUtil.GetSetting("OverlaySelectedClass");
+      var selectedClass = ConfigUtil.GetSetting("OverlaySelectedClass");
       if (selectedClass == null || !PlayerManager.Instance.GetClassList().Contains(selectedClass))
       {
         selectedClass = EQLogParser.Resource.ANY_CLASS;
@@ -161,7 +161,7 @@ namespace EQLogParser
         return;
       }
 
-      int maxRows = maxRowsList.SelectedIndex + 1;
+      var maxRows = maxRowsList.SelectedIndex + 1;
 
       DamageOverlayStats damageOverlayStats;
       lock (StatsLock)
@@ -252,16 +252,16 @@ namespace EQLogParser
 
     private void LoadStats(UIElementCollection children, CombinedStats localStats)
     {
-      for (int i = 0; i < children.Count; i++)
+      for (var i = 0; i < children.Count; i++)
       {
         var statIndex = i;
         var damageBar = children[i] as DamageBar;
         if (localStats.StatsList.Count > statIndex)
         {
           var stat = localStats.StatsList[statIndex];
-          var barPercent = (statIndex == 0) ? 100.0 : (stat.Total / (double)localStats.StatsList[0].Total) * 100.0;
+          var barPercent = (statIndex == 0) ? 100.0 : stat.Total / (double)localStats.StatsList[0].Total * 100.0;
 
-          string playerName = ConfigUtil.PlayerName;
+          var playerName = ConfigUtil.PlayerName;
           var isMe = !string.IsNullOrEmpty(playerName) && stat.Name.StartsWith(playerName, StringComparison.OrdinalIgnoreCase) &&
             (playerName.Length >= stat.Name.Length || stat.Name[playerName.Length] == ' ');
 
@@ -334,7 +334,7 @@ namespace EQLogParser
 
     private void LoadTestData(bool load)
     {
-      for (int i = 0; i < damageContent.Children.Count - 1; i++)
+      for (var i = 0; i < damageContent.Children.Count - 1; i++)
       {
         if (load)
         {
@@ -398,7 +398,7 @@ namespace EQLogParser
       SavedMiniBars = miniBars.IsChecked.Value;
 
       ConfigUtil.SetSetting("OverlayMaxRows", (maxRowsList.SelectedIndex + 1).ToString());
-      SavedMaxRows = (maxRowsList.SelectedIndex + 1);
+      SavedMaxRows = maxRowsList.SelectedIndex + 1;
 
       ConfigUtil.SetSetting("OverlayRankColor", progressBrush.Color.ToString());
       SavedProgressColor = progressBrush.Color.ToString();
@@ -462,7 +462,7 @@ namespace EQLogParser
 
     private void SetWindowSizes(string height, string width, string top, string left)
     {
-      if (width != null && double.TryParse(width, out double dvalue) && !double.IsNaN(dvalue))
+      if (width != null && double.TryParse(width, out var dvalue) && !double.IsNaN(dvalue))
       {
         Width = dvalue;
       }
@@ -525,14 +525,14 @@ namespace EQLogParser
 
     private void UpdateMiniBars(bool isChecked)
     {
-      double newHeight = 0.0;
+      var newHeight = 0.0;
       if (isChecked)
       {
         newHeight = 3.0;
       }
       else
       {
-        if (fontList.SelectedValue is ComboBoxItem item && int.TryParse(item.Tag.ToString(), out int value))
+        if (fontList.SelectedValue is ComboBoxItem item && int.TryParse(item.Tag.ToString(), out var value))
         {
           switch (value)
           {
@@ -589,7 +589,7 @@ namespace EQLogParser
     {
       CurrentHideOthers = hideOthers;
 
-      int selectedIndex = CurrentHideOthers ? 1 : 0;
+      var selectedIndex = CurrentHideOthers ? 1 : 0;
       if (showNames.SelectedIndex != selectedIndex)
       {
         showNames.SelectedIndex = selectedIndex;
@@ -609,7 +609,7 @@ namespace EQLogParser
     {
       CurrentShowCritRate = show;
 
-      int selectedIndex = CurrentShowCritRate ? 1 : 0;
+      var selectedIndex = CurrentShowCritRate ? 1 : 0;
       if (showCritRate.SelectedIndex != selectedIndex)
       {
         showCritRate.SelectedIndex = selectedIndex;
@@ -619,7 +619,7 @@ namespace EQLogParser
     private void DamageModeChanged(object sender, SelectionChangedEventArgs e)
     {
       if (damageModeList.SelectedIndex != -1 && e.RemovedItems.Count > 0 &&
-        damageModeList.SelectedItem is ComboBoxItem item && int.TryParse(item.Tag.ToString(), out int value))
+        damageModeList.SelectedItem is ComboBoxItem item && int.TryParse(item.Tag.ToString(), out var value))
       {
         UpdateDamageMode(value);
         DataChanged();
@@ -677,7 +677,7 @@ namespace EQLogParser
       tankContent.Children.Clear();
 
       // damage bars
-      for (int i = 0; i < maxRows; i++)
+      for (var i = 0; i < maxRows; i++)
       {
         damageContent.Children.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", true));
         tankContent.Children.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", true));
@@ -687,7 +687,7 @@ namespace EQLogParser
       damageContent.Children.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", false));
       tankContent.Children.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", false));
 
-      int selectedIndex = maxRows - 1;
+      var selectedIndex = maxRows - 1;
       if (maxRowsList.SelectedIndex != selectedIndex)
       {
         maxRowsList.SelectedIndex = selectedIndex;
@@ -703,7 +703,7 @@ namespace EQLogParser
 
     private void FontSizeChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (fontList.SelectedValue is ComboBoxItem item && e.RemovedItems.Count > 0 && int.TryParse(item.Tag.ToString(), out int value))
+      if (fontList.SelectedValue is ComboBoxItem item && e.RemovedItems.Count > 0 && int.TryParse(item.Tag.ToString(), out var value))
       {
         UpdateFontSize(value);
         DataChanged();
@@ -713,7 +713,7 @@ namespace EQLogParser
 
     private void UpdateFontSize(int fontSize)
     {
-      int selectedIndex = -1;
+      var selectedIndex = -1;
       switch (fontSize)
       {
         case 10:
@@ -958,7 +958,7 @@ namespace EQLogParser
       {
         var source = (HwndSource)PresentationSource.FromVisual(this);
         // set to layered and topmost by xaml
-        int exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
+        var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
         exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
         NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
       }

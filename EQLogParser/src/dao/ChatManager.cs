@@ -99,7 +99,7 @@ namespace EQLogParser
 
     internal static bool DeleteArchivedPlayer(string player)
     {
-      bool deleted = false;
+      var deleted = false;
 
       var dir = ConfigUtil.GetArchiveDir() + @"/" + player;
       if (Directory.Exists(dir))
@@ -130,15 +130,15 @@ namespace EQLogParser
       {
         foreach (var dir in Directory.GetDirectories(ConfigUtil.GetArchiveDir()))
         {
-          string name = Path.GetFileName(dir);
+          var name = Path.GetFileName(dir);
           var split = name.Split('.');
 
           if (split.Length > 1 && split[1].Length > 3)
           {
-            bool found = false;
+            var found = false;
             foreach (var sub in Directory.GetDirectories(dir))
             {
-              if (int.TryParse(Path.GetFileName(sub), out int year))
+              if (int.TryParse(Path.GetFileName(sub), out var year))
               {
                 found = true;
                 break;
@@ -178,7 +178,7 @@ namespace EQLogParser
     {
       ZipArchive result = null;
 
-      int tries = 10;
+      var tries = 10;
       while (result == null && tries-- > 0)
       {
         try
@@ -203,12 +203,12 @@ namespace EQLogParser
     internal static List<ComboBoxItemDetails> GetChannels(string playerAndServer)
     {
       var selected = GetSelectedChannels(playerAndServer);
-      List<ComboBoxItemDetails> channelList = new List<ComboBoxItemDetails>();
+      var channelList = new List<ComboBoxItemDetails>();
 
-      foreach (string line in GetSavedChannels(playerAndServer))
+      foreach (var line in GetSavedChannels(playerAndServer))
       {
         var isChecked = selected == null || selected.Contains(line);
-        ComboBoxItemDetails details = new ComboBoxItemDetails { Text = line, IsChecked = isChecked };
+        var details = new ComboBoxItemDetails { Text = line, IsChecked = isChecked };
         channelList.Add(details);
       }
 
@@ -217,7 +217,7 @@ namespace EQLogParser
 
     internal static List<string> GetPlayers(string playerAndServer)
     {
-      string playerDir = ConfigUtil.GetArchiveDir() + playerAndServer;
+      var playerDir = ConfigUtil.GetArchiveDir() + playerAndServer;
       var file = playerDir + @"\players.txt";
       return ConfigUtil.ReadList(file);
     }
@@ -243,7 +243,7 @@ namespace EQLogParser
 
     private static List<string> GetSavedChannels(string playerAndServer)
     {
-      string playerDir = ConfigUtil.GetArchiveDir() + playerAndServer;
+      var playerDir = ConfigUtil.GetArchiveDir() + playerAndServer;
       var file = playerDir + @"\" + CHANNELS_FILE;
       var list = ConfigUtil.ReadList(file);
       return list.ConvertAll(item => item.ToLower()).Distinct().OrderBy(item => item.ToLower()).ToList();
@@ -261,9 +261,9 @@ namespace EQLogParser
           ChatTypes = new List<ChatType>();
         }
 
-        double lastTime = double.NaN;
-        double increment = 0.0;
-        for (int i = 0; i < working.Count; i++)
+        var lastTime = double.NaN;
+        var increment = 0.0;
+        for (var i = 0; i < working.Count; i++)
         {
           if (working[i] != null)
           {
@@ -278,10 +278,10 @@ namespace EQLogParser
             }
 
             var chatLine = new ChatLine { Line = chatType.Text, BeginTime = chatType.BeginTime + increment };
-            DateTime dateTime = DateTime.MinValue.AddSeconds(chatLine.BeginTime);
-            string year = dateTime.ToString("yyyy", CultureInfo.CurrentCulture);
-            string month = dateTime.ToString("MM", CultureInfo.CurrentCulture);
-            string day = dateTime.ToString("dd", CultureInfo.CurrentCulture);
+            var dateTime = DateTime.MinValue.AddSeconds(chatLine.BeginTime);
+            var year = dateTime.ToString("yyyy", CultureInfo.CurrentCulture);
+            var month = dateTime.ToString("MM", CultureInfo.CurrentCulture);
+            var day = dateTime.ToString("dd", CultureInfo.CurrentCulture);
             AddToArchive(year, month, day, chatLine, chatType);
             lastTime = chatType.BeginTime;
           }
@@ -327,13 +327,13 @@ namespace EQLogParser
 
     private void AddToArchive(string year, string month, string day, ChatLine chatLine, ChatType chatType)
     {
-      string entryKey = day;
-      string archiveKey = year + "-" + month;
+      var entryKey = day;
+      var archiveKey = year + "-" + month;
 
       if (CurrentArchiveKey != archiveKey)
       {
         SaveCurrent(true);
-        string fileName = GetFileName(year, month);
+        var fileName = GetFileName(year, month);
         var mode = File.Exists(fileName) ? ZipArchiveMode.Update : ZipArchiveMode.Create;
 
         CurrentArchive = OpenArchive(fileName, mode);
@@ -352,7 +352,7 @@ namespace EQLogParser
         {
           using (var reader = new StreamReader(entry.Open()))
           {
-            List<string> temp = new List<string>();
+            var temp = new List<string>();
             while (reader.BaseStream.CanRead && !reader.EndOfStream)
             {
               temp.Insert(0, reader.ReadLine()); // reverse
@@ -360,8 +360,8 @@ namespace EQLogParser
 
             // this is so the date precision numbers are calculated in the same order
             // as the new lines being added
-            double lastTime = double.NaN;
-            double increment = 0.0;
+            var lastTime = double.NaN;
+            var increment = 0.0;
             temp.ForEach(line =>
             {
               var beginTime = DateUtil.ParseDate(line);
@@ -388,7 +388,7 @@ namespace EQLogParser
 
       if (CurrentList != null)
       {
-        int index = CurrentList.BinarySearch(chatLine, RTAComparer);
+        var index = CurrentList.BinarySearch(chatLine, RTAComparer);
 
         if (index < 0)
         {
@@ -548,7 +548,7 @@ namespace EQLogParser
     {
       List<string> result = null; // throw null to check case where file has never existed vs empty content
       var playerDir = ConfigUtil.GetArchiveDir() + playerAndServer;
-      string fileName = playerDir + @"\" + SELECTED_CHANNELS_FILE;
+      var fileName = playerDir + @"\" + SELECTED_CHANNELS_FILE;
       if (File.Exists(fileName))
       {
         result = ConfigUtil.ReadList(fileName);
@@ -560,7 +560,7 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(value))
       {
-        string player = value.ToLower(CultureInfo.CurrentCulture);
+        var player = value.ToLower(CultureInfo.CurrentCulture);
         if (!PlayerCache.ContainsKey(player) && !PlayerManager.Instance.IsVerifiedPet(player) && PlayerManager.IsPossiblePlayerName(player))
         {
           PlayerCache[player] = 1;
@@ -576,7 +576,7 @@ namespace EQLogParser
 
     private static string GetFileName(string year, string month)
     {
-      string folder = PLAYER_DIR + @"\" + year;
+      var folder = PLAYER_DIR + @"\" + year;
       Directory.CreateDirectory(folder);
       return folder + @"\Chat-" + month + @".zip";
     }

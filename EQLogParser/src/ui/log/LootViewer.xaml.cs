@@ -37,7 +37,7 @@ namespace EQLogParser
       optionsList.SelectedIndex = 0;
 
       // default these columns to descending
-      string[] desc = new string[] { "Quantity", "Time" };
+      var desc = new string[] { "Quantity", "Time" };
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
@@ -56,17 +56,17 @@ namespace EQLogParser
       TotalRecords.Clear();
       IndividualRecords.Clear();
 
-      List<LootRow> totalRecords = new List<LootRow>();
-      Dictionary<string, byte> uniquePlayers = new Dictionary<string, byte>();
-      Dictionary<string, byte> uniqueItems = new Dictionary<string, byte>();
-      Dictionary<string, byte> uniqueNpcs = new Dictionary<string, byte>();
+      var totalRecords = new List<LootRow>();
+      var uniquePlayers = new Dictionary<string, byte>();
+      var uniqueItems = new Dictionary<string, byte>();
+      var uniqueNpcs = new Dictionary<string, byte>();
 
-      List<string> players = new List<string>
+      var players = new List<string>
       {
         ALLPLAYERS
       };
 
-      List<string> itemNames = new List<string>
+      var itemNames = new List<string>
       {
         ALLITEMS,
         ONLYASS,
@@ -74,7 +74,7 @@ namespace EQLogParser
         ONLYITEMS
       };
 
-      List<string> npcs = new List<string>
+      var npcs = new List<string>
       {
        ALLNPCS
       };
@@ -140,7 +140,7 @@ namespace EQLogParser
 
     private void UpdateTitle()
     {
-      int count = dataGrid?.View != null ? dataGrid.View.Records.Count : 0;
+      var count = dataGrid?.View != null ? dataGrid.View.Records.Count : 0;
       titleLabel.Content = count == 0 ? "No Loot Found" : count + " Loot Entries Found";
     }
 
@@ -176,12 +176,12 @@ namespace EQLogParser
     {
       dataGrid.View.Filter = new Predicate<object>(obj =>
       {
-        bool found = false;
+        var found = false;
 
         if (obj is LootRow row)
         {
-          found = (CurrentSelectedItem == ALLITEMS || row.IsCurrency && CurrentSelectedItem == ONLYCURR ||
-          !row.IsCurrency && CurrentSelectedItem == ONLYITEMS || CurrentSelectedItem == ONLYASS && !row.IsCurrency && row.Quantity == 0 || CurrentSelectedItem == row.Item) &&
+          found = (CurrentSelectedItem == ALLITEMS || (row.IsCurrency && CurrentSelectedItem == ONLYCURR) ||
+          (!row.IsCurrency && CurrentSelectedItem == ONLYITEMS) || (CurrentSelectedItem == ONLYASS && !row.IsCurrency && row.Quantity == 0) || CurrentSelectedItem == row.Item) &&
           (CurrentSelectedPlayer == ALLPLAYERS || row.Player == CurrentSelectedPlayer);
 
           found = found && (CurrentSelectedNpc == ALLNPCS || row.Npc == CurrentSelectedNpc);
@@ -228,7 +228,7 @@ namespace EQLogParser
 
     private static string GetMoneyDescription(uint amount)
     {
-      List<string> values = new List<string>();
+      var values = new List<string>();
 
       if (amount / 1000 is uint plat && plat > 0)
       {

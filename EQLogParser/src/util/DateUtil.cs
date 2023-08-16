@@ -28,8 +28,8 @@ namespace EQLogParser
 
     internal static string FormatGeneralTime(double seconds, bool showSeconds = false)
     {
-      TimeSpan diff = TimeSpan.FromSeconds(seconds);
-      string result = "";
+      var diff = TimeSpan.FromSeconds(seconds);
+      var result = "";
 
       if (diff.Days >= 1)
       {
@@ -105,7 +105,7 @@ namespace EQLogParser
 
     internal bool HasTimeInRange(double now, string line, int lastMins, out double dateTime)
     {
-      bool found = false;
+      var found = false;
       dateTime = double.NaN;
       if (line.Length > 24)
       {
@@ -113,7 +113,7 @@ namespace EQLogParser
         if (!double.IsNaN(dateTime))
         {
           var diff = TimeSpan.FromSeconds(now - dateTime);
-          found = (diff.TotalMinutes < lastMins);
+          found = diff.TotalMinutes < lastMins;
         }
       }
       return found;
@@ -125,17 +125,17 @@ namespace EQLogParser
       return ParseDate(line);
     }
 
-    internal double ParseDate(string timeString) => ParseDateTime(timeString, out double _);
+    internal double ParseDate(string timeString) => ParseDateTime(timeString, out var _);
 
     internal double ParsePreciseDate(string timeString)
     {
-      ParseDateTime(timeString, out double precise);
+      ParseDateTime(timeString, out var precise);
       return precise;
     }
 
     private double ParseDateTime(string timeString, out double precise)
     {
-      double result = double.NaN;
+      var result = double.NaN;
 
       if (LastDateTimeString == timeString)
       {
@@ -145,7 +145,7 @@ namespace EQLogParser
       }
 
       increment = 0.0;
-      DateTime dateTime = CustomDateTimeParser("MMM dd HH:mm:ss yyyy", timeString, 5);
+      var dateTime = CustomDateTimeParser("MMM dd HH:mm:ss yyyy", timeString, 5);
 
       if (dateTime == DateTime.MinValue)
       {
@@ -169,30 +169,30 @@ namespace EQLogParser
 
     internal static DateTime CustomDateTimeParser(string dateFormat, string source, int offset = 0)
     {
-      int year = 0;
-      int month = 0;
-      int day = 0;
-      int hour = 0;
-      int minute = 0;
-      int second = 0;
-      int letterMonth = 0;
+      var year = 0;
+      var month = 0;
+      var day = 0;
+      var hour = 0;
+      var minute = 0;
+      var second = 0;
+      var letterMonth = 0;
 
       if (source.Length - offset >= dateFormat.Length)
       {
-        for (int i = 0; i < dateFormat.Length; i++)
+        for (var i = 0; i < dateFormat.Length; i++)
         {
-          char c = source[offset + i];
+          var c = source[offset + i];
           switch (dateFormat[i])
           {
             case 'y':
-              year = year * 10 + (c - '0');
+              year = (year * 10) + (c - '0');
               break;
             case 'M':
               if (char.IsLetter(c))
               {
                 if (++letterMonth == 3)
                 {
-                  int cur = offset + i;
+                  var cur = offset + i;
                   switch (source[cur - 2])
                   {
                     case 'J':
@@ -232,29 +232,29 @@ namespace EQLogParser
               }
               else
               {
-                month = month * 10 + (c - '0');
+                month = (month * 10) + (c - '0');
               }
               break;
             case 'd':
               if (char.IsDigit(c))
               {
-                day = day * 10 + (c - '0');
+                day = (day * 10) + (c - '0');
               }
               break;
             case 'H':
-              hour = hour * 10 + (c - '0');
+              hour = (hour * 10) + (c - '0');
               break;
             case 'm':
-              minute = minute * 10 + (c - '0');
+              minute = (minute * 10) + (c - '0');
               break;
             case 's':
-              second = second * 10 + (c - '0');
+              second = (second * 10) + (c - '0');
               break;
           }
         }
       }
 
-      DateTime result = DateTime.MinValue;
+      var result = DateTime.MinValue;
 
       if (year > 0 && month > 0 && month < 13 && day > 0 && day < 32 && hour >= 0 && hour < 24 && minute >= 0 && minute < 60 && second >= 0 && second < 60)
       {

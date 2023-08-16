@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace EQLogParser
 {
-  internal class NativeMethods
+  internal static class NativeMethods
   {
     #region Window styles
 
@@ -20,7 +20,7 @@ namespace EQLogParser
     internal enum GetWindowLongFields
     {
       // ...
-      GWL_EXSTYLE = (-20),
+      GWL_EXSTYLE = -20,
       // ...
     }
 
@@ -60,7 +60,7 @@ namespace EQLogParser
       if (IntPtr.Size == 4)
       {
         // use SetWindowLong
-        Int32 tempResult = IntSetWindowLong(hWnd, nIndex, IntPtrToInt32(dwNewLong));
+        var tempResult = IntSetWindowLong(hWnd, nIndex, IntPtrToInt32(dwNewLong));
         error = Marshal.GetLastWin32Error();
         result = new IntPtr(tempResult);
       }

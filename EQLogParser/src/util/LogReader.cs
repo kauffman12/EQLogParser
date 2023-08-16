@@ -33,15 +33,15 @@ namespace EQLogParser
       {
         try
         {
-          string logFilePath = FileName.Substring(0, FileName.LastIndexOf("\\", StringComparison.Ordinal)) + "\\";
-          string logFileName = FileName.Substring(FileName.LastIndexOf("\\", StringComparison.Ordinal) + 1);
-          bool isGzip = logFileName.EndsWith(".gz", StringComparison.Ordinal);
+          var logFilePath = FileName.Substring(0, FileName.LastIndexOf("\\", StringComparison.Ordinal)) + "\\";
+          var logFileName = FileName.Substring(FileName.LastIndexOf("\\", StringComparison.Ordinal) + 1);
+          var isGzip = logFileName.EndsWith(".gz", StringComparison.Ordinal);
 
           Stream gs;
           Stream fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
           StreamReader reader;
           FileSize = fs.Length;
-          double dateTime = double.NaN;
+          var dateTime = double.NaN;
 
           if (!isGzip) // fs.Length works and we can seek properly
           {
@@ -49,7 +49,7 @@ namespace EQLogParser
             if (LastMins > -1 && fs.Length > 0)
             {
               double now = DateTime.Now.Ticks / TimeSpan.FromSeconds(1).Ticks;
-              long position = fs.Length / 2;
+              var position = fs.Length / 2;
               long lastPos = 0;
               long value = -1;
 
@@ -58,8 +58,8 @@ namespace EQLogParser
 
               while (!reader.EndOfStream && value != 0)
               {
-                string line = reader.ReadLine();
-                bool inRange = DateUtil.HasTimeInRange(now, line, LastMins, out dateTime);
+                var line = reader.ReadLine();
+                var inRange = DateUtil.HasTimeInRange(now, line, LastMins, out dateTime);
                 value = Math.Abs(lastPos - position) / 2;
 
                 lastPos = position;
@@ -86,7 +86,7 @@ namespace EQLogParser
               while (!reader.EndOfStream)
               {
                 // seek the slow way since we can't jump around a zip stream
-                string line = reader.ReadLine();
+                var line = reader.ReadLine();
                 if (DateUtil.HasTimeInRange(now, line, LastMins, out dateTime))
                 {
                   LoadingCallback(line, fs.Position, dateTime);
@@ -101,14 +101,14 @@ namespace EQLogParser
 
           while (!reader.EndOfStream && Running)
           {
-            string line = reader.ReadLine();
+            var line = reader.ReadLine();
             LoadingCallback(line, fs.Position, DateUtil.ParseDate(line));
           }
 
           FileLoadComplete = true;
 
           // setup watcher
-          FileSystemWatcher fsw = new FileSystemWatcher
+          var fsw = new FileSystemWatcher
           {
             Path = logFilePath,
             Filter = logFileName
@@ -120,7 +120,7 @@ namespace EQLogParser
 
           while (Running)
           {
-            WaitForChangedResult result = fsw.WaitForChanged(WatcherChangeTypes.Renamed | WatcherChangeTypes.Deleted | WatcherChangeTypes.Changed, 2000);
+            var result = fsw.WaitForChanged(WatcherChangeTypes.Renamed | WatcherChangeTypes.Deleted | WatcherChangeTypes.Changed, 2000);
 
             if (reader == null && File.Exists(FileName))
             {
@@ -143,7 +143,7 @@ namespace EQLogParser
                 {
                   while (Running && !reader.EndOfStream)
                   {
-                    string line = reader.ReadLine();
+                    var line = reader.ReadLine();
                     LoadingCallback(line, fs.Length, DateUtil.ParseDate(line));
                   }
                 }

@@ -1,10 +1,10 @@
 ﻿namespace EQLogParser
 {
-  class ChatLineParser
+  static class ChatLineParser
   {
     internal static ChatType Process(LineData lineData, string fullLine)
     {
-      ChatType chatType = ParseChatType(lineData.Action, lineData.BeginTime);
+      var chatType = ParseChatType(lineData.Action, lineData.BeginTime);
 
       if (chatType != null)
       {
@@ -36,7 +36,7 @@
     internal static ChatType CheckYouCriteria(string action)
     {
       ChatType chatType = null;
-      string you = "You";
+      var you = "You";
 
       if (action.Length > 7 && action.IndexOf("say", 4, 3) == 4)
       {
@@ -118,23 +118,23 @@
     internal static ChatType CheckOtherCriteria(string action, double beginTime = double.NaN)
     {
       ChatType chatType = null;
-      string you = "You";
+      var you = "You";
 
       // check if line starts with what looks like a player name followed by a space
       // ignore NPC like names entirely
-      int end1 = PlayerManager.FindPossiblePlayerName(action, out bool isCrossServer, 0, -1, ' ');
+      var end1 = PlayerManager.FindPossiblePlayerName(action, out var isCrossServer, 0, -1, ' ');
 
       if (end1 > -1 && action.Length > (end1 + 5))
       {
         // "Kant -> Kazint:
         if (action.IndexOf("-> ", end1 + 1, 3) == (end1 + 1))
         {
-          int end2 = PlayerManager.FindPossiblePlayerName(action, out bool _, end1 + 4, -1, ':');
+          var end2 = PlayerManager.FindPossiblePlayerName(action, out var _, end1 + 4, -1, ':');
           if (end2 > -1)
           {
             chatType = new ChatType { Channel = ChatChannels.Tell, TextStart = end1 + 1 };
             chatType.Sender = action.Substring(0, end1);
-            chatType.SenderIsYou = (you == chatType.Sender);
+            chatType.SenderIsYou = you == chatType.Sender;
             chatType.Receiver = action.Substring(end1 + 4, end2 - (end1 + 4));
           }
         }
@@ -240,7 +240,7 @@
     {
       if (!double.IsNaN(beginTime) && action.Length > (petEnd + 15))
       {
-        int petLeaderIndex = action.IndexOf("'My leader is ", petEnd + 6);
+        var petLeaderIndex = action.IndexOf("'My leader is ", petEnd + 6);
         if (petLeaderIndex > -1)
         {
           if (string.IsNullOrEmpty(pet))
@@ -250,10 +250,10 @@
 
           if (!PlayerManager.Instance.IsVerifiedPlayer(pet)) // thanks idiots for this
           {
-            int period = action.IndexOf(".", petLeaderIndex + 16);
+            var period = action.IndexOf(".", petLeaderIndex + 16);
             if (period > -1)
             {
-              string owner = action.Substring(petLeaderIndex + 14, period - (petLeaderIndex + 14));
+              var owner = action.Substring(petLeaderIndex + 14, period - (petLeaderIndex + 14));
               PlayerManager.Instance.AddVerifiedPlayer(owner, beginTime);
               PlayerManager.Instance.AddVerifiedPet(pet);
               PlayerManager.Instance.AddPetToPlayer(pet, owner);

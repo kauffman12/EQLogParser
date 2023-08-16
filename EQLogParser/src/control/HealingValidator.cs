@@ -41,7 +41,7 @@ namespace EQLogParser
             // need to count group AEs and if more than 6 are seen we need to ignore those
             // casts since they're from MGB and count as an AE
             var key = record.Healer + "|" + record.SubType;
-            if (!currentSpellCounts.TryGetValue(key, out HashSet<string> value))
+            if (!currentSpellCounts.TryGetValue(key, out var value))
             {
               value = new HashSet<string>();
               currentSpellCounts[key] = value;

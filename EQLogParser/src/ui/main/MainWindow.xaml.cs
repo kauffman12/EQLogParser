@@ -1,7 +1,6 @@
 ﻿using FontAwesome5;
 using log4net;
 using log4net.Core;
-using Microsoft.VisualBasic.Logging;
 using Microsoft.Win32;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Shared;
@@ -82,7 +81,7 @@ namespace EQLogParser
 
         // DPI and sizing
         var dpi = UIElementUtil.GetDpi();
-        System.Drawing.Rectangle resolution = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
+        var resolution = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
         var defaultHeight = resolution.Height * 0.75 / dpi;
         var defaultWidth = resolution.Width * 0.85 / dpi;
         Height = ConfigUtil.GetSettingAsDouble("WindowHeight", defaultHeight);
@@ -373,7 +372,7 @@ namespace EQLogParser
       deleteChat.Items.Clear();
       ChatManager.GetArchivedPlayers().ForEach(player =>
       {
-        MenuItem item = new MenuItem() { IsEnabled = true, Header = player };
+        var item = new MenuItem() { IsEnabled = true, Header = player };
         deleteChat.Items.Add(item);
 
         item.Click += (object sender, RoutedEventArgs e) =>
@@ -423,7 +422,7 @@ namespace EQLogParser
 
       var tankingOptions = new GenerateStatsOptions();
       tankingOptions.Npcs.AddRange(filtered);
-      if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out ContentControl control) && control != null)
+      if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out var control) && control != null)
       {
         tankingOptions.DamageType = ((TankingSummary)control.Content).DamageType;
       }
@@ -442,17 +441,17 @@ namespace EQLogParser
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
       var tables = new Dictionary<string, SummaryTable>();
 
-      if (opened.TryGetValue(damageSummaryIcon.Tag as string, out ContentControl control))
+      if (opened.TryGetValue(damageSummaryIcon.Tag as string, out var control))
       {
         tables.Add(DockingManager.GetHeader(control) as string, (DamageSummary)control.Content);
       }
 
-      if (opened.TryGetValue(healingSummaryIcon.Tag as string, out ContentControl control2))
+      if (opened.TryGetValue(healingSummaryIcon.Tag as string, out var control2))
       {
         tables.Add(DockingManager.GetHeader(control2) as string, (HealingSummary)control2.Content);
       }
 
-      if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out ContentControl control3))
+      if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out var control3))
       {
         tables.Add(DockingManager.GetHeader(control3) as string, (TankingSummary)control3.Content);
       }
@@ -487,7 +486,7 @@ namespace EQLogParser
 
     private void ViewErrorLogClick(object sender, RoutedEventArgs e)
     {
-      using (Process fileopener = new Process())
+      using (var fileopener = new Process())
       {
         var appender = LOG.Logger.Repository.GetAppenders().FirstOrDefault(test => "file".Equals(test.Name, StringComparison.OrdinalIgnoreCase));
         if (appender != null)
@@ -501,7 +500,7 @@ namespace EQLogParser
 
     private void OpenSoundsFolderClick(object sender, RoutedEventArgs e)
     {
-      using (Process fileopener = new Process())
+      using (var fileopener = new Process())
       {
         fileopener.StartInfo.FileName = "explorer";
         fileopener.StartInfo.Arguments = "\"" + @"data\sounds" + "\"";
@@ -578,7 +577,7 @@ namespace EQLogParser
     private void ToggleDamageOverlayClick(object sender, RoutedEventArgs e)
     {
       enableDamageOverlayIcon.Visibility = enableDamageOverlayIcon.Visibility == Visibility.Hidden ? Visibility.Visible : Visibility.Hidden;
-      var enabled = (enableDamageOverlayIcon.Visibility == Visibility.Visible);
+      var enabled = enableDamageOverlayIcon.Visibility == Visibility.Visible;
       ConfigUtil.SetSetting("IsDamageOverlayEnabled", enabled.ToString());
 
       if (enabled)
@@ -723,7 +722,7 @@ namespace EQLogParser
       }
       else if (e.Source == eqLogMenuItem)
       {
-        int found = LogWindows.FindIndex(used => !used);
+        var found = LogWindows.FindIndex(used => !used);
         if (found == -1)
         {
           LogWindows.Add(true);
@@ -756,7 +755,7 @@ namespace EQLogParser
       {
         // any other core windows that just get hidden
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-        if (opened.TryGetValue(name, out ContentControl control) && control.Tag.ToString() == "Hide")
+        if (opened.TryGetValue(name, out var control) && control.Tag.ToString() == "Hide")
         {
           var state = (DockingManager.GetState(control) == DockState.Hidden) ? DockState.Dock : DockState.Hidden;
           DockingManager.SetState(control, state);
@@ -770,7 +769,7 @@ namespace EQLogParser
       if (Helpers.OpenChart(opened, dockSite, damageChartIcon.Tag as string, DAMAGE_CHOICES, "DPS Chart", ChartTab, true))
       {
         List<PlayerStats> selected = null;
-        if (opened.TryGetValue(damageSummaryIcon.Tag as string, out ContentControl window) && window.Content is DamageSummary summary)
+        if (opened.TryGetValue(damageSummaryIcon.Tag as string, out var window) && window.Content is DamageSummary summary)
         {
           selected = summary?.GetSelectedStats();
         }
@@ -785,7 +784,7 @@ namespace EQLogParser
       if (Helpers.OpenChart(opened, dockSite, healingChartIcon.Tag as string, HEALING_CHOICES, "Healing Chart", ChartTab, false))
       {
         List<PlayerStats> selected = null;
-        if (opened.TryGetValue(healingSummaryIcon.Tag as string, out ContentControl window) && window.Content is HealingSummary summary)
+        if (opened.TryGetValue(healingSummaryIcon.Tag as string, out var window) && window.Content is HealingSummary summary)
         {
           selected = summary?.GetSelectedStats();
         }
@@ -800,7 +799,7 @@ namespace EQLogParser
       if (Helpers.OpenChart(opened, dockSite, tankingChartIcon.Tag as string, TANKING_CHOICES, "Tanking Chart", ChartTab, false))
       {
         List<PlayerStats> selected = null;
-        if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out ContentControl window) && window.Content is TankingSummary summary)
+        if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out var window) && window.Content is TankingSummary summary)
         {
           selected = summary?.GetSelectedStats();
         }
@@ -812,7 +811,7 @@ namespace EQLogParser
     private void OpenDamageSummary()
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-      if (Helpers.OpenWindow(dockSite, opened, out ContentControl control, typeof(DamageSummary), damageSummaryIcon.Tag as string, "DPS Summary"))
+      if (Helpers.OpenWindow(dockSite, opened, out var control, typeof(DamageSummary), damageSummaryIcon.Tag as string, "DPS Summary"))
       {
         (control.Content as DamageSummary).EventsSelectionChange += DamageSummary_SelectionChanged;
         if (DamageStatsManager.Instance.GetGroupCount() > 0)
@@ -827,7 +826,7 @@ namespace EQLogParser
     private void OpenHealingSummary()
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-      if (Helpers.OpenWindow(dockSite, opened, out ContentControl control, typeof(HealingSummary), healingSummaryIcon.Tag as string, "Healing Summary"))
+      if (Helpers.OpenWindow(dockSite, opened, out var control, typeof(HealingSummary), healingSummaryIcon.Tag as string, "Healing Summary"))
       {
         (control.Content as HealingSummary).EventsSelectionChange += HealingSummary_SelectionChanged;
         if (HealingStatsManager.Instance.GetGroupCount() > 0)
@@ -841,7 +840,7 @@ namespace EQLogParser
     private void OpenTankingSummary()
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-      if (Helpers.OpenWindow(dockSite, opened, out ContentControl control, typeof(TankingSummary), tankingSummaryIcon.Tag as string, "Tanking Summary"))
+      if (Helpers.OpenWindow(dockSite, opened, out var control, typeof(TankingSummary), tankingSummaryIcon.Tag as string, "Tanking Summary"))
       {
         (control.Content as TankingSummary).EventsSelectionChange += TankingSummary_SelectionChanged;
         if (TankingStatsManager.Instance.GetGroupCount() > 0)
@@ -863,7 +862,7 @@ namespace EQLogParser
     private void HealingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
       HealingStatsManager.Instance.FireChartEvent("SELECT", data.Selected);
-      bool addTopParse = data.Selected?.Count == 1 && data.Selected[0].SubStats?.Count > 0;
+      var addTopParse = data.Selected?.Count == 1 && data.Selected[0].SubStats?.Count > 0;
       var preview = playerParseTextWindow.Content as ParsePreview;
       preview.UpdateParse(data, HealingStatsManager.Instance, addTopParse, Labels.HEALPARSE, Labels.TOPHEALSPARSE);
     }
@@ -871,7 +870,7 @@ namespace EQLogParser
     private void TankingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
     {
       TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "SELECT", data.Selected);
-      bool addReceiveParse = data.Selected?.Count == 1 && data.Selected[0].MoreStats != null;
+      var addReceiveParse = data.Selected?.Count == 1 && data.Selected[0].MoreStats != null;
       var preview = playerParseTextWindow.Content as ParsePreview;
       preview.UpdateParse(data, TankingStatsManager.Instance, addReceiveParse, Labels.TANKPARSE, Labels.RECEIVEDHEALPARSE);
     }
@@ -943,8 +942,8 @@ namespace EQLogParser
 
           statusText.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;
 
-          if ((filePercent >= 100 && CastProcessor.GetPercentComplete() >= 100 && DamageProcessor.GetPercentComplete() >= 100
-            && HealingProcessor.GetPercentComplete() >= 100 && MiscProcessor.GetPercentComplete() >= 100) && EQLogReader.FileLoadComplete)
+          if (filePercent >= 100 && CastProcessor.GetPercentComplete() >= 100 && DamageProcessor.GetPercentComplete() >= 100
+            && HealingProcessor.GetPercentComplete() >= 100 && MiscProcessor.GetPercentComplete() >= 100 && EQLogReader.FileLoadComplete)
           {
             if (filePercent >= 100)
             {
@@ -996,7 +995,7 @@ namespace EQLogParser
       try
       {
         string theFile;
-        bool success = true;
+        var success = true;
         if (previousFile != null)
         {
           theFile = previousFile;
@@ -1004,7 +1003,7 @@ namespace EQLogParser
         else
         {
           // WPF doesn't have its own file chooser so use Win32 Version
-          OpenFileDialog dialog = new OpenFileDialog
+          var dialog = new OpenFileDialog
           {
             // filter to txt files
             DefaultExt = ".txt",
@@ -1137,7 +1136,7 @@ namespace EQLogParser
         else
         {
           // only if it's not a chat line check if two lines are on the same line
-          int multiLine = line.IndexOf("[", ACTION_INDEX + 1);
+          var multiLine = line.IndexOf("[", ACTION_INDEX + 1);
           if (multiLine > -1 && line.Length > (multiLine + ACTION_INDEX - 1) && line[multiLine + ACTION_INDEX - 2] == ']' &&
             char.IsDigit(line[multiLine + ACTION_INDEX - 3]) && char.IsDigit(line[multiLine + ACTION_INDEX - 6]))
           {
@@ -1174,10 +1173,10 @@ namespace EQLogParser
       {
         if (RecentFiles.Count > count)
         {
-          int m = 75;
+          var m = 75;
           var theFile = RecentFiles[count].Length > m ? "... " + RecentFiles[count].Substring(RecentFiles[count].Length - m) : RecentFiles[count];
           var escapedFile = theFile.Replace("_", "__");
-          menuItem.Header = (count + 1) + ": " + escapedFile;
+          menuItem.Header = count + 1 + ": " + escapedFile;
           menuItem.Visibility = Visibility.Visible;
 
           if (menuItem.Items.Count == 0)
@@ -1218,7 +1217,7 @@ namespace EQLogParser
         if (icon.Tag is string name)
         {
           var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-          if (opened.TryGetValue(name, out ContentControl control))
+          if (opened.TryGetValue(name, out var control))
           {
             icon.Visibility = DockingManager.GetState(control) != DockState.Hidden ? Visibility.Visible : Visibility.Hidden;
           }
@@ -1281,9 +1280,9 @@ namespace EQLogParser
             }
           }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-          // ignore
+          LOG.Error(ex);
         }
       }
       else if (testButton.Content.ToString() == "Stop Test")
@@ -1367,12 +1366,12 @@ namespace EQLogParser
       var content = window.Content;
       if (content is EQLogViewer)
       {
-        string title = DockingManager.GetHeader(window) as string;
-        int last = title.LastIndexOf(" ");
+        var title = DockingManager.GetHeader(window) as string;
+        var last = title.LastIndexOf(" ");
         if (last > -1)
         {
-          string value = title.Substring(last, title.Length - last);
-          if (int.TryParse(value, out int result) && result > 0 && LogWindows.Count >= result)
+          var value = title.Substring(last, title.Length - last);
+          if (int.TryParse(value, out var result) && result > 0 && LogWindows.Count >= result)
           {
             LogWindows[result - 1] = false;
           }

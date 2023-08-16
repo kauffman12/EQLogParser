@@ -56,7 +56,7 @@ namespace EQLogParser
     {
       while (!Stopped)
       {
-        bool needSleep = false;
+        var needSleep = false;
 
         lock (QueueLock)
         {

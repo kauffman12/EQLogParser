@@ -19,8 +19,8 @@ namespace EQLogParser
       textBlock.Text = text;
       Title = caption;
 
-      string brush = "";
-      EFontAwesomeIcon image = EFontAwesomeIcon.None;
+      var brush = "";
+      var image = EFontAwesomeIcon.None;
       if (type == IconType.Warn)
       {
         brush = "EQWarnForegroundBrush";

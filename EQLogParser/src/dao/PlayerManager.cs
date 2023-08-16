@@ -89,7 +89,7 @@ namespace EQLogParser
       // Populate generated pets
       ConfigUtil.ReadList(@"data\petnames.txt").ForEach(line => GameGeneratedPets[line.TrimEnd()] = 1);
 
-      DispatcherTimer saveTimer = new DispatcherTimer();
+      var saveTimer = new DispatcherTimer();
       saveTimer.Tick += SaveTimer_Tick;
       saveTimer.Interval = new TimeSpan(0, 0, 30);
       saveTimer.Start();
@@ -118,7 +118,7 @@ namespace EQLogParser
       {
         lock (LockObject)
         {
-          if (!PetToPlayer.TryGetValue(pet, out string value) || value != player)
+          if (!PetToPlayer.TryGetValue(pet, out var value) || value != player)
           {
             if (!IsVerifiedPlayer(pet))
             {
@@ -178,7 +178,7 @@ namespace EQLogParser
         lock (LockObject)
         {
           name = string.Intern(name);
-          if (VerifiedPlayers.TryGetValue(name, out double lastTime))
+          if (VerifiedPlayers.TryGetValue(name, out var lastTime))
           {
             if (playerTime > lastTime)
             {
@@ -203,9 +203,9 @@ namespace EQLogParser
 
     internal string GetPlayerClass(string name)
     {
-      string className = "";
+      var className = "";
 
-      if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out SpellClassCounter counter))
+      if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out var counter))
       {
         className = ClassNames[counter.CurrentClass];
       }
@@ -215,7 +215,7 @@ namespace EQLogParser
 
     internal BitmapImage GetPlayerIcon(string name)
     {
-      BitmapImage icon = UNK_ICON;
+      var icon = UNK_ICON;
 
       switch (GetPlayerClassEnum(name))
       {
@@ -276,7 +276,7 @@ namespace EQLogParser
     {
       SpellClass spellClass = 0;
 
-      if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out SpellClassCounter counter))
+      if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out var counter))
       {
         spellClass = counter.CurrentClass;
       }
@@ -286,9 +286,9 @@ namespace EQLogParser
 
     internal string GetPlayerClassReason(string name)
     {
-      string result = "";
+      var result = "";
 
-      if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out SpellClassCounter counter))
+      if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out var counter))
       {
         result = counter.Reason;
       }
@@ -310,8 +310,8 @@ namespace EQLogParser
 
     internal bool IsVerifiedPet(string name)
     {
-      bool found = false;
-      bool isGameGenerated = false;
+      var found = false;
+      var isGameGenerated = false;
 
       if (!string.IsNullOrEmpty(name))
       {
@@ -373,7 +373,7 @@ namespace EQLogParser
 
     internal string ReplacePlayer(string name, string alternative)
     {
-      string result = name;
+      var result = name;
 
       if (ThirdPerson.ContainsKey(name))
       {
@@ -404,10 +404,10 @@ namespace EQLogParser
         {
           if (!string.IsNullOrEmpty(player) && player.Length > 2)
           {
-            double parsed = 0d;
+            var parsed = 0d;
             string name;
             string className = null;
-            string reason = "";
+            var reason = "";
             var split = player.Split('=');
             if (split.Length == 2)
             {
@@ -486,8 +486,8 @@ namespace EQLogParser
               if (keypair.Value != 0 && (now - DateUtil.FromDouble(keypair.Value)).TotalDays < 300)
               {
                 var output = keypair.Key + "=" + Math.Round(keypair.Value);
-                if (PlayerToClass.TryGetValue(keypair.Key, out SpellClassCounter value) && value.CurrentMax == long.MaxValue &&
-                  ClassNames.TryGetValue(value.CurrentClass, out string className))
+                if (PlayerToClass.TryGetValue(keypair.Key, out var value) && value.CurrentMax == long.MaxValue &&
+                  ClassNames.TryGetValue(value.CurrentClass, out var className))
                 {
                   output += "," + className;
                   output += "," + value.Reason;
@@ -507,7 +507,7 @@ namespace EQLogParser
 
     internal void SetPlayerClass(string player, string className, string reason)
     {
-      if (ClassesByName.TryGetValue(className, out SpellClass value))
+      if (ClassesByName.TryGetValue(className, out var value))
       {
         SetPlayerClass(player, value, reason);
       }
@@ -519,7 +519,7 @@ namespace EQLogParser
 
     internal void SetPlayerClass(string player, SpellClass theClass, string reason)
     {
-      if (!PlayerToClass.TryGetValue(player, out SpellClassCounter counter))
+      if (!PlayerToClass.TryGetValue(player, out var counter))
       {
         lock (PlayerToClass)
         {
@@ -548,7 +548,7 @@ namespace EQLogParser
 
     internal void UpdatePlayerClassFromSpell(SpellCast cast, SpellClass theClass)
     {
-      if (!PlayerToClass.TryGetValue(cast.Caster, out SpellClassCounter counter))
+      if (!PlayerToClass.TryGetValue(cast.Caster, out var counter))
       {
         lock (PlayerToClass)
         {
@@ -567,7 +567,7 @@ namespace EQLogParser
             newValue = 10;
           }
 
-          if (counter.ClassCounts.TryGetValue(theClass, out long value))
+          if (counter.ClassCounts.TryGetValue(theClass, out var value))
           {
             newValue += value;
           }
@@ -610,7 +610,7 @@ namespace EQLogParser
     internal static int FindPossiblePlayerName(string part, out bool isCrossServer, int start = 0, int stop = -1, char end = char.MaxValue)
     {
       isCrossServer = false;
-      int dotCount = 0;
+      var dotCount = 0;
 
       if (part != null)
       {
@@ -621,7 +621,7 @@ namespace EQLogParser
 
         if (start <= stop && (stop - start) >= 3)
         {
-          for (int i = start; i < stop; i++)
+          for (var i = start; i < stop; i++)
           {
             if (end != char.MaxValue && part[i] == end)
             {
@@ -652,7 +652,7 @@ namespace EQLogParser
       return -1;
     }
 
-    internal static bool IsPossiblePlayerName(string part, int stop = -1) => FindPossiblePlayerName(part, out bool _, 0, stop) > -1;
+    internal static bool IsPossiblePlayerName(string part, int stop = -1) => FindPossiblePlayerName(part, out var _, 0, stop) > -1;
 
     private static void AddMultiCase(string[] values, ConcurrentDictionary<string, byte> dict)
     {

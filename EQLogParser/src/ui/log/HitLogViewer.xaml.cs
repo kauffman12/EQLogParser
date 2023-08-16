@@ -39,7 +39,7 @@ namespace EQLogParser
       dataGrid.IsEnabled = false;
       UIElementUtil.SetEnabled(controlPanel.Children, false);
 
-      for (int i = 0; i <= 5; i++)
+      for (var i = 0; i <= 5; i++)
       {
         CheckBoxColumns.Add(dataGrid.Columns[i]);
         TextColumns.Add(dataGrid.Columns[i]);
@@ -66,7 +66,7 @@ namespace EQLogParser
         });
       });
 
-      for (int i = 6; i < dataGrid.Columns.Count; i++)
+      for (var i = 6; i < dataGrid.Columns.Count; i++)
       {
         CheckBoxColumns.Add(dataGrid.Columns[i]);
         TextColumns.Add(dataGrid.Columns[i]);
@@ -164,7 +164,7 @@ namespace EQLogParser
           {
             Parallel.ForEach(group, block =>
             {
-              double precise = 0.0;
+              var precise = 0.0;
               var rowCache = new Dictionary<string, HitLogRow>();
               foreach (ref var action in block.Actions.ToArray().AsSpan())
               {
@@ -199,7 +199,7 @@ namespace EQLogParser
         var lastSeen = new Dictionary<string, double>();
         foreach (var row in list.OrderBy(row => row.Time))
         {
-          if (lastSeen.TryGetValue(row.SubType, out double lastTime)) // 1 day
+          if (lastSeen.TryGetValue(row.SubType, out var lastTime)) // 1 day
           {
             var diff = Math.Floor(row.Time) - lastTime;
             if (diff > 0 && diff < 3600)
@@ -309,7 +309,7 @@ namespace EQLogParser
       {
         if (!defending && !string.IsNullOrEmpty(damage.Attacker) && !string.IsNullOrEmpty(playerStats.OrigName) && StatsUtil.IsHitType(damage.Type))
         {
-          bool isPet = false;
+          var isPet = false;
           if (damage.Attacker.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase) ||
           (isPet = playerStats.OrigName.Equals(PlayerManager.Instance.GetPlayerFromPet(damage.Attacker), StringComparison.OrdinalIgnoreCase) ||
           (!string.IsNullOrEmpty(damage.AttackerOwner) && damage.AttackerOwner.Equals(playerStats.OrigName, StringComparison.OrdinalIgnoreCase))))
@@ -363,7 +363,7 @@ namespace EQLogParser
         if (CurrentGroupActionsFilter)
         {
           var rowKey = GetRowKey(row, CurrentActedFilter != null);
-          if (rowCache.TryGetValue(rowKey, out HitLogRow previous))
+          if (rowCache.TryGetValue(rowKey, out var previous))
           {
             if (row.Acted != previous.Acted && previous.Acted != "Multiple")
             {

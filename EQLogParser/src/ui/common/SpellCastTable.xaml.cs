@@ -54,9 +54,9 @@ namespace EQLogParser
         var allSpells = new HashSet<TimedAction>();
         var startTime = SpellCountBuilder.QuerySpellBlocks(RaidStats, allSpells);
         var playerSpells = new Dictionary<string, List<string>>();
-        int max = 0;
+        var max = 0;
 
-        double lastTime = double.NaN;
+        var lastTime = double.NaN;
         var list = new List<IDictionary<string, object>>();
         foreach (var action in allSpells.OrderBy(action => action.BeginTime).ThenBy(action => (action is ReceivedSpell) ? 1 : -1))
         {
@@ -67,7 +67,7 @@ namespace EQLogParser
             max = 0;
           }
 
-          int size = 0;
+          var size = 0;
           if (action is SpellCast cast && !cast.Interrupted && IsValid(cast, UniqueNames, cast.Caster, false, out _))
           {
             size = AddToList(playerSpells, cast.Caster, cast.Spell);
@@ -100,7 +100,7 @@ namespace EQLogParser
 
     private int AddToList(Dictionary<string, List<string>> dict, string key, string value)
     {
-      if (dict.TryGetValue(key, out List<string> list))
+      if (dict.TryGetValue(key, out var list))
       {
         list.Add(value);
       }
@@ -114,12 +114,12 @@ namespace EQLogParser
 
     private bool IsValid(ReceivedSpell spell, Dictionary<string, bool> unique, string player, bool received, out SpellData replaced)
     {
-      bool valid = false;
+      var valid = false;
       replaced = spell.SpellData;
 
       if (!string.IsNullOrEmpty(player) && unique.ContainsKey(player))
       {
-        SpellData spellData = spell.SpellData ?? null;
+        var spellData = spell.SpellData ?? null;
 
         if (spellData == null && spell.Ambiguity.Count > 0 && DataManager.ResolveSpellAmbiguity(spell, out replaced))
         {
@@ -137,7 +137,7 @@ namespace EQLogParser
 
     private void AddRow(List<IDictionary<string, object>> list, Dictionary<string, List<string>> playerSpells, int max, double beginTime, double startTime)
     {
-      for (int i = 0; i < max; i++)
+      for (var i = 0; i < max; i++)
       {
         var row = new ExpandoObject() as IDictionary<string, object>;
         row.Add("Time", beginTime);
@@ -170,7 +170,7 @@ namespace EQLogParser
           UIElementUtil.SetEnabled(controlPanel.Children, true);
           dataGrid.ItemsSource = null;
 
-          for (int i = dataGrid.Columns.Count - 1; i > 1; i--)
+          for (var i = dataGrid.Columns.Count - 1; i > 1; i--)
           {
             dataGrid.Columns.RemoveAt(i);
           }

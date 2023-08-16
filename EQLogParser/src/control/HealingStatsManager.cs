@@ -116,7 +116,7 @@ namespace EQLogParser
                 {
                   if (previousSpellCounts.ContainsKey(timeKey))
                   {
-                    if (currentTime != double.NaN && (currentTime - timeKey) > 7)
+                    if (!double.IsNaN(currentTime) && (currentTime - timeKey) > 7)
                     {
                       previousSpellCounts.Remove(timeKey);
                     }
@@ -192,9 +192,9 @@ namespace EQLogParser
     {
       lock (HealingGroups)
       {
-        List<PlayerStats> playerStats = combined.StatsList;
-        Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
-        Dictionary<string, long> totals = new Dictionary<string, long>();
+        var playerStats = combined.StatsList;
+        var individualStats = new Dictionary<string, PlayerStats>();
+        var totals = new Dictionary<string, long>();
 
         // clear out previous
         playerStats.ForEach(stats =>
@@ -211,14 +211,14 @@ namespace EQLogParser
             {
               if (action is HealRecord record)
               {
-                PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Healed);
+                var stats = StatsUtil.CreatePlayerStats(individualStats, record.Healed);
                 StatsUtil.UpdateStats(stats, record);
 
-                PlayerSubStats subStats2 = StatsUtil.CreatePlayerSubStats(stats.SubStats2, record.Healer, record.Type);
+                var subStats2 = StatsUtil.CreatePlayerSubStats(stats.SubStats2, record.Healer, record.Type);
                 StatsUtil.UpdateStats(subStats2, record);
 
                 var spellStatName = record.SubType ?? Labels.SELFHEAL;
-                PlayerSubStats spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
+                var spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
                 StatsUtil.UpdateStats(spellStats, record);
 
                 long value = 0;
@@ -266,7 +266,7 @@ namespace EQLogParser
     private void UpdateStats(PlayerStats stats, ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> calc,
       ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> secondary)
     {
-      if (calc.TryGetValue(stats.Name, out ConcurrentDictionary<string, TimeRange> ranges))
+      if (calc.TryGetValue(stats.Name, out var ranges))
       {
         // base the total time range off the sub times ranges since healing doesn't have good Fight segments to work with
         var totalRange = new TimeRange();
@@ -284,7 +284,7 @@ namespace EQLogParser
       lock (HealingGroups)
       {
         // send update
-        DataPointEvent de = new DataPointEvent { Action = action, Iterator = new HealGroupCollection(HealingGroups) };
+        var de = new DataPointEvent { Action = action, Iterator = new HealGroupCollection(HealingGroups) };
 
         if (selected != null)
         {
@@ -316,7 +316,7 @@ namespace EQLogParser
         if (RaidTotals != null)
         {
           CombinedStats combined = null;
-          Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
+          var individualStats = new Dictionary<string, PlayerStats>();
 
           // always start over
           RaidTotals.Total = 0;
@@ -332,15 +332,15 @@ namespace EQLogParser
                   if (action is HealRecord record)
                   {
                     RaidTotals.Total += record.Total;
-                    PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Healer);
+                    var stats = StatsUtil.CreatePlayerStats(individualStats, record.Healer);
                     StatsUtil.UpdateStats(stats, record);
 
                     var spellStatName = record.SubType ?? Labels.SELFHEAL;
-                    PlayerSubStats spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
+                    var spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
                     StatsUtil.UpdateStats(spellStats, record);
 
                     var healedStatName = record.Healed;
-                    PlayerSubStats healedStats = StatsUtil.CreatePlayerSubStats(stats.SubStats2, healedStatName, record.Type);
+                    var healedStats = StatsUtil.CreatePlayerSubStats(stats.SubStats2, healedStatName, record.Type);
                     StatsUtil.UpdateStats(healedStats, record);
                   }
                 });
@@ -352,7 +352,7 @@ namespace EQLogParser
             Parallel.ForEach(individualStats.Values, stats =>
             {
               UpdateStats(stats, HealerSpellTimeRanges, HealerHealedTimeRanges);
-              if (RaidTotals.Specials.TryGetValue(stats.OrigName, out string special2))
+              if (RaidTotals.Specials.TryGetValue(stats.OrigName, out var special2))
               {
                 stats.Special = special2;
               }
@@ -370,7 +370,7 @@ namespace EQLogParser
             combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
             combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
 
-            for (int i = 0; i < combined.StatsList.Count; i++)
+            for (var i = 0; i < combined.StatsList.Count; i++)
             {
               combined.StatsList[i].Rank = Convert.ToUInt16(i + 1);
               combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
@@ -412,10 +412,10 @@ namespace EQLogParser
     public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool _, bool showDPS, bool showTotals,
       bool rankPlayers, bool __, bool showTime, string customTitle)
     {
-      List<string> list = new List<string>();
+      var list = new List<string>();
 
-      string title = "";
-      string details = "";
+      var title = "";
+      var details = "";
 
       if (currentStats != null)
       {
@@ -423,10 +423,10 @@ namespace EQLogParser
         {
           if (selected?.Count > 0)
           {
-            foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
+            foreach (var stats in selected.OrderByDescending(item => item.Total))
             {
-              string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(StatsUtil.PLAYER_FORMAT, stats.Name);
-              string healsFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
+              var playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(StatsUtil.PLAYER_FORMAT, stats.Name);
+              var healsFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
               list.Add(playerFormat + healsFormat);
             }
           }
@@ -440,16 +440,16 @@ namespace EQLogParser
         {
           if (selected?.Count == 1 && selected[0].SubStats.Count > 0)
           {
-            int rank = 1;
+            var rank = 1;
             foreach (var stats in selected[0].SubStats.OrderByDescending(stats => stats.Total).Take(10))
             {
-              string abbrv = DataManager.Instance.AbbreviateSpellName(stats.Name);
-              string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, rank++, abbrv) : string.Format(StatsUtil.PLAYER_FORMAT, abbrv);
-              string healsFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
+              var abbrv = DataManager.Instance.AbbreviateSpellName(stats.Name);
+              var playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, rank++, abbrv) : string.Format(StatsUtil.PLAYER_FORMAT, abbrv);
+              var healsFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
               list.Add(playerFormat + healsFormat);
             }
 
-            string totalTitle = selected[0].Name + "'s Top Heals";
+            var totalTitle = selected[0].Name + "'s Top Heals";
             details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
             var timeTitle = showTime ? currentStats.TimeTitle : "";
             title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, totalTitle);

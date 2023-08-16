@@ -52,8 +52,8 @@ namespace EQLogParser
 
     protected bool UpdateSelectedCastTypes(ComboBox selected)
     {
-      bool changed = false;
-      int count = 0;
+      var changed = false;
+      var count = 0;
       CurrentShowAnySpellType = false;
       foreach (var item in selected.Items.Cast<ComboBoxItemDetails>())
       {
@@ -106,8 +106,8 @@ namespace EQLogParser
 
     protected bool UpdateSelectedRestrictions(ComboBox selected)
     {
-      bool changed = false;
-      int count = 0;
+      var changed = false;
+      var count = 0;
       foreach (var item in selected.Items.Cast<ComboBoxItemDetails>())
       {
         if (item.IsChecked)

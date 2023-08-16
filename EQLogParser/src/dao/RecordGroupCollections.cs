@@ -13,7 +13,7 @@ namespace EQLogParser
 
     protected override bool IsValid(RecordWrapper wrapper)
     {
-      DamageRecord record = wrapper?.Record as DamageRecord;
+      var record = wrapper?.Record as DamageRecord;
       return DamageValidator.IsValid(record);
     }
 
@@ -24,7 +24,7 @@ namespace EQLogParser
       if (wrapper?.Record is DamageRecord record)
       {
         string origName = null;
-        string pname = PlayerManager.Instance.GetPlayerFromPet(record.Attacker);
+        var pname = PlayerManager.Instance.GetPlayerFromPet(record.Attacker);
         if (pname != null || (!string.IsNullOrEmpty(record.AttackerOwner) && !string.IsNullOrEmpty(pname = record.AttackerOwner)))
         {
           origName = pname;
@@ -86,7 +86,7 @@ namespace EQLogParser
 
     protected override bool IsValid(RecordWrapper wrapper)
     {
-      bool valid = false;
+      var valid = false;
       if (wrapper.Record is DamageRecord damage)
       {
         valid = DamageType == 0 || (DamageType == 1 && TankingStatsManager.IsMelee(damage)) || (DamageType == 2 && !TankingStatsManager.IsMelee(damage));
@@ -162,7 +162,7 @@ namespace EQLogParser
 
     private RecordWrapper GetRecord()
     {
-      RecordWrapper wrapper = StopWrapper;
+      var wrapper = StopWrapper;
 
       if (RecordGroups.Count > CurrentGroup)
       {

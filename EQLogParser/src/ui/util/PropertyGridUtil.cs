@@ -5,7 +5,7 @@ using System.Windows;
 
 namespace EQLogParser
 {
-  internal class PropertyGridUtil
+  internal static class PropertyGridUtil
   {
     internal static void EnableCategories(PropertyGrid propertyGrid, dynamic[] settings)
     {

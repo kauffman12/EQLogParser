@@ -20,7 +20,7 @@ namespace EQLogParser
       InitializeComponent();
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
       // default these columns to descending
-      string[] desc = new string[] { "Lowest", "Cold", "Corruption", "Disease", "Magic", "Fire", "Physical", "Poison", "Average", "Reflected" };
+      var desc = new string[] { "Lowest", "Cold", "Corruption", "Disease", "Magic", "Fire", "Physical", "Poison", "Average", "Reflected" };
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       Load();
@@ -94,7 +94,7 @@ namespace EQLogParser
 
       foreach (var kv in DataManager.Instance.GetNpcTotalSpellCounts())
       {
-        if (!npcStatsRows.TryGetValue(kv.Key, out NpcStatsRow updateRow))
+        if (!npcStatsRows.TryGetValue(kv.Key, out var updateRow))
         {
           updateRow = new NpcStatsRow { Name = kv.Key };
         }
@@ -111,8 +111,8 @@ namespace EQLogParser
       Tuple<double, string> GetRate(uint landed, uint notLanded)
       {
         Tuple<double, string> results;
-        double computed = 0.0;
-        uint total = landed + notLanded;
+        var computed = 0.0;
+        var total = landed + notLanded;
 
         if (landed == 0 && total > 0)
         {
@@ -126,7 +126,7 @@ namespace EQLogParser
         if (total > 0)
         {
           computed = Math.Round(computed * 100, 2);
-          string computedString = string.Format(CultureInfo.CurrentCulture, "{0} ({1}/{2})", computed, notLanded, total);
+          var computedString = string.Format(CultureInfo.CurrentCulture, "{0} ({1}/{2})", computed, notLanded, total);
           results = new Tuple<double, string>(computed, computedString);
         }
         else

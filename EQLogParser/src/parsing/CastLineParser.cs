@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace EQLogParser
 {
-  class CastLineParser
+  static class CastLineParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly char[] OldSpellChars = new char[] { '<', '>' };
@@ -24,14 +24,14 @@ namespace EQLogParser
     {
       try
       {
-        List<string> sList = new List<string>(lineData.Action.Split(' '));
+        var sList = new List<string>(lineData.Action.Split(' '));
 
         if (sList.Count > 1 && !sList[0].Contains(".") && !sList.Last().EndsWith(")") && !CheckLandsOnMessages(sList, lineData.BeginTime))
         {
           string player = null;
           string spellName = null;
-          bool isSpell = false;
-          bool isInterrupted = false;
+          var isSpell = false;
+          var isInterrupted = false;
 
           // [Sat Mar 14 19:57:48 2020] You activate Venon's Vindication.
           // [Mon Mar 02 19:46:09 2020] You begin casting Shield of Destiny Rk. II.
@@ -116,7 +116,7 @@ namespace EQLogParser
 
           if (!string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(spellName))
           {
-            double currentTime = lineData.BeginTime;
+            var currentTime = lineData.BeginTime;
 
             if (!isInterrupted)
             {
@@ -145,16 +145,16 @@ namespace EQLogParser
     private static bool CheckLandsOnMessages(List<string> sList, double beginTime)
     {
       // LandsOnYou messages also require DataIndex of zero
-      string player = ConfigUtil.PlayerName;
+      var player = ConfigUtil.PlayerName;
 
       // old logs sometimes had received messages on the same line as a heal
       // [Sun Aug 04 23:39:56 2019] You are generously healed. You healed Kizant for 35830 (500745) hit points by Staunch Recovery.
-      for (int i = 0; i < sList.Count; i++)
+      for (var i = 0; i < sList.Count; i++)
       {
         if (sList[i].EndsWith("."))
         {
           // if its a spell
-          int lastIndex = (sList.Count - 1);
+          var lastIndex = sList.Count - 1;
           if (lastIndex != i && sList[i].Equals("Rk."))
           {
             return false;
@@ -217,7 +217,7 @@ namespace EQLogParser
       // ZONE EVENT - moved here to keep it in the same thread as lands on message parsing
       if (sList[1] == "have" && sList[2] == "entered")
       {
-        string zone = string.Join(" ", sList.ToArray(), 3, sList.Count - 3).TrimEnd('.');
+        var zone = string.Join(" ", sList.ToArray(), 3, sList.Count - 3).TrimEnd('.');
         DataManager.Instance.AddMiscRecord(new ZoneRecord { Zone = zone }, beginTime);
         if (!zone.StartsWith("an area", StringComparison.OrdinalIgnoreCase))
         {
