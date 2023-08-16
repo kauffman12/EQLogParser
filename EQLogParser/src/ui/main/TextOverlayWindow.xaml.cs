@@ -65,7 +65,7 @@ namespace EQLogParser
         TextDataList.AddFirst(new TextData
         {
           Text = text,
-          EndTicks = beginTicks + TheOverlay.FadeDelay * TimeSpan.TicksPerSecond,
+          EndTicks = beginTicks + (TheOverlay.FadeDelay * TimeSpan.TicksPerSecond),
           Brush = brush
         });
 
@@ -106,7 +106,7 @@ namespace EQLogParser
       lock (TextDataList)
       {
         var node = TextDataList.First;
-        int lastIndex = content.Children.Count - 1;
+        var lastIndex = content.Children.Count - 1;
 
         while (node != null)
         {
@@ -259,7 +259,7 @@ namespace EQLogParser
       {
         var source = (HwndSource)PresentationSource.FromVisual(this);
         // set to layered and topmost by xaml
-        int exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
+        var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
         exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
         NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
       }

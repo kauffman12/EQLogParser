@@ -27,7 +27,7 @@ namespace EQLogParser
 
     private void HandleNewTaunt(object sender, TauntEvent e)
     {
-      Fight fight = DataManager.Instance.GetFight(e.Record.Npc);
+      var fight = DataManager.Instance.GetFight(e.Record.Npc);
 
       if (fight == null)
       {
@@ -57,11 +57,11 @@ namespace EQLogParser
         RecentSpellCache[processed.Record.SubType] = true;
       }
 
-      string comboKey = processed.Record.Attacker + "=" + processed.Record.Defender;
-      if (ValidCombo.TryGetValue(comboKey, out bool defender) || IsValidAttack(processed.Record, isAttackerPlayer, out defender))
+      var comboKey = processed.Record.Attacker + "=" + processed.Record.Defender;
+      if (ValidCombo.TryGetValue(comboKey, out var defender) || IsValidAttack(processed.Record, isAttackerPlayer, out defender))
       {
         ValidCombo[comboKey] = defender;
-        bool isNonTankingFight = false;
+        var isNonTankingFight = false;
 
         // fix for unknown spells having a good name to work from
         if (processed.Record.AttackerIsSpell && defender)
@@ -75,7 +75,7 @@ namespace EQLogParser
           }
         }
 
-        Fight fight = Get(processed.Record, processed.BeginTime, defender);
+        var fight = Get(processed.Record, processed.BeginTime, defender);
 
         if (defender)
         {
@@ -92,7 +92,7 @@ namespace EQLogParser
 
             var attacker = processed.Record.AttackerOwner ?? processed.Record.Attacker;
             var validator = new DamageValidator();
-            if (fight.PlayerDamageTotals.TryGetValue(attacker, out FightTotalDamage total))
+            if (fight.PlayerDamageTotals.TryGetValue(attacker, out var total))
             {
               total.Damage += validator.IsValid(processed.Record) ? processed.Record.Total : 0;
               total.PetOwner = total.PetOwner ?? processed.Record.AttackerOwner;
@@ -154,7 +154,7 @@ namespace EQLogParser
           fight.TankHits++;
           fight.TankTotal += processed.Record.Total;
 
-          if (fight.PlayerTankTotals.TryGetValue(processed.Record.Defender, out FightTotalDamage total))
+          if (fight.PlayerTankTotals.TryGetValue(processed.Record.Defender, out var total))
           {
             total.Damage += processed.Record.Total;
             total.UpdateTime = processed.BeginTime;
@@ -180,9 +180,9 @@ namespace EQLogParser
 
     private Fight Get(DamageRecord record, double currentTime, bool defender)
     {
-      string npc = defender ? record.Defender : record.Attacker;
+      var npc = defender ? record.Defender : record.Attacker;
 
-      Fight fight = DataManager.Instance.GetFight(npc);
+      var fight = DataManager.Instance.GetFight(npc);
       if (fight == null)
       {
         fight = Create(npc, currentTime);
@@ -193,7 +193,7 @@ namespace EQLogParser
 
     private Fight Create(string defender, double currentTime)
     {
-      string timeString = DateUtil.FormatSimpleDate(currentTime);
+      var timeString = DateUtil.FormatSimpleDate(currentTime);
       return new Fight
       {
         Name = string.Intern(defender),
@@ -213,7 +213,7 @@ namespace EQLogParser
 
     private static bool IsValidAttack(DamageRecord record, bool isAttackerPlayer, out bool npcDefender)
     {
-      bool valid = false;
+      var valid = false;
       npcDefender = false;
 
       if (!record.Attacker.Equals(record.Defender, StringComparison.OrdinalIgnoreCase))

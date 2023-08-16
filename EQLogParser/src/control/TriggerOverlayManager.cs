@@ -132,7 +132,7 @@ namespace EQLogParser
       var overlay = GetTextOverlayById(model.Id, out _);
       if (overlay != null)
       {
-        if (PreviewTextWindows.TryGetValue(overlay.Id, out TextOverlayWindow textWindow))
+        if (PreviewTextWindows.TryGetValue(overlay.Id, out var textWindow))
         {
           window = textWindow;
         }
@@ -142,7 +142,7 @@ namespace EQLogParser
         overlay = GetTimerOverlayById(model.Id, out _);
         if (overlay != null)
         {
-          if (PreviewTimerWindows.TryGetValue(overlay.Id, out TimerOverlayWindow timerWindow))
+          if (PreviewTimerWindows.TryGetValue(overlay.Id, out var timerWindow))
           {
             window = timerWindow;
           }
@@ -200,7 +200,7 @@ namespace EQLogParser
 
     internal void ClosePreviewTextOverlay(string id)
     {
-      if (PreviewTextWindows.TryGetValue(id, out TextOverlayWindow window))
+      if (PreviewTextWindows.TryGetValue(id, out var window))
       {
         window.Close();
         PreviewTextWindows.TryRemove(id, out _);
@@ -209,7 +209,7 @@ namespace EQLogParser
 
     internal void ClosePreviewTimerOverlay(string id)
     {
-      if (PreviewTimerWindows.TryGetValue(id, out TimerOverlayWindow window))
+      if (PreviewTimerWindows.TryGetValue(id, out var window))
       {
         window.Close();
         PreviewTimerWindows.TryRemove(id, out _);
@@ -378,7 +378,7 @@ namespace EQLogParser
               var nowTicks = DateTime.Now.Ticks;
               if (windowData.RemoveTicks == -1)
               {
-                windowData.RemoveTicks = (nowTicks + (TimeSpan.TicksPerMinute * 2));
+                windowData.RemoveTicks = nowTicks + (TimeSpan.TicksPerMinute * 2);
               }
               else if (nowTicks > windowData.RemoveTicks)
               {
@@ -425,11 +425,11 @@ namespace EQLogParser
           trigger.SelectedOverlays.ForEach(overlayId =>
           {
             // check if it's even enabled
-            if (GetTextOverlayById(overlayId, out bool isEnabled) is Overlay overlay)
+            if (GetTextOverlayById(overlayId, out var isEnabled) is Overlay overlay)
             {
               if (isEnabled)
               {
-                if (!TextWindows.TryGetValue(overlayId, out WindowData windowData))
+                if (!TextWindows.TryGetValue(overlayId, out var windowData))
                 {
                   windowData = new WindowData { TheWindow = new TextOverlayWindow(overlay) };
                   TextWindows[overlayId] = windowData;
@@ -468,11 +468,11 @@ namespace EQLogParser
           trigger.SelectedOverlays.ForEach(overlayId =>
           {
             // check if it's even enabled
-            if (GetTimerOverlayById(overlayId, out bool isEnabled) is Overlay overlay)
+            if (GetTimerOverlayById(overlayId, out var isEnabled) is Overlay overlay)
             {
               if (isEnabled)
               {
-                if (!TimerWindows.TryGetValue(overlayId, out WindowData windowData))
+                if (!TimerWindows.TryGetValue(overlayId, out var windowData))
                 {
                   windowData = new WindowData { TheWindow = new TimerOverlayWindow(overlay) };
                   TimerWindows[overlayId] = windowData;

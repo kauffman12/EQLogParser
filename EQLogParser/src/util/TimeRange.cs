@@ -13,7 +13,7 @@ namespace EQLogParser
     {
       var additional = new List<TimeSegment>();
 
-      for (int i = 0; i < TimeSegments.Count; i++)
+      for (var i = 0; i < TimeSegments.Count; i++)
       {
         if (i + 1 is int next && next < TimeSegments.Count)
         {
@@ -52,11 +52,11 @@ namespace EQLogParser
         }
         else
         {
-          int leftIndex = -1;
-          int rightIndex = -1;
-          bool handled = false;
+          var leftIndex = -1;
+          var rightIndex = -1;
+          var handled = false;
 
-          for (int i = 0; i < TimeSegments.Count; i++)
+          for (var i = 0; i < TimeSegments.Count; i++)
           {
             if (TimeSegments[i].Equals(segment))
             {

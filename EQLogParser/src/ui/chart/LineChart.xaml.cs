@@ -83,10 +83,10 @@ namespace EQLogParser
     private void UpdateTimes(string name, DataPoint dataPoint, Dictionary<string, double> diffs, Dictionary<string, double> firstTimes,
       Dictionary<string, double> lastTimes)
     {
-      double diff = lastTimes.TryGetValue(name, out double lastTime) ? dataPoint.CurrentTime - lastTime : 0;
+      var diff = lastTimes.TryGetValue(name, out var lastTime) ? dataPoint.CurrentTime - lastTime : 0;
       diffs[name] = diff;
 
-      if (!firstTimes.TryGetValue(name, out double _) || diff > DataManager.FIGHTTIMEOUT)
+      if (!firstTimes.TryGetValue(name, out var _) || diff > DataManager.FIGHTTIMEOUT)
       {
         firstTimes[name] = dataPoint.CurrentTime;
       }
@@ -115,7 +115,7 @@ namespace EQLogParser
         UpdateTimes(dataPoint.Name, dataPoint, diffs, firstTimes, lastTimes);
         UpdateTimes(raidName, dataPoint, diffs, firstTimes, lastTimes);
 
-        if (!raidData.TryGetValue(raidName, out DataPoint raidAggregate))
+        if (!raidData.TryGetValue(raidName, out var raidAggregate))
         {
           raidAggregate = new DataPoint() { Name = raidName };
           raidData[raidName] = raidAggregate;
@@ -125,7 +125,7 @@ namespace EQLogParser
 
         var petName = dataPoint.PlayerName == null ? null : dataPoint.Name;
         UpdateTimes(totalName, dataPoint, diffs, firstTimes, lastTimes);
-        if (!totalPlayerData.TryGetValue(totalName, out DataPoint totalAggregate))
+        if (!totalPlayerData.TryGetValue(totalName, out var totalAggregate))
         {
           totalAggregate = new DataPoint() { Name = totalName, PlayerName = playerName };
           totalPlayerData[totalName] = totalAggregate;
@@ -135,7 +135,7 @@ namespace EQLogParser
 
         if (dataPoint.PlayerName == null)
         {
-          if (!playerData.TryGetValue(dataPoint.Name, out DataPoint aggregate))
+          if (!playerData.TryGetValue(dataPoint.Name, out var aggregate))
           {
             aggregate = new DataPoint() { Name = dataPoint.Name, PlayerName = dataPoint.Name };
             playerData[dataPoint.Name] = aggregate;
@@ -151,7 +151,7 @@ namespace EQLogParser
           }
 
           HasPets[totalName][petName] = 1;
-          if (!petData.TryGetValue(petName, out DataPoint petAggregate))
+          if (!petData.TryGetValue(petName, out var petAggregate))
           {
             petAggregate = new DataPoint() { Name = petName, PlayerName = playerName };
             petData[petName] = petAggregate;
@@ -182,12 +182,12 @@ namespace EQLogParser
     {
       foreach (ref var points in data.Values.ToArray().AsSpan())
       {
-        for (int i = 0; i < points.Count; i++)
+        for (var i = 0; i < points.Count; i++)
         {
           var count = 0;
           var total = 0L;
           var beginTime = points[i].CurrentTime;
-          for (int j = i; j >= 0; j--)
+          for (var j = i; j >= 0; j--)
           {
             if ((beginTime - points[j].CurrentTime) > 5)
             {
@@ -214,8 +214,8 @@ namespace EQLogParser
 
       Dictionary<string, List<DataPoint>> workingData = null;
 
-      string selectedLabel = "Selected Player(s)";
-      string nonSelectedLabel = " Player(s)";
+      var selectedLabel = "Selected Player(s)";
+      var nonSelectedLabel = " Player(s)";
       switch (CurrentPetOrPlayerOption)
       {
         case Labels.PETPLAYEROPTION:
@@ -253,10 +253,10 @@ namespace EQLogParser
       }
       else
       {
-        List<string> names = selected.Select(stats => stats.OrigName).ToList();
+        var names = selected.Select(stats => stats.OrigName).ToList();
         sortedValues = workingData.Values.Where(values =>
         {
-          bool pass = false;
+          var pass = false;
           var first = values.First();
           if (CurrentPetOrPlayerOption == Labels.PETPLAYEROPTION)
           {
@@ -291,7 +291,7 @@ namespace EQLogParser
     {
       var collection = new ChartSeriesCollection();
 
-      string yPath = "Avg";
+      var yPath = "Avg";
       switch (CurrentChoice)
       {
         case "Aggregate DPS":
@@ -478,7 +478,7 @@ namespace EQLogParser
     {
       var diff = diffs[aggregate.Name];
       var firstTime = firstTimes[aggregate.Name];
-      lastTimes.TryGetValue(aggregate.Name, out double lastTime);
+      lastTimes.TryGetValue(aggregate.Name, out var lastTime);
 
       if (diff > DataManager.FIGHTTIMEOUT)
       {
@@ -519,7 +519,7 @@ namespace EQLogParser
       aggregate.CritsPerSecond += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
       aggregate.TcPerSecond += LineModifiersParser.IsTwincast(dataPoint.ModifiersMask) ? (uint)1 : 0;
       aggregate.AttemptsPerSecond += 1;
-      aggregate.HitsPerSecond += (MissTypes.ContainsKey(dataPoint.Type) ? 0 : 1);
+      aggregate.HitsPerSecond += MissTypes.ContainsKey(dataPoint.Type) ? 0 : 1;
       aggregate.TotalPerSecond += dataPoint.Total;
       aggregate.Total += dataPoint.Total;
       aggregate.FightTotal += dataPoint.Total;
@@ -588,7 +588,7 @@ namespace EQLogParser
         newEntry.TcRate = Math.Round(Convert.ToDouble(aggregate.FightTcHits) / aggregate.FightHits * 100, 2);
       }
 
-      if (!chartValues.TryGetValue(aggregate.Name, out List<DataPoint> playerValues))
+      if (!chartValues.TryGetValue(aggregate.Name, out var playerValues))
       {
         playerValues = new List<DataPoint>();
         chartValues[aggregate.Name] = playerValues;

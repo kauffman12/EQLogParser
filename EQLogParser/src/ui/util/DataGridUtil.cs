@@ -15,7 +15,7 @@ using System.Windows.Media.Imaging;
 
 namespace EQLogParser
 {
-  class DataGridUtil
+  static class DataGridUtil
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static int StartRow = 0;
@@ -91,7 +91,7 @@ namespace EQLogParser
       try
       {
         var export = BuildExportData(gridBase);
-        string result = TextFormatUtils.BuildCsv(export.Item1, export.Item2, title);
+        var result = TextFormatUtils.BuildCsv(export.Item1, export.Item2, title);
         Clipboard.SetDataObject(result);
       }
       catch (ArgumentNullException ane)
@@ -117,7 +117,7 @@ namespace EQLogParser
       {
         var dataGrid = gridBase as SfDataGrid;
         props = dataGrid.View.GetPropertyAccessProvider();
-        for (int i = 0; i < dataGrid.Columns.Count; i++)
+        for (var i = 0; i < dataGrid.Columns.Count; i++)
         {
           if (!dataGrid.Columns[i].IsHidden && dataGrid.Columns[i].ValueBinding is Binding binding)
           {
@@ -132,7 +132,7 @@ namespace EQLogParser
       {
         var treeGrid = gridBase as SfTreeGrid;
         props = treeGrid.View.GetPropertyAccessProvider();
-        for (int i = 0; i < treeGrid.Columns.Count; i++)
+        for (var i = 0; i < treeGrid.Columns.Count; i++)
         {
           if (!treeGrid.Columns[i].IsHidden && treeGrid.Columns[i].ValueBinding is Binding binding)
           {
@@ -220,7 +220,7 @@ namespace EQLogParser
               var dpiScale = UIElementUtil.GetDpi();
 
               // create title image
-              RenderTargetBitmap rtb = new RenderTargetBitmap((int)tableWidth, (int)titleHeight, dpiScale, dpiScale, PixelFormats.Default);
+              var rtb = new RenderTargetBitmap((int)tableWidth, (int)titleHeight, dpiScale, dpiScale, PixelFormats.Default);
               rtb.Render(titleLabel);
               var titleImage = BitmapFrame.Create(rtb);
 
@@ -234,7 +234,7 @@ namespace EQLogParser
                 dpiScale, dpiScale, PixelFormats.Default);
 
               var dv = new DrawingVisual();
-              using (DrawingContext ctx = dv.RenderOpen())
+              using (var ctx = dv.RenderOpen())
               {
                 var background = Application.Current.Resources["ContentBackground"] as SolidColorBrush;
                 ctx.DrawRectangle(background, null, new Rect(new Point(0, 0), new Size(titleImage.Width, titleImage.Height)));
@@ -347,11 +347,11 @@ namespace EQLogParser
 
       if (gridBase is SfDataGrid dataGrid)
       {
-        width += (rowHeaderWidth + dataGrid.Columns.Where(col => !col.IsHidden).Select(col => col.ActualWidth).Sum());
+        width += rowHeaderWidth + dataGrid.Columns.Where(col => !col.IsHidden).Select(col => col.ActualWidth).Sum();
       }
       else if (gridBase is SfTreeGrid treeGrid)
       {
-        width += (rowHeaderWidth + treeGrid.Columns.Where(col => !col.IsHidden).Select(col => col.ActualWidth).Sum());
+        width += rowHeaderWidth + treeGrid.Columns.Where(col => !col.IsHidden).Select(col => col.ActualWidth).Sum();
       }
 
       return allData ? width : Math.Min(width, gridBase.ActualWidth);
@@ -389,7 +389,7 @@ namespace EQLogParser
             else
             {
               treeGrid.SelectionController.ClearSelections(false);
-              int direction = 0;
+              var direction = 0;
               if (StartRow < row)
               {
                 direction = -1;
@@ -432,7 +432,7 @@ namespace EQLogParser
     internal static void LoadColumns(ComboBox columnCombo, dynamic gridBase)
     {
       HashSet<string> visible = null;
-      string visibleSetting = ConfigUtil.GetSetting(columnCombo.Tag.ToString());
+      var visibleSetting = ConfigUtil.GetSetting(columnCombo.Tag.ToString());
 
       if (!string.IsNullOrEmpty(visibleSetting))
       {
@@ -471,7 +471,7 @@ namespace EQLogParser
             name = "% Lucky";
           }
 
-          for (int i = 0; i < columns.Count; i++)
+          for (var i = 0; i < columns.Count; i++)
           {
             // handle old version that saved column display names
             // Eventually (remove the HeaderText check)
@@ -487,7 +487,7 @@ namespace EQLogParser
       }
 
       // check for new columns that didn't exist when preferences were saved
-      for (int i = 0; i < columns.Count; i++)
+      for (var i = 0; i < columns.Count; i++)
       {
         if (!found.ContainsKey(columns[i].MappingName))
         {
@@ -505,9 +505,9 @@ namespace EQLogParser
 
       columns = SetColumns(columnCombo, gridBase, updated);
 
-      int selectedCount = 0;
+      var selectedCount = 0;
       var list = new List<ComboBoxItemDetails>();
-      for (int i = 0; i < columns.Count; i++)
+      for (var i = 0; i < columns.Count; i++)
       {
         list.Add(new ComboBoxItemDetails
         {
@@ -570,7 +570,7 @@ namespace EQLogParser
 
     internal static void SetTreeExpander(SfTreeGrid treeGrid, dynamic columns)
     {
-      for (int i = 0; i < columns.Count; i++)
+      for (var i = 0; i < columns.Count; i++)
       {
         if (!columns[i].IsHidden)
         {
@@ -586,7 +586,7 @@ namespace EQLogParser
 
       if (columnCombo.Items.Count > 0)
       {
-        for (int i = 0; i < columnCombo.Items.Count; i++)
+        for (var i = 0; i < columnCombo.Items.Count; i++)
         {
           var checkedItem = columnCombo.Items[i] as ComboBoxItemDetails;
           if (checkedItem.IsChecked)
@@ -600,7 +600,7 @@ namespace EQLogParser
         if (gridBase is SfDataGrid)
         {
           var columns = ((SfDataGrid)gridBase).Columns;
-          for (int i = 0; i < columns.Count; i++)
+          for (var i = 0; i < columns.Count; i++)
           {
             columns[i].IsHidden = !IsColumnVisible(visible, columns, i);
           }
@@ -609,7 +609,7 @@ namespace EQLogParser
         {
           var expanderSet = false;
           var columns = ((SfTreeGrid)gridBase).Columns;
-          for (int i = 0; i < columns.Count; i++)
+          for (var i = 0; i < columns.Count; i++)
           {
             columns[i].IsHidden = !IsColumnVisible(visible, columns, i);
             if (!expanderSet && !columns[i].IsHidden)

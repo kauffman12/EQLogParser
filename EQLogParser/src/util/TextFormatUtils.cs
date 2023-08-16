@@ -10,7 +10,7 @@ using System.Xml;
 
 namespace EQLogParser
 {
-  class TextFormatUtils
+  static class TextFormatUtils
   {
     private const string BB_CELL_HEADER = "  [td]{0}    [/td]";
     private const string BB_CELL_BODY = "[td][right]{0}   [/right][/td]";
@@ -98,7 +98,7 @@ namespace EQLogParser
 
     internal static string BuildGamparseList(List<string> header, List<List<object>> data, string title = null)
     {
-      StringBuilder sb = new StringBuilder();
+      var sb = new StringBuilder();
 
       if (title != null)
       {
@@ -107,15 +107,15 @@ namespace EQLogParser
       }
 
       // for each header minus the Totals
-      SortedList<string, int> sorted = new SortedList<string, int>();
-      for (int i = 1; i < header.Count - 1; i++)
+      var sorted = new SortedList<string, int>();
+      for (var i = 1; i < header.Count - 1; i++)
       {
         sorted.Add(header[i], i);
       }
 
       foreach (var pair in sorted)
       {
-        string updatedHeader = header[pair.Value].Replace("=", "-");
+        var updatedHeader = header[pair.Value].Replace("=", "-");
         sb.AppendFormat(CultureInfo.CurrentCulture, BB_TITLE, updatedHeader);
 
         data.OrderBy(row => row[0]).ToList().ForEach(row =>
@@ -228,7 +228,7 @@ namespace EQLogParser
           {
             foreach (XmlNode triggerNode in triggersList.SelectNodes("Trigger"))
             {
-              bool goodTrigger = false;
+              var goodTrigger = false;
               var trigger = new Trigger();
               trigger.Name = Helpers.GetText(triggerNode, "Name");
               trigger.Pattern = Helpers.GetText(triggerNode, "TriggerText");
@@ -240,24 +240,24 @@ namespace EQLogParser
                 trigger.AltTimerName = timerName;
               }
 
-              if (bool.TryParse(Helpers.GetText(triggerNode, "UseText"), out bool _))
+              if (bool.TryParse(Helpers.GetText(triggerNode, "UseText"), out var _))
               {
                 goodTrigger = true;
                 trigger.TextToDisplay = Helpers.GetText(triggerNode, "DisplayText");
               }
 
-              if (bool.TryParse(Helpers.GetText(triggerNode, "UseTextToVoice"), out bool _))
+              if (bool.TryParse(Helpers.GetText(triggerNode, "UseTextToVoice"), out var _))
               {
                 goodTrigger = true;
                 trigger.TextToSpeak = Helpers.GetText(triggerNode, "TextToVoiceText");
               }
 
-              if (bool.TryParse(Helpers.GetText(triggerNode, "EnableRegex"), out bool regex))
+              if (bool.TryParse(Helpers.GetText(triggerNode, "EnableRegex"), out var regex))
               {
                 trigger.UseRegex = regex;
               }
 
-              if (bool.TryParse(Helpers.GetText(triggerNode, "InterruptSpeech"), out bool interrupt))
+              if (bool.TryParse(Helpers.GetText(triggerNode, "InterruptSpeech"), out var interrupt))
               {
                 trigger.Priority = interrupt ? 1 : 3;
               }
@@ -266,14 +266,14 @@ namespace EQLogParser
               {
                 goodTrigger = true;
 
-                if (int.TryParse(Helpers.GetText(triggerNode, "TimerDuration"), out int duration) && duration > 0)
+                if (int.TryParse(Helpers.GetText(triggerNode, "TimerDuration"), out var duration) && duration > 0)
                 {
                   trigger.DurationSeconds = duration;
                 }
 
-                if (int.TryParse(Helpers.GetText(triggerNode, "TimerMillisecondDuration"), out int millis) && millis > 0)
+                if (int.TryParse(Helpers.GetText(triggerNode, "TimerMillisecondDuration"), out var millis) && millis > 0)
                 {
-                  trigger.DurationSeconds = (millis / (double)1000);
+                  trigger.DurationSeconds = millis / (double)1000;
                   if (trigger.DurationSeconds > 0 && trigger.DurationSeconds < 0.2)
                   {
                     trigger.DurationSeconds = 0.2;
@@ -285,18 +285,18 @@ namespace EQLogParser
 
                 if (triggerNode.SelectSingleNode("TimerEndingTrigger") is XmlNode timerEndingNode)
                 {
-                  if (bool.TryParse(Helpers.GetText(timerEndingNode, "UseText"), out bool _))
+                  if (bool.TryParse(Helpers.GetText(timerEndingNode, "UseText"), out var _))
                   {
                     trigger.WarningTextToDisplay = Helpers.GetText(timerEndingNode, "DisplayText");
                   }
 
-                  if (bool.TryParse(Helpers.GetText(timerEndingNode, "UseTextToVoice"), out bool _))
+                  if (bool.TryParse(Helpers.GetText(timerEndingNode, "UseTextToVoice"), out var _))
                   {
                     trigger.WarningTextToSpeak = Helpers.GetText(timerEndingNode, "TextToVoiceText");
                   }
                 }
 
-                if (int.TryParse(Helpers.GetText(triggerNode, "TimerEndingTime"), out int endTime))
+                if (int.TryParse(Helpers.GetText(triggerNode, "TimerEndingTime"), out var endTime))
                 {
                   // GINA defaults to 1 even if there's no text?
                   if (!string.IsNullOrEmpty(trigger.WarningTextToSpeak) || endTime > 1)
@@ -312,7 +312,7 @@ namespace EQLogParser
                 }
                 else if ("RestartTimer".Equals(behavior))
                 {
-                  if (bool.TryParse(Helpers.GetText(triggerNode, "RestartBasedOnTimerName"), out bool onTimerName))
+                  if (bool.TryParse(Helpers.GetText(triggerNode, "RestartBasedOnTimerName"), out var onTimerName))
                   {
                     trigger.TriggerAgainOption = onTimerName ? 2 : 1;
                   }
@@ -324,12 +324,12 @@ namespace EQLogParser
 
                 if (triggerNode.SelectSingleNode("TimerEndedTrigger") is XmlNode timerEndedNode)
                 {
-                  if (bool.TryParse(Helpers.GetText(timerEndedNode, "UseText"), out bool _))
+                  if (bool.TryParse(Helpers.GetText(timerEndedNode, "UseText"), out var _))
                   {
                     trigger.EndTextToDisplay = Helpers.GetText(timerEndedNode, "DisplayText");
                   }
 
-                  if (bool.TryParse(Helpers.GetText(timerEndedNode, "UseTextToVoice"), out bool _))
+                  if (bool.TryParse(Helpers.GetText(timerEndedNode, "UseTextToVoice"), out var _))
                   {
                     trigger.EndTextToSpeak = Helpers.GetText(timerEndedNode, "TextToVoiceText");
                   }
@@ -343,7 +343,7 @@ namespace EQLogParser
                     if (enderNodes.Count > 0)
                     {
                       trigger.EndEarlyPattern = Helpers.GetText(enderNodes[0], "EarlyEndText");
-                      if (bool.TryParse(Helpers.GetText(enderNodes[0], "EnableRegex"), out bool regex2))
+                      if (bool.TryParse(Helpers.GetText(enderNodes[0], "EnableRegex"), out var regex2))
                       {
                         trigger.EndUseRegex = regex2;
                       }
@@ -352,7 +352,7 @@ namespace EQLogParser
                     if (enderNodes.Count > 1)
                     {
                       trigger.EndEarlyPattern2 = Helpers.GetText(enderNodes[1], "EarlyEndText");
-                      if (bool.TryParse(Helpers.GetText(enderNodes[1], "EnableRegex"), out bool regex2))
+                      if (bool.TryParse(Helpers.GetText(enderNodes[1], "EnableRegex"), out var regex2))
                       {
                         trigger.EndUseRegex2 = regex2;
                       }
@@ -407,7 +407,7 @@ namespace EQLogParser
     [DebuggerHidden]
     internal static bool IsValidRegex(string pattern)
     {
-      bool pass = true;
+      var pass = true;
 
       try
       {

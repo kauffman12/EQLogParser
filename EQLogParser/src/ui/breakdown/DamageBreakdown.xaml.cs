@@ -129,7 +129,7 @@ namespace EQLogParser
 
       if (GroupedDD.ContainsKey(name))
       {
-        PlayerSubStats dds = GroupedDD[name];
+        var dds = GroupedDD[name];
         if (dds.Total > 0)
         {
           list.Add(dds);
@@ -138,7 +138,7 @@ namespace EQLogParser
 
       if (GroupedDoT.ContainsKey(name))
       {
-        PlayerSubStats dots = GroupedDoT[name];
+        var dots = GroupedDoT[name];
         if (dots.Total > 0)
         {
           list.Add(dots);
@@ -147,7 +147,7 @@ namespace EQLogParser
 
       if (GroupedProcs.ContainsKey(name))
       {
-        PlayerSubStats procs = GroupedProcs[name];
+        var procs = GroupedProcs[name];
         if (procs.Total > 0)
         {
           list.Add(procs);

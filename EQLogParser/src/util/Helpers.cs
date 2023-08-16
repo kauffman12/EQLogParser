@@ -15,7 +15,7 @@ using System.Xml;
 
 namespace EQLogParser
 {
-  class Helpers
+  static class Helpers
   {
     internal static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
@@ -44,9 +44,9 @@ namespace EQLogParser
         var wasHidden = content.Visibility != Visibility.Visible;
         content.Visibility = Visibility.Visible;
 
-        int titlePadding = 0;
-        int titleHeight = 0;
-        int titleWidth = 0;
+        var titlePadding = 0;
+        var titleHeight = 0;
+        var titleWidth = 0;
         if (titleLabel != null)
         {
           titlePadding = (int)titleLabel.Padding.Top + (int)titleLabel.Padding.Bottom;
@@ -54,14 +54,14 @@ namespace EQLogParser
           titleWidth = (int)titleLabel.DesiredSize.Width;
         }
 
-        var height = (int)content.ActualHeight + (int)titleHeight + (int)titlePadding;
+        var height = (int)content.ActualHeight + titleHeight + titlePadding;
         var width = (int)content.ActualWidth;
 
         var dpiScale = UIElementUtil.GetDpi();
-        RenderTargetBitmap rtb = new RenderTargetBitmap(width, height + 20, dpiScale, dpiScale, PixelFormats.Pbgra32);
+        var rtb = new RenderTargetBitmap(width, height + 20, dpiScale, dpiScale, PixelFormats.Pbgra32);
 
-        DrawingVisual dv = new DrawingVisual();
-        using (DrawingContext ctx = dv.RenderOpen())
+        var dv = new DrawingVisual();
+        using (var ctx = dv.RenderOpen())
         {
           var brush = Application.Current.Resources["ContentBackground"] as SolidColorBrush;
           ctx.DrawRectangle(brush, null, new Rect(new Point(0, 0), new Size(width, height + 20)));
@@ -117,7 +117,7 @@ namespace EQLogParser
         // delay so windows can be cleaned up before we manually try to do it
         try
         {
-          if (state == DockState.Hidden && window?.Tag as string != "Hide")
+          if (state == DockState.Hidden && (window?.Tag as string) != "Hide")
           {
             Dispatcher.CurrentDispatcher.InvokeAsync(() =>
             {
@@ -138,9 +138,9 @@ namespace EQLogParser
             DockingManager.SetState(window, state);
           }
         }
-        catch (Exception)
+        catch (Exception e)
         {
-          // ignore undocking and removing children causes an exception
+          LOG.Debug(e);
         }
       }
     }
@@ -148,10 +148,10 @@ namespace EQLogParser
     internal static bool OpenWindow(DockingManager dockSite, Dictionary<string, ContentControl> opened, out ContentControl window,
       Type type = null, string key = "", string title = "")
     {
-      bool nowOpen = false;
+      var nowOpen = false;
       window = null;
 
-      if (opened != null && opened.TryGetValue(key, out ContentControl control))
+      if (opened != null && opened.TryGetValue(key, out var control))
       {
         CloseWindow(dockSite, control);
       }
@@ -175,9 +175,9 @@ namespace EQLogParser
     internal static bool OpenChart(Dictionary<string, ContentControl> opened, DockingManager dockSite, string key, List<string> choices,
       string title, DocumentTabControl tabControl, bool includePets)
     {
-      bool nowOpen = false;
+      var nowOpen = false;
 
-      if (opened != null && opened.TryGetValue(key, out ContentControl control))
+      if (opened != null && opened.TryGetValue(key, out var control))
       {
         CloseWindow(dockSite, control);
       }
@@ -213,7 +213,7 @@ namespace EQLogParser
 
     internal static string CreateRecordKey(string type, string subType)
     {
-      string key = subType;
+      var key = subType;
 
       if (type == Labels.DD || type == Labels.DOT)
       {
@@ -264,12 +264,12 @@ namespace EQLogParser
           long pos = 0;
           if (check)
           {
-            pos = left + (f.Position - left) / 2;
+            pos = left + ((f.Position - left) / 2);
             right = f.Position;
           }
           else
           {
-            pos = right - (right - f.Position) / 2;
+            pos = right - ((right - f.Position) / 2);
             good = left = f.Position;
           }
 
@@ -293,7 +293,7 @@ namespace EQLogParser
 
     internal static bool TimeCheck(string line, double start, double end = -1)
     {
-      bool pass = false;
+      var pass = false;
       if (!string.IsNullOrEmpty(line) && line.Length > 24)
       {
         var logTime = DateUtil.ParseDate(line);
@@ -315,7 +315,7 @@ namespace EQLogParser
 
     internal static bool TimeCheck(string line, double start, TimeRange range, out bool exceeds)
     {
-      bool pass = false;
+      var pass = false;
       exceeds = false;
       if (!string.IsNullOrEmpty(line) && line.Length > 24)
       {
@@ -355,7 +355,7 @@ namespace EQLogParser
   {
     internal int AddToList(Dictionary<T1, List<T2>> dict, T1 key, T2 value)
     {
-      int size = 0;
+      var size = 0;
       lock (dict)
       {
         if (!dict.ContainsKey(key))

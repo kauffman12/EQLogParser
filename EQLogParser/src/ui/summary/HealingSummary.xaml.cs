@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace EQLogParser
@@ -40,7 +39,7 @@ namespace EQLogParser
       if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl breakdown, typeof(HealBreakdown),
+        if (Helpers.OpenWindow(main.dockSite, null, out var breakdown, typeof(HealBreakdown),
           "healingBreakdownWindow", "Healing Breakdown"))
         {
           (breakdown.Content as HealBreakdown).Init(CurrentStats, selected);
@@ -58,13 +57,13 @@ namespace EQLogParser
           menuItemShowHealingLog.IsEnabled = dataGrid.SelectedItems.Count == 1;
           copyHealParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
           copyTopHealsParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) && (dataGrid.SelectedItem as PlayerStats)?.SubStats?.Count > 0;
-          menuItemShowHealingTimeline.IsEnabled = (dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2);
+          menuItemShowHealingTimeline.IsEnabled = dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2;
 
           menuItemShowDeathLog.IsEnabled = false;
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
-            menuItemShowDeathLog.IsEnabled = (!string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X"));
+            menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X");
           }
 
           EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats.UniqueClasses);
@@ -111,7 +110,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(HitLogViewer), "healingLogWindow", "Healing Log"))
+        if (Helpers.OpenWindow(main.dockSite, null, out var log, typeof(HitLogViewer), "healingLogWindow", "Healing Log"))
         {
           (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
         }
@@ -123,7 +122,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
+        if (Helpers.OpenWindow(main.dockSite, null, out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
         {
           (log.Content as DeathLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
         }
@@ -135,7 +134,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl timeline, typeof(GanttChart), "healingTimeline", "Healing Timeline"))
+        if (Helpers.OpenWindow(main.dockSite, null, out var timeline, typeof(GanttChart), "healingTimeline", "Healing Timeline"))
         {
           ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 2);
         }

@@ -41,11 +41,11 @@ namespace EQLogParser
       logSearchTime.ItemsSource = Times;
       fontFamily.ItemsSource = System.Windows.Media.Fonts.SystemFontFamilies.OrderBy(f => f.Source).ToList();
 
-      string family = ConfigUtil.GetSetting("EQLogViewerFontFamily");
+      var family = ConfigUtil.GetSetting("EQLogViewerFontFamily");
       fontFamily.SelectedItem = (family != null) ? new FontFamily(family) : logBox.FontFamily;
 
-      string size = ConfigUtil.GetSetting("EQLogViewerFontSize");
-      if (size != null && double.TryParse(size, out double dsize))
+      var size = ConfigUtil.GetSetting("EQLogViewerFontSize");
+      if (size != null && double.TryParse(size, out var dsize))
       {
         fontSize.SelectedItem = dsize;
       }
@@ -130,8 +130,8 @@ namespace EQLogParser
       else if ((logFilter.FontStyle != FontStyles.Italic && logFilter.Text.Length > 1) || types.Count < LineTypeCount)
       {
         var filtered = new List<string>();
-        int lineCount = -1;
-        foreach (ref string line in UnFiltered.ToArray().AsSpan())
+        var lineCount = -1;
+        foreach (ref var line in UnFiltered.ToArray().AsSpan())
         {
           lineCount++;
 
@@ -203,8 +203,8 @@ namespace EQLogParser
           }
 
           if (logFilter.FontStyle == FontStyles.Italic ||
-            (logFilterModifier.SelectedIndex == 0 && line.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) > -1 ||
-             logFilterModifier.SelectedIndex == 1 && line.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) < 0))
+            (logFilterModifier.SelectedIndex == 0 && line.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) > -1) ||
+             (logFilterModifier.SelectedIndex == 1 && line.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) < 0))
           {
             FilteredLinePositionMap[filtered.Count] = LinePositions[lineCount];
             filtered.Add(line);
@@ -232,7 +232,7 @@ namespace EQLogParser
           using (var f = File.OpenRead(MainWindow.CurrentLogFile))
           {
             f.Seek(Math.Max(0, pos - CONTEXT), SeekOrigin.Begin);
-            StreamReader s = Helpers.GetStreamReader(f);
+            var s = Helpers.GetStreamReader(f);
             var list = new List<string>();
 
             if (!s.EndOfStream)
@@ -241,7 +241,7 @@ namespace EQLogParser
               s.ReadLine();
             }
 
-            List<int> FoundLines = new List<int>();
+            var FoundLines = new List<int>();
             while (!s.EndOfStream)
             {
               var line = s.ReadLine();
@@ -261,7 +261,7 @@ namespace EQLogParser
             var allText = string.Join(Environment.NewLine, list);
             Dispatcher.InvokeAsync(() =>
             {
-              SolidColorBrush highlight = Application.Current.Resources["EQSearchBackgroundBrush"] as SolidColorBrush;
+              var highlight = Application.Current.Resources["EQSearchBackgroundBrush"] as SolidColorBrush;
               contextBox.Text = allText;
               contextTab.Visibility = Visibility.Visible;
               FoundLines.ForEach(line => contextBox.SetLineBackground(line, true, highlight));
@@ -325,22 +325,22 @@ namespace EQLogParser
               switch (logTimeIndex)
               {
                 case 0:
-                  start = DateUtil.ToDouble(DateTime.Now) - 60 * 60;
+                  start = DateUtil.ToDouble(DateTime.Now) - (60 * 60);
                   break;
                 case 1:
-                  start = DateUtil.ToDouble(DateTime.Now) - 60 * 60 * 8;
+                  start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 8);
                   break;
                 case 2:
-                  start = DateUtil.ToDouble(DateTime.Now) - 60 * 60 * 24;
+                  start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24);
                   break;
                 case 3:
-                  start = DateUtil.ToDouble(DateTime.Now) - 60 * 60 * 24 * 7;
+                  start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 7);
                   break;
                 case 4:
-                  start = DateUtil.ToDouble(DateTime.Now) - 60 * 60 * 24 * 14;
+                  start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 14);
                   break;
                 case 5:
-                  start = DateUtil.ToDouble(DateTime.Now) - 60 * 60 * 24 * 30;
+                  start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 30);
                   break;
                 case 6:
                   if (fights.Count > 0)
@@ -381,7 +381,7 @@ namespace EQLogParser
               while (!s.EndOfStream && Running)
               {
                 var line = s.ReadLine();
-                if (Helpers.TimeCheck(line, start, ranges, out bool exceeds))
+                if (Helpers.TimeCheck(line, start, ranges, out var exceeds))
                 {
                   var match = true;
                   var firstIndex = -2;
@@ -535,8 +535,8 @@ namespace EQLogParser
 
     private void SearchTextChange(object sender, RoutedEventArgs e)
     {
-      searchIcon.IsEnabled = (logSearch.Text != EQLogParser.Resource.LOG_SEARCH_TEXT && (logSearch.Text.Length > 1) ||
-        logSearch2.Text != EQLogParser.Resource.LOG_SEARCH_TEXT && logSearch2.Text.Length > 1);
+      searchIcon.IsEnabled = (logSearch.Text != EQLogParser.Resource.LOG_SEARCH_TEXT && (logSearch.Text.Length > 1)) ||
+        (logSearch2.Text != EQLogParser.Resource.LOG_SEARCH_TEXT && logSearch2.Text.Length > 1);
     }
 
     private void SearchKeyDown(object sender, KeyEventArgs e)
@@ -662,7 +662,7 @@ namespace EQLogParser
 
     private void SearchIconIsEnabledChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-      var brush = (searchIcon.IsEnabled) ? "EQMenuIconBrush" : "ContentBackgroundAlt5";
+      var brush = searchIcon.IsEnabled ? "EQMenuIconBrush" : "ContentBackgroundAlt5";
       searchIcon.Foreground = Application.Current.Resources[brush] as SolidColorBrush;
     }
 

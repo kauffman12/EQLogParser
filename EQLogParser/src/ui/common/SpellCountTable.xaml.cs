@@ -116,7 +116,7 @@ namespace EQLogParser
         Dispatcher.InvokeAsync(() =>
         {
           var playerColumns = new List<GridColumn>();
-          foreach (string name in totalCountMap.Keys)
+          foreach (var name in totalCountMap.Keys)
           {
             double playerTotal = totalCountMap.ContainsKey(name) ? totalCountMap[name] : 0;
             var header = GetHeaderValue(name, playerTotal, totalCasts);
@@ -149,7 +149,7 @@ namespace EQLogParser
           dataGrid.Columns.Add(totalCol);
         });
 
-        int existingIndex = 0;
+        var existingIndex = 0;
         var playerNames = totalCountMap.Keys.ToList();
         var list = new List<IDictionary<string, object>>();
         foreach (var spell in uniqueSpellsMap.Keys.OrderByDescending(key => uniqueSpellsMap[key]))
@@ -157,7 +157,7 @@ namespace EQLogParser
           var row = (list.Count > existingIndex) ? list[existingIndex] : new ExpandoObject();
           row["Spell"] = spell;
 
-          for (int i = 0; i < playerNames.Count; i++)
+          for (var i = 0; i < playerNames.Count; i++)
           {
             if (filteredPlayerMap.ContainsKey(playerNames[i]))
             {
@@ -200,9 +200,9 @@ namespace EQLogParser
 
     private void AddPlayerRow(string player, string spell, double value, double playerTotal, IDictionary<string, object> row)
     {
-      string countText = GetFormattedValue(value, playerTotal);
+      var countText = GetFormattedValue(value, playerTotal);
       if (TheSpellCounts.PlayerInterruptedCounts.ContainsKey(player) &&
-        TheSpellCounts.PlayerInterruptedCounts[player].TryGetValue(spell, out uint interrupts) && interrupts > 0)
+        TheSpellCounts.PlayerInterruptedCounts[player].TryGetValue(spell, out var interrupts) && interrupts > 0)
       {
         countText = countText + " (" + TheSpellCounts.PlayerInterruptedCounts[player][spell] + ")";
       }
@@ -214,7 +214,7 @@ namespace EQLogParser
     private uint UpdateMaps(string id, string player, uint playerCount, Dictionary<string, uint> maxCounts, Dictionary<string, uint> totalCountMap,
       Dictionary<string, uint> uniqueSpellsMap, Dictionary<string, Dictionary<string, uint>> filteredPlayerMap, bool received, uint totalCasts)
     {
-      string name = TheSpellCounts.UniqueSpells[id].NameAbbrv;
+      var name = TheSpellCounts.UniqueSpells[id].NameAbbrv;
 
       if (received)
       {
@@ -272,7 +272,7 @@ namespace EQLogParser
       try
       {
         // WPF doesn't have its own file chooser so use Win32 Version
-        OpenFileDialog dialog = new OpenFileDialog
+        var dialog = new OpenFileDialog
         {
           // filter to txt files
           DefaultExt = ".scf.gz",
@@ -282,11 +282,11 @@ namespace EQLogParser
         // show dialog and read result
         if (dialog.ShowDialog().Value)
         {
-          FileInfo gzipFileName = new FileInfo(dialog.FileName);
+          var gzipFileName = new FileInfo(dialog.FileName);
 
-          GZipStream decompressionStream = new GZipStream(gzipFileName.OpenRead(), CompressionMode.Decompress);
+          var decompressionStream = new GZipStream(gzipFileName.OpenRead(), CompressionMode.Decompress);
           var reader = new StreamReader(decompressionStream);
-          string json = reader?.ReadToEnd();
+          var json = reader?.ReadToEnd();
           reader?.Close();
 
           var data = System.Text.Json.JsonSerializer.Deserialize<SpellCountsSerialized>(json);
@@ -351,14 +351,14 @@ namespace EQLogParser
         data.PlayerNames.AddRange(PlayerList);
 
         var result = System.Text.Json.JsonSerializer.Serialize(data);
-        SaveFileDialog saveFileDialog = new SaveFileDialog();
-        string filter = "Spell Count File (*.scf.gz)|*.scf.gz";
+        var saveFileDialog = new SaveFileDialog();
+        var filter = "Spell Count File (*.scf.gz)|*.scf.gz";
         saveFileDialog.Filter = filter;
         if (saveFileDialog.ShowDialog().Value)
         {
-          FileInfo gzipFileName = new FileInfo(saveFileDialog.FileName);
-          FileStream gzipTargetAsStream = gzipFileName.Create();
-          GZipStream gzipStream = new GZipStream(gzipTargetAsStream, CompressionMode.Compress);
+          var gzipFileName = new FileInfo(saveFileDialog.FileName);
+          var gzipTargetAsStream = gzipFileName.Create();
+          var gzipStream = new GZipStream(gzipTargetAsStream, CompressionMode.Compress);
           var writer = new StreamWriter(gzipStream);
           writer?.Write(result);
           writer?.Close();
@@ -376,7 +376,7 @@ namespace EQLogParser
       try
       {
         var export = DataGridUtil.BuildExportData(dataGrid);
-        string result = TextFormatUtils.BuildBBCodeTable(export.Item1, export.Item2, titleLabel.Content as string);
+        var result = TextFormatUtils.BuildBBCodeTable(export.Item1, export.Item2, titleLabel.Content as string);
         Clipboard.SetDataObject(result);
       }
       catch (ArgumentNullException ane)
@@ -395,7 +395,7 @@ namespace EQLogParser
       try
       {
         var export = DataGridUtil.BuildExportData(dataGrid);
-        string result = TextFormatUtils.BuildGamparseList(export.Item1, export.Item2, titleLabel.Content as string);
+        var result = TextFormatUtils.BuildGamparseList(export.Item1, export.Item2, titleLabel.Content as string);
         Clipboard.SetDataObject(result);
       }
       catch (ArgumentNullException ane)
@@ -469,13 +469,13 @@ namespace EQLogParser
         }
       }
 
-      int colIndex = 1;
+      var colIndex = 1;
       playerColumns.OrderBy(key => key.HeaderText, TotalColumnComparer).ToList().ForEach(col => dataGrid.Columns[colIndex++] = col);
     }
 
     private string GetHeaderValue(string name, double amount, double total)
     {
-      double result = 0.0;
+      var result = 0.0;
       switch (CurrentCountType)
       {
         case 0:

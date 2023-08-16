@@ -34,7 +34,7 @@ namespace EQLogParser
       TheTitle.Content = DEFAULT_TABLE_LABEL;
 
       // default these columns to descending
-      string[] desc = new string[] { "PercentOfRaid", "Total", "Extra", "Potential", "DPS", "SDPS", "TotalSeconds", "Hits", "Max",
+      var desc = new string[] { "PercentOfRaid", "Total", "Extra", "Potential", "DPS", "SDPS", "TotalSeconds", "Hits", "Max",
         "Avg", "AvgCrit", "AvgLucky", "ExtraRate", "CritRate", "LuckRate", "MeleeHitRate", "MeleeAccRate", "RampageRate", "Special"};
 
       if (TheDataGrid is SfTreeGrid treeGrid)
@@ -76,13 +76,13 @@ namespace EQLogParser
 
     internal static void CreateClassMenuItems(MenuItem parent, Action<object, RoutedEventArgs> selectedHandler, Action<object, RoutedEventArgs> classHandler)
     {
-      MenuItem selected = new MenuItem { IsEnabled = false, Header = "Selected" };
+      var selected = new MenuItem { IsEnabled = false, Header = "Selected" };
       selected.Click += new RoutedEventHandler(selectedHandler);
       parent.Items.Add(selected);
 
       PlayerManager.Instance.GetClassList().ForEach(name =>
       {
-        MenuItem item = new MenuItem { IsEnabled = false, Header = name };
+        var item = new MenuItem { IsEnabled = false, Header = name };
         item.Click += new RoutedEventHandler(classHandler);
         parent.Items.Add(item);
       });
@@ -98,8 +98,8 @@ namespace EQLogParser
     {
       foreach (var item in menu.Items)
       {
-        MenuItem menuItem = item as MenuItem;
-        menuItem.IsEnabled = menuItem.Header as string == "Selected" ? gridBase.SelectedItems.Count > 0 : uniqueClasses != null &&
+        var menuItem = item as MenuItem;
+        menuItem.IsEnabled = (menuItem.Header as string) == "Selected" ? gridBase.SelectedItems.Count > 0 : uniqueClasses != null &&
           uniqueClasses.ContainsKey(menuItem.Header as string);
       }
     }
@@ -112,8 +112,8 @@ namespace EQLogParser
       {
         foreach (var column in treeGrid.Columns)
         {
-          string binding = (column.ValueBinding as Binding).Path.Path;
-          string title = column.HeaderText;
+          var binding = (column.ValueBinding as Binding).Path.Path;
+          var title = column.HeaderText;
           headers.Add(new string[] { binding, title });
         }
       }
@@ -121,8 +121,8 @@ namespace EQLogParser
       {
         foreach (var column in dataGrid.Columns)
         {
-          string binding = (column.ValueBinding as Binding).Path.Path;
-          string title = column.HeaderText;
+          var binding = (column.ValueBinding as Binding).Path.Path;
+          var title = column.HeaderText;
           headers.Add(new string[] { binding, title });
         }
       }
@@ -196,7 +196,7 @@ namespace EQLogParser
       if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl spellTable, typeof(SpellCastTable),
+        if (Helpers.OpenWindow(main.dockSite, null, out var spellTable, typeof(SpellCastTable),
           "spellCastsWindow", "Spell Cast Timeline"))
         {
           (spellTable.Content as SpellCastTable).Init(selected, CurrentStats);
@@ -209,7 +209,7 @@ namespace EQLogParser
       if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl spellTable, typeof(SpellCountTable),
+        if (Helpers.OpenWindow(main.dockSite, null, out var spellTable, typeof(SpellCountTable),
           "spellCountsWindow", "Spell Counts"))
         {
           (spellTable.Content as SpellCountTable).Init(selected, CurrentStats);

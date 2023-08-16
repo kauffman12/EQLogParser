@@ -30,7 +30,7 @@ namespace EQLogParser
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
     {
-      Binding binding = new Binding("Value")
+      var binding = new Binding("Value")
       {
         Mode = info.CanWrite ? BindingMode.TwoWay : BindingMode.OneWay,
         Source = info,
@@ -97,7 +97,7 @@ namespace EQLogParser
     {
       if (sender is TextBox textBox)
       {
-        bool hideText = TriggerUtil.MatchSoundFile(textBox.Text, out string soundFile, out _);
+        var hideText = TriggerUtil.MatchSoundFile(textBox.Text, out var soundFile, out _);
 
         if (hideText)
         {
@@ -135,7 +135,7 @@ namespace EQLogParser
     {
       if (sender is ComboBox combo && combo.SelectedIndex > -1)
       {
-        bool hideText = combo.SelectedIndex == 0 ? false : true;
+        var hideText = combo.SelectedIndex == 0 ? false : true;
         TheFakeTextBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;
         TheSoundCombo.Visibility = hideText ? Visibility.Visible : Visibility.Collapsed;
 
@@ -147,8 +147,8 @@ namespace EQLogParser
         }
         else
         {
-          var isSound = TriggerUtil.MatchSoundFile(TheRealTextBox.Text, out string decoded, out string _);
-          if ((!isSound || !TheSoundCombo.Items.Contains(decoded)) || (TheSoundCombo.SelectedValue is string selectedValue &&
+          var isSound = TriggerUtil.MatchSoundFile(TheRealTextBox.Text, out var decoded, out var _);
+          if (!isSound || !TheSoundCombo.Items.Contains(decoded) || (TheSoundCombo.SelectedValue is string selectedValue &&
             !string.IsNullOrEmpty(selectedValue) && selectedValue != TheRealTextBox.Text))
           {
             TheSoundCombo.Tag = null;

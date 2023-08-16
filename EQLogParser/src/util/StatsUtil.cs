@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace EQLogParser
 {
-  class StatsUtil
+  static class StatsUtil
   {
     internal const string TIME_FORMAT = "in {0}s";
     internal const string TOTAL_FORMAT = "{0}{1}@{2}";
@@ -43,7 +43,7 @@ namespace EQLogParser
     internal static PlayerStats CreatePlayerStats(string name, string origName = null)
     {
       origName = origName ?? name;
-      string className = PlayerManager.Instance.GetPlayerClass(origName);
+      var className = PlayerManager.Instance.GetPlayerClass(origName);
 
       return new PlayerStats()
       {
@@ -74,7 +74,7 @@ namespace EQLogParser
 
     internal static string FormatTitle(string targetTitle, string timeTitle, string damageTitle = "")
     {
-      string result = targetTitle;
+      var result = targetTitle;
       if (!string.IsNullOrEmpty(timeTitle))
       {
         result += " " + timeTitle;
@@ -114,14 +114,14 @@ namespace EQLogParser
     internal static uint ParseUInt(string str)
     {
       uint y = 0;
-      for (int i = 0; i < str.Length; i++)
+      for (var i = 0; i < str.Length; i++)
       {
         if (!char.IsDigit(str[i]))
         {
           return uint.MaxValue;
         }
 
-        y = y * 10 + (Convert.ToUInt32(str[i]) - '0');
+        y = (y * 10) + (Convert.ToUInt32(str[i]) - '0');
       }
       return y;
     }
@@ -143,7 +143,7 @@ namespace EQLogParser
     internal static void AddSubTimeEntry(ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges,
       KeyValuePair<string, Dictionary<string, TimeSegment>> subEntry)
     {
-      if (!playerSubTimeRanges.TryGetValue(subEntry.Key, out ConcurrentDictionary<string, TimeRange> ranges))
+      if (!playerSubTimeRanges.TryGetValue(subEntry.Key, out var ranges))
       {
         ranges = new ConcurrentDictionary<string, TimeRange>();
         playerSubTimeRanges[subEntry.Key] = ranges;
@@ -157,7 +157,7 @@ namespace EQLogParser
 
     private static void AddTimeEntry(ConcurrentDictionary<string, TimeRange> ranges, KeyValuePair<string, TimeSegment> entry)
     {
-      if (ranges.TryGetValue(entry.Key, out TimeRange range))
+      if (ranges.TryGetValue(entry.Key, out var range))
       {
         range.Add(new TimeSegment(entry.Value.BeginTime, entry.Value.EndTime));
       }
@@ -171,7 +171,7 @@ namespace EQLogParser
     internal static void UpdateAllStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, TimeRange> playerTimeRanges,
       ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges, double minTime = -1, double maxTime = -1)
     {
-      if (playerTimeRanges.TryGetValue(stats.Name, out TimeRange range))
+      if (playerTimeRanges.TryGetValue(stats.Name, out var range))
       {
         var filteredRange = FilterTimeRange(range, minTime, maxTime);
         stats.TotalSeconds = filteredRange.GetTotal();
@@ -183,7 +183,7 @@ namespace EQLogParser
     internal static void UpdateSubStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges,
       double minTime = -1, double maxTime = -1)
     {
-      if (playerSubTimeRanges.TryGetValue(stats.Name, out ConcurrentDictionary<string, TimeRange> subRanges))
+      if (playerSubTimeRanges.TryGetValue(stats.Name, out var subRanges))
       {
         UpdateSubStat(stats.SubStats, subRanges, minTime, maxTime);
         UpdateSubStat(stats.SubStats2, subRanges, minTime, maxTime);
@@ -194,7 +194,7 @@ namespace EQLogParser
     {
       foreach (ref var subStat in subStats.ToArray().AsSpan())
       {
-        if (subRanges.TryGetValue(subStat.Key, out TimeRange subRange))
+        if (subRanges.TryGetValue(subStat.Key, out var subRange))
         {
           var filteredRange = FilterTimeRange(subRange, minTime, maxTime);
           subStat.TotalSeconds = filteredRange.GetTotal();
@@ -207,7 +207,7 @@ namespace EQLogParser
     {
       if (segments != null)
       {
-        if (segments.TryGetValue(player, out TimeSegment segment))
+        if (segments.TryGetValue(player, out var segment))
         {
           segment.EndTime = time;
         }
@@ -217,13 +217,13 @@ namespace EQLogParser
         }
       }
 
-      if (!subSegments.TryGetValue(player, out Dictionary<string, TimeSegment> typeSegments))
+      if (!subSegments.TryGetValue(player, out var typeSegments))
       {
         typeSegments = new Dictionary<string, TimeSegment>();
         subSegments[player] = typeSegments;
       }
 
-      if (typeSegments.TryGetValue(key, out TimeSegment typeSegment))
+      if (typeSegments.TryGetValue(key, out var typeSegment))
       {
         typeSegment.EndTime = time;
       }
@@ -481,7 +481,7 @@ namespace EQLogParser
     {
       if (superStats != null)
       {
-        if (resistCounts != null && superStats.Name == ConfigUtil.PlayerName && resistCounts.TryGetValue(stats.Name, out int value))
+        if (resistCounts != null && superStats.Name == ConfigUtil.PlayerName && resistCounts.TryGetValue(stats.Name, out var value))
         {
           stats.Resists = value;
         }
@@ -524,9 +524,9 @@ namespace EQLogParser
       raidStats.Specials.Clear();
       raidStats.Deaths.Clear();
 
-      ConcurrentDictionary<object, bool> temp = new ConcurrentDictionary<object, bool>();
+      var temp = new ConcurrentDictionary<object, bool>();
       var allSpecials = DataManager.Instance.GetSpecials();
-      int specialStart = 0;
+      var specialStart = 0;
 
       foreach (ref var segment in raidStats.Ranges.TimeSegments.ToArray().AsSpan())
       {
@@ -538,7 +538,7 @@ namespace EQLogParser
           specialStart = allSpecials.FindIndex(specialStart, special => special.BeginTime >= offsetBegin);
           if (specialStart > -1)
           {
-            for (int j = specialStart; j < allSpecials.Count; j++)
+            for (var j = specialStart; j < allSpecials.Count; j++)
             {
               if (allSpecials[j].BeginTime >= offsetBegin && allSpecials[j].BeginTime <= segment.EndTime)
               {
@@ -588,7 +588,7 @@ namespace EQLogParser
 
             if (!string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(code))
             {
-              if (raidStats.Specials.TryGetValue(player, out string special))
+              if (raidStats.Specials.TryGetValue(player, out var special))
               {
                 raidStats.Specials[player] = special + code;
               }
@@ -641,7 +641,7 @@ namespace EQLogParser
 
     internal static bool IsHitType(string type)
     {
-      bool isHitType = true;
+      var isHitType = true;
       if (!string.IsNullOrEmpty(type))
       {
         switch (type)

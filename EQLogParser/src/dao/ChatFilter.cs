@@ -19,7 +19,7 @@ namespace EQLogParser
     {
       if (player.Length > 0)
       {
-        int index = player.IndexOf(".", StringComparison.Ordinal);
+        var index = player.IndexOf(".", StringComparison.Ordinal);
         Player = (index > -1) ? player.Substring(0, index) : player;
       }
 
@@ -38,52 +38,52 @@ namespace EQLogParser
 
     internal bool DuringYear(DateTime year)
     {
-      double begin = DateUtil.ToDouble(year);
-      double end = DateUtil.ToDouble(year.AddYears(1));
+      var begin = DateUtil.ToDouble(year);
+      var end = DateUtil.ToDouble(year.AddYears(1));
       return (StartDate == 0 || (StartDate < end)) && (EndDate == 0 || (EndDate >= begin));
     }
 
     internal bool DuringMonth(DateTime month)
     {
-      double begin = DateUtil.ToDouble(month);
-      double end = DateUtil.ToDouble(month.AddMonths(1));
+      var begin = DateUtil.ToDouble(month);
+      var end = DateUtil.ToDouble(month.AddMonths(1));
       return (StartDate == 0 || (StartDate < end)) && (EndDate == 0 || (EndDate >= begin));
     }
 
     internal bool DuringDay(DateTime day)
     {
-      double begin = DateUtil.ToDouble(day);
-      double end = DateUtil.ToDouble(day.AddDays(1));
+      var begin = DateUtil.ToDouble(day);
+      var end = DateUtil.ToDouble(day.AddDays(1));
       return (StartDate == 0 || (StartDate < end)) && (EndDate == 0 || (EndDate >= begin));
     }
 
     internal bool PastLiveFilter(ChatType chatType)
     {
-      double endOfDay = EndDate + 86400;
+      var endOfDay = EndDate + 86400;
       return (StartDate == 0 || chatType.BeginTime >= StartDate) && (EndDate == 0 || chatType.BeginTime < endOfDay) && PassFilter(chatType);
     }
 
     internal bool PassFilter(ChatType chatType)
     {
-      bool passed = false;
+      var passed = false;
 
       if (ValidChannels == null || (chatType.Channel != null && ValidChannels.ContainsKey(chatType.Channel)))
       {
-        string receiver = chatType.Receiver;
-        string sender = chatType.Sender;
-        bool receiverIsTo = receiver != null && To != null && receiver.IndexOf(To, StringComparison.OrdinalIgnoreCase) > -1;
-        bool senderIsFrom = sender != null && From != null && sender.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1;
-        bool receiverIsFrom = receiver != null && From != null && receiver.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1;
-        bool senderIsTo = sender != null && To != null && sender.IndexOf(To, StringComparison.OrdinalIgnoreCase) > -1;
+        var receiver = chatType.Receiver;
+        var sender = chatType.Sender;
+        var receiverIsTo = receiver != null && To != null && receiver.IndexOf(To, StringComparison.OrdinalIgnoreCase) > -1;
+        var senderIsFrom = sender != null && From != null && sender.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1;
+        var receiverIsFrom = receiver != null && From != null && receiver.IndexOf(From, StringComparison.OrdinalIgnoreCase) > -1;
+        var senderIsTo = sender != null && To != null && sender.IndexOf(To, StringComparison.OrdinalIgnoreCase) > -1;
 
-        if (((To == null || receiverIsTo) && (From == null || senderIsFrom)) || (senderIsTo && receiverIsFrom) || (To == From && (sender == Player && receiverIsTo || receiver == Player && senderIsFrom)))
+        if (((To == null || receiverIsTo) && (From == null || senderIsFrom)) || (senderIsTo && receiverIsFrom) || (To == From && ((sender == Player && receiverIsTo) || (receiver == Player && senderIsFrom))))
         {
           if (chatType.SenderIsYou || (!PlayerManager.Instance.IsVerifiedPet(chatType.Sender) && IsPossiblePlayerNameWithServer(chatType.Sender)))
           {
             if (Keyword != null)
             {
-              int afterSender = chatType.TextStart >= 0 ? chatType.TextStart : 0;
-              int foundIndex = chatType.Text.IndexOf(Keyword, afterSender, StringComparison.OrdinalIgnoreCase);
+              var afterSender = chatType.TextStart >= 0 ? chatType.TextStart : 0;
+              var foundIndex = chatType.Text.IndexOf(Keyword, afterSender, StringComparison.OrdinalIgnoreCase);
               if (foundIndex > -1)
               {
                 passed = true;
@@ -108,8 +108,8 @@ namespace EQLogParser
         stop = part.Length;
       }
 
-      bool found = stop < 3 ? false : true;
-      for (int i = 0; found != false && i < stop; i++)
+      var found = stop < 3 ? false : true;
+      for (var i = 0; found != false && i < stop; i++)
       {
         if (!char.IsLetter(part, i) && part[i] != '.')
         {

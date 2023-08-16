@@ -152,7 +152,7 @@ namespace EQLogParser
       }
       else
       {
-        section = new ExpandoObject() as dynamic;
+        section = new ExpandoObject();
         section.From = random.From;
         section.To = random.To;
         section.Type = type;

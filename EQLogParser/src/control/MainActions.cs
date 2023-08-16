@@ -22,7 +22,7 @@ using System.Windows.Media;
 
 namespace EQLogParser
 {
-  class MainActions
+  static class MainActions
   {
     private const string PETS_LIST_TITLE = "Verified Pets ({0})";
     private const string PLAYER_LIST_TITLE = "Verified Players ({0})";
@@ -47,8 +47,8 @@ namespace EQLogParser
           request.Wait();
 
           var matches = new Regex(@"EQLogParser-((\d)\.(\d)\.(\d?\d?\d))\.(msi|exe)").Match(request.Result);
-          if (matches.Success && matches.Groups.Count == 6 && int.TryParse(matches.Groups[2].Value, out int v1) &&
-            int.TryParse(matches.Groups[3].Value, out int v2) && int.TryParse(matches.Groups[4].Value, out int v3)
+          if (matches.Success && matches.Groups.Count == 6 && int.TryParse(matches.Groups[2].Value, out var v1) &&
+            int.TryParse(matches.Groups[3].Value, out var v2) && int.TryParse(matches.Groups[4].Value, out var v3)
             && (v1 > version.Major || (v1 == version.Major && v2 > version.Minor) ||
             (v1 == version.Major && v2 == version.Minor && v3 > version.Build)))
           {
@@ -61,7 +61,7 @@ namespace EQLogParser
               if (msg.IsYes1Clicked)
               {
                 HttpClient client = null;
-                var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-" + 
+                var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-" +
                   matches.Groups[1].Value + "." + matches.Groups[5].Value;
 
                 try
@@ -155,9 +155,9 @@ namespace EQLogParser
           }
         }
       }
-      catch (Exception)
+      catch (Exception e)
       {
-        // ignore
+        LOG.Error(e);
       }
     }
 
@@ -431,13 +431,13 @@ namespace EQLogParser
 
         Task.Delay(150).ContinueWith(task =>
         {
-          bool accessError = false;
+          var accessError = false;
 
           try
           {
             using (var os = File.Open(saveFileDialog.FileName, FileMode.Create))
             {
-              TimeRange range = new TimeRange();
+              var range = new TimeRange();
               fights.ForEach(fight =>
               {
                 range.Add(new TimeSegment(fight.BeginTime - 15, fight.LastTime));
@@ -447,16 +447,16 @@ namespace EQLogParser
               {
                 using (var f = File.OpenRead(MainWindow.CurrentLogFile))
                 {
-                  StreamReader s = Helpers.GetStreamReader(f, range.TimeSegments[0].BeginTime);
+                  var s = Helpers.GetStreamReader(f, range.TimeSegments[0].BeginTime);
                   while (!s.EndOfStream)
                   {
-                    string line = s.ReadLine();
+                    var line = s.ReadLine();
                     if (!string.IsNullOrEmpty(line) && line.Length > MainWindow.ACTION_INDEX)
                     {
-                      string action = line.Substring(MainWindow.ACTION_INDEX);
+                      var action = line.Substring(MainWindow.ACTION_INDEX);
                       if (ChatLineParser.ParseChatType(action) == null)
                       {
-                        if (Helpers.TimeCheck(line, range.TimeSegments[0].BeginTime, range, out bool exceeds))
+                        if (Helpers.TimeCheck(line, range.TimeSegments[0].BeginTime, range, out var exceeds))
                         {
                           os.Write(Encoding.UTF8.GetBytes(line));
                           os.Write(Encoding.UTF8.GetBytes(Environment.NewLine));
@@ -554,7 +554,7 @@ namespace EQLogParser
 
     private static void InsertPetMappingIntoSortedList(PetMapping mapping, ObservableCollection<PetMapping> collection)
     {
-      int index = collection.ToList().BinarySearch(mapping, TheSortablePetMappingComparer);
+      var index = collection.ToList().BinarySearch(mapping, TheSortablePetMappingComparer);
       if (index < 0)
       {
         collection.Insert(~index, mapping);

@@ -186,10 +186,10 @@ namespace EQLogParser
       }
       else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != EQLogParser.Resource.SHARE_DPS_SELECTED)
       {
-        if (parseList.SelectedItem != null && Parses.TryGetValue(parseList.SelectedItem as string, out ParseData data))
+        if (parseList.SelectedItem != null && Parses.TryGetValue(parseList.SelectedItem as string, out var data))
         {
           var count = data.Selected?.Count > 0 ? data.Selected?.Count : 0;
-          string players = count == 1 ? "Player" : "Players";
+          var players = count == 1 ? "Player" : "Players";
           sharePlayerParseLabel.Text = string.Format("{0} {1} Selected", count, players);
         }
 

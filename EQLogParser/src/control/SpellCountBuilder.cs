@@ -4,20 +4,20 @@ using System.Linq;
 
 namespace EQLogParser
 {
-  class SpellCountBuilder
+  static class SpellCountBuilder
   {
     public const int BUFF_OFFSET = 30;
     public const int DMG_OFFSET = 5;
     internal static SpellCountData GetSpellCounts(List<string> playerList, PlayerStats raidStats)
     {
       var result = new SpellCountData();
-      HashSet<TimedAction> castsDuring = new HashSet<TimedAction>();
-      HashSet<TimedAction> receivedDuring = new HashSet<TimedAction>();
+      var castsDuring = new HashSet<TimedAction>();
+      var receivedDuring = new HashSet<TimedAction>();
       QuerySpellBlocks(raidStats, castsDuring, receivedDuring);
 
       foreach (var action in castsDuring.AsParallel().Where(cast => playerList.Contains((cast as SpellCast).Caster)))
       {
-        SpellCast cast = action as SpellCast;
+        var cast = action as SpellCast;
         if (cast.SpellData != null)
         {
           UpdateMaps(cast.SpellData, cast.Caster, result.PlayerCastCounts, result.PlayerInterruptedCounts, result.MaxCastCounts, result.UniqueSpells, cast.Interrupted);
@@ -26,7 +26,7 @@ namespace EQLogParser
 
       foreach (var action in receivedDuring.AsParallel().Where(received => playerList.Contains((received as ReceivedSpell).Receiver)))
       {
-        ReceivedSpell received = action as ReceivedSpell;
+        var received = action as ReceivedSpell;
 
         // dont include detrimental received spells since they're mostly things like being nuked
         if (received.SpellData != null)
@@ -55,12 +55,12 @@ namespace EQLogParser
         maxTime = maxTime == -1 ? segment.BeginTime + raidStats.TotalSeconds : maxTime;
         var blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - DMG_OFFSET, segment.EndTime);
         AddBlocks(raidStats, blocks, maxTime, castsDuring, true);
-        blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + BUFF_OFFSET / 2);
+        blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + (BUFF_OFFSET / 2));
         AddBlocks(raidStats, blocks, maxTime, castsDuring);
 
         blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - DMG_OFFSET, segment.EndTime + DMG_OFFSET);
         AddBlocks(raidStats, blocks, maxTime, receivedDuring, true);
-        blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + BUFF_OFFSET / 2);
+        blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + (BUFF_OFFSET / 2));
         AddBlocks(raidStats, blocks, maxTime, receivedDuring);
       });
 
@@ -81,7 +81,7 @@ namespace EQLogParser
             }
             else if (action is ReceivedSpell received)
             {
-              if (received.SpellData == null && received.Ambiguity.Count > 0 && DataManager.ResolveSpellAmbiguity(received, out SpellData replaced))
+              if (received.SpellData == null && received.Ambiguity.Count > 0 && DataManager.ResolveSpellAmbiguity(received, out var replaced))
               {
                 received.SpellData = replaced;
               }

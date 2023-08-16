@@ -98,7 +98,7 @@ namespace EQLogParser
       dataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? Fights : NonTankingFights;
 
       // default these columns to descending
-      string[] desc = new string[] { "SortId" };
+      var desc = new string[] { "SortId" };
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
@@ -135,7 +135,7 @@ namespace EQLogParser
 
     private static void RemoveFight(ObservableCollection<Fight> fights, string name)
     {
-      for (int i = fights.Count - 1; i >= 0; i--)
+      for (var i = fights.Count - 1; i >= 0; i--)
       {
         if (!fights[i].IsInactivity && !string.IsNullOrEmpty(fights[i].Name) && fights[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
         {
@@ -234,9 +234,9 @@ namespace EQLogParser
 
       if (processList != null)
       {
-        double lastWithTankingTime = double.NaN;
+        var lastWithTankingTime = double.NaN;
 
-        int searchAttempts = 0;
+        var searchAttempts = 0;
         foreach (var fight in Fights.Reverse())
         {
           if (searchAttempts++ == 30 || fight.IsInactivity)
@@ -266,9 +266,9 @@ namespace EQLogParser
 
       if (processNonTankingList != null)
       {
-        double lastNonTankingTime = double.NaN;
+        var lastNonTankingTime = double.NaN;
 
-        int searchAttempts = 0;
+        var searchAttempts = 0;
         foreach (var fight in NonTankingFights.Reverse())
         {
           if (searchAttempts++ == 30 || fight.IsInactivity)
@@ -296,7 +296,7 @@ namespace EQLogParser
         NewRowsAdded(NonTankingFights);
       }
 
-      if (NeedRefresh && (processList == null && dataGrid.ItemsSource == Fights || processNonTankingList == null && dataGrid.ItemsSource == NonTankingFights) &&
+      if (NeedRefresh && ((processList == null && dataGrid.ItemsSource == Fights) || (processNonTankingList == null && dataGrid.ItemsSource == NonTankingFights)) &&
         (Keyboard.GetKeyStates(Key.LeftShift) & KeyStates.Down) == 0 && (Keyboard.GetKeyStates(Key.LeftCtrl) & KeyStates.Down) == 0)
       {
         dataGrid.View.RefreshFilter();
@@ -307,7 +307,7 @@ namespace EQLogParser
     private void AddDivider(Fight fight, ObservableCollection<Fight> list, double lastTime)
     {
       var seconds = fight.BeginTime - lastTime;
-      Fight divider = new Fight
+      var divider = new Fight
       {
         LastTime = fight.BeginTime,
         BeginTime = lastTime,
@@ -511,7 +511,7 @@ namespace EQLogParser
 
         while (checksNeeded-- > 0)
         {
-          for (int i = CurrentFightSearchIndex; i < records.Count && i >= 0; i += 1 * direction)
+          for (var i = CurrentFightSearchIndex; i < records.Count && i >= 0; i += 1 * direction)
           {
             if (records.GetItemAt(i) is Fight npc && npc.Name != null && npc.Name.IndexOf(fightSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
             {

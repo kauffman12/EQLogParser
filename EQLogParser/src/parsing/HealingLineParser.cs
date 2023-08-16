@@ -19,7 +19,7 @@ namespace EQLogParser
         int index;
         if (action.Length >= 23 && (index = action.LastIndexOf(" healed ", action.Length, StringComparison.Ordinal)) > -1)
         {
-          HealRecord record = HandleHealed(action, index, lineData.BeginTime);
+          var record = HandleHealed(action, index, lineData.BeginTime);
           if (record != null)
           {
             DataManager.Instance.AddHealRecord(record, lineData.BeginTime);
@@ -60,24 +60,24 @@ namespace EQLogParser
       // [Wed Nov 06 14:19:54 2019] Your ward heals you as it breaks! You healed Niktaza for 8970 (86306) hit points by Healing Ward. (Critical)
 
       HealRecord record = null;
-      string test = part.Substring(0, optional);
+      var test = part.Substring(0, optional);
 
-      bool done = false;
-      string healer = "";
-      string healed = "";
+      var done = false;
+      var healer = "";
+      var healed = "";
       string spell = null;
-      string type = Labels.HEAL;
-      uint heal = uint.MaxValue;
+      var type = Labels.HEAL;
+      var heal = uint.MaxValue;
       uint overHeal = 0;
 
-      int previous = test.Length >= 2 ? test.LastIndexOf(" ", test.Length - 2, StringComparison.Ordinal) : -1;
+      var previous = test.Length >= 2 ? test.LastIndexOf(" ", test.Length - 2, StringComparison.Ordinal) : -1;
       if (previous > -1)
       {
         if (test.IndexOf("are ", previous + 1, StringComparison.Ordinal) > -1)
         {
           done = true;
         }
-        else if (previous - 1 >= 0 && (test[previous - 1] == '.' || test[previous - 1] == '!') || previous - 9 > 0 && test.IndexOf("fulfilled", previous - 9, StringComparison.Ordinal) > -1)
+        else if ((previous - 1 >= 0 && (test[previous - 1] == '.' || test[previous - 1] == '!')) || (previous - 9 > 0 && test.IndexOf("fulfilled", previous - 9, StringComparison.Ordinal) > -1))
         {
           healer = test.Substring(previous + 1);
         }
@@ -101,7 +101,7 @@ namespace EQLogParser
         }
         else
         {
-          int wardIndex = test.IndexOf("`s ward", StringComparison.OrdinalIgnoreCase);
+          var wardIndex = test.IndexOf("`s ward", StringComparison.OrdinalIgnoreCase);
           if (wardIndex > 0)
           {
             // assign owner of ward as healer
@@ -116,11 +116,11 @@ namespace EQLogParser
 
       if (!done)
       {
-        int amountIndex = -1;
+        var amountIndex = -1;
         if (healed.Length == 0)
         {
-          int afterHealed = optional + 8;
-          int forIndex = part.IndexOf(" for ", afterHealed, StringComparison.Ordinal);
+          var afterHealed = optional + 8;
+          var forIndex = part.IndexOf(" for ", afterHealed, StringComparison.Ordinal);
 
           if (forIndex > 1)
           {
@@ -151,22 +151,22 @@ namespace EQLogParser
 
         if (amountIndex > -1)
         {
-          int amountEnd = part.IndexOf(" ", amountIndex, StringComparison.Ordinal);
+          var amountEnd = part.IndexOf(" ", amountIndex, StringComparison.Ordinal);
           if (amountEnd > -1)
           {
-            uint value = StatsUtil.ParseUInt(part.Substring(amountIndex, amountEnd - amountIndex));
+            var value = StatsUtil.ParseUInt(part.Substring(amountIndex, amountEnd - amountIndex));
             if (value != uint.MaxValue)
             {
               heal = value;
             }
 
-            int overEnd = -1;
+            var overEnd = -1;
             if (part.Length > amountEnd + 1 && part[amountEnd + 1] == '(')
             {
               overEnd = part.IndexOf(")", amountEnd + 2, StringComparison.Ordinal);
               if (overEnd > -1)
               {
-                uint value2 = StatsUtil.ParseUInt(part.Substring(amountEnd + 2, overEnd - amountEnd - 2));
+                var value2 = StatsUtil.ParseUInt(part.Substring(amountEnd + 2, overEnd - amountEnd - 2));
                 if (value2 != uint.MaxValue)
                 {
                   overHeal = value2;
@@ -174,11 +174,11 @@ namespace EQLogParser
               }
             }
 
-            int rest = overEnd > -1 ? overEnd : amountEnd;
-            int byIndex = part.IndexOf(" by ", rest, StringComparison.Ordinal);
+            var rest = overEnd > -1 ? overEnd : amountEnd;
+            var byIndex = part.IndexOf(" by ", rest, StringComparison.Ordinal);
             if (byIndex > -1)
             {
-              int periodIndex = part.LastIndexOf(".", StringComparison.Ordinal);
+              var periodIndex = part.LastIndexOf(".", StringComparison.Ordinal);
               if (periodIndex > -1 && periodIndex - byIndex - 4 > 0)
               {
                 spell = part.Substring(byIndex + 4, periodIndex - byIndex - 4);
@@ -195,7 +195,7 @@ namespace EQLogParser
           }
 
           // check for pets
-          int possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
+          var possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
           if (possessive > -1)
           {
             if (PlayerManager.Instance.IsVerifiedPlayer(healed.Substring(0, possessive)))
@@ -230,7 +230,7 @@ namespace EQLogParser
             if (part[part.Length - 1] == ')')
             {
               // using 4 here since the shortest modifier should at least be 3 even in the future. probably.
-              int firstParen = part.LastIndexOf('(', part.Length - 4);
+              var firstParen = part.LastIndexOf('(', part.Length - 4);
               if (firstParen > -1)
               {
                 record.ModifiersMask = LineModifiersParser.Parse(record.Healer, part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1), beginTime);

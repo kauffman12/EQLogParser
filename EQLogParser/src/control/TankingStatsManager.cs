@@ -92,7 +92,7 @@ namespace EQLogParser
           {
             RaidTotals.TotalSeconds = RaidTotals.MaxTime = RaidTotals.Ranges.GetTotal();
 
-            int rangeIndex = 0;
+            var rangeIndex = 0;
             double lastTime = 0;
             var newBlock = new List<ActionBlock>();
             damageBlocks.ForEach(block =>
@@ -146,7 +146,7 @@ namespace EQLogParser
       lock (TankingGroupIds)
       {
         // send update
-        DataPointEvent de = new DataPointEvent() { Action = action, Iterator = new TankGroupCollection(TankingGroups, options.DamageType) };
+        var de = new DataPointEvent() { Action = action, Iterator = new TankGroupCollection(TankingGroups, options.DamageType) };
 
         if (selected != null)
         {
@@ -175,7 +175,7 @@ namespace EQLogParser
       lock (TankingGroupIds)
       {
         CombinedStats combined = null;
-        Dictionary<string, PlayerStats> individualStats = new Dictionary<string, PlayerStats>();
+        var individualStats = new Dictionary<string, PlayerStats>();
 
         if (RaidTotals != null)
         {
@@ -195,17 +195,17 @@ namespace EQLogParser
                     if (options.DamageType == 0 || (options.DamageType == 1 && IsMelee(record)) || (options.DamageType == 2 && !IsMelee(record)))
                     {
                       RaidTotals.Total += record.Total;
-                      PlayerStats stats = StatsUtil.CreatePlayerStats(individualStats, record.Defender);
+                      var stats = StatsUtil.CreatePlayerStats(individualStats, record.Defender);
                       StatsUtil.UpdateStats(stats, record);
-                      PlayerSubStats subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
+                      var subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
 
-                      uint critHits = subStats.CritHits;
+                      var critHits = subStats.CritHits;
                       StatsUtil.UpdateStats(subStats, record);
 
                       // dont count misses/dodges or where no damage was done
                       if (record.Total > 0)
                       {
-                        Dictionary<long, int> values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
+                        var values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
                         Helpers.LongIntAddHelper.Add(values, record.Total, 1);
                       }
                     }
@@ -220,7 +220,7 @@ namespace EQLogParser
             {
               StatsUtil.UpdateAllStatsTimeRanges(stats, PlayerTimeRanges, PlayerSubTimeRanges);
               StatsUtil.UpdateCalculations(stats, RaidTotals);
-              if (RaidTotals.Specials.TryGetValue(stats.OrigName, out string special2))
+              if (RaidTotals.Specials.TryGetValue(stats.OrigName, out var special2))
               {
                 stats.Special = special2;
               }
@@ -238,7 +238,7 @@ namespace EQLogParser
             combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
             combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
 
-            for (int i = 0; i < combined.StatsList.Count; i++)
+            for (var i = 0; i < combined.StatsList.Count; i++)
             {
               combined.StatsList[i].Rank = Convert.ToUInt16(i + 1);
               combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
@@ -279,10 +279,10 @@ namespace EQLogParser
     public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool _, bool showDPS, bool showTotals,
       bool rankPlayers, bool __, bool showTime, string customTitle)
     {
-      List<string> list = new List<string>();
+      var list = new List<string>();
 
-      string title = "";
-      string details = "";
+      var title = "";
+      var details = "";
 
       if (currentStats != null)
       {
@@ -290,10 +290,10 @@ namespace EQLogParser
         {
           if (selected?.Count > 0)
           {
-            foreach (PlayerStats stats in selected.OrderByDescending(item => item.Total))
+            foreach (var stats in selected.OrderByDescending(item => item.Total))
             {
-              string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(StatsUtil.PLAYER_FORMAT, stats.Name);
-              string damageFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
+              var playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(StatsUtil.PLAYER_FORMAT, stats.Name);
+              var damageFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
               list.Add(playerFormat + damageFormat);
             }
           }
@@ -307,17 +307,17 @@ namespace EQLogParser
         {
           if (selected?.Count == 1 && selected[0].MoreStats != null)
           {
-            int rank = 1;
+            var rank = 1;
             long totals = 0;
             foreach (var stats in selected[0].MoreStats.SubStats2.OrderByDescending(stats => stats.Total).Take(10))
             {
-              string playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, rank++, stats.Name) : string.Format(StatsUtil.PLAYER_FORMAT, stats.Name);
-              string damageFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
+              var playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, rank++, stats.Name) : string.Format(StatsUtil.PLAYER_FORMAT, stats.Name);
+              var damageFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
               list.Add(playerFormat + damageFormat);
               totals += stats.Total;
             }
 
-            string totalTitle = showTotals ? (selected[0].Name + " Received " + StatsUtil.FormatTotals(totals) + " Healing") : (selected[0].Name + " Received Healing");
+            var totalTitle = showTotals ? (selected[0].Name + " Received " + StatsUtil.FormatTotals(totals) + " Healing") : (selected[0].Name + " Received Healing");
             details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
             var timeTitle = showTime ? currentStats.TimeTitle : "";
             title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, totalTitle);

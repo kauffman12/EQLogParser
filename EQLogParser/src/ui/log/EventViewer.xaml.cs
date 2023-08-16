@@ -83,7 +83,7 @@ namespace EQLogParser
               var isActorPlayer = PlayerManager.Instance.IsPetOrPlayerOrSpell(death.Killer);
               var isTargetPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(death.Killed);
 
-              string text = KILLSHOT_EVENT;
+              var text = KILLSHOT_EVENT;
               if (isTargetPlayer && isActorPlayer)
               {
                 text = PLAYERKILL_EVENT;
@@ -121,7 +121,7 @@ namespace EQLogParser
     private void UpdateTitleAndRefresh()
     {
       dataGrid?.View?.RefreshFilter();
-      int count = dataGrid?.View != null ? dataGrid.View.Records.Count : 0;
+      var count = dataGrid?.View != null ? dataGrid.View.Records.Count : 0;
       titleLabel.Content = count == 0 ? "No Events Found" : count + " Events Found";
     }
 
@@ -129,11 +129,11 @@ namespace EQLogParser
     {
       dataGrid.View.Filter = new Predicate<object>(obj =>
       {
-        bool result = false;
+        var result = false;
         if (obj is EventRow row)
         {
-          result = CurrentShowMezBreaks && row.Event == MEZBREAK_EVENT || CurrentShowEnterZone && row.Event == ZONE_EVENT || CurrentShowKillShots &&
-            row.Event == KILLSHOT_EVENT || CurrentShowPlayerKilling && row.Event == PLAYERKILL_EVENT || CurrentShowPlayerSlain && row.Event == PLAYERSLAIN_EVENT;
+          result = (CurrentShowMezBreaks && row.Event == MEZBREAK_EVENT) || (CurrentShowEnterZone && row.Event == ZONE_EVENT) || (CurrentShowKillShots &&
+            row.Event == KILLSHOT_EVENT) || (CurrentShowPlayerKilling && row.Event == PLAYERKILL_EVENT) || (CurrentShowPlayerSlain && row.Event == PLAYERSLAIN_EVENT);
 
           if (result && !string.IsNullOrEmpty(CurrentFilterText) && CurrentFilterText != EQLogParser.Resource.EVENT_FILTER_TEXT)
           {
@@ -173,7 +173,7 @@ namespace EQLogParser
     {
       if (selectedOptions?.Items != null)
       {
-        int count = 0;
+        var count = 0;
         foreach (var item in selectedOptions.Items.Cast<ComboBoxItemDetails>())
         {
           switch (item.Text)

@@ -17,8 +17,8 @@ namespace Syncfusion.Themes.MaterialDarkCustom.WPF
 
     public override List<string> GetDictionaries(String type, string style)
     {
-      string rootStylePath = "/Syncfusion.Themes.MaterialDarkCustom.WPF;component/";
-      List<string> styles = new List<string>();
+      var rootStylePath = "/Syncfusion.Themes.MaterialDarkCustom.WPF;component/";
+      var styles = new List<string>();
       #region Switch
 
       switch (type)
@@ -811,7 +811,7 @@ namespace Syncfusion.Themes.MaterialDarkCustom.WPF
     [System.ComponentModel.Browsable(false)]
     public Dictionary<string, string> GetPropertyMappings()
     {
-      Dictionary<string, string> propertyMappings = new Dictionary<string, string>();
+      var propertyMappings = new Dictionary<string, string>();
       #region PropertyMappings
       propertyMappings.Add("HeaderFontSize", "HeaderTextStyle");
       propertyMappings.Add("SubHeaderFontSize", "SubHeaderTextStyle");

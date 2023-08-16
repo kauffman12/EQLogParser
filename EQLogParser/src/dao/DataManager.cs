@@ -122,7 +122,7 @@ namespace EQLogParser
 
     private DataManager()
     {
-      DictionaryUniqueListHelper<string, SpellData> helper = new DictionaryUniqueListHelper<string, SpellData>();
+      var helper = new DictionaryUniqueListHelper<string, SpellData>();
       var spellList = new List<SpellData>();
 
       // build ranks cache
@@ -135,7 +135,7 @@ namespace EQLogParser
       // Player title mapping for /who queries
       ConfigUtil.ReadList(@"data\titles.txt").ForEach(line =>
       {
-        string[] split = line.Split('=');
+        var split = line.Split('=');
         if (split.Length == 2)
         {
           TitleToClass[split[0]] = split[0];
@@ -216,7 +216,7 @@ namespace EQLogParser
             // these need to be unique and keep track if a conflict is found
             if (SpellsToClass.ContainsKey(spell.Name))
             {
-              SpellsToClass.TryRemove(spell.Name, out SpellClass _);
+              SpellsToClass.TryRemove(spell.Name, out var _);
               keepOut[spell.Name] = 1;
             }
             else if (!keepOut.ContainsKey(spell.Name))
@@ -245,20 +245,20 @@ namespace EQLogParser
             {
               foreach (var spellLine in multiple)
               {
-                if (spellLine.Split('=') is string[] list && list.Length == 2 && uint.TryParse(list[1], out uint rate))
+                if (spellLine.Split('=') is string[] list && list.Length == 2 && uint.TryParse(list[1], out var rate))
                 {
                   if (GetAdpsByName(list[0]) is SpellData spellData)
                   {
                     AdpsValues[key][spellData.NameAbbrv] = rate;
 
-                    if (!AdpsWearOff.TryGetValue(spellData.WearOff, out HashSet<SpellData> wearOffList))
+                    if (!AdpsWearOff.TryGetValue(spellData.WearOff, out var wearOffList))
                     {
                       AdpsWearOff[spellData.WearOff] = new HashSet<SpellData>();
                     }
 
                     AdpsWearOff[spellData.WearOff].Add(spellData);
 
-                    if (!AdpsLandsOn.TryGetValue(spellData.LandsOnYou, out HashSet<SpellData> landsOnList))
+                    if (!AdpsLandsOn.TryGetValue(spellData.LandsOnYou, out var landsOnList))
                     {
                       AdpsLandsOn[spellData.LandsOnYou] = new HashSet<SpellData>();
                     }
@@ -303,7 +303,7 @@ namespace EQLogParser
 
     internal string AbbreviateSpellName(string spell)
     {
-      if (!SpellAbbrvCache.TryGetValue(spell, out string result))
+      if (!SpellAbbrvCache.TryGetValue(spell, out var result))
       {
         result = spell;
         int index;
@@ -313,9 +313,9 @@ namespace EQLogParser
         }
         else if ((index = spell.LastIndexOf(" ", StringComparison.Ordinal)) > -1)
         {
-          string lastWord = spell.Substring(index + 1);
+          var lastWord = spell.Substring(index + 1);
 
-          if (RanksCache.TryGetValue(lastWord, out string root))
+          if (RanksCache.TryGetValue(lastWord, out var root))
           {
             result = spell.Substring(0, index);
             if (!string.IsNullOrEmpty(root))
@@ -371,7 +371,7 @@ namespace EQLogParser
     {
       Helpers.AddAction(AllResistBlocks, record, beginTime);
 
-      if (SpellsNameDB.TryGetValue(record.Spell, out List<SpellData> spellList))
+      if (SpellsNameDB.TryGetValue(record.Spell, out var spellList))
       {
         if (spellList.Find(item => !item.IsBeneficial) is SpellData spellData)
         {
@@ -382,10 +382,10 @@ namespace EQLogParser
 
     internal void CheckExpireFights(double currentTime)
     {
-      foreach (ref Fight fight in ActiveFights.Values.ToArray().AsSpan())
+      foreach (ref var fight in ActiveFights.Values.ToArray().AsSpan())
       {
-        double diff = currentTime - fight.LastTime;
-        if (diff > MAXTIMEOUT || diff > FIGHTTIMEOUT && fight.DamageBlocks.Count > 0)
+        var diff = currentTime - fight.LastTime;
+        if (diff > MAXTIMEOUT || (diff > FIGHTTIMEOUT && fight.DamageBlocks.Count > 0))
         {
           RemoveActiveFight(fight.CorrectMapKey);
           RemoveOverlayFight(fight.Id);
@@ -399,7 +399,7 @@ namespace EQLogParser
 
       if (!SpellsAbbrvDB.TryGetValue(name, out spellData))
       {
-        if (SpellsNameDB.TryGetValue(name, out List<SpellData> spellList))
+        if (SpellsNameDB.TryGetValue(name, out var spellList))
         {
           spellData = spellList.Find(item => item.Adps > 0);
         }
@@ -422,7 +422,7 @@ namespace EQLogParser
     {
       SpellData spellData = null;
 
-      if (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.TryGetValue(name, out List<SpellData> spellList))
+      if (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.TryGetValue(name, out var spellList))
       {
         spellData = spellList.Find(item => item.Damaging > 0);
       }
@@ -434,7 +434,7 @@ namespace EQLogParser
     {
       SpellData spellData = null;
 
-      if (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.TryGetValue(name, out List<SpellData> spellList))
+      if (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.TryGetValue(name, out var spellList))
       {
         spellData = spellList.Find(item => item.Damaging < 0);
       }
@@ -446,11 +446,11 @@ namespace EQLogParser
     {
       SpellData spellData = null;
 
-      if (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.TryGetValue(name, out List<SpellData> spellList))
+      if (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.TryGetValue(name, out var spellList))
       {
         if (spellList.Count <= 10)
         {
-          foreach (ref SpellData spell in spellList.ToArray().AsSpan())
+          foreach (ref var spell in spellList.ToArray().AsSpan())
           {
             if (spellData == null || (spellData.Level < spell.Level && spell.Level <= 250) || (spellData.Level > 250 && spell.Level <= 250))
             {
@@ -484,9 +484,9 @@ namespace EQLogParser
 
     internal void HandleSpellInterrupt(string player, string spell, double beginTime)
     {
-      for (int i = AllSpellCastBlocks.Count - 1; i >= 0 && beginTime - AllSpellCastBlocks[i].BeginTime <= 5; i--)
+      for (var i = AllSpellCastBlocks.Count - 1; i >= 0 && beginTime - AllSpellCastBlocks[i].BeginTime <= 5; i--)
       {
-        int index = AllSpellCastBlocks[i].Actions.FindLastIndex(action => action is SpellCast sc && sc.Spell == spell && sc.Caster == player);
+        var index = AllSpellCastBlocks[i].Actions.FindLastIndex(action => action is SpellCast sc && sc.Spell == spell && sc.Caster == player);
         if (index > -1 && AllSpellCastBlocks[i].Actions[index] is SpellCast cast)
         {
           cast.Interrupted = true;
@@ -502,7 +502,7 @@ namespace EQLogParser
         Helpers.AddAction(AllSpellCastBlocks, cast, beginTime);
         LastSpellIndex = AllSpellCastBlocks.Count - 1;
 
-        if (SpellsToClass.TryGetValue(cast.Spell, out SpellClass theClass))
+        if (SpellsToClass.TryGetValue(cast.Spell, out var theClass))
         {
           PlayerManager.Instance.UpdatePlayerClassFromSpell(cast, theClass);
         }
@@ -546,7 +546,7 @@ namespace EQLogParser
         found.SpellData = FindByLandsOn(ConfigUtil.PlayerName, found.SpellData);
 
         // check Adps
-        if (AdpsLandsOn.TryGetValue(found.SpellData[0].LandsOnYou, out HashSet<SpellData> spellDataSet) && spellDataSet.Count > 0)
+        if (AdpsLandsOn.TryGetValue(found.SpellData[0].LandsOnYou, out var spellDataSet) && spellDataSet.Count > 0)
         {
           var spellData = spellDataSet.Count == 1 ? spellDataSet.First() : FindPreviousCast(ConfigUtil.PlayerName, spellDataSet.ToList(), true);
 
@@ -559,7 +559,7 @@ namespace EQLogParser
             {
               AdpsKeys.ForEach(key =>
               {
-                if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out uint value))
+                if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out var value))
                 {
                   AdpsActive[key][spellData.LandsOnYou] = value;
                   RecalculateAdps();
@@ -582,13 +582,13 @@ namespace EQLogParser
         found.SpellData = FindByLandsOn(data[0], found.SpellData);
 
         // check Adps
-        if (AdpsWearOff.TryGetValue(found.SpellData[0].WearOff, out HashSet<SpellData> spellDataSet) && spellDataSet.Count > 0)
+        if (AdpsWearOff.TryGetValue(found.SpellData[0].WearOff, out var spellDataSet) && spellDataSet.Count > 0)
         {
           var spellData = spellDataSet.First();
 
           AdpsKeys.ForEach(key =>
           {
-            if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out uint value))
+            if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out var value))
             {
               AdpsActive[key].Remove(spellData.LandsOnYou);
               RecalculateAdps();
@@ -604,7 +604,7 @@ namespace EQLogParser
     {
       lock (NpcTotalSpellCounts)
       {
-        if (!NpcTotalSpellCounts.TryGetValue(npc, out TotalCount value))
+        if (!NpcTotalSpellCounts.TryGetValue(npc, out var value))
         {
           value = new TotalCount { Reflected = 1 };
           NpcTotalSpellCounts[npc] = value;
@@ -621,13 +621,13 @@ namespace EQLogParser
       // NPC is always upper case after it is parsed
       lock (NpcResistStats)
       {
-        if (!NpcResistStats.TryGetValue(npc, out Dictionary<SpellResist, ResistCount> stats))
+        if (!NpcResistStats.TryGetValue(npc, out var stats))
         {
           stats = new Dictionary<SpellResist, ResistCount>();
           NpcResistStats[npc] = stats;
         }
 
-        if (!stats.TryGetValue(resist, out ResistCount count))
+        if (!stats.TryGetValue(resist, out var count))
         {
           stats[resist] = resisted ? new ResistCount { Resisted = 1 } : new ResistCount { Landed = 1 };
         }
@@ -646,7 +646,7 @@ namespace EQLogParser
 
       lock (NpcTotalSpellCounts)
       {
-        if (!NpcTotalSpellCounts.TryGetValue(npc, out TotalCount value))
+        if (!NpcTotalSpellCounts.TryGetValue(npc, out var value))
         {
           value = new TotalCount { Landed = 1 };
           NpcTotalSpellCounts[npc] = value;
@@ -660,7 +660,7 @@ namespace EQLogParser
 
     internal void ZoneChanged()
     {
-      bool updated = false;
+      var updated = false;
 
       lock (LockObject)
       {
@@ -689,14 +689,14 @@ namespace EQLogParser
 
       if (!string.IsNullOrEmpty(line))
       {
-        string[] data = line.Split('^');
+        var data = line.Split('^');
 
         if (data.Length >= 11)
         {
-          int duration = int.Parse(data[3], CultureInfo.CurrentCulture) * 6; // as seconds
-          int beneficial = int.Parse(data[4], CultureInfo.CurrentCulture);
-          byte target = byte.Parse(data[6], CultureInfo.CurrentCulture);
-          ushort classMask = ushort.Parse(data[7], CultureInfo.CurrentCulture);
+          var duration = int.Parse(data[3], CultureInfo.CurrentCulture) * 6; // as seconds
+          var beneficial = int.Parse(data[4], CultureInfo.CurrentCulture);
+          var target = byte.Parse(data[6], CultureInfo.CurrentCulture);
+          var classMask = ushort.Parse(data[7], CultureInfo.CurrentCulture);
 
           // deal with too big or too small values
           // all adps we care about is in the range of a few minutes
@@ -751,9 +751,9 @@ namespace EQLogParser
       if (LastSpellIndex > -1)
       {
         var endTime = AllSpellCastBlocks[LastSpellIndex].BeginTime - 5;
-        for (int i = LastSpellIndex; i >= 0 && AllSpellCastBlocks[i].BeginTime >= endTime; i--)
+        for (var i = LastSpellIndex; i >= 0 && AllSpellCastBlocks[i].BeginTime >= endTime; i--)
         {
-          for (int j = AllSpellCastBlocks[i].Actions.Count - 1; j >= 0; j--)
+          for (var j = AllSpellCastBlocks[i].Actions.Count - 1; j >= 0; j--)
           {
             if (AllSpellCastBlocks[i].Actions[j] is SpellCast cast && !cast.Interrupted &&
               output.Find(spellData => (spellData.Target != (int)SpellTarget.SELF || cast.Caster == player) &&
@@ -796,7 +796,7 @@ namespace EQLogParser
 
     internal bool RemoveActiveFight(string name)
     {
-      bool removed = ActiveFights.TryRemove(name, out Fight fight);
+      var removed = ActiveFights.TryRemove(name, out var fight);
       if (removed)
       {
         fight.Dead = true;
@@ -826,11 +826,11 @@ namespace EQLogParser
 
       if (fight.DamageHits > 0)
       {
-        bool needEvent = false;
+        var needEvent = false;
 
         lock (OverlayFights)
         {
-          needEvent = (OverlayFights.Count == 0);
+          needEvent = OverlayFights.Count == 0;
           OverlayFights[fight.Id] = fight;
         }
 
@@ -861,7 +861,7 @@ namespace EQLogParser
 
     internal bool HasOverlayFights()
     {
-      bool result = false;
+      var result = false;
       lock (OverlayFights)
       {
         result = OverlayFights.Count > 0;
@@ -948,7 +948,7 @@ namespace EQLogParser
 
       if (spell.Ambiguity.Count < 30)
       {
-        int spellClass = (int)PlayerManager.Instance.GetPlayerClassEnum(spell.Receiver);
+        var spellClass = (int)PlayerManager.Instance.GetPlayerClassEnum(spell.Receiver);
         var subset = spell.Ambiguity.FindAll(test => test.Target == (int)SpellTarget.SELF && spellClass != 0 && (test.ClassMask & spellClass) == spellClass);
         var distinct = subset.Distinct(AbbrvComparer).ToList();
         replaced = distinct.Count == 1 ? distinct.First() : spell.Ambiguity.First();
@@ -961,8 +961,8 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(name))
       {
-        bool removed = ActiveFights.TryRemove(name, out Fight npc);
-        removed = LifetimeFights.TryRemove(name, out byte bnpc) || removed;
+        var removed = ActiveFights.TryRemove(name, out var npc);
+        removed = LifetimeFights.TryRemove(name, out var bnpc) || removed;
 
         if (removed)
         {
@@ -976,7 +976,7 @@ namespace EQLogParser
           overlayFights = OverlayFights.Values.ToArray().AsSpan();
         }
 
-        foreach (ref Fight fight in overlayFights)
+        foreach (ref var fight in overlayFights)
         {
           if (fight.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
           {
@@ -988,22 +988,22 @@ namespace EQLogParser
 
     private static List<ActionBlock> SearchActions(List<ActionBlock> allActions, double beginTime, double endTime)
     {
-      ActionBlock startBlock = new ActionBlock { BeginTime = beginTime };
-      ActionBlock endBlock = new ActionBlock { BeginTime = endTime + 1 };
+      var startBlock = new ActionBlock { BeginTime = beginTime };
+      var endBlock = new ActionBlock { BeginTime = endTime + 1 };
 
-      int startIndex = allActions.BinarySearch(startBlock, TAComparer);
+      var startIndex = allActions.BinarySearch(startBlock, TAComparer);
       if (startIndex < 0)
       {
         startIndex = Math.Abs(startIndex) - 1;
       }
 
-      int endIndex = allActions.BinarySearch(endBlock, TAComparer);
+      var endIndex = allActions.BinarySearch(endBlock, TAComparer);
       if (endIndex < 0)
       {
         endIndex = Math.Abs(endIndex) - 1;
       }
 
-      int last = endIndex - startIndex;
+      var last = endIndex - startIndex;
       return last > 0 ? allActions.GetRange(startIndex, last) : new List<ActionBlock>();
     }
 
@@ -1014,7 +1014,7 @@ namespace EQLogParser
         lastIndex = data.Count - 1;
       }
 
-      if (node.Words.TryGetValue(data[lastIndex], out SpellTreeNode child))
+      if (node.Words.TryGetValue(data[lastIndex], out var child))
       {
         if (lastIndex > 0)
         {
@@ -1043,7 +1043,7 @@ namespace EQLogParser
       }
       else
       {
-        if (!node.Words.TryGetValue(data[lastIndex], out SpellTreeNode child))
+        if (!node.Words.TryGetValue(data[lastIndex], out var child))
         {
           child = new SpellTreeNode();
           node.Words[data[lastIndex]] = child;
@@ -1065,7 +1065,7 @@ namespace EQLogParser
     {
       if (b.Duration.CompareTo(a.Duration) is int result && result == 0)
       {
-        if (int.TryParse(a.ID, out int aInt) && int.TryParse(b.ID, out int bInt) && aInt != bInt)
+        if (int.TryParse(a.ID, out var aInt) && int.TryParse(b.ID, out var bInt) && aInt != bInt)
         {
           result = aInt > bInt ? -1 : 1;
         }

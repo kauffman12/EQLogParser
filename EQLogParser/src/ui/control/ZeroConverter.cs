@@ -19,7 +19,7 @@ namespace EQLogParser
     {
       if (value is string s)
       {
-        if (!double.TryParse(s, out double decValue))
+        if (!double.TryParse(s, out var decValue))
         {
           decValue = 0;
         }

@@ -128,15 +128,15 @@ namespace EQLogParser
 
     private bool GetNextYear()
     {
-      bool success = false;
+      var success = false;
 
       CurrentDirectory++;
       CurrentMonth = -1;
 
       if (CurrentDirectory < Directories.Count && Directory.Exists(Directories[CurrentDirectory]))
       {
-        string dir = Path.GetFileName(Directories[CurrentDirectory]);
-        if (DateTime.TryParseExact(dir, "yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime parsed) && CurrentChatFilter.DuringYear(parsed))
+        var dir = Path.GetFileName(Directories[CurrentDirectory]);
+        if (DateTime.TryParseExact(dir, "yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed) && CurrentChatFilter.DuringYear(parsed))
         {
           var months = Directory.GetFiles(Directories[CurrentDirectory]);
           if (months.Length > 0)
@@ -182,23 +182,23 @@ namespace EQLogParser
 
       if (CurrentDirectory > -1 && CurrentDirectory < Directories.Count && CurrentMonth > -1 && Months != null && CurrentMonth < Months.Count)
       {
-        string dir = Path.GetFileName(Directories[CurrentDirectory]);
-        string fileName = Path.GetFileName(Months[CurrentMonth]);
+        var dir = Path.GetFileName(Directories[CurrentDirectory]);
+        var fileName = Path.GetFileName(Months[CurrentMonth]);
         if (dir != null && fileName != null)
         {
-          string monthString = dir + "-" + fileName.Substring(5, 2);
-          if (DateTime.TryParseExact(monthString, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime parsed) && CurrentChatFilter.DuringMonth(parsed))
+          var monthString = dir + "-" + fileName.Substring(5, 2);
+          if (DateTime.TryParseExact(monthString, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed) && CurrentChatFilter.DuringMonth(parsed))
           {
             var archive = ChatManager.OpenArchive(Months[CurrentMonth], ZipArchiveMode.Read);
             if (archive != null)
             {
               Entries = archive.Entries.Where(entry =>
               {
-                bool found = false;
+                var found = false;
                 if (entry.Name != ChatManager.INDEX)
                 {
-                  string dayString = monthString + "-" + entry.Name;
-                  if (DateTime.TryParseExact(dayString, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime day) && CurrentChatFilter.DuringDay(day))
+                  var dayString = monthString + "-" + entry.Name;
+                  if (DateTime.TryParseExact(dayString, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var day) && CurrentChatFilter.DuringDay(day))
                   {
                     found = true;
                   }

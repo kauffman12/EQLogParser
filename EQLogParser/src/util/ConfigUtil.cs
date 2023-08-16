@@ -7,7 +7,7 @@ using System.Security;
 
 namespace EQLogParser
 {
-  class ConfigUtil
+  static class ConfigUtil
   {
     public delegate void PostConfigCallback();
     public static string PlayerName;
@@ -39,9 +39,9 @@ namespace EQLogParser
 
     internal static bool IfSet(string setting, PostConfigCallback callback = null, bool callByDefault = false)
     {
-      bool result = false;
-      string value = GetSetting(setting);
-      if ((value == null && callByDefault) || (value != null && bool.TryParse(value, out bool bValue) && bValue))
+      var result = false;
+      var value = GetSetting(setting);
+      if ((value == null && callByDefault) || (value != null && bool.TryParse(value, out var bValue) && bValue))
       {
         result = true;
         callback?.Invoke();
@@ -51,8 +51,8 @@ namespace EQLogParser
 
     internal static bool IfSetOrElse(string setting, bool def = false)
     {
-      bool result = def;
-      string value = GetSetting(setting);
+      var result = def;
+      var value = GetSetting(setting);
       if (value != null)
       {
         if (bool.TryParse(value, out result) == false)
@@ -65,7 +65,7 @@ namespace EQLogParser
 
     internal static double GetSettingAsDouble(string key, double def = 0.0)
     {
-      if (double.TryParse(GetSetting(key), out double result) == false)
+      if (double.TryParse(GetSetting(key), out var result) == false)
       {
         result = def;
       }
@@ -74,7 +74,7 @@ namespace EQLogParser
 
     internal static int GetSettingAsInteger(string key)
     {
-      if (int.TryParse(GetSetting(key), out int result) == false)
+      if (int.TryParse(GetSetting(key), out var result) == false)
       {
         result = int.MaxValue;
       }
@@ -84,7 +84,7 @@ namespace EQLogParser
     internal static string GetSetting(string key, string def = null)
     {
       Init();
-      ApplicationSettings.TryGetValue(key, out string setting);
+      ApplicationSettings.TryGetValue(key, out var setting);
       return setting ?? def;
     }
 
@@ -93,7 +93,7 @@ namespace EQLogParser
       Init();
       if (!string.IsNullOrEmpty(key))
       {
-        ApplicationSettings.TryRemove(key, out string _);
+        ApplicationSettings.TryRemove(key, out var _);
       }
     }
 
@@ -110,7 +110,7 @@ namespace EQLogParser
       }
       else
       {
-        if (ApplicationSettings.TryGetValue(key, out string existing))
+        if (ApplicationSettings.TryGetValue(key, out var existing))
         {
           if (existing != value)
           {
@@ -197,7 +197,7 @@ namespace EQLogParser
 
     internal static List<string> ReadList(string fileName)
     {
-      List<string> result = new List<string>();
+      var result = new List<string>();
 
       try
       {
@@ -318,7 +318,7 @@ namespace EQLogParser
     {
       list.ForEach(line =>
       {
-        string[] parts = line.Split('=');
+        var parts = line.Split('=');
         if (parts != null && parts.Length == 2 && parts[0].Length > 0 && parts[1].Length > 0)
         {
           properties[parts[0]] = parts[1];
@@ -330,7 +330,7 @@ namespace EQLogParser
     {
       try
       {
-        List<string> lines = new List<string>();
+        var lines = new List<string>();
         foreach (var keypair in enumeration)
         {
           lines.Add(keypair.Key + "=" + keypair.Value);

@@ -69,7 +69,7 @@ namespace EQLogParser
         var currentTicks = DateTime.Now.Ticks;
         foreach (var timerData in timerList.Where(timerData => timerData.TimerType == 2 && timerData.SelectedOverlays.Contains(TheOverlay.Id)))
         {
-          if (ShortDurationBars.TryGetValue(timerData.Key, out ShortDurationData value))
+          if (ShortDurationBars.TryGetValue(timerData.Key, out var value))
           {
             var remainingTicks = timerData.EndTicks - currentTicks;
             UpdateTimerBar(remainingTicks, value.TheTimerBar, timerData, value.MaxDuration, true);
@@ -86,7 +86,7 @@ namespace EQLogParser
     internal bool Tick(List<TimerData> timerList)
     {
       var currentTicks = DateTime.Now.Ticks;
-      double maxDurationTicks = double.NaN;
+      var maxDurationTicks = double.NaN;
       IEnumerable<TimerData> orderedList = null;
 
       if (TheOverlay.Width != Width)
@@ -117,7 +117,7 @@ namespace EQLogParser
         {
           // remaining order
           orderedList = timerList.Where(timerData => timerData.SelectedOverlays.Contains(TheOverlay.Id))
-            .OrderBy(timerData => (timerData.EndTicks - currentTicks));
+            .OrderBy(timerData => timerData.EndTicks - currentTicks);
         }
 
         if (TheOverlay.UseStandardTime)
@@ -237,11 +237,11 @@ namespace EQLogParser
       var complete = false;
       if (TheOverlay.TimerMode == 0)
       {
-        complete = (count == 0);
+        complete = count == 0;
       }
       else if (TheOverlay.IdleTimeoutSeconds > 0)
       {
-        complete = ((count == idleList.Count) && (oldestIdleTicks > (TheOverlay.IdleTimeoutSeconds * TimeSpan.TicksPerSecond)));
+        complete = (count == idleList.Count) && (oldestIdleTicks > (TheOverlay.IdleTimeoutSeconds * TimeSpan.TicksPerSecond));
       }
 
       while (count < childCount)
@@ -270,7 +270,7 @@ namespace EQLogParser
       {
         if (timerData.TimerType == 2)
         {
-          if (!ShortDurationBars.TryGetValue(timerData.Key, out ShortDurationData value))
+          if (!ShortDurationBars.TryGetValue(timerData.Key, out var value))
           {
             value = new ShortDurationData();
             ShortDurationBars[timerData.Key] = value;
@@ -307,7 +307,7 @@ namespace EQLogParser
       }
       else
       {
-        var timeText = DateUtil.FormatSimpleMS((long)timerData.DurationTicks);
+        var timeText = DateUtil.FormatSimpleMS(timerData.DurationTicks);
         timerBar.SetIdle();
         timerBar.Update(GetDisplayName(timerData), timeText, 100.0);
       }
@@ -412,7 +412,7 @@ namespace EQLogParser
       {
         var source = (HwndSource)PresentationSource.FromVisual(this);
         // set to layered and topmost by xaml
-        int exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
+        var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
         exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
         NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
       }

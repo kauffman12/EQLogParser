@@ -4,12 +4,12 @@ using System.Windows.Media;
 
 namespace EQLogParser
 {
-  class UIElementUtil
+  static class UIElementUtil
   {
     internal static double GetDpi()
     {
       var dpi = 96.0;
-      PresentationSource source = PresentationSource.FromVisual(Application.Current.MainWindow);
+      var source = PresentationSource.FromVisual(Application.Current.MainWindow);
       if (source != null)
       {
         var matrix = source.CompositionTarget.TransformToDevice;
@@ -64,7 +64,7 @@ namespace EQLogParser
         }
 
         var total = hasSelectAll ? columns.Items.Count - 2 : columns.Items.Count;
-        string countString = total == count ? "All" : count.ToString();
+        var countString = total == count ? "All" : count.ToString();
         var text = countString + " " + value + ((total == count) ? "" : " Selected");
         if (text[0] == '0')
         {

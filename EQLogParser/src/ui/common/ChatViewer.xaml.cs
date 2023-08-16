@@ -45,11 +45,11 @@ namespace EQLogParser
       toFilter.Text = EQLogParser.Resource.CHAT_TO_FILTER;
       fromFilter.Text = EQLogParser.Resource.CHAT_FROM_FILTER;
 
-      string family = ConfigUtil.GetSetting("ChatFontFamily");
+      var family = ConfigUtil.GetSetting("ChatFontFamily");
       fontFamily.SelectedItem = (family != null) ? new FontFamily(family) : chatBox.FontFamily;
 
-      string size = ConfigUtil.GetSetting("ChatFontSize");
-      if (size != null && double.TryParse(size, out double dsize))
+      var size = ConfigUtil.GetSetting("ChatFontSize");
+      if (size != null && double.TryParse(size, out var dsize))
       {
         fontSize.SelectedItem = dsize;
       }
@@ -126,7 +126,7 @@ namespace EQLogParser
 
       if (chatList.Count > 0)
       {
-        string text = string.Join("\n", chatList);
+        var text = string.Join("\n", chatList);
 
         if (!string.IsNullOrEmpty(chatBox.Text))
         {
@@ -147,7 +147,7 @@ namespace EQLogParser
         new ComboBoxItemDetails { Text = EQLogParser.Resource.UNSELECT_ALL }
       };
 
-      int count = 0;
+      var count = 0;
       ChatManager.GetChannels(playerAndServer).ForEach(chan =>
       {
         count += chan.IsChecked ? 1 : 0;
@@ -160,7 +160,7 @@ namespace EQLogParser
 
     private void LoadPlayers(string updatedPlayer = null)
     {
-      if (updatedPlayer == null || (updatedPlayer != null && !players.Items.Contains(updatedPlayer)))
+      if (updatedPlayer == null || !players.Items.Contains(updatedPlayer))
       {
         var playerList = ChatManager.GetArchivedPlayers();
         if (playerList.Count > 0)
@@ -172,7 +172,7 @@ namespace EQLogParser
 
           players.ItemsSource = playerList;
 
-          string player = ConfigUtil.GetSetting("ChatSelectedPlayer");
+          var player = ConfigUtil.GetSetting("ChatSelectedPlayer");
           if (string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(ConfigUtil.PlayerName) && !string.IsNullOrEmpty(ConfigUtil.ServerName))
           {
             player = ConfigUtil.PlayerName + "." + ConfigUtil.ServerName;
@@ -186,10 +186,10 @@ namespace EQLogParser
     private List<string> GetSelectedChannels(out bool changed)
     {
       changed = false;
-      List<string> selected = new List<string>();
+      var selected = new List<string>();
 
-      StringBuilder builder = new StringBuilder();
-      for (int i = 2; i < channels.Items.Count; i++)
+      var builder = new StringBuilder();
+      for (var i = 2; i < channels.Items.Count; i++)
       {
         if (channels.Items[i] is ComboBoxItemDetails checkedItem && checkedItem.IsChecked)
         {
@@ -212,12 +212,12 @@ namespace EQLogParser
     {
       if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
       {
-        var channelList = GetSelectedChannels(out bool changed);
-        string text = (textFilter.Text.Length != 0 && textFilter.Text != EQLogParser.Resource.CHAT_TEXT_FILTER) ? textFilter.Text : null;
-        string to = (toFilter.Text.Length != 0 && toFilter.Text != EQLogParser.Resource.CHAT_TO_FILTER) ? toFilter.Text : null;
-        string from = (fromFilter.Text.Length != 0 && fromFilter.Text != EQLogParser.Resource.CHAT_FROM_FILTER) ? fromFilter.Text : null;
-        double startDateValue = GetStartDate();
-        double endDateValue = GetEndDate();
+        var channelList = GetSelectedChannels(out var changed);
+        var text = (textFilter.Text.Length != 0 && textFilter.Text != EQLogParser.Resource.CHAT_TEXT_FILTER) ? textFilter.Text : null;
+        var to = (toFilter.Text.Length != 0 && toFilter.Text != EQLogParser.Resource.CHAT_TO_FILTER) ? toFilter.Text : null;
+        var from = (fromFilter.Text.Length != 0 && fromFilter.Text != EQLogParser.Resource.CHAT_FROM_FILTER) ? fromFilter.Text : null;
+        var startDateValue = GetStartDate();
+        var endDateValue = GetEndDate();
         if (force || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from ||
           LastStartDate != startDateValue || LastEndDate != endDateValue)
         {
@@ -312,7 +312,7 @@ namespace EQLogParser
           var unselect = channels.Items[1] as ComboBoxItemDetails;
           unselect.IsChecked = false;
 
-          for (int i = 2; i < channels.Items.Count; i++)
+          for (var i = 2; i < channels.Items.Count; i++)
           {
             (channels.Items[i] as ComboBoxItemDetails).IsChecked = true;
           }
@@ -330,7 +330,7 @@ namespace EQLogParser
           var select = channels.Items[0] as ComboBoxItemDetails;
           select.IsChecked = false;
 
-          for (int i = 2; i < channels.Items.Count; i++)
+          for (var i = 2; i < channels.Items.Count; i++)
           {
             (channels.Items[i] as ComboBoxItemDetails).IsChecked = false;
           }
@@ -369,8 +369,8 @@ namespace EQLogParser
     {
       if (channels.Items.Count > 0)
       {
-        int count = 0;
-        for (int i = 2; i < channels.Items.Count; i++)
+        var count = 0;
+        for (var i = 2; i < channels.Items.Count; i++)
         {
           var checkedItem = channels.Items[i] as ComboBoxItemDetails;
           if (checkedItem.IsChecked)

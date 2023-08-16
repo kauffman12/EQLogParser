@@ -33,7 +33,7 @@ namespace EQLogParser
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
     {
-      Binding binding = new Binding("Value")
+      var binding = new Binding("Value")
       {
         Mode = info.CanWrite ? BindingMode.TwoWay : BindingMode.OneWay,
         Source = info,
@@ -78,8 +78,8 @@ namespace EQLogParser
 
         if (Min != Max)
         {
-          doubleTextBox.MinValue = (double)Min;
-          doubleTextBox.MaxValue = (double)Max;
+          doubleTextBox.MinValue = Min;
+          doubleTextBox.MaxValue = Max;
         }
 
         doubleTextBox.SetResourceReference(EditorBase.PositiveForegroundProperty, "ContentForeground");

@@ -77,7 +77,7 @@ namespace EQLogParser
       if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl breakdown, typeof(DamageBreakdown),
+        if (Helpers.OpenWindow(main.dockSite, null, out var breakdown, typeof(DamageBreakdown),
           "damageBreakdownWindow", "DPS Breakdown"))
         {
           (breakdown.Content as DamageBreakdown).Init(CurrentStats, selected);
@@ -87,7 +87,7 @@ namespace EQLogParser
 
     override internal void UpdateDataGridMenuItems()
     {
-      string selectedName = "Unknown";
+      var selectedName = "Unknown";
 
       Dispatcher.InvokeAsync(() =>
       {
@@ -107,7 +107,7 @@ namespace EQLogParser
             menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.UNK && playerStats.OrigName != Labels.RS &&
             !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
             selectedName = playerStats.OrigName;
-            menuItemShowDeathLog.IsEnabled = (!string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X"));
+            menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X");
           }
 
           EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats?.UniqueClasses);
@@ -149,7 +149,7 @@ namespace EQLogParser
       {
         foreach (var stats in CurrentStats.StatsList.Where(stats => PlayerManager.Instance.IsVerifiedPlayer(stats.OrigName)).OrderBy(stats => stats.OrigName))
         {
-          MenuItem item = new MenuItem { IsEnabled = true, Header = stats.OrigName };
+          var item = new MenuItem { IsEnabled = true, Header = stats.OrigName };
           item.Click += new RoutedEventHandler(AssignOwnerClick);
           menuItemPetOptions.Children.Add(item);
         }
@@ -201,7 +201,7 @@ namespace EQLogParser
 
     private List<PlayerStats> UpdateRank(List<PlayerStats> list)
     {
-      int rank = 1;
+      var rank = 1;
       foreach (ref var stats in list.OrderByDescending(stats => stats.Total).ToArray().AsSpan())
       {
         stats.Rank = (ushort)rank++;
@@ -224,7 +224,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(HitLogViewer), "damageLogWindow", "DPS Log"))
+        if (Helpers.OpenWindow(main.dockSite, null, out var log, typeof(HitLogViewer), "damageLogWindow", "DPS Log"))
         {
           (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
         }
@@ -236,7 +236,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
+        if (Helpers.OpenWindow(main.dockSite, null, out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
         {
           (log.Content as DeathLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
         }
@@ -248,7 +248,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems.Count == 1)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl hitFreq, typeof(HitFreqChart), "damageFreqChart", "Damage Hit Frequency"))
+        if (Helpers.OpenWindow(main.dockSite, null, out var hitFreq, typeof(HitFreqChart), "damageFreqChart", "Damage Hit Frequency"))
         {
           (hitFreq.Content as HitFreqChart).Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
         }
@@ -260,7 +260,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out ContentControl timeline, typeof(GanttChart), "adpsTimeline", "ADPS Timeline"))
+        if (Helpers.OpenWindow(main.dockSite, null, out var timeline, typeof(GanttChart), "adpsTimeline", "ADPS Timeline"))
         {
           ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 1);
         }
@@ -340,8 +340,8 @@ namespace EQLogParser
       {
         dataGrid.View.Filter = (stats) =>
         {
-          string name = "";
-          string className = "";
+          var name = "";
+          var className = "";
           if (stats is PlayerStats playerStats)
           {
             name = playerStats.Name;
@@ -353,7 +353,7 @@ namespace EQLogParser
             className = PlayerManager.Instance.GetPlayerClass(name);
           }
 
-          bool result = false;
+          var result = false;
           if (CurrentPetOrPlayerOption == 1)
           {
             result = !PlayerManager.Instance.IsVerifiedPet(name) && (string.IsNullOrEmpty(CurrentClass) || CurrentClass == className);
@@ -399,7 +399,7 @@ namespace EQLogParser
         {
           e.ChildItems = dataGrid.ItemsSource as List<PlayerStats>;
         }
-        else if (e.ParentItem is PlayerStats stats && CurrentStats.Children.TryGetValue(stats.Name, out List<PlayerStats> childs))
+        else if (e.ParentItem is PlayerStats stats && CurrentStats.Children.TryGetValue(stats.Name, out var childs))
         {
           e.ChildItems = childs;
         }

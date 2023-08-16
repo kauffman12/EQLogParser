@@ -88,7 +88,7 @@ namespace EQLogParser
             {
               if (Selected.FindIndex(stats => stats.OrigName == death.Killed) > -1)
               {
-                if (deathMap.TryGetValue(death.Killed, out HashSet<double> values))
+                if (deathMap.TryGetValue(death.Killed, out var values))
                 {
                   values.Add(block.BeginTime);
                 }
@@ -101,14 +101,14 @@ namespace EQLogParser
           }
         }
 
-        for (int i = 0; i < Selected.Count; i++)
+        for (var i = 0; i < Selected.Count; i++)
         {
           var player = Selected[i].OrigName;
           var allSpells = new List<ActionBlock>();
           allSpells.AddRange(DataManager.Instance.GetCastsDuring(StartTime, EndTime));
           allSpells.AddRange(DataManager.Instance.GetReceivedSpellsDuring(StartTime, EndTime));
 
-          if (deathMap.TryGetValue(Selected[i].OrigName, out HashSet<double> deathTimes))
+          if (deathMap.TryGetValue(Selected[i].OrigName, out var deathTimes))
           {
             var death = new SpellData { Adps = (byte)ANY_ADPS, Duration = 3, NameAbbrv = "Player Death", Name = "Player Death" };
             foreach (var time in deathTimes)
@@ -129,7 +129,7 @@ namespace EQLogParser
               else if (action is ReceivedSpell received && received.Receiver == player)
               {
                 var spellData = received.SpellData;
-                if (spellData == null && received.Ambiguity.Count > 0 && DataManager.ResolveSpellAmbiguity(received, out SpellData replaced))
+                if (spellData == null && received.Ambiguity.Count > 0 && DataManager.ResolveSpellAmbiguity(received, out var replaced))
                 {
                   spellData = replaced;
                 }
@@ -155,8 +155,8 @@ namespace EQLogParser
       AddHeaderLabel(0, string.Format(CultureInfo.CurrentCulture, "Buffs (T-{0})", DataManager.BUFFS_OFFSET), 20);
       AddHeaderLabel(DataManager.BUFFS_OFFSET, DateUtil.FormatSimpleHMS(StartTime + DataManager.BUFFS_OFFSET), 10);
 
-      int minutes = 1;
-      for (int more = (int)(DataManager.BUFFS_OFFSET + 60); more < Length; more += 60)
+      var minutes = 1;
+      for (var more = (int)(DataManager.BUFFS_OFFSET + 60); more < Length; more += 60)
       {
         AddHeaderLabel(more, minutes + "m", 0);
         minutes++;
@@ -179,7 +179,7 @@ namespace EQLogParser
 
     private void UpdateSpellRange(SpellData spellData, double beginTime, string brush, HashSet<double> deathTimes = null)
     {
-      if (!SpellRanges.TryGetValue(spellData.NameAbbrv, out SpellRange spellRange))
+      if (!SpellRanges.TryGetValue(spellData.NameAbbrv, out var spellRange))
       {
         spellRange = new SpellRange { Adps = spellData.Adps };
         var duration = GetDuration(spellData, EndTime, beginTime, deathTimes);
@@ -242,7 +242,7 @@ namespace EQLogParser
         var playerData = new List<List<object>>();
         labels.ForEach(label =>
         {
-          if (player1.TryGetValue(label, out List<Rectangle> l1))
+          if (player1.TryGetValue(label, out var l1))
           {
             l1.ForEach(rectangle =>
             {
@@ -250,7 +250,7 @@ namespace EQLogParser
             });
           }
 
-          if (player2.TryGetValue(label, out List<Rectangle> l2))
+          if (player2.TryGetValue(label, out var l2))
           {
             l2.ForEach(rectangle =>
             {
@@ -269,7 +269,7 @@ namespace EQLogParser
           title = string.Format(CultureInfo.CurrentCulture, "{0} {1} {2}", titleLabel1.Content as string, titleLabel2.Content as string, titleLabel3.Content as string);
         }
 
-        List<string> header = new List<string> { "Adps", "Player", "Start", "End" };
+        var header = new List<string> { "Adps", "Player", "Start", "End" };
         Clipboard.SetDataObject(TextFormatUtils.BuildCsv(header, playerData, title));
       }
       catch (ExternalException ex)
@@ -350,7 +350,7 @@ namespace EQLogParser
           rtb = new RenderTargetBitmap(width, height, dpiScale, dpiScale, PixelFormats.Default);
 
           var dv = new DrawingVisual();
-          using (DrawingContext ctx = dv.RenderOpen())
+          using (var ctx = dv.RenderOpen())
           {
             // add images together and fix missing background
             var background = Application.Current.Resources["ContentBackground"] as SolidColorBrush;
@@ -372,34 +372,34 @@ namespace EQLogParser
       content.Children.Clear();
       contentLabels.Children.Clear();
 
-      int row = 0;
+      var row = 0;
       foreach (var key in SpellRanges.Keys.OrderBy(key => key))
       {
         var spellRange = SpellRanges[key];
         if ((CurrentShowSelfOnly || !SelfOnly.ContainsKey(key))
-          && (CurrentShowCasterAdps && ((spellRange.Adps & CASTER_ADPS) == CASTER_ADPS)
-          || CurrentShowMeleeAdps && ((spellRange.Adps & MELEE_ADPS) == MELEE_ADPS)
-          || TimelineType == 0 && ((spellRange.Adps & TANK_ADPS) == TANK_ADPS)
-          || TimelineType == 2 && ((spellRange.Adps & HEALING_ADPS) == HEALING_ADPS)) && !Ignore.ContainsKey(key))
+          && ((CurrentShowCasterAdps && ((spellRange.Adps & CASTER_ADPS) == CASTER_ADPS))
+          || (CurrentShowMeleeAdps && ((spellRange.Adps & MELEE_ADPS) == MELEE_ADPS))
+          || (TimelineType == 0 && ((spellRange.Adps & TANK_ADPS) == TANK_ADPS))
+          || (TimelineType == 2 && ((spellRange.Adps & HEALING_ADPS) == HEALING_ADPS))) && !Ignore.ContainsKey(key))
         {
-          int hPos = ROW_HEIGHT * row;
+          var hPos = ROW_HEIGHT * row;
           AddGridRow(hPos, key);
           spellRange.Ranges.ForEach(range => content.Children.Add(CreateAdpsBlock(key, hPos, range.BeginSeconds, range.Duration, range.BlockBrush, Selected.Count)));
           row++;
         }
       }
 
-      int finalHeight = ROW_HEIGHT * row;
+      var finalHeight = ROW_HEIGHT * row;
       AddDivider(contentLabels, finalHeight, 20);
       AddDivider(content, finalHeight, DataManager.BUFFS_OFFSET);
       AddDivider(content, finalHeight, Length);
 
-      for (int more = (int)(DataManager.BUFFS_OFFSET + 60); more < Length; more += 60)
+      for (var more = (int)(DataManager.BUFFS_OFFSET + 60); more < Length; more += 60)
       {
         AddDivider(content, finalHeight, more);
       }
 
-      if (SpellRanges.TryGetValue("Player Death", out SpellRange range))
+      if (SpellRanges.TryGetValue("Player Death", out var range))
       {
         range.Ranges.ForEach(instance =>
         {
@@ -590,7 +590,7 @@ namespace EQLogParser
 
     private int GetDuration(SpellData spell, double endTime, double currentTime, HashSet<double> deathTimes = null)
     {
-      int duration = spell.Duration > 0 ? spell.Duration : 6;
+      var duration = spell.Duration > 0 ? spell.Duration : 6;
 
       // tanking hits happen a lot faster than spell casting so have our guesses be 1/3 as long
       var mod = TimelineType == 0 ? 3 : 1;
@@ -611,7 +611,7 @@ namespace EQLogParser
         }
         else
         {
-          var guess = (spell.MaxHits / 5) * 18 / mod;
+          var guess = spell.MaxHits / 5 * 18 / mod;
           duration = duration > guess ? guess : duration;
         }
       }

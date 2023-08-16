@@ -15,7 +15,7 @@ namespace EQLogParser
     {
       if (value is string s)
       {
-        if (!double.TryParse(s, NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out double decValue))
+        if (!double.TryParse(s, NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out var decValue))
         {
           decValue = 0;
         }

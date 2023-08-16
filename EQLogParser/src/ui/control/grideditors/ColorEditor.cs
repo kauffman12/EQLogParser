@@ -13,7 +13,7 @@ namespace EQLogParser
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
     {
-      Binding binding = new Binding("Value")
+      var binding = new Binding("Value")
       {
         Mode = info.CanWrite ? BindingMode.TwoWay : BindingMode.OneWay,
         Source = info,
