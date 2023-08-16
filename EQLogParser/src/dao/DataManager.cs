@@ -750,16 +750,22 @@ namespace EQLogParser
     {
       if (LastSpellIndex > -1)
       {
+        var outputSpan = output.ToArray().AsSpan();
         var endTime = AllSpellCastBlocks[LastSpellIndex].BeginTime - 5;
         for (var i = LastSpellIndex; i >= 0 && AllSpellCastBlocks[i].BeginTime >= endTime; i--)
         {
           for (var j = AllSpellCastBlocks[i].Actions.Count - 1; j >= 0; j--)
           {
-            if (AllSpellCastBlocks[i].Actions[j] is SpellCast cast && !cast.Interrupted &&
-              output.Find(spellData => (spellData.Target != (int)SpellTarget.SELF || cast.Caster == player) &&
-              spellData.Name == cast.Spell && (!isAdps || spellData.Adps > 0)) is SpellData found)
+            if (AllSpellCastBlocks[i].Actions[j] is SpellCast cast && !cast.Interrupted)
             {
-              return found;
+              foreach (var value in outputSpan)
+              {
+                if ((!isAdps || value.Adps > 0) && (value.Target != (int)SpellTarget.SELF || cast.Caster == player) &&
+                  value.Name == cast.Spell)
+                {
+                  return value;
+                }
+              }
             }
           }
         }
