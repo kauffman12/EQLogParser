@@ -248,6 +248,7 @@ namespace EQLogParser
       Application.Current.Resources["DamageOverlayProgressBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF1D397E") };
     }
 
+    // should already run on the UI thread
     internal static void Clear(ContentControl petsWindow, ContentControl playersWindow)
     {
       PetPlayersView.Clear();
@@ -304,6 +305,7 @@ namespace EQLogParser
       return entry;
     }
 
+    // should already run on the UI thread
     internal static void InitPetOwners(MainWindow main, SfDataGrid petMappingGrid, GridComboBoxColumn ownerList, ContentControl petMappingWindow)
     {
       // pet -> players
@@ -334,6 +336,7 @@ namespace EQLogParser
       };
     }
 
+    // should already run on the UI thread
     internal static void InitVerifiedPlayers(MainWindow main, SfDataGrid playersGrid, GridComboBoxColumn classList,
       ContentControl playersWindow, ContentControl petMappingWindow)
     {
@@ -352,13 +355,16 @@ namespace EQLogParser
 
       PlayerManager.Instance.EventsUpdatePlayerClass += (name, playerClass) =>
       {
-        var entry = new ExpandoObject() as dynamic;
-        entry.Name = name;
-        int index = VerifiedPlayersView.ToList().BinarySearch(entry, TheSortableNameComparer);
-        if (index >= 0)
+        Application.Current.Dispatcher.InvokeAsync(() =>
         {
-          VerifiedPlayersView[index].PlayerClass = playerClass;
-        }
+          var entry = new ExpandoObject() as dynamic;
+          entry.Name = name;
+          int index = VerifiedPlayersView.ToList().BinarySearch(entry, TheSortableNameComparer);
+          if (index >= 0)
+          {
+            VerifiedPlayersView[index].PlayerClass = playerClass;
+          }
+        });
       };
 
       PlayerManager.Instance.EventsRemoveVerifiedPlayer += (sender, name) =>
