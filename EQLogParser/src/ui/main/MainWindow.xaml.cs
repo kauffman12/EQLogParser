@@ -179,7 +179,7 @@ namespace EQLogParser
         enableDamageOverlay.Header = ConfigUtil.IfSet("IsDamageOverlayEnabled") ? "Disable _Meter" : "Enable _Meter";
 
         // create menu items for reading log files
-        MainActions.CreateOpenLogMenuItems(this, fileOpenMenu, MenuItemSelectLogFileClick);
+        MainActions.CreateOpenLogMenuItems(fileOpenMenu, MenuItemSelectLogFileClick);
 
         // Load recent files
         if (ConfigUtil.GetSetting("RecentFiles") is string recentFiles && !string.IsNullOrEmpty(recentFiles))
@@ -1181,7 +1181,7 @@ namespace EQLogParser
 
           if (menuItem.Items.Count == 0)
           {
-            MainActions.CreateOpenLogMenuItems(this, menuItem, MenuItemSelectLogFileClick);
+            MainActions.CreateOpenLogMenuItems(menuItem, MenuItemSelectLogFileClick);
           }
 
           if (count == 0)

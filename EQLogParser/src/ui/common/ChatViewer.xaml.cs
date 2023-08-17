@@ -17,6 +17,7 @@ namespace EQLogParser
   /// </summary>
   public partial class ChatViewer : UserControl, IDisposable
   {
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
 
     private const int PAGE_SIZE = 200;
@@ -38,7 +39,7 @@ namespace EQLogParser
     {
       InitializeComponent();
       fontSize.ItemsSource = FontSizeList;
-      fontFamily.ItemsSource = fontFamily.ItemsSource = Fonts.SystemFontFamilies.OrderBy(f => f.Source).ToList();
+      fontFamily.ItemsSource = Helpers.GetSystemFontFamilies();
       textFilter.Text = EQLogParser.Resource.CHAT_TEXT_FILTER;
       startDate.DateTime = new DateTime(1999, 3, 16);
       endDate.DateTime = DateTime.Now;
@@ -165,20 +166,22 @@ namespace EQLogParser
         var playerList = ChatManager.GetArchivedPlayers();
         if (playerList.Count > 0)
         {
-          if (players.ItemsSource == null)
-          {
-            players.Items.Clear();
-          }
-
+          players.Items.Clear();
           players.ItemsSource = playerList;
 
           var player = ConfigUtil.GetSetting("ChatSelectedPlayer");
-          if (string.IsNullOrEmpty(player) && !string.IsNullOrEmpty(ConfigUtil.PlayerName) && !string.IsNullOrEmpty(ConfigUtil.ServerName))
+          if (string.IsNullOrEmpty(player))
           {
-            player = ConfigUtil.PlayerName + "." + ConfigUtil.ServerName;
+            if (!string.IsNullOrEmpty(ConfigUtil.PlayerName) && !string.IsNullOrEmpty(ConfigUtil.ServerName))
+            {
+              player = ConfigUtil.PlayerName + "." + ConfigUtil.ServerName;
+            }
           }
 
-          players.SelectedIndex = (player != null && playerList.IndexOf(player) > -1) ? playerList.IndexOf(player) : 0;
+          if (playerList.IndexOf(player) is int index && index > -1)
+          {
+            players.SelectedIndex = index;
+          }
         }
       }
     }
@@ -210,36 +213,43 @@ namespace EQLogParser
 
     private void ChangeSearch(bool force = false)
     {
-      if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
+      try
       {
-        var channelList = GetSelectedChannels(out var changed);
-        var text = (textFilter.Text.Length != 0 && textFilter.Text != EQLogParser.Resource.CHAT_TEXT_FILTER) ? textFilter.Text : null;
-        var to = (toFilter.Text.Length != 0 && toFilter.Text != EQLogParser.Resource.CHAT_TO_FILTER) ? toFilter.Text : null;
-        var from = (fromFilter.Text.Length != 0 && fromFilter.Text != EQLogParser.Resource.CHAT_FROM_FILTER) ? fromFilter.Text : null;
-        var startDateValue = GetStartDate();
-        var endDateValue = GetEndDate();
-        if (force || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from ||
-          LastStartDate != startDateValue || LastEndDate != endDateValue)
+        if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
         {
-          CurrentChatFilter = new ChatFilter(name, channelList, startDateValue, endDateValue, to, from, text);
-          CurrentIterator?.Close();
-          CurrentIterator = new ChatIterator(name, CurrentChatFilter);
-          LastPlayerSelection = name;
-          LastTextFilter = text;
-          LastToFilter = to;
-          LastFromFilter = from;
-          LastStartDate = startDateValue;
-          LastEndDate = endDateValue;
-
-          if (changed)
+          var channelList = GetSelectedChannels(out var changed);
+          var text = (textFilter.Text.Length != 0 && textFilter.Text != EQLogParser.Resource.CHAT_TEXT_FILTER) ? textFilter.Text : null;
+          var to = (toFilter.Text.Length != 0 && toFilter.Text != EQLogParser.Resource.CHAT_TO_FILTER) ? toFilter.Text : null;
+          var from = (fromFilter.Text.Length != 0 && fromFilter.Text != EQLogParser.Resource.CHAT_FROM_FILTER) ? fromFilter.Text : null;
+          var startDateValue = GetStartDate();
+          var endDateValue = GetEndDate();
+          if (force || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from ||
+            LastStartDate != startDateValue || LastEndDate != endDateValue)
           {
-            ChatManager.SaveSelectedChannels(name, channelList);
-          }
+            CurrentChatFilter = new ChatFilter(name, channelList, startDateValue, endDateValue, to, from, text);
+            CurrentIterator?.Close();
+            CurrentIterator = new ChatIterator(name, CurrentChatFilter);
+            LastPlayerSelection = name;
+            LastTextFilter = text;
+            LastToFilter = to;
+            LastFromFilter = from;
+            LastStartDate = startDateValue;
+            LastEndDate = endDateValue;
 
-          chatBox.Text = "";
-          LastFocused = Keyboard.FocusedElement;
-          DisplayPage(PAGE_SIZE);
+            if (changed)
+            {
+              ChatManager.SaveSelectedChannels(name, channelList);
+            }
+
+            chatBox.Text = "";
+            LastFocused = Keyboard.FocusedElement;
+            DisplayPage(PAGE_SIZE);
+          }
         }
+      }
+      catch (Exception e)
+      {
+        LOG.Error(e);
       }
     }
 
