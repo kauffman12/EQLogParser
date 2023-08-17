@@ -161,7 +161,7 @@ namespace EQLogParser
       }
     }
 
-    internal static void CreateOpenLogMenuItems(MainWindow main, MenuItem parent, RoutedEventHandler callback)
+    internal static void CreateOpenLogMenuItems(MenuItem parent, RoutedEventHandler callback)
     {
       parent.Items.Add(createMenuItem("Now", "0", callback, EFontAwesomeIcon.Solid_CalendarDay));
       parent.Items.Add(createMenuItem("Last Hour", "1", callback, EFontAwesomeIcon.Solid_CalendarDay));
@@ -173,7 +173,7 @@ namespace EQLogParser
       parent.Items.Add(createMenuItem("Everything", null, callback, EFontAwesomeIcon.Solid_Infinity));
       MenuItem createMenuItem(string name, string value, RoutedEventHandler handler, EFontAwesomeIcon awesome)
       {
-        var imageAwesome = new ImageAwesome { Icon = awesome, Style = (Style)main.FindResource("EQIconStyle") };
+        var imageAwesome = new ImageAwesome { Icon = awesome, Style = (Style)Application.Current.Resources["EQIconStyle"] };
         var menuItem = new MenuItem { Header = name, Tag = value, Height = 24 };
         menuItem.Click += handler;
         menuItem.Icon = imageAwesome;

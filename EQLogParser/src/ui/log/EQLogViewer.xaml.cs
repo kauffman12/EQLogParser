@@ -39,7 +39,7 @@ namespace EQLogParser
       InitializeComponent();
       fontSize.ItemsSource = FontSizeList;
       logSearchTime.ItemsSource = Times;
-      fontFamily.ItemsSource = System.Windows.Media.Fonts.SystemFontFamilies.OrderBy(f => f.Source).ToList();
+      fontFamily.ItemsSource = Helpers.GetSystemFontFamilies();
 
       var family = ConfigUtil.GetSetting("EQLogViewerFontFamily");
       fontFamily.SelectedItem = (family != null) ? new FontFamily(family) : logBox.FontFamily;

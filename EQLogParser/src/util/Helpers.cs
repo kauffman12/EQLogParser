@@ -86,6 +86,28 @@ namespace EQLogParser
       }), TaskScheduler.Default);
     }
 
+    internal static ReadOnlyCollection<FontFamily> GetSystemFontFamilies()
+    {
+      var systemFontFamilies = new List<FontFamily>();
+      foreach (var fontFamily in Fonts.SystemFontFamilies)
+      {
+        try
+        {
+          // trigger the exception
+          var unused = fontFamily.FamilyNames;
+
+          // add the font if it didn't throw
+          systemFontFamilies.Add(fontFamily);
+        }
+        catch (ArgumentException)
+        {
+          // certain fonts cause WPF 4 to throw an exception when the FamilyNames property is accessed; ignore them
+        }
+      }
+
+      return systemFontFamilies.OrderBy(f => f.Source).ToList().AsReadOnly();
+    }
+
     internal static string GetText(XmlNode node, string value)
     {
       if (node.SelectSingleNode(value) is XmlNode selected)
