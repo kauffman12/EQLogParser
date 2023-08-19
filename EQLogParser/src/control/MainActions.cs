@@ -262,13 +262,23 @@ namespace EQLogParser
       DockingManager.SetHeader(playersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
     }
 
-    internal static Dictionary<string, ContentControl> GetOpenWindows(DockingManager dockSite, DocumentTabControl ChartTab)
+    internal static Dictionary<string, ContentControl> GetOpenWindows(DockingManager dockSite, DocumentTabControl ChartTab, bool debug = false)
     {
       var opened = new Dictionary<string, ContentControl>();
       foreach (var child in dockSite.Children)
       {
+        if (debug)
+        {
+          LOG.Warn("Reading Docked Windows");
+        }
+
         if (child is ContentControl control)
         {
+          if (debug)
+          {
+            LOG.Warn(control.Name);
+          }
+
           opened[control.Name] = control;
         }
       }
@@ -277,12 +287,18 @@ namespace EQLogParser
       {
         foreach (var child in ChartTab.Container.Items)
         {
+          if (debug)
+          {
+            LOG.Warn("Reading Chart Windows");
+          }
           if (child is ContentControl control)
           {
             opened[control.Name] = control;
           }
         }
       }
+
+      LOG.Warn("Returning " + opened.Count + " opened Windows");
 
       return opened;
     }

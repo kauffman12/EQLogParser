@@ -697,8 +697,16 @@ namespace EQLogParser
       }
       else if (e.Source == chatMenuItem)
       {
-        var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-        Helpers.OpenWindow(dockSite, opened, out _, typeof(ChatViewer), chatIcon.Tag as string, "Chat Archive");
+        try
+        {
+          LOG.Warn("Open Chat Archive Window");
+          var opened = MainActions.GetOpenWindows(dockSite, ChartTab, true);
+          Helpers.OpenWindow(dockSite, opened, out _, typeof(ChatViewer), chatIcon.Tag as string, "Chat Archive", true);
+        }
+        catch (Exception ex)
+        {
+          LOG.Error(ex);
+        }
       }
       else if (e.Source == eventMenuItem)
       {

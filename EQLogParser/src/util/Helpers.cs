@@ -168,26 +168,69 @@ namespace EQLogParser
     }
 
     internal static bool OpenWindow(DockingManager dockSite, Dictionary<string, ContentControl> opened, out ContentControl window,
-      Type type = null, string key = "", string title = "")
+      Type type = null, string key = "", string title = "", bool debug = false)
     {
       var nowOpen = false;
       window = null;
 
+      if (debug)
+      {
+        LOG.Warn("Check if Window needs to be closed");
+      }
       if (opened != null && opened.TryGetValue(key, out var control))
       {
+        if (debug)
+        {
+          LOG.Warn("Closing Window");
+          LOG.Warn(control.Name);
+        }
         CloseWindow(dockSite, control);
       }
       else if (type != null)
       {
+        if (debug)
+        {
+          LOG.Warn("Create Window Instance");
+        }
         var instance = Activator.CreateInstance(type);
+        if (debug)
+        {
+          LOG.Warn("Create Control");
+        }
         window = new ContentControl { Name = key };
+        if (debug)
+        {
+          LOG.Warn("Update Dock Manager");
+        }
         DockingManager.SetHeader(window, title);
         DockingManager.SetState(window, DockState.Document);
         DockingManager.SetCanDock(window, false);
+        if (debug)
+        {
+          LOG.Warn("Set Window Content");
+        }
         window.Content = instance;
+
+        if (debug)
+        {
+          LOG.Warn("BeginInit on DockSite");
+        }
         dockSite.BeginInit();
+        if (debug)
+        {
+          LOG.Warn("Add Child to DockSite");
+        }
         dockSite.Children.Add(window);
+
+        if (debug)
+        {
+          LOG.Warn("EndInit");
+        }
         dockSite.EndInit();
+        if (debug)
+        {
+          LOG.Warn("Complete");
+        }
         nowOpen = true;
       }
 
