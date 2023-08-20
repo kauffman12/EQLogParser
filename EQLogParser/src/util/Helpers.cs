@@ -99,9 +99,10 @@ namespace EQLogParser
           // add the font if it didn't throw
           systemFontFamilies.Add(fontFamily);
         }
-        catch (ArgumentException)
+        catch (ArgumentException e)
         {
           // certain fonts cause WPF 4 to throw an exception when the FamilyNames property is accessed; ignore them
+          LOG.Debug(e);
         }
       }
 
@@ -143,16 +144,23 @@ namespace EQLogParser
           {
             Dispatcher.CurrentDispatcher.InvokeAsync(() =>
             {
-              if (dockSite.Children.Contains(window))
+              try
               {
-                dockSite.Children.Remove(window);
-              }
-              else if (dockSite.DocContainer != null && dockSite.DocContainer.Items.Contains(window))
-              {
-                dockSite.DocContainer.Items.Remove(window);
-              }
+                (window.Content as IDisposable)?.Dispose();
 
-            (window.Content as IDisposable)?.Dispose();
+                if (dockSite.Children.Contains(window))
+                {
+                  dockSite.Children.Remove(window);
+                }
+                else if (dockSite.DocContainer != null && dockSite.DocContainer.Items.Contains(window))
+                {
+                  dockSite.DocContainer.Items.Remove(window);
+                }
+              }
+              catch (Exception ex)
+              {
+                LOG.Debug(ex);
+              }
             }, DispatcherPriority.Background);
           }
           else

@@ -38,17 +38,21 @@ namespace EQLogParser
     public ChatViewer()
     {
       InitializeComponent();
-      fontSize.ItemsSource = FontSizeList;
-      fontFamily.ItemsSource = Helpers.GetSystemFontFamilies();
       textFilter.Text = EQLogParser.Resource.CHAT_TEXT_FILTER;
       startDate.DateTime = new DateTime(1999, 3, 16);
       endDate.DateTime = DateTime.Now;
       toFilter.Text = EQLogParser.Resource.CHAT_TO_FILTER;
       fromFilter.Text = EQLogParser.Resource.CHAT_FROM_FILTER;
 
-      var family = ConfigUtil.GetSetting("ChatFontFamily");
-      fontFamily.SelectedItem = (family != null) ? new FontFamily(family) : chatBox.FontFamily;
+      var allFonts = Helpers.GetSystemFontFamilies();
+      fontFamily.ItemsSource = allFonts;
+      var family = ConfigUtil.GetSetting("ChatFontFamily") ?? chatBox.FontFamily?.Source;
+      if (allFonts.FirstOrDefault(item => item.Source == family) is FontFamily found)
+      {
+        fontFamily.SelectedItem = found;
+      }
 
+      fontSize.ItemsSource = FontSizeList;
       var size = ConfigUtil.GetSetting("ChatFontSize");
       if (size != null && double.TryParse(size, out var dsize))
       {
@@ -60,7 +64,6 @@ namespace EQLogParser
       }
 
       UpdateCurrentTextColor();
-
       FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
       FilterTimer.Tick += (sender, e) =>
       {
@@ -69,12 +72,11 @@ namespace EQLogParser
       };
 
       LoadPlayers();
-
       Ready = true;
       ChatManager.EventsUpdatePlayer += ChatManagerEventsUpdatePlayer;
       ChatManager.EventsNewChannels += ChatManagerEventsNewChannels;
       (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
-      Task.Delay(500).ContinueWith(task => Dispatcher.InvokeAsync(() => ChangeSearch()));
+      ChangeSearch();
     }
 
     private void EventsThemeChanged(object sender, string e) => UpdateCurrentTextColor();
@@ -96,7 +98,6 @@ namespace EQLogParser
     private void UpdateCurrentTextColor()
     {
       var defaultColor = (Color)Application.Current.Resources["ContentForeground.Color"];
-
       try
       {
         var colorSetting = "ChatFontFgColor" + MainWindow.CurrentTheme;
@@ -215,7 +216,7 @@ namespace EQLogParser
     {
       try
       {
-        if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
+        if (players.SelectedItem is string name && !string.IsNullOrEmpty(name) && !name.StartsWith("No ", StringComparison.Ordinal))
         {
           var channelList = GetSelectedChannels(out var changed);
           var text = (textFilter.Text.Length != 0 && textFilter.Text != EQLogParser.Resource.CHAT_TEXT_FILTER) ? textFilter.Text : null;

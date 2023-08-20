@@ -76,7 +76,8 @@ namespace EQLogParser
     {
       try
       {
-        var domain = AppDomain.CurrentDomain;
+        var dotNetVersion = Environment.Version;
+        LOG.Info("Using DotNet " + dotNetVersion); var domain = AppDomain.CurrentDomain;
         domain.UnhandledException += DomainUnhandledException;
 
         // DPI and sizing

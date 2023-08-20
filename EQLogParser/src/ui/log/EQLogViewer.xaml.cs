@@ -37,13 +37,17 @@ namespace EQLogParser
     public EQLogViewer()
     {
       InitializeComponent();
-      fontSize.ItemsSource = FontSizeList;
       logSearchTime.ItemsSource = Times;
-      fontFamily.ItemsSource = Helpers.GetSystemFontFamilies();
 
-      var family = ConfigUtil.GetSetting("EQLogViewerFontFamily");
-      fontFamily.SelectedItem = (family != null) ? new FontFamily(family) : logBox.FontFamily;
+      var allFonts = Helpers.GetSystemFontFamilies();
+      fontFamily.ItemsSource = allFonts;
+      var family = ConfigUtil.GetSetting("EQLogViewerFontFamily") ?? logBox.FontFamily?.Source;
+      if (allFonts.FirstOrDefault(item => item.Source == family) is FontFamily found)
+      {
+        fontFamily.SelectedItem = found;
+      }
 
+      fontSize.ItemsSource = FontSizeList;
       var size = ConfigUtil.GetSetting("EQLogViewerFontSize");
       if (size != null && double.TryParse(size, out var dsize))
       {
