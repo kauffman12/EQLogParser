@@ -260,9 +260,12 @@ namespace EQLogParser
       {
         if (e.VerticalChange < 0 && e.VerticalOffset < 800)
         {
-          DisplayPage(PAGE_SIZE);
+          if (Ready)
+          {
+            DisplayPage(PAGE_SIZE);
+          }
         }
-        else if (e.VerticalChange == 0 && chatBox.Text != null && chatBox.Lines.Count > PAGE_SIZE && e.VerticalOffset < 800)
+        else if (e.VerticalChange == 0 && chatBox?.Text != null && chatBox.Lines.Count > PAGE_SIZE && e.VerticalOffset < 800)
         {
           viewer.ScrollToVerticalOffset(4500);
         }
@@ -271,7 +274,7 @@ namespace EQLogParser
 
     private void ChatTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-      if (chatBox.Text != null && chatBox.Lines.Count <= PAGE_SIZE)
+      if (chatBox?.Text != null && chatBox.Lines.Count <= PAGE_SIZE)
       {
         Task.Delay(100).ContinueWith(task => Dispatcher.InvokeAsync(() =>
         {
@@ -299,12 +302,12 @@ namespace EQLogParser
     {
       if ((Keyboard.Modifiers & ModifierKeys.Control) > 0)
       {
-        if (e.Delta < 0 && fontSize.SelectedIndex > 0)
+        if (e.Delta < 0 && fontSize?.SelectedIndex > 0)
         {
           fontSize.SelectedIndex--;
           e.Handled = true;
         }
-        else if (e.Delta > 0 && fontSize.SelectedIndex < (fontSize.Items.Count - 1))
+        else if (e.Delta > 0 && fontSize?.SelectedIndex < (fontSize?.Items.Count - 1))
         {
           fontSize.SelectedIndex++;
           e.Handled = true;
@@ -378,7 +381,7 @@ namespace EQLogParser
 
     private void ChannelsDropDownClosed(object sender, EventArgs e)
     {
-      if (channels.Items.Count > 0)
+      if (channels?.Items.Count > 0)
       {
         var count = 0;
         for (var i = 2; i < channels.Items.Count; i++)
@@ -401,14 +404,17 @@ namespace EQLogParser
 
     private void FontFgColorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-      chatBox.Foreground = new SolidColorBrush(colorPicker.Color);
-      var colorSetting = "ChatFontFgColor" + MainWindow.CurrentTheme;
-      ConfigUtil.SetSetting(colorSetting, colorPicker.Color.ToString());
+      if (chatBox != null)
+      {
+        chatBox.Foreground = new SolidColorBrush(colorPicker.Color);
+        var colorSetting = "ChatFontFgColor" + MainWindow.CurrentTheme;
+        ConfigUtil.SetSetting(colorSetting, colorPicker.Color.ToString());
+      }
     }
 
     private void FontSizeChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (fontSize.SelectedItem != null)
+      if (fontSize?.SelectedItem != null && chatBox != null)
       {
         chatBox.FontSize = (double)fontSize.SelectedItem;
         ConfigUtil.SetSetting("ChatFontSize", fontSize.SelectedItem.ToString());
@@ -417,7 +423,7 @@ namespace EQLogParser
 
     private void FontFamilyChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (fontFamily.SelectedItem != null)
+      if (fontFamily?.SelectedItem != null && chatBox != null)
       {
         var family = fontFamily.SelectedItem as FontFamily;
         chatBox.FontFamily = family;
@@ -436,7 +442,7 @@ namespace EQLogParser
 
         filter.Text = text;
         filter.FontStyle = FontStyles.Italic;
-        chatBox.Focus();
+        chatBox?.Focus();
       }
       else if (filter is SfTextBoxExt filterExt)
       {
@@ -446,7 +452,7 @@ namespace EQLogParser
 
     private void FilterGotFocus(TextBox filter, string text)
     {
-      if (filter.Text == text)
+      if (filter?.Text == text)
       {
         filter.Text = "";
         filter.FontStyle = FontStyles.Normal;
@@ -455,7 +461,7 @@ namespace EQLogParser
 
     private static void FilterLostFocus(TextBox filter, string text)
     {
-      if (filter.Text.Length == 0)
+      if (filter?.Text?.Length == 0)
       {
         if (filter is SfTextBoxExt filterExt)
         {
