@@ -34,7 +34,7 @@
     <ManifestCertificateThumbprint>263EC30559646FBF37D9B31A8D743891880A6719</ManifestCertificateThumbprint>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestKeyFile>newsigner.pfx</ManifestKeyFile>
+    <ManifestKeyFile></ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
     <GenerateManifests>false</GenerateManifests>
@@ -74,10 +74,6 @@
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>False</SignAssembly>
-  </PropertyGroup>
-  <PropertyGroup>
-    <AssemblyOriginatorKeyFile>signer2.pfx</AssemblyOriginatorKeyFile>
-    <Version>$(VersionPrefix)</Version>
   </PropertyGroup>
   <ItemGroup>
     <Reference Update="System">
