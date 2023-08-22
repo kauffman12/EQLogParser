@@ -164,10 +164,14 @@
     </PackageReference>
     <PackageReference Include="Syncfusion.DocIO.Wpf" Version="22.2.5" />
     <PackageReference Include="Syncfusion.Edit.WPF" Version="22.2.5" />
+    <PackageReference Include="Syncfusion.PropertyGrid.WPF" Version="22.2.5" />
     <PackageReference Include="Syncfusion.SfChart.WPF" Version="22.2.5" />
     <PackageReference Include="Syncfusion.SfGrid.WPF" Version="22.2.5" />
     <PackageReference Include="Syncfusion.SfInput.WPF" Version="22.2.5" />
+    <PackageReference Include="Syncfusion.SfProgressBar.WPF" Version="22.2.5" />
+    <PackageReference Include="Syncfusion.SfRichTextBoxAdv.WPF" Version="22.2.5" />
     <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="22.2.5" />
+    <PackageReference Include="Syncfusion.SfTreeView.WPF" Version="22.2.5" />
     <PackageReference Include="Syncfusion.Shared.WPF" Version="22.2.5" />
     <PackageReference Include="Syncfusion.Shared.WPF.Classic" Version="22.2.5" />
     <PackageReference Include="Syncfusion.Themes.MaterialDark.WPF" Version="22.2.5" />
