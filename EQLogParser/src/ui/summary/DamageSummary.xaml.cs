@@ -403,6 +403,10 @@ namespace EQLogParser
         {
           e.ChildItems = childs;
         }
+        else
+        {
+          e.ChildItems = new List<PlayerStats>();
+        }
       }
     }
 
