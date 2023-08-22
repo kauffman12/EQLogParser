@@ -201,6 +201,10 @@ namespace EQLogParser
         {
           e.ChildItems = breakdown.Children;
         }
+        else
+        {
+          e.ChildItems = new List<PlayerStats>();
+        }
       }
     }
   }
