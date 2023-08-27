@@ -41,7 +41,9 @@ namespace EQLogParser
     internal static bool IsHideOnMinimizeEnabled = false;
     internal static bool IsMapSendToEQEnabled = false;
     internal const int ACTION_INDEX = 27;
-    internal static string CurrentTheme = "MaterialDark";
+    internal static string CurrentTheme;
+    internal static string CurrentFontFamily;
+    internal static double CurrentFontSize;
 
     private static readonly ILog LOG = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly Regex ParseFileName = new Regex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline);
@@ -90,7 +92,7 @@ namespace EQLogParser
 
         var top = ConfigUtil.GetSettingAsDouble("WindowTop", double.NaN);
         var left = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN);
-        if (top < 0 && left < 0)
+        if ((!double.IsNaN(top) && top < 0) || (!double.IsNaN(left) && left < 0))
         {
           top = 0;
           left = 0;
@@ -98,6 +100,9 @@ namespace EQLogParser
 
         Top = top;
         Left = left;
+
+        LOG.Info("Window Pos (" + Top + ", " + Left + ")");
+        LOG.Info("Window Size (" + Width + ", " + Height + ")");
 
         switch (ConfigUtil.GetSetting("WindowState", "Normal"))
         {
@@ -109,9 +114,22 @@ namespace EQLogParser
             break;
         }
 
-        // load theme
-        CurrentTheme = ConfigUtil.GetSetting("CurrentTheme") ?? CurrentTheme;
+        // load theme and fonts
+        CurrentFontFamily = ConfigUtil.GetSetting("ApplicationFontFamily", "Segoe UI");
+        CurrentFontSize = ConfigUtil.GetSettingAsDouble("ApplicationFontSize", 12);
+        CurrentTheme = ConfigUtil.GetSetting("CurrentTheme", "MaterialDark");
+
+        if (Helpers.GetSystemFontFamilies().FirstOrDefault(font => font.Source == CurrentFontFamily) == null)
+        {
+          LOG.Info(CurrentFontFamily + " Not Found, Trying Default");
+          CurrentFontFamily = "Segoe UI";
+        }
+
         MainActions.LoadTheme(this, CurrentTheme);
+        Application.Current.Resources["EQChatFontSize"] = 16.0; // changed when chat archive loads
+        Application.Current.Resources["EQChatFontFamily"] = new FontFamily("Segoe UI");
+        Application.Current.Resources["EQLogFontSize"] = 16.0; // changed when chat archive loads
+        Application.Current.Resources["EQLogFontFamily"] = new FontFamily("Segoe UI");
 
         InitializeComponent();
 
@@ -181,6 +199,12 @@ namespace EQLogParser
 
         // create menu items for reading log files
         MainActions.CreateOpenLogMenuItems(fileOpenMenu, MenuItemSelectLogFileClick);
+
+        // create font families menu items
+        MainActions.CreateFontFamiliesMenuItems(appFontFamilies, MenuItemFontFamilyClicked, CurrentFontFamily);
+
+        // crate f ont sizes menu items
+        MainActions.CreateFontSizesMenuItems(appFontSizes, MenuItemFontSizeClicked, CurrentFontSize);
 
         // Load recent files
         if (ConfigUtil.GetSetting("RecentFiles") is string recentFiles && !string.IsNullOrEmpty(recentFiles))
@@ -874,6 +898,30 @@ namespace EQLogParser
       var addReceiveParse = data.Selected?.Count == 1 && data.Selected[0].MoreStats != null;
       var preview = playerParseTextWindow.Content as ParsePreview;
       preview.UpdateParse(data, TankingStatsManager.Instance, addReceiveParse, Labels.TANKPARSE, Labels.RECEIVEDHEALPARSE);
+    }
+
+    private void MenuItemFontFamilyClicked(object sender, RoutedEventArgs e)
+    {
+      if (sender is MenuItem menuItem)
+      {
+        MainActions.UpdateCheckedMenuItem(menuItem, (menuItem.Parent as MenuItem).Items);
+        CurrentFontFamily = menuItem.Header as string;
+        ConfigUtil.SetSetting("ApplicationFontFamily", CurrentFontFamily);
+        MainActions.LoadTheme(this, CurrentTheme);
+        EventsThemeChanged?.Invoke(this, CurrentTheme);
+      }
+    }
+
+    private void MenuItemFontSizeClicked(object sender, RoutedEventArgs e)
+    {
+      if (sender is MenuItem menuItem)
+      {
+        MainActions.UpdateCheckedMenuItem(menuItem, (menuItem.Parent as MenuItem).Items);
+        CurrentFontSize = (double)menuItem.Tag;
+        ConfigUtil.SetSetting("ApplicationFontSize", CurrentFontSize.ToString());
+        MainActions.LoadTheme(this, CurrentTheme);
+        EventsThemeChanged?.Invoke(this, CurrentTheme);
+      }
     }
 
     private void MenuItemSelectLogFileClick(object sender, RoutedEventArgs e)

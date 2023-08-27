@@ -322,6 +322,57 @@ namespace EQLogParser
       }
     }
 
+    internal static void UpdateTableMargin(SfGridBase gridBase)
+    {
+      var size = 2;
+      switch (MainWindow.CurrentFontSize)
+      {
+        case 11:
+          size = 4;
+          break;
+        case 12:
+          size = 8;
+          break;
+        case 13:
+          size = 12;
+          break;
+        case 14:
+          size = 16;
+          break;
+        case 15:
+          size = 20;
+          break;
+        case 16:
+          size = 24;
+          break;
+      }
+
+      if (gridBase is SfDataGrid dataGrid)
+      {
+        dataGrid.GridColumnSizer.Margin = new Thickness(size, 0, size, 0);
+      }
+      else if (gridBase is SfTreeGrid treeGrid)
+      {
+        treeGrid.TreeGridColumnSizer.Margin = new Thickness(size, 0, size, 0);
+      }
+    }
+
+    internal static void RefreshTableColumns(SfGridBase gridBase)
+    {
+      DataGridUtil.UpdateTableMargin(gridBase);
+
+      if (gridBase is SfDataGrid dataGrid)
+      {
+        dataGrid.GridColumnSizer.ResetAutoCalculationforAllColumns();
+        dataGrid.GridColumnSizer.Refresh();
+      }
+      else if (gridBase is SfTreeGrid treeGrid)
+      {
+        treeGrid.TreeGridColumnSizer.ResetAutoCalculationforAllColumns();
+        treeGrid.TreeGridColumnSizer.Refresh();
+      }
+    }
+
     private static double GetTableHeight(SfGridBase gridBase, bool allData)
     {
       var height = gridBase.HeaderRowHeight + 1;

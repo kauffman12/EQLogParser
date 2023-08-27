@@ -33,10 +33,11 @@
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
-                           HeaderRowHeight="26"
+                           HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
-                           RowHeaderWidth="40"
+                           RowHeaderWidth="50"
+                           RowHeight="{DynamicResource EQTableRowHeight}"
                            ShowRowHeader="True"               
                            SelectionMode="Extended">
       <syncfusion:SfDataGrid.Resources>
@@ -47,7 +48,7 @@
               <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
                 <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
                   <Grid>
-                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+                    <TextBlock HorizontalAlignment="Center" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
                   </Grid>
                 </Border>
               </ControlTemplate>
@@ -89,7 +90,7 @@
       </syncfusion:SfDataGrid.ContextMenu>      
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Time, Converter={StaticResource DateTimeConverter}}"
-                                   Width="100" TextAlignment="Center" HeaderText="Time" />
+                                   TextAlignment="Center" HeaderText="Time" />
         <syncfusion:GridTextColumn MappingName="TimeSince" TextAlignment="Center" HeaderText="Since" />
         <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" />
         <syncfusion:GridTextColumn MappingName="SubType" HeaderText="Action" />

@@ -27,15 +27,19 @@ namespace EQLogParser
       var desc = new string[] { "Taunt", "Failed", "Improved", "SuccessRate" };
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+
+      DataGridUtil.UpdateTableMargin(dataGrid);
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
       Load();
     }
 
+    internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
     private void CreateLargeImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel, true);
     private void LogLoadingComplete(object sender, bool e) => Load();
     private void RefreshClick(object sender, RoutedEventArgs e) => Load();
-    internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
+    private void EventsThemeChanged(object sender, string e) => DataGridUtil.RefreshTableColumns(dataGrid);
 
     private void SelectionChange(object sender, System.Collections.IList e)
     {
@@ -139,6 +143,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
+        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
         (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= LogLoadingComplete;
         (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange -= SelectionChange;
         dataGrid.Dispose();

@@ -19,10 +19,10 @@
       <RowDefinition Height="20" />
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <ComboBox x:Name="players" SelectedIndex="0" Width="140" Margin="8,0,0,2" SelectionChanged="PlayerChanged" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource EQMenuIconBrush}">
+      <ComboBox x:Name="players" SelectedIndex="0" Width="140" Margin="8,0,0,2" SelectionChanged="PlayerChanged" FontSize="{DynamicResource EQTitleSize}" FontWeight="Bold" Foreground="{DynamicResource EQMenuIconBrush}">
         <ComboBoxItem Content="No Chat Data"/>
       </ComboBox>
-      <ComboBox x:Name="channels" Width="135" Margin="0,0,0,2" DropDownClosed="ChannelsDropDownClosed" ItemTemplateSelector="{StaticResource ComboBoxSelector}">
+      <ComboBox x:Name="channels" Width="150" Margin="0,0,0,2" DropDownClosed="ChannelsDropDownClosed" ItemTemplateSelector="{StaticResource ComboBoxSelector}">
         <ComboBox.ItemContainerStyle>
           <Style>
             <EventSetter Event="ComboBoxItem.PreviewMouseDown" Handler="ChannelPreviewMouseDown"/>
@@ -39,9 +39,9 @@
       <syncfusion:SfTextBoxExt x:Name="fromFilter" Margin="0,0,0,2" VerticalContentAlignment="Center" FontStyle="Italic"
                                AutoCompleteMode="SuggestAppend" Width="80" LostFocus="FromFilterLostFocus" GotFocus="FromFilterGotFocus" PreviewKeyDown="FromFilterKeyDown" TextChanged="FilterTextChanged" />
       <TextBox x:Name="textFilter" Margin="0,0,8,2" FontStyle="Italic" Width="170" LostFocus="TextFilterLostFocus" GotFocus="TextFilterGotFocus" PreviewKeyDown="TextFilterKeyDown" TextChanged="FilterTextChanged" />
-      <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Refresh</Button>
+      <Button Margin="0,0,8,2" Padding="8,0,8,0" Height="24" Click="RefreshClick">Refresh</Button>
     </StackPanel>
-    <syncfusion:EditControl x:Name="chatBox" Grid.Row="1" HorizontalAlignment="Stretch" BorderThickness="0" FontSize="16" Margin="0,0,0,15" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
+    <syncfusion:EditControl x:Name="chatBox" Grid.Row="1" HorizontalAlignment="Stretch" BorderThickness="0" FontFamily="{DynamicResource EQChatFontFamily}" FontSize="{DynamicResource EQChatFontSize}" Margin="0,0,0,15" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
       ShowOutlining="Hidden" DocumentLanguage="Text" TextChanged="ChatTextChanged" PreviewKeyDown="ChatPreviewKeyDown" PreviewMouseWheel="ChatMouseWheel" ScrollViewer.ScrollChanged="ChatScrollChanged" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
       <syncfusion:EditControl.ContextMenu>
         <ContextMenu>
@@ -51,12 +51,12 @@
         </ContextMenu>
       </syncfusion:EditControl.ContextMenu>
     </syncfusion:EditControl>
-    <StatusBar Grid.Row="2" FontSize="11">
+    <StatusBar Grid.Row="2" FontSize="{DynamicResource EQContentSize}">
       <TextBlock x:Name="statusCount"/>
     </StatusBar>
     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,1,0,0">
-      <syncfusion:ComboBoxAdv x:Name="fontFamily" Height="20" BorderThickness="0" FontSize="12" Width="120" SelectionChanged="FontFamilyChanged" />
-      <syncfusion:ComboBoxAdv x:Name="fontSize" Height="20" BorderThickness="0" FontSize="12" SelectionChanged="FontSizeChanged" />
+      <syncfusion:ComboBoxAdv x:Name="fontFamily" Height="20" BorderThickness="0" FontSize="{DynamicResource EQContentSize}" Width="120" SelectionChanged="FontFamilyChanged" />
+      <syncfusion:ComboBoxAdv x:Name="fontSize" Height="20" BorderThickness="0" FontSize="{DynamicResource EQContentSize}" SelectionChanged="FontSizeChanged" />
       <syncfusion:ColorPicker x:Name="colorPicker" Width="34" BorderThickness="0" Padding="4,0,0,4" Margin="0" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False"
         HeaderTemplate="{DynamicResource ColorPickerMinHeaderTemplate}" ColorChanged="FontFgColorChanged" />
     </StackPanel>

@@ -1,4 +1,5 @@
 ﻿using FontAwesome5;
+using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -15,13 +16,13 @@ using System.Windows.Shapes;
 
 namespace EQLogParser
 {
-  public partial class GanttChart : UserControl
+  public partial class GanttChart : UserControl, IDisposable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     private static readonly List<string> BlockBrushes = new List<string>() { "EQMenuIconBrush", "EQWarnForegroundBrush" };
 
-    private const int ROW_HEIGHT = 24;
+    private int ROW_HEIGHT;
     private const int LABELS_WIDTH = 190;
     private const ushort CASTER_ADPS = 1;
     private const ushort MELEE_ADPS = 2;
@@ -48,6 +49,8 @@ namespace EQLogParser
     public GanttChart()
     {
       InitializeComponent();
+      ROW_HEIGHT = (int)MainWindow.CurrentFontSize + 12;
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
     }
 
     // timelineType 0 = tanking, 1 = dps, 2 = healing
@@ -162,6 +165,12 @@ namespace EQLogParser
         minutes++;
       }
 
+      Display();
+    }
+
+    private void EventsThemeChanged(object sender, string e)
+    {
+      ROW_HEIGHT = (int)MainWindow.CurrentFontSize + 12;
       Display();
     }
 
@@ -421,12 +430,12 @@ namespace EQLogParser
       {
         HorizontalAlignment = HorizontalAlignment.Left,
         VerticalAlignment = VerticalAlignment.Top,
-        Height = 12,
-        Width = 12,
         Icon = EFontAwesomeIcon.Solid_Times,
         Margin = new Thickness(4, hPos + 6, 4, 0)
       };
 
+      image.SetResourceReference(ImageAwesome.HeightProperty, "EQContentSize");
+      image.SetResourceReference(ImageAwesome.WidthProperty, "EQContentSize");
       image.SetResourceReference(ImageAwesome.ForegroundProperty, "EQMenuIconBrush");
       image.PreviewMouseLeftButtonDown += (object sender, MouseButtonEventArgs e) =>
       {
@@ -440,10 +449,10 @@ namespace EQLogParser
         VerticalAlignment = VerticalAlignment.Top,
         Text = name,
         Width = LABELS_WIDTH - 20,
-        FontSize = 12,
         Margin = new Thickness(24, hPos + 4, 0, 0)
       };
 
+      textBlock.SetResourceReference(TextBlock.FontSizeProperty, "EQContentSize");
       textBlock.SetResourceReference(TextBlock.ForegroundProperty, "ContentForeground");
       textBlock.SetValue(Panel.ZIndexProperty, 10);
       image.SetValue(Panel.ZIndexProperty, 10);
@@ -459,11 +468,11 @@ namespace EQLogParser
         VerticalAlignment = VerticalAlignment.Center,
         Text = text,
         Width = 80,
-        FontSize = 12,
         Margin = new Thickness(LABELS_WIDTH + left - offset, 0, 0, 0)
       };
 
       Headers.Add(textBlock);
+      textBlock.SetResourceReference(TextBlock.FontSizeProperty, "EQContentSize");
       textBlock.SetResourceReference(TextBlock.ForegroundProperty, "ContentForeground");
       textBlock.SetValue(Panel.ZIndexProperty, 10);
       contentHeader.Children.Add(textBlock);
@@ -548,7 +557,7 @@ namespace EQLogParser
       }
     }
 
-    private static Rectangle CreateAdpsBlock(string label, int hPos, int start, int length, string blockBrush, int count)
+    private Rectangle CreateAdpsBlock(string label, int hPos, int start, int length, string blockBrush, int count)
     {
       var offset = count == 1 ? 0 : blockBrush == BlockBrushes[0] ? -3 : 3;
       var zIndex = blockBrush == BlockBrushes[0] ? 11 : 10;
@@ -574,7 +583,7 @@ namespace EQLogParser
       return block;
     }
 
-    private static Rectangle CreateRowBlock(int hPos)
+    private Rectangle CreateRowBlock(int hPos)
     {
       var block = new Rectangle
       {
@@ -634,6 +643,28 @@ namespace EQLogParser
 
       return duration;
     }
+
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (!disposedValue)
+      {
+        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
+        disposedValue = true;
+      }
+    }
+
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
+    {
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
+    }
+    #endregion
 
     private class SpellRange
     {

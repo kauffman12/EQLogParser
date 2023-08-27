@@ -46,6 +46,15 @@ namespace EQLogParser
         SetResourceReference(BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
         title.Visibility = Visibility.Visible;
         buttonsPanel.Visibility = Visibility.Visible;
+
+        // test data
+        TextDataList.AddFirst(new TextData
+        {
+          Text = "test message",
+          EndTicks = DateTime.Now.Ticks + (TheOverlay.FadeDelay * TimeSpan.TicksPerSecond)
+        });
+        content.Children.Add(CreateBlock());
+        Tick();
       }
       else
       {
@@ -181,6 +190,7 @@ namespace EQLogParser
       };
 
       block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + TheOverlay.Id);
+      block.SetResourceReference(TextBlock.FontFamilyProperty, "TextOverlayFontFamily-" + TheOverlay.Id);
       return block;
     }
 

@@ -369,6 +369,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
+        SummaryCleanup();
         TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "UPDATE");
         TankingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
         HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;

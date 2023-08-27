@@ -20,6 +20,11 @@ namespace EQLogParser
     internal static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly DateUtil DateUtil = new DateUtil();
+    private static readonly string[] CommonFontFamilies =
+    {
+      "Arial", "Calibri", "Cambria", "Cascadia Code", "Century Gothic", "Lucida Sans",
+      "Open Sans", "Segoe UI", "Tahoma", "Roboto", "Helvetica"
+    };
 
     public static void AddAction(List<ActionBlock> blockList, IAction action, double beginTime)
     {
@@ -107,6 +112,19 @@ namespace EQLogParser
       }
 
       return systemFontFamilies.OrderBy(f => f.Source).ToList().AsReadOnly();
+    }
+
+    internal static ReadOnlyCollection<string> GetCommonFontFamilyNames()
+    {
+      var common = new List<string>();
+      foreach (var fontFamily in GetSystemFontFamilies())
+      {
+        if (CommonFontFamilies.Contains(fontFamily.Source))
+        {
+          common.Add(fontFamily.Source);
+        }
+      }
+      return common.OrderBy(name => name).ToList().AsReadOnly();
     }
 
     internal static string GetText(XmlNode node, string value)

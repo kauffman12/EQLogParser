@@ -18,7 +18,7 @@
         <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}" />
       </StackPanel>
       <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-        <ComboBox x:Name="randomDurations" Margin="0,0,8,2" SelectedIndex="1" SelectionChanged="OptionsChanged" Width="175" VerticalContentAlignment="Center">
+        <ComboBox x:Name="randomDurations" Margin="0,0,8,2" SelectedIndex="1" SelectionChanged="OptionsChanged" VerticalContentAlignment="Center">
           <ComboBoxItem>Time Limit for Rolls: 10 Mins</ComboBoxItem>
           <ComboBoxItem>Time Limit for Rolls: 5 Mins</ComboBoxItem>
           <ComboBoxItem>Time Limit for Rolls: 4 Mins</ComboBoxItem>
@@ -37,9 +37,10 @@
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
-                           HeaderRowHeight="26"
+                           HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
                            PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
+                           RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            ShowRowHeader="False"
                            ShowSortNumbers="True">
@@ -53,15 +54,15 @@
         </syncfusion:SfTreeGrid.SortColumnDescriptions>
         <syncfusion:SfTreeGrid.Columns>
           <syncfusion:TreeGridTextColumn MappingName="StartTime" DisplayBinding="{Binding Path=StartTime, Converter={StaticResource DateTimeConverter}}" 
-                                   Width="100" TextAlignment="Center" HeaderText="Start Time" />
-          <syncfusion:TreeGridTextColumn Width="112" MappingName="Duration" HeaderText="Duration" />
-          <syncfusion:TreeGridNumericColumn Width="60" MappingName="Count" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Rolls" />
-          <syncfusion:TreeGridNumericColumn Width="60" MappingName="From" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="From" />
-          <syncfusion:TreeGridNumericColumn Width="60" MappingName="To" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="To" />
-          <syncfusion:TreeGridNumericColumn Width="75" MappingName="Rolled" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Rolled" />
+                                   TextAlignment="Center" HeaderText="Start Time" />
+          <syncfusion:TreeGridTextColumn MappingName="Duration" HeaderText="Duration" />
+          <syncfusion:TreeGridNumericColumn MappingName="Count" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Rolls" />
+          <syncfusion:TreeGridNumericColumn MappingName="From" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="From" />
+          <syncfusion:TreeGridNumericColumn MappingName="To" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="To" />
+          <syncfusion:TreeGridNumericColumn MappingName="Rolled" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Rolled" />
           <syncfusion:TreeGridTextColumn MappingName="RollTime" DisplayBinding="{Binding Path=RollTime, Converter={StaticResource DateTimeConverter}}" 
-                                   Width="100" TextAlignment="Center" HeaderText="Roll Time" />
-          <syncfusion:TreeGridTextColumn Width="400" MappingName="Player" HeaderText="Details" />
+                                   TextAlignment="Center" HeaderText="Roll Time" />
+          <syncfusion:TreeGridTextColumn MappingName="Player" HeaderText="Details" MinimumWidth="300"/>
         </syncfusion:SfTreeGrid.Columns>
         <syncfusion:SfTreeGrid.ContextMenu>
           <ContextMenu>

@@ -81,6 +81,7 @@ namespace EQLogParser
 
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
     }
 
     internal void Init(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionBlock>> groups, bool defending = false)
@@ -144,6 +145,7 @@ namespace EQLogParser
         showPets.Visibility = Visibility.Collapsed;
       }
 
+      DataGridUtil.UpdateTableMargin(dataGrid);
       Display();
     }
 
@@ -262,6 +264,7 @@ namespace EQLogParser
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
+    private void EventsThemeChanged(object sender, string e) => DataGridUtil.RefreshTableColumns(dataGrid);
 
     private void PopulateRow(HitLogRow row, ConcurrentDictionary<string, bool> uniqueActions, ConcurrentDictionary<string, bool> uniqueDefenders,
       ConcurrentDictionary<string, bool> uniqueTypes)
@@ -444,7 +447,8 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        dataGrid.Dispose();
+        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
+        dataGrid?.Dispose();
         disposedValue = true;
       }
     }

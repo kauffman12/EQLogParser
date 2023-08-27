@@ -21,34 +21,36 @@
         <ComboBoxItem>All Fights</ComboBoxItem>
         <ComboBoxItem>Selected Fights</ComboBoxItem>
       </ComboBox>
-      <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Refresh</Button>
+      <Button Margin="0,0,8,2" Padding="8,0,8,0" Height="24" Click="RefreshClick">Refresh</Button>
     </StackPanel>
     <syncfusion:SfTreeGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
                            AllowSorting="True"
+                           AutoExpandMode="RootNodesExpanded"
                            AutoGenerateColumns="False"
                            ChildPropertyName="Children"
                            ColumnSizer="Auto"
                            CurrentCellBorderThickness="0"
-                           AutoExpandMode="RootNodesExpanded"
+                           ExpanderCellStyle="{DynamicResource EQExpanderCellStyle}"                    
                            FrozenColumnCount="1"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
-                           HeaderRowHeight="26"
+                           HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
                            PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
+                           RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            ShowRowHeader="False">
       <syncfusion:SfTreeGrid.Resources>
         <local:ZeroConverter x:Key="ZeroConverter" />
       </syncfusion:SfTreeGrid.Resources>
       <syncfusion:SfTreeGrid.Columns>
-        <syncfusion:TreeGridTextColumn Width="150" MappingName="Name" HeaderText="Name" />
-        <syncfusion:TreeGridNumericColumn Width="70" MappingName="Taunt" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Taunt" />
-        <syncfusion:TreeGridNumericColumn Width="75" MappingName="Failed" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderFailedTauntToolTip}" HeaderText="# Failed" />
-        <syncfusion:TreeGridTextColumn Width="90" MappingName="SuccessRate" DisplayBinding="{Binding Path=SuccessRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Success" />
-        <syncfusion:TreeGridNumericColumn Width="90" MappingName="Improved" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderImprovedTauntToolTip}" HeaderText="# Improved" />
+        <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" MinimumWidth="150" />
+        <syncfusion:TreeGridNumericColumn MappingName="Taunt" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Taunt" />
+        <syncfusion:TreeGridNumericColumn MappingName="Failed" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderFailedTauntToolTip}" HeaderText="# Failed" />
+        <syncfusion:TreeGridTextColumn MappingName="SuccessRate" DisplayBinding="{Binding Path=SuccessRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Success" />
+        <syncfusion:TreeGridNumericColumn MappingName="Improved" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderImprovedTauntToolTip}" HeaderText="# Improved" />
       </syncfusion:SfTreeGrid.Columns>
       <syncfusion:SfTreeGrid.ContextMenu>
         <ContextMenu>

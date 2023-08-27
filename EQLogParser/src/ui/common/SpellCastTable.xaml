@@ -18,7 +18,7 @@
             <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
               <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
                 <Grid>
-                  <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+                  <TextBlock HorizontalAlignment="Center" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
                 </Grid>
               </Border>
             </ControlTemplate>
@@ -34,9 +34,9 @@
       <Label x:Name="titleLabel" Content="Loading..." Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel x:Name="controlPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox x:Name="selectedSpellRestrictions" Width="150" Margin="0,0,0,2" 
+      <ComboBox x:Name="selectedSpellRestrictions" Margin="0,0,0,2" 
                 DropDownClosed="CastTypesChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
-      <ComboBox x:Name="selectedCastTypes" Width="140" Margin="0,0,8,2" 
+      <ComboBox x:Name="selectedCastTypes" Margin="0,0,8,2" 
                 DropDownClosed="CastTypesChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
     </StackPanel>    
     <syncfusion:SfDataGrid x:Name="dataGrid"
@@ -46,12 +46,13 @@
                            ColumnSizer="Auto"
                            CurrentCellBorderThickness="0"
                            FrozenColumnCount="2"
-                           HeaderRowHeight="26"
+                           HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Both"
                            IsReadOnly="True"
                            RowHeaderWidth="40"
+                           RowHeight="{DynamicResource EQTableRowHeight}"
                            ShowRowHeader="True"
                            SelectionMode="Extended">
       <syncfusion:SfDataGrid.SortColumnDescriptions>
@@ -91,7 +92,7 @@
       </syncfusion:SfDataGrid.ContextMenu>
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Path=Time, Converter={StaticResource dateTimeConverter}}" 
-                                   Width="100" TextAlignment="Center" HeaderText="Time" />
+                                   MinimumWidth="120" TextAlignment="Center" HeaderText="Time" />
         <syncfusion:GridTextColumn MappingName="Seconds" SortMode="Value" DisplayBinding="{Binding Path=Seconds}" TextAlignment="Right" HeaderText="Sec" />
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>

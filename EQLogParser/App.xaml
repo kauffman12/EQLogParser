@@ -16,9 +16,15 @@
       <Setter Property="Background" Value="{x:Null}" />
       <Setter Property="Foreground" Value="{DynamicResource EQMenuIconBrush}" />
       <Setter Property="Height" Value="30"/>
-      <Setter Property="FontSize" Value="14" />
+      <Setter Property="FontSize" Value="{DynamicResource EQTitleSize}" />
       <Setter Property="FontWeight" Value="Bold" />
       <Setter Property="Margin" Value="0" />
+    </Style>
+
+    <Style x:Key="EQExpanderCellStyle" TargetType="syncfusion:TreeGridExpanderCell">
+      <Setter Property="FontSize" Value="{DynamicResource EQContentSize}" />
+      <Setter Property="CurrentCellBorderThickness" Value="0" />
+      <Setter Property="BorderThickness" Value="0.4" />
     </Style>
 
     <DataTemplate x:Key="TextOverlayFileTemplate">
@@ -112,71 +118,71 @@
     </DataTemplate>
     
     <DataTemplate x:Key="TemplateToolTip">
-      <TextBlock FontSize="12" Text="{Binding TooltipText}" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Text="{Binding TooltipText}" />
     </DataTemplate>
 
     <DataTemplate x:Key="HeaderImprovedTauntToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Improved Taunts can not Fail" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Improved Taunts can not Fail" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderFailedTauntToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Number of Failed Taunts" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Number of Failed Taunts" />
     </DataTemplate>    
     <DataTemplate x:Key="HeaderSpecialTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="6 = Staunch, 7 = Intensity, D = Dragon Glyph, G = Destruction Glyph, M = Mana Burn, L = Life Burn, S = Arcane Secrets" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="6 = Staunch, 7 = Intensity, D = Dragon Glyph, G = Destruction Glyph, M = Mana Burn, L = Life Burn, S = Arcane Secrets" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderBestSecondTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Max Amount of Damage done in a single Second." />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Max Amount of Damage done in a single Second." />
     </DataTemplate>
     <DataTemplate x:Key="HeaderSpellCountsTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Cast Count (# Interrupted)" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Cast Count (# Interrupted)" />
     </DataTemplate>    
     <DataTemplate x:Key="HeaderTotalTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Total (raid total)" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Total (raid total)" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderOverHealTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Amount of Healing in Excess of what could be Healed" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Amount of Healing in Excess of what could be Healed" />
     </DataTemplate>
     <DataTemplate x:Key="PotentialHealTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Amount of Healing which could have been applied. (Healed + Over Healed)" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Amount of Healing which could have been applied. (Healed + Over Healed)" />
     </DataTemplate>    
     <DataTemplate x:Key="HeaderDPSTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Damage/Second based on Player Time" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Damage/Second based on Player Time" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderSDPSTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Scaled Damage/Second based on Total Time (raid time)" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Scaled Damage/Second based on Total Time (raid time)" />
     </DataTemplate>    
     <DataTemplate x:Key="HeaderHPSTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Healing/Second based on Player Time" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Healing/Second based on Player Time" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderSHPSTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Scaled Healing/Second based on Total Time (raid time)" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Scaled Healing/Second based on Total Time (raid time)" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderMeleeAccRateTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Hits that were not Misses" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Hits that were not Misses" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderMeleeHitRateTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Hits that were not Blocked, Dodged, Misses, or Parried" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Hits that were not Blocked, Dodged, Misses, or Parried" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderMeleeAttemptsTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Number of Melee Attempts to Hit the Player" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Number of Melee Attempts to Hit the Player" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderMeleeUndefendedTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Number of Melee Hits minus Strikethrough " />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Number of Melee Hits minus Strikethrough " />
     </DataTemplate>
     <DataTemplate x:Key="HeaderOverHealPercentTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Healing in Excess of what could be Healed" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Healing in Excess of what could be Healed" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderRampageTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Melee hits received which were from Rampage" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Melee hits received which were from Rampage" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderAvgNonTwincastTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Average Damage for all Hits that were not a Twincast" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Average Damage for all Hits that were not a Twincast" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderAvgNonTwincastCritTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Average Crit Damage for all Hits that were not a Twincast" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Average Crit Damage for all Hits that were not a Twincast" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderAvgNonTwincastLuckyTemplateToolTip">
-      <TextBlock FontSize="12" Foreground="{DynamicResource PrimaryForeground}" Text="Average Lucky Damage for all Hits that were not a Twincast" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Average Lucky Damage for all Hits that were not a Twincast" />
     </DataTemplate>
 
     <!-- Syncfusion ColorPicker -->

@@ -42,8 +42,11 @@ namespace EQLogParser
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = MEZBREAK_EVENT });
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = PLAYERKILL_EVENT });
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = PLAYERSLAIN_EVENT });
+
       selectedOptions.ItemsSource = list;
       UIElementUtil.SetComboBoxTitle(selectedOptions, list.Count, EQLogParser.Resource.EVENT_TYPES_SELECTED);
+      DataGridUtil.UpdateTableMargin(dataGrid);
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
 
       eventFilter.Text = EQLogParser.Resource.EVENT_FILTER_TEXT;
       FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
@@ -64,6 +67,7 @@ namespace EQLogParser
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
     private void RefreshClick(object sender, RoutedEventArgs e) => Load();
+    private void EventsThemeChanged(object sender, string e) => DataGridUtil.RefreshTableColumns(dataGrid);
 
     private void Load()
     {
@@ -250,6 +254,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
+        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
         (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventsLogLoadingComplete;
         dataGrid.Dispose();
         disposedValue = true;

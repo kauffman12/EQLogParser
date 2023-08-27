@@ -1,6 +1,7 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
@@ -20,7 +21,8 @@ namespace EQLogParser
           "18pt", "20pt", "22pt", "24pt", "26pt", "28pt", "30pt", "34pt", "38pt", "42pt", "46pt", "50pt" } },
       { "SortBy", new List<string>() { "Trigger Time", "Remaining Time" } },
       { "TimerMode", new List<string>() { "Standard", "Cooldown" } },
-      { "TimerType", new List<string>() { "No Timer", "Basic", "Short Duration" } }
+      { "TimerType", new List<string>() { "No Timer", "Basic", "Short Duration" } },
+      { "FontFamily", Helpers.GetSystemFontFamilies().Select(font => font.Source).ToList() },
     };
 
     private static Dictionary<string, DependencyProperty> Props = new Dictionary<string, DependencyProperty>()
@@ -29,7 +31,8 @@ namespace EQLogParser
       { "FontSize", ComboBox.SelectedValueProperty },
       { "SortBy", ComboBox.SelectedIndexProperty },
       { "TimerMode", ComboBox.SelectedIndexProperty },
-      { "TimerType", ComboBox.SelectedIndexProperty }
+      { "TimerType", ComboBox.SelectedIndexProperty },
+      { "FontFamily", ComboBox.SelectedValueProperty }
     };
 
 

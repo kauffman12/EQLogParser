@@ -16,16 +16,17 @@
                            AllowResizingColumns="True"
                            AllowSorting="False"
                            AutoGenerateColumns="False"
-                           ColumnSizer="AutoWithLastColumnFill"
+                           ColumnSizer="Auto"
                            CurrentCellBorderThickness="0"
                            FrozenColumnCount="1"
                            Grid.Row="0"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
-                           HeaderRowHeight="26"
+                           HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
                            PreviewMouseLeftButtonDown="PreviewMouseLeftButtonDown"
-                           RowHeaderWidth="30"
+                           RowHeaderWidth="40"
+                           RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            ShowRowHeader="True">
       <syncfusion:SfDataGrid.Resources>
@@ -36,7 +37,7 @@
               <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
                 <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
                   <Grid>
-                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+                    <TextBlock HorizontalAlignment="Center" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
                   </Grid>
                 </Border>
               </ControlTemplate>
@@ -46,11 +47,11 @@
       </syncfusion:SfDataGrid.Resources>
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Time, Converter={StaticResource DateTimeConverter}}"
-                                   Width="100" TextAlignment="Center" HeaderText="Time" />
-        <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" Width="150"/>
-        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" Width="100" />
-        <syncfusion:GridTextColumn MappingName="Priority" HeaderText="Priority" Width="60" />
-        <syncfusion:GridTextColumn MappingName="Eval" HeaderText="Eval Time (μs)" Width="100" />
+                                   TextAlignment="Center" HeaderText="Time" MinimumWidth="120" />
+        <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" MinimumWidth="150"/>
+        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" MinimumWidth="75"/>
+        <syncfusion:GridTextColumn MappingName="Priority" HeaderText="Priority" />
+        <syncfusion:GridTextColumn MappingName="Eval" HeaderText="Eval Time (μs)" />
         <syncfusion:GridTextColumn MappingName="Line" HeaderText="Line Matched / Previously Matched if Started Timer" />
       </syncfusion:SfDataGrid.Columns>
       <syncfusion:SfDataGrid.ContextMenu>

@@ -35,6 +35,8 @@ namespace EQLogParser
       TheDataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       TheDataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
+      DataGridUtil.UpdateTableMargin(TheDataGrid);
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
 
       // workaround to avoid drag/drop failing when grid has no data
       TheDataGrid.ItemsSource = new List<PlayerStats>();
@@ -46,6 +48,11 @@ namespace EQLogParser
     internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
     internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(TheColumnsCombo, TheDataGrid);
 
+    private void EventsThemeChanged(object sender, string e)
+    {
+      DataGridUtil.RefreshTableColumns(TheDataGrid);
+    }
+
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls
 
@@ -53,6 +60,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
+        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
         TheDataGrid.Dispose();
         disposedValue = true;
       }

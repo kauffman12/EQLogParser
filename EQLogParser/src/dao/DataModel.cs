@@ -54,6 +54,7 @@ namespace EQLogParser
     public string FontSize { get; set; } = "12pt";
     public int SortBy { get; set; } = 0;
     public string FontColor { get; set; } = "#FFFFFF";
+    public string FontFamily { get; set; } = "Segoe UI";
     public string ActiveColor { get; set; } = "#FF1D397E";
     public string BackgroundColor { get; set; } = "#5F000000";
     public string IdleColor { get; set; } = "#FF8f1515";
