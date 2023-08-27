@@ -1,6 +1,7 @@
 ﻿using FontAwesome5;
 using Microsoft.Win32;
 using Syncfusion.SfSkinManager;
+using Syncfusion.Themes.MaterialDarkCustom.WPF;
 using Syncfusion.Themes.MaterialLight.WPF;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Tools.Controls;
@@ -161,6 +162,52 @@ namespace EQLogParser
       }
     }
 
+    internal static void CreateFontFamiliesMenuItems(MenuItem parent, RoutedEventHandler callback, string currentFamily)
+    {
+      foreach (var family in Helpers.GetCommonFontFamilyNames())
+      {
+        parent.Items.Add(createMenuItem(family, callback, EFontAwesomeIcon.Solid_Check));
+      }
+
+      MenuItem createMenuItem(string name, RoutedEventHandler handler, EFontAwesomeIcon awesome)
+      {
+        var imageAwesome = new ImageAwesome
+        {
+          Icon = awesome,
+          Style = (Style)Application.Current.Resources["EQIconStyle"],
+          Visibility = (name == currentFamily) ? Visibility.Visible : Visibility.Hidden
+        };
+
+        var menuItem = new MenuItem { Header = name };
+        menuItem.Click += handler;
+        menuItem.Icon = imageAwesome;
+        return menuItem;
+      }
+    }
+
+    internal static void CreateFontSizesMenuItems(MenuItem parent, RoutedEventHandler callback, double currentSize)
+    {
+      parent.Items.Add(createMenuItem(10, callback, EFontAwesomeIcon.Solid_Check));
+      parent.Items.Add(createMenuItem(11, callback, EFontAwesomeIcon.Solid_Check));
+      parent.Items.Add(createMenuItem(12, callback, EFontAwesomeIcon.Solid_Check));
+      parent.Items.Add(createMenuItem(13, callback, EFontAwesomeIcon.Solid_Check));
+      parent.Items.Add(createMenuItem(14, callback, EFontAwesomeIcon.Solid_Check));
+      MenuItem createMenuItem(double size, RoutedEventHandler handler, EFontAwesomeIcon awesome)
+      {
+        var imageAwesome = new ImageAwesome
+        {
+          Icon = awesome,
+          Style = (Style)Application.Current.Resources["EQIconStyle"],
+          Visibility = (size == currentSize) ? Visibility.Visible : Visibility.Hidden
+        };
+
+        var menuItem = new MenuItem { Header = size.ToString() + "pt", Tag = size };
+        menuItem.Click += handler;
+        menuItem.Icon = imageAwesome;
+        return menuItem;
+      }
+    }
+
     internal static void CreateOpenLogMenuItems(MenuItem parent, RoutedEventHandler callback)
     {
       parent.Items.Add(createMenuItem("Now", "0", callback, EFontAwesomeIcon.Solid_CalendarDay));
@@ -174,10 +221,21 @@ namespace EQLogParser
       MenuItem createMenuItem(string name, string value, RoutedEventHandler handler, EFontAwesomeIcon awesome)
       {
         var imageAwesome = new ImageAwesome { Icon = awesome, Style = (Style)Application.Current.Resources["EQIconStyle"] };
-        var menuItem = new MenuItem { Header = name, Tag = value, Height = 24 };
+        var menuItem = new MenuItem { Header = name, Tag = value };
         menuItem.Click += handler;
         menuItem.Icon = imageAwesome;
         return menuItem;
+      }
+    }
+
+    internal static void UpdateCheckedMenuItem(MenuItem selectedItem, ItemCollection items)
+    {
+      foreach (var item in items)
+      {
+        if (item is MenuItem menuItem && menuItem.Icon is ImageAwesome image)
+        {
+          image.Visibility = (menuItem == selectedItem) ? Visibility.Visible : Visibility.Hidden;
+        }
       }
     }
 
@@ -198,10 +256,22 @@ namespace EQLogParser
 
     internal static void LoadTheme(MainWindow main, string theme)
     {
+      Application.Current.Resources["EQTitleSize"] = MainWindow.CurrentFontSize + 2;
+      Application.Current.Resources["EQContentSize"] = MainWindow.CurrentFontSize;
+      Application.Current.Resources["EQTableHeaderRowHeight"] = MainWindow.CurrentFontSize + 14;
+      Application.Current.Resources["EQTableRowHeight"] = MainWindow.CurrentFontSize + 12;
+
       if (theme == "MaterialLight")
       {
         var themeSettings = new MaterialLightThemeSettings();
         themeSettings.PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF343434") };
+        themeSettings.FontFamily = new FontFamily(MainWindow.CurrentFontFamily);
+        themeSettings.BodyAltFontSize = MainWindow.CurrentFontSize - 2;
+        themeSettings.BodyFontSize = MainWindow.CurrentFontSize;
+        themeSettings.HeaderFontSize = MainWindow.CurrentFontSize + 4;
+        themeSettings.SubHeaderFontSize = MainWindow.CurrentFontSize + 2;
+        themeSettings.SubTitleFontSize = MainWindow.CurrentFontSize;
+        themeSettings.TitleFontSize = MainWindow.CurrentFontSize + 2;
         SfSkinManager.RegisterThemeSettings("MaterialLight", themeSettings);
         Application.Current.Resources["EQGoodForegroundBrush"] = new SolidColorBrush { Color = Colors.DarkGreen };
         Application.Current.Resources["EQMenuIconBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF3d7baf") };
@@ -223,6 +293,17 @@ namespace EQLogParser
       }
       else
       {
+        var themeSettings = new MaterialDarkCustomThemeSettings();
+        themeSettings.PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFE1E1E1") };
+        themeSettings.FontFamily = new FontFamily(MainWindow.CurrentFontFamily);
+        themeSettings.BodyAltFontSize = MainWindow.CurrentFontSize - 2;
+        themeSettings.BodyFontSize = MainWindow.CurrentFontSize;
+        themeSettings.HeaderFontSize = MainWindow.CurrentFontSize + 4;
+        themeSettings.SubHeaderFontSize = MainWindow.CurrentFontSize + 2;
+        themeSettings.SubTitleFontSize = MainWindow.CurrentFontSize;
+        themeSettings.TitleFontSize = MainWindow.CurrentFontSize + 2;
+        SfSkinManager.RegisterThemeSettings("MaterialDarkCustom", themeSettings);
+
         Application.Current.Resources["EQGoodForegroundBrush"] = new SolidColorBrush { Color = Colors.LightGreen };
         Application.Current.Resources["EQMenuIconBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF4F9FE2") };
         Application.Current.Resources["EQSearchBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF314435") };
@@ -230,7 +311,7 @@ namespace EQLogParser
         Application.Current.Resources["EQWarnForegroundBrush"] = new SolidColorBrush { Color = Colors.Orange };
         Application.Current.Resources["EQStopForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFcc434d") };
         Application.Current.Resources["EQDisabledBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#88FFFFFF") };
-        SfSkinManager.SetTheme(main, new Theme("MaterialDarkCustom;MaterialDark"));
+        SfSkinManager.SetTheme(main, new Theme("MaterialDarkCustom"));
         Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/CheckBox.xaml");
         Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfDataGrid/SfDataGrid.xaml");
         Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/Brushes.xaml");

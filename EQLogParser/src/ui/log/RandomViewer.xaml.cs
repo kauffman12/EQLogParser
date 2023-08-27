@@ -21,8 +21,11 @@ namespace EQLogParser
     public RandomViewer()
     {
       InitializeComponent();
+
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += LogLoadingComplete;
       DataManager.Instance.EventsNewRandomRecord += EventsNewRandomRecord;
+      DataGridUtil.UpdateTableMargin(dataGrid);
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
 
       Load();
 
@@ -64,10 +67,11 @@ namespace EQLogParser
       }
     }
 
+    internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
     private void LogLoadingComplete(object sender, bool e) => Load();
-    internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
+    private void EventsThemeChanged(object sender, string e) => DataGridUtil.RefreshTableColumns(dataGrid);
 
     private void GetLatest()
     {
@@ -242,6 +246,7 @@ namespace EQLogParser
       if (!disposedValue)
       {
         ReloadTimer?.Stop();
+        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
         (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= LogLoadingComplete;
         DataManager.Instance.EventsNewRandomRecord -= EventsNewRandomRecord;
         dataGrid.Dispose();

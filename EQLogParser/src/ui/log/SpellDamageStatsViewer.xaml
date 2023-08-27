@@ -25,7 +25,7 @@
       <ComboBox Margin="0,0,0,2" x:Name="playerList" IsEnabled="True" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,0,2" x:Name="spellList" IsEnabled="True" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,8,2" x:Name="typeList" IsEnabled="True" SelectionChanged="OptionsChanged" />
-      <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Refresh</Button>
+      <Button Margin="0,0,8,2" Padding="8,0,8,0" Height="24" Click="RefreshClick">Refresh</Button>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
@@ -37,10 +37,11 @@
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
-                           HeaderRowHeight="26"
+                           HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
-                           RowHeaderWidth="30"
+                           RowHeaderWidth="40"
+                           RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            ShowRowHeader="True">
       <syncfusion:SfDataGrid.Resources>
@@ -50,7 +51,7 @@
               <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
                 <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
                   <Grid>
-                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+                    <TextBlock HorizontalAlignment="Center" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
                   </Grid>
                 </Border>
               </ControlTemplate>
@@ -62,13 +63,13 @@
         <syncfusion:SortColumnDescription ColumnName="Avg" SortDirection="Descending" />
       </syncfusion:SfDataGrid.SortColumnDescriptions>
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Spell" HeaderText="Spell" Width="250"/>
-        <syncfusion:GridTextColumn MappingName="Caster" HeaderText="Caster" Width="150"/>
-        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" Width="120"/>
-        <syncfusion:GridNumericColumn MappingName="Avg" Width="70" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Av Hit" TextAlignment="Right"/>
-        <syncfusion:GridNumericColumn MappingName="Max" Width="75" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Max Hit" TextAlignment="Right"/>
-        <syncfusion:GridNumericColumn MappingName="Total" Width="100" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Total" TextAlignment="Right"/>
-        <syncfusion:GridNumericColumn MappingName="Hits" Width="70" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="# Hits" TextAlignment="Right"/>
+        <syncfusion:GridTextColumn MappingName="Spell" HeaderText="Spell" MinimumWidth="250"/>
+        <syncfusion:GridTextColumn MappingName="Caster" HeaderText="Caster" MinimumWidth="120"/>
+        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" />
+        <syncfusion:GridNumericColumn MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Av Hit" TextAlignment="Right"/>
+        <syncfusion:GridNumericColumn MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Max Hit" TextAlignment="Right"/>
+        <syncfusion:GridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Total" TextAlignment="Right"/>
+        <syncfusion:GridNumericColumn MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="# Hits" TextAlignment="Right"/>
       </syncfusion:SfDataGrid.Columns>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>

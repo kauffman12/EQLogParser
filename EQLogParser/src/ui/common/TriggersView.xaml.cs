@@ -139,6 +139,7 @@ namespace EQLogParser
       AddEditor(new CheckComboBoxEditor(), "SelectedTimerOverlays");
       AddEditor(new TriggerListsEditor(), "TriggerAgainOption");
       AddEditor(new TriggerListsEditor(), "FontSize");
+      AddEditor(new TriggerListsEditor(), "FontFamily");
       AddEditor(new TriggerListsEditor(), "SortBy");
       AddEditor(new TriggerListsEditor(), "TimerMode");
       AddEditor(new TriggerListsEditor(), "TimerType");
@@ -1154,6 +1155,11 @@ namespace EQLogParser
           textChange = !(textOverlay.FontBrush.Color == (Color)ColorConverter.ConvertFromString(textOverlay.Original.FontColor));
           Application.Current.Resources["TextOverlayFontColor-" + textOverlay.Id] = textOverlay.FontBrush;
         }
+        else if (args.Property.Name == fontFamilyItem.PropertyName)
+        {
+          textChange = textOverlay.FontFamily != textOverlay.Original.FontFamily;
+          Application.Current.Resources["TextOverlayFontFamily-" + textOverlay.Id] = new FontFamily(textOverlay.FontFamily);
+        }
         else if (args.Property.Name == fontSizeItem.PropertyName && textOverlay.FontSize.Split("pt") is string[] split && split.Length == 2
          && double.TryParse(split[0], out var newFontSize))
         {
@@ -1314,16 +1320,16 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
+        disposedValue = true;
         TriggerOverlayManager.Instance.EventsUpdateTree -= EventsUpdateOverlayTree;
         TriggerOverlayManager.Instance.EventsUpdateOverlay -= EventsUpdateOverlay;
         TriggerManager.Instance.EventsUpdateTree -= EventsUpdateTriggerTree;
         TriggerManager.Instance.EventsSelectTrigger -= EventsSelectTrigger;
-        treeView.DragDropController.Dispose();
-        treeView.Dispose();
-        thePropertyGrid?.Dispose();
         TestSynth?.Dispose();
         Watcher?.Dispose();
-        disposedValue = true;
+        thePropertyGrid?.Dispose();
+        treeView?.DragDropController.Dispose();
+        treeView?.Dispose();
       }
     }
 

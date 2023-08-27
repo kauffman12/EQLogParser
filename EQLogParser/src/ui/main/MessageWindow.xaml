@@ -8,13 +8,15 @@
         mc:Ignorable="d"
         ResizeMode="NoResize"
         Icon="EQLogParser.ico"
-        TitleBarHeight="26"
-        TitleFontSize="12"
+        TitleBarHeight="{DynamicResource EQTableHeaderRowHeight}"
+        TitleFontSize="{DynamicResource EQContentSize}"
         TitleBarForeground="{DynamicResource PrimaryDarken}"
         TitleTextAlignment="Left"
         Topmost="True"
         WindowStartupLocation="CenterScreen"
-        Height="150" Width="375">
+        SizeToContent="WidthAndHeight"
+        MinHeight="135"
+        Width="375">
   <Grid>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="1*" />
@@ -27,7 +29,7 @@
     </Grid.RowDefinitions>
     <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.ColumnSpan="3">
       <fa:ImageAwesome x:Name="iconImage" Height="32" Width="32" Margin="25,5,0,0" />
-      <TextBlock x:Name="textBlock" FontSize="14" Foreground="{DynamicResource PrimaryDarken}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="20,24,0,6" Height="35" Width="270" />
+      <TextBlock x:Name="textBlock" FontSize="{DynamicResource EQTitleSize}" Foreground="{DynamicResource PrimaryDarken}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="20,0,0,0" Padding="0,0,20,0" />
     </StackPanel>
     <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.ColumnSpan="3" HorizontalAlignment="Right" Margin="0,0,10,2">
       <Button x:Name="yesButton2" Foreground="{DynamicResource PrimaryDarken}" Height="24" Width="80" Margin="4" Content="" IsEnabled="True" Visibility="Hidden" Click="ButtonYes2Click"/>

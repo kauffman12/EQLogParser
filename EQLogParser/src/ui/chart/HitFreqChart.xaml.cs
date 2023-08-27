@@ -12,7 +12,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for HitFreqChart.xaml
   /// </summary>
-  public partial class HitFreqChart : UserControl
+  public partial class HitFreqChart : UserControl, IDisposable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private const string CRIT_HITTYPE = "Critical";
@@ -28,6 +28,7 @@ namespace EQLogParser
       InitializeComponent();
       minFreqList.ItemsSource = MinFreqs;
       minFreqList.SelectedIndex = 0;
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
     }
 
     internal void Update(PlayerStats playerStats, CombinedStats combined)
@@ -59,6 +60,23 @@ namespace EQLogParser
     }
 
     private void CreateImageClick(object sender, RoutedEventArgs e) => Helpers.CreateImage(Dispatcher, sfChart);
+
+    private void EventsThemeChanged(object sender, string e)
+    {
+      if (sfChart?.Series is ChartSeriesCollection collection && collection.Count > 0)
+      {
+        if (collection[0] is FastColumnBitmapSeries series)
+        {
+          // this object doesn't have setResource
+          series.AdornmentsInfo.FontSize = MainWindow.CurrentFontSize + 4;
+          series.AdornmentsInfo.Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush;
+        }
+
+        // not sure why dynamic resource wasnt working in xaml
+        catLabel.FontSize = MainWindow.CurrentFontSize;
+        numLabel.FontSize = MainWindow.CurrentFontSize;
+      }
+    }
 
     private void UserSelectionChanged()
     {
@@ -137,15 +155,19 @@ namespace EQLogParser
 
         var collection = new ChartSeriesCollection();
         var series = new FastColumnBitmapSeries { XBindingPath = "X", YBindingPath = "Y", ItemsSource = onePage };
+
         var adornment = new ChartAdornmentInfo
         {
           ShowLabel = true,
           ShowMarker = false,
           LabelPosition = AdornmentsLabelPosition.Outer,
-          FontSize = 20,
+          FontSize = MainWindow.CurrentFontSize + 4,
           Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush,
           Background = new SolidColorBrush(Colors.Transparent)
         };
+
+        catLabel.FontSize = MainWindow.CurrentFontSize;
+        numLabel.FontSize = MainWindow.CurrentFontSize;
         series.AdornmentsInfo = adornment;
         ChartSeriesBase.SetSpacing(series, 0.5);
         collection.Add(series);
@@ -307,6 +329,28 @@ namespace EQLogParser
       }
     }
 
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (!disposedValue)
+      {
+        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
+        sfChart?.Dispose();
+        disposedValue = true;
+      }
+    }
+
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
+    {
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
+    }
+    #endregion
 
     private class ColumnData
     {

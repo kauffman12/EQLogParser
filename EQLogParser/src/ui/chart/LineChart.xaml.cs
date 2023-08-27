@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-
 using System.Windows;
 using System.Windows.Controls;
 
@@ -12,7 +11,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for LineChart.xaml
   /// </summary>
-  public partial class LineChart : UserControl, IDisposable
+  public partial class LineChart : UserControl, System.IDisposable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -35,7 +34,11 @@ namespace EQLogParser
       choicesList.ItemsSource = choices;
       choicesList.SelectedIndex = 0;
       CurrentChoice = choicesList.SelectedValue as string;
+      dateLabel.FontSize = MainWindow.CurrentFontSize - 1;
+      numLabel.FontSize = MainWindow.CurrentFontSize;
+
       DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
 
       if (includePets)
       {
@@ -78,6 +81,12 @@ namespace EQLogParser
           PlotSelected(e.Selected);
           break;
       }
+    }
+
+    private void EventsThemeChanged(object sender, string e)
+    {
+      dateLabel.FontSize = MainWindow.CurrentFontSize - 1;
+      numLabel.FontSize = MainWindow.CurrentFontSize;
     }
 
     private void UpdateTimes(string name, DataPoint dataPoint, Dictionary<string, double> diffs, Dictionary<string, double> firstTimes,
@@ -287,9 +296,9 @@ namespace EQLogParser
       sfLineChart.Series = BuildCollection(sortedValues);
     }
 
-    private ChartSeriesCollection BuildCollection(List<List<DataPoint>> sortedValues)
+    private Syncfusion.UI.Xaml.Charts.ChartSeriesCollection BuildCollection(List<List<DataPoint>> sortedValues)
     {
-      var collection = new ChartSeriesCollection();
+      var collection = new Syncfusion.UI.Xaml.Charts.ChartSeriesCollection();
 
       var yPath = "Avg";
       switch (CurrentChoice)
@@ -618,6 +627,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
+        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
         DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
         sfLineChart.Dispose();
         disposedValue = true;

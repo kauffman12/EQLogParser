@@ -224,6 +224,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
+        SummaryCleanup();
         HealingStatsManager.Instance.FireChartEvent("UPDATE");
         HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
         DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;

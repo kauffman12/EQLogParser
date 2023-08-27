@@ -43,7 +43,6 @@ namespace EQLogParser
       InitSummaryTable(title, dataGrid, selectedColumns);
       DamageStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
-
       dataGrid.CopyContent += DataGridCopyContent;
 
       SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
@@ -178,24 +177,27 @@ namespace EQLogParser
 
     private void UpdateList()
     {
-      var beforeList = dataGrid.ItemsSource;
-      switch (CurrentPetOrPlayerOption)
+      if (CurrentStats != null)
       {
-        case 0:
-          dataGrid.ItemsSource = UpdateRank(CurrentStats.StatsList);
-          break;
-        case 1:
-        case 2:
-        case 3:
-          dataGrid.ItemsSource = UpdateRank(CurrentStats.ExpandedStatsList);
-          break;
-      }
+        var beforeList = dataGrid.ItemsSource;
+        switch (CurrentPetOrPlayerOption)
+        {
+          case 0:
+            dataGrid.ItemsSource = UpdateRank(CurrentStats.StatsList);
+            break;
+          case 1:
+          case 2:
+          case 3:
+            dataGrid.ItemsSource = UpdateRank(CurrentStats.ExpandedStatsList);
+            break;
+        }
 
-      // if list stayed the same then update the filter
-      if (beforeList == dataGrid.ItemsSource)
-      {
-        dataGrid.SelectedItems.Clear();
-        dataGrid.View.RefreshFilter();
+        // if list stayed the same then update the filter
+        if (beforeList == dataGrid.ItemsSource)
+        {
+          dataGrid.SelectedItems.Clear();
+          dataGrid.View.RefreshFilter();
+        }
       }
     }
 
@@ -417,6 +419,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
+        SummaryCleanup();
         DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { MaxSeconds = long.MinValue }, "UPDATE");
         DamageStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
         DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;

@@ -37,14 +37,14 @@
       Foreground="#33FFFFFF" Background="#33000000" TextWrapping="WrapWithOverflow" Padding="3,5,3,20" />
     </Viewbox>
     <StackPanel Grid.Row="0" Orientation="Vertical" VerticalAlignment="Bottom" HorizontalAlignment="Center">
+      <Border x:Name="border" CornerRadius="5" Visibility="Hidden">
+        <StackPanel x:Name="content" Orientation="Vertical"/>
+      </Border>
       <StackPanel x:Name="buttonsPanel" Visibility="Collapsed" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,6">
         <Button x:Name="saveButton" Margin="2,6,0,0" VerticalAlignment="Top" IsEnabled="False" Width="80" MinWidth="80" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save Position</Button>
         <Button x:Name="cancelButton" Margin="2,6,0,0" VerticalAlignment="Top" IsEnabled="False" Width="48" MinWidth="48" Height="24" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
         <Button x:Name="closeButton" Margin="2,6,0,0" VerticalAlignment="Top" IsEnabled="True" Width="48" MinWidth="48" Height="24" HorizontalAlignment="Left" Click="CloseClick">Close</Button>
       </StackPanel>
-      <Border x:Name="border" CornerRadius="5" Visibility="Hidden">
-        <StackPanel x:Name="content" Orientation="Vertical"/>
-      </Border>
     </StackPanel>
   </Grid>
 </Window>

@@ -16,7 +16,7 @@
             <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
               <Border x:Name="PART_RowHeaderCellBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
                 <Grid>
-                  <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+                  <TextBlock HorizontalAlignment="Center" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
                 </Grid>
               </Border>
             </ControlTemplate>
@@ -37,7 +37,7 @@
       <ComboBox Margin="0,0,0,2" x:Name="itemsList" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,0,2" x:Name="npcsList" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,8,2" x:Name="optionsList" SelectionChanged="OptionsChanged" />
-      <Button Margin="0,0,8,2" Width="55" Height="24" Click="RefreshClick">Refresh</Button>
+      <Button Margin="0,0,8,2" Padding="8,0,8,0" Height="24" Click="RefreshClick">Refresh</Button>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
@@ -49,10 +49,11 @@
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
-                           HeaderRowHeight="26"
+                           HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
-                           RowHeaderWidth="30"
+                           RowHeaderWidth="40"
+                           RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            ShowRowHeader="True">
       <syncfusion:SfDataGrid.SortColumnDescriptions>
@@ -60,15 +61,15 @@
       </syncfusion:SfDataGrid.SortColumnDescriptions>
         <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Path=Time, Converter={StaticResource dateTimeConverter}}" 
-                                   Width="100" TextAlignment="Center" HeaderText="Time"/>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Player}" HeaderText="Player" Width="150"/>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Item}" HeaderText="Item" Width="300"/>
-        <syncfusion:GridTemplateColumn HeaderText="Quantity" MappingName="Quantity" Width="120">
+                                   TextAlignment="Center" HeaderText="Time"/>
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Player}" HeaderText="Player" />
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Item}" HeaderText="Item" />
+        <syncfusion:GridTemplateColumn HeaderText="Quantity" MappingName="Quantity">
           <syncfusion:GridTemplateColumn.CellTemplateSelector>
             <local:LootQuantityTemplateSelector />
           </syncfusion:GridTemplateColumn.CellTemplateSelector>
         </syncfusion:GridTemplateColumn>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Npc}" HeaderText="NPC" Width="250"/>
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Npc}" HeaderText="NPC" MinimumWidth="225"/>
       </syncfusion:SfDataGrid.Columns>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>

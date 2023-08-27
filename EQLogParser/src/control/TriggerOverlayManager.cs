@@ -166,8 +166,6 @@ namespace EQLogParser
         {
           var beginTicks = DateTime.Now.Ticks;
           PreviewTextWindows[overlay.Id] = new TextOverlayWindow(overlay, true);
-          PreviewTextWindows[overlay.Id].AddTriggerText("Example Message", beginTicks, null);
-          PreviewTextWindows[overlay.Id].AddTriggerText("Example Message #2", beginTicks, null);
           PreviewTextWindows[overlay.Id].Show();
         }
         else

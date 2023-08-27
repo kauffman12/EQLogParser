@@ -42,6 +42,9 @@ namespace EQLogParser
       var desc = new string[] { "Avg", "Max", "Total", "Hits" };
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+
+      DataGridUtil.UpdateTableMargin(dataGrid);
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
       Load();
     }
 
@@ -49,6 +52,7 @@ namespace EQLogParser
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
     private void LogLoadingComplete(object sender, bool e) => Load();
     private void RefreshClick(object sender, RoutedEventArgs e) => Load();
+    private void EventsThemeChanged(object sender, string e) => DataGridUtil.RefreshTableColumns(dataGrid);
 
     private void SelectionChange(object sender, System.Collections.IList e)
     {
@@ -234,6 +238,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
+        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
         (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= LogLoadingComplete;
         (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange -= SelectionChange;
         dataGrid.Dispose();

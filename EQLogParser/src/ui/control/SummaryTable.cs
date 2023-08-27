@@ -49,6 +49,8 @@ namespace EQLogParser
       }
 
       DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
+      DataGridUtil.UpdateTableMargin(TheDataGrid);
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
 
       // workaround to avoid drag/drop failing when grid has no data
       TheDataGrid.ItemsSource = NoResultsList;
@@ -215,6 +217,16 @@ namespace EQLogParser
           (spellTable.Content as SpellCountTable).Init(selected, CurrentStats);
         }
       }
+    }
+
+    private void EventsThemeChanged(object sender, string e)
+    {
+      DataGridUtil.RefreshTableColumns(TheDataGrid);
+    }
+
+    protected void SummaryCleanup()
+    {
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
     }
   }
 }

@@ -416,7 +416,7 @@ namespace EQLogParser
     {
       if (fontSize?.SelectedItem != null && chatBox != null)
       {
-        chatBox.FontSize = (double)fontSize.SelectedItem;
+        Application.Current.Resources["EQChatFontSize"] = (double)fontSize.SelectedItem;
         ConfigUtil.SetSetting("ChatFontSize", fontSize.SelectedItem.ToString());
       }
     }
@@ -426,7 +426,7 @@ namespace EQLogParser
       if (fontFamily?.SelectedItem != null && chatBox != null)
       {
         var family = fontFamily.SelectedItem as FontFamily;
-        chatBox.FontFamily = family;
+        Application.Current.Resources["EQChatFontFamily"] = family;
         ConfigUtil.SetSetting("ChatFontFamily", family.ToString());
       }
     }

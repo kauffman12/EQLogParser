@@ -40,7 +40,7 @@
         </ContextMenu>
       </syncfusion:SfChart.ContextMenu>
       <syncfusion:SfChart.Legend>
-        <syncfusion:ChartLegend Margin="0" FontSize="14" Padding="0"/>
+        <syncfusion:ChartLegend Margin="0" FontSize="{DynamicResource EQTitleSize}" Padding="0"/>
       </syncfusion:SfChart.Legend>
       <syncfusion:SfChart.Behaviors>
         <syncfusion:ChartZoomPanBehavior EnableMouseWheelZooming="True" EnablePanning="True" ResetOnDoubleTap="True" />
@@ -48,14 +48,14 @@
       <syncfusion:SfChart.PrimaryAxis>
         <syncfusion:DateTimeAxis LabelFormat="HH:mm:ss">
           <syncfusion:DateTimeAxis.LabelStyle>
-            <syncfusion:LabelStyle FontSize="12"/>
+            <syncfusion:LabelStyle x:Name="dateLabel" />
           </syncfusion:DateTimeAxis.LabelStyle>
         </syncfusion:DateTimeAxis>
       </syncfusion:SfChart.PrimaryAxis>
       <syncfusion:SfChart.SecondaryAxis>
         <syncfusion:NumericalAxis LabelFormat="###,###,###">
           <syncfusion:NumericalAxis.LabelStyle>
-            <syncfusion:LabelStyle FontSize="12" />
+            <syncfusion:LabelStyle x:Name="numLabel" />
           </syncfusion:NumericalAxis.LabelStyle>
         </syncfusion:NumericalAxis>
       </syncfusion:SfChart.SecondaryAxis>

@@ -22,9 +22,9 @@
         StateChanged="WindowStateChanged">
   <syncfusion:ChromelessWindow.LeftHeaderItemsSource>
     <listCollection:ArrayList>
-      <Menu Height="26" FontSize="12" Width="285" Margin="0,0,0,2" VerticalAlignment="Bottom">
-        <MenuItem Header="_File" Height="30" Width="40">
-          <MenuItem x:Name="fileOpenMenu" Header="Open and Monitor _Log File" Height="24" ToolTip="Open Log File, Archive Chat and Start Monitoring">
+      <Menu Margin="0" Padding="0" VerticalAlignment="Bottom">
+        <MenuItem Header="_File">
+          <MenuItem x:Name="fileOpenMenu" Header="Open and Monitor _Log File" ToolTip="Open Log File, Archive Chat and Start Monitoring">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_FolderOpen" />
             </MenuItem.Icon>
@@ -37,336 +37,343 @@
           <MenuItem x:Name="recent5File" Visibility="Collapsed" Tag="4" />
           <MenuItem x:Name="recent6File" Visibility="Collapsed" Tag="5" />
           <Separator/>
-          <MenuItem Header="_Save" Height="24">
+          <MenuItem Header="_Save">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Save" />
             </MenuItem.Icon>
-            <MenuItem Header="_HTML Summary" Height="24" Click="MenuItemExportHTMLClick" ToolTip="Save Open Summary Tables As HTML">
+            <MenuItem Header="_HTML Summary" Click="MenuItemExportHTMLClick" ToolTip="Save Open Summary Tables As HTML">
               <MenuItem.Icon>
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Table" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem Header="Selected _Fight Log" Height="24" Click="MenuItemExportFightsClick" ToolTip="Save Selected Fights to log file without chat.">
+            <MenuItem Header="Selected _Fight Log" Click="MenuItemExportFightsClick" ToolTip="Save Selected Fights to log file without chat.">
               <MenuItem.Icon>
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_File" />
               </MenuItem.Icon>
             </MenuItem>            
           </MenuItem>
           <Separator/>
-          <MenuItem Header="E_xit" Height="24" Click="WindowClose" InputGestureText="Alt+F4" />
+          <MenuItem Header="E_xit" Click="WindowClose" InputGestureText="Alt+F4" />
         </MenuItem>
-        <MenuItem Header="_View" Height="30" Width="45">
-          <MenuItem x:Name="damageView" Header="_DPS" Height="24">
+        <MenuItem Header="_View" Margin="4,0,0,0">
+          <MenuItem x:Name="damageView" Header="_DPS">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="damageViewIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Meteor" />
             </MenuItem.Icon>
-            <MenuItem x:Name="damageChartMenuItem" Click="MenuItemWindowClick" Header="DPS _Chart" Height="24">
+            <MenuItem x:Name="damageChartMenuItem" Click="MenuItemWindowClick" Header="DPS _Chart">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="damageChartIcon" Tag="damageChartWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="damageSummaryMenuItem" Click="MenuItemWindowClick" Header="DPS _Summary" Height="24">
+            <MenuItem x:Name="damageSummaryMenuItem" Click="MenuItemWindowClick" Header="DPS _Summary">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="damageSummaryIcon" Tag="damageSummaryWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
-          <MenuItem x:Name="healingView" Header="_Healing" Height="24">
+          <MenuItem x:Name="healingView" Header="_Healing">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="healingViewIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Heart" />
             </MenuItem.Icon>
-            <MenuItem x:Name="healingChartMenuItem" Click="MenuItemWindowClick" Header="Healing _Chart" Height="24">
+            <MenuItem x:Name="healingChartMenuItem" Click="MenuItemWindowClick" Header="Healing _Chart">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="healingChartIcon" Tag="healingChartWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="healingSummaryMenuItem" Click="MenuItemWindowClick" Header="Healing _Summary" Height="24">
+            <MenuItem x:Name="healingSummaryMenuItem" Click="MenuItemWindowClick" Header="Healing _Summary">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="healingSummaryIcon" Tag="healingSummaryWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
-          <MenuItem x:Name="tankingView" Header="_Tanking" Height="24">
+          <MenuItem x:Name="tankingView" Header="_Tanking">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="tankingViewIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_ShieldAlt" />
             </MenuItem.Icon>
-            <MenuItem x:Name="tankingChartMenuItem" Click="MenuItemWindowClick" Header="Tanking _Chart" Height="24">
+            <MenuItem x:Name="tankingChartMenuItem" Click="MenuItemWindowClick" Header="Tanking _Chart">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="tankingChartIcon" Tag="tankingChartWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="tankingSummaryMenuItem" Click="MenuItemWindowClick" Header="Tanking _Summary" Height="24">
+            <MenuItem x:Name="tankingSummaryMenuItem" Click="MenuItemWindowClick" Header="Tanking _Summary">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="tankingSummaryIcon" Tag="tankingSummaryWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <Separator />
-          <MenuItem Header="Damage _Meter" Height="24">
+          <MenuItem Header="Damage _Meter">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_ThermometerHalf" />
             </MenuItem.Icon>
-            <MenuItem x:Name="enableDamageOverlay" Header="Enable _Meter" Click="ToggleDamageOverlayClick" Height="24">
+            <MenuItem x:Name="enableDamageOverlay" Header="Enable _Meter" Click="ToggleDamageOverlayClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="enableDamageOverlayIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem Header="_Reset Position" Click="ResetOverlayClick" Height="24">
+            <MenuItem Header="_Reset Position" Click="ResetOverlayClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_LocationArrow" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem Header="_Setup" Click="ConfigureOverlayClick" Height="24">
+            <MenuItem Header="_Setup" Click="ConfigureOverlayClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Cog" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="playerDataView" Header="_Events" Height="24">
+          <MenuItem x:Name="playerDataView" Header="_Events">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="playerDataViewIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Table" />
             </MenuItem.Icon>
-            <MenuItem x:Name="playerLootMenuItem" Header="_Looted Items" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="playerLootMenuItem" Header="_Looted Items" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="playerLootIcon" Tag="lootWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="randomsMenuItem" Header="_Random Rolls" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="randomsMenuItem" Header="_Random Rolls" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="randomsIcon" Tag="randomsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="eventMenuItem" Header="Misc _Events" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="eventMenuItem" Header="Misc _Events" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="eventIcon" Tag="specialEventsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
-          <MenuItem x:Name="triggers" Header="T_riggers" Height="24">
+          <MenuItem x:Name="triggers" Header="T_riggers">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="triggrsViewIcon" Style="{StaticResource EQIconStyle}" Icon="Regular_FileAudio" />
             </MenuItem.Icon>
-            <MenuItem x:Name="triggersMenuItem" Header="_Trigger Manager" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="triggersMenuItem" Header="_Trigger Manager" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="triggersIcon" Tag="triggersWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="triggerLogMenuItem" Header="Trigger _Log" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="triggerLogMenuItem" Header="Trigger _Log" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="triggerLogIcon" Tag="triggerLogWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="triggerTestMenuItem" Header="Trigger _Tester" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="triggerTestMenuItem" Header="Trigger _Tester" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="triggerTestIcon" Tag="triggerTestWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="searchView" Header="_Search" Height="24">
+          <MenuItem x:Name="searchView" Header="_Search">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="searchViewIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Search" />
             </MenuItem.Icon>
-            <MenuItem x:Name="eqLogMenuItem" Header="_New Log Search" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="eqLogMenuItem" Header="_New Log Search" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_FileAlt" />
               </MenuItem.Icon>
             </MenuItem>
             <Separator />
-            <MenuItem x:Name="chatMenuItem" Click="MenuItemWindowClick" Header="_Chat Archive" Height="24">
+            <MenuItem x:Name="chatMenuItem" Click="MenuItemWindowClick" Header="_Chat Archive">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="chatIcon" Tag="chatWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
-          <MenuItem x:Name="statsView" Header="S_tatistics" Height="24">
+          <MenuItem x:Name="statsView" Header="S_tatistics">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="statsViewIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Calculator" />
             </MenuItem.Icon>
-            <MenuItem x:Name="spellDamageStatsMenuItem" Header="Spell _Damage" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="spellDamageStatsMenuItem" Header="Spell _Damage" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="npcSpellDamageIcon" Tag="spellDamageStatsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="spellResistsMenuItem" Header="Spell _Resists" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="spellResistsMenuItem" Header="Spell _Resists" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="spellResistsIcon" Tag="spellResistsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="tauntStatsMenuItem" Header="_Taunt Usage" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="tauntStatsMenuItem" Header="_Taunt Usage" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="tauntStatsIcon" Tag="tauntStatsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>            
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="windowList" Header="_Windows" Height="24">
+          <MenuItem x:Name="windowList" Header="_Windows">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="windowListIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_WindowRestore" />
             </MenuItem.Icon>
             <Separator />
-            <MenuItem x:Name="npcWindowMenuItem" Header="_Fight List" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="npcWindowMenuItem" Header="_Fight List" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="npcIcon" Tag="npcWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Preview Parse" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Preview Parse" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="playerParseIcon" Tag="playerParseTextWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
             <Separator />
-            <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindowClick" Height="24">
+            <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="petMappingIcon" Tag="petMappingWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindowClick" Header="Verified P_ets" Height="24">
+            <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindowClick" Header="Verified P_ets">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="verifiedPetsIcon" Tag="verifiedPetsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindowClick" Header="Verified P_layers" Height="24">
+            <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindowClick" Header="Verified P_layers">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="verifiedPlayersIcon" Tag="verifiedPlayersWindow"  Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
         </MenuItem>
-        <MenuItem Header="_Options" Height="30" Width="65">
-          <MenuItem x:Name="enableAutoMonitor" Header="Auto _Monitor Last Log" Click="ToggleAutoMonitorClick" Height="24">
+        <MenuItem Header="_Options" Margin="4,0,0,0">
+          <MenuItem x:Name="enableAutoMonitor" Header="Auto _Monitor Last Log" Click="ToggleAutoMonitorClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableAutoMonitorIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="checkUpdates" Header="Check for _Updates at Startup" Click="ToggleCheckUpdatesClick" Height="24">
+          <MenuItem x:Name="checkUpdates" Header="Check for _Updates at Startup" Click="ToggleCheckUpdatesClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="checkUpdatesIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>          
-          <MenuItem x:Name="hideOnMinimize" Header="Hide _Window if Minimized" Click="ToggleHideOnMinimizeClick" Height="24">
+          <MenuItem x:Name="hideOnMinimize" Header="Hide _Window if Minimized" Click="ToggleHideOnMinimizeClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableHideOnMinimizeIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="enableMapSendtoEQ" Header="_Send To EQ With Ctrl+C" Click="ToggleMapSendToEQClick" Height="24">
+          <MenuItem x:Name="enableMapSendtoEQ" Header="_Send To EQ With Ctrl+C" Click="ToggleMapSendToEQClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableMapSendToEQIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="damageOptions" Header="_Damage Settings" Height="24">
+          <MenuItem x:Name="damageOptions" Header="_Damage Settings">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="damageOptionsIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Meteor" />
             </MenuItem.Icon>
-            <MenuItem x:Name="enableAssassinateDamage" Header="Include _Assassinate" Click="ToggleAssassinateDamageClick" Height="24">
+            <MenuItem x:Name="enableAssassinateDamage" Header="Include _Assassinate" Click="ToggleAssassinateDamageClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="enableAssassinateDamageIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="enableBaneDamage" Header="Include _Banes" Click="ToggleBaneDamageClick" Height="24">
+            <MenuItem x:Name="enableBaneDamage" Header="Include _Banes" Click="ToggleBaneDamageClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="enableBaneDamageIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="enableDamageShieldDamage" Header="Include _Damage Shields" Click="ToggleDamageShieldDamageClick" Height="24">
+            <MenuItem x:Name="enableDamageShieldDamage" Header="Include _Damage Shields" Click="ToggleDamageShieldDamageClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="enableDamageShieldDamageIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="enableHeahshotDamage" Header="Include _Headshots" Click="ToggleHeadshotDamageClick" Height="24">
+            <MenuItem x:Name="enableHeahshotDamage" Header="Include _Headshots" Click="ToggleHeadshotDamageClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="enableHeadshotDamageIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="enableFinishingBlowDamage" Header="Include _Finishing Blow" Click="ToggleFinishingBlowDamageClick" Height="24">
+            <MenuItem x:Name="enableFinishingBlowDamage" Header="Include _Finishing Blow" Click="ToggleFinishingBlowDamageClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="enableFinishingBlowDamageIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="enableSlayUndeadDamage" Header="Include _Slay Undead" Click="ToggleSlayUndeadDamageClick" Height="24">
+            <MenuItem x:Name="enableSlayUndeadDamage" Header="Include _Slay Undead" Click="ToggleSlayUndeadDamageClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="enableSlayUndeadDamageIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
-          <MenuItem x:Name="healingOptions" Header="_Healing Settings" Height="24">
+          <MenuItem x:Name="healingOptions" Header="_Healing Settings">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="healingOptionsIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Heart" />
             </MenuItem.Icon>
-            <MenuItem x:Name="enableAoEHealing" Header="Include _AoE Healing" Click="ToggleAoEHealingClick" Height="24">
+            <MenuItem x:Name="enableAoEHealing" Header="Include _AoE Healing" Click="ToggleAoEHealingClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="enableAoEHealingIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="enableSwarmPetHealing" Header="Include Healing _Swarm Pets" Click="ToggleHealingSwarmPetsClick" Height="24">
+            <MenuItem x:Name="enableSwarmPetHealing" Header="Include Healing _Swarm Pets" Click="ToggleHealingSwarmPetsClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="enableHealingSwarmPetsIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="themeOptions" Header="_Theme" Height="24">
-            <MenuItem x:Name="themeDark" Header="Dark" Click="ToggleMaterialDarkClick" Height="24">
-              <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="themeDarkIcon" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem x:Name="themeLight" Header="Light" Click="ToggleMaterialLightClick" Height="24">
-              <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="themeLightIcon" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
-              </MenuItem.Icon>
+          <MenuItem Header="_Look And Feel">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_PaintBrush" />
+            </MenuItem.Icon>
+            <MenuItem x:Name="appFontFamilies" Header="Font Family" />
+            <MenuItem x:Name="appFontSizes" Header="Font Size"  />
+            <MenuItem x:Name="themeOptions" Header="_Theme">
+              <MenuItem x:Name="themeDark" Header="Dark" Click="ToggleMaterialDarkClick">
+                <MenuItem.Icon>
+                  <fa:ImageAwesome x:Name="themeDarkIcon" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <MenuItem x:Name="themeLight" Header="Light" Click="ToggleMaterialLightClick">
+                <MenuItem.Icon>
+                  <fa:ImageAwesome x:Name="themeLightIcon" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+                </MenuItem.Icon>
+              </MenuItem>
             </MenuItem>
           </MenuItem>
         </MenuItem>
-        <MenuItem Header="_Tools" Height="30" Width="50">
-          <MenuItem x:Name="deleteChat" Header="_Clear Chat Archive" IsEnabled="False" Height="24">
+        <MenuItem Header="_Tools" Margin="4,0,0,0">
+          <MenuItem x:Name="deleteChat" Header="_Clear Chat Archive" IsEnabled="False">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="deleteChatIcon" Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Times" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="deleteOpenRecent" Header="_Clear Recent Log Files" Height="24" Click="MenuItemClearOpenRecentClick">
+          <MenuItem x:Name="deleteOpenRecent" Header="_Clear Recent Log Files" Click="MenuItemClearOpenRecentClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="deleteOpenRecentIcon" Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Times" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="restoreTableColumns" Header="_Restore Default Table Columns" Click="RestoreTableColumnsClick" Height="24">
+          <MenuItem x:Name="restoreTableColumns" Header="_Restore Default Table Columns" Click="RestoreTableColumnsClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="restoreTableColumnsIcon" Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Undo" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
-          <MenuItem Header="_Open Sounds Folder" Click="OpenSoundsFolderClick" Height="24">
+          <MenuItem Header="_Open Sounds Folder" Click="OpenSoundsFolderClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_FolderOpen" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem Header="View _Error Log" Click="ViewErrorLogClick" Height="24">
+          <MenuItem Header="View _Error Log" Click="ViewErrorLogClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_FileCode" />
             </MenuItem.Icon>
           </MenuItem>
         </MenuItem>
-        <MenuItem Header="_Help" Height="30" Width="50">
-          <MenuItem Header="_Report a Problem" Click="ReportProblemClick" IsEnabled="True" Height="24">
+        <MenuItem Header="_Help" Margin="4,0,0,0">
+          <MenuItem Header="_Report a Problem" Click="ReportProblemClick" IsEnabled="True">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Bug" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem Header="_View Release Notes" Click="ViewReleaseNotesClick" IsEnabled="True" Height="24">
+          <MenuItem Header="_View Release Notes" Click="ViewReleaseNotesClick" IsEnabled="True">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Regular_ListAlt" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem Header="_About" Click="AboutClick" IsEnabled="True" Height="24">
+          <MenuItem Header="_About" Click="AboutClick" IsEnabled="True">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Info" />
             </MenuItem.Icon>
           </MenuItem>
         </MenuItem>
       </Menu>
-      <TextBlock Margin="35,0,0,0" Visibility="Hidden" Text="" />
+      <TextBlock Margin="100,0,0,0" Visibility="Hidden" Text="" />
       <TextBlock x:Name="statusTriggersText" Margin="0,0,0,0" Visibility="Collapsed" VerticalAlignment="Center" Text="Triggers Active  " Foreground="{DynamicResource EQGoodForegroundBrush}"/>
       <TextBlock x:Name="statusText" Margin="0,0,4,0" VerticalAlignment="Center"/>
       <TextBlock x:Name="fileText" Margin="1,0,4,0" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"/>
@@ -375,7 +382,7 @@
   <syncfusion:ChromelessWindow.RightHeaderItemsSource>
     <listCollection:ArrayList>
       <TextBlock x:Name="errorText" Margin="0,0,8,0" VerticalAlignment="Center" FontStyle="Italic" Foreground="{DynamicResource EQWarnForegroundBrush}"/>
-      <TextBlock x:Name="versionText" VerticalAlignment="Center" Width="40" Margin="0,0,10,0" Foreground="{DynamicResource ContentForeground}" FontStyle="Italic" Text="v1.0.0.0" HorizontalAlignment="Right"/>
+      <TextBlock x:Name="versionText" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource ContentForeground}" FontStyle="Italic" Text="v1.0.0.0" HorizontalAlignment="Right"/>
     </listCollection:ArrayList>
   </syncfusion:ChromelessWindow.RightHeaderItemsSource>
   <Grid Margin="0">
@@ -397,16 +404,16 @@
             <RowDefinition Height="100*" />
           </Grid.RowDefinitions>
           <StackPanel Orientation="Horizontal" Grid.Row="0">
-            <Button x:Name="testButton" Margin="4,3,0,0" VerticalAlignment="Top" Width="88" Height="24" HorizontalAlignment="Left" Click="TestTriggersClick">Run Test</Button>
+            <Button x:Name="testButton" Margin="4,3,0,0" VerticalAlignment="Top" Height="24" Padding="8,0,8,0" HorizontalAlignment="Left" Click="TestTriggersClick">Run Test</Button>
             <CheckBox x:Name="realTime" Margin="8,1,0,0" Content="Real-Time"/>
             <TextBlock x:Name="testStatus" VerticalAlignment="Center" Visibility="Collapsed" Margin="7,1,0,0" Text="" />
           </StackPanel>
           <syncfusion:EditControl Grid.Row="1" x:Name="testTriggersBox" IsAutoLineNumberAreaWidthEnabled="False" LineNumberAreaWidth="65" EnableIntellisense="False" IsTrackChangesEnabled="False" 
-            ShowFindAndReplace="False" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" ModifiedLineIndicatorBrush="Transparent" ShowBlockIndicatorLine="False" ShowDefaultContextMenu="False" VerticalContentAlignment="Top" FontSize="14" BorderThickness="1" Text="[Fri Feb 03 20:27:50 2023] You paste lines from your log file here and click Run Test."></syncfusion:EditControl>
+            ShowFindAndReplace="False" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" ModifiedLineIndicatorBrush="Transparent" ShowBlockIndicatorLine="False" ShowDefaultContextMenu="False" VerticalContentAlignment="Top" FontSize="{DynamicResource EQTitleSize}" BorderThickness="1" Text="[Fri Feb 03 20:27:50 2023] You paste lines from your log file here and click Run Test."></syncfusion:EditControl>
         </Grid>
       </ContentControl>
       <ContentControl x:Name="npcWindow" Tag="Hide" Padding="0" Margin="0" syncfusion:DockingManager.Header="Fight List" syncfusion:DockingManager.State="Dock" 
-                      syncfusion:DockingManager.DesiredWidthInDockedMode="340" syncfusion:DockingManager.DesiredWidthInFloatingMode="340">
+                      syncfusion:DockingManager.DesiredWidthInDockedMode="360" syncfusion:DockingManager.DesiredWidthInFloatingMode="360">
         <local:FightTable />
       </ContentControl>
       <ContentControl x:Name="petMappingWindow" Tag="Hide" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="Dock" syncfusion:DockingManager.SideInDockedMode="Right" 

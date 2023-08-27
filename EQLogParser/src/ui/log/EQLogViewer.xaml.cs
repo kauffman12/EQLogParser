@@ -599,10 +599,9 @@ namespace EQLogParser
 
     private void FontSize_Changed(object sender, SelectionChangedEventArgs e)
     {
-      if (fontSize?.SelectedItem != null)
+      if (fontSize?.SelectedItem != null && logBox != null)
       {
-        logBox.FontSize = (double)fontSize.SelectedItem;
-        contextBox.FontSize = (double)fontSize.SelectedItem;
+        Application.Current.Resources["EQLogFontSize"] = (double)fontSize.SelectedItem;
         ConfigUtil.SetSetting("EQLogViewerFontSize", fontSize.SelectedItem.ToString());
       }
     }
@@ -612,8 +611,7 @@ namespace EQLogParser
       if (fontFamily?.SelectedItem != null)
       {
         var family = fontFamily.SelectedItem as FontFamily;
-        logBox.FontFamily = family;
-        contextBox.FontFamily = family;
+        Application.Current.Resources["EQLogFontFamily"] = family;
         ConfigUtil.SetSetting("EQLogViewerFontFamily", family.ToString());
       }
     }

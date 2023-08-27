@@ -23,16 +23,16 @@
         <ContextMenu>
           <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
             <MenuItem.Icon>
-              <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Copy" Foreground="#FF4F9FE2" />
+              <fa:ImageAwesome HorizontalAlignment="Center" Icon="Solid_Copy" Style="{StaticResource EQIconStyle}" />
             </MenuItem.Icon>
             <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Table" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome HorizontalAlignment="Center" Icon="Solid_Table" Style="{StaticResource EQIconStyle}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_Image" Foreground="#FF4F9FE2" />
+                <fa:ImageAwesome HorizontalAlignment="Center" Icon="Solid_Image" Style="{StaticResource EQIconStyle}" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
@@ -42,14 +42,14 @@
         <syncfusion:CategoryAxis ShowGridLines="False" EnableAutoIntervalOnZooming="False" ShowLabelBorder="False" 
           LabelPlacement="BetweenTicks" EnableScrollBar="False" IsManipulationEnabled="False">
           <syncfusion:CategoryAxis.LabelStyle>
-            <syncfusion:LabelStyle FontSize="12"/>
+            <syncfusion:LabelStyle x:Name="catLabel" />
           </syncfusion:CategoryAxis.LabelStyle>
         </syncfusion:CategoryAxis>
       </syncfusion:SfChart.PrimaryAxis>
       <syncfusion:SfChart.SecondaryAxis>
-        <syncfusion:NumericalAxis Header="Frequency" FontSize="16" RangePadding="Normal" Interval="2" StartRangeFromZero="True">
+        <syncfusion:NumericalAxis Header="Frequency" FontSize="{DynamicResource EQTitleSize}" RangePadding="Normal" Interval="2" StartRangeFromZero="True">
           <syncfusion:NumericalAxis.LabelStyle>
-            <syncfusion:LabelStyle FontSize="12"/>
+            <syncfusion:LabelStyle x:Name="numLabel" />
           </syncfusion:NumericalAxis.LabelStyle>
         </syncfusion:NumericalAxis>
       </syncfusion:SfChart.SecondaryAxis>

@@ -18,6 +18,7 @@ namespace EQLogParser
     public DeathLogViewer()
     {
       InitializeComponent();
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
     }
 
     internal void Init(CombinedStats combined, PlayerStats playerStats)
@@ -34,11 +35,14 @@ namespace EQLogParser
       deathList.ItemsSource = list;
       deathList.SelectedIndex = 0;
       CurrentPlayer = playerStats;
+
+      DataGridUtil.UpdateTableMargin(dataGrid);
       Display();
     }
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
+    private void EventsThemeChanged(object sender, string e) => DataGridUtil.RefreshTableColumns(dataGrid);
 
     private void Display()
     {
@@ -251,7 +255,8 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        dataGrid.Dispose();
+        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
+        dataGrid?.Dispose();
         disposedValue = true;
       }
     }
