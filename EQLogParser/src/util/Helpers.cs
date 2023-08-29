@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -147,6 +148,18 @@ namespace EQLogParser
       foreach (var key in dict.Keys)
       {
         Application.Current.Resources[key] = dict[key];
+      }
+    }
+
+    internal static void OpenFileWithDefault(string fileName)
+    {
+      try
+      {
+        Process.Start(new ProcessStartInfo { FileName = fileName, UseShellExecute = true });
+      }
+      catch (Exception ex)
+      {
+        LOG.Error(ex);
       }
     }
 

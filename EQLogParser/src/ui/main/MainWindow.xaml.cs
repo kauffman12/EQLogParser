@@ -7,7 +7,6 @@ using Syncfusion.Windows.Shared;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Dynamic;
 using System.Globalization;
 using System.IO;
@@ -324,6 +323,10 @@ namespace EQLogParser
     internal FightTable GetFightTable() => npcWindow?.Content as FightTable;
     private void RestoreTableColumnsClick(object sender, RoutedEventArgs e) => DataGridUtil.RestoreAllTableColumns();
     private void TabGroupCreated(object sender, TabGroupEventArgs e) => ChartTab = e.CurrentTabGroup;
+    private void AboutClick(object sender, RoutedEventArgs e) => Helpers.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/#readme");
+    private void OpenSoundsFolderClick(object sender, RoutedEventArgs e) => Helpers.OpenFileWithDefault("\"" + @"data\sounds" + "\"");
+    private void ReportProblemClick(object sender, RoutedEventArgs e) => Helpers.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
+    private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => Helpers.OpenFileWithDefault(@"data\releasenotes.rtf");
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
@@ -511,50 +514,11 @@ namespace EQLogParser
 
     private void ViewErrorLogClick(object sender, RoutedEventArgs e)
     {
-      using (var fileopener = new Process())
+      var appender = LOG.Logger.Repository.GetAppenders().FirstOrDefault(test => "file".Equals(test.Name, StringComparison.OrdinalIgnoreCase));
+      if (appender != null)
       {
-        var appender = LOG.Logger.Repository.GetAppenders().FirstOrDefault(test => "file".Equals(test.Name, StringComparison.OrdinalIgnoreCase));
-        if (appender != null)
-        {
-          fileopener.StartInfo.FileName = "explorer";
-          fileopener.StartInfo.Arguments = "\"" + (appender as log4net.Appender.FileAppender).File + "\"";
-          fileopener.Start();
-        }
+        Helpers.OpenFileWithDefault("\"" + (appender as log4net.Appender.FileAppender).File + "\"");
       }
-    }
-
-    private void OpenSoundsFolderClick(object sender, RoutedEventArgs e)
-    {
-      using (var fileopener = new Process())
-      {
-        fileopener.StartInfo.FileName = "explorer";
-        fileopener.StartInfo.Arguments = "\"" + @"data\sounds" + "\"";
-        fileopener.Start();
-      }
-    }
-
-    private void ReportProblemClick(object sender, RoutedEventArgs e)
-    {
-      var uri = "http://github.com/kauffman12/EQLogParser/issues";
-      var psi = new System.Diagnostics.ProcessStartInfo();
-      psi.UseShellExecute = true;
-      psi.FileName = uri;
-      System.Diagnostics.Process.Start(psi);
-    }
-
-    private void AboutClick(object sender, RoutedEventArgs e)
-    {
-      var uri = "http://github.com/kauffman12/EQLogParser/#readme";
-      var psi = new System.Diagnostics.ProcessStartInfo();
-      psi.UseShellExecute = true;
-      psi.FileName = uri;
-      System.Diagnostics.Process.Start(psi);
-    }
-
-    private void ViewReleaseNotesClick(object sender, RoutedEventArgs e)
-    {
-      var notesWindow = new DocumentViewer(@"data\releasenotes.rtf");
-      notesWindow.Show();
     }
 
     private void ToggleHideOnMinimizeClick(object sender, RoutedEventArgs e)
