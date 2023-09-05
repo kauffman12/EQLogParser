@@ -3,32 +3,52 @@
 					>
 
 <Color x:Key="PrimaryBackground.Color">#FFE1E1E1</Color>
-<Color x:Key="ContentBackgroundAlt2.Color">#FF1F1F1F</Color>
+<Color x:Key="BorderGradient.Color">#71000000</Color>
+<Color x:Key="Border.Color">#FF666666</Color>
+<Color x:Key="BorderAlt2Gradient.Color">#FF005FB8</Color>
 <Color x:Key="BorderAlt2.Color">#FF8C8C8C</Color>
+<Color x:Key="ContentBackgroundAlt2.Color">#FF1F1F1F</Color>
+<Color x:Key="BorderAlt1.Color">#71000000</Color>
 <Color x:Key="ErrorBackground.Color">#FFF3584D</Color>
-<Color x:Key="SuccessForeground.Color">#FF4BAF4F</Color>
+<Color x:Key="SuccessForeground.Color">#FF4CAF4F</Color>
 <Color x:Key="WarningForeground.Color">#FFFF8D4D</Color>
 <Color x:Key="LinkForeground.Color">#FF0279FF</Color>
 <Color x:Key="ContentForeground.Color">#DDFFFFFF</Color>
 <Color x:Key="ContentBackground.Color">#FF121212</Color>
 <Color x:Key="PrimaryForeground.Color">#FF000000</Color>
-<Color x:Key="White.Color">#FFFFFFFF</Color>
-<Color x:Key="PrimaryColorDark1.Color">#FF0069BA</Color>
+<Color x:Key="PrimaryBackgroundOpacity2.Color">#4CE1E1E1</Color>
+<Color x:Key="BorderAlt4.Color">#37000000</Color>
 <Color x:Key="BorderAlt.Color">#FF373737</Color>
-<Color x:Key="PrimaryColorLight1.Color">#FF0793FF</Color>
+<Color x:Key="PrimaryBackgroundOpacity1.Color">#E5005FB8</Color>
+<Color x:Key="PrimaryColorLight1.Color">#FF0079EB</Color>
+<Color x:Key="SecondaryBorderGradient.Color">#29000000</Color>
+<Color x:Key="SecondaryBorder.Color">#0E000000</Color>
+<Color x:Key="SecondaryBorderHoveredGradient.Color">#29000000</Color>
+<Color x:Key="SecondaryBorderHovered.Color">#0E000000</Color>
 <Color x:Key="IconColor.Color">#B2FFFFFF</Color>
-<Color x:Key="ContentBackgroundHovered.Color">#19000000</Color>
-<Color x:Key="SystemAccentColorDark3.Color">#FF003E6E</Color>
-<Color x:Key="SecondaryBackgroundHovered.Color">#19000000</Color>
-<Color x:Key="SecondaryBackgroundSelected.Color">#66000000</Color>
-<Color x:Key="IconColorDisabled.Color">#66000000</Color>
-<Color x:Key="IconColorHovered.Color">#FF000000</Color>
-<Color x:Key="ContentForegroundAlt1.Color">#CC000000</Color>
-<Color x:Key="ContentBackgroundSelected.Color">#660078D4</Color>
+<Color x:Key="ContentBackgroundHovered.Color">#09000000</Color>
+<Color x:Key="PrimaryColorLight2.Color">#FF1F92FF</Color>
+<Color x:Key="SecondaryBackgroundHovered.Color">#FFF9F9F9</Color>
+<Color x:Key="SecondaryBackgroundSelected.Color">#FFF9F9F9</Color>
+<Color x:Key="PrimaryButtonBorderGradient.Color">#FF184275</Color>
+<Color x:Key="PrimaryButtonBorder.Color">#FF2D6BB8</Color>
+<Color x:Key="PrimaryButtonBorderHoveredGradient.Color">#FF295282</Color>
+<Color x:Key="PrimaryButtonBorderHovered.Color">#FF3E79BD</Color>
+<Color x:Key="BorderAlt5Gradient.Color">#29000000</Color>
+<Color x:Key="BorderAlt5.Color">#0E000000</Color>
+<Color x:Key="IconColorDisabled.Color">#5C000000</Color>
+<Color x:Key="IconColorHovered.Color">#E4000000</Color>
+<Color x:Key="IconColorSelected.Color">#9A000000</Color>
+<Color x:Key="ContentBackgroundSelected.Color">#09000000</Color>
 <Color x:Key="Series1.Color">#FF632AD8</Color>
 <Color x:Key="Series5.Color">#FFDC3913</Color>
 <Color x:Key="Series2.Color">#FF00ABB8</Color>
 <Color x:Key="Series4.Color">#FF9C35CA</Color>
+<Color x:Key="Series3.Color">#FF2C69DC</Color>
+<Color x:Key="PrimaryColorDark1.Color">#FF00519E</Color>
+<Color x:Key="White.Color">#FFFFFFFF</Color>
+<Color x:Key="SystemAccentColorDark3.Color">#FF002A51</Color>
+<Color x:Key="ContentForegroundAlt1.Color">#9A000000</Color>
 <Color x:Key="Series7.Color">#FFFF9902</Color>
 <Color x:Key="Series6.Color">#FF129618</Color>
 <Color x:Key="IconDisabledColor.Color">#42FFFFFF</Color>
@@ -37,9 +57,7 @@
 <Color x:Key="PrimaryLight.Color">#FFCFCFCF</Color>
 <Color x:Key="PrimaryDark.Color">#FFC2C2C2</Color>
 <Color x:Key="BorderDark.Color">#FF4B4B4B</Color>
-<Color x:Key="Border.Color">#FF666666</Color>
 <Color x:Key="PopupBackground.Color">#FF252525</Color>
-<Color x:Key="Series3.Color">#FF2C69DC</Color>
 <Color x:Key="BadgeBackground.Color">#FF666666</Color>
 <Color x:Key="ContentBackgroundAlt5.Color">#FF404040</Color>
 <Color x:Key="ErrorForeground.Color">#FFF3584D</Color>
@@ -48,15 +66,11 @@
 <Color x:Key="PrimaryDarken.Color">#FFCFCFCF</Color>
 <Color x:Key="PrimaryLightest.Color">#FFBDBDBD</Color>
 <Color x:Key="ContentBackgroundAlt4.Color">#FF313131</Color>
-<Color x:Key="PrimaryColorDark2.Color">#FF004C87</Color>
-<Color x:Key="BorderAlt1.Color">#66000000</Color>
-<Color x:Key="PrimaryColorLight2.Color">#FF219EFF</Color>
-<Color x:Key="ContentBackgroundAlt3.Color">#FF888888</Color>
+<Color x:Key="PrimaryColorDark2.Color">#FF00376B</Color>
+<Color x:Key="ContentBackgroundAlt3.Color">#FF292929</Color>
 <Color x:Key="Overlay.Color">#26FFFFFF</Color>
-<Color x:Key="IconColorSelected.Color">#FF000000</Color>
-<Color x:Key="BorderAlt3.Color">#FF000000</Color>
-<Color x:Key="PrimaryBackgroundOpacity1.Color">#660078D4</Color>
-<Color x:Key="HoveredForeground.Color">#FF000000</Color>
+<Color x:Key="BorderAlt3.Color">#E4000000</Color>
+<Color x:Key="HoveredForeground.Color">#E4000000</Color>
 <SolidColorBrush x:Key="White" Color="#FFFFFFFF" />
 <SolidColorBrush x:Key="Gray50" Color="#FF666666" />
 <SolidColorBrush x:Key="Gray100" Color="#FF555555" />
@@ -78,7 +92,7 @@
 <SolidColorBrush x:Key="ContentBackgroundAlt" Color="#FF1A1A1A" />
 <SolidColorBrush x:Key="ContentBackgroundAlt1" Color="#FF1A1A1A" />
 <SolidColorBrush x:Key="ContentBackgroundAlt2" Color="#FF1F1F1F" />
-<SolidColorBrush x:Key="ContentBackgroundAlt3" Color="#FF888888" />
+<SolidColorBrush x:Key="ContentBackgroundAlt3" Color="#FF292929" />
 <SolidColorBrush x:Key="ContentBackgroundAlt4" Color="#FF313131" />
 <SolidColorBrush x:Key="ContentBackgroundAlt5" Color="#FF404040" />
 <SolidColorBrush x:Key="ContentBackgroundHover" Color="#FF303030" />
@@ -121,7 +135,7 @@
 <SolidColorBrush x:Key="LinkForeground" Color="#FF0279FF" />
 <SolidColorBrush x:Key="LinkForegroundHover" Color="#FF0060CE" />
 <SolidColorBrush x:Key="ErrorForeground" Color="#FFF3584D" />
-<SolidColorBrush x:Key="SuccessForeground" Color="#FF4BAF4F" />
+<SolidColorBrush x:Key="SuccessForeground" Color="#FF4CAF4F" />
 <SolidColorBrush x:Key="WarningForeground" Color="#FFFF8D4D" />
 <SolidColorBrush x:Key="TooltipBackground" Color="#FFC0C0C0" />
 <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FF121212" />

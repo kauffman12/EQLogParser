@@ -1,4 +1,4 @@
-<ResourceDictionary 
+<ResourceDictionary  
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="clr-namespace:Syncfusion.Windows.Controls.Notification;assembly=Syncfusion.SfHubTile.WPF"
@@ -71,20 +71,24 @@
                         <Rectangle
                             x:Name="PointerOveRect"
                             Margin="-2"
+                            RadiusX="0"
+                            RadiusY="0"
                             Fill="Transparent" />
                         <Border
                             x:Name="PART_Border"
                             Margin="{TemplateBinding Padding}"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
+                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                             BorderThickness="{TemplateBinding BorderThickness}">
                             <Grid Margin="{TemplateBinding Padding}">
-                                <ContentPresenter
+                                <Grid ClipToBounds="false">
+                                    <Border x:Name="MaskBorder" Background="{TemplateBinding Background}" CornerRadius="{Binding ElementName=PART_Border,Path=CornerRadius}"/>
+                                    <ContentPresenter
                                     x:Name="PART_Content"
                                     HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
                                     VerticalAlignment="{TemplateBinding VerticalAlignment}" />
-
-                                <ContentPresenter Content="{TemplateBinding Title}" Style="{TemplateBinding TitleStyle}">
+                                    <ContentPresenter Content="{TemplateBinding Title}" Style="{TemplateBinding TitleStyle}">
                                     <ContentPresenter.Resources>
                                         <Style BasedOn="{x:Null}" TargetType="TextBlock" />
                                     </ContentPresenter.Resources>
@@ -104,6 +108,10 @@
                                     VerticalAlignment="Center"
                                     Visibility="Collapsed">
                                     <Image Source="{TemplateBinding ImageSource}" Stretch="None" />
+                                </Grid>
+                                    <Grid.OpacityMask>
+                                        <VisualBrush Visual="{Binding Source={x:Reference MaskBorder}}"/>
+                                    </Grid.OpacityMask>
                                 </Grid>
                             </Grid>
                         </Border>

@@ -17,6 +17,7 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphDropdownExpander.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphEditableDropdownExpander.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphButton.xaml" />
+
     </ResourceDictionary.MergedDictionaries>
 
     <BooleanToVisibilityConverter x:Key="BooleanVisibilityConverter" />
@@ -24,11 +25,13 @@
     <Thickness x:Key="DropDownButtonMargin">1,1,1,2</Thickness>
     <Thickness x:Key="DeleteButtonMargin">1,1,0,1</Thickness>
     <Thickness x:Key="ToggleButtonMargin">0,1,1,1</Thickness>
+    <Thickness x:Key="Windows11TextMargin">10,0,0,0</Thickness>
     <Thickness x:Key="TextMargin">4,0,0,0</Thickness>
     <Thickness x:Key="WaterMarkMargin">2,0,0,0</Thickness>
     <Thickness x:Key="WaterMarkFluentMargin">4,0,0,2</Thickness>
     <Thickness x:Key="TokenBorderMargin">2,0,2,4</Thickness>
     <Thickness x:Key="SystemThemeTokenBorderMargin">2,3,2,2</Thickness>
+    <Thickness x:Key="TokenCloseButtonMarginWindows11">4,0,1,0</Thickness>
     <Thickness x:Key="FluentThemeTokenBorderMargin">2,3,2,3</Thickness>
     <Thickness x:Key="TokenCloseButtonMarginCommon">4,0,2,0</Thickness>
     <Thickness x:Key="TokenCloseButtonMarginFluent">4,0,0,0</Thickness>
@@ -85,6 +88,8 @@
             <Button
                 Name="deleteButton"
                 Grid.Column="1"
+                
+                
                 Margin="1"
                 Padding="5,0,5,0"
                 Background="Transparent"
@@ -108,6 +113,7 @@
                 Name="toggleButton"
                 Grid.Column="2"
                 Width="18"
+                
                 HorizontalAlignment="Right"
                 HorizontalContentAlignment="Center"
                 IsChecked="{Binding Path=IsSuggestionOpen, Mode=TwoWay, RelativeSource={RelativeSource AncestorType={x:Type Input:SfTextBoxExt}}}"
@@ -128,11 +134,15 @@
                 SnapsToDevicePixels="True">
                 <Border
                     x:Name="DropDownBorder"
-                    Margin="8,0,8,8"
                     BorderBrush="{StaticResource BorderAlt}"
                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
-                    Effect="{StaticResource Default.ShadowDepth3}"
-                    CornerRadius="0">
+                    Effect="{StaticResource Default.ShadowDepth3}" >
+                    <Border.CornerRadius>
+                        <CornerRadius>0</CornerRadius>
+                    </Border.CornerRadius>
+                    <Border.Margin>
+                        <Thickness>8,0,8,8</Thickness>
+                    </Border.Margin>
                     <Grid>
                         <Input:SuggestionBox
                             x:Name="PART_SuggestionBox"
@@ -142,6 +152,9 @@
                             BorderThickness="0"
                             ItemsSource="{TemplateBinding Suggestions}"
                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <Input:SuggestionBox.Padding>
+                                <Thickness>0</Thickness>
+                            </Input:SuggestionBox.Padding>
                             <Input:SuggestionBox.Resources>
                                 <Style TargetType="Border">
                                     <Setter Property="CornerRadius" Value="0"/>
@@ -171,6 +184,11 @@
             <Trigger Property="IsSuggestionOpen" Value="True">
                 <Setter Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
                 <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}" />
+                <Setter TargetName="Border" Property="CornerRadius">
+                    <Setter.Value>
+                        <CornerRadius>0</CornerRadius>
+                    </Setter.Value>
+                </Setter>
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Background" Value="{StaticResource ContentBackground}" />
@@ -245,7 +263,6 @@
                                     IsHitTestVisible="False"
                                     IsTabStop="False"
                                     Visibility="{TemplateBinding Visibility}" />
-
                             </Grid>
                         </WrapPanel>
                     </ScrollViewer>
@@ -253,12 +270,14 @@
             </Border>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button Name="deleteButton" 
+                        
+                        
                         Padding="5,0,5,0" 
                         Margin="1"
                         Visibility="Collapsed" 
                         Background="Transparent" 
-                    BorderBrush="Transparent"
-                    Style="{StaticResource WPFGlyphButtonStyle}"
+                        BorderBrush="Transparent"
+                        Style="{StaticResource WPFGlyphButtonStyle}"
                         BorderThickness="0"
                         IsTabStop="False">
                     <Path x:Name="ClearButtonContent"
@@ -267,13 +286,14 @@
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Data="M1.4139423,0 L7.0029922,5.5845888 12.592018,0 14.006015,1.4149939 8.4180527,6.9985202 14.006,12.582007 12.591996,13.997001 7.0030056,8.4124444 1.4140122,13.997001 1.5026823E-05,12.582007 5.5879484,6.9985092 0,1.4149939 z"
-                          Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
+                        Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                         Stretch="Fill"
                         UseLayoutRounding="True" />
                 </Button>
                 <ToggleButton
                     Name="toggleButton"
                     Width="18"
+                    
                     HorizontalAlignment="Right"
                     HorizontalContentAlignment="Center"
                     IsChecked="{Binding Path=IsSuggestionOpen, Mode=TwoWay, RelativeSource={RelativeSource AncestorType={x:Type Input:SfTextBoxExt}}}"
@@ -295,11 +315,15 @@
                 SnapsToDevicePixels="True">
                 <Border
                     x:Name="DropDownBorder"
-                    Margin="8,0,8,8"
                     BorderBrush="{StaticResource BorderAlt}"
                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
-                    Effect="{StaticResource Default.ShadowDepth3}"
-                    CornerRadius="0">
+                    Effect="{StaticResource Default.ShadowDepth3}" >
+                    <Border.CornerRadius>
+                    	<CornerRadius>0</CornerRadius>
+                    </Border.CornerRadius>
+                    <Border.Margin>
+                        <Thickness>8,0,8,8</Thickness>
+                    </Border.Margin>
                     <Grid>
                         <Input:SuggestionBox
                             x:Name="PART_SuggestionBox"
@@ -309,6 +333,9 @@
                             BorderThickness="0"
                             ItemsSource="{TemplateBinding Suggestions}"
                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <Input:SuggestionBox.Padding>
+                                <Thickness>0</Thickness>
+                            </Input:SuggestionBox.Padding>
                             <Input:SuggestionBox.Resources>
                                 <Style TargetType="Border">
                                     <Setter Property="CornerRadius" Value="0"/>
@@ -340,16 +367,22 @@
                 <Setter Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
                 <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
                 <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}" />
-                <Setter TargetName="toggleButton" Property="Margin" Value="{StaticResource DropDownButtonMargin}" />
                 <Setter TargetName="deleteButton" Property="Margin" Value="{StaticResource DropDownButtonMargin}" />
+                <Setter TargetName="toggleButton" Property="Margin" Value="{StaticResource DropDownButtonMargin}"/>
             </Trigger>
             <Trigger Property="IsKeyboardFocused" Value="true">
-                <Setter Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
-                <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}" />
+                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
+                <Setter TargetName="Border" Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}" />
             </Trigger>
+            
             <Trigger Property="IsSuggestionOpen" Value="True">
                 <Setter Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
                 <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}" />
+                <Setter TargetName="Border" Property="CornerRadius">
+                    <Setter.Value>
+                        <CornerRadius>0</CornerRadius>
+                    </Setter.Value>
+                </Setter>
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Background" Value="{StaticResource ContentBackground}" />
@@ -402,11 +435,14 @@
                 <ControlTemplate TargetType="Input:TokenItem">
                     <Border
                         x:Name="TokenBorder"
-                        Height="18" Margin="4,2,2,2"          
+                        Height="18"      
                         Background="{StaticResource ContentBackgroundAlt3}"
                         BorderBrush="{StaticResource ContentBackgroundAlt3}"
                         CornerRadius="8"
                         BorderThickness="0">
+                        <Border.Margin>
+                            <Thickness>4,2,2,2</Thickness>
+                        </Border.Margin>
                         <Grid x:Name="TokenGrid" Margin="1">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="auto" />
@@ -423,11 +459,11 @@
                                 x:Name="TokenTextBlock"
                                 Grid.Column="1"
                                 Height="18"
-                                Margin="4,1,0,0"
                                 Padding="{StaticResource TokenTextBlockPadding}"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
                                 Foreground="{StaticResource ContentForeground}"
+                                Margin="4 1 0 1"
                                 Text="{TemplateBinding Text}" />
                             <Button
                                 x:Name="TokenCloseButton"

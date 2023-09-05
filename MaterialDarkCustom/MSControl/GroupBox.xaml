@@ -1,4 +1,5 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                     
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                      xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
                     xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
@@ -43,13 +44,13 @@
                                 Grid.ColumnSpan="4" 
                                 Grid.Row="1" 
                                 Grid.RowSpan="3"
-                                CornerRadius="4" />
+                                 CornerRadius="4" />
                         <Border BorderBrush="Transparent" 
                                 BorderThickness="{TemplateBinding BorderThickness}" 
                                 Grid.ColumnSpan="4" 
                                 Grid.Row="1"
                                 Grid.RowSpan="3"
-                                CornerRadius="4" >
+                                 CornerRadius="4" >
                             <Border.OpacityMask>
                                 <MultiBinding ConverterParameter="7" Converter="{StaticResource BorderGapMaskConverter}">
                                     <Binding ElementName="Header" Path="ActualWidth"/>
@@ -76,9 +77,12 @@
                         </Border>
                         <ContentPresenter Grid.ColumnSpan="2" 
                                           Grid.Column="1" 
-                                          Grid.Row="2" 
-                                          Margin="{TemplateBinding Padding}" 
-                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                          Grid.Row="2"
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                            <ContentPresenter.Margin>
+                                <Thickness>3,1,3,0</Thickness>
+                            </ContentPresenter.Margin>
+                        </ContentPresenter>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">

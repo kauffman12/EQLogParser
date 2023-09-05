@@ -772,6 +772,7 @@
                                         <Border
                                             Name="border"
                                             MinHeight="19"
+                                            
                                             Margin="0,1,0,1"
                                             Padding="{TemplateBinding Padding}"
                                             Background="{TemplateBinding Panel.Background}"
@@ -793,7 +794,8 @@
                                                     ContentSource="Header"
                                                     ContentTemplate="{TemplateBinding tools_controls:TreeViewItemAdv.HeaderTemplate}"
                                                     ContentTemplateSelector="{TemplateBinding tools_controls:TreeViewItemAdv.HeaderTemplateSelector}"
-                                                    Visibility="Visible" />
+                                                    Visibility="Visible">
+                                                </ContentPresenter>
                                                 <ContentPresenter
                                                     x:Name="LoadingContentPresenter"
                                                     HorizontalAlignment="Left"
@@ -969,9 +971,10 @@
                             <Setter TargetName="border" Property="TextElement.Foreground" Value="{StaticResource ContentForeground}" />
                         </MultiTrigger>
                         <Trigger Property="tools_controls:TreeViewItemAdv.IsDraging" Value="True">
-						     <Setter TargetName="border" Property="Panel.Background" Value="{StaticResource ContentBackgroundHover}" /> 
+                            <Setter TargetName="border" Property="Panel.Background" Value="{StaticResource ContentBackgroundHover}" />
                             <Setter TargetName="border" Property="TextElement.Foreground" Value="{Binding Path=MouseOverForeground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TreeViewAdv}}}" />
                         </Trigger>
+                       
                         <Trigger Property="UIElement.IsEnabled" Value="False">
                             <Setter TargetName="border" Property="TextElement.Background" Value="Transparent" />
                             <Setter TargetName="border" Property="TextElement.Foreground" Value="{StaticResource DisabledForeground}" />

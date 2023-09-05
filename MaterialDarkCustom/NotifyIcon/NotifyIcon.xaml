@@ -15,6 +15,10 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphButton.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
+    <SolidColorBrush x:Key="NotifyIcon..CloseButton.Pressed.Border" Color="#c8c8c8" />
+    
+    <DropShadowEffect x:Key="NotifyIcon.Shadow.Effect" BlurRadius="16" ShadowDepth="8" Direction="270" Color="{StaticResource DropShadow.Static.Background}" Opacity=".62" RenderingBias="Performance" />
+
     <local:BalloonTipHeaderTemplateSelector x:Key="SyncfusionBalloonTipHeaderTemplateSelector" />
     <local:BalloonTipContentTemplateSelector x:Key="SyncfusionBalloonTipContentTemplateSelector" />
     <converter:BrushToColorConverter x:Key="BrushToColorConverter" />
@@ -62,30 +66,39 @@
                     Height="16"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Center"
-                    Data="M5.9120088,4.5019755 L7.9994998,6.586482 10.086991,4.5019755 11.49999,5.9169765 9.4145126,7.9994717 11.500003,10.08198 10.087005,11.496981 7.9995003,9.4124613 5.9119954,11.496981 4.4989967,10.08198 6.5844874,7.9994712 4.4990106,5.9169765 z M8,2 C4.6910095,2 2,4.690979 2,8 2,11.309021 4.6910095,14 8,14 11.30899,14 14,11.309021 14,8 14,4.690979 11.30899,2 8,2 z M8,0 C12.411011,0 16,3.5889893 16,8 16,12.411011 12.411011,16 8,16 3.5889893,16 0,12.411011 0,8 0,3.5889893 3.5889893,0 8,0 z"
                     Fill="{StaticResource ErrorForeground}"
                     Stretch="Fill"
-                    Visibility="Collapsed" />
+                    Visibility="Collapsed">
+                <Path.Data>
+                    <PathGeometry>M5.9120088,4.5019755 L7.9994998,6.586482 10.086991,4.5019755 11.49999,5.9169765 9.4145126,7.9994717 11.500003,10.08198 10.087005,11.496981 7.9995003,9.4124613 5.9119954,11.496981 4.4989967,10.08198 6.5844874,7.9994712 4.4990106,5.9169765 z M8,2 C4.6910095,2 2,4.690979 2,8 2,11.309021 4.6910095,14 8,14 11.30899,14 14,11.309021 14,8 14,4.690979 11.30899,2 8,2 z M8,0 C12.411011,0 16,3.5889893 16,8 16,12.411011 12.411011,16 8,16 3.5889893,16 0,12.411011 0,8 0,3.5889893 3.5889893,0 8,0 z</PathGeometry>
+                </Path.Data>
+            </Path>
             <Path
                     x:Name="Warning"
                     Width="16"
                     Height="14"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Center"
-                    Data="M7,10 L7,12 9,12 9,10 z M7,5 L7,9 9,9 9,5 z M8,0 L16,14 0,14 z"
                     Fill="{StaticResource WarningForeground}"
                     Stretch="Fill"
-                    Visibility="Collapsed" />
+                    Visibility="Collapsed" >
+                <Path.Data>
+                    <PathGeometry>M7,10 L7,12 9,12 9,10 z M7,5 L7,9 9,9 9,5 z M8,0 L16,14 0,14 z</PathGeometry>
+                </Path.Data>
+            </Path>
             <Path
                     x:Name="Info_Line"
                     Width="16"
                     Height="16"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Center"
-                    Data="M7,7 L9,7 9,12 7,12 z M7,4 L9,4 9,6 7,6 z M8,2 C4.6910019,2 2,4.6910019 2,8 2,11.308998 4.6910019,14 8,14 11.308998,14 14,11.308998 14,8 14,4.6910019 11.308998,2 8,2 z M8,0 C12.411003,0 16,3.5890007 16,8 16,12.410999 12.411003,16 8,16 3.5889969,16 0,12.410999 0,8 0,3.5890007 3.5889969,0 8,0 z"
                     Fill="{StaticResource ContentForeground}"
                     Stretch="Fill"
-                    Visibility="Collapsed" />
+                    Visibility="Collapsed" >
+                <Path.Data>
+                    <PathGeometry>M7,7 L9,7 9,12 7,12 z M7,4 L9,4 9,6 7,6 z M8,2 C4.6910019,2 2,4.6910019 2,8 2,11.308998 4.6910019,14 8,14 11.308998,14 14,11.308998 14,8 14,4.6910019 11.308998,2 8,2 z M8,0 C12.411003,0 16,3.5890007 16,8 16,12.410999 12.411003,16 8,16 3.5889969,16 0,12.410999 0,8 0,3.5890007 3.5889969,0 8,0 z</PathGeometry>
+                </Path.Data>
+            </Path>
             <Image
                     Name="PART_ContentImage"
                     Source="{x:Null}"
@@ -123,17 +136,50 @@
     <Style x:Key="SyncfusionBallonTipHeaderCloseButtonStyle"
         BasedOn="{StaticResource WPFGlyphButtonStyle}"
         TargetType="{x:Type Button}">
-        <Setter Property="Content">
+        <Setter Property="Template">
             <Setter.Value>
-                <Path
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border
+                        x:Name="PART_Border"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        Background="{TemplateBinding Background}"
+                        Effect="{TemplateBinding Effect}"
+                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                        <Path Name="BallonTipHeaderCloseButtonPath"
                     Width="10"
                     Height="10"
                     Margin="3"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Data="M1,1 L9,9 M1,9 L9,1"
-                    Stroke="{Binding RelativeSource={RelativeSource AncestorType={x:Type Button}}, Path=Foreground, TargetNullValue=Black}"
-                    StrokeThickness="1" />
+                    Stroke="{StaticResource IconColor}"
+                    StrokeThickness="1" >
+                            <Path.Data>
+                                <PathGeometry>M1,1 L9,9 M1,9 L9,1</PathGeometry>
+                            </Path.Data>
+                        </Path>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver"  Value="True">
+                            <Setter TargetName="BallonTipHeaderCloseButtonPath" Property="Stroke" Value="{StaticResource IconColor}"/>
+                            <Setter TargetName="PART_Border" Property="Background"  Value="{StaticResource SecondaryHoverBackground}"/>
+                            <Setter TargetName="PART_Border" Property="BorderBrush"  Value="{StaticResource SecondaryHoverBackground}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="BallonTipHeaderCloseButtonPath" Property="Stroke" Value="{StaticResource IconColor}"/>
+                            <Setter TargetName="PART_Border" Property="Background" Value="{StaticResource SecondarySelectionBackground}"/>
+                            <Setter TargetName="PART_Border" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="BallonTipHeaderCloseButtonPath" Property="Stroke" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter TargetName="PART_Border" Property="Background" Value="Transparent"/>
+                            <Setter TargetName="PART_Border" Property="BorderBrush" Value="Transparent"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
             </Setter.Value>
         </Setter>
         <Style.Triggers>
@@ -243,12 +289,15 @@
                                                              Converter={StaticResource HeaderVisibilityToVisibilityConverter}}" />
                             <Border
                                 Name="PART_ContentBorder"
-                                Margin="0,2,0,4"
                                 Padding="12,0,12,0"
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"
+                                CornerRadius="{TemplateBinding Border.CornerRadius}"
                                 Background="{Binding Path=Background, RelativeSource={RelativeSource TemplatedParent}}"
                                 TextBlock.Foreground="{Binding Path=Foreground, RelativeSource={RelativeSource TemplatedParent}}">
+                                <Border.Margin>
+                                    <Thickness>0,2,0,4</Thickness>
+                                </Border.Margin>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
@@ -376,6 +425,7 @@
         <Setter Property="ToolTipTemplate" Value="{StaticResource SyncfusionNotifyIconToolTipContentTemplate}" />
         <Setter Property="HeaderTemplateSelector" Value="{StaticResource SyncfusionBalloonTipHeaderTemplateSelector}" />
         <Setter Property="ContentTemplateSelector" Value="{StaticResource SyncfusionBalloonTipContentTemplateSelector}" />
+        <Setter Property="BalloonTipShape" Value="Balloon"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type local:NotifyIcon}">

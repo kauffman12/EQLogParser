@@ -127,9 +127,10 @@
     <DataTemplate x:Key="ToolTipTemplate">
         <Border Background="{StaticResource TooltipBackground}"
                 BorderBrush="{StaticResource TooltipBackground}"
-                BorderThickness="1"
+                
                 CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
-                Padding="7">
+                Padding="7"
+                Effect="{StaticResource Default.ShadowDepth3}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition />

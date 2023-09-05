@@ -13,12 +13,105 @@
     </ResourceDictionary.MergedDictionaries>
 
     <local:BooleanToOpacityConverter x:Key="BooleanToOpacityConvert" />
+    <SolidColorBrush x:Key="TabNavigationItem.Header.Static.Background" Color="#BDBDBD" />
 
-    <Style x:Key="SyncfusionTabNavigationButtonStyle" BasedOn="{StaticResource WPFRoundedButtonStyle}" TargetType="{x:Type Button}" >
+    <Style x:Key="SyncfusionTabNavigationRoundButtonStyle" BasedOn="{StaticResource WPFRoundedButtonStyle}" TargetType="{x:Type Button}" >
         <Setter Property="Width" Value="24"/>
         <Setter Property="Height" Value="24"/>
     </Style>
-    
+
+    <Style x:Key="SyncfusionTabNavigationFlatButtonStyle"
+           TargetType="{x:Type Button}">
+        <Setter Property="FocusVisualStyle" 
+                Value="{x:Null}"/>
+        <Setter Property="Background" 
+                Value="{StaticResource SecondaryBackground}"/>
+        <Setter Property="BorderThickness" 
+                Value="{StaticResource MaterialDarkCustom.BorderThickness}"/>
+        <Setter Property="BorderBrush"
+                Value="{StaticResource SecondaryBackground}"/>
+        <Setter Property="Foreground"
+                Value="{StaticResource SecondaryForeground}"/>
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"/>
+        <Setter Property="FontWeight"
+                Value="{StaticResource MaterialDarkCustom.FontWeightMedium}"/>
+        <Setter Property="HorizontalContentAlignment" 
+                Value="Center"/>
+        <Setter Property="VerticalContentAlignment" 
+                Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Grid>
+                        <Border CornerRadius="3">
+                        <Rectangle
+                            x:Name="rectangle"
+                            Height="30"
+                            Width="14"
+                            Effect="{StaticResource Default.ShadowDepth1}"
+                            Fill="{TemplateBinding Background}"
+                            Stroke="{TemplateBinding BorderBrush}"
+                            StrokeThickness="{TemplateBinding BorderThickness}"                                 
+                            />
+                        </Border>
+                        <ContentPresenter x:Name="contentPresenter" 
+                                          Focusable="False"
+                                          Margin="{TemplateBinding Padding}" 
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" 
+                                          RecognizesAccessKey="True">
+                            <ContentPresenter.Resources>
+                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                        
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+                        </Trigger>
+                        <Trigger Property="IsDefaulted" Value="true">
+                            <Setter Property="Stroke" TargetName="rectangle" Value="{StaticResource SecondaryHoverBackground}"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsFocused" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter Property="Fill" TargetName="rectangle" Value="{StaticResource SecondaryHoverBackground}"/>
+                            <Setter Property="Stroke" TargetName="rectangle" Value="{StaticResource SecondaryHoverBackground}"/>
+                            <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
+                        </MultiTrigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Fill" TargetName="rectangle" Value="{StaticResource SecondaryHoverBackground}"/>
+                            <Setter Property="Stroke" TargetName="rectangle" Value="{StaticResource SecondaryHoverBackground}"/>
+                            <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Fill" TargetName="rectangle" Value="{StaticResource SecondarySelectionBackground}"/>
+                            <Setter Property="Stroke" TargetName="rectangle" Value="{StaticResource SecondarySelectionBackground}"/>
+                            <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter Property="Fill" TargetName="rectangle" Value="{StaticResource SecondaryHoverBackground}"/>
+                            <Setter Property="Stroke" TargetName="rectangle" Value="{StaticResource SecondaryHoverBackground}"/>
+                            <Setter Property="Foreground" Value="{StaticResource SecondaryForegroundDisabled}"/>
+                            <Setter Property="Effect" TargetName="rectangle" Value="{x:Null}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource CircleKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+ 
     <Style x:Key="SyncfusionTabStripButtonStyle" TargetType="{x:Type Button}">
         <Setter Property="Template">
             <Setter.Value>
@@ -102,7 +195,8 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            FocusVisualStyle="{x:Null}">
+                            FocusVisualStyle="{x:Null}"
+                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
                             <Grid x:Name="Root" FocusVisualStyle="{x:Null}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
@@ -114,6 +208,9 @@
                                     Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     Visibility="{TemplateBinding HeaderVisibility}">
+                                    <Border.CornerRadius>
+                                        <CornerRadius>0,0,0,0</CornerRadius>
+                                    </Border.CornerRadius>
                                     <ContentPresenter x:Name="header"
                                             Grid.Row="0"
                                             Margin="12,3,3,3"
@@ -136,63 +233,82 @@
                                     Opacity="{Binding Path=IsTabStripVisible, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToOpacityConvert}}" />
                                 <ContentControl
                                     x:Name="PART_OldContent"
-                                    Grid.Row="1"
-                                    Margin="14,12,14,12"
-                                    IsTabStop="False" />
+                                    Grid.Row="1"                               
+                                    IsTabStop="False" >
+                                    <ContentControl.Margin>
+                                        <Thickness>14,12,14,12</Thickness>
+                                    </ContentControl.Margin>
+                                </ContentControl>
                                 <ContentControl
                                     x:Name="PART_SelectedContent"
                                     Grid.Row="1"
-                                    Margin="14,12,14,12"
                                     HorizontalContentAlignment="Stretch"
                                     VerticalContentAlignment="Stretch"
                                     Content="{Binding Path=SelectedTabItem.Content, RelativeSource={RelativeSource TemplatedParent}}"
                                     ContentTemplate="{Binding Path=ItemTemplate, RelativeSource={RelativeSource TemplatedParent}}"
-                                    IsTabStop="False" />
+                                    IsTabStop="False" >
+                                    <ContentControl.Margin>
+                                        <Thickness>14,12,14,12</Thickness>
+                                    </ContentControl.Margin>
+                                </ContentControl>
                                 <ContentControl
                                     x:Name="PART_FrontOldContent"
                                     Grid.Row="1"
-                                    Margin="14,12,14,12"
                                     IsHitTestVisible="False"
-                                    IsTabStop="False" />
+                                    IsTabStop="False" >
+                                    <ContentControl.Margin>
+                                        <Thickness>14,12,14,12</Thickness>
+                                    </ContentControl.Margin>
+                                </ContentControl>
                             </Grid>
                         </Border>
                         <Button
                             x:Name="PART_LeftSidButton"
                             Grid.Row="1"
-                            Margin="-12,0,0,0"
                             HorizontalAlignment="Left"
-                            VerticalAlignment="Center"
+                            VerticalAlignment="Center"                           
                             Command="{Binding Path=PreviousCommand, RelativeSource={RelativeSource TemplatedParent}}"
-                            Style="{StaticResource SyncfusionTabNavigationButtonStyle}"
+                            Style="{StaticResource SyncfusionTabNavigationRoundButtonStyle}"
                             Visibility="{TemplateBinding NavigationButtonVisibility}">
-                            <Path
+                            <Button.Margin>
+                                <Thickness>-12,0,0,0</Thickness>
+                            </Button.Margin>
+                            <Path Name="LeftNavigationPath"
                                 Width="5"
                                 Height="8"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                Data="M5.9849989,0 L7.4009988,1.4120026 2.8239995,6.0010083 7.4009988,10.590015 5.9849989,12.002017 0,6.0010083 z"
                                 Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                                 Stretch="Fill"
-                                StrokeThickness="0" />
+                                StrokeThickness="0">
+                                 <Path.Data>
+                                    <PathGeometry>M5.9849989,0 L7.4009988,1.4120026 2.8239995,6.0010083 7.4009988,10.590015 5.9849989,12.002017 0,6.0010083 z</PathGeometry>
+                                </Path.Data>
+                            </Path>
                         </Button>
                         <Button
                              x:Name="PART_RightSidButton"
-                            Grid.Row="1"
-                            Margin="0,0,-12,0"
+                            Grid.Row="1"                            
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
                             Command="{Binding Path=NextCommand, RelativeSource={RelativeSource TemplatedParent}}"
-                            Style="{StaticResource SyncfusionTabNavigationButtonStyle}"
+                            Style="{StaticResource SyncfusionTabNavigationRoundButtonStyle}"
                             Visibility="{TemplateBinding NavigationButtonVisibility}">
-                            <Path
+                            <Button.Margin>
+                                <Thickness>0,0,-12,0</Thickness>
+                            </Button.Margin>
+                            <Path Name="RightNavigationPath"
                                 Width="5"
                                 Height="8"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                Data="M1.4160154,0 L7.4009999,6.0010001 1.4160154,12.002 0,10.590014 4.5770258,6.0010001 0,1.4120161 z"
                                 Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                                 Stretch="Fill"
-                                StrokeThickness="0" />
+                                StrokeThickness="0">
+                                <Path.Data>
+                                    <PathGeometry>M1.4160154,0 L7.4009999,6.0010001 1.4160154,12.002 0,10.590014 4.5770258,6.0010001 0,1.4120161 z</PathGeometry>
+                                </Path.Data>    
+                            </Path>
                         </Button>
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -205,6 +321,14 @@
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="header" Property="TextElement.Foreground" Value="{StaticResource DisabledForeground}"/>
                         </Trigger>
+                        <DataTrigger Binding="{Binding ElementName=PART_LeftSidButton,Path=IsPressed}" Value="True">
+                            <Setter TargetName="LeftNavigationPath" Property="Height" Value="7"/>
+                            <Setter TargetName="LeftNavigationPath" Property="Width" Value="4"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding ElementName=PART_RightSidButton,Path=IsPressed}" Value="True">
+                            <Setter TargetName="RightNavigationPath" Property="Height" Value="7"/>
+                            <Setter TargetName="RightNavigationPath" Property="Width" Value="4"/>
+                        </DataTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>

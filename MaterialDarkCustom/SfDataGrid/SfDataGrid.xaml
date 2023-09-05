@@ -8,6 +8,7 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/ChromelessWindow/ChromelessWindow.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatPrimaryButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/PrimaryButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphEditableDropdownExpander.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ListBox.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/DatePicker.xaml" />
@@ -61,7 +62,7 @@
     <!--GroupDropArea-->
 
     <!--GroupDropArea.Item-->
-
+    
     <!--DetailsViewExpanderCell-->
 
     <!--ExpanderCell-->
@@ -74,11 +75,15 @@
 
     <!--RowDragWindow-->
 
+    <!-- ColumnDragWindow-->
+    
     <!--Row-->
 
     <!--CurrentCell-->
 
     <!--GridFilterControl-->
+
+    <SolidColorBrush x:Key="GridFilterControl.ClearFilterButton.Disabled.Background" Color="#000000"/>
 
     <!--ColumnChooser-->
 
@@ -141,7 +146,7 @@
             <Border Margin="2,2,-2,-2"
                     CornerRadius="3" />
             <Border Margin="1,1,-1,-1"
-                    CornerRadius="2" />-->
+                    CornerRadius="2" />--> 
 
             <Border Background="{StaticResource ErrorBackground}" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" />
             <Border CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" BorderThickness="1" BorderBrush="{StaticResource ErrorBackground}">
@@ -171,6 +176,7 @@
         <Setter Property="SelectionForegroundBrush" Value="{StaticResource ContentForeground}"/>
         <Setter Property="GroupRowSelectionBrush" Value="{StaticResource ContentBackgroundSelection}"/>
         <Setter Property="CurrentCellBorderBrush" Value="{StaticResource Border}"/>
+        <Setter Property="GridLinesVisibility" Value="Both"/>
         <Setter Property="RowDragDropTemplate">
             <Setter.Value>
                 <DataTemplate>
@@ -181,7 +187,6 @@
                             BorderBrush="{StaticResource BorderAlt}" Height="45"
                             BorderThickness="1.2"
                             Effect="{StaticResource Default.ShadowDepth3}">
-
                         <Grid  VerticalAlignment="Center" 
                           HorizontalAlignment="Left">
                             <Grid.RowDefinitions>
@@ -448,32 +453,32 @@
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 SnapsToDevicePixels="True">
                             <Border x:Name="PART_InnerHeadercellBorder" Background="Transparent" BorderThickness="0">
-                                <Grid Margin="{TemplateBinding Padding}" SnapsToDevicePixels="True">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <ContentPresenter x:Name="contentPresenter"
+                                <Grid>
+                                    <Grid Margin="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ContentPresenter x:Name="contentPresenter"
                                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                                 Focusable="False" >
-                                        <ContentPresenter.Resources>
-                                            <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
-                                        </ContentPresenter.Resources>
-                                    </ContentPresenter>
-                                    <Border x:Name="PART_FilterPopUpPresenter" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" />
+                                            <ContentPresenter.Resources>
+                                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
+                                            </ContentPresenter.Resources>
+                                        </ContentPresenter>
+                                        <Border x:Name="PART_FilterPopUpPresenter" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" />
 
-                                    <Grid x:Name="PART_SortButtonPresenter"
+                                        <Grid x:Name="PART_SortButtonPresenter"
                                     Grid.Column="1"
                                     SnapsToDevicePixels="True">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="0" MinWidth="{Binding Path=SortDirection, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource sortDirectionToWidthConverter}}" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="0" MinWidth="{Binding Path=SortDirection, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource sortDirectionToWidthConverter}}" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
 
-                                        <Path x:Name="AscendingSortDirection"
+                                            <Path x:Name="AscendingSortDirection"
                                       Height="12" 
                                       Width="10"
                                       Stretch="Fill" 
@@ -485,20 +490,20 @@
                                                                RelativeSource={RelativeSource TemplatedParent},
                                                                ConverterParameter=Ascending,
                                                                Converter={StaticResource sortDirectionToVisibilityConverter}}">
-                                            <Path.Data>
-                                                <PathGeometry>M5.9941153,0 L6.0064,0.00051339702 6.0261813,0.00028107814 6.0818273,0.0036656148 6.0900383,0.0040087604 6.0920613,0.0042880683 6.0990125,0.0047108598 C6.1232811,0.0070740746 6.1475253,0.010326931 6.1716975,0.014478503 L6.1829119,0.016831406 6.1853166,0.017163408 6.1915463,0.018642992 6.2439501,0.029637889 6.2726622,0.037908398 6.2792357,0.039469664 6.2853295,0.041557223 6.3154854,0.050243609 C6.3391789,0.058026054 6.3627053,0.066725076 6.3860168,0.076349781 6.4325151,0.095849425 6.4769821,0.11859892 6.519199,0.14426817 L6.5406851,0.15844527 6.5456878,0.16135719 6.5516514,0.16568114 6.58081,0.1849208 6.6220374,0.21671546 6.6270205,0.22032854 6.6289228,0.22202553 6.6388818,0.22970592 C6.6576313,0.24529529 6.6757634,0.26153223 6.693251,0.27837534 L6.7004536,0.28583537 6.7034193,0.28848104 11.703763,5.230113 C12.096765,5.6180854 12.100763,6.2510357 11.71176,6.6440129 11.516738,6.8419967 11.258725,6.9409886 11.000712,6.9409886 10.746696,6.9409886 10.492651,6.8449874 10.297661,6.6520081 L6.9999928,3.3937042 6.9999928,14.999015 C6.9999928,15.551003 6.5530103,15.998992 6.0000319,15.998992 5.4470538,15.998992 5.0000713,15.551003 5.0000714,14.999015 L5.0000714,3.3932755 1.7032006,6.6522021 C1.3102162,7.0401936 0.67724085,7.0351935 0.2892561,6.6442022 -0.099728584,6.2502113 -0.095728874,5.6172257 0.29725599,5.2292342 L5.2970596,0.28834514 C5.3150589,0.270658 5.3336051,0.25375213 5.3526504,0.23763666 L5.3594331,0.23231494 5.3646626,0.22752929 5.3815641,0.2149508 5.4112367,0.19166954 5.4277534,0.18057568 5.4450793,0.16768134 5.4622689,0.15739247 5.472533,0.15049839 5.4988301,0.13550872 5.5298557,0.11693828 5.5768008,0.094834671 5.6021124,0.082760223 5.6040692,0.0819956 5.6182773,0.075305813 5.6509629,0.063671634 5.6698243,0.056301449 5.6839809,0.051919118 5.7096289,0.042789914 5.7296089,0.03779452 5.7391035,0.034855355 5.7707008,0.0275207 5.8031958,0.019396298 5.8165941,0.017385828&#xa;5.8812215,0.0072179145 5.8883613,0.0066169204 5.8982629,0.0051311657 5.9195499,0.0039916287 5.9534891,0.0011348023 5.9783767,0.00084251227 z</PathGeometry>
-                                            </Path.Data>
-                                            <Path.RenderTransform>
-                                                <TransformGroup>
-                                                    <TransformGroup.Children>
-                                                        <RotateTransform Angle="0" />
-                                                        <ScaleTransform ScaleX="1" ScaleY="1" />
-                                                    </TransformGroup.Children>
-                                                </TransformGroup>
-                                            </Path.RenderTransform>
-                                        </Path>
+                                                <Path.Data>
+                                                    <PathGeometry>M5.9941153,0 L6.0064,0.00051339702 6.0261813,0.00028107814 6.0818273,0.0036656148 6.0900383,0.0040087604 6.0920613,0.0042880683 6.0990125,0.0047108598 C6.1232811,0.0070740746 6.1475253,0.010326931 6.1716975,0.014478503 L6.1829119,0.016831406 6.1853166,0.017163408 6.1915463,0.018642992 6.2439501,0.029637889 6.2726622,0.037908398 6.2792357,0.039469664 6.2853295,0.041557223 6.3154854,0.050243609 C6.3391789,0.058026054 6.3627053,0.066725076 6.3860168,0.076349781 6.4325151,0.095849425 6.4769821,0.11859892 6.519199,0.14426817 L6.5406851,0.15844527 6.5456878,0.16135719 6.5516514,0.16568114 6.58081,0.1849208 6.6220374,0.21671546 6.6270205,0.22032854 6.6289228,0.22202553 6.6388818,0.22970592 C6.6576313,0.24529529 6.6757634,0.26153223 6.693251,0.27837534 L6.7004536,0.28583537 6.7034193,0.28848104 11.703763,5.230113 C12.096765,5.6180854 12.100763,6.2510357 11.71176,6.6440129 11.516738,6.8419967 11.258725,6.9409886 11.000712,6.9409886 10.746696,6.9409886 10.492651,6.8449874 10.297661,6.6520081 L6.9999928,3.3937042 6.9999928,14.999015 C6.9999928,15.551003 6.5530103,15.998992 6.0000319,15.998992 5.4470538,15.998992 5.0000713,15.551003 5.0000714,14.999015 L5.0000714,3.3932755 1.7032006,6.6522021 C1.3102162,7.0401936 0.67724085,7.0351935 0.2892561,6.6442022 -0.099728584,6.2502113 -0.095728874,5.6172257 0.29725599,5.2292342 L5.2970596,0.28834514 C5.3150589,0.270658 5.3336051,0.25375213 5.3526504,0.23763666 L5.3594331,0.23231494 5.3646626,0.22752929 5.3815641,0.2149508 5.4112367,0.19166954 5.4277534,0.18057568 5.4450793,0.16768134 5.4622689,0.15739247 5.472533,0.15049839 5.4988301,0.13550872 5.5298557,0.11693828 5.5768008,0.094834671 5.6021124,0.082760223 5.6040692,0.0819956 5.6182773,0.075305813 5.6509629,0.063671634 5.6698243,0.056301449 5.6839809,0.051919118 5.7096289,0.042789914 5.7296089,0.03779452 5.7391035,0.034855355 5.7707008,0.0275207 5.8031958,0.019396298 5.8165941,0.017385828&#xa;5.8812215,0.0072179145 5.8883613,0.0066169204 5.8982629,0.0051311657 5.9195499,0.0039916287 5.9534891,0.0011348023 5.9783767,0.00084251227 z</PathGeometry>
+                                                </Path.Data>
+                                                <Path.RenderTransform>
+                                                    <TransformGroup>
+                                                        <TransformGroup.Children>
+                                                            <RotateTransform Angle="0" />
+                                                            <ScaleTransform ScaleX="1" ScaleY="1" />
+                                                        </TransformGroup.Children>
+                                                    </TransformGroup>
+                                                </Path.RenderTransform>
+                                            </Path>
 
-                                        <Path x:Name="DescendingSortDirection"
+                                            <Path x:Name="DescendingSortDirection"
                                       Height="12" 
                                       Width="10"
                                       Stretch="Fill" 
@@ -510,20 +515,20 @@
                                                                RelativeSource={RelativeSource TemplatedParent},
                                                                ConverterParameter=Decending,
                                                                Converter={StaticResource sortDirectionToVisibilityConverter}}">
-                                            <Path.Data>
-                                                <PathGeometry>M5.9999749,0 C6.551953,0 6.9999353,0.44799995 6.9999353,1 L6.9999353,12.606 10.296806,9.3470001 C10.689791,8.9600001 11.322765,8.9630001 11.710751,9.355 12.099735,9.7490001 12.095736,10.382 11.702751,10.77 L6.7167751,15.697335 6.7117063,15.703 C6.5167014,15.900995 6.2586886,15.999992 6.0006606,15.999992 L5.9999749,16 5.9617616,15.998152 5.9055201,15.995491 5.9048897,15.995401 5.9024159,15.995281 C5.8536679,15.990547 5.8050605,15.982226 5.7570154,15.970215 L5.7189185,15.959667 5.7180048,15.959445 5.7175514,15.959288 5.7091733,15.956968 C5.6932994,15.95214 5.6775028,15.946898 5.6618005,15.941238 L5.6315137,15.929438 5.6270124,15.927876 5.6242978,15.926626 5.6149899,15.923 C5.5916783,15.91325 5.5688783,15.902688 5.5466172,15.891354 L5.5415474,15.88853 5.5387856,15.887259 5.5296503,15.881906 5.4814774,15.85508 5.4620687,15.842301 5.4540154,15.837582 5.4457218,15.831538 5.4197332,15.814426 5.3751503,15.780112 5.3733937,15.778831 5.3728196,15.778317 5.3615466,15.769641 C5.3427621,15.754051 5.324598,15.737813 5.3070809,15.72097 L5.2936684,15.7071 0.29727824,10.77011 C-0.09573804,10.382117 -0.099736103,9.7491336 0.28928216,9.3551288 0.67730839,8.9631378 1.3093542,8.9601471 1.7033775,9.3471332 L5.000014,12.605241 5.000014,1 C5.000014,0.44799995 5.4479963,0 5.9999749,0 z</PathGeometry>
-                                            </Path.Data>
-                                            <Path.RenderTransform>
-                                                <TransformGroup>
-                                                    <TransformGroup.Children>
-                                                        <RotateTransform Angle="0" />
-                                                        <ScaleTransform ScaleX="1" ScaleY="1" />
-                                                    </TransformGroup.Children>
-                                                </TransformGroup>
-                                            </Path.RenderTransform>
-                                        </Path>
+                                                <Path.Data>
+                                                    <PathGeometry>M5.9999749,0 C6.551953,0 6.9999353,0.44799995 6.9999353,1 L6.9999353,12.606 10.296806,9.3470001 C10.689791,8.9600001 11.322765,8.9630001 11.710751,9.355 12.099735,9.7490001 12.095736,10.382 11.702751,10.77 L6.7167751,15.697335 6.7117063,15.703 C6.5167014,15.900995 6.2586886,15.999992 6.0006606,15.999992 L5.9999749,16 5.9617616,15.998152 5.9055201,15.995491 5.9048897,15.995401 5.9024159,15.995281 C5.8536679,15.990547 5.8050605,15.982226 5.7570154,15.970215 L5.7189185,15.959667 5.7180048,15.959445 5.7175514,15.959288 5.7091733,15.956968 C5.6932994,15.95214 5.6775028,15.946898 5.6618005,15.941238 L5.6315137,15.929438 5.6270124,15.927876 5.6242978,15.926626 5.6149899,15.923 C5.5916783,15.91325 5.5688783,15.902688 5.5466172,15.891354 L5.5415474,15.88853 5.5387856,15.887259 5.5296503,15.881906 5.4814774,15.85508 5.4620687,15.842301 5.4540154,15.837582 5.4457218,15.831538 5.4197332,15.814426 5.3751503,15.780112 5.3733937,15.778831 5.3728196,15.778317 5.3615466,15.769641 C5.3427621,15.754051 5.324598,15.737813 5.3070809,15.72097 L5.2936684,15.7071 0.29727824,10.77011 C-0.09573804,10.382117 -0.099736103,9.7491336 0.28928216,9.3551288 0.67730839,8.9631378 1.3093542,8.9601471 1.7033775,9.3471332 L5.000014,12.605241 5.000014,1 C5.000014,0.44799995 5.4479963,0 5.9999749,0 z</PathGeometry>
+                                                </Path.Data>
+                                                <Path.RenderTransform>
+                                                    <TransformGroup>
+                                                        <TransformGroup.Children>
+                                                            <RotateTransform Angle="0" />
+                                                            <ScaleTransform ScaleX="1" ScaleY="1" />
+                                                        </TransformGroup.Children>
+                                                    </TransformGroup>
+                                                </Path.RenderTransform>
+                                            </Path>
 
-                                        <TextBlock x:Name="SortNumber"
+                                            <TextBlock x:Name="SortNumber"
                                            Grid.Column="1"
                                            Margin="0,-4,0,0"
                                            VerticalAlignment="Center"
@@ -531,15 +536,16 @@
                                            SnapsToDevicePixels="True"
                                            Text="{TemplateBinding SortNumber}"
                                            Visibility="{TemplateBinding SortNumberVisibility}" />
-                                    </Grid>
+                                        </Grid>
 
-                                    <grid:FilterToggleButton x:Name="PART_FilterToggleButton"
+                                        <grid:FilterToggleButton x:Name="PART_FilterToggleButton"
                                                     Grid.Column="2"
                                                     HorizontalAlignment="Stretch"
                                                     VerticalAlignment="Stretch"
                                                     SnapsToDevicePixels="True"
                                                     Background="Transparent"
                                                     Visibility="{TemplateBinding FilterIconVisiblity}" />
+                                    </Grid>
                                 </Grid>
                             </Border>
                         </Border>
@@ -1045,9 +1051,9 @@
                             </ContentPresenter>
                         </Border>
                         <Border x:Name="PART_DragLineIndicator" 
-                                BorderBrush="{StaticResource PrimaryBackground}" 
-                                Visibility="Collapsed" 
-                                BorderThickness="0,0,0,2" />
+                        BorderBrush="{StaticResource PrimaryBackground}" 
+                        Visibility="Collapsed" 
+                        BorderThickness="0,0,0,2" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -1072,9 +1078,9 @@
                             <ContentPresenter />
                         </Border>
                         <Border x:Name="PART_DragLineIndicator" 
-                                BorderBrush="{StaticResource PrimaryBackground}" 
-                                Visibility="Collapsed" 
-                                BorderThickness="0,0,0,2" />
+                        BorderBrush="{StaticResource PrimaryBackground}" 
+                        Visibility="Collapsed" 
+                        BorderThickness="0,0,0,2" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -1156,9 +1162,9 @@
                             </ContentPresenter>
                         </Border>
                         <Border x:Name="PART_DragLineIndicator" 
-                                BorderBrush="{StaticResource PrimaryBackground}" 
-                                Visibility="Collapsed" 
-                                BorderThickness="0,0,0,2" />
+                        BorderBrush="{StaticResource PrimaryBackground}" 
+                        Visibility="Collapsed" 
+                        BorderThickness="0,0,0,2" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -1245,9 +1251,9 @@
                             </ContentPresenter>
                         </Border>
                         <Border x:Name="PART_DragLineIndicator" 
-                                BorderBrush="{StaticResource PrimaryBackground}" 
-                                Visibility="Collapsed" 
-                                BorderThickness="0,0,0,2" />
+                        BorderBrush="{StaticResource PrimaryBackground}" 
+                        Visibility="Collapsed" 
+                        BorderThickness="0,0,0,2" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -1354,9 +1360,9 @@
                             </ContentPresenter>
                         </Border>
                         <Border x:Name="PART_DragLineIndicator" 
-                                BorderBrush="{StaticResource PrimaryBackground}" 
-                                Visibility="Collapsed" 
-                                BorderThickness="0,0,0,2" />
+                        BorderBrush="{StaticResource PrimaryBackground}" 
+                        Visibility="Collapsed" 
+                        BorderThickness="0,0,0,2" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -1482,11 +1488,6 @@
                                   Stretch="Fill" />
                         </Border>
                     </Grid>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="skinManager:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
-                            <Setter TargetName="PART_CurrentCellInnerBorder" Property="Visibility" Value="Visible"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -1607,9 +1608,9 @@
                             </Grid>
                         </Border>
                         <Border x:Name="PART_DragLineIndicator" 
-                                BorderBrush="{StaticResource PrimaryBackground}" 
-                                Visibility="Collapsed" 
-                                BorderThickness="0,0,0,2" />
+                        BorderBrush="{StaticResource PrimaryBackground}" 
+                        Visibility="Collapsed" 
+                        BorderThickness="0,0,0,2" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -1813,9 +1814,9 @@
                             </ContentPresenter>
                         </Border>
                         <Border x:Name="PART_DragLineIndicator" 
-                                BorderBrush="{StaticResource PrimaryBackground}" 
-                                Visibility="Collapsed" 
-                                BorderThickness="0,0,0,2" />
+                        BorderBrush="{StaticResource PrimaryBackground}" 
+                        Visibility="Collapsed" 
+                        BorderThickness="0,0,0,2" />
                         <Rectangle x:Name="PART_CurrentFocusRow"
                                    Margin="{TemplateBinding CurrentFocusBorderMargin}"
                                    Stroke="{StaticResource BorderAlt2}"
@@ -2218,9 +2219,9 @@
                             </ContentPresenter>
                         </Border>
                         <Border x:Name="PART_DragLineIndicator" 
-                                BorderBrush="{StaticResource PrimaryBackground}" 
-                                Visibility="Collapsed" 
-                                BorderThickness="0,0,0,2" />
+                        BorderBrush="{StaticResource PrimaryBackground}" 
+                        Visibility="Collapsed" 
+                        BorderThickness="0,0,0,2" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -2340,7 +2341,8 @@
                                             Background="{StaticResource ContentBackground}"
                                             Width="140"
                                             Margin="14,0,14,14"
-                                            Effect="{StaticResource Default.ShadowDepth3}">
+                                            Effect="{StaticResource Default.ShadowDepth3}"
+                                            >                                             
                                     <ListBox x:Name="PART_FilterOptionsList"
                                              IsSynchronizedWithCurrentItem="True"
                                              FocusVisualStyle="{x:Null}"
@@ -2359,9 +2361,6 @@
                         </Border>
                     </Grid>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="skinManager:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
-                            <Setter TargetName="PART_FilterRowCellInnerBorder" Property="Visibility" Value="Visible"/>
-                        </Trigger>
                         <Trigger Property="Visibility" SourceName="PART_CurrentCellBorder" Value="Visible">
                             <Setter TargetName="PART_FilterOptionButton" Property="Foreground" Value="{StaticResource IconColor}"/>
                         </Trigger>
@@ -2518,7 +2517,7 @@
                                         <TextBlock Margin="40,5"
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center"
-                                                   Foreground="{StaticResource ContentForegroundAlt}"
+                                                   Foreground="{TemplateBinding Foreground}"
                                                    Text="{TemplateBinding GroupDropAreaText}" />
                                     </Grid>
                                     <StackPanel Name="PART_StackPanel"
@@ -2556,7 +2555,7 @@
     <Style TargetType="grid:PopupContentControl" x:Key="SyncfusionPopupContentControlStyle">
         <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="ThumbWidth" Value="18" />
@@ -2662,6 +2661,7 @@
                                    Visibility="{TemplateBinding LeftResizeThumbVisibility}" />
                             <Border Grid.Column="1"
                                     BorderThickness="{TemplateBinding BorderThickness}"
+                                    
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     SnapsToDevicePixels="True">
                                 <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" >
@@ -2719,9 +2719,11 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border Background="Transparent" SnapsToDevicePixels="True" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                    <Border Background="{TemplateBinding Background}" SnapsToDevicePixels="True" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
                         <Path Fill="{TemplateBinding Foreground}"
-                              Stretch="Fill">
+                                
+                                 
+                                Stretch="Fill">
                             <Path.Data>
                                 <PathGeometry>F1M54.0573,47.8776L38.1771,31.9974 54.0547,16.1198C55.7604,14.4141 55.7604,11.6511 54.0573,9.94531 52.3516,8.23962 49.5859,8.23962 47.8802,9.94531L32.0026,25.8229 16.1224,9.94531C14.4167,8.23962 11.6511,8.23962 9.94794,9.94531 8.24219,11.6511 8.24219,14.4141 9.94794,16.1198L25.8255,32 9.94794,47.8776C8.24219,49.5834 8.24219,52.3477 9.94794,54.0534 11.6511,55.7572 14.4167,55.7585 16.1224,54.0534L32.0026,38.1745 47.8802,54.0534C49.5859,55.7585 52.3516,55.7572 54.0573,54.0534 55.7604,52.3477 55.763,49.5834 54.0573,47.8776z</PathGeometry>
                             </Path.Data>
@@ -2857,7 +2859,7 @@
                                     Grid.Column="1"
                                     Width="9"
                                     Height="9"
-                                    Margin="0,0,5,0"
+                                    Margin="0 0 5 0"
                                     HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                     VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                     Style="{StaticResource CloseButtonStyle}"
@@ -2870,6 +2872,7 @@
                             <Setter Property="Fill" TargetName="AscendingSortDirection" Value="{StaticResource IconColor}"/>
                             <Setter Property="Fill" TargetName="DescendingSortDirection" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" TargetName="PART_CloseButton" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Background" TargetName="PART_CloseButton" Value="Transparent"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True" SourceName="PART_CloseButton">
                             <Setter Property="Foreground" TargetName="PART_CloseButton" Value="{StaticResource ContentForeground}"/>
@@ -3035,6 +3038,7 @@
         <Setter Property="GroupRowSelectionBrush" Value="{StaticResource ContentBackgroundSelection}" />
         <Setter Property="CurrentCellBorderThickness" Value="2" />
         <Setter Property="CurrentCellBorderBrush" Value="{StaticResource Border}" />
+		<Setter Property="GridLinesVisibility" Value="Both"/>
         <Style.Triggers>
             <Trigger Property="skinManager:SfSkinManager.SizeMode" Value="Touch">
                 <Setter Property="RowHeight" Value="{StaticResource TouchMode.MinHeight}"/>
@@ -3238,12 +3242,6 @@
                                 </VisualState>
                                 <VisualState x:Name="Disabled">
                                     <Storyboard>
-                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="Background">
-                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PopupBackground}" />
-                                        </ObjectAnimationUsingKeyFrames>
-                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_RootBorder" Storyboard.TargetProperty="BorderBrush">
-                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PopupBackground}" />
-                                        </ObjectAnimationUsingKeyFrames>
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ClearButtonPath" Storyboard.TargetProperty="Fill">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource IconDisabledColor}" />
                                         </ObjectAnimationUsingKeyFrames>
@@ -3279,8 +3277,13 @@
                                 BorderBrush="Transparent" 
                                 BorderThickness="1"
                                 
-                                Padding="0,6,0,6"
-                                Margin="0,8,0,0">
+                                >
+                            <Border.Padding>
+                                <Thickness>0,6,0,6</Thickness>
+                            </Border.Padding>
+                            <Border.Margin>
+                                <Thickness>0,8,0,0</Thickness>
+                            </Border.Margin>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -3290,8 +3293,10 @@
                                       Width="16"
                                       Height="14"
                                       Fill="{StaticResource IconColor}"
-                                      Stretch="Uniform"
-                                      Margin="12,0,4,0">
+                                      Stretch="Uniform">
+                                    <Path.Margin>
+                                        <Thickness>12,0,4,0</Thickness>
+                                    </Path.Margin>
                                     <Path.Data>
                                         <PathGeometry>M11.707,10.997001 L13.5,12.791254 15.293,10.997001 16,11.704 14.206753,13.498501 16,15.293 15.293,16 13.5,14.205747 11.707,16 11,15.293 12.793247,13.498501 11,11.704 z M0,0 L14,0 14,1 8.5,7 8.5,16 5.5,13 5.5,7 0,1 z</PathGeometry>
                                     </Path.Data>
@@ -3320,9 +3325,13 @@
                             </Grid>
                         </Border>
                         <Border Grid.ColumnSpan="2"
-                                Margin="35,4,0,0"
+                                
                                 BorderBrush="{StaticResource BorderAlt}"
-                                BorderThickness="0,1,0,0" />
+                                BorderThickness="0,1,0,0" >
+                            <Border.Margin>
+                                <Thickness>35,4,0,0</Thickness>
+                            </Border.Margin>
+                        </Border>
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -3421,6 +3430,7 @@
                                                 </EasingDoubleKeyFrame.EasingFunction>
                                             </EasingDoubleKeyFrame>
                                         </DoubleAnimationUsingKeyFrames>
+  
                                     </Storyboard>
                                 </VisualState>
                                 <VisualState x:Name="Collapsed">
@@ -3438,10 +3448,16 @@
                         </VisualStateManager.VisualStateGroups>
                         <Border x:Name="PART_RootBorder" 
                                 Background="Transparent" 
+                                
                                 BorderBrush="Transparent" 
                                 
-                                BorderThickness="1" 
-                                Padding="0,4,0,4">
+                                BorderThickness="1">
+                            <Border.Padding>
+                                <Thickness>0,4,0,4</Thickness>
+                            </Border.Padding>
+                            <Border.Margin>
+                                <Thickness>0</Thickness>
+                            </Border.Margin>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="29" />
@@ -3457,10 +3473,28 @@
                                                                                     AncestorType={x:Type grid:GridFilterControl}},
                                                      Converter={StaticResource filteredFromCheckVisibilityConverter},
                                                      ConverterParameter=reverse}" />
+                                <Path x:Name="PART_AdvancedFilterToggleIndicator"
+                              Width="12"
+                              Height="12"
+                              Margin="4,4,3,4"
+                              Fill="{StaticResource PrimaryBackground}"
+                              Data="M0 1.875C0 1.71875 0.0292969 1.57227 0.0878906 1.43555C0.146484 1.29883 0.226562 1.17969 0.328125 1.07812C0.429688 0.976562 0.548828 0.896484 0.685547 0.837891C0.822266 0.779297 0.96875 0.75 1.125 0.75H10.875C11.0312 0.75 11.1777 0.779297 11.3145 0.837891C11.4512 0.896484 11.5703 0.976562 11.6719 1.07812C11.7734 1.17969 11.8535 1.29883 11.9121 1.43555C11.9707 1.57227 12 1.71875 12 1.875C12 2.19531 11.8828 2.4668 11.6484 2.68945L7.85156 6.31055C7.79688 6.36523 7.74805 6.42383 7.70508 6.48633C7.66211 6.54883 7.625 6.61328 7.59375 6.67969C7.53125 6.81641 7.5 6.96484 7.5 7.125V11.625C7.5 11.7266 7.46289 11.8145 7.38867 11.8887C7.31445 11.9629 7.22656 12 7.125 12C7.05078 12 6.98242 11.9785 6.91992 11.9355L4.66992 10.4355C4.55664 10.3613 4.5 10.2578 4.5 10.125V7.125C4.5 6.96875 4.4707 6.82031 4.41211 6.67969C4.38086 6.60938 4.3418 6.54492 4.29492 6.48633C4.25195 6.42383 4.20312 6.36523 4.14844 6.31055L0.351562 2.68945C0.117188 2.4668 0 2.19531 0 1.875ZM11.25 1.86914C11.25 1.76758 11.2129 1.68164 11.1387 1.61133C11.0645 1.53711 10.9766 1.5 10.875 1.5H1.125C1.02344 1.5 0.935547 1.53711 0.861328 1.61133C0.787109 1.68164 0.75 1.76758 0.75 1.86914C0.75 1.98242 0.789062 2.07422 0.867188 2.14453L4.66992 5.76562C4.85352 5.94141 4.99609 6.14844 5.09766 6.38672C5.19922 6.625 5.25 6.87109 5.25 7.125V9.92578L6.75 10.9219V7.125C6.75 6.87109 6.80078 6.625 6.90234 6.38672C7.00391 6.14844 7.14648 5.94141 7.33008 5.76562L11.1328 2.14453C11.2109 2.07422 11.25 1.98242 11.25 1.86914Z"
+                              Stretch="Uniform">
+                                    <Path.Visibility>
+                                        <Visibility>Collapsed</Visibility>
+                                    </Path.Visibility>
+                                    <Path.RenderTransform>
+                                        <TransformGroup>
+                                            <TransformGroup.Children>
+                                                <RotateTransform Angle="0" />
+                                                <ScaleTransform ScaleX="1" ScaleY="1" />
+                                            </TransformGroup.Children>
+                                        </TransformGroup>
+                                    </Path.RenderTransform>
+                                </Path>
                                 <Path x:Name="PART_FilteredFromCheck"
                               Width="11.4"
-                              Height="9"
-                              Margin="4,5,4,4"
+                              Height="9"     
                               Fill="{StaticResource PrimaryBackground}"
                               Stretch="Uniform"
                               Visibility="{Binding FilteredFrom,
@@ -3468,6 +3502,9 @@
                                                                                   AncestorType={x:Type grid:GridFilterControl}},
                                                    Converter={StaticResource filteredFromCheckVisibilityConverter},
                                                    ConverterParameter=reverse}">
+                                    <Path.Margin>
+                                        <Thickness>4,5,4,4</Thickness>
+                                    </Path.Margin>
                                     <Path.Data>
                                         <PathGeometry>M14.573975,0 L16,1.401977 4.848999,12.742 0,7.8109712 1.4259644,6.4089942 4.848999,9.8900108 z</PathGeometry>
                                     </Path.Data>
@@ -3482,20 +3519,24 @@
                                     </Path.RenderTransform>
                                 </Path>
                                 <ContentPresenter Grid.Column="1" x:Name="ContentPresenter_filter"
-                                                  Margin="5,0,0,0"
                                           HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                           OpacityMask="{x:Null}"
                                           RecognizesAccessKey="True"
                                           SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" >
+                                    <ContentPresenter.Margin>
+                                        <Thickness>5,0,0,0</Thickness>
+                                    </ContentPresenter.Margin>
                                     <ContentPresenter.Resources>
                                         <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                     </ContentPresenter.Resources>
                                 </ContentPresenter>
                                 <Grid Grid.Column="2"
                                       Width="20"
-                                      Height="20"
-                                      Margin="0,0,12,0">
+                                      Height="20">
+                                    <Grid.Margin>
+                                        <Thickness>0,0,12,0</Thickness>
+                                    </Grid.Margin>
                                     <Path x:Name="PART_ExpanderCellPath"
                                   Width="8"
                                   Height="4"
@@ -3543,7 +3584,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="grid:SortButton">
-                    <Grid x:Name="PART_SortButtonPresenter" Background="Transparent">
+                    <Grid x:Name="PART_SortButtonPresenter" Background="Transparent"
+                          >
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="CommonStates">
                                 <VisualState x:Name="Normal" />
@@ -3619,6 +3661,9 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
+                        <Border x:Name="PART_SortedBorder" Height="24" 
+                                CornerRadius="{StaticResource MaterialDarkCustom.CornerRadius4}"
+                                Visibility=" Collapsed" />
                         <Border x:Name="PART_RootBorder"
                                 CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                                 Background="{TemplateBinding Background}"
@@ -3626,13 +3671,16 @@
                                 BorderThickness="1">
                             <StackPanel Orientation="Horizontal">
                                 <Border x:Name="PART_IconPresenter"
-                                        Margin="8,2,4,2"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         Background="Transparent"
                                         BorderBrush="Transparent"
                                         BorderThickness="1" 
-                                       CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"/>
+                                       CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                                    <Border.Margin>
+                                        <Thickness>8,2,4,2</Thickness>
+                                    </Border.Margin>
+                                </Border>
                                 <ContentPresenter x:Name="SortButton_ContentPresenter" 
                                                   Margin="0,2,8,2"
                                                   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -3727,10 +3775,13 @@
 
                                 <TextBox x:Name="PART_SearchTextBox"
                                          Height="24"
-                                         Margin="5,8,4,0"
                                          HorizontalAlignment="Stretch"
                                          VerticalAlignment="Center"
-                                         VerticalContentAlignment="Center"/>
+                                         VerticalContentAlignment="Center">
+                                    <TextBox.Margin>
+                                        <Thickness>5,8,4,0</Thickness>
+                                    </TextBox.Margin>
+                                </TextBox>
 
                                 <TextBlock HorizontalAlignment="Left"
                                            VerticalAlignment="Center"
@@ -3773,14 +3824,17 @@
                                 <Button x:Name="PART_DeleteButton"
                                         Width="12"
                                         Height="12"
-                                        Margin="0,0,6,6"
                                         HorizontalAlignment="Right"
                                         VerticalAlignment="Bottom"
                                         Style="{StaticResource SyncfusionDataGridFilterDeleteButtonStyle}"
                                         Visibility="{Binding Text,
                                                              ElementName=PART_SearchTextBox,
                                                              ConverterParameter=deletebtn,
-                                                             Converter={StaticResource textBlockVisibilityConverter}}" />
+                                                             Converter={StaticResource textBlockVisibilityConverter}}">
+                                    <Button.Margin>
+                                        <Thickness>0,0,6,6</Thickness>
+                                    </Button.Margin>
+                                </Button>
                             </Grid>
                             <Border Grid.Row="1"
                                     Margin="0,4,4,4"
@@ -3903,7 +3957,6 @@
                                                                      ConverterParameter=ItemsControl,
                                                                      Converter={StaticResource ResourceKey=listItemsVisiblityConverter}}">
                                             <CheckBox x:Name="PART_CheckBox"
-                                                      Margin="4,4,4,4"
                                                       
                                                       HorizontalAlignment="Stretch"
                                                       VerticalAlignment="Center"
@@ -3911,7 +3964,11 @@
                                                       Content="{grid:GridLocalizationResourceExtension ResourceName=SelectAll}"
                                                       IsThreeState="True"
                                                       Visibility="{Binding Visibility,
-                                                                           ElementName=PART_ItemsControl}" />
+                                                                           ElementName=PART_ItemsControl}" >
+                                                <CheckBox.Margin>
+                                                    <Thickness>4</Thickness>
+                                                </CheckBox.Margin>
+                                            </CheckBox>
                                         </Border>
                                     </Grid>
                                 </Grid>
@@ -3931,6 +3988,9 @@
     
     <Style TargetType="grid:GridFilterControl" x:Key="SyncfusionGridFilterControlStyle">
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Background" Value="{StaticResource PopupBackground}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource PopupBackground}"/>
+        <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="grid:GridFilterControl">
@@ -3968,7 +4028,8 @@
                                Placement="Bottom"
                                PlacementTarget="{Binding ElementName=PART_FilterToggleButton}"
                                StaysOpen="False"
-                               grid:VisualContainer.WantsMouseInput="True">
+                               grid:VisualContainer.WantsMouseInput="True"
+                               >
                             <ContentControl ContentTemplate="{TemplateBinding ContentTemplate}" IsTabStop="False">
                                 <Border x:Name="PART_FilterPopUpBorder"
                                         Width="{Binding FilterPopupWidth,
@@ -3979,9 +4040,9 @@
                                                          RelativeSource={RelativeSource TemplatedParent}}"
                                         MinWidth="300"
                                         MinHeight="450"
-                                        Background="{StaticResource PopupBackground}"
-                                        BorderBrush="{StaticResource PopupBackground}"
-                                        BorderThickness="1"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
                                         CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                                         Margin="14,0,14,14"
                                         Effect="{StaticResource Default.ShadowDepth3}">
@@ -3995,7 +4056,10 @@
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
                                         </Grid.RowDefinitions>
-                                        <StackPanel Margin="0,4,0,0">
+                                        <StackPanel>
+                                            <StackPanel.Margin>
+                                                <Thickness>0,4,0,0</Thickness>
+                                            </StackPanel.Margin>
                                             <grid:SortButton x:Name="PART_SortAscendingButton"
                                                               Content="{TemplateBinding AscendingSortString}"
                                                               Visibility="{TemplateBinding SortOptionVisibility}"
@@ -4029,8 +4093,8 @@
                                                               Fill="{StaticResource IconColor}" 
                                                               HorizontalAlignment="Center" 
                                                               VerticalAlignment="Center"
-                                                              Width="16"
-                                                              Height="15.705" 
+                                                               Height="15.705" 
+                                                              Width="16"  
                                                               Stretch="Fill">
                                                             <Path.Data>
                                                                 <PathGeometry>M6.834002,13.863987 L10.515995,13.863987 8.6749988,15.704983 z M11.797001,5.0669352 L10.264009,9.1599452 13.330024,9.1599452 z M0.031000137,3.3439566 L6.5900164,3.3439566 6.5900164,4.338957 1.9040046,11.134959 6.7390168,11.134959 6.7390168,12.39096 0,12.39096 0,11.370959 4.6770115,4.6089568 0.031000137,4.6089568 z M11.157016,3.3369578 L12.452001,3.3369578 16.000011,12.390958 14.547006,12.390958 13.820014,10.455964 9.7820139,10.455964 9.0549924,12.390958 7.6010108,12.390958 z M8.6759987,0 L10.539997,1.8639864 6.8110005,1.8639864 z</PathGeometry>
@@ -4050,7 +4114,6 @@
                                                     Style="{StaticResource SyncfusionDataGridClearFilterButtonStyle}" />
 
                                             <TextBlock x:Name="AdvancedFiltersText"
-                                                       Margin="30,5,4,2"
                                                        HorizontalAlignment="Stretch"
                                                        VerticalAlignment="Center"
                                                        Text="{Binding FilterColumnType,
@@ -4058,7 +4121,14 @@
                                                        Visibility="{Binding FilterMode,
                                                                             RelativeSource={RelativeSource TemplatedParent},
                                                                             Converter={StaticResource ResourceKey=advancedFilterButtonVisibilityConverter},
-                                                                            ConverterParameter=reverse}" />
+                                                                            ConverterParameter=reverse}"
+                                                       
+                                                       
+                                                       >
+                                                <TextBlock.Margin>
+                                                    <Thickness>30,5,4,2</Thickness>
+                                                </TextBlock.Margin>
+                                            </TextBlock>
 
                                             <Button x:Name="PART_AdvancedFilterButton"
                                                     HorizontalAlignment="Stretch"
@@ -4113,7 +4183,7 @@
                                                                              Converter={StaticResource ResourceKey=boolToVisiblityConverter},
                                                                              ConverterParameter=InverseVisiblity}" 
                                                         Style="{StaticResource WPFFlatPrimaryButtonStyle}">
-													<Button.Margin>
+                                                    <Button.Margin>
 																	<Thickness>8,8,4,0</Thickness>
 														</Button.Margin>
 													</Button>
@@ -4130,7 +4200,8 @@
 												</Button>
                                             </StackPanel>
                                             <Border Height="10"
-                                                    BorderThickness="0">
+                                                    BorderThickness="0"
+                                                    Visibility="Visible">
                                                 <Thumb x:Name="PART_ThumbGripper"
                                                        HorizontalAlignment="Right"
                                                        Cursor="SizeNWSE">
@@ -4317,9 +4388,12 @@
                                                   Height="17"
                                                   HorizontalAlignment="Center"
                                                   VerticalAlignment="Center"
-                                                  Data="M8,9 L11,9 11,12 8,12 z M13,6 L2,6 2,14 13.001,14 z M3.4860003,0 C4.0380001,0 4.4860005,0.44700003 4.4860005,1 L4.4860005,2 11,2 11,1 C11,0.44700003 11.448,0 12,0 12.552,0 13,0.44700003 13,1 L13,2 C14.104,2 15,2.8960001 15,4 L15,14 C15,15.104 14.104,16 13,16 L2,16 C0.89600003,16 0,15.104 0,14 L0,4 C0,2.8960001 0.89600003,2 2,2 L2.4860001,2 2.4860001,1 C2.4860003,0.44700003 2.9340003,0 3.4860003,0 z"
                                                   Fill="{StaticResource IconColor}"
-                                                  Stretch="Fill" />
+                                                  Stretch="Fill" >
+                                                <Path.Data>
+                                                    <PathGeometry>M8,9 L11,9 11,12 8,12 z M13,6 L2,6 2,14 13.001,14 z M3.4860003,0 C4.0380001,0 4.4860005,0.44700003 4.4860005,1 L4.4860005,2 11,2 11,1 C11,0.44700003 11.448,0 12,0 12.552,0 13,0.44700003 13,1 L13,2 C14.104,2 15,2.8960001 15,4 L15,14 C15,15.104 14.104,16 13,16 L2,16 C0.89600003,16 0,15.104 0,14 L0,4 C0,2.8960001 0.89600003,2 2,2 L2.4860001,2 2.4860001,1 C2.4860003,0.44700003 2.9340003,0 3.4860003,0 z</PathGeometry>
+                                                </Path.Data>
+                                            </Path>
                                         </Grid>
                                     </Grid>
                                 </ControlTemplate>
@@ -4447,15 +4521,18 @@
                                 <Thickness>30,0,4,4</Thickness>
                             </Grid.Margin>
                             <TextBlock Grid.Row="0"
-                                       Margin="5,0,10,5"
                                        HorizontalAlignment="Stretch"
                                        VerticalAlignment="Center"
                                        Foreground="{StaticResource ContentForegroundAlt}"
+                                       
                                        FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
                                        FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
                                        FontWeight="{StaticResource MaterialDarkCustom.FontWeightNormal}"
-                                       Text="{grid:GridLocalizationResourceExtension ResourceName=ShowRowsWhere}" />
-
+                                       Text="{grid:GridLocalizationResourceExtension ResourceName=ShowRowsWhere}" >
+                                <TextBlock.Margin>
+                                    <Thickness>5,0,10,5</Thickness>
+                                </TextBlock.Margin>
+                            </TextBlock>
                             <ComboBox x:Name="PART_MenuComboBox1"
                                       Grid.Row="1"
                                       Margin="5,0,0,0"
@@ -4552,9 +4629,12 @@
                                                   Height="10.875"
                                                   HorizontalAlignment="Left"
                                                   VerticalAlignment="Bottom"
-                                                  Data="M4.8177202,6.9778699 C4.5546901,7.0650901 4.1380301,7.1718797 3.5690904,7.2916597 3,7.41406 2.6276202,7.5350598 2.4519,7.6511201 2.1849103,7.83853 2.0507803,8.0793504 2.0507803,8.3724097 2.0507803,8.6588401 2.1587801,8.9088401 2.3724103,9.1172799 2.58603,9.3268098 2.8593102,9.4309997 3.1901202,9.4309997 3.5599103,9.4309997 3.9127803,9.3111896 4.2487202,9.0650901 4.4960902,8.8815002 4.6601601,8.6549396 4.7369101,8.3867196 4.7917502,8.2109403 4.8177202,7.8801297 &#10;4.8177202,7.3867201 z M3.5690904,2.7747499 C4.4843802,2.7747499 5.1666901,2.88419 5.6133702,3.0989699 6.0612202,3.3150899 6.3763101,3.58994 6.5585301,3.92441 6.7409701,4.2577199 6.8320302,4.86841 6.8320303,5.7618097 L6.8099103,8.1549396 C6.8099102,8.8333396 6.8437501,9.3385295 6.9076502,9.66016 6.9740602,9.9830598 7.0964402,10.3307 7.2773403,10.7006 L5.2473102,10.7006 C5.1953101,10.5638 5.1303101,10.3621 5.0507801,10.0938 5.0169401,9.9738797 4.99213,9.8945302 4.9778702,9.8541602 4.6276202,10.194 4.2526901,10.4506 3.8527803,10.6211 3.4544401,10.7917 3.0286603,10.875 2.5768399,10.875 1.7786603,10.875 1.1497502,10.6602 0.69012499,10.2266 0.2305603,9.7916602 0,9.2448701 0,8.5847196 0,8.1458997 0.10546923,7.7552199 0.31390429,7.4126901 0.52343798,7.0689401 0.81771898,6.8085899 &#10;1.1940303,6.62363 1.57162,6.4427199 2.1133699,6.2839398 2.8243103,6.1471299 3.7825603,5.9675297 4.4478502,5.79678 4.8177202,5.6432199 L4.8177202,5.4388098 C4.8177202,5.0429701 4.7199702,4.7643098 4.5259702,4.59628 4.3306601,4.4284701 3.9636202,4.3437499 3.4245601,4.3437499 3.0585303,4.3437499 2.7748404,4.41406 2.57025,4.5599097 2.3645,4.7031297 2.2005301,4.95444 2.0729403,5.3138098 L0.21225023,4.9778699 C0.421875,4.2304701 0.78118896,3.67441 1.29175,3.3150899 1.8021903,2.95444 2.5625,2.7747499 3.5690904,2.7747499 z M13.216205,2.49741 L11.770804,6.4675297 14.690106,6.4675297 z M12.099004,0 L14.382807,0 18.666711,10.7006 16.316409,10.7006 15.382808,8.2708396 11.105504,8.2708396 10.224103,10.7006 7.9309104,10.7006 z"
                                                   Fill="{StaticResource IconColor}"
-                                                  Stretch="Fill" />
+                                                  Stretch="Fill" >
+                                                <Path.Data>
+                                                    <PathGeometry>M4.8177202,6.9778699 C4.5546901,7.0650901 4.1380301,7.1718797 3.5690904,7.2916597 3,7.41406 2.6276202,7.5350598 2.4519,7.6511201 2.1849103,7.83853 2.0507803,8.0793504 2.0507803,8.3724097 2.0507803,8.6588401 2.1587801,8.9088401 2.3724103,9.1172799 2.58603,9.3268098 2.8593102,9.4309997 3.1901202,9.4309997 3.5599103,9.4309997 3.9127803,9.3111896 4.2487202,9.0650901 4.4960902,8.8815002 4.6601601,8.6549396 4.7369101,8.3867196 4.7917502,8.2109403 4.8177202,7.8801297 &#10;4.8177202,7.3867201 z M3.5690904,2.7747499 C4.4843802,2.7747499 5.1666901,2.88419 5.6133702,3.0989699 6.0612202,3.3150899 6.3763101,3.58994 6.5585301,3.92441 6.7409701,4.2577199 6.8320302,4.86841 6.8320303,5.7618097 L6.8099103,8.1549396 C6.8099102,8.8333396 6.8437501,9.3385295 6.9076502,9.66016 6.9740602,9.9830598 7.0964402,10.3307 7.2773403,10.7006 L5.2473102,10.7006 C5.1953101,10.5638 5.1303101,10.3621 5.0507801,10.0938 5.0169401,9.9738797 4.99213,9.8945302 4.9778702,9.8541602 4.6276202,10.194 4.2526901,10.4506 3.8527803,10.6211 3.4544401,10.7917 3.0286603,10.875 2.5768399,10.875 1.7786603,10.875 1.1497502,10.6602 0.69012499,10.2266 0.2305603,9.7916602 0,9.2448701 0,8.5847196 0,8.1458997 0.10546923,7.7552199 0.31390429,7.4126901 0.52343798,7.0689401 0.81771898,6.8085899 &#10;1.1940303,6.62363 1.57162,6.4427199 2.1133699,6.2839398 2.8243103,6.1471299 3.7825603,5.9675297 4.4478502,5.79678 4.8177202,5.6432199 L4.8177202,5.4388098 C4.8177202,5.0429701 4.7199702,4.7643098 4.5259702,4.59628 4.3306601,4.4284701 3.9636202,4.3437499 3.4245601,4.3437499 3.0585303,4.3437499 2.7748404,4.41406 2.57025,4.5599097 2.3645,4.7031297 2.2005301,4.95444 2.0729403,5.3138098 L0.21225023,4.9778699 C0.421875,4.2304701 0.78118896,3.67441 1.29175,3.3150899 1.8021903,2.95444 2.5625,2.7747499 3.5690904,2.7747499 z M13.216205,2.49741 L11.770804,6.4675297 14.690106,6.4675297 z M12.099004,0 L14.382807,0 18.666711,10.7006 16.316409,10.7006 15.382808,8.2708396 11.105504,8.2708396 10.224103,10.7006 7.9309104,10.7006 z</PathGeometry>
+                                                </Path.Data>
+                                            </Path>
                                         </Grid>
                                     </ToggleButton.Content>
                                 </ToggleButton>
@@ -4568,11 +4648,14 @@
                                              Content="{grid:GridLocalizationResourceExtension ResourceName=AND}"
                                              GroupName="R1" />
                                 <RadioButton x:Name="PART_RadioButton2"
-                                             Margin="12,0,0,0"
                                              Content="{grid:GridLocalizationResourceExtension ResourceName=OR}"
                                              GroupName="R1"
                                              IsChecked="{Binding IsORChecked,
-                                                                 RelativeSource={RelativeSource TemplatedParent}}" />
+                                                                 RelativeSource={RelativeSource TemplatedParent}}" >
+                                    <RadioButton.Margin>
+                                        <Thickness>12,0,0,0</Thickness>
+                                    </RadioButton.Margin>
+                                </RadioButton>
                             </StackPanel>
 
                             <ComboBox x:Name="PART_MenuComboBox2"
@@ -4662,13 +4745,17 @@
                                                                    Converter={StaticResource reverseVisibilityConverter}}">
                                     <ToggleButton.Content>
                                         <Grid Width="20">
-                                            <Path Width="18.667"
+                                            <Path 
+                                                  Width="18.667"
                                                   Height="10.875"
                                                   HorizontalAlignment="Left"
                                                   VerticalAlignment="Bottom"
-                                                  Data="M4.8177202,6.9778699 C4.5546901,7.0650901 4.1380301,7.1718797 3.5690904,7.2916597 3,7.41406 2.6276202,7.5350598 2.4519,7.6511201 2.1849103,7.83853 2.0507803,8.0793504 2.0507803,8.3724097 2.0507803,8.6588401 2.1587801,8.9088401 2.3724103,9.1172799 2.58603,9.3268098 2.8593102,9.4309997 3.1901202,9.4309997 3.5599103,9.4309997 3.9127803,9.3111896 4.2487202,9.0650901 4.4960902,8.8815002 4.6601601,8.6549396 4.7369101,8.3867196 4.7917502,8.2109403 4.8177202,7.8801297 &#10;4.8177202,7.3867201 z M3.5690904,2.7747499 C4.4843802,2.7747499 5.1666901,2.88419 5.6133702,3.0989699 6.0612202,3.3150899 6.3763101,3.58994 6.5585301,3.92441 6.7409701,4.2577199 6.8320302,4.86841 6.8320303,5.7618097 L6.8099103,8.1549396 C6.8099102,8.8333396 6.8437501,9.3385295 6.9076502,9.66016 6.9740602,9.9830598 7.0964402,10.3307 7.2773403,10.7006 L5.2473102,10.7006 C5.1953101,10.5638 5.1303101,10.3621 5.0507801,10.0938 5.0169401,9.9738797 4.99213,9.8945302 4.9778702,9.8541602 4.6276202,10.194 4.2526901,10.4506 3.8527803,10.6211 3.4544401,10.7917 3.0286603,10.875 2.5768399,10.875 1.7786603,10.875 1.1497502,10.6602 0.69012499,10.2266 0.2305603,9.7916602 0,9.2448701 0,8.5847196 0,8.1458997 0.10546923,7.7552199 0.31390429,7.4126901 0.52343798,7.0689401 0.81771898,6.8085899 &#10;1.1940303,6.62363 1.57162,6.4427199 2.1133699,6.2839398 2.8243103,6.1471299 3.7825603,5.9675297 4.4478502,5.79678 4.8177202,5.6432199 L4.8177202,5.4388098 C4.8177202,5.0429701 4.7199702,4.7643098 4.5259702,4.59628 4.3306601,4.4284701 3.9636202,4.3437499 3.4245601,4.3437499 3.0585303,4.3437499 2.7748404,4.41406 2.57025,4.5599097 2.3645,4.7031297 2.2005301,4.95444 2.0729403,5.3138098 L0.21225023,4.9778699 C0.421875,4.2304701 0.78118896,3.67441 1.29175,3.3150899 1.8021903,2.95444 2.5625,2.7747499 3.5690904,2.7747499 z M13.216205,2.49741 L11.770804,6.4675297 14.690106,6.4675297 z M12.099004,0 L14.382807,0 18.666711,10.7006 16.316409,10.7006 15.382808,8.2708396 11.105504,8.2708396 10.224103,10.7006 7.9309104,10.7006 z"
                                                   Fill="{StaticResource IconColor}"
-                                                  Stretch="Fill" />
+                                                  Stretch="Fill" >
+                                                <Path.Data>
+                                                    <PathGeometry>M4.8177202,6.9778699 C4.5546901,7.0650901 4.1380301,7.1718797 3.5690904,7.2916597 3,7.41406 2.6276202,7.5350598 2.4519,7.6511201 2.1849103,7.83853 2.0507803,8.0793504 2.0507803,8.3724097 2.0507803,8.6588401 2.1587801,8.9088401 2.3724103,9.1172799 2.58603,9.3268098 2.8593102,9.4309997 3.1901202,9.4309997 3.5599103,9.4309997 3.9127803,9.3111896 4.2487202,9.0650901 4.4960902,8.8815002 4.6601601,8.6549396 4.7369101,8.3867196 4.7917502,8.2109403 4.8177202,7.8801297 &#10;4.8177202,7.3867201 z M3.5690904,2.7747499 C4.4843802,2.7747499 5.1666901,2.88419 5.6133702,3.0989699 6.0612202,3.3150899 6.3763101,3.58994 6.5585301,3.92441 6.7409701,4.2577199 6.8320302,4.86841 6.8320303,5.7618097 L6.8099103,8.1549396 C6.8099102,8.8333396 6.8437501,9.3385295 6.9076502,9.66016 6.9740602,9.9830598 7.0964402,10.3307 7.2773403,10.7006 L5.2473102,10.7006 C5.1953101,10.5638 5.1303101,10.3621 5.0507801,10.0938 5.0169401,9.9738797 4.99213,9.8945302 4.9778702,9.8541602 4.6276202,10.194 4.2526901,10.4506 3.8527803,10.6211 3.4544401,10.7917 3.0286603,10.875 2.5768399,10.875 1.7786603,10.875 1.1497502,10.6602 0.69012499,10.2266 0.2305603,9.7916602 0,9.2448701 0,8.5847196 0,8.1458997 0.10546923,7.7552199 0.31390429,7.4126901 0.52343798,7.0689401 0.81771898,6.8085899 &#10;1.1940303,6.62363 1.57162,6.4427199 2.1133699,6.2839398 2.8243103,6.1471299 3.7825603,5.9675297 4.4478502,5.79678 4.8177202,5.6432199 L4.8177202,5.4388098 C4.8177202,5.0429701 4.7199702,4.7643098 4.5259702,4.59628 4.3306601,4.4284701 3.9636202,4.3437499 3.4245601,4.3437499 3.0585303,4.3437499 2.7748404,4.41406 2.57025,4.5599097 2.3645,4.7031297 2.2005301,4.95444 2.0729403,5.3138098 L0.21225023,4.9778699 C0.421875,4.2304701 0.78118896,3.67441 1.29175,3.3150899 1.8021903,2.95444 2.5625,2.7747499 3.5690904,2.7747499 z M13.216205,2.49741 L11.770804,6.4675297 14.690106,6.4675297 z M12.099004,0 L14.382807,0 18.666711,10.7006 16.316409,10.7006 15.382808,8.2708396 11.105504,8.2708396 10.224103,10.7006 7.9309104,10.7006 z</PathGeometry>
+                                                </Path.Data>
+                                            </Path>
                                         </Grid>
                                     </ToggleButton.Content>
                                 </ToggleButton>

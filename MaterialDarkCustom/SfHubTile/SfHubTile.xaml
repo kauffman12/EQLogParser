@@ -72,15 +72,19 @@
                         <Rectangle
                             x:Name="PointerOveRect"
                             Margin="-2"
+                            RadiusX="0"
+                            RadiusY="0"
                             Fill="Transparent" />
                         <Border
                             x:Name="Part_Border"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
+                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                             BorderThickness="{TemplateBinding BorderThickness}">
                             <Grid Margin="{TemplateBinding Padding}">
                                 <Grid x:Name="PART_SlideRoot">
                                     <Grid x:Name="PART_LayoutRoot">
+                                        <Border x:Name="MaskBorder" Background="{TemplateBinding Background}" CornerRadius="{Binding ElementName=Part_Border,Path=CornerRadius}"/>
                                         <ContentPresenter
                                                 Content="{TemplateBinding Header}"
                                                 ContentTemplate="{TemplateBinding HeaderTemplate}"
@@ -110,7 +114,11 @@
                                         VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
                                         Content="{TemplateBinding SecondaryContent}"
                                         ContentTemplate="{TemplateBinding SecondaryContentTemplate}"
-                                        Visibility="Collapsed" />
+                                        Visibility="Collapsed" >
+                                        <ContentControl.OpacityMask>
+                                            <VisualBrush Visual="{Binding Source={x:Reference MaskBorder}}" />
+                                        </ContentControl.OpacityMask>
+                                    </ContentControl>
                                 </Grid>
                             </Grid>
                         </Border>

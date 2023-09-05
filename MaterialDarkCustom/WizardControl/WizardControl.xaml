@@ -72,7 +72,7 @@
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness0100}" />
         <Setter Property="Padding" Value="8,4,8,4" />
-        <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+        <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
         <Setter Property="IsTabStop" Value="False" />
         <Setter Property="Template">
             <Setter.Value>
@@ -93,7 +93,11 @@
                                 Command="syncfusion:WizardCommands.Help"
                                 Content="{Binding RelativeSource={StaticResource wizardAncestor}, Path=HelpText}"
                                 Style="{StaticResource WPFFlatButtonStyle}"
-                                Visibility="{Binding RelativeSource={StaticResource wizardAncestor}, Path=(syncfusion:WizardControl.SelectedWizardPage).(syncfusion:WizardPage.HelpVisibility)}" />
+                                Visibility="{Binding RelativeSource={StaticResource wizardAncestor}, Path=(syncfusion:WizardControl.SelectedWizardPage).(syncfusion:WizardPage.HelpVisibility)}" >
+                                <Button.Margin>
+                                    <Thickness>0,0,8,0</Thickness>
+                                </Button.Margin>
+                            </Button>
                             <StackPanel
                                 Grid.Column="1"
                                 HorizontalAlignment="Right"
@@ -101,37 +105,49 @@
                                 <Button
                                     Name="PART_CancelButton"
                                     MinWidth="66"
-                                    Margin="0,0,8,0"
                                     Command="syncfusion:WizardCommands.Cancel"
                                     Content="{Binding RelativeSource={StaticResource wizardAncestor}, Path=CancelText}"
                                     Style="{StaticResource WPFFlatButtonStyle}"
-                                    Visibility="{Binding RelativeSource={StaticResource wizardAncestor}, Path=(syncfusion:WizardControl.SelectedWizardPage).(syncfusion:WizardPage.CancelVisibility)}" />
+                                    Visibility="{Binding RelativeSource={StaticResource wizardAncestor}, Path=(syncfusion:WizardControl.SelectedWizardPage).(syncfusion:WizardPage.CancelVisibility)}" >
+                                    <Button.Margin>
+                                        <Thickness>0,0,8,0</Thickness>
+                                    </Button.Margin>
+                                </Button>
                                 <Button
                                     Name="PART_BackButton"
                                     MinWidth="66"
-                                    Margin="0,0,8,0"
                                     Command="syncfusion:WizardCommands.Previous"
                                     Content="{Binding RelativeSource={StaticResource wizardAncestor}, Path=BackText}"
                                     Style="{StaticResource WPFFlatButtonStyle}"
-                                    Visibility="{Binding RelativeSource={StaticResource wizardAncestor}, Path=(syncfusion:WizardControl.SelectedWizardPage).(syncfusion:WizardPage.BackVisibility)}" />
+                                    Visibility="{Binding RelativeSource={StaticResource wizardAncestor}, Path=(syncfusion:WizardControl.SelectedWizardPage).(syncfusion:WizardPage.BackVisibility)}" >
+                                    <Button.Margin>
+                                        <Thickness>0,0,8,0</Thickness>
+                                    </Button.Margin>
+                                </Button>
                                 <Button
                                     Name="PART_NextButton"
                                     MinWidth="66"
-									Margin="0,0,8,0"
                                     Command="syncfusion:WizardCommands.Next"
                                     Content="{Binding RelativeSource={StaticResource wizardAncestor}, Path=NextText}"
                                     IsDefault="{Binding RelativeSource={StaticResource wizardAncestor}, Path=NextFocused}"
                                     Style="{StaticResource WPFFlatPrimaryButtonStyle}"
-                                    Visibility="{Binding RelativeSource={StaticResource wizardAncestor}, Path=(syncfusion:WizardControl.SelectedWizardPage).(syncfusion:WizardPage.NextVisibility)}" />
+                                    Visibility="{Binding RelativeSource={StaticResource wizardAncestor}, Path=(syncfusion:WizardControl.SelectedWizardPage).(syncfusion:WizardPage.NextVisibility)}" >
+                                    <Button.Margin>
+                                        <Thickness>0,0,8,0</Thickness>
+                                    </Button.Margin>
+                                </Button>
                                 <Button
                                     Name="PART_FinishButton"
                                     MinWidth="66"
-                                    Margin="0,0,8,0"
                                     Command="syncfusion:WizardCommands.Finish"
                                     Content="{Binding RelativeSource={StaticResource wizardAncestor}, Path=FinishText}"
                                     IsDefault="{Binding RelativeSource={StaticResource wizardAncestor}, Path=FinishFocused}"
                                     Style="{StaticResource WPFFlatPrimaryButtonStyle}"
-                                    Visibility="{Binding RelativeSource={StaticResource wizardAncestor}, Path=(syncfusion:WizardControl.SelectedWizardPage).(syncfusion:WizardPage.FinishVisibility)}" />
+                                    Visibility="{Binding RelativeSource={StaticResource wizardAncestor}, Path=(syncfusion:WizardControl.SelectedWizardPage).(syncfusion:WizardPage.FinishVisibility)}" >
+                                    <Button.Margin>
+                                        <Thickness>0,0,8,0</Thickness>
+                                    </Button.Margin>
+                                </Button>
                             </StackPanel>
                         </Grid>
                     </classic:ClassicBorderDecorator>
@@ -244,12 +260,15 @@
                                             Stretch="Fill" />
                                     </Grid>
                                 </classic:ClassicBorderDecorator>
-                                <Grid Margin="12" Column="1">
+                                <Grid Column="1">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
                                     </Grid.RowDefinitions>
+                                    <Grid.Margin>
+                                        <Thickness>12,12,12,12</Thickness>
+                                    </Grid.Margin>
                                     <TextBlock
                                         Name="PART_TitleTextBlock"
                                         Grid.Row="0"
@@ -325,7 +344,8 @@
                     <Border
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}">
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*" />

@@ -285,8 +285,8 @@
                                                   VerticalAlignment="Center"/>
                                 <ToolBarPanel x:Name="PART_ToolBarPanel" 
                                               IsItemsHost="true"
-                                              Margin="0,1,2,2" 
-                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                                </ToolBarPanel>
                             </DockPanel>
                         </Border>
                     </Grid>

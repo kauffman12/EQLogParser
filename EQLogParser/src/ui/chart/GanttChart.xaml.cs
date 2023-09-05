@@ -292,7 +292,26 @@ namespace EQLogParser
 
     private void CreateImage(bool everything = false)
     {
-      Task.Delay(250).ContinueWith(t =>
+      double previousOffset = -1;
+      var hidden = new List<TextBlock>();
+
+      if (everything)
+      {
+        foreach (var header in Headers)
+        {
+          if (header.Visibility == Visibility.Hidden)
+          {
+            hidden.Add(header);
+            header.Visibility = Visibility.Visible;
+          }
+        }
+
+        previousOffset = contentScroller.HorizontalOffset;
+        contentScroller.ScrollToHorizontalOffset(0);
+        headerScroller.ScrollToHorizontalOffset(0);
+      }
+
+      Task.Delay(150).ContinueWith(t =>
       {
         Dispatcher.InvokeAsync(() =>
         {
@@ -350,7 +369,12 @@ namespace EQLogParser
           else
           {
             height += Math.Min(contentHeight, (int)labelsScroller.ActualHeight) + 1;
-            if (contentScroller.ComputedHorizontalScrollBarVisibility == Visibility.Visible)
+            if (contentScroller.ComputedVerticalScrollBarVisibility == Visibility.Visible)
+            {
+              height += 2; // might be a Syncfusion property for this
+            }
+            if (contentScroller.ComputedHorizontalScrollBarVisibility == Visibility.Visible &&
+              contentScroller.ComputedVerticalScrollBarVisibility == Visibility.Visible)
             {
               height -= 12; // might be a Syncfusion property for this
             }
@@ -372,6 +396,12 @@ namespace EQLogParser
 
           rtb.Render(dv);
           Clipboard.SetImage(BitmapFrame.Create(rtb));
+
+          if (everything)
+          {
+            hidden.ForEach(header => header.Visibility = Visibility.Hidden);
+            contentScroller.ScrollToHorizontalOffset(previousOffset);
+          }
         }, System.Windows.Threading.DispatcherPriority.Background);
       });
     }

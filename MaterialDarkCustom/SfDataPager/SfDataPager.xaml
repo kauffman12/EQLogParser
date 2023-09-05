@@ -320,7 +320,7 @@
                         <Rectangle x:Name="PART_PageIndicator"
                                  Fill="{TemplateBinding Background}"
                                  Stroke="Transparent"
-                                 StrokeThickness="1"  
+                                 StrokeThickness="1"
                                  RadiusX="12.5" 
                                  RadiusY="12.5">
                         </Rectangle>
@@ -348,7 +348,7 @@
             </Setter.Value>
         </Setter>
     </Style>
-
+   
     <Style TargetType="datapager:NumericButton" x:Key="SyncfusionNumericButtonStyle">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
@@ -416,12 +416,26 @@
                                    Height="25"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center" 
+                                   
                                    RadiusX="12.5" 
                                    RadiusY="12.5">
                         </Rectangle>
+                        <Rectangle x:Name="PART_CurrentPageLineIndicator"
+                                   Width="25"
+                                   Height="2"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Visibility="Hidden"
+                                   Margin="0,21,0,0"
+                                   StrokeThickness="2"
+                                   RadiusX="2" 
+                                   RadiusY="2">
+                        </Rectangle>
                         <Border x:Name="PART_RootBorder"
                                 Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderBrush="{TemplateBinding BorderBrush}"    
+                                
+                                
                                 BorderThickness="{TemplateBinding BorderThickness}">
                             <ContentPresenter x:Name="PART_ContentPresenter"
                                               HorizontalAlignment="Center"
@@ -638,7 +652,8 @@
                                     Style="{StaticResource SyncfusionDataPagerNavigationButtonStyle}"
                                     Visibility="Collapsed">
                                 <Button.Content>
-                                    <Path Width="11"
+                                    <Path 
+                                          Width=" 11"
                                           Height="12.01"
                                           Margin="0,0,0,0"
                                           Fill="{TemplateBinding AccentForeground}"
@@ -665,7 +680,8 @@
                                     BorderThickness="1"
                                     Visibility="Collapsed">
                                 <Button.Content>
-                                    <Path Width="8.001"
+                                    <Path 
+                                          Width=" 8.001"
                                           Height="13"
                                           Margin="0,0,0,0"
                                           Fill="{TemplateBinding AccentForeground}"
@@ -692,7 +708,8 @@
                                     Style="{StaticResource SyncfusionDataPagerNavigationButtonStyle}"
                                     Visibility="Collapsed">
                                 <Button.Content>
-                                    <Path Width="8.001"
+                                    <Path 
+                                          Width=" 8.001"
                                           Height="13"
                                           Fill="{TemplateBinding AccentForeground}"
                                           Stretch="Fill">
@@ -718,7 +735,8 @@
                                     Style="{StaticResource SyncfusionDataPagerNavigationButtonStyle}"
                                     Visibility="Collapsed">
                                 <Button.Content>
-                                    <Path Width="10.999"
+                                    <Path 
+                                          Width=" 10.999"
                                           Height="12.01"
                                           Margin="0,0,0,0"
                                           Fill="{TemplateBinding AccentForeground}"

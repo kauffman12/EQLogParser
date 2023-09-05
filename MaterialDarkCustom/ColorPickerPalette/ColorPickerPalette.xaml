@@ -71,11 +71,13 @@
                             BorderBrush="{StaticResource Black}"
                             FocusVisualStyle="{x:Null}"
                             Focusable="True"
+                            
                             SnapsToDevicePixels="True">
                             <Border
                                 x:Name="InnerBorder"
                                 Background="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Color}"
-                                BorderBrush="{StaticResource PopupBackground}">
+                                BorderBrush="{StaticResource PopupBackground}"
+                                >
                                 <Border.ToolTip>
                                     <ToolTip>
                                         <TextBlock Text="{TemplateBinding ColorName}" />
@@ -276,7 +278,8 @@
                                             FocusVisualStyle="{x:Null}"
                                             Grid.Column="0"
                                             Padding="2"
-                                            SnapsToDevicePixels="True">
+                                            SnapsToDevicePixels="True"
+                                            >
                                             <ContentPresenter x:Name="Header" ContentTemplate="{TemplateBinding HeaderTemplate}" />
                                         </Border>
                                         <Border
@@ -326,6 +329,7 @@
                                                     <RowDefinition Height="Auto" />
                                                     <RowDefinition Height="Auto" />
                                                     <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
                                                 </Grid.RowDefinitions>
 
                                                 <Border
@@ -352,11 +356,13 @@
                                                                 Grid.Column="0"
                                                                 Background="{StaticResource PopupBackground}"
                                                                 BorderBrush="{StaticResource PopupBackground}"
+                                                                
                                                                 BorderThickness="1">
                                                                 <Border
                                                                     x:Name="aborder"
                                                                     Grid.Column="0"
-                                                                    Background="{TemplateBinding AutomaticColor}" />
+                                                                    Background="{TemplateBinding AutomaticColor}"
+                                                                    />
                                                             </Border>
                                                         </Border>
                                                         <TextBlock
@@ -371,7 +377,13 @@
                                                             Text="{shared_resources:SharedLocalizationResourceExtension ResourceName=AutomaticText}" />
                                                     </Grid>
                                                 </Border>
-
+                                                <Border
+                                                    x:Name="border1"
+                                                    Grid.Row="1"
+                                                    Margin="0,3,0,3"
+                                                    Visibility="Collapsed"
+                                                    BorderBrush="{StaticResource BorderAlt}"
+                                                    BorderThickness=".5" />
                                                 <ItemsControl
                                                     x:Name="ColorArea"
                                                     Grid.Row="1"
@@ -433,6 +445,7 @@
                                                     </Grid>
                                                 </Border>
                                                 <Border
+                                                    x:Name="border2"
                                                     Grid.Row="3"
                                                     Margin="0,3,0,3"
                                                     BorderBrush="{StaticResource BorderAlt}"
@@ -444,6 +457,7 @@
                                                     Margin="0,3,0,0"
                                                     Background="{StaticResource ContentBackgroundAlt2}"
                                                     BorderThickness="0"
+                                                    CornerRadius="0"
                                                     FocusVisualStyle="{x:Null}"
                                                     Focusable="True">
                                                     <Border.Visibility>
@@ -622,6 +636,29 @@
                         <!--<Trigger Property="Mode" Value="DropDown">
                             <Setter TargetName="ColorPickerBorder" Property="Focusable" Value="True"/>
                         </Trigger>-->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="ThemePanelVisibility" Value="Collapsed"/>
+                                <Condition Property="StandardPanelVisibility" Value="Collapsed"/>
+                                <Condition Property="RecentlyUsedPanelVisibility" Value="Collapsed"/>
+                                <Condition Property="NoColorVisibility" Value="Collapsed"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="border1" Property="Visibility" Value="Collapsed"/>
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="ThemePanelVisibility" Value="Collapsed"/>
+                                <Condition Property="StandardPanelVisibility" Value="Collapsed"/>
+                                <Condition Property="RecentlyUsedPanelVisibility" Value="Collapsed"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="ColorArea" Property="Visibility" Value="Collapsed"/>
+                        </MultiTrigger>
+                        <Trigger SourceName="MoreColors1" Property="Visibility" Value="Collapsed">
+                            <Setter TargetName="border2" Property="Visibility" Value="Collapsed"/>
+                        </Trigger>
+                        <Trigger Property="AutomaticColorVisibility" Value="Collapsed">
+                            <Setter TargetName="border1" Property="Visibility" Value="Collapsed"/>
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>

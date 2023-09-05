@@ -33,26 +33,32 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ContentControl">
-                    <Grid RenderTransformOrigin="0.5, 0.5">
-                        <Path
-                            x:Name="ToolTipPath"
-                            Height="30"
-                            Margin="0,1,0,0"
-                            HorizontalAlignment="Stretch"
-                            VerticalAlignment="Center"
-                            Data="M1,0 L15,0 C15.553,0 16,0.44800001 16,1 L16,10.511001 C16,11.063001 15.553,11.511001 15,11.511001 L10.173,11.511001 8,14 5.8150001,11.511001 1,11.511001 C0.44800001,11.511001 0,11.063001 0,10.511001 L0,1 C0,0.44800001 0.44800001,0 1,0 z"
-                            Fill="{TemplateBinding Background}"
-                            Stretch="Fill"
-                            Stroke="{TemplateBinding BorderBrush}"
-                            StrokeThickness="1" />
+                    <Grid 
+                        Effect="{StaticResource Default.ShadowDepth2}"
+                        RenderTransformOrigin="0.5,0.5">
+                    <Grid.Margin>
+                        <Thickness>0</Thickness>
+                    </Grid.Margin>
+                    <Path
+                         x:Name="ToolTipPath"
+                         Height="30"
+                         Margin="0,1,0,0"
+                         HorizontalAlignment="Stretch"
+                         VerticalAlignment="Center"
+                         Data="M1,0 L15,0 C15.553,0 16,0.44800001 16,1 L16,10.511001 C16,11.063001 15.553,11.511001 15,11.511001 L10.173,11.511001 8,14 5.8150001,11.511001 1,11.511001 C0.44800001,11.511001 0,11.063001 0,10.511001 L0,1 C0,0.44800001 0.44800001,0 1,0 z"
+                         Fill="{TemplateBinding Background}"
+                         Stretch="Fill"
+                         Stroke="{TemplateBinding BorderBrush}"
+                         StrokeThickness="1" />
                         <TextBlock
-                            Margin="10,0,10,5"
                             HorizontalAlignment="Stretch"
                             VerticalAlignment="Center"
+                            Margin="10,0,10,5"
                             FontFamily="{TemplateBinding FontFamily}"
                             FontSize="{TemplateBinding FontSize}"
                             FontWeight="{TemplateBinding FontWeight}"
                             Foreground="{TemplateBinding Foreground}"
+                            Visibility="Visible"
                             Text="{Binding Path=PreviewValue, RelativeSource={RelativeSource AncestorType={x:Type Input:SfRating}}}" />
                     </Grid>
                 </ControlTemplate>
@@ -134,55 +140,70 @@
                         <Path
                             x:Name="Unrated"
                             VerticalAlignment="Stretch"
-                            Data="M1540.22,2082.07L1546.95,2102.78 1568.73,2102.78 1551.11,2115.58 1557.84,2136.29 1540.22,2123.49 1522.6,2136.29 1529.33,2115.58 1511.71,2102.78 1533.49,2102.78 1540.22,2082.07z"
                             Fill="{TemplateBinding UnratedFill}"
                             Opacity="1"
                             Stretch="Uniform"
                             Stroke="{TemplateBinding UnratedStroke}"
                             StrokeLineJoin="Miter"
-                            StrokeThickness="{TemplateBinding UnratedStrokeThickness}" />
+                            StrokeThickness="{TemplateBinding UnratedStrokeThickness}" >
+                            <Path.Data>
+                                <PathGeometry>M1540.22,2082.07L1546.95,2102.78 1568.73,2102.78 1551.11,2115.58 1557.84,2136.29 1540.22,2123.49 1522.6,2136.29 1529.33,2115.58 1511.71,2102.78 1533.49,2102.78 1540.22,2082.07z</PathGeometry>
+                            </Path.Data>
+                        </Path>
                         <Path
                             x:Name="MouseOverPath"
                             VerticalAlignment="Stretch"
-                            Data="M1540.22,2082.07L1546.95,2102.78 1568.73,2102.78 1551.11,2115.58 1557.84,2136.29 1540.22,2123.49 1522.6,2136.29 1529.33,2115.58 1511.71,2102.78 1533.49,2102.78 1540.22,2082.07z"
                             Fill="{TemplateBinding PointerOverFill}"
                             Opacity="0"
                             Stretch="Uniform"
                             Stroke="{TemplateBinding PointerOverStroke}"
                             StrokeLineJoin="Miter"
                             StrokeThickness="{TemplateBinding PointerOverStrokeThickness}"
-                            Visibility="{Binding Path=Precision, Converter={StaticResource VisibilityConverter}, Mode=TwoWay, RelativeSource={RelativeSource AncestorType={x:Type Input:SfRating}}}" />
+                            Visibility="{Binding Path=Precision, Converter={StaticResource VisibilityConverter}, Mode=TwoWay, RelativeSource={RelativeSource AncestorType={x:Type Input:SfRating}}}" >
+                            <Path.Data>
+                                <PathGeometry>M1540.22,2082.07L1546.95,2102.78 1568.73,2102.78 1551.11,2115.58 1557.84,2136.29 1540.22,2123.49 1522.6,2136.29 1529.33,2115.58 1511.71,2102.78 1533.49,2102.78 1540.22,2082.07z</PathGeometry>
+                            </Path.Data>
+                        </Path>
                         <Path
                             x:Name="RatedPath"
                             VerticalAlignment="Stretch"
-                            Data="M1540.22,2082.07L1546.95,2102.78 1568.73,2102.78 1551.11,2115.58 1557.84,2136.29 1540.22,2123.49 1522.6,2136.29 1529.33,2115.58 1511.71,2102.78 1533.49,2102.78 1540.22,2082.07z"
                             Fill="{TemplateBinding RatedFill}"
-                            Opacity="1"
+			    Opacity="1"
                             Stretch="Uniform"
                             Stroke="{TemplateBinding RatedStroke}"
                             StrokeLineJoin="Miter"
-                            StrokeThickness="{TemplateBinding RatedStrokeThickness}" />
+                            StrokeThickness="{TemplateBinding RatedStrokeThickness}" >
+                            <Path.Data>
+                                <PathGeometry>M1540.22,2082.07L1546.95,2102.78 1568.73,2102.78 1551.11,2115.58 1557.84,2136.29 1540.22,2123.49 1522.6,2136.29 1529.33,2115.58 1511.71,2102.78 1533.49,2102.78 1540.22,2082.07z</PathGeometry>
+                            </Path.Data>
+                        </Path>
                         <shared:LinearClipper x:Name="LinearClipper" IsTabStop="False" ExpandDirection="Right">
                             <Path
                                 x:Name="MouseOverRatedPath"
                                 VerticalAlignment="Stretch"
-                                Data="M1540.22,2082.07L1546.95,2102.78 1568.73,2102.78 1551.11,2115.58 1557.84,2136.29 1540.22,2123.49 1522.6,2136.29 1529.33,2115.58 1511.71,2102.78 1533.49,2102.78 1540.22,2082.07z"
                                 Fill="{TemplateBinding RatedFill}"
                                 Stretch="Uniform"
                                 Stroke="{TemplateBinding RatedStroke}"
                                 StrokeLineJoin="Miter"
-                                StrokeThickness="{TemplateBinding RatedStrokeThickness}" />
+                                StrokeThickness="{TemplateBinding RatedStrokeThickness}" >
+                                <Path.Data>
+                                    <PathGeometry>M1540.22,2082.07L1546.95,2102.78 1568.73,2102.78 1551.11,2115.58 1557.84,2136.29 1540.22,2123.49 1522.6,2136.29 1529.33,2115.58 1511.71,2102.78 1533.49,2102.78 1540.22,2082.07z</PathGeometry>
+                                </Path.Data>
+                            </Path>
                         </shared:LinearClipper>
                         <shared:LinearClipper ExpandDirection="Right" IsTabStop="False" RatioVisible="{TemplateBinding InternalValue}">
                             <Path
                                 x:Name="LinearCliperPath"
                                 VerticalAlignment="Stretch"
-                                Data="M1540.22,2082.07L1546.95,2102.78 1568.73,2102.78 1551.11,2115.58 1557.84,2136.29 1540.22,2123.49 1522.6,2136.29 1529.33,2115.58 1511.71,2102.78 1533.49,2102.78 1540.22,2082.07z"
                                 Fill="{TemplateBinding RatedFill}"
                                 Stretch="Uniform"
                                 Stroke="{TemplateBinding RatedStroke}"
                                 StrokeLineJoin="Miter"
-                                StrokeThickness="{TemplateBinding RatedStrokeThickness}" />
+                                StrokeThickness="{TemplateBinding RatedStrokeThickness}" >
+                                <Path.Data>
+                                    <PathGeometry>M1540.22,2082.07L1546.95,2102.78 1568.73,2102.78 1551.11,2115.58 1557.84,2136.29 1540.22,2123.49 1522.6,2136.29 1529.33,2115.58 1511.71,2102.78 1533.49,2102.78 1540.22,2082.07z</PathGeometry>
+                                </Path.Data>
+                            </Path>
                         </shared:LinearClipper>
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="CommonStates">

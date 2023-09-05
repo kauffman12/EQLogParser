@@ -91,12 +91,14 @@
                                     Grid.Row="0"
                                     Grid.Column="1"
                                     Width="19"
-                                    Height="19"
-                                    Margin="5,0,5,0"
+                                    Height="19"                                    
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
                                     Background="Transparent"
                                     RenderTransformOrigin="0.5,0.5">
+                                <Grid.Margin>
+                                    <Thickness>5,0,5,0</Thickness>
+                                </Grid.Margin>
                                 <Grid.RenderTransform>
                                     <TransformGroup>
                                         <ScaleTransform />
@@ -272,7 +274,8 @@
                             Padding="{TemplateBinding Padding}"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}">
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            >
                             <ScrollViewer
                                 x:Name="PART_ScrollViewer"
                                 Background="{x:Null}"
@@ -336,8 +339,10 @@
                         x:Name="border"
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        Margin="0,0,0,1">
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                        <Border.Margin>
+                            <Thickness>0,0,0,1</Thickness>
+                        </Border.Margin>
                         <Grid
                             Margin="{TemplateBinding Padding}"
                             HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"

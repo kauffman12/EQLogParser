@@ -505,6 +505,11 @@
                                 <Border Name="FrameBorder" Style="{StaticResource FrameBorderStyle}">
                                     <Border Name="FrameInnerBorder" Style="{StaticResource FrameInnerBorderStyle}">
                                         <Grid HorizontalAlignment="Center">
+                                            <Grid.Resources>
+                                                <local:SecondsConverter x:Key="secondsConverter" />
+                                                <local:MinutesConverter x:Key="minutesConverter" />
+                                                <local:HoursConverter x:Key="hoursConverter" />
+                                            </Grid.Resources>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="{Binding Path=FirstBorderFrameRadius, RelativeSource={RelativeSource AncestorType={x:Type local:Clock}}}" />
                                             </Grid.ColumnDefinitions>

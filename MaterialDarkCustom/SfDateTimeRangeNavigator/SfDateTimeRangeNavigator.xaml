@@ -1,5 +1,6 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    
                     xmlns:local="clr-namespace:Syncfusion.UI.Xaml.Charts;assembly=Syncfusion.SfChart.WPF"
                     xmlns:System="clr-namespace:System;assembly=mscorlib"
                     xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF">
@@ -10,27 +11,35 @@
     </ResourceDictionary.MergedDictionaries>
     
     <DataTemplate x:Key="leftTooltipTemplate">
-        <Grid>
-            <Path x:Name="light_left"
+		<Border 
+                Background="Transparent"
+                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}">
+			<Grid>
+				<Path x:Name="light_left"
                   Data="F1M398.0605,350.6934L377.7585,350.6934L372.3835,350.6934L372.3215,350.6934C370.2155,350.6934,368.5085,352.5044,368.5085,354.7344C368.5085,356.9664,370.2155,358.7774,372.3215,358.7774L372.3835,358.7774L377.7585,358.7774L398.0605,358.7774z"
                   Fill="{StaticResource TooltipBackground}"
-                  Stretch="Fill" />
-            <TextBlock Text="{Binding}"
+                  Stretch="Fill"/>
+				<TextBlock Text="{Binding}"
                        Margin="5,5,5,5"
                        Foreground="{StaticResource Black}" />
-        </Grid>
+			</Grid>
+		</Border>
     </DataTemplate>
 
     <DataTemplate x:Key="rightTooltipTemplate">
-        <Grid>            
-            <Path x:Name="dark_right"
+		<Border 
+                Background="Transparent"
+                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}">
+			<Grid>
+				<Path x:Name="dark_right"
                   Data="F1M400.5342,362.2568L420.8372,362.2568L426.2122,362.2568L426.2742,362.2568C428.3802,362.2568,430.0872,364.0658,430.0872,366.2978C430.0872,368.5298,428.3802,370.3388,426.2742,370.3388L426.2122,370.3388L420.8372,370.3388L400.5342,370.3388z"
                   Fill="{StaticResource TooltipBackground}"
                   Stretch="Fill" />
-            <TextBlock Text="{Binding}"
+				<TextBlock Text="{Binding}"
                        Margin="5,5,5,5"
                        Foreground="{StaticResource Black}" />
-        </Grid>
+			</Grid>
+		</Border>
     </DataTemplate>
 
     <Style x:Key="DefaultThumbLineStyle"
@@ -614,12 +623,17 @@
                             <ControlTemplate x:Key="HorizontalNearThumbTemplate"
                                              TargetType="Thumb">
                                 <Border CornerRadius="8,0,0,8"
-                                        Margin="0,0,-1,0"
                                         Width="18"
-                                        Background="{StaticResource ContentBackgroundAlt3}">
-                                    <Grid Margin="4,0,0,0"
-                                          VerticalAlignment="Center"
+                                        Background="{StaticResource ContentBackgroundAlt3}"
+										>
+									<Border.Margin>
+												<Thickness>0,-1,0,0</Thickness>
+									</Border.Margin>
+                                    <Grid VerticalAlignment="Center"
                                           HorizontalAlignment="Center">
+										<Grid.Margin>
+                                            <Thickness>4,0,0,0</Thickness>
+                                        </Grid.Margin>
                                         <ContentControl>
                                             <Ellipse Width="9"
                                                      Height="9"
@@ -632,12 +646,17 @@
                             <ControlTemplate x:Key="HorizontalFarThumbTemplate"
                                              TargetType="Thumb">
                                 <Border CornerRadius="0,8,8,0"
-                                        Margin="-1,0,0,0"
                                         Width="18"
-                                        Background="{StaticResource ContentBackgroundAlt3}">
-                                    <Grid Margin="0,0,3,0"
-                                          VerticalAlignment="Center"
+                                        Background="{StaticResource ContentBackgroundAlt3}"
+										>
+									<Border.Margin>
+												<Thickness>-1,0,0,0</Thickness>
+									</Border.Margin>
+                                    <Grid VerticalAlignment="Center"
                                           HorizontalAlignment="Center">
+										<Grid.Margin>
+                                            <Thickness>0,0,3,0</Thickness>
+                                        </Grid.Margin>
                                         <ContentControl>
                                             <Ellipse Width="9"
                                                      Height="9"

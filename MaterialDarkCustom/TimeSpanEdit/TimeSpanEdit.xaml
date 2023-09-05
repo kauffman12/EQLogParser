@@ -10,7 +10,10 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphRepeatButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/RepeatButton.xaml" />
     </ResourceDictionary.MergedDictionaries>
+
+    <Thickness x:Key="Win11Margin" >4,0,0,0</Thickness>
 
     <shared:BoolToVisibilityConverter x:Key="TimeEditBooleanToVisibilityConverter" />
 
@@ -26,6 +29,7 @@
         <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant1}" />
         <Setter Property="AllowDrop" Value="False" />
         <Setter Property="Padding" Value="0" />
+        <Setter Property="MinHeight" Value="{StaticResource MaterialDarkCustom.MinHeight}" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Stylus.IsFlicksEnabled" Value="False" />
         <Setter Property="Template">
@@ -51,6 +55,7 @@
                                 HorizontalContentAlignment="Center"
                                 VerticalContentAlignment="Center"
                                 Background="Transparent"
+                                
                                 FontFamily="{TemplateBinding FontFamily}"
                                 FontSize="{TemplateBinding FontSize}"
                                 FontWeight="{TemplateBinding FontWeight}"
@@ -65,6 +70,7 @@
                                     x:Name="upbutton"
                                     Grid.Row="0"
                                     Width="16"
+                                    Margin="0"
                                     Padding="{TemplateBinding Padding}"
                                     Background="Transparent"
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
@@ -74,21 +80,29 @@
                                     Visibility="{Binding ShowArrowButtons, Converter={StaticResource TimeEditBooleanToVisibilityConverter}, RelativeSource={RelativeSource TemplatedParent}}">
                                     <RepeatButton.Content>
                                         <Path
-                                            x:Name="upbuttonpath"
-                                            Width="8"
-                                            Height="4"
-                                            HorizontalAlignment="Stretch"
-                                            VerticalAlignment="Stretch"
-                                            Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
-                                            StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness1}"
-                                            Stretch="Uniform"
-                                            Data="F1 M 541.537,173.589L 531.107,173.589L 536.322,167.49L 541.537,173.589 Z"/>
+                                                    x:Name="upbuttonpath"
+                                                    Width="8"
+                                                    Height="4"
+                                                    HorizontalAlignment="Stretch"
+                                                    VerticalAlignment="Stretch"
+                                                    StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness1}"
+                                                    Stretch="Uniform">
+                                            <Path.Data>
+                                                <PathGeometry>F1 M 541.537,173.589L 531.107,173.589L 536.322,167.49L 541.537,173.589 Z</PathGeometry>
+                                            </Path.Data>
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Setter Property=" Fill" Value="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"/>
+                                                </Style>
+                                            </Path.Style>
+                                        </Path>
                                     </RepeatButton.Content>
                                 </RepeatButton>
                                 <RepeatButton
                                     x:Name="downbutton"
                                     Grid.Row="1"
                                     Width="16"
+                                    Margin="0"
                                     Padding="{TemplateBinding Padding}"
                                     Background="Transparent"
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" 
@@ -98,15 +112,22 @@
                                     Visibility="{Binding ShowArrowButtons, Converter={StaticResource TimeEditBooleanToVisibilityConverter}, RelativeSource={RelativeSource TemplatedParent}}">
                                     <RepeatButton.Content>
                                         <Path
-                                            x:Name="downbuttonpath"
-                                            Width="8"
-                                            Height="4"
-                                            HorizontalAlignment="Stretch"
-                                            VerticalAlignment="Stretch"
-                                            Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
-                                            StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness1}"
-                                            Stretch="Uniform"
-                                            Data="F1 M 531.107,321.943L 541.537,321.943L 536.322,328.042L 531.107,321.943 Z"/>
+                                                    x:Name="downbuttonpath"
+                                                    Width="8"
+                                                    Height="4"
+                                                    HorizontalAlignment="Stretch"
+                                                    VerticalAlignment="Stretch"
+                                                    StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness1}"
+                                                    Stretch="Uniform">
+                                            <Path.Data>
+                                                <PathGeometry>F1 M 531.107,321.943L 541.537,321.943L 536.322,328.042L 531.107,321.943 Z</PathGeometry>
+                                            </Path.Data>
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Setter Property=" Fill" Value="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"/>
+                                                </Style>
+                                            </Path.Style>
+                                        </Path>
                                     </RepeatButton.Content>
                                 </RepeatButton>
                             </Grid>

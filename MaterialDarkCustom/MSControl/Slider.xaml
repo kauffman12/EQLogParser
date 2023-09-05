@@ -27,7 +27,22 @@
         <Grid UseLayoutRounding="True" 
               HorizontalAlignment="Center" 
               VerticalAlignment="Center">
+            <Path x:Name="gripBorder" 
+                  Visibility="Collapsed"
+                  Width="20" 
+                  Height="20"
+                  Data="M362,462.135928 L367.166007,457 L372,462.135928 L372,475 C372,476.104569 371.104569,477 370,477 L367.068498,477 L367.068498,477 L364,477 C362.895431,477 362,476.104569 362,475 L362,462.135928 L362,462.135928 Z" 
+                  Fill="Transparent" 
+                  Stretch="Fill" 
+                  Stroke="Transparent" 
+                  StrokeThickness="1"
+                  UseLayoutRounding="True" 
+                  VerticalAlignment="Center"
+                  SnapsToDevicePixels="True" />
+            
             <Path x:Name="grip" 
+                  Width="12" 
+                  Height="18"
                   Data="M362,462.135928 L367.166007,457 L372,462.135928 L372,475 C372,476.104569 371.104569,477 370,477 L367.068498,477 L367.068498,477 L364,477 C362.895431,477 362,476.104569 362,475 L362,462.135928 L362,462.135928 Z" 
                   Fill="{StaticResource PrimaryBackground}" 
                   Stretch="Fill" 
@@ -57,7 +72,22 @@
         <Grid HorizontalAlignment="Center" 
               UseLayoutRounding="True" 
               VerticalAlignment="Center">
+            <Path x:Name="gripBorder" 
+                  Width="20" 
+                  Height="20"
+                  Visibility="Collapsed"
+                  Data="M203,457 L209,457 C210.104569,457 211,457.895431 211,459 L211,471.666667 L211,471.666667 L206.068498,477 L201,471.666667 L201,459 C201,457.895431 201.895431,457 203,457 Z" 
+                  Fill="Transparent"
+                  Stretch="Fill"  
+                  Stroke="Transparent" 
+                  StrokeThickness="1"
+                  UseLayoutRounding="True" 
+                  VerticalAlignment="Center"
+                  SnapsToDevicePixels="True"/>
+            
             <Path x:Name="grip" 
+                  Width="12" 
+                  Height="18"
                   Data="M203,457 L209,457 C210.104569,457 211,457.895431 211,459 L211,471.666667 L211,471.666667 L206.068498,477 L201,471.666667 L201,459 C201,457.895431 201.895431,457 203,457 Z" 
                   Fill="{StaticResource PrimaryBackground}"
                   Stretch="Fill"  
@@ -93,13 +123,27 @@
                 <ControlTemplate TargetType="{x:Type RepeatButton}">
                     <Rectangle Fill="{TemplateBinding Background}" 
                                Height="{TemplateBinding Height}" 
-                               Width="{TemplateBinding Width}"/>
+                               Width="{TemplateBinding Width}"
+                               
+                               />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
     <ControlTemplate x:Key="SliderThumbHorizontalDefault" TargetType="{x:Type Thumb}">
         <Grid HorizontalAlignment="Center" UseLayoutRounding="True" VerticalAlignment="Center">
+            <Border x:Name="gripBorder" 
+                    Width="20" 
+                    Height="20"
+                    BorderBrush="Transparent" 
+                    BorderThickness="1"
+                    Background="Transparent" 
+                    Visibility="Collapsed"
+                    UseLayoutRounding="True" 
+                    VerticalAlignment="Center"
+                    SnapsToDevicePixels="True"                              
+                    CornerRadius="100" />
+
             <Path x:Name="grip" 
                   Width="12" 
                   Height="12"
@@ -120,10 +164,16 @@
             <Trigger Property="IsMouseOver" Value="true">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource PrimaryDark}"/>
                 <Setter Property="Stroke" TargetName="grip" Value="{StaticResource PrimaryDark}"/>
+                <Trigger.ExitActions>
+                        
+                </Trigger.ExitActions>
             </Trigger>
             <Trigger Property="IsDragging" Value="true">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource PrimaryDarken}"/>
                 <Setter Property="Stroke" TargetName="grip" Value="{StaticResource PrimaryDarken}"/>
+                <Trigger.ExitActions>
+
+                </Trigger.ExitActions>
             </Trigger>
             <Trigger Property="IsEnabled" Value="false">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource BorderAlt}"/>
@@ -166,7 +216,8 @@
                 </TickBar>
                 <Border x:Name="TrackBackground" 
                         Grid.Row="1" 
-                        Height="2" 
+                        Height="2"
+                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
                         Margin="5,0"                         
                         BorderBrush="{StaticResource BorderDark}" 
                         Background="{StaticResource BorderDark}"
@@ -182,7 +233,9 @@
                        Grid.Row="1">
                     <Track.DecreaseRepeatButton>
                         <RepeatButton Command="{x:Static Slider.DecreaseLarge}" 
-                                      Style="{StaticResource RepeatButtonTransparent}"/>
+                                      Style="{StaticResource RepeatButtonTransparent}"
+                                      
+                                      />
                     </Track.DecreaseRepeatButton>
                     <Track.IncreaseRepeatButton>
                         <RepeatButton Command="{x:Static Slider.IncreaseLarge}" 
@@ -235,11 +288,24 @@
             </Trigger>
         </ControlTemplate.Triggers>
     </ControlTemplate>
+
     <ControlTemplate x:Key="SliderThumbVerticalLeft" TargetType="{x:Type Thumb}">
         <Grid HorizontalAlignment="Center" 
               UseLayoutRounding="True" 
               VerticalAlignment="Center">
+            <Path x:Name="gripBorder"
+                  Width="20" 
+                  Height="20"
+                  Visibility="Collapsed"
+                  Data="M412,457 L425,457 C426.104569,457 427,457.895431 427,459 L427,465 C427,466.104569 426.104569,467 425,467 L412,467 L412,467 L407,462.111033 L412,457 Z" 
+                  Fill="Transparent" 
+                  Stretch="Fill" 
+                  StrokeThickness="1"
+                  Stroke="Transparent" />
+
             <Path x:Name="grip"
+                  Width="12" 
+                  Height="18"
                   Data="M412,457 L425,457 C426.104569,457 427,457.895431 427,459 L427,465 C427,466.104569 426.104569,467 425,467 L412,467 L412,467 L407,462.111033 L412,457 Z" 
                   Fill="{StaticResource PrimaryBackground}" 
                   Stretch="Fill" 
@@ -265,7 +331,19 @@
         <Grid HorizontalAlignment="Center"
               UseLayoutRounding="True"
               VerticalAlignment="Center">
+            <Path x:Name="gripBorder" 
+                  Width="20" 
+                  Height="20"
+                  Visibility="Collapsed"
+                  Data="M387,457 L400,457 L400,457 L405,462.082328 L400,467 L387,467 C385.895431,467 385,466.104569 385,465 L385,459 C385,457.895431 385.895431,457 387,457 Z"
+                  Fill="Transparent"
+                  Stretch="Fill" 
+                  Stroke="Transparent" 
+                  StrokeThickness="1"/>
+            
             <Path x:Name="grip" 
+                  Width="12" 
+                  Height="18"
                   Data="M387,457 L400,457 L400,457 L405,462.082328 L400,467 L387,467 C385.895431,467 385,466.104569 385,465 L385,459 C385,457.895431 385.895431,457 387,457 Z"
                   Fill="{StaticResource PrimaryBackground}"
                   Stretch="Fill" 
@@ -291,6 +369,18 @@
         <Grid UseLayoutRounding="True" 
               HorizontalAlignment="Center"
               VerticalAlignment="Center">
+            <Border x:Name="gripBorder" 
+                    Width="20" 
+                    Height="20"
+                    BorderBrush="Transparent" 
+                    BorderThickness="1"
+                    Background="Transparent" 
+                    Visibility="Collapsed"
+                    UseLayoutRounding="True" 
+                    VerticalAlignment="Center"
+                    SnapsToDevicePixels="True"                              
+                    CornerRadius="100" />
+            
             <Path x:Name="grip" 
                   Width="12" 
                   Height="12"
@@ -304,7 +394,7 @@
             <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                 <Setter Property="MinHeight" TargetName="grip" Value="{StaticResource TouchMode.MinSize}" />
                 <Setter Property="MinWidth" TargetName="grip" Value="{StaticResource TouchMode.MinSize}" />
-            </Trigger>         
+            </Trigger>
             <Trigger Property="IsMouseOver" Value="true">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource PrimaryDark}"/>
                 <Setter Property="Stroke" TargetName="grip" Value="{StaticResource PrimaryDark}"/>
@@ -357,6 +447,7 @@
                         Background="{StaticResource BorderDark}" 
                         HorizontalAlignment="center" 
                         Margin="0,5"
+                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
                         Width="4.0">
                     <Canvas  Margin="-1,-6">
                         <Rectangle x:Name="PART_SelectionRange" 

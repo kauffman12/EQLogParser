@@ -147,14 +147,18 @@
                                         x:Name="PART_Cancel"
                                         Grid.Row="3"
                                         Grid.ColumnSpan="2"
-                                        Margin="0,0,5,0"
                                         Padding="5"
+                                        Height="22"
                                         Background="Transparent"
                                         HorizontalAlignment="Right"
                                         VerticalAlignment="Bottom"
                                         Content="{resources:SharedLocalizationResourceExtension ResourceName=CancelText}"
                                         Style="{StaticResource WPFFlatButtonStyle}"
-                                        Visibility="{TemplateBinding CancelButtonVisibility}"/>
+                                        Visibility="{TemplateBinding CancelButtonVisibility}">
+                                        <Button.Margin>
+                                            <Thickness>0,0,5,0</Thickness>
+                                        </Button.Margin>
+                                    </Button>
                                 </Grid>
                             </Border>
                         </Grid>

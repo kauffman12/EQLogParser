@@ -61,6 +61,8 @@
 
     <Style x:Key="SyncfusionSfImageEditorStyle"
            TargetType="imageEditor:SfImageEditor">
+        <Setter Property="Background"
+                Value="{StaticResource White}" />
         <Setter Property="BorderBrush"
                 Value="{StaticResource BorderAlt}" />
         <Setter Property="BorderThickness"
@@ -85,6 +87,7 @@
                 <ControlTemplate>
                     <Border Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
+                            
                             BorderThickness="{TemplateBinding BorderThickness}">
                         <Grid  KeyboardNavigation.ControlTabNavigation="None">
 
@@ -117,6 +120,7 @@
 
                                         <Button x:Name="PART_OpenFolderIcon"
                                                 Style="{StaticResource WPFGlyphButtonStyle}"
+                                                
                                                 ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=BrowseImage}}"
                                                 Margin="10,0,0,0"
                                                 Height="24"
@@ -139,6 +143,7 @@
 
                                         <Button x:Name="PART_SaveIcon"
                                                 Style="{StaticResource WPFGlyphButtonStyle}"
+                                                
                                                 ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=Save}}"
                                                 Margin="10,0,0,0"
                                                 Height="24"
@@ -165,6 +170,7 @@
 
                                         <Button x:Name="PART_UndoIcon"
                                                 Style="{StaticResource WPFGlyphButtonStyle}"
+                                                
                                                 ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=Undo}}"
                                                 ToolTipService.ShowOnDisabled="True"
                                                 Margin="10,0,0,0"
@@ -178,7 +184,7 @@
                                                   HorizontalAlignment="Center"
                                                   Stretch="Fill"
                                                   VerticalAlignment="Center"
-                                                  Width="16.001">
+                                                  Width="16">
                                                 <Path.Height>
                                                     <system:Double>7</system:Double>
                                                 </Path.Height>
@@ -190,6 +196,7 @@
 
                                         <Button x:Name="PART_RedoIcon"
                                                 Style="{StaticResource WPFGlyphButtonStyle}"
+                                                
                                                 ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=Redo}}"
                                                 ToolTipService.ShowOnDisabled="True"
                                                 Margin="10,0,0,0"
@@ -226,6 +233,7 @@
 
                                             <Button x:Name="PART_SelectIcon"
                                                     Margin="0,0,10,0"
+                                                    
                                                     Style="{StaticResource WPFGlyphButtonStyle}"
                                                     Height="24"
                                                     Width="24"
@@ -247,6 +255,7 @@
 
                                             <Button x:Name="PART_PanIcon"
                                                     Margin="0,0,10,0"
+                                                    
                                                     Style="{StaticResource WPFGlyphButtonStyle}"
                                                     Height="24"
                                                     Width="24"
@@ -303,6 +312,7 @@
 
                                     <Button  x:Name="PART_ResetIcon"
                                              Grid.Column="2"
+                                             
                                              VerticalAlignment="Center"
                                              Style="{StaticResource WPFGlyphButtonStyle}"
                                              Padding="5"
@@ -369,13 +379,15 @@
                                             </ComboBox>
 
                                             <sharedWpf:ColorPickerPalette x:Name="PART_TextColorPicker"
-                                                                           Margin="10,0,0,0"
-                                                                           MoreColorOptionVisibility="Collapsed"
-                                                                           Style="{StaticResource SyncfusionColorPickerPaletteStyle}"
-                                                                           Color="Red"
-                                                                           IconSize="12,16"
-                                                                           IsExpanded="False"
-                                                                           ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=FontColor}}">
+                                                                          Margin="10,0,0,0"
+                                                                          MoreColorOptionVisibility="Collapsed"
+                                                                          Style="{StaticResource SyncfusionColorPickerPaletteStyle}"
+                                                                          Color="Red"
+                                                                          IsExpanded="False"
+                                                                          ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=FontColor}}">
+                                                <sharedWpf:ColorPickerPalette.IconSize>
+                                                    <Size>12,16</Size>
+                                                </sharedWpf:ColorPickerPalette.IconSize>
                                                 <sharedWpf:ColorPickerPalette.Icon>
                                                     <DrawingImage>
                                                         <DrawingImage.Drawing>
@@ -457,7 +469,7 @@
                                                 </Path>
                                             </ToggleButton>
 
-                                            <Rectangle  Fill="#C4C4C4 "
+                                            <Rectangle  Fill="#C4C4C4"
                                                         Height="18"
                                                         Width="1"
                                                         Margin="10,0,0,0"></Rectangle>
@@ -540,9 +552,12 @@
                                                                                MoreColorOptionVisibility="Collapsed"
                                                                                Style="{StaticResource SyncfusionColorPickerPaletteStyle}"
                                                                                Color="Red"
-                                                                               IconSize="12,12"
                                                                                IsExpanded="False"
                                                                                ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=Fill}}">
+                                                    <sharedWpf:ColorPickerPalette.IconSize>
+                                                        <Size>12,12</Size>
+                                                    </sharedWpf:ColorPickerPalette.IconSize>
+                                                    
                                                     <sharedWpf:ColorPickerPalette.Icon>
                                                         <DrawingImage>
                                                             <DrawingImage.Drawing>
@@ -566,10 +581,13 @@
                                                 <sharedWpf:ColorPickerPalette x:Name="PART_ShapeStrokeIcon"
                                                                                MoreColorOptionVisibility="Collapsed"
                                                                                Style="{StaticResource SyncfusionColorPickerPaletteStyle}"
-                                                                               IconSize="12,12"
                                                                                IsExpanded="False"
                                                                                Color="Red"
                                                                                ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=Stroke}}">
+                                                    <sharedWpf:ColorPickerPalette.IconSize>
+                                                        <Size>12,12</Size>
+                                                    </sharedWpf:ColorPickerPalette.IconSize>
+
                                                     <sharedWpf:ColorPickerPalette.Icon>
                                                         <DrawingImage>
                                                             <DrawingImage.Drawing>
@@ -639,6 +657,7 @@
                                             <Grid Margin="20,0,0,0"
                                                   VerticalAlignment="Center">
                                                 <Button x:Name="PART_CropOkIcon"
+                                                        
                                                         Style="{StaticResource WPFGlyphButtonStyle}"
                                                         Height="24"
                                                         Width="24"
@@ -659,9 +678,10 @@
                                                 </Button>
                                             </Grid>
 
-                                            <Grid Margin="20,0,0,0"
+                                            <Grid Margin="10,0,0,0"
                                                   VerticalAlignment="Center">
                                                 <Button x:Name="PART_CropCancelIcon"
+                                                        
                                                         Style="{StaticResource WPFGlyphButtonStyle}"
                                                         Height="24"
                                                         Width="24"
@@ -758,6 +778,7 @@
                                     <Button x:Name="PART_ResetZoomIcon"
                                             Grid.Column="0"
                                             Style="{StaticResource WPFGlyphButtonStyle}"
+                                            
                                             ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=ResetZoom}}"
                                             Height="24"
                                             Width="24"
@@ -787,6 +808,7 @@
                                              Grid.Column="2"
                                              ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=ZoomOut}}"
                                              Style="{StaticResource WPFGlyphButtonStyle}"
+                                             
                                              Height="24"
                                              Width="24"
                                              HorizontalAlignment="Center"
@@ -821,6 +843,7 @@
                                     <Button  x:Name="PART_IncreaseZoomIcon"
                                              Grid.Column="4"
                                              Style="{StaticResource WPFGlyphButtonStyle}"
+                                             
                                              Height="24"
                                              Width="24"
                                              HorizontalAlignment="Center"
@@ -889,6 +912,7 @@
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
                                     Background="{TemplateBinding Background}"
+                                    CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                                     MinHeight="22"
                                     Opacity="{TemplateBinding Opacity}">
                                 <Grid>
@@ -939,20 +963,22 @@
                                            AllowsTransparency="True"
                                            Focusable="False"
                                            IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource FindAncestor, AncestorLevel=1, AncestorType={x:Type toolsWpf:DropDownButton}}}"
-                                           PopupAnimation="Fade"
+                                           PopupAnimation="Slide"
                                            Placement="Bottom"
                                            StaysOpen="False">
 
                                         <Border x:Name="PART_Shadow"
                                                 BorderBrush="{StaticResource BorderAlt}"
-                                                BorderThickness="1"
+                                                BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                                 Background="{StaticResource PopupBackground}"
                                                 MinWidth="28"
-                                                MinHeight="14">
-                                            <Border.Effect>
-                                                <DropShadowEffect  Opacity="0.25"
-                                                                   ShadowDepth="4" />
-                                            </Border.Effect>
+                                                MinHeight="14"
+                                                
+                                                
+                                                Effect="{StaticResource Default.ShadowDepth3}">
+                                            <Border.Margin>
+                                                <Thickness>8,1,8,8</Thickness>
+                                            </Border.Margin>
                                             <ScrollViewer CanContentScroll="True"
                                                           Style="{DynamicResource {ComponentResourceKey ResourceId=MenuScrollViewer, TypeInTargetAssembly={x:Type FrameworkElement}}}">
                                                 <ItemsPresenter  x:Name="Presenter"
@@ -966,13 +992,6 @@
                                 </Grid>
                             </Border>
                             <ControlTemplate.Triggers>
-                                <Trigger Property="HasDropShadow"
-                                         SourceName="PART_Popup"
-                                         Value="True">
-                                    <Setter Property="Margin"
-                                            TargetName="PART_Shadow"
-                                            Value="0,0,5,5" />
-                                </Trigger>
                                 <Trigger Property="IsSmallImageVisible"
                                          Value="False">
                                     <Setter Property="Visibility"
@@ -1084,6 +1103,7 @@
 
     <DataTemplate x:Key="Text">
         <Button Style="{StaticResource WPFGlyphButtonStyle}"
+                
                 Height="24"
                 Width="24"
                 CommandParameter="Text"
@@ -1176,10 +1196,10 @@
                     <Path x:Name="Arrow"
                           Fill="{StaticResource IconColor}"
                           HorizontalAlignment="Center"
-                          Height="12.999"
+                          Height="14"
                           Stretch="Fill"
                           VerticalAlignment="Center"
-                          Width="13.011">
+                          Width="14">
                         <Path.Data>
                             <PathGeometry>M7.3230037,0 L14.008004,0 14.008004,6.6959997 12.008003,6.6959997 12.008003,3.4192372 1.4149966,14.031035 0,12.618035 10.599227,2.0000048 7.3230037,2.0000048 z</PathGeometry>
                         </Path.Data>
@@ -1204,8 +1224,8 @@
                           Fill="{StaticResource IconColor}" 
                           HorizontalAlignment="Center" 
                           Stretch="Fill" 
-                          VerticalAlignment="Center" 
-                          Height="16" 
+                          VerticalAlignment="Center"
+                          Height="16"
                           Width="16">
                         <Path.Data>
                             <PathGeometry>M7,3 L13,3 13,9 11,9 11,5 7,5 z M3,0 L5,0 5,11 16,11 16,13 13,13 13,16 11,16 11,13 3,13 3,5 0,5 0,3 3,3 z</PathGeometry>
@@ -1241,12 +1261,12 @@
                                          Style="{StaticResource SyncfusionImageEditorDropDownMenuItemStyle}">
                     <sharedWpf:DropDownMenuItem.Icon>
                         <Path x:Name="Circle"
-                          Fill="{StaticResource IconColor}"
-                          HorizontalAlignment="Center"
-                          Height="14"
-                          Stretch="Fill"
-                          VerticalAlignment="Center"
-                          Width="14">
+                              Fill="{StaticResource IconColor}"
+                              HorizontalAlignment="Center"
+                              Height="14"
+                              Stretch="Fill"
+                              VerticalAlignment="Center"
+                              Width="14">
                             <Path.Data>
                                 <PathGeometry>M8,2 C4.69104,2 2,4.6910095 2,8 2,11.309021 4.69104,14 8,14 11.309021,14 14,11.309021 14,8 14,4.6910095 11.309021,2 8,2 z M8,0 C12.411011,0 16,3.5890198 16,8 16,12.411011 12.411011,16 8,16 3.5890503,16 0,12.411011 0,8 0,3.5890198 3.5890503,0 8,0 z</PathGeometry>
                             </Path.Data>
@@ -1326,6 +1346,7 @@
 
     <DataTemplate x:Key="Rotate">
         <Button Style="{StaticResource WPFGlyphButtonStyle}"
+                
                 Height="24"
                 Width="24"
                 CommandParameter="Rotate"
@@ -1348,6 +1369,7 @@
 
     <DataTemplate x:Key="Path">
         <Button Style="{StaticResource WPFGlyphButtonStyle}"
+                
                 Height="24"
                 Width="24"
                 CommandParameter="Path"

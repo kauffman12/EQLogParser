@@ -10,7 +10,7 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
     </ResourceDictionary.MergedDictionaries>
-    
+
     <Style x:Key="WPFToggleButtonStyle"
            TargetType="{x:Type ToggleButton}">
         <Setter Property="FocusVisualStyle" 
@@ -41,7 +41,7 @@
                             SnapsToDevicePixels="true" 
                             Background="{TemplateBinding Background}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderBrush="{TemplateBinding BorderBrush}"
                             CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                             Effect="{StaticResource Default.ShadowDepth1}"
                             >
@@ -62,12 +62,15 @@
                         <Trigger Property="Button.IsDefaulted" Value="true">
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                         </Trigger>
-                        <Trigger Property="IsFocused" Value="true">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsFocused" Value="True"/>
+                            </MultiTrigger.Conditions>
                             <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                             <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
                             <Setter Property="Effect" Value="{StaticResource Default.ShadowDepth2}"/>
-                        </Trigger>
+                        </MultiTrigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                             <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>

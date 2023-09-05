@@ -7,6 +7,7 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/TextBox.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatPrimaryButton.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatButton.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/PrimaryButton.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphDropdownExpander.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphEditableDropdownExpander.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfDataGrid/SfDataGrid.xaml" />
@@ -86,7 +87,7 @@
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Padding" Value="2"/>
         <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant1}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource Border}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Border}"/> 
         <Setter Property="Background" Value="{StaticResource ContentBackground}" />
         <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
         <Setter Property="PopupBorderBrush" Value="{StaticResource BorderAlt2}" />
@@ -108,7 +109,7 @@
                             MinHeight="{TemplateBinding MinHeight}"
                             Background="{TemplateBinding Background}"
                             BorderBrush="Transparent"
-                            BorderThickness="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant1}"
+                            BorderThickness="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant1}" 
                             Grid.Row="0">
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="SelectionStates">
@@ -146,7 +147,7 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
-                        <Grid>
+                        <Grid >
                             <Popup x:Name="PART_Popup"
                                    AllowsTransparency="True"
                                    MinWidth="{TemplateBinding PopupMinWidth}"
@@ -162,12 +163,12 @@
                                         BorderBrush="{TemplateBinding PopupBorderBrush}"
                                         BorderThickness="{TemplateBinding PopupBorderThickness}"
                                         Effect="{StaticResource Default.ShadowDepth3}"
-                                        >
+                                        >                                       
                                     <Border.Margin>
                                         <Thickness>14,0,14,14</Thickness>
                                     </Border.Margin>
 
-                                    <Grid Background="{TemplateBinding PopupBackground}">
+                                    <Grid Background="{TemplateBinding PopupBackground}" >
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="*" />
@@ -222,18 +223,24 @@
                                                 <Button x:Name="PART_OkButton"
                                                         Height="24"
                                                         Width="36"
-                                                        Margin="0,8,0,8"
                                                         HorizontalAlignment="Center"
                                                         Content="{grid:GridLocalizationResourceExtension ResourceName=OK}"
-                                                        Style="{StaticResource WPFFlatPrimaryButtonStyle}"/>
+                                                        Style="{StaticResource WPFFlatPrimaryButtonStyle}">
+                                                    <Button.Margin>
+                                                        <Thickness>0,8,0,8</Thickness>
+                                                    </Button.Margin>
+                                                </Button>
 
                                                 <Button x:Name="PART_CancelButton"
                                                         Height="24"
                                                         Width="68"
-                                                        Margin="8,8,5,8"
                                                         HorizontalAlignment="Center"
                                                         Content="{grid:GridLocalizationResourceExtension ResourceName=Cancel}"
-                                                        Style="{StaticResource WPFFlatButtonStyle}"/>
+                                                        Style="{StaticResource WPFFlatButtonStyle}">
+                                                    <Button.Margin>
+                                                        <Thickness>8,8,5,8</Thickness>
+                                                    </Button.Margin>
+                                                </Button>                                                       
 
                                             </StackPanel>
                                             <Thumb x:Name="PART_ThumbGripper" 
@@ -385,7 +392,7 @@
                             </MultiTrigger.Conditions>
                             <Setter TargetName="PART_Border" Property="BorderBrush" Value="{StaticResource BorderAlt2}"/>
                             <Setter TargetName="PART_TextBox" Property="Foreground" Value="{StaticResource ContentForeground}"/>
-                            <Setter TargetName="PART_TextBox" Property="Background" Value="{StaticResource ContentBackground}"/>
+                            <Setter Property="Background" TargetName="PART_TextBox" Value="{StaticResource ContentBackground}"/>
                         </MultiTrigger>
 
                         <MultiTrigger>
@@ -395,8 +402,8 @@
                                 <Condition Property="IsMouseOver" SourceName="PART_ToggleButton" Value="false"/>
                             </MultiTrigger.Conditions>
                             <Setter TargetName="PART_Border" Property="BorderBrush" Value="{StaticResource BorderAlt2}"/>
-                            <Setter TargetName="PART_TextBox" Property="Foreground" Value="{StaticResource ContentForeground}"/>
-                            <Setter TargetName="PART_TextBox" Property="Background" Value="{StaticResource ContentBackground}"/>
+                            <Setter TargetName="PART_TextBox" Property="Foreground" Value="{StaticResource ContentForeground}"/> 
+                            <Setter Property="Background" TargetName="PART_TextBox" Value="{StaticResource ContentBackground}"/>
                         </MultiTrigger>
 
                         <Trigger Property="IsPressed" SourceName="PART_ToggleButton" Value="true">
@@ -422,8 +429,8 @@
                                 <Condition Property="IsFocused" SourceName="PART_ToggleButton" Value="false"/>
                                 <Condition Property="IsChecked" SourceName="PART_ToggleButton" Value="true"/>
                             </MultiTrigger.Conditions>
-                            <Setter TargetName="PART_Border" Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}"/>
                             <Setter TargetName="PART_Border" Property="BorderBrush" Value="{StaticResource PrimaryBackground}"/>
+                            <Setter TargetName="PART_Border" Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}"/>
                             <Setter TargetName="PART_ToggleButton" Property="Foreground" Value="{StaticResource IconColor}"/>
                             <Setter TargetName="PART_ToggleButton" Property="Background" Value="Transparent"/>
                             <Setter TargetName="PART_ToggleButton" Property="BorderBrush" Value="Transparent"/>
@@ -456,7 +463,7 @@
                         <Trigger Property="IsMouseOver" SourceName="PART_MultiSelectToggleButton" Value="true">
                             <Setter TargetName="PART_MultiSelectBorder" Property="BorderBrush" Value="{StaticResource BorderAlt2}"/>
                             <Setter TargetName="PART_ItemsControl" Property="TextElement.Foreground" Value="{StaticResource ContentForeground}"/>
-                            <Setter TargetName="PART_ItemsControl" Property="Background" Value="{StaticResource ContentBackground}"/>
+                            <Setter Property="Background" TargetName="PART_ItemsControl" Value="{StaticResource ContentBackground}"/>
                         </Trigger>
 
                         <Trigger Property="IsPressed" SourceName="PART_MultiSelectToggleButton" Value="true">
@@ -485,11 +492,11 @@
                         </Trigger>
                         
                         <Trigger Property="IsDropDownOpen" Value="true">
-                            <Setter TargetName="PART_Border" Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}"/>
                             <Setter TargetName="PART_Border" Property="BorderBrush" Value="{StaticResource PrimaryBackground}"/>
-                            <Setter TargetName="PART_MultiSelectBorder" Property="Margin" Value="0,-1,0,0"/>
+                            <Setter TargetName="PART_Border" Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}"/>
                             <Setter TargetName="PART_MultiSelectBorder" Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}"/>
                             <Setter TargetName="PART_MultiSelectBorder" Property="BorderBrush" Value="{StaticResource PrimaryBackground}"/>
+                            <Setter TargetName="PART_MultiSelectBorder" Property="Margin" Value="0,-1,0,0"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

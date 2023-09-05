@@ -102,7 +102,11 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            Opacity="{TemplateBinding Opacity}">
+                            Opacity="{TemplateBinding Opacity}"
+                            CornerRadius="0">
+                        <Border.Margin>
+                            <Thickness>0,0,0,0</Thickness>
+                        </Border.Margin>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="30" />
@@ -181,7 +185,11 @@
 
     <Style x:Key="SyncfusionHierarchySeparatorStyle" BasedOn="{StaticResource WPFSeparatorStyle}" TargetType="{x:Type Separator}">
         <Setter Property="Background" Value="{StaticResource BorderAlt}" />
-        <Setter Property="Margin" Value="1,5,1,5" />
+        <Setter Property="Margin">
+            <Setter.Value>
+                <Thickness>1,5,1,5</Thickness>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!--  HierarchyNavigatorBarContent  --> 
@@ -419,7 +427,7 @@
                                 <VisualState x:Name="MouseOver">
                                     <Storyboard>
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_OuterBorder" Storyboard.TargetProperty="Background">
-                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondaryHoverBackground}" />
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondarySelectionBackground}" />
                                         </ObjectAnimationUsingKeyFrames>
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_OuterBorder" Storyboard.TargetProperty="BorderBrush">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource BorderAlt}" />
@@ -438,7 +446,7 @@
                                 <VisualState x:Name="NavigationButtonMouseOver">
                                     <Storyboard>
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_OuterBorder" Storyboard.TargetProperty="Background">
-                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondaryHoverBackground}" />
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SecondarySelectionBackground}" />
                                         </ObjectAnimationUsingKeyFrames>
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_OuterBorder" Storyboard.TargetProperty="BorderBrush">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource BorderAlt}" />
@@ -648,21 +656,23 @@
                                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1000}"
                                                     Opacity="0"
                                                     SnapsToDevicePixels="True" />
-                                                <Path
-                                                    x:Name="PART_path"
-                                                    Width="8"
-                                                    Height="4"
-                                                    HorizontalAlignment="Center"
-                                                    VerticalAlignment="Center"
-                                                    Data="M0,0 L7.0000002,0 3.5,3.9999999 z"
-                                                    Fill="{StaticResource IconColor}"
-                                                    RenderTransformOrigin="0.5,0.5"
-                                                    Stretch="Fill"
-                                                    Stroke="{StaticResource IconColor}"
-                                                    StrokeThickness="0" />
+                                                <Path x:Name="PART_path"
+                                                      Width="8"
+                                                      Height="4"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"
+                                                      Fill="{StaticResource IconColor}"
+                                                      RenderTransformOrigin="0.5,0.5"
+                                                      Stretch="Fill"
+                                                      Stroke="{StaticResource IconColor}"
+                                                      StrokeThickness="0">
+                                                    <Path.Data>
+                                                        <PathGeometry>M0,0 L7.0000002,0 3.5,3.9999999 z</PathGeometry>
+                                                    </Path.Data>
+                                                </Path>
                                             </Grid>
                                         </ToggleButton>
-                                        <Separator
+                                        <Separator                                            
                                             Grid.Column="2"
                                             Width="2"
                                             Height="{TemplateBinding Height}"
@@ -674,7 +684,7 @@
                                             SnapsToDevicePixels="True"
                                             Style="{StaticResource WPFGlyphButtonStyle}"
                                             Padding="1,0,1,0"
-                                            Visibility="{TemplateBinding ShowRefreshButton}">
+                                            Visibility="{TemplateBinding ShowRefreshButton}">                                            
                                             <Path
                                                 x:Name="Path"
                                                 Width="10.847"
@@ -704,7 +714,8 @@
                                                 BorderBrush="{StaticResource BorderAlt}"
                                                 
                                                 BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
-                                                Effect="{StaticResource Default.ShadowDepth2}">
+                                                Effect="{StaticResource Default.ShadowDepth2}"
+                                                Width="{Binding ElementName=PART_HierarchyNavigatorHistoryListBox, Path=ActualWidth}">
                                                 <Border.Margin>
                                                     <Thickness>8,1,8,8</Thickness>
                                                 </Border.Margin>
@@ -879,6 +890,14 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                             <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                        </Trigger>
+                        <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                            <Setter TargetName="PART_RefreshButton"
+                                    Property="FocusVisualStyle"
+                                    Value="{StaticResource KeyboardFocusVisualStyle}" />
+                        </Trigger> 
+                        <Trigger SourceName="PART_BreadCrumbEditor" Property="Visibility" Value="Visible">
+                            <Setter TargetName="PART_ContentRoot" Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness}"/> 
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

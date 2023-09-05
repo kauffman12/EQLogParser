@@ -10,6 +10,7 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Button.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ToggleButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphPrimaryToggleButton.xaml" /> 
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Expander.xaml" />
@@ -112,7 +113,8 @@
                     <Border
                         x:Name="bg"
                         Background="Transparent"
-                        BorderBrush="Transparent">
+                        BorderBrush="Transparent"
+                        CornerRadius="0">
                         <Grid x:Name="grid" Background="Transparent">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -203,7 +205,8 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ToggleButton}">
                     <Border
-                        x:Name="ToggleButtonBorder">
+                        x:Name="ToggleButtonBorder"
+                        CornerRadius="0">
                         <Grid x:Name="grid" Background="Transparent" HorizontalAlignment="Center">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
@@ -221,9 +224,12 @@
                                     Height="4"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
-                                    Data="M0,0 L7.0000002,0 3.5,3.9999999 z"
                                     Fill="{TemplateBinding Foreground}"
-                                    Stretch="Fill" />
+                                    Stretch="Fill" >
+                                    <Path.Data>
+                                        <PathGeometry>M0,0 L7.0000002,0 3.5,3.9999999 z</PathGeometry>
+                                    </Path.Data>
+                                </Path>
                             </Border>
                         </Grid>
                     </Border>
@@ -271,7 +277,7 @@
                 <ControlTemplate TargetType="{x:Type tools_controls:CardViewItem}">
                     <Grid SnapsToDevicePixels="True">
                         <Border
-                            x:Name="CardViewItemBorder"  CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                            x:Name="CardViewItemBorder" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
@@ -368,7 +374,8 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
-                        SnapsToDevicePixels="True">
+                        SnapsToDevicePixels="True"
+                        CornerRadius="0">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -379,7 +386,8 @@
                                 Height="42" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness0001}"
                                 Background="{StaticResource ContentBackgroundAlt}"
                                 BorderBrush="{StaticResource BorderAlt}"
-                                Visibility="{Binding ShowHeader, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource Converter}}">
+                                Visibility="{Binding ShowHeader, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource Converter}}"
+                                CornerRadius="0">
                                 <Grid
                                     x:Name="GroupPanel"
                                     AllowDrop="True"
@@ -465,10 +473,15 @@
                                                             IsOpen="{Binding ElementName=PART_Toggle, Path=IsChecked}"
                                                             Placement="MousePoint" SnapsToDevicePixels="True"
                                                             StaysOpen="False">
-                                                            <Border BorderThickness="0" Effect="{StaticResource Default.ShadowDepth3}" Margin="14,0,14,14">
+                                                            <Border 
+                                                                Background="Transparent" 
+                                                                BorderThickness="0" 
+                                                                Effect="{StaticResource Default.ShadowDepth3}" 
+                                                                Margin="14 0 14 14"
+                                                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
                                                                 <Grid Background="{StaticResource PopupBackground}">
                                                                 <Grid.RowDefinitions>
-                                                                    <RowDefinition Height="*" />
+                                                                    <RowDefinition Height="Auto" />
                                                                     <RowDefinition Height="Auto" />
                                                                 </Grid.RowDefinitions>
                                                                 <tools_controls:CheckListBox
@@ -479,7 +492,7 @@
                                                                     ItemsSource="{Binding FilterValues}"
                                                                     Tag="{Binding Name}" />
                                                                 <Button
-                                                                    Grid.Row="1" Margin="-1"
+                                                                    Grid.Row="1" Margin="2"
                                                                     HorizontalContentAlignment="Center" BorderThickness="0"
                                                                     Background="Transparent"
                                                                     Command="{Binding ClearFilter, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:CardView}}}"
@@ -534,7 +547,8 @@
                                 x:Name="scroll"
                                 Grid.Row="1"
                                 HorizontalScrollBarVisibility="Auto"
-                                VerticalScrollBarVisibility="Disabled">
+                                VerticalScrollBarVisibility="Disabled"
+                                Focusable="False">
                                 <Grid Margin="5">
                                     <ItemsPresenter x:Name="PART_Host" />
                                 </Grid>

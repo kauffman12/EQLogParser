@@ -13,9 +13,11 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Button.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatPrimaryButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/PrimaryButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphRepeatButton.xaml" />
 		<ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ToggleButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Calendar.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/RepeatButton.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
     <BooleanToVisibilityConverter x:Key="DateTimeBooleanToVisibilityConverter" />
@@ -144,11 +146,11 @@
                                         VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                         Background="Transparent"
                                         SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
-                                        Visibility="{TemplateBinding ContentElementVisibility}" />
-
+                                        Visibility="{TemplateBinding ContentElementVisibility}" >
+                                    </ScrollViewer>
                                     <ContentControl
                                         x:Name="PART_EmptyContent"
-                                        Margin="2,0,0,0"
+                                        Margin="2 0 0 0"
                                         Padding="{TemplateBinding Padding}"
                                         HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                         VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
@@ -169,25 +171,36 @@
                                         x:Name="PART_DropDown"
                                         Grid.Column="2"
                                         Width="20"
+                                        
                                         Background="Transparent"
-                                        Padding="{TemplateBinding Padding}"
                                         HorizontalAlignment="Stretch"
                                         VerticalAlignment="Stretch"
                                         IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
                                         IsTabStop="False"
+                                        
                                         Style="{StaticResource SyncfusionDropDownGlyphToggleButtonStyle}"
                                         Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsButtonPopUpEnabled, Converter={StaticResource DateTimeBooleanToVisibilityConverter}}">
+                                        <ToggleButton.Padding>
+                                            <Thickness>0</Thickness>
+                                        </ToggleButton.Padding>
                                         <ToggleButton.Content>
                                             <Path
-                                                x:Name="path1"
-                                                Width="12"
-                                                Height="12"
-                                                Margin="1,0,0,0"
-                                                Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
-                                                StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness1}"
-                                                RenderTransformOrigin="0.5,0.5"
-                                                Stretch="Fill"
-                                                Data="M11.500002,10 L11.999999,10 12.5,10 12.5,11.463126 12.708088,12.072044 13.550999,13.093001 13.165756,13.41129 13.165999,13.412001 13.165551,13.411458 12.78,13.730001 11.500002,12.179 z M11.999999,9.0000005 C10.345999,9.0000005 8.9999995,10.346001 8.9999995,12.000001 8.9999995,13.654002 10.345999,15.000001 11.999999,15.000001 13.654,15.000001 14.999999,13.654002 14.999999,12.000001 14.999999,10.346001 13.654,9.0000005 11.999999,9.0000005 z M11.999999,6.0000004 L1.9999996,6.0000004 1.9999996,13.000001 8.1265182,13.000001 8.1261243,12.998617 C8.0437984,12.679318 7.9999995,12.344689 7.9999995,12.000001 7.9999995,9.7940006 9.7939991,8 11.999999,8 L12.000885,8.0000114 z M3.4859979,0 C4.0379977,0 4.4859979,0.44700003 4.4859979,1 L4.4859979,2 9.9999995,2 9.9999995,1 C9.9999995,0.44700003 10.447999,0 10.999999,0 11.552,0 11.999999,0.44700003 11.999999,1 L11.999999,2.0000002 12.102954,2.0026041 C13.160059,2.0562031 13.999997,2.9305001 13.999997,4.0000004 L13.999997,8.5379477 14.072751,8.579824 C15.227388,9.2820592 15.999999,10.552313 15.999999,12.000001 15.999999,14.206002 14.206,16.000002 11.999999,16.000002 11.034874,16.000002 10.148609,15.65662 9.4569315,15.085582 L9.3581623,15.000002 1.9999996,15.000002 C0.89599976,15.000002 0,14.104002 0,13.000001 L0,4.0000004 C0,2.8960001 0.89599976,2 1.9999996,2 L2.4859977,2 2.4859977,1 C2.4859977,0.44700003 2.9339978,0 3.4859979,0 z"/>
+                                                        x:Name="path"
+                                                        Width="12"
+                                                        Height="12"
+                                                        Margin="1,0,0,0"
+                                                        StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness1}"
+                                                        RenderTransformOrigin="0.5,0.5"
+                                                        Stretch="Fill" >
+                                                <Path.Data>
+                                                    <PathGeometry>M11.500002,10 L11.999999,10 12.5,10 12.5,11.463126 12.708088,12.072044 13.550999,13.093001 13.165756,13.41129 13.165999,13.412001 13.165551,13.411458 12.78,13.730001 11.500002,12.179 z M11.999999,9.0000005 C10.345999,9.0000005 8.9999995,10.346001 8.9999995,12.000001 8.9999995,13.654002 10.345999,15.000001 11.999999,15.000001 13.654,15.000001 14.999999,13.654002 14.999999,12.000001 14.999999,10.346001 13.654,9.0000005 11.999999,9.0000005 z M11.999999,6.0000004 L1.9999996,6.0000004 1.9999996,13.000001 8.1265182,13.000001 8.1261243,12.998617 C8.0437984,12.679318 7.9999995,12.344689 7.9999995,12.000001 7.9999995,9.7940006 9.7939991,8 11.999999,8 L12.000885,8.0000114 z M3.4859979,0 C4.0379977,0 4.4859979,0.44700003 4.4859979,1 L4.4859979,2 9.9999995,2 9.9999995,1 C9.9999995,0.44700003 10.447999,0 10.999999,0 11.552,0 11.999999,0.44700003 11.999999,1 L11.999999,2.0000002 12.102954,2.0026041 C13.160059,2.0562031 13.999997,2.9305001 13.999997,4.0000004 L13.999997,8.5379477 14.072751,8.579824 C15.227388,9.2820592 15.999999,10.552313 15.999999,12.000001 15.999999,14.206002 14.206,16.000002 11.999999,16.000002 11.034874,16.000002 10.148609,15.65662 9.4569315,15.085582 L9.3581623,15.000002 1.9999996,15.000002 C0.89599976,15.000002 0,14.104002 0,13.000001 L0,4.0000004 C0,2.8960001 0.89599976,2 1.9999996,2 L2.4859977,2 2.4859977,1 C2.4859977,0.44700003 2.9339978,0 3.4859979,0 z</PathGeometry>
+                                                </Path.Data>
+                                                <Path.Style>
+                                                    <Style TargetType="Path">
+                                                        <Setter Property=" Fill" Value="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"/>
+                                                    </Style>
+                                                </Path.Style>
+                                            </Path>
                                         </ToggleButton.Content>
                                     </ToggleButton>
 
@@ -202,6 +215,7 @@
                                             Grid.Row="0"
                                             Grid.Column="1"
                                             Width="16"
+                                            Margin="0"
                                             Padding="{TemplateBinding Padding}"
                                             Background="{TemplateBinding RepeatButtonBackground}"
                                             
@@ -217,9 +231,12 @@
                                                     Height="4"
                                                     HorizontalAlignment="Stretch"
                                                     VerticalAlignment="Stretch"
-                                                    Data="F1 M 541.537,173.589L 531.107,173.589L 536.322,167.49L 541.537,173.589 Z "
                                                     Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
-                                                    Stretch="Uniform" />
+                                                    Stretch="Uniform" >
+                                                    <Path.Data>
+                                                        <PathGeometry>F1 M 541.537,173.589L 531.107,173.589L 536.322,167.49L 541.537,173.589 Z</PathGeometry>
+                                                    </Path.Data>
+                                                </Path>
                                             </RepeatButton.Content>
                                         </RepeatButton>
 
@@ -228,6 +245,7 @@
                                             Grid.Row="1"
                                             Grid.Column="1"
                                             Width="16"
+                                            Margin="0"
                                             Padding="{TemplateBinding Padding}"
                                             Background="{TemplateBinding RepeatButtonBackground}"
                                             
@@ -243,9 +261,12 @@
                                                     Height="4"
                                                     HorizontalAlignment="Stretch"
                                                     VerticalAlignment="Stretch"
-                                                    Data="F1 M 531.107,321.943L 541.537,321.943L 536.322,328.042L 531.107,321.943 Z "
                                                     Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
-                                                    Stretch="Uniform" />
+                                                    Stretch="Uniform" >
+                                                    <Path.Data>
+                                                        <PathGeometry>F1 M 531.107,321.943L 541.537,321.943L 536.322,328.042L 531.107,321.943 Z</PathGeometry>
+                                                    </Path.Data>
+                                                </Path>
                                             </RepeatButton.Content>
                                         </RepeatButton>
                                     </Grid>
@@ -260,7 +281,7 @@
                                         StaysOpen="False">
                                         <Border
                                             x:Name="CombinedBorder"
-                                            Margin="8,0,8,8"
+                                            Margin="8 0 8 8"
                                             Background="{StaticResource PopupBackground}"
                                             BorderBrush="{StaticResource Border}"
                                             
@@ -304,14 +325,15 @@
                                                     Background="{StaticResource PopupBackground}"
                                                     BorderBrush="{StaticResource BorderAlt}"
                                                     BorderThickness="0,1,0,0"
-                                                    SnapsToDevicePixels="True">
+                                                    SnapsToDevicePixels="True"
+                                                    CornerRadius="0">
                                                     <Grid x:Name="FooterHost">
                                                         <Grid x:Name="CalendarFooter" HorizontalAlignment="Left">
                                                             <Button
                                                                 x:Name="todayButton"
                                                                 Margin="4"
                                                                 Padding="8,4"
-                                                                BorderBrush="Transparent"
+                                                                
                                                                 BorderThickness="1"
                                                                 Content="{Sync_Shared_Resources:SharedLocalizationResourceExtension ResourceName=TodayLabel}"
                                                                 SnapsToDevicePixels="True"
@@ -329,7 +351,7 @@
                                                                 x:Name="noneButton"
                                                                 Margin="4"
                                                                 Padding="8,4"
-                                                                BorderBrush="Transparent"
+                                                                
                                                                 BorderThickness="1"
                                                                 Content="{Sync_Shared_Resources:SharedLocalizationResourceExtension ResourceName=AccessEmptyDateText}"
                                                                 Style="{StaticResource WPFFlatButtonStyle}"
@@ -346,7 +368,7 @@
                                                                 Grid.Column="2"
                                                                 Margin="4"
                                                                 Padding="8,4"
-                                                                BorderBrush="Transparent"
+                                                                
                                                                 BorderThickness="1"
                                                                 Content="{Sync_Shared_Resources:SharedLocalizationResourceExtension ResourceName=OkLabel}"
                                                                 Style="{StaticResource WPFFlatPrimaryButtonStyle}" />
@@ -355,7 +377,7 @@
                                                                 Grid.Column="3"
                                                                 Margin="4"
                                                                 Padding="8,4"
-                                                                BorderBrush="Transparent"
+                                                                
                                                                 BorderThickness="1"
                                                                 Content="{Sync_Shared_Resources:SharedLocalizationResourceExtension ResourceName=CancelLabel}"
                                                                 Style="{StaticResource WPFFlatButtonStyle}" />
@@ -424,7 +446,7 @@
                             <Setter TargetName="todayButton" Property="Visibility" Value="Visible" />
                             <Setter TargetName="CalendarFooter" Property="Visibility" Value="Visible" />
                             <Setter TargetName="ClockFooter" Property="HorizontalAlignment" Value="Right" />
-                            <Setter TargetName="path1" Property="Data" Value="M8,9 L11,9 11,12 8,12 z M13,6 L2,6 2,14 13.001,14 z M3.4860003,0 C4.0380001,0 4.4860005,0.44700003 4.4860005,1 L4.4860005,2 11,2 11,1 C11,0.44700003 11.448,0 12,0 12.552,0 13,0.44700003 13,1 L13,2 C14.104,2 15,2.8960001 15,4 L15,14 C15,15.104 14.104,16 13,16 L2,16 C0.89600003,16 0,15.104 0,14 L0,4 C0,2.8960001 0.89600003,2 2,2 L2.4860001,2 2.4860001,1 C2.4860003,0.44700003 2.9340003,0 3.4860003,0 z" />
+                            <Setter TargetName="path" Property="Data" Value="M8,9 L11,9 11,12 8,12 z M13,6 L2,6 2,14 13.001,14 z M3.4860003,0 C4.0380001,0 4.4860005,0.44700003 4.4860005,1 L4.4860005,2 11,2 11,1 C11,0.44700003 11.448,0 12,0 12.552,0 13,0.44700003 13,1 L13,2 C14.104,2 15,2.8960001 15,4 L15,14 C15,15.104 14.104,16 13,16 L2,16 C0.89600003,16 0,15.104 0,14 L0,4 C0,2.8960001 0.89600003,2 2,2 L2.4860001,2 2.4860001,1 C2.4860003,0.44700003 2.9340003,0 3.4860003,0 z" />
                         </Trigger>
                         <Trigger Property="DropDownView" Value="Clock">
                             <Setter TargetName="CombinedCalendar" Property="Visibility" Value="Collapsed" />
@@ -436,7 +458,7 @@
                             <Setter TargetName="okButton" Property="Grid.Column" Value="0" />
                             <Setter TargetName="CalendarFooter" Property="Visibility" Value="Collapsed" />
                             <Setter TargetName="ClockFooter" Property="HorizontalAlignment" Value="Stretch" />
-                            <Setter TargetName="path1" Property="Data" Value="M7.5000014,4 L8.5,4 8.5,8.2319994 11.277998,10.084 10.722999,10.915999 7.5000014,8.7679996 z M7.993,2 C4.6880035,2 2,4.691 2,8 2,11.309 4.6880035,14 7.993,14 11.305,14 14,11.309 14,8 14,4.691 11.305,2 7.993,2 z M7.993,0 C12.408005,0 16,3.5890007 16,8 16,12.410999 12.408005,16 7.993,16 3.5860023,16 0,12.410999 0,8 0,3.5890007 3.5860023,0 7.993,0 z" />
+                            <Setter TargetName="path" Property="Data" Value="M7.5000014,4 L8.5,4 8.5,8.2319994 11.277998,10.084 10.722999,10.915999 7.5000014,8.7679996 z M7.993,2 C4.6880035,2 2,4.691 2,8 2,11.309 4.6880035,14 7.993,14 11.305,14 14,11.309 14,8 14,4.691 11.305,2 7.993,2 z M7.993,0 C12.408005,0 16,3.5890007 16,8 16,12.410999 12.408005,16 7.993,16 3.5860023,16 0,12.410999 0,8 0,3.5890007 3.5860023,0 7.993,0 z" />
                         </Trigger>
                         <Trigger Property="DropDownView" Value="Combined">
                             <Setter TargetName="CombinedCalendar" Property="Visibility" Value="Visible" />
@@ -449,7 +471,7 @@
                             <Setter TargetName="CalendarFooter" Property="Visibility" Value="Visible" />
                             <Setter TargetName="ClockFooter" Property="HorizontalAlignment" Value="Right" />
                             <Setter TargetName="CalendarFooter" Property="HorizontalAlignment" Value="Left" />
-                            <Setter TargetName="path1" Property="Data" Value="M11.500002,10 L11.999999,10 12.5,10 12.5,11.463126 12.708088,12.072044 13.550999,13.093001 13.165756,13.41129 13.165999,13.412001 13.165551,13.411458 12.78,13.730001 11.500002,12.179 z M11.999999,9.0000005 C10.345999,9.0000005 8.9999995,10.346001 8.9999995,12.000001 8.9999995,13.654002 10.345999,15.000001 11.999999,15.000001 13.654,15.000001 14.999999,13.654002 14.999999,12.000001 14.999999,10.346001 13.654,9.0000005 11.999999,9.0000005 z M11.999999,6.0000004 L1.9999996,6.0000004 1.9999996,13.000001 8.1265182,13.000001 8.1261243,12.998617 C8.0437984,12.679318 7.9999995,12.344689 7.9999995,12.000001 7.9999995,9.7940006 9.7939991,8 11.999999,8 L12.000885,8.0000114 z M3.4859979,0 C4.0379977,0 4.4859979,0.44700003 4.4859979,1 L4.4859979,2 9.9999995,2 9.9999995,1 C9.9999995,0.44700003 10.447999,0 10.999999,0 11.552,0 11.999999,0.44700003 11.999999,1 L11.999999,2.0000002 12.102954,2.0026041 C13.160059,2.0562031 13.999997,2.9305001 13.999997,4.0000004 L13.999997,8.5379477 14.072751,8.579824 C15.227388,9.2820592 15.999999,10.552313 15.999999,12.000001 15.999999,14.206002 14.206,16.000002 11.999999,16.000002 11.034874,16.000002 10.148609,15.65662 9.4569315,15.085582 L9.3581623,15.000002 1.9999996,15.000002 C0.89599976,15.000002 0,14.104002 0,13.000001 L0,4.0000004 C0,2.8960001 0.89599976,2 1.9999996,2 L2.4859977,2 2.4859977,1 C2.4859977,0.44700003 2.9339978,0 3.4859979,0 z"/>
+                            <Setter TargetName="path" Property="Data" Value="M11.500002,10 L11.999999,10 12.5,10 12.5,11.463126 12.708088,12.072044 13.550999,13.093001 13.165756,13.41129 13.165999,13.412001 13.165551,13.411458 12.78,13.730001 11.500002,12.179 z M11.999999,9.0000005 C10.345999,9.0000005 8.9999995,10.346001 8.9999995,12.000001 8.9999995,13.654002 10.345999,15.000001 11.999999,15.000001 13.654,15.000001 14.999999,13.654002 14.999999,12.000001 14.999999,10.346001 13.654,9.0000005 11.999999,9.0000005 z M11.999999,6.0000004 L1.9999996,6.0000004 1.9999996,13.000001 8.1265182,13.000001 8.1261243,12.998617 C8.0437984,12.679318 7.9999995,12.344689 7.9999995,12.000001 7.9999995,9.7940006 9.7939991,8 11.999999,8 L12.000885,8.0000114 z M3.4859979,0 C4.0379977,0 4.4859979,0.44700003 4.4859979,1 L4.4859979,2 9.9999995,2 9.9999995,1 C9.9999995,0.44700003 10.447999,0 10.999999,0 11.552,0 11.999999,0.44700003 11.999999,1 L11.999999,2.0000002 12.102954,2.0026041 C13.160059,2.0562031 13.999997,2.9305001 13.999997,4.0000004 L13.999997,8.5379477 14.072751,8.579824 C15.227388,9.2820592 15.999999,10.552313 15.999999,12.000001 15.999999,14.206002 14.206,16.000002 11.999999,16.000002 11.034874,16.000002 10.148609,15.65662 9.4569315,15.085582 L9.3581623,15.000002 1.9999996,15.000002 C0.89599976,15.000002 0,14.104002 0,13.000001 L0,4.0000004 C0,2.8960001 0.89599976,2 1.9999996,2 L2.4859977,2 2.4859977,1 C2.4859977,0.44700003 2.9339978,0 3.4859979,0 z"/>
                         </Trigger>
 
                         <Trigger Property="DropDownView" Value="Classic">
@@ -461,7 +483,7 @@
                             <Setter TargetName="todayButton" Property="Visibility" Value="Visible" />
                             <Setter TargetName="CalendarFooter" Property="Visibility" Value="Visible" />
                             <Setter TargetName="ClockFooter" Property="HorizontalAlignment" Value="Right" />
-                            <Setter TargetName="path1" Property="Data" Value="M8,9 L11,9 11,12 8,12 z M13,6 L2,6 2,14 13.001,14 z M3.4860003,0 C4.0380001,0 4.4860005,0.44700003 4.4860005,1 L4.4860005,2 11,2 11,1 C11,0.44700003 11.448,0 12,0 12.552,0 13,0.44700003 13,1 L13,2 C14.104,2 15,2.8960001 15,4 L15,14 C15,15.104 14.104,16 13,16 L2,16 C0.89600003,16 0,15.104 0,14 L0,4 C0,2.8960001 0.89600003,2 2,2 L2.4860001,2 2.4860001,1 C2.4860003,0.44700003 2.9340003,0 3.4860003,0 z" />
+                            <Setter TargetName="path" Property="Data" Value="M8,9 L11,9 11,12 8,12 z M13,6 L2,6 2,14 13.001,14 z M3.4860003,0 C4.0380001,0 4.4860005,0.44700003 4.4860005,1 L4.4860005,2 11,2 11,1 C11,0.44700003 11.448,0 12,0 12.552,0 13,0.44700003 13,1 L13,2 C14.104,2 15,2.8960001 15,4 L15,14 C15,15.104 14.104,16 13,16 L2,16 C0.89600003,16 0,15.104 0,14 L0,4 C0,2.8960001 0.89600003,2 2,2 L2.4860001,2 2.4860001,1 C2.4860003,0.44700003 2.9340003,0 3.4860003,0 z" />
                         </Trigger>
 
                         <MultiTrigger>

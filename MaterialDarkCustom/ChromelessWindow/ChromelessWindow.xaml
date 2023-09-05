@@ -16,10 +16,17 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ToolTip.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
+    <SolidColorBrush x:Key="ChromelessWindow.TitleBar.CloseButton.Path.Static.Fill" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ChromelessWindow.TitleBar.CloseButton.Path.Disabled.Fill" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ChromelessWindow.TitleBar.CloseButton.MouseOver.BackColor" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ChromelessWindow.TitleBar.CloseButton.MouseOver.Fill" Color="#000000" />
+    <SolidColorBrush x:Key="ChromelessWindow.TitleBar.CloseButton.Pressed.BackColor" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ChromelessWindow.TitleBar.CloseButton.Pressed.Fill" Color="#000000" />
+
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     <local:CornerRadiusConverter x:Key="CRConvert" />
-	<local:IcoFileSizeSelectorConverter x:Key="IcoFileSizeSelector" />
-	
+    <local:IcoFileSizeSelectorConverter x:Key="IcoFileSizeSelector" />
+    
     <Style x:Key="SyncfusionChromlessWindowTitleBarStyle" TargetType="{x:Type local:TitleBar}">
         <Setter Property="Focusable" Value="False" />
     </Style>
@@ -59,6 +66,38 @@
         </Setter>
     </Style>
 
+    <ControlTemplate x:Key="SyncfusionWindows11TitleBarCloseButtonTemplate" TargetType="{x:Type local:TitleButton}">
+        <Border x:Name="PART_Border"
+                Panel.ZIndex="100"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}">
+            <Path x:Name="closepath"
+                  Width="10"
+                  Height="10"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Data="M5.70801 5.11182L10 9.40381L9.29199 10.1118L5 5.81982L0.708008 10.1118L0 9.40381L4.29199 5.11182L0 0.819824L0.708008 0.111816L5 4.40381L9.29199 0.111816L10 0.819824L5.70801 5.11182Z"
+                  Fill="{StaticResource ChromelessWindow.TitleBar.CloseButton.Path.Static.Fill}"
+                  Stretch="Fill" />
+        </Border>
+        <ControlTemplate.Triggers>
+            <DataTrigger Binding="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:ChromelessWindow}}, Path=IsActive}" Value="False">
+                <Setter TargetName="closepath" Property="Fill" Value="{StaticResource ChromelessWindow.TitleBar.CloseButton.Path.Disabled.Fill}" />
+            </DataTrigger>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="PART_Border" Property="Background" Value="{StaticResource ChromelessWindow.TitleBar.CloseButton.MouseOver.BackColor}" />
+                <Setter TargetName="PART_Border" Property="BorderBrush" Value="{StaticResource ChromelessWindow.TitleBar.CloseButton.MouseOver.BackColor}" />
+                <Setter TargetName="closepath" Property="Fill" Value="{StaticResource ChromelessWindow.TitleBar.CloseButton.MouseOver.Fill}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="PART_Border" Property="Background" Value="{StaticResource ChromelessWindow.TitleBar.CloseButton.Pressed.BackColor}" />
+                <Setter TargetName="PART_Border" Property="BorderBrush" Value="{StaticResource ChromelessWindow.TitleBar.CloseButton.Pressed.BackColor}" />
+                <Setter TargetName="closepath" Property="Fill" Value="{StaticResource ChromelessWindow.TitleBar.CloseButton.Pressed.Fill}" />
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
     <ControlTemplate x:Key="SyncfusionTitleBarControlTemplate" TargetType="{x:Type local:TitleBar}">
         <Border
             Name="border"
@@ -80,7 +119,7 @@
             <Border
                 Name="OuterBorder"
                 Margin="{TemplateBinding Margin}"
-                Background="{TemplateBinding Background}"
+                Background="{TemplateBinding ResizeBorderBrush}"
                 BorderBrush="{TemplateBinding ResizeBorderBrush}"
                 BorderThickness="{TemplateBinding ResizeBorderThickness}">
                 <Grid x:Name="RootGrid">
@@ -88,7 +127,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <Border
+                    <Border Name="InnerBorder"
                             Grid.RowSpan="2"
                             Background="{TemplateBinding Background}"
                             CornerRadius="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:ChromelessWindow}}, Path=CornerRadius}"/>
@@ -98,11 +137,12 @@
                             CornerRadius="{Binding RelativeSource={RelativeSource FindAncestor,  AncestorType={x:Type local:ChromelessWindow}}, Path=CornerRadius,Converter={StaticResource CRConvert},ConverterParameter=Bottom}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}">
-                        <Grid x:Name="ChildGrid">
+                        <Grid x:Name="ChildGrid" ClipToBounds="True">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
+                            <Border x:Name="BorderMask" Background="{TemplateBinding Background}"/>
                             <local:ResizeGripStyle
                                     x:Name="PART_Resizegrip"
                                     Margin="0,0,3,3"
@@ -149,6 +189,7 @@
                                         x:Name="PART_LeftHeaderItems"
                                         shell:WindowChrome.IsHitTestVisibleInChrome="True"
                                         Grid.Column="1"
+                                        Focusable = "False"
                                         VerticalAlignment="Center"
                                         ItemTemplate="{TemplateBinding LeftHeaderItemTemplate}"
                                         ItemsSource="{Binding LeftHeaderItemsSource, RelativeSource={RelativeSource TemplatedParent}}">
@@ -175,6 +216,7 @@
                                         x:Name="PART_RightHeaderItems"
                                         shell:WindowChrome.IsHitTestVisibleInChrome="True"
                                         Grid.Column="3"
+                                        Focusable = "False"
                                         VerticalAlignment="Center"
                                         ItemTemplate="{TemplateBinding RightHeaderItemTemplate}"
                                         ItemsSource="{Binding RightHeaderItemsSource, RelativeSource={RelativeSource TemplatedParent}}">
@@ -304,6 +346,9 @@
                             </Grid>
                         </local:TitleBar>
                     </Border>
+                    <Grid.OpacityMask>
+                        <VisualBrush Visual="{Binding Source={x:Reference BorderMask}}"/>
+                    </Grid.OpacityMask>
                 </Grid>
             </Border>
         </AdornerDecorator>
@@ -315,7 +360,7 @@
                     </Setter.Value>
                 </Setter>
             </Trigger>
-			<Trigger Property="TitleBarHeight" Value="0" >
+            <Trigger Property="TitleBarHeight" Value="0" >
                 <Setter Property="CornerRadius" TargetName="ContentAreaBorder" Value="{Binding RelativeSource={RelativeSource FindAncestor,  AncestorType={x:Type local:ChromelessWindow}}, Path=CornerRadius}" />
             </Trigger>
             <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
@@ -437,6 +482,10 @@
                 <Setter Property="Visibility" Value="Collapsed" TargetName="MinimizeButton" />
             </Trigger>
 
+            <Trigger Property="WindowState" Value="Maximized">
+                <Setter TargetName="InnerBorder" Property="CornerRadius" Value="0" />
+            </Trigger>
+
             <MultiTrigger>
                 <MultiTrigger.Conditions>
                     <Condition Property="WindowStyle" Value="None" />
@@ -470,7 +519,7 @@
         <Setter Property="MinimizeButtonTemplate" Value="{StaticResource WPFGlyphWindowButtonTemplate}" />
         <Setter Property="MaximizeButtonTemplate" Value="{StaticResource WPFGlyphWindowButtonTemplate}" />
         <Setter Property="RestoreButtonTemplate" Value="{StaticResource WPFGlyphWindowButtonTemplate}" />
-        <Setter Property="CloseButtonTemplate" Value="{StaticResource WPFGlyphWindowCloseButtonTemplate}" />
+        <Setter Property="CloseButtonTemplate" Value="{StaticResource WPFGlyphWindowCloseButtonTemplate}"/>
         <Setter Property="TitleBarTemplate" Value="{StaticResource SyncfusionTitleBarControlTemplate}" />
         <Setter Property="IconAlignment" Value="Left" />
         <Setter Property="Template" Value="{StaticResource SyncfusionChromelessWindowControlTemplate}" />

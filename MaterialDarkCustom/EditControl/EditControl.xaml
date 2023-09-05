@@ -1,4 +1,4 @@
-<ResourceDictionary 
+ <ResourceDictionary 
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
     xmlns:syncfusion="clr-namespace:Syncfusion.Windows.Tools.Controls;assembly=Syncfusion.Tools.WPF"
@@ -22,7 +22,7 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatPrimaryButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Ribbon/Ribbon.xaml"/>
     </ResourceDictionary.MergedDictionaries>
-    
+
     <BooleanToVisibilityConverter x:Key="VisibilityConverter" />
 
     <local:TabSelectionToTextConverter x:Key="tabTextConverter" />
@@ -72,29 +72,58 @@
                     Margin="3"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Data="M1,1 L11,11 M1,11 L11,1"
                     Stroke="{StaticResource SecondaryForeground}"
-                    StrokeThickness="1" />
+                    StrokeThickness="1">
+                    <Path.Data>
+                        <PathGeometry>M1,1 L11,11 M1,11 L11,1</PathGeometry>
+                    </Path.Data>
+                </Path>
             </Setter.Value>
         </Setter>
     </Style>
-	
-	  <Style x:Key="UpArrowButtonStyle" 
+
+    <Style x:Key="UpArrowButtonStyle" 
            BasedOn="{StaticResource WPFGlyphButtonStyle}"
            TargetType="{x:Type Button}">
-        <Setter Property="Content">
+        <Setter Property="Template">
             <Setter.Value>
-                <Border Padding="4">
-                    <Path
-                    x:Name="Arrow"
-                    Data="M3,8L7.3,2 12,8z"
-                    HorizontalAlignment="Center"
-                    Width="15"
-                    Stroke="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
-                    StrokeThickness="1"
-                    Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
-                    />
-                </Border>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border Padding="4"
+                        x:Name="PART_Border"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        Background="{TemplateBinding Background}"
+                        Effect="{TemplateBinding Effect}"
+                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                        <Path x:Name="Arrow"
+                                      Data="M3,8L7.3,2 12,8z"
+                                      HorizontalAlignment="Center"
+                                      Width="15"
+                                      Stroke="{StaticResource IconColor}"
+                                      StrokeThickness="1"
+                                      Fill="{StaticResource IconColor}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Arrow" Property="Stroke" Value="{StaticResource IconColor}"/>
+                            <Setter TargetName="Arrow" Property="Fill" Value="{StaticResource IconColor}"/>
+                            <Setter TargetName="PART_Border" Property="Background" Value="{StaticResource SecondaryHoverBackground}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Arrow" Property="Stroke" Value="{StaticResource IconColor}"/>
+                            <Setter TargetName="Arrow" Property="Fill" Value="{StaticResource IconColor}"/>
+                            <Setter TargetName="PART_Border" Property="Background" Value="{StaticResource SecondarySelectionBackground}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter TargetName="Arrow" Property="Stroke" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter TargetName="Arrow" Property="Fill" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter Property="Background" TargetName="PART_Border" Value="Transparent"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
@@ -102,19 +131,47 @@
     <Style x:Key="DownArrowButtonStyle"
            BasedOn="{StaticResource WPFGlyphButtonStyle}"
            TargetType="{x:Type Button}">
-        <Setter Property="Content">
+        <Setter Property="Template">
             <Setter.Value>
-                <Border Padding="4">
-                    <Path
-                    x:Name="Arrow"
-                    Data="M3,1L7.3,7 12,1z"
-                    HorizontalAlignment="Center"
-                    Width="15"
-                    Stroke="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
-                    StrokeThickness="1"
-                    Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
-                    />
-                </Border>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border Padding="4"
+                        x:Name="PART_Border"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        Background="{TemplateBinding Background}"
+                        Effect="{TemplateBinding Effect}"
+                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+
+                        <Path x:Name="Arrow"
+                                      Data="M3,1L7.3,7 12,1z"
+                                      HorizontalAlignment="Center"
+                                      Width="15"
+                                      Stroke="{StaticResource IconColor}"
+                                      StrokeThickness="1"
+                                      Fill="{StaticResource IconColor}"/>
+                    </Border>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Arrow" Property="Stroke" Value="{StaticResource IconColor}"/>
+                            <Setter TargetName="Arrow" Property="Fill" Value="{StaticResource IconColor}"/>
+                            <Setter TargetName="PART_Border" Property="Background" Value="{StaticResource SecondaryHoverBackground}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Arrow" Property="Stroke" Value="{StaticResource IconColor}"/>
+                            <Setter TargetName="Arrow" Property="Fill" Value="{StaticResource IconColor}"/>
+                            <Setter TargetName="PART_Border" Property="Background" Value="{StaticResource SecondarySelectionBackground}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter TargetName="Arrow" Property="Stroke" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter TargetName="Arrow" Property="Fill" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter Property="Background" TargetName="PART_Border" Value="Transparent"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
@@ -134,8 +191,8 @@
             </MultiTrigger>
         </Style.Triggers>
     </Style>
-	
-	 <ControlTemplate x:Key="SyncfusionContextPromptControlTemplate" TargetType="{x:Type local:ContextPromptControl}">
+
+    <ControlTemplate x:Key="SyncfusionContextPromptControlTemplate" TargetType="{x:Type local:ContextPromptControl}">
         <Border  Background="{StaticResource ContentBackgroundAlt}" Padding="2" BorderBrush="{StaticResource BorderAlt}" CornerRadius="3" BorderThickness="1">
             <Grid >
                 <Grid.ColumnDefinitions>
@@ -267,6 +324,7 @@
                   CommandTarget="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}}">
             <MenuItem.Icon>
                 <Image Source="pack://application:,,,/Syncfusion.Edit.Wpf;component/Resources/Uncomment.png" MaxHeight="16" MaxWidth="16" />
+                
             </MenuItem.Icon>
         </MenuItem>
     </ContextMenu>
@@ -274,6 +332,7 @@
     <Style x:Key="SyncfusionFindReplaceControlStyle" TargetType="{x:Type local:FindReplaceControl}">
         <Setter Property="FocusVisualStyle" Value="{StaticResource EditControlFocusVisualStyle}" />
         <Setter Property="MinWidth" Value="350" />
+        <Setter Property="MinHeight" Value="378" />
         <Setter Property="FocusManager.IsFocusScope" Value="True" />
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle" />
         <Setter Property="FontSize" Value="12" />
@@ -295,8 +354,8 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
-                        <Border>
-                            <Grid x:Name="PART_TitleGrid" 
+                        <Border CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                            <Grid x:Name="PART_TitleGrid"
                                   Margin="8,12,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="3*" />
@@ -328,10 +387,16 @@
                                                             SizeForm="Small" 
                                                             SmallIcon="{x:Null}" 
                                                             HorizontalAlignment="Stretch" 
-                                                            VerticalAlignment="Stretch" 
-                                                            Label="" 
+                                                            VerticalAlignment="Stretch"  
                                                             Height="24" 
                                                             Width="120">
+                                        <syncfusion:SplitButton.Label>
+                                            <MultiBinding Converter="{StaticResource tabTextConverter}">
+                                                <Binding Path="IsFindTabActive" />
+                                                <Binding Path="IsFindSymbolTabActive" />
+                                                <Binding Path="Text" RelativeSource="{RelativeSource Self}" />
+                                            </MultiBinding>
+                                        </syncfusion:SplitButton.Label>
                                         <syncfusion:RibbonMenuItem Header="{Sync_Resources:EditLocalizationResourceExtension ResourceName=QuickfindText}" x:Name="PART_FindMenu" Style="{StaticResource SyncfusionRibbonMenuItemStyle}" />
                                         <syncfusion:RibbonMenuItem Header="{Sync_Resources:EditLocalizationResourceExtension ResourceName=FindsymbolText}" x:Name="PART_FindSymbolMenu" Style="{StaticResource SyncfusionRibbonMenuItemStyle}" />
                                         <syncfusion:SplitButton.ToolTip>
@@ -339,21 +404,6 @@
                                             </ToolTip>
                                         </syncfusion:SplitButton.ToolTip>
                                     </syncfusion:SplitButton>
-                                    <TextBlock x:Name="PART_FindButtonText" 
-                                               Grid.RowSpan="1" 
-                                               HorizontalAlignment="Left" 
-                                               Margin="5,0,0,0" 
-                                               VerticalAlignment="Center" 
-                                               TextAlignment="Center" 
-                                               IsHitTestVisible="False">
-                                        <TextBlock.Text>
-                                            <MultiBinding Converter="{StaticResource tabTextConverter}">
-                                                <Binding Path="IsFindTabActive" />
-                                                <Binding Path="IsFindSymbolTabActive" />
-                                                <Binding Path="Text" RelativeSource="{RelativeSource Self}" />
-                                            </MultiBinding>
-                                        </TextBlock.Text>
-                                    </TextBlock>
                                 </Grid>
                                 <Separator Grid.Column="1" Margin="4" Width="1" />
                                 <Grid Grid.Column="2" 
@@ -400,7 +450,7 @@
                                                  CustomSource="{Binding FindHistory}"  
                                                  Text="{Binding FindText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                                  Grid.Row="2" 
-                                                 MinHeight="{StaticResource MaterialDarkCustom.MinHeight}" 
+                                                 MinHeight="{StaticResource MaterialDarkCustom.MinHeight}"
                                                  Margin="8,0" 
                                                  Grid.ColumnSpan="3" />
 
@@ -413,7 +463,7 @@
                                Target="{Binding ElementName=PART_ReplaceWith}" 
                                Padding="0" />
                         <syncfusion:AutoComplete x:Name="PART_ReplaceWith" 
-                                                 MinHeight="{StaticResource MaterialDarkCustom.MinHeight}" 
+                                                 MinHeight="{StaticResource MaterialDarkCustom.MinHeight}"
                                                  IsHistory="True" 
                                                  CustomSource="{Binding ReplaceHistory}"
                                                  Text="{Binding ReplaceText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
@@ -432,7 +482,7 @@
                                   Grid.Row="6" 
                                   Margin="8,0" 
                                   VerticalContentAlignment="Center" 
-                                  MinHeight="25" 
+                                  MinHeight="25"
                                   Grid.ColumnSpan="3">
                             <ComboBoxItem Content="{Sync_Resources:EditLocalizationResourceExtension ResourceName=CurrentdocumentText}" IsSelected="True" />
                             <ComboBoxItem Content="{Sync_Resources:EditLocalizationResourceExtension ResourceName=SelectionText}" IsSelected="{Binding Path=IsSelectionSelected, Mode=TwoWay}" />
@@ -626,7 +676,7 @@
     <Style x:Key="SyncfusionEditControlStyle" TargetType="{x:Type local:EditControl}">
         <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
         <Setter Property="Background" Value="{StaticResource ContentBackground}"/>
-		<Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
+        <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
         <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
         <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"/>
         <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}"/>
@@ -645,6 +695,8 @@
         <Setter Property="IntellisenseItemTemplate" Value="{StaticResource IntellisenseItemTemplate}" />
         <Setter Property="IntellisenseBoxStyle" Value="{StaticResource WPFListBoxStyle}" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="ContextMenu" Value="{StaticResource SyncfusionContextMenu}"/>
+        <Setter Property="ShowDefaultContextMenu" Value="True"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type local:EditControl}">

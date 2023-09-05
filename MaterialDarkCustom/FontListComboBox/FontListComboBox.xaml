@@ -159,7 +159,7 @@
                                 </Grid.ColumnDefinitions>
                                 <ContentPresenter Name="PART_Text"
                                                   Grid.Column="0"
-                                                  Margin="2,0,0,0"
+                                                  Margin="2 0 0 0"
                                                   HorizontalAlignment="{TemplateBinding Control.HorizontalContentAlignment}"
                                                   VerticalAlignment="{TemplateBinding Control.VerticalContentAlignment}"
                                                   SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" 
@@ -170,7 +170,7 @@
                                     </ContentPresenter.Resources>
                                 </ContentPresenter>
 
-                                <ToggleButton Grid.Column="1"
+                                <ToggleButton x:Name="Part_ToggleButton" Grid.Column="1"
                                               Margin="0,0,2,0"
                                               IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay,RelativeSource={RelativeSource AncestorType={x:Type syncfusion:FontListComboBox}}}"
                                               Style="{StaticResource WPFGlyphDropdownExpanderStyle}">

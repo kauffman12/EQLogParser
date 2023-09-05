@@ -18,8 +18,9 @@
 
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Button.xaml" />
-        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatButton.xaml" /> 
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatPrimaryButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphButton.xaml" />
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
     </ResourceDictionary.MergedDictionaries>
@@ -52,42 +53,43 @@
         <Setter Property="AlternativeBackground" Value="{StaticResource ContentBackgroundAlt}" />
         <Setter Property="AlternativeBorderBrush" Value="{StaticResource ContentBackgroundAlt}" />
         <Setter Property="AccentBrush" Value="{StaticResource PrimaryBackground}" />
+        <Setter Property="Background" Value="Transparent" />
         <Setter Property="KeyboardNavigation.TabNavigation" Value="None" />
         <Setter Property="KeyboardNavigation.DirectionalNavigation" Value="None" />
         <Setter Property="Margin" Value="2"/>
-        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="BorderBrush" Value="{StaticResource ContentBackgroundAlt}"/>
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate>
+                <ControlTemplate TargetType="{x:Type input_controls:LoopingSelectorItem}">
                     <Border
-                        x:Name="root" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" SnapsToDevicePixels="True"
-                        Margin="{TemplateBinding Margin}" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{StaticResource ContentBackgroundAlt}"
-                        Background="Transparent"
+                        x:Name="root" 
+                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" 
+                        SnapsToDevicePixels="True"
+                        BorderThickness="{TemplateBinding BorderThickness}" 
+                        BorderBrush="{TemplateBinding BorderBrush}"
                         Opacity="0">
                         <Border.RenderTransform>
                             <TranslateTransform x:Name="Transform" />
                         </Border.RenderTransform>
-                        <Grid x:Name="LoopingSelectorGrid" Margin="-1">
-                            <Rectangle
-                                x:Name="background" SnapsToDevicePixels="True"
-                                Fill="{Binding AccentBrush, Converter={StaticResource BrushConverter}, ConverterParameter=AccentBrushnull, RelativeSource={RelativeSource Mode=TemplatedParent}}"
-                                Opacity="0" />
-                            <Rectangle 
-                                x:Name="Part_Disabled" SnapsToDevicePixels="True"
-                                Width="{Binding ElementName=Part_Border, Path=ActualWidth}"
-                                Height="{Binding ElementName=Part_Border, Path=ActualHeight}"
-                                Fill="{StaticResource ContentBackgroundAlt3}"
-                                Opacity="0" />
-                            <Border
-                                x:Name="Part_Border" SnapsToDevicePixels="True" Background="{Binding AlternativeBackground, RelativeSource={RelativeSource Mode=TemplatedParent}}"
-                                BorderThickness="0">
-                                <ContentControl
-                                    x:Name="contentPresenter"
-                                    Margin="1,0"
-                                    Content="{Binding}"
-                                    ContentTemplate="{Binding ItemTemplate, RelativeSource={RelativeSource Mode=TemplatedParent}}"
-                                    ContentTemplateSelector="{Binding ItemTemplateSelector, RelativeSource={RelativeSource Mode=TemplatedParent}}" />
-                            </Border>
+                        <Grid x:Name="LoopingSelectorGrid">
+                            <Border 
+                                SnapsToDevicePixels="True"
+                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" 
+                                Background="{TemplateBinding AccentBrush}"
+                                Opacity="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                x:Name="Accent_Border"/>
+                            <Border 
+                                SnapsToDevicePixels="True"
+                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" 
+                                Background="{TemplateBinding Background}"
+                                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                x:Name="Part_Border"/>
+                            <ContentControl
+                                x:Name="contentPresenter"
+                                Content="{Binding}"
+                                Background="Transparent"
+                                ContentTemplate="{Binding ItemTemplate, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                ContentTemplateSelector="{Binding ItemTemplateSelector, RelativeSource={RelativeSource Mode=TemplatedParent}}" />
                         </Grid>
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="CommonStates">
@@ -99,15 +101,9 @@
                                             Storyboard.TargetProperty="Opacity"
                                             To="1"
                                             Duration="0" />
-                                        <DoubleAnimation
-                                            Storyboard.TargetName="background"
-                                            Storyboard.TargetProperty="Opacity"
-                                            To="0"
-                                            Duration="0" />
-                                        <!--<ColorAnimation Storyboard.TargetName="Part_Border" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)" To="Transparent" Duration="0"/>-->
                                     </Storyboard>
                                 </VisualState>
-                                <VisualState x:Name="Selected">
+                                <VisualState x:Name="Selected">                                    
                                     <Storyboard>
                                         <DoubleAnimation
                                             Storyboard.TargetName="root"
@@ -115,7 +111,7 @@
                                             To="1"
                                             Duration="0" />
                                         <DoubleAnimation
-                                            Storyboard.TargetName="background"
+                                            Storyboard.TargetName="Accent_Border"
                                             Storyboard.TargetProperty="Opacity"
                                             To="1"
                                             Duration="0" />
@@ -126,33 +122,17 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Part_Border" Property="Background" Value="{StaticResource ContentBackgroundHover}" />
-                            <Setter TargetName="root" Property="BorderBrush" Value="{StaticResource ContentBackgroundHover}" />
-                            <Setter TargetName="contentPresenter" Property="Foreground" Value="{StaticResource ContentForeground}" />
+                            <Setter Property="Background" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
                         </Trigger>
                         <Trigger Property="IsFocused" Value="True">
-                            <Setter TargetName="contentPresenter" Property="Foreground" Value="{StaticResource LoopingSelectorItem.Pressed.Foreground}" />
+                            <Setter Property="Foreground" Value="{StaticResource LoopingSelectorItem.Pressed.Foreground}" />
                         </Trigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsMouseOver" Value="false"/>
-                                <Condition Property="Opacity" Value="1" SourceName="background" />
-                            </MultiTrigger.Conditions>
-                            <Setter Property="Background" Value="{Binding AccentBrush, RelativeSource={RelativeSource Mode=TemplatedParent}}" TargetName="Part_Border"/>
-                            <Setter Property="BorderBrush" Value="{StaticResource PrimaryBackground}" TargetName="root"/>
-                        </MultiTrigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsMouseOver" Value="True"/>
-                                <Condition Property="Opacity" Value="1" SourceName="background" />
-                            </MultiTrigger.Conditions>
-                            <Setter Property="Background" Value="{StaticResource PrimaryDark}" TargetName="Part_Border"/>
-                            <Setter Property="BorderBrush" Value="{StaticResource PrimaryDark}" TargetName="root"/>
-                            <Setter TargetName="contentPresenter" Property="Foreground" Value="{StaticResource PrimaryForeground}" />
-                        </MultiTrigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" TargetName="root"/>
-                            <Setter TargetName="contentPresenter" Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
+                            <Setter Property="Background" Value="{StaticResource ContentBackgroundAlt3}" />
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForeground}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -270,7 +250,6 @@
                             <Border
                                 x:Name="SelectorBorder"
                                 Grid.Row="1"
-                                Padding="3"
                                 HorizontalAlignment="Center"
                                 Background="Transparent">
                                 <Grid x:Name="SelectorGrid">
@@ -279,11 +258,23 @@
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
+                                    <Border 
+                                        x:Name="SelectionHighlighter"
+                                        Height="{TemplateBinding SelectorItemHeight}"
+                                        CornerRadius="4"
+                                        Margin="2,0"
+                                        Grid.ColumnSpan="3"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Stretch"
+                                        Visibility="Collapsed"
+                                        Background="{Binding AccentBrush, Converter={StaticResource BrushConverter}, ConverterParameter=AccentBrushnull, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        BorderBrush="{StaticResource PrimaryBackground}"/>
                                     <input_controls:LoopingSelector
                                         x:Name="PART_Month"
                                         Width="{Binding SelectorItemWidth, RelativeSource={RelativeSource Mode=TemplatedParent}}"
                                         Height="{Binding Height, RelativeSource={RelativeSource Mode=TemplatedParent}}"
                                         HorizontalAlignment="Center"
+                                        Margin="2,2,3,2"
                                         AccentBrush="{Binding AccentBrush, RelativeSource={RelativeSource Mode=TemplatedParent}}"
                                         IsTabStop="False"
                                         ItemHeight="{Binding SelectorItemHeight, RelativeSource={RelativeSource Mode=TemplatedParent}}"
@@ -292,11 +283,18 @@
                                         ItemWidth="{Binding SelectorItemWidth, RelativeSource={RelativeSource Mode=TemplatedParent}}"
                                         SelectedForeground="{Binding SelectedForeground, RelativeSource={RelativeSource Mode=TemplatedParent}}"
                                         Style="{Binding SelectorStyle, RelativeSource={RelativeSource Mode=TemplatedParent}}" />
+                                    <Rectangle
+                                        VerticalAlignment="Stretch"
+                                        HorizontalAlignment="Right"
+                                        Width="1"
+                                        Visibility="Collapsed"
+                                        Fill="{StaticResource Border}"/>
                                     <input_controls:LoopingSelector
                                         x:Name="PART_Date"
                                         Grid.Column="1"
                                         Width="{Binding SelectorItemWidth, RelativeSource={RelativeSource Mode=TemplatedParent}}"
                                         Height="{Binding Height, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        Margin="2,2,3,2"
                                         HorizontalAlignment="Center"
                                         AccentBrush="{Binding AccentBrush, RelativeSource={RelativeSource Mode=TemplatedParent}}"
                                         IsTabStop="False"
@@ -306,11 +304,19 @@
                                         ItemWidth="{Binding SelectorItemWidth, RelativeSource={RelativeSource Mode=TemplatedParent}}"
                                         SelectedForeground="{Binding SelectedForeground, RelativeSource={RelativeSource Mode=TemplatedParent}}"
                                         Style="{Binding SelectorStyle, RelativeSource={RelativeSource Mode=TemplatedParent}}" />
+                                    <Rectangle
+                                        Grid.Column="1"
+                                        VerticalAlignment="Stretch"
+                                        HorizontalAlignment="Right"
+                                        Width="1"
+                                        Visibility="Collapsed"
+                                        Fill="{StaticResource Border}"/>
                                     <input_controls:LoopingSelector
                                         x:Name="PART_Year"
                                         Grid.Column="2"
                                         Width="{Binding SelectorItemWidth, RelativeSource={RelativeSource Mode=TemplatedParent}}"
                                         Height="{Binding Height, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                        Margin="2"
                                         HorizontalAlignment="Center"
                                         AccentBrush="{Binding AccentBrush, RelativeSource={RelativeSource Mode=TemplatedParent}}"
                                         IsTabStop="False"
@@ -329,9 +335,7 @@
                                 BorderThickness="0,1,0,0" >
                                 <Grid x:Name="FooterGrid">
                                     <Grid.RowDefinitions>
-                                        <RowDefinition Height="4" />
-                                        <RowDefinition x:Name="FooterButtonRowDefinition" Height="24" />
-                                        <RowDefinition Height="4" />
+                                        <RowDefinition x:Name="FooterButtonRowDefinition" MinHeight="32" />
                                     </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -339,30 +343,30 @@
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <Button
-                                    x:Name="PART_DoneButton"
-                                    Grid.Row="1"
-                                    Grid.Column="0"
-                                    Margin="4,0"
-                                    Content="{Input:InputLocalizationResourceExtension ResourceName=OKText}"
-                                    Style="{StaticResource WPFFlatPrimaryButtonStyle}"
-                                    Visibility="{Binding ShowDoneButton, Converter={StaticResource BooleanVisibilityConverter}, RelativeSource={RelativeSource Mode=TemplatedParent}}" />
+                                        x:Name="PART_DoneButton"
+                                        Grid.Column="0"
+                                        Margin="2"
+                                        Style="{StaticResource WPFFlatPrimaryButtonStyle}"
+                                        Visibility="{Binding ShowDoneButton, Converter={StaticResource BooleanVisibilityConverter}, RelativeSource={RelativeSource Mode=TemplatedParent}}">
+                                        <Button.Content>
+                                            <Input:InputLocalizationResourceExtension ResourceName="OKText"/>
+                                        </Button.Content>
+                                    </Button>
                                     <Button
-                                    x:Name="PART_CancelButton"
-                                    Grid.Row="1"
-                                    Grid.Column="2"
-                                    Margin="4,0"
-                                    Content="{Input:InputLocalizationResourceExtension ResourceName=CancelText}"
-                                    Style="{StaticResource WPFFlatPrimaryButtonStyle}"
-                                    Visibility="{Binding ShowCancelButton, Converter={StaticResource BooleanVisibilityConverter}, RelativeSource={RelativeSource Mode=TemplatedParent}}" />
+                                        x:Name="PART_CancelButton"
+                                        Grid.Column="2"
+                                        Margin="2"
+                                        Style="{StaticResource WPFFlatPrimaryButtonStyle}"
+                                        Visibility="{Binding ShowCancelButton, Converter={StaticResource BooleanVisibilityConverter}, RelativeSource={RelativeSource Mode=TemplatedParent}}">
+                                        <Button.Content>
+                                            <Input:InputLocalizationResourceExtension ResourceName="CancelText"/>
+                                        </Button.Content>
+                                    </Button>
                                 </Grid>
                             </Border>
                         </Grid>
                     </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
-                            <Setter Property="MinHeight" TargetName="FooterButtonRowDefinition" Value="32"/>
-                        </Trigger>
-                        
+                    <ControlTemplate.Triggers>                        
                         <Trigger Property="Header" Value="{x:Null}">
                             <Setter TargetName="HeaderGrid" Property="Visibility" Value="Collapsed" />
                         </Trigger>

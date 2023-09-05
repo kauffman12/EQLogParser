@@ -477,7 +477,7 @@
                                 Background="Transparent"
                                 Visibility="Collapsed">
 
-                                <Ellipse Fill="White" />
+                                <Ellipse Fill="Transparent" />
 
                                 <Ellipse Fill="{Binding RimBackground, RelativeSource={RelativeSource TemplatedParent}}" />
 

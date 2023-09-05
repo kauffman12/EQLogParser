@@ -22,7 +22,7 @@
 
     <Style x:Key="SyncfusionCircularScaleStyle"
            TargetType="circularGauge:CircularScale">
-        <Setter Property="RimStroke" Value="{StaticResource Series3}"></Setter>
+        <Setter Property="RimStroke" Value="{StaticResource Series8}"></Setter>
         <Setter Property="TickStroke" Value="{StaticResource Border}"></Setter>
         <Setter Property="LabelStroke" Value="{StaticResource ContentForeground}"></Setter>
         <Setter Property="SmallTickStroke" Value="{StaticResource Border}"></Setter>
@@ -32,7 +32,7 @@
 
     <Style x:Key="SyncfusionCircularRangeStyle"
            TargetType="circularGauge:CircularRange">
-        <Setter Property="Stroke" Value="{StaticResource Series8}"></Setter>
+        <Setter Property="Stroke" Value="{StaticResource Series3}"></Setter>
         <Setter Property="IsTabStop" Value="False"/>
     </Style>
 

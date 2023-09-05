@@ -44,103 +44,71 @@
     </Style>
     <Style BasedOn="{StaticResource SyncfusionMonthViewControlStyle}" TargetType="scheduler:MonthViewControl"/>
 
-    <DataTemplate x:Key="SyncfusionMonthCellFluentTemplate">
-        <Grid>
-            <Border x:Name="PART_Border" Background="Transparent">
-                <Grid x:Name="PART_Grid">
+    <DataTemplate x:Key="SyncfusionMonthCellTemplate">
+        <Grid Background="Transparent">
+            <Border x:Name="PART_TodayHighlightBorder"
+                    Margin="8 ,3 ,0, 0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Width="{Binding Path=FontSize, Converter={StaticResource TodayBorderSizeConverter}}"
+                    Height="{Binding Path=FontSize, Converter={StaticResource TodayBorderSizeConverter}}"
+                    CornerRadius="{Binding Path=FontSize, Converter={StaticResource TodayBorderSizeConverter}}">
+                <Grid Margin="0,1,0,0">
                     <TextBlock x:Name="PART_TextBlock"
-                        Padding="8 ,3 ,0, 0"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Top"
-                        Text="{Binding Path=DateText}" >
+                               TextAlignment="Center"
+                               HorizontalAlignment="Stretch"
+                               VerticalAlignment="Center"
+                               Text="{Binding Path=DateText}" >
                         <TextBlock.Style>
                             <Style>
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding ElementName=PART_TextBlock,Path=IsMouseOver}" Value="true">
-                                        <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
-                                        <Setter Property="TextBlock.Cursor" Value="Hand"/>
-                                    </DataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding ElementName=PART_TextBlock,Path=IsMouseOver}" Value="true"/>
+                                            <Condition Binding="{Binding Path=AllowViewNavigation}" Value="True" />
+                                        </MultiDataTrigger.Conditions>
+                                        <MultiDataTrigger.Setters>
+                                            <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
+                                            <Setter Property="TextBlock.Cursor" Value="Hand"/>
+                                        </MultiDataTrigger.Setters>
+                                    </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
+                    <Path x:Name="PART_BlackOutDate" 
+                          Opacity="0.7"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          Width="{Binding ElementName=PART_TextBlock,Path=ActualWidth}"  
+                          Height="{Binding ElementName=PART_TextBlock,Path=ActualHeight}"
+                          Stroke="{Binding ElementName=PART_TextBlock,Path=Foreground}"
+                          StrokeThickness="1"
+                          Visibility="Collapsed"
+                          Stretch="Fill">
+                        <Path.Data>
+                            <LineGeometry StartPoint="0,0" EndPoint="1,1"  />
+                        </Path.Data>
+                    </Path>
                 </Grid>
             </Border>
         </Grid>
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding Path=DayType}" Value="Today">
-                <Setter TargetName="PART_TextBlock" Property="Foreground" Value="{StaticResource PrimaryForeground}" />
-                <Setter TargetName="PART_TextBlock" Property="FontWeight" Value="Medium" />
-                <Setter TargetName="PART_Border" Property="BorderBrush" Value='{StaticResource PrimaryForeground}'/>
-                <Setter TargetName="PART_Border" Property="Margin" Value="0,-1,0,0"/>
-                <Setter TargetName="PART_Border" Property="BorderThickness" Value="0,2,0,0"/>
-            </DataTrigger>
-            <DataTrigger Binding="{Binding Path=DayType}" Value="NormalDay, BlackoutDay">
-                <Setter TargetName="PART_TextBlock" Property="TextDecorations" Value="Strikethrough" />
-                <Setter TargetName="PART_Grid" Property="Background" Value="{StaticResource ContentBackgroundAlt}"/>
-            </DataTrigger>
-            <DataTrigger Binding="{Binding Path=DayType}" Value="Today, BlackoutDay">
-                <Setter TargetName="PART_TextBlock" Property="TextDecorations" Value="Strikethrough" />
-                <Setter TargetName="PART_TextBlock" Property="FontWeight" Value="Medium" />
-                <Setter TargetName="PART_Grid" Property="Background" Value="{StaticResource ContentBackgroundAlt}"/>
-                <Setter TargetName="PART_TextBlock" Property="Foreground" Value="{StaticResource PrimaryForeground}" />
-                <Setter TargetName="PART_Border" Property="BorderBrush" Value='{StaticResource PrimaryForeground}'/>
-                <Setter TargetName="PART_Border" Property="Margin" Value="0,-1,0,0"/>
-                <Setter TargetName="PART_Border" Property="BorderThickness" Value="0,2,0,0"/>
-            </DataTrigger>
-            <DataTrigger Binding="{Binding Path=DayType}" Value="LeadingDay, BlackoutDay">
-                <Setter TargetName="PART_TextBlock" Property="TextDecorations" Value="Strikethrough" />
-                <Setter TargetName="PART_Grid" Property="Background" Value="{StaticResource ContentBackgroundAlt}"/>
-            </DataTrigger>
-            <DataTrigger Binding="{Binding Path=DayType}" Value="TrailingDay, BlackoutDay">
-                <Setter TargetName="PART_TextBlock" Property="TextDecorations" Value="Strikethrough" />
-                <Setter TargetName="PART_Grid" Property="Background" Value="{StaticResource ContentBackgroundAlt}"/>
-            </DataTrigger>
-        </DataTemplate.Triggers>
-    </DataTemplate>
-
-    <DataTemplate x:Key="SyncfusionMonthCellTemplate">
-        <Grid Background="Transparent">
-            <Border x:Name="PART_TodayHighlightBorder"
-                    Margin="8,3,0,0" 
-                    HorizontalAlignment="Left" 
-                    VerticalAlignment="Top" 
-                    Width="{Binding Path=FontSize, Converter={StaticResource TodayBorderSizeConverter}}"
-                    Height="{Binding Path=FontSize, Converter={StaticResource TodayBorderSizeConverter}}" 
-                    CornerRadius="{Binding Path=FontSize, Converter={StaticResource TodayBorderSizeConverter}}">
-                <TextBlock x:Name="PART_TextBlock"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Text="{Binding Path=DateText}" >
-                    <TextBlock.Style>
-                        <Style>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding ElementName=PART_TextBlock,Path=IsMouseOver}" Value="true">
-                                    <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
-                                    <Setter Property="TextBlock.Cursor" Value="Hand"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-            </Border>
-        </Grid>
-        <DataTemplate.Triggers>
-            <DataTrigger Binding="{Binding Path=DayType}" Value="Today">
                 <Setter TargetName="PART_TodayHighlightBorder" Property="Background" Value="{StaticResource PrimaryBackground}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Path=DayType}" Value="NormalDay, BlackoutDay">
-                <Setter TargetName="PART_TextBlock" Property="TextDecorations" Value="Strikethrough" />
+                <Setter TargetName="PART_BlackOutDate" Property="Visibility" Value="Visible" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Path=DayType}" Value="Today, BlackoutDay">
-                <Setter TargetName="PART_TextBlock" Property="TextDecorations" Value="Strikethrough" />
+                <Setter TargetName="PART_BlackOutDate" Property="Visibility" Value="Visible" />
                 <Setter TargetName="PART_TodayHighlightBorder" Property="Background" Value="{StaticResource PrimaryBackground}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Path=DayType}" Value="LeadingDay, BlackoutDay">
-                <Setter TargetName="PART_TextBlock" Property="TextDecorations" Value="Strikethrough" />
+                <Setter TargetName="PART_BlackOutDate" Property="Visibility" Value="Visible" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Path=DayType}" Value="TrailingDay, BlackoutDay">
-                <Setter TargetName="PART_TextBlock" Property="TextDecorations" Value="Strikethrough" />
+                <Setter TargetName="PART_BlackOutDate" Property="Visibility" Value="Visible" />
             </DataTrigger>
         </DataTemplate.Triggers>
     </DataTemplate>

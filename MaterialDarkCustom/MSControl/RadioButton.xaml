@@ -67,7 +67,10 @@
                                 CornerRadius="100" 
                                 Width="14" Height="14"
                                 Margin="1,1,2,1" >
-                            <Grid x:Name="markGrid" Margin="2">
+                            <Grid x:Name="markGrid">
+                                <Grid.Margin>
+                                    <Thickness>2,2,2,2</Thickness>
+                                </Grid.Margin>
                                 <Ellipse x:Name="optionMark"
                                          Fill="{StaticResource IconColor}"
                                          Width="6"

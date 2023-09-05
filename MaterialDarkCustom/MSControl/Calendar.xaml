@@ -83,7 +83,8 @@
                         </ContentPresenter>
                         <Rectangle x:Name="CalendarButtonFocusVisual"
                                    IsHitTestVisible="false"
-                                   RadiusY="1" RadiusX="1"
+                                   RadiusY="1" 
+                                   RadiusX="1"
                                    Stroke="{StaticResource PrimaryBackground}"
                                    Visibility="Collapsed"/>
                     </Grid>
@@ -126,6 +127,8 @@
     <Style x:Key="WPFCalendarDayButtonStyle" TargetType="{x:Type CalendarDayButton}">
         <Setter Property="MinWidth" Value="5"/>
         <Setter Property="MinHeight" Value="5"/>
+        <Setter Property="Height" Value="NaN"/>
+        <Setter Property="Width" Value="NaN"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -190,13 +193,15 @@
                                  BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1}"
                                  Opacity="0"
                                  CornerRadius="14"
-                                 Width="24" Height="24">
+                                 Width="24"
+                                 Height="24">
                         </Border>
                         <Border x:Name="SelectedBackground"
                                  Background="{StaticResource PrimaryBackground}"
                                  Opacity="0"
                                  CornerRadius="14"
-                                 Width="24" Height="24">
+                                 Width="24"
+                                 Height="24">
                         </Border>
                         <Border BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
@@ -207,7 +212,8 @@
                                  BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1}"
                                  Opacity="0"
                                  CornerRadius="14"
-                                 Width="24" Height="24">
+                                 Width="24"
+                                 Height="24">
                         </Border>
                         <ContentPresenter x:Name="NormalText"
                                           TextElement.Foreground="{StaticResource ContentForeground}"
@@ -228,10 +234,12 @@
                               Opacity="0"
                               RenderTransformOrigin="0.5,0.5"
                               Stretch="Fill"
-                              VerticalAlignment="Stretch"/>
+                              VerticalAlignment="Stretch">
+                        </Path>
                         <Border x:Name="DayButtonFocusVisual"
                                  IsHitTestVisible="false"
-                                 Width="24" Height="24"
+                                 Width="24"
+                                 Height="24"
                                  BorderBrush="{StaticResource PrimaryBackground}"
                                  BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1}"
                                  CornerRadius="14"
@@ -299,8 +307,8 @@
                             </MultiTrigger.Conditions>
                             <Setter Property="Opacity" TargetName="SelectedBackground" Value="1"/>
                             <Setter Property="Opacity" TargetName="TodayBackground" Value="0"/>
-                            <Setter Property="Width" TargetName="SelectedBackground" Value="18"/>
-                            <Setter Property="Height" TargetName="SelectedBackground" Value="18"/>
+                            <Setter Property="Width" TargetName="SelectedBackground" Value="24"/>
+                            <Setter Property="Height" TargetName="SelectedBackground" Value="24"/>
                             <Setter Property="Visibility" TargetName="DayButtonFocusVisual" Value="Visible"/>
                             <Setter Property="Background" TargetName="SelectedBackground" Value="{StaticResource PrimaryBackground}"/>
                             <Setter Property="BorderBrush" TargetName="DayButtonFocusVisual" Value="{StaticResource PrimaryBackground}"/>
@@ -544,8 +552,12 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
-                        <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" CornerRadius="1">
-                            <Border BorderBrush="{StaticResource ContentBackground}" BorderThickness="2" CornerRadius="1">
+                        <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" 
+                                SnapsToDevicePixels="True"
+                                CornerRadius="1">
+                            <Border BorderBrush="{StaticResource ContentBackground}" BorderThickness="2" 
+                                    SnapsToDevicePixels="True"
+                                    CornerRadius="1">
                                 <Grid>
                                     <Grid.Resources>
                                         <Style
@@ -563,7 +575,8 @@
                                                         VerticalAlignment="Center"
                                                         Stretch="Fill"
                                                         Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-                                                        StrokeThickness="1">
+                                                        StrokeThickness="1"
+                                                        Opacity="0.67">
                                                         <Path.RenderTransformOrigin>
                                                             <Point X="0" Y="0"/>
                                                         </Path.RenderTransformOrigin>
@@ -602,7 +615,8 @@
                                                         VerticalAlignment="Center"
                                                         Stretch="Fill"
                                                         Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-                                                        StrokeThickness="1">
+                                                        StrokeThickness="1"
+                                                        Opacity="0.67">
                                                         <Path.RenderTransformOrigin>
                                                             <Point X="0" Y="0"/>
                                                         </Path.RenderTransformOrigin>
@@ -630,7 +644,7 @@
                                             <Setter Property="Template">
                                                 <Setter.Value>
                                                     <ControlTemplate TargetType="{x:Type Button}">
-                                                        <Grid Cursor="Hand">
+                                                        <Border x:Name="HeaderButtonGrid"  Cursor="Hand">
                                                             <VisualStateManager.VisualStateGroups>
                                                                 <VisualStateGroup x:Name="CommonStates">
                                                                     <VisualState x:Name="Normal"/>
@@ -646,7 +660,7 @@
                                                                       TextElement.FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
                                                                       TextElement.FontSize="{StaticResource MaterialDarkCustom.TitleTextStyle}"
                                                                       TextElement.FontWeight="{StaticResource MaterialDarkCustom.FontWeightMedium}"
-                                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                      HorizontalAlignment="Center"
                                                                       VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
                                                                 <ContentPresenter.Margin>
                                                                     <Thickness>0,0,0,0</Thickness>
@@ -655,10 +669,12 @@
                                                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                                                 </ContentPresenter.Resources>
                                                             </ContentPresenter>
-                                                        </Grid>
+                                                        </Border>
                                                         <ControlTemplate.Triggers>
                                                             <Trigger Property="IsMouseOver" Value="true">
                                                                 <Setter Property="TextElement.Foreground" TargetName="buttonContent" Value="{StaticResource ContentForeground}"/>
+                                                            </Trigger>
+                                                            <Trigger Property="IsPressed" Value="true">
                                                             </Trigger>
                                                             <Trigger Property="IsEnabled" Value="false">
                                                                 <Setter Property="TextElement.Foreground" TargetName="buttonContent" Value="{StaticResource DisabledForeground}"/>
@@ -675,9 +691,14 @@
                                         <ColumnDefinition Width="28"/>
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
+                                    <Border Grid.ColumnSpan="3" 
+                                            SnapsToDevicePixels="True"
+                                            Visibility="Collapsed"
+                                            BorderThickness="0,0,0,1"
+                                            BorderBrush="{TemplateBinding BorderBrush}"/>
                                     <Button x:Name="PART_PreviousButton"
                                             Grid.Column="0"
                                             HorizontalAlignment="Left"
@@ -694,12 +715,15 @@
                                             FontWeight="Bold"
                                             Focusable="False"
                                             FontSize="10.5"
-                                            Height="24"
-                                            Margin="0,4,0,0"
+                                            Height="24" 
+                                            MinWidth="140"
                                             VerticalAlignment="Center"
                                             HorizontalAlignment="Center"
                                             Grid.Row="0"
                                             Style="{StaticResource MaterialHeaderButtonStyle}">
+                                        <Button.Margin>
+                                            <Thickness>0,4,0,0</Thickness>
+                                        </Button.Margin>
                                     </Button>
                                     <Button x:Name="PART_NextButton"
                                             Grid.Column="2"
@@ -714,7 +738,7 @@
                                     </Button>
                                     <Grid x:Name="PART_MonthView"
                                           Grid.ColumnSpan="3"
-                                          HorizontalAlignment="Center"
+                                          HorizontalAlignment="Center "
                                           Margin="6"
                                           Grid.Row="1"
                                           Visibility="Visible">
@@ -989,7 +1013,8 @@
                               Opacity="0"
                               RenderTransformOrigin="0.5,0.5"
                               Stretch="Fill"
-                              VerticalAlignment="Stretch"/>
+                              VerticalAlignment="Stretch">
+                        </Path>
                         <Border x:Name="DayButtonFocusVisual"
                                  IsHitTestVisible="false"
                                  Width="24" Height="24"
@@ -1439,7 +1464,7 @@
                                             <Setter Property="Template">
                                                 <Setter.Value>
                                                     <ControlTemplate TargetType="{x:Type Button}">
-                                                        <Grid Cursor="Hand">
+                                                        <Border x:Name="HeaderButtonGrid"  Cursor="Hand">
                                                             <ContentPresenter
                                                                 x:Name="buttonContent"
                                                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -1457,10 +1482,12 @@
                                                                     <VisualState x:Name="Disabled" />
                                                                 </VisualStateGroup>
                                                             </VisualStateManager.VisualStateGroups>
-                                                        </Grid>
+                                                        </Border>
                                                         <ControlTemplate.Triggers>
                                                             <Trigger Property="IsMouseOver" Value="true">
                                                                 <Setter TargetName="buttonContent" Property="TextElement.Foreground" Value="{StaticResource ContentForeground}" />
+                                                            </Trigger>
+                                                            <Trigger Property="IsPressed" Value="true">
                                                             </Trigger>
                                                             <Trigger Property="IsEnabled" Value="false">
                                                                 <Setter TargetName="buttonContent" Property="TextElement.Foreground" Value="{StaticResource DisabledForeground}" />
@@ -1486,6 +1513,7 @@
                                         Grid.Column="0"
                                         Width="24"
                                         Height="24"
+                                        Margin="8,0,8,0"
                                         HorizontalAlignment="Left"
                                         Style="{StaticResource MaterialPreviousArrowButtonStyle}" />
                                     <Button
@@ -1506,6 +1534,7 @@
                                         Width="24"
                                         Height="24"
                                         HorizontalAlignment="Right"
+                                        Margin="0,8,8,8"
                                         Style="{StaticResource MaterialNextArrowButtonStyle}" />
                                     <Grid
                                         x:Name="PART_MonthView"

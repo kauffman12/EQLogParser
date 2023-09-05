@@ -50,23 +50,27 @@
                                          HorizontalAlignment="Center"
                                          VerticalAlignment="Center" />
                                 <Path x:Name="arrow" 
-                                      Margin="0,0,6,0"
                                       Stroke="{StaticResource IconColor}" 
                                       StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}" 
                                       HorizontalAlignment="Center" 
                                       VerticalAlignment="Center"
                                       SnapsToDevicePixels="false">
+                                    <Path.Margin>
+                                        <Thickness>0,0,6,0</Thickness>
+                                    </Path.Margin>
                                     <Path.Data>
                                         <PathGeometry>M 1,1.5 L 4.5,5 L 8,1.5</PathGeometry>
                                     </Path.Data>
                                 </Path>
                             </Grid>
                             <ContentPresenter  Grid.Row="1" 
-                                               Margin="2,6,2,0" 
                                                HorizontalAlignment="Center" 
                                                VerticalAlignment="Top"
                                                RecognizesAccessKey="True" 
                                                SnapsToDevicePixels="True">
+                                <ContentPresenter.Margin>
+                                        <Thickness>2,6,2,0</Thickness>
+                                </ContentPresenter.Margin>
                                 <ContentPresenter.Resources>
                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                 </ContentPresenter.Resources>
@@ -132,6 +136,7 @@
                                     </TransformGroup>
                                 </Grid.LayoutTransform>
                                 <Ellipse x:Name="circle"                                          
+                                         Grid.Column="0"
                                          Fill="Transparent"  
                                          Stroke="Transparent" 
                                          HorizontalAlignment="Center" 
@@ -139,23 +144,28 @@
                                          Width="19"
                                          Height="19"/>
                                 <Path x:Name="arrow" 
-                                      Margin="0,0,6,0"
+                                      Grid.Column="0"
                                       Stroke="{StaticResource IconColor}" 
                                       StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
-                                      HorizontalAlignment="Center" 
+                                      HorizontalAlignment="Center"
                                       VerticalAlignment="Center"
                                       SnapsToDevicePixels="false">
+                                    <Path.Margin>
+                                        <Thickness>0,0,6,0</Thickness>
+                                    </Path.Margin>
                                     <Path.Data>
                                         <PathGeometry>M 1,4.5  L 4.5,1  L 8,4.5</PathGeometry>
                                     </Path.Data>
                                 </Path>
                             </Grid>
                             <ContentPresenter Grid.Column="1" 
-                                              Margin="6,2,0,2" 
                                               HorizontalAlignment="Left" 
                                               VerticalAlignment="Center"                                              
                                               RecognizesAccessKey="True" 
                                               SnapsToDevicePixels="True">
+                                <ContentPresenter.Margin>
+                                    <Thickness>6,2,0,2</Thickness>
+                                </ContentPresenter.Margin>
                                 <ContentPresenter.Resources>
                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                 </ContentPresenter.Resources>
@@ -226,26 +236,29 @@
                                          Fill="Transparent"  
                                          Stroke="Transparent" 
                                          HorizontalAlignment="Center" 
-                                         VerticalAlignment="Center" 
-                                         />
+                                         VerticalAlignment="Center" />
                                 <Path x:Name="arrow"
-                                      Margin="6,0,0,0"
                                       Stroke="{StaticResource IconColor}" 
                                       StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
                                       HorizontalAlignment="Center" 
                                       VerticalAlignment="Center"
                                       SnapsToDevicePixels="false">
-                                    <Path.Data>
+                                    <Path.Margin>
+                                        <Thickness>6,0,0,0</Thickness>
+                                     </Path.Margin>
+                                     <Path.Data>
                                         <PathGeometry>M 1,1.5 L 4.5,5 L 8,1.5</PathGeometry>
                                     </Path.Data>
                                 </Path>
                             </Grid>
                             <ContentPresenter Grid.Row="1" 
-                                              Margin="2,6,2,0" 
                                               RecognizesAccessKey="True" 
                                               SnapsToDevicePixels="True" 
                                               HorizontalAlignment="Center" 
                                               VerticalAlignment="Top">
+                                <ContentPresenter.Margin>
+                                        <Thickness>2,6,2,0</Thickness>
+                                </ContentPresenter.Margin>
                                 <ContentPresenter.Resources>
                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                 </ContentPresenter.Resources>
@@ -290,7 +303,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ToggleButton}">
-                    <Border Margin="{TemplateBinding Margin}"
+                    <Border Name="border"
+                            Margin="{TemplateBinding Margin}"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}" 
@@ -302,6 +316,7 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Ellipse x:Name="circle" 
+                                     Grid.Column="0"
                                      Width="19"
                                      Height="19"                                          
                                      Fill="Transparent"  
@@ -309,22 +324,28 @@
                                      HorizontalAlignment="Center"
                                      VerticalAlignment="Center" />
                             <Path x:Name="arrow" 
-                                  Margin="6,0,0,0"
+                                  Grid.Column="0"
                                   Stroke="{StaticResource IconColor}" 
+                                  Fill="Transparent "  
                                   StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
                                   HorizontalAlignment="Center" 
                                   VerticalAlignment="Center"
                                   SnapsToDevicePixels="false">
+                                <Path.Margin>
+                                    <Thickness>6,0,0,0</Thickness>
+                                </Path.Margin>
                                 <Path.Data>
                                     <PathGeometry>M 1,1.5 L 4.5,5 L 8,1.5</PathGeometry>
                                 </Path.Data>
                             </Path>
                             <ContentPresenter Grid.Column="1" 
-                                              Margin="6,2,0,2"
                                               HorizontalAlignment="Left" 
                                               VerticalAlignment="Center"                                              
                                               RecognizesAccessKey="True" 
                                               SnapsToDevicePixels="True">
+                                <ContentPresenter.Margin>
+                                    <Thickness>6,2,0,2</Thickness>
+                                </ContentPresenter.Margin>
                                 <ContentPresenter.Resources>
                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                 </ContentPresenter.Resources>
@@ -401,7 +422,7 @@
                     <Border BorderBrush="{TemplateBinding BorderBrush}" 
                             BorderThickness="{TemplateBinding BorderThickness}"
                             Background="{TemplateBinding Background}" 
-                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" 
+                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                             SnapsToDevicePixels="true">
                         <DockPanel>
                             <ToggleButton x:Name="HeaderSite" 
@@ -423,13 +444,17 @@
                                           VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
                                           IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" 
                                           Style="{StaticResource ExpanderDownHeaderStyle}"/>
-                            <ContentPresenter x:Name="ExpandSite" 
-                                              DockPanel.Dock="Bottom" 
-                                              Focusable="false"  
-                                              Margin="{TemplateBinding Padding}" 
-                                              Visibility="Collapsed" 
-                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                            <Border x:Name="ExpandSite"
+                                    DockPanel.Dock="Bottom"
+                                    Focusable="false"
+                                    Margin="{TemplateBinding Padding}"
+                                    Visibility="Collapsed">
+                                <Border.Padding>
+                                    <Thickness>0,0,0,0</Thickness>
+                                </Border.Padding>
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                            </Border>                            
                         </DockPanel>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -535,23 +560,27 @@
                                          HorizontalAlignment="Center"
                                          VerticalAlignment="Center" />
                                 <Path x:Name="arrow" 
-                                      Margin="0,0,6,0"
                                       Stroke="{StaticResource IconColor}" 
                                       StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}" 
                                       HorizontalAlignment="Center" 
                                       VerticalAlignment="Center"
                                       SnapsToDevicePixels="false">
+                                    <Path.Margin>
+                                        <Thickness>0,0,6,0</Thickness>
+                                    </Path.Margin>
                                     <Path.Data>
                                         <PathGeometry>M 1,1.5 L 4.5,5 L 8,1.5</PathGeometry>
                                     </Path.Data>
                                 </Path>
                             </Grid>
                             <ContentPresenter  Grid.Row="1" 
-                                               Margin="2,6,2,0" 
                                                HorizontalAlignment="Center" 
                                                VerticalAlignment="Top"
                                                RecognizesAccessKey="True" 
                                                SnapsToDevicePixels="True">
+                                <ContentPresenter.Margin>
+                                        <Thickness>2,6,2,0</Thickness>
+                                </ContentPresenter.Margin>
                                 <ContentPresenter.Resources>
                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                 </ContentPresenter.Resources>
@@ -617,30 +646,36 @@
                                     </TransformGroup>
                                 </Grid.LayoutTransform>
                                 <Ellipse x:Name="circle"                                          
+                                         Grid.Column="0"
                                          Fill="Transparent"  
                                          Stroke="Transparent" 
-                                         HorizontalAlignment="Center" 
+                                         HorizontalAlignment="Center"
                                          VerticalAlignment="Center" 
                                          Width="19"
                                          Height="19"/>
                                 <Path x:Name="arrow" 
-                                      Margin="0,0,6,0"
+                                      Grid.Column="0"
                                       Stroke="{StaticResource IconColor}" 
                                       StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
-                                      HorizontalAlignment="Center" 
+                                      HorizontalAlignment="Center"
                                       VerticalAlignment="Center"
                                       SnapsToDevicePixels="false">
+                                    <Path.Margin>
+                                        <Thickness>0,0,6,0</Thickness>
+                                    </Path.Margin>
                                     <Path.Data>
                                         <PathGeometry>M 1,4.5  L 4.5,1  L 8,4.5</PathGeometry>
                                     </Path.Data>
                                 </Path>
                             </Grid>
-                            <ContentPresenter Grid.Column="1" 
-                                              Margin="6,2,0,2" 
+                            <ContentPresenter Grid.Column="1"
                                               HorizontalAlignment="Left" 
                                               VerticalAlignment="Center"                                              
                                               RecognizesAccessKey="True" 
                                               SnapsToDevicePixels="True">
+                                <ContentPresenter.Margin>
+                                    <Thickness>6,2,0,2</Thickness>
+                                </ContentPresenter.Margin>
                                 <ContentPresenter.Resources>
                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                 </ContentPresenter.Resources>
@@ -714,23 +749,27 @@
                                          VerticalAlignment="Center" 
                                          />
                                 <Path x:Name="arrow"
-                                      Margin="6,0,0,0"
                                       Stroke="{StaticResource IconColor}" 
                                       StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
                                       HorizontalAlignment="Center" 
                                       VerticalAlignment="Center"
                                       SnapsToDevicePixels="false">
+                                    <Path.Margin>
+                                        <Thickness>6,0,0,0</Thickness>
+                                     </Path.Margin>
                                     <Path.Data>
                                         <PathGeometry>M 1,1.5 L 4.5,5 L 8,1.5</PathGeometry>
                                     </Path.Data>
                                 </Path>
                             </Grid>
                             <ContentPresenter Grid.Row="1" 
-                                              Margin="2,6,2,0" 
                                               RecognizesAccessKey="True" 
                                               SnapsToDevicePixels="True" 
                                               HorizontalAlignment="Center" 
                                               VerticalAlignment="Top">
+                                <ContentPresenter.Margin>
+                                        <Thickness>2,6,2,0</Thickness>
+                                </ContentPresenter.Margin>
                                 <ContentPresenter.Resources>
                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                 </ContentPresenter.Resources>
@@ -787,6 +826,7 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Ellipse x:Name="circle" 
+                                     Grid.Column="0" 
                                      Width="19"
                                      Height="19"                                          
                                      Fill="Transparent"  
@@ -794,22 +834,27 @@
                                      HorizontalAlignment="Center"
                                      VerticalAlignment="Center" />
                             <Path x:Name="arrow" 
-                                  Margin="6,0,0,0"
+                                  Grid.Column="0"
                                   Stroke="{StaticResource IconColor}" 
                                   StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
                                   HorizontalAlignment="Center" 
                                   VerticalAlignment="Center"
                                   SnapsToDevicePixels="false">
+                                <Path.Margin>
+                                    <Thickness>6,0,0,0</Thickness>
+                                </Path.Margin>
                                 <Path.Data>
                                     <PathGeometry>M 1,1.5 L 4.5,5 L 8,1.5</PathGeometry>
                                 </Path.Data>
                             </Path>
-                            <ContentPresenter Grid.Column="1" 
-                                              Margin="6,2,0,2"
+                            <ContentPresenter Grid.Column="1"
                                               HorizontalAlignment="Left" 
                                               VerticalAlignment="Center"                                              
                                               RecognizesAccessKey="True" 
                                               SnapsToDevicePixels="True">
+                                <ContentPresenter.Margin>
+                                    <Thickness>6,2,0,2</Thickness>
+                                </ContentPresenter.Margin>
                                 <ContentPresenter.Resources>
                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                 </ContentPresenter.Resources>

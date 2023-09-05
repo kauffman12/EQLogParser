@@ -195,7 +195,7 @@
                       Margin="5,3,5,5">
                     <Path Data="{Binding Path=ImagePath}"                            
                           Fill="{StaticResource ContentForeground}"
-                          Opacity=".54"
+                          Opacity=".54"  
                           RenderTransformOrigin="0.5,0.5"
                           Stretch="Uniform" />
                 </Grid>
@@ -246,7 +246,7 @@
                       Margin="5,3,5,5">
                     <Path Data="{Binding Path=ImagePath}"                            
                           Fill="{StaticResource ContentForeground}"
-                          Opacity=".54"
+                          Opacity=".54"  
                           Stretch="Uniform" >
                     </Path>
                 </Grid>
@@ -268,35 +268,43 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <Grid Width="24" 
-                      Height="24" 
-                      Margin="5,3,5,15">
+                      Height="24">
+                    <Grid.Margin>
+                        <Thickness Left="5" Top="3" Right="5" Bottom="15"/>
+                    </Grid.Margin>
                     <Path Data="{Binding Path=ImagePath}"                            
                           Fill="{StaticResource ContentForeground}"
-                          Opacity=".54"
+                          Opacity=".54"  
                           Stretch="Uniform" />
                 </Grid>
                 <Grid Grid.Column="1" 
                       Margin="5,0,0,0">
                     <Grid.RowDefinitions>
-                        <RowDefinition  Height="18"/>
+                        <RowDefinition Height="18"/>
                         <RowDefinition />
                     </Grid.RowDefinitions>
-                    <TextBlock Margin="3,0,0,0"
-                               HorizontalAlignment="Left"
+                    <TextBlock HorizontalAlignment="Left"
                                VerticalAlignment="Top"
                                Text="{Binding Path=MarginName}" 
-                               Style="{StaticResource WPFTextBlockStyle}"/>
+                               Style="{StaticResource WPFTextBlockStyle}">
+                        <TextBlock.Margin>
+                                <Thickness Left="3" Top="0" Right="0" Bottom="0"/>
+                            </TextBlock.Margin>
+                    </TextBlock>
                     <Grid Grid.Row="1" >
                         <Grid.RowDefinitions>
-                            <RowDefinition />
-                            <RowDefinition />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition />
                             <ColumnDefinition />
                         </Grid.ColumnDefinitions>
-                        <StackPanel Orientation="Horizontal"
-                                    Margin="3,2,1,1">
+                        <StackPanel x:Name="_LeftMargin"
+                                    Orientation="Horizontal">
+                            <StackPanel.Margin>
+                                <Thickness Left="3" Top="2" Right="1" Bottom="1"/>
+                            </StackPanel.Margin>
                             <TextBlock HorizontalAlignment="Left" 
                                        VerticalAlignment="Top"
                                        Text="{resources:SharedLocalizationResourceExtension ResourceName=Left}" 
@@ -306,9 +314,12 @@
                                        Text="{Binding Path=Thickness.Left, StringFormat=: {0} cm,Mode=TwoWay}"  
                                        Style="{StaticResource WPFTextBlockStyle}"/>
                         </StackPanel>
-                        <StackPanel Grid.Column="1"
-                                    Margin="3,2,1,1"
+                        <StackPanel x:Name="_RightMargin"
+                                    Grid.Column="1"
                                     Orientation="Horizontal">
+                            <StackPanel.Margin>
+                                <Thickness Left="3" Top="2" Right="1" Bottom="1"/>
+                            </StackPanel.Margin>
                             <TextBlock HorizontalAlignment="Left" 
                                        VerticalAlignment="Top"
                                        Text="{resources:SharedLocalizationResourceExtension ResourceName=Right}"
@@ -318,9 +329,12 @@
                                        Text="{Binding Path=Thickness.Right, StringFormat=: {0} cm,Mode=TwoWay}" 
                                        Style="{StaticResource WPFTextBlockStyle}"/>
                         </StackPanel>
-                        <StackPanel Grid.Row="1" 
-                                    Orientation="Horizontal"
-                                    Margin="3,2,1,0">
+                        <StackPanel x:Name="_TopMargin"
+                                    Grid.Row="1" 
+                                    Orientation="Horizontal">
+                            <StackPanel.Margin>
+                                <Thickness Left="3" Top="2" Right="1" Bottom="0"/>
+                            </StackPanel.Margin>
                             <TextBlock HorizontalAlignment="Left" 
                                        VerticalAlignment="Top"
                                        Text="{resources:SharedLocalizationResourceExtension ResourceName=Top}" 
@@ -330,10 +344,13 @@
                                        Text="{Binding Path=Thickness.Top, StringFormat=: {0} cm,Mode=TwoWay}" 
                                        Style="{StaticResource WPFTextBlockStyle}"/>
                         </StackPanel>
-                        <StackPanel Grid.Row="1"
+                        <StackPanel x:Name="_BottomMargin"
+                                    Grid.Row="1"
                                     Grid.Column="1"
-                                    Orientation="Horizontal"
-                                    Margin="3,2,1,0">
+                                    Orientation="Horizontal">
+                            <StackPanel.Margin>
+                                <Thickness Left="3" Top="2" Right="1" Bottom="0"/>
+                            </StackPanel.Margin>
                             <TextBlock HorizontalAlignment="Left" 
                                        VerticalAlignment="Top"
                                        Text="{resources:SharedLocalizationResourceExtension ResourceName=Bottom}"
@@ -347,6 +364,16 @@
                 </Grid>
             </Grid>
         </Border>
+        <DataTemplate.Triggers>
+            <DataTrigger Value="True" Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ComboBoxItem}}">
+                <Setter TargetName="_TopMargin" Property="Visibility" Value="Collapsed" />
+                <Setter TargetName="_BottomMargin" Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
+            <DataTrigger Value="{x:Null}" Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ComboBoxItem}}">
+                <Setter TargetName="_TopMargin" Property="Visibility" Value="Collapsed" />
+                <Setter TargetName="_BottomMargin" Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
     </DataTemplate>
 
     <DataTemplate x:Key="PageSizeTemplate">
@@ -364,7 +391,7 @@
                           Width="{Binding Path=ImagePath.Width}"
                           Height="{Binding Path=ImagePath.Height}"                            
                           Fill="{StaticResource ContentForeground}"
-                          Opacity=".54"
+                          Opacity=".54"  
                           HorizontalAlignment="Left"
                           VerticalAlignment="Center"
                           Stretch="Fill" />
@@ -547,7 +574,7 @@
                                             <Border x:Name="Border"
                                                     Width="{TemplateBinding Width}"
                                                     SnapsToDevicePixels="True"
-                                                    BorderThickness="1"    
+                                                    BorderThickness="1"
                                                     
                                                     BorderBrush="{TemplateBinding BorderBrush}"
                                                     Background="{TemplateBinding Background}">
@@ -583,11 +610,13 @@
                                                               Width="6"
                                                               HorizontalAlignment="Center"
                                                               VerticalAlignment="Center"
-                                                              Data="M 0 0 L 3.5 4 L 7 0 Z"
                                                               Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
                                                               Stretch="Uniform"
                                                               RenderTransformOrigin=".5,.5"
                                                               Margin="-1">
+                                                            <Path.Data>
+                                                                <PathGeometry>M 0 0 L 3.5 4 L 7 0 Z</PathGeometry>
+                                                            </Path.Data>
                                                             <Path.RenderTransform>
                                                                 <TransformGroup>
                                                                     <ScaleTransform />
@@ -611,10 +640,12 @@
                                                               Width="6" 
                                                               HorizontalAlignment="Center" 
                                                               VerticalAlignment="Center"
-                                                              Data="M 0 0 L 3.5 4 L 7 0 Z"
                                                               Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"                                                              
                                                               Stretch="Uniform" 
                                                               Margin="-1">
+                                                            <Path.Data>
+                                                                <PathGeometry>M 0 0 L 3.5 4 L 7 0 Z</PathGeometry>
+                                                            </Path.Data>
                                                         </Path>
                                                     </RepeatButton>
                                                 </Grid>
@@ -625,23 +656,29 @@
                                                HorizontalAlignment="Left"
                                                Text="{resources:SharedLocalizationResourceExtension ResourceName=PrintPreview_Printer}" 
                                                Style="{StaticResource WPFTextBlockStyle}"
-                                               FontSize="16"
-                                               Margin="0,2,10,0">
+                                               FontSize="16">
+                                        <TextBlock.Margin>
+                                            <Thickness Left="0" Top="2" Right="10" Bottom="0"/>
+                                        </TextBlock.Margin>
                                     </TextBlock>
                                     <ComboBox x:Name="PART_PrintersComboBox"
                                               HorizontalAlignment="Left"
                                               ItemsSource="{Binding Printers}"
                                               ItemTemplate="{StaticResource PrintersListItemTemplate}"
                                               Style="{StaticResource Print_ComboBoxStyle}"
-                                              SelectedItem="{Binding SelectedPrinter}"
-                                              Margin="0,8,0,5">
+                                              SelectedItem="{Binding SelectedPrinter}">
+                                        <ComboBox.Margin>
+                                            <Thickness Left="0" Top="8" Right="0" Bottom="5"/>
+                                        </ComboBox.Margin>
                                     </ComboBox>
                                     <TextBlock x:Name="Part_SettingsTitle"                                                
                                                HorizontalAlignment="Left"
                                                Text="{resources:SharedLocalizationResourceExtension ResourceName=Settings}" 
                                                Style="{StaticResource WPFTextBlockStyle}"
-                                               FontSize="16"
-                                               Margin="0,8,10,2">
+                                               FontSize="16">
+                                        <TextBlock.Margin>
+                                            <Thickness Left="0" Top="8" Right="10" Bottom="2"/>
+                                        </TextBlock.Margin>
                                     </TextBlock>
                                     <ComboBox x:Name="PART_PageRangeSelection"
                                               HorizontalAlignment="Left"
@@ -649,11 +686,15 @@
                                               SelectedValuePath="PageRangeSelection"
                                               ItemsSource="{Binding PrintPageRangeSelectionOptions}"
                                               ItemTemplate="{StaticResource PageRangeSelectionTemplate}"
-                                              Style="{StaticResource Print_ComboBoxStyle}"
-                                              Margin="0,10,0,8">
+                                              Style="{StaticResource Print_ComboBoxStyle}">
+                                        <ComboBox.Margin>
+                                            <Thickness Left="0" Top="10" Right="0" Bottom="8"/>
+                                        </ComboBox.Margin>
                                     </ComboBox>
-                                    <StackPanel Orientation="Horizontal"
-                                                Margin="5,7,0,4">
+                                    <StackPanel Orientation="Horizontal">
+                                        <StackPanel.Margin>
+                                            <Thickness Left="5" Top="7" Right="0" Bottom="4"/>
+                                        </StackPanel.Margin>
                                         <TextBlock x:Name="Part_Pages"
                                                    HorizontalAlignment="Left" 
                                                    VerticalAlignment="Center" 
@@ -670,6 +711,7 @@
                                                     Width="{TemplateBinding Width}"
                                                     SnapsToDevicePixels="True"
                                                     BorderThickness="1" 
+                                                    CornerRadius="0"
                                                     BorderBrush="{TemplateBinding BorderBrush}" 
                                                     Background="{TemplateBinding Background}">
                                                 <Grid ClipToBounds="True">
@@ -704,11 +746,13 @@
                                                               Width="6"
                                                               HorizontalAlignment="Center"
                                                               VerticalAlignment="Center"
-                                                              Data="M 0 0 L 3.5 4 L 7 0 Z"
                                                               Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
                                                               Stretch="Uniform"
                                                               RenderTransformOrigin=".5,.5"
                                                               Margin="-1">
+                                                            <Path.Data>
+                                                                <PathGeometry>M 0 0 L 3.5 4 L 7 0 Z</PathGeometry>
+                                                            </Path.Data>
                                                             <Path.RenderTransform>
                                                                 <TransformGroup>
                                                                     <ScaleTransform />
@@ -732,10 +776,12 @@
                                                               Width="6"
                                                               HorizontalAlignment="Center" 
                                                               VerticalAlignment="Center"
-                                                              Data="M 0 0 L 3.5 4 L 7 0 Z"
                                                               Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
                                                               Stretch="Uniform"
                                                               Margin="-1">
+                                                            <Path.Data>
+                                                                <PathGeometry>M 0 0 L 3.5 4 L 7 0 Z</PathGeometry>
+                                                            </Path.Data>
                                                         </Path>
                                                     </RepeatButton>
                                                 </Grid>
@@ -756,6 +802,7 @@
                                             <Border x:Name="ToPage_Border"  
                                                     Width="{TemplateBinding Width}"  
                                                     BorderThickness="1" 
+                                                    CornerRadius="0"
                                                     BorderBrush="{TemplateBinding BorderBrush}"
                                                     Background="{TemplateBinding Background}"                                                    
                                                     SnapsToDevicePixels="True">
@@ -792,11 +839,13 @@
                                                               Width="6"
                                                               HorizontalAlignment="Center" 
                                                               VerticalAlignment="Center"
-                                                              Data="M 0 0 L 3.5 4 L 7 0 Z"                                                               
                                                               Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}" 
                                                               Stretch="Uniform"
                                                               RenderTransformOrigin=".5,.5"
                                                               Margin="-1">
+                                                            <Path.Data>
+                                                                <PathGeometry>M 0 0 L 3.5 4 L 7 0 Z</PathGeometry>
+                                                            </Path.Data>
                                                             <Path.RenderTransform>
                                                                 <TransformGroup>
                                                                     <ScaleTransform />
@@ -820,10 +869,12 @@
                                                               Width="6"
                                                               HorizontalAlignment="Center" 
                                                               VerticalAlignment="Center"
-                                                              Data="M 0 0 L 3.5 4 L 7 0 Z"
                                                               Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
-                                                              Stretch="Uniform"    
+                                                              Stretch="Uniform"
                                                               Margin="-1">
+                                                            <Path.Data>
+                                                                <PathGeometry>M 0 0 L 3.5 4 L 7 0 Z</PathGeometry>
+                                                            </Path.Data>
                                                         </Path>
                                                     </RepeatButton>
                                                 </Grid>
@@ -831,31 +882,38 @@
                                         </Grid>
                                     </StackPanel>
                                     <ComboBox x:Name="PART_Collated"
-                                              Margin="0,2,0,4" 
                                               HorizontalAlignment="Left"
                                               SelectedValue="{Binding SelectedCollation, Mode=TwoWay}"
                                               SelectedValuePath="Collation"
                                               ItemsSource="{Binding PrintPageCollationOptions}"                                              
                                               ItemTemplate="{StaticResource CollatedTemplate}"
                                               Style="{StaticResource Print_ComboBoxStyle}">
+                                        <ComboBox.Margin>
+                                            <Thickness Left="0" Top="2" Right="0" Bottom="4"/>
+                                        </ComboBox.Margin>
                                     </ComboBox>
                                     <ComboBox x:Name="PART_OrientationComboBox"
-                                              Margin="0,2,0,4" 
                                               HorizontalAlignment="Left"
                                               SelectedValue="{Binding PrintOrientation, Mode=TwoWay}"
                                               SelectedValuePath="Orientation"
                                               ItemsSource="{Binding OrientationOptions}"
                                               ItemTemplate="{StaticResource OrientationTemplate}"
                                               Style="{StaticResource Print_ComboBoxStyle}">
+                                        <ComboBox.Margin>
+                                            <Thickness Left="0" Top="2" Right="0" Bottom="4"/>
+                                        </ComboBox.Margin>
                                     </ComboBox>
                                     <Grid>
                                         <ComboBox x:Name="PART_PapersComboBox"
-                                                  Margin="0,2,0,4"
                                                   HorizontalAlignment="Left"
                                                   ItemTemplate="{StaticResource PageSizeTemplate}"
                                                   ItemsSource="{Binding PageSizeOptions}"
                                                   Style="{StaticResource Print_ComboBoxStyle}"
-                                                  SelectedItem="{Binding SelectedPageSize}" />
+                                                  SelectedItem="{Binding SelectedPageSize}">
+                                            <ComboBox.Margin>
+                                                <Thickness Left="0" Top="2" Right="0" Bottom="4"/>
+                                            </ComboBox.Margin>
+                                        </ComboBox>
                                         <Grid Width="Auto"
                                               Height="Auto">
                                             <TextBlock IsHitTestVisible="False"
@@ -884,20 +942,24 @@
                                             </TextBlock>
                                         </Grid>
                                     </Grid>
-                                    <ComboBox x:Name="PART_MarginComboBox"                                              
-                                              Margin="0,2,0,4" 
+                                    <ComboBox x:Name="PART_MarginComboBox"
                                               HorizontalAlignment="Left"
                                               ItemTemplate="{StaticResource MarginTemplate}"
                                               ItemsSource="{Binding MarginOptions}"
                                               Style="{StaticResource Print_ComboBoxStyle}">
+                                        <ComboBox.Margin>
+                                            <Thickness Left="0" Top="2" Right="0" Bottom="4"/>
+                                        </ComboBox.Margin>
                                     </ComboBox>
                                     <ComboBox x:Name="PART_ScaleOptionComboBox"
-                                              Margin="0,2,0,4"
                                               HorizontalAlignment="Left"
                                               SelectedIndex="{Binding SelectedScaleIndex}"
                                               ItemTemplate="{StaticResource ScaleOptionTemplate}"
                                               ItemsSource="{Binding ScaleOptions}"
                                               Style="{StaticResource Print_ComboBoxStyle}">
+                                        <ComboBox.Margin>
+                                            <Thickness Left="0" Top="2" Right="0" Bottom="4"/>
+                                        </ComboBox.Margin>
                                     </ComboBox>
                                 </StackPanel>
                             </Grid>
@@ -988,9 +1050,9 @@
                                                 Width="24"
                                                 Command="{Binding PreviousCommand}"
                                                 Style="{StaticResource WPFGlyphButtonStyle}">
-                                                <Path Height="13" 
-                                                  Width="9.001"
-                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}">
+                                                <Path Height="13"
+                                                      Width="9.001"
+                                                      Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}">
                                                     <Path.Data>
                                                         <PathGeometry>M7.7109926,0 L9.0010002,1.529007 3.1009803,6.5099945 8.97799,11.472 7.6879824,13 0,6.5099945 z</PathGeometry>
                                                     </Path.Data>
@@ -1023,9 +1085,9 @@
                                                 Width="24"
                                                 Command="{Binding NextCommand}"
                                                 Style="{StaticResource WPFGlyphButtonStyle}">
-                                                <Path Height="13" 
-                                                  Width="9.001"
-                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}">
+                                                <Path Height="13"
+                                                      Width="9.001"
+                                                      Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}">
                                                     <Path.Data>
                                                         <PathGeometry>M1.2899816,0 L9.0010002,6.5099945 1.3129919,13 0.022979841,11.472 5.9000094,6.5099945 0,1.529007 z</PathGeometry>
                                                     </Path.Data>

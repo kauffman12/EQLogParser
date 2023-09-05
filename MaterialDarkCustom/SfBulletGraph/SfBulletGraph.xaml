@@ -1,6 +1,7 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:bulletGraph="clr-namespace:Syncfusion.UI.Xaml.BulletGraph;assembly=Syncfusion.SfBulletGraph.WPF"
+                    
                     xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
                     xmlns:system="clr-namespace:System;assembly=mscorlib">
     
@@ -14,6 +15,7 @@
                  BorderBrush="{StaticResource TooltipBackground}"
                  BorderThickness="1"
                  Background="{StaticResource TooltipBackground}"
+                 Effect="{StaticResource Default.ShadowDepth3}"
                  CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
             <TextBlock x:Name="ToolTipText"
                        Text="{Binding}"
@@ -26,10 +28,11 @@
     <DataTemplate x:Key="DefaultQualitativeRangeToolTipTemplate">
         <Border x:Name="QualitativeRangeToolTipBorder"
                 BorderBrush="{StaticResource Series7}"
-                BorderThickness="1"
+                BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1}"
+                Effect="{StaticResource Default.ShadowDepth3}"
                 CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                 Background="{Binding RangeStroke}">
-                <StackPanel Orientation="Horizontal"
+            <StackPanel Orientation="Horizontal"
                             Margin="12 8">
                     <TextBlock Text="{Binding Caption}"
                                FontSize="{StaticResource MaterialDarkCustom.CaptionText}"

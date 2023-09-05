@@ -12,51 +12,140 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/DropDownButtonAdv/DropDownButtonAdv.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
-    <Style x:Key="SyncfusionPreviousButtonStyle" TargetType="Button" BasedOn="{StaticResource WPFGlyphButtonStyle}">
-        <Setter Property="Content">
+    <CornerRadius x:Key="SfScheduler.HeaderCell.AllowedViewButton.CornerRadius">16</CornerRadius>
+
+    <Thickness x:Key="SfScheduler.HeaderCell.AllowedViewButton.Padding">6,0,6,0</Thickness>
+    <Thickness x:Key="SfScheduler.HeaderCell.AllowedViewButton.Margin">3,0,3,0</Thickness>
+
+    <Style x:Key="SyncfusionSchedulerKeyboardFocusVisualStyle">
+        <Setter Property="Control.Template">
             <Setter.Value>
-                <Path x:Name="PART_Previous" 
-                  Width="7.401" 
-                  Height="12.002" 
-                  Stretch="Fill" 
-                  VerticalAlignment="Center" 
-                  HorizontalAlignment="Center">
-                    <Path.Data>
-                        <PathGeometry>M5.9849989,0 L7.4009988,1.4120026 2.8239995,6.0010083 7.4009988,10.590015 5.9849989,12.002017 0,6.0010083 z</PathGeometry>
-                    </Path.Data>
-                    <Path.Style>
-                        <Style TargetType="Path">
-                            <Setter Property=" Fill" Value="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType=Button}}"/>
-                        </Style>
-                    </Path.Style>
-                </Path>
+                <ControlTemplate>
+                    <Border Height="28"
+                            SnapsToDevicePixels="True"
+                            CornerRadius="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.CornerRadius}"
+                            BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1}"
+                            BorderBrush="{StaticResource IconColor}"
+                            Background="{StaticResource SecondaryHoverBackground}">
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionPreviousButtonStyle" TargetType="Button" BasedOn="{StaticResource WPFGlyphButtonStyle}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border
+                        x:Name="PART_Border"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        Background="{TemplateBinding Background}"
+                        Effect="{TemplateBinding Effect}"
+                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                        <Path x:Name="PART_Previous"
+                              Width="6.401"
+                              Height="12.002" 
+                              Stretch="Fill" 
+                              VerticalAlignment="Center" 
+                              HorizontalAlignment="Center">
+                            <Path.Data>
+                                <PathGeometry>M5.9849989,0 L7.4009988,1.4120026 2.8239995,6.0010083 7.4009988,10.590015 5.9849989,12.002017 0,6.0010083 z</PathGeometry>
+                            </Path.Data>
+                            <Path.Style>
+                                <Style TargetType="Path">
+                                    <Setter Property=" Fill" Value="{StaticResource IconColor}"/>
+                                </Style>
+                            </Path.Style>
+                        </Path>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="skinmanager:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="skinmanager:SkinManagerHelper.FocusVisualKind" Value="Default"/>
+                                <Condition Property="IsFocused" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_Previous" Property=" Fill" Value="{StaticResource IconColor}"/>
+                        </MultiTrigger>
+                        <Trigger Property="IsMouseOver"  Value="True">
+                            <Setter TargetName="PART_Previous" Property=" Fill" Value="{StaticResource IconColor}"/>
+                            <Setter TargetName="PART_Border" Property="Background"  Value="{StaticResource SecondaryHoverBackground}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="PART_Previous" Property=" Fill" Value="{StaticResource IconColor}"/>
+                            <Setter TargetName="PART_Border" Property="Background" Value="{StaticResource SecondarySelectionBackground}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="PART_Previous" Property=" Fill" Value="{StaticResource IconDisabledColor}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
     <Style x:Key="SyncfusionNextButtonStyle" TargetType="Button" BasedOn="{StaticResource WPFGlyphButtonStyle}">
-        <Setter Property="Content">
+        <Setter Property="Template">
             <Setter.Value>
-                <Path x:Name="PART_Next" 
-                 Width="7.401" 
-                  Height="12.002"    
-                  Stretch="Fill" 
-                  HorizontalAlignment="Center"
-                  VerticalAlignment="Center" >
-                    <Path.Data>
-                        <PathGeometry>M1.4160154,0 L7.4009999,6.0010001 1.4160154,12.002 0,10.590014 4.5770258,6.0010001 0,1.4120161 z</PathGeometry>
-                    </Path.Data>
-                    <Path.Style>
-                        <Style TargetType="Path">
-                            <Setter Property=" Fill" Value="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType=Button}}"/>
-                        </Style>
-                    </Path.Style>
-                </Path>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border
+                        x:Name="PART_Border"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        Background="{TemplateBinding Background}"
+                        Effect="{TemplateBinding Effect}"
+                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                        <Path x:Name="PART_Next"
+                              Width="6.401" 
+                              Height="12.002"
+                              Stretch="Fill" 
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center" >
+                            <Path.Data>
+                                <PathGeometry>M1.4160154,0 L7.4009999,6.0010001 1.4160154,12.002 0,10.590014 4.5770258,6.0010001 0,1.4120161 z</PathGeometry>
+                            </Path.Data>
+                            <Path.Style>
+                                <Style TargetType="Path">
+                                    <Setter Property=" Fill" Value="{StaticResource IconColor}"/>
+                                </Style>
+                            </Path.Style>
+                        </Path>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="skinmanager:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="skinmanager:SkinManagerHelper.FocusVisualKind" Value="Default"/>
+                                <Condition Property="IsFocused" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_Next" Property=" Fill" Value="{StaticResource IconColor}"/>
+                        </MultiTrigger>
+                        <Trigger Property="IsMouseOver"  Value="True">
+                            <Setter TargetName="PART_Next" Property=" Fill" Value="{StaticResource IconColor}"/>
+                            <Setter TargetName="PART_Border" Property="Background"  Value="{StaticResource SecondaryHoverBackground}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="PART_Next" Property=" Fill" Value="{StaticResource IconColor}"/>
+                            <Setter TargetName="PART_Border" Property="Background" Value="{StaticResource SecondarySelectionBackground}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="PART_Next" Property=" Fill" Value="{StaticResource IconDisabledColor}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
     <Style x:Key="SyncfusionSchedulerAllowedViewsButtonStyle" TargetType="{x:Type Button}">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
@@ -64,12 +153,15 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
+                            Height="28"
+                            SnapsToDevicePixels="True"
                             CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" >
                         <ContentPresenter x:Name="PART_ContentPresenter" 
-                                          Focusable="True"
+                                          Focusable="False"
                                           Margin="{TemplateBinding Padding}" 
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}">
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          RecognizesAccessKey="True">
                             <ContentPresenter.Resources>
                                 <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
                             </ContentPresenter.Resources>
@@ -92,9 +184,18 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <Trigger Property="skinmanager:SkinManagerHelper.FocusVisualKind" Value="Default">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}"/>
+            </Trigger>
+            <Trigger Property="skinmanager:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <Style x:Key="SyncfusionSchedulerDropDownButtonStyle" BasedOn="{StaticResource SyncfusionDropDownButtonAdvStyle}" TargetType="{x:Type shared:DropDownButtonAdv}">
+        <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="IsHitTestVisible" Value="True"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -106,7 +207,7 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                            CornerRadius="{StaticResource MaterialDarkCustom.CornerRadius2}"
                             SnapsToDevicePixels="True">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -133,7 +234,7 @@
                                 <Path
                                     x:Name="PART_Expander"
                                     Grid.Column="1"
-                                    HorizontalAlignment="Left"
+                                    HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
                                     Opacity="1"           
                                     Height="5"
@@ -144,7 +245,7 @@
                                     </Path.Data>
                                     <Path.Style>
                                         <Style TargetType="Path">
-                                            <Setter Property=" Fill" Value="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType=shared:DropDownButtonAdv}}"/>
+                                            <Setter Property=" Fill" Value="{StaticResource IconColor}"/>
                                         </Style>
                                     </Path.Style>
                                 </Path>
@@ -157,8 +258,8 @@
                             Placement="Bottom"
                             StaysOpen="{TemplateBinding StaysOpen}">
                             <Border 
-                                Background="{StaticResource PopupBackground}"
-                                BorderBrush="{StaticResource BorderAlt}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding  BorderBrush}"
                                 
                                 BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                 Effect="{StaticResource Default.ShadowDepth2}">
@@ -167,12 +268,12 @@
                                 </Border.Margin>
                                 <tools:CalendarEdit 
                                              x:Name="PART_Calendar" 
-                                             Background="{StaticResource PopupBackground}"
                                              MinMaxHidden="False" 
-                                             BorderThickness="0" 
-                                             AllowMultiplySelection="False" 
-                                             Width="250" 
-                                             Height="250">
+                                             BorderThickness="0"
+                                             MinHeight="250"
+                                             MinWidth="250"
+                                             MonthChangeDirection="Horizontal"
+                                             AllowMultiplySelection="False">
                                 </tools:CalendarEdit>
                             </Border>
                         </Popup>
@@ -196,6 +297,92 @@
                             <Setter Property="Foreground" TargetName="PART_Text" Value="{StaticResource SelectionForeground}"/>
                             <Setter Property="Fill" TargetName="PART_Expander" Value="{StaticResource SelectionForeground}"/>
                         </Trigger>
+                        <Trigger Property="skinmanager:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="skinmanager:SkinManagerHelper.FocusVisualKind" Value="Default">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}"/>
+            </Trigger>
+            <Trigger Property="skinmanager:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="SyncfusionSchedulerAllowedViewsListItemStyle" TargetType="{x:Type ListViewItem}">
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="Padding">
+            <Setter.Value>
+                <Thickness>4,2,4,2</Thickness>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Margin">
+            <Setter.Value>
+                <Thickness>0,0,0,0</Thickness>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ListViewItem}">
+                    <Grid>
+                        <Border x:Name="PART_SelectionIndicator"
+                                HorizontalAlignment="Left" 
+                                CornerRadius="1.5"
+                                Height="0"
+                                Width="0"
+                                Visibility="Collapsed"  
+                                Background="Transparent" />
+                        <Border  x:Name="PART_Border"        
+                                 Background="{StaticResource PopupBackground}"
+                                 BorderBrush="Transparent" 
+                                 SnapsToDevicePixels="True"
+                                 BorderThickness="0"
+                                 Padding="6,0,6,0"
+                                 CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" 
+                                  >
+                            <ContentPresenter   x:Name="PART_ContentPresenter"
+                                                Focusable="True"
+                                                Margin="{TemplateBinding Padding}" 
+                                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                SnapsToDevicePixels="True">
+                                <ContentPresenter.Resources>
+                                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background"  TargetName="PART_Border"  Value="{StaticResource SecondaryHoverBackground}"/>
+                            <Setter Property="BorderBrush"  TargetName="PART_Border"  Value="{StaticResource SecondaryHoverBackground}"/>
+                            <Setter Property="TextBlock.Foreground"  TargetName="PART_ContentPresenter" Value="{StaticResource HoverForeground}"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background"  TargetName="PART_Border"  Value="{StaticResource PopupBackground}"/>
+                            <Setter Property="BorderBrush"  TargetName="PART_Border"  Value="{StaticResource PopupBackground}"/>
+                            <Setter Property="TextBlock.Foreground" TargetName="PART_ContentPresenter" Value="{StaticResource PrimaryColorForeground}" />
+                            <Setter Property="Visibility" TargetName="PART_SelectionIndicator" Value="Visible" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsSelected" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <MultiTrigger.Setters>
+                                <Setter Property="Background"  TargetName="PART_Border"  Value="{StaticResource SecondaryHoverBackground}"/>
+                                <Setter Property="TextBlock.Foreground"  TargetName="PART_ContentPresenter" Value="{StaticResource HoverForeground}"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                            </MultiTrigger.Setters>
+                        </MultiTrigger>
                         <Trigger Property="skinmanager:SfSkinManager.SizeMode" Value="Touch">
                             <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
                         </Trigger>
@@ -277,25 +464,25 @@
                                            Foreground="{TemplateBinding Foreground}"
                                            Visibility="Visible"/>
                                 <Button  x:Name="PART_PreviousNavigationButton"
-                     Grid.Column="0"
-                     Width="30"
-                     Height="30" 
-                     Margin="10,0,0,0"
-                     HorizontalAlignment="Left"                            
-                     VerticalAlignment="Center"                          
-                     IsTabStop="False"
-                     Style="{StaticResource SyncfusionPreviousButtonStyle}"
-                     Visibility="Visible" />
+                                         Grid.Column="0"
+                                         Width="30"
+                                         Height="30" 
+                                         Margin="10,0,0,0"
+                                         HorizontalAlignment="Left"  
+                                         VerticalAlignment="Center" 
+                                         IsTabStop="False"
+                                         Style="{StaticResource SyncfusionPreviousButtonStyle}"
+                                         Visibility="Visible" />
                                 <Button  x:Name="PART_NextNavigationButton"
-                     Grid.Column="0"
-                     Width="30"
-                     Height="30"
-                     Margin="40,0,0,0"
-                     HorizontalAlignment="Right"
-                     VerticalAlignment="Center"
-                     IsTabStop="False"
-                     Style="{StaticResource SyncfusionNextButtonStyle}"
-                     Visibility="Visible" />
+                                         Grid.Column="0"
+                                         Width="30"
+                                         Height="30"
+                                         Margin="40,0,0,0"
+                                         HorizontalAlignment="Right"
+                                         VerticalAlignment="Center"
+                                         IsTabStop="False"
+                                         Style="{StaticResource SyncfusionNextButtonStyle}"
+                                         Visibility="Visible" />
                                 <StackPanel x:Name="PART_StackPanel" 
                                             Grid.Column="2"
                                             Orientation="Horizontal" 
@@ -304,16 +491,16 @@
                                             Height="Auto" 
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center">
-                                    <Button x:Name="PART_TodayButton"     Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="28" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="3,0,3,0" Padding="6,0,6,0" BorderThickness="0" Background="Transparent" Visibility="Collapsed"/>
-                                    <Border x:Name="PART_Border"          Height="20" BorderThickness="1,0,0,0" BorderBrush="{StaticResource BorderAlt}" Margin="3,0,3,0" UseLayoutRounding="True" SnapsToDevicePixels="True" Visibility="Collapsed" />
-                                    <Button x:Name="PART_ViewTypeButton1" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="28" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="3,0,3,0" Padding="6,0,6,0" BorderThickness="0" Background="Transparent" Visibility="Collapsed"/>
-                                    <Button x:Name="PART_ViewTypeButton2" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="28" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="3,0,3,0" Padding="6,0,6,0" BorderThickness="0" Background="Transparent" Visibility="Collapsed"/>
-                                    <Button x:Name="PART_ViewTypeButton3" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="28" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="3,0,3,0" Padding="6,0,6,0" BorderThickness="0" Background="Transparent" Visibility="Collapsed"/>
-                                    <Button x:Name="PART_ViewTypeButton4" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="28" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="3,0,3,0" Padding="6,0,6,0" BorderThickness="0" Background="Transparent" Visibility="Collapsed"/>
-                                    <Button x:Name="PART_ViewTypeButton5" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="28" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="3,0,3,0" Padding="6,0,6,0" BorderThickness="0" Background="Transparent" Visibility="Collapsed"/>
-                                    <Button x:Name="PART_ViewTypeButton6" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="28" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="3,0,3,0" Padding="6,0,6,0" BorderThickness="0" Background="Transparent" Visibility="Collapsed"/>
-                                    <Button x:Name="PART_ViewTypeButton7" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="28" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="3,0,3,0" Padding="6,0,6,0" BorderThickness="0" Background="Transparent" Visibility="Collapsed"/>
-                                    <Button x:Name="PART_ViewTypeButton8" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="28" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="3,0,3,0" Padding="6,0,6,0" BorderThickness="0" Background="Transparent" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_TodayButton"     Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
+                                    <Border x:Name="PART_Border"          Height="20"  BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1000}" BorderBrush="{StaticResource BorderAlt}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" UseLayoutRounding="True" SnapsToDevicePixels="True" Visibility="Collapsed" />
+                                    <Button x:Name="PART_ViewTypeButton1" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_ViewTypeButton2" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_ViewTypeButton3" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_ViewTypeButton4" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_ViewTypeButton5" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_ViewTypeButton6" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_ViewTypeButton7" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_ViewTypeButton8" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
                                 </StackPanel>
                                 <ToggleButton 
                                     x:Name="PART_ViewTypeComboBox" 
@@ -322,7 +509,7 @@
                                     Width="30" 
                                     Height="28" 
                                     BorderThickness="0"
-                                    Margin="5,0,5,0" 
+                                    Margin="2,0,6,0" 
                                     HorizontalContentAlignment="Center"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center" 
@@ -333,11 +520,13 @@
                                     Visibility="{Binding ElementName=PART_ViewTypeListView,Path=Visibility}">
                                     <ToggleButton.Style>
                                         <Style TargetType="ToggleButton">
+                                            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                                             <Setter Property="IsHitTestVisible" Value="True"/>
                                             <Setter Property="Template">
                                                 <Setter.Value>
                                                     <ControlTemplate TargetType="{x:Type ToggleButton}">
                                                         <Border x:Name="PART_Border"
+                                                                Focusable="False"
                                                                 CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}" 
                                                                 Background="Transparent"
                                                                 BorderBrush="Transparent"
@@ -347,9 +536,12 @@
                                                                 Width="3"
                                                                 HorizontalAlignment="Center"
                                                                 VerticalAlignment="Center" 
-                                                                Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType=ToggleButton}}"
-                                                                Data="M3 1.5C3 2.32843 2.32843 3 1.5 3C0.671573 3 0 2.32843 0 1.5C0 0.671573 0.671573 0 1.5 0C2.32843 0 3 0.671573 3 1.5Z M3 8.5C3 9.32843 2.32843 10 1.5 10C0.671573 10 0 9.32843 0 8.5C0 7.67157 0.671573 7 1.5 7C2.32843 7 3 7.67157 3 8.5Z M3 15.5C3 16.3284 2.32843 17 1.5 17C0.671573 17 0 16.3284 0 15.5C0 14.6716 0.671573 14 1.5 14C2.32843 14 3 14.6716 3 15.5Z"
-                                                                Stretch="Fill" />
+                                                                Fill="{StaticResource IconColor}"
+                                                                Stretch="Fill" >
+                                                                <Path.Data>
+                                                                    <PathGeometry>M3 1.5C3 2.32843 2.32843 3 1.5 3C0.671573 3 0 2.32843 0 1.5C0 0.671573 0.671573 0 1.5 0C2.32843 0 3 0.671573 3 1.5Z M3 8.5C3 9.32843 2.32843 10 1.5 10C0.671573 10 0 9.32843 0 8.5C0 7.67157 0.671573 7 1.5 7C2.32843 7 3 7.67157 3 8.5Z M3 15.5C3 16.3284 2.32843 17 1.5 17C0.671573 17 0 16.3284 0 15.5C0 14.6716 0.671573 14 1.5 14C2.32843 14 3 14.6716 3 15.5Z</PathGeometry>
+                                                                </Path.Data>
+                                                            </Path>
                                                         </Border>
                                                         <ControlTemplate.Triggers>
                                                             <DataTrigger Binding="{Binding ElementName=PART_Popup,Path=IsOpen}" Value="True">
@@ -371,6 +563,14 @@
                                                     </ControlTemplate>
                                                 </Setter.Value>
                                             </Setter>
+                                            <Style.Triggers>
+                                                <Trigger Property="skinmanager:SkinManagerHelper.FocusVisualKind" Value="Default">
+                                                    <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}"/>
+                                                </Trigger>
+                                                <Trigger Property="skinmanager:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                                                    <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}"/>
+                                                </Trigger>
+                                            </Style.Triggers>
                                         </Style>
                                     </ToggleButton.Style>
                                     <Popup 
@@ -385,6 +585,7 @@
                                         SnapsToDevicePixels="True">
                                         <Border 
                                             Background="{StaticResource PopupBackground}"
+                                            SnapsToDevicePixels="True"
                                             BorderBrush="{StaticResource BorderAlt}"
                                             
                                             BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
@@ -392,63 +593,15 @@
                                             <Border.Margin>
                                                 <Thickness>8</Thickness>
                                             </Border.Margin>
-                                            <ListView x:Name="PART_ViewTypeListView" Background="{TemplateBinding Background}" Visibility="Collapsed">
-                                                <ListView.ItemContainerStyle>
-                                                    <Style  TargetType="{x:Type ListViewItem}">
-                                                        <Setter Property="Height" Value="32"/>
-                                                        <Setter Property="Template">
-                                                            <Setter.Value>
-                                                                <ControlTemplate TargetType="{x:Type ListViewItem}">
-                                                                    <Border 
-                                                                        x:Name="PART_Border"                             
-                                                                        Background="{StaticResource PopupBackground}"
-                                                                        BorderBrush="Transparent" 
-                                                                        SnapsToDevicePixels="True"
-                                                                        BorderThickness="0"
-                                                                        Padding="6,0,6,0"
-                                                                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" 
-                                                                        >
-                                                                        <ContentPresenter  
-                                                                            x:Name="PART_ContentPresenter"
-                                                                            Focusable="True"
-                                                                            Margin="{TemplateBinding Padding}" 
-                                                                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                                            SnapsToDevicePixels="True">
-                                                                            <ContentPresenter.Resources>
-                                                                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
-                                                                            </ContentPresenter.Resources>
-                                                                        </ContentPresenter>
-                                                                    </Border>
-                                                                    <ControlTemplate.Triggers>
-                                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                                            <Setter Property="Background"  TargetName="PART_Border"  Value="{StaticResource SecondaryHoverBackground}"/>
-                                                                            <Setter Property="TextBlock.Foreground"  TargetName="PART_ContentPresenter" Value="{StaticResource HoverForeground}"/>
-                                                                            <Setter Property="Cursor" Value="Hand"/>
-                                                                        </Trigger>
-                                                                        <Trigger Property="IsSelected" Value="True">
-                                                                            <Setter Property="TextBlock.Foreground" TargetName="PART_ContentPresenter" Value="{StaticResource PrimaryColorForeground}" />
-                                                                        </Trigger>
-                                                                        <MultiTrigger>
-                                                                            <MultiTrigger.Conditions>
-                                                                                <Condition Property="IsMouseOver" Value="True"/>
-                                                                                <Condition Property="IsSelected" Value="True"/>
-                                                                            </MultiTrigger.Conditions>
-                                                                            <MultiTrigger.Setters>
-                                                                                <Setter Property="Background"  TargetName="PART_Border"  Value="{StaticResource SecondaryHoverBackground}"/>
-                                                                                <Setter Property="TextBlock.Foreground"  TargetName="PART_ContentPresenter" Value="{StaticResource HoverForeground}"/>
-                                                                                <Setter Property="Cursor" Value="Hand"/>
-                                                                            </MultiTrigger.Setters>
-                                                                        </MultiTrigger>
-                                                                        <Trigger Property="skinmanager:SfSkinManager.SizeMode" Value="Touch">
-                                                                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
-                                                                        </Trigger>
-                                                                    </ControlTemplate.Triggers>
-                                                                </ControlTemplate>
-                                                            </Setter.Value>
-                                                        </Setter>
+                                            <ListView x:Name="PART_ViewTypeListView" 
+                                                      ItemContainerStyle="{StaticResource SyncfusionSchedulerAllowedViewsListItemStyle}"
+                                                      Background="{TemplateBinding Background}" 
+                                                      Visibility="Collapsed">
+                                                <ListView.Resources>
+                                                    <Style TargetType="ListBox">
+                                                        <Setter Property="ItemContainerStyle" Value="{StaticResource SyncfusionSchedulerAllowedViewsListItemStyle}" />
                                                     </Style>
-                                                </ListView.ItemContainerStyle>
+                                                </ListView.Resources>
                                             </ListView>
                                         </Border>
                                     </Popup>
@@ -463,11 +616,17 @@
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton1" Storyboard.TargetProperty="Foreground">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
                                         </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton1" Storyboard.TargetProperty="BorderBrush">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
+                                        </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>
                                 </VisualState>
                                 <VisualState x:Name="PART_ViewTypeButton2Pressed">
                                     <Storyboard>
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton2" Storyboard.TargetProperty="Foreground">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton2" Storyboard.TargetProperty="BorderBrush">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
                                         </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>
@@ -477,11 +636,17 @@
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton3" Storyboard.TargetProperty="Foreground">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
                                         </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton3" Storyboard.TargetProperty="BorderBrush">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
+                                        </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>
                                 </VisualState>
                                 <VisualState x:Name="PART_ViewTypeButton4Pressed">
                                     <Storyboard>
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton4" Storyboard.TargetProperty="Foreground">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton4" Storyboard.TargetProperty="BorderBrush">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
                                         </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>
@@ -491,11 +656,17 @@
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton5" Storyboard.TargetProperty="Foreground">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
                                         </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton5" Storyboard.TargetProperty="BorderBrush">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
+                                        </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>
                                 </VisualState>
                                 <VisualState x:Name="PART_ViewTypeButton6Pressed">
                                     <Storyboard>
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton6" Storyboard.TargetProperty="Foreground">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton6" Storyboard.TargetProperty="BorderBrush">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
                                         </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>
@@ -505,11 +676,17 @@
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton7" Storyboard.TargetProperty="Foreground">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
                                         </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton7" Storyboard.TargetProperty="BorderBrush">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
+                                        </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>
                                 </VisualState>
                                 <VisualState x:Name="PART_ViewTypeButton8Pressed">
                                     <Storyboard>
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton8" Storyboard.TargetProperty="Foreground">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton8" Storyboard.TargetProperty="BorderBrush">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
                                         </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>

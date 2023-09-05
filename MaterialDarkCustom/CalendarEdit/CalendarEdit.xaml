@@ -36,7 +36,9 @@
     <ControlTemplate x:Key="SyncfusionDayNameCellControlTemplate" TargetType="{x:Type shared:DayNameCell}">
         <Border
             x:Name="Border"
-            Margin="1,0"
+            Margin="1 0"
+            Width="Auto"
+            Height="Auto"
             Background="{TemplateBinding Background}"
             BorderBrush="{TemplateBinding Border.BorderBrush}"
             BorderThickness="{TemplateBinding Border.BorderThickness}"
@@ -192,29 +194,25 @@
         <Setter Property="IsTabStop" Value="False" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="ContentTemplate" Value="{StaticResource SyncfusionDayCellTemplate}" />
+        <Setter Property="Width" Value="24"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="Margin" Value="0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type shared:DayCell}">
                     <shared:DayCellPanel>
                         <Grid x:Name="DayCellGrid">
-                            <Border x:Name="TodayBackground"
-                                 Background="{Binding Path=TodayCellBackground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:CalendarEdit}}}"
-                                 BorderBrush="{Binding Path=TodayCellBorderBrush, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:CalendarEdit}}}"
-                                 BorderThickness="1"
-                                 Opacity="0"
-                                 Width="24" Height="24">
-                                <Border.CornerRadius>
-                                    <CornerRadius>14</CornerRadius>
-                                </Border.CornerRadius>
-                            </Border>
+                            <Border 
+                                x:Name="TodayBackground"
+                                Background="{Binding Path=TodayCellBackground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:CalendarEdit}}}"
+                                BorderBrush="{Binding Path=TodayCellBorderBrush, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:CalendarEdit}}}"
+                                BorderThickness="1"
+                                Opacity="0"
+                                CornerRadius="100"/>
                             <Border x:Name="SelectedBackground"
                                  Background="{Binding Path=SelectedDayCellBackground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:CalendarEdit}}}"
                                  Opacity="0"
-                                 Width="24" Height="24">
-                                <Border.CornerRadius>
-                                    <CornerRadius>14</CornerRadius>
-                                </Border.CornerRadius>
-                            </Border>
+                                 CornerRadius="100"/>
                             <Border
                                 x:Name="Border"
                                 Background="{TemplateBinding Background}"
@@ -225,11 +223,7 @@
                                  BorderBrush="{StaticResource ContentBackgroundHover}"
                                  BorderThickness="1"
                                  Opacity="0"
-                                 Width="24" Height="24">
-                                <Border.CornerRadius>
-                                    <CornerRadius>14</CornerRadius>
-                                </Border.CornerRadius>
-                            </Border>
+                                 CornerRadius="100"/>
                             <Path
                                 x:Name="BlockoutDate"
                                 Height="1"
@@ -241,7 +235,8 @@
                                 Opacity="0"
                                 RenderTransformOrigin="0.5,0.5"
                                 Stretch="Fill"
-                                Stroke="{Binding Path=BlackoutDatesBorderBrush, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:CalendarEdit}}}" />
+                                Stroke="{Binding Path=BlackoutDatesBorderBrush, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:CalendarEdit}}}" >
+                            </Path>
                             <ContentPresenter
                                 x:Name="DayContentPresenter"
                                 HorizontalAlignment="{TemplateBinding Control.HorizontalContentAlignment}"
@@ -254,7 +249,6 @@
                             </ContentPresenter>
                             <Border x:Name="DayButtonFocusVisual"
                                  IsHitTestVisible="false"
-                                 Width="24" Height="24"
                                  BorderBrush="{Binding Path=SelectedDayCellBorderBrush, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:CalendarEdit}}}"
                                  BorderThickness="1"
                                  Visibility="Collapsed">
@@ -344,6 +338,7 @@
                             <Setter TargetName="TodayBackground" Property="Opacity" Value="0" />
                             <Setter TargetName="SelectedBackground" Property="Width" Value="18" />
                             <Setter TargetName="SelectedBackground" Property="Height" Value="18" />
+                            <Setter TargetName="SelectedBackground" Property="Margin" Value="0" />
                             <Setter TargetName="DayButtonFocusVisual" Property="Visibility" Value="Visible" />
                             <Setter TargetName="DayButtonFocusVisual" Property="BorderBrush" Value="{Binding Path=TodayCellSelectedBorderBrush, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:CalendarEdit}}}" />
                             <Setter TargetName="SelectedBackground" Property="Background" Value="{Binding Path=TodayCellSelectedBackground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:CalendarEdit}}}" />
@@ -362,6 +357,7 @@
                             <Setter TargetName="TodayBackground" Property="Opacity" Value="0" />
                             <Setter TargetName="SelectedBackground" Property="Width" Value="18" />
                             <Setter TargetName="SelectedBackground" Property="Height" Value="18" />
+                            <Setter TargetName="SelectedBackground" Property="BorderThickness" Value="0" />
                             <Setter TargetName="DayButtonFocusVisual" Property="Visibility" Value="Visible" />
                             <Setter TargetName="DayButtonFocusVisual" Property="BorderBrush" Value="{Binding Path=TodayCellSelectedBorderBrush, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:CalendarEdit}}}" />
                             <Setter TargetName="SelectedBackground" Property="Background" Value="{Binding Path=TodayCellSelectedBackground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:CalendarEdit}}}" />
@@ -492,6 +488,7 @@
         <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
         <Setter Property="Width" Value="45" />
         <Setter Property="Height" Value="47" />
+        <Setter Property="Margin" Value="0"/>
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Focusable" Value="True" />
         <Setter Property="IsTabStop" Value="False" />
@@ -506,14 +503,14 @@
                                 x:Name="SelectedBackground"
                                 Fill="{StaticResource PrimaryBackground}"
                                 Opacity="0"
-                                RadiusX="1"
-                                RadiusY="1" />
+                                RadiusX="100"
+                                RadiusY="100"/>
                             <Rectangle
                                 x:Name="Background"
                                 Fill="{TemplateBinding Background}"
                                 Opacity="0"
-                                RadiusX="1"
-                                RadiusY="1"
+                                RadiusX="100"
+                                RadiusY="100"
                                 Stroke="{TemplateBinding BorderBrush}" />
                             <ContentPresenter
                                 x:Name="DayContentPresenter"
@@ -527,8 +524,8 @@
                             </ContentPresenter>
                             <Rectangle
                                 x:Name="CalendarButtonFocusVisual"
-                                RadiusX="1"
-                                RadiusY="1"
+                                RadiusX="100"
+                                RadiusY="100"
                                 Stroke="{StaticResource PrimaryBackground}"
                                 Visibility="Collapsed" />
                         </Grid>
@@ -579,6 +576,7 @@
         <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
         <Setter Property="Width" Value="45" />
         <Setter Property="Height" Value="47" />
+        <Setter Property="Margin" Value="0"/>
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Focusable" Value="True" />
         <Setter Property="IsTabStop" Value="False" />
@@ -593,14 +591,14 @@
                                 x:Name="SelectedBackground"
                                 Fill="{StaticResource PrimaryBackground}"
                                 Opacity="0"
-                                RadiusX="1"
-                                RadiusY="1" />
+                                RadiusX="100"
+                                RadiusY="100"/>
                             <Rectangle
                                 x:Name="Background"
                                 Fill="{TemplateBinding Background}"
                                 Opacity="0"
-                                RadiusX="1"
-                                RadiusY="1"
+                                RadiusX="100"
+                                RadiusY="100"
                                 Stroke="{TemplateBinding BorderBrush}" />
                             <ContentPresenter
                                 x:Name="DayContentPresenter"
@@ -615,8 +613,8 @@
                             <Rectangle
                                 x:Name="CalendarButtonFocusVisual"
                                 IsHitTestVisible="false"
-                                RadiusX="1"
-                                RadiusY="1"
+                                RadiusX="100"
+                                RadiusY="100"
                                 Stroke="{StaticResource PrimaryBackground}"
                                 Visibility="Collapsed" />
                         </Grid>
@@ -674,6 +672,7 @@
         <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
         <Setter Property="Width" Value="45" />
         <Setter Property="Height" Value="47" />
+        <Setter Property="Margin" Value="0"/>
         <Setter Property="Focusable" Value="True" />
         <Setter Property="IsTabStop" Value="False" />
         <Setter Property="BorderThickness" Value="1" />
@@ -688,14 +687,14 @@
                                 x:Name="SelectedBackground"
                                 Fill="{StaticResource PrimaryBackground}"
                                 Opacity="0"
-                                RadiusX="1"
-                                RadiusY="1" />
+                                RadiusX="100"
+                                RadiusY="100"/>
                             <Rectangle
                                 x:Name="Background"
                                 Fill="{TemplateBinding Background}"
                                 Opacity="0"
-                                RadiusX="1"
-                                RadiusY="1"
+                                RadiusX="100"
+                                RadiusY="100"
                                 Stroke="{TemplateBinding BorderBrush}" />
                             <ContentPresenter
                                 x:Name="DayContentPresenter"
@@ -710,8 +709,8 @@
                             <Rectangle
                                 x:Name="CalendarButtonFocusVisual"
                                 IsHitTestVisible="false"
-                                RadiusX="1"
-                                RadiusY="1"
+                                RadiusX="100"
+                                RadiusY="100"
                                 Stroke="{StaticResource PrimaryBackground}"
                                 Visibility="Collapsed" />
                         </Grid>
@@ -764,11 +763,15 @@
         <Setter Property="Control.VerticalContentAlignment" Value="{x:Static VerticalAlignment.Center}" />
         <Setter Property="BorderThickness" Value="0,0,0,0" />
         <Setter Property="Control.Template" Value="{StaticResource SyncfusionDayNameCellControlTemplate}" />
+        <Setter Property="Width" Value="24"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="Margin" Value="0"/>
     </Style>
     <Style BasedOn="{StaticResource SyncfusionDayNameCellStyle}" TargetType="{x:Type shared:DayNameCell}" />
 
     <!--  DayNamesGridStyle  -->
     <Style x:Key="SyncfusionDayNamesGridStyle" TargetType="{x:Type shared:DayNamesGrid}">
+        <Setter Property="OverridesDefaultStyle" Value="True"/>
         <Setter Property="Control.Focusable" Value="False" />
     </Style>
     <Style BasedOn="{StaticResource SyncfusionDayNamesGridStyle}" TargetType="{x:Type shared:DayNamesGrid}" />
@@ -781,6 +784,8 @@
         <Setter Property="BorderBrush" Value="{StaticResource ContentBackground}" />
         <Setter Property="Control.Template" Value="{StaticResource SyncfusionWeekNumberCellControlTemplate}" />
         <Setter Property="Focusable" Value="True" />
+        <Setter Property="Width" Value="Auto"/>
+        <Setter Property="Margin" Value="0"/>
     </Style>
     <Style BasedOn="{StaticResource SyncfusionCalendarWeekNumberCellStyle}" TargetType="{x:Type shared:WeekNumberCell}" />
 
@@ -905,8 +910,10 @@
     <Style BasedOn="{StaticResource SyncfusionNavigateButtonStyle}" TargetType="{x:Type shared:NavigateButton}" />
 
     <Style x:Key="SyncfusionMonthButtonStyle" TargetType="{x:Type shared:MonthButton}">
-        <Setter Property="HorizontalContentAlignment" Value="{x:Static HorizontalAlignment.Center}" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="{x:Static VerticalAlignment.Center}" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="Padding" Value="0" />
         <Setter Property="TextBlock.FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}" />
         <Setter Property="TextBlock.FontSize" Value="{StaticResource MaterialDarkCustom.TitleTextStyle}" />
         <Setter Property="TextBlock.FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightMedium}" />
@@ -918,8 +925,10 @@
                 <ControlTemplate TargetType="{x:Type shared:MonthButton}">
                     <Border
                         x:Name="border"
+                        CornerRadius="0"
                         Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}">
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        Padding="{TemplateBinding Padding}">
                         <ContentPresenter
                             x:Name="buttonContent"
                             HorizontalAlignment="{TemplateBinding Control.HorizontalContentAlignment}"
@@ -950,6 +959,7 @@
         <Setter Property="Height" Value="219" />-->
         <Setter Property="Control.MinWidth" Value="208" />
         <Setter Property="Control.MinHeight" Value="219" />
+        <Setter Property="Padding" Value="0"/>
         <Setter Property="IsTabStop" Value="False" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="WeekNumberBorderThickness" Value="1" />
@@ -994,6 +1004,7 @@
         <Setter Property="BlackoutDatesForeground" Value="{StaticResource DisabledForeground}" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="DayCellsStyle" Value="{StaticResource SyncfusionDayCellStyle}" />
+        <Setter Property="DayNameCellsStyle" Value="{StaticResource SyncfusionDayNameCellStyle}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type shared:CalendarEdit}">
@@ -1004,15 +1015,16 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
+                        Padding="{TemplateBinding Padding}"
                         CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                         SnapsToDevicePixels="True">
                         <Grid x:Name="MainGrid" FlowDirection="{TemplateBinding FlowDirection}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="10" />
                                 <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition />
+                                <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="4*" />
-                                <ColumnDefinition />
+                                <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="10" />
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
@@ -1026,14 +1038,19 @@
                             <Grid
                                 x:Name="InnerGrid"
                                 Grid.Row="0"
-                                Grid.Column="0"
-                                Grid.ColumnSpan="6">
+                                Grid.Column="1"
+                                Grid.ColumnSpan="6"
+                                Margin="0">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition />
-                                    <ColumnDefinition Width="4*" />
-                                    <ColumnDefinition />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-
+                                <Border Grid.ColumnSpan="3" 
+                                            SnapsToDevicePixels="True"
+                                            Visibility="Collapsed"
+                                            BorderThickness="0,0,0,1"
+                                            BorderBrush="{TemplateBinding BorderBrush}"/>
                                 <shared:NavigateButton
                                     x:Name="PART_NextMonthButton"
                                     Grid.Row="0"
@@ -1042,7 +1059,7 @@
                                     Height="24"
                                     MinWidth="5"
                                     MinHeight="5"
-                                    Margin="0,8,8,8"
+                                    Margin="0 8 8 8"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
                                     Tag="NextMonthButton"
@@ -1050,16 +1067,24 @@
                                     Foreground="{Binding Path=HeaderForeground, RelativeSource={RelativeSource TemplatedParent}}"
                                     IsTabStop="False" >
                                     <shared:NavigateButton.Content>
-                                        <Path x:Name="NextButtonPath" 
-                                          Width="4"
-                                          Height="8"
-                                          Margin="0"
-                                          HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"
-                                          Fill="{Binding RelativeSource={RelativeSource AncestorType=shared:NavigateButton}, Path=Foreground}"
-                                          Stretch="Fill"
-                                          StrokeThickness="1" 
-                                          Data="M0,0 L4,3.5 0,7 z"/>
+                                        <Path 
+                                            x:Name="NextButtonPath" 
+                                            Width="4"
+                                            Height="8"
+                                            Margin="0"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Stretch="Fill"
+                                            StrokeThickness="1">
+                                            <Path.Data>
+                                                <PathGeometry>M0,0 L4,3.5 0,7 z</PathGeometry>
+                                            </Path.Data>
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Setter Property="Fill" Value="{Binding RelativeSource={RelativeSource AncestorType=shared:NavigateButton}, Path=Foreground}"/>
+                                                </Style>
+                                            </Path.Style>
+                                        </Path>
                                     </shared:NavigateButton.Content>
                                 </shared:NavigateButton>
 
@@ -1071,24 +1096,32 @@
                                     Height="24"
                                     MinWidth="5"
                                     MinHeight="5"
-                                    Margin="8,8,0,8"
+                                    Margin="8 8 0 8"
                                     HorizontalAlignment="Left"
                                     VerticalAlignment="Center"
                                     Tag="PreviousMonthButton"
                                     Background="{Binding Path=HeaderBackground, RelativeSource={RelativeSource TemplatedParent}}"
                                     Foreground="{Binding Path=HeaderForeground, RelativeSource={RelativeSource TemplatedParent}}"
-                                    IsTabStop="False" >
+                                    IsTabStop="False">
                                     <shared:NavigateButton.Content>
-                                        <Path x:Name="PreviousButtonPath" 
-                                              Width="4"
-                                              Height="8"
-                                              Margin="0"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Fill="{Binding RelativeSource={RelativeSource AncestorType=shared:NavigateButton}, Path=Foreground}"
-                                              Stretch="Fill"
-                                              StrokeThickness="1" 
-                                              Data="M4,0 L4,7 0,3.5000001 z"/>
+                                        <Path 
+                                            x:Name="PreviousButtonPath" 
+                                            Width="4"
+                                            Height="8"
+                                            Margin="0"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Stretch="Fill"
+                                            StrokeThickness="1">
+                                            <Path.Data>
+                                                <PathGeometry>M4,0 L4,7 0,3.5000001 z</PathGeometry>
+                                            </Path.Data>
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Setter Property="Fill" Value="{Binding RelativeSource={RelativeSource AncestorType=shared:NavigateButton}, Path=Foreground}"/>
+                                                </Style>
+                                            </Path.Style>
+                                        </Path>
                                     </shared:NavigateButton.Content>
                                 </shared:NavigateButton>
 
@@ -1107,7 +1140,9 @@
                                 <shared:MonthButton
                                     Name="PART_Month2"
                                     Grid.Row="0"
+                                    Height="24"
                                     Grid.Column="1"
+                                    HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
                                     Background="{Binding Path=HeaderBackground, RelativeSource={RelativeSource TemplatedParent}}"
                                     Foreground="{Binding Path=HeaderForeground, RelativeSource={RelativeSource TemplatedParent}}"
@@ -1154,6 +1189,7 @@
                                 Grid.Row="2"
                                 Grid.Column="1"
                                 ClipToBounds="True"
+                                IsHitTestVisible="False"
                                 Content="{Binding Path=WeekNumbersGrid, RelativeSource={RelativeSource TemplatedParent}}"
                                 Visibility="Collapsed" />
 
@@ -1200,6 +1236,7 @@
                                 Grid.Column="2"
                                 Grid.ColumnSpan="3"
                                 ClipToBounds="True"
+                                VerticalAlignment="Center"
                                 Content="{Binding Path=CurrentMonthGrid, RelativeSource={RelativeSource TemplatedParent}}" />
                             <ContentPresenter
                                 Name="CurrentYearGrid"
@@ -1208,6 +1245,7 @@
                                 Grid.Column="2"
                                 Grid.ColumnSpan="3"
                                 ClipToBounds="True"
+                                VerticalAlignment="Center"
                                 Content="{Binding Path=CurrentYearGrid, RelativeSource={RelativeSource TemplatedParent}}" />
                             <ContentPresenter
                                 Name="CurrentYearRangeGrid"
@@ -1216,6 +1254,7 @@
                                 Grid.Column="2"
                                 Grid.ColumnSpan="3"
                                 ClipToBounds="True"
+                                VerticalAlignment="Center"
                                 Content="{Binding Path=CurrentYearRangeGrid, RelativeSource={RelativeSource TemplatedParent}}" />
                             <ContentPresenter
                                 Name="FollowingMonthGrid"
@@ -1225,6 +1264,7 @@
                                 Grid.ColumnSpan="3"
                                 Margin="0,4,0,0"
                                 ClipToBounds="True"
+                                VerticalAlignment="Center"
                                 Content="{Binding Path=FollowingMonthGrid, RelativeSource={RelativeSource TemplatedParent}}" />
                             <ContentPresenter
                                 Name="FollowingYearGrid"
@@ -1233,6 +1273,7 @@
                                 Grid.Column="2"
                                 Grid.ColumnSpan="3"
                                 ClipToBounds="True"
+                                VerticalAlignment="Center"
                                 Content="{Binding Path=FollowingYearGrid, RelativeSource={RelativeSource TemplatedParent}}" />
                             <ContentPresenter
                                 Name="FollowingYearRangeGrid"
@@ -1241,11 +1282,12 @@
                                 Grid.Column="2"
                                 Grid.ColumnSpan="3"
                                 ClipToBounds="True"
+                                VerticalAlignment="Center"
                                 Content="{Binding Path=FollowingYearRangeGrid, RelativeSource={RelativeSource TemplatedParent}}" />
                             <Grid
                                 Name="PART_TodayGrid"
                                 Grid.Row="3"
-                                Grid.Column="1"
+                                Grid.Column="2"
                                 Grid.ColumnSpan="3"
                                 Background="Transparent"
                                 Visibility="{Binding Path=TodayRowIsVisible, Converter={StaticResource Boolean_To_VisibilityConverter}, RelativeSource={RelativeSource TemplatedParent}}">
@@ -1257,11 +1299,12 @@
                                     Name="PART_TodayButton"
                                     x:Uid="AccessTodayTextID"
                                     Grid.Column="0"
-                                    Width="50"
-                                    Height="20"
+                                    Padding="2"
+                                    Margin="2"
                                     Content="{Sync_Shared_Resources:SharedLocalizationResourceExtension ResourceName=AccessTodayText}" />
                                 <Border
                                     Grid.Column="1"
+                                    Margin="2"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center">
                                     <TextBlock
@@ -1293,7 +1336,7 @@
                             <Setter Property="HeaderBackground" Value="{StaticResource DisabledForeground}" />
                         </Trigger>
                         <Trigger Property="ShowWeekNumbers" Value="True">
-                            <Setter Property="Width" Value="224" />
+                            <Setter Property="MinWidth" Value="224" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

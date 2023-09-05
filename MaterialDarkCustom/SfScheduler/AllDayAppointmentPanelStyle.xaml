@@ -24,7 +24,7 @@
             BorderBrush="{StaticResource BorderAlt}"
             BorderThickness="0">
                         <Path x:Name="PART_Expander" 
-                  Fill="{StaticResource ContentForeground}" 
+                  Fill="{StaticResource IconColor}" 
                   Stroke="Transparent"            
                   Height="7.401"
                   Width="12.002"   

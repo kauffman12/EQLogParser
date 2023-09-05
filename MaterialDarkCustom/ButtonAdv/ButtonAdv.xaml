@@ -60,13 +60,16 @@
             <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                 <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
             </Trigger>
-            <Trigger Property="IsFocused" Value="True">
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="IsFocused" Value="True"/>
+                </MultiTrigger.Conditions>
                 <Setter TargetName="ItemBorder1" Property="Border.Background" Value="{StaticResource SecondaryHoverBackground}" />
                 <Setter TargetName="ItemBorder1" Property="Border.BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
                 <Setter TargetName="PART_LargeText" Property="TextElement.Foreground" Value="{StaticResource SecondaryForeground}" />
                 <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}" />
                 <Setter TargetName="ItemBorder1" Property="Effect" Value="{StaticResource Default.ShadowDepth2}" />
-            </Trigger>
+            </MultiTrigger>
 
             <Trigger Property="IsMouseOver" Value="true">
                 <Setter TargetName="ItemBorder1" Property="Border.Background" Value="{StaticResource SecondaryHoverBackground}" />
@@ -181,13 +184,16 @@
                             </MultiTrigger.Conditions>
                             <Setter TargetName="PART_NormalText" Property="Border.Margin" Value="0" />
                         </MultiTrigger>
-                        <Trigger Property="IsFocused" Value="True">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsFocused" Value="True"/>
+                            </MultiTrigger.Conditions>
                             <Setter TargetName="ItemBorder" Property="Border.Background" Value="{StaticResource SecondaryHoverBackground}" />
                             <Setter TargetName="ItemBorder" Property="Border.BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
                             <Setter TargetName="PART_NormalText" Property="TextElement.Foreground" Value="{StaticResource SecondaryForeground}" />
                             <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}" />
                             <Setter TargetName="ItemBorder" Property="Effect" Value="{StaticResource Default.ShadowDepth2}" />
-                        </Trigger>
+                        </MultiTrigger>
 
                         <Trigger Property="IsMouseOver" Value="true">
                             <Setter TargetName="ItemBorder" Property="Border.Background" Value="{StaticResource SecondaryHoverBackground}" />

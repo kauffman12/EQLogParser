@@ -43,8 +43,10 @@
                             SnapsToDevicePixels="True">
                         <ScrollViewer x:Name="PART_ContentHost" 
                                       Focusable="false" 
+                                      Background="Transparent"
                                       HorizontalScrollBarVisibility="Hidden" 
-                                      VerticalScrollBarVisibility="Hidden"/>
+                                      VerticalScrollBarVisibility="Hidden">
+                        </ScrollViewer>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="true">
@@ -59,6 +61,7 @@
                             <Setter Property="Foreground" Value="{StaticResource DisabledForeground}"/>
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="true">
+                            <Setter Property="Background" TargetName="border" Value="Transparent"/>
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PrimaryBackground}"/>
                             <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}"/>
                             <Setter Property="Padding" Value="-1"/>
@@ -87,6 +90,7 @@
                 Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"/>
         <Setter Property="FontWeight"
                 Value="{StaticResource MaterialDarkCustom.FontWeightNormal}"/>
+        
         <Style.Resources>
             <Style x:Key="{x:Type FlowDocument}" TargetType="{x:Type FlowDocument}">
                 <Setter Property="OverridesDefaultStyle" Value="true"/>

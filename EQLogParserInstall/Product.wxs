@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.1.31" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.1.32" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -265,6 +265,9 @@
       </Component>
       <Component Win64="yes" Id="adpsMeter.txt" Guid="F1428697-7A90-4E37-8894-289D81A5D32E">
         <File Id="adpsMeter.txt" Name="adpsMeter.txt" Source="$(var.EQLogParser.TargetDir)\data\adpsMeter.txt" />
+      </Component>
+      <Component Win64="yes" Id="triggerVariables.rtf" Guid="84B51F66-9155-47E6-98BB-767BFAF7ADC9">
+        <File Id="triggerVariables.rtf" Name="triggerVariables.rtf" Source="$(var.EQLogParser.TargetDir)\data\triggerVariables.rtf" />
       </Component>
     </ComponentGroup>
     <ComponentGroup Id="ProductHtmlDataComponents" Directory="HTMLDATAFOLDER">

@@ -9,6 +9,7 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Button.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphButton.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/TextBox.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/PrimaryButton.xaml" />
         <skinmanager:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <skinmanager:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
     </ResourceDictionary.MergedDictionaries>
@@ -847,17 +848,23 @@
                                                         Orientation="Horizontal">
                                         <Button x:Name="PART_OkButton"
                                                         Height="22"
-                                                        Width="32"
-                                                        Margin="8,8,4,0"
+                                                        Width="32"                                                    
                                                         Content="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Ok}"
                                                         Style="{StaticResource WPFFlatButtonStyle}"
-                                                        Visibility="Visible"/>
+                                                        Visibility="Visible">
+                                            <Button.Margin>
+                                            <Thickness>8,8,4,0</Thickness>
+                                            </Button.Margin>
+                                        </Button>
                                         <Button x:Name="PART_CancelButton"
                                                         Height="22"
-                                                        Width="52"
-                                                        Margin="4,8,8,0"
+                                                        Width="52"                                                   
                                                         Content="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=Cancel}"
-                                                        Style="{StaticResource WPFFlatButtonStyle}"/>
+                                                        Style="{StaticResource WPFFlatButtonStyle}">
+                                            <Button.Margin>
+                                                <Thickness>4,8,8,0</Thickness>
+                                            </Button.Margin>
+                                        </Button>
                                     </StackPanel>
                                     <Border Height="10"
                                                     BorderBrush="{StaticResource BorderAlt}"

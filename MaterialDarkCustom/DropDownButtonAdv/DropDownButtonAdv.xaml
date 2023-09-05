@@ -13,6 +13,8 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
     </ResourceDictionary.MergedDictionaries>
 
+    <SolidColorBrush x:Key="DropDownMenuItem.Selection.Background" Color="#FFFFFF" />
+
     <local:SizeToDoubleConverter x:Key="sizeToDoubleConverter"/>
 
     <DataTemplate x:Key="LargeIconTemplate">
@@ -96,6 +98,9 @@
                         <Thickness>8,1,8,8</Thickness>
                     </Border.Margin>
                     <ContentPresenter/>
+                    <Border.RenderTransform>
+                        <TranslateTransform/>
+                    </Border.RenderTransform>
                 </Border>
             </Popup>
         </Grid>
@@ -247,6 +252,9 @@
                                     <Thickness>8,1,8,8</Thickness>
                                 </Border.Margin>
                                 <ContentPresenter/>
+                                <Border.RenderTransform>
+                                    <TranslateTransform/>
+                                </Border.RenderTransform>
                             </Border>
                         </Popup>
                     </Grid>
@@ -469,27 +477,46 @@
         <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.BodyTextStyle}" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="MinHeight" Value="24" />
+        <Setter Property="Padding">
+            <Setter.Value>
+                <Thickness>0,0,0,0</Thickness>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Margin">
+            <Setter.Value>
+                <Thickness>0,0,0,0</Thickness>
+            </Setter.Value>
+        </Setter>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="local:DropDownMenuItem">
-                    <Border
+                    <Grid>
+                        <Border x:Name="SelectionIndicator"
+                                        HorizontalAlignment="Left"            
+                                        CornerRadius="1.5"
+                                        Height="12"
+                                        Width="2"
+                                        Visibility="Collapsed"     
+                                        Background="{StaticResource DropDownMenuItem.Selection.Background}" />
+                        <Border
                         Name="Bd"
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}">
-                        <Grid
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="0">
+                            <Grid
                             x:Name="DropDownTray"
                             Margin="0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition x:Name="Icontraywidth" Width="25" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition x:Name="SubItemPath" Width="20" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.Resources>
-                                <BooleanToVisibilityConverter x:Key="BoolConverter" />
-                            </Grid.Resources>
-                            <Border Grid.Column="1">
-                                <ContentControl
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition x:Name="Icontraywidth" Width="25" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition x:Name="SubItemPath" Width="20" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.Resources>
+                                    <BooleanToVisibilityConverter x:Key="BoolConverter" />
+                                </Grid.Resources>
+                                <Border Grid.Column="1">
+                                    <ContentControl
                                     Name="content"
                                     Margin="0"
                                     HorizontalAlignment="Stretch"
@@ -499,9 +526,9 @@
                                     ContentTemplate="{TemplateBinding HeaderTemplate}"
                                     Foreground="{TemplateBinding Foreground}"
                                     IsTabStop="False" />
-                            </Border>
-                            <Border Grid.Column="2">
-                                <Path     
+                                </Border>
+                                <Border Grid.Column="2">
+                                    <Path     
                                         Name="path"    
                                         Height="5" Width="3"
                                         Margin="0,0,7,0"
@@ -510,9 +537,9 @@
                                         Fill="{StaticResource IconColor}" 
 										Stroke="{StaticResource IconColor}"
                                         Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=HasItems, Converter={StaticResource BoolConverter}}" />
-                            </Border>
-                            <Border Margin="2">
-                                <ContentControl
+                                </Border>
+                                <Border Margin="2">
+                                    <ContentControl
                                     x:Name="Part_Icon"
                                     Width="{TemplateBinding IconSize, Converter= {StaticResource sizeToDoubleConverter}, ConverterParameter=width}"
                                     Height="{TemplateBinding IconSize, Converter= {StaticResource sizeToDoubleConverter}, ConverterParameter=height}" 
@@ -520,8 +547,8 @@
                                     BorderThickness="2"
                                     Content="{TemplateBinding Icon}"
                                     IsTabStop="False" />
-                            </Border>
-                            <Border
+                                </Border>
+                                <Border
                                 x:Name="PART_CheckedBorder"
                                 Width="18"
                                 Height="18"
@@ -530,7 +557,7 @@
                                 BorderThickness="1"
                                 SnapsToDevicePixels="True"
                                 Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsChecked, Converter={StaticResource BoolConverter}}">
-                                <Path
+                                    <Path
                                     x:Name="CheckIcon"
                                     Width="10.5"
                                     Height="10"
@@ -538,8 +565,8 @@
                                     Fill="{TemplateBinding Foreground}"
                                     FlowDirection="LeftToRight"
                                     Stretch="Fill" />
-                            </Border>
-                            <Popup
+                                </Border>
+                                <Popup
                                 x:Name="PART_DropDown"
                                 Margin="2,0,0,0"
                                 AllowsTransparency="True"
@@ -547,23 +574,23 @@
                                 Placement="Right"
                                 VerticalOffset="1"
                                 Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=HasItems, Converter={StaticResource BoolConverter}}">
-                                <Grid x:Name="PART_poup">
-                                    <Border
-                                        Width="{Binding Path=ActualWidth, ElementName=DropDownTray}"
+                                    <Grid x:Name="PART_poup">
+                                        <Border
                                         Background="{StaticResource PopupBackground}"
                                         BorderBrush="{StaticResource BorderAlt}"
                                         BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1}"
                                         
                                         SnapsToDevicePixels="True">
-                                        <ItemsPresenter Margin="2"/>
-                                    </Border>
-                                </Grid>
-                            </Popup>
-                        </Grid>
-                    </Border>
+                                            <ItemsPresenter Margin="2"/>
+                                        </Border>
+                                    </Grid>
+                                </Popup>
+                            </Grid>
+                        </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
-                            <Setter Property="Width" TargetName="Icontraywidth" Value="{StaticResource MaterialDarkCustom.IconPanelSize}"/>
+                            <Setter Property="Width" TargetName="Icontraywidth" Value="32"/>
                             <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
                         </Trigger>
                         <Trigger Property="IsFocused" Value="True">
@@ -603,6 +630,11 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <Style BasedOn="{StaticResource SyncfusionDropDownMenuItemStyle}" TargetType="{x:Type local:DropDownMenuItem}" />

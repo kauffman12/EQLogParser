@@ -81,13 +81,16 @@
                                 <Button Style="{StaticResource WPFGlyphButtonStyle}">
                                     <Button.Content>
                                         <Path x:Name="PreviousIcon"
-                                              Data="M1.4603138E-05,10 L7.0000147,10 3.5000147,14 z"
                                               HorizontalAlignment="Center" 
                                               VerticalAlignment="Center" 
                                               Stretch="Fill"
                                               Width="7" 
                                               Height="4" 
-                                              Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(Button.Foreground)}" />
+                                              Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}">
+                                            <Path.Data>
+                                                <PathGeometry>M1.4603138E-05,10 L7.0000147,10 3.5000147,14 z</PathGeometry>
+                                            </Path.Data>
+                                        </Path>
                                     </Button.Content>
                                 </Button>
                             </Border>
@@ -250,8 +253,10 @@
                                                               Height="7"
                                                               Margin="0,0,18,0"
                                                               Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}" 
-                                                              Stretch="Fill"
-                                                              Data="M0,0 L4,3.500001 0,7.0000019 z">
+                                                              Stretch="Fill">
+                                                    <Path.Data>
+                                                        <PathGeometry>M0,0 L4,3.500001 0,7.0000019 z</PathGeometry>
+                                                    </Path.Data>
                                                 </Path>
                                             </Grid>
                                         </ToggleButton.Content>

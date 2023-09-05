@@ -266,15 +266,23 @@
                             Style="{StaticResource PoorHeaderButtonStyle}"
                             Visibility="{Binding Path=CloseButtonVisible, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:QuickTabSwicthPreviewControl}}, Converter={StaticResource BooleanToVisibility}}">
                             <Path
-                                x:Name="closeButtonPath1"
-                                Width="6"
-                                Height="6"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Fill="{Binding Foreground, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools_controls:ItemHeader}}}"
-                                SnapsToDevicePixels="False"
-                                Stretch="Fill"
-                                Data="M10.586002,0 L12.000003,1.4140021 7.413983,5.9987224 12,10.583006 10.586,11.997005 5.9997823,7.4125217 1.4140045,11.997 3.0398377E-06,10.582997 4.5855133,5.9987873 0,1.4150074 1.414,0.0010076167 5.9997136,4.5849875 z"/>
+                                        x:Name="closeButtonPath"
+                                        Width="6"
+                                        Height="6"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        StrokeThickness="0"
+                                        SnapsToDevicePixels="False"
+                                        Stretch="Fill">
+                                <Path.Data>
+                                    <PathGeometry>M10.586002,0 L12.000003,1.4140021 7.413983,5.9987224 12,10.583006 10.586,11.997005 5.9997823,7.4125217 1.4140045,11.997 3.0398377E-06,10.582997 4.5855133,5.9987873 0,1.4150074 1.414,0.0010076167 5.9997136,4.5849875 z</PathGeometry>
+                                </Path.Data>
+                                <Path.Style>
+                                    <Style TargetType="Path">
+                                        <Setter Property=" Fill" Value="{StaticResource IconColor}"/>
+                                    </Style>
+                                </Path.Style>
+                            </Path>
                         </ContentControl>
                         <TextBlock
                             DockPanel.Dock="Left"
@@ -428,15 +436,23 @@
                         BorderThickness="0"
                         CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
                         <Path
-                            x:Name="MaximizeButtonPath"
-                            Width="9"
-                            Height="8"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Fill="{TemplateBinding Foreground}"
-                            SnapsToDevicePixels="False"
-                            Stretch="Fill" 
-                            Data="M2,2 L2,12 12,12 12,2 z M0,0 L14,0 14,14 0,14 z"/>
+                                    x:Name="MaximizeButtonPath"
+                                    Width="9"
+                                    Height="8"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    StrokeThickness="0"
+                                    SnapsToDevicePixels="False"
+                                    Stretch="Fill" >
+                            <Path.Data>
+                                <PathGeometry>M2,2 L2,12 12,12 12,2 z M0,0 L14,0 14,14 0,14 z</PathGeometry>
+                            </Path.Data>
+                            <Path.Style>
+                                <Style TargetType="Path">
+                                    <Setter Property=" Fill" Value="{StaticResource IconColor}"/>
+                                </Style>
+                            </Path.Style>
+                        </Path>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -477,29 +493,37 @@
                         BorderThickness="0"
                         CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
                         <Path
-                            x:Name="MinimizeButtonPath"
-                            Width="9"
-                            Height="2"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Fill="{TemplateBinding Foreground}"
-                            SnapsToDevicePixels="False"
-                            Stretch="Fill" 
-                            Data="M0,0 L14,0 14,1.9999999 0,1.9999999 z"/>
+                                    x:Name="MinimizeButtonPath"
+                                    Width="9"
+                                    Height="2"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    StrokeThickness="0"
+                                    SnapsToDevicePixels="False"
+                                    Stretch="Fill" >
+                            <Path.Data>
+                                <PathGeometry>M0,0 L14,0 14,1.9999999 0,1.9999999 z</PathGeometry>
+                            </Path.Data>
+                            <Path.Style>
+                                <Style TargetType="Path">
+                                    <Setter Property=" Fill" Value="{StaticResource IconColor}"/>
+                                </Style>
+                            </Path.Style>
+                        </Path>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="MinimizeButtonPath" Property="Fill" Value="{StaticResource IconColor}" />
+                            <Setter TargetName="MinimizeButtonPath" Property=" Fill" Value="{StaticResource IconColor}" />
                             <Setter TargetName="MinimizeButtonBorder" Property="Background" Value="{StaticResource SecondaryHoverBackground}" />
                             <Setter TargetName="MinimizeButtonBorder" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="MinimizeButtonPath" Property="Fill" Value="{StaticResource IconColor}" />
+                            <Setter TargetName="MinimizeButtonPath" Property=" Fill" Value="{StaticResource IconColor}" />
                             <Setter TargetName="MinimizeButtonBorder" Property="Background" Value="{StaticResource SecondarySelectionBackground}" />
                             <Setter TargetName="MinimizeButtonBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="MinimizeButtonPath" Property="Fill" Value="{StaticResource IconDisabledColor}" />
+                            <Setter TargetName="MinimizeButtonPath" Property=" Fill" Value="{StaticResource IconDisabledColor}" />
                             <Setter TargetName="MinimizeButtonBorder" Property="Background" Value="Transparent" />
                             <Setter TargetName="MinimizeButtonBorder" Property="BorderBrush" Value="Transparent" />
                         </Trigger>
@@ -526,29 +550,37 @@
                         BorderThickness="0"
                         CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
                         <Path
-                            x:Name="RestoreButtonPath"
-                            Width="8"
-                            Height="8"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Fill="{TemplateBinding Foreground}"
-                            SnapsToDevicePixels="False"
-                            Stretch="Fill" 
-                            Data="M2,5.0000004 L2,14 11,14 11,5.0000004 z M5,2 L5,3.0000006 13,3.0000006 13,11 14,11 14,2 z M3,0 L16,0 16,13 13,13 13,16 0,16 0,3.0000006 3,3.0000006 z"/>
+                                    x:Name="RestoreButtonPath"
+                                    Width="8"
+                                    Height="8"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    StrokeThickness="0"
+                                    SnapsToDevicePixels="False"
+                                    Stretch="Fill">
+                            <Path.Data>
+                                <PathGeometry>M2,5.0000004 L2,14 11,14 11,5.0000004 z M5,2 L5,3.0000006 13,3.0000006 13,11 14,11 14,2 z M3,0 L16,0 16,13 13,13 13,16 0,16 0,3.0000006 3,3.0000006 z</PathGeometry>
+                            </Path.Data>
+                            <Path.Style>
+                                <Style TargetType="Path">
+                                    <Setter Property=" Fill" Value="{StaticResource IconColor}"/>
+                                </Style>
+                            </Path.Style>
+                        </Path>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="RestoreButtonPath" Property="Fill" Value="{StaticResource IconColor}" />
+                            <Setter TargetName="RestoreButtonPath" Property=" Fill" Value="{StaticResource IconColor}" />
                             <Setter TargetName="RestoreButtonBorder" Property="Background" Value="{StaticResource SecondaryHoverBackground}" />
                             <Setter TargetName="RestoreButtonBorder" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="RestoreButtonPath" Property="Fill" Value="{StaticResource IconColor}" />
+                            <Setter TargetName="RestoreButtonPath" Property=" Fill" Value="{StaticResource IconColor}" />
                             <Setter TargetName="RestoreButtonBorder" Property="Background" Value="{StaticResource SecondarySelectionBackground}" />
                             <Setter TargetName="RestoreButtonBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="RestoreButtonPath" Property="Fill" Value="{StaticResource IconDisabledColor}" />
+                            <Setter TargetName="RestoreButtonPath" Property=" Fill" Value="{StaticResource IconDisabledColor}" />
                             <Setter TargetName="RestoreButtonBorder" Property="Background" Value="Transparent" />
                             <Setter TargetName="RestoreButtonBorder" Property="BorderBrush" Value="Transparent" />
                         </Trigger>
@@ -575,29 +607,37 @@
                         BorderThickness="0"
                         CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
                         <Path
-                            x:Name="CloseButtonPath"
-                            Width="9"
-                            Height="8"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Fill="{TemplateBinding Foreground}"
-                            SnapsToDevicePixels="False"
-                            Stretch="Fill" 
-                            Data="M10.586002,0 L12.000003,1.4140021 7.413983,5.9987224 12,10.583006 10.586,11.997005 5.9997823,7.4125217 1.4140045,11.997 3.0398377E-06,10.582997 4.5855133,5.9987873 0,1.4150074 1.414,0.0010076167 5.9997136,4.5849875 z"/>
+                                    x:Name="CloseButtonPath"
+                                    Width="9"
+                                    Height="8"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    StrokeThickness="0"
+                                    SnapsToDevicePixels="False"
+                                    Stretch="Fill" >
+                            <Path.Data>
+                                <PathGeometry>M10.586002,0 L12.000003,1.4140021 7.413983,5.9987224 12,10.583006 10.586,11.997005 5.9997823,7.4125217 1.4140045,11.997 3.0398377E-06,10.582997 4.5855133,5.9987873 0,1.4150074 1.414,0.0010076167 5.9997136,4.5849875 z</PathGeometry>
+                            </Path.Data>
+                            <Path.Style>
+                                <Style TargetType="Path">
+                                    <Setter Property=" Fill" Value="{StaticResource IconColor}"/>
+                                </Style>
+                            </Path.Style>
+                        </Path>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="CloseButtonPath" Property="Fill" Value="{StaticResource IconColor}" />
+                            <Setter TargetName="CloseButtonPath" Property=" Fill" Value="{StaticResource IconColor}" />
                             <Setter TargetName="CloseButtonBorder" Property="Background" Value="{StaticResource SecondaryHoverBackground}" />
                             <Setter TargetName="CloseButtonBorder" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="CloseButtonPath" Property="Fill" Value="{StaticResource IconColor}" />
+                            <Setter TargetName="CloseButtonPath" Property=" Fill" Value="{StaticResource IconColor}" />
                             <Setter TargetName="CloseButtonBorder" Property="Background" Value="{StaticResource SecondarySelectionBackground}" />
                             <Setter TargetName="CloseButtonBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="CloseButtonPath" Property="Fill" Value="{StaticResource IconDisabledColor}" />
+                            <Setter TargetName="CloseButtonPath" Property=" Fill" Value="{StaticResource IconDisabledColor}" />
                             <Setter TargetName="CloseButtonBorder" Property="Background" Value="Transparent" />
                             <Setter TargetName="CloseButtonBorder" Property="BorderBrush" Value="Transparent" />
                         </Trigger>
@@ -627,7 +667,8 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
-                        SnapsToDevicePixels="True">
+                        SnapsToDevicePixels="True"
+                        CornerRadius="0 ">
                         <DockPanel VerticalAlignment="{TemplateBinding VerticalAlignment}" LastChildFill="True">
                             <Button
                                 Name="btnClose"
@@ -759,7 +800,8 @@
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
                         ClipToBounds="True"
-                        Focusable="False">
+                        Focusable="False"
+                        CornerRadius="0">
                         <Grid>
                             <DockPanel Name="Panel" LastChildFill="True">
                                 <ScrollViewer
@@ -862,13 +904,15 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            Effect="{StaticResource Default.ShadowDepth4}"/>
+                            Effect="{StaticResource Default.ShadowDepth4}"
+                            CornerRadius="0"/>
                         <Border
                             Name="Border3D"
                             tools_controls:DocumentContainerHelper.IsMDIBorder="True"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="0"
                             DataContext="{Binding Path=DataContext, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:MDIWindow}}}"
                             SnapsToDevicePixels="True">
                             <DockPanel
@@ -891,7 +935,7 @@
                                     </tools_controls:DocumentHeader.ContextMenu>
                                 </tools_controls:DocumentHeader>
                                 <AdornerDecorator Name="WrapAdorner">
-                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}">
+                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" CornerRadius="0" >
                                         <Grid Name="grid" Background="{TemplateBinding Background}">
                                             <ContentPresenter
                                                 Name="PART_ContentPresenter"

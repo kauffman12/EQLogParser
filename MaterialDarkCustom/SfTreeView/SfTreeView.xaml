@@ -9,6 +9,8 @@
         <skinManager:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <skinManager:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
     </ResourceDictionary.MergedDictionaries>
+    
+    <SolidColorBrush x:Key="SfTreeView.CurrentItem.InnerBorder.Static.Border" Color="#FAFAFA" />
 
     <BooleanToVisibilityConverter x:Key="boolToVisibilityConverter"/>
 
@@ -199,19 +201,20 @@
                                 Background="{StaticResource ContentBackground}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
-                                BorderBrush="{StaticResource BorderAlt}"/>
-
+                                BorderBrush="{StaticResource BorderAlt}">
+                                </Border>
                         <Border x:Name="PART_CurrentItemBorder" 
                                 CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                                 Visibility="Collapsed">
                             <Border x:Name="PART_CurrentItemInnerBorder" 
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1}" 
                                     CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
-                                    BorderBrush="{StaticResource ContentBackground}" Visibility="Collapsed"/>
+                                    BorderBrush="{StaticResource SfTreeView.CurrentItem.InnerBorder.Static.Border}" Visibility="Collapsed"/>
                         </Border>
                         <Border x:Name="PART_HoverBorder" 
                                 Background="{StaticResource ContentBackgroundHover}"
                                 BorderBrush="{StaticResource BorderAlt}"
+                                
                                 Visibility="Collapsed"
                                 CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                                 />
@@ -249,10 +252,12 @@
                         </ContentControl>
 
                         <treeView:TreeNodeView x:Name="PART_ContentView" Grid.Column="2"
-                                            Margin="4,0,4,0"
                                             VerticalAlignment="Center"
                                             Focusable="False"
                                             ContentTemplate="{TemplateBinding ItemTemplate}">
+                            <treeView:TreeNodeView.Margin>
+                                <Thickness>4,0,4,0</Thickness>
+                            </treeView:TreeNodeView.Margin>
                         </treeView:TreeNodeView>
 
                         <Border x:Name="PART_DragLine" Grid.ColumnSpan="3" Visibility="Collapsed" BorderBrush="{StaticResource PrimaryBackground}" />
@@ -333,6 +338,7 @@
                     <Grid x:Name="treeViewGrid" Background="{StaticResource ContentBackground}">
                         <Border x:Name="PART_TreeViewBorder" Background="{StaticResource ContentBackground}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
+                                
                                 BorderThickness="1"
                                 SnapsToDevicePixels="True">
                             <ScrollViewer x:Name="PART_ScrollViewer" 
@@ -340,7 +346,7 @@
                                       CanContentScroll="True"
                                       IsTabStop="False" 
                                           FlowDirection="{TemplateBinding FlowDirection}"
-                                          HorizontalScrollBarVisibility="Disabled"
+                                          HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
                                           IsDeferredScrollingEnabled="{TemplateBinding ScrollViewer.IsDeferredScrollingEnabled}"
                                           PanningMode="{TemplateBinding ScrollViewer.PanningMode}"
                                           PanningRatio="{TemplateBinding ScrollViewer.PanningRatio}"
@@ -379,9 +385,11 @@
                     <Border
                         x:Name="PART_Border"
                         Padding="5"
+                        
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="1"
+                        
                         CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
                         <ItemsControl x:Name="PART_ItemsControl" Margin="2" />
                     </Border>

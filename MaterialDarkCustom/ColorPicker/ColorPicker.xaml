@@ -59,7 +59,7 @@
                             <Border
                                 x:Name="MainBorder"
                                 Grid.Column="1"
-                                Margin="0,0,3,0"
+                                Margin="0 0 3 0"
                                 SnapsToDevicePixels="True">
                                 <Viewbox Width="9" Height="7">
                                     <Path
@@ -131,12 +131,14 @@
                 Height="20"
                 Margin="2"
                 HorizontalAlignment="Left"
-                Background="{Binding Brush, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:ColorPicker}}}" />
+                Background="{Binding Brush, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:ColorPicker}}}"
+                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"/>
             <TextBlock
                 Name="SelectedColorText"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Center"
-                Foreground="{StaticResource ContentForeground}">
+                Foreground="{StaticResource ContentForeground}"
+                Margin="0">
                 <TextBlock.Text>
                     <MultiBinding Converter="{StaticResource brushToTextConverter}">
                         <Binding Path="Brush" RelativeSource="{RelativeSource FindAncestor, AncestorType={x:Type shared:ColorPicker}}" />

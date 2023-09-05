@@ -90,7 +90,11 @@
                                 IsTabStop="False"
                                 SnapsToDevicePixels="True"
                                 Style="{StaticResource WPFGlyphEditableDropdownExpanderStyle}"
-                                Visibility="{Binding Path=EnableDropDown, RelativeSource={RelativeSource AncestorType={x:Type local:AutoComplete}}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                Visibility="{Binding Path=EnableDropDown, RelativeSource={RelativeSource AncestorType={x:Type local:AutoComplete}}, Converter={StaticResource BooleanToVisibilityConverter}}" >
+                                <ToggleButton.Margin>
+                                    <Thickness>0</Thickness>
+                                </ToggleButton.Margin>
+                            </ToggleButton>
                             <Popup
                                 x:Name="PART_Popup"
                                 AllowsTransparency="True"
@@ -102,7 +106,7 @@
                                 SnapsToDevicePixels="True">
                                 <Border
                                     x:Name="PopupBorder"
-                                    Margin="8,0,8,8"
+                                    Margin="8 0 8 8"
                                     Background="{StaticResource PopupBackground}"
                                     BorderBrush="{StaticResource BorderAlt}"
                                     BorderThickness="1"
@@ -146,7 +150,7 @@
                                 SnapsToDevicePixels="True">
                                 <Border
                                     x:Name="HistoryPopupBorder"
-                                    Margin="8,0,8,8"
+                                    Margin="8 0 8 8"
                                     Background="{StaticResource PopupBackground}"
                                     BorderBrush="{StaticResource BorderAlt}"
                                     BorderThickness="1"

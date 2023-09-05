@@ -1,6 +1,7 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:syncfusion="clr-namespace:Syncfusion.UI.Xaml.Maps;assembly=Syncfusion.SfMaps.WPF"
+                    
                     xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
                     xmlns:system="clr-namespace:System;assembly=mscorlib">
 
@@ -10,9 +11,13 @@
     </ResourceDictionary.MergedDictionaries>
 
     <DataTemplate x:Key="ToolTipTemplate">
-        <Border>
+        <Border Effect="{StaticResource Default.ShadowDepth3}"
+                
+                
+                
+                >
             <Grid>
-                <Polygon Fill="{StaticResource TooltipBackground}"
+                <Polygon  Fill="{StaticResource TooltipBackground}"
                          Points="{Binding PolygonPoints}"
                          Stroke="{StaticResource TooltipBackground}"
                          StrokeThickness="{Binding StrokeThickness}" />

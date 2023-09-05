@@ -17,6 +17,7 @@
     mc:Ignorable="d">
 
     <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/RepeatButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphRepeatButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfDateSelector/SfDateSelector.xaml" />
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
@@ -41,7 +42,7 @@
             <Setter.Value>
                 <DataTemplate>
                     <Path
-                        x:Name="path1"
+                        x:Name="path"
                         Width="12"
                         Height="12"
                         Margin="0,0,0,0"
@@ -63,7 +64,7 @@
         <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.BodyTextStyle}" />
         <Setter Property="FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}" />
         <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
-        <Setter Property="SelectorStyle" Value="{DynamicResource SyncfusionSfDateSelectorStyle}" />
+        <Setter Property="SelectorStyle" Value="{StaticResource SyncfusionSfDateSelectorStyle}" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="DropDownHeight" Value="320" />
         <Setter Property="Height" Value="24" />
@@ -71,6 +72,7 @@
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="IsTabStop" Value="False" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="SelectorItemHeight" Value="40"/>
         <Setter Property="SelectorItemWidth" Value="40"/>
@@ -90,13 +92,11 @@
                             <Grid x:Name="DatePickerInnerGrid" >
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition x:Name="DropDownColumnDefinition" Width="17" />
+                                    <ColumnDefinition x:Name="DropDownColumnDefinition" Width="auto" />
                                 </Grid.ColumnDefinitions>
                                 <Input:SfTextBoxExt
                                     x:Name="PART_TextBlock"
                                     Grid.Column="0"
-                                    Width="{TemplateBinding Width}"
-                                    Height="{TemplateBinding Height}"
                                     MinWidth="{TemplateBinding MinWidth}"
                                     MinHeight="{TemplateBinding MinHeight}"
                                     Margin="1,0"
@@ -126,8 +126,6 @@
                                 <Input:SfTextBoxExt
                                     x:Name="PART_TextBoxExt"
                                     Grid.Column="0"
-                                    Width="{TemplateBinding Width}"
-                                    Height="{TemplateBinding Height}"
                                     MinWidth="{TemplateBinding MinWidth}"
                                     MinHeight="{TemplateBinding MinHeight}"
                                     Margin="1,0"
@@ -159,12 +157,14 @@
                                     Grid.Column="1"
                                     Width="20"
                                     Padding="{TemplateBinding Padding}"
+                                    
                                     HorizontalAlignment="Stretch"
                                     VerticalAlignment="Stretch"
                                     Background="Transparent"
                                     IsTabStop="False"
                                     Style="{StaticResource SyncfusionSfDatePickerDropDownButtonStyle}"
-                                    Visibility="{Binding ShowDropDownButton, Converter={StaticResource BooleanVisibilityConverter}, RelativeSource={RelativeSource Mode=TemplatedParent}}" />
+                                    Visibility="{Binding ShowDropDownButton, Converter={StaticResource BooleanVisibilityConverter}, RelativeSource={RelativeSource Mode=TemplatedParent}}" >
+                                </RepeatButton>
                             </Grid>
                         </Border>
                         <Popup
@@ -175,10 +175,16 @@
                             SnapsToDevicePixels="True"
                             StaysOpen="False">
                             <Border
-                                Margin="8,0,8,10"
+                                Margin="8 0 8 10"
                                 BorderBrush="{StaticResource Border}"
                                 BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                 Effect="{StaticResource Default.ShadowDepth3}">
+                                <Border.CornerRadius>
+                                    <CornerRadius>0</CornerRadius>
+                                </Border.CornerRadius>
+                                <Border.RenderTransform>
+                                    <TranslateTransform/>
+                                </Border.RenderTransform>
                                 <Grid x:Name="PART_DatePickerPage" Height="{Binding DropDownHeight, RelativeSource={RelativeSource Mode=TemplatedParent}}">
                                     <Input:SfDateSelector
                                         x:Name="PART_DateSelector"
@@ -215,7 +221,7 @@
                             <Setter TargetName="PART_TextBlock" Property="Background" Value="Transparent" />
                         </Trigger>
                         <Trigger Property="IsFocused" Value="True">
-                            <Setter TargetName="PART_TextBlock" Property="Background" Value="{StaticResource PrimaryBackground}" />
+                            <Setter TargetName="PART_TextBlock" Property="Background" Value="{StaticResource PrimaryBackground}" /> 
                             <Setter TargetName="DatePickerBorder" Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
                             <Setter TargetName="PART_TextBlock" Property="Foreground" Value="{StaticResource ContentForeground}" />
                         </Trigger>

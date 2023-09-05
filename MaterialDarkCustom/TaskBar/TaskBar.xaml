@@ -14,6 +14,8 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ScrollViewer.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
+    <SolidColorBrush x:Key="TaskBarItem.Header.Selected.Border" Color="#E0E0E0" />
+
     <converters:SpeedToDurationConverter x:Key="SpeedToDurationConverter" />
     <converters:DoubleToNegativeDoubleConverter x:Key="DoubleToNegativeDoubleConverter" />
 
@@ -157,7 +159,7 @@
                             </MultiTrigger.Conditions>
                             <Setter TargetName="checkBorder" Property="Background" Value="{StaticResource ContentBackground}" />
                             <Setter TargetName="headerPanel" Property="Background" Value="{StaticResource ContentBackground}" />
-                            <Setter TargetName="checkBorder" Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter TargetName="checkBorder" Property="BorderBrush" Value="{StaticResource TaskBarItem.Header.Selected.Border}" />
                         </MultiTrigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="checkBorder" Property="Background" Value="{StaticResource ContentBackgroundDisabled}" />
@@ -364,10 +366,10 @@
                                                     Storyboard.TargetProperty="Opacity"
                                                     To="0">
                                                     <DoubleAnimation.Duration>
-                                                        <MultiBinding Converter="{StaticResource SpeedToDurationConverter}" ConverterParameter="Collapsed">
-                                                            <Binding Path="(local:TaskBar.Speed)" RelativeSource="{RelativeSource AncestorType={x:Type local:TaskBarItem}}" />
-                                                            <Binding ElementName="PanelPresenter" Path="SafeHeight" />
-                                                        </MultiBinding>
+                                                <MultiBinding Converter="{StaticResource SpeedToDurationConverter}" ConverterParameter="Collapsed">
+                                                    <Binding Path="(local:TaskBar.Speed)" RelativeSource="{RelativeSource AncestorType={x:Type local:TaskBarItem}}" />
+                                                    <Binding ElementName="PanelPresenter" Path="SafeHeight" />
+                                                </MultiBinding>
                                                     </DoubleAnimation.Duration>
                                                 </DoubleAnimation>
                                                 <DoubleAnimation
@@ -376,10 +378,10 @@
                                                     Storyboard.TargetProperty="(SafeHeight)"
                                                     To="0">
                                                     <DoubleAnimation.Duration>
-                                                        <MultiBinding Converter="{StaticResource SpeedToDurationConverter}" ConverterParameter="Collapsed">
-                                                            <Binding Path="(local:TaskBar.Speed)" RelativeSource="{RelativeSource AncestorType={x:Type local:TaskBarItem}}" />
-                                                            <Binding ElementName="PanelPresenter" Path="SafeHeight" />
-                                                        </MultiBinding>
+                                                <MultiBinding Converter="{StaticResource SpeedToDurationConverter}" ConverterParameter="Collapsed">
+                                                    <Binding Path="(local:TaskBar.Speed)" RelativeSource="{RelativeSource AncestorType={x:Type local:TaskBarItem}}" />
+                                                    <Binding ElementName="PanelPresenter" Path="SafeHeight" />
+                                                </MultiBinding>
                                                     </DoubleAnimation.Duration>
                                                 </DoubleAnimation>
                                                 <DoubleAnimation Storyboard.Target="{Binding ElementName=SimplePanel}" Storyboard.TargetProperty="(StackPanel.RenderTransform).(TranslateTransform.Y)">
@@ -390,10 +392,10 @@
                                                         </MultiBinding>
                                                     </DoubleAnimation.To>
                                                     <DoubleAnimation.Duration>
-                                                        <MultiBinding Converter="{StaticResource SpeedToDurationConverter}" ConverterParameter="Collapsed">
-                                                            <Binding Path="(local:TaskBar.Speed)" RelativeSource="{RelativeSource AncestorType={x:Type local:TaskBarItem}}" />
-                                                            <Binding ElementName="PanelPresenter" Path="SafeHeight" />
-                                                        </MultiBinding>
+                                                <MultiBinding Converter="{StaticResource SpeedToDurationConverter}" ConverterParameter="Collapsed">
+                                                    <Binding Path="(local:TaskBar.Speed)" RelativeSource="{RelativeSource AncestorType={x:Type local:TaskBarItem}}" />
+                                                    <Binding ElementName="PanelPresenter" Path="SafeHeight" />
+                                                </MultiBinding>
                                                     </DoubleAnimation.Duration>
                                                 </DoubleAnimation>
                                             </Storyboard>
@@ -419,7 +421,11 @@
         <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
         <Setter Property="HeaderStyle" Value="{StaticResource SyncfusionToggleButtonExtStyle}" />
         <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness1}" />
-        <Setter Property="GroupMargin" Value="4,4,4,0" />
+        <Setter Property="GroupMargin">
+            <Setter.Value>
+                <Thickness>4,4,4,0</Thickness>
+            </Setter.Value>
+        </Setter>
         <Setter Property="local:TaskBar.ButtonSize" Value="20" />
         <Setter Property="Template">
             <Setter.Value>
@@ -439,7 +445,7 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
-
+        
         <Style.Triggers>
             <Trigger Property="local:TaskBar.GroupOrientation" Value="Horizontal">
                 <Setter Property="ItemsPanel">
