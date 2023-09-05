@@ -14,8 +14,10 @@
     <Style  x:Key="SyncfusionSfTextInputLayoutStyle"
             TargetType="sync:SfTextInputLayout">
         <Setter Property="OutlineCornerRadius" Value="4"></Setter>
-        <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness}"></Setter>
-        <Setter Property="FocusedStrokeThickness" Value="{StaticResource MaterialDarkCustom.StrokeThickness2}"></Setter>
+        <Setter Property="BorderThickness"
+                Value="{StaticResource MaterialDarkCustom.BorderThickness}"></Setter>
+        <Setter Property="FocusedStrokeThickness"
+                Value="{StaticResource MaterialDarkCustom.StrokeThickness2}"></Setter>
         <Setter Property="FontSize"
                 Value="{StaticResource MaterialDarkCustom.CaptionText}"></Setter>
         <Setter Property="FontFamily"
@@ -154,6 +156,10 @@
                                     Value="Transparent"></Setter>
                             <Setter TargetName="Arrow" Property="Fill" 
                                     Value="{StaticResource BorderDark}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=Self},Path=IsKeyboardFocusWithin}" Value="True">
+                            <Setter Property="ContainerBackground"
+                                    Value="Transparent"></Setter>
                         </DataTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

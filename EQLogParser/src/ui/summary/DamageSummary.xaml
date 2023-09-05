@@ -83,7 +83,7 @@
         </Style>
       </syncfusion:SfTreeGrid.Resources>
       <syncfusion:SfTreeGrid.ContextMenu>
-        <ContextMenu>
+        <ContextMenu x:Name="rightClickMenu">
           <MenuItem IsEnabled="False" x:Name="copyDamageParseToEQClick" Header="Send Parse to EQ" Click="CopyToEQClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="copyDamageParseIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />

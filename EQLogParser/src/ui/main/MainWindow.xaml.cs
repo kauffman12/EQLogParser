@@ -327,6 +327,7 @@ namespace EQLogParser
     private void OpenSoundsFolderClick(object sender, RoutedEventArgs e) => Helpers.OpenFileWithDefault("\"" + @"data\sounds" + "\"");
     private void ReportProblemClick(object sender, RoutedEventArgs e) => Helpers.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
     private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => Helpers.OpenFileWithDefault(@"data\releasenotes.rtf");
+    private void TriggerVariablesHelpClick(object sender, RoutedEventArgs e) => Helpers.OpenFileWithDefault(@"data\triggerVariables.rtf");
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {

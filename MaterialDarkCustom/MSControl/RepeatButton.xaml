@@ -36,6 +36,7 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             Background="{TemplateBinding Background}"
                             SnapsToDevicePixels="true"
+                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                             >
                         <ContentPresenter x:Name="contentPresenter"
                                           Focusable="False"
@@ -52,11 +53,14 @@
                         <Trigger Property="Button.IsDefaulted" Value="true">
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                         </Trigger>
-                        <Trigger Property="IsFocused" Value="True">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsFocused" Value="True"/>
+                            </MultiTrigger.Conditions>
                             <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource SecondaryForeground}"/>
-                        </Trigger>
+                        </MultiTrigger>
                         <Trigger Property="IsMouseOver" Value="true">
                             <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>

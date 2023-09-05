@@ -28,7 +28,7 @@
     <grid:ScaleOptionsConverter x:Key="ScaleOptionsConverter" />
 
     <!--Print Preview-->
-
+    
     <Style TargetType="{x:Type grid:PrintOptionsControl}" x:Key="SyncfusionDataGridPrintOptionsControlStyle">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Template">
@@ -41,7 +41,7 @@
                                       Style="{StaticResource WPFScrollViewerStyle}">
                             <Grid Width="260" HorizontalAlignment="Center">
                                 <StackPanel>
-                                    <StackPanel Margin="0,10" Orientation="Horizontal">
+                                    <StackPanel Margin="0,10"  Orientation="Horizontal">
                                         <Border Margin="0,0,10,0" BorderThickness="1" BorderBrush="{StaticResource Border}" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
                                             <Button x:Name="PartPrintButton"
                                                 Height="85"
@@ -49,27 +49,26 @@
                                                 Command="{Binding PrintCommand}"
                                                 Style="{StaticResource WPFFlatButtonStyle}" 
                                                 Tag="Print" >
-                                                <Grid
-                                        SnapsToDevicePixels="True">
+                                                <Grid SnapsToDevicePixels="True">
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition />
                                                         <RowDefinition />
                                                     </Grid.RowDefinitions>
                                                     <Path HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" 
-                                              Width="31" 
-                                              Height="31"
-                                              Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
-                                              Data="M9.9999905,14.857998 L19.000016,14.857998 19.000016,15.972014 9.9999905,15.972014 z M9.9999905,12.437018 L19.000016,12.437018 19.000016,13.550991 9.9999905,13.550991 z M9.9999905,10.017001 L19.000016,10.017001 19.000016,11.131018 9.9999905,11.131018 z M9.2579598,6.1825708 L9.2579598,17.554331 19.7432,17.554331 19.7432,6.1825708 z M6.3470017,0 L22.654003,0 22.654003,1.6660135 29,1.6660135 29,12.582828 21.52844,12.582828 21.52844,19.000006 7.4738797,19.000006 7.4738797,12.582828 0,12.582828 0,1.6660135 6.3470017,1.6660135 z"
-                                              Stretch="Fill" 
-                                              SnapsToDevicePixels="True"
-                                              Margin="24.1, 2, 24.1, 8"/>
+                                                          VerticalAlignment="Center" 
+                                                          Width="31" 
+                                                          Height="31"
+                                                          Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
+                                                          Data="M9.9999905,14.857998 L19.000016,14.857998 19.000016,15.972014 9.9999905,15.972014 z M9.9999905,12.437018 L19.000016,12.437018 19.000016,13.550991 9.9999905,13.550991 z M9.9999905,10.017001 L19.000016,10.017001 19.000016,11.131018 9.9999905,11.131018 z M9.2579598,6.1825708 L9.2579598,17.554331 19.7432,17.554331 19.7432,6.1825708 z M6.3470017,0 L22.654003,0 22.654003,1.6660135 29,1.6660135 29,12.582828 21.52844,12.582828 21.52844,19.000006 7.4738797,19.000006 7.4738797,12.582828 0,12.582828 0,1.6660135 6.3470017,1.6660135 z"
+                                                          Stretch="Fill" 
+                                                          SnapsToDevicePixels="True"
+                                                          Margin="24.1, 2, 24.1, 8"/>
                                                     <TextBlock Grid.Row="1"
-                                                   HorizontalAlignment="Center" 
-                                                   VerticalAlignment="Center"
-                                                   SnapsToDevicePixels="True"
-                                                   Style="{StaticResource WPFTextBlockStyle}"
-                                                   Text ="{grid:GridLocalizationResourceExtension ResourceName=Print}" />
+                                                           HorizontalAlignment="Center" 
+                                                           VerticalAlignment="Center"
+                                                           SnapsToDevicePixels="True"
+                                                           Style="{StaticResource WPFTextBlockStyle}"
+                                                           Text ="{grid:GridLocalizationResourceExtension ResourceName=Print}" />
                                                 </Grid>
                                             </Button>
                                         </Border>
@@ -80,34 +79,34 @@
                                                 Command="{Binding QuickPrintCommand}"
                                                 Style="{StaticResource WPFFlatPrimaryButtonStyle}"
                                                 Tag="QuickPrint">
-                                                <Grid
-                                        SnapsToDevicePixels="True">
+                                                <Grid SnapsToDevicePixels="True">
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition />
                                                         <RowDefinition />
                                                     </Grid.RowDefinitions>
                                                     <Path HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" 
-                                              Width="31" 
-                                              Height="31"
-                                              Data="M6.0000002,20.252001 L26,20.252001 26,30.252001 6.0000002,30.252001 z M0,11.25201 L3.9999995,11.25201 3.9999995,14.252005 21.847998,14.252005 C22.848997,15.252003 23.994997,14.947003 25.142998,14.947003 25.281998,14.947003 25.471996,14.996003 25.610996,14.989003 27.878996,14.879004 30.067997,13.892005 31.593996,12.211009 31.666996,12.131009 31.999996,12.044009 31.999996,11.961009 L31.999996,23.250987 27.999996,23.250987 27.999996,18.251997 3.9999995,18.251997 3.9999995,23.250987 0,23.250987 z M5.9999998,9.2519989 L17.091001,9.2519989 C17.494,10.251999 18.136001,11.251999 18.946001,12.251999 L5.9999998,12.251999 z M28.929127,2.9638805 L23.566946,8.3260565 21.268869,6.0279808 20.502844,6.7940054 23.566946,9.8581066 29.695152,3.7299042 z M25.118446,1.5258789E-05 C28.556807,0.007396698 31.422647,2.7109337 31.591215,6.1849861 31.765221,9.7701035 29.000128,12.818204 25.414009,12.992209 21.828889,13.166215 18.780787,10.401124 18.606781,6.8150063 18.432775,3.2298889 21.197867,0.1817894 24.783987,0.0077819824 24.896023,0.0023441315 25.007532,-0.00022315979 25.118446,1.5258789E-05 z"
-                                              Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
-                                              Stretch="Fill" 
-                                              SnapsToDevicePixels="True"
-                                              Margin="24.1, 2, 24.1, 8"/>
+                                                          VerticalAlignment="Center" 
+                                                          Width="31" 
+                                                          Height="31"
+                                                          Data="M6.0000002,20.252001 L26,20.252001 26,30.252001 6.0000002,30.252001 z M0,11.25201 L3.9999995,11.25201 3.9999995,14.252005 21.847998,14.252005 C22.848997,15.252003 23.994997,14.947003 25.142998,14.947003 25.281998,14.947003 25.471996,14.996003 25.610996,14.989003 27.878996,14.879004 30.067997,13.892005 31.593996,12.211009 31.666996,12.131009 31.999996,12.044009 31.999996,11.961009 L31.999996,23.250987 27.999996,23.250987 27.999996,18.251997 3.9999995,18.251997 3.9999995,23.250987 0,23.250987 z M5.9999998,9.2519989 L17.091001,9.2519989 C17.494,10.251999 18.136001,11.251999 18.946001,12.251999 L5.9999998,12.251999 z M28.929127,2.9638805 L23.566946,8.3260565 21.268869,6.0279808 20.502844,6.7940054 23.566946,9.8581066 29.695152,3.7299042 z M25.118446,1.5258789E-05 C28.556807,0.007396698 31.422647,2.7109337 31.591215,6.1849861 31.765221,9.7701035 29.000128,12.818204 25.414009,12.992209 21.828889,13.166215 18.780787,10.401124 18.606781,6.8150063 18.432775,3.2298889 21.197867,0.1817894 24.783987,0.0077819824 24.896023,0.0023441315 25.007532,-0.00022315979 25.118446,1.5258789E-05 z"
+                                                          Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
+                                                          Stretch="Fill" 
+                                                          SnapsToDevicePixels="True"
+                                                          Margin="24.1, 2, 24.1, 8"/>
                                                     <TextBlock Grid.Row="1"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center"
-                                                   SnapsToDevicePixels="True"
-                                                   Style="{StaticResource WPFTextBlockStyle}"
-                                                   Text ="{grid:GridLocalizationResourceExtension ResourceName=QuickPrint}" />
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           SnapsToDevicePixels="True"
+                                                           Style="{StaticResource WPFTextBlockStyle}"
+                                                           Text ="{grid:GridLocalizationResourceExtension ResourceName=QuickPrint}" />
                                                 </Grid>
                                             </Button>
                                         </Border>
                                     </StackPanel>
                                     <ComboBox x:Name="ScaleOptionCmbBox"
                                               Height="55"
-                                              Margin="0,8"
+                                              
+                                              Margin="0 8"
                                               Style="{StaticResource WPFComboBoxStyle}"
                                               SelectedIndex="{Binding PrintScaleOption,
                                                                       Mode=TwoWay,
@@ -121,11 +120,14 @@
                                                     </Grid.ColumnDefinitions>
                                                     <Path x:Name="no_scaling"
                                                           Height="30"
+                                                          
                                                           Margin="8,10,10,10"
-                                                          Data="M27.511008,29.399002 C26.603007,29.399002 26.149007,30.321003 26.149007,32.165003 26.149007,33.885004 26.594007,34.744002 27.485008,34.744002 28.36401,34.744002 28.80301,33.868002 28.80301,32.116003 28.80301,30.304003 28.372009,29.399002 27.511008,29.399002 z M22.609999,29.399002 C21.701998,29.399002 21.247998,30.321003 21.247998,32.165003 21.247998,33.885004 21.692998,34.744002 22.583999,34.744002 23.463,34.744002 23.902,33.868002 23.902,32.116003 23.902,30.304003 23.471,29.399002 22.609999,29.399002 z M27.547009,28.782002 C28.88101,28.782002 29.54901,29.870003 29.54901,32.045004 29.54901,32.578001 29.501011,33.050001 29.40501,33.461004 29.309011,33.873003 29.16901,34.220003 28.98801,34.502001 28.80501,34.785002 28.582009,35.000002 28.317009,35.146002 28.052009,35.293001 27.751009,35.366003 27.413009,35.366003 27.094008,35.366003 26.809008,35.296003 26.559008,35.155001 26.309008,35.014002 26.098007,34.809004 25.926007,34.540003 25.755007,34.270003 25.624007,33.940004 &#10;25.535007,33.548002 25.447006,33.156004 25.403007,32.707003 25.403007,32.200003 25.403007,31.644003 25.449007,31.153002 25.542006,30.726002 25.636006,30.301003 25.773007,29.943003 25.953007,29.654003 26.133007,29.366003 26.358007,29.148003 26.625008,29.002003 26.894008,28.855002 27.200008,28.782002 27.547009,28.782002 z M22.645999,28.782002 C23.98,28.782002 24.648001,29.870003 24.648001,32.045004 24.648001,32.578001 24.600001,33.050001 24.504001,33.461004 24.408001,33.873003 24.268001,34.220003 24.087001,34.502001 23.904,34.785002 23.681,35.000002 23.416,35.146002 23.151,35.293001 22.849999,35.366003 22.511999,35.366003 22.192999,35.366003 21.907999,35.296003 21.657998,35.155001 21.407998,35.014002 21.196998,34.809004 21.024998,34.540003 20.853998,34.270003 20.722998,33.940004 &#10;20.633997,33.548002 20.545997,33.156004 20.501997,32.707003 20.501997,32.200003 20.501997,31.644003 20.547997,31.153002 20.640998,30.726002 20.734997,30.301003 20.871997,29.943003 21.051998,29.654003 21.231998,29.366003 21.456998,29.148003 21.723999,29.002003 21.992999,28.855002 22.298999,28.782002 22.645999,28.782002 z M18.157994,28.747011 L18.432991,28.747011 18.432991,34.708998 19.295,34.708998 19.295,35.255007 16.747997,35.255007 16.747997,34.708998 17.704999,34.708998 17.704999,29.755009 C17.649,29.811009 17.567001,29.87501 17.458002,29.947008 17.351004,30.02101 17.230005,30.092009 17.095007,30.16301 16.960009,30.234009 16.81801,30.301008 16.668012,30.362009 16.519014,30.425009 16.373016,30.474009 16.231017,30.509009 L16.231017,29.77301 C16.391015,29.72801 16.561013,29.668009 16.740011,29.59301 16.918009,29.51701 17.095007,29.43301 17.268005,29.34001 17.441003,29.24601 17.605001,29.14901 17.757999,29.047011 17.911997,28.944012 18.044996,28.845011 18.157994,28.747011 z M9.85501,20.010004 L9.8700104,22.116005 12.012013,22.116005 z M0.91900063,19.480005 L0.91900063,34.444006 12.673013,34.424006 12.673013,22.804005 9.2150097,22.804005 9.2150097,19.480005 z M0,18.667004 L9.3360095,18.667004 13.554014,22.824005 13.554014,35.237005 0,35.255007 z M9.85501,1.3430113 L9.8700104,3.4490093 12.012013,3.4490093 z M25.854989,1.3430018 L25.870004,3.4490027 28.012005,3.4490027 z M0.91900063,0.81301185 L0.91900063,15.777 12.673013,15.757 12.673013,4.1370088 9.2150097,4.1370088 9.2150097,0.81301185 z M16.919006,0.81300339 L16.919006,15.776996 28.673016,15.756992 28.673016,4.1370055 25.215004,4.1370055 25.215004,0.81300339 z M0,1.2120874E-05 L9.3360095,1.2120874E-05 13.554014,4.1570088 13.554014,16.57 0,16.587999 z M15.999998,0 L25.336007,0 29.553998,4.1570097 29.553998,16.569994 15.999998,16.587999 z"
                                                           Fill="{StaticResource IconColor}"
-                                                          Stretch="Fill" />
-
+                                                          Stretch="Fill" >
+                                                        <Path.Data>
+                                                            <PathGeometry>M27.511008,29.399002 C26.603007,29.399002 26.149007,30.321003 26.149007,32.165003 26.149007,33.885004 26.594007,34.744002 27.485008,34.744002 28.36401,34.744002 28.80301,33.868002 28.80301,32.116003 28.80301,30.304003 28.372009,29.399002 27.511008,29.399002 z M22.609999,29.399002 C21.701998,29.399002 21.247998,30.321003 21.247998,32.165003 21.247998,33.885004 21.692998,34.744002 22.583999,34.744002 23.463,34.744002 23.902,33.868002 23.902,32.116003 23.902,30.304003 23.471,29.399002 22.609999,29.399002 z M27.547009,28.782002 C28.88101,28.782002 29.54901,29.870003 29.54901,32.045004 29.54901,32.578001 29.501011,33.050001 29.40501,33.461004 29.309011,33.873003 29.16901,34.220003 28.98801,34.502001 28.80501,34.785002 28.582009,35.000002 28.317009,35.146002 28.052009,35.293001 27.751009,35.366003 27.413009,35.366003 27.094008,35.366003 26.809008,35.296003 26.559008,35.155001 26.309008,35.014002 26.098007,34.809004 25.926007,34.540003 25.755007,34.270003 25.624007,33.940004 &#10;25.535007,33.548002 25.447006,33.156004 25.403007,32.707003 25.403007,32.200003 25.403007,31.644003 25.449007,31.153002 25.542006,30.726002 25.636006,30.301003 25.773007,29.943003 25.953007,29.654003 26.133007,29.366003 26.358007,29.148003 26.625008,29.002003 26.894008,28.855002 27.200008,28.782002 27.547009,28.782002 z M22.645999,28.782002 C23.98,28.782002 24.648001,29.870003 24.648001,32.045004 24.648001,32.578001 24.600001,33.050001 24.504001,33.461004 24.408001,33.873003 24.268001,34.220003 24.087001,34.502001 23.904,34.785002 23.681,35.000002 23.416,35.146002 23.151,35.293001 22.849999,35.366003 22.511999,35.366003 22.192999,35.366003 21.907999,35.296003 21.657998,35.155001 21.407998,35.014002 21.196998,34.809004 21.024998,34.540003 20.853998,34.270003 20.722998,33.940004 &#10;20.633997,33.548002 20.545997,33.156004 20.501997,32.707003 20.501997,32.200003 20.501997,31.644003 20.547997,31.153002 20.640998,30.726002 20.734997,30.301003 20.871997,29.943003 21.051998,29.654003 21.231998,29.366003 21.456998,29.148003 21.723999,29.002003 21.992999,28.855002 22.298999,28.782002 22.645999,28.782002 z M18.157994,28.747011 L18.432991,28.747011 18.432991,34.708998 19.295,34.708998 19.295,35.255007 16.747997,35.255007 16.747997,34.708998 17.704999,34.708998 17.704999,29.755009 C17.649,29.811009 17.567001,29.87501 17.458002,29.947008 17.351004,30.02101 17.230005,30.092009 17.095007,30.16301 16.960009,30.234009 16.81801,30.301008 16.668012,30.362009 16.519014,30.425009 16.373016,30.474009 16.231017,30.509009 L16.231017,29.77301 C16.391015,29.72801 16.561013,29.668009 16.740011,29.59301 16.918009,29.51701 17.095007,29.43301 17.268005,29.34001 17.441003,29.24601 17.605001,29.14901 17.757999,29.047011 17.911997,28.944012 18.044996,28.845011 18.157994,28.747011 z M9.85501,20.010004 L9.8700104,22.116005 12.012013,22.116005 z M0.91900063,19.480005 L0.91900063,34.444006 12.673013,34.424006 12.673013,22.804005 9.2150097,22.804005 9.2150097,19.480005 z M0,18.667004 L9.3360095,18.667004 13.554014,22.824005 13.554014,35.237005 0,35.255007 z M9.85501,1.3430113 L9.8700104,3.4490093 12.012013,3.4490093 z M25.854989,1.3430018 L25.870004,3.4490027 28.012005,3.4490027 z M0.91900063,0.81301185 L0.91900063,15.777 12.673013,15.757 12.673013,4.1370088 9.2150097,4.1370088 9.2150097,0.81301185 z M16.919006,0.81300339 L16.919006,15.776996 28.673016,15.756992 28.673016,4.1370055 25.215004,4.1370055 25.215004,0.81300339 z M0,1.2120874E-05 L9.3360095,1.2120874E-05 13.554014,4.1570088 13.554014,16.57 0,16.587999 z M15.999998,0 L25.336007,0 29.553998,4.1570097 29.553998,16.569994 15.999998,16.587999 z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
                                                     <TextBlock Grid.Column="1"
                                                                HorizontalAlignment="Left"
                                                                VerticalAlignment="Center"
@@ -141,9 +143,7 @@
                                                         <ColumnDefinition Width="2*" />
                                                         <ColumnDefinition Width="8*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <Grid x:Name="fit_sheet"
-                                                          Height="30"
-                                                          Margin="8,10,8,10">
+                                                    <Grid x:Name="fit_sheet" Height="30" Margin="8,10,8,10">
                                                         <Path Margin="8.791,8.378,8.702,8.785"
                                                               Data="F1M424.2842,281.0459L412.5302,281.0659L412.5302,266.1019L420.8262,266.1019L420.8262,269.4259L424.2842,269.4259z M423.6232,268.7379L421.4812,268.7379L421.4662,266.6319z M420.9472,265.2889L411.6112,265.2889L411.6112,281.8769L425.1652,281.8589L425.1652,269.4459z"
                                                               Fill="{StaticResource IconColor}"
@@ -152,7 +152,6 @@
                                                               Fill="{StaticResource IconColor}"
                                                               Stretch="Fill" />
                                                     </Grid>
-
                                                     <TextBlock Grid.Column="1"
                                                                HorizontalAlignment="Left"
                                                                VerticalAlignment="Center"
@@ -169,8 +168,8 @@
                                                         <ColumnDefinition Width="8*" />
                                                     </Grid.ColumnDefinitions>
                                                     <Grid x:Name="fit_width"
-                                                          Height="30"
-                                                          Margin="8,10,9,10">
+                                                         Height="30"
+                                                         Margin="8,10,9,10">
                                                         <Path Height="6.898"
                                                               Margin="0,4.512,0,0"
                                                               VerticalAlignment="Top"
@@ -211,8 +210,7 @@
                                                               Fill="{StaticResource IconColor}"
                                                               Stretch="Fill" />
                                                     </Grid>
-
-                                                    <TextBlock Grid.Column="1" Padding="6,0,0,0"
+                                                    <TextBlock Grid.Column="1" Padding="6 0 0 0"
                                                                HorizontalAlignment="Left"
                                                                VerticalAlignment="Center"
                                                                Style="{StaticResource WPFTextBlockStyle}"
@@ -223,7 +221,8 @@
                                     </ComboBox>
                                     <ComboBox x:Name="PART_OrientationComboBox"
                                               Height="55"
-                                              Margin="0,8"
+                                              
+                                              Margin="0 8"
                                               Style="{StaticResource WPFComboBoxStyle}"
                                               SelectedIndex="{Binding PrintOrientation,
                                                                       Mode=TwoWay,
@@ -237,11 +236,16 @@
                                                         <ColumnDefinition Width="8*" />
                                                     </Grid.ColumnDefinitions>
                                                     <Path Height="30"
+                                                          
                                                           Margin="8,10,10,10"
-                                                          Data="F1M488.7754,206.377L467.4064,206.377L467.4064,178.021L480.7794,178.021L480.7794,185.259L488.7754,185.259z M480.8944,177.198L466.5844,177.198L466.5844,207.198L489.5974,207.198L489.5974,185.259z"
                                                           Fill="{StaticResource IconColor}"
                                                           RenderTransformOrigin="0.5,0.5"
-                                                          Stretch="Uniform" />
+                                                          Stretch="Uniform" >
+                                                        <Path.Data>
+                                                            <PathGeometry>F1M488.7754,206.377L467.4064,206.377L467.4064,178.021L480.7794,178.021L480.7794,185.259L488.7754,185.259z M480.8944,177.198L466.5844,177.198L466.5844,207.198L489.5974,207.198L489.5974,185.259z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
+
                                                     <TextBlock Grid.Column="1"
                                                                HorizontalAlignment="Left"
                                                                VerticalAlignment="Center"
@@ -258,11 +262,15 @@
                                                         <ColumnDefinition Width="8*" />
                                                     </Grid.ColumnDefinitions>
                                                     <Path Height="30"
-                                                          Margin="8,10,10,10"
-                                                          Data="F1M446.8555,202.6284L416.0295,202.6674L416.0295,181.7324L439.2835,181.7324L439.2835,189.2634L446.8555,189.2634z M439.9045,180.6904L415.1325,180.6904L415.1325,203.7054L448.2355,203.6684L448.2355,188.9014z"
+                                                          
+                                                          Margin="8 10 10 10"
                                                           Fill="{StaticResource IconColor}"
                                                           RenderTransformOrigin="0.5,0.5"
-                                                          Stretch="Uniform" />
+                                                          Stretch="Uniform" >
+                                                        <Path.Data>
+                                                            <PathGeometry>F1M446.8555,202.6284L416.0295,202.6674L416.0295,181.7324L439.2835,181.7324L439.2835,189.2634L446.8555,189.2634z M439.9045,180.6904L415.1325,180.6904L415.1325,203.7054L448.2355,203.6684L448.2355,188.9014z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
                                                     <TextBlock Grid.Column="1"
                                                                HorizontalAlignment="Left"
                                                                VerticalAlignment="Center"
@@ -274,7 +282,8 @@
                                     </ComboBox>
                                     <ComboBox x:Name="PART_PapersComboBox"
                                               Height="55"
-                                              Margin="0,8"
+                                              
+                                              Margin="0 8"
                                               Style="{StaticResource WPFComboBoxStyle}"
                                               SelectedIndex="3">
                                         <ComboBoxItem Tag="Letter" Style="{StaticResource WPFComboBoxItemStyle}">
@@ -292,7 +301,7 @@
                                                           VerticalAlignment="Top"
                                                           Margin="8,10,10,10"
                                                           Stretch="Fill" />
-                                                    <Grid Grid.Column="1">
+                                                    <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
                                                             <RowDefinition />
@@ -304,6 +313,8 @@
                                                         <TextBlock Grid.Row="1"
                                                                    HorizontalAlignment="Left"
                                                                    VerticalAlignment="Center"
+                                                                   
+                                                                   
                                                                    Style="{StaticResource WPFTextBlockStyle}"
                                                                    Text="21.59 cm * 27.94 cm" />
                                                     </Grid>
@@ -323,7 +334,7 @@
                                                           Margin="8,10,10,10"
                                                           Height="32"
                                                           Width="19"/>
-                                                    <Grid Grid.Column="1">
+                                                    <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
                                                             <RowDefinition />
@@ -335,6 +346,8 @@
                                                         <TextBlock Grid.Row="1"
                                                                    HorizontalAlignment="Left"
                                                                    VerticalAlignment="Center"
+                                                                   
+                                                                   
                                                                    Style="{StaticResource WPFTextBlockStyle}"
                                                                    Text="21.59 cm * 35.56 cm" />
                                                     </Grid>
@@ -356,7 +369,7 @@
                                                           Height="25"
                                                           Margin="8,10,10,10"
                                                           Stretch="Fill" />
-                                                    <Grid Grid.Column="1">
+                                                    <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
                                                             <RowDefinition />
@@ -368,6 +381,8 @@
                                                         <TextBlock Grid.Row="1"
                                                                    HorizontalAlignment="Left"
                                                                    VerticalAlignment="Center"
+                                                                   
+                                                                   
                                                                    Style="{StaticResource WPFTextBlockStyle}"
                                                                    Text="18.41 cm * 26.67 cm" />
                                                     </Grid>
@@ -389,7 +404,7 @@
                                                           Margin="8,10,10,10"
                                                           HorizontalAlignment="Left"
                                                           VerticalAlignment="Top"/>
-                                                    <Grid Grid.Column="1">
+                                                    <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
                                                             <RowDefinition />
@@ -401,6 +416,8 @@
                                                         <TextBlock Grid.Row="1"
                                                                    HorizontalAlignment="Left"
                                                                    VerticalAlignment="Center"
+                                                                   
+                                                                   
                                                                    Style="{StaticResource WPFTextBlockStyle}"
                                                                    Text="21 cm * 29.7 cm" />
                                                     </Grid>
@@ -419,10 +436,10 @@
                                                           Stretch="Fill"
                                                           Width="11"
                                                           Height="23"
-                                                          Margin="8,10,15,10"
+                                                          Margin="8 10 15 10"
                                                           HorizontalAlignment="Left"
                                                           VerticalAlignment="Top"/>
-                                                    <Grid Grid.Column="1">
+                                                    <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
                                                             <RowDefinition />
@@ -435,6 +452,8 @@
                                                                    HorizontalAlignment="Left"
                                                                    VerticalAlignment="Center"
                                                                    Style="{StaticResource WPFTextBlockStyle}"
+                                                                   
+                                                                   
                                                                    Text="10.48 cm * 24.13 cm" />
                                                     </Grid>
                                                 </Grid>
@@ -452,10 +471,10 @@
                                                           Stretch="Fill"
                                                           Width="12"
                                                           Height="21"
-                                                          Margin="8,10,12,10"
+                                                          Margin="8 10 12 10"
                                                           HorizontalAlignment="Left"
                                                           VerticalAlignment="Top"/>
-                                                    <Grid Grid.Column="1">
+                                                    <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
                                                             <RowDefinition />
@@ -467,6 +486,8 @@
                                                         <TextBlock Grid.Row="1"
                                                                    HorizontalAlignment="Left"
                                                                    VerticalAlignment="Center"
+                                                                   
+                                                                   
                                                                    Style="{StaticResource WPFTextBlockStyle}"
                                                                    Text="11 cm * 22 cm" />
                                                     </Grid>
@@ -488,7 +509,7 @@
                                                           Margin="8,10,10,10"
                                                           HorizontalAlignment="Left"
                                                           VerticalAlignment="Top"/>
-                                                    <Grid Grid.Column="1">
+                                                    <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
                                                             <RowDefinition />
@@ -500,6 +521,8 @@
                                                         <TextBlock Grid.Row="1"
                                                                    HorizontalAlignment="Left"
                                                                    VerticalAlignment="Center"
+                                                                   
+                                                                   
                                                                    Style="{StaticResource WPFTextBlockStyle}"
                                                                    Text="16.2 cm * 22.9 cm" />
                                                     </Grid>
@@ -521,7 +544,7 @@
                                                           Margin="8,10,10,10"
                                                           HorizontalAlignment="Left"
                                                           VerticalAlignment="Top"/>
-                                                    <Grid Grid.Column="1">
+                                                    <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
                                                             <RowDefinition />
@@ -533,6 +556,8 @@
                                                         <TextBlock Grid.Row="1"
                                                                    HorizontalAlignment="Left"
                                                                    VerticalAlignment="Center"
+                                                                   
+                                                                   
                                                                    Style="{StaticResource WPFTextBlockStyle}"
                                                                    Text="17.6 cm * 25 cm" />
                                                     </Grid>
@@ -551,10 +576,10 @@
                                                           Stretch="Fill"
                                                           Width="11"
                                                           Height="19"
-                                                          Margin="8,10,14,10"
+                                                          Margin="8 10 14 10"
                                                           HorizontalAlignment="Center"
                                                           VerticalAlignment="Center"/>
-                                                    <Grid Grid.Column="1">
+                                                    <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
                                                             <RowDefinition />
@@ -564,6 +589,8 @@
                                                                    Style="{StaticResource WPFTextBlockStyle}"
                                                                    Text="Envelope Monarch" />
                                                         <TextBlock Grid.Row="1"
+                                                                   
+                                                                   
                                                                    HorizontalAlignment="Left"
                                                                    VerticalAlignment="Center"
                                                                    Style="{StaticResource WPFTextBlockStyle}"
@@ -587,8 +614,8 @@
                                                           Data="F1M355.128,227.697L376.944,227.697L376.944,198.697L355.128,198.697z M377.945,228.697L354.129,228.697L354.129,197.697L377.945,197.697z"
                                                           Fill="{StaticResource IconColor}"
                                                           Stretch="Fill" />
-                                                    <Grid Grid.Column="1">
-                                                        <TextBlock HorizontalAlignment="Left"
+                                                    <Grid Grid.Column="1" >
+                                                        <TextBlock HorizontalAlignment="Left"                                                                   
                                                                    VerticalAlignment="Center"
                                                                    Style="{StaticResource WPFTextBlockStyle}"
                                                                    Text="{grid:GridLocalizationResourceExtension ResourceName=CustomSize}" />
@@ -598,13 +625,21 @@
                                         </ComboBoxItem>
                                     </ComboBox>
                                     <TextBlock Margin="0,4" 
+                                               
+                                               
+                                               
                                                Style="{StaticResource WPFTextBlockStyle}" 
                                                Text="{grid:GridLocalizationResourceExtension ResourceName=CustomPageSizes}" />
-                                    <Border Margin="0,0,0,10"
+                                    <Border x:Name="PART_CustomPageSizeBorder"
+                                            Margin="0,0,0,10"
+                                            
+                                            
                                             BorderThickness="1"
+                                            
+                                            Background="Transparent"
                                             BorderBrush="{StaticResource Border}"
                                             SnapsToDevicePixels="True">
-                                        <Grid Margin="5">
+                                        <Grid x:Name="PART_CustomPageSizeGrid" Margin="5">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="35" />
                                                 <RowDefinition Height="*" />
@@ -613,7 +648,8 @@
                                                 <ColumnDefinition />
                                                 <ColumnDefinition />
                                             </Grid.ColumnDefinitions>
-                                            <StackPanel Margin="3,8,3,3"
+                                            <StackPanel x:Name="PART_PageWidthUpDownPanel"
+                                                        Margin="3 8 3 3"
                                                         HorizontalAlignment="Center"
                                                         VerticalAlignment="Center"
                                                         Orientation="Horizontal"
@@ -622,6 +658,8 @@
                                                            VerticalAlignment="Center"
                                                            IsHitTestVisible="False"
                                                            SnapsToDevicePixels="True"
+                                                           
+                                                           
                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Width}" />
                                                 <shared:UpDown x:Name="PART_PageWidthUpDown"
@@ -635,8 +673,9 @@
                                                                MinValue="1"
                                                                Value="21" />
                                             </StackPanel>
-                                            <StackPanel Grid.Column="1"
-                                                        Margin="3,8,3,3"
+                                            <StackPanel x:Name="PART_PageHeightUpDownPanel"
+                                                        Grid.Column="1"
+                                                        Margin="3 8 3 3"
                                                         HorizontalAlignment="Right"
                                                         VerticalAlignment="Center"
                                                         Orientation="Horizontal"
@@ -644,6 +683,8 @@
                                                 <TextBlock HorizontalAlignment="Right"
                                                            VerticalAlignment="Center"
                                                            IsHitTestVisible="False"
+                                                           
+                                                           
                                                            SnapsToDevicePixels="True"
                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Height}" />
@@ -663,13 +704,14 @@
                                                     HorizontalAlignment="Right"
                                                     Width="70"
                                                     Height="25"
-                                                    Margin="0,16,0,8"
+                                                    Margin="0 16 0 8"
                                                     Content="{grid:GridLocalizationResourceExtension ResourceName=OK}"
                                                     SnapsToDevicePixels="True"
                                                     Style="{StaticResource WPFFlatPrimaryButtonStyle}" />
                                         </Grid>
                                     </Border>
                                     <ComboBox x:Name="PART_MarginComboBox"
+                                              
                                               Height="55"
                                               Margin="0,8"
                                               Style="{StaticResource WPFComboBoxStyle}"
@@ -711,15 +753,20 @@
                                                             </Grid.RowDefinitions>
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition />
+                                                                <ColumnDefinition Width="0"/>
                                                                 <ColumnDefinition />
                                                             </Grid.ColumnDefinitions>
                                                             <StackPanel Orientation="Horizontal" Margin="6">
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Left}" />
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text=" 2.5 cm" />
                                                             </StackPanel>
@@ -728,19 +775,27 @@
                                                                         Orientation="Horizontal">
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Right}" />
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text=" 2.5 cm" />
                                                             </StackPanel>
                                                             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="6">
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Top}" />
                                                                 <TextBlock HorizontalAlignment="Left"
+                                                                           
+                                                                           
                                                                            VerticalAlignment="Top"
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text=" 2.5 cm" />
@@ -751,10 +806,14 @@
                                                                         Orientation="Horizontal">
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Bottom}" />
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text=" 2.5 cm" />
                                                             </StackPanel>
@@ -799,15 +858,20 @@
                                                             </Grid.RowDefinitions>
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition />
+                                                                <ColumnDefinition Width="0"/>
                                                                 <ColumnDefinition />
                                                             </Grid.ColumnDefinitions>
                                                             <StackPanel Orientation="Horizontal" Margin="6">
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Left}" />
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text=" 1.27cm" />
                                                             </StackPanel>
@@ -816,20 +880,28 @@
                                                                         Orientation="Horizontal">
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Right}" />
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text=" 1.27cm" />
                                                             </StackPanel>
                                                             <StackPanel Margin="6" Grid.Row="1" Orientation="Horizontal">
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Top}" />
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text=" 1.27cm" />
                                                             </StackPanel>
@@ -839,10 +911,14 @@
                                                                         Orientation="Horizontal">
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Bottom}" />
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text=" 1.27cm" />
                                                             </StackPanel>
@@ -887,14 +963,19 @@
                                                             </Grid.RowDefinitions>
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition />
+                                                                <ColumnDefinition Width="0"/>
                                                                 <ColumnDefinition />
                                                             </Grid.ColumnDefinitions>
                                                             <StackPanel Orientation="Horizontal" Margin="6">
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Left}" />
                                                                 <TextBlock HorizontalAlignment="Left"
+                                                                           
+                                                                           
                                                                            VerticalAlignment="Top"
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text=" 1.91cm" />
@@ -904,20 +985,28 @@
                                                                         Orientation="Horizontal">
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Right}" />
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text=" 1.91cm" />
                                                             </StackPanel>
                                                             <StackPanel Grid.Row="1" Margin="6" Orientation="Horizontal">
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Top}" />
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text=" 2.54cm" />
                                                             </StackPanel>
@@ -927,10 +1016,14 @@
                                                                         Orientation="Horizontal">
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Bottom}" />
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text=" 2.54cm" />
                                                             </StackPanel>
@@ -975,15 +1068,20 @@
                                                             </Grid.RowDefinitions>
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition />
+                                                                <ColumnDefinition Width="0"/>
                                                                 <ColumnDefinition />
                                                             </Grid.ColumnDefinitions>
                                                             <StackPanel Orientation="Horizontal" Margin="6">
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Left}" />
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text=" 5.08cm" />
                                                             </StackPanel>
@@ -992,20 +1090,28 @@
                                                                         Orientation="Horizontal">
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Right}" />
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text=" 5.08cm" />
                                                             </StackPanel>
                                                             <StackPanel Grid.Row="1" Margin="6" Orientation="Horizontal">
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Top}" />
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text=" 2.54cm" />
                                                             </StackPanel>
@@ -1015,10 +1121,14 @@
                                                                         Orientation="Horizontal">
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Bottom}" />
                                                                 <TextBlock HorizontalAlignment="Left"
                                                                            VerticalAlignment="Top"
+                                                                           
+                                                                           
                                                                            Style="{StaticResource WPFTextBlockStyle}"
                                                                            Text="  2.54cm" />
                                                             </StackPanel>
@@ -1036,10 +1146,10 @@
                                                     </Grid.ColumnDefinitions>
                                                     <Path Width="23.816"
                                                           Height="31"
-                                                          Margin="8,10,10,10"
+                                                          Margin="4,3,8,3"
                                                           HorizontalAlignment="Left"
                                                           VerticalAlignment="Top"
-                                                          Data="F1M355.128,227.697L376.944,227.697L376.944,198.697L355.128,198.697z M377.945,228.697L354.129,228.697L354.129,197.697L377.945,197.697z"
+                                                          Data="M15 1H2C1.44771 1 1 1.44772 1 2V22C1 22.5523 1.44772 23 2 23H15C15.5523 23 16 22.5523 16 22V2C16 1.44772 15.5523 1 15 1ZM2 0C0.895431 0 0 0.89543 0 2V22C0 23.1046 0.89543 24 2 24H15C16.1046 24 17 23.1046 17 22V2C17 0.895431 16.1046 0 15 0H2Z"                                            
                                                           Fill="{StaticResource IconColor}"
                                                           Stretch="Fill" />
                                                     <Grid Grid.Column="1">
@@ -1054,13 +1164,21 @@
                                         </ComboBoxItem>
                                     </ComboBox>
                                     <TextBlock Margin="0,4" 
+                                               
+                                               
+                                               
                                                Style="{StaticResource WPFTextBlockStyle}"
                                                Text="{grid:GridLocalizationResourceExtension ResourceName=CustomMargins}" />
-                                    <Border Margin="0,0,0,10"
+                                    <Border x:Name="PART_CustomPageMarginBorder"
+                                            Margin="0,0,0,10"
+                                            
+                                            
                                             BorderBrush="{StaticResource Border}"
+                                            Background="Transparent"
                                             BorderThickness="1"
+                                            
                                             SnapsToDevicePixels="True">
-                                        <Grid Margin="5" SnapsToDevicePixels="True">
+                                        <Grid x:Name="PART_CustomPageMarginGrid" Margin="5" SnapsToDevicePixels="True">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="35" />
                                                 <RowDefinition Height="35" />
@@ -1071,7 +1189,8 @@
                                                     <ColumnDefinition />
                                                     <ColumnDefinition />
                                                 </Grid.ColumnDefinitions>
-                                                <StackPanel Margin="3,8,3,3"
+                                                <StackPanel x:Name="PART_PageLeftUpDownPanel"
+                                                            Margin="3 8 3 3"
                                                             HorizontalAlignment="Center"
                                                             VerticalAlignment="Center"
                                                             Orientation="Horizontal"
@@ -1079,12 +1198,15 @@
                                                     <TextBlock HorizontalAlignment="Center"
                                                                VerticalAlignment="Center"
                                                                SnapsToDevicePixels="True"
+                                                               
+                                                               
                                                                Style="{StaticResource WPFTextBlockStyle}"
                                                                Text="{grid:GridLocalizationResourceExtension ResourceName=Left}" />
                                                     <shared:UpDown x:Name="PART_LeftUpDown"
                                                                   EnableFocusedColors="True"
                                                                    Width="68"
-                                                                   Height="22" Margin="3,0,0,0"
+                                                                   Height="22" 
+                                                                   Margin="3,0,0,0"
                                                                    HorizontalAlignment="Center"
                                                                    VerticalAlignment="Center"
                                                                    TextAlignment="Center"
@@ -1093,13 +1215,16 @@
                                                                    MaxValue ="22"
                                                                    Value="2.5" />
                                                 </StackPanel>
-                                                <StackPanel Grid.Column="1"
-                                                            Margin="3,8,3,3"
+                                                <StackPanel x:Name="PART_PageRightUpDownPanel"
+                                                            Grid.Column="1"
+                                                            Margin="3 8 3 3"
                                                             HorizontalAlignment="Right"
                                                             Orientation="Horizontal"
                                                             SnapsToDevicePixels="True">
                                                     <TextBlock HorizontalAlignment="Center"
                                                                VerticalAlignment="Center"
+                                                               
+                                                               
                                                                SnapsToDevicePixels="True"
                                                                Style="{StaticResource WPFTextBlockStyle}"
                                                                Text="{grid:GridLocalizationResourceExtension ResourceName=Right}" />
@@ -1121,13 +1246,16 @@
                                                     <ColumnDefinition />
                                                     <ColumnDefinition />
                                                 </Grid.ColumnDefinitions>
-                                                <StackPanel Margin="3,8,3,3"
+                                                <StackPanel x:Name="PART_PageTopUpDownPanel"
+                                                            Margin="3 8 3 3"
                                                             HorizontalAlignment="Center"
                                                             VerticalAlignment="Center"
                                                             Orientation="Horizontal"
                                                             SnapsToDevicePixels="True">
                                                     <TextBlock HorizontalAlignment="Center"
                                                                VerticalAlignment="Center"
+                                                               
+                                                               
                                                                SnapsToDevicePixels="True"
                                                                Style="{StaticResource WPFTextBlockStyle}"
                                                                Text="{grid:GridLocalizationResourceExtension ResourceName=Top}" />
@@ -1142,13 +1270,16 @@
                                                                    MaxValue ="22"
                                                                    Value="2.5" />
                                                 </StackPanel>
-                                                <StackPanel Grid.Column="1"
-                                                            Margin="3,8,3,3"
+                                                <StackPanel x:Name="PART_PageBottomUpDownPanel"
+                                                            Grid.Column="1"
+                                                            Margin="3 8 3 3"
                                                             HorizontalAlignment="Right"
                                                             Orientation="Horizontal"
                                                             SnapsToDevicePixels="True">
                                                     <TextBlock HorizontalAlignment="Center"
                                                                VerticalAlignment="Center"
+                                                               
+                                                               
                                                                SnapsToDevicePixels="True"
                                                                Style="{StaticResource WPFTextBlockStyle}"
                                                                Text="{grid:GridLocalizationResourceExtension ResourceName=Bottom}" />
@@ -1164,7 +1295,7 @@
                                                                    Value="2.5" />
                                                 </StackPanel>
                                             </Grid>
-                                            <Grid Grid.Row="2" SnapsToDevicePixels="True" Margin="0,16,0,8">
+                                            <Grid Grid.Row="2" SnapsToDevicePixels="True" Margin="0 16 0 8">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition />
                                                     <ColumnDefinition />
@@ -1208,8 +1339,10 @@
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="35" />
                             </Grid.RowDefinitions>
-                            <grid:PrintPreviewAreaControl x:Name="PART_PrintPreviewAreaControl" Background="{StaticResource ContentBackgroundAlt2}" />
-                            <Grid Grid.Row="1" DataContext="{Binding ElementName=PART_PrintPreviewAreaControl}">
+                            <Grid Background="{StaticResource ContentBackgroundAlt2}">
+                                <grid:PrintPreviewAreaControl x:Name="PART_PrintPreviewAreaControl"  />
+                            </Grid>
+                            <Grid Grid.Row="1" Background="Transparent" DataContext="{Binding ElementName=PART_PrintPreviewAreaControl}">
                                 <Border BorderThickness="0,1,0,0" BorderBrush="{StaticResource BorderAlt}">
                                     <DockPanel>
                                         <StackPanel HorizontalAlignment="Left"
@@ -1222,10 +1355,14 @@
                                                 Height="24"
                                                 Command="{Binding FirstCommand}"
                                                 Style="{StaticResource WPFGlyphButtonStyle}">
-                                                <Path Data="M9.5280266,0.0090068526 L11.000011,1.3629964 6.718029,6.0179985 10.98402,10.656002 9.5120354,12.010007 4.0000115,6.0179985 z M0,0 L2,0 2,12 0,12 z"
-                                                  Width="11"
+                                                <Path  Width=" 11"
                                                   Height="12.01"
-                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"/>
+                                                  
+                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}">
+                                                    <Path.Data>
+                                                        <PathGeometry>M9.5280266,0.0090068526 L11.000011,1.3629964 6.718029,6.0179985 10.98402,10.656002 9.5120354,12.010007 4.0000115,6.0179985 z M0,0 L2,0 2,12 0,12 z</PathGeometry>
+                                                    </Path.Data>
+                                                </Path>
                                             </Button>
                                             <Button x:Name="PerviousPageButton"
                                                 Margin="5,0"
@@ -1233,10 +1370,14 @@
                                                 Height="24"
                                                 Command="{Binding PreviousCommand}"
                                                 Style="{StaticResource WPFGlyphButtonStyle}">
-                                                <Path Data="M7.7109926,0 L9.0010002,1.529007 3.1009803,6.5099945 8.97799,11.472 7.6879824,13 0,6.5099945 z"
-                                                  Width="9.001"
+                                                <Path Width=" 9.001"
                                                   Height="13"
-                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"/>
+                                                  
+                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}">
+                                                    <Path.Data>
+                                                        <PathGeometry>M7.7109926,0 L9.0010002,1.529007 3.1009803,6.5099945 8.97799,11.472 7.6879824,13 0,6.5099945 z</PathGeometry>
+                                                    </Path.Data>
+                                                </Path>
                                             </Button>
                                             <TextBox x:Name="PART_TextBox"
                                                  Width="25"
@@ -1258,10 +1399,14 @@
                                                 Height="24"
                                                 Command="{Binding NextCommand}"
                                                 Style="{StaticResource WPFGlyphButtonStyle}">
-                                                <Path Data="M1.2899816,0 L9.0010002,6.5099945 1.3129919,13 0.022979841,11.472 5.9000094,6.5099945 0,1.529007 z"
-                                                  Width="9.001"
+                                                <Path Width=" 9.001"
                                                   Height="13"
-                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"/>
+                                                  
+                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}">
+                                                    <Path.Data>
+                                                        <PathGeometry>M1.2899816,0 L9.0010002,6.5099945 1.3129919,13 0.022979841,11.472 5.9000094,6.5099945 0,1.529007 z</PathGeometry>
+                                                    </Path.Data>
+                                                </Path>
                                             </Button>
                                             <Button x:Name="LastPageButton"
                                                 Margin="0,0,15,0"
@@ -1269,10 +1414,14 @@
                                                 Height="24"
                                                 Command="{Binding LastCommand}"
                                                 Style="{StaticResource WPFGlyphButtonStyle}">
-                                                <Path Data="M1.4710002,0.0089941425 L7.0000001,6.0179982 1.4880004,12.010002 0.015999794,10.656001 4.2820001,6.0179982 0,1.3629951 z M8.9989967,0 L10.998997,0 10.998997,12 8.9989967,12 z"
-                                                  Width="11"
+                                                <Path Width=" 11"
                                                   Height="12.01"
-                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"/>
+                                                  
+                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}">
+                                                    <Path.Data>
+                                                        <PathGeometry>M1.4710002,0.0089941425 L7.0000001,6.0179982 1.4880004,12.010002 0.015999794,10.656001 4.2820001,6.0179982 0,1.3629951 z M8.9989967,0 L10.998997,0 10.998997,12 8.9989967,12 z</PathGeometry>
+                                                    </Path.Data>
+                                                </Path>
                                             </Button>
                                         </StackPanel>
                                         <Grid HorizontalAlignment="Right" DockPanel.Dock="Right" Margin="0,0,8,0">
@@ -1301,10 +1450,13 @@
                                                   VerticalAlignment="Center" 
                                                   Width="12" 
                                                   Height="12"
-                                                  Data="M6.9999886,4.0000038 L8.9999886,4.0000038 8.9999886,7.0000038 11.999989,7.0000038 11.999989,9.0000038 8.9999886,9.0000038 8.9999886,12.000004 6.9999886,12.000004 6.9999886,9.0000038 3.9999886,9.0000038 3.9999886,7.0000038 6.9999886,7.0000038 z M8,2 C4.6910095,2 2,4.6910095 2,8 2,11.309006 4.6910095,14 8,14 11.30899,14 14,11.309006 14,8 14,4.6910095 11.30899,2 8,2 z M8,0 C12.411011,0 16,3.5890045 16,8 16,12.410995 12.411011,16 8,16 3.5890198,16 0,12.410995 0,8 0,3.5890045 3.5890198,0 8,0 z"
                                                   Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                                                   Stretch="Fill" 
-                                                  SnapsToDevicePixels="True"/>
+                                                  SnapsToDevicePixels="True">
+                                                    <Path.Data>
+                                                        <PathGeometry>M6.9999886,4.0000038 L8.9999886,4.0000038 8.9999886,7.0000038 11.999989,7.0000038 11.999989,9.0000038 8.9999886,9.0000038 8.9999886,12.000004 6.9999886,12.000004 6.9999886,9.0000038 3.9999886,9.0000038 3.9999886,7.0000038 6.9999886,7.0000038 z M8,2 C4.6910095,2 2,4.6910095 2,8 2,11.309006 4.6910095,14 8,14 11.30899,14 14,11.309006 14,8 14,4.6910095 11.30899,2 8,2 z M8,0 C12.411011,0 16,3.5890045 16,8 16,12.410995 12.411011,16 8,16 3.5890198,16 0,12.410995 0,8 0,3.5890045 3.5890198,0 8,0 z</PathGeometry>
+                                                    </Path.Data>
+                                                </Path>
                                             </Button>
                                             <Slider x:Name="PART_ZoomSlider"
                                                 Grid.Column="2"
@@ -1331,10 +1483,13 @@
                                                   VerticalAlignment="Center" 
                                                   Width="12" 
                                                   Height="12"
-                                                  Data="M3.9999886,7.0000038 L11.999989,7.0000038 11.999989,9.0000038 3.9999886,9.0000038 z M8,2 C4.6910095,2 2,4.6910095 2,8 2,11.309006 4.6910095,14 8,14 11.30899,14 14,11.309006 14,8 14,4.6910095 11.30899,2 8,2 z M8,0 C12.411011,0 16,3.5890045 16,8 16,12.410995 12.411011,16 8,16 3.5890198,16 0,12.410995 0,8 0,3.5890045 3.5890198,0 8,0 z"
                                                   Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                                                   Stretch="Fill" 
-                                                  SnapsToDevicePixels="True"/>
+                                                  SnapsToDevicePixels="True">
+                                                    <Path.Data>
+                                                        <PathGeometry>M3.9999886,7.0000038 L11.999989,7.0000038 11.999989,9.0000038 3.9999886,9.0000038 z M8,2 C4.6910095,2 2,4.6910095 2,8 2,11.309006 4.6910095,14 8,14 11.30899,14 14,11.309006 14,8 14,4.6910095 11.30899,2 8,2 z M8,0 C12.411011,0 16,3.5890045 16,8 16,12.410995 12.411011,16 8,16 3.5890198,16 0,12.410995 0,8 0,3.5890045 3.5890198,0 8,0 z</PathGeometry>
+                                                    </Path.Data>
+                                                </Path>
                                             </Button>
                                         </Grid>
                                     </DockPanel>

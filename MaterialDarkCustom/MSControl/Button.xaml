@@ -15,7 +15,7 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                             Effect="{StaticResource Default.ShadowDepth1}"
                             SnapsToDevicePixels="true"
                             >
@@ -38,12 +38,15 @@
             <Trigger Property="IsDefaulted" Value="true">
                 <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
             </Trigger>
-            <Trigger Property="IsFocused" Value="True">
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="IsFocused" Value="True"/>
+                </MultiTrigger.Conditions>
                 <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                 <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                 <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource SecondaryForeground}"/>
                 <Setter Property="Effect" TargetName="border" Value="{StaticResource Default.ShadowDepth2}"/>
-            </Trigger>
+            </MultiTrigger>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                 <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
@@ -149,11 +152,14 @@
                         <Trigger Property="IsDefaulted" Value="true">
                             <Setter Property="Stroke" TargetName="ellipse" Value="{StaticResource SecondaryHoverBackground}"/>
                         </Trigger>
-                        <Trigger Property="IsFocused" Value="True">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsFocused" Value="True"/>
+                            </MultiTrigger.Conditions>
                             <Setter Property="Fill" TargetName="ellipse" Value="{StaticResource SecondaryHoverBackground}"/>
                             <Setter Property="Stroke" TargetName="ellipse" Value="{StaticResource SecondaryHoverBackground}"/>
                             <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
-                        </Trigger>
+                        </MultiTrigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Fill" TargetName="ellipse" Value="{StaticResource SecondaryHoverBackground}"/>
                             <Setter Property="Stroke" TargetName="ellipse" Value="{StaticResource SecondaryHoverBackground}"/>

@@ -1,5 +1,6 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    
                     xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
                     xmlns:input="http://schemas.microsoft.com/netfx/2007/xaml/presentation"
                     xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
@@ -38,6 +39,10 @@
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="Transparent"/>
                 <Setter Property="Foreground" Value="{StaticResource LinkForegroundHover}"/>
+                <Setter Property="TextDecorations" Value="None" />
+            </Trigger>
+            <Trigger Property="IsFocused" Value="True">
+                <Setter Property="TextDecorations"  Value="None" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="false">
                 <Setter Property="Background" Value="Transparent"/>

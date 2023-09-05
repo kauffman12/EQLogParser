@@ -47,7 +47,8 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
-                        SnapsToDevicePixels="True">
+                        SnapsToDevicePixels="True"
+                        CornerRadius="0">
                         <Grid>
                             <ContentPresenter Name="PART_ContentPresenter" />
                         </Grid>
@@ -77,8 +78,10 @@
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="tools:CheckListBox.CheckBoxAlignment" Value="Left" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="IsSelected" Value="{Binding RelativeSource={RelativeSource Mode=Self}, Path=State.IsSelected, Mode=TwoWay}" />
         <Setter Property="Padding" Value="{Binding Path=State.Level, RelativeSource={RelativeSource Mode=Self}, Converter={StaticResource ListItemIndentConverter}, ConverterParameter='Item'}" />
+        <Setter Property="Margin" Value="0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type tools:CheckListBoxItem}">
@@ -90,6 +93,7 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             SnapsToDevicePixels="true"
+                            CornerRadius="0"
                             >
                             <Grid KeyboardNavigation.DirectionalNavigation="None">
                                 <Grid.ColumnDefinitions>
@@ -98,7 +102,7 @@
                                 </Grid.ColumnDefinitions>
                                 <CheckBox
                                     Name="PART_CheckBox"
-                                    Margin="1,1,5,1"
+                                    Margin="1 1 5 1"
                                     VerticalAlignment="Center"
                                     Focusable="False"
                                     IsChecked="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=State.IsChecked}" />
@@ -172,6 +176,7 @@
         <Setter Property="SnapsToDevicePixels" Value="True" />
         <Setter Property="IsSelected" Value="{Binding RelativeSource={RelativeSource Mode=Self}, Path=State.IsSelected}" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Margin" Value="0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type tools:CheckListSelectAllItem}">
@@ -183,6 +188,7 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             SnapsToDevicePixels="true"
+                            CornerRadius="0"
                             >
                             <Grid KeyboardNavigation.DirectionalNavigation="None">
                                 <Grid.ColumnDefinitions>
@@ -191,7 +197,7 @@
                                 </Grid.ColumnDefinitions>
                                 <CheckBox
                                     Name="PART_CheckBox"
-                                    Margin="1,1,5,1"
+                                    Margin="1 1 5 1"
                                     VerticalAlignment="Center"
                                     Focusable="False"
                                     IsChecked="{Binding IsChecked}" />
@@ -325,6 +331,7 @@
         <Setter Property="IsSelected" Value="{Binding RelativeSource={RelativeSource Mode=Self}, Path=State.IsSelected}" />
         <Setter Property="IsExpanded" Value="{Binding RelativeSource={RelativeSource Mode=Self}, Path=State.IsExpanded}" />
         <Setter Property="Padding" Value="{Binding Path=State.Level, RelativeSource={RelativeSource Mode=Self}, Converter={StaticResource ListItemIndentConverter}, ConverterParameter='Group'}" />
+        <Setter Property="Margin" Value="0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type tools:CheckListGroupItem}">
@@ -336,6 +343,7 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             SnapsToDevicePixels="true"
+                            CornerRadius="0"
                             >
                             <Grid KeyboardNavigation.DirectionalNavigation="None">
                                 <Grid.ColumnDefinitions>
@@ -351,7 +359,7 @@
                                 <CheckBox
                                     Name="PART_CheckBox"
                                     Grid.Column="1"
-                                    Margin="1,1,5,1"
+                                    Margin="1 1 5 1"
                                     VerticalAlignment="Center"
                                     Focusable="False"
                                     IsChecked="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=State.IsChecked}" />

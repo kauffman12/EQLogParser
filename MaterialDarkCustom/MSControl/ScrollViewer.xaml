@@ -29,7 +29,8 @@
         <Setter Property="FocusVisualStyle" Value="{StaticResource ScrollBarFocusVisual}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Padding" Value="1"/>
+        <Setter Property="Padding"
+                Value="1"/>
         <Setter Property="Focusable" Value="false"/>
         <Setter Property="IsTabStop" Value="false"/>
         <Setter Property="Template">
@@ -50,16 +51,26 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="true">
                             <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
-                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource BorderAlt}"/>
+                            <Setter Property="BorderBrush"
+                                    TargetName="border"
+                                    Value="{StaticResource BorderAlt}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="true">
-                            <Setter Property="Background" TargetName="border" Value="{StaticResource SecondarySelectionBackground}"/>
-                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource BorderAlt}"/>
+                            <Setter Property="Background"
+                                    TargetName="border"
+                                    Value="{StaticResource SecondarySelectionBackground}"/>
+                            <Setter Property="BorderBrush"
+                                    TargetName="border"
+                                    Value="{StaticResource BorderAlt}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
                             <Setter Property="Opacity" TargetName="contentPresenter" Value="0.56"/>
-                            <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
-                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource BorderAlt}"/>
+                            <Setter Property="Background"
+                                    TargetName="border"
+                                    Value="{StaticResource SecondaryHoverBackground}"/>
+                            <Setter Property="BorderBrush"
+                                    TargetName="border"
+                                    Value="{StaticResource BorderAlt}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -281,7 +292,7 @@
                         <Trigger Property="sfskin:SkinManagerHelper.ScrollBarMode" Value="Compact">
                             <Setter Property="HorizontalAlignment" TargetName="thumb" Value="Right"/>
                             <Setter Property="Margin" TargetName="thumb" Value="0,0,3,0"/>
-                            <Setter Property="Width" TargetName="thumb" Value="4"/>
+                            <Setter Property="Width" TargetName="thumb" Value="2"/>
                             <Setter Property="Visibility" TargetName="PART_LineDownButton" Value="Hidden"/>
                             <Setter Property="Visibility" TargetName="PART_LineUpButton" Value="Hidden"/>
                         </Trigger>
@@ -296,7 +307,7 @@
                             <Setter Property="Visibility" TargetName="PART_LineDownButton" Value="Visible"/>
                             <Setter Property="Visibility" TargetName="PART_LineUpButton" Value="Visible"/>
                         </MultiTrigger>
-                        <MultiTrigger>
+                       <MultiTrigger>
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsEnabled" Value="False"/>
                                 <Condition Property="sfskin:SkinManagerHelper.ScrollBarMode" Value="Compact"/>
@@ -338,7 +349,7 @@
                         <Trigger Property="IsEnabled" Value="false">
                             <Setter Property="Fill" TargetName="ArrowTop" Value="{StaticResource IconDisabledColor}"/>
                             <Setter Property="Fill" TargetName="ArrowBottom" Value="{StaticResource IconDisabledColor}"/>
-                        </Trigger>
+                        </Trigger> 
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -440,7 +451,7 @@
                                 <Trigger Property="sfskin:SkinManagerHelper.ScrollBarMode" Value="Compact">
                                     <Setter Property="VerticalAlignment" TargetName="thumb" Value="Bottom"/>
                                     <Setter Property="Margin" TargetName="thumb" Value="0,0,0,3"/>
-                                    <Setter Property="Height" TargetName="thumb" Value="4"/>
+                                    <Setter Property="Height" TargetName="thumb" Value="2"/>
                                     <Setter Property="Visibility" TargetName="PART_LineRightButton" Value="Hidden"/>
                                     <Setter Property="Visibility" TargetName="PART_LineLeftButton" Value="Hidden"/>
                                 </Trigger>

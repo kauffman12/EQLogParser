@@ -9,7 +9,7 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
     </ResourceDictionary.MergedDictionaries>
-    
+
     <Style x:Key="ListBoxItemFocusVisual">
         <Setter Property="Control.Template">
             <Setter.Value>
@@ -38,26 +38,46 @@
                 Value="{StaticResource MaterialDarkCustom.FontWeightNormal}"/>
         <Setter Property="BorderThickness" 
                 Value="{StaticResource MaterialDarkCustom.BorderThickness}"/>
-        <Setter Property="Padding" Value="4,3"/>
+        <Setter Property="Padding">
+            <Setter.Value>
+                <Thickness>4,3,4,3</Thickness>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Margin">
+            <Setter.Value>
+                <Thickness>0,0,0,0</Thickness>
+            </Setter.Value>
+        </Setter>
         <Setter Property="MinHeight" Value="{StaticResource MaterialDarkCustom.MinHeight}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                    <Border x:Name="Bd" 
+                    <Grid>
+                        <Border x:Name="SelectionIndicator"
+                                        HorizontalAlignment="Left"            
+                                        CornerRadius="1.5"
+                                        Height="12"
+                                        Width="2"
+                                        Visibility="Collapsed"     
+                                          />
+
+                        <Border x:Name="Bd" 
+                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
                             BorderBrush="{TemplateBinding BorderBrush}" 
                             BorderThickness="{TemplateBinding BorderThickness}" 
                             Background="{TemplateBinding Background}" 
                             Padding="{TemplateBinding Padding}" 
                             SnapsToDevicePixels="true"
                             >
-                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                           SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" >
-                            <ContentPresenter.Resources>
-                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
-                            </ContentPresenter.Resources>
-                        </ContentPresenter>
-                    </Border>
+                                <ContentPresenter.Resources>
+                                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
+                        </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                             <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
@@ -154,6 +174,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ListBox}">
                     <Border Name="Bd"
+                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             Background="{TemplateBinding Background}"
@@ -161,7 +182,11 @@
                         <ScrollViewer x:Name="scrollviewer" 
                                       Focusable="false"
                                       Padding="{TemplateBinding Padding}">
-                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                                <ItemsPresenter.Margin>
+                                    <Thickness>0,0,0,0</Thickness>
+                                </ItemsPresenter.Margin>
+                            </ItemsPresenter>
                         </ScrollViewer>
                     </Border>
                     <ControlTemplate.Triggers>

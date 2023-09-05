@@ -460,7 +460,7 @@
                         BorderThickness="{TemplateBinding BorderThickness}"
                         CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                         SnapsToDevicePixels="True">
-                        <Grid x:Name="RootGrid">
+                        <Grid x:Name="RootGrid" Background="{TemplateBinding Background}">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
@@ -643,7 +643,7 @@
                             <TextBlock
                                 x:Name="Part_Text"
                                 Grid.Column="0"
-                                Margin="2,0"
+                                Margin="2 0"
                                 Text="{propertygrid:PropertyGridLocalizationResourceExtension ResourceName=CollectionEditorWatermark}"
                                 VerticalAlignment="Center" />
                             <Button

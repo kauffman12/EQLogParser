@@ -44,7 +44,12 @@
                     <RowDefinition Height="*" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
-                <Border x:Name="PART_Button" Focusable="True" FocusVisualStyle="{x:Null}" Background="Transparent"
+                <Border x:Name="PART_Button" 
+                        Focusable="True" 
+                        FocusVisualStyle="{x:Null}" 
+                        Background="Transparent"
+                        CornerRadius="0"
+                        Margin="0"
                         >
                     <ContentPresenter x:Name="LargeIconContent" ContentTemplate="{TemplateBinding IconTemplate}" Content="{Binding }" Margin="2"
                                                               MinWidth="{TemplateBinding MinWidth}"
@@ -57,6 +62,7 @@
                         Focusable="True"
                         FocusVisualStyle="{x:Null}"
                         Background="Transparent"
+                        CornerRadius="0"
                         BorderThickness="0,1,0,0" >
                     <StackPanel>
                         <TextBlock
@@ -105,6 +111,9 @@
                         <Thickness>8,1,8,8</Thickness>
                     </Border.Margin>
                     <ContentPresenter/>
+                    <Border.RenderTransform>
+                        <TranslateTransform/>
+                    </Border.RenderTransform>
                 </Border>
             </Popup>
         </Grid>
@@ -258,6 +267,8 @@
                                     Focusable="True" 
                                     FocusVisualStyle="{x:Null}"
                                     Background="Transparent"
+                                    CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                                    Margin="0"
                                     >
                                     <Grid
                                         Margin="{TemplateBinding Padding}"
@@ -291,6 +302,7 @@
                                     Focusable="True" 
                                     FocusVisualStyle="{x:Null}"
                                     Background="Transparent"
+                                    CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1000}"
                                     >
                                     <Path
@@ -331,6 +343,9 @@
                                     <Thickness>8,1,8,8</Thickness>
                                 </Border.Margin>
                                 <ContentPresenter/>
+                                <Border.RenderTransform>
+                                    <TranslateTransform/>
+                                </Border.RenderTransform>
                             </Border>
                         </Popup>
                     </Grid>
@@ -497,6 +512,7 @@
                                     Grid.Column="0" 
                                     Focusable="True" 
                                     FocusVisualStyle="{x:Null}"
+                                    CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                                     Background="Transparent">
                                 <Grid
                                         Margin="{TemplateBinding Padding}"
@@ -530,6 +546,7 @@
                                     Focusable="True" 
                                     FocusVisualStyle="{x:Null}"
                                     Background="Transparent"
+                                    CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1000}">
                                 <Path
                                         Name="Arrow"
@@ -679,7 +696,7 @@
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="Label" Value="Split Button"/>
-        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{StaticResource SecondaryBackground}" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="Template">
@@ -691,17 +708,18 @@
                                AllowsTransparency="True" 
                                Focusable="False" 
                                IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource FindAncestor, AncestorLevel=1, AncestorType={x:Type local:SplitButtonAdv}}}"
-                               PopupAnimation="Fade"
+                               PopupAnimation="Slide"
                                StaysOpen="False">
                             <Grid x:Name="Part_GridPopup" 
                                 MinWidth="{TemplateBinding MinWidth}" 
                                 MinHeight="{TemplateBinding MinHeight}">
                                 <Border  BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1}"
                                          CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                                         Background="{StaticResource SecondaryBackground}"
                                          BorderBrush="{StaticResource SecondaryBackground}"
-                                         Background="{StaticResource SecondaryBackground}" 
                                          MinWidth="28" 
-                                         MinHeight="14">
+                                         MinHeight="14"
+                                         Effect="{StaticResource Default.ShadowDepth3}">
                                     <ContentPresenter/>
                                 </Border>
                             </Grid>
@@ -710,17 +728,19 @@
                                 Background="{TemplateBinding Background}"
                                 BorderThickness="{TemplateBinding BorderThickness}" 
                                 BorderBrush="{TemplateBinding BorderBrush}"
-                                MinHeight="22"  
-                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
-                                SnapsToDevicePixels="True" >
-                            <Border Name="InnerBorder" 
-                                    Background="Transparent" 
+                                MinHeight="22"
+                                SnapsToDevicePixels="True"
+                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+
+                            <Border Name="InnerBorder"
+                                    Background="Transparent"
+                                    MinHeight="22"
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1}"
                                     CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
-                                <Grid >
+                                <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition  />
-                                        <ColumnDefinition x:Name="dropDownColumn" Width="24"/>
+                                        <ColumnDefinition x:Name="dropDownColumn" Width="22"/>
                                     </Grid.ColumnDefinitions>
                                     <Border x:Name="PART_ButtonNormal" 
                                             Focusable="True"
@@ -735,29 +755,30 @@
                                             </Grid.ColumnDefinitions>
                                             <ContentPresenter x:Name="SmallIconContent"
                                                               Margin="2"
-                                                              ContentTemplate="{TemplateBinding IconTemplate}" Content="{Binding}" 
-                                                              ContentTemplateSelector="{TemplateBinding IconTemplateSelector}"/>
-                                            <TextBlock x:Name="PART_NormalText" 
-                                           Grid.Column="1"
-                                           Text="{TemplateBinding Label}" 
-                                           FontFamily="{TemplateBinding FontFamily}"
-                                           FontSize="{TemplateBinding FontSize}"
-                                           VerticalAlignment="{TemplateBinding VerticalAlignment}"                           
-                                           HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
-                                           Margin="2,0,2,0"/>
+                                                              ContentTemplate="{TemplateBinding IconTemplate}"
+                                                              Content="{Binding}"
+                                                              ContentTemplateSelector="{TemplateBinding IconTemplateSelector}" />
+                                            <TextBlock x:Name="PART_NormalText"
+                                                       Grid.Column="1"
+                                                       Text="{TemplateBinding Label}"
+                                                       FontFamily="{TemplateBinding FontFamily}"
+                                                       FontSize="{TemplateBinding FontSize}"
+                                                       VerticalAlignment="{TemplateBinding VerticalAlignment}"
+                                                       HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                                                       Margin="2,0,2,0" />
                                         </Grid>
                                     </Border>
-                                    <Border x:Name="PART_DropDownButtonNormal" 
-                                            Focusable="True" 
-                                            Grid.Column="1" 
-                                            BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1}" 
+                                    <Border x:Name="PART_DropDownButtonNormal"
+                                            Focusable="True"
+                                            Grid.Column="1"
+                                            BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1}"
                                             Background="Transparent">
-                                        <Path Name="Arrow" 
-                                            HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center" 
-                                            Fill="{StaticResource IconColor}"
-                                            Data="M 0 0 L 4 4 L 8 0 Z" 
-                                            Margin="2,0,2,0"/>
+                                        <Path Name="Arrow"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Fill="{StaticResource IconColor}"
+                                              Data="M 0 0 L 4 4 L 8 0 Z"
+                                              Margin="2,0,2,0" />
                                     </Border>
                                 </Grid>
                             </Border>
@@ -772,16 +793,22 @@
                             <Setter Property="Width" TargetName="SmallIconContent" Value="20"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter Property="Border.Background" TargetName="SplitButtonBorder" Value="{StaticResource SecondarySelectionBackground}"/>
+                            <Setter Property="Border.Background" TargetName="SplitButtonBorder" Value="{StaticResource SecondarySelectionBackground}" />
                             <Setter Property="Border.BorderBrush" TargetName="PART_DropDownButtonNormal" Value="#DEDEDE"/>
                             <Setter Property="Path.Fill" TargetName="Arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="TextBlock.Foreground" TargetName="PART_NormalText" Value="Black"/>
                         </Trigger>
-                        <Trigger Property="IsDropDownOpen" Value="True">
+                       <Trigger Property="IsDropDownOpen" Value="True">
                             <Setter Property="Border.Background" TargetName="SplitButtonBorder" Value="{StaticResource SecondarySelectionBackground}"/>
                             <Setter Property="Border.BorderBrush" TargetName="PART_DropDownButtonNormal" Value="#DEDEDE"/>
                             <Setter Property="Path.Fill" TargetName="Arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="TextBlock.Foreground" TargetName="PART_NormalText" Value="Black"/>
+                            <Setter Property="Border.Background"
+                                    TargetName="PART_DropDownButtonNormal"
+                                    Value="{StaticResource SecondaryHoverBackground}" />
+                            <Setter Property="Border.Background"
+                                    TargetName="PART_ButtonNormal"
+                                    Value="{StaticResource SecondaryHoverBackground}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Border.Opacity" TargetName="SplitButtonBorder" Value="0.5"/>
@@ -789,8 +816,8 @@
                         <Trigger Property="IsMouseOver" SourceName="PART_ButtonNormal" Value="true">
                             <Setter Property="Border.Background" TargetName="SplitButtonBorder" Value="Transparent"/>
                             <Setter Property="Border.BorderBrush" TargetName="SplitButtonBorder" Value="{StaticResource SecondaryHoverBackground}"/>
-                            <Setter Property="Border.Background" TargetName="PART_ButtonNormal" Value="{StaticResource SecondaryHoverBackground}"/>
-                            <Setter Property="Border.Background" TargetName="PART_DropDownButtonNormal" Value="Transparent"/>
+                            <Setter Property="Border.Background" TargetName="PART_ButtonNormal" Value="{StaticResource SecondaryHoverBackground}" />
+                            <Setter Property="Border.Background" TargetName="PART_DropDownButtonNormal" Value="Transparent" />
                             <Setter Property="Border.BorderBrush" TargetName="InnerBorder" Value="{StaticResource SecondaryHoverBackground}"/>
                             <Setter Property="Path.Fill" TargetName="Arrow" Value="{StaticResource IconColor}"/>
                         </Trigger>

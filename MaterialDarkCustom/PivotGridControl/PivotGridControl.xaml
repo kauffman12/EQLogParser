@@ -669,13 +669,13 @@
                                  Value="True">
                             <Setter TargetName="brdItem"
                                     Property="Background"
-                                    Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}},Path=GroupingButtonCheckedBackground}"/>
+                                    Value="{StaticResource ContentBackgroundAlt5}"/>
                             <Setter TargetName="brdItem" 
                                     Property="BorderBrush" 
                                     Value="{StaticResource ContentBackgroundAlt5}"/>
                             <Setter TargetName="PART_contentTxt"
                                     Property="Foreground"
-                                    Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type syncfusion:PivotGridControl}},Path=GroupingButtonCheckedForeground}"/>
+                                    Value="{StaticResource ContentForegroundAlt}"/>
                         </Trigger>
                         <Trigger Property="IsFocused" 
                                  Value="True">

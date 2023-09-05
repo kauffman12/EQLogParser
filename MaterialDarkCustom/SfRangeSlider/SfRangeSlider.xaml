@@ -26,29 +26,43 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
-                    <Border
-                        x:Name="ThumbBorder"
-                        Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="8" />
+                    <Grid>
+                        <Border
+                            x:Name="ThumbOuterBorder"
+                            
+                            CornerRadius="10"
+                            BorderThickness="0">
+                            <Border
+                                x:Name="ThumbBorder"
+                                
+                                
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8" />  
+                        </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                             <Setter TargetName="ThumbBorder" Property="MinHeight" Value="16" />
                             <Setter TargetName="ThumbBorder" Property="MinWidth" Value="16" />
                         </Trigger>
+
                         <Trigger Property="IsEnabled" Value="false">
                             <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource BorderDark}" />
                             <Setter TargetName="ThumbBorder" Property="BorderBrush" Value="{StaticResource ContentBackground}" />
                         </Trigger>
+
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource PrimaryDark}" />
                             <Setter TargetName="ThumbBorder" Property="BorderBrush" Value="{StaticResource PrimaryDark}" />
                         </Trigger>
-						<Trigger Property="IsDragging" Value="True">
-							<Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource PrimaryDarken}" />
-							<Setter TargetName="ThumbBorder" Property="BorderBrush" Value="{StaticResource PrimaryDarken}" />
-						</Trigger>
+
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource PrimaryDarken}" />
+                            <Setter TargetName="ThumbBorder" Property="BorderBrush" Value="{StaticResource PrimaryDarken}" />
+                        </Trigger>
+
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -88,7 +102,10 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ContentControl">
-                    <Grid>
+                    <Grid Effect="{StaticResource Default.ShadowDepth2}">
+                        <Grid.Margin>
+                            <Thickness>0</Thickness>
+                        </Grid.Margin>
                         <Path
                             x:Name="ToolTipPath"
                             Height="30"
@@ -99,22 +116,22 @@
                             Fill="{TemplateBinding Background}"
                             Stretch="Fill"
                             Stroke="{TemplateBinding BorderBrush}"
-                            StrokeThickness="1" />
+                            StrokeThickness="1" />  
                         <TextBlock
-                            Margin="10,0,10,5"
+                            Margin="10 0 10 5"
                             HorizontalAlignment="Stretch"
                             VerticalAlignment="Center"
                             FontFamily="{TemplateBinding FontFamily}"
                             FontSize="{TemplateBinding FontSize}"
                             FontWeight="{TemplateBinding FontWeight}"
                             Foreground="{TemplateBinding Foreground}"
+                            Visibility="Visible"
                             Text="{TemplateBinding Content}" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
-
     <Style
         x:Key="BottomToolTipStyle"
         BasedOn="{StaticResource ThumbToolTipStyle}"
@@ -122,7 +139,12 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ContentControl">
-                    <Grid>
+                    <Grid 
+                        Effect="{StaticResource Default.ShadowDepth2}"
+                        RenderTransformOrigin="0.5,0.5">
+                        <Grid.Margin>
+                            <Thickness>0</Thickness>
+                        </Grid.Margin>
                         <Path
                             x:Name="ToolTipPath"
                             Height="30"
@@ -139,13 +161,14 @@
                             </Path.LayoutTransform>
                         </Path>
                         <TextBlock
-                            Margin="10,5,10,0"
+                            Margin="10 5 10 0"
                             HorizontalAlignment="Stretch"
                             VerticalAlignment="Center"
                             FontFamily="{TemplateBinding FontFamily}"
                             FontSize="{TemplateBinding FontSize}"
                             FontWeight="{TemplateBinding FontWeight}"
                             Foreground="{TemplateBinding Foreground}"
+                            Visibility="Visible "
                             Text="{TemplateBinding Content}" />
                     </Grid>
                 </ControlTemplate>
@@ -160,44 +183,34 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ContentControl">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="6" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+                    <Grid  Effect="{StaticResource Default.ShadowDepth2}" >
+                        <Grid.Margin>
+                            <Thickness>4</Thickness>
+                        </Grid.Margin>
                         <Path
-                            Grid.Column="0"
-                            Width="6"
-                            Height="32"
-                            HorizontalAlignment="Left"
-                            Data="M309.085,301.3628L309.085,370.4708L364.838,411.2828L309.153,444.7618L309.153,510.1278"
+                            Width="32"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Center"
+                            Data="M1,0 L15,0 C15.553,0 16,0.44800001 16,1 L16,10.511001 C16,11.063001 15.553,11.511001 15,11.511001 L10.173,11.511001 8,14 5.8150001,11.511001 1,11.511001 C0.44800001,11.511001 0,11.063001 0,10.511001 L0,1 C0,0.44800001 0.44800001,0 1,0 z"
                             Fill="{TemplateBinding Background}"
                             Stretch="Fill"
                             Stroke="{TemplateBinding BorderBrush}"
-                            StrokeThickness="1">
+                            StrokeThickness="1">    
                             <Path.LayoutTransform>
-                                <RotateTransform Angle="180" />
+                                <RotateTransform Angle="90" />
                             </Path.LayoutTransform>
                         </Path>
-                        <Grid Grid.Column="1">
-                            <Border
-                                Margin="-0.25,0,0,0"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="0,1,1,1">
-                                <TextBlock
-                                    Height="30"
-                                    Padding="5,6,5,5"
+                        <TextBlock
+                                    Padding="16 6 8 7"
                                     HorizontalAlignment="Stretch"
                                     VerticalAlignment="Center"
                                     Background="Transparent"
+                                    Visibility="Visible "
                                     FontFamily="{TemplateBinding FontFamily}"
                                     FontSize="{TemplateBinding FontSize}"
                                     FontWeight="{TemplateBinding FontWeight}"
                                     Foreground="{TemplateBinding Foreground}"
                                     Text="{TemplateBinding Content}" />
-                            </Border>
-                        </Grid>
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -211,30 +224,25 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ContentControl">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="7" />
-                        </Grid.ColumnDefinitions>
+                    <Grid Effect="{StaticResource Default.ShadowDepth2}">
+                        <Grid.Margin>
+                            <Thickness>4</Thickness>
+                        </Grid.Margin>
                         <Path
-                            Grid.Column="1"
-                            Width="6"
-                            Height="32"
-                            HorizontalAlignment="Left"
-                            Data="M309.085,301.3628L309.085,370.4708L364.838,411.2828L309.153,444.7618L309.153,510.1278"
-                            Fill="{TemplateBinding Background}"
-                            Stretch="Fill"
-                            Stroke="{TemplateBinding BorderBrush}"
-                            StrokeThickness="1" />
-                        <Grid Grid.Column="0">
-                            <Border
-                                Margin="0,0,-0.25,0"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="1,1,0,1">
-                                <TextBlock
-                                    Height="30"
-                                    Padding="5,6,5,5"
+                    Width="32"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Center"
+                    Data="M1,0 L15,0 C15.553,0 16,0.44800001 16,1 L16,10.511001 C16,11.063001 15.553,11.511001 15,11.511001 L10.173,11.511001 8,14 5.8150001,11.511001 1,11.511001 C0.44800001,11.511001 0,11.063001 0,10.511001 L0,1 C0,0.44800001 0.44800001,0 1,0 z"
+                    Fill="{TemplateBinding Background}"
+                    Stretch="Fill"
+                    Stroke="{TemplateBinding BorderBrush}"
+                    StrokeThickness="1" >
+                            <Path.LayoutTransform>
+                                <RotateTransform Angle="270" />
+                            </Path.LayoutTransform>
+                        </Path>
+                        <TextBlock
+                                    Padding="8 5 16 7"
                                     HorizontalAlignment="Stretch"
                                     VerticalAlignment="Center"
                                     Background="Transparent"
@@ -242,26 +250,22 @@
                                     FontSize="{TemplateBinding FontSize}"
                                     FontWeight="{TemplateBinding FontWeight}"
                                     Foreground="{TemplateBinding Foreground}"
+                                    Visibility="Visible "
                                     Text="{TemplateBinding Content}" />
-                            </Border>
-                        </Grid>
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
-
     <!--  Style for inactive track of SfRangeSlider  -->
     <Style x:Key="SyncfusionSfRangeSliderInactiveTrackStyle" TargetType="Rectangle">
         <Setter Property="Height" Value="2" />
         <Setter Property="Fill" Value="{StaticResource BorderAlt}" />
     </Style>
-
     <Style x:Key="SyncfusionSfRangeSliderVerticalInactiveTrackStyle" TargetType="Rectangle">
         <Setter Property="Width" Value="2" />
         <Setter Property="Fill" Value="{StaticResource BorderAlt}" />
     </Style>
-
     <!--  Style for active track of SfRangeSlider  -->
     <Style x:Key="SyncfusionSfRangeSliderActiveTrackStyle" TargetType="Rectangle">
         <Setter Property="Height" Value="2" />
@@ -378,9 +382,7 @@
         </Setter>
     </Style>
 
-    <Style BasedOn="{StaticResource SyncfusionSfRangeSliderTickBarItemStyle}" TargetType="Input:TickBarItem" />
-
-    <!--  Template for HorizontalRangeSlider  -->
+    <Style BasedOn="{StaticResource SyncfusionSfRangeSliderTickBarItemStyle}" TargetType="Input:TickBarItem" />    <!--  Template for HorizontalRangeSlider  -->
     <ControlTemplate x:Key="SyncfusionSfRangeSliderHorizontalControlTemplate" TargetType="Input:SfRangeSlider">
         <Border
             x:Name="border"
@@ -389,7 +391,6 @@
             SnapsToDevicePixels="True">
             <Grid
                 x:Name="HorizontalTemplate"
-                Margin="{TemplateBinding Padding}"
                 Background="Transparent">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -401,17 +402,24 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
+
                 <Rectangle
                     x:Name="HorizontalTrackRectangle"
                     Grid.Row="1"
                     Grid.ColumnSpan="3"
+                    
                     Width="{TemplateBinding ActualWidth}"
+                    RadiusX="0"
+                    RadiusY="0"
                     Style="{TemplateBinding InactiveTrackStyle}" />
                 <Rectangle
                     x:Name="HorizontalDecreaseRectangle"
                     Grid.Row="1"
+                     
                     Grid.ColumnSpan="3"
                     Width="{TemplateBinding ActualWidth}"
+                    RadiusX="0"
+                    RadiusY="0"
                     Style="{TemplateBinding ActiveTrackStyle}" />
                 <Input:TickBar
                     x:Name="TopTickBar"
@@ -583,7 +591,7 @@
                 <Setter TargetName="HorizontalTrackRectangle" Property="Height" Value="4" />
                 <Setter TargetName="HorizontalDecreaseRectangle" Property="Height" Value="4" />
             </Trigger>
-		    <Trigger Property="IsEnabled" Value="False">
+            <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Fill" TargetName="HorizontalDecreaseRectangle" Value="{StaticResource BorderAlt}"/>
                 <Setter Property="Fill" TargetName="HorizontalTrackRectangle" Value="{StaticResource BorderAlt}"/>
             </Trigger>
@@ -616,12 +624,16 @@
                     Grid.RowSpan="3"
                     Grid.Column="1"
                     Height="{TemplateBinding ActualHeight}"
+                    RadiusX="0"
+                    RadiusY="0"
                     Style="{TemplateBinding InactiveTrackStyle}" />
                 <Rectangle
                     x:Name="VerticalDecreaseRectangle"
                     Grid.RowSpan="3"
                     Grid.Column="1"
                     Height="{TemplateBinding ActualHeight}"
+                    RadiusX="0"
+                    RadiusY="0"
                     Style="{TemplateBinding ActiveTrackStyle}" />
                 <Input:TickBar
                     x:Name="LeftTickBar"
@@ -795,7 +807,7 @@
                 <Setter TargetName="VerticalTrackRectangle" Property="Height" Value="4" />
                 <Setter TargetName="VerticalDecreaseRectangle" Property="Height" Value="4" />
             </Trigger>
-		    <Trigger Property="IsEnabled" Value="False">
+            <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Fill" TargetName="VerticalDecreaseRectangle" Value="{StaticResource BorderAlt}"/>
                 <Setter Property="Fill" TargetName="VerticalTrackRectangle" Value="{StaticResource BorderAlt}"/>
             </Trigger>

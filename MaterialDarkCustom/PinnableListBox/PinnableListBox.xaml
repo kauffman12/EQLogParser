@@ -16,7 +16,10 @@
 
     <shared:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
 
+    <SolidColorBrush x:Key="PinnableListBoxItem.Selection.Background" Color="#FFA2D7EF"/>
+
     <Style x:Key="SyncfusionPinnableListBoxStyle" TargetType="{x:Type shared:PinnableListBox}">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Background" Value="{StaticResource ContentBackground}" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
         <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
@@ -30,7 +33,8 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            SnapsToDevicePixels="true">
+                            SnapsToDevicePixels="true"
+                            CornerRadius="0">
                             <Grid x:Name="ContenHost">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
@@ -58,7 +62,7 @@
                                     X2="1"
                                     Y1="0"
                                     Y2="0" />
-                                <ScrollViewer x:Name="ScrollViewer" Grid.Row="2">
+                                <ScrollViewer x:Name="ScrollViewer" Grid.Row="2" FocusVisualStyle="{x:Null}">
                                     <Grid x:Name="ItemsContainer">
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" />
@@ -87,6 +91,7 @@
                                         <shared:PinnableItemsControl
                                             x:Name="PART_UnpinnedItems"
                                             Grid.Row="2"
+                                            Focusable="False"
                                             ItemsSource="{Binding UnpinnedItems, RelativeSource={RelativeSource TemplatedParent}}" />
                                     </Grid>
                                 </ScrollViewer>
@@ -101,6 +106,9 @@
                             <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource BorderAlt}" />
                             <Setter TargetName="Border" Property="Background" Value="{StaticResource ContentBackground}" />
                             <Setter TargetName="Header" Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                        </Trigger>
+                        <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                            <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -156,11 +164,23 @@
         <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
         <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness}" />
         <Setter Property="Padding" Value="4" />
+        <Setter Property="Margin">
+            <Setter.Value>
+                <Thickness>0,0,0,0</Thickness>
+            </Setter.Value>
+        </Setter>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type shared:PinnableListBoxItem}">
-
-                    <Border
+                    <Grid x:Name="PinnableListBoxItemGrid">
+                        <Border x:Name="SelectionIndicator"
+                                        HorizontalAlignment="Left"            
+                                        CornerRadius="1.5"
+                                        Height="12"
+                                        Width="2"
+                                        Visibility="Collapsed"     
+                                        Background="{StaticResource PinnableListBoxItem.Selection.Background}" />
+                        <Border
                         x:Name="OuterBorder"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
@@ -204,7 +224,8 @@
                                         VerticalAlignment="Center"
                                         TextElement.FontFamily="{TemplateBinding FontFamily}"
                                         TextElement.FontSize="{TemplateBinding FontSize}"
-                                        TextElement.FontWeight="{TemplateBinding FontWeight}" />
+                                        TextElement.FontWeight="{TemplateBinding FontWeight}"
+                                        Margin="0"/>
                                     <TextBlock
                                         x:Name="Description"
                                         Grid.Row="1"
@@ -217,9 +238,9 @@
                                         Text="{TemplateBinding Description}"
                                         TextTrimming="WordEllipsis"
                                         Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Description, Converter={StaticResource StringToVisibilityConverter}}" />
+                                    </Grid>
                                 </Grid>
-                            </Grid>
-                            <Button
+                                <Button
                                 x:Name="pinnedButton"
                                 Grid.Column="1"
                                 Width="24"
@@ -228,7 +249,7 @@
                                 Command="{x:Static shared:PinnableListBoxItem.PinCommand}"
                                 Style="{StaticResource MaterialPinnableButtonStyle}"
                                 Visibility="Collapsed">
-                                <Path
+                                    <Path
                                     x:Name="Pinpath"
                                     Width="12"
                                     Height="8"
@@ -236,15 +257,17 @@
                                     VerticalAlignment="Bottom"
                                     Fill="{StaticResource IconColor}"
                                     Stretch="Fill" >
-                                    <Path.Data>
-                                        <PathGeometry>M5,0 L6,0 8,2 14,2 14,1 16,1 16,9 14,9 14,8 8,8 6,10 5,10 5,6 0,6 0,4 5,4 z</PathGeometry>
-                                    </Path.Data>
-                                </Path>
-                            </Button>
-                        </Grid>
-                    </Border>
+                                        <Path.Data>
+                                            <PathGeometry>M5,0 L6,0 8,2 14,2 14,1 16,1 16,9 14,9 14,8 8,8 6,10 5,10 5,6 0,6 0,4 5,4 z</PathGeometry>
+                                        </Path.Data>
+                                    </Path>
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger SourceName="ContentHost" Property="IsMouseOver" Value="True">
+                            <Setter TargetName="OuterBorder" Property="Background" Value="Transparent" />
                             <Setter TargetName="ItemContent" Property="TextElement.Foreground" Value="{StaticResource ContentForeground}" />
                             <Setter TargetName="Description" Property="Foreground" Value="{StaticResource ContentForeground}" />
                             <Setter TargetName="ContentHost" Property="Background" Value="{StaticResource ContentBackgroundHover}" />
@@ -256,7 +279,6 @@
                             <Setter TargetName="ItemContent" Property="TextElement.Foreground" Value="{StaticResource ContentForeground}" />
                             <Setter TargetName="Description" Property="Foreground" Value="{StaticResource ContentForeground}" />
                             <Setter TargetName="ContentHost" Property="Background" Value="{StaticResource ContentBackgroundSelection}" />
-
                             <Setter TargetName="Pinpath" Property="Fill" Value="{StaticResource ContentForeground}"/>
                         </Trigger>
 

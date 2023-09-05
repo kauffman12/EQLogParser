@@ -23,7 +23,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
-                    <Grid Background="{TemplateBinding Background}">
+                    <Grid Background="{TemplateBinding Background}" Focusable="False">
                         <ContentPresenter />
                     </Grid>
                 </ControlTemplate>
@@ -245,6 +245,7 @@
     <Style x:Key="SyncfusionSfGridSplitterStyle" TargetType="{x:Type input:SfGridSplitter}">   
         <Setter Property="Background" Value="{StaticResource BorderAlt}" />
         <Setter Property="IsTabStop" Value="true" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="UpButtonTemplate" Value="{StaticResource ExpandCollapseButtonTemplate}" />
         <Setter Property="DownButtonTemplate" Value="{StaticResource ExpandCollapseButtonTemplate}" />
         <Setter Property="LeftButtonTemplate" Value="{StaticResource ExpandCollapseButtonTemplate}"/>

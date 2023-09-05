@@ -120,7 +120,12 @@
         <Setter Property="Background" Value="{StaticResource ContentBackground}"/>
         <Setter Property="BorderBrush" Value="{StaticResource PrimaryBackground}"/>
         <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness}"/>
-        <Setter Property="Padding" Value="6,4,6,4"/>
+        <Setter Property="Padding" Value="6,4,6,4" />
+        <Setter Property="Margin">
+            <Setter.Value>
+                <Thickness>0,0,0,0</Thickness>
+            </Setter.Value>
+        </Setter>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
         <Setter Property="Template">
@@ -128,7 +133,18 @@
                 <ControlTemplate TargetType="{x:Type TabItem}">
                     <Grid x:Name="templateRoot" 
                           SnapsToDevicePixels="true">
+                        <Rectangle x:Name="TabSeparator"
+                            HorizontalAlignment="Right"
+                            Width="1"
+                            
+                            SnapsToDevicePixels="True"
+                            Visibility="Collapsed"    
+                             
+                            StrokeThickness="1"
+                            Margin="0,4,0,4"/>
+                        
                         <Border x:Name="mainBorder" 
+                                SnapsToDevicePixels="True"
                                 BorderBrush="{TemplateBinding BorderBrush}" 
                                 BorderThickness="{TemplateBinding BorderThickness}" 
                                 Background="{TemplateBinding Background}">
@@ -159,8 +175,8 @@
                             <Setter Property="BorderThickness" TargetName="mainBorder">
 							  <Setter.Value>
                                     <Thickness>0,0,0,2</Thickness>
-                                </Setter.Value>
-								</Setter>
+                              </Setter.Value>
+						    </Setter>
                             <Setter Property="Background" TargetName="mainBorder" Value="{StaticResource ContentBackground}"/>
                             <Setter Property="BorderBrush" TargetName="mainBorder" Value="{StaticResource PrimaryBackground}"/>
                             <Setter Property="Foreground" Value="{StaticResource PrimaryColorForeground}"/>

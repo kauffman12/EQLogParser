@@ -1,5 +1,6 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"  
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					
                     xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
                     xmlns:local="clr-namespace:Syncfusion.UI.Xaml.Charts;assembly=Syncfusion.SfChart.WPF">
    <ResourceDictionary.MergedDictionaries>
@@ -21,7 +22,9 @@
         <Setter Property="Template" >
             <Setter.Value>
                 <ControlTemplate TargetType="local:ZoomingToolBar">
-                    <Border  Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                    <Border  Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                             CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
+							 >
                         <ItemsPresenter  />
                     </Border>
                 </ControlTemplate>
@@ -66,12 +69,15 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
-                        <Border x:Name="border" Height="{Binding ToolBarIconHeight}" Width="{Binding ToolBarIconWidth}"  Margin="{Binding ToolBarIconMargin}" Background="Transparent">
+                        <Border x:Name="border" Height="{Binding ToolBarIconHeight}" Width="{Binding ToolBarIconWidth}"  Margin="{Binding ToolBarIconMargin}" Background="Transparent"
+                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}">
                             <Path x:Name="path" 
                                   Margin="4" 
                                   Stretch="Fill" 
-                                  StrokeThickness="1" 
-                                  Data="M16.1685 17L12.2522 12.75M7.83607 4V11.5M3.83607 7.83619H11.8361M14.6724 7.83619C14.6724 11.6117 11.6117 14.6724 7.83619 14.6724C4.06067 14.6724 1 11.6117 1 7.83619C1 4.06067 4.06067 1 7.83619 1C11.6117 1 14.6724 4.06067 14.6724 7.83619Z">
+                                  StrokeThickness="1">
+                                <Path.Data>
+                                    <PathGeometry>M16.1685 17L12.2522 12.75M7.83607 4V11.5M3.83607 7.83619H11.8361M14.6724 7.83619C14.6724 11.6117 11.6117 14.6724 7.83619 14.6724C4.06067 14.6724 1 11.6117 1 7.83619C1 4.06067 4.06067 1 7.83619 1C11.6117 1 14.6724 4.06067 14.6724 7.83619Z</PathGeometry>
+                                </Path.Data>
                                 <Path.Stroke>
                                     <SolidColorBrush x:Name="borderColor" Color="{Binding IconBackground}" />
                                 </Path.Stroke>
@@ -122,12 +128,15 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
-                        <Border x:Name="border" Height="{Binding ToolBarIconHeight}" Width="{Binding ToolBarIconWidth}"  Margin="{Binding ToolBarIconMargin}" Background="Transparent">
+                        <Border x:Name="border" Height="{Binding ToolBarIconHeight}" Width="{Binding ToolBarIconWidth}"  Margin="{Binding ToolBarIconMargin}" Background="Transparent"
+                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}">
                             <Path x:Name="path" 
                                   Margin="4" 
                                   Stretch="Fill" 
-                                  StrokeThickness="1" 
-                                  Data="M16.1685 17L12.2522 12.75M3.83607 7.83619H11.8361M14.6724 7.83619C14.6724 11.6117 11.6117 14.6724 7.83619 14.6724C4.06067 14.6724 1 11.6117 1 7.83619C1 4.06067 4.06067 1 7.83619 1C11.6117 1 14.6724 4.06067 14.6724 7.83619Z">
+                                  StrokeThickness="1">
+                                <Path.Data>
+                                    <PathGeometry>M16.1685 17L12.2522 12.75M3.83607 7.83619H11.8361M14.6724 7.83619C14.6724 11.6117 11.6117 14.6724 7.83619 14.6724C4.06067 14.6724 1 11.6117 1 7.83619C1 4.06067 4.06067 1 7.83619 1C11.6117 1 14.6724 4.06067 14.6724 7.83619Z</PathGeometry>
+                                </Path.Data>
                                 <Path.Stroke>
                                     <SolidColorBrush x:Name="borderColor" Color="{Binding IconBackground}" />
                                 </Path.Stroke>
@@ -178,12 +187,15 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
-                        <Border x:Name="border" Height="{Binding ToolBarIconHeight}" Width="{Binding ToolBarIconWidth}"  Margin="{Binding ToolBarIconMargin}" Background="Transparent">
+                        <Border x:Name="border" Height="{Binding ToolBarIconHeight}" Width="{Binding ToolBarIconWidth}"  Margin="{Binding ToolBarIconMargin}" Background="Transparent"
+                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}">
                             <Path x:Name="path" 
                                   Margin="4" 
                                   Stretch="Fill" 
-                                  StrokeThickness="1" 
-                                  Data="M12.0599 12.7274L16.3325 17M9 5H11V7M7 5H5V7M9 11H11V9M7 11H5V9M14.6724 7.83619C14.6724 11.6117 11.6117 14.6724 7.83619 14.6724C4.06067 14.6724 1 11.6117 1 7.83619C1 4.06067 4.06067 1 7.83619 1C11.6117 1 14.6724 4.06067 14.6724 7.83619Z">
+                                  StrokeThickness="1">
+                                <Path.Data>
+                                    <PathGeometry>M12.0599 12.7274L16.3325 17M9 5H11V7M7 5H5V7M9 11H11V9M7 11H5V9M14.6724 7.83619C14.6724 11.6117 11.6117 14.6724 7.83619 14.6724C4.06067 14.6724 1 11.6117 1 7.83619C1 4.06067 4.06067 1 7.83619 1C11.6117 1 14.6724 4.06067 14.6724 7.83619Z</PathGeometry>
+                                </Path.Data>
                                 <Path.Stroke>
                                     <SolidColorBrush x:Name="borderColor" Color="{Binding IconBackground}" />
                                 </Path.Stroke>
@@ -233,12 +245,15 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
-                        <Border x:Name="border" Height="{Binding ToolBarIconHeight}" Width="{Binding ToolBarIconWidth}"  Margin="{Binding ToolBarIconMargin}" Background="Transparent">
+                        <Border x:Name="border" Height="{Binding ToolBarIconHeight}" Width="{Binding ToolBarIconWidth}"  Margin="{Binding ToolBarIconMargin}" Background="Transparent"
+                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}">
                             <Path x:Name="path" 
                                   Margin="4" 
                                   Stretch="Fill" 
-                                  StrokeThickness="1" 
-                                  Data="M15.142 12.3137L17.9704 9.48528M17.9704 9.48528L15.142 6.65686M17.9704 9.48528H12.3136M6.6568 3.82843L9.48522 1M9.48522 1L12.3137 3.82843M9.48522 1V6.65685M12.3137 15.1421L9.48522 17.9706M9.48522 17.9706L6.6568 15.1421M9.48522 17.9706V12.3137M3.82843 6.65686L1 9.48528M1 9.48528L3.82843 12.3137M1 9.48528H6.65685">
+                                  StrokeThickness="1">
+                                <Path.Data>
+                                    <PathGeometry>M15.142 12.3137L17.9704 9.48528M17.9704 9.48528L15.142 6.65686M17.9704 9.48528H12.3136M6.6568 3.82843L9.48522 1M9.48522 1L12.3137 3.82843M9.48522 1V6.65685M12.3137 15.1421L9.48522 17.9706M9.48522 17.9706L6.6568 15.1421M9.48522 17.9706V12.3137M3.82843 6.65686L1 9.48528M1 9.48528L3.82843 12.3137M1 9.48528H6.65685</PathGeometry>
+                                </Path.Data>
                                 <Path.Stroke>
                                     <SolidColorBrush x:Name="borderColor" Color="{Binding IconBackground}" />
                                 </Path.Stroke>
@@ -288,12 +303,15 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
-                        <Border x:Name="border" Height="{Binding ToolBarIconHeight}" Width="{Binding ToolBarIconWidth}"  Margin="{Binding ToolBarIconMargin}" Background="Transparent">
+                        <Border x:Name="border" Height="{Binding ToolBarIconHeight}" Width="{Binding ToolBarIconWidth}"  Margin="{Binding ToolBarIconMargin}" Background="Transparent"
+                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}">
                             <Path x:Name="path" 
                                   Margin="4" 
                                   Stretch="Fill" 
-                                  StrokeThickness="1" 
-                                  Data="M4.62828 14.0618H1V1H14.0618V4.62828M10.9466 11.3717L14.5749 15M12.6105 8.25655C12.6105 10.6612 10.6612 12.6105 8.25655 12.6105C5.85194 12.6105 3.90262 10.6612 3.90262 8.25655C3.90262 5.85194 5.85194 3.90262 8.25655 3.90262C10.6612 3.90262 12.6105 5.85194 12.6105 8.25655Z">
+                                  StrokeThickness="1">
+                                <Path.Data>
+                                    <PathGeometry>M4.62828 14.0618H1V1H14.0618V4.62828M10.9466 11.3717L14.5749 15M12.6105 8.25655C12.6105 10.6612 10.6612 12.6105 8.25655 12.6105C5.85194 12.6105 3.90262 10.6612 3.90262 8.25655C3.90262 5.85194 5.85194 3.90262 8.25655 3.90262C10.6612 3.90262 12.6105 5.85194 12.6105 8.25655Z</PathGeometry>
+                                </Path.Data>
                                 <Path.Stroke>
                                     <SolidColorBrush x:Name="borderColor" Color="{Binding IconBackground}" />
                                 </Path.Stroke>

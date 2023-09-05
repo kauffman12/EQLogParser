@@ -4,6 +4,7 @@
     xmlns:Microsoft_Windows_Aero="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.Aero"
     xmlns:Microsoft_Windows_Luna="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.Luna"
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
+    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
     
     xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
     xmlns:tools_controls="clr-namespace:Syncfusion.Windows.Tools.Controls;assembly=Syncfusion.Tools.WPF"
@@ -23,7 +24,7 @@
     <tools_controls:CloseButtonTypeToVisibilityConverter x:Key="TabControlExtCloseButtonTypeToVisibilityConverter" />
     <windows_shared:BooleanToVisibilityConverterEx x:Key="TabControlExtBooleanToVisibilityConverterEx" />
     <tools_controls:ImageAlignmentToDockConverter x:Key="TabControlExtImageAlignmentToDockConverter" />
-
+    <windows_shared:ObjectNullToVisibilityConverter x:Key="TabControlExtObjectNullToVisibilityConverterEx"/>
     <DataTemplate x:Key="TabControlExtHeaderDataTemplate" DataType="{x:Type tools_controls:TabItemExt}">
         <TextBlock
             x:Name="HeaderText"
@@ -47,16 +48,24 @@
     <DataTemplate x:Key="SyncfusionTabNewButtonDataTemplate">
         <Border Height="16" Width="16" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" Background="Transparent" x:Name="NewButtonContentBorder">
         <Grid >
-            <Path
-                x:Name="NewButtonPath"
-                Width="9"
-                Height="9"
-                Margin="0 -2 0 0"
-                Fill="{Binding Path=Foreground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Button}}}"
-                SnapsToDevicePixels="True"
-                Stretch="Fill" 
-                Data="M6,0 L8,0 8,6.0000001 14,6.0000001 14,8 8,8 8,14 6,14 6,8 0,8 0,6.0000001 6,6.0000001 z"/>
-        </Grid>
+                <Path
+                        x:Name="NewButtonPath"
+                        Width="9"
+                        Margin="0 -2 0 0"
+                        Height="9"
+                        StrokeThickness="0"
+                        SnapsToDevicePixels="True"
+                        Stretch="Fill" >
+                    <Path.Data>
+                        <PathGeometry>M6,0 L8,0 8,6.0000001 14,6.0000001 14,8 8,8 8,14 6,14 6,8 0,8 0,6.0000001 6,6.0000001 z</PathGeometry>
+                    </Path.Data>
+                    <Path.Style>
+                        <Style TargetType="Path">
+                            <Setter Property=" Fill" Value="{Binding Path=Foreground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Button}}}"/>
+                        </Style>
+                    </Path.Style>
+                </Path>
+            </Grid>
         </Border>
         <DataTemplate.Triggers>
             <Trigger Property="IsMouseOver" SourceName="NewButtonContentBorder" Value="True">
@@ -68,13 +77,20 @@
 
      <Style x:Key="SyncfusionNewButtonStyle" TargetType="{x:Type Button}">
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Margin" Value="4,0"/>
+        <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
-                    <Border x:Name="NewButtonBorder" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
+                    <Border 
+                        x:Name="NewButtonBorder" 
+                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                        Background="{TemplateBinding Background}" 
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        Padding="{TemplateBinding Padding}"
+                        SnapsToDevicePixels="true">
                         <ContentPresenter x:Name="contentPresenter" Focusable="False"  RecognizesAccessKey="True" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -99,7 +115,7 @@
         </Setter>
         <Style.Triggers>
             <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
-            <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -282,6 +298,7 @@
     <Style x:Key="SyncfusionTabControlExtTabPanelAdvStyle" TargetType="{x:Type tools_controls:TabPanelAdv}">
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type tools_controls:TabPanelAdv}">
@@ -295,351 +312,371 @@
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
                         CornerRadius="{TemplateBinding CornerRadius}">
-
-                        <DockPanel LastChildFill="True">
-                            <ContentPresenter
-                                x:Name="PART_CustomItems"
-                                MaxHeight="{Binding Path=ActualHeight, ElementName=PART_TabItems}"
-                                Margin="2,0,0,0"
-                                AllowDrop="False"
-                                Content="{Binding Path=TabPanelItem, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=''}"
-                                ContentSource="TabPanelItem"
-                                DockPanel.Dock="Right" />
-                            <Button
-                                x:Name="PART_CloseButton"
-                                Width="16"
-                                Height="16"
-                                Margin="0,0,8,0"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                AllowDrop="True"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
+                        <Grid>
+                            <Border 
                                 BorderThickness="0"
-                                Command="tools_controls:TabControlCommands.CloseCurrentTabItem"
-                                DockPanel.Dock="Right"
-                                Focusable="False"
-                                Style="{StaticResource TabPanelCaptionButtonsStyle}"
-                                Visibility="{Binding Path=CloseButtonType, Converter={StaticResource TabControlExtCloseButtonTypeToVisibilityConverter}, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Collapsed}">
-                                <Button.ToolTip>
-                                    <ToolTip x:Name="tooltip">
-                                        <ToolTip.Resources>
-                                            <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
-                                        </ToolTip.Resources>
-                                        <TextBlock x:Name="tooltipText" Text="{tools_controls:ToolsLocalizationResourceExtension ResourceName=CloseButtonTooltipText}" />
-                                    </ToolTip>
-                                </Button.ToolTip>
-                                <Button.Content>
-                                    <Path
-                                        x:Name="CloseButtonPath"
-                                        Width="8"
-                                        Height="8"
+                                BorderBrush="Transparent"/>
+                            <DockPanel
+                                LastChildFill="False"
+                                Grid.Column="5">
+                                <ContentPresenter
+                                    x:Name="PART_CustomItems"
+                                    MaxHeight="{Binding Path=ActualHeight, ElementName=PART_TabItems}"
+                                    Margin="2,0,0,0"
+                                    AllowDrop="False"
+                                    Content="{Binding Path=TabPanelItem, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=''}"
+                                    ContentSource="TabPanelItem"
+                                    DockPanel.Dock="Right" />
+                                <Button
+                                    x:Name="PART_CloseButton"
+                                    Width="16"
+                                    Height="16"
+                                    Margin="0,0,8,0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    AllowDrop="True"
+                                    Background="Transparent"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="0"
+                                    Command="tools_controls:TabControlCommands.CloseCurrentTabItem"
+                                    DockPanel.Dock="Right"
+                                    Focusable="False"
+                                    Style="{StaticResource TabPanelCaptionButtonsStyle}"
+                                    Visibility="{Binding Path=CloseButtonType, Converter={StaticResource TabControlExtCloseButtonTypeToVisibilityConverter}, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Collapsed}">
+                                    <Button.ToolTip>
+                                        <ToolTip x:Name="tooltip">
+                                            <ToolTip.Resources>
+                                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                            </ToolTip.Resources>
+                                            <TextBlock x:Name="tooltipText" Text="{tools_controls:ToolsLocalizationResourceExtension ResourceName=CloseButtonTooltipText}" />
+                                        </ToolTip>
+                                    </Button.ToolTip>
+                                    <Button.Content>
+                                        <Path
+                                            x:Name="CloseButtonPath"
+                                            Width="8"
+                                            Height="8"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Fill="{Binding Foreground, ElementName=PART_CloseButton}"
+                                            SnapsToDevicePixels="True"
+                                            Stretch="Fill" 
+                                            Data="M2.999979,0C3.8000264,0,4.4999763,0.30000305,5.1000115,0.90000927L15.999954,11.700012 26.899959,0.90000927C28.099967,-0.29998779 29.999927,-0.29998779 31.099961,0.90000927 32.299972,2.1000061 32.299972,4 31.099961,5.1000061L20.199958,16 31.099961,26.900009C32.299972,28.100006 32.299972,30 31.099961,31.100006 29.899951,32.300003 27.999931,32.300003 26.899959,31.100006L15.999954,20.200012 5.1000115,31.100006C3.9000017,32.300003 1.9999809,32.300003 0.90000743,31.100006 -0.30000248,29.900009 -0.30000248,28 0.90000743,26.900009L11.800011,16 0.90000743,5.1000061C-0.30000248,3.9000092 -0.30000248,2 0.90000743,0.90000927 1.4999818,0.30000305 2.1999928,0 2.999979,0z"/>
+                                    </Button.Content>
+                                </Button>
+                                <Button
+                                    x:Name="PART_MenuButton"
+                                    Width="16"
+                                    Height="16"
+                                    Margin="0,0,8,0"
+                                    AllowDrop="True"
+                                    Background="Transparent"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="0"
+                                    Command="tools_controls:TabControlCommands.OpenContextMenu"
+                                    DockPanel.Dock="Right"
+                                    Focusable="False"
+                                    Style="{StaticResource TabPanelCaptionButtonsStyle}"
+                                    Visibility="Visible">
+                                    <Button.ToolTip>
+                                        <ToolTip x:Name="PART_ContextMenuButtonTooltip">
+                                            <ToolTip.Resources>
+                                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                            </ToolTip.Resources>
+                                            <TextBlock x:Name="PART_ContextMenuButtonTooltipText" Text="{tools_controls:ToolsLocalizationResourceExtension ResourceName=MoreTabs}" />
+                                        </ToolTip>
+                                    </Button.ToolTip>
+                                    <Button.Content>
+                                        <Path
+                                            x:Name="MenuButtonPath"
+                                            Width="8"
+                                            Height="4"
+                                            Fill="{Binding Foreground, ElementName=PART_MenuButton}"
+                                            RenderTransformOrigin="0.5,0.5"
+                                            SnapsToDevicePixels="True"
+                                            Stretch="Fill" 
+                                            Data="M0.87499046,0L31.12499,0C31.92399,0,32.22299,0.49899435,31.82399,0.9979887L16.648991,21.064764C16.24999,21.563759,15.65099,21.563759,15.250991,21.064764L0.1759901,0.9979887C-0.22300911,0.49899435,0.075990677,0,0.87499046,0z"/>
+                                    </Button.Content>
+                                </Button>
+                                <Button
+                                    x:Name="PART_LastTab"
+                                    Width="16"
+                                    MinHeight="16"
+                                    Margin="0,0,8,0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    BorderBrush="Transparent"
+                                    DockPanel.Dock="Right"
+                                    Focusable="False"
+                                    Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}"
+                                    Tag="LastTab"
+                                    Visibility="Collapsed">
+                                    <Button.ToolTip>
+                                        <ToolTip Name="LastTabToolTip">
+                                            <ToolTip.Resources>
+                                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                            </ToolTip.Resources>
+                                            <TextBlock Name="LastToolTipText" Text="{tools_controls:ToolsLocalizationResourceExtension ResourceName=LastTab}"/>
+                                        </ToolTip>
+                                    </Button.ToolTip>
+                                    <Button.Content>
+                                        <Path
+                                            Width="8"
+                                            Height="8"
+                                            Fill="{Binding Foreground, ElementName=PART_LastTab}"
+                                            SnapsToDevicePixels="True"
+                                            Stretch="Fill" 
+                                            Data="M1.4710002,0.0089941425 L7.0000001,6.0179982 1.4880004,12.010002 0.015999794,10.656001 4.2820001,6.0179982 0,1.3629951 z M8.9989967,0 L10.998997,0 10.998997,12 8.9989967,12 z"/>
+                                    </Button.Content>
+                                </Button>
+                                <Button
+                                    x:Name="PART_NextTab"
+                                    Width="16"
+                                    MinHeight="16"
+                                    Margin="0,0,8,0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    BorderBrush="Transparent"
+                                    DockPanel.Dock="Right"
+                                    Focusable="False"
+                                    Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}"
+                                    Tag="NextTab"
+                                    Visibility="Collapsed">
+                                    <Button.ToolTip>
+                                        <ToolTip Name="NextTabToolTip">
+                                            <ToolTip.Resources>
+                                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                            </ToolTip.Resources>
+                                            <TextBlock Name="NextTabToolTipText" Text="{tools_controls:ToolsLocalizationResourceExtension ResourceName=NextTab}"/>
+                                        </ToolTip>
+                                    </Button.ToolTip>
+                                    <Button.Content>
+                                        <Path
+                                            Width="4"
+                                            Height="8"
+                                            Fill="{Binding Foreground, ElementName=PART_NextTab}"
+                                            SnapsToDevicePixels="True"
+                                            Stretch="Fill"
+                                            Data="M1.2899816,0 L9.0010002,6.5099945 1.3129919,13 0.022979841,11.472 5.9000094,6.5099945 0,1.529007 z"/>
+                                    </Button.Content>
+                                </Button>
+                                <Button
+                                    x:Name="PART_PrevTab"
+                                    Width="16"
+                                    MinHeight="16"
+                                    Margin="0,0,8,0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    BorderBrush="Transparent"
+                                    DockPanel.Dock="Right"
+                                    Focusable="False"
+                                    Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}"
+                                    Tag="PrevTab"
+                                    Visibility="Collapsed">
+                                    <Button.ToolTip>
+                                        <ToolTip Name="PreviousTabToolTip">
+                                            <ToolTip.Resources>
+                                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                            </ToolTip.Resources>
+                                            <TextBlock Name="PreviousTabToolTipText" Text="{tools_controls:ToolsLocalizationResourceExtension ResourceName=PreviousTab}"/>
+                                        </ToolTip>
+                                    </Button.ToolTip>
+                                    <Button.Content>
+                                        <Path
+                                            Width="4"
+                                            Height="8"
+                                            Fill="{Binding Foreground, ElementName=PART_PrevTab}"
+                                            SnapsToDevicePixels="True"
+                                            Stretch="Fill"
+                                            Data="M7.7109926,0 L9.0010002,1.529007 3.1009803,6.5099945 8.97799,11.472 7.6879824,13 0,6.5099945 z"/>
+                                    </Button.Content>
+                                </Button>
+                                <Button
+                                    x:Name="PART_NextPage"
+                                    Width="16"
+                                    MinHeight="16"
+                                    Margin="0,0,8,0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    BorderBrush="Transparent"
+                                    DockPanel.Dock="Right"
+                                    Focusable="False"
+                                    Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}"
+                                    Tag="NextPage"
+                                    Visibility="Collapsed">
+                                    <Button.ToolTip>
+                                        <ToolTip Name="NextPageToolTip">
+                                            <ToolTip.Resources>
+                                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                            </ToolTip.Resources>
+                                            <TextBlock Name="NextPageToolTipText" Text="{tools_controls:ToolsLocalizationResourceExtension ResourceName=NextPage}"/>
+                                        </ToolTip>
+                                    </Button.ToolTip>
+                                    <Button.Content>
+                                        <Path
+                                            Width="8"
+                                            Height="8"
+                                            Fill="{Binding Foreground, ElementName=PART_NextPage}"
+                                            SnapsToDevicePixels="True"
+                                            Stretch="Fill"
+                                            Data="M1.2899995,1.4306011E-06 L9.0009968,6.5090012 1.3129997,12.999001 0.02300024,11.471001 5.8999981,6.5090012 0,1.5280014 z M8.2900028,0 L16.001002,6.5090003 8.3130016,12.999 7.0230044,11.471 12.900004,6.5090003 7.0000017,1.5279997 z"/>
+                                    </Button.Content>
+                                </Button>
+                                <Button
+                                    x:Name="PART_PrevPage"
+                                    Width="16"
+                                    MinHeight="16"
+                                    Margin="0,0,8,0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    BorderBrush="Transparent"
+                                    DockPanel.Dock="Right"
+                                    Focusable="False"
+                                    Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}"
+                                    Tag="PrevPage"
+                                    Visibility="Collapsed">
+                                    <Button.ToolTip>
+                                        <ToolTip Name="PreviousPageToolTip">
+                                            <ToolTip.Resources>
+                                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                            </ToolTip.Resources>
+                                            <TextBlock Name="PreviousPageToolTipText" Text="{tools_controls:ToolsLocalizationResourceExtension ResourceName=PreviousPage}"/>
+                                        </ToolTip>
+                                    </Button.ToolTip>
+                                    <Button.Content>
+                                        <Path
+                                            Width="8"
+                                            Height="8"
+                                            Fill="{Binding Foreground, ElementName=PART_PrevPage}"
+                                            SnapsToDevicePixels="True"
+                                            Stretch="Fill" 
+                                            Data="M7.7109995,1.4306008E-06 L9.0009995,1.5280014 3.1009996,6.5090012 8.9779992,11.471001 7.6879995,12.999001 0,6.5090012 z M14.710999,0 L16.000999,1.5279997 10.100999,6.5090003 15.977999,11.471 14.688,12.999 7,6.5090003 z"/>
+                                    </Button.Content>
+                                </Button>
+                                <Button
+                                    x:Name="PART_FirstTab"
+                                    Width="16"
+                                    MinHeight="16"
+                                    Margin="0,0,8,0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    BorderBrush="Transparent"
+                                    DockPanel.Dock="Right"
+                                    Focusable="False"
+                                    Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}"
+                                    Tag="FirstTab"
+                                    Visibility="Collapsed">
+                                    <Button.ToolTip>
+                                        <ToolTip Name="FirstTabToolTip">
+                                            <ToolTip.Resources>
+                                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                            </ToolTip.Resources>
+                                            <TextBlock Name="FirstTabToolTipText" Text="{tools_controls:ToolsLocalizationResourceExtension ResourceName=FirstTab}"/>
+                                        </ToolTip>
+                                    </Button.ToolTip>
+                                    <Button.Content>
+                                        <Path
+                                            Width="8"
+                                            Height="8"
+                                            Fill="{Binding Foreground, ElementName=PART_FirstTab}"
+                                            SnapsToDevicePixels="True"
+                                            Stretch="Fill" 
+                                            Data="M9.5280266,0.0090068526 L11.000011,1.3629964 6.718029,6.0179985 10.98402,10.656002 9.5120354,12.010007 4.0000115,6.0179985 z M0,0 L2,0 2,12 0,12 z"/>
+                                    </Button.Content>
+                                </Button>
+                                <Border
+                                    x:Name="PART_Separator"
+                                    Width="1.5"
+                                    Height="14"
+                                    Margin="0,0,8,0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Background="{StaticResource BorderAlt}"
+                                    DockPanel.Dock="Right"
+                                    Focusable="False"
+                                    Visibility="Collapsed" />
+                                <DockPanel LastChildFill="False">
+                                    <Grid 
+                                        x:Name="NewButtonPosition"
+                                        DockPanel.Dock="Left"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                        <tools_controls:NewTabLayout Visibility="Visible">
+                                            <ContentPresenter x:Name="PART_ToolBarTray" 
+											Visibility="{Binding Path=ToolBarTray , Converter={StaticResource TabControlExtObjectNullToVisibilityConverterEx}, Mode=OneWay , RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Collapsed}"
+											Content="{Binding Path=ToolBarTray, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=''}" />
+                                            <Button 
+                                                x:Name="PART_NewTab"
+												Visibility="{Binding Path=IsNewButtonEnabled, Converter={StaticResource TabControlExtBooleanToVisibilityConverterEx}, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}},FallbackValue=Collapsed}"
+                                                BorderBrush="Transparent"
+                                                ContentTemplate="{Binding Path=NewTabButtonTemplate, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}"
+                                                Background="{Binding Path=NewButtonBackground, RelativeSource={RelativeSource AncestorType=tools_controls:TabControlExt}}"    
+                                                BorderThickness="{Binding Path=NewButtonBorderThickness, RelativeSource={RelativeSource AncestorType=tools_controls:TabControlExt}}"    
+                                                Style="{StaticResource SyncfusionNewButtonStyle}"
+                                                DockPanel.Dock="Top"/>
+                                        </tools_controls:NewTabLayout>
+                                    </Grid>
+                                    <Button 
+                                        x:Name="PART_NextAutoScrollButton"
+                                        DockPanel.Dock="Right"
+                                        Width="16"
+                                        MinHeight="16"
+                                        Margin="0,0,8,0"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
-                                        Fill="{Binding Foreground, ElementName=PART_CloseButton}"
-                                        SnapsToDevicePixels="True"
-                                        Stretch="Fill" 
-                                        Data="M2.999979,0C3.8000264,0,4.4999763,0.30000305,5.1000115,0.90000927L15.999954,11.700012 26.899959,0.90000927C28.099967,-0.29998779 29.999927,-0.29998779 31.099961,0.90000927 32.299972,2.1000061 32.299972,4 31.099961,5.1000061L20.199958,16 31.099961,26.900009C32.299972,28.100006 32.299972,30 31.099961,31.100006 29.899951,32.300003 27.999931,32.300003 26.899959,31.100006L15.999954,20.200012 5.1000115,31.100006C3.9000017,32.300003 1.9999809,32.300003 0.90000743,31.100006 -0.30000248,29.900009 -0.30000248,28 0.90000743,26.900009L11.800011,16 0.90000743,5.1000061C-0.30000248,3.9000092 -0.30000248,2 0.90000743,0.90000927 1.4999818,0.30000305 2.1999928,0 2.999979,0z"/>
-                                </Button.Content>
-                            </Button>
-                            <Button
-                                x:Name="PART_MenuButton"
-                                Width="16"
-                                Height="16"
-                                Margin="0,0,8,0"
-                                AllowDrop="True"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                BorderThickness="0"
-                                Command="tools_controls:TabControlCommands.OpenContextMenu"
-                                DockPanel.Dock="Right"
-                                Focusable="False"
-                                Style="{StaticResource TabPanelCaptionButtonsStyle}"
-                                Visibility="Visible">
-                                <Button.ToolTip>
-                                    <ToolTip x:Name="PART_ContextMenuButtonTooltip">
-                                        <ToolTip.Resources>
-                                            <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
-                                        </ToolTip.Resources>
-                                        <TextBlock x:Name="PART_ContextMenuButtonTooltipText" Text="{tools_controls:ToolsLocalizationResourceExtension ResourceName=MoreTabs}" />
-                                    </ToolTip>
-                                </Button.ToolTip>
-                                <Button.Content>
-                                    <Path
-                                        x:Name="MenuButtonPath"
-                                        Width="8"
-                                        Height="4"
-                                        Fill="{Binding Foreground, ElementName=PART_MenuButton}"
-                                        RenderTransformOrigin="0.5,0.5"
-                                        SnapsToDevicePixels="True"
-                                        Stretch="Fill" 
-                                        Data="M0.87499046,0L31.12499,0C31.92399,0,32.22299,0.49899435,31.82399,0.9979887L16.648991,21.064764C16.24999,21.563759,15.65099,21.563759,15.250991,21.064764L0.1759901,0.9979887C-0.22300911,0.49899435,0.075990677,0,0.87499046,0z"/>
-                                </Button.Content>
-                            </Button>
-                            <Button
-                                x:Name="PART_LastTab"
-                                Width="16"
-                                MinHeight="16"
-                                Margin="0,0,8,0"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                DockPanel.Dock="Right"
-                                Focusable="False"
-                                Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}"
-                                Tag="LastTab"
-                                Visibility="Collapsed">
-                                <Button.ToolTip>
-                                    <ToolTip Name="LastTabToolTip">
-                                        <ToolTip.Resources>
-                                            <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
-                                        </ToolTip.Resources>
-                                        <TextBlock Name="LastToolTipText" Text="{tools_controls:ToolsLocalizationResourceExtension ResourceName=LastTab}"/>
-                                    </ToolTip>
-                                </Button.ToolTip>
-                                <Button.Content>
-                                    <Path
-                                        Width="8"
-                                        Height="8"
-                                        Fill="{Binding Foreground, ElementName=PART_LastTab}"
-                                        SnapsToDevicePixels="True"
-                                        Stretch="Fill" 
-                                        Data="M1.4710002,0.0089941425 L7.0000001,6.0179982 1.4880004,12.010002 0.015999794,10.656001 4.2820001,6.0179982 0,1.3629951 z M8.9989967,0 L10.998997,0 10.998997,12 8.9989967,12 z"/>
-                                </Button.Content>
-                            </Button>
-                            <Button
-                                x:Name="PART_NextTab"
-                                Width="16"
-                                MinHeight="16"
-                                Margin="0,0,8,0"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                DockPanel.Dock="Right"
-                                Focusable="False"
-                                Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}"
-                                Tag="NextTab"
-                                Visibility="Collapsed">
-                                <Button.ToolTip>
-                                    <ToolTip Name="NextTabToolTip">
-                                        <ToolTip.Resources>
-                                            <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
-                                        </ToolTip.Resources>
-                                        <TextBlock Name="NextTabToolTipText" Text="{tools_controls:ToolsLocalizationResourceExtension ResourceName=NextTab}"/>
-                                    </ToolTip>
-                                </Button.ToolTip>
-                                <Button.Content>
-                                    <Path
-                                        Width="4"
-                                        Height="8"
-                                        Fill="{Binding Foreground, ElementName=PART_NextTab}"
-                                        SnapsToDevicePixels="True"
-                                        Stretch="Fill"
-                                        Data="M1.2899816,0 L9.0010002,6.5099945 1.3129919,13 0.022979841,11.472 5.9000094,6.5099945 0,1.529007 z"/>
-                                </Button.Content>
-                            </Button>
-                            <Button
-                                x:Name="PART_PrevTab"
-                                Width="16"
-                                MinHeight="16"
-                                Margin="0,0,8,0"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                DockPanel.Dock="Right"
-                                Focusable="False"
-                                Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}"
-                                Tag="PrevTab"
-                                Visibility="Collapsed">
-                                <Button.ToolTip>
-                                    <ToolTip Name="PreviousTabToolTip">
-                                        <ToolTip.Resources>
-                                            <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
-                                        </ToolTip.Resources>
-                                        <TextBlock Name="PreviousTabToolTipText" Text="{tools_controls:ToolsLocalizationResourceExtension ResourceName=PreviousTab}"/>
-                                    </ToolTip>
-                                </Button.ToolTip>
-                                <Button.Content>
-                                    <Path
-                                        Width="4"
-                                        Height="8"
-                                        Fill="{Binding Foreground, ElementName=PART_PrevTab}"
-                                        SnapsToDevicePixels="True"
-                                        Stretch="Fill"
-                                        Data="M7.7109926,0 L9.0010002,1.529007 3.1009803,6.5099945 8.97799,11.472 7.6879824,13 0,6.5099945 z"/>
-                                </Button.Content>
-                            </Button>
-                            <Button
-                                x:Name="PART_NextPage"
-                                Width="16"
-                                MinHeight="16"
-                                Margin="0,0,8,0"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                DockPanel.Dock="Right"
-                                Focusable="False"
-                                Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}"
-                                Tag="NextPage"
-                                Visibility="Collapsed">
-                                <Button.ToolTip>
-                                    <ToolTip Name="NextPageToolTip">
-                                        <ToolTip.Resources>
-                                            <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
-                                        </ToolTip.Resources>
-                                        <TextBlock Name="NextPageToolTipText" Text="{tools_controls:ToolsLocalizationResourceExtension ResourceName=NextPage}"/>
-                                    </ToolTip>
-                                </Button.ToolTip>
-                                <Button.Content>
-                                    <Path
-                                        Width="8"
-                                        Height="8"
-                                        Fill="{Binding Foreground, ElementName=PART_NextPage}"
-                                        SnapsToDevicePixels="True"
-                                        Stretch="Fill"
-                                        Data="M1.2899995,1.4306011E-06 L9.0009968,6.5090012 1.3129997,12.999001 0.02300024,11.471001 5.8999981,6.5090012 0,1.5280014 z M8.2900028,0 L16.001002,6.5090003 8.3130016,12.999 7.0230044,11.471 12.900004,6.5090003 7.0000017,1.5279997 z"/>
-                                </Button.Content>
-                            </Button>
-                            <Button
-                                x:Name="PART_PrevPage"
-                                Width="16"
-                                MinHeight="16"
-                                Margin="0,0,8,0"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                DockPanel.Dock="Right"
-                                Focusable="False"
-                                Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}"
-                                Tag="PrevPage"
-                                Visibility="Collapsed">
-                                <Button.ToolTip>
-                                    <ToolTip Name="PreviousPageToolTip">
-                                        <ToolTip.Resources>
-                                            <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
-                                        </ToolTip.Resources>
-                                        <TextBlock Name="PreviousPageToolTipText" Text="{tools_controls:ToolsLocalizationResourceExtension ResourceName=PreviousPage}"/>
-                                    </ToolTip>
-                                </Button.ToolTip>
-                                <Button.Content>
-                                    <Path
-                                        Width="8"
-                                        Height="8"
-                                        Fill="{Binding Foreground, ElementName=PART_PrevPage}"
-                                        SnapsToDevicePixels="True"
-                                        Stretch="Fill" 
-                                        Data="M7.7109995,1.4306008E-06 L9.0009995,1.5280014 3.1009996,6.5090012 8.9779992,11.471001 7.6879995,12.999001 0,6.5090012 z M14.710999,0 L16.000999,1.5279997 10.100999,6.5090003 15.977999,11.471 14.688,12.999 7,6.5090003 z"/>
-                                </Button.Content>
-                            </Button>
-                            <Button
-                                x:Name="PART_FirstTab"
-                                Width="16"
-                                MinHeight="16"
-                                Margin="0,0,8,0"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                DockPanel.Dock="Right"
-                                Focusable="False"
-                                Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}"
-                                Tag="FirstTab"
-                                Visibility="Collapsed">
-                                <Button.ToolTip>
-                                    <ToolTip Name="FirstTabToolTip">
-                                        <ToolTip.Resources>
-                                            <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
-                                        </ToolTip.Resources>
-                                        <TextBlock Name="FirstTabToolTipText" Text="{tools_controls:ToolsLocalizationResourceExtension ResourceName=FirstTab}"/>
-                                    </ToolTip>
-                                </Button.ToolTip>
-                                <Button.Content>
-                                    <Path
-                                        Width="8"
-                                        Height="8"
-                                        Fill="{Binding Foreground, ElementName=PART_FirstTab}"
-                                        SnapsToDevicePixels="True"
-                                        Stretch="Fill" 
-                                        Data="M9.5280266,0.0090068526 L11.000011,1.3629964 6.718029,6.0179985 10.98402,10.656002 9.5120354,12.010007 4.0000115,6.0179985 z M0,0 L2,0 2,12 0,12 z"/>
-                                </Button.Content>
-                            </Button>
-                            <Grid x:Name="NewButtonPosition" DockPanel.Dock="Left">
-                                <tools_controls:NewTabLayout>
-                                    <ContentPresenter x:Name="PART_ToolBarTray" Content="{Binding Path=ToolBarTray, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=''}" />
-                                    <Button x:Name="PART_NewTab"
-                                        ContentTemplate="{Binding Path=NewTabButtonTemplate, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}"
-                                        Style="{StaticResource SyncfusionNewButtonStyle}"
-                                        DockPanel.Dock="Top"/>
-                                </tools_controls:NewTabLayout>
-                            </Grid>
-                            <Button 
-                                x:Name="PART_NextAutoScrollButton"
-                                Width="16"
-                                MinHeight="16"
-                                Margin="0,0,8,0"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                DockPanel.Dock="Right"
-                                Focusable="False"
-                                Tag="RightAutoScroll"
-                                Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}"
-                                Visibility="Collapsed">
-                                <Button.Content>
-                                    <Path Data="M18,1.4210855E-14 C19.104004,-1.1920928E-07 20,0.89599597 20,1.9999999 20,3.1040038 19.104004,3.9999999 18,3.9999999 16.895996,3.9999999 16,3.1040038 16,1.9999999 16,0.89599597 16.895996,-1.1920928E-07 18,1.4210855E-14 z M10,1.4210855E-14 C11.104004,-1.1920928E-07 12,0.89599597 12,1.9999999 12,3.1040038 11.104004,3.9999999 10,3.9999999 8.8959961,3.9999999 8,3.1040038 8,1.9999999 8,0.89599597 8.8959961,-1.1920928E-07 10,1.4210855E-14 z M1.9999999,1.4210855E-14 C3.1040039,-1.1920928E-07 4,0.89599597 4,1.9999999 4,3.1040038 3.1040039,3.9999999 1.9999999,3.9999999 0.89599609,3.9999999 0,3.1040038 0,1.9999999 0,0.89599597 0.89599609,-1.1920928E-07 1.9999999,1.4210855E-14 z" 
-                                  Fill="{Binding Foreground, ElementName=PART_NextAutoScrollButton}"
-                                  Height="2"  
-                                  SnapsToDevicePixels="True"
-                                  Stretch="Fill"
-                                  Width="8"/>
-                                </Button.Content>
-                            </Button>
-                            <Button
-                                x:Name="PART_PrevAutoScrollButton"
-                                Width="16"
-                                MinHeight="16"
-                                Margin="0,0,8,0"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                DockPanel.Dock="Left"
-                                Focusable="False"
-                                Tag="LeftAutoScroll"
-                                Style="{Binding ScrollingButtonStyle,RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type tools_controls:TabControlExt}}}"
-                                Visibility="Collapsed">
-                                <Button.Content>
-                                    <Path Data="M18,1.4210855E-14 C19.104004,-1.1920928E-07 20,0.89599597 20,1.9999999 20,3.1040038 19.104004,3.9999999 18,3.9999999 16.895996,3.9999999 16,3.1040038 16,1.9999999 16,0.89599597 16.895996,-1.1920928E-07 18,1.4210855E-14 z M10,1.4210855E-14 C11.104004,-1.1920928E-07 12,0.89599597 12,1.9999999 12,3.1040038 11.104004,3.9999999 10,3.9999999 8.8959961,3.9999999 8,3.1040038 8,1.9999999 8,0.89599597 8.8959961,-1.1920928E-07 10,1.4210855E-14 z M1.9999999,1.4210855E-14 C3.1040039,-1.1920928E-07 4,0.89599597 4,1.9999999 4,3.1040038 3.1040039,3.9999999 1.9999999,3.9999999 0.89599609,3.9999999 0,3.1040038 0,1.9999999 0,0.89599597 0.89599609,-1.1920928E-07 1.9999999,1.4210855E-14 z" 
-                                  Fill="{Binding Foreground, ElementName=PART_PrevAutoScrollButton}"
-                                  Height="2"  
-                                  SnapsToDevicePixels="True"
-                                  Stretch="Fill"
-                                  Width="8"/>
-                                </Button.Content>
-                            </Button>
-                            <Border
-                                x:Name="PART_Separator"
-                                Width="1.5"
-                                Height="14"
-                                Margin="0,0,8,0"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Background="{StaticResource BorderAlt}"
-                                DockPanel.Dock="Right"
-                                Focusable="False"
-                                Visibility="{Binding ElementName=PART_PrevTab, Path=Visibility}" />
-                            <ContentPresenter
-                                x:Name="PART_TabItems"
-                                Content="{TemplateBinding Content}"
-                                ContentSource="TabItems"
-                                DockPanel.Dock="Right" />
-                        </DockPanel>
+                                        Background="Transparent"
+                                        BorderBrush="Transparent"
+                                        Focusable="False"
+                                        Tag="RightAutoScroll"
+                                        Style="{Binding ScrollingButtonStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}"
+                                        Visibility="Collapsed">
+                                        <Button.Content>
+                                            <Path 
+                                                Data="M18,1.4210855E-14 C19.104004,-1.1920928E-07 20,0.89599597 20,1.9999999 20,3.1040038 19.104004,3.9999999 18,3.9999999 16.895996,3.9999999 16,3.1040038 16,1.9999999 16,0.89599597 16.895996,-1.1920928E-07 18,1.4210855E-14 z M10,1.4210855E-14 C11.104004,-1.1920928E-07 12,0.89599597 12,1.9999999 12,3.1040038 11.104004,3.9999999 10,3.9999999 8.8959961,3.9999999 8,3.1040038 8,1.9999999 8,0.89599597 8.8959961,-1.1920928E-07 10,1.4210855E-14 z M1.9999999,1.4210855E-14 C3.1040039,-1.1920928E-07 4,0.89599597 4,1.9999999 4,3.1040038 3.1040039,3.9999999 1.9999999,3.9999999 0.89599609,3.9999999 0,3.1040038 0,1.9999999 0,0.89599597 0.89599609,-1.1920928E-07 1.9999999,1.4210855E-14 z" 
+                                                Fill="{Binding Foreground, ElementName=PART_NextAutoScrollButton}"
+                                                Height="2"  
+                                                SnapsToDevicePixels="True"
+                                                Stretch="Fill"
+                                                Width="8"/>
+                                        </Button.Content>
+                                    </Button>
+                                    <Button
+                                        x:Name="PART_PrevAutoScrollButton"
+                                        DockPanel.Dock="Left"
+                                        Width="16"
+                                        MinHeight="16"
+                                        Margin="0,0,8,0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent"
+                                        Focusable="False"
+                                        Tag="LeftAutoScroll"
+                                        Style="{Binding ScrollingButtonStyle,RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type tools_controls:TabControlExt}}}"
+                                        Visibility="Collapsed">
+                                        <Button.Content>
+                                            <Path Data="M18,1.4210855E-14 C19.104004,-1.1920928E-07 20,0.89599597 20,1.9999999 20,3.1040038 19.104004,3.9999999 18,3.9999999 16.895996,3.9999999 16,3.1040038 16,1.9999999 16,0.89599597 16.895996,-1.1920928E-07 18,1.4210855E-14 z M10,1.4210855E-14 C11.104004,-1.1920928E-07 12,0.89599597 12,1.9999999 12,3.1040038 11.104004,3.9999999 10,3.9999999 8.8959961,3.9999999 8,3.1040038 8,1.9999999 8,0.89599597 8.8959961,-1.1920928E-07 10,1.4210855E-14 z M1.9999999,1.4210855E-14 C3.1040039,-1.1920928E-07 4,0.89599597 4,1.9999999 4,3.1040038 3.1040039,3.9999999 1.9999999,3.9999999 0.89599609,3.9999999 0,3.1040038 0,1.9999999 0,0.89599597 0.89599609,-1.1920928E-07 1.9999999,1.4210855E-14 z" 
+                                            Fill="{Binding Foreground, ElementName=PART_PrevAutoScrollButton}"
+                                            Height="2"  
+                                            SnapsToDevicePixels="True"
+                                            Stretch="Fill"
+                                            Width="8"/>
+                                        </Button.Content>
+                                    </Button>
+                                    <ContentPresenter 
+                                        DockPanel.Dock="Left"
+                                        x:Name="PART_TabItems"
+                                        Content="{TemplateBinding Content}"
+                                        ContentSource="TabItems"/>
+                                </DockPanel>
+                            </DockPanel>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
@@ -664,6 +701,7 @@
                             <Setter Property="Visibility" TargetName="PART_MenuButton" Value="Collapsed"/>
                         </DataTrigger>
                         <DataTrigger Binding="{Binding Path=TabStripPlacement, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type TabControl}}, FallbackValue=Top}" Value="Bottom">
+                            <Setter Property="BorderThickness" Value="0"/>
                             <Setter TargetName="PART_CustomItems" Property="LayoutTransform">
                                 <Setter.Value>
                                     <RotateTransform Angle="-180" />
@@ -676,15 +714,19 @@
                             </Setter>
                         </DataTrigger>
                         <DataTrigger Binding="{Binding Path=TabStripPlacement, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type TabControl}}, FallbackValue=Top}" Value="Left">
+                            <Setter Property="BorderThickness" Value="0"/>
                             <Setter TargetName="PART_MenuButton" Property="LayoutTransform">
                                 <Setter.Value>
                                     <RotateTransform Angle="-180" />
                                 </Setter.Value>
                             </Setter>
                         </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=TabStripPlacement, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type TabControl}}, FallbackValue=Top}" Value="Right">
+                            <Setter Property="BorderThickness" Value="0"/>
+                        </DataTrigger>
                         <DataTrigger Binding="{Binding Path=NewButtonAlignment,RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}},FallbackValue=First}" Value="Last">
                             <Setter Property="DockPanel.Dock" Value="Right" TargetName="NewButtonPosition"/>
-                            <Setter Property="Margin" Value="0,0,6,0" TargetName="PART_NewTab"/>
+                            <Setter Property="Margin" Value="0 0 6 0" TargetName="PART_NewTab"/>
                         </DataTrigger>
                         <DataTrigger Binding="{Binding Path=IsAllTabsClosed, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=false}" Value="True">
                             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Hidden" />
@@ -1034,7 +1076,6 @@
         x:Key="SyncfusionMenuItemStyle"
         BasedOn="{StaticResource WPFMenuItemStyle}"
         TargetType="MenuItem">
-        <Setter Property="IsCheckable" Value="True"/>
         <Style.Triggers>
             <Trigger Property="Tag"  Value="Separator">
                 <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
@@ -1161,124 +1202,202 @@
         <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.BodyTextStyle}" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="Transparent" />
-        <Setter Property="Margin" Value="0" />
         <Setter Property="MinHeight" Value="24" />
         <Setter Property="HeaderMargin" Value="6 0" />
         <Setter Property="IconMargin" Value="6 0" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="Padding" Value="1 1 1 0" />
         <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness0002}"/>
         <Setter Property="Control.HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="Control.VerticalContentAlignment" Value="Stretch" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type tools_controls:TabItemExt}">
-                    <Border
-                        x:Name="Bd"
-                        Margin="{TemplateBinding Margin}"
-                        Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        SnapsToDevicePixels="True"
-                        ToolTip="{TemplateBinding ItemToolTip}">
-                        <DockPanel x:Name="PART_DockPanel" LastChildFill="True">
-                            <Button
-                                x:Name="PART_CloseButton"
-                                Width="{Binding ElementName=Content, Path=ActualHeight}"
-                                Height="{Binding ElementName=Content, Path=ActualHeight}"
-                                Margin="0,0,6,0"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                BorderThickness="0"
-                                Command="tools_controls:TabControlCommands.CloseTabItem"
-                                DockPanel.Dock="Right"
-                                Focusable="False"
-                                Style="{StaticResource TabPanelCaptionButtonsStyle}"
-                                Tag="TabItem"
-                                Visibility="Collapsed">
-                                <Button.Content>
-                                    <Path
-                                        x:Name="CloseButtonPath"
-                                        Width="8"
-                                        Height="8"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        Fill="{Binding Foreground, ElementName=PART_CloseButton}"
-                                        SnapsToDevicePixels="True"
-                                        Stretch="Fill" 
-                                        Data="M2.999979,0C3.8000264,0,4.4999763,0.30000305,5.1000115,0.90000927L15.999954,11.700012 26.899959,0.90000927C28.099967,-0.29998779 29.999927,-0.29998779 31.099961,0.90000927 32.299972,2.1000061 32.299972,4 31.099961,5.1000061L20.199958,16 31.099961,26.900009C32.299972,28.100006 32.299972,30 31.099961,31.100006 29.899951,32.300003 27.999931,32.300003 26.899959,31.100006L15.999954,20.200012 5.1000115,31.100006C3.9000017,32.300003 1.9999809,32.300003 0.90000743,31.100006 -0.30000248,29.900009 -0.30000248,28 0.90000743,26.900009L11.800011,16 0.90000743,5.1000061C-0.30000248,3.9000092 -0.30000248,2 0.90000743,0.90000927 1.4999818,0.30000305 2.1999928,0 2.999979,0z"/>
-                                </Button.Content>
-                            </Button>
-                            <ToggleButton
-                                x:Name="PART_PinButton"
-                                Width="{Binding ElementName=Content, Path=ActualHeight}"
-                                Height="{Binding ElementName=Content, Path=ActualHeight}"
-                                Margin="0,0,6,0"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                BorderThickness="0"
-                                Command="tools_controls:TabControlCommands.PinTabItem"
-                                CommandParameter="{Binding IsChecked, RelativeSource={RelativeSource Self}}"
-                                DockPanel.Dock="Right"
-                                Style="{StaticResource TabItemCaptionButtonsStyle}"
-                                Visibility="{Binding ShowPin, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:TabItemExt}}, Converter={StaticResource TabControlExtCloseButtonTypeToVisibilityConverter}}">
-                                <ToggleButton.Content>
-                                    <Path
-                                        x:Name="PinButtonPath"
-                                        Width="8"
-                                        Height="10"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        Fill="{Binding Foreground, ElementName=PART_PinButton}"
-                                        Stretch="Fill" 
-                                        Data="M1,0 L9,0 9,2 8,2 8,8 10,10 10,11 6,11 6,16 4,16 4,11 0,11 0,10 2,8 2,2 1,2 z"/>
-                                </ToggleButton.Content>
-                                <ToggleButton.LayoutTransform>
-                                    <RotateTransform Angle="90" />
-                                </ToggleButton.LayoutTransform>
-                            </ToggleButton>
-                            <Image
-                                x:Name="PART_Image"
-                                Width="{TemplateBinding tools_controls:TabControlExt.ImageWidth}"
-                                Height="{TemplateBinding tools_controls:TabControlExt.ImageHeight}"
-                                Margin="{TemplateBinding IconMargin}"
-                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                DockPanel.Dock="{Binding Path=(tools_controls:TabControlExt.ImageAlignment), Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource TabControlExtImageAlignmentToDockConverter}}"
+                    <Grid x:Name="templateRoot" 
+                          SnapsToDevicePixels="true">
+                        <Rectangle x:Name="TabSeparator"
+                            HorizontalAlignment="Right"
+                            Width="1"
+                            SnapsToDevicePixels="True"
+                            Visibility="Collapsed"    
+                             
+                            StrokeThickness="1"
+                            Margin="0,4,0,4">
+                            <Rectangle.RenderTransform>
+                                <TranslateTransform X="1"/>
+                            </Rectangle.RenderTransform>
+                        </Rectangle>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition x:Name="topRow"/>
+                                <RowDefinition x:Name="bottomRow" Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <!--<Grid.ColumnDefinitions>
+                                <ColumnDefinition x:Name="leftColumn"/>
+                                <ColumnDefinition x:Name="rightColumn" Width="Auto"/>
+                            </Grid.ColumnDefinitions>-->
+                            <Border
+                                x:Name="Bd"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
                                 SnapsToDevicePixels="True"
-                                Source="{TemplateBinding tools_controls:TabControlExt.Image}"
-                                Stretch="Fill" />
-                            <ContentPresenter
-                                x:Name="Content"
-                                Margin="{TemplateBinding HeaderMargin}"
-                                HorizontalAlignment="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
-                                VerticalAlignment="{Binding VerticalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
-                                Content="{TemplateBinding HeaderedContentControl.Header}"
-                                ContentSource="Header"
-                                ContentTemplate="{TemplateBinding HeaderedContentControl.HeaderTemplate}"
-                                RecognizesAccessKey="False"
-                                SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}"
-                                TextElement.Foreground="{TemplateBinding Foreground}">
-                                <ContentPresenter.Resources>
-                                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
-                                </ContentPresenter.Resources>
-                            </ContentPresenter>
-                            <ContentPresenter
-                                x:Name="PART_EditHeader"
-                                Margin="{TemplateBinding HeaderMargin}"
-                                HorizontalAlignment="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
-                                VerticalAlignment="{Binding VerticalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
-                                Content="{TemplateBinding HeaderedContentControl.Header}"
-                                ContentSource="Header"
-                                RecognizesAccessKey="True"
-                                SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}"
-                                TextElement.FontWeight="{TemplateBinding FontWeight}"
-                                TextElement.Foreground="{TemplateBinding Foreground}"
-                                Visibility="Collapsed" />
-                        </DockPanel>
-                    </Border>
+                                ToolTip="{TemplateBinding ItemToolTip}">
+                                <DockPanel x:Name="PART_DockPanel" LastChildFill="True">
+                                    <Button
+                                    x:Name="PART_CloseButton"
+                                    Width="{Binding ElementName=Content, Path=ActualHeight}"
+                                    Height="{Binding ElementName=Content, Path=ActualHeight}"
+                                    Margin="1"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="0"
+                                    Command="tools_controls:TabControlCommands.CloseTabItem"
+                                    DockPanel.Dock="Right"
+                                    Focusable="False"
+                                    Style="{StaticResource TabPanelCaptionButtonsStyle}"
+                                    Tag="TabItem"
+                                    Visibility="Collapsed">
+                                        <Button.Content>
+                                            <Path
+                                            x:Name="CloseButtonPath"
+                                            Width="8"
+                                            Height="8"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Fill="{Binding Foreground, ElementName=PART_CloseButton}"
+                                            SnapsToDevicePixels="True"
+                                            Stretch="Fill" 
+                                            Data="M2.999979,0C3.8000264,0,4.4999763,0.30000305,5.1000115,0.90000927L15.999954,11.700012 26.899959,0.90000927C28.099967,-0.29998779 29.999927,-0.29998779 31.099961,0.90000927 32.299972,2.1000061 32.299972,4 31.099961,5.1000061L20.199958,16 31.099961,26.900009C32.299972,28.100006 32.299972,30 31.099961,31.100006 29.899951,32.300003 27.999931,32.300003 26.899959,31.100006L15.999954,20.200012 5.1000115,31.100006C3.9000017,32.300003 1.9999809,32.300003 0.90000743,31.100006 -0.30000248,29.900009 -0.30000248,28 0.90000743,26.900009L11.800011,16 0.90000743,5.1000061C-0.30000248,3.9000092 -0.30000248,2 0.90000743,0.90000927 1.4999818,0.30000305 2.1999928,0 2.999979,0z"/>
+                                        </Button.Content>
+                                    </Button>
+                                    <ToggleButton
+                                    x:Name="PART_PinButton"
+                                    Width="{Binding ElementName=Content, Path=ActualHeight}"
+                                    Height="{Binding ElementName=Content, Path=ActualHeight}"
+                                    Margin="1"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Background="Transparent"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="0"
+                                    Command="tools_controls:TabControlCommands.PinTabItem"
+                                    CommandParameter="{Binding IsChecked, RelativeSource={RelativeSource Self}}"
+                                    DockPanel.Dock="Right"
+                                    Style="{StaticResource TabItemCaptionButtonsStyle}"
+                                    Visibility="{Binding ShowPin, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:TabItemExt}}, Converter={StaticResource TabControlExtCloseButtonTypeToVisibilityConverter}}">
+                                        <ToggleButton.Content>
+                                            <Path
+                                            x:Name="PinButtonPath"
+                                            Width="8"
+                                            Height="10"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Fill="{Binding Foreground, ElementName=PART_PinButton}"
+                                            Stretch="Fill" 
+                                            Data="M1,0 L9,0 9,2 8,2 8,8 10,10 10,11 6,11 6,16 4,16 4,11 0,11 0,10 2,8 2,2 1,2 z"/>
+                                        </ToggleButton.Content>
+                                        <ToggleButton.LayoutTransform>
+                                            <RotateTransform Angle="90" />
+                                        </ToggleButton.LayoutTransform>
+                                    </ToggleButton>
+                                    <Image
+                                    x:Name="PART_Image"
+                                    Width="{TemplateBinding tools_controls:TabControlExt.ImageWidth}"
+                                    Height="{TemplateBinding tools_controls:TabControlExt.ImageHeight}"
+                                    Margin="{TemplateBinding IconMargin}"
+                                    HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                    VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                    DockPanel.Dock="{Binding Path=(tools_controls:TabControlExt.ImageAlignment), Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource TabControlExtImageAlignmentToDockConverter}}"
+                                    SnapsToDevicePixels="True"
+                                    Source="{TemplateBinding tools_controls:TabControlExt.Image}"
+                                    Stretch="Fill" />
+									<Grid x:Name="HeaderGrid">
+                                    <ContentPresenter
+                                    x:Name="Content"
+                                    Margin="{TemplateBinding HeaderMargin}"
+                                    HorizontalAlignment="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                    VerticalAlignment="{Binding VerticalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                    Content="{TemplateBinding HeaderedContentControl.Header}"
+                                    ContentSource="Header"
+                                    ContentTemplate="{TemplateBinding HeaderedContentControl.HeaderTemplate}"
+                                    RecognizesAccessKey="False"
+                                    SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}"
+                                    TextElement.Foreground="{TemplateBinding Foreground}">
+                                        <ContentPresenter.Resources>
+                                            <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                        </ContentPresenter.Resources>
+                                    </ContentPresenter>
+                                    <ContentPresenter
+                                    x:Name="PART_EditHeader"
+                                    Margin="{TemplateBinding HeaderMargin}"
+                                    HorizontalAlignment="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                    VerticalAlignment="{Binding VerticalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                    Content="{TemplateBinding HeaderedContentControl.Header}"
+                                    ContentSource="Header"
+                                    RecognizesAccessKey="True"
+                                    SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}"
+                                    TextElement.FontWeight="{TemplateBinding FontWeight}"
+                                    TextElement.Foreground="{TemplateBinding Foreground}"
+                                    Visibility="Collapsed" />
+									</Grid>
+                                </DockPanel>
+                            </Border>
+                            <Grid
+                                Grid.Row="1"
+                                Name="Curve"
+                                Visibility="Collapsed"
+                                Background="{TemplateBinding Background}">
+                                <Path
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Bottom"
+                                    Data="M0,4 C 2,4 4,2 4,0 L 4,4 0,4z"
+                                    Fill="{TemplateBinding Background}"
+                                    Stroke="{TemplateBinding Background}"
+                                    StrokeLineJoin="Round">
+                                    <Path.RenderTransform>
+                                        <TranslateTransform X="-4"/>
+                                    </Path.RenderTransform>
+                                </Path>
+                                <Path
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Bottom"
+                                    Data="M0,4 C 2,4 4,2 4,0"
+                                    StrokeThickness="1"
+                                    Stroke="{TemplateBinding BorderBrush}"
+                                    StrokeLineJoin="Round">
+                                    <Path.RenderTransform>
+                                        <TranslateTransform X="-4"/>
+                                    </Path.RenderTransform>
+                                </Path>
+                                <Path
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Bottom"
+                                    Data="M0,0 C 0,2 2,4 4,4 L 0,4 0,0z"
+                                    Fill="{TemplateBinding Background}"
+                                    Stroke="{TemplateBinding Background}"
+                                    StrokeLineJoin="Round">
+                                    <Path.RenderTransform>
+                                        <TranslateTransform X="4"/>
+                                    </Path.RenderTransform>
+                                </Path>
+                                <Path
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Bottom"
+                                    Data="M0,0 C 0,2 2,4 4,4"
+                                    StrokeThickness="1"
+                                    Stroke="{TemplateBinding BorderBrush}"
+                                    StrokeLineJoin="Round">
+                                    <Path.RenderTransform>
+                                        <TranslateTransform X="4"/>
+                                    </Path.RenderTransform>
+                                </Path>
+                            </Grid>
+                        </Grid>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                             <Setter Property="HeaderMargin" Value="12,9,12,8" />
@@ -1322,28 +1441,27 @@
                             </MultiTrigger.Conditions>
                             <Setter TargetName="PART_Image" Property="Stretch" Value="None" />
                         </MultiTrigger>
-
                         <Trigger SourceName="Bd" Property="IsMouseOver" Value="true">
-                            <Setter Property="Background" Value="{Binding Path=TabItemHoverBackground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Transparent}" />
-                            <Setter Property="BorderBrush" Value="{Binding Path=TabItemHoverBorderBrush, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Transparent}" />
-                            <Setter Property="Foreground" Value="{Binding Path=TabItemHoverForeground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Transparent}" />
+                            <Setter Property="Background" Value="{Binding Path=TabControlExt.TabItemHoverBackground, RelativeSource={RelativeSource Mode=Self}, FallbackValue=Transparent}" />
+                            <Setter Property="BorderBrush" Value="{Binding Path=TabControlExt.TabItemHoverBorderBrush, RelativeSource={RelativeSource Mode=Self}, FallbackValue=Transparent}" />
+                            <Setter Property="Foreground" Value="{Binding Path=TabControlExt.TabItemHoverForeground, RelativeSource={RelativeSource Mode=Self}, FallbackValue=Transparent}" />
                         </Trigger>
                         <DataTrigger Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Self}}" Value="True">
-                            <Setter Property="Background" Value="{Binding Path=TabItemSelectedBackground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Transparent}" />
-                            <Setter Property="BorderBrush" Value="{Binding Path=TabItemSelectedBorderBrush, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Transparent}" />
-                            <Setter Property="Foreground" Value="{Binding Path=TabItemSelectedForeground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Transparent}" />
-                            <Setter Property="FontWeight" Value="{Binding Path=SelectedItemFontWeight, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=SemiBold}" />
+                            <Setter Property="Background" Value="{Binding Path=TabControlExt.TabItemSelectedBackground, RelativeSource={RelativeSource Mode=Self}, FallbackValue=Transparent}" />
+                            <Setter Property="BorderBrush" Value="{Binding Path=TabControlExt.TabItemSelectedBorderBrush, RelativeSource={RelativeSource Mode=Self}, FallbackValue=Transparent}" />
+                            <Setter Property="Foreground" Value="{Binding Path=TabControlExt.TabItemSelectedForeground, RelativeSource={RelativeSource Mode=Self}, FallbackValue=Transparent}" />
+                            <Setter Property="FontWeight" Value="{Binding Path=TabControlExt.SelectedItemFontWeight, RelativeSource={RelativeSource Mode=Self}, FallbackValue=SemiBold}" />
                         </DataTrigger>
-                        <DataTrigger Binding="{Binding Path=CloseButtonType, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Common}" Value="Both">
+                        <DataTrigger Binding="{Binding Path=TabControlExt.CloseButtonType, RelativeSource={RelativeSource Mode=Self}, FallbackValue=Common}" Value="Both">
                             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Visible" />
                         </DataTrigger>
-                        <DataTrigger Binding="{Binding Path=CloseButtonType, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Common}" Value="Individual">
+                        <DataTrigger Binding="{Binding Path=TabControlExt.CloseButtonType, RelativeSource={RelativeSource Mode=Self}, FallbackValue=Common}" Value="Individual">
                             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Visible" />
                         </DataTrigger>
-                        <DataTrigger Binding="{Binding Path=CloseButtonType, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Common}" Value="IndividualOnMouseOver">
+                        <DataTrigger Binding="{Binding Path=TabControlExt.CloseButtonType, RelativeSource={RelativeSource Mode=Self}, FallbackValue=Common}" Value="IndividualOnMouseOver">
                             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Hidden" />
                         </DataTrigger>
-                        <DataTrigger Binding="{Binding Path=CloseButtonType, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Common}" Value="Extended">
+                        <DataTrigger Binding="{Binding Path=TabControlExt.CloseButtonType, RelativeSource={RelativeSource Mode=Self}, FallbackValue=Common}" Value="Extended">
                             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Hidden" />
                         </DataTrigger>
                         <Trigger SourceName="PART_PinButton" Property="IsChecked" Value="True">
@@ -1355,21 +1473,21 @@
                         </Trigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
-                                <Condition Binding="{Binding Path=CloseButtonType, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Common}" Value="IndividualOnMouseOver" />
+                                <Condition Binding="{Binding Path=TabControlExt.CloseButtonType, RelativeSource={RelativeSource Mode=Self}, FallbackValue=Common}" Value="IndividualOnMouseOver" />
                                 <Condition Binding="{Binding Path=IsMouseOver, ElementName=Bd}" Value="True" />
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Visible" />
                         </MultiDataTrigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
-                                <Condition Binding="{Binding Path=CloseButtonType, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Common}" Value="Extended" />
+                                <Condition Binding="{Binding Path=TabControlExt.CloseButtonType, RelativeSource={RelativeSource Mode=Self}, FallbackValue=Common}" Value="Extended" />
                                 <Condition Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Self}}" Value="True" />
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Visible" />
                         </MultiDataTrigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
-                                <Condition Binding="{Binding Path=CloseButtonType, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Common}" Value="Extended" />
+                                <Condition Binding="{Binding Path=TabControlExt.CloseButtonType,RelativeSource={RelativeSource Mode=Self}, FallbackValue=Common}" Value="Extended" />
                                 <Condition Binding="{Binding Path=IsMouseOver, ElementName=Bd}" Value="True" />
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Visible" />
@@ -1380,7 +1498,7 @@
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition  Binding="{Binding Path=IsVisible, RelativeSource={RelativeSource Self}}" Value="True" />
-                                <Condition Binding="{Binding Path=TabStripPlacement, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Top}" Value="Left" />
+                                <Condition Binding="{Binding Path=TabControlExt.TabStripPlacement, RelativeSource={RelativeSource Mode=Self}, FallbackValue=Top}" Value="Left" />
                                 <Condition Binding="{Binding Path=RotateTextWhenVertical, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=false}" Value="True" />
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="Bd" Property="LayoutTransform">
@@ -1392,7 +1510,7 @@
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition  Binding="{Binding Path=IsVisible, RelativeSource={RelativeSource Self}}" Value="True" />
-                                <Condition Binding="{Binding Path=TabStripPlacement, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Top}" Value="Right" />
+                                <Condition Binding="{Binding Path=TabControlExt.TabStripPlacement,  RelativeSource={RelativeSource Mode=Self}, FallbackValue=Top}" Value="Right" />
                                 <Condition Binding="{Binding Path=RotateTextWhenVertical, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=false}" Value="True" />
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="Bd" Property="LayoutTransform">
@@ -1404,7 +1522,7 @@
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition  Binding="{Binding Path=IsVisible, RelativeSource={RelativeSource Self}}" Value="True" />
-                                <Condition Binding="{Binding Path=TabStripPlacement, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Top}" Value="Left" />
+                                <Condition Binding="{Binding Path=TabControlExt.TabStripPlacement, RelativeSource={RelativeSource Mode=Self}, FallbackValue=Top}" Value="Left" />
                             </MultiDataTrigger.Conditions>
                             <Setter Property="LayoutTransform">
                                 <Setter.Value>
@@ -1429,7 +1547,6 @@
                             <Setter TargetName="Content" Property="ContentTemplate" Value="{Binding Path=NewTabButtonTemplate, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}}" />
                             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Collapsed" />
                         </Trigger>
-
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -1526,7 +1643,7 @@
                                         Style="{TemplateBinding TabPanelStyle}">
                                 <tools_controls:TabLayoutPanel
                                             x:Name="PART_TabLayoutPanel"
-                                            Margin="0,0,2,0"
+                                            Margin="0"
                                             HorizontalAlignment="Left"
                                             VerticalAlignment="Top"
                                             AllowDrop="True"
@@ -1568,7 +1685,7 @@
                                                 ContentSource="SelectedContent"
                                                 ContentTemplate="{TemplateBinding SelectedContentTemplate}"
                                                 ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"
-                                                SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" />
+                                                SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" Visibility="Collapsed"/>
                                     </Grid>
                                 </Border>
                             </Border>
@@ -1583,6 +1700,7 @@
                             <Setter Property="Visibility" TargetName="PART_ContentHolder" Value="Collapsed"/>
                         </MultiTrigger>
                         <Trigger Property="TabControl.TabStripPlacement" Value="Bottom">
+                            <Setter Property="BorderThickness" Value="1"/>
                             <Setter TargetName="HeaderPanel" Property="Grid.Row" Value="1" />
                             <Setter TargetName="ContentPanel" Property="Grid.Row" Value="0" />
                             <Setter TargetName="RowDefinition0" Property="RowDefinition.Height" Value="*" />
@@ -1594,6 +1712,7 @@
                             </Setter>
                         </Trigger>
                         <Trigger Property="TabControl.TabStripPlacement" Value="Left">
+                            <Setter Property="BorderThickness" Value="1"/>
                             <Setter TargetName="HeaderPanel" Property="LayoutTransform">
                                 <Setter.Value>
                                     <RotateTransform Angle="90" />
@@ -1610,6 +1729,7 @@
                             <Setter TargetName="HeaderPanel" Property="VerticalAlignment" Value="Bottom" />
                         </Trigger>
                         <Trigger Property="TabControl.TabStripPlacement" Value="Right">
+                            <Setter Property="BorderThickness" Value="1"/>
                             <Setter TargetName="HeaderPanel" Property="LayoutTransform">
                                 <Setter.Value>
                                     <RotateTransform Angle="90" />
@@ -1676,6 +1796,7 @@
                                                 x:Name="PART_TabLayoutPanel"
                                                 HorizontalAlignment="Left"
                                                 VerticalAlignment="Top"
+                                                Margin="0"
                                                 AllowDrop="True"
                                                 IsItemsHost="True"
                                                 KeyboardNavigation.TabIndex="1" />
@@ -1716,7 +1837,7 @@
                                                 ContentSource="SelectedContent"
                                                 ContentTemplate="{TemplateBinding SelectedContentTemplate}"
                                                 ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"
-                                                SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" />
+                                                SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" Visibility="Collapsed"/>
                                             </Grid>
                                         </Border>
                                     </Border>
@@ -1731,6 +1852,7 @@
                                     <Setter Property="Visibility" TargetName="PART_ContentHolder" Value="Collapsed"/>
                                 </MultiTrigger>
                                 <Trigger Property="TabControl.TabStripPlacement" Value="Bottom">
+                                    <Setter Property="BorderThickness" Value="1"/>
                                     <Setter TargetName="HeaderPanel" Property="Grid.Row" Value="1" />
                                     <Setter TargetName="ContentPanel" Property="Grid.Row" Value="0" />
                                     <Setter TargetName="RowDefinition0" Property="RowDefinition.Height" Value="*" />
@@ -1742,6 +1864,7 @@
                                     </Setter>
                                 </Trigger>
                                 <Trigger Property="TabControl.TabStripPlacement" Value="Left">
+                                    <Setter Property="BorderThickness" Value="1"/>
                                     <Setter TargetName="HeaderPanel" Property="LayoutTransform">
                                         <Setter.Value>
                                             <RotateTransform Angle="90" />
@@ -1758,6 +1881,7 @@
                                     <Setter TargetName="HeaderPanel" Property="VerticalAlignment" Value="Stretch" />
                                 </Trigger>
                                 <Trigger Property="TabControl.TabStripPlacement" Value="Right">
+                                    <Setter Property="BorderThickness" Value="1"/>
                                     <Setter TargetName="HeaderPanel" Property="LayoutTransform">
                                         <Setter.Value>
                                             <RotateTransform Angle="90" />

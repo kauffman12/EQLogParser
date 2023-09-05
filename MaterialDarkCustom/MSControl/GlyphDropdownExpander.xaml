@@ -19,7 +19,6 @@
         <Setter Property="IsTabStop" Value="false"/>
         <Setter Property="Focusable" Value="false"/>
         <Setter Property="ClickMode" Value="Press"/>
-        <Setter Property="FocusVisualStyle" Value="{StaticResource ToggleButtonFocusVisual}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template">
@@ -73,11 +72,14 @@
                             <Setter Property="Width" TargetName="Arrow" Value="10.5"/>
                             <Setter Property="Height" TargetName="Arrow" Value="8.5"/>
                         </Trigger>
-                        <Trigger Property="IsFocused" Value="True">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsFocused" Value="True"/>
+                            </MultiTrigger.Conditions>
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="BorderBrush" Value="Transparent"/>
                             <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
-                        </Trigger>
+                        </MultiTrigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="BorderBrush" Value="Transparent"/>
                             <Setter Property="Background" Value="Transparent"/>

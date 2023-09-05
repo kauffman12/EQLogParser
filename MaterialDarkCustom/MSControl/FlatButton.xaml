@@ -9,7 +9,7 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
     </ResourceDictionary.MergedDictionaries>
-    
+
     <Style x:Key="WPFFlatButtonStyle"
            TargetType="{x:Type Button}">
         <Setter Property="FocusVisualStyle" 
@@ -60,16 +60,20 @@
                         <Trigger Property="IsDefaulted" Value="true">
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                         </Trigger>
-                        <Trigger Property="IsFocused" Value="True">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsFocused" Value="True"/>
+                            </MultiTrigger.Conditions>
                             <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource SecondaryForeground}"/>
-							<Setter Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
+                            <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
                             <Setter Property="BorderThickness" TargetName="border" Value="{StaticResource MaterialDarkCustom.BorderThickness1}"/>
-                        </Trigger>
+                        </MultiTrigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
-                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
+                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}" />
+                           
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource SecondaryForeground}"/>
                             <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
                             <Setter Property="BorderThickness" TargetName="border" Value="{StaticResource MaterialDarkCustom.BorderThickness1}"/>

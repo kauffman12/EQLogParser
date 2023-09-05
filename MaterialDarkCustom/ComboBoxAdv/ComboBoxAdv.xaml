@@ -14,9 +14,12 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Button.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatPrimaryButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/PrimaryButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphDropdownExpander.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphEditableDropdownExpander.xaml"/>
     </ResourceDictionary.MergedDictionaries>
+
+    <SolidColorBrush x:Key="ComboBoxItemAdv.Selection.Background" Color="#d0d1d4"/>
 
     <BooleanToVisibilityConverter x:Key="VisiblityConverter" />
     <tools_controls_shared:TemplateToVisibilityConverter x:Key="dropDownTemplateConvertor"/>
@@ -132,13 +135,18 @@
                                     </Canvas>
                                     <ItemsPresenter x:Name="ItemsPresenter" 
                                                                 Grid.Row="1"
-                                                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" ClipToBounds="True"/>
                                     <tools_controls_shared:ComboBoxItemAdv
                                                                x:Name="PART_SelectAll"
                                                                Grid.Row="0"
-                                                               Margin="0.2,0,0,0.5"
+                                                               Margin="0.2 0 0 0.5"
                                                                Visibility="{TemplateBinding AllowSelectAll, Converter={StaticResource VisiblityConverter}}"
                                                                Content="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=SelectAll}"/>
+                                    <Border Grid.RowSpan="1" 
+                                            SnapsToDevicePixels="True"
+                                            Visibility="Collapsed"
+                                            BorderThickness="0,0,0,1"
+                                            BorderBrush="{StaticResource BorderAlt}"/>
                                       <TextBlock x:Name="No_Records" 
                                                                Text="{shared:SharedLocalizationResourceExtension ResourceName=NoRecords}"
                                                                Focusable="False"
@@ -220,7 +228,13 @@
                                    Margin="{TemplateBinding Padding}"                                       
                                    Opacity="0.5"/>
 
-            <Border x:Name="PART_Border" Background="{StaticResource ContentBackground}" BorderBrush="Transparent" BorderThickness="1,1,0,1" Visibility="Collapsed">
+            <Border x:Name="PART_Border" 
+                    CornerRadius="0" 
+                    Margin="0" 
+                    Background="{StaticResource ContentBackground}" 
+                    BorderBrush="Transparent" 
+                    BorderThickness="1,1,0,1" 
+                    Visibility="Collapsed">
                 <ItemsControl  x:Name="PART_TokenItems" Focusable="False" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}" DisplayMemberPath="{Binding DisplayMemberPath, RelativeSource={RelativeSource Mode=TemplatedParent}}">
                     <ItemsControl.ItemsPanel>
@@ -236,7 +250,7 @@
                                   Foreground="{TemplateBinding Foreground}"
                                   FontWeight="{TemplateBinding FontWeight}"
                                   BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
-                                  Margin="1,2,0,2"
+                                  Margin="1 2 0 2 "
                                   Padding="2,0,2,5"
                                   HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" 
                                   IsReadOnly="{Binding IsReadOnly, RelativeSource={RelativeSource TemplatedParent}}"
@@ -259,7 +273,10 @@
                       Style="{StaticResource WPFBorderlessTextBoxStyle}"/>
         </Grid>
         <ControlTemplate.Triggers>
-             <MultiTrigger>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+            </Trigger>
+            <MultiTrigger>
                 <MultiTrigger.Conditions>
                     <Condition Property="EnableToken" Value="True"/>
                     <Condition Property="IsEditable" Value="True"/>
@@ -276,6 +293,7 @@
                 <Setter TargetName="PART_IsEditDefaultText"
                                     Property="Visibility"
                                     Value="Visible" />
+                <Setter TargetName="PART_SelectedItems" Property="MinHeight" Value="30"/>
                 <Setter TargetName="PART_ToggleButton" Property="Style" Value="{StaticResource WPFGlyphEditableDropdownExpanderStyle}"/>
                 <Setter TargetName="PART_ToggleButton" Property="Width" Value="20"/>
                 <Setter TargetName="PART_ToggleButton" Property="Margin" Value="0"/>
@@ -402,6 +420,9 @@
                                 <Border.Margin>
                                     <Thickness>8,1,8,10</Thickness>
                                 </Border.Margin>
+                                <Border.RenderTransform>
+                                    <TranslateTransform/>
+                                </Border.RenderTransform>
                                 <Grid>
                                     <Grid Visibility="{TemplateBinding DropDownContentTemplate, Converter={StaticResource dropDownTemplateConvertor}, ConverterParameter='Item_Presenter'}">
                                         <Grid.RowDefinitions>
@@ -426,8 +447,8 @@
                                                 </Canvas>
                                                 <ItemsPresenter x:Name="ItemsPresenter" 
                                                                 Grid.Row="1"
-                                                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
-                                               <TextBlock x:Name="No_Records" 
+                                                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" ClipToBounds="True"/>
+                                                <TextBlock x:Name="No_Records" 
                                                                Text="{shared:SharedLocalizationResourceExtension ResourceName=NoRecords}"
                                                                Focusable="False"
                                                                Padding="3"                                                               
@@ -485,7 +506,7 @@
                                   FontFamily="{TemplateBinding FontFamily}"
                                   Foreground="{TemplateBinding Foreground}"
                                   FontWeight="{TemplateBinding FontWeight}"
-                                  Margin="1,2,0,2" 
+                                  Margin="1 2 0 2 "
                                   HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" 
                                   IsReadOnly="{Binding IsReadOnly, RelativeSource={RelativeSource TemplatedParent}}"
                                   VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
@@ -522,7 +543,11 @@
                                     Value="Visible" />
                             <Setter TargetName="PART_ToggleButton" Property="Style" Value="{StaticResource WPFGlyphEditableDropdownExpanderStyle}"/>
                             <Setter TargetName="PART_ToggleButton" Property="Width" Value="20"/>
-                            <Setter TargetName="PART_ToggleButton" Property="Margin" Value="0"/>
+                            <Setter TargetName="PART_ToggleButton" Property="Margin">
+                                <Setter.Value>
+                                    <Thickness>0</Thickness>
+                                </Setter.Value>
+                            </Setter>
                             <Setter TargetName="PART_ToggleButton" Property="Padding">
                                 <Setter.Value>
                                     <Thickness>0</Thickness>
@@ -546,7 +571,7 @@
                                 <Condition Binding="{Binding Path=HasItems,RelativeSource={RelativeSource Self}}" Value="false"></Condition>
                                 <Condition Binding="{Binding Path=AutoCompleteMode,RelativeSource={RelativeSource Self}}" Value="None"></Condition>
                             </MultiDataTrigger.Conditions>
-                            <Setter Property="Height" TargetName="DropDownBorder" Value="95" />
+                            <Setter Property="MinHeight" TargetName="DropDownBorder" Value="95" />
                         </MultiDataTrigger>
                         <Trigger Property="IsGrouping" 
                                  Value="true">
@@ -634,8 +659,16 @@
         <Setter Property="FocusVisualStyle" 
             Value="{StaticResource SyncfusionComboBoxItemFocusVisual}" />
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Padding"
-            Value="2,0,2,0" />
+        <Setter Property="Padding">
+            <Setter.Value>
+                <Thickness>2,0,2,0</Thickness>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Margin">
+            <Setter.Value>
+                <Thickness>0,0,0,0</Thickness>
+            </Setter.Value>
+        </Setter>
         <Setter Property="BorderThickness" 
             Value="{StaticResource MaterialDarkCustom.BorderThickness}" />
         <Setter Property="Background" 
@@ -650,33 +683,44 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type tools_controls_shared:ComboBoxItemAdv}">
-                    <Border 
+                    <Grid>
+                        <Border x:Name="SelectionIndicator"
+                                        HorizontalAlignment="Left"            
+                                        CornerRadius="1.5"
+                                        Height="12"
+                                        Width="2"
+                                        Visibility="Collapsed"     
+                                        Background="{StaticResource ComboBoxItemAdv.Selection.Background}" />
+
+                        <Border 
                             BorderBrush="{TemplateBinding BorderBrush}" 
                             BorderThickness="{TemplateBinding BorderThickness}" 
                             Background="{TemplateBinding Background}" 
                             Padding="{TemplateBinding Padding}" 
+                            CornerRadius="0"
                             SnapsToDevicePixels="true">
-                        <Grid Margin="1">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
+                            <Grid Margin="1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
 
-                            <CheckBox x:Name="PART_CheckBox"
+                                <CheckBox x:Name="PART_CheckBox"
                                        Margin="2" 
                                        Visibility="{Binding Path=AllowMultiSelect, Converter={StaticResource VisiblityConverter}, RelativeSource={RelativeSource AncestorType={x:Type tools_controls_shared:ComboBoxAdv}}}"
                                        IsHitTestVisible="False" />
 
-                            <ContentPresenter Grid.Column="1" 
+                                <ContentPresenter Grid.Column="1" 
                                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                               SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                                <ContentPresenter.Resources>
-                                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
-                                </ContentPresenter.Resources>
-                            </ContentPresenter>
-                        </Grid>
-                    </Border>
+                                    <ContentPresenter.Resources>
+                                        <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                    </ContentPresenter.Resources>
+                                </ContentPresenter>
+                            </Grid>
+                        </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                             <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
@@ -741,6 +785,16 @@
                                     Value="{StaticResource BorderAlt}" />
                             <Setter Property="Foreground" 
                                     Value="{StaticResource ContentForeground}" />
+                        </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Path=IsSelected,RelativeSource={RelativeSource Self}}" 
+                                           Value="true" />
+                                <Condition Binding="{Binding Path=IsHighlighted,RelativeSource={RelativeSource Self}}"
+                                           Value="true" />
+                                <Condition Binding="{Binding MultiSelect,RelativeSource={RelativeSource Self}}"
+                                           Value="False" />
+                            </MultiDataTrigger.Conditions>
                         </MultiDataTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

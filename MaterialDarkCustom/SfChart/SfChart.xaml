@@ -24,7 +24,7 @@
 
     <Style x:Key="SyncfusionShapeAnnotationStyle" TargetType="charts:ShapeAnnotation">
         <Setter Property="Stroke"
-                Value="{StaticResource Black}"></Setter>
+                Value="{StaticResource White}"></Setter>
         <Setter Property="Fill"
                 Value="{StaticResource White}" />
         <Setter Property="Foreground"
@@ -37,7 +37,7 @@
     
     <Style x:Key="SyncfusionHorizontalLineAnnotationStyle" TargetType="charts:HorizontalLineAnnotation">
         <Setter Property="Stroke"
-                Value="{StaticResource Black}"></Setter>
+                Value="{StaticResource White}"></Setter>
         <Setter Property="Fill"
                 Value="{StaticResource White}" />
         <Setter Property="Foreground"
@@ -50,7 +50,7 @@
     
     <Style x:Key="SyncfusionVerticalLineAnnotationStyle" TargetType="charts:VerticalLineAnnotation">
         <Setter Property="Stroke"
-                Value="{StaticResource Black}"></Setter>
+                Value="{StaticResource White}"></Setter>
         <Setter Property="Fill"
                 Value="{StaticResource White}" />
         <Setter Property="Foreground"
@@ -63,7 +63,7 @@
     
     <Style x:Key="SyncfusionEllipseAnnotationStyle" TargetType="charts:EllipseAnnotation">
         <Setter Property="Stroke"
-                Value="{StaticResource Black}"></Setter>
+                Value="{StaticResource White}"></Setter>
         <Setter Property="Fill"
                 Value="{StaticResource White}" />
         <Setter Property="Foreground"
@@ -76,7 +76,7 @@
     
     <Style x:Key="SyncfusionRectangleAnnotationStyle" TargetType="charts:RectangleAnnotation">
         <Setter Property="Stroke"
-                Value="{StaticResource Black}"></Setter>
+                Value="{StaticResource White}"></Setter>
         <Setter Property="Fill"
                 Value="{StaticResource White}" />
         <Setter Property="Foreground"

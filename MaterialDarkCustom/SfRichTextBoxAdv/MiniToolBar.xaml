@@ -12,6 +12,8 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfRichTextBoxAdv/SfRichTextBoxCommon.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
+    <richtextboxadv:FontColorIconColorConverter x:Key="FontColorIconColorConverter"/>
+
     <DataTemplate x:Key="fontColorIconTemplate">
         <Grid Width="13" Height="17">
             <Path Data="M0,0 L16,0 16,4 0,4 z"
@@ -125,6 +127,7 @@
                                                       SelectedValue="{Binding Selection.CharacterFormat.FontFamily,Mode=TwoWay,Converter={StaticResource FontFamilyStringConverter}}" 
                                                       Margin="3,3,0,3"
                                                       Focusable="False"
+                                                      IsEditable="True"
                                                       Width="130" Height="23"
                                                       ToolTipService.ToolTip="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=MiniToolBarFontToolTip}"/>
                                             <ComboBox Grid.Column="1" x:Name="PART_FontSizeBox" 
@@ -132,6 +135,7 @@
                                                       SelectedValue="{Binding Selection.CharacterFormat.FontSize}"  
                                                       Margin="3,3,0,3" Width="50"
                                                       Focusable="False"
+                                                      IsEditable="True"
                                                       Height="23"
                                                       VerticalAlignment="Top" 
                                                       ToolTipService.ToolTip="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=MiniToolBarFontSizeToolTip}"/>
@@ -144,21 +148,21 @@
                                                     Style="{StaticResource WPFGlyphButtonStyle}"
                                                     ToolTip="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=MiniToolBarIncreaseFontToolTip}">
                                                 <Grid x:Name="Increase_font_size" 
-                                                      HorizontalAlignment="Right"
-                                                      Height="15"
-                                                      VerticalAlignment="Top"
-                                                      Width="15">
+                                              HorizontalAlignment="Right"
+                                              Height="15"
+                                              VerticalAlignment="Top"
+                                              Width="15">
                                                     <Path Data="M2.5189795,0 L5.0050001,2.2590036 4.3330035,3.0000011 2.5149817,1.3470006 0.66799865,3.002 0,2.2570047 z" 
-                                                          Fill="{StaticResource PrimaryDark}"
-                                                          Height="3.002"
-                                                          Width="5.005"
-                                                          HorizontalAlignment="Right" 
-                                                          VerticalAlignment="Top"
-                                                          Stretch="Fill" />
+                                                  Fill="{StaticResource PrimaryDark}"
+                                                  Height="3.002"
+                                                  Width="5.005"
+                                                  HorizontalAlignment="Right" 
+                                                  VerticalAlignment="Top"
+                                                  Stretch="Fill" />
                                                     <Path Data="M4.4360077,0.8710022 C4.3949921,0.98799133 4.3580048,1.1040039 4.321994,1.2200012 4.2859833,1.3549957 4.2420075,1.4919891 4.1850006,1.6309967 L2.3469865,6.2549896 6.5470016,6.2549896 4.7169835,1.6179962 C4.6359894,1.427002 4.5530121,1.1779938 4.4660065,0.8710022 z M4.0639984,0 L4.7779882,0 8.8869998,10 8.0589959,10 6.8140003,6.8899994 2.0889907,6.8899994 0.84298758,10 0,10 z"
-                                                          Stretch="Fill" 
-                                                          Margin="0,2.001,3,0"
-                                                          Fill="{StaticResource IconColor}"/>
+                                                  Stretch="Fill" 
+                                                  Margin="0,2.001,3,0"
+                                                  Fill="{StaticResource IconColor}"/>
                                                 </Grid>
                                             </Button>
                                             <Button x:Name="PART_DecreaseFontSizeButton"
@@ -170,21 +174,21 @@
                                                     Style="{StaticResource WPFGlyphButtonStyle}"
                                                     ToolTip="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=MiniToolBarDecreaseFontToolTip}">
                                                 <Grid x:Name="Decrease_font_size"
-                                                          HorizontalAlignment="Right"
-                                                          Height="15"
-                                                          VerticalAlignment="Top"
-                                                          Width="15">
+                                                  HorizontalAlignment="Right"
+                                                  Height="15"
+                                                  VerticalAlignment="Top"
+                                                  Width="15">
                                                     <Path Data="M4.3379981,0 L5.0059998,0.74500296 2.4870088,3.002 0,0.74300412 0.67199955,0.0019988532 2.4910066,1.6549994 z"
-                                                      Fill="{StaticResource PrimaryDark}"
-                                                      HorizontalAlignment="Right"
-                                                      Height="3.002"
-                                                      Stretch="Fill"
-                                                      VerticalAlignment="Top"
-                                                      Width="5.006" />
+                                              Fill="{StaticResource PrimaryDark}"
+                                              HorizontalAlignment="Right"
+                                              Height="3.002"
+                                              Stretch="Fill"
+                                              VerticalAlignment="Top"
+                                              Width="5.006" />
                                                     <Path Data="M3.9919964,0.78500372 C3.9550091,0.88999939 3.9210125,0.9940033 3.8889998,1.098999 3.8570173,1.2189941 3.8160017,1.3430023 3.7660142,1.4689941 L2.1120258,5.6300049 5.892017,5.6300049 4.2450171,1.4559937 C4.1720191,1.2850037 4.0959998,1.0610046 4.0190044,0.78500372 z M3.6570056,0 L4.3000098,0 7.9980002,9 7.2530065,9 6.1320067,6.201004 1.880001,6.201004 0.75802458,9 0,9 z"
-                                                      Margin="0,2.001,3.005,0"
-                                                      Stretch="Fill"
-                                                      Fill="{StaticResource IconColor}"/>
+                                              Margin="0,2.001,3.005,0"
+                                              Stretch="Fill"
+                                              Fill="{StaticResource IconColor}"/>
                                                 </Grid>
                                             </Button>
                                         </Grid>
@@ -213,9 +217,12 @@
                                                     <Path x:Name="BoldButtonPath"
                                                           Width="7"
                                                           Height="11"
-                                                          Data="M1.3320006,5.8759918 L1.3320006,9.8339996 3.1399993,9.8339996 C3.9220123,9.8339996 4.5279998,9.6549988 4.9589996,9.2969971 5.3899993,8.9389954 5.6040038,8.447998 5.6040038,7.8239899 5.6040038,6.5249939 4.6900024,5.8759918 2.8619995,5.8759918 z M1.3320006,1.1660004 L1.3320006,4.7180023 2.6950073,4.7180023 C3.425003,4.7180023 3.998001,4.5469971 4.4160003,4.2079926 4.8330078,3.8669891 5.0420074,3.3880005 5.0420074,2.769989 5.0420074,1.701004 4.3150024,1.1660004 2.8619995,1.1660004 z M0,0 L3.2340087,0 C4.2180023,0 4.9970092,0.23300171 5.572998,0.69799811 6.149002,1.1629944 6.4370117,1.769989 6.4370117,2.5159912 6.4370117,3.1399994 6.2630004,3.6819916 5.9140014,4.1419983 5.5650024,4.6029968 5.0839996,4.9299927 4.4710082,5.125 L4.4710082,5.1549988 C5.2369995,5.2419891 5.8509979,5.5220032 6.3110046,5.9949951 6.7700042,6.4680023 6.9999999,7.0829926 6.9999999,7.8399963 6.9999999,8.7799988 6.6510009,9.5429993 5.95401,10.125992 5.2560119,10.709 4.376007,11 3.3130035,11 L0,11 z"
                                                           Fill="{StaticResource IconColor}"
-                                                          Stretch="Fill" />
+                                                          Stretch="Fill">
+                                                        <Path.Data>
+                                                            <PathGeometry>M1.3320006,5.8759918 L1.3320006,9.8339996 3.1399993,9.8339996 C3.9220123,9.8339996 4.5279998,9.6549988 4.9589996,9.2969971 5.3899993,8.9389954 5.6040038,8.447998 5.6040038,7.8239899 5.6040038,6.5249939 4.6900024,5.8759918 2.8619995,5.8759918 z M1.3320006,1.1660004 L1.3320006,4.7180023 2.6950073,4.7180023 C3.425003,4.7180023 3.998001,4.5469971 4.4160003,4.2079926 4.8330078,3.8669891 5.0420074,3.3880005 5.0420074,2.769989 5.0420074,1.701004 4.3150024,1.1660004 2.8619995,1.1660004 z M0,0 L3.2340087,0 C4.2180023,0 4.9970092,0.23300171 5.572998,0.69799811 6.149002,1.1629944 6.4370117,1.769989 6.4370117,2.5159912 6.4370117,3.1399994 6.2630004,3.6819916 5.9140014,4.1419983 5.5650024,4.6029968 5.0839996,4.9299927 4.4710082,5.125 L4.4710082,5.1549988 C5.2369995,5.2419891 5.8509979,5.5220032 6.3110046,5.9949951 6.7700042,6.4680023 6.9999999,7.0829926 6.9999999,7.8399963 6.9999999,8.7799988 6.6510009,9.5429993 5.95401,10.125992 5.2560119,10.709 4.376007,11 3.3130035,11 L0,11 z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
                                                 </ToggleButton.Content>
                                             </ToggleButton>
                                             <ToggleButton x:Name="PART_ItalicToggleButton" 
@@ -231,9 +238,12 @@
                                                     <Path x:Name="italicButtonPath"
                                                           Width="7"
                                                           Height="11"
-                                                          Data="M2.000005,0 L6.000005,0 6.000005,1 4.4186966,1 2.4888427,8.9999952 4,8.9999952 4,9.9999952 0,9.9999952 0,8.9999952 1.4594386,8.9999952 3.3901918,1 2.000005,1 z"
                                                           Fill="{StaticResource IconColor}"
-                                                          Stretch="Fill" />
+                                                          Stretch="Fill">
+                                                        <Path.Data>
+                                                            <PathGeometry>M2.000005,0 L6.000005,0 6.000005,1 4.4186966,1 2.4888427,8.9999952 4,8.9999952 4,9.9999952 0,9.9999952 0,8.9999952 1.4594386,8.9999952 3.3901918,1 2.000005,1 z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
                                                 </ToggleButton.Content>
                                             </ToggleButton>
                                             <ToggleButton x:Name="PART_UnderlineToggleButton" 
@@ -250,9 +260,12 @@
                                                     <Path x:Name="UnderlineButtonPath"
                                                           Width="7"
                                                           Height="12"
-                                                          Data="M0,10.999995 L9.0000002,10.999995 9.0000002,11.999995 0,11.999995 z M1.000005,0 L2.0000049,0 2.0000049,6.5 C2.000005,7.8779907 3.1210072,9 4.500005,9 5.8790028,9 7.000005,7.8779907 7.000005,6.5 L7.000005,0 8.000005,0 8.000005,6.5 C8.000005,8.4299927 6.4299977,10 4.500005,10 2.5699971,10 1.000005,8.4299927 1.000005,6.5 z"
                                                           Fill="{StaticResource IconColor}"
-                                                          Stretch="Fill" />
+                                                          Stretch="Fill">
+                                                        <Path.Data>
+                                                            <PathGeometry>M0,10.999995 L9.0000002,10.999995 9.0000002,11.999995 0,11.999995 z M1.000005,0 L2.0000049,0 2.0000049,6.5 C2.000005,7.8779907 3.1210072,9 4.500005,9 5.8790028,9 7.000005,7.8779907 7.000005,6.5 L7.000005,0 8.000005,0 8.000005,6.5 C8.000005,8.4299927 6.4299977,10 4.500005,10 2.5699971,10 1.000005,8.4299927 1.000005,6.5 z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
                                                 </ToggleButton.Content>
                                             </ToggleButton>
                                             <tools_controls_shared:SplitButtonAdv x:Name="PART_FontColorSplitButton" 
@@ -262,8 +275,22 @@
                                                                                   Margin="0,0,4,0" 
                                                                                   Height="24" 
                                                                                   Style="{StaticResource SyncfusionFlatSplitButtonAdvStyle}"
-                                                                                  IconTemplate="{StaticResource fontColorIconTemplate}"
                                                                                   ToolTip="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=MiniToolBarFontColorToolTip}">
+                                                <tools_controls_shared:SplitButtonAdv.IconTemplate>
+                                                    <DataTemplate >
+                                                        <Grid Width="13" Height="17">
+                                                            <Path Data="M0,0 L16,0 16,4 0,4 z"
+           Fill="{Binding ElementName=PART_ColorPicker,Path=Color,Mode=OneWay, Converter={StaticResource FontColorIconColorConverter}}" 
+          Height="4" 
+          Stretch="Fill" 
+          VerticalAlignment="Bottom" />
+                                                            <Path Data="M4.6480023,0.95898432 C4.6079937,1.0870056 4.5689923,1.2149963 4.533012,1.34198 4.4980089,1.4909973 4.4510118,1.6419983 4.394005,1.7949829 L2.5330156,6.8809814 6.787006,6.8809814 4.9330055,1.7799988 C4.8510047,1.5699768 4.7659832,1.2969971 4.6790081,0.95898432 z M4.0779959,0 L5.209006,0 9.304,11 8.3170024,11 7.2039977,8.0019836 2.1150171,8.0029907 1.0100081,11 0,11 z" 
+          Fill="{StaticResource SecondaryForeground}"
+          Margin="3.344,0,3.352,5" 
+          Stretch="Fill" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </tools_controls_shared:SplitButtonAdv.IconTemplate>
                                                 <tools_controls_shared:ColorPickerPalette x:Name="PART_ColorPicker" 
                                                                                           Focusable="False" 
                                                                                           IsExpanded="True" 
@@ -277,9 +304,31 @@
                                                                                   Grid.Column="4" 
                                                                                   SizeMode="Small"
                                                                                   Margin="0,0,4,0" 
-                                                                                  Height="24" 
-                                                                                  IconTemplate="{StaticResource highLightColorIconTemplate}"
+                                                                                  Height="24"
                                                                                   ToolTip="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=MiniToolBarHighlightColorToolTip}">
+                                                <tools_controls_shared:SplitButtonAdv.IconTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Width="13" Height="17">
+                                                            <Path
+          Height="4"
+          Margin="1"
+          VerticalAlignment="Bottom"
+          Data="M0,0 L16,0 16,4 0,4 z"
+          Fill="Yellow"
+          Stretch="Fill" />
+                                                            <Path
+          Margin="6.5,0.502,1.934,8.048"
+          Data="M6.4365052,0.00010436084 C6.6881317,-0.0035195307 6.9411348,0.087229683 7.1381453,0.27322931 L8.254165,1.3292008 C8.6621631,1.7171909 8.6711658,2.3651685 8.2731775,2.763153 L2.5470487,8.4889981 0,6.0360758 5.7431277,0.29321776 C5.9346298,0.10172514 6.1848787,0.0037282004 6.4365052,0.00010436084 z"
+          Fill="Transparent"
+          Stretch="Fill" />
+                                                            <Path
+          Margin="2.061,0,1.434,5"
+          Data="M10.881433,1.0010477 C10.756186,1.0027986 10.631936,1.052303 10.535929,1.1488092 L5.1529995,6.5319232 6.9789655,8.2909641 12.358904,2.9118485 C12.454911,2.815838 12.506913,2.6878447 12.504899,2.55184 12.502915,2.4158355 12.446916,2.2888338 12.347918,2.1958293 L11.232911,1.1398066 C11.132922,1.0452991 11.00668,0.99929665 10.881433,1.0010477 z M10.868932,0.0001521778 C11.245179,-0.005222887 11.623424,0.13178115 11.920921,0.41278561 L13.035898,1.4688085 C13.332891,1.7498205 13.498905,2.1298184 13.504886,2.5378322 13.509891,2.9468378 13.354894,3.329857 13.065897,3.6188647 L6.9929731,9.6919965 6.6261415,9.3388461 5.5570025,10.219989 C4.9130021,10.748988 4.1050018,11.038988 3.2720014,11.038988 L0,11.038988 0.22000027,10.953988 C2.0155009,10.255738 3.3807202,8.7842073 3.9559099,6.9755153 L4.0042109,6.8147053 3.725008,6.5459155 9.8289366,0.44179319 C10.118438,0.15328126 10.492686,0.0055271609 10.868932,0.0001521778 z"
+          Fill="{StaticResource SecondaryForeground}"
+          Stretch="Fill" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </tools_controls_shared:SplitButtonAdv.IconTemplate>
                                                 <Border BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
@@ -500,7 +549,7 @@
                                                     Focusable="False" 
                                                     Margin="0,0,4,0" 
                                                     Height="23" 
-                                                    Width="27" 
+                                                    Width="29" 
                                                     Style="{StaticResource WPFGlyphButtonStyle}" 
                                                     ToolTipService.ToolTip="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=MiniToolBarAlignmentToolTip}">
                                                 <Button.Content>

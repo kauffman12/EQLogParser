@@ -10,7 +10,7 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
     </ResourceDictionary.MergedDictionaries>
-    
+
     <Style x:Key="WPFFlatPrimaryButtonStyle"
            TargetType="{x:Type Button}">
         <Setter Property="FocusVisualStyle" 
@@ -36,7 +36,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
-                    <Border x:Name="Chrome"                       
+                    <Border x:Name="Chrome"     
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"                            
                             BorderThickness="{TemplateBinding BorderThickness}"
@@ -56,11 +56,14 @@
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                             <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
                         </Trigger>
-                        <Trigger Property="IsFocused" Value="True">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsFocused" Value="True"/>
+                            </MultiTrigger.Conditions>
                             <Setter Property="Background" TargetName="Chrome" Value="{StaticResource PrimaryBackgroundOpacity}"/>
                             <Setter Property="BorderBrush" TargetName="Chrome" Value="{StaticResource PrimaryBackgroundOpacity}"/>
                             <Setter Property="Foreground" Value="{StaticResource PrimaryColorForeground}"/>
-                        </Trigger>
+                        </MultiTrigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="BorderBrush" TargetName="Chrome" Value="{StaticResource PrimaryBackgroundOpacity}"/>
                             <Setter Property="Background" TargetName="Chrome" Value="{StaticResource PrimaryBackgroundOpacity}"/>

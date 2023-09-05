@@ -22,25 +22,30 @@
     <PathGeometry x:Key="ChangedOccurrenceIcon">M7.9999192,0 C9.5450284,0 11.090012,0.58826971 12.266001,1.7648098 L11.200011,2.8308461 C9.6280744,1.2597301 7.1788528,1.0878892 5.4150094,2.3153236 L5.3743703,2.3443701 11.686544,8.656544 11.782608,8.5168743 C12.151227,7.9569926 12.389125,7.3246689 12.48234,6.6656399 L12.495132,6.5639997 10.667,6.5639997 13.333,3.8969997 16,6.5639997 14.011191,6.5639997 13.998763,6.6953402 C13.8784,7.7884393 13.460509,8.8335431 12.779953,9.7147398 L12.764228,9.7342277 14,10.97 12.939,12.031 11.703289,10.795177 11.690159,10.805606 C9.3250544,12.635909 5.9023156,12.466436 3.7339994,10.297189 L4.800032,9.2311516 C6.3720334,10.803161 8.8213556,10.975099 10.584565,9.7469668 L10.625729,9.7175174 4.313171,3.404382 4.3111634,3.4070761 C3.8764154,4.0163516 3.6031511,4.7180063 3.5092549,5.45123 L3.5040073,5.4980001 5.3329998,5.4980001 2.6669998,8.1649995 0,5.4980001 1.9874194,5.4980001 1.9918504,5.4431353 C2.0994397,4.3285719 2.5167905,3.2618282 3.2097413,2.3607326 L3.2361002,2.3272126 2.0010006,1.092 3.0610005,0.031000137 4.2969177,1.2669175 4.310167,1.256393 C5.3924582,0.41879749 6.6962333,0 7.9999192,0 z</PathGeometry>
 
     <DataTemplate x:Key="DayAppointmentControlTemplate">
-        <Grid x:Name="PART_AppointmentGrid" Background="{Binding AppointmentBackground}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock x:Name="PART_AppointmentTextBlock"
+        <Border 
+            x:Name="PART_AppointmentBorder"
+            Background="{Binding AppointmentBackground}"
+            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}">
+            <Grid x:Name="PART_AppointmentGrid">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="PART_AppointmentTextBlock"
             Foreground="{Binding Foreground}"
             Margin="5,5,0,0"
             HorizontalAlignment="Stretch"
             Text="{Binding Subject}" TextTrimming="CharacterEllipsis"
             TextWrapping="Wrap" />
-            <Path x:Name="PART_RecurrenceIcon"  
+                <Path x:Name="PART_RecurrenceIcon"  
                   Fill="#FFFFFFFF"
                   Grid.Column="1"
                   HorizontalAlignment="Right"
                   VerticalAlignment="Bottom"
                   Stretch="Fill"
                   Margin="3" />
-        </Grid>
+            </Grid>
+        </Border>
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding Path=IsAllDay}" Value="True">
                 <Setter TargetName="PART_RecurrenceIcon" Property="VerticalAlignment" Value="Center" />
@@ -59,7 +64,7 @@
                 <Setter TargetName="PART_AppointmentTextBlock" Property="TextBlock.Text" Value="{scheduler:SchedulerLocalizationResourceExtension ResourceName=EmptyAppointmentSubject}"/>
             </DataTrigger>
             <DataTrigger Binding="{Binding Path=AppointmentBackground}" Value="{x:Null}">
-                <Setter TargetName="PART_AppointmentGrid" Property="Background" Value="{StaticResource PrimaryBackground}" />
+                <Setter TargetName="PART_AppointmentBorder" Property="Background" Value="{StaticResource PrimaryBackground}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Path=Foreground}" Value="{x:Null}">
                 <Setter TargetName="PART_AppointmentTextBlock" Property="Foreground" Value="{StaticResource PrimaryForeground}" />
@@ -69,26 +74,31 @@
     </DataTemplate>
 
     <DataTemplate x:Key="MonthAppointmentControlTemplate">
-        <Grid x:Name="PART_AppointmentGrid" Background="{Binding AppointmentBackground}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock x:Name="PART_AppointmentTextBlock"
+        <Border 
+            x:Name="PART_AppointmentBorder"
+            Background="{Binding AppointmentBackground}" 
+            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}">
+            <Grid x:Name="PART_AppointmentGrid">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="PART_AppointmentTextBlock"
             Margin="5,0,0,0"
             Foreground="{Binding Foreground}" 
             HorizontalAlignment="Stretch"
             VerticalAlignment="Center"
             Text="{Binding Subject}" TextTrimming="CharacterEllipsis"
             TextWrapping="Wrap" />
-            <Path x:Name="PART_RecurrenceIcon"  
+                <Path x:Name="PART_RecurrenceIcon"  
                   Fill="#FFFFFFFF"
                   Grid.Column="1"
                   HorizontalAlignment="Right"
                   VerticalAlignment="Center"
                   Stretch="Fill"
                   Margin="3" />
-        </Grid>
+            </Grid>
+        </Border>
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding Path=IsRecursive}" Value="True">
                 <Setter TargetName="PART_RecurrenceIcon" Property="Data" Value="{StaticResource OccurrenceIcon}" />
@@ -104,7 +114,7 @@
                 <Setter TargetName="PART_AppointmentTextBlock" Property="TextBlock.Text" Value="{scheduler:SchedulerLocalizationResourceExtension ResourceName=EmptyAppointmentSubject}"/>
             </DataTrigger>
             <DataTrigger Binding="{Binding Path=AppointmentBackground}" Value="{x:Null}">
-                <Setter TargetName="PART_AppointmentGrid" Property="Background" Value="{StaticResource PrimaryBackground}" />
+                <Setter TargetName="PART_AppointmentBorder" Property="Background" Value="{StaticResource PrimaryBackground}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Path=Foreground}" Value="{x:Null}">
                 <Setter TargetName="PART_AppointmentTextBlock" Property="Foreground" Value="{StaticResource PrimaryForeground}" />
@@ -130,12 +140,14 @@
             <Setter.Value>
                 <ControlTemplate TargetType="scheduler:SfScheduler">
                     <busyIndicator:SfBusyIndicator x:Name="PART_BusyIndicator" 
-                                                       AnimationType="DotCircle"
-                                                       IsBusy="False">
-                        <Border BorderBrush="{TemplateBinding BorderBrush}" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
-                        BorderThickness="{TemplateBinding BorderThickness}">
-                            <Grid Background="{TemplateBinding Background}" DataContext="{TemplateBinding DataContext}"
-                        x:Name="PART_Root">
+                                                   AnimationType="DotCircle"
+                                                   IsBusy="False">
+                        <Border BorderBrush="{TemplateBinding BorderBrush}" 
+                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <Grid Background="{TemplateBinding Background}" 
+                                  DataContext="{TemplateBinding DataContext}"
+                                  x:Name="PART_Root">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="0.7*" />
@@ -158,8 +170,9 @@
                                             <RowDefinition Height="*" />
                                         </Grid.RowDefinitions>
 
-                                        <Border BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="0, 0, 0, 1" />
+                                        <Border 
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="0, 0, 0, 1" />
                                         <ScrollViewer x:Name="PART_ResourceScrollViewer" Grid.Row="1"
                                   HorizontalScrollBarVisibility="Auto" 
                                   IsDeferredScrollingEnabled="False" 
@@ -181,7 +194,7 @@
                                         </ScrollViewer>
                                     </Grid>
                                 </Border>
-                                <scheduler:SchedulerHeaderControl x:Name="PART_ScheduleHeaderControl" Height="{TemplateBinding HeaderHeight}" Grid.ColumnSpan="2" />
+                                <scheduler:SchedulerHeaderControl x:Name="PART_ScheduleHeaderControl" MinHeight="32" Height="{TemplateBinding HeaderHeight}" Grid.ColumnSpan="2" />
 
                                 <scheduler:MonthAgendaView x:Name="PART_AgendaListViewControl"
                                                    Grid.Row="2" Grid.Column="1"/>
@@ -237,7 +250,8 @@
             <Setter.Value>
                 <ControlTemplate TargetType="scheduler:ResourceHeaderControl">
                     <Border
-                        BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                        BorderBrush="{TemplateBinding BorderBrush}" 
+                        BorderThickness="{TemplateBinding BorderThickness}">
                         <ContentPresenter x:Name="PART_ResourceContentPresenter" 
                          Content="{TemplateBinding DataContext}"
                          ContentTemplate="{TemplateBinding ContentTemplate}">

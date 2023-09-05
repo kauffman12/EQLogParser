@@ -761,6 +761,7 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}" 
                             Opacity="0.6"
+                            CornerRadius="0 "
                             RenderTransformOrigin="0.5,0.5">
                         <Border.RenderTransform>
                             <ScaleTransform></ScaleTransform>
@@ -772,9 +773,11 @@
                             <Path x:Name="ellipse" 
                                   Width="8"
                                   Height="8"
-                                  Data="{TemplateBinding Shape, Converter={StaticResource PathConverter}}"
                                   StrokeThickness="1.1"
                                   Stretch="Fill">
+                                <Path.Data>
+                                    <PathGeometry>M242,1078L231,1078L231,1067L242,1067z</PathGeometry>
+                                </Path.Data>
                                 <Path.Fill>
                                     <SolidColorBrush x:Name="ellipseFill" Color="{StaticResource PrimaryBackground.Color}"/>
                                 </Path.Fill>
@@ -1081,7 +1084,7 @@
                 <Setter Property="IsTabStop" 
                         Value="false"/>
                 <Setter Property="Shape"
-                        Value="M146.199,121.824L76.199,121.824L76.199,77.824L146.199,77.824z"/>
+                        Value="{StaticResource Rectangle}"/>
                 <Setter Property="ShapeStyle">
                     <Setter.Value>
                         <Style TargetType="Path">

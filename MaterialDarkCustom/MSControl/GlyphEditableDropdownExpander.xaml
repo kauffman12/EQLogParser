@@ -8,29 +8,29 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
     </ResourceDictionary.MergedDictionaries>
-    
+
     <Style x:Key="WPFGlyphEditableDropdownExpanderStyle" TargetType="{x:Type ToggleButton}">
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="OverridesDefaultStyle" Value="true"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
-        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness}"/>
         <Setter Property="IsTabStop" Value="false"/>
         <Setter Property="Focusable" Value="false"/>
         <Setter Property="ClickMode" Value="Press"/>
-        <Setter Property="FocusVisualStyle" Value="{StaticResource ToggleButtonFocusVisual}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="MinWidth" Value="16"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ToggleButton}">
-                    <Border Name="border"  
-                            Background="{TemplateBinding Background}"       
-                            BorderBrush="{TemplateBinding BorderBrush}"  
+                    <Border Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+
                         <ContentPresenter x:Name="contentPresenter" Margin="{TemplateBinding Padding}" 
                                           HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
@@ -71,13 +71,17 @@
                             <Setter Property="Width" TargetName="Arrow" Value="10.5"/>
                             <Setter Property="Height" TargetName="Arrow" Value="8.5"/>
                         </Trigger>
-                        <Trigger Property="IsFocused" Value="True">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsFocused" Value="True"/>
+                            </MultiTrigger.Conditions>
                             <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                             <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
-                        </Trigger>
+                        </MultiTrigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
+                            <Setter Property="BorderBrush" TargetName="border"  Value="{StaticResource SecondaryHoverBackground}" />
+
                             <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                             <Setter Property="Foreground" Value="{StaticResource IconColor}"/>
                         </Trigger>

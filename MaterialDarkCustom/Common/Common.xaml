@@ -35,6 +35,7 @@
 	<Thickness x:Key="MaterialDarkCustom.BorderThickness1011">1,0,1,1</Thickness>
 	<Thickness x:Key="MaterialDarkCustom.BorderThickness0111">0,1,1,1</Thickness>
 	<Thickness x:Key="MaterialDarkCustom.BorderThickness0011">0,0,1,1</Thickness>
+	<Thickness x:Key="MaterialDarkCustom.BorderThickness1112">1,1,1,2</Thickness>
 <Thickness x:Key="MaterialDarkCustom.ThemeBorderThicknessVariant1">0,0,0,1</Thickness> 
 <Thickness x:Key="MaterialDarkCustom.ThemeBorderThicknessVariant2">0,0,0,2</Thickness> 
 <Thickness x:Key="MaterialDarkCustom.FocusMargin">2,2,2,2</Thickness> 
@@ -46,6 +47,8 @@
 <CornerRadius x:Key="MaterialDarkCustom.ThemeCornerRadiusVariant2">0,0,0,0</CornerRadius> 
 <CornerRadius x:Key="MaterialDarkCustom.CornerRadius2">2,2,2,2</CornerRadius> 
 <CornerRadius x:Key="MaterialDarkCustom.CornerRadius4">4,4,4,4</CornerRadius> 
+<CornerRadius x:Key="MaterialDarkCustom.CornerRadius6">6,6,6,6</CornerRadius> 
+<CornerRadius x:Key="MaterialDarkCustom.CornerRadius7">7,7,7,7</CornerRadius> 
 <CornerRadius x:Key="MaterialDarkCustom.CornerRadius8">8,8,8,8</CornerRadius> 
 	<sys:Double x:Key="TouchMode.MinHeight">32</sys:Double>
 	<sys:Double x:Key="TouchMode.MinWidth">32</sys:Double>

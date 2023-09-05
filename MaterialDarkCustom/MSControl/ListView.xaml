@@ -463,27 +463,47 @@
                 Value="{StaticResource ContentForeground}"/>
                 <Setter Property="BorderThickness" 
                         Value="{StaticResource MaterialDarkCustom.BorderThickness}"/>
-                <Setter Property="Padding" Value="4,1"/>
+                <Setter Property="Padding">
+                    <Setter.Value>
+                        <Thickness>4,1,4,1</Thickness>
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="Margin">
+                    <Setter.Value>
+                        <Thickness>0,0,0,0</Thickness>
+                    </Setter.Value>
+                </Setter>
                 <Setter Property="MinHeight" Value="{StaticResource MaterialDarkCustom.MinHeight}"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="{x:Type ListViewItem}">
-                            <Border x:Name="Bd" 
+                            <Grid>
+                                <Border x:Name="SelectionIndicator"
+                                        HorizontalAlignment="Left"            
+                                        CornerRadius="1.5"
+                                        Height="12"
+                                        Width="2"
+                                        Visibility="Collapsed"     
+                                         />
+                                
+                                <Border x:Name="Bd" 
+                                    CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
                                     BorderBrush="{TemplateBinding BorderBrush}" 
                                     BorderThickness="{TemplateBinding BorderThickness}" 
                                     Background="{TemplateBinding Background}" 
                                     Padding="{TemplateBinding Padding}" 
                                     SnapsToDevicePixels="true"
-                            >
-                                <ContentPresenter x:Name="content"
+                                    >
+                                    <ContentPresenter x:Name="content"
                                                   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
                                                   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                                   SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                                    <ContentPresenter.Resources>
-                                        <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
-                                    </ContentPresenter.Resources>
-                                </ContentPresenter>
-                            </Border>
+                                        <ContentPresenter.Resources>
+                                            <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                        </ContentPresenter.Resources>
+                                    </ContentPresenter>                                    
+                                </Border>
+                            </Grid>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter Property="Background" TargetName="Bd"
@@ -561,6 +581,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ListView}">
                     <Border Name="Bd"
+                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             Background="{TemplateBinding Background}"
@@ -569,7 +590,11 @@
                                       Focusable="false"
                                       Style="{StaticResource {x:Static GridView.GridViewScrollViewerStyleKey}}"
                                       Padding="{TemplateBinding Padding}">
-                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                                <ItemsPresenter.Margin>
+                                    <Thickness>0,0,0,0</Thickness>
+                                </ItemsPresenter.Margin>
+                            </ItemsPresenter>
                         </ScrollViewer>
                     </Border>
                     <ControlTemplate.Triggers>

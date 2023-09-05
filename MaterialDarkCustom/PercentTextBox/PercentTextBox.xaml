@@ -11,6 +11,7 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphRepeatButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/RepeatButton.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
     <shared:ProgressConverter x:Key="ProgressConverter" />
@@ -27,9 +28,9 @@
         <Setter Property="CaretBrush" Value="{StaticResource ContentForeground}" />
         <Setter Property="SelectionBrush" Value="{StaticResource PrimaryBackground}" />
         <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
-        <Setter Property="PositiveForeground" Value="{StaticResource SuccessForeground}" />
-        <Setter Property="NegativeForeground" Value="{StaticResource ErrorForeground}" />
-        <Setter Property="ZeroColor" Value="{StaticResource ErrorForeground}" />
+        <Setter Property="PositiveForeground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="NegativeForeground" Value="{StaticResource ContentForeground}" />
+        <Setter Property="ZeroColor" Value="{StaticResource ContentForeground}" />
         <Setter Property="RangeAdornerBackground" Value="{StaticResource PrimaryLightest}" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="{StaticResource Border}" />
@@ -51,6 +52,7 @@
                     <Grid x:Name="ContentHost">
                         <Border
                             x:Name="Border"
+                            Padding="{TemplateBinding Padding}"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
@@ -130,6 +132,7 @@
                                     x:Name="upbutton"
                                     Width="16"
                                     Cursor="Arrow"
+                                    Margin="0"
                                     Padding="{TemplateBinding Padding}"
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                     Background="{TemplateBinding Background}"
@@ -156,6 +159,7 @@
                                     Grid.Row="1"
                                     Width="16"
                                     Cursor="Arrow"
+                                    Margin="0"
                                     Padding="{TemplateBinding Padding}"
                                     Background="{TemplateBinding Background}"
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
@@ -184,6 +188,8 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                             <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                            <Setter Property="MinHeight" Value="16" TargetName="downbutton"/>
+                            <Setter Property="MinHeight" Value="16" TargetName="upbutton"/>
                         </Trigger>
                         <Trigger Property="EnableRangeAdorner" Value="False">
                             <Setter TargetName="Border" Property="Clip" Value="{x:Null}" />
@@ -191,14 +197,12 @@
                         <Trigger Property="IsReadOnly" Value="True">
 							<Setter TargetName="upbutton" Property="IsEnabled" Value="False" />
                             <Setter TargetName="downbutton" Property="IsEnabled" Value="False" />
-                            <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource BorderAlt}" />
-                            <Setter TargetName="Border" Property="Background" Value="{StaticResource ContentBackground}" />
-                            <Setter Property="TextElement.Foreground" Value="{StaticResource DisabledForeground}" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="true">
                             <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
-                            <Setter TargetName="Border" Property="Background" Value="Transparent"/>
+                            <Setter TargetName="Border" Property="Background" Value="{StaticResource ContentBackground}"/>
                             <Setter TargetName="Border" Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}" />
+                            <Setter Property="Padding" TargetName="downbutton" Value="0,0,0,-2"/>
                         </Trigger>
 						<MultiTrigger>
                             <MultiTrigger.Conditions>
@@ -244,7 +248,7 @@
                         </Trigger>
                         <Trigger Property="IsFocused" Value="True">
                             <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
-                            <Setter TargetName="Border" Property="Background" Value="Transparent"/>
+                            <Setter TargetName="Border" Property="Background" Value="{StaticResource ContentBackground}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

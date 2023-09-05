@@ -230,6 +230,7 @@
                         </Grid.RowDefinitions>
                         <Border x:Name="border" Grid.Row="1" 
                                 Grid.Column="0" 
+                                
                                 BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 Background="{StaticResource PopupBackground}">
@@ -445,8 +446,14 @@
                                       Width="9"
                                       Height="11"
                                       Fill="{StaticResource IconColor}"
-                                      FlowDirection="LeftToRight"
-                                      Data="M 0,5.1 L 1.7,5.2 L 3.4,7.1 L 8,0.4 L 9.2,0 L 3.3,10.8 Z"/>
+                                      FlowDirection="LeftToRight">
+                                    <Path.Margin>
+                                        <Thickness>0,0,0,0</Thickness>
+                                    </Path.Margin>
+                                    <Path.Data>
+                                        <PathGeometry>M 0,5.1 L 1.7,5.2 L 3.4,7.1 L 8,0.4 L 9.2,0 L 3.3,10.8 Z</PathGeometry>
+                                    </Path.Data>
+                                </Path>
                             </Border>
                             <ContentPresenter Grid.Column="1"
                                               ContentSource="Header"
@@ -529,7 +536,11 @@
         <Style.Triggers>
             <Trigger Property="Role"
                      Value="TopLevelHeader">
-                <Setter Property="Padding" Value="6,3,6,3"/>
+                <Setter Property="Padding">
+                    <Setter.Value>
+                        <Thickness>6,3,6,3</Thickness>
+                    </Setter.Value>
+                </Setter>
                 <Setter Property="Background"
                 Value="Transparent"/>
                 <Setter Property="BorderBrush"
@@ -538,18 +549,23 @@
                 Value="{StaticResource SecondaryForeground}"/>
                 <Setter Property="VerticalContentAlignment"
                 Value="Center"/>
+                <Setter Property="Margin">
+                    <Setter.Value>
+                        <Thickness>0,0,0,0</Thickness>
+                    </Setter.Value>
+                </Setter>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate 
                      TargetType="{x:Type MenuItem}">
                             <Grid SnapsToDevicePixels="true">
                                 <Rectangle Name="Bg"
-                                           Margin="1"
                                            Fill="{TemplateBinding Background}"
                                            Stroke="Transparent"
                                            StrokeThickness="0"
+                                           Margin="1"
                                            RadiusX="1"
-                                           RadiusY="1"/>
+                                           RadiusY="1" />
                                 <DockPanel>
                                     <ContentPresenter x:Name="Icon"
                                                       Margin="4,0,6,0"
@@ -557,12 +573,19 @@
                                                       ContentSource="Icon"
                                                       SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                                     <Path x:Name="Glyph"
-                                          Margin="7,0,0,0"
                                           Visibility="Collapsed"
                                           VerticalAlignment="Center"
+                                          
+                                          
                                           Fill="{StaticResource IconColor}"
-                                          Data="M 0,5.1 L 1.7,5.2 L 3.4,7.1 L 8,0.4 L 9.2,0 L 3.3,10.8 Z"
-                                          FlowDirection="LeftToRight"/>
+                                          FlowDirection="LeftToRight">
+                                        <Path.Margin>
+                                            <Thickness>7,0,0,0</Thickness>
+                                        </Path.Margin>
+                                        <Path.Data>
+                                            <PathGeometry>M 0,5.1 L 1.7,5.2 L 3.4,7.1 L 8,0.4 L 9.2,0 L 3.3,10.8 Z</PathGeometry>
+                                        </Path.Data>
+                                    </Path>
                                     <ContentPresenter x:Name="content"
                                                       ContentSource="Header"
                                                       Margin="{TemplateBinding MenuItem.Padding}"
@@ -593,6 +616,7 @@
                                             <StackPanel IsItemsHost="True"
                                                             KeyboardNavigation.DirectionalNavigation="Cycle" />
                                         </ScrollViewer>
+
                                     </Border>
                                 </Popup>
                             </Grid>
@@ -695,26 +719,34 @@
             </Trigger>
             <Trigger Property="Role"
                      Value="TopLevelItem">
-                <Setter Property="Padding"
-                        Value="6,3,6,3"/>
+                <Setter Property="Padding">
+                        <Setter.Value>
+                            <Thickness>6,3,6,3</Thickness>
+                        </Setter.Value>
+                </Setter>
                 <Setter Property="Background"
                 Value="Transparent"/>
                 <Setter Property="BorderBrush"
                 Value="Transparent"/>
                 <Setter Property="Foreground"
                 Value="{StaticResource SecondaryForeground}"/>
+                <Setter Property="Margin">
+                    <Setter.Value>
+                        <Thickness>0,0,0,0</Thickness>
+                    </Setter.Value>
+                </Setter>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate 
                      TargetType="{x:Type MenuItem}">
                             <Grid SnapsToDevicePixels="true">
                                 <Rectangle Name="Bg"
-                                           Margin="1"
                                            Fill="{TemplateBinding Background}"
                                            Stroke="Transparent"
                                            StrokeThickness="0"
+                                           Margin="1"
                                            RadiusX="1"
-                                           RadiusY="1"/>
+                                           RadiusY="1" />
                                 <DockPanel>
                                     <ContentPresenter x:Name="Icon"
                                                       Margin="4,0,6,0"
@@ -722,13 +754,21 @@
                                                       ContentSource="Icon"
                                                       SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                                     <Path x:Name="Glyph"
-                                          Margin="7,0,0,0"
                                           Visibility="Collapsed"
+                                          
+                                          
                                           VerticalAlignment="Center"
                                           Fill="{StaticResource IconColor}"
-                                          FlowDirection="LeftToRight"
-                                          Data="M 0,5.1 L 1.7,5.2 L 3.4,7.1 L 8,0.4 L 9.2,0 L 3.3,10.8 Z"/>
-                                    <ContentPresenter ContentSource="Header"
+                                          FlowDirection="LeftToRight">
+                                        <Path.Margin>
+                                            <Thickness>7,0,0,0</Thickness>
+                                        </Path.Margin>
+                                        <Path.Data>
+                                            <PathGeometry>M 0,5.1 L 1.7,5.2 L 3.4,7.1 L 8,0.4 L 9.2,0 L 3.3,10.8 Z</PathGeometry>
+                                        </Path.Data>
+                                    </Path>
+                                    <ContentPresenter x:Name="ContentElement"
+                                                      ContentSource="Header"
                                                       Margin="{TemplateBinding MenuItem.Padding}"
                                                       RecognizesAccessKey="True" 
                                                       VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
@@ -834,8 +874,14 @@
                                               Width="9"
                                               Height="11"
                                               Fill="{StaticResource IconColor}"
-                                              FlowDirection="LeftToRight"
-                                              Data="M 0,5.1 L 1.7,5.2 L 3.4,7.1 L 8,0.4 L 9.2,0 L 3.3,10.8 Z"/>
+                                              FlowDirection="LeftToRight">
+                                            <Path.Margin>
+                                                <Thickness>0,0,0,0</Thickness>
+                                            </Path.Margin>
+                                            <Path.Data>
+                                                <PathGeometry>M 0,5.1 L 1.7,5.2 L 3.4,7.1 L 8,0.4 L 9.2,0 L 3.3,10.8 Z</PathGeometry>
+                                            </Path.Data>
+                                        </Path>
                                     </Border>
                                     <ContentPresenter Grid.Column="1"
                                                       ContentSource="Header"
@@ -851,8 +897,12 @@
                                           Grid.Column="3"
                                           VerticalAlignment="Center"
                                           Margin="4,0,0,0" 
-                                          Fill="{StaticResource IconColor}"
-                                          Data="M 0,0 L 4,3.5 L 0,7 Z"/>
+                                          
+                                          Fill="{StaticResource IconColor}">
+                                        <Path.Data>
+                                            <PathGeometry>M 0,0 L 4,3.5 L 0,7 Z</PathGeometry>
+                                        </Path.Data>
+                                    </Path>
                                     <Popup x:Name="PART_Popup"
                                        AllowsTransparency="true"
                                        Placement="Right"
@@ -946,7 +996,7 @@
                                             Value="{StaticResource ContentBackgroundDisabled}"/>
                                     <Setter TargetName="Glyph"
                                             Property="Fill"
-                                            Value="{StaticResource IconDisabledColor}"/>
+                                             Value="{StaticResource IconDisabledColor}"/>
                                     <Setter Property="Foreground"
                                             Value="{StaticResource DisabledForeground}"/>
                                 </Trigger>
@@ -1001,11 +1051,17 @@
                                             Width="22" 
                                             Height="22">
                                         <Path Name="Glyph"
-                                              Width="9"
+                                             Width="9"
                                               Height="11"
                                               Fill="{StaticResource IconColor}"
-                                              FlowDirection="LeftToRight"
-                                              Data="M 0,5.1 L 1.7,5.2 L 3.4,7.1 L 8,0.4 L 9.2,0 L 3.3,10.8 Z"/>
+                                              FlowDirection="LeftToRight">
+                                            <Path.Margin>
+                                                <Thickness>0,0,0,0</Thickness>
+                                            </Path.Margin>
+                                            <Path.Data>
+                                                <PathGeometry>M 0,5.1 L 1.7,5.2 L 3.4,7.1 L 8,0.4 L 9.2,0 L 3.3,10.8 Z</PathGeometry>
+                                            </Path.Data>
+                                        </Path>
                                     </Border>
                                     <ContentPresenter Grid.Column="1"
                                                       ContentSource="Header"
@@ -1071,7 +1127,7 @@
                                             Value="{StaticResource ContentBackgroundDisabled}"/>
                                     <Setter TargetName="Glyph"
                                             Property="Fill"
-                                            Value="{StaticResource IconDisabledColor}"/>
+                                             Value="{StaticResource IconDisabledColor}"/>
                                     <Setter Property="Foreground"
                                             Value="{StaticResource DisabledForeground}"/>
                                 </Trigger>

@@ -10,7 +10,7 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
     </ResourceDictionary.MergedDictionaries>
-    
+
     <Style x:Key="WPFPrimaryButtonStyle"
            TargetType="{x:Type Button}">
         <Setter Property="FocusVisualStyle"
@@ -58,12 +58,15 @@
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                             <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
                         </Trigger>
-                        <Trigger Property="IsFocused" Value="True">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsFocused" Value="True"/>
+                            </MultiTrigger.Conditions>
                             <Setter Property="Background" TargetName="border" Value="{StaticResource PrimaryLight}"/>
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PrimaryLight}"/>
                             <Setter Property="Foreground" Value="{StaticResource PrimaryForeground}"/>
                             <Setter Property="Effect" TargetName="border" Value="{StaticResource Default.ShadowDepth2}"/>
-                        </Trigger>
+                        </MultiTrigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PrimaryLight}"/>
                             <Setter Property="Background" TargetName="border" Value="{StaticResource PrimaryLight}"/>

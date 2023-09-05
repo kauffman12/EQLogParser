@@ -71,10 +71,11 @@ namespace EQLogParser
 
     internal void Init() => (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
     internal ObservableCollection<dynamic> GetAlertLog() => AlertLog;
-    private string ModText(string text) => string.IsNullOrEmpty(text) ? null : text.Replace("{c}", ConfigUtil.PlayerName, StringComparison.OrdinalIgnoreCase);
     internal void SetVoice(string voice) => CurrentVoice = voice;
     internal void SetVoiceRate(int rate) => CurrentVoiceRate = rate;
     internal void Select(Trigger trigger) => EventsSelectTrigger?.Invoke(this, trigger);
+    private string ModLine(string text, string line) => string.IsNullOrEmpty(text) ? null : text.Replace("{l}", line, StringComparison.OrdinalIgnoreCase);
+    private string ModPlayer(string text) => string.IsNullOrEmpty(text) ? null : text.Replace("{c}", ConfigUtil.PlayerName, StringComparison.OrdinalIgnoreCase);
 
     internal List<TimerData> GetActiveTimers()
     {
@@ -359,7 +360,7 @@ namespace EQLogParser
 
             if (wrapper.TriggerData.TimerType > 0 && wrapper.TriggerData.DurationSeconds > 0)
             {
-              StartTimer(wrapper, displayName, beginTicks, speechChannel, lineData.Line, matches);
+              StartTimer(wrapper, displayName, beginTicks, speechChannel, lineData, matches);
             }
           }
 
@@ -375,7 +376,7 @@ namespace EQLogParser
             });
           }
 
-          AddTextEvent(wrapper.ModifiedDisplay, wrapper.TriggerData, matches);
+          AddTextEvent(lineData.Action, wrapper.ModifiedDisplay, wrapper.TriggerData, matches);
           AddEntry(lineData.Line, wrapper.TriggerData, "Trigger", time);
         }
         else
@@ -407,7 +408,7 @@ namespace EQLogParser
                 OriginalMatches = timerData.OriginalMatches
               });
 
-              AddTextEvent(displayText, wrapper.TriggerData, earlyMatches, timerData.OriginalMatches);
+              AddTextEvent(lineData.Action, displayText, wrapper.TriggerData, earlyMatches, timerData.OriginalMatches);
               AddEntry(lineData.Line, wrapper.TriggerData, "Timer End Early");
               CleanupTimer(wrapper, timerData);
             }
@@ -528,7 +529,7 @@ namespace EQLogParser
       });
     }
 
-    private void StartTimer(TriggerWrapper wrapper, string displayName, long beginTicks, Channel<Speak> speechChannel, string line, MatchCollection matches)
+    private void StartTimer(TriggerWrapper wrapper, string displayName, long beginTicks, Channel<Speak> speechChannel, LineData lineData, MatchCollection matches)
     {
       var trigger = wrapper.TriggerData;
 
@@ -579,8 +580,8 @@ namespace EQLogParser
                   Matches = matches
                 });
 
-                AddTextEvent(wrapper.ModifiedWarningDisplay, trigger, matches);
-                AddEntry(line, trigger, "Timer Warning");
+                AddTextEvent(lineData.Action, wrapper.ModifiedWarningDisplay, trigger, matches);
+                AddEntry(lineData.Line, trigger, "Timer Warning");
               }
             }
           }, newTimerData.WarningSource.Token);
@@ -665,8 +666,8 @@ namespace EQLogParser
                 OriginalMatches = newTimerData.OriginalMatches
               });
 
-              AddTextEvent(wrapper.ModifiedEndDisplay, trigger, matches, newTimerData.OriginalMatches);
-              AddEntry(line, trigger, "Timer End");
+              AddTextEvent(lineData.Action, wrapper.ModifiedEndDisplay, trigger, matches, newTimerData.OriginalMatches);
+              AddEntry(lineData.Line, trigger, "Timer End");
               CleanupTimer(wrapper, newTimerData);
             }
           }
@@ -748,15 +749,15 @@ namespace EQLogParser
             var wrapper = new TriggerWrapper
             {
               TriggerData = trigger,
-              ModifiedSpeak = ModText(trigger.TextToSpeak),
-              ModifiedWarningSpeak = ModText(trigger.WarningTextToSpeak),
-              ModifiedEndSpeak = ModText(trigger.EndTextToSpeak),
-              ModifiedEndEarlySpeak = ModText(trigger.EndEarlyTextToSpeak),
-              ModifiedDisplay = ModText(trigger.TextToDisplay),
-              ModifiedWarningDisplay = ModText(trigger.WarningTextToDisplay),
-              ModifiedEndDisplay = ModText(trigger.EndTextToDisplay),
-              ModifiedEndEarlyDisplay = ModText(trigger.EndEarlyTextToDisplay),
-              ModifiedTimerName = ModText(string.IsNullOrEmpty(trigger.AltTimerName) ? trigger.Name : trigger.AltTimerName)
+              ModifiedSpeak = ModPlayer(trigger.TextToSpeak),
+              ModifiedWarningSpeak = ModPlayer(trigger.WarningTextToSpeak),
+              ModifiedEndSpeak = ModPlayer(trigger.EndTextToSpeak),
+              ModifiedEndEarlySpeak = ModPlayer(trigger.EndEarlyTextToSpeak),
+              ModifiedDisplay = ModPlayer(trigger.TextToDisplay),
+              ModifiedWarningDisplay = ModPlayer(trigger.WarningTextToDisplay),
+              ModifiedEndDisplay = ModPlayer(trigger.EndTextToDisplay),
+              ModifiedEndEarlyDisplay = ModPlayer(trigger.EndEarlyTextToDisplay),
+              ModifiedTimerName = ModPlayer(string.IsNullOrEmpty(trigger.AltTimerName) ? trigger.Name : trigger.AltTimerName)
             };
 
             wrapper.ModifiedTimerName = string.IsNullOrEmpty(wrapper.ModifiedTimerName) ? "" : wrapper.ModifiedTimerName;
@@ -861,7 +862,7 @@ namespace EQLogParser
       SaveTriggers();
     }
 
-    private void AddTextEvent(string text, Trigger data, MatchCollection matches, MatchCollection originalMatches = null)
+    private void AddTextEvent(string action, string text, Trigger data, MatchCollection matches, MatchCollection originalMatches = null)
     {
       if (!string.IsNullOrEmpty(text))
       {
@@ -869,6 +870,7 @@ namespace EQLogParser
         {
           text = ProcessText(text, originalMatches);
           text = ProcessText(text, matches);
+          text = ModLine(text, action);
           EventsAddText?.Invoke(this, new { Text = text, Trigger = data, CustomFont = data.FontColor });
         }, DispatcherPriority.Render);
       }

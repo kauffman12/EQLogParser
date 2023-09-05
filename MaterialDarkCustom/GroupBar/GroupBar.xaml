@@ -19,6 +19,7 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MsControl/ToggleButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ListBox.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphPrimaryToggleButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphToggleButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Menu.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ScrollViewer.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Separator.xaml" />
@@ -115,12 +116,14 @@
                 Width="10"
                 Height="7"
                 HorizontalAlignment="Center"
-                VerticalAlignment="Center"  
-                Data="M6.64645 0.292847L12.6465 6.09228L11.9217 6.79285L6.64645 1.69398L1.37125 6.79285L0.646454 6.09228L6.64645 0.292847Z"
+                VerticalAlignment="Center"                 
                 Stroke="{StaticResource IconColor}"
                 StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness1}"
                 RenderTransformOrigin="0.5,0.5"
                 Stretch="Fill">
+                <Path.Data>
+                    <Geometry>M6.64645 0.292847L12.6465 6.09228L11.9217 6.79285L6.64645 1.69398L1.37125 6.79285L0.646454 6.09228L6.64645 0.292847Z</Geometry>
+                </Path.Data>
                 <Path.RenderTransform>
                     <TransformGroup>
                         <RotateTransform Angle="270" />
@@ -256,6 +259,7 @@
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
                                        FontSize="14"
+                                       FontWeight="Normal"
                                        Foreground="{StaticResource IconColor}"
                                        Text="{Binding Path=NavigationPaneText, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type syncfusion:GroupBar}}}">
                                 <TextBlock.LayoutTransform>
@@ -298,6 +302,7 @@
         <Border
             Height="{TemplateBinding Height}"
             Background="{StaticResource ContentBackground}"
+            CornerRadius="0"
             BorderBrush="{TemplateBinding BorderBrush}"
             BorderThickness="{TemplateBinding BorderThickness}">
             <Grid
@@ -325,8 +330,9 @@
                     Background="{StaticResource ContentBackground}"
                     BorderBrush="{StaticResource BorderAlt}"
                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness0001}"
+                    CornerRadius="0"
                     KeyboardNavigation.IsTabStop="False"
-                    Style="{Binding Path=GroupBarHeaderStyle, RelativeSource={RelativeSource TemplatedParent}}">
+                    Style="{Binding Path=GroupBarHeaderStyle, RelativeSource={RelativeSource TemplatedParent}}">                    
                     <DockPanel Name="HeaderDockPanel" Margin="{Binding Path=HeaderMarginRight, RelativeSource={RelativeSource TemplatedParent}}">
                         <ToggleButton
                             Name="CloseButton"
@@ -464,7 +470,17 @@
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
                                         </Grid.RowDefinitions>
-                                        <ListBoxItem x:Name="PART_NavigationOption"  Grid.Row="0" Margin="2" Content="Navigation Option..." VerticalContentAlignment="Center" Padding="30,0,0,0" MinHeight="20"  />
+                                        <Grid.Margin>
+                                            <Thickness>0,0,0,0</Thickness>
+                                        </Grid.Margin>
+                                        <ListBoxItem x:Name="PART_NavigationOption"  Grid.Row="0" Content="Navigation Option..." VerticalContentAlignment="Center" MinHeight="20">
+                                            <ListBoxItem.Margin>
+                                                <Thickness>2,2,2,2</Thickness>
+                                            </ListBoxItem.Margin>
+                                            <ListBoxItem.Padding>
+                                                <Thickness>30,0,0,0</Thickness>
+                                            </ListBoxItem.Padding>
+                                        </ListBoxItem>
                                         <Separator x:Name="PART_OverflowSeparator" Grid.Row="1" BorderThickness="1" Height="1" MinHeight="1" MaxHeight="2" Visibility="Collapsed" IsHitTestVisible="False" Padding="0" Margin="30, 1, 0, 1" Width="123" Focusable="False" ></Separator>
                                         <ListBox Grid.Row="2"
                                         x:Name="PART_OverFlow"
@@ -706,6 +722,7 @@
     <!--  GroupBar Style  -->
 
     <Style x:Key="SyncfusionGroupBarStyle" TargetType="{x:Type syncfusion:GroupBar}">
+        <Setter Property="CornerRadius" Value="0"/>
         <Setter Property="ItemHeaderHeight" Value="32" />
         <Setter Property="HeaderHeight" Value="32" />
         <Setter Property="OverFlowItemTemplate" Value="{StaticResource OverFlowItemTemplate}" />
@@ -839,9 +856,11 @@
                 BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1}"
                 Cursor="{Binding Path=GroupBarItemCursor, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GroupBar}}}"
                 >
+                <Border.Margin>
+                    <Thickness>0,0,0,0</Thickness>
+                </Border.Margin>
                 <ContentPresenter
-                    x:Name="contentText"
-                    Margin="12,0,0,0"
+                    x:Name="contentText"                    
                     VerticalAlignment="Center"
                     Content="{TemplateBinding Header}"
                     ContentTemplate="{TemplateBinding HeaderTemplate}"
@@ -849,6 +868,9 @@
                     TextElement.FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
                     TextElement.FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
                     TextElement.Foreground="{StaticResource ContentForeground}">
+                    <ContentPresenter.Margin>
+                        <Thickness>12,0,0,0</Thickness>
+                    </ContentPresenter.Margin>
                     <ContentPresenter.Resources>
                         <Style BasedOn="{x:Null}" TargetType="TextBlock" />
                     </ContentPresenter.Resources>
@@ -865,6 +887,9 @@
                         <RotateTransform Angle="{Binding Path=ContentRotationAngle, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GroupBar}}, Converter={StaticResource AngleConverter}}" />
                     </TransformGroup>
                 </Border.LayoutTransform>
+                <Border.Margin>
+                    <Thickness>0,0,0,0</Thickness>
+                </Border.Margin>
                 <ContentPresenter
                     Name="ContentHost"
                     Margin="0,0,0,0"
@@ -924,38 +949,56 @@
             <StackPanel>
                 <Border
                     Name="HeaderHost"
-                    Height="{Binding Path=ItemHeaderHeight, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GroupBar}}}"
-                    Margin="0"
+                    Height="{Binding Path=ItemHeaderHeight, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GroupBar}}}"                   
                     BorderThickness="0.5"
                     Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
                     ClipToBounds="True"
                     Cursor="{Binding Path=GroupBarItemCursor, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GroupBar}}}"
                     >
-                    <DockPanel Margin="4,0,0,0">
-                        <ToggleButton
-                            Name="Expander"
-                            ClickMode="Press"
-                            DockPanel.Dock="Left"
-                            IsChecked="{Binding Path=IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"
-                            Style="{StaticResource WPFGlyphTreeExpanderToggleStyle}">
-                        </ToggleButton>
-                        <ContentPresenter
-                            x:Name="contentText"
-                            Margin="4,0,0,0"
-                            VerticalAlignment="Center"
-                            Content="{TemplateBinding Header}"
-                            ContentTemplate="{TemplateBinding HeaderTemplate}"
-                            ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}"
-                            DockPanel.Dock="Top"
-                            TextElement.FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
-                            TextElement.FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
-                            TextElement.Foreground="{StaticResource ContentForeground}">
-                            <ContentPresenter.Resources>
-                                <Style BasedOn="{x:Null}" TargetType="TextBlock" />
-                            </ContentPresenter.Resources>
-                        </ContentPresenter>
-                    </DockPanel>
+                    <Border.Margin>
+                        <Thickness>0,0,0,0</Thickness>
+                    </Border.Margin>
+                    <Grid>
+                        <Border x:Name="SelectionIndicator"
+                                HorizontalAlignment="Left"
+                                CornerRadius="1.5"
+                                Height="12"
+                                Width="2"
+                                Visibility="Collapsed"
+                                 />
+                        <DockPanel>
+                            <DockPanel.Margin>
+                                <Thickness>4,0,0,0</Thickness>
+                            </DockPanel.Margin>
+                            <ToggleButton Name="Expander"
+                                          ClickMode="Press"
+                                          DockPanel.Dock="Left"
+                                          IsChecked="{Binding Path=IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"
+                                          Style="{StaticResource WPFGlyphTreeExpanderToggleStyle}">
+                                <ToggleButton.Margin>
+                                    <Thickness>0,0,0,0</Thickness>
+                                </ToggleButton.Margin>
+                            </ToggleButton>
+                            <ContentPresenter x:Name="contentText"
+                                              VerticalAlignment="Center"
+                                              Content="{TemplateBinding Header}"
+                                              ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}"
+                                              DockPanel.Dock="Top"
+                                              TextElement.FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                                              TextElement.FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
+                                              TextElement.Foreground="{StaticResource ContentForeground}">
+                                <ContentPresenter.Margin>
+                                    <Thickness>4,0,0,0</Thickness>
+                                </ContentPresenter.Margin>
+                                <ContentPresenter.Resources>
+                                    <Style BasedOn="{x:Null}"
+                                           TargetType="TextBlock" />
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
+                        </DockPanel>
+                    </Grid>                    
                 </Border>
             </StackPanel>
 
@@ -963,11 +1006,13 @@
                 Name="ContentHostBorder"
                 Grid.Row="1"
                 Width="0"
-                Height="0"
-                Margin="0"
+                Height="0"                
                 Background="{StaticResource ContentBackground}"
                 BorderBrush="{StaticResource BorderAlt}"
                 BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}">
+                <Border.Margin>
+                    <Thickness>0,0,0,0</Thickness>
+                </Border.Margin>
                 <Border.LayoutTransform>
                     <TransformGroup>
                         <RotateTransform Angle="{Binding Path=ContentRotationAngle, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GroupBar}}, Converter={StaticResource AngleConverter}}" />
@@ -1024,8 +1069,7 @@
                 <Setter TargetName="HeaderHost" Property="Background" Value="{StaticResource ContentBackgroundDisabled}" />
                 <Setter TargetName="HeaderHost" Property="BorderBrush" Value="{StaticResource ContentBackgroundDisabled}" />
                 <Setter TargetName="contentText" Property="TextElement.Foreground" Value="{StaticResource DisabledForeground}" />
-            </Trigger>
-
+            </Trigger>                            
         </ControlTemplate.Triggers>
     </ControlTemplate>
 
@@ -1063,6 +1107,7 @@
         </Grid>
 
         <ControlTemplate.Triggers>
+            
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter TargetName="HeaderHost" Property="Background" Value="{StaticResource ContentBackgroundHover}" />
                 <Setter TargetName="HeaderHost" Property="BorderBrush" Value="{StaticResource BorderAlt}" />
@@ -1088,6 +1133,7 @@
     <!--  GroupBarItem Style  -->
 
     <Style x:Key="SyncfusionGroupBarItemStyle" TargetType="{x:Type syncfusion:GroupBarItem}">
+        <Setter Property="GroupBarItemCornerRadius" Value="0" />
         <Setter Property="Background" Value="{StaticResource ContentBackground}" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
         <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
@@ -1098,7 +1144,13 @@
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="SelectedAnimation" Value="{StaticResource SyncfusionGroupBarSelectedAnimation}"/>
         <Setter Property="UnselectedAnimation" Value="{StaticResource SyncfusionGroupBarUnSelectedAnimation}"/>
+        <Setter Property="Margin">
+            <Setter.Value>
+                <Thickness>0,0,0,0</Thickness>
+            </Setter.Value>
+        </Setter>
         <Style.Triggers>
+            
             <Trigger Property="componentModel:DesignerProperties.IsInDesignMode" Value="False">
                 <Setter Property="ContextMenu" Value="{StaticResource SyncfusionGroupBarContextMenu}" />
             </Trigger>
@@ -1138,9 +1190,11 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type syncfusion:GroupBarItemHeader}">
                     <DockPanel
-                        Name="MainGrid"
-                        Margin="5,0,0,0"
+                        Name="MainGrid"                       
                         SnapsToDevicePixels="True">
+                        <DockPanel.Margin>
+                            <Thickness>5,0,0,0</Thickness>
+                        </DockPanel.Margin>
                         <Border
                             Name="ImageHost"
                             Width="{TemplateBinding ImageWidth}"
@@ -1203,8 +1257,13 @@
                         </MultiDataTrigger>
 
                         <DataTrigger Binding="{Binding Path=(syncfusion:GroupBar.IsCollapsed), RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GroupBar}}}" Value="True">
-                            <Setter TargetName="ImageHost" Property="Margin" Value="-4,2,0,2" />
-                            <Setter TargetName="Text" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="ImageHost"
+                                    Property="Margin">
+                                <Setter.Value>
+                                    <Thickness>-4,2,0,2</Thickness>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter TargetName="Text" Property="Visibility" Value="Collapsed" />                             
                         </DataTrigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Text" Property="Foreground" Value="{StaticResource DisabledForeground}" />
@@ -1321,11 +1380,20 @@
             BorderThickness="{TemplateBinding BorderThickness}"
             ClipToBounds="True"
             Cursor="{Binding Path=GroupViewItemCursor, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GroupView}}}"
-            SnapsToDevicePixels="True">
+            SnapsToDevicePixels="True"
+            CornerRadius="0">
             <Grid>
                 <Grid.Resources>
                     <syncfusion:ContentToVisibilityConverter x:Key="ContentToVisibility" />
                 </Grid.Resources>
+                <Border x:Name="SelectionIndicator"
+                        HorizontalAlignment="Left"
+                        CornerRadius="1.5"
+                        Height="12"
+                        Width="2"
+                        Visibility="Collapsed"
+                        Margin="1,0,0,0"
+                         />
                 <DockPanel
                     Name="ContentHost"
                     Width="{Binding Path=InternalContentLength, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GroupView}}}"
@@ -1414,7 +1482,7 @@
             <Trigger Property="IsSelected" Value="True">
                 <Setter TargetName="MainGrid" Property="Background" Value="{Binding Path=SelectedItemColor, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:GroupViewItem}}}" />
                 <Setter TargetName="MainGrid" Property="BorderBrush" Value="{StaticResource BorderAlt}" />
-                <Setter TargetName="Text" Property="Foreground" Value="{StaticResource SelectionForeground}" />
+                <Setter TargetName="Text" Property="Foreground" Value="{StaticResource SelectionForeground}" /> 
             </Trigger>
             <MultiTrigger>
                 <MultiTrigger.Conditions>
@@ -1449,7 +1517,11 @@
         <Setter Property="SelectedItemColor" Value="{StaticResource ContentBackgroundSelection}" />
         <Setter Property="MouseDownColor" Value="{StaticResource ContentBackgroundHover}" />
         <Setter Property="SelectedItemMouseHoverColor" Value="{StaticResource ContentBackgroundHover}" />
-        <Setter Property="Margin" Value="0" />
+        <Setter Property="Margin">
+            <Setter.Value>
+                <Thickness>0,0,0,0</Thickness>
+            </Setter.Value>
+        </Setter>
         <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness}" />
         <Setter Property="Template" Value="{StaticResource SyncfusionGroupViewItemControlTemplate}" />
         <Setter Property="MinHeight" Value="24" />
@@ -1457,6 +1529,9 @@
         <Setter Property="ToolTipService.Placement" Value="Mouse" />
 
         <Style.Triggers>
+            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            </Trigger>
             <Trigger Property="componentModel:DesignerProperties.IsInDesignMode" Value="False">
                 <Setter Property="MouseHoverColor" Value="{StaticResource ContentBackgroundHover}" />
             </Trigger>

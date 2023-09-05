@@ -535,7 +535,8 @@
                         x:Name="TabSplitterBorder"
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}">
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="0">
                         <Grid
                             x:Name="TabSplitterGrid"
                             Background="{TemplateBinding Background}"

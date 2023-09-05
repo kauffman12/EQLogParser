@@ -44,21 +44,30 @@
                                         <ColumnDefinition Width="102" />
                                         <ColumnDefinition />
                                     </Grid.ColumnDefinitions>
+                                    <Border x:Name="PART_Border" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" 
+                                            Background="{StaticResource ContentBackgroundAlt2}"/>
                                     <Border
                                         Grid.Column="0"
                                         MinWidth="92"
                                         Margin="10,2,0,2"
                                         Background="{StaticResource ContentBackgroundAlt2}"
                                         BorderBrush="{StaticResource BorderAlt}"
+                                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
                                         BorderThickness="1">
                                         <ContentPresenter
-                                            MinWidth="0"
-                                            Margin="2,1,1,1"
+                                            MinWidth="0"                                           
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
                                             ContentSource="Content"
                                             ContentTemplate="{TemplateBinding Property=syncfusion:GalleryItem.ContentTemplate}"
-                                            ContentTemplateSelector="{TemplateBinding Property=syncfusion:GalleryItem.ContentTemplateSelector}" />
+                                            ContentTemplateSelector="{TemplateBinding Property=syncfusion:GalleryItem.ContentTemplateSelector}">
+                                            <ContentPresenter.Margin>
+                                                <Thickness>2,1,1,1</Thickness>
+                                            </ContentPresenter.Margin>
+                                            <ContentPresenter.OpacityMask>
+                                                <VisualBrush Visual="{Binding ElementName=PART_Border}"/>
+                                            </ContentPresenter.OpacityMask>
+                                        </ContentPresenter>
                                     </Border>
                                     <Border
                                         Grid.Column="1"
@@ -104,6 +113,7 @@
                                     <Setter TargetName="border" Property="BorderBrush" Value="{Binding Path=ItemMouseOverBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
                                     <Setter TargetName="HeaderText" Property="Foreground" Value="{Binding Path=ItemMouseOverForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
                                     <Setter TargetName="Description" Property="Foreground" Value="{Binding Path=ItemMouseOverForeground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
+                                    <Setter TargetName="border" Property="CornerRadius" Value="{Binding Path=ItemCornerRadius, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"/>
                                 </Trigger>
                                 <Trigger Property="IsSelected" Value="True">
                                     <Setter TargetName="border" Property="BorderThickness" Value="{Binding Path=SelectedItemBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}" />
@@ -640,13 +650,14 @@
         <Setter Property="PanelBorderThickness" Value="0" />
         <Setter Property="PanelCornerRadius" Value="0"/>
         <Setter Property="PanelPadding" Value="0"/>
-        
+
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="FocusedItemBorderThickness" Value="1"/>
         <Setter Property="SelectedItemBorderThickness" Value="1"/>
         <Setter Property="ItemBorderThickness" Value="1"/>
         <Setter Property="ItemPadding" Value="3,3,0,0" />
         <Setter Property="ItemCornerRadius" Value="0"/>
+        <Setter Property="GalleryCornerRadius" Value="0"/>
 
         <Setter Property="VerticalAlignment" Value="Top" />
         <Setter Property="AllowDrop" Value="{Binding Path=AllowDrop, RelativeSource={RelativeSource Self}}" />
@@ -655,6 +666,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type syncfusion:Gallery}">
                     <Border Style="{StaticResource SyncfusionGalleryDeterminedStyle}">
+                        <Border.Padding>
+                            <Thickness>0,0,0,0</Thickness>
+                        </Border.Padding>
                         <ItemsPresenter />
                     </Border>
                 </ControlTemplate>

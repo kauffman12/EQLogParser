@@ -172,12 +172,16 @@
 
     <DataTemplate x:Key="ToolTipTemplate">
         <Border BorderBrush="{StaticResource TooltipBackground}"
-                BorderThickness="0">
+                
+                
+                
+                Effect="{StaticResource Default.ShadowDepth3}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <Polygon Grid.Column="0"
+                         
                          StrokeThickness="1"
                          Fill="{Binding Interior}"
                          Stroke="{StaticResource TooltipBackground}"

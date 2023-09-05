@@ -192,6 +192,12 @@
                                 TextElement.FontSize="{TemplateBinding FontSize}"
                                 TextElement.FontWeight="{TemplateBinding FontWeight}"
                                 TextElement.Foreground="{TemplateBinding Foreground}" >
+                                <ContentPresenter.Resources>
+                                    <Style TargetType="{x:Type TextBlock}">
+                                        <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
+                                        <Setter Property="FontSize" Value="10"/>
+                                    </Style>
+                                </ContentPresenter.Resources>
                             </ContentPresenter>
                         </Border>
                     </Grid>

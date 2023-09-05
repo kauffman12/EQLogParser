@@ -414,7 +414,8 @@
                             HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"
                             VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"
                             Visibility="Visible"
-                            CanContentScroll="True">
+                            CanContentScroll="True"
+                            Focusable="False">
                             <ItemsPresenter />
                         </ScrollViewer>
                     </Grid>

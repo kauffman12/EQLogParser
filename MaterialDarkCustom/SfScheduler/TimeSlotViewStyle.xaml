@@ -262,6 +262,9 @@
             <DataTrigger Binding="{Binding Path=Foreground}" Value="{x:Null}">
                 <Setter TargetName="PART_TimeRegionTextBlock" Property="Foreground" Value="{StaticResource PlaceholderForeground}" />
             </DataTrigger>
+            <DataTrigger Binding="{Binding Path=Text}" Value="{x:Null}">
+                <Setter TargetName="PART_TimeRegionTextBlock" Property="Text" Value="{x:Static system:String.Empty}" />
+            </DataTrigger>
         </DataTemplate.Triggers>
     </DataTemplate>
 
@@ -273,6 +276,8 @@
         </Style.Triggers>
         <Setter Property="ContentTemplate" Value="{StaticResource TimeRegionControlTemplate}" />
         <Setter Property="AllowDrop" Value="True"/>
+        <Setter Property="Background" Value="{StaticResource ContentBackgroundAlt4}" />
+        <Setter Property="Foreground" Value="{StaticResource PlaceholderForeground}" />
         <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.BodyTextStyle}" />
         <Setter Property="FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}" />
         <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />

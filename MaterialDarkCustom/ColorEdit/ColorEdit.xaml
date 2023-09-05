@@ -14,6 +14,7 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/UpDown/UpDown.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Slider.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
     <conv:ValueToStringConverter x:Key="FloatToString" />
@@ -142,16 +143,16 @@
     <DrawingBrush
         x:Key="BrushForTransparencyVertical"
         TileMode="Tile"
-        Viewport="0,0,7,7"
+        Viewport="0,0,12,12"
         ViewportUnits="Absolute">
         <DrawingBrush.Drawing>
             <DrawingGroup>
-                <GeometryDrawing Brush="White">
+                <GeometryDrawing Brush="#7F000000">
                     <GeometryDrawing.Geometry>
                         <RectangleGeometry Rect="0,0 100,100" />
                     </GeometryDrawing.Geometry>
                 </GeometryDrawing>
-                <GeometryDrawing Brush="LightGray">
+                <GeometryDrawing Brush="#7FFFFFFF">
                     <GeometryDrawing.Geometry>
                         <GeometryGroup>
                             <RectangleGeometry Rect="0,0 50,50" />
@@ -598,6 +599,7 @@
             Background="{StaticResource SecondaryBackground}"
             BorderBrush="{TemplateBinding BorderBrush}"
             BorderThickness="0"
+            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
             SnapsToDevicePixels="True">
             <Grid>
                 <ContentPresenter
@@ -729,7 +731,115 @@
         <Setter Property="Foreground" Value="{StaticResource MetroForegroundBrush}" />
     </Style>
 
-    <Style x:Key="VerticalSliderStyle" TargetType="{x:Type Slider}">
+    <ControlTemplate x:Key="SliderVertical" TargetType="{x:Type Slider}">
+        <Border x:Name="border" 
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}" 
+                SnapsToDevicePixels="True">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition MinWidth="{TemplateBinding MinWidth}" Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TickBar x:Name="TopTick" 
+                            Grid.Column="0"
+                            Fill="{StaticResource BorderDark1}"
+                            Placement="Left"
+                            Visibility="Collapsed"
+                            Width="4">
+                    <TickBar.Margin>
+                        <Thickness>0,0,2,0</Thickness>
+                    </TickBar.Margin>
+                </TickBar>
+                <TickBar x:Name="BottomTick" 
+                            Grid.Column="2" 
+                            Fill="{StaticResource BorderDark1}"
+                            Placement="Right"
+                            Visibility="Collapsed" 
+                            Width="4">
+                    <TickBar.Margin>
+                        <Thickness>2,0,0,0</Thickness>
+                    </TickBar.Margin>
+                </TickBar>
+                <Border x:Name="TrackBackground"
+                        Grid.Column="1"
+                        Background="{StaticResource BrushForTransparencyVertical}"
+                        HorizontalAlignment="center" 
+                        Margin="0,5"                                    
+                        CornerRadius="6"
+                        Width="12">
+                    <Border 
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="6"/>
+                </Border>
+                <Track x:Name="PART_Track" Grid.Column="1">
+                    <Track.DecreaseRepeatButton>
+                        <RepeatButton Command="{x:Static Slider.DecreaseLarge}" 
+                                        Style="{StaticResource RepeatButtonTransparent}"/>
+                    </Track.DecreaseRepeatButton>
+                    <Track.IncreaseRepeatButton>
+                        <RepeatButton Command="{x:Static Slider.IncreaseLarge}" 
+                                        Style="{StaticResource RepeatButtonTransparent}"/>
+                    </Track.IncreaseRepeatButton>
+                    <Track.Thumb>
+                        <Thumb x:Name="Thumb" 
+                                Focusable="False"                           
+                                Width="18" 
+                                Height="12"
+                                OverridesDefaultStyle="True" 
+                                Template="{StaticResource SliderThumbVerticalDefault}" 
+                                VerticalAlignment="Top"/>
+                    </Track.Thumb>
+                </Track>
+            </Grid>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+                <Setter Property="MinHeight" TargetName="Thumb" Value="{StaticResource TouchMode.MinHeight}"/>
+                <Setter Property="MinWidth" TargetName="Thumb" Value="{StaticResource TouchMode.MinSize}"/>
+            </Trigger>
+            <Trigger Property="TickPlacement" Value="TopLeft">
+                <Setter Property="Visibility" TargetName="TopTick" Value="Visible"/>
+                <Setter Property="Template" TargetName="Thumb" Value="{StaticResource SliderThumbVerticalLeft}"/>
+                <Setter Property="Margin" TargetName="TrackBackground" Value="2,5,0,5"/>
+            </Trigger>
+            <Trigger Property="TickPlacement" Value="BottomRight">
+                <Setter Property="Visibility" TargetName="BottomTick" Value="Visible"/>
+                <Setter Property="Template" TargetName="Thumb" Value="{StaticResource SliderThumbVerticalRight}"/>
+                <Setter Property="Margin" TargetName="TrackBackground" Value="0,5,2,5"/>
+            </Trigger>
+            <Trigger Property="TickPlacement" Value="Both">
+                <Setter Property="Visibility" TargetName="TopTick" Value="Visible"/>
+                <Setter Property="Visibility" TargetName="BottomTick" Value="Visible"/>
+            </Trigger>
+            <!--<Trigger Property="IsSelectionRangeEnabled" Value="true">
+                <Setter Property="Visibility" TargetName="PART_SelectionRange" Value="Visible"/>
+            </Trigger>-->
+            <Trigger Property="IsKeyboardFocused" Value="true">
+                <Setter Property="Foreground" TargetName="Thumb" Value="Blue"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" TargetName="TrackBackground" Value="{StaticResource BorderAlt}"/>
+                <Setter Property="BorderBrush" TargetName="TrackBackground" Value="{StaticResource BorderAlt}"/>
+                <!--<Setter Property="Fill" TargetName="PART_SelectionRange" Value="{StaticResource BorderDark}"/>-->
+                <Setter Property="Fill" TargetName="TopTick" Value="{StaticResource BorderAlt}"/>
+                <Setter Property="Fill" TargetName="BottomTick" Value="{StaticResource BorderAlt}"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <Style x:Key="VerticalSliderStyle" TargetType="{x:Type Slider}" BasedOn="{StaticResource WPFSliderStyle}">
+        <Setter Property="IsMoveToPointEnabled" Value="true" />
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Vertical">
+                <Setter Property="Template" Value="{StaticResource SliderVertical}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="VerticalSliderStyle1" TargetType="{x:Type Slider}">
         <Setter Property="Minimum" Value="0" />
         <Setter Property="Width" Value="20" />
         <Setter Property="HorizontalAlignment" Value="Left" />
@@ -799,7 +909,10 @@
                     HorizontalAlignment="Center"
                     Background="{Binding Path=Background, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}, UpdateSourceTrigger=PropertyChanged}"
                     BorderBrush="{Binding Path=BorderBrush, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}, UpdateSourceTrigger=PropertyChanged}"
-                    BorderThickness="1">
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                    Effect="{x:Null}"
+                    Margin="0">
                     <Grid
                         x:Name="GridGradient"
                         Margin="5"
@@ -1086,7 +1199,9 @@
             Grid.ColumnSpan="4"
             Margin="5"
             HorizontalAlignment="Center"
-            BorderThickness="0">
+            BorderThickness="0"    
+            Effect="{x:Null}"
+            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
             <Grid x:Name="GridGradient" Margin="0,5,0,0">
 
                 <Grid.ColumnDefinitions>
@@ -1448,7 +1563,8 @@
                                         Margin="5,10,0,0"
                                         BorderBrush="{StaticResource BorderAlt}"
                                         BorderThickness="1"
-                                        SnapsToDevicePixels="True">
+                                        SnapsToDevicePixels="True"
+                                        >
                                         <Grid>
                                             <Border
                                                 x:Name="ColorPalitte"
@@ -1461,7 +1577,8 @@
                                                     Canvas.Top="{Binding SelectorPositionY, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:ColorEdit}}}"
                                                     Width="10"
                                                     Height="10"
-                                                    Stroke="{Binding InvertColor, Converter={StaticResource ColorToBrush}, RelativeSource={RelativeSource TemplatedParent}}" />
+                                                    Stroke="{Binding InvertColor, Converter={StaticResource ColorToBrush}, RelativeSource={RelativeSource TemplatedParent}}"
+                                                    StrokeThickness="1"/>
                                                 <Path
                                                     x:Name="SelectorEllipse"
                                                     Canvas.Left="{Binding Path=SelectorPositionX, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:ColorEdit}}}"
@@ -1494,7 +1611,7 @@
                                                         CornerRadius="1">
                                                         <TextBox
                                                             x:Name="WordKnownColorsTextBox"
-                                                            Margin="2,1"
+                                                            Margin="2 1"
                                                             Background="Transparent"
                                                             BorderBrush="Transparent"
                                                             BorderThickness="0"
@@ -1502,6 +1619,7 @@
                                                             FontWeight="{StaticResource MaterialDarkCustom.FontWeightNormal}"
                                                             Foreground="{StaticResource Black}"
                                                             IsReadOnly="True"
+                                                            
                                                             Text="{TemplateBinding Color,
                                                                                    Converter={StaticResource ColorToWordKnownColors}}" />
                                                     </Border>
@@ -1716,29 +1834,33 @@
                                             <Border
                                                 Height="20"
                                                 BorderThickness="0"
-                                                CornerRadius="0"
-                                                SnapsToDevicePixels="True" />
-                                            <Rectangle
-                                                x:Name="SelectedColor"
-                                                Margin="0,0.5,-1,0.5"
-                                                RadiusX="0"
-                                                RadiusY="0"
-                                                Stroke="{StaticResource White}"
-                                                StrokeThickness="0.5" />
+                                                CornerRadius="4,0,0,4"
+                                                Background="{Binding ElementName=SelectedColor, Path=Fill}"
+                                                SnapsToDevicePixels="True">
+                                                <Rectangle
+                                                    x:Name="SelectedColor"
+                                                    Visibility="Collapsed"
+                                                    RadiusX="0"
+                                                    RadiusY="0"
+                                                    Stroke="{StaticResource White}"
+                                                    StrokeThickness="0.5" />
+                                            </Border>
                                         </Grid>
                                         <Grid Grid.Column="1" Height="20">
                                             <Border
                                                 BorderThickness="0"
-                                                CornerRadius="0"
-                                                SnapsToDevicePixels="True" />
-                                            <Rectangle
-                                                x:Name="CurrentColor"
-                                                Margin="0,0.5,0,0.5"
-                                                Fill="White"
-                                                RadiusX="0"
-                                                RadiusY="0"
-                                                Stroke="{StaticResource White}"
-                                                StrokeThickness="0.5" />
+                                                CornerRadius="0,4,4,0"
+                                                Background="{Binding ElementName=CurrentColor, Path=Fill}"
+                                                SnapsToDevicePixels="True">
+                                                <Rectangle
+                                                    x:Name="CurrentColor"
+                                                    Visibility="Collapsed"
+                                                    Fill="White"
+                                                    RadiusX="0"
+                                                    RadiusY="0"
+                                                    Stroke="{StaticResource White}"
+                                                    StrokeThickness="0.5" />
+                                            </Border>
                                         </Grid>
                                     </Grid>
                                     <Grid
@@ -1753,43 +1875,47 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
+                                        <Grid.Resources>
+                                            <Style TargetType="{x:Type Button}">
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate>
+                                                            <Border
+                                                                Name="SolidBorder"
+                                                                Background="{TemplateBinding Background}"
+                                                                BorderBrush="Transparent"
+                                                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" />
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
+                                                                </Trigger>
+                                                                <Trigger Property="IsMouseCaptured" Value="True">
+                                                                    <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
+                                                                </Trigger>
+                                                                <DataTrigger Binding="{Binding Path=BrushMode, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}}" Value="Solid">
+                                                                    <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
+                                                                </DataTrigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </Grid.Resources>
                                         <Button
                                             x:Name="Solid"
                                             Grid.Column="1"
                                             Width="20"
-                                            Margin="0,0,3,0">
+                                            Background="{StaticResource SolidBrushKey}">
                                             <Button.ToolTip>
                                                 <ToolTip>
                                                     <TextBlock Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Solid}" />
                                                 </ToolTip>
                                             </Button.ToolTip>
-                                            <Button.Template>
-                                                <ControlTemplate>
-                                                    <Border
-                                                        Name="SolidBorder"
-                                                        Background="{StaticResource SolidBrushKey}"
-                                                        BorderBrush="Transparent"
-                                                        BorderThickness="3"
-                                                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" />
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
-                                                        </Trigger>
-                                                        <Trigger Property="IsMouseCaptured" Value="True">
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
-                                                        </Trigger>
-                                                        <DataTrigger Binding="{Binding Path=BrushMode, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}}" Value="Solid">
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
-                                                        </DataTrigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Button.Template>
                                         </Button>
                                         <Button
                                             x:Name="Gradient"
                                             Grid.Column="2"
                                             Width="20"
-                                            Margin="0,0,2,0"
                                             Background="{StaticResource GradientBrushKey}"
                                             BorderBrush="Transparent"
                                             BorderThickness="1"
@@ -1799,31 +1925,6 @@
                                                     <TextBlock Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=LinearGradient}" />
                                                 </ToolTip>
                                             </Button.ToolTip>
-                                            <Button.Template>
-                                                <ControlTemplate>
-                                                    <Border
-                                                        Name="SolidBorder"
-                                                        Background="{StaticResource GradientBrushKey}"
-                                                        BorderBrush="Transparent"
-                                                        BorderThickness="3"
-                                                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" />
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
-                                                        </Trigger>
-                                                        <Trigger Property="IsMouseCaptured" Value="True">
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
-                                                        </Trigger>
-                                                        <MultiDataTrigger>
-                                                            <MultiDataTrigger.Conditions>
-                                                                <Condition Binding="{Binding Path=Brush, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BrushToVisibility}, ConverterParameter=Linear}" Value="Visible" />
-                                                                <Condition Binding="{Binding Path=BrushMode, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}}" Value="Gradient" />
-                                                            </MultiDataTrigger.Conditions>
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
-                                                        </MultiDataTrigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Button.Template>
                                         </Button>
                                         <shared:BorderEyeDrop
                                             x:Name="EyeDropBorder"
@@ -1838,44 +1939,23 @@
                                                 Margin="3,3,0,0"
                                                 HorizontalAlignment="Center"
                                                 VerticalAlignment="Center"
-                                                Data="M8.7380004,5.5859985 L1.7380009,12.586997 3.4050007,14.254996 10.406,7.253998 z M12.743,0 L16,3.257999 12.665,6.5849981 14.332,8.2519979 13.108,9.4779973 11.874,8.2429976 4.1260004,15.991996 0,15.991996 0,11.865996 7.7480004,4.117999 6.5150003,2.8839992 7.7390003,1.6589994 9.4250004,3.3179992 z"
-                                                Fill="{StaticResource IconColor}" />
+                                                Fill="{StaticResource IconColor}" >
+                                                <Path.Data>
+                                                    <PathGeometry>M8.7380004,5.5859985 L1.7380009,12.586997 3.4050007,14.254996 10.406,7.253998 z M12.743,0 L16,3.257999 12.665,6.5849981 14.332,8.2519979 13.108,9.4779973 11.874,8.2429976 4.1260004,15.991996 0,15.991996 0,11.865996 7.7480004,4.117999 6.5150003,2.8839992 7.7390003,1.6589994 9.4250004,3.3179992 z</PathGeometry>
+                                                </Path.Data>
+                                            </Path>
                                         </shared:BorderEyeDrop>
                                         <Button
                                             x:Name="radial"
                                             Grid.Column="3"
                                             Width="20"
+                                            Background="{StaticResource RadialBrushKey}"
                                             BorderThickness="1">
                                             <Button.ToolTip>
                                                 <ToolTip>
                                                     <TextBlock Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=RadialGradient}" />
                                                 </ToolTip>
                                             </Button.ToolTip>
-                                            <Button.Template>
-                                                <ControlTemplate>
-                                                    <Border
-                                                        Name="SolidBorder"
-                                                        Background="{StaticResource RadialBrushKey}"
-                                                        BorderBrush="Transparent"
-                                                        BorderThickness="3"
-                                                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" />
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
-                                                        </Trigger>
-                                                        <Trigger Property="IsMouseCaptured" Value="True">
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
-                                                        </Trigger>
-                                                        <MultiDataTrigger>
-                                                            <MultiDataTrigger.Conditions>
-                                                                <Condition Binding="{Binding Path=Brush, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BrushToVisibility}, ConverterParameter=Radial}" Value="Visible" />
-                                                                <Condition Binding="{Binding Path=BrushMode, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}}" Value="Gradient" />
-                                                            </MultiDataTrigger.Conditions>
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
-                                                        </MultiDataTrigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Button.Template>
                                         </Button>
                                     </Grid>
                                     <Grid
@@ -2052,7 +2132,8 @@
                                         Margin="5,10,0,0"
                                         BorderBrush="{StaticResource BorderAlt}"
                                         BorderThickness="1"
-                                        SnapsToDevicePixels="True">
+                                        SnapsToDevicePixels="True"
+                                        >
                                         <Grid>
                                             <Border
                                                 x:Name="ColorPalitte"
@@ -2065,7 +2146,8 @@
                                                     Canvas.Top="{Binding SelectorPositionY, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:ColorEdit}}}"
                                                     Width="10"
                                                     Height="10"
-                                                    Stroke="{Binding InvertColor, Converter={StaticResource ColorToBrush}, RelativeSource={RelativeSource TemplatedParent}}" />
+                                                    Stroke="{Binding InvertColor, Converter={StaticResource ColorToBrush}, RelativeSource={RelativeSource TemplatedParent}}"
+                                                    StrokeThickness="1"/>
                                                 <Path
                                                     x:Name="SelectorEllipse"
                                                     Canvas.Left="{Binding Path=SelectorPositionX, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:ColorEdit}}}"
@@ -2097,13 +2179,14 @@
                                                         CornerRadius="1">
                                                         <TextBox
                                                             x:Name="WordKnownColorsTextBox"
-                                                            Margin="2,1"
+                                                            Margin="2 1"
                                                             Background="Transparent"
                                                             BorderBrush="Transparent"
                                                             BorderThickness="0"
                                                             FontSize="{StaticResource MaterialDarkCustom.CaptionText}"
                                                             FontWeight="{StaticResource MaterialDarkCustom.FontWeightNormal}"
                                                             Foreground="{StaticResource Black}"
+                                                            
                                                             Text="{TemplateBinding Color,
                                                                                    Converter={StaticResource ColorToWordKnownColors}}" />
                                                     </Border>
@@ -2328,29 +2411,33 @@
                                             <Border
                                                 Height="20"
                                                 BorderThickness="0"
-                                                CornerRadius="0"
-                                                SnapsToDevicePixels="True" />
-                                            <Rectangle
-                                                x:Name="SelectedColor"
-                                                Margin="0,0.5,-1,0.5"
-                                                RadiusX="0"
-                                                RadiusY="0"
-                                                Stroke="{StaticResource White}"
-                                                StrokeThickness="0.5" />
+                                                CornerRadius="4,0,0,4"
+                                                Background="{Binding ElementName=SelectedColor, Path=Fill}"
+                                                SnapsToDevicePixels="True">
+                                                <Rectangle
+                                                    x:Name="SelectedColor"
+                                                    Visibility="Collapsed"
+                                                    RadiusX="0"
+                                                    RadiusY="0"
+                                                    Stroke="{StaticResource White}"
+                                                    StrokeThickness="0.5" />
+                                            </Border>
                                         </Grid>
                                         <Grid Grid.Column="1" Height="20">
                                             <Border
                                                 BorderThickness="0"
-                                                CornerRadius="0"
-                                                SnapsToDevicePixels="True" />
-                                            <Rectangle
-                                                x:Name="CurrentColor"
-                                                Margin="0,0.5,0,0.5"
-                                                Fill="White"
-                                                RadiusX="0"
-                                                RadiusY="0"
-                                                Stroke="{StaticResource White}"
-                                                StrokeThickness="0.5" />
+                                                CornerRadius="0,4,4,0"
+                                                Background="{Binding ElementName=CurrentColor, Path=Fill}"
+                                                SnapsToDevicePixels="True">
+                                                <Rectangle
+                                                    x:Name="CurrentColor"
+                                                    Visibility="Collapsed"
+                                                    Fill="White"
+                                                    RadiusX="0"
+                                                    RadiusY="0"
+                                                    Stroke="{StaticResource White}"
+                                                    StrokeThickness="0.5" />
+                                            </Border>
                                         </Grid>
                                     </Grid>
                                     <Grid
@@ -2365,43 +2452,47 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
+                                        <Grid.Resources>
+                                            <Style TargetType="{x:Type Button}">
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate>
+                                                            <Border
+                                                                Name="SolidBorder"
+                                                                Background="{TemplateBinding Background}"
+                                                                BorderBrush="Transparent"
+                                                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" />
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
+                                                                </Trigger>
+                                                                <Trigger Property="IsMouseCaptured" Value="True">
+                                                                    <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
+                                                                </Trigger>
+                                                                <DataTrigger Binding="{Binding Path=BrushMode, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}}" Value="Solid">
+                                                                    <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
+                                                                </DataTrigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </Grid.Resources>
                                         <Button
                                             x:Name="Solid"
                                             Grid.Column="1"
                                             Width="20"
-                                            Margin="0,0,3,0">
+                                            Background="{StaticResource SolidBrushKey}">
                                             <Button.ToolTip>
                                                 <ToolTip>
                                                     <TextBlock Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Solid}" />
                                                 </ToolTip>
                                             </Button.ToolTip>
-                                            <Button.Template>
-                                                <ControlTemplate>
-                                                    <Border
-                                                        Name="SolidBorder"
-                                                        Background="{StaticResource SolidBrushKey}"
-                                                        BorderBrush="Transparent"
-                                                        BorderThickness="3"
-                                                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" />
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
-                                                        </Trigger>
-                                                        <Trigger Property="IsMouseCaptured" Value="True">
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
-                                                        </Trigger>
-                                                        <DataTrigger Binding="{Binding Path=BrushMode, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}}" Value="Solid">
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
-                                                        </DataTrigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Button.Template>
                                         </Button>
                                         <Button
                                             x:Name="Gradient"
                                             Grid.Column="2"
                                             Width="20"
-                                            Margin="0,0,2,0"
                                             Background="{StaticResource GradientBrushKey}"
                                             BorderBrush="Transparent"
                                             BorderThickness="1"
@@ -2411,31 +2502,6 @@
                                                     <TextBlock Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=LinearGradient}" />
                                                 </ToolTip>
                                             </Button.ToolTip>
-                                            <Button.Template>
-                                                <ControlTemplate>
-                                                    <Border
-                                                        Name="SolidBorder"
-                                                        Background="{StaticResource GradientBrushKey}"
-                                                        BorderBrush="Transparent"
-                                                        BorderThickness="3"
-                                                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" />
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
-                                                        </Trigger>
-                                                        <Trigger Property="IsMouseCaptured" Value="True">
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
-                                                        </Trigger>
-                                                        <MultiDataTrigger>
-                                                            <MultiDataTrigger.Conditions>
-                                                                <Condition Binding="{Binding Path=Brush, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BrushToVisibility}, ConverterParameter=Linear}" Value="Visible" />
-                                                                <Condition Binding="{Binding Path=BrushMode, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}}" Value="Gradient" />
-                                                            </MultiDataTrigger.Conditions>
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
-                                                        </MultiDataTrigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Button.Template>
                                         </Button>
                                         <shared:BorderEyeDrop
                                             x:Name="EyeDropBorder"
@@ -2450,44 +2516,23 @@
                                                 Margin="3,3,0,0"
                                                 HorizontalAlignment="Center"
                                                 VerticalAlignment="Center"
-                                                Data="M8.7380004,5.5859985 L1.7380009,12.586997 3.4050007,14.254996 10.406,7.253998 z M12.743,0 L16,3.257999 12.665,6.5849981 14.332,8.2519979 13.108,9.4779973 11.874,8.2429976 4.1260004,15.991996 0,15.991996 0,11.865996 7.7480004,4.117999 6.5150003,2.8839992 7.7390003,1.6589994 9.4250004,3.3179992 z"
-                                                Fill="{StaticResource IconColor}" />
+                                                Fill="{StaticResource IconColor}" >
+                                                <Path.Data>
+                                                    <PathGeometry>M8.7380004,5.5859985 L1.7380009,12.586997 3.4050007,14.254996 10.406,7.253998 z M12.743,0 L16,3.257999 12.665,6.5849981 14.332,8.2519979 13.108,9.4779973 11.874,8.2429976 4.1260004,15.991996 0,15.991996 0,11.865996 7.7480004,4.117999 6.5150003,2.8839992 7.7390003,1.6589994 9.4250004,3.3179992 z</PathGeometry>
+                                                </Path.Data>
+                                            </Path>
                                         </shared:BorderEyeDrop>
                                         <Button
                                             x:Name="radial"
                                             Grid.Column="3"
                                             Width="20"
+                                            Background="{StaticResource RadialBrushKey}"
                                             BorderThickness="1">
                                             <Button.ToolTip>
                                                 <ToolTip>
                                                     <TextBlock Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=RadialGradient}" />
                                                 </ToolTip>
                                             </Button.ToolTip>
-                                            <Button.Template>
-                                                <ControlTemplate>
-                                                    <Border
-                                                        Name="SolidBorder"
-                                                        Background="{StaticResource RadialBrushKey}"
-                                                        BorderBrush="Transparent"
-                                                        BorderThickness="3"
-                                                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" />
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
-                                                        </Trigger>
-                                                        <Trigger Property="IsMouseCaptured" Value="True">
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
-                                                        </Trigger>
-                                                        <MultiDataTrigger>
-                                                            <MultiDataTrigger.Conditions>
-                                                                <Condition Binding="{Binding Path=Brush, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource BrushToVisibility}, ConverterParameter=Radial}" Value="Visible" />
-                                                                <Condition Binding="{Binding Path=BrushMode, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}}" Value="Gradient" />
-                                                            </MultiDataTrigger.Conditions>
-                                                            <Setter TargetName="SolidBorder" Property="BorderBrush" Value="{StaticResource SecondarySelectionBackground}" />
-                                                        </MultiDataTrigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Button.Template>
                                         </Button>
                                     </Grid>
                                     <Grid

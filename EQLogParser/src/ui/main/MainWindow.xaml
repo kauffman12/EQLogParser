@@ -356,12 +356,18 @@
           </MenuItem>
         </MenuItem>
         <MenuItem Header="_Help" Margin="4,0,0,0">
+          <MenuItem Header="_Using Trigger Variables" Click="TriggerVariablesHelpClick" IsEnabled="True">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Question" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
           <MenuItem Header="_Report a Problem" Click="ReportProblemClick" IsEnabled="True">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Bug" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem Header="_View Release Notes" Click="ViewReleaseNotesClick" IsEnabled="True">
+          <MenuItem Header="Release _Notes" Click="ViewReleaseNotesClick" IsEnabled="True">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Regular_ListAlt" />
             </MenuItem.Icon>

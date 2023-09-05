@@ -27,15 +27,16 @@
                             <ContentPresenter
                                 DataContext="{TemplateBinding DataContext}"
                                 Content="{TemplateBinding DataContext}"
-                            ContentTemplate="{TemplateBinding ContentTemplate}"
-                            TextBlock.FontFamily="{TemplateBinding FontFamily}"
-                            TextBlock.FontSize="{TemplateBinding FontSize}"
-                            TextBlock.FontWeight="{TemplateBinding FontWeight}"
-                            TextBlock.Foreground="{TemplateBinding Foreground}"
-                            x:Name="PART_AppointmentContentPresenter"
-                            Margin="{TemplateBinding Padding}" />
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                TextBlock.FontFamily="{TemplateBinding FontFamily}"
+                                TextBlock.FontSize="{TemplateBinding FontSize}"
+                                TextBlock.FontWeight="{TemplateBinding FontWeight}"
+                                TextBlock.Foreground="{TemplateBinding Foreground}"
+                                x:Name="PART_AppointmentContentPresenter"
+                                Margin="{TemplateBinding Padding}" />
                         </Border>
                         <Border x:Name="PART_SelectionBorder" 
+                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}">
 
