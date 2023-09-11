@@ -51,23 +51,25 @@ namespace EQLogParser
 
       raidStats.Ranges.TimeSegments.ForEach(segment =>
       {
+        var damageAfter = segment.BeginTime - DMG_OFFSET;
+        var damageBefore = segment.EndTime;
+
         startTime = double.IsNaN(startTime) ? segment.BeginTime : Math.Min(startTime, segment.BeginTime);
         maxTime = maxTime == -1 ? segment.BeginTime + raidStats.TotalSeconds : maxTime;
-        var blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - DMG_OFFSET, segment.EndTime);
-        AddBlocks(raidStats, blocks, maxTime, castsDuring, true);
-        blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + (BUFF_OFFSET / 2));
-        AddBlocks(raidStats, blocks, maxTime, castsDuring);
 
-        blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - DMG_OFFSET, segment.EndTime + DMG_OFFSET);
-        AddBlocks(raidStats, blocks, maxTime, receivedDuring, true);
+        // damage section is a subset of this query
+        var blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + (BUFF_OFFSET / 2));
+        AddBlocks(raidStats, blocks, maxTime, castsDuring, damageAfter, damageBefore);
+
         blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + (BUFF_OFFSET / 2));
-        AddBlocks(raidStats, blocks, maxTime, receivedDuring);
+        AddBlocks(raidStats, blocks, maxTime, receivedDuring, damageAfter, damageBefore);
       });
 
       return startTime;
     }
 
-    private static void AddBlocks(PlayerStats raidStats, List<ActionBlock> blocks, double maxTime, HashSet<TimedAction> actions, bool damageOnly = false)
+    private static void AddBlocks(PlayerStats raidStats, List<ActionBlock> blocks, double maxTime, HashSet<TimedAction> actions, double damageAfter,
+      double damageBefore)
     {
       blocks.ForEach(block =>
       {
@@ -75,9 +77,9 @@ namespace EQLogParser
         {
           block.Actions.ForEach(action =>
           {
-            if (action is SpellCast cast && (!damageOnly || cast.SpellData.Damaging != 0))
+            if (action is SpellCast cast)
             {
-              actions.Add(cast);
+              Add(block, cast.SpellData, action as TimedAction);
             }
             else if (action is ReceivedSpell received)
             {
@@ -86,14 +88,22 @@ namespace EQLogParser
                 received.SpellData = replaced;
               }
 
-              if (received.SpellData != null && (!damageOnly || received.SpellData.Damaging != 0))
+              if (received.SpellData != null)
               {
-                actions.Add(received);
+                Add(block, received.SpellData, action as TimedAction);
               }
             }
           });
         }
       });
+
+      void Add(ActionBlock block, SpellData spellData, TimedAction action)
+      {
+        if ((block.BeginTime >= damageAfter && block.BeginTime <= damageBefore) || spellData.Damaging < 1)
+        {
+          actions.Add(action);
+        }
+      }
     }
 
     private static void UpdateMaps(SpellData theSpell, string thePlayer, Dictionary<string, Dictionary<string, uint>> playerCounts,
