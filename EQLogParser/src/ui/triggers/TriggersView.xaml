@@ -39,11 +39,44 @@
     </StackPanel>
     <Grid Grid.Row="1">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="500"></ColumnDefinition>
+        <ColumnDefinition Width="200"></ColumnDefinition>
+        <ColumnDefinition Width="300"></ColumnDefinition>
         <ColumnDefinition Width="2"></ColumnDefinition>
         <ColumnDefinition Width="400*"></ColumnDefinition>
       </Grid.ColumnDefinitions>
       <Grid Grid.Column="0">
+        <syncfusion:SfDataGrid
+          x:Name="playerList"
+          HeaderRowHeight="0"
+          GridLinesVisibility="None"
+          SelectionMode="Single"
+          CurrentCellBorderThickness="0"
+          ColumnSizer="AutoWithLastColumnFill"
+        >
+          <syncfusion:SfDataGrid.Columns>
+            <syncfusion:GridTextColumn Width="50" MappingName="Player" Padding="4,0,0,0" />
+            <syncfusion:GridTemplateColumn MappingName="Progress" Width="100">
+              <syncfusion:GridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <syncfusion:SfLinearProgressBar Visibility="{Binding Running}" IsIndeterminate="True" IndicatorPadding="4" Width="50" Height="3" />
+                  </StackPanel>
+                </DataTemplate>
+              </syncfusion:GridTemplateColumn.CellTemplate>
+            </syncfusion:GridTemplateColumn>
+            <syncfusion:GridTemplateColumn MappingName="StartStop" Width="50">
+              <syncfusion:GridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <fa:ImageAwesome Foreground="{DynamicResource EQGoodForegroundBrush}" Height="{DynamicResource EQTitleSize}" Width="{DynamicResource EQTitleSize}" Icon="Solid_PlayCircle" PreviewMouseLeftButtonUp="PlayerListPreviewMouseLeftButtonUp"/>
+                  </StackPanel>
+                </DataTemplate>
+              </syncfusion:GridTemplateColumn.CellTemplate>
+            </syncfusion:GridTemplateColumn>
+          </syncfusion:SfDataGrid.Columns>
+        </syncfusion:SfDataGrid>
+      </Grid>
+      <Grid Grid.Column="1">
         <Grid.RowDefinitions>
           <RowDefinition Height="300*"></RowDefinition>
         </Grid.RowDefinitions>
@@ -105,10 +138,10 @@
           </syncfusion:SfTreeView.ItemContextMenu>
         </syncfusion:SfTreeView>
       </Grid>
-      <GridSplitter Grid.Column="1" ResizeDirection="Columns" HorizontalAlignment="Stretch" />
-      <Grid Grid.Column="2">
+      <GridSplitter Grid.Column="2" ResizeDirection="Columns" HorizontalAlignment="Stretch" />
+      <Grid Grid.Column="3">
         <Grid.RowDefinitions>
-          <RowDefinition Height="30"></RowDefinition>
+          <RowDefinition Height="35"></RowDefinition>
           <RowDefinition Height="100*"></RowDefinition>
         </Grid.RowDefinitions>
         <syncfusion:PropertyGrid
@@ -179,11 +212,13 @@
             <syncfusion:PropertyGridItem x:Name="fadeDelayItem" CategoryName="Text Overlay" PropertyName="FadeDelay" DisplayName="Fade Delay (s)" Visibility="Collapsed" Description="Seconds before Text fades from screen."/>
           </syncfusion:PropertyGrid.Items>
         </syncfusion:PropertyGrid>
-          <StackPanel Grid.Row="0" Orientation="Horizontal">
-            <Button x:Name="showButton" Visibility="Collapsed" Margin="8,2,0,0" VerticalAlignment="Top" IsEnabled="True" Width="106" Height="24" HorizontalAlignment="Left" Click="ShowClick">Preview Overlay</Button>
-            <Button x:Name="saveButton" Margin="4,2,0,0" VerticalAlignment="Top" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
-            <Button x:Name="cancelButton" Margin="4,2,0,0" VerticalAlignment="Top" IsEnabled="False" Width="55" Height="24" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
+        <Border Grid.Row="0" BorderBrush="{DynamicResource ContentBackgroundAlt2}" BorderThickness="1">
+          <StackPanel Orientation="Horizontal" Margin="4,4,0,0">
+            <Button x:Name="showButton" Visibility="Collapsed" Margin="0,0,4,0" Padding="8,0,8,0" VerticalAlignment="Top" IsEnabled="True" Height="24" HorizontalAlignment="Left" Click="ShowClick">Preview Overlay</Button>
+            <Button x:Name="saveButton" Margin="0,0,4,0" Padding="8,0,8,0" VerticalAlignment="Top" IsEnabled="False" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save Trigger</Button>
+            <Button x:Name="cancelButton" Margin="0" Padding="8,0,8,0" VerticalAlignment="Top" IsEnabled="False" Height="24" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
           </StackPanel>
+        </Border>
       </Grid>
     </Grid>
   </Grid>

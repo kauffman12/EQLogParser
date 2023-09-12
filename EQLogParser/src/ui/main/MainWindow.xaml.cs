@@ -1278,34 +1278,7 @@ namespace EQLogParser
       }
     }
 
-    private void TestTriggersClick(object sender, RoutedEventArgs e)
-    {
-      if (testButton.Content.ToString() == "Run Test")
-      {
-        try
-        {
-          if (testTriggersBox.Lines?.Count > 0)
-          {
-            var allLines = testTriggersBox.Lines.ToList().Where(line => !string.IsNullOrEmpty(line.Text) && line.Text.Length > ACTION_INDEX)
-              .Select(line => line.Text).ToList();
-            if (allLines.Count > 0)
-            {
-              TriggerUtil.RunTest(allLines, realTime.IsChecked == true);
-            }
-          }
-        }
-        catch (Exception ex)
-        {
-          LOG.Error(ex);
-        }
-      }
-      else if (testButton.Content.ToString() == "Stop Test")
-      {
-        testButton.Content = "Stopping Test";
-      }
-    }
-
-    private void NotifyIcon_Click(object sender, EventArgs e)
+    private void NotifyIconClick(object sender, EventArgs e)
     {
       if (Visibility == Visibility.Hidden)
       {
@@ -1339,14 +1312,6 @@ namespace EQLogParser
         // workaround to bring window to front
         Topmost = true;
         Topmost = false;
-      }
-    }
-
-    private void ChromelessWindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
-    {
-      if (testButton.Content.ToString() == "Stop Test")
-      {
-        testButton.Content = "Stopping Test";
       }
     }
 
