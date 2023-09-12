@@ -21,13 +21,16 @@
     <Compile Update="src\ui\common\DamageBar.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="src\ui\common\TriggersView.xaml.cs">
+    <Compile Update="src\ui\triggers\TriggersTester.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="src\ui\triggers\TriggersView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="src\ui\common\TimerBar.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="src\ui\log\TriggersLogView.xaml.cs">
+    <Compile Update="src\ui\triggers\TriggersLogView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="src\ui\log\DeathLogViewer.xaml.cs">
@@ -36,7 +39,7 @@
     <Compile Update="src\ui\log\RandomViewer.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="src\ui\log\TauntStatsViewer.xaml.cs">
+    <Compile Update="src\ui\stats\TauntStatsViewer.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="src\ui\main\DamageOverlayWindow.xaml.cs">
@@ -53,13 +56,16 @@
     <Page Update="src\ui\common\DamageBar.xaml">
       <SubType>Designer</SubType>
     </Page>
-    <Page Update="src\ui\common\TriggersView.xaml">
+    <Page Update="src\ui\triggers\TriggersTester.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="src\ui\triggers\TriggersView.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\common\TimerBar.xaml">
       <SubType>Designer</SubType>
     </Page>
-    <Page Update="src\ui\log\TriggersLogView.xaml">
+    <Page Update="src\ui\triggers\TriggersLogView.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\log\DeathLogViewer.xaml">
@@ -68,7 +74,7 @@
     <Page Update="src\ui\log\RandomViewer.xaml">
       <SubType>Designer</SubType>
     </Page>
-    <Page Update="src\ui\log\TauntStatsViewer.xaml">
+    <Page Update="src\ui\stats\TauntStatsViewer.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\main\DamageOverlayWindow.xaml">
