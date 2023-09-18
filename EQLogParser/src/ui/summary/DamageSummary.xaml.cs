@@ -76,7 +76,7 @@ namespace EQLogParser
       if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out var breakdown, typeof(DamageBreakdown),
+        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var breakdown, typeof(DamageBreakdown),
           "damageBreakdownWindow", "DPS Breakdown"))
         {
           (breakdown.Content as DamageBreakdown).Init(CurrentStats, selected);
@@ -226,7 +226,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out var log, typeof(HitLogViewer), "damageLogWindow", "DPS Log"))
+        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(HitLogViewer), "damageLogWindow", "DPS Log"))
         {
           (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
         }
@@ -238,7 +238,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
+        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
         {
           (log.Content as DeathLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
         }
@@ -250,7 +250,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems.Count == 1)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out var hitFreq, typeof(HitFreqChart), "damageFreqChart", "Damage Hit Frequency"))
+        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var hitFreq, typeof(HitFreqChart), "damageFreqChart", "Damage Hit Frequency"))
         {
           (hitFreq.Content as HitFreqChart).Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
         }
@@ -262,7 +262,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItems.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out var timeline, typeof(GanttChart), "adpsTimeline", "ADPS Timeline"))
+        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var timeline, typeof(GanttChart), "adpsTimeline", "ADPS Timeline"))
         {
           ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 1);
         }

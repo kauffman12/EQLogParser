@@ -39,7 +39,7 @@ namespace EQLogParser
       InitializeComponent();
       logSearchTime.ItemsSource = Times;
 
-      var allFonts = Helpers.GetSystemFontFamilies();
+      var allFonts = UIElementUtil.GetSystemFontFamilies();
       fontFamily.ItemsSource = allFonts;
       var family = ConfigUtil.GetSetting("EQLogViewerFontFamily") ?? logBox.FontFamily?.Source;
       if (allFonts.FirstOrDefault(item => item.Source == family) is FontFamily found)

@@ -118,7 +118,7 @@ namespace EQLogParser
         CurrentFontSize = ConfigUtil.GetSettingAsDouble("ApplicationFontSize", 12);
         CurrentTheme = ConfigUtil.GetSetting("CurrentTheme", "MaterialDark");
 
-        if (Helpers.GetSystemFontFamilies().FirstOrDefault(font => font.Source == CurrentFontFamily) == null)
+        if (UIElementUtil.GetSystemFontFamilies().FirstOrDefault(font => font.Source == CurrentFontFamily) == null)
         {
           LOG.Info(CurrentFontFamily + " Not Found, Trying Default");
           CurrentFontFamily = "Segoe UI";
@@ -688,27 +688,27 @@ namespace EQLogParser
       else if (e.Source == chatMenuItem)
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-        Helpers.OpenWindow(dockSite, opened, out _, typeof(ChatViewer), chatIcon.Tag as string, "Chat Archive");
+        SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(ChatViewer), chatIcon.Tag as string, "Chat Archive");
       }
       else if (e.Source == eventMenuItem)
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-        Helpers.OpenWindow(dockSite, opened, out _, typeof(EventViewer), eventIcon.Tag as string, "Misc Events");
+        SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(EventViewer), eventIcon.Tag as string, "Misc Events");
       }
       else if (e.Source == randomsMenuItem)
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-        Helpers.OpenWindow(dockSite, opened, out _, typeof(RandomViewer), randomsIcon.Tag as string, "Random Rolls");
+        SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(RandomViewer), randomsIcon.Tag as string, "Random Rolls");
       }
       else if (e.Source == playerLootMenuItem)
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-        Helpers.OpenWindow(dockSite, opened, out _, typeof(LootViewer), playerLootIcon.Tag as string, "Looted Items");
+        SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(LootViewer), playerLootIcon.Tag as string, "Looted Items");
       }
       else if (e.Source == triggersMenuItem)
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-        Helpers.OpenWindow(dockSite, opened, out _, typeof(TriggersView), triggersIcon.Tag as string, "Trigger Manager");
+        SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(TriggersView), triggersIcon.Tag as string, "Trigger Manager");
       }
       else if (e.Source == eqLogMenuItem)
       {
@@ -724,22 +724,22 @@ namespace EQLogParser
           found += 1;
         }
 
-        Helpers.OpenWindow(dockSite, null, out _, typeof(EQLogViewer), "eqLogWindow", "Log Search " + found);
+        SyncFusionUtil.OpenWindow(dockSite, null, out _, typeof(EQLogViewer), "eqLogWindow", "Log Search " + found);
       }
       else if (e.Source == spellResistsMenuItem)
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-        Helpers.OpenWindow(dockSite, opened, out _, typeof(NpcStatsViewer), spellResistsIcon.Tag as string, "Spell Resists");
+        SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(NpcStatsViewer), spellResistsIcon.Tag as string, "Spell Resists");
       }
       else if (e.Source == spellDamageStatsMenuItem)
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-        Helpers.OpenWindow(dockSite, opened, out _, typeof(SpellDamageStatsViewer), npcSpellDamageIcon.Tag as string, "Spell Damage");
+        SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(SpellDamageStatsViewer), npcSpellDamageIcon.Tag as string, "Spell Damage");
       }
       else if (e.Source == tauntStatsMenuItem)
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-        Helpers.OpenWindow(dockSite, opened, out _, typeof(TauntStatsViewer), tauntStatsIcon.Tag as string, "Taunt Usage");
+        SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(TauntStatsViewer), tauntStatsIcon.Tag as string, "Taunt Usage");
       }
       else if ((sender as MenuItem)?.Icon is ImageAwesome icon && icon.Tag is string name)
       {
@@ -756,7 +756,7 @@ namespace EQLogParser
     private void OpenDamageChart()
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-      if (Helpers.OpenChart(opened, dockSite, damageChartIcon.Tag as string, DAMAGE_CHOICES, "DPS Chart", ChartTab, true))
+      if (SyncFusionUtil.OpenChart(opened, dockSite, damageChartIcon.Tag as string, DAMAGE_CHOICES, "DPS Chart", ChartTab, true))
       {
         List<PlayerStats> selected = null;
         if (opened.TryGetValue(damageSummaryIcon.Tag as string, out var window) && window.Content is DamageSummary summary)
@@ -771,7 +771,7 @@ namespace EQLogParser
     private void OpenHealingChart()
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-      if (Helpers.OpenChart(opened, dockSite, healingChartIcon.Tag as string, HEALING_CHOICES, "Healing Chart", ChartTab, false))
+      if (SyncFusionUtil.OpenChart(opened, dockSite, healingChartIcon.Tag as string, HEALING_CHOICES, "Healing Chart", ChartTab, false))
       {
         List<PlayerStats> selected = null;
         if (opened.TryGetValue(healingSummaryIcon.Tag as string, out var window) && window.Content is HealingSummary summary)
@@ -786,7 +786,7 @@ namespace EQLogParser
     private void OpenTankingChart()
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-      if (Helpers.OpenChart(opened, dockSite, tankingChartIcon.Tag as string, TANKING_CHOICES, "Tanking Chart", ChartTab, false))
+      if (SyncFusionUtil.OpenChart(opened, dockSite, tankingChartIcon.Tag as string, TANKING_CHOICES, "Tanking Chart", ChartTab, false))
       {
         List<PlayerStats> selected = null;
         if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out var window) && window.Content is TankingSummary summary)
@@ -801,7 +801,7 @@ namespace EQLogParser
     private void OpenDamageSummary()
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-      if (Helpers.OpenWindow(dockSite, opened, out var control, typeof(DamageSummary), damageSummaryIcon.Tag as string, "DPS Summary"))
+      if (SyncFusionUtil.OpenWindow(dockSite, opened, out var control, typeof(DamageSummary), damageSummaryIcon.Tag as string, "DPS Summary"))
       {
         (control.Content as DamageSummary).EventsSelectionChange += DamageSummary_SelectionChanged;
         if (DamageStatsManager.Instance.GetGroupCount() > 0)
@@ -816,7 +816,7 @@ namespace EQLogParser
     private void OpenHealingSummary()
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-      if (Helpers.OpenWindow(dockSite, opened, out var control, typeof(HealingSummary), healingSummaryIcon.Tag as string, "Healing Summary"))
+      if (SyncFusionUtil.OpenWindow(dockSite, opened, out var control, typeof(HealingSummary), healingSummaryIcon.Tag as string, "Healing Summary"))
       {
         (control.Content as HealingSummary).EventsSelectionChange += HealingSummary_SelectionChanged;
         if (HealingStatsManager.Instance.GetGroupCount() > 0)
@@ -830,7 +830,7 @@ namespace EQLogParser
     private void OpenTankingSummary()
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-      if (Helpers.OpenWindow(dockSite, opened, out var control, typeof(TankingSummary), tankingSummaryIcon.Tag as string, "Tanking Summary"))
+      if (SyncFusionUtil.OpenWindow(dockSite, opened, out var control, typeof(TankingSummary), tankingSummaryIcon.Tag as string, "Tanking Summary"))
       {
         (control.Content as TankingSummary).EventsSelectionChange += TankingSummary_SelectionChanged;
         if (TankingStatsManager.Instance.GetGroupCount() > 0)
@@ -1360,7 +1360,7 @@ namespace EQLogParser
       }
       else
       {
-        Helpers.CloseWindow(dockSite, window);
+        SyncFusionUtil.CloseWindow(dockSite, window);
       }
     }
 

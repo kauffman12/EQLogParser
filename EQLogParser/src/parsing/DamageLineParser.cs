@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using static EQLogParser.Helpers;
 
 namespace EQLogParser
 {
@@ -464,9 +465,9 @@ namespace EQLogParser
         }
         else if (isYou)
         {
-          attacker = "You";
           spell = string.Join(" ", split, fromDamage + 2, stop - fromDamage - 1);
           spell = (!string.IsNullOrEmpty(spell) && spell[spell.Length - 1] == '.') ? spell.Substring(0, spell.Length - 1) : spell;
+          attacker = spell;
         }
 
         if (!string.IsNullOrEmpty(attacker) && !string.IsNullOrEmpty(spell))
@@ -657,7 +658,7 @@ namespace EQLogParser
             var taunt = new TauntRecord { Player = ConfigUtil.PlayerName, Success = true, Npc = TextFormatUtils.ToUpper(npc) };
             EventsNewTaunt?.Invoke(taunt, new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
-          else if (failedIndex == 2 && split.Length > 6 && split[1] == "have" && split[3] == "to")
+          else if (attentionIndex == (split.Length - 1) && failedIndex == 2 && split.Length > 6 && split[1] == "have" && split[3] == "to")
           {
             var taunt = new TauntRecord
             {
@@ -922,10 +923,10 @@ namespace EQLogParser
       len = -1;
 
       var end = 2;
-      if ((part.Length >= (start + ++end) && part.Substring(start, 3) == "pet") ||
-        (part.Length >= (start + ++end) && part.Substring(start, 4) == "ward" && !(part.Length > (start + 5) && part[start + 5] != 'e')) ||
-        (part.Length >= (start + ++end) && part.Substring(start, 5) == "Mount") ||
-        (part.Length >= (start + ++end) && (part.Substring(start, 6) == "warder" || part.Substring(start, 6) == "Warder")))
+      if ((part.Length >= (start + ++end) && SCompare(part, start, 3, "pet")) ||
+        (part.Length >= (start + ++end) && SCompare(part, start, 4, "ward") && !(part.Length > (start + 5) && part[start + 5] != 'e')) ||
+        (part.Length >= (start + ++end) && SCompare(part, start, 5, "Mount")) ||
+        (part.Length >= (start + ++end) && SCompare(part, start, 6, "warder")) || SCompare(part, start, 6, "Warder"))
       {
         found = true;
         len = end;
@@ -954,8 +955,8 @@ namespace EQLogParser
               result = Labels.PROC;
             }
           }
+          SpellTypeCache[key] = result;
         }
-        SpellTypeCache[key] = result;
       }
       return result;
     }

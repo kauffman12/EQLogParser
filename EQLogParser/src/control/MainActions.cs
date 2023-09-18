@@ -164,7 +164,7 @@ namespace EQLogParser
 
     internal static void CreateFontFamiliesMenuItems(MenuItem parent, RoutedEventHandler callback, string currentFamily)
     {
-      foreach (var family in Helpers.GetCommonFontFamilyNames())
+      foreach (var family in UIElementUtil.GetCommonFontFamilyNames())
       {
         parent.Items.Add(createMenuItem(family, callback, EFontAwesomeIcon.Solid_Check));
       }
