@@ -44,7 +44,7 @@ namespace EQLogParser
       toFilter.Text = EQLogParser.Resource.CHAT_TO_FILTER;
       fromFilter.Text = EQLogParser.Resource.CHAT_FROM_FILTER;
 
-      var allFonts = Helpers.GetSystemFontFamilies();
+      var allFonts = UIElementUtil.GetSystemFontFamilies();
       fontFamily.ItemsSource = allFonts;
       var family = ConfigUtil.GetSetting("ChatFontFamily") ?? chatBox.FontFamily?.Source;
       if (allFonts.FirstOrDefault(item => item.Source == family) is FontFamily found)

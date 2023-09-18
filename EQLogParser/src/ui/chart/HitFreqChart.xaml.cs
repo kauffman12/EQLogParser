@@ -59,7 +59,7 @@ namespace EQLogParser
       }
     }
 
-    private void CreateImageClick(object sender, RoutedEventArgs e) => Helpers.CreateImage(Dispatcher, sfChart);
+    private void CreateImageClick(object sender, RoutedEventArgs e) => UIElementUtil.CreateImage(Dispatcher, sfChart);
 
     private void EventsThemeChanged(object sender, string e)
     {

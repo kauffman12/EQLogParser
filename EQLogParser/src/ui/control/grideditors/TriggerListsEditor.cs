@@ -22,7 +22,7 @@ namespace EQLogParser
       { "SortBy", new List<string>() { "Trigger Time", "Remaining Time" } },
       { "TimerMode", new List<string>() { "Standard", "Cooldown" } },
       { "TimerType", new List<string>() { "No Timer", "Basic", "Short Duration" } },
-      { "FontFamily", Helpers.GetSystemFontFamilies().Select(font => font.Source).ToList() },
+      { "FontFamily", UIElementUtil.GetSystemFontFamilies().Select(font => font.Source).ToList() },
     };
 
     private static Dictionary<string, DependencyProperty> Props = new Dictionary<string, DependencyProperty>()

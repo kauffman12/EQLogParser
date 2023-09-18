@@ -111,18 +111,22 @@ namespace EQLogParser
       return result;
     }
 
-    internal static uint ParseUInt(string str)
+    internal static uint ParseUInt(string str) => ParseUInt(str.AsSpan());
+
+    internal static uint ParseUInt(ReadOnlySpan<char> span)
     {
       uint y = 0;
-      for (var i = 0; i < str.Length; i++)
+
+      for (var i = 0; i < span.Length; i++)
       {
-        if (!char.IsDigit(str[i]))
+        if (!char.IsDigit(span[i]))
         {
           return uint.MaxValue;
         }
 
-        y = (y * 10) + (Convert.ToUInt32(str[i]) - '0');
+        y = (y * 10) + (uint)(span[i] - '0');
       }
+
       return y;
     }
 

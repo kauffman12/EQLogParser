@@ -198,7 +198,7 @@ namespace EQLogParser
       if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out var spellTable, typeof(SpellCastTable),
+        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var spellTable, typeof(SpellCastTable),
           "spellCastsWindow", "Spell Cast Timeline"))
         {
           (spellTable.Content as SpellCastTable).Init(selected, CurrentStats);
@@ -211,7 +211,7 @@ namespace EQLogParser
       if (selected?.Count > 0)
       {
         var main = Application.Current.MainWindow as MainWindow;
-        if (Helpers.OpenWindow(main.dockSite, null, out var spellTable, typeof(SpellCountTable),
+        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var spellTable, typeof(SpellCountTable),
           "spellCountsWindow", "Spell Counts"))
         {
           (spellTable.Content as SpellCountTable).Init(selected, CurrentStats);
