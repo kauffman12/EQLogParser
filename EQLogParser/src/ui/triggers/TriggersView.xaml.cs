@@ -46,11 +46,6 @@ namespace EQLogParser
     {
       InitializeComponent();
 
-      var players = new List<dynamic>();
-      players.Add(new { Player = "Default", Running = Visibility.Hidden });
-      players.Add(new { Player = "Kiznat", Running = Visibility.Hidden });
-      playerList.ItemsSource = players;
-
       try
       {
         TestSynth = new SpeechSynthesizer();
@@ -1347,28 +1342,5 @@ namespace EQLogParser
       GC.SuppressFinalize(this);
     }
     #endregion
-
-    private void PlayerListPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-      if (sender is ImageAwesome image)
-      {
-        var data = image.DataContext as dynamic;
-        var list = playerList.ItemsSource as List<dynamic>;
-        var found = list.Find(item => item.Player == data.Player);
-
-        if (image.Icon == EFontAwesomeIcon.Solid_PlayCircle)
-        {
-          image.Icon = EFontAwesomeIcon.Solid_StopCircle;
-          image.SetResourceReference(ImageAwesome.ForegroundProperty, "EQWarnForegroundBrush");
-          found.Running = Visibility.Visible;
-        }
-        else
-        {
-          image.Icon = EFontAwesomeIcon.Solid_PlayCircle;
-          image.SetResourceReference(ImageAwesome.ForegroundProperty, "EQGoodForegroundBrush");
-          found.Running = Visibility.Hidden;
-        }
-      }
-    }
   }
 }

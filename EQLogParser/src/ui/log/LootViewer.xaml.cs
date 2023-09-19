@@ -44,8 +44,8 @@ namespace EQLogParser
       DataGridUtil.UpdateTableMargin(dataGrid);
       (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
 
-      Load();
       dataGrid.ItemsSource = IndividualRecords;
+      Load();
     }
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());

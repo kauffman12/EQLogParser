@@ -51,7 +51,7 @@ using System.Windows;
 // You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("2.1.33")]
-[assembly: AssemblyFileVersion("2.1.33")]
+[assembly: AssemblyVersion("2.1.34")]
+[assembly: AssemblyFileVersion("2.1.34")]
 [assembly: log4net.Config.XmlConfigurator(Watch = true)]
 [assembly: System.Runtime.Versioning.SupportedOSPlatform("windows10.0")]
