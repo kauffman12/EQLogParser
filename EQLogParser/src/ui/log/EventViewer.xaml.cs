@@ -60,8 +60,8 @@ namespace EQLogParser
         }
       };
 
-      Load();
       dataGrid.ItemsSource = EventRows;
+      Load();
     }
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());

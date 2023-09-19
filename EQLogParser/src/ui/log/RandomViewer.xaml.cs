@@ -27,8 +27,6 @@ namespace EQLogParser
       DataGridUtil.UpdateTableMargin(dataGrid);
       (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
 
-      Load();
-
       ReloadTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 2000) };
       ReloadTimer.Tick += (sender, e) =>
       {
@@ -57,6 +55,8 @@ namespace EQLogParser
           }
         }
       };
+
+      Load();
     }
 
     private void EventsNewRandomRecord(object sender, RandomRecord e)
