@@ -39,8 +39,8 @@ namespace EQLogParser
       {
         IncrementOnScrolling = false,
         MinValue = new System.TimeSpan(0, 0, Min),
-        MaxValue = new System.TimeSpan(0, 59, 59),
-        Format = "mm:ss"
+        MaxValue = new System.TimeSpan(23, 59, 59),
+        Format = "hh:mm:ss"
       };
 
       TheTimeSpan = timeSpan;

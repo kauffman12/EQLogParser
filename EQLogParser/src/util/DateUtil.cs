@@ -12,10 +12,13 @@ namespace EQLogParser
     private double LastDateTime;
     private double increment = 0.0;
 
+    internal static double ToDouble(DateTime dateTime) => dateTime.Ticks / TimeSpan.FromSeconds(1).Ticks;
+    internal static DateTime FromDouble(double value) => new DateTime((long)value * TimeSpan.FromSeconds(1).Ticks);
     internal static string GetCurrentDate(string format) => DateTime.Now.ToString(format, CultureInfo.InvariantCulture);
     internal static string FormatDate(double seconds) => new DateTime().AddSeconds(seconds).ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
     internal static string FormatSimpleDate(double seconds) => new DateTime().AddSeconds(seconds).ToString("MMM dd HH:mm:ss", CultureInfo.InvariantCulture);
     internal static string FormatSimpleHMS(double seconds) => new DateTime().AddSeconds(seconds).ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+
     internal static string FormatSimpleMS(long ticks)
     {
       return new DateTime(ticks < 0 ? 0 : ticks).ToString("mm:ss", CultureInfo.InvariantCulture);
@@ -83,6 +86,52 @@ namespace EQLogParser
       return result;
     }
 
+    internal static uint SimpleTimeToSeconds(string source)
+    {
+      if (string.IsNullOrEmpty(source))
+      {
+        return 0;
+      }
+
+      uint h = 0, m = 0, s = 0;
+
+      var split = source.Split(':');
+
+      if (split.Length == 0 || split.Length > 3)
+      {
+        return 0;
+      }
+
+      if (split.Length == 1)
+      {
+        s = StatsUtil.ParseUInt(split[0], 0);
+      }
+      else if (split.Length == 2)
+      {
+        m = StatsUtil.ParseUInt(split[0], 0);
+        s = StatsUtil.ParseUInt(split[1], 0);
+
+        if (s > 59 || m > 59)
+        {
+          return 0;
+        }
+      }
+      else if (split.Length == 3)
+      {
+        h = StatsUtil.ParseUInt(split[0], 0);
+        m = StatsUtil.ParseUInt(split[1], 0);
+        s = StatsUtil.ParseUInt(split[2], 0);
+
+        if (s > 59 || m > 59 || h > 23)
+        {
+          return 0;
+        }
+      }
+
+      // Convert to total seconds
+      return s + (m * 60) + (h * 60 * 60);
+    }
+
     // This doesn't currently get called so test if ever needed
     internal static double ParseSimpleDate(string timeString)
     {
@@ -98,10 +147,6 @@ namespace EQLogParser
 
       return result;
     }
-
-    internal static double ToDouble(DateTime dateTime) => dateTime.Ticks / TimeSpan.FromSeconds(1).Ticks;
-
-    internal static DateTime FromDouble(double value) => new DateTime((long)value * TimeSpan.FromSeconds(1).Ticks);
 
     internal bool HasTimeInRange(double now, string line, int lastMins, out double dateTime)
     {

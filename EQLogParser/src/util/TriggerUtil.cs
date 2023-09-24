@@ -335,47 +335,65 @@ namespace EQLogParser
       return success;
     }
 
-    internal static bool CheckNumberOptions(List<NumberOptions> options, MatchCollection matches)
+    internal static bool CheckOptions(List<NumberOptions> options, MatchCollection matches, out double duration)
     {
-      var passed = true;
-      if (matches.Count > 0)
-      {
-        foreach (var option in options)
-        {
-          foreach (Match match in matches)
-          {
-            if (match.Success)
-            {
-              for (var i = 0; i < match.Groups.Count; i++)
-              {
-                if (match.Groups[i].Name == option.Key && !string.IsNullOrEmpty(option.Op))
-                {
-                  if (StatsUtil.ParseUInt(match.Groups[i].Value) is uint value && value != uint.MaxValue)
-                  {
-                    switch (option.Op)
-                    {
-                      case ">":
-                        passed = value > option.Value;
-                        break;
-                      case ">=":
-                        passed = value >= option.Value;
-                        break;
-                      case "<":
-                        passed = value < option.Value;
-                        break;
-                      case "<=":
-                        passed = value <= option.Value;
-                        break;
-                      case "=":
-                      case "==":
-                        passed = value == option.Value;
-                        break;
-                    }
+      duration = -1;
 
-                    if (!passed)
-                    {
-                      return false;
-                    }
+      foreach (Match match in matches)
+      {
+        if (!match.Success)
+        {
+          continue;
+        }
+
+        for (var i = 0; i < match.Groups.Count; i++)
+        {
+          var groupName = match.Groups[i].Name;
+          var groupValue = match.Groups[i].Value;
+
+          if ("TS".Equals(groupName, StringComparison.OrdinalIgnoreCase) && DateUtil.SimpleTimeToSeconds(groupValue) is uint sec)
+          {
+            if (sec > 0)
+            {
+              duration = sec;
+            }
+            else
+            {
+              return false;
+            }
+          }
+          else
+          {
+            var passed = true;
+            foreach (var option in options)
+            {
+              if (groupName == option.Key && !string.IsNullOrEmpty(option.Op))
+              {
+                if (StatsUtil.ParseUInt(groupValue) is uint value && value != uint.MaxValue)
+                {
+                  switch (option.Op)
+                  {
+                    case ">":
+                      passed = value > option.Value;
+                      break;
+                    case ">=":
+                      passed = value >= option.Value;
+                      break;
+                    case "<":
+                      passed = value < option.Value;
+                      break;
+                    case "<=":
+                      passed = value <= option.Value;
+                      break;
+                    case "=":
+                    case "==":
+                      passed = value == option.Value;
+                      break;
+                  }
+
+                  if (!passed)
+                  {
+                    return false;
                   }
                 }
               }
@@ -383,7 +401,8 @@ namespace EQLogParser
           }
         }
       }
-      return passed;
+
+      return true;
     }
 
     internal static double GetTimerBarHeight(double fontSize) => fontSize + 2;
