@@ -202,7 +202,6 @@ namespace EQLogParser
         try
         {
           activeTriggers = GetActiveTriggers();
-
           while (await logChannel.Reader.WaitToReadAsync())
           {
             var result = await logChannel.Reader.ReadAsync();
@@ -321,10 +320,16 @@ namespace EQLogParser
       lock (node.Value)
       {
         var wrapper = node.Value;
+        double dynamicDuration = -1;
         if (wrapper.Regex != null)
         {
           matches = wrapper.Regex.Matches(action);
-          found = matches != null && matches.Count > 0 && TriggerUtil.CheckNumberOptions(wrapper.RegexNOptions, matches);
+          found = matches != null && matches.Count > 0 && TriggerUtil.CheckOptions(wrapper.RegexNOptions, matches, out dynamicDuration);
+
+          if (dynamicDuration != -1 && wrapper.TriggerData.TimerType == 1)
+          {
+            wrapper.ModifiedDurationSeconds = dynamicDuration;
+          }
         }
         else if (!string.IsNullOrEmpty(wrapper.ModifiedPattern))
         {
@@ -426,7 +431,7 @@ namespace EQLogParser
       if (endEarlyRegex != null)
       {
         earlyMatches = endEarlyRegex.Matches(action);
-        if (earlyMatches != null && earlyMatches.Count > 0 && TriggerUtil.CheckNumberOptions(options, earlyMatches))
+        if (earlyMatches != null && earlyMatches.Count > 0 && TriggerUtil.CheckOptions(options, earlyMatches, out _))
         {
           endEarly = true;
         }
@@ -552,7 +557,7 @@ namespace EQLogParser
       if (!(trigger.TriggerAgainOption == 3 && wrapper.TimerList.Count > 0))
       {
         TimerData newTimerData = null;
-        if (trigger.WarningSeconds > 0 && trigger.DurationSeconds - trigger.WarningSeconds is double diff && diff > 0)
+        if (trigger.WarningSeconds > 0 && wrapper.ModifiedDurationSeconds - trigger.WarningSeconds is double diff && diff > 0)
         {
           newTimerData = new TimerData { DisplayName = displayName, WarningSource = new CancellationTokenSource() };
 
@@ -597,7 +602,7 @@ namespace EQLogParser
           newTimerData.Repeated = wrapper.TimerCounts[displayName].Count;
         }
 
-        newTimerData.EndTicks = beginTicks + (long)(TimeSpan.TicksPerMillisecond * trigger.DurationSeconds * 1000);
+        newTimerData.EndTicks = beginTicks + (long)(TimeSpan.TicksPerMillisecond * wrapper.ModifiedDurationSeconds * 1000);
         newTimerData.DurationTicks = newTimerData.EndTicks - beginTicks;
         newTimerData.ResetTicks = trigger.ResetDurationSeconds > 0 ?
           beginTicks + (long)(TimeSpan.TicksPerSecond * trigger.ResetDurationSeconds) : 0;
@@ -644,7 +649,7 @@ namespace EQLogParser
         wrapper.TimerList.Add(newTimerData);
         var needEvent = wrapper.TimerList.Count == 1;
 
-        Task.Delay((int)(trigger.DurationSeconds * 1000)).ContinueWith(task =>
+        Task.Delay((int)(wrapper.ModifiedDurationSeconds * 1000)).ContinueWith(task =>
         {
           var proceed = false;
           lock (wrapper)
@@ -757,12 +762,14 @@ namespace EQLogParser
               ModifiedWarningDisplay = ModPlayer(trigger.WarningTextToDisplay),
               ModifiedEndDisplay = ModPlayer(trigger.EndTextToDisplay),
               ModifiedEndEarlyDisplay = ModPlayer(trigger.EndEarlyTextToDisplay),
-              ModifiedTimerName = ModPlayer(string.IsNullOrEmpty(trigger.AltTimerName) ? trigger.Name : trigger.AltTimerName)
+              ModifiedTimerName = ModPlayer(string.IsNullOrEmpty(trigger.AltTimerName) ? trigger.Name : trigger.AltTimerName),
+              ModifiedDurationSeconds = trigger.DurationSeconds
             };
 
             wrapper.ModifiedTimerName = string.IsNullOrEmpty(wrapper.ModifiedTimerName) ? "" : wrapper.ModifiedTimerName;
             wrapper.HasRepeated = wrapper.ModifiedTimerName.Contains("{repeated}", StringComparison.OrdinalIgnoreCase);
             pattern = UpdatePattern(trigger.UseRegex, playerName, pattern, out var numberOptions);
+            pattern = UpdateTimePattern(trigger.UseRegex, playerName, pattern);
 
             // temp
             if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.TimerType == 0)
@@ -810,6 +817,27 @@ namespace EQLogParser
       }
     }
 
+    private string UpdateTimePattern(bool useRegex, string playerName, string pattern)
+    {
+      if (useRegex)
+      {
+        if (Regex.Matches(pattern, @"{(ts)}", RegexOptions.IgnoreCase) is MatchCollection matches2 && matches2.Count > 0)
+        {
+          foreach (Match match in matches2)
+          {
+            if (match.Groups.Count == 2)
+            {
+              // This regex pattern matches time in the formats hh:mm:ss, mm:ss, or ss
+              var timePattern = @"(?<" + match.Groups[1].Value + @">(?:\d+[:]?){1,3})";
+              pattern = pattern.Replace(match.Value, timePattern);
+            }
+          }
+        }
+      }
+
+      return pattern;
+    }
+
     private string UpdatePattern(bool useRegex, string playerName, string pattern, out List<NumberOptions> numberOptions)
     {
       numberOptions = new List<NumberOptions>();
@@ -828,9 +856,9 @@ namespace EQLogParser
           }
         }
 
-        if (Regex.Matches(pattern, @"{(n\d?)(<=|>=|>|<|=|==)?(\d+)?}", RegexOptions.IgnoreCase) is MatchCollection matches2 && matches2.Count > 0)
+        if (Regex.Matches(pattern, @"{(n\d?)(<=|>=|>|<|=|==)?(\d+)?}", RegexOptions.IgnoreCase) is MatchCollection matches3 && matches3.Count > 0)
         {
-          foreach (Match match in matches2)
+          foreach (Match match in matches3)
           {
             if (match.Groups.Count == 4)
             {
@@ -979,6 +1007,7 @@ namespace EQLogParser
       public string ModifiedEndEarlyDisplay { get; set; }
       public string ModifiedWarningDisplay { get; set; }
       public string ModifiedTimerName { get; set; }
+      public double ModifiedDurationSeconds { get; set; }
       public Regex Regex { get; set; }
       public List<NumberOptions> RegexNOptions { get; set; }
       public Trigger TriggerData { get; set; }

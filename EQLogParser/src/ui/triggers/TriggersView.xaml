@@ -182,7 +182,7 @@
         <Border Grid.Row="0" BorderBrush="{DynamicResource ContentBackgroundAlt2}" BorderThickness="1">
           <StackPanel Orientation="Horizontal" Margin="4,4,0,0">
             <Button x:Name="showButton" Visibility="Collapsed" Margin="0,0,4,0" Padding="8,0,8,0" VerticalAlignment="Top" IsEnabled="True" Height="24" HorizontalAlignment="Left" Click="ShowClick">Preview Overlay</Button>
-            <Button x:Name="saveButton" Margin="0,0,4,0" Padding="8,0,8,0" VerticalAlignment="Top" IsEnabled="False" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save Trigger</Button>
+            <Button x:Name="saveButton" Margin="0,0,4,0" Padding="10,0,10,0" VerticalAlignment="Top" IsEnabled="False" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
             <Button x:Name="cancelButton" Margin="0" Padding="8,0,8,0" VerticalAlignment="Top" IsEnabled="False" Height="24" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
           </StackPanel>
         </Border>

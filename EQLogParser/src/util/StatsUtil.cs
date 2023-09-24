@@ -111,9 +111,9 @@ namespace EQLogParser
       return result;
     }
 
-    internal static uint ParseUInt(string str) => ParseUInt(str.AsSpan());
+    internal static uint ParseUInt(string str, uint defValue = uint.MaxValue) => ParseUInt(str.AsSpan(), defValue);
 
-    internal static uint ParseUInt(ReadOnlySpan<char> span)
+    internal static uint ParseUInt(ReadOnlySpan<char> span, uint defValue = uint.MaxValue)
     {
       uint y = 0;
 
@@ -121,7 +121,7 @@ namespace EQLogParser
       {
         if (!char.IsDigit(span[i]))
         {
-          return uint.MaxValue;
+          return defValue;
         }
 
         y = (y * 10) + (uint)(span[i] - '0');
