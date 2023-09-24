@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using Syncfusion.Licensing;
+using System.Windows;
 
 namespace EQLogParser
 {
@@ -9,6 +10,7 @@ namespace EQLogParser
   {
     public App()
     {
+      SyncfusionLicenseProvider.RegisterLicense("LICENSE HERE");
     }
   }
 }
