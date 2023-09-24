@@ -1,6 +1,16 @@
 {\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Segoe UI;}{\f1\fnil\fcharset2 Symbol;}}
 {\*\generator Riched20 10.0.22621}\viewkind4\uc1 
-\pard\ul\f0\fs20\lang1033 Updated in Version 2.1.34\ulnone\par
+\pard\ul\f0\fs20\lang1033 Updated in Version 2.1.35\ulnone\par
+\par
+
+\pard 
+{\pntext\f0 1.\tab}{\*\pn\pnlvlbody\pnf0\pnindent0\pnstart1\pndec{\pntxta.}}
+\fi-360\li720 Updated the main Trigger Pattern field to handle \{TS\} tags for timestamps. If a timestamp is found the associated Timer will execute with the matched duration. If a single number is matched it will be counted as seconds otherwise the format hh:mm:ss is expected. Regex must be enabled for this to work.\par
+{\pntext\f0 2.\tab}Updted Trigger Duration fields to include hours and made the spinners easier to use.\par
+{\pntext\f0 3.\tab}Fixed misc bugs with button naming and position throughout the UI.\par
+
+\pard\par
+\ul Updates in Version 2.1.34\ulnone\par
 \par
 
 \pard 
@@ -324,7 +334,7 @@ Updates in Version 2.1.9\par
 
 \pard\par
 \par
-\ul Updates in Version 2.1.0\ulnone\par
+\ul Major Updates in Version 2.1.0\ulnone\par
 \par
 \b Version 1.0 of Audio Triggers is now ready.\b0  Look under View -> Triggers. \ul\par
 
@@ -346,62 +356,6 @@ Updates in Version 2.1.9\par
 
 \pard{\pntext\f1\'B7\tab}{\*\pn\pnlvlblt\pnf1\pnindent0{\pntxtb\'B7}}\fi-360\li720\b0 One option allows you to view these release notes.\ul\b\par
 {\pntext\f1\'B7\tab}\ulnone\b0 Reporting an Issue takes you to the Github page for reporting bugs.\ul\b\par
-{\pntext\f1\'B7\tab}\ulnone\b0 The About option takes you to the README on Github.\ul\b\par
-
-\pard\b0\par
-\par
-Updates in Version 2.0.0\ulnone\par
-\par
-
-\pard 
-{\pntext\f0 1.\tab}{\*\pn\pnlvlbody\pnf0\pnindent0\pnstart1\pndec{\pntxta.}}
-\fi-360\li720 Work was done supporting audio Triggers.\par
-{\pntext\f0 2.\tab}Added a Cooldown Overlay for timer bars. If a Reset Druation is specified in the timer the timer will count back up after it completes. Then stay on screen in an idle state until activated again. The idea is have another way to visualize when abiltiies are ready to be used again.\par
-{\pntext\f0 3.\tab}Added support for \{n\} and number comparisons.\par
-{\pntext\f0 4.\tab}Added Trigger Tester window for pasting/running log lines.\par
-{\pntext\f0 5.\tab}Included option to run test log lines in real-time.\par
-{\pntext\f0 6.\tab}Changed default Priority settings for GINA imports. Interrupt speech is Priority 1 and Don't Interrupt is Priority 3. Should make it easier to import old triggers and create new ones that work around existing without resetting everything.\par
-{\pntext\f0 7.\tab}Updated install to better handle adding new DLLs. Hopefully downgrading and re-installing will work better after this version.\par
-{\pntext\f0 8.\tab}Update from Syncfusion to fix memory leak.\par
-{\pntext\f0 9.\tab}Added option to ignore Damage Shields.\par
-{\pntext\f0 10.\tab}Added Specials column to Healing and Tanking Summaries.\par
-{\pntext\f0 11.\tab}Implemented a basic Death Log feature that can be opened from the right-click menu on all three summaries.\par
-{\pntext\f0 12.\tab}Removed the Newtonsoft JSON library from the install.\par
-{\pntext\f0 13.\tab}Made the X for removing spells from spell counts or players from the verified player list easier to click.\par
-{\pntext\f0 14.\tab}Added a new column to the Damge Summary called Best Second. It's the max amount of total damage the player does during the same second of time in the log file. Due to multiple hits and procs, etc this may sometimes be more useful than just looking at Max Hit.\par
-{\pntext\f0 15.\tab}Added Option to enable Ctrl+C to be used for Send To EQ on the summary windows.\par
-{\pntext\f0 16.\tab}Added Refresh to the Fight list's right-click menu that will cause summary windows to reload with the latest data without having to change the selection.\par
-{\pntext\f0 17.\tab}Added an option to search the current log file during the time frame surrounding the selected fights.\par
-{\pntext\f0 18.\tab}Updated how selected fights are found in the log file which should making exporting those fights to a new log file faster. Also, added error checking for accessing the exported file. You'll see an error dialog if the file is already open by another application and can't be written to.\par
-{\pntext\f0 19.\tab}Added a checkbox dropdown filter to Log Search for hiding certain types of log entries. I can add more later but these are the ones I can easily parse right now. It's just another way to remove spam that may in the way.\par
-{\pntext\f0 20.\tab}Added the Copy As Image and Large Image options to the ADPS/Tanking charts.\par
-{\pntext\f0 21.\tab}Added Regex option to Log Search. When checked the two search terms will be interpreted as C# style regular expressions.\par
-{\pntext\f0 22.\tab}Removed the Ignore Charm Pet option due to a conflict with handling of mercs that are named like an NPC. If anyone has suggestions for an alternative for what this features used to do let me know.\par
-{\pntext\f0 23.\tab}Added a procs.txt to the installed data directory which lists every spell that is being counted as a proc. It can be manually edited if anyone wants to make adjustments for their parser. I'll be moving more of the data into the install dir so it's easier to modify.\par
-{\pntext\f0 24.\tab}Added new setting under the Options menu to Check for Updates at Startup. If your firewall allows the parser to check it will look for a new version and allow you to download and install it from within the parser. It only does the check one time when the parser starts if you have the setting enabled.\par
-{\pntext\f0 25.\tab}Update Spell Damage Statistics to count spell procs.\par
-{\pntext\f0 26.\tab}Added a new Chart Type for # Attempts and changed the time format to 24 hour.\par
-{\pntext\f0 27.\tab}Added Chart Type for # Crits and DPS while renaming some previous options so it's clearer what they do.\par
-{\pntext\f0 28.\tab}Added option to the File Menu for Saving Selected Fights to a new log file. The new file will contain everything except chat messages and will also include the time 30 seconds before or after the fight time.\par
-{\pntext\f0 29.\tab}Added a Potential Heals column to Healing Summary and Healing Breakdown. It is the sum of the Healed and Over Healed columns.\par
-{\pntext\f0 30.\tab}Added additional way to assign a pet to a player. The existing right-click option on the Damage and Tank Summary has been replaced with a version that allows you to choose a player.\par
-{\pntext\f0 31.\tab}Added class column to Verified Player window. It allows a class to be manually selected if needed. In addition, there is a tooltip to provide why the class was chosen for the specific player.\par
-{\pntext\f0 32.\tab}Added a progress icon to show a countdown whenever time ranges are changed on the Damage Summary to make it more obvious how much time you have to left if you stop typing.\par
-{\pntext\f0 33.\tab}Added Player Deaths row to the ADPS and Defensive Timelines. In addition, a vertical line is drawn at the time of death and active spells will be stopped at that point. The only exception being Glyphs which will continue like normal.\par
-{\pntext\f0 34.\tab}Updated damage breakdown to show Direct Damage, DoTs, and Proc as a 3rd level to be expanded to make it easier to compare within each type.\par
-{\pntext\f0 35.\tab}There's a new Look and Feel including an updated Dark mode theme as well as a new Light mode alternative. Themes may be selected from the Options menu.\par
-{\pntext\f0 36.\tab}Every table now has a consistent right-click menu including options for copying data as CSV or Image in addition to the standard Select All/Copy choices.\par
-{\pntext\f0 37.\tab}Renamed the Copy Parse menu option on the Summary windows. They're now named \i Send To EQ \i0 to make them more distinct from the other Copy choices.\par
-{\pntext\f0 38.\tab}Moved Special Events (renamed Misc Events) and Looted Items to the Events menu.\par
-{\pntext\f0 39.\tab}Added Taunt Usage window to the Statistics menu.\par
-{\pntext\f0 40.\tab}Added Random Rolls window to the Events menu.\par
-{\pntext\f0 41.\tab}Damage Summary now has a 2nd time option for choosing the start time in addition to the end time. Both specified in seconds and you can now type to choose your own values. Also, note that if you type a large number like 9999 it switches back to the max value if you want to quickly go back to the original max time.\par
-{\pntext\f0 42.\tab}All summary and breakdown windows allow for highlighting of rows in child sections. They can be used when selection options like showing spell counts or copying data from the tables.\par
-{\pntext\f0 43.\tab}Tank Breakdown has a few new columns. There's now a column for attempted hits and a column for undefended hits. Undefended is hits minus strikethrough hits. \par
-{\pntext\f0 44.\tab}Updated Charts to count time differently. Each player's values are calculated based on the time they are active and not based on the total time of the raid. This should make it easier to see when player activity has completely stopped since their line will drop to zero instead of slowly average down.\par
-{\pntext\f0 45.\tab}The parser will now save its location and size when you close the application.\par
-{\pntext\f0 46.\tab}Added Arcane Secrets to the Specials column as 'S'. Saving 'A' for Anger glyph if anyone thinks thats worth parsing.\par
-{\pntext\f0 47.\tab}\i Removed\i0  - The parser no longer saves whether you have a chart open. Need to work out some issues with the new docking manager.\par
-{\pntext\f0 48.\tab}\i For developers\i0 . All Actipro libraries have been replaced with an alternative from Syncfusion. If you want to build your own parser you can apply for a free community license from Syncfusion.\ul\par
+{\pntext\f1\'B7\tab}\ulnone\b0 The About option takes you to the README on Github.\ul\par
 }
  

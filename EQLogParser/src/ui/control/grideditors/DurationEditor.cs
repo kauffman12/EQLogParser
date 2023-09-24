@@ -1,5 +1,6 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Shared;
+using System;
 using System.ComponentModel;
 using System.Reflection;
 using System.Windows.Data;
@@ -40,13 +41,36 @@ namespace EQLogParser
         IncrementOnScrolling = false,
         MinValue = new System.TimeSpan(0, 0, Min),
         MaxValue = new System.TimeSpan(23, 59, 59),
-        Format = "hh:mm:ss"
+        Format = "hh : mm : ss",
+        Margin = new System.Windows.Thickness(0, 2, 0, 2)
       };
 
       TheTimeSpan = timeSpan;
       timeSpan.GotFocus += TimeSpanGotFocus;
       timeSpan.LostFocus += TimeSpanLostFocus;
+      timeSpan.PreviewMouseWheel += TimeSpanPreviewMouseWheel;
       return timeSpan;
+    }
+
+    private void TimeSpanPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+      if (TheTimeSpan?.SelectionStart is int selected && TheTimeSpan.Value is TimeSpan t)
+      {
+        var inc = e.Delta > 0 ? 1 : -1;
+        if (selected >= 10)
+        {
+          TheTimeSpan.Value = new TimeSpan(t.Hours, t.Minutes, t.Seconds + inc);
+        }
+        else if (selected >= 5)
+        {
+          TheTimeSpan.Value = new TimeSpan(t.Hours, t.Minutes + inc, t.Seconds);
+        }
+        else if (selected >= 0)
+        {
+          TheTimeSpan.Value = new TimeSpan(t.Hours + inc, t.Minutes, t.Seconds);
+        }
+        e.Handled = true;
+      }
     }
 
     private void TimeSpanLostFocus(object sender, System.Windows.RoutedEventArgs e)
@@ -83,6 +107,7 @@ namespace EQLogParser
       {
         TheTimeSpan.GotFocus -= TimeSpanGotFocus;
         TheTimeSpan.LostFocus -= TimeSpanLostFocus;
+        TheTimeSpan.PreviewMouseWheel -= TimeSpanPreviewMouseWheel;
         BindingOperations.ClearAllBindings(TheTimeSpan);
         TheTimeSpan?.Dispose();
         TheTimeSpan = null;
