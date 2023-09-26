@@ -13,6 +13,7 @@
         TitleBarForeground="{DynamicResource PrimaryDarken}"
         TitleTextAlignment="Left"
         Topmost="True"
+        UseLayoutRounding="True"
         WindowStartupLocation="CenterScreen"
         SizeToContent="WidthAndHeight"
         MinHeight="135"

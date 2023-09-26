@@ -9,11 +9,11 @@ namespace EQLogParser
     {
       if (item is TriggerTreeViewNode node)
       {
-        if (node.IsTrigger)
+        if (node.IsTrigger())
         {
           return Application.Current.Resources["TriggerFileTemplate"] as DataTemplate;
         }
-        else if (node.IsOverlay)
+        else if (node.IsOverlay())
         {
           if (node.SerializedData?.OverlayData?.IsTimerOverlay == true)
           {
@@ -24,10 +24,12 @@ namespace EQLogParser
             return Application.Current.Resources["TextOverlayFileTemplate"] as DataTemplate;
           }
         }
-        else
+        else if (TriggerStateManager.OVERLAYS.Equals(node?.Content?.ToString()))
         {
-          return Application.Current.Resources["TriggerNodeTemplate"] as DataTemplate;
+          return Application.Current.Resources["OverlayNodeTemplate"] as DataTemplate;
         }
+
+        return Application.Current.Resources["TriggerNodeTemplate"] as DataTemplate;
       }
 
       return null;

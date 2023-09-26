@@ -26,6 +26,7 @@ namespace EQLogParser
     private static string ConfigDir;
     private static string ServerConfigDir;
     private static string SettingsFile;
+    private static string TriggersDBFile;
     private static bool initDone = false;
     private static bool SettingsUpdated = false;
 
@@ -175,6 +176,12 @@ namespace EQLogParser
       }
     }
 
+    internal static string GetTriggersDBFile()
+    {
+      Init();
+      return TriggersDBFile;
+    }
+
     private static void Init()
     {
       if (!initDone)
@@ -185,6 +192,7 @@ namespace EQLogParser
         LogsDir = Environment.ExpandEnvironmentVariables(APP_DATA + @"\logs\");
         ServerConfigDir = ConfigDir + PETMAP_PATH;
         SettingsFile = ConfigDir + @"\settings.txt";
+        TriggersDBFile = ConfigDir + @"triggers.db";
 
         // create config dir if it doesn't exist
         Directory.CreateDirectory(ConfigDir);

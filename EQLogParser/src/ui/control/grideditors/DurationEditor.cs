@@ -13,7 +13,12 @@ namespace EQLogParser
     private TimeSpanEdit TheTimeSpan;
     private int Min;
 
-    public DurationEditor(int min = 0)
+    public DurationEditor()
+    {
+      Min = 0;
+    }
+
+    public DurationEditor(int min)
     {
       Min = min;
     }

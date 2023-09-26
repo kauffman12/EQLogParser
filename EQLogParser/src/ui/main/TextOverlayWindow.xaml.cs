@@ -16,34 +16,36 @@ namespace EQLogParser
   {
     private LinkedList<TextData> TextDataList = new LinkedList<TextData>();
     private int MaxNodes = -1;
-    private Overlay TheOverlay;
+    private TriggerNode Node;
     private bool Preview = false;
     private long SavedHeight;
     private long SavedWidth;
     private long SavedTop = long.MaxValue;
     private long SavedLeft = long.MaxValue;
+    private Dictionary<string, Window> PreviewWindows = null;
 
-    internal TextOverlayWindow(Overlay overlay, bool preview = false)
+    internal TextOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
     {
       InitializeComponent();
-      Preview = preview;
-      TheOverlay = overlay;
-      title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + TheOverlay.Id);
+      Node = node;
+      Preview = previews != null;
+      PreviewWindows = previews;
+      title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + Node.Id);
 
-      Height = TheOverlay.Height;
-      Width = TheOverlay.Width;
-      Top = TheOverlay.Top;
-      Left = TheOverlay.Left;
+      Height = Node.OverlayData.Height;
+      Width = Node.OverlayData.Width;
+      Top = Node.OverlayData.Top;
+      Left = Node.OverlayData.Left;
 
       // start off with one node
       content.Children.Add(CreateBlock());
 
-      if (preview)
+      if (Preview)
       {
         MainActions.SetTheme(this, MainWindow.CurrentTheme);
         ResizeMode = ResizeMode.CanResizeWithGrip;
         SetResourceReference(BorderBrushProperty, "PreviewBackgroundBrush");
-        SetResourceReference(BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
+        SetResourceReference(BackgroundProperty, "OverlayBrushColor-" + Node.Id);
         title.Visibility = Visibility.Visible;
         buttonsPanel.Visibility = Visibility.Visible;
 
@@ -51,14 +53,16 @@ namespace EQLogParser
         TextDataList.AddFirst(new TextData
         {
           Text = "test message",
-          EndTicks = DateTime.Now.Ticks + (TheOverlay.FadeDelay * TimeSpan.TicksPerSecond)
+          EndTicks = DateTime.Now.Ticks + (Node.OverlayData.FadeDelay * TimeSpan.TicksPerSecond)
         });
+
         content.Children.Add(CreateBlock());
+        TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
         Tick();
       }
       else
       {
-        border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
+        border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + Node.Id);
       }
     }
 
@@ -74,7 +78,7 @@ namespace EQLogParser
         TextDataList.AddFirst(new TextData
         {
           Text = text,
-          EndTicks = beginTicks + (TheOverlay.FadeDelay * TimeSpan.TicksPerSecond),
+          EndTicks = beginTicks + (Node.OverlayData.FadeDelay * TimeSpan.TicksPerSecond),
           Brush = brush
         });
 
@@ -95,21 +99,21 @@ namespace EQLogParser
       var currentTicks = DateTime.Now.Ticks;
       var done = false;
 
-      if (TheOverlay.Width != Width)
+      if (Node.OverlayData.Width != Width)
       {
-        Width = TheOverlay.Width;
+        Width = Node.OverlayData.Width;
       }
-      else if (TheOverlay.Height != Height)
+      else if (Node.OverlayData.Height != Height)
       {
-        Height = TheOverlay.Height;
+        Height = Node.OverlayData.Height;
       }
-      else if (TheOverlay.Top != Top)
+      else if (Node.OverlayData.Top != Top)
       {
-        Top = TheOverlay.Top;
+        Top = Node.OverlayData.Top;
       }
-      else if (TheOverlay.Left != Left)
+      else if (Node.OverlayData.Left != Left)
       {
-        Left = TheOverlay.Left;
+        Left = Node.OverlayData.Left;
       }
 
       lock (TextDataList)
@@ -125,18 +129,18 @@ namespace EQLogParser
             if (node.Value.EndTicks >= currentTicks)
             {
               block.Text = node.Value.Text;
-              if (block.Visibility != Visibility.Visible)
+              if (node.Value.Brush != null)
               {
-                block.Visibility = Visibility.Visible;
-              }
-
-              if (node.Value.Brush == null)
-              {
-                block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + TheOverlay.Id);
+                block.Foreground = node.Value.Brush;
               }
               else
               {
-                block.Foreground = node.Value.Brush;
+                block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + Node.Id);
+              }
+
+              if (block.Visibility != Visibility.Visible)
+              {
+                block.Visibility = Visibility.Visible;
               }
             }
             else
@@ -174,7 +178,7 @@ namespace EQLogParser
       return done;
     }
 
-    private void CloseClick(object sender, RoutedEventArgs e) => TriggerOverlayManager.Instance.ClosePreviewTextOverlay(TheOverlay.Id);
+    private void CloseClick(object sender, RoutedEventArgs e) => Close();
 
     private TextBlock CreateBlock()
     {
@@ -189,8 +193,8 @@ namespace EQLogParser
         Effect = new DropShadowEffect { ShadowDepth = 2, Direction = 330, Color = Colors.Black, Opacity = 0.7, BlurRadius = 0 }
       };
 
-      block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + TheOverlay.Id);
-      block.SetResourceReference(TextBlock.FontFamilyProperty, "TextOverlayFontFamily-" + TheOverlay.Id);
+      block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + Node.Id);
+      block.SetResourceReference(TextBlock.FontFamilyProperty, "TextOverlayFontFamily-" + Node.Id);
       return block;
     }
 
@@ -221,15 +225,15 @@ namespace EQLogParser
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
-      TheOverlay.Height = SavedHeight = (long)Height;
-      TheOverlay.Width = SavedWidth = (long)Width;
-      TheOverlay.Top = SavedTop = (long)Top;
-      TheOverlay.Left = SavedLeft = (long)Left;
+      Node.OverlayData.Height = SavedHeight = (long)Height;
+      Node.OverlayData.Width = SavedWidth = (long)Width;
+      Node.OverlayData.Top = SavedTop = (long)Top;
+      Node.OverlayData.Left = SavedLeft = (long)Left;
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
-      TriggerOverlayManager.Instance.Update(TheOverlay);
-      TriggerOverlayManager.Instance.UpdateOverlays();
+      TriggerStateManager.Instance.Update(Node);
+      TriggerManager.Instance.CloseOverlay(Node.Id);
     }
 
     private void CancelClick(object sender, RoutedEventArgs e)
@@ -238,6 +242,22 @@ namespace EQLogParser
       Width = SavedWidth;
       Top = SavedTop;
       Left = SavedLeft;
+      saveButton.IsEnabled = false;
+      cancelButton.IsEnabled = false;
+      closeButton.IsEnabled = true;
+    }
+
+    private void TriggerUpdateEvent(TriggerNode node)
+    {
+      if (Node != node)
+      {
+        Node = node;
+      }
+
+      Height = Node.OverlayData.Height;
+      Width = Node.OverlayData.Width;
+      Top = Node.OverlayData.Top;
+      Left = Node.OverlayData.Left;
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
@@ -259,6 +279,13 @@ namespace EQLogParser
           closeButton.IsEnabled = false;
         }
       }
+    }
+
+    private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
+    {
+      TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
+      PreviewWindows?.Remove(Node.Id);
+      PreviewWindows = null;
     }
 
     protected override void OnSourceInitialized(EventArgs e)

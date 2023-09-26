@@ -1,29 +1,26 @@
 ﻿using Microsoft.Win32;
-using Syncfusion.UI.Xaml.TreeView;
-using Syncfusion.UI.Xaml.TreeView.Engine;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net.Http;
 using System.Speech.Synthesis;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
-using System.Xml;
 
 namespace EQLogParser
 {
   internal static class TriggerUtil
   {
+    private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new ConcurrentDictionary<string, SolidColorBrush>();
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
-    private static ConcurrentDictionary<string, string> GinaCache = new ConcurrentDictionary<string, string>();
+    internal static double GetTimerBarHeight(double fontSize) => fontSize + 2;
+    internal static void ImportTriggers(TriggerNode parent) => Import(parent);
+    internal static void ImportOverlays(TriggerNode triggerNode) => Import(triggerNode, false);
 
     internal static string GetSelectedVoice()
     {
@@ -43,43 +40,46 @@ namespace EQLogParser
       return ConfigUtil.GetSetting("TriggersSelectedVoice", defaultVoice);
     }
 
+    internal static SpeechSynthesizer GetSpeechSynthesizer()
+    {
+      SpeechSynthesizer result = null;
+      try
+      {
+        result = new SpeechSynthesizer();
+        result.SetOutputToDefaultAudioDevice();
+      }
+      catch (Exception ex)
+      {
+        LOG.Error(ex);
+      }
+      return result;
+    }
+
     internal static int GetVoiceRate()
     {
       var rate = ConfigUtil.GetSettingAsInteger("TriggersVoiceRate");
       return rate == int.MaxValue ? 0 : rate;
     }
 
-    internal static void AddTreeNodes(List<TriggerNode> nodes, TriggerTreeViewNode treeNode)
+    internal static bool TestRegexProperty(bool useRegex, string pattern, PatternEditor editor)
     {
-      if (nodes != null)
-      {
-        foreach (var node in nodes)
-        {
-          var child = new TriggerTreeViewNode { Content = node.Name, SerializedData = node };
+      var isValid = useRegex ? TextFormatUtils.IsValidRegex(pattern) : true;
+      editor.SetForeground(isValid ? "ContentForeground" : "EQWarnForegroundBrush");
+      return isValid;
+    }
 
-          if (node.TriggerData != null)
-          {
-            child.IsTrigger = true;
-            child.IsChecked = node.IsEnabled;
-            treeNode.ChildNodes.Add(child);
-          }
-          else if (node.OverlayData != null)
-          {
-            child.IsOverlay = true;
-            child.IsChecked = node.IsEnabled;
-            treeNode.ChildNodes.Add(child);
-          }
-          else
-          {
-            child.IsChecked = node.IsEnabled;
-            child.IsExpanded = node.IsExpanded;
-            child.IsTrigger = false;
-            child.IsOverlay = false;
-            treeNode.ChildNodes.Add(child);
-            AddTreeNodes(node.Nodes, child);
-          }
+    internal static SolidColorBrush GetBrush(string color)
+    {
+      SolidColorBrush brush = null;
+      if (!string.IsNullOrEmpty(color))
+      {
+        if (!BrushCache.TryGetValue(color, out brush))
+        {
+          brush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(color) };
+          BrushCache[color] = brush;
         }
       }
+      return brush;
     }
 
     internal static void Copy(object to, object from)
@@ -117,13 +117,19 @@ namespace EQLogParser
 
         if (toTrigger is TriggerPropertyModel toModel)
         {
-          if (fromTrigger.FontColor is string fontColor && !string.IsNullOrEmpty(fontColor))
+          if (!string.IsNullOrEmpty(fromTrigger.ActiveColor))
           {
-            toModel.TriggerFontBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(fontColor) };
+            toModel.TriggerActiveBrush = GetBrush(fromTrigger.ActiveColor);
           }
 
-          toModel.SelectedTextOverlays = TriggerOverlayManager.Instance.GetTextOverlayItems(toModel.SelectedOverlays);
-          toModel.SelectedTimerOverlays = TriggerOverlayManager.Instance.GetTimerOverlayItems(toModel.SelectedOverlays);
+          if (!string.IsNullOrEmpty(fromTrigger.FontColor))
+          {
+            toModel.TriggerFontBrush = GetBrush(fromTrigger.FontColor);
+          }
+
+          var (textItems, timerItems) = GetOverlayItems(toModel.SelectedOverlays);
+          toModel.SelectedTextOverlays = textItems;
+          toModel.SelectedTimerOverlays = timerItems;
           toModel.ResetDurationTimeSpan = new TimeSpan(0, 0, (int)toModel.ResetDurationSeconds);
           toModel.SoundOrText = GetFromCodedSoundOrText(toModel.SoundToPlay, toModel.TextToSpeak, out _);
           toModel.EndEarlySoundOrText = GetFromCodedSoundOrText(toModel.EndEarlySoundToPlay, toModel.EndEarlyTextToSpeak, out _);
@@ -133,7 +139,7 @@ namespace EQLogParser
           if (fromTrigger.EnableTimer && fromTrigger.TimerType == 0)
           {
             toModel.TimerType = 1;
-            toModel.Original.TimerType = 1;
+            toModel.Node.TriggerData.TimerType = 1;
           }
 
           if (toModel.TimerType == 1)
@@ -143,6 +149,7 @@ namespace EQLogParser
         }
         else if (fromTrigger is TriggerPropertyModel fromModel)
         {
+          toTrigger.ActiveColor = (fromModel.TriggerActiveBrush == null) ? null : fromModel.TriggerActiveBrush.Color.ToString();
           toTrigger.FontColor = (fromModel.TriggerFontBrush == null) ? null : fromModel.TriggerFontBrush.Color.ToString();
           var selectedOverlays = fromModel.SelectedTextOverlays.Where(item => item.IsChecked).Select(item => item.Value).ToList();
           selectedOverlays.AddRange(fromModel.SelectedTimerOverlays.Where(item => item.IsChecked).Select(item => item.Value));
@@ -171,76 +178,44 @@ namespace EQLogParser
       }
       else if (to is Overlay toOverlay && from is Overlay fromOverlay)
       {
-        toOverlay.OverlayComments = fromOverlay.OverlayComments;
+        toOverlay.ActiveColor = fromOverlay.ActiveColor;
+        toOverlay.BackgroundColor = fromOverlay.BackgroundColor;
+        toOverlay.FadeDelay = fromOverlay.FadeDelay;
         toOverlay.FontColor = fromOverlay.FontColor;
         toOverlay.FontFamily = fromOverlay.FontFamily;
-        toOverlay.ActiveColor = fromOverlay.ActiveColor;
-        toOverlay.IdleColor = fromOverlay.IdleColor;
-        toOverlay.ResetColor = fromOverlay.ResetColor;
-        toOverlay.IdleTimeoutSeconds = fromOverlay.IdleTimeoutSeconds;
-        toOverlay.BackgroundColor = fromOverlay.BackgroundColor;
-        toOverlay.OverlayColor = fromOverlay.OverlayColor;
         toOverlay.FontSize = fromOverlay.FontSize;
+        toOverlay.Height = fromOverlay.Height;
+        toOverlay.IdleColor = fromOverlay.IdleColor;
+        toOverlay.IdleTimeoutSeconds = fromOverlay.IdleTimeoutSeconds;
+        toOverlay.IsTextOverlay = fromOverlay.IsTextOverlay;
+        toOverlay.IsTimerOverlay = fromOverlay.IsTimerOverlay;
+        toOverlay.Left = fromOverlay.Left;
+        toOverlay.OverlayColor = fromOverlay.OverlayColor;
+        toOverlay.OverlayComments = fromOverlay.OverlayComments;
+        toOverlay.ResetColor = fromOverlay.ResetColor;
         toOverlay.SortBy = fromOverlay.SortBy;
         toOverlay.TimerMode = fromOverlay.TimerMode;
-        toOverlay.Id = fromOverlay.Id;
-        toOverlay.UseStandardTime = fromOverlay.UseStandardTime;
-        toOverlay.Name = fromOverlay.Name;
-        toOverlay.FadeDelay = fromOverlay.FadeDelay;
-        toOverlay.IsTimerOverlay = fromOverlay.IsTimerOverlay;
-        toOverlay.IsTextOverlay = fromOverlay.IsTextOverlay;
-        toOverlay.Left = fromOverlay.Left;
         toOverlay.Top = fromOverlay.Top;
-        toOverlay.Height = fromOverlay.Height;
+        toOverlay.UseStandardTime = fromOverlay.UseStandardTime;
         toOverlay.Width = fromOverlay.Width;
 
         if (toOverlay is TimerOverlayPropertyModel toModel)
         {
           toModel.IdleTimeoutTimeSpan = new TimeSpan(0, 0, (int)toModel.IdleTimeoutSeconds);
+          Application.Current.Resources["OverlayText-" + toModel.Node.Id] = toModel.Node.Name;
 
-          Application.Current.Resources["OverlayText-" + toModel.Id] = toModel.Name;
+          AssignResource(toModel, fromOverlay, "OverlayColor", "OverlayBrushColor");
+          AssignResource(toModel, fromOverlay, "FontColor", "TimerBarFontColor");
+          AssignResource(toModel, fromOverlay, "ActiveColor", "TimerBarActiveColor");
+          AssignResource(toModel, fromOverlay, "IdleColor", "TimerBarIdleColor");
+          AssignResource(toModel, fromOverlay, "ResetColor", "TimerBarResetColor");
+          AssignResource(toModel, fromOverlay, "BackgroundColor", "TimerBarTrackColor");
 
-          if (fromOverlay.OverlayColor is string overlayColor && !string.IsNullOrEmpty(overlayColor))
+          if (!string.IsNullOrEmpty(fromOverlay.FontSize) && fromOverlay.FontSize.Split("pt") is string[] split && split.Length == 2
+             && double.TryParse(split[0], out var newFontSize))
           {
-            toModel.OverlayBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(overlayColor) };
-            Application.Current.Resources["OverlayBrushColor-" + toModel.Id] = toModel.OverlayBrush;
-          }
-
-          if (fromOverlay.FontColor is string fontColor && !string.IsNullOrEmpty(fontColor))
-          {
-            toModel.FontBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(fontColor) };
-            Application.Current.Resources["TimerBarFontColor-" + toModel.Id] = toModel.FontBrush;
-          }
-
-          if (fromOverlay.ActiveColor is string active && !string.IsNullOrEmpty(active))
-          {
-            toModel.ActiveBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(active) };
-            Application.Current.Resources["TimerBarActiveColor-" + toModel.Id] = toModel.ActiveBrush;
-          }
-
-          if (fromOverlay.IdleColor is string idle && !string.IsNullOrEmpty(idle))
-          {
-            toModel.IdleBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(idle) };
-            Application.Current.Resources["TimerBarIdleColor-" + toModel.Id] = toModel.IdleBrush;
-          }
-
-          if (fromOverlay.ResetColor is string reset && !string.IsNullOrEmpty(reset))
-          {
-            toModel.ResetBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(reset) };
-            Application.Current.Resources["TimerBarResetColor-" + toModel.Id] = toModel.ResetBrush;
-          }
-
-          if (fromOverlay.BackgroundColor is string background && !string.IsNullOrEmpty(background))
-          {
-            toModel.BackgroundBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(background) };
-            Application.Current.Resources["TimerBarTrackColor-" + toModel.Id] = toModel.BackgroundBrush;
-          }
-
-          if (fromOverlay.FontSize is string fontSize && !string.IsNullOrEmpty(fontSize) && fontSize.Split("pt") is string[] split && split.Length == 2
-           && double.TryParse(split[0], out var newFontSize))
-          {
-            Application.Current.Resources["TimerBarFontSize-" + toModel.Id] = newFontSize;
-            Application.Current.Resources["TimerBarHeight-" + toModel.Id] = GetTimerBarHeight(newFontSize);
+            Application.Current.Resources["TimerBarFontSize-" + toModel.Node.Id] = newFontSize;
+            Application.Current.Resources["TimerBarHeight-" + toModel.Node.Id] = GetTimerBarHeight(newFontSize);
           }
         }
         else if (fromOverlay is TimerOverlayPropertyModel fromModel)
@@ -255,30 +230,21 @@ namespace EQLogParser
         }
         else if (toOverlay is TextOverlayPropertyModel toTextModel)
         {
-          Application.Current.Resources["OverlayText-" + toTextModel.Id] = toTextModel.Name;
+          Application.Current.Resources["OverlayText-" + toTextModel.Node.Id] = toTextModel.Node.Name;
 
-          if (fromOverlay.OverlayColor is string overlayColor && !string.IsNullOrEmpty(overlayColor))
+          AssignResource(toTextModel, fromOverlay, "OverlayColor", "OverlayBrushColor");
+          AssignResource(toTextModel, fromOverlay, "FontColor", "TextOverlayFontColor");
+
+          if (!string.IsNullOrEmpty(fromOverlay.FontFamily))
           {
-            toTextModel.OverlayBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(overlayColor) };
-            Application.Current.Resources["OverlayBrushColor-" + toTextModel.Id] = toTextModel.OverlayBrush;
+            toTextModel.FontFamily = fromOverlay.FontFamily;
+            Application.Current.Resources["TextOverlayFontFamily-" + toTextModel.Node.Id] = new FontFamily(toTextModel.FontFamily);
           }
 
-          if (fromOverlay.FontColor is string fontColor && !string.IsNullOrEmpty(fontColor))
+          if (!string.IsNullOrEmpty(fromOverlay.FontSize) && fromOverlay.FontSize.Split("pt") is string[] split && split.Length == 2
+              && double.TryParse(split[0], out var newFontSize))
           {
-            toTextModel.FontBrush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(fontColor) };
-            Application.Current.Resources["TextOverlayFontColor-" + toTextModel.Id] = toTextModel.FontBrush;
-          }
-
-          if (fromOverlay.FontFamily is string fontFamily && !string.IsNullOrEmpty(fontFamily))
-          {
-            toTextModel.FontFamily = fontFamily;
-            Application.Current.Resources["TextOverlayFontFamily-" + toTextModel.Id] = new FontFamily(toTextModel.FontFamily);
-          }
-
-          if (fromOverlay.FontSize is string fontSize && !string.IsNullOrEmpty(fontSize) && fontSize.Split("pt") is string[] split && split.Length == 2
-           && double.TryParse(split[0], out var newFontSize))
-          {
-            Application.Current.Resources["TextOverlayFontSize-" + toTextModel.Id] = newFontSize;
+            Application.Current.Resources["TextOverlayFontSize-" + toTextModel.Node.Id] = newFontSize;
           }
         }
         else if (fromOverlay is TextOverlayPropertyModel fromTextModel)
@@ -287,6 +253,84 @@ namespace EQLogParser
           toOverlay.OverlayColor = fromTextModel.OverlayBrush.Color.ToString();
         }
       }
+    }
+
+    internal static void LoadOverlayStyles()
+    {
+      foreach (var od in TriggerStateManager.Instance.GetAllOverlays())
+      {
+        var node = new TriggerNode { Name = od.Name, Id = od.Id, OverlayData = od.OverlayData };
+        Application.Current.Resources["OverlayText-" + od.Id] = od.Name;
+        if (od.OverlayData?.IsTextOverlay == true)
+        {
+          // workaround to load styles
+          TriggerUtil.Copy(new TextOverlayPropertyModel { Node = node }, od.OverlayData);
+        }
+        else if (od.OverlayData?.IsTextOverlay == false)
+        {
+          // workaround to load styles
+          TriggerUtil.Copy(new TimerOverlayPropertyModel { Node = node }, od.OverlayData);
+        }
+      }
+    }
+
+    internal static void CloseOverlay(Dictionary<string, OverlayWindowData> windows, string id)
+    {
+      if (id != null)
+      {
+        lock (windows)
+        {
+          windows.Remove(id, out var windowData);
+          windowData?.TheWindow.Close();
+        }
+      }
+    }
+
+    internal static void CloseOverlays(Dictionary<string, OverlayWindowData> windows)
+    {
+      lock (windows)
+      {
+        foreach (var windowData in windows.Values)
+        {
+          windowData?.TheWindow?.Close();
+        }
+
+        windows.Clear();
+      }
+    }
+
+    private static void AssignResource(dynamic toModel, object fromOverlay, string colorPropertyName, string resourceKeyPrefix)
+    {
+      var colorPropertyValue = (string)fromOverlay.GetType().GetProperty(colorPropertyName)?.GetValue(fromOverlay);
+      if (!string.IsNullOrEmpty(colorPropertyValue))
+      {
+        var brush = GetBrush(colorPropertyValue);
+        toModel.GetType().GetProperty($"{colorPropertyName}Brush")?.SetValue(toModel, brush);
+        Application.Current.Resources[$"{resourceKeyPrefix}-{toModel.Node.Id}"] = brush;
+      }
+    }
+
+    private static (ObservableCollection<ComboBoxItemDetails>, ObservableCollection<ComboBoxItemDetails>)
+      GetOverlayItems(List<string> overlayIds)
+    {
+      var text = new ObservableCollection<ComboBoxItemDetails>();
+      var timer = new ObservableCollection<ComboBoxItemDetails>();
+
+      foreach (var data in TriggerStateManager.Instance.GetAllOverlays())
+      {
+        var isChecked = overlayIds == null ? false : overlayIds.Contains(data.Id);
+        var details = new ComboBoxItemDetails { IsChecked = isChecked, Text = data.Name, Value = data.Id };
+        if (data.OverlayData.IsTextOverlay)
+        {
+          text.Add(details);
+        }
+        else
+        {
+          timer.Add(details);
+        }
+      }
+
+      return (text, timer);
     }
 
     internal static string GetFromCodedSoundOrText(string soundToPlay, string text, out bool isSound)
@@ -405,213 +449,87 @@ namespace EQLogParser
       return true;
     }
 
-    internal static double GetTimerBarHeight(double fontSize) => fontSize + 2;
-
-    internal static void DisableNodes(TriggerNode node)
+    internal static FileSystemWatcher CreateSoundsWatcher(ObservableCollection<string> fileList)
     {
-      node.IsEnabled = false;
-      node.IsExpanded = false;
-      if (node.TriggerData == null && node.OverlayData == null)
+      FileSystemWatcher watcher = null;
+      try
       {
-        if (node.Nodes != null)
-        {
-          foreach (var child in node.Nodes)
-          {
-            DisableNodes(child);
-          }
-        }
+        LoadSounds(fileList);
+        watcher = new FileSystemWatcher(@"data/sounds");
+        watcher.Created += (sender, e) => OnWatcherUpdated(sender, e, fileList);
+        watcher.Deleted += (sender, e) => OnWatcherUpdated(sender, e, fileList);
+        watcher.Changed += (sender, e) => OnWatcherUpdated(sender, e, fileList);
+        watcher.Filter = "*.wav";
+        watcher.EnableRaisingEvents = true;
       }
-    }
-
-    internal static TriggerTreeViewNode GetTreeView(TriggerNode nodes, string title)
-    {
-      var result = new TriggerTreeViewNode
+      catch (Exception e)
       {
-        Content = title,
-        IsChecked = nodes.IsEnabled,
-        IsTrigger = false,
-        IsOverlay = false,
-        IsExpanded = nodes.IsExpanded,
-        SerializedData = nodes
-      };
-
-      lock (nodes)
-      {
-        AddTreeNodes(nodes.Nodes, result);
+        LOG.Debug(e);
       }
 
-      return result;
+      void OnWatcherUpdated(object sender, FileSystemEventArgs _, ObservableCollection<string> fileList)
+      {
+        LoadSounds(fileList);
+      }
+      return watcher;
     }
 
-    internal static void MergeNodes(List<TriggerNode> newNodes, TriggerNode parent, bool doSort)
+    internal static void LoadSounds(ObservableCollection<string> fileList)
     {
-      if (newNodes != null)
-      {
-        if (parent.Nodes == null)
-        {
-          parent.Nodes = newNodes;
-        }
-        else
-        {
-          var needsSort = new List<TriggerNode>();
-          foreach (var newNode in newNodes)
-          {
-            var found = parent.Nodes.Find(node => node.Name == newNode.Name);
+      var current = Directory.GetFiles(@"data/sounds", "*.wav").Select(file => Path.GetFileName(file)).OrderBy(file => file).ToList();
 
-            if (found != null)
+      Application.Current.Dispatcher.InvokeAsync(() =>
+      {
+        try
+        {
+          for (var i = 0; i < current.Count; i++)
+          {
+            if (i < fileList.Count)
             {
-              if (newNode.TriggerData != null && found.TriggerData != null)
+              if (fileList[i] != current[i])
               {
-                Copy(found.TriggerData, newNode.TriggerData);
-              }
-              else if (newNode.OverlayData != null && found.OverlayData != null)
-              {
-                Copy(found.OverlayData, newNode.OverlayData);
-              }
-              else
-              {
-                MergeNodes(newNode.Nodes, found, doSort);
+                fileList[i] = current[i];
               }
             }
             else
             {
-              parent.Nodes.Add(newNode);
-              needsSort.Add(parent);
+              fileList.Add(current[i]);
             }
           }
 
-          if (doSort)
+          for (var j = fileList.Count - 1; j >= current.Count; j--)
           {
-            needsSort.ForEach(parent => parent.Nodes = parent.Nodes.OrderBy(node => node.Name).ToList());
+            fileList.RemoveAt(j);
           }
         }
-      }
-    }
-
-    internal static TriggerTreeViewNode FindAndExpandNode(SfTreeView treeView, TriggerTreeViewNode node, object file)
-    {
-      if (node.SerializedData?.TriggerData == file || node.SerializedData?.OverlayData == file)
-      {
-        return node;
-      }
-
-      foreach (var child in node.ChildNodes.Cast<TriggerTreeViewNode>())
-      {
-        if (FindAndExpandNode(treeView, child, file) is TriggerTreeViewNode found && found != null)
+        catch (Exception e)
         {
-          treeView.ExpandNode(node);
-          return found;
+          LOG.Debug(e);
         }
-      }
-
-      return null;
+      });
     }
 
-    internal static void Import(TreeViewNodeCollection collection, TriggerTreeViewNode node)
+    internal static void Export(IEnumerable<TriggerTreeViewNode> viewNodes)
     {
-      if (node != null)
+      if (viewNodes != null)
       {
         try
         {
-          var defExt = collection[1] == node ? ".ogf.gz" : ".tgf.gz";
-          var filter = collection[1] == node ? "All Supported Files|*.ogf.gz" : "All Supported Files|*.tgf.gz;*.gtp";
-
-          // WPF doesn't have its own file chooser so use Win32 Version
-          var dialog = new OpenFileDialog
+          var exportList = new List<ExportTriggerNode>();
+          foreach (var viewNode in viewNodes)
           {
-            // filter to txt files
-            DefaultExt = defExt,
-            Filter = filter
-          };
-
-          // show dialog and read result
-          if (dialog.ShowDialog().Value)
-          {
-            // limit to 100 megs just incase
-            var fileInfo = new FileInfo(dialog.FileName);
-            if (fileInfo.Exists && fileInfo.Length < 100000000)
-            {
-              if (dialog.FileName.EndsWith("tgf.gz") || dialog.FileName.EndsWith("ogf.gz"))
-              {
-                var decompressionStream = new GZipStream(fileInfo.OpenRead(), CompressionMode.Decompress);
-                var reader = new StreamReader(decompressionStream);
-                var json = reader?.ReadToEnd();
-                reader?.Close();
-                var data = JsonSerializer.Deserialize<List<TriggerNode>>(json, new JsonSerializerOptions { IncludeFields = true });
-
-                if (collection[1] == node)
-                {
-                  TriggerOverlayManager.Instance.MergeOverlays(data, node.SerializedData);
-                }
-                else
-                {
-                  TriggerManager.Instance.MergeTriggers(data, node.SerializedData);
-                }
-              }
-              else if (dialog.FileName.EndsWith(".gtp"))
-              {
-                var data = new byte[fileInfo.Length];
-                fileInfo.OpenRead().Read(data);
-                ImportFromGina(data, node.SerializedData);
-              }
-            }
-          }
-        }
-        catch (Exception ex)
-        {
-          new MessageWindow("Problem Importing Triggers. Check Error Log for details.", EQLogParser.Resource.IMPORT_ERROR).ShowDialog();
-          LOG.Error("Import Failure", ex);
-        }
-      }
-    }
-
-    internal static void Export(TreeViewNodeCollection collection, List<TriggerTreeViewNode> nodes)
-    {
-      if (nodes != null)
-      {
-        try
-        {
-          var isTrigger = true;
-          var exportList = new List<TriggerNode>();
-          foreach (var selected in nodes)
-          {
-            // if the root is in there just use it
-            if (selected == collection[0] || selected == collection[1])
-            {
-              isTrigger = selected == collection[0];
-              exportList = new List<TriggerNode>() { selected.SerializedData };
-              break;
-            }
-
-            var start = selected.ParentNode as TriggerTreeViewNode;
-            var child = selected.SerializedData;
-            TriggerNode newNode = null;
-            while (start != null)
-            {
-              newNode = new TriggerNode
-              {
-                Name = start.SerializedData.Name,
-                IsEnabled = start.SerializedData.IsEnabled,
-                IsExpanded = start.SerializedData.IsExpanded,
-                Nodes = new List<TriggerNode>() { child }
-              };
-
-              isTrigger = !start.IsOverlay && start.ParentNode != collection[1];
-              child = newNode;
-              start = start.ParentNode as TriggerTreeViewNode;
-            }
-
-            if (newNode != null)
-            {
-              exportList.Add(newNode);
-            }
+            var node = Create(viewNode);
+            var top = BuildUpTree(viewNode.ParentNode as TriggerTreeViewNode, node);
+            BuildDownTree(viewNode, node);
+            exportList.Add(top);
           }
 
           if (exportList.Count > 0)
           {
+            var isTriggers = exportList[0].Name == TriggerStateManager.TRIGGERS;
             var result = JsonSerializer.Serialize(exportList);
             var saveFileDialog = new SaveFileDialog();
-            var filter = isTrigger ? "Triggers File (*.tgf.gz)|*.tgf.gz" : "Overlays File (*.ogf.gz)|*.ogf.gz";
+            var filter = isTriggers ? "Triggers File (*.tgf.gz)|*.tgf.gz" : "Overlays File (*.ogf.gz)|*.ogf.gz";
             saveFileDialog.Filter = filter;
             if (saveFileDialog.ShowDialog().Value)
             {
@@ -632,258 +550,103 @@ namespace EQLogParser
       }
     }
 
-    internal static void CheckGina(LineData lineData)
+    private static void Import(TriggerNode parent, bool triggers = true)
     {
-      var action = lineData.Action;
-
-      // if GINA data is recent then try to handle it
-      if (action.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is int index && index > -1 &&
-        (DateTime.Now - DateUtil.FromDouble(lineData.BeginTime)).TotalSeconds <= 20 && action.IndexOf("}") is int end && end > (index + 40))
+      try
       {
-        string player = null;
-        var split = action.Split(' ');
-        if (split.Length > 0)
+        var defExt = triggers ? ".tgf.gz" : ".ogf.gz";
+        var filter = triggers ? "All Supported Files|*.tgf.gz;*.gtp" : "All Supported Files|*.ogf.gz";
+
+        // WPF doesn't have its own file chooser so use Win32 Version
+        var dialog = new OpenFileDialog
         {
-          if (split[0] == ConfigUtil.PlayerName)
+          // filter to txt files
+          DefaultExt = defExt,
+          Filter = filter
+        };
+
+        if (dialog.ShowDialog().Value)
+        {
+          // limit to 100 megs just incase
+          var fileInfo = new FileInfo(dialog.FileName);
+          if (fileInfo.Exists && fileInfo.Length < 100000000)
           {
-            return;
-          }
-
-          if (PlayerManager.IsPossiblePlayerName(split[0]))
-          {
-            player = split[0];
-          }
-        }
-
-        string ginaKey = null;
-        var start = index + 6;
-        var finish = end - index - 6;
-        if (start < finish)
-        {
-          ginaKey = action.Substring(index + 6, end - index - 6);
-        }
-
-        // ignore if we're still processing plus avoid spam
-        if (string.IsNullOrEmpty(ginaKey) || GinaCache.ContainsKey(ginaKey) || GinaCache.Count > 5)
-        {
-          return;
-        }
-
-        GinaCache[ginaKey] = player;
-
-        if (GinaCache.Count == 1)
-        {
-          RunGinaTask(ginaKey, player);
-        }
-      }
-    }
-
-    internal static void ImportFromGina(byte[] data, string player, string ginaKey)
-    {
-      var dispatcher = Application.Current.Dispatcher;
-
-      using (var zip = new ZipArchive(new MemoryStream(data), ZipArchiveMode.Read))
-      {
-        var entry = zip.Entries.FirstOrDefault();
-        if (entry != null)
-        {
-          using (var sr = new StreamReader(entry.Open()))
-          {
-            var triggerXml = sr.ReadToEnd();
-            var audioTriggerData = ConvertGinaXmlToJson(triggerXml);
-
-            dispatcher.InvokeAsync(() =>
+            if (dialog.FileName.EndsWith("tgf.gz") || dialog.FileName.EndsWith("ogf.gz"))
             {
-              if (audioTriggerData == null)
+              var decompressionStream = new GZipStream(fileInfo.OpenRead(), CompressionMode.Decompress);
+              var reader = new StreamReader(decompressionStream);
+              var json = reader?.ReadToEnd();
+              reader?.Close();
+              var data = JsonSerializer.Deserialize<List<ExportTriggerNode>>(json, new JsonSerializerOptions { IncludeFields = true });
+              if (triggers)
               {
-                var badMessage = "GINA Triggers received";
-                if (!string.IsNullOrEmpty(player))
-                {
-                  badMessage += " from " + player;
-                }
-
-                badMessage += " but no supported Triggers found.";
-                new MessageWindow(badMessage, EQLogParser.Resource.RECEIVE_GINA).ShowDialog();
+                TriggerStateManager.Instance.ImportTriggers(parent, data);
               }
               else
               {
-                var message = "Merge GINA Triggers or Import to New Folder?\r\n";
-                if (!string.IsNullOrEmpty(player))
-                {
-                  message = "Merge GINA Triggers from " + player + " or Import to New Folder?\r\n";
-                }
-
-                var msgDialog = new MessageWindow(message, EQLogParser.Resource.RECEIVE_GINA, MessageWindow.IconType.Question, "New Folder", "Merge");
-                msgDialog.ShowDialog();
-
-                if (msgDialog.IsYes2Clicked)
-                {
-                  TriggerManager.Instance.MergeTriggers(audioTriggerData, true);
-                }
-                else if (msgDialog.IsYes1Clicked)
-                {
-                  var folderName = (player == null) ? "New Folder" : "From " + player;
-                  TriggerManager.Instance.MergeTriggers(audioTriggerData, folderName);
-                }
-              }
-
-              if (ginaKey != null)
-              {
-                NextGinaTask(ginaKey);
-              }
-            });
-          }
-        }
-      }
-    }
-
-    internal static void ImportFromGina(byte[] data, TriggerNode parent)
-    {
-      var dispatcher = Application.Current.Dispatcher;
-
-      using (var zip = new ZipArchive(new MemoryStream(data), ZipArchiveMode.Read))
-      {
-        var entry = zip.Entries.First();
-        using (var sr = new StreamReader(entry.Open()))
-        {
-          var triggerXml = sr.ReadToEnd();
-          var audioTriggerData = ConvertGinaXmlToJson(triggerXml);
-
-          dispatcher.InvokeAsync(() =>
-          {
-            if (audioTriggerData != null)
-            {
-              TriggerManager.Instance.MergeTriggers(audioTriggerData, true, parent);
-            }
-          });
-        }
-      }
-    }
-
-    private static void NextGinaTask(string ginaKey)
-    {
-      GinaCache.TryRemove(ginaKey, out var _);
-
-      if (GinaCache.Count > 0)
-      {
-        var nextKey = GinaCache.Keys.First();
-        RunGinaTask(nextKey, GinaCache[nextKey]);
-      }
-    }
-
-    private static void RunGinaTask(string ginaKey, string player)
-    {
-      var dispatcher = Application.Current.Dispatcher;
-
-      Task.Delay(500).ContinueWith(task =>
-      {
-        var client = new HttpClient();
-
-        try
-        {
-          var postData = "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"><s:Body><DownloadPackageChunk xmlns=\"http://tempuri.org/\"><sessionId>" +
-            ginaKey + "</sessionId><chunkNumber>0</chunkNumber></DownloadPackageChunk></s:Body></s:Envelope>";
-
-          var content = new StringContent(postData, UnicodeEncoding.UTF8, "text/xml");
-          content.Headers.Add("Content-Length", postData.Length.ToString());
-
-          var message = new HttpRequestMessage(HttpMethod.Post, @"http://eq.gimasoft.com/GINAServices/Package.svc");
-          message.Content = content;
-          message.Headers.Add("SOAPAction", "http://tempuri.org/IPackageService/DownloadPackageChunk");
-          message.Headers.Add("Accept-Encoding", "gzip, deflate");
-
-          var response = client.Send(message);
-          if (response.IsSuccessStatusCode)
-          {
-            using (var data = response.Content.ReadAsStreamAsync())
-            {
-              data.Wait();
-
-              var buffer = new byte[data.Result.Length];
-              var read = data.Result.ReadAsync(buffer, 0, buffer.Length);
-              read.Wait();
-
-              using (var bufferStream = new MemoryStream(buffer))
-              {
-                using (var gzip = new GZipStream(bufferStream, CompressionMode.Decompress))
-                {
-                  using (var memory = new MemoryStream())
-                  {
-                    gzip.CopyTo(memory);
-                    var xml = Encoding.UTF8.GetString(memory.ToArray());
-
-                    if (!string.IsNullOrEmpty(xml) && xml.IndexOf("<a:ChunkData>") is int start && start > -1
-                      && xml.IndexOf("</a:ChunkData>") is int end && end > start)
-                    {
-                      var encoded = xml.Substring(start + 13, end - start - 13);
-                      var decoded = Convert.FromBase64String(encoded);
-                      ImportFromGina(decoded, player, ginaKey);
-                    }
-                    else
-                    {
-                      // no chunk data in response. too old?
-                      NextGinaTask(ginaKey);
-                    }
-                  }
-                }
+                TriggerStateManager.Instance.ImportOverlays(parent, data);
               }
             }
-          }
-          else
-          {
-            LOG.Error("Error Downloading GINA Triggers. Received Status Code = " + response.StatusCode.ToString());
-            NextGinaTask(ginaKey);
-          }
-        }
-        catch (Exception ex)
-        {
-          if (ex.Message != null && ex.Message.Contains("An attempt was made to access a socket in a way forbidden by its access permissions"))
-          {
-            dispatcher.InvokeAsync(() =>
+            else if (dialog.FileName.EndsWith(".gtp"))
             {
-              new MessageWindow("Error Downloading GINA Triggers. Blocked by Firewall?", EQLogParser.Resource.RECEIVE_GINA).ShowDialog();
-              NextGinaTask(ginaKey);
-            });
+              var data = new byte[fileInfo.Length];
+              fileInfo.OpenRead().Read(data);
+              var imported = GinaUtil.CovertToTriggerNodes(data);
+              TriggerStateManager.Instance.ImportTriggers(parent, imported);
+            }
           }
-          else
-          {
-            NextGinaTask(ginaKey);
-          }
-
-          LOG.Error("Error Downloading GINA Triggers", ex);
-        }
-        finally
-        {
-          client.Dispose();
-        }
-      });
-    }
-
-    private static TriggerNode ConvertGinaXmlToJson(string xml)
-    {
-      var result = new TriggerNode();
-
-      try
-      {
-        var doc = new XmlDocument();
-        doc.LoadXml(xml);
-
-        result.Nodes = new List<TriggerNode>();
-        var nodeList = doc.DocumentElement.SelectSingleNode("/SharedData");
-        var added = new List<Trigger>();
-        TextFormatUtils.ParseGinaTriggerGroups(nodeList.ChildNodes, result.Nodes, added);
-
-        if (added.Count == 0)
-        {
-          result = null;
         }
       }
       catch (Exception ex)
       {
-        LOG.Error("Error Parsing GINA Data", ex);
+        new MessageWindow("Problem Importing Triggers. Check Error Log for details.", EQLogParser.Resource.IMPORT_ERROR).ShowDialog();
+        LOG.Error("Import Triggers Failure", ex);
+      }
+    }
+
+    private static ExportTriggerNode Create(TriggerTreeViewNode viewNode)
+    {
+      return new ExportTriggerNode
+      {
+        Name = viewNode.SerializedData.Name,
+        TriggerData = viewNode.SerializedData.TriggerData,
+        OverlayData = viewNode.SerializedData.OverlayData,
+      };
+    }
+
+    private static ExportTriggerNode BuildUpTree(TriggerTreeViewNode viewNode, ExportTriggerNode child = null)
+    {
+      if (viewNode != null)
+      {
+        var node = Create(viewNode);
+
+        if (child != null)
+        {
+          node.Nodes.Add(child);
+        }
+
+        if (viewNode.ParentNode is TriggerTreeViewNode parent)
+        {
+          return BuildUpTree(parent, node);
+        }
+
+        return node;
       }
 
-      return result;
+      return child;
+    }
+
+    private static void BuildDownTree(TriggerTreeViewNode viewNode, ExportTriggerNode node)
+    {
+      if (viewNode.HasChildNodes)
+      {
+        foreach (var childView in viewNode.ChildNodes.Cast<TriggerTreeViewNode>())
+        {
+          var child = Create(childView);
+          node.Nodes.Add(child);
+          BuildDownTree(childView, child);
+        }
+      }
     }
   }
 }

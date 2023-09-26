@@ -70,20 +70,20 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Assign Overlay.
+        /// </summary>
+        internal static string ASSIGN_OVERLAY {
+            get {
+                return ResourceManager.GetString("ASSIGN_OVERLAY", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Assign Priority.
         /// </summary>
         internal static string ASSIGN_PRIORITY {
             get {
                 return ResourceManager.GetString("ASSIGN_PRIORITY", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Assign Timer Overlay.
-        /// </summary>
-        internal static string ASSIGN_TIMER_OVERLAY {
-            get {
-                return ResourceManager.GetString("ASSIGN_TIMER_OVERLAY", resourceCulture);
             }
         }
         
@@ -462,6 +462,15 @@ namespace EQLogParser {
         internal static string SPELL_TYPES_SELECTED {
             get {
                 return ResourceManager.GetString("SPELL_TYPES_SELECTED", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unassign Overlay.
+        /// </summary>
+        internal static string UNASSIGN_OVERLAY {
+            get {
+                return ResourceManager.GetString("UNASSIGN_OVERLAY", resourceCulture);
             }
         }
         

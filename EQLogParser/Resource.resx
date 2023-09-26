@@ -120,11 +120,11 @@
   <data name="ANY_CLASS" xml:space="preserve">
     <value>All Classes</value>
   </data>
+  <data name="ASSIGN_OVERLAY" xml:space="preserve">
+    <value>Assign Overlay</value>
+  </data>
   <data name="ASSIGN_PRIORITY" xml:space="preserve">
     <value>Assign Priority</value>
-  </data>
-  <data name="ASSIGN_TIMER_OVERLAY" xml:space="preserve">
-    <value>Assign Timer Overlay</value>
   </data>
   <data name="BER" xml:space="preserve">
     <value>Berserker</value>
@@ -251,6 +251,9 @@
   </data>
   <data name="SPELL_TYPES_SELECTED" xml:space="preserve">
     <value>Spell Types</value>
+  </data>
+  <data name="UNASSIGN_OVERLAY" xml:space="preserve">
+    <value>Unassign Overlay</value>
   </data>
   <data name="UNSAVED" xml:space="preserve">
     <value>Unsaved Changes</value>

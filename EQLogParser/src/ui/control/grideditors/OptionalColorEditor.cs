@@ -53,7 +53,7 @@ namespace EQLogParser
 
       TheTextBox.SetValue(Grid.ColumnProperty, 0);
 
-      TheCheckBox = new CheckBox { Content = "Use Custom Color" };
+      TheCheckBox = new CheckBox { Content = "Use Custom" };
       TheCheckBox.SetValue(Grid.ColumnProperty, 1);
       TheCheckBox.Checked += TheCheckBoxChecked;
       TheCheckBox.Unchecked += TheCheckBoxChecked;

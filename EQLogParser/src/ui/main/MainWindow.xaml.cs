@@ -58,7 +58,6 @@ namespace EQLogParser
     private static ActionProcessor CastProcessor = null;
     private static ActionProcessor DamageProcessor = null;
     private static ActionProcessor HealingProcessor = null;
-    private static ActionProcessor MiscProcessor = null;
 
     // progress window
     private static DateTime StartLoadTime;
@@ -77,10 +76,6 @@ namespace EQLogParser
     {
       try
       {
-        var dotNetVersion = Environment.Version;
-        LOG.Info("Using DotNet " + dotNetVersion); var domain = AppDomain.CurrentDomain;
-        domain.UnhandledException += DomainUnhandledException;
-
         // DPI and sizing
         var dpi = UIElementUtil.GetDpi();
         var resolution = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
@@ -100,8 +95,8 @@ namespace EQLogParser
         Top = top;
         Left = left;
 
-        LOG.Info("Window Pos (" + Top + ", " + Left + ")");
-        LOG.Info("Window Size (" + Width + ", " + Height + ")");
+        LOG.Info($"Window Pos ({Top}, {Left})");
+        LOG.Info($"Window Size ({Width}, {Height})");
 
         switch (ConfigUtil.GetSetting("WindowState", "Normal"))
         {
@@ -311,12 +306,6 @@ namespace EQLogParser
           OpenDamageOverlayIfEnabled(false, false);
         }
       });
-    }
-
-    private void DomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
-    {
-      var exception = e.ExceptionObject as Exception;
-      LOG.Error(exception.Message, exception);
     }
 
     internal void CopyToEQClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEQClick(type);
@@ -946,18 +935,18 @@ namespace EQLogParser
 
           if (filePercent < 100)
           {
-            statusText.Text = string.Format("Reading Log.. {0}% in {1} seconds", filePercent, seconds);
+            statusText.Text = $"Reading Log.. {filePercent}% in {seconds} seconds";
           }
           else
           {
             var procPercent = Convert.ToInt32(Math.Min(CastProcessor.GetPercentComplete(), DamageProcessor.GetPercentComplete()));
-            statusText.Text = string.Format("Processing... {0}% in {1} seconds", procPercent, seconds);
+            statusText.Text = $"Processing... {procPercent}% in {seconds} seconds";
           }
 
           statusText.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;
 
           if (filePercent >= 100 && CastProcessor.GetPercentComplete() >= 100 && DamageProcessor.GetPercentComplete() >= 100
-            && HealingProcessor.GetPercentComplete() >= 100 && MiscProcessor.GetPercentComplete() >= 100 && EQLogReader.FileLoadComplete)
+            && HealingProcessor.GetPercentComplete() >= 100 && EQLogReader.FileLoadComplete)
           {
             if (filePercent >= 100)
             {
@@ -966,7 +955,7 @@ namespace EQLogParser
             }
 
             ConfigUtil.SetSetting("LastOpenedFile", CurrentLogFile);
-            LOG.Info("Finished Loading Log File in " + seconds.ToString() + " seconds.");
+            LOG.Info($"Finished Loading Log File in {seconds} seconds.");
             Task.Delay(1500).ContinueWith(task => Dispatcher.InvokeAsync(() =>
             {
               EventsLogLoadingComplete?.Invoke(this, true);
@@ -1040,7 +1029,6 @@ namespace EQLogParser
           CastProcessor = new ActionProcessor(CastLineParser.Process);
           DamageProcessor = new ActionProcessor(DamageLineParser.Process);
           HealingProcessor = new ActionProcessor(HealingLineParser.Process);
-          MiscProcessor = new ActionProcessor(MiscLineParser.Process);
 
           fileText.Text = "-- " + theFile;
           StartLoadTime = DateTime.Now;
@@ -1162,8 +1150,8 @@ namespace EQLogParser
           {
             CastProcessor.Add(lineData);
             HealingProcessor.Add(lineData);
-            MiscProcessor.Add(lineData);
             DamageProcessor.Add(lineData);
+            MiscLineParser.Process(lineData);
           }
         }
       }
@@ -1221,7 +1209,6 @@ namespace EQLogParser
       CastProcessor?.Stop();
       DamageProcessor?.Stop();
       HealingProcessor?.Stop();
-      MiscProcessor?.Stop();
     }
 
     private void WindowIconLoaded(object sender, RoutedEventArgs e)
@@ -1264,7 +1251,7 @@ namespace EQLogParser
 
     private void RemovePetMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is System.Windows.Controls.Border border && border.DataContext is ExpandoObject sortable)
+      if (sender is Border border && border.DataContext is ExpandoObject sortable)
       {
         PlayerManager.Instance.RemoveVerifiedPet(((dynamic)sortable)?.Name);
       }
@@ -1272,7 +1259,7 @@ namespace EQLogParser
 
     private void RemovePlayerMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is System.Windows.Controls.Border border && border.DataContext is ExpandoObject sortable)
+      if (sender is Border border && border.DataContext is ExpandoObject sortable)
       {
         PlayerManager.Instance.RemoveVerifiedPlayer(((dynamic)sortable)?.Name);
       }
@@ -1333,6 +1320,7 @@ namespace EQLogParser
 
       StopProcessing();
       PlayerChatManager?.Dispose();
+      TriggerStateManager.Instance.Stop();
       TriggerManager.Instance.Stop(false);
       ConfigUtil.Save();
       PlayerManager.Instance?.Save();
@@ -1342,8 +1330,7 @@ namespace EQLogParser
     // This is where closing summary tables and line charts will get disposed
     private void CloseTab(ContentControl window)
     {
-      var content = window.Content;
-      if (content is EQLogViewer)
+      if (window.Content is EQLogViewer)
       {
         var title = DockingManager.GetHeader(window) as string;
         var last = title.LastIndexOf(" ");

@@ -10,6 +10,7 @@ namespace EQLogParser
   {
     private string OverlayId;
     private bool? Active = true;
+    private TimerData LastTimerData = null;
 
     public TimerBar()
     {
@@ -21,15 +22,39 @@ namespace EQLogParser
       OverlayId = overlayId;
       progress.SetResourceReference(ProgressBarBase.TrackColorProperty, "TimerBarTrackColor-" + OverlayId);
       progress.SetResourceReference(HeightProperty, "TimerBarHeight-" + OverlayId);
-      progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarActiveColor-" + OverlayId);
       time.SetResourceReference(TextBlock.FontSizeProperty, "TimerBarFontSize-" + OverlayId);
       title.SetResourceReference(TextBlock.FontSizeProperty, "TimerBarFontSize-" + OverlayId);
-      time.SetResourceReference(TextBlock.ForegroundProperty, "TimerBarFontColor-" + OverlayId);
-      title.SetResourceReference(TextBlock.ForegroundProperty, "TimerBarFontColor-" + OverlayId);
     }
 
-    internal void Update(string displayName, string timeText, double remaining)
+    internal void Update(string displayName, string timeText, double remaining, TimerData timerData)
     {
+      // only reset colors if the timer has been assigned to something else
+      if (LastTimerData != timerData)
+      {
+        if (timerData?.FontColor != null)
+        {
+          var brush = TriggerUtil.GetBrush(timerData.FontColor);
+          time.Foreground = brush;
+          title.Foreground = brush;
+        }
+        else
+        {
+          time.SetResourceReference(TextBlock.ForegroundProperty, "TimerBarFontColor-" + OverlayId);
+          title.SetResourceReference(TextBlock.ForegroundProperty, "TimerBarFontColor-" + OverlayId);
+        }
+
+        if (timerData?.ActiveColor != null)
+        {
+          progress.ProgressColor = TriggerUtil.GetBrush(timerData.ActiveColor);
+        }
+        else
+        {
+          progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarActiveColor-" + OverlayId);
+        }
+
+        LastTimerData = timerData;
+      }
+
       title.Text = displayName;
       time.Text = timeText;
       progress.Progress = remaining;
@@ -60,6 +85,11 @@ namespace EQLogParser
         progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarIdleColor-" + OverlayId);
         Active = null;
       }
+    }
+
+    private void UnloadWindow(object sender, System.Windows.RoutedEventArgs e)
+    {
+      LastTimerData = null;
     }
   }
 }
