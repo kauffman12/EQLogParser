@@ -25,7 +25,7 @@ namespace EQLogParser
 
     public void Update(long value)
     {
-      if (TheIntTextBox != null)
+      if (TheIntTextBox?.Value != value)
       {
         TheIntTextBox.Value = value;
       }

@@ -13,7 +13,7 @@ namespace EQLogParser
     {
       var overlayId = info.Value as string;
       TheTimerBar.Init(overlayId);
-      TheTimerBar.Update("Example Timer Bar #1", "00:30", 60.0);
+      TheTimerBar.Update("Example Timer Bar #1", "00:30", 60.0, new TimerData());
     }
 
     public object Create(PropertyInfo propertyInfo) => Create();

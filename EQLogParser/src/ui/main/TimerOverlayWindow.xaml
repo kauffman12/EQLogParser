@@ -23,6 +23,7 @@
         Height="400"
         MouseLeftButtonDown="OverlayMouseLeftDown"
         SizeChanged="WindowSizeChanged"
+        UseLayoutRounding="True"
         Loaded="WindowLoaded"
         Closing="WindowClosing"
         Style="{x:Null}"

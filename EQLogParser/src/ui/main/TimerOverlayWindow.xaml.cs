@@ -15,7 +15,7 @@ namespace EQLogParser
   /// </summary>
   public partial class TimerOverlayWindow : Window
   {
-    private Overlay TheOverlay;
+    private TriggerNode Node;
     private bool Preview = false;
     private long SavedHeight;
     private long SavedWidth;
@@ -23,41 +23,47 @@ namespace EQLogParser
     private long SavedLeft = long.MaxValue;
     private Dictionary<string, TimerData> CooldownTimerData = new Dictionary<string, TimerData>();
     private Dictionary<string, ShortDurationData> ShortDurationBars = new Dictionary<string, ShortDurationData>();
+    private Dictionary<string, Window> PreviewWindows = null;
 
-    internal TimerOverlayWindow(Overlay overlay, bool preview = false)
+    internal TimerOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
     {
       InitializeComponent();
-      Preview = preview;
-      TheOverlay = overlay;
-      title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + TheOverlay.Id);
+      Node = node;
+      Preview = previews != null;
+      PreviewWindows = previews;
+      title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + Node.Id);
 
-      Height = TheOverlay.Height;
-      Width = TheOverlay.Width;
-      Top = TheOverlay.Top;
-      Left = TheOverlay.Left;
+      Height = Node.OverlayData.Height;
+      Width = Node.OverlayData.Width;
+      Top = Node.OverlayData.Top;
+      Left = Node.OverlayData.Left;
 
-      if (preview)
+      if (Preview)
       {
         MainActions.SetTheme(this, MainWindow.CurrentTheme);
         ResizeMode = ResizeMode.CanResizeWithGrip;
         SetResourceReference(BorderBrushProperty, "PreviewBackgroundBrush");
-        SetResourceReference(BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
+        SetResourceReference(BackgroundProperty, "OverlayBrushColor-" + Node.Id);
         title.Visibility = Visibility.Visible;
         buttonsPanel.Visibility = Visibility.Visible;
+        CreatePreviewTimer("Example Trigger Name", "03:00", 90.0);
+        CreatePreviewTimer("Example Trigger Name #2", "02:00", 60.0);
+        CreatePreviewTimer("Example Trigger Name #3", "01:00", 30.0);
+        TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
       }
       else
       {
-        border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + TheOverlay.Id);
+        border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + Node.Id);
       }
     }
 
-    private void CloseClick(object sender, RoutedEventArgs e) => TriggerOverlayManager.Instance.ClosePreviewTimerOverlay(TheOverlay.Id);
+    private void CloseClick(object sender, RoutedEventArgs e) => Close();
 
     internal void CreatePreviewTimer(string displayName, string timeText, double progress)
     {
       var timerBar = new TimerBar();
-      timerBar.Init(TheOverlay.Id);
-      timerBar.Update(displayName, timeText, progress);
+      timerBar.Init(Node.Id);
+      timerBar.Update(displayName, timeText, progress, new TimerData());
       content.Children.Add(timerBar);
     }
 
@@ -66,7 +72,7 @@ namespace EQLogParser
       if (timerList.Count > 0)
       {
         var currentTicks = DateTime.Now.Ticks;
-        foreach (var timerData in timerList.Where(timerData => timerData.TimerType == 2 && timerData.SelectedOverlays.Contains(TheOverlay.Id)))
+        foreach (var timerData in timerList.Where(timerData => timerData.TimerType == 2 && timerData.SelectedOverlays.Contains(Node.Id)))
         {
           if (ShortDurationBars.TryGetValue(timerData.Key, out var value))
           {
@@ -88,38 +94,38 @@ namespace EQLogParser
       var maxDurationTicks = double.NaN;
       IEnumerable<TimerData> orderedList = null;
 
-      if (TheOverlay.Width != Width)
+      if (Node.OverlayData.Width != Width)
       {
-        Width = TheOverlay.Width;
+        Width = Node.OverlayData.Width;
       }
-      else if (TheOverlay.Height != Height)
+      else if (Node.OverlayData.Height != Height)
       {
-        Height = TheOverlay.Height;
+        Height = Node.OverlayData.Height;
       }
-      else if (TheOverlay.Top != Top)
+      else if (Node.OverlayData.Top != Top)
       {
-        Top = TheOverlay.Top;
+        Top = Node.OverlayData.Top;
       }
-      else if (TheOverlay.Left != Left)
+      else if (Node.OverlayData.Left != Left)
       {
-        Left = TheOverlay.Left;
+        Left = Node.OverlayData.Left;
       }
 
       if (timerList.Count > 0)
       {
-        if (TheOverlay.SortBy == 0)
+        if (Node.OverlayData.SortBy == 0)
         {
           // create order
-          orderedList = timerList.Where(timerData => timerData.SelectedOverlays.Contains(TheOverlay.Id));
+          orderedList = timerList.Where(timerData => timerData.SelectedOverlays.Contains(Node.Id));
         }
         else
         {
           // remaining order
-          orderedList = timerList.Where(timerData => timerData.SelectedOverlays.Contains(TheOverlay.Id))
+          orderedList = timerList.Where(timerData => timerData.SelectedOverlays.Contains(Node.Id))
             .OrderBy(timerData => timerData.EndTicks - currentTicks);
         }
 
-        if (TheOverlay.UseStandardTime)
+        if (Node.OverlayData.UseStandardTime)
         {
           if (orderedList.Any())
           {
@@ -139,7 +145,7 @@ namespace EQLogParser
           var remainingTicks = timerData.EndTicks - currentTicks;
           remainingTicks = Math.Max(remainingTicks, 0);
 
-          if (TheOverlay.TimerMode == 1 && timerData.ResetTicks > 0)
+          if (Node.OverlayData.TimerMode == 1 && timerData.ResetTicks > 0)
           {
             handledKeys[timerData.Key] = true;
             CooldownTimerData[timerData.Key] = timerData;
@@ -153,7 +159,7 @@ namespace EQLogParser
           else
           {
             timerBar = new TimerBar();
-            timerBar.Init(TheOverlay.Id);
+            timerBar.Init(Node.Id);
             content.Children.Add(timerBar);
             childCount++;
           }
@@ -166,7 +172,7 @@ namespace EQLogParser
       var oldestIdleTicks = double.NaN;
       var idleList = new List<dynamic>();
       var resetList = new List<dynamic>();
-      if (TheOverlay.TimerMode == 1)
+      if (Node.OverlayData.TimerMode == 1)
       {
         foreach (var timerData in CooldownTimerData.Values)
         {
@@ -200,7 +206,7 @@ namespace EQLogParser
           if (count >= childCount)
           {
             timerBar = new TimerBar();
-            timerBar.Init(TheOverlay.Id);
+            timerBar.Init(Node.Id);
             content.Children.Add(timerBar);
             childCount++;
           }
@@ -219,7 +225,7 @@ namespace EQLogParser
           if (count >= childCount)
           {
             timerBar = new TimerBar();
-            timerBar.Init(TheOverlay.Id);
+            timerBar.Init(Node.Id);
             content.Children.Add(timerBar);
             childCount++;
           }
@@ -234,13 +240,13 @@ namespace EQLogParser
       }
 
       var complete = false;
-      if (TheOverlay.TimerMode == 0)
+      if (Node.OverlayData.TimerMode == 0)
       {
         complete = count == 0;
       }
-      else if (TheOverlay.IdleTimeoutSeconds > 0)
+      else if (Node.OverlayData.IdleTimeoutSeconds > 0)
       {
-        complete = (count == idleList.Count) && (oldestIdleTicks > (TheOverlay.IdleTimeoutSeconds * TimeSpan.TicksPerSecond));
+        complete = (count == idleList.Count) && (oldestIdleTicks > (Node.OverlayData.IdleTimeoutSeconds * TimeSpan.TicksPerSecond));
       }
 
       while (count < childCount)
@@ -263,7 +269,7 @@ namespace EQLogParser
       var progress = remainingTicks / endTicks * 100.0;
       var timeText = timerData.TimerType == 2 ? DateUtil.FormatSimpleMillis((long)remainingTicks) : DateUtil.FormatSimpleMS((long)remainingTicks);
       timerBar.SetActive();
-      timerBar.Update(GetDisplayName(timerData), timeText, progress);
+      timerBar.Update(GetDisplayName(timerData), timeText, progress, timerData);
 
       if (!shortTick)
       {
@@ -302,13 +308,13 @@ namespace EQLogParser
         var progress = 100.0 - (remainingTicks / timerData.ResetDurationTicks * 100.0);
         var timeText = DateUtil.FormatSimpleMS((long)remainingTicks);
         timerBar.SetReset();
-        timerBar.Update(GetDisplayName(timerData), timeText, progress);
+        timerBar.Update(GetDisplayName(timerData), timeText, progress, timerData);
       }
       else
       {
         var timeText = DateUtil.FormatSimpleMS(timerData.DurationTicks);
         timerBar.SetIdle();
-        timerBar.Update(GetDisplayName(timerData), timeText, 100.0);
+        timerBar.Update(GetDisplayName(timerData), timeText, 100.0, timerData);
       }
 
       if (timerBar.Visibility != Visibility.Visible)
@@ -331,15 +337,15 @@ namespace EQLogParser
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
-      TheOverlay.Height = SavedHeight = (long)Height;
-      TheOverlay.Width = SavedWidth = (long)Width;
-      TheOverlay.Top = SavedTop = (long)Top;
-      TheOverlay.Left = SavedLeft = (long)Left;
+      Node.OverlayData.Height = SavedHeight = (long)Height;
+      Node.OverlayData.Width = SavedWidth = (long)Width;
+      Node.OverlayData.Top = SavedTop = (long)Top;
+      Node.OverlayData.Left = SavedLeft = (long)Left;
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
-      TriggerOverlayManager.Instance.Update(TheOverlay);
-      TriggerOverlayManager.Instance.UpdateOverlays();
+      TriggerStateManager.Instance.Update(Node);
+      TriggerManager.Instance.CloseOverlay(Node.Id);
     }
 
     private void CancelClick(object sender, RoutedEventArgs e)
@@ -348,6 +354,22 @@ namespace EQLogParser
       Width = SavedWidth;
       Top = SavedTop;
       Left = SavedLeft;
+      saveButton.IsEnabled = false;
+      cancelButton.IsEnabled = false;
+      closeButton.IsEnabled = true;
+    }
+
+    private void TriggerUpdateEvent(TriggerNode node)
+    {
+      if (Node != node)
+      {
+        Node = node;
+      }
+
+      Height = Node.OverlayData.Height;
+      Width = Node.OverlayData.Width;
+      Top = Node.OverlayData.Top;
+      Left = Node.OverlayData.Left;
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
@@ -398,9 +420,12 @@ namespace EQLogParser
 
     private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
     {
+      TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
       content.Children.Clear();
       CooldownTimerData.Clear();
       ShortDurationBars.Clear();
+      PreviewWindows?.Remove(Node.Id);
+      PreviewWindows = null;
     }
 
     protected override void OnSourceInitialized(EventArgs e)

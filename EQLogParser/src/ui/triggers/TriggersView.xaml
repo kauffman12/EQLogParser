@@ -17,14 +17,6 @@
       <local:TriggerTemplateSelector x:Key="triggerTemplateSelector"/>
       <local:ZeroConverter x:Key="ZeroConverter" />
     </Grid.Resources>
-    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Button x:Name="startButton" Click="PlayButtonClick" Height="24" Padding="8,0,8,0" Margin="8,0,0,2" Focusable="False" IsHitTestVisible="False" Background="{DynamicResource ContentBackgroundAlt2}">
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-          <fa:ImageAwesome x:Name="startIcon" Height="{DynamicResource EQTitleSize}" Width="{DynamicResource EQTitleSize}" Margin="0" HorizontalAlignment="Center" Style="{StaticResource EQIconStyle}"/>
-          <Label x:Name="titleLabel" FontSize="{DynamicResource EQContentSize}" Style="{StaticResource EQTitleStyle}" Margin="0" Padding="6,0,0,6" VerticalContentAlignment="Center" />
-        </StackPanel>
-      </Button>
-    </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <CheckBox x:Name="watchGina" IsChecked="False" Margin="0,0,8,2" Checked="OptionsChanged" Unchecked="OptionsChanged">Watch for GINA Triggers</CheckBox>
       <ComboBox x:Name="voices" SelectedIndex="0" Margin="0,0,0,2" SelectionChanged="OptionsChanged" />
@@ -60,8 +52,8 @@
            FullRowSelect="False"
            IsAnimationEnabled="False"
            ItemContextMenuOpening="ItemContextMenuOpening"
-           ItemDropped="ItemDropped"
            ItemDropping="ItemDropping"
+           ItemDropped="ItemDropped"
            ItemEndEdit="ItemEndEdit"
            ItemTemplateDataContextType="Node"
            ItemTemplateSelector="{StaticResource triggerTemplateSelector}"
@@ -134,7 +126,8 @@
           <syncfusion:PropertyGrid.Items>
             <syncfusion:PropertyGridItem CategoryName="Overlays" PropertyName="SelectedTextOverlays" DisplayName="Assigned Text" Visibility="Collapsed" Description="Overlays used to display spoken Text associated with this Trigger."/>
             <syncfusion:PropertyGridItem x:Name="assignedOverlaysItem" CategoryName="Overlays" PropertyName="SelectedTimerOverlays" DisplayName="Assigned Timer" Visibility="Collapsed" Description="Overlays used to display Timers."/>
-            <syncfusion:PropertyGridItem x:Name="triggerFontBrushItem" CategoryName="Overlays" PropertyName="TriggerFontBrush" DisplayName="Text Font Color" Visibility="Collapsed" Description="Use default Font Color defined by the Overlay or choose a specific color for this Trigger."/>
+            <syncfusion:PropertyGridItem x:Name="triggerActiveBrushItem" CategoryName="Overlays" PropertyName="TriggerActiveBrush" DisplayName="Custom Active Color" Visibility="Collapsed" Description="Use default Active Color defined by the Overlay or choose a specific color for this Trigger."/>
+            <syncfusion:PropertyGridItem x:Name="triggerFontBrushItem" CategoryName="Overlays" PropertyName="TriggerFontBrush" DisplayName="Custom Font Color" Visibility="Collapsed" Description="Use default Font Color defined by the Overlay or choose a specific color for this Trigger."/>
             <syncfusion:PropertyGridItem CategoryName="Trigger" PropertyName="Comments" DisplayName="Comments" Description="Notes about this Trigger." />
             <syncfusion:PropertyGridItem x:Name="patternItem" CategoryName="Trigger" PropertyName="Pattern" DisplayName="Pattern" Description="Text to match on. It is not case sensitive. See the documentation on Using Trigger Variables, under the Help Menu, for additional information."/>
             <syncfusion:PropertyGridItem x:Name="useRegexItem" CategoryName="Hidden Settings" PropertyName="UseRegex" DisplayName="Pattern Use Regex" Visibility="Hidden"  Description="True if Regex is to be used for the specified Pattern."/>
@@ -161,7 +154,6 @@
             <syncfusion:PropertyGridItem x:Name="fontBrushItem" CategoryName="Overlay" PropertyName="FontBrush" DisplayName="Font Color" Visibility="Collapsed" Description="Font Color used to display the Text on this Overlay."/>
             <syncfusion:PropertyGridItem x:Name="fontFamilyItem" CategoryName="Overlay" PropertyName="FontFamily" DisplayName="Font Family" Visibility="Collapsed" Description="Font Family used to display the Text on this Overlay."/>
             <syncfusion:PropertyGridItem x:Name="fontSizeItem" CategoryName="Overlay" PropertyName="FontSize" DisplayName="Font Size" Visibility="Collapsed" Description="Font Size used to display the Text on this Overlay."/>
-            <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="Id" DisplayName="Id" IsReadOnly="True" Visibility="Collapsed" Description="Unique ID for this Overlay. Assigned when it is created." />
             <syncfusion:PropertyGridItem x:Name="overlayBrushItem" CategoryName="Overlay" PropertyName="OverlayBrush" DisplayName="Overlay Color" Visibility="Collapsed" Description="Color used for the background of this Overlay."/>
             <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="Left" DisplayName="Positon Left" IsReadOnly="False" Visibility="Collapsed" Description="Left most position for the Overlay Window." />
             <syncfusion:PropertyGridItem CategoryName="Overlay" PropertyName="Top" DisplayName="Positon Top" IsReadOnly="False" Visibility="Collapsed" Description="Top most position for the Overlay Window." />

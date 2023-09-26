@@ -30,24 +30,8 @@
     <DataTemplate x:Key="TextOverlayFileTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
-          <CheckBox x:Name="CheckBox" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
           <fa:ImageAwesome Margin="5,0,0,0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Font" />
-          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}">
-            <TextBlock.Style>
-              <Style TargetType="TextBlock">
-                <Style.Triggers>
-                  <DataTrigger Binding="{Binding IsChecked}" Value="True">
-                    <Setter Property="FontStyle" Value="Normal"/>
-                    <Setter Property="FontWeight" Value="DemiBold" />
-                  </DataTrigger>
-                  <DataTrigger Binding="{Binding IsChecked}" Value="False">
-                    <Setter Property="FontStyle" Value="Italic"/>
-                    <Setter Property="FontWeight" Value="Normal" />
-                  </DataTrigger>
-                </Style.Triggers>
-              </Style>
-            </TextBlock.Style>
-          </TextBlock>
+          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" FontStyle="Normal" FontWeight="DemiBold" />
         </StackPanel>
       </Grid>
     </DataTemplate>
@@ -55,24 +39,8 @@
     <DataTemplate x:Key="TimerOverlayFileTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
-          <CheckBox x:Name="CheckBox" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
           <fa:ImageAwesome Margin="5,0,0,0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Clock" />
-          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}">
-            <TextBlock.Style>
-              <Style TargetType="TextBlock">
-                <Style.Triggers>
-                  <DataTrigger Binding="{Binding IsChecked}" Value="True">
-                    <Setter Property="FontStyle" Value="Normal"/>
-                    <Setter Property="FontWeight" Value="DemiBold" />
-                  </DataTrigger>
-                  <DataTrigger Binding="{Binding IsChecked}" Value="False">
-                    <Setter Property="FontStyle" Value="Italic"/>
-                    <Setter Property="FontWeight" Value="Normal" />
-                  </DataTrigger>
-                </Style.Triggers>
-              </Style>
-            </TextBlock.Style>
-          </TextBlock>
+          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" FontStyle="Normal" FontWeight="DemiBold" />
         </StackPanel>
       </Grid>
     </DataTemplate>
@@ -80,7 +48,8 @@
     <DataTemplate x:Key="TriggerFileTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
-          <fa:ImageAwesome Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Tasks" />
+          <CheckBox x:Name="CheckBox" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+          <fa:ImageAwesome Margin="5,0,0,0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Tasks" />
           <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}">
             <TextBlock.Style>
               <Style TargetType="TextBlock">
@@ -105,6 +74,14 @@
       <Grid>
         <StackPanel Orientation="Horizontal">
           <CheckBox x:Name="CheckBox" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" />
+        </StackPanel>
+      </Grid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="OverlayNodeTemplate">
+      <Grid>
+        <StackPanel Orientation="Horizontal">
           <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" />
         </StackPanel>
       </Grid>

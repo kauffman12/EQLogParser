@@ -1,4 +1,5 @@
-﻿using Syncfusion.UI.Xaml.TreeView.Engine;
+﻿using AutoMapper;
+using Syncfusion.UI.Xaml.TreeView.Engine;
 using Syncfusion.Windows.Shared;
 using System;
 using System.Collections.Concurrent;
@@ -8,14 +9,36 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Windows;
 using System.Windows.Media;
 
 namespace EQLogParser
 {
+  internal class MappingProfile : Profile
+  {
+    public MappingProfile()
+    {
+      CreateMap<TriggerNode, TriggerNode>();
+      CreateMap<ExportTriggerNode, TriggerNode>();
+      CreateMap<LegacyOverlay, Overlay>();
+    }
+  }
+
   internal interface ISummaryBuilder
   {
     StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showPetLabel, bool showDPS, bool showTotals,
       bool rankPlayers, bool showSpecial, bool showTime, string customTitle);
+  }
+
+  internal class AlertEntry
+  {
+    public double Time { get; set; }
+    public string Line { get; set; }
+    public string Name { get; set; }
+    public string Type { get; set; }
+    public long Eval { get; set; }
+    public long Priority { get; set; }
+    public Trigger Trigger { get; set; }
   }
 
   internal class TimerData
@@ -39,6 +62,8 @@ namespace EQLogParser
     public List<NumberOptions> EndEarlyRegex2NOptions { get; set; }
     public MatchCollection OriginalMatches { get; set; }
     public int Repeated { get; set; } = -1;
+    public string ActiveColor { get; set; }
+    public string FontColor { get; set; }
   }
 
   internal class NumberOptions
@@ -48,7 +73,7 @@ namespace EQLogParser
     public string Op { get; set; }
   }
 
-  internal class Overlay : NotificationObject
+  internal class Overlay
   {
     public string OverlayComments { get; set; }
     public string FontSize { get; set; } = "12pt";
@@ -62,8 +87,6 @@ namespace EQLogParser
     public string OverlayColor { get; set; } = "#00000000";
     public double IdleTimeoutSeconds { get; set; }
     public long FadeDelay { get; set; } = 10;
-    public string Name { get; set; }
-    public string Id { get; set; }
     public bool UseStandardTime { get; set; } = false;
     public bool IsTimerOverlay { get; set; }
     public bool IsTextOverlay { get; set; }
@@ -74,7 +97,19 @@ namespace EQLogParser
     public long Left { get; set; } = 100;
   }
 
-  internal class Trigger : NotificationObject
+  internal class LegacyOverlay : Overlay
+  {
+    public string Id { get; set; }
+    public string Name { get; set; }
+  }
+
+  internal class OverlayWindowData
+  {
+    public Window TheWindow { get; set; }
+    public long RemoveTicks { get; set; } = -1;
+  }
+
+  internal class Trigger
   {
     // fields to not serialize during export
     public double LastTriggered;
@@ -88,11 +123,11 @@ namespace EQLogParser
     public bool EndUseRegex { get; set; }
     public bool EndUseRegex2 { get; set; }
     public long WorstEvalTime { get; set; } = -1;
-    public string Name { get; set; }
     public string Pattern { get; set; }
     public long Priority { get; set; } = 3;
     public int TriggerAgainOption { get; set; }
     public bool UseRegex { get; set; }
+    public string ActiveColor { get; set; } = null;
     public string FontColor { get; set; } = null;
     public List<string> SelectedOverlays { get; set; } = new List<string>();
     public double ResetDurationSeconds { get; set; }
@@ -122,45 +157,69 @@ namespace EQLogParser
     public SolidColorBrush OverlayBrush { get; set; }
     // referenced dynamically
     public string TimerBarPreview { get; set; }
-    public Overlay Original { get; set; }
+    public TriggerNode Node { get; set; }
   }
 
   internal class TextOverlayPropertyModel : Overlay
   {
     public SolidColorBrush FontBrush { get; set; }
     public SolidColorBrush OverlayBrush { get; set; }
-    public Overlay Original { get; set; }
+    public TriggerNode Node { get; set; }
   }
 
   internal class TriggerPropertyModel : Trigger
   {
+    public SolidColorBrush TriggerActiveBrush { get; set; }
     public SolidColorBrush TriggerFontBrush { get; set; }
     public ObservableCollection<ComboBoxItemDetails> SelectedTextOverlays { get; set; }
     public ObservableCollection<ComboBoxItemDetails> SelectedTimerOverlays { get; set; }
     public TimeSpan DurationTimeSpan { get; set; }
     public TimeSpan ResetDurationTimeSpan { get; set; }
-    public Trigger Original { get; set; }
     public string SoundOrText { get; set; }
     public string EndEarlySoundOrText { get; set; }
     public string EndSoundOrText { get; set; }
     public string WarningSoundOrText { get; set; }
+    public TriggerNode Node { get; set; }
+  }
+
+  internal class TriggerState
+  {
+    public string Id { get; set; }
+    public Dictionary<string, bool?> Enabled { get; set; } = new Dictionary<string, bool?>();
   }
 
   internal class TriggerNode
   {
+    public bool IsExpanded { get; set; } = false;
+    public string Name { get; set; }
+    public Trigger TriggerData { get; set; }
+    public Overlay OverlayData { get; set; }
+    public string Id { get; set; }
+    public int Index { get; set; }
+    public string Parent { get; set; }
+  }
+
+  internal class ExportTriggerNode : TriggerNode
+  {
+    public List<ExportTriggerNode> Nodes { get; set; } = new List<ExportTriggerNode>();
+  }
+
+  internal class LegacyTriggerNode
+  {
     public bool? IsEnabled { get; set; } = false;
     public bool IsExpanded { get; set; } = false;
     public string Name { get; set; }
-    public List<TriggerNode> Nodes { get; set; } = new List<TriggerNode>();
+    public List<LegacyTriggerNode> Nodes { get; set; } = new List<LegacyTriggerNode>();
     public Trigger TriggerData { get; set; }
-    public Overlay OverlayData { get; set; }
+    public LegacyOverlay OverlayData { get; set; }
   }
 
   internal class TriggerTreeViewNode : TreeViewNode
   {
-    public bool IsTrigger { get; set; }
-    public bool IsOverlay { get; set; }
     public TriggerNode SerializedData { get; set; }
+    public bool IsTrigger() => SerializedData?.TriggerData != null;
+    public bool IsOverlay() => SerializedData?.OverlayData != null;
+    public bool IsDir() => !IsOverlay() && !IsTrigger();
   }
 
   internal interface IAction { }

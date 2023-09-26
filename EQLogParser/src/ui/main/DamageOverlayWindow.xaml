@@ -25,6 +25,7 @@
         MouseLeftButtonDown="OverlayMouseLeftDown"
         SizeChanged="WindowSizeChanged"
         Loaded="WindowLoaded"
+        UseLayoutRounding="True"
         Closing="WindowClosing"
         Style="{x:Null}"
         Width="350"
