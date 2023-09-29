@@ -24,8 +24,7 @@ namespace EQLogParser
 
       try
       {
-        var split = lineData.Action.Split(' ');
-
+        var split = lineData.Split;
         if (split != null && split.Length >= 2)
         {
           // [Sun Mar 01 22:20:36 2020] A shaded torch has been awakened by Drogbaa.

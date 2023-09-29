@@ -2,27 +2,6 @@
 {
   static class ChatLineParser
   {
-    internal static ChatType Process(LineData lineData, string fullLine)
-    {
-      var chatType = ParseChatType(lineData.Action, lineData.BeginTime);
-
-      if (chatType != null)
-      {
-        chatType.BeginTime = lineData.BeginTime;
-        chatType.Text = fullLine; // workaround for now?
-
-        if (chatType.SenderIsYou == false && chatType.Sender != null)
-        {
-          if (chatType.Channel == ChatChannels.Guild || chatType.Channel == ChatChannels.Raid || chatType.Channel == ChatChannels.Fellowship)
-          {
-            PlayerManager.Instance.AddVerifiedPlayer(chatType.Sender, lineData.BeginTime);
-          }
-        }
-      }
-
-      return chatType;
-    }
-
     internal static ChatType ParseChatType(string action, double beginTime = double.NaN)
     {
       if (!string.IsNullOrEmpty(action))

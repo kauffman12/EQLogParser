@@ -517,14 +517,14 @@ namespace EQLogParser
       }
     }
 
-    internal SpellTreeResult GetLandsOnOther(List<string> data, out string player)
+    internal SpellTreeResult GetLandsOnOther(string[] split, out string player)
     {
       player = null;
-      var found = SearchSpellPath(LandsOnOtherTree, data);
+      var found = SearchSpellPath(LandsOnOtherTree, split);
 
       if (found.SpellData.Count > 0 && found.DataIndex > -1)
       {
-        player = string.Join(" ", data.ToArray(), 0, found.DataIndex + 1);
+        player = string.Join(" ", split.ToArray(), 0, found.DataIndex + 1);
         if (player.EndsWith("'s"))
         {
           // if string is only 2 then it must be invalid
@@ -537,9 +537,9 @@ namespace EQLogParser
       return found;
     }
 
-    internal SpellTreeResult GetLandsOnYou(List<string> data)
+    internal SpellTreeResult GetLandsOnYou(string[] split)
     {
-      var found = SearchSpellPath(LandsOnYouTree, data);
+      var found = SearchSpellPath(LandsOnYouTree, split);
 
       if (found.DataIndex == 0 && found.SpellData.Count > 0)
       {
@@ -573,13 +573,13 @@ namespace EQLogParser
       return found;
     }
 
-    internal SpellTreeResult GetWearOff(List<string> data)
+    internal SpellTreeResult GetWearOff(string[] split)
     {
-      var found = SearchSpellPath(WearOffTree, data);
+      var found = SearchSpellPath(WearOffTree, split);
 
       if (found.DataIndex == 0 && found.SpellData.Count > 0)
       {
-        found.SpellData = FindByLandsOn(data[0], found.SpellData);
+        found.SpellData = FindByLandsOn(split[0], found.SpellData);
 
         // check Adps
         if (AdpsWearOff.TryGetValue(found.SpellData[0].WearOff, out var spellDataSet) && spellDataSet.Count > 0)
@@ -1013,18 +1013,18 @@ namespace EQLogParser
       return last > 0 ? allActions.GetRange(startIndex, last) : new List<ActionBlock>();
     }
 
-    public static SpellTreeResult SearchSpellPath(SpellTreeNode node, List<string> data, int lastIndex = -1)
+    public static SpellTreeResult SearchSpellPath(SpellTreeNode node, string[] split, int lastIndex = -1)
     {
       if (lastIndex == -1)
       {
-        lastIndex = data.Count - 1;
+        lastIndex = split.Length - 1;
       }
 
-      if (node.Words.TryGetValue(data[lastIndex], out var child))
+      if (node.Words.TryGetValue(split[lastIndex], out var child))
       {
         if (lastIndex > 0)
         {
-          return SearchSpellPath(child, data, lastIndex - 1);
+          return SearchSpellPath(child, split, lastIndex - 1);
         }
         else
         {

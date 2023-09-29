@@ -70,7 +70,7 @@ namespace EQLogParser
             if (dateTime != DateTime.MinValue)
             {
               var beginTime = DateUtil.ToDouble(dateTime);
-              TriggerManager.Instance.AddAction(new LineData { Line = line, Action = line.Substring(MainWindow.ACTION_INDEX), BeginTime = beginTime });
+              TriggerManager.Instance.AddAction(new LineData { Action = line.Substring(MainWindow.ACTION_INDEX), BeginTime = beginTime });
             }
           }
         });
@@ -172,7 +172,7 @@ namespace EQLogParser
                         foreach (var line in list)
                         {
                           var action = line.Substring(MainWindow.ACTION_INDEX);
-                          TriggerManager.Instance.AddAction(new LineData { Line = line, Action = action, BeginTime = nowTime });
+                          TriggerManager.Instance.AddAction(new LineData { Action = action, BeginTime = nowTime });
                         }
 
                         var took = (DateTime.Now - start).Ticks;

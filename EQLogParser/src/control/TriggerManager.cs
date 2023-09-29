@@ -299,7 +299,7 @@ namespace EQLogParser
           }
 
           AddTextEvent(lineData.Action, wrapper.ModifiedDisplay, wrapper.TriggerData, matches);
-          AddEntry(lineData.Line, wrapper, "Trigger", time);
+          AddEntry(lineData, wrapper, "Trigger", time);
         }
         else
         {
@@ -331,7 +331,7 @@ namespace EQLogParser
               });
 
               AddTextEvent(lineData.Action, displayText, wrapper.TriggerData, earlyMatches, timerData.OriginalMatches);
-              AddEntry(lineData.Line, wrapper, "Timer End Early");
+              AddEntry(lineData, wrapper, "Timer End Early");
               CleanupTimer(wrapper, timerData);
             }
           });
@@ -386,7 +386,7 @@ namespace EQLogParser
               if (cancel && synth.State == SynthesizerState.Speaking)
               {
                 synth.SpeakAsyncCancelAll();
-                AddEntry("", previous, "Speech Canceled");
+                AddEntry(null, previous, "Speech Canceled");
               }
 
               if (result.IsSound)
@@ -396,7 +396,7 @@ namespace EQLogParser
                   if (cancel)
                   {
                     player?.Stop();
-                    AddEntry("", previous, "Wav Canceled");
+                    AddEntry(null, previous, "Wav Canceled");
                   }
 
                   var theFile = @"data\sounds\" + result.TTSOrSound;
@@ -502,7 +502,7 @@ namespace EQLogParser
                 });
 
                 AddTextEvent(lineData.Action, wrapper.ModifiedWarningDisplay, trigger, matches);
-                AddEntry(lineData.Line, wrapper, "Timer Warning");
+                AddEntry(lineData, wrapper, "Timer Warning");
               }
             }
           }, newTimerData.WarningSource.Token);
@@ -590,7 +590,7 @@ namespace EQLogParser
               });
 
               AddTextEvent(lineData.Action, wrapper.ModifiedEndDisplay, trigger, matches, newTimerData.OriginalMatches);
-              AddEntry(lineData.Line, wrapper, "Timer End");
+              AddEntry(lineData, wrapper, "Timer End");
               CleanupTimer(wrapper, newTimerData);
             }
           }
@@ -786,15 +786,17 @@ namespace EQLogParser
       RequestRefresh();
     }
 
-    private void AddEntry(string line, TriggerWrapper wrapper, string type, long eval = 0)
+    private void AddEntry(LineData lineData, TriggerWrapper wrapper, string type, long eval = 0)
     {
+      var eventTime = DateUtil.ToDouble(DateTime.Now);
       _ = Application.Current.Dispatcher.InvokeAsync(() =>
       {
         // update log
         var log = new AlertEntry
         {
-          Time = DateUtil.ToDouble(DateTime.Now),
-          Line = line,
+          EventTime = eventTime,
+          LogTime = lineData?.BeginTime ?? double.NaN,
+          Line = lineData?.Action ?? "",
           Name = wrapper.Name,
           Type = type,
           Eval = eval,

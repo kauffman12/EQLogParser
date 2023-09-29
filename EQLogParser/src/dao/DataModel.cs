@@ -32,7 +32,8 @@ namespace EQLogParser
 
   internal class AlertEntry
   {
-    public double Time { get; set; }
+    public double EventTime { get; set; }
+    public double LogTime { get; set; }
     public string Line { get; set; }
     public string Name { get; set; }
     public string Type { get; set; }
@@ -420,8 +421,8 @@ namespace EQLogParser
   {
     public string Action { get; set; }
     public double BeginTime { get; set; }
-    public string Line { get; set; }
     public long LineNumber { get; set; }
+    public string[] Split { get; set; }
   }
 
   internal class LootRow : LootRecord

@@ -20,13 +20,12 @@ namespace EQLogParser
       { "Fortify Companion", true }, { "Zeal of the Elements", true }, { "Frenzied Burnout", true }, { "Frenzy of the Dead", true }
     };
 
-    public static void Process(LineData lineData)
+    public static bool Process(LineData lineData)
     {
       try
       {
-        var sList = new List<string>(lineData.Action.Split(' '));
-
-        if (sList.Count > 1 && !sList[0].Contains(".") && !sList.Last().EndsWith(")") && !CheckLandsOnMessages(sList, lineData.BeginTime))
+        var split = lineData.Split;
+        if (split.Length > 1 && !split[0].Contains(".") && !split.Last().EndsWith(")") && !CheckLandsOnMessages(split, lineData.BeginTime))
         {
           string player = null;
           string spellName = null;
@@ -46,71 +45,72 @@ namespace EQLogParser
           // [Thu Apr 18 01:38:10 2019] Incogitable's Dizzying Wheel Rk. II spell is interrupted.
           // [Thu Apr 18 01:38:00 2019] Your Stormjolt Vortex Rk. III spell is interrupted.
           // [Sun Mar 01 22:34:58 2020] You have entered The Eastern Wastes.
-          if (sList[0] == "You")
+          if (split[0] == "You")
           {
             player = ConfigUtil.PlayerName;
-            if (sList[1] == "activate" && sList.Count > 2)
+            if (split[1] == "activate" && split.Length > 2)
             {
-              spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), 2);
+              spellName = TextFormatUtils.ParseSpellOrNpc(split.ToArray(), 2);
             }
-            else if (sList[1] == "begin" && sList.Count > 3)
+            else if (split[1] == "begin" && split.Length > 3)
             {
-              if (sList[2] == "casting")
+              if (split[2] == "casting")
               {
-                spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), 3);
+                spellName = TextFormatUtils.ParseSpellOrNpc(split.ToArray(), 3);
                 isSpell = true;
               }
-              else if (sList[2] == "singing")
+              else if (split[2] == "singing")
               {
-                spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), 3);
+                spellName = TextFormatUtils.ParseSpellOrNpc(split.ToArray(), 3);
               }
             }
           }
-          else if (sList[1] == "activates")
+          else if (split[1] == "activates")
           {
-            player = sList[0];
-            spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), 2);
+            player = split[0];
+            spellName = TextFormatUtils.ParseSpellOrNpc(split.ToArray(), 2);
           }
-          else if (sList.Count > 3 && sList.FindIndex(1, sList.Count - 1, s => s == "begins") is int bIndex && bIndex > -1 && (bIndex + 2) < sList.Count)
+          else if (split.Length > 3 && Array.FindIndex(split, 1, split.Length - 1, s => s == "begins") is int bIndex
+            && bIndex > -1 && (bIndex + 2) < split.Length)
           {
-            if (sList[bIndex + 1] == "casting")
+            if (split[bIndex + 1] == "casting")
             {
-              player = string.Join(" ", sList.ToArray(), 0, bIndex);
-              spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), bIndex + 2);
+              player = string.Join(" ", split.ToArray(), 0, bIndex);
+              spellName = TextFormatUtils.ParseSpellOrNpc(split.ToArray(), bIndex + 2);
               isSpell = true;
             }
-            else if (sList[bIndex + 1] == "singing")
+            else if (split[bIndex + 1] == "singing")
             {
-              player = string.Join(" ", sList.ToArray(), 0, bIndex);
-              spellName = TextFormatUtils.ParseSpellOrNpc(sList.ToArray(), bIndex + 2);
+              player = string.Join(" ", split.ToArray(), 0, bIndex);
+              spellName = TextFormatUtils.ParseSpellOrNpc(split.ToArray(), bIndex + 2);
             }
-            else if (sList.Count > 5 && sList[2] == "to" && sList[4] == "a")
+            else if (split.Length > 5 && split[2] == "to" && split[4] == "a")
             {
-              if (sList[3] == "cast" && sList[5] == "spell.")
+              if (split[3] == "cast" && split[5] == "spell.")
               {
-                player = sList[0];
-                spellName = ParseOldSpellName(sList, 6);
+                player = split[0];
+                spellName = ParseOldSpellName(split, 6);
                 isSpell = true;
               }
-              else if (sList[3] == "sing" && sList[5] == "song.")
+              else if (split[3] == "sing" && split[5] == "song.")
               {
-                player = sList[0];
-                spellName = ParseOldSpellName(sList, 6);
+                player = split[0];
+                spellName = ParseOldSpellName(split, 6);
               }
             }
           }
-          else if (sList.Count > 4 && sList[sList.Count - 1] == "interrupted." && sList[sList.Count - 2] == "is" && sList[sList.Count - 3] == "spell")
+          else if (split.Length > 4 && split[split.Length - 1] == "interrupted." && split[split.Length - 2] == "is" && split[split.Length - 3] == "spell")
           {
             isInterrupted = true;
-            spellName = string.Join(" ", sList.ToArray(), 1, sList.Count - 4);
+            spellName = string.Join(" ", split.ToArray(), 1, split.Length - 4);
 
-            if (sList[0] == "Your")
+            if (split[0] == "Your")
             {
               player = ConfigUtil.PlayerName;
             }
-            else if (sList[0].Length > 3 && sList[0][sList[0].Length - 1] == 's' && sList[0][sList[0].Length - 2] == '\'')
+            else if (split[0].Length > 3 && split[0][split[0].Length - 1] == 's' && split[0][split[0].Length - 2] == '\'')
             {
-              player = sList[0].Substring(0, sList[0].Length - 2);
+              player = split[0].Substring(0, split[0].Length - 2);
             }
           }
 
@@ -133,6 +133,8 @@ namespace EQLogParser
             {
               DataManager.Instance.HandleSpellInterrupt(player, spellName, currentTime);
             }
+
+            return true;
           }
         }
       }
@@ -140,43 +142,45 @@ namespace EQLogParser
       {
         LOG.Error(e);
       }
+
+      return false;
     }
 
-    private static bool CheckLandsOnMessages(List<string> sList, double beginTime)
+    private static bool CheckLandsOnMessages(string[] split, double beginTime)
     {
       // LandsOnYou messages also require DataIndex of zero
       var player = ConfigUtil.PlayerName;
 
       // old logs sometimes had received messages on the same line as a heal
       // [Sun Aug 04 23:39:56 2019] You are generously healed. You healed Kizant for 35830 (500745) hit points by Staunch Recovery.
-      for (var i = 0; i < sList.Count; i++)
+      for (var i = 0; i < split.Length; i++)
       {
-        if (sList[i].EndsWith("."))
+        if (split[i].EndsWith("."))
         {
           // if its a spell
-          var lastIndex = sList.Count - 1;
-          if (lastIndex != i && sList[i].Equals("Rk."))
+          var lastIndex = split.Length - 1;
+          if (lastIndex != i && split[i].Equals("Rk."))
           {
             return false;
           }
           else if (i < lastIndex)
           {
-            sList = sList.Take(i + 1).ToList();
+            split = split.Take(i + 1).ToArray();
           }
         }
       }
 
-      var searchResult = DataManager.Instance.GetLandsOnYou(sList);
+      var searchResult = DataManager.Instance.GetLandsOnYou(split);
       if (searchResult.SpellData.Count == 0 || searchResult.DataIndex != 0)
       {
         // WearOff messages can only apply to use so DataIndex has to also be zero meaing that every word was matched
-        searchResult = DataManager.Instance.GetWearOff(sList);
+        searchResult = DataManager.Instance.GetWearOff(split);
         if (searchResult.SpellData.Count > 0 && searchResult.DataIndex == 0)
         {
           return true;
         }
 
-        searchResult = DataManager.Instance.GetLandsOnOther(sList, out player);
+        searchResult = DataManager.Instance.GetLandsOnOther(split, out player);
         if (searchResult.SpellData.Count == 1 && !string.IsNullOrEmpty(player))
         {
           if (searchResult.SpellData[0].Target == (int)SpellTarget.PET && !PlayerManager.Instance.IsVerifiedPet(player) &&
@@ -215,9 +219,9 @@ namespace EQLogParser
       }
 
       // ZONE EVENT - moved here to keep it in the same thread as lands on message parsing
-      if (sList[1] == "have" && sList[2] == "entered")
+      if (split[1] == "have" && split[2] == "entered")
       {
-        var zone = string.Join(" ", sList.ToArray(), 3, sList.Count - 3).TrimEnd('.');
+        var zone = string.Join(" ", split.ToArray(), 3, split.Length - 3).TrimEnd('.');
         DataManager.Instance.AddMiscRecord(new ZoneRecord { Zone = zone }, beginTime);
         if (!zone.StartsWith("an area", StringComparison.OrdinalIgnoreCase))
         {
@@ -237,9 +241,9 @@ namespace EQLogParser
       }
     }
 
-    private static string ParseOldSpellName(List<string> split, int spellIndex)
+    private static string ParseOldSpellName(string[] split, int spellIndex)
     {
-      return string.Join(" ", split.ToArray(), spellIndex, split.Count - spellIndex).Trim(OldSpellChars);
+      return string.Join(" ", split.ToArray(), spellIndex, split.Length - spellIndex).Trim(OldSpellChars);
     }
   }
 }
