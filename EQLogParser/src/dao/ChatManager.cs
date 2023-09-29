@@ -69,10 +69,7 @@ namespace EQLogParser
       }
     }
 
-    internal string GetCurrentPlayer()
-    {
-      return CurrentPlayer;
-    }
+    internal string GetCurrentPlayer() => CurrentPlayer;
 
     internal void Reset()
     {
@@ -224,10 +221,18 @@ namespace EQLogParser
 
     internal void Add(ChatType chatType)
     {
-      lock (LockObject)
+      if (chatType != null)
       {
-        if (chatType != null)
+        lock (LockObject)
         {
+          if (chatType.SenderIsYou == false && chatType.Sender != null)
+          {
+            if (chatType.Channel == ChatChannels.Guild || chatType.Channel == ChatChannels.Raid || chatType.Channel == ChatChannels.Fellowship)
+            {
+              PlayerManager.Instance.AddVerifiedPlayer(chatType.Sender, chatType.BeginTime);
+            }
+          }
+
           ChatTypes.Add(chatType);
         }
 
@@ -539,6 +544,7 @@ namespace EQLogParser
 
       }
 
+      CurrentList?.Clear();
       CurrentList = null;
       CurrentEntryKey = null;
       CurrentListModified = false;

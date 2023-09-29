@@ -42,7 +42,7 @@ namespace EQLogParser
       return "";
     }
 
-    internal static bool SCompare(string s, int start, int count, string test) => s.AsSpan().Slice(start, count).SequenceEqual(test);
+    internal static bool SCompare(string s, int start, int count, string test) => s.AsSpan(start, count).SequenceEqual(test);
 
     internal static void LoadDictionary(string path)
     {

@@ -53,22 +53,16 @@ namespace EQLogParser
     private static readonly List<string> TANKING_CHOICES = new List<string>()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "Rolling DPS", "Rolling Damage", "# Attempts", "# Hits", "# Twincasts" };
 
-    private static long LineCount = 0;
-    private static long FilePosition = 0;
-    private static ActionProcessor CastProcessor = null;
-    private static ActionProcessor DamageProcessor = null;
-    private static ActionProcessor HealingProcessor = null;
-
     // progress window
     private static DateTime StartLoadTime;
     private DamageOverlayWindow DamageOverlay;
     private readonly DispatcherTimer ComputeStatsTimer;
-    private ChatManager PlayerChatManager = null;
     private readonly NpcDamageManager NpcDamageManager = new NpcDamageManager();
     private DocumentTabControl ChartTab = null;
     private LogReader EQLogReader = null;
     private List<bool> LogWindows = new List<bool>();
     private bool DoneLoading = false;
+    private int DoneLogReading = 0;
 
     private List<string> RecentFiles = new List<string>();
 
@@ -398,17 +392,10 @@ namespace EQLogParser
           var msgDialog = new MessageWindow("Clear Chat Archive for " + player + "?", EQLogParser.Resource.CLEAR_CHAT, MessageWindow.IconType.Question, "Yes");
           msgDialog.ShowDialog();
 
-          if (msgDialog.IsYes1Clicked && ChatManager.DeleteArchivedPlayer(player))
+          if (msgDialog.IsYes1Clicked)
           {
-            if (PlayerChatManager != null && PlayerChatManager.GetCurrentPlayer().Equals(player, StringComparison.Ordinal))
-            {
-              PlayerChatManager.Reset();
-            }
-            else
-            {
-              deleteChat.Items.Remove(item);
-              deleteChat.IsEnabled = deleteChat.Items.Count > 0;
-            }
+            ChatManager.DeleteArchivedPlayer(player);
+            // TODO reload list for the view and call reset potentially on chat manager if deleting the current player?
           }
         };
       });
@@ -931,33 +918,29 @@ namespace EQLogParser
         if (EQLogReader != null)
         {
           var seconds = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds);
-          double filePercent = EQLogReader.FileSize > 0 ? Math.Min(Convert.ToInt32((double)FilePosition / EQLogReader.FileSize * 100), 100) : 100;
+          var filePercent = Math.Round(EQLogReader.Progress);
 
-          if (filePercent < 100)
+          if (filePercent < 100.0)
           {
             statusText.Text = $"Reading Log.. {filePercent}% in {seconds} seconds";
           }
           else
           {
-            var procPercent = Convert.ToInt32(Math.Min(CastProcessor.GetPercentComplete(), DamageProcessor.GetPercentComplete()));
-            statusText.Text = $"Processing... {procPercent}% in {seconds} seconds";
+            statusText.Text = $"Additional Processing... {seconds} seconds";
           }
 
           statusText.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;
 
-          if (filePercent >= 100 && CastProcessor.GetPercentComplete() >= 100 && DamageProcessor.GetPercentComplete() >= 100
-            && HealingProcessor.GetPercentComplete() >= 100 && EQLogReader.FileLoadComplete)
+          if (filePercent >= 100)
           {
-            if (filePercent >= 100)
-            {
-              statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
-              statusText.Text = "Monitoring Active";
-            }
+            statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
+            statusText.Text = "Monitoring Active";
 
             ConfigUtil.SetSetting("LastOpenedFile", CurrentLogFile);
             LOG.Info($"Finished Loading Log File in {seconds} seconds.");
             Task.Delay(1500).ContinueWith(task => Dispatcher.InvokeAsync(() =>
             {
+              Interlocked.Exchange(ref DoneLogReading, 1);
               EventsLogLoadingComplete?.Invoke(this, true);
               Dispatcher.InvokeAsync(() =>
               {
@@ -1026,13 +1009,9 @@ namespace EQLogParser
           }
 
           StopProcessing();
-          CastProcessor = new ActionProcessor(CastLineParser.Process);
-          DamageProcessor = new ActionProcessor(DamageLineParser.Process);
-          HealingProcessor = new ActionProcessor(HealingLineParser.Process);
 
           fileText.Text = "-- " + theFile;
           StartLoadTime = DateTime.Now;
-          FilePosition = LineCount = 0;
 
           var name = "You";
           var server = "Unknown";
@@ -1088,11 +1067,10 @@ namespace EQLogParser
           DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
           CloseDamageOverlay();
           DataManager.Instance.Clear();
-          PlayerChatManager = new ChatManager();
           CurrentLogFile = theFile;
           NpcDamageManager.Reset();
-          EQLogReader = new LogReader(theFile, FileLoadingCallback, lastMins);
-          EQLogReader.Start();
+          EQLogReader = new LogReader(new LogProcessor(), theFile, lastMins);
+          Interlocked.Exchange(ref DoneLogReading, 0);
           UpdateLoadingProgress();
         }
       }
@@ -1106,59 +1084,6 @@ namespace EQLogParser
         {
           LOG.Error("Problem During Initialization", e);
         }
-      }
-    }
-
-    private void FileLoadingCallback(string line, long position, double dateTime)
-    {
-      if (double.IsNaN(dateTime))
-      {
-        return;
-      }
-
-      Interlocked.Exchange(ref FilePosition, position);
-      Interlocked.Add(ref LineCount, 1);
-
-      string splitLine = null;
-      if (!string.IsNullOrEmpty(line) && line.Length > 30)
-      {
-        var lineData = new LineData { Line = line, Action = line.Substring(ACTION_INDEX), LineNumber = LineCount, BeginTime = dateTime };
-
-        if (EQLogReader.FileLoadComplete)
-        {
-          TriggerManager.Instance.AddAction(lineData);
-        }
-
-        // avoid having other things parse chat by accident
-        if (ChatLineParser.Process(lineData, line) is ChatType chatType)
-        {
-          PlayerChatManager.Add(chatType);
-        }
-        // populates lineData.Action
-        else
-        {
-          // only if it's not a chat line check if two lines are on the same line
-          var multiLine = line.IndexOf("[", ACTION_INDEX + 1);
-          if (multiLine > -1 && line.Length > (multiLine + ACTION_INDEX - 1) && line[multiLine + ACTION_INDEX - 2] == ']' &&
-            char.IsDigit(line[multiLine + ACTION_INDEX - 3]) && char.IsDigit(line[multiLine + ACTION_INDEX - 6]))
-          {
-            splitLine = line.Substring(multiLine);
-            lineData.Action = line.Substring(0, multiLine).Substring(ACTION_INDEX);
-          }
-
-          if (PreLineParser.NeedProcessing(lineData) && lineData.Action != null)
-          {
-            CastProcessor.Add(lineData);
-            HealingProcessor.Add(lineData);
-            DamageProcessor.Add(lineData);
-            MiscLineParser.Process(lineData);
-          }
-        }
-      }
-
-      if (splitLine != null)
-      {
-        FileLoadingCallback(splitLine, position, dateTime);
       }
     }
 
@@ -1205,10 +1130,7 @@ namespace EQLogParser
 
     private void StopProcessing()
     {
-      EQLogReader?.Stop();
-      CastProcessor?.Stop();
-      DamageProcessor?.Stop();
-      HealingProcessor?.Stop();
+      EQLogReader?.Dispose();
     }
 
     private void WindowIconLoaded(object sender, RoutedEventArgs e)
@@ -1319,7 +1241,6 @@ namespace EQLogParser
       }
 
       StopProcessing();
-      PlayerChatManager?.Dispose();
       TriggerStateManager.Instance.Stop();
       TriggerManager.Instance.Stop(false);
       ConfigUtil.Save();
@@ -1362,7 +1283,6 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        PlayerChatManager?.Dispose();
         petMappingGrid?.Dispose();
         verifiedPetsGrid?.Dispose();
         verifiedPlayersGrid?.Dispose();

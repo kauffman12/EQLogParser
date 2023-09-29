@@ -1,173 +1,182 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 
 namespace EQLogParser
 {
-  class LogReader
+  class LogReader : IDisposable
   {
-    public delegate void ParseLineCallback(string line, long position, double dateTime);
-
+    private BufferBlock<Tuple<string, double, bool>> Lines { get; } =
+      new BufferBlock<Tuple<string, double, bool>>(new DataflowBlockOptions { BoundedCapacity = 20000 });
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
-    public bool FileLoadComplete = false;
-    public long FileSize;
+    private readonly FileSystemWatcher FileWatcher;
     private readonly string FileName;
-    private readonly ParseLineCallback LoadingCallback;
-    private bool Running = false;
-    private readonly int LastMins;
-    private readonly DateUtil DateUtil = new DateUtil();
+    private readonly int MinBack;
+    private CancellationTokenSource Cts;
+    private ManualResetEvent NewDataAvailable = new ManualResetEvent(false);
+    private IDisposable LogProcessor;
+    private Task ReadFileTask;
+    private long InitSize;
+    private long CurrentPos;
+    private long NextUpdateThreshold;
 
-    public LogReader(string fileName, ParseLineCallback loadingCallback, int lastMins)
+    public LogReader(IDisposable logProcessor, string fileName, int minBack)
     {
+      LogProcessor = logProcessor;
       FileName = fileName;
-      LoadingCallback = loadingCallback;
-      LastMins = lastMins;
-    }
+      MinBack = minBack;
 
-    public void Start()
-    {
-      Running = true;
-      new Thread(() =>
+      dynamic processor = logProcessor;
+      processor.LinkTo(Lines);
+
+      FileWatcher = new FileSystemWatcher(Path.GetDirectoryName(fileName), Path.GetFileName(fileName))
       {
-        try
-        {
-          var logFilePath = FileName.Substring(0, FileName.LastIndexOf("\\", StringComparison.Ordinal)) + "\\";
-          var logFileName = FileName.Substring(FileName.LastIndexOf("\\", StringComparison.Ordinal) + 1);
-          var isGzip = logFileName.EndsWith(".gz", StringComparison.Ordinal);
+        NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite
+      };
 
-          Stream gs;
-          Stream fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-          StreamReader reader;
-          FileSize = fs.Length;
-          var dateTime = double.NaN;
-
-          if (!isGzip) // fs.Length works and we can seek properly
-          {
-            reader = new StreamReader(fs, System.Text.Encoding.UTF8, true, 4096);
-            if (LastMins > -1 && fs.Length > 0)
-            {
-              double now = DateTime.Now.Ticks / TimeSpan.FromSeconds(1).Ticks;
-              var position = fs.Length / 2;
-              long lastPos = 0;
-              long value = -1;
-
-              fs.Seek(position, SeekOrigin.Begin);
-              reader.ReadLine();
-
-              while (!reader.EndOfStream && value != 0)
-              {
-                var line = reader.ReadLine();
-                var inRange = DateUtil.HasTimeInRange(now, line, LastMins, out dateTime);
-                value = Math.Abs(lastPos - position) / 2;
-
-                lastPos = position;
-                position += inRange ? -value : value;
-
-                fs.Seek(position, SeekOrigin.Begin);
-                reader.DiscardBufferedData();
-                reader.ReadLine(); // seek will lead to partial line
-              }
-
-              fs.Seek(lastPos, SeekOrigin.Begin);
-              reader.DiscardBufferedData();
-              reader.ReadLine(); // seek will lead to partial line
-            }
-          }
-          else
-          {
-            gs = new GZipStream(fs, CompressionMode.Decompress);
-            reader = new StreamReader(gs, System.Text.Encoding.UTF8, true, 4096);
-
-            if (LastMins > -1 && fs.Length > 0)
-            {
-              double now = DateTime.Now.Ticks / TimeSpan.FromSeconds(1).Ticks;
-              while (!reader.EndOfStream)
-              {
-                // seek the slow way since we can't jump around a zip stream
-                var line = reader.ReadLine();
-                if (DateUtil.HasTimeInRange(now, line, LastMins, out dateTime))
-                {
-                  LoadingCallback(line, fs.Position, dateTime);
-                  break;
-                }
-              }
-
-              // complete
-              LoadingCallback(null, fs.Position, dateTime);
-            }
-          }
-
-          while (!reader.EndOfStream && Running)
-          {
-            var line = reader.ReadLine();
-            LoadingCallback(line, fs.Position, DateUtil.ParseDate(line));
-          }
-
-          FileLoadComplete = true;
-
-          // setup watcher
-          var fsw = new FileSystemWatcher
-          {
-            Path = logFilePath,
-            Filter = logFileName
-          };
-
-          // events to notify for changes
-          //fsw.NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.CreationTime;
-          fsw.EnableRaisingEvents = true;
-
-          while (Running)
-          {
-            var result = fsw.WaitForChanged(WatcherChangeTypes.Renamed | WatcherChangeTypes.Deleted | WatcherChangeTypes.Changed, 2000);
-
-            if (reader == null && File.Exists(FileName))
-            {
-              fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-              reader = new StreamReader(fs, System.Text.Encoding.UTF8, true, 4096);
-            }
-
-            switch (result.ChangeType)
-            {
-              case WatcherChangeTypes.Renamed:
-              case WatcherChangeTypes.Deleted:
-                if (reader != null)
-                {
-                  reader.Close();
-                  reader = null;
-                }
-                break;
-              case WatcherChangeTypes.Changed:
-                if (reader != null)
-                {
-                  while (Running && !reader.EndOfStream)
-                  {
-                    var line = reader.ReadLine();
-                    LoadingCallback(line, fs.Length, DateUtil.ParseDate(line));
-                  }
-                }
-                break;
-            }
-          }
-
-          if (reader != null)
-          {
-            reader.Close();
-          }
-
-          fsw.Dispose();
-        }
-        catch (IOException e)
-        {
-          LOG.Error(e);
-        }
-      }).Start();
+      FileWatcher.Deleted += OnFileMoved;
+      FileWatcher.Renamed += OnFileMoved;
+      FileWatcher.Changed += OnFileChanged;
+      FileWatcher.EnableRaisingEvents = true;
+      StartReadingFile();
     }
 
-    public void Stop()
+    public double Progress => CurrentPos / (double)InitSize * 100;
+
+    private void OnFileMoved(object sender, FileSystemEventArgs e)
     {
-      Running = false;
+      Cts?.Cancel();
+      ReadFileTask?.Wait();
+      StartReadingFile();
+    }
+
+    private void OnFileChanged(object sender, FileSystemEventArgs e)
+    {
+      NewDataAvailable.Set();
+    }
+
+    private void StartReadingFile()
+    {
+      Cts = new CancellationTokenSource();
+      ReadFileTask = Task.Run(() => ReadFile(FileName, Cts.Token, MinBack), Cts.Token);
+    }
+
+    private async Task ReadFile(string fileName, CancellationToken cancelToken, int? minBack)
+    {
+      var bufferSize = 147456;
+      var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, bufferSize);
+      InitSize = fs.Length;
+      NextUpdateThreshold = InitSize / 50;
+
+      if (minBack == 0)
+      {
+        fs.Seek(0, SeekOrigin.End);
+        CurrentPos = fs.Position;
+      }
+
+      StreamReader reader;
+      if (fileName.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
+      {
+        var gzipStream = new GZipStream(fs, CompressionMode.Decompress);
+        reader = new StreamReader(gzipStream, bufferSize: bufferSize);
+      }
+      else
+      {
+        reader = new StreamReader(fs, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: bufferSize);
+      }
+
+      using (fs)
+      using (reader)
+      {
+        string line = null;
+        string previous = null;
+        var dateTime = DateTime.MinValue;
+        double doubleValue = 0;
+        var validTimeframe = false;
+        var minimumDate = minBack > -1 ? DateTime.Now.AddMinutes(-minBack.Value) : DateTime.MinValue;
+        long bytesRead = 0;
+
+        while ((line = await reader.ReadLineAsync()) != null && !cancelToken.IsCancellationRequested)
+        {
+          if (cancelToken.IsCancellationRequested) break;
+
+          // update progress during intitial load
+          bytesRead += Encoding.UTF8.GetByteCount(line) + 2;
+          if (bytesRead >= NextUpdateThreshold)
+          {
+            CurrentPos = fs.Position;
+            NextUpdateThreshold += InitSize / 50; // 2% of InitSize
+          }
+          else if ((InitSize - bytesRead) < 10000)
+          {
+            CurrentPos = fs.Position;
+          }
+
+          await HandleLine();
+        }
+
+        // continue reading for new updates
+        while (!cancelToken.IsCancellationRequested)
+        {
+          while ((line = await reader.ReadLineAsync()) != null)
+          {
+            await HandleLine(true);
+          }
+
+          if (cancelToken.IsCancellationRequested) break;
+          WaitHandle.WaitAny(new[] { NewDataAvailable, cancelToken.WaitHandle });
+          NewDataAvailable.Reset();
+        }
+
+        async Task HandleLine(bool monitor = false)
+        {
+          if (line.Length > 28)
+          {
+            if (previous == null || !line.AsSpan(1, 24).SequenceEqual(previous.AsSpan(1, 24)))
+            {
+              dateTime = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", line, 5);
+              doubleValue = DateUtil.ToDouble(dateTime);
+            }
+            else if (!validTimeframe)
+            {
+              return;
+            }
+
+            if (dateTime != DateTime.MinValue && (validTimeframe || minimumDate == DateTime.MinValue || dateTime >= minimumDate))
+            {
+              validTimeframe = true;
+              await Lines.SendAsync(Tuple.Create(line, doubleValue, monitor), cancelToken);
+            }
+            previous = line;
+          }
+        }
+      }
+
+      Lines.Complete();
+    }
+
+    public void Dispose()
+    {
+      Cts?.Cancel();
+
+      try
+      {
+        ReadFileTask?.Wait();
+      }
+      catch (AggregateException ex)
+      {
+        LOG.Warn(ex);
+      }
+
+      Cts?.Dispose();
+      FileWatcher?.Dispose();
+      NewDataAvailable?.Dispose();
+      Lines.Complete();
+      LogProcessor?.Dispose();
     }
   }
 }

@@ -68,24 +68,30 @@ namespace EQLogParser
       }
     }
 
-    public static void Process(LineData lineData)
+    public static bool Process(LineData lineData)
     {
+      var processed = false;
+
       try
       {
-        var split = lineData.Action.Split(' ');
-
+        var split = lineData.Split;
         if (split != null && split.Length >= 2)
         {
           var stop = FindStop(split);
 
           // see if it's a died message right away
-          if (split.Length > 1 && stop >= 1 && split[stop] == "died." && string.Join(" ", split, 0, stop) is string test && !string.IsNullOrEmpty(test))
+          if (split.Length > 1 && stop >= 1 && split[stop] == "died." && string.Join(" ", split, 0, stop) is string test
+            && !string.IsNullOrEmpty(test))
           {
             UpdateSlain(test, "", lineData);
+            processed = true;
           }
           else
           {
-            ParseLine(false, lineData, split, stop);
+            if (ParseLine(false, lineData, split, stop) is DamageRecord)
+            {
+              processed = true;
+            }
           }
         }
 
@@ -95,6 +101,8 @@ namespace EQLogParser
       {
         LOG.Error(e);
       }
+
+      return processed;
     }
 
     public static DamageRecord ParseLine(string action)
@@ -926,7 +934,7 @@ namespace EQLogParser
       if ((part.Length >= (start + ++end) && SCompare(part, start, 3, "pet")) ||
         (part.Length >= (start + ++end) && SCompare(part, start, 4, "ward") && !(part.Length > (start + 5) && part[start + 5] != 'e')) ||
         (part.Length >= (start + ++end) && SCompare(part, start, 5, "Mount")) ||
-        (part.Length >= (start + ++end) && SCompare(part, start, 6, "warder")) || SCompare(part, start, 6, "Warder"))
+        (part.Length >= (start + ++end) && SCompare(part, start, 6, "warder")) || (part.Length >= (start + end) && SCompare(part, start, 6, "Warder")))
       {
         found = true;
         len = end;
