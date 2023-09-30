@@ -12,7 +12,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -62,7 +61,6 @@ namespace EQLogParser
     private LogReader EQLogReader = null;
     private List<bool> LogWindows = new List<bool>();
     private bool DoneLoading = false;
-    private int DoneLogReading = 0;
 
     private List<string> RecentFiles = new List<string>();
 
@@ -945,9 +943,9 @@ namespace EQLogParser
 
             ConfigUtil.SetSetting("LastOpenedFile", CurrentLogFile);
             LOG.Info($"Finished Loading Log File in {seconds} seconds.");
-            Task.Delay(1500).ContinueWith(task => Dispatcher.InvokeAsync(() =>
+
+            Task.Delay(1000).ContinueWith(task => Dispatcher.InvokeAsync(() =>
             {
-              Interlocked.Exchange(ref DoneLogReading, 1);
               EventsLogLoadingComplete?.Invoke(this, true);
               Dispatcher.InvokeAsync(() =>
               {
@@ -1077,7 +1075,6 @@ namespace EQLogParser
           CurrentLogFile = theFile;
           NpcDamageManager.Reset();
           EQLogReader = new LogReader(new LogProcessor(), theFile, lastMins);
-          Interlocked.Exchange(ref DoneLogReading, 0);
           UpdateLoadingProgress();
         }
       }

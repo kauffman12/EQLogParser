@@ -85,7 +85,7 @@ namespace EQLogParser
       };
 
       UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
-      UpdateTimer.Tick += (sender, e) => ProcessFights();
+      UpdateTimer.Tick += (sender, e) => DoProcessFights();
       UpdateTimer.Start();
 
       // read show hp setting
@@ -110,13 +110,28 @@ namespace EQLogParser
       (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
     }
 
-    internal IEnumerable<Fight> GetSelectedFights() => dataGrid.SelectedItems.Cast<Fight>().Where(item => !item.IsInactivity);
-    internal IEnumerable<Fight> GetFights() => Fights.Where(item => !item.IsInactivity);
+    internal IEnumerable<Fight> GetSelectedFights()
+    {
+      if (dataGrid?.SelectedItems is ObservableCollection<object> selected)
+      {
+        return selected.ToList().Cast<Fight>().Where(item => !item.IsInactivity);
+      }
+      return Enumerable.Empty<Fight>();
+    }
+
+    internal IEnumerable<Fight> GetFights()
+    {
+      if (dataGrid?.ItemsSource is ObservableCollection<Fight> fights)
+      {
+        return fights.ToList().Where(item => !item.IsInactivity);
+      }
+      return Enumerable.Empty<Fight>();
+    }
 
     private void EventsUpdateFight(object sender, Fight fight) => NeedRefresh = true;
     private void EventsRemovedFight(object sender, string name) => RemoveFight(name);
-    private void EventsNewFight(object sender, Fight fight) => AddFight(fight);
-    private void EventsNewNonTankingFight(object sender, Fight fight) => AddNonTankingFight(fight);
+    private void EventsNewFight(object sender, Fight fight) => ProcessFight(fight);
+    private void EventsNewNonTankingFight(object sender, Fight fight) => ProcessNonTankingFight(fight);
     private void ClearClick(object sender, RoutedEventArgs e) => DataManager.Instance.Clear();
     private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
@@ -193,7 +208,7 @@ namespace EQLogParser
       }
     }
 
-    private void AddFight(Fight fight)
+    private void ProcessFight(Fight fight)
     {
       lock (FightsToProcess)
       {
@@ -201,7 +216,7 @@ namespace EQLogParser
       }
     }
 
-    private void AddNonTankingFight(Fight fight)
+    private void ProcessNonTankingFight(Fight fight)
     {
       lock (FightsToProcess)
       {
@@ -209,7 +224,7 @@ namespace EQLogParser
       }
     }
 
-    private void ProcessFights()
+    private void DoProcessFights()
     {
       IsEveryOther = !IsEveryOther;
 
@@ -256,8 +271,7 @@ namespace EQLogParser
           }
 
           fight.GroupId = CurrentGroup;
-          fight.SortId = CurrentSortId++;
-          Fights.Add(fight);
+          AddFight(fight, Fights);
           lastWithTankingTime = double.IsNaN(lastWithTankingTime) ? fight.LastTime : Math.Max(lastWithTankingTime, fight.LastTime);
         });
 
@@ -288,8 +302,7 @@ namespace EQLogParser
           }
 
           fight.NonTankingGroupId = CurrentNonTankingGroup;
-          fight.SortId = CurrentSortId++;
-          NonTankingFights.Add(fight);
+          AddFight(fight, NonTankingFights);
           lastNonTankingTime = double.IsNaN(lastNonTankingTime) ? fight.LastDamageTime : Math.Max(lastNonTankingTime, fight.LastDamageTime);
         });
 
@@ -302,6 +315,14 @@ namespace EQLogParser
         dataGrid.View.RefreshFilter();
         NeedRefresh = false;
       }
+    }
+
+    private void AddFight(Fight fight, ObservableCollection<Fight> list)
+    {
+      fight.SortId = CurrentSortId++;
+      var ttl = fight.LastTime - fight.BeginTime + 1;
+      fight.TooltipText = $"#Hits To Players: {fight.TankHits}, #Hits From Players: {fight.DamageHits}, Time Alive: {ttl}s";
+      list.Add(fight);
     }
 
     private void AddDivider(Fight fight, ObservableCollection<Fight> list, double lastTime)
