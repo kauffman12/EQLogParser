@@ -10,15 +10,15 @@ namespace EQLogParser
     private readonly ActionBlock<LineData> Process;
     private readonly ActionBlock<LineData> Triggers;
     private long LineCount = 0;
-    private ChatManager PlayerChatManager = new ChatManager();
 
     internal LogProcessor()
     {
       // Setup the pre-processor block
-      var options = new ExecutionDataflowBlockOptions { BoundedCapacity = 20000 };
+      var options = new ExecutionDataflowBlockOptions { BoundedCapacity = 30000 };
       PreProcess = new ActionBlock<Tuple<string, double, bool>>(data => DoPreProcess(data.Item1, data.Item2, data.Item3), options);
       Process = new ActionBlock<LineData>(data => DoProcess(data), options);
       Triggers = new ActionBlock<LineData>(data => TriggerManager.Instance.AddAction(data));
+      ChatManager.Instance.Init();
     }
 
     public void LinkTo(ISourceBlock<Tuple<string, double, bool>> sourceBlock)
@@ -31,7 +31,7 @@ namespace EQLogParser
     {
       var lineData = new LineData { Action = line.Substring(27), BeginTime = dateTime, LineNumber = LineCount };
 
-      if (monitor)
+      if (monitor && TriggerStateManager.Instance.IsActive())
       {
         // Triggers check everything
         Triggers.Post(lineData);
@@ -42,7 +42,7 @@ namespace EQLogParser
       {
         chatType.BeginTime = lineData.BeginTime;
         chatType.Text = line; // workaround for now?
-        PlayerChatManager.Add(chatType);
+        ChatManager.Instance.Add(chatType);
       }
       else
       {
@@ -57,7 +57,7 @@ namespace EQLogParser
           lineData.Action = original.Substring(0, index);
           doubleLine = original.Substring(index);
 
-          if (DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", doubleLine, 5) is DateTime newDate && newDate != DateTime.MinValue)
+          if (DateUtil.ParseStandardDate(doubleLine) is DateTime newDate && newDate != DateTime.MinValue)
           {
             extraDouble = DateUtil.ToDouble(newDate);
           }
@@ -94,7 +94,6 @@ namespace EQLogParser
 
     public void Dispose()
     {
-      PlayerChatManager?.Dispose();
       PreProcess?.Complete();
       Process?.Complete();
     }

@@ -59,16 +59,16 @@ namespace EQLogParser
 
         // damage section is a subset of this query
         var blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + (BUFF_OFFSET / 2));
-        AddBlocks(raidStats, blocks, maxTime, castsDuring, damageAfter, damageBefore);
+        AddGroups(raidStats, blocks, maxTime, castsDuring, damageAfter, damageBefore);
 
         blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + (BUFF_OFFSET / 2));
-        AddBlocks(raidStats, blocks, maxTime, receivedDuring, damageAfter, damageBefore);
+        AddGroups(raidStats, blocks, maxTime, receivedDuring, damageAfter, damageBefore);
       });
 
       return startTime;
     }
 
-    private static void AddBlocks(PlayerStats raidStats, List<ActionBlock> blocks, double maxTime, HashSet<TimedAction> actions, double damageAfter,
+    private static void AddGroups(PlayerStats raidStats, List<ActionGroup> blocks, double maxTime, HashSet<TimedAction> actions, double damageAfter,
       double damageBefore)
     {
       blocks.ForEach(block =>
@@ -97,7 +97,7 @@ namespace EQLogParser
         }
       });
 
-      void Add(ActionBlock block, SpellData spellData, TimedAction action)
+      void Add(ActionGroup block, SpellData spellData, TimedAction action)
       {
         if ((block.BeginTime >= damageAfter && block.BeginTime <= damageBefore) || spellData.Damaging < 1)
         {

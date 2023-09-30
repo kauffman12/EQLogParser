@@ -83,14 +83,14 @@ namespace EQLogParser
     private static readonly TimedActionComparer TAComparer = new TimedActionComparer();
     private static readonly object LockObject = new object();
 
-    private readonly List<ActionBlock> AllMiscBlocks = new List<ActionBlock>();
-    private readonly List<ActionBlock> AllDeathBlocks = new List<ActionBlock>();
-    private readonly List<ActionBlock> AllHealBlocks = new List<ActionBlock>();
-    private readonly List<ActionBlock> AllSpellCastBlocks = new List<ActionBlock>();
-    private readonly List<ActionBlock> AllReceivedSpellBlocks = new List<ActionBlock>();
-    private readonly List<ActionBlock> AllResistBlocks = new List<ActionBlock>();
-    private readonly List<ActionBlock> AllRandomBlocks = new List<ActionBlock>();
-    private readonly List<ActionBlock> AllLootBlocks = new List<ActionBlock>();
+    private readonly List<ActionGroup> AllMiscBlocks = new List<ActionGroup>();
+    private readonly List<ActionGroup> AllDeathBlocks = new List<ActionGroup>();
+    private readonly List<ActionGroup> AllHealBlocks = new List<ActionGroup>();
+    private readonly List<ActionGroup> AllSpellCastBlocks = new List<ActionGroup>();
+    private readonly List<ActionGroup> AllReceivedSpellBlocks = new List<ActionGroup>();
+    private readonly List<ActionGroup> AllResistBlocks = new List<ActionGroup>();
+    private readonly List<ActionGroup> AllRandomBlocks = new List<ActionGroup>();
+    private readonly List<ActionGroup> AllLootBlocks = new List<ActionGroup>();
     private readonly List<TimedAction> AllSpecialActions = new List<TimedAction>();
     private readonly List<LootRecord> AssignedLoot = new List<LootRecord>();
 
@@ -284,17 +284,17 @@ namespace EQLogParser
     internal void AddDeathRecord(DeathRecord record, double beginTime) => Helpers.AddAction(AllDeathBlocks, record, beginTime);
     internal void AddMiscRecord(IAction action, double beginTime) => Helpers.AddAction(AllMiscBlocks, action, beginTime);
     internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => Helpers.AddAction(AllReceivedSpellBlocks, received, beginTime);
-    internal List<ActionBlock> GetAllLoot() => AllLootBlocks.ToList();
-    internal List<ActionBlock> GetAllRandoms() => AllRandomBlocks.ToList();
+    internal List<ActionGroup> GetAllLoot() => AllLootBlocks.ToList();
+    internal List<ActionGroup> GetAllRandoms() => AllRandomBlocks.ToList();
     internal string GetClassFromTitle(string title) => TitleToClass.ContainsKey(title) ? TitleToClass[title] : null;
-    internal List<ActionBlock> GetCastsDuring(double beginTime, double endTime) => SearchActions(AllSpellCastBlocks, beginTime, endTime);
-    internal List<ActionBlock> GetDeathsDuring(double beginTime, double endTime) => SearchActions(AllDeathBlocks, beginTime, endTime);
-    internal List<ActionBlock> GetHealsDuring(double beginTime, double endTime) => SearchActions(AllHealBlocks, beginTime, endTime);
-    internal List<ActionBlock> GetMiscDuring(double beginTime, double endTime) => SearchActions(AllMiscBlocks, beginTime, endTime);
+    internal List<ActionGroup> GetCastsDuring(double beginTime, double endTime) => SearchActions(AllSpellCastBlocks, beginTime, endTime);
+    internal List<ActionGroup> GetDeathsDuring(double beginTime, double endTime) => SearchActions(AllDeathBlocks, beginTime, endTime);
+    internal List<ActionGroup> GetHealsDuring(double beginTime, double endTime) => SearchActions(AllHealBlocks, beginTime, endTime);
+    internal List<ActionGroup> GetMiscDuring(double beginTime, double endTime) => SearchActions(AllMiscBlocks, beginTime, endTime);
     internal ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>> GetNpcResistStats() => NpcResistStats;
     internal ConcurrentDictionary<string, TotalCount> GetNpcTotalSpellCounts() => NpcTotalSpellCounts;
-    internal List<ActionBlock> GetResistsDuring(double beginTime, double endTime) => SearchActions(AllResistBlocks, beginTime, endTime);
-    internal List<ActionBlock> GetReceivedSpellsDuring(double beginTime, double endTime) => SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
+    internal List<ActionGroup> GetResistsDuring(double beginTime, double endTime) => SearchActions(AllResistBlocks, beginTime, endTime);
+    internal List<ActionGroup> GetReceivedSpellsDuring(double beginTime, double endTime) => SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
     internal SpellData GetSpellByAbbrv(string abbrv) => (!string.IsNullOrEmpty(abbrv) && abbrv != Labels.UNKSPELL && SpellsAbbrvDB.ContainsKey(abbrv)) ? SpellsAbbrvDB[abbrv] : null;
     internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && AllNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
     internal bool IsOldSpell(string name) => OldSpellNamesDB.ContainsKey(name);
@@ -992,10 +992,10 @@ namespace EQLogParser
       }
     }
 
-    private static List<ActionBlock> SearchActions(List<ActionBlock> allActions, double beginTime, double endTime)
+    private static List<ActionGroup> SearchActions(List<ActionGroup> allActions, double beginTime, double endTime)
     {
-      var startBlock = new ActionBlock { BeginTime = beginTime };
-      var endBlock = new ActionBlock { BeginTime = endTime + 1 };
+      var startBlock = new ActionGroup { BeginTime = beginTime };
+      var endBlock = new ActionGroup { BeginTime = endTime + 1 };
 
       var startIndex = allActions.BinarySearch(startBlock, TAComparer);
       if (startIndex < 0)
@@ -1010,7 +1010,7 @@ namespace EQLogParser
       }
 
       var last = endIndex - startIndex;
-      return last > 0 ? allActions.GetRange(startIndex, last) : new List<ActionBlock>();
+      return last > 0 ? allActions.GetRange(startIndex, last) : new List<ActionGroup>();
     }
 
     public static SpellTreeResult SearchSpellPath(SpellTreeNode node, string[] split, int lastIndex = -1)

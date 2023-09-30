@@ -29,21 +29,36 @@ namespace EQLogParser
     {
       var path = ConfigUtil.GetTriggersDBFile();
       var needUpgrade = !File.Exists(path);
-      DB = new LiteDatabase(path);
-      DB.CheckpointSize = 10;
 
-      if (needUpgrade)
+      try
       {
-        Upgrade();
+        DB = new LiteDatabase(path);
+        DB.CheckpointSize = 10;
+
+        if (needUpgrade)
+        {
+          Upgrade();
+        }
+
+        var tree = DB.GetCollection<TriggerNode>(TREE_COL);
+        tree.EnsureIndex(x => x.Id);
+        tree.EnsureIndex(x => x.Parent);
+        tree.EnsureIndex(x => x.Name);
+
+        var states = DB.GetCollection<TriggerState>(STATES_COL);
+        states.EnsureIndex(x => x.Id);
       }
-
-      var tree = DB.GetCollection<TriggerNode>(TREE_COL);
-      tree.EnsureIndex(x => x.Id);
-      tree.EnsureIndex(x => x.Parent);
-      tree.EnsureIndex(x => x.Name);
-
-      var states = DB.GetCollection<TriggerState>(STATES_COL);
-      states.EnsureIndex(x => x.Id);
+      catch (Exception ex)
+      {
+        if (ex is IOException)
+        {
+          LOG.Warn("Trigger Database already in use.");
+        }
+        else
+        {
+          LOG.Error(ex);
+        }
+      }
     }
 
     internal void AssignOverlay(string id, IEnumerable<TriggerNode> nodes) => AssignOverlay(DB?.GetCollection<TriggerNode>(TREE_COL), id, nodes);
@@ -55,6 +70,7 @@ namespace EQLogParser
     internal TriggerTreeViewNode GetOverlayTreeView() => GetTreeView(OVERLAYS);
     internal void ImportTriggers(TriggerNode parent, IEnumerable<ExportTriggerNode> imported) => Import(parent, imported, TRIGGERS);
     internal void ImportOverlays(TriggerNode parent, IEnumerable<ExportTriggerNode> imported) => Import(parent, imported, OVERLAYS);
+    internal bool IsActive() => DB != null;
 
     internal void Stop()
     {
@@ -147,7 +163,8 @@ namespace EQLogParser
       lock (LockObject)
       {
         return DB?.GetCollection<TriggerNode>(TREE_COL).FindAll().Where(n => n.OverlayData != null)
-          .Select(n => new OTData { Name = n.Name, Id = n.Id, OverlayData = n.OverlayData });
+          .Select(n => new OTData { Name = n.Name, Id = n.Id, OverlayData = n.OverlayData })
+          ?? Enumerable.Empty<OTData>();
       }
     }
 

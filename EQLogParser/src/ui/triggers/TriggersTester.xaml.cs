@@ -66,7 +66,7 @@ namespace EQLogParser
         {
           if (line.Length > MainWindow.ACTION_INDEX)
           {
-            var dateTime = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", line, 5);
+            var dateTime = DateUtil.ParseStandardDate(line);
             if (dateTime != DateTime.MinValue)
             {
               var beginTime = DateUtil.ToDouble(dateTime);
@@ -85,8 +85,8 @@ namespace EQLogParser
           {
             if (allLines.Count > 0)
             {
-              var firstDate = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", allLines.First(), 5);
-              var lastDate = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", allLines.Last(), 5);
+              var firstDate = DateUtil.ParseStandardDate(allLines.First());
+              var lastDate = DateUtil.ParseStandardDate(allLines.Last());
               if (firstDate != DateTime.MinValue && lastDate != DateTime.MinValue)
               {
                 var startTime = DateUtil.ToDouble(firstDate);
@@ -100,7 +100,7 @@ namespace EQLogParser
                   data[dataIndex] = new List<string>();
                   foreach (var line in allLines)
                   {
-                    var current = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", line, 5);
+                    var current = DateUtil.ParseStandardDate(line);
                     if (current != DateTime.MinValue)
                     {
                       var currentTime = DateUtil.ToDouble(current);

@@ -243,8 +243,6 @@ namespace EQLogParser
 
         if (ConfigUtil.IfSet("Debug"))
         {
-          LOG.Info("Debug Enabled. Saving Unprocessed Lines to " + ConfigUtil.LogsDir);
-          ConfigUtil.Debug = true;
           ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).Root.Level = Level.Debug;
           ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
         }
@@ -322,6 +320,11 @@ namespace EQLogParser
       (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.TANKPARSE, TankingStatsManager.Instance, combined, selected, true);
     }
 
+    internal void DisableTriggers()
+    {
+      Dispatcher.InvokeAsync(() => triggersMenuItem.IsEnabled = false);
+    }
+
     internal void ShowTriggersEnabled(bool active)
     {
       Dispatcher.InvokeAsync(() => statusTriggersText.Visibility = active ? Visibility.Visible : Visibility.Collapsed);
@@ -382,20 +385,24 @@ namespace EQLogParser
     private void UpdateDeleteChatMenu()
     {
       deleteChat.Items.Clear();
-      ChatManager.GetArchivedPlayers().ForEach(player =>
+      ChatManager.Instance.GetArchivedPlayers().ForEach(player =>
       {
-        var item = new MenuItem() { IsEnabled = true, Header = player };
+        var item = new MenuItem { IsEnabled = true, Header = player };
         deleteChat.Items.Add(item);
 
         item.Click += (object sender, RoutedEventArgs e) =>
         {
-          var msgDialog = new MessageWindow("Clear Chat Archive for " + player + "?", EQLogParser.Resource.CLEAR_CHAT, MessageWindow.IconType.Question, "Yes");
+          var msgDialog = new MessageWindow("Clear Chat Archive for " + player + "?", EQLogParser.Resource.CLEAR_CHAT,
+            MessageWindow.IconType.Question, "Yes");
           msgDialog.ShowDialog();
 
           if (msgDialog.IsYes1Clicked)
           {
-            ChatManager.DeleteArchivedPlayer(player);
-            // TODO reload list for the view and call reset potentially on chat manager if deleting the current player?
+            if (!ChatManager.Instance.DeleteArchivedPlayer(player))
+            {
+              deleteChat.Items.Remove(item);
+              deleteChat.IsEnabled = deleteChat.Items.Count > 0;
+            }
           }
         };
       });
@@ -1241,6 +1248,7 @@ namespace EQLogParser
       }
 
       StopProcessing();
+      ChatManager.Instance.Stop();
       TriggerStateManager.Instance.Stop();
       TriggerManager.Instance.Stop(false);
       ConfigUtil.Save();

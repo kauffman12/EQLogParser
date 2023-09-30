@@ -23,7 +23,7 @@ namespace EQLogParser
     { "Hits", "Critical", "Lucky", "Twincast", "Rampage", "Riposte", "Strikethrough" };
 
     private string ActedOption = Labels.UNK;
-    private List<List<ActionBlock>> CurrentGroups;
+    private List<List<ActionGroup>> CurrentGroups;
     private bool Defending;
     private PlayerStats PlayerStats;
     private string CurrentActedFilter = null;
@@ -84,7 +84,7 @@ namespace EQLogParser
       (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
     }
 
-    internal void Init(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionBlock>> groups, bool defending = false)
+    internal void Init(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionGroup>> groups, bool defending = false)
     {
       CurrentGroups = groups;
       Defending = defending;

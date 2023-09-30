@@ -27,7 +27,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealerSpellTimeRanges =
       new ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>>();
 
-    private readonly List<List<ActionBlock>> HealingGroups = new List<List<ActionBlock>>();
+    private readonly List<List<ActionGroup>> HealingGroups = new List<List<ActionGroup>>();
     private PlayerStats RaidTotals;
     private List<Fight> Selected;
     private string Title;
@@ -87,7 +87,7 @@ namespace EQLogParser
 
             RaidTotals.Ranges.TimeSegments.ForEach(segment =>
             {
-              var updatedHeals = new List<ActionBlock>();
+              var updatedHeals = new List<ActionGroup>();
               var healedByHealerTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
               var healedBySpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
               var healerHealedTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
@@ -97,11 +97,11 @@ namespace EQLogParser
               var currentSpellCounts = new Dictionary<string, HashSet<string>>();
               var previousSpellCounts = new Dictionary<double, Dictionary<string, HashSet<string>>>();
               var ignoreRecords = new Dictionary<string, byte>();
-              var filtered = new List<ActionBlock>();
+              var filtered = new List<ActionGroup>();
               DataManager.Instance.GetHealsDuring(segment.BeginTime, segment.EndTime).ForEach(heal =>
               {
                 // copy
-                var newBlock = new ActionBlock { BeginTime = heal.BeginTime };
+                var newBlock = new ActionGroup { BeginTime = heal.BeginTime };
                 filtered.Add(newBlock);
 
                 if (currentSpellCounts.Count > 0)
@@ -137,7 +137,7 @@ namespace EQLogParser
 
               filtered.ForEach(heal =>
               {
-                var updatedHeal = new ActionBlock() { BeginTime = heal.BeginTime };
+                var updatedHeal = new ActionGroup() { BeginTime = heal.BeginTime };
                 foreach (var record in heal.Actions.Cast<HealRecord>())
                 {
                   var ignoreKey = heal.BeginTime + "|" + record.Healer + "|" + record.SubType;

@@ -23,7 +23,7 @@ namespace EQLogParser
     internal ComboBox TheColumnsCombo;
     internal Label TheTitle;
     internal CombinedStats CurrentStats;
-    internal List<List<ActionBlock>> CurrentGroups;
+    internal List<List<ActionGroup>> CurrentGroups;
 
     internal void InitSummaryTable(Label title, SfGridBase gridBase, ComboBox columnsCombo)
     {

@@ -73,8 +73,8 @@ namespace EQLogParser
 
       LoadPlayers();
       Ready = true;
-      ChatManager.EventsUpdatePlayer += ChatManagerEventsUpdatePlayer;
-      ChatManager.EventsNewChannels += ChatManagerEventsNewChannels;
+      ChatManager.Instance.EventsUpdatePlayer += ChatManagerEventsUpdatePlayer;
+      ChatManager.Instance.EventsNewChannels += ChatManagerEventsNewChannels;
       (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
       ChangeSearch();
     }
@@ -150,7 +150,7 @@ namespace EQLogParser
       };
 
       var count = 0;
-      ChatManager.GetChannels(playerAndServer).ForEach(chan =>
+      ChatManager.Instance.GetChannels(playerAndServer).ForEach(chan =>
       {
         count += chan.IsChecked ? 1 : 0;
         items.Add(chan);
@@ -164,7 +164,7 @@ namespace EQLogParser
     {
       if (updatedPlayer == null || !players.Items.Contains(updatedPlayer))
       {
-        var playerList = ChatManager.GetArchivedPlayers();
+        var playerList = ChatManager.Instance.GetArchivedPlayers();
         if (playerList.Count > 0)
         {
           players.Items.Clear();
@@ -239,7 +239,7 @@ namespace EQLogParser
 
             if (changed)
             {
-              ChatManager.SaveSelectedChannels(name, channelList);
+              ChatManager.Instance.SaveSelectedChannels(name, channelList);
             }
 
             chatBox.Text = "";
@@ -484,7 +484,7 @@ namespace EQLogParser
       if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
       {
         LoadChannels(players.SelectedItem as string);
-        PlayerAutoCompleteList = ChatManager.GetPlayers(name);
+        PlayerAutoCompleteList = ChatManager.Instance.GetPlayers(name);
         ConfigUtil.SetSetting("ChatSelectedPlayer", name);
 
         if (Ready)
@@ -502,8 +502,8 @@ namespace EQLogParser
       if (!disposedValue)
       {
         (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
-        ChatManager.EventsUpdatePlayer -= ChatManagerEventsUpdatePlayer;
-        ChatManager.EventsNewChannels -= ChatManagerEventsNewChannels;
+        ChatManager.Instance.EventsUpdatePlayer -= ChatManagerEventsUpdatePlayer;
+        ChatManager.Instance.EventsNewChannels -= ChatManagerEventsNewChannels;
 
         chatBox?.Dispose();
         FilterTimer?.Stop();
