@@ -16,15 +16,15 @@ namespace EQLogParser
     private static readonly DateUtil DateUtil = new DateUtil();
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    public static void AddAction(List<ActionBlock> blockList, IAction action, double beginTime)
+    public static void AddAction(List<ActionGroup> blockList, IAction action, double beginTime)
     {
-      if (blockList.LastOrDefault() is ActionBlock last && last.BeginTime == beginTime)
+      if (blockList.LastOrDefault() is ActionGroup last && last.BeginTime == beginTime)
       {
         last.Actions.Add(action);
       }
       else
       {
-        var newSegment = new ActionBlock { BeginTime = beginTime };
+        var newSegment = new ActionGroup { BeginTime = beginTime };
         newSegment.Actions.Add(action);
         blockList.Add(newSegment);
       }

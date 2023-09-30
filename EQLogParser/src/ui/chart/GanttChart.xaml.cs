@@ -54,7 +54,7 @@ namespace EQLogParser
     }
 
     // timelineType 0 = tanking, 1 = dps, 2 = healing
-    internal void Init(CombinedStats currentStats, List<PlayerStats> selected, List<List<ActionBlock>> groups, int timelineType)
+    internal void Init(CombinedStats currentStats, List<PlayerStats> selected, List<List<ActionGroup>> groups, int timelineType)
     {
       if (selected != null && selected.Count > 0 && timelineType >= 0 && timelineType <= 2)
       {
@@ -107,7 +107,7 @@ namespace EQLogParser
         for (var i = 0; i < Selected.Count; i++)
         {
           var player = Selected[i].OrigName;
-          var allSpells = new List<ActionBlock>();
+          var allSpells = new List<ActionGroup>();
           allSpells.AddRange(DataManager.Instance.GetCastsDuring(StartTime, EndTime));
           allSpells.AddRange(DataManager.Instance.GetReceivedSpellsDuring(StartTime, EndTime));
 

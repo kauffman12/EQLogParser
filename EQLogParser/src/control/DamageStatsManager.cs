@@ -22,8 +22,8 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> PlayerPets = new ConcurrentDictionary<string, ConcurrentDictionary<string, byte>>();
     private readonly ConcurrentDictionary<string, string> PetToPlayer = new ConcurrentDictionary<string, string>();
     private readonly List<IAction> Resists = new List<IAction>();
-    private List<List<ActionBlock>> AllDamageGroups;
-    private List<List<ActionBlock>> DamageGroups = new List<List<ActionBlock>>();
+    private List<List<ActionGroup>> AllDamageGroups;
+    private List<List<ActionGroup>> DamageGroups = new List<List<ActionGroup>>();
     private PlayerStats RaidTotals;
     private List<Fight> Selected;
     private string Title;
@@ -312,7 +312,7 @@ namespace EQLogParser
 
           Selected = options.Npcs.OrderBy(sel => sel.Id).ToList();
           Title = options.Npcs?.FirstOrDefault()?.Name;
-          var damageBlocks = new List<ActionBlock>();
+          var damageBlocks = new List<ActionGroup>();
 
           Selected.ForEach(fight =>
           {
@@ -336,7 +336,7 @@ namespace EQLogParser
 
             var rangeIndex = 0;
             double lastTime = 0;
-            var newBlock = new List<ActionBlock>();
+            var newBlock = new List<ActionGroup>();
             damageBlocks.ForEach(block =>
             {
               if (RaidTotals.Ranges.TimeSegments.Count > rangeIndex && block.BeginTime > RaidTotals.Ranges.TimeSegments[rangeIndex].EndTime)
@@ -348,12 +348,12 @@ namespace EQLogParser
                   DamageGroups.Add(newBlock);
                 }
 
-                newBlock = new List<ActionBlock>();
+                newBlock = new List<ActionGroup>();
               }
 
               if (lastTime != block.BeginTime)
               {
-                var copy = new ActionBlock();
+                var copy = new ActionGroup();
                 copy.Actions.AddRange(block.Actions);
                 copy.BeginTime = block.BeginTime;
                 newBlock.Add(copy);
@@ -447,10 +447,10 @@ namespace EQLogParser
                 }
               }
 
-              var filteredGroups = new List<List<ActionBlock>>();
+              var filteredGroups = new List<List<ActionGroup>>();
               AllDamageGroups.ForEach(group =>
               {
-                var filteredBlocks = new List<ActionBlock>();
+                var filteredBlocks = new List<ActionGroup>();
                 group.ForEach(block =>
                 {
                   if ((startTime == -1 || block.BeginTime >= startTime) && (stopTime == -1 || block.BeginTime <= stopTime))

@@ -148,28 +148,6 @@ namespace EQLogParser
       return result;
     }
 
-    internal bool HasTimeInRange(double now, string line, int lastMins, out double dateTime)
-    {
-      var found = false;
-      dateTime = double.NaN;
-      if (line.Length > 24)
-      {
-        dateTime = ParseDate(line);
-        if (!double.IsNaN(dateTime))
-        {
-          var diff = TimeSpan.FromSeconds(now - dateTime);
-          found = diff.TotalMinutes < lastMins;
-        }
-      }
-      return found;
-    }
-
-    internal double ParseLogDate(string line, out string timeString)
-    {
-      timeString = line.Substring(1, 24);
-      return ParseDate(line);
-    }
-
     internal double ParseDate(string timeString) => ParseDateTime(timeString, out var _);
 
     internal double ParsePreciseDate(string timeString)
@@ -190,7 +168,7 @@ namespace EQLogParser
       }
 
       increment = 0.0;
-      var dateTime = CustomDateTimeParser("MMM dd HH:mm:ss yyyy", timeString, 5);
+      var dateTime = ParseStandardDate(timeString);
 
       if (dateTime == DateTime.MinValue)
       {
@@ -211,6 +189,8 @@ namespace EQLogParser
 
       return result;
     }
+
+    internal static DateTime ParseStandardDate(string source) => CustomDateTimeParser("MMM dd HH:mm:ss yyyy", source, 5);
 
     internal static DateTime CustomDateTimeParser(string dateFormat, string source, int offset = 0)
     {

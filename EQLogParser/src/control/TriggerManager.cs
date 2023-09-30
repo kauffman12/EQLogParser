@@ -90,6 +90,14 @@ namespace EQLogParser
     [MethodImpl(MethodImplOptions.Synchronized)]
     internal void Start()
     {
+      if (!TriggerStateManager.Instance.IsActive())
+      {
+        new MessageWindow("Trigger Database not available. In use by another EQLogParser?\r\nTrigger Management disabled.",
+          EQLogParser.Resource.Warning).Show();
+        (Application.Current.MainWindow as MainWindow).DisableTriggers();
+        return;
+      }
+
       LOG.Info("Starting Trigger Manager");
       if (TriggerUtil.GetSpeechSynthesizer() == null)
       {

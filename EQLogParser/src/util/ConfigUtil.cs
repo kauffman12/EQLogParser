@@ -13,7 +13,6 @@ namespace EQLogParser
     public static string PlayerName;
     public static string ServerName;
     public static string LogsDir;
-    public static bool Debug = false;
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 

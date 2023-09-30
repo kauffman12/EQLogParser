@@ -125,7 +125,7 @@ namespace EQLogParser
       return child;
     }
 
-    private void UpdateSection(ActionBlock block, RandomRecord random, List<dynamic> sections)
+    private void UpdateSection(ActionGroup block, RandomRecord random, List<dynamic> sections)
     {
       var type = random.From + " to " + random.To;
       var section = sections.LastOrDefault(section => section.Type == type);

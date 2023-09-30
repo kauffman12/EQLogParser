@@ -11,11 +11,11 @@ namespace EQLogParser
   class LogReader : IDisposable
   {
     private BufferBlock<Tuple<string, double, bool>> Lines { get; } =
-      new BufferBlock<Tuple<string, double, bool>>(new DataflowBlockOptions { BoundedCapacity = 20000 });
+      new BufferBlock<Tuple<string, double, bool>>(new DataflowBlockOptions { BoundedCapacity = 50000 });
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private readonly FileSystemWatcher FileWatcher;
     private readonly string FileName;
-    private readonly int MinBack;
+    private int MinBack;
     private CancellationTokenSource Cts;
     private ManualResetEvent NewDataAvailable = new ManualResetEvent(false);
     private IDisposable LogProcessor;
@@ -38,6 +38,7 @@ namespace EQLogParser
         NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite
       };
 
+      FileWatcher.Created += OnFileCreated;
       FileWatcher.Deleted += OnFileMoved;
       FileWatcher.Renamed += OnFileMoved;
       FileWatcher.Changed += OnFileChanged;
@@ -46,17 +47,14 @@ namespace EQLogParser
     }
 
     public double Progress => CurrentPos / (double)InitSize * 100;
+    private void OnFileCreated(object sender, FileSystemEventArgs e) => StartReadingFile();
+    private void OnFileChanged(object sender, FileSystemEventArgs e) => NewDataAvailable.Set();
 
     private void OnFileMoved(object sender, FileSystemEventArgs e)
     {
       Cts?.Cancel();
       ReadFileTask?.Wait();
-      StartReadingFile();
-    }
-
-    private void OnFileChanged(object sender, FileSystemEventArgs e)
-    {
-      NewDataAvailable.Set();
+      MinBack = 0;
     }
 
     private void StartReadingFile()
@@ -82,10 +80,20 @@ namespace EQLogParser
       if (fileName.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
       {
         var gzipStream = new GZipStream(fs, CompressionMode.Decompress);
-        reader = new StreamReader(gzipStream, bufferSize: bufferSize);
+        reader = new StreamReader(gzipStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: bufferSize);
+
+        if (minBack > 0)
+        {
+          SearchCompressed(reader, minBack);
+        }
       }
       else
       {
+        if (minBack > 0)
+        {
+          Search(fs, minBack);
+        }
+
         reader = new StreamReader(fs, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: bufferSize);
       }
 
@@ -96,10 +104,9 @@ namespace EQLogParser
         string previous = null;
         var dateTime = DateTime.MinValue;
         double doubleValue = 0;
-        var validTimeframe = false;
-        var minimumDate = minBack > -1 ? DateTime.Now.AddMinutes(-minBack.Value) : DateTime.MinValue;
-        long bytesRead = 0;
+        var bytesRead = fs.Position;
 
+        // date is now valid so read every line
         while ((line = await reader.ReadLineAsync()) != null && !cancelToken.IsCancellationRequested)
         {
           if (cancelToken.IsCancellationRequested) break;
@@ -138,25 +145,71 @@ namespace EQLogParser
           {
             if (previous == null || !line.AsSpan(1, 24).SequenceEqual(previous.AsSpan(1, 24)))
             {
-              dateTime = DateUtil.CustomDateTimeParser("MMM dd HH:mm:ss yyyy", line, 5);
+              dateTime = DateUtil.ParseStandardDate(line);
               doubleValue = DateUtil.ToDouble(dateTime);
             }
-            else if (!validTimeframe)
-            {
-              return;
-            }
 
-            if (dateTime != DateTime.MinValue && (validTimeframe || minimumDate == DateTime.MinValue || dateTime >= minimumDate))
-            {
-              validTimeframe = true;
-              await Lines.SendAsync(Tuple.Create(line, doubleValue, monitor), cancelToken);
-            }
+            await Lines.SendAsync(Tuple.Create(line, doubleValue, monitor), cancelToken);
             previous = line;
           }
         }
       }
+    }
 
-      Lines.Complete();
+    private void Search(FileStream fs, int? minBack)
+    {
+      long min = 0;
+      var max = fs.Length;
+      long? closestGreaterPosition = null;
+      var minimumDate = DateTime.Now.AddMinutes(-minBack.Value);
+
+      while (min < max)
+      {
+        var mid = (min + max) / 2;
+        fs.Seek(mid, SeekOrigin.Begin);
+
+        using (var tempReader = new StreamReader(fs, Encoding.UTF8, true, 1024, leaveOpen: true))
+        {
+          if (mid != 0)
+          {
+            // Discard partial line, if not at the start
+            tempReader.ReadLine();
+          }
+
+          var positionBeforeReadLine = fs.Position;
+          var line = tempReader.ReadLine();
+          if (line == null) break;
+
+          var dateTime = DateUtil.ParseStandardDate(line);
+          if (dateTime >= minimumDate)
+          {
+            closestGreaterPosition = positionBeforeReadLine;
+            max = mid;
+          }
+          else
+          {
+            min = fs.Position;
+          }
+        }
+      }
+
+      if (closestGreaterPosition.HasValue)
+        fs.Seek(closestGreaterPosition.Value, SeekOrigin.Begin);
+    }
+
+    private void SearchCompressed(StreamReader reader, int? minBack)
+    {
+      var minimumDate = DateTime.Now.AddMinutes(-minBack.Value);
+
+      string line;
+      while ((line = reader.ReadLine()) != null)
+      {
+        var dateTime = DateUtil.ParseStandardDate(line);
+        if (dateTime >= minimumDate)
+        {
+          break;
+        }
+      }
     }
 
     public void Dispose()

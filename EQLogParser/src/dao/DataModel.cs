@@ -328,7 +328,7 @@ namespace EQLogParser
     public string Type { get; set; }
     public string State { get; set; }
     public CombinedStats CombinedStats { get; set; }
-    public List<List<ActionBlock>> Groups { get; } = new List<List<ActionBlock>>();
+    public List<List<ActionGroup>> Groups { get; } = new List<List<ActionGroup>>();
     public int UniqueGroupCount { get; set; }
   }
 
@@ -430,7 +430,7 @@ namespace EQLogParser
     public double Time { get; set; }
   }
 
-  internal class ActionBlock : TimedAction
+  internal class ActionGroup : TimedAction
   {
     public List<IAction> Actions { get; } = new List<IAction>();
   }
@@ -521,13 +521,13 @@ namespace EQLogParser
     public string TooltipText { get; set; }
     public ConcurrentDictionary<string, FightTotalDamage> PlayerDamageTotals { get; } = new ConcurrentDictionary<string, FightTotalDamage>();
     public ConcurrentDictionary<string, FightTotalDamage> PlayerTankTotals { get; } = new ConcurrentDictionary<string, FightTotalDamage>();
-    public List<ActionBlock> DamageBlocks { get; } = new List<ActionBlock>();
+    public List<ActionGroup> DamageBlocks { get; } = new List<ActionGroup>();
     public Dictionary<string, TimeSegment> DamageSegments { get; } = new Dictionary<string, TimeSegment>();
     public Dictionary<string, Dictionary<string, TimeSegment>> DamageSubSegments { get; } = new Dictionary<string, Dictionary<string, TimeSegment>>();
     public Dictionary<string, TimeSegment> TankSegments { get; } = new Dictionary<string, TimeSegment>();
     public Dictionary<string, Dictionary<string, TimeSegment>> TankSubSegments { get; } = new Dictionary<string, Dictionary<string, TimeSegment>>();
-    public List<ActionBlock> TankingBlocks { get; } = new List<ActionBlock>();
-    public List<ActionBlock> TauntBlocks { get; } = new List<ActionBlock>();
+    public List<ActionGroup> TankingBlocks { get; } = new List<ActionGroup>();
+    public List<ActionGroup> TauntBlocks { get; } = new List<ActionGroup>();
     public Dictionary<string, SpellDamageStats> DoTDamage { get; } = new Dictionary<string, SpellDamageStats>();
     public Dictionary<string, SpellDamageStats> DDDamage { get; } = new Dictionary<string, SpellDamageStats>();
     public Dictionary<string, SpellDamageStats> ProcDamage { get; } = new Dictionary<string, SpellDamageStats>();

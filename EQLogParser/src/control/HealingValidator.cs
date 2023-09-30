@@ -13,7 +13,7 @@ namespace EQLogParser
       SwarmPetsEnabled = MainWindow.IsHealingSwarmPetsEnabled;
     }
 
-    public bool IsValid(ActionBlock heal, HealRecord record, Dictionary<string, HashSet<string>> currentSpellCounts,
+    public bool IsValid(ActionGroup heal, HealRecord record, Dictionary<string, HashSet<string>> currentSpellCounts,
       Dictionary<double, Dictionary<string, HashSet<string>>> previousSpellCounts, Dictionary<string, byte> ignoreRecords)
     {
       if (!SwarmPetsEnabled)
