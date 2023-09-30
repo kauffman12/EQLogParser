@@ -281,9 +281,9 @@ namespace EQLogParser
         Application.Current.Resources["EQStopForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFcc434d") };
         Application.Current.Resources["EQDisabledBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#88000000") };
         SfSkinManager.SetTheme(main, new Theme("MaterialLight"));
-        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/MSControl/CheckBox.xaml");
-        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/SfDataGrid/SfDataGrid.xaml");
-        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/Common/Brushes.xaml");
+        LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/MSControl/CheckBox.xaml");
+        LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/SfDataGrid/SfDataGrid.xaml");
+        LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/Common/Brushes.xaml");
         main.BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
 
         if (!string.IsNullOrEmpty(main.statusText?.Text))
@@ -312,9 +312,9 @@ namespace EQLogParser
         Application.Current.Resources["EQStopForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFcc434d") };
         Application.Current.Resources["EQDisabledBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#88FFFFFF") };
         SfSkinManager.SetTheme(main, new Theme("MaterialDarkCustom"));
-        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/CheckBox.xaml");
-        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfDataGrid/SfDataGrid.xaml");
-        Helpers.LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/Brushes.xaml");
+        LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/CheckBox.xaml");
+        LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfDataGrid/SfDataGrid.xaml");
+        LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/Brushes.xaml");
         main.BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
 
         if (!string.IsNullOrEmpty(main.statusText?.Text))
@@ -543,7 +543,7 @@ namespace EQLogParser
                       var action = line.Substring(MainWindow.ACTION_INDEX);
                       if (ChatLineParser.ParseChatType(action) == null)
                       {
-                        if (Helpers.TimeCheck(line, range.TimeSegments[0].BeginTime, range, out var exceeds))
+                        if (TimeRange.TimeCheck(line, range.TimeSegments[0].BeginTime, range, out var exceeds))
                         {
                           os.Write(Encoding.UTF8.GetBytes(line));
                           os.Write(Encoding.UTF8.GetBytes(Environment.NewLine));
@@ -618,7 +618,7 @@ namespace EQLogParser
 
         if (saveFileDialog.ShowDialog().Value)
         {
-          TextFormatUtils.SaveHTML(saveFileDialog.FileName, tables);
+          TextUtils.SaveHTML(saveFileDialog.FileName, tables);
         }
       }
       catch (IOException ex)
@@ -636,6 +636,31 @@ namespace EQLogParser
       catch (ArgumentNullException ane)
       {
         LOG.Error(ane);
+      }
+    }
+
+    internal static void OpenFileWithDefault(string fileName)
+    {
+      try
+      {
+        Process.Start(new ProcessStartInfo { FileName = fileName, UseShellExecute = true });
+      }
+      catch (Exception ex)
+      {
+        LOG.Error(ex);
+      }
+    }
+
+    private static void LoadDictionary(string path)
+    {
+      var dict = new ResourceDictionary
+      {
+        Source = new Uri(path, UriKind.RelativeOrAbsolute)
+      };
+
+      foreach (var key in dict.Keys)
+      {
+        Application.Current.Resources[key] = dict[key];
       }
     }
 

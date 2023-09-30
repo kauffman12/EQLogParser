@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using static EQLogParser.Helpers;
+using static EQLogParser.TextUtils;
 
 namespace EQLogParser
 {
@@ -405,7 +405,7 @@ namespace EQLogParser
         var hitTypeMod = hitTypeAdd > 0 ? 1 : 0;
         attacker = string.Join(" ", split, 0, hitType);
         defender = string.Join(" ", split, hitType + hitTypeMod + 1, forIndex - hitType - hitTypeMod - 1);
-        subType = TextFormatUtils.ToUpper(subType);
+        subType = ToUpper(subType);
         var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
         attacker = UpdateAttacker(attacker, subType);
         defender = UpdateDefender(defender);
@@ -616,7 +616,7 @@ namespace EQLogParser
           {
             defender = defender.Substring(0, defender.Length - 1);
             attacker = string.Join(" ", split, 0, tryIndex);
-            subType = TextFormatUtils.ToUpper(subType);
+            subType = ToUpper(subType);
             attacker = UpdateAttacker(attacker, subType);
             defender = UpdateDefender(defender);
             record = CreateDamageRecord(lineData, split, stop, attacker, defender, 0, label, subType);
@@ -663,7 +663,7 @@ namespace EQLogParser
         {
           if (attentionIndex == (split.Length - 1) && split.Length > 3 && split[1] == "capture" && ParseNpcName(split, 3, out var npc))
           {
-            var taunt = new TauntRecord { Player = ConfigUtil.PlayerName, Success = true, Npc = TextFormatUtils.ToUpper(npc) };
+            var taunt = new TauntRecord { Player = ConfigUtil.PlayerName, Success = true, Npc = ToUpper(npc) };
             EventsNewTaunt?.Invoke(taunt, new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
           else if (attentionIndex == (split.Length - 1) && failedIndex == 2 && split.Length > 6 && split[1] == "have" && split[3] == "to")
@@ -672,7 +672,7 @@ namespace EQLogParser
             {
               Player = ConfigUtil.PlayerName,
               Success = false,
-              Npc = TextFormatUtils.ToUpper(TextFormatUtils.ParseSpellOrNpc(split, 5))
+              Npc = ToUpper(ParseSpellOrNpc(split, 5))
             };
             EventsNewTaunt?.Invoke(taunt, new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
@@ -685,7 +685,7 @@ namespace EQLogParser
           var name = (i == 2) ? split[0] + " " + split[1] : split[0];
           if (split[i] == "has" && split[i + 1] == "captured" && ParseNpcName(split, 3 + i, out var npc))
           {
-            var taunt = new TauntRecord { Player = name, Success = true, Npc = TextFormatUtils.ToUpper(npc) };
+            var taunt = new TauntRecord { Player = name, Success = true, Npc = ToUpper(npc) };
             EventsNewTaunt?.Invoke(taunt, new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
         }
@@ -697,7 +697,7 @@ namespace EQLogParser
           var name = (i == 2) ? split[0] + " " + split[1] : split[0];
           if (failedIndex == i && split[i + 1] == "to" && split[i + 2] == "taunt")
           {
-            var taunt = new TauntRecord { Player = name, Success = false, Npc = TextFormatUtils.ToUpper(TextFormatUtils.ParseSpellOrNpc(split, 3 + i)) };
+            var taunt = new TauntRecord { Player = name, Success = false, Npc = ToUpper(ParseSpellOrNpc(split, 3 + i)) };
             EventsNewTaunt?.Invoke(taunt, new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
           else if (split.Length > 10 && split[split.Length - 1] == "taunt." && split[split.Length - 2] == "improved" &&
@@ -711,7 +711,7 @@ namespace EQLogParser
               {
                 var npc = string.Join(" ", split, 0, j);
                 var taunter = string.Join(" ", split, playerIndex, last - playerIndex);
-                var taunt = new TauntRecord { Player = taunter, Success = true, IsImproved = true, Npc = TextFormatUtils.ToUpper(npc) };
+                var taunt = new TauntRecord { Player = taunter, Success = true, IsImproved = true, Npc = ToUpper(npc) };
                 EventsNewTaunt?.Invoke(taunt, new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
               }
             }
@@ -810,7 +810,7 @@ namespace EQLogParser
           lock (SlainQueue)
           {
             // we also use upper case now
-            slain = TextFormatUtils.ToUpper(slain);
+            slain = ToUpper(slain);
             if (!SlainQueue.Contains(slain) && DataManager.Instance.GetFight(slain) != null)
             {
               SlainQueue.Add(slain);
@@ -818,7 +818,7 @@ namespace EQLogParser
             }
           }
 
-          killer = TextFormatUtils.ToUpper(killer);
+          killer = ToUpper(killer);
 
           var death = new DeathRecord { Killed = string.Intern(slain), Killer = string.Intern(killer), Message = string.Intern(lineData.Action) };
           if (PreviousAction != null)
@@ -887,7 +887,7 @@ namespace EQLogParser
         attacker = PlayerManager.Instance.ReplacePlayer(attacker, attacker);
       }
 
-      attacker = TextFormatUtils.ToUpper(attacker);
+      attacker = ToUpper(attacker);
       return attacker;
     }
 
@@ -895,7 +895,7 @@ namespace EQLogParser
     {
       // Needed to replace 'You' and 'you', etc
       defender = PlayerManager.Instance.ReplacePlayer(defender, defender);
-      return TextFormatUtils.ToUpper(defender);
+      return ToUpper(defender);
     }
 
     private static bool HasOwner(string name, out string owner)
@@ -944,7 +944,7 @@ namespace EQLogParser
 
     private static string GetTypeFromSpell(string name, string type)
     {
-      var key = Helpers.CreateRecordKey(type, name);
+      var key = StatsUtil.CreateRecordKey(type, name);
       if (string.IsNullOrEmpty(key) || !SpellTypeCache.TryGetValue(key, out var result))
       {
         result = type;

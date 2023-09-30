@@ -376,7 +376,7 @@ namespace EQLogParser
       try
       {
         var export = DataGridUtil.BuildExportData(dataGrid);
-        var result = TextFormatUtils.BuildBBCodeTable(export.Item1, export.Item2, titleLabel.Content as string);
+        var result = TextUtils.BuildBBCodeTable(export.Item1, export.Item2, titleLabel.Content as string);
         Clipboard.SetDataObject(result);
       }
       catch (ArgumentNullException ane)
@@ -395,7 +395,7 @@ namespace EQLogParser
       try
       {
         var export = DataGridUtil.BuildExportData(dataGrid);
-        var result = TextFormatUtils.BuildGamparseList(export.Item1, export.Item2, titleLabel.Content as string);
+        var result = TextUtils.BuildGamparseList(export.Item1, export.Item2, titleLabel.Content as string);
         Clipboard.SetDataObject(result);
       }
       catch (ArgumentNullException ane)

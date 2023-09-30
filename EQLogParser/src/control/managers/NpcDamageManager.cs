@@ -206,7 +206,7 @@ namespace EQLogParser
     private static void AddPlayerTime(Dictionary<string, TimeSegment> segments, Dictionary<string, Dictionary<string, TimeSegment>> subSegments,
       DamageRecord record, string player, double time)
     {
-      StatsUtil.UpdateTimeSegments(segments, subSegments, Helpers.CreateRecordKey(record.Type, record.SubType), player, time);
+      StatsUtil.UpdateTimeSegments(segments, subSegments, StatsUtil.CreateRecordKey(record.Type, record.SubType), player, time);
     }
 
     private static bool IsValidAttack(DamageRecord record, bool isAttackerPlayer, out bool npcDefender)

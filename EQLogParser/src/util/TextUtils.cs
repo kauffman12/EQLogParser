@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 
 namespace EQLogParser
 {
-  static class TextFormatUtils
+  static class TextUtils
   {
     private const string BB_CELL_HEADER = "  [td]{0}    [/td]";
     private const string BB_CELL_BODY = "[td][right]{0}   [/right][/td]";
@@ -29,6 +29,7 @@ namespace EQLogParser
       { 400, "CD" }, { 100, "C" }, { 90, "XC" }, { 50, "L" }, { 40, "XL" }, { 10, "X" }, { 9, "IX" }, { 5, "V" }, { 4, "IV" }, { 1, "I" }
     };
 
+    internal static bool SCompare(string s, int start, int count, string test) => s.AsSpan(start, count).SequenceEqual(test);
     internal static string ParseSpellOrNpc(string[] split, int index) => string.Join(" ", split, index, split.Length - index).Trim('.');
     internal static string ToUpper(string name) => string.IsNullOrEmpty(name) ? "" : (char.ToUpper(name[0]) + (name.Length > 1 ? name.Substring(1) : ""));
 

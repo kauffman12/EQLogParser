@@ -385,7 +385,7 @@ namespace EQLogParser
               while (!s.EndOfStream && Running)
               {
                 var line = s.ReadLine();
-                if (Helpers.TimeCheck(line, start, ranges, out var exceeds))
+                if (TimeRange.TimeCheck(line, start, ranges, out var exceeds))
                 {
                   var match = true;
                   var firstIndex = -2;

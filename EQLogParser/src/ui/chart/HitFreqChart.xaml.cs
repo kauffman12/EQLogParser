@@ -51,7 +51,7 @@ namespace EQLogParser
           data.Add(new List<object> { column.XLongValue, column.Y, column.Diff });
         }
 
-        Clipboard.SetDataObject(TextFormatUtils.BuildCsv(header, data));
+        Clipboard.SetDataObject(TextUtils.BuildCsv(header, data));
       }
       catch (ExternalException ex)
       {
