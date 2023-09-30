@@ -92,7 +92,7 @@ namespace EQLogParser
     {
       if (!TriggerStateManager.Instance.IsActive())
       {
-        new MessageWindow("Trigger Database not available. In use by another EQLogParser?\r\nTrigger Management disabled.",
+        new MessageWindow("Trigger Database not available. In use by another EQLogParser?\r\nTrigger Management disabled until restart.",
           EQLogParser.Resource.Warning).Show();
         (Application.Current.MainWindow as MainWindow).DisableTriggers();
         return;
