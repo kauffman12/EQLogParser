@@ -56,7 +56,7 @@ namespace EQLogParser
 
     internal static PlayerSubStats CreatePlayerSubStats(ICollection<PlayerSubStats> individualStats, string subType, string type)
     {
-      var key = Helpers.CreateRecordKey(type, subType);
+      var key = CreateRecordKey(type, subType);
       PlayerSubStats stats = null;
 
       lock (individualStats)
@@ -70,6 +70,18 @@ namespace EQLogParser
       }
 
       return stats;
+    }
+
+    internal static string CreateRecordKey(string type, string subType)
+    {
+      var key = subType;
+
+      if (type == Labels.DD || type == Labels.DOT)
+      {
+        key = type + "=" + key;
+      }
+
+      return key;
     }
 
     internal static string FormatTitle(string targetTitle, string timeTitle, string damageTitle = "")

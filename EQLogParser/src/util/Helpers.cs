@@ -1,19 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Windows;
-using System.Xml;
 
 namespace EQLogParser
 {
   static class Helpers
   {
     internal static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
-    private static readonly DateUtil DateUtil = new DateUtil();
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     public static void AddAction(List<ActionGroup> blockList, IAction action, double beginTime)
@@ -31,55 +27,6 @@ namespace EQLogParser
     }
 
     internal static void AddToCollection(ObservableCollection<string> props, params string[] values) => values.ToList().ForEach(value => props.Add(value));
-
-    internal static string GetText(XmlNode node, string value)
-    {
-      if (node.SelectSingleNode(value) is XmlNode selected)
-      {
-        return selected.InnerText?.Trim();
-      }
-
-      return "";
-    }
-
-    internal static bool SCompare(string s, int start, int count, string test) => s.AsSpan(start, count).SequenceEqual(test);
-
-    internal static void LoadDictionary(string path)
-    {
-      var dict = new ResourceDictionary
-      {
-        Source = new Uri(path, UriKind.RelativeOrAbsolute)
-      };
-
-      foreach (var key in dict.Keys)
-      {
-        Application.Current.Resources[key] = dict[key];
-      }
-    }
-
-    internal static void OpenFileWithDefault(string fileName)
-    {
-      try
-      {
-        Process.Start(new ProcessStartInfo { FileName = fileName, UseShellExecute = true });
-      }
-      catch (Exception ex)
-      {
-        LOG.Error(ex);
-      }
-    }
-
-    internal static string CreateRecordKey(string type, string subType)
-    {
-      var key = subType;
-
-      if (type == Labels.DD || type == Labels.DOT)
-      {
-        key = type + "=" + key;
-      }
-
-      return key;
-    }
 
     internal static StreamReader GetStreamReader(FileStream f, double start = 0)
     {
@@ -116,7 +63,7 @@ namespace EQLogParser
         {
           var s = new StreamReader(f);
           s.ReadLine();
-          var check = TimeCheck(s.ReadLine(), time);
+          var check = TimeRange.TimeCheck(s.ReadLine(), time);
           s.DiscardBufferedData();
 
           long pos = 0;
@@ -147,65 +94,6 @@ namespace EQLogParser
       {
         f.Seek(good, SeekOrigin.Begin);
       }
-    }
-
-    internal static bool TimeCheck(string line, double start, double end = -1)
-    {
-      var pass = false;
-      if (!string.IsNullOrEmpty(line) && line.Length > 24)
-      {
-        var logTime = DateUtil.ParseDate(line);
-        if (!double.IsNaN(logTime))
-        {
-          if (end > -1)
-          {
-            pass = logTime >= start && logTime <= end;
-          }
-          else
-          {
-            pass = (start > 0) ? logTime >= start : false;
-          }
-        }
-      }
-
-      return pass;
-    }
-
-    internal static bool TimeCheck(string line, double start, TimeRange range, out bool exceeds)
-    {
-      var pass = false;
-      exceeds = false;
-      if (!string.IsNullOrEmpty(line) && line.Length > 24)
-      {
-        var logTime = DateUtil.ParseDate(line);
-        if (!double.IsNaN(logTime))
-        {
-          if (range == null)
-          {
-            pass = (start > -1) ? logTime >= start : false;
-          }
-          else
-          {
-            if (logTime > range.TimeSegments.Last().EndTime)
-            {
-              exceeds = true;
-            }
-            else
-            {
-              foreach (var segment in range.TimeSegments)
-              {
-                if (logTime >= segment.BeginTime && logTime <= segment.EndTime)
-                {
-                  pass = true;
-                  break;
-                }
-              }
-            }
-          }
-        }
-      }
-
-      return pass;
     }
   }
 

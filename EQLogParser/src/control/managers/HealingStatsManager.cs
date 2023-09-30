@@ -145,7 +145,7 @@ namespace EQLogParser
                   {
                     updatedHeal.Actions.Add(record);
                     // store substats and substats2 which is based on the player that was healed
-                    var key = Helpers.CreateRecordKey(record.Type, record.SubType);
+                    var key = StatsUtil.CreateRecordKey(record.Type, record.SubType);
                     StatsUtil.UpdateTimeSegments(null, healedByHealerTimeSegments, record.Healer, record.Healed, heal.BeginTime);
                     StatsUtil.UpdateTimeSegments(null, healedBySpellTimeSegments, key, record.Healed, heal.BeginTime);
                     StatsUtil.UpdateTimeSegments(null, healerHealedTimeSegments, record.Healed, record.Healer, heal.BeginTime);

@@ -190,6 +190,7 @@ namespace EQLogParser
       return result;
     }
 
+    internal static double StandardDateToDouble(string source) => ToDouble(ParseStandardDate(source));
     internal static DateTime ParseStandardDate(string source) => CustomDateTimeParser("MMM dd HH:mm:ss yyyy", source, 5);
 
     internal static DateTime CustomDateTimeParser(string dateFormat, string source, int offset = 0)

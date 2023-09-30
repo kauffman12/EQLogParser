@@ -63,7 +63,7 @@ namespace EQLogParser
 
     internal static bool TestRegexProperty(bool useRegex, string pattern, PatternEditor editor)
     {
-      var isValid = useRegex ? TextFormatUtils.IsValidRegex(pattern) : true;
+      var isValid = useRegex ? TextUtils.IsValidRegex(pattern) : true;
       editor.SetForeground(isValid ? "ContentForeground" : "EQWarnForegroundBrush");
       return isValid;
     }
@@ -86,12 +86,12 @@ namespace EQLogParser
     {
       if (to is Trigger toTrigger && from is Trigger fromTrigger)
       {
-        toTrigger.AltTimerName = TextFormatUtils.Trim(fromTrigger.AltTimerName);
-        toTrigger.Comments = TextFormatUtils.Trim(fromTrigger.Comments);
+        toTrigger.AltTimerName = TextUtils.Trim(fromTrigger.AltTimerName);
+        toTrigger.Comments = TextUtils.Trim(fromTrigger.Comments);
         toTrigger.DurationSeconds = fromTrigger.DurationSeconds;
-        toTrigger.Pattern = TextFormatUtils.Trim(fromTrigger.Pattern);
-        toTrigger.EndEarlyPattern = TextFormatUtils.Trim(fromTrigger.EndEarlyPattern);
-        toTrigger.EndEarlyPattern2 = TextFormatUtils.Trim(fromTrigger.EndEarlyPattern2);
+        toTrigger.Pattern = TextUtils.Trim(fromTrigger.Pattern);
+        toTrigger.EndEarlyPattern = TextUtils.Trim(fromTrigger.EndEarlyPattern);
+        toTrigger.EndEarlyPattern2 = TextUtils.Trim(fromTrigger.EndEarlyPattern2);
         toTrigger.EndUseRegex = fromTrigger.EndUseRegex;
         toTrigger.EndUseRegex2 = fromTrigger.EndUseRegex2;
         toTrigger.WorstEvalTime = fromTrigger.WorstEvalTime;
@@ -102,18 +102,18 @@ namespace EQLogParser
         toTrigger.TimerType = fromTrigger.TimerType;
         toTrigger.UseRegex = fromTrigger.UseRegex;
         toTrigger.WarningSeconds = fromTrigger.WarningSeconds;
-        toTrigger.EndTextToDisplay = TextFormatUtils.Trim(fromTrigger.EndTextToDisplay);
-        toTrigger.EndEarlyTextToDisplay = TextFormatUtils.Trim(fromTrigger.EndEarlyTextToDisplay);
-        toTrigger.TextToDisplay = TextFormatUtils.Trim(fromTrigger.TextToDisplay);
-        toTrigger.WarningTextToDisplay = TextFormatUtils.Trim(fromTrigger.WarningTextToDisplay);
-        toTrigger.EndTextToSpeak = TextFormatUtils.Trim(fromTrigger.EndTextToSpeak);
-        toTrigger.EndEarlyTextToSpeak = TextFormatUtils.Trim(fromTrigger.EndEarlyTextToSpeak);
-        toTrigger.TextToSpeak = TextFormatUtils.Trim(fromTrigger.TextToSpeak);
-        toTrigger.WarningTextToSpeak = TextFormatUtils.Trim(fromTrigger.WarningTextToSpeak);
-        toTrigger.SoundToPlay = TextFormatUtils.Trim(fromTrigger.SoundToPlay);
-        toTrigger.EndEarlySoundToPlay = TextFormatUtils.Trim(fromTrigger.EndEarlySoundToPlay);
-        toTrigger.EndSoundToPlay = TextFormatUtils.Trim(fromTrigger.EndSoundToPlay);
-        toTrigger.WarningSoundToPlay = TextFormatUtils.Trim(fromTrigger.WarningSoundToPlay);
+        toTrigger.EndTextToDisplay = TextUtils.Trim(fromTrigger.EndTextToDisplay);
+        toTrigger.EndEarlyTextToDisplay = TextUtils.Trim(fromTrigger.EndEarlyTextToDisplay);
+        toTrigger.TextToDisplay = TextUtils.Trim(fromTrigger.TextToDisplay);
+        toTrigger.WarningTextToDisplay = TextUtils.Trim(fromTrigger.WarningTextToDisplay);
+        toTrigger.EndTextToSpeak = TextUtils.Trim(fromTrigger.EndTextToSpeak);
+        toTrigger.EndEarlyTextToSpeak = TextUtils.Trim(fromTrigger.EndEarlyTextToSpeak);
+        toTrigger.TextToSpeak = TextUtils.Trim(fromTrigger.TextToSpeak);
+        toTrigger.WarningTextToSpeak = TextUtils.Trim(fromTrigger.WarningTextToSpeak);
+        toTrigger.SoundToPlay = TextUtils.Trim(fromTrigger.SoundToPlay);
+        toTrigger.EndEarlySoundToPlay = TextUtils.Trim(fromTrigger.EndEarlySoundToPlay);
+        toTrigger.EndSoundToPlay = TextUtils.Trim(fromTrigger.EndSoundToPlay);
+        toTrigger.WarningSoundToPlay = TextUtils.Trim(fromTrigger.WarningSoundToPlay);
 
         if (toTrigger is TriggerPropertyModel toModel)
         {

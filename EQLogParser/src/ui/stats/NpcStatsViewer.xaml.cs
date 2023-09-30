@@ -34,7 +34,7 @@ namespace EQLogParser
       var npcStatsRows = new Dictionary<string, NpcStatsRow>();
       foreach (var kv in DataManager.Instance.GetNpcResistStats())
       {
-        if (!PlayerManager.Instance.IsPetOrPlayerOrMerc(kv.Key) && !PlayerManager.Instance.IsPetOrPlayerOrMerc(TextFormatUtils.ToUpper(kv.Key)))
+        if (!PlayerManager.Instance.IsPetOrPlayerOrMerc(kv.Key) && !PlayerManager.Instance.IsPetOrPlayerOrMerc(TextUtils.ToUpper(kv.Key)))
         {
           var row = new NpcStatsRow { Name = kv.Key };
           foreach (var resists in kv.Value)

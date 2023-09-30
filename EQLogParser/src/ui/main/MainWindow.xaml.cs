@@ -302,11 +302,11 @@ namespace EQLogParser
     internal FightTable GetFightTable() => npcWindow?.Content as FightTable;
     private void RestoreTableColumnsClick(object sender, RoutedEventArgs e) => DataGridUtil.RestoreAllTableColumns();
     private void TabGroupCreated(object sender, TabGroupEventArgs e) => ChartTab = e.CurrentTabGroup;
-    private void AboutClick(object sender, RoutedEventArgs e) => Helpers.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/#readme");
-    private void OpenSoundsFolderClick(object sender, RoutedEventArgs e) => Helpers.OpenFileWithDefault("\"" + @"data\sounds" + "\"");
-    private void ReportProblemClick(object sender, RoutedEventArgs e) => Helpers.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
-    private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => Helpers.OpenFileWithDefault(@"data\releasenotes.rtf");
-    private void TriggerVariablesHelpClick(object sender, RoutedEventArgs e) => Helpers.OpenFileWithDefault(@"data\triggerVariables.rtf");
+    private void AboutClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/#readme");
+    private void OpenSoundsFolderClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("\"" + @"data\sounds" + "\"");
+    private void ReportProblemClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
+    private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(@"data\releasenotes.rtf");
+    private void TriggerVariablesHelpClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(@"data\triggerVariables.rtf");
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
@@ -499,7 +499,7 @@ namespace EQLogParser
       var appender = LOG.Logger.Repository.GetAppenders().FirstOrDefault(test => "file".Equals(test.Name, StringComparison.OrdinalIgnoreCase));
       if (appender != null)
       {
-        Helpers.OpenFileWithDefault("\"" + (appender as log4net.Appender.FileAppender).File + "\"");
+        MainActions.OpenFileWithDefault("\"" + (appender as log4net.Appender.FileAppender).File + "\"");
       }
     }
 

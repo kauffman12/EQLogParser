@@ -127,7 +127,7 @@ namespace EQLogParser
 
       // build ranks cache
       Enumerable.Range(1, 9).ToList().ForEach(r => RanksCache[r.ToString(CultureInfo.CurrentCulture)] = "");
-      Enumerable.Range(1, 200).ToList().ForEach(r => RanksCache[TextFormatUtils.IntToRoman(r)] = "");
+      Enumerable.Range(1, 200).ToList().ForEach(r => RanksCache[TextUtils.IntToRoman(r)] = "");
       RanksCache["Third"] = "Root";
       RanksCache["Fifth"] = "Root";
       RanksCache["Octave"] = "Root";

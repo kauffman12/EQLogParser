@@ -50,25 +50,25 @@ namespace EQLogParser
             player = ConfigUtil.PlayerName;
             if (split[1] == "activate" && split.Length > 2)
             {
-              spellName = TextFormatUtils.ParseSpellOrNpc(split.ToArray(), 2);
+              spellName = TextUtils.ParseSpellOrNpc(split.ToArray(), 2);
             }
             else if (split[1] == "begin" && split.Length > 3)
             {
               if (split[2] == "casting")
               {
-                spellName = TextFormatUtils.ParseSpellOrNpc(split.ToArray(), 3);
+                spellName = TextUtils.ParseSpellOrNpc(split.ToArray(), 3);
                 isSpell = true;
               }
               else if (split[2] == "singing")
               {
-                spellName = TextFormatUtils.ParseSpellOrNpc(split.ToArray(), 3);
+                spellName = TextUtils.ParseSpellOrNpc(split.ToArray(), 3);
               }
             }
           }
           else if (split[1] == "activates")
           {
             player = split[0];
-            spellName = TextFormatUtils.ParseSpellOrNpc(split.ToArray(), 2);
+            spellName = TextUtils.ParseSpellOrNpc(split.ToArray(), 2);
           }
           else if (split.Length > 3 && Array.FindIndex(split, 1, split.Length - 1, s => s == "begins") is int bIndex
             && bIndex > -1 && (bIndex + 2) < split.Length)
@@ -76,13 +76,13 @@ namespace EQLogParser
             if (split[bIndex + 1] == "casting")
             {
               player = string.Join(" ", split.ToArray(), 0, bIndex);
-              spellName = TextFormatUtils.ParseSpellOrNpc(split.ToArray(), bIndex + 2);
+              spellName = TextUtils.ParseSpellOrNpc(split.ToArray(), bIndex + 2);
               isSpell = true;
             }
             else if (split[bIndex + 1] == "singing")
             {
               player = string.Join(" ", split.ToArray(), 0, bIndex);
-              spellName = TextFormatUtils.ParseSpellOrNpc(split.ToArray(), bIndex + 2);
+              spellName = TextUtils.ParseSpellOrNpc(split.ToArray(), bIndex + 2);
             }
             else if (split.Length > 5 && split[2] == "to" && split[4] == "a")
             {
