@@ -23,8 +23,8 @@ namespace EQLogParser
 {
   public partial class MainWindow : ChromelessWindow, IDisposable
   {
-    internal event EventHandler<bool> EventsLogLoadingComplete;
-    internal event EventHandler<string> EventsThemeChanged;
+    internal event Action<string> EventsLogLoadingComplete;
+    internal event Action<string> EventsThemeChanged;
 
     // global settings
     internal static string CurrentLogFile;
@@ -247,14 +247,13 @@ namespace EQLogParser
 
         if (ConfigUtil.IfSetOrElse("TriggersEnabled", false))
         {
-          TriggerManager.Instance.Start();
+          // TriggerManager.Instance.Start();
         }
 
         SystemEvents.PowerModeChanged += SystemEventsPowerModeChanged;
 
         // cleanup downloads
         Dispatcher.InvokeAsync(() => MainActions.Cleanup());
-        TriggerManager.Instance.Init();
       }
       catch (Exception e)
       {
@@ -269,7 +268,7 @@ namespace EQLogParser
       {
         case PowerModes.Suspend:
           LOG.Warn("Suspending");
-          TriggerManager.Instance.Stop(false);
+          TriggerManager.Instance.Stop();
           DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
           CloseDamageOverlay();
           break;
@@ -281,7 +280,7 @@ namespace EQLogParser
 
           if (ConfigUtil.IfSetOrElse("TriggersEnabled", false))
           {
-            TriggerManager.Instance.Start();
+            // TriggerManager.Instance.Start();
           }
           break;
       }
@@ -616,7 +615,7 @@ namespace EQLogParser
         CurrentTheme = "MaterialDark";
         MainActions.LoadTheme(this, CurrentTheme);
         ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
-        EventsThemeChanged?.Invoke(this, CurrentTheme);
+        EventsThemeChanged?.Invoke(CurrentTheme);
       }
     }
 
@@ -627,7 +626,7 @@ namespace EQLogParser
         CurrentTheme = "MaterialLight";
         MainActions.LoadTheme(this, CurrentTheme);
         ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
-        EventsThemeChanged?.Invoke(this, CurrentTheme);
+        EventsThemeChanged?.Invoke(CurrentTheme);
       }
     }
 
@@ -854,7 +853,7 @@ namespace EQLogParser
         CurrentFontFamily = menuItem.Header as string;
         ConfigUtil.SetSetting("ApplicationFontFamily", CurrentFontFamily);
         MainActions.LoadTheme(this, CurrentTheme);
-        EventsThemeChanged?.Invoke(this, CurrentTheme);
+        EventsThemeChanged?.Invoke(CurrentTheme);
       }
     }
 
@@ -866,7 +865,7 @@ namespace EQLogParser
         CurrentFontSize = (double)menuItem.Tag;
         ConfigUtil.SetSetting("ApplicationFontSize", CurrentFontSize.ToString());
         MainActions.LoadTheme(this, CurrentTheme);
-        EventsThemeChanged?.Invoke(this, CurrentTheme);
+        EventsThemeChanged?.Invoke(CurrentTheme);
       }
     }
 
@@ -946,7 +945,7 @@ namespace EQLogParser
 
             Task.Delay(1000).ContinueWith(task => Dispatcher.InvokeAsync(() =>
             {
-              EventsLogLoadingComplete?.Invoke(this, true);
+              EventsLogLoadingComplete?.Invoke(CurrentLogFile);
               Dispatcher.InvokeAsync(() =>
               {
                 DataManager.Instance.ResetOverlayFights(true);
@@ -1247,7 +1246,7 @@ namespace EQLogParser
       StopProcessing();
       ChatManager.Instance.Stop();
       TriggerStateManager.Instance.Stop();
-      TriggerManager.Instance.Stop(false);
+      TriggerManager.Instance.Stop();
       ConfigUtil.Save();
       PlayerManager.Instance?.Save();
       Application.Current.Shutdown();

@@ -83,7 +83,7 @@ namespace EQLogParser
       }
     }
 
-    private void EventsThemeChanged(object sender, string e)
+    private void EventsThemeChanged(string _)
     {
       dateLabel.FontSize = MainWindow.CurrentFontSize - 1;
       numLabel.FontSize = MainWindow.CurrentFontSize;

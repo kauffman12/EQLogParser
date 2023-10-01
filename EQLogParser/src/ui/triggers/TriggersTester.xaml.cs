@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -58,8 +59,10 @@ namespace EQLogParser
       }
     }
 
-    private void RunTest(List<string> allLines, bool realTime)
+    private async void RunTest(List<string> allLines, bool realTime)
     {
+      var buffer = TriggerManager.Instance.GetTestBuffer();
+
       if (!realTime)
       {
         allLines.ForEach(line =>
@@ -70,7 +73,7 @@ namespace EQLogParser
             if (dateTime != DateTime.MinValue)
             {
               var beginTime = DateUtil.ToDouble(dateTime);
-              TriggerManager.Instance.AddAction(new LineData { Action = line.Substring(MainWindow.ACTION_INDEX), BeginTime = beginTime });
+              buffer.Post(Tuple.Create(line, beginTime, true));
             }
           }
         });
@@ -79,7 +82,7 @@ namespace EQLogParser
       {
         testButton.Content = "Stop Test";
 
-        Task.Run(() =>
+        await Task.Run(() =>
         {
           try
           {
@@ -94,9 +97,8 @@ namespace EQLogParser
                 var range = (int)(endTime - startTime + 1);
                 if (range > 0)
                 {
-                  var data = new List<string>[range];
-
                   var dataIndex = 0;
+                  var data = new List<string>[range];
                   data[dataIndex] = new List<string>();
                   foreach (var line in allLines)
                   {
@@ -114,8 +116,7 @@ namespace EQLogParser
                         if (diff == 1)
                         {
                           dataIndex++;
-                          data[dataIndex] = new List<string>();
-                          data[dataIndex].Add(line);
+                          data[dataIndex] = new List<string>() { line };
                           startTime++;
                         }
                         else if (diff > 1)
@@ -127,8 +128,7 @@ namespace EQLogParser
                           }
 
                           dataIndex++;
-                          data[dataIndex] = new List<string>();
-                          data[dataIndex].Add(line);
+                          data[dataIndex] = new List<string>() { line };
                           startTime += diff;
                         }
                       }
@@ -171,8 +171,7 @@ namespace EQLogParser
                         var start = DateTime.Now;
                         foreach (var line in list)
                         {
-                          var action = line.Substring(MainWindow.ACTION_INDEX);
-                          TriggerManager.Instance.AddAction(new LineData { Action = action, BeginTime = nowTime });
+                          buffer.Post(Tuple.Create(line, nowTime, true));
                         }
 
                         var took = (DateTime.Now - start).Ticks;

@@ -79,7 +79,7 @@ namespace EQLogParser
       ChangeSearch();
     }
 
-    private void EventsThemeChanged(object sender, string e) => UpdateCurrentTextColor();
+    private void EventsThemeChanged(string _) => UpdateCurrentTextColor();
     private void RefreshClick(object sender, RoutedEventArgs e) => ChangeSearch(true);
     private void ChatManagerEventsUpdatePlayer(object sender, string player) => LoadPlayers(player);
     private void ToFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(toFilter, EQLogParser.Resource.CHAT_TO_FILTER);

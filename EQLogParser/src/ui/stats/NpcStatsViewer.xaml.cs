@@ -145,8 +145,8 @@ namespace EQLogParser
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
     private void CreateLargeImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel, true);
     private void RefreshClick(object sender, RoutedEventArgs e) => Load();
-    private void EventsLogLoadingComplete(object sender, bool e) => Load();
-    private void EventsThemeChanged(object sender, string e) => DataGridUtil.RefreshTableColumns(dataGrid);
+    private void EventsLogLoadingComplete(string _) => Load();
+    private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
 
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls

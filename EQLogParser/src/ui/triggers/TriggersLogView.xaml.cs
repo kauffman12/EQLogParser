@@ -13,7 +13,7 @@ namespace EQLogParser
     public TriggersLogView()
     {
       InitializeComponent();
-      dataGrid.ItemsSource = TriggerManager.Instance.GetAlertLog();
+      // dataGrid.ItemsSource = TriggerManager.Instance.GetAlertLog();
     }
 
     private new void PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)

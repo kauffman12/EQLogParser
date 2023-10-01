@@ -8,7 +8,6 @@ namespace EQLogParser
   {
     private readonly ActionBlock<Tuple<string, double, bool>> PreProcess;
     private readonly ActionBlock<LineData> Process;
-    private readonly ActionBlock<LineData> Triggers;
     private long LineCount = 0;
 
     internal LogProcessor()
@@ -17,13 +16,11 @@ namespace EQLogParser
       var options = new ExecutionDataflowBlockOptions { BoundedCapacity = 30000 };
       PreProcess = new ActionBlock<Tuple<string, double, bool>>(data => DoPreProcess(data.Item1, data.Item2, data.Item3), options);
       Process = new ActionBlock<LineData>(data => DoProcess(data), options);
-      Triggers = new ActionBlock<LineData>(data => TriggerManager.Instance.AddAction(data));
       ChatManager.Instance.Init();
     }
 
-    public void LinkTo(ISourceBlock<Tuple<string, double, bool>> sourceBlock)
+    internal void LinkTo(ISourceBlock<Tuple<string, double, bool>> sourceBlock)
     {
-      // Establish the link and add the disposable to the group
       sourceBlock.LinkTo(PreProcess, new DataflowLinkOptions { PropagateCompletion = false });
     }
 
@@ -33,8 +30,11 @@ namespace EQLogParser
 
       if (monitor && TriggerStateManager.Instance.IsActive())
       {
-        // Triggers check everything
-        Triggers.Post(lineData);
+        // Look for GINA entries in the log
+        if (ConfigUtil.IfSetOrElse("TriggersWatchForGINA", false))
+        {
+          GinaUtil.CheckGina(lineData);
+        }
       }
 
       // avoid having other things parse chat by accident

@@ -216,7 +216,7 @@ namespace EQLogParser
       selected.SelectedItem = selected.Items[0];
     }
 
-    private void EventsThemeChanged(object sender, string e)
+    private void EventsThemeChanged(string _)
     {
       if (TheDataGrid?.View != null)
       {

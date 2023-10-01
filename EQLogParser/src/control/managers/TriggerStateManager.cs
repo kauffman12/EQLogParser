@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Media;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace EQLogParser
@@ -729,17 +730,27 @@ namespace EQLogParser
       else if (old.OverlayData != null)
       {
         newNode.OverlayData = (Application.Current as App).AutoMap.Map(old.OverlayData, new Overlay());
+        newNode.OverlayData.OverlayColor = FixColor(newNode.OverlayData.OverlayColor);
+        newNode.OverlayData.FontColor = FixColor(newNode.OverlayData.FontColor);
+        newNode.OverlayData.ActiveColor = FixColor(newNode.OverlayData.ActiveColor);
+        newNode.OverlayData.BackgroundColor = FixColor(newNode.OverlayData.BackgroundColor);
+        newNode.OverlayData.IdleColor = FixColor(newNode.OverlayData.IdleColor);
+        newNode.OverlayData.ResetColor = FixColor(newNode.OverlayData.ResetColor);
         if (old.OverlayData.Id != null)
         {
           overlayIds[old.OverlayData.Id] = newNode.Id;
         }
       }
 
-      if (newNode.TriggerData != null && newNode.TriggerData.SelectedOverlays is List<string> selected)
+      if (newNode.TriggerData != null)
       {
-        var remapped = selected.Where(id => overlayIds.ContainsKey(id)).Select(id => overlayIds[id]).ToList();
-        selected.Clear();
-        selected.AddRange(remapped);
+        newNode.TriggerData.FontColor = FixColor(newNode.TriggerData.FontColor);
+        if (newNode.TriggerData.SelectedOverlays is List<string> selected)
+        {
+          var remapped = selected.Where(id => overlayIds.ContainsKey(id)).Select(id => overlayIds[id]).ToList();
+          selected.Clear();
+          selected.AddRange(remapped);
+        }
       }
 
       DB?.GetCollection<TriggerNode>(TREE_COL).Insert(newNode);
@@ -751,6 +762,20 @@ namespace EQLogParser
           UpgradeTree(old.Nodes[i], overlayIds, defaultEnabled, newNode.Id, i);
         }
       }
+    }
+
+    string FixColor(string value)
+    {
+      if (!string.IsNullOrEmpty(value))
+      {
+        if (ColorConverter.ConvertFromString(value) is Color color)
+        {
+          return color.ToHexString();
+        }
+        return "#FFFFFF";
+      }
+
+      return value;
     }
   }
 
