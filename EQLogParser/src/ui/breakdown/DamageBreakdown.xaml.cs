@@ -1,6 +1,7 @@
 ﻿using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -154,7 +155,7 @@ namespace EQLogParser
         }
       }
 
-      return list;
+      return list.OrderByDescending(stats => stats.Total).ToList();
     }
 
     private void ItemsSourceChanged(object sender, TreeGridItemsSourceChangedEventArgs e)
