@@ -28,6 +28,7 @@ namespace EQLogParser
     private const string LABEL_NEW_TRIGGER = "New Trigger";
     private const string LABEL_NEW_FOLDER = "New Folder";
     private readonly Dictionary<string, Window> PreviewWindows = new Dictionary<string, Window>();
+    private TriggerConfig TheConfig;
     private FileSystemWatcher Watcher;
     private PatternEditor PatternEditor;
     private PatternEditor EndEarlyPatternEditor;
@@ -45,6 +46,17 @@ namespace EQLogParser
     public TriggersView()
     {
       InitializeComponent();
+
+      if (TriggerStateManager.Instance.GetConfig() is TriggerConfig config)
+      {
+        TheConfig = config;
+
+        if (!TheConfig.IsAdvanced)
+        {
+          basicCheckBox.IsChecked = config.IsEnabled;
+          SetTitle(config.IsEnabled);
+        }
+      }
 
       if ((TestSynth = TriggerUtil.GetSpeechSynthesizer()) != null)
       {
@@ -121,6 +133,7 @@ namespace EQLogParser
 
     private void AssignTextOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender, true);
     private void AssignTimerOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender, false);
+    private void CloseOverlaysClick(object sender, RoutedEventArgs e) => TriggerManager.Instance.CloseOverlays();
     private void CreateTextOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(false);
     private void CreateTimerOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(true);
     private void ExportClick(object sender, RoutedEventArgs e) => TriggerUtil.Export(treeView?.SelectedItems?.Cast<TriggerTreeViewNode>());
@@ -128,6 +141,40 @@ namespace EQLogParser
     private void NodeExpanded(object sender, NodeExpandedCollapsedEventArgs e) => TriggerStateManager.Instance.SetExpanded(e.Node as TriggerTreeViewNode);
     private void RenameClick(object sender, RoutedEventArgs e) => treeView?.BeginEdit(treeView.SelectedItem as TriggerTreeViewNode);
     private void SelectionChanging(object sender, ItemSelectionChangingEventArgs e) => e.Cancel = IsCancelSelection();
+
+    private void BasicChecked(object sender, RoutedEventArgs e)
+    {
+      if (Ready && sender is CheckBox checkBox)
+      {
+        if (checkBox?.IsChecked == true)
+        {
+          SetTitle(true);
+          TheConfig.IsEnabled = true;
+        }
+        else
+        {
+          SetTitle(false);
+          TheConfig.IsEnabled = false;
+        }
+
+        TriggerStateManager.Instance.UpdateConfig(TheConfig);
+        TriggerManager.Instance.ConfigUpdated();
+      }
+    }
+
+    private void SetTitle(bool active)
+    {
+      if (active)
+      {
+        titleLabel.SetResourceReference(Label.ForegroundProperty, "EQGoodForegroundBrush");
+        titleLabel.Content = "Triggers Active";
+      }
+      else
+      {
+        titleLabel.SetResourceReference(Label.ForegroundProperty, "EQStopForegroundBrush");
+        titleLabel.Content = "Check to Activate Triggers";
+      }
+    }
 
     private void CollapseAllClick(object sender, RoutedEventArgs e)
     {
@@ -146,7 +193,7 @@ namespace EQLogParser
       if (e.Node is TriggerTreeViewNode viewNode)
       {
         TriggerStateManager.Instance.SetState(CurrentPlayer, viewNode);
-        TriggerManager.Instance.UpdateTriggers();
+        TriggerManager.Instance.TriggersUpdated();
       }
     }
 
@@ -394,7 +441,7 @@ namespace EQLogParser
 
       if (triggerDelete)
       {
-        TriggerManager.Instance.UpdateTriggers();
+        TriggerManager.Instance.TriggersUpdated();
       }
     }
 
@@ -583,7 +630,7 @@ namespace EQLogParser
 
         RefreshTriggerNode();
         SelectionChanged(treeView.SelectedItem as TriggerTreeViewNode);
-        TriggerManager.Instance.UpdateTriggers();
+        TriggerManager.Instance.TriggersUpdated();
       }
     }
 
@@ -637,7 +684,7 @@ namespace EQLogParser
 
         RefreshTriggerNode();
         SelectionChanged(treeView.SelectedItem as TriggerTreeViewNode);
-        TriggerManager.Instance.UpdateTriggers();
+        TriggerManager.Instance.TriggersUpdated();
       }
     }
 
@@ -929,14 +976,20 @@ namespace EQLogParser
         // reload triggers if current one is enabled by anyone
         if (TriggerStateManager.Instance.IsAnyEnabled(model.Node.Id))
         {
-          TriggerManager.Instance.UpdateTriggers();
+          TriggerManager.Instance.TriggersUpdated();
         }
       }
       else if (model is TextOverlayPropertyModel || model is TimerOverlayPropertyModel)
       {
+        // only close overlay if non-style attributes have changed
+        var old = model.Node.OverlayData;
+        if (old.Top != model.Top || old.Left != model.Left || old.Height != model.Height || old.Width != model.Width)
+        {
+          TriggerManager.Instance.CloseOverlay(model.Node.Id);
+        }
+
         TriggerUtil.Copy(model.Node.OverlayData, model);
         TriggerStateManager.Instance.Update(model.Node);
-        TriggerManager.Instance.CloseOverlay(model.Node.Id);
       }
 
       cancelButton.IsEnabled = false;

@@ -18,6 +18,7 @@ namespace EQLogParser
     internal const string TRIGGERS = "Triggers";
     private const string LEGACY_OVERLAY_FILE = "triggerOverlays.json";
     private const string LEGACY_TRIGGERS_FILE = "triggers.json";
+    private const string CONFIG_COL = "Config";
     private const string STATES_COL = "States";
     private const string TREE_COL = "Tree";
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
@@ -40,6 +41,9 @@ namespace EQLogParser
         {
           Upgrade();
         }
+
+        var config = DB.GetCollection<TriggerConfig>(CONFIG_COL);
+        config.EnsureIndex(x => x.Id);
 
         var tree = DB.GetCollection<TriggerNode>(TREE_COL);
         tree.EnsureIndex(x => x.Id);
@@ -69,6 +73,7 @@ namespace EQLogParser
     internal TriggerTreeViewNode CreateOverlay(string parentId, string name, bool isTimer) => CreateNode(parentId, name, OVERLAYS, isTimer);
     internal TriggerTreeViewNode GetTriggerTreeView(string playerId) => GetTreeView(TRIGGERS, playerId);
     internal TriggerTreeViewNode GetOverlayTreeView() => GetTreeView(OVERLAYS);
+    internal void UpdateConfig(TriggerConfig config) => DB?.GetCollection<TriggerConfig>(CONFIG_COL).Update(config);
     internal void ImportTriggers(TriggerNode parent, IEnumerable<ExportTriggerNode> imported) => Import(parent, imported, TRIGGERS);
     internal void ImportOverlays(TriggerNode parent, IEnumerable<ExportTriggerNode> imported) => Import(parent, imported, OVERLAYS);
     internal bool IsActive() => DB != null;
@@ -80,6 +85,21 @@ namespace EQLogParser
         DB?.Dispose();
         DB = null;
       }
+    }
+
+    internal TriggerConfig GetConfig()
+    {
+      if (DB?.GetCollection<TriggerConfig>(CONFIG_COL) is ILiteCollection<TriggerConfig> configs)
+      {
+        if (configs.Count() == 0)
+        {
+          configs.Insert(new TriggerConfig { Id = Guid.NewGuid().ToString() });
+        }
+
+        return configs.FindAll().FirstOrDefault();
+      }
+
+      return null;
     }
 
     internal void Copy(TriggerNode src, TriggerNode dst)
@@ -704,6 +724,12 @@ namespace EQLogParser
       {
         var states = DB?.GetCollection<TriggerState>(STATES_COL);
         states?.Insert(new TriggerState { Id = DEFAULT_USER, Enabled = defaultEnabled });
+      }
+
+      if (ConfigUtil.IfSetOrElse("TriggersEnabled", false))
+      {
+        var config = new TriggerConfig { IsEnabled = true, Id = Guid.NewGuid().ToString() };
+        DB?.GetCollection<TriggerConfig>(CONFIG_COL).Insert(config);
       }
 
       DB?.Checkpoint();

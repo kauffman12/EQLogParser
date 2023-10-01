@@ -245,12 +245,10 @@ namespace EQLogParser
           ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
         }
 
-        if (ConfigUtil.IfSetOrElse("TriggersEnabled", false))
-        {
-          // TriggerManager.Instance.Start();
-        }
-
         SystemEvents.PowerModeChanged += SystemEventsPowerModeChanged;
+
+        // Init Trigger Manager
+        TriggerManager.Instance.Init();
 
         // cleanup downloads
         Dispatcher.InvokeAsync(() => MainActions.Cleanup());
@@ -277,11 +275,7 @@ namespace EQLogParser
           DataManager.Instance.ResetOverlayFights(true);
           OpenDamageOverlayIfEnabled(true, false);
           DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
-
-          if (ConfigUtil.IfSetOrElse("TriggersEnabled", false))
-          {
-            // TriggerManager.Instance.Start();
-          }
+          TriggerManager.Instance.ConfigUpdated();
           break;
       }
     }

@@ -151,6 +151,7 @@ namespace EQLogParser
               doubleValue = DateUtil.ToDouble(dateTime);
             }
 
+            if (cancelToken.IsCancellationRequested) return;
             await Lines.SendAsync(Tuple.Create(line, doubleValue, monitor), cancelToken);
             previous = line;
           }

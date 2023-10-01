@@ -200,6 +200,22 @@ namespace EQLogParser
     public string Parent { get; set; }
   }
 
+  internal class TriggerUser
+  {
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string FileName { get; set; }
+    public bool IsEnabled { get; set; }
+  }
+
+  internal class TriggerConfig
+  {
+    public string Id { get; set; }
+    public bool IsAdvanced { get; set; }
+    public List<TriggerUser> Users { get; set; } = new List<TriggerUser>();
+    public bool IsEnabled { get; set; }
+  }
+
   internal class ExportTriggerNode : TriggerNode
   {
     public List<ExportTriggerNode> Nodes { get; set; } = new List<ExportTriggerNode>();
