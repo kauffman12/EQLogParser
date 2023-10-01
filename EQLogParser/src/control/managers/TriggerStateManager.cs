@@ -25,6 +25,7 @@ namespace EQLogParser
     private static readonly Lazy<TriggerStateManager> _lazy = new Lazy<TriggerStateManager>(() => new TriggerStateManager());
     internal static TriggerStateManager Instance => _lazy.Value; // instance
     private readonly object LockObject = new object();
+    private readonly object ConfigLock = new object();
     private LiteDatabase DB;
 
     private TriggerStateManager()
@@ -70,10 +71,11 @@ namespace EQLogParser
     internal void AssignPriority(int pri, IEnumerable<TriggerNode> nodes) => AssignPriority(DB?.GetCollection<TriggerNode>(TREE_COL), pri, nodes);
     internal TriggerTreeViewNode CreateFolder(string parentId, string name) => CreateNode(parentId, name);
     internal TriggerTreeViewNode CreateTrigger(string parentId, string name) => CreateNode(parentId, name, TRIGGERS);
-    internal TriggerTreeViewNode CreateOverlay(string parentId, string name, bool isTimer) => CreateNode(parentId, name, OVERLAYS, isTimer);
+    internal TriggerTreeViewNode CreateOverlay(string parentId, string name, bool isTextOverlay) => CreateNode(parentId, name, OVERLAYS, isTextOverlay);
     internal TriggerTreeViewNode GetTriggerTreeView(string playerId) => GetTreeView(TRIGGERS, playerId);
     internal TriggerTreeViewNode GetOverlayTreeView() => GetTreeView(OVERLAYS);
-    internal void UpdateConfig(TriggerConfig config) => DB?.GetCollection<TriggerConfig>(CONFIG_COL).Update(config);
+    internal TriggerNode GetDefaultTextOverlay() => GetDefaultOverlay(true);
+    internal TriggerNode GetDefaultTimerOverlay() => GetDefaultOverlay(false);
     internal void ImportTriggers(TriggerNode parent, IEnumerable<ExportTriggerNode> imported) => Import(parent, imported, TRIGGERS);
     internal void ImportOverlays(TriggerNode parent, IEnumerable<ExportTriggerNode> imported) => Import(parent, imported, OVERLAYS);
     internal bool IsActive() => DB != null;
@@ -91,14 +93,37 @@ namespace EQLogParser
     {
       if (DB?.GetCollection<TriggerConfig>(CONFIG_COL) is ILiteCollection<TriggerConfig> configs)
       {
-        if (configs.Count() == 0)
+        lock (ConfigLock)
         {
-          configs.Insert(new TriggerConfig { Id = Guid.NewGuid().ToString() });
-        }
+          if (configs.Count() == 0)
+          {
+            configs.Insert(new TriggerConfig { Id = Guid.NewGuid().ToString() });
+          }
 
-        return configs.FindAll().FirstOrDefault();
+          return configs.FindAll().FirstOrDefault();
+        }
       }
 
+      return null;
+    }
+
+    internal void UpdateConfig(TriggerConfig config)
+    {
+      lock (ConfigLock)
+      {
+        DB?.GetCollection<TriggerConfig>(CONFIG_COL).Update(config);
+      }
+    }
+
+    internal TriggerNode GetDefaultOverlay(bool isTextOverlay)
+    {
+      if (DB?.GetCollection<TriggerNode>(TREE_COL) is ILiteCollection<TriggerNode> tree)
+      {
+        lock (LockObject)
+        {
+          return tree.Query().Where(n => n.OverlayData != null && n.OverlayData.IsDefault && n.OverlayData.IsTextOverlay == isTextOverlay).FirstOrDefault();
+        }
+      }
       return null;
     }
 
@@ -170,6 +195,14 @@ namespace EQLogParser
             if (updateIndex)
             {
               node.Index = GetNextIndex(tree, node.Parent);
+            }
+
+            if (node.OverlayData != null)
+            {
+              if (node.OverlayData.IsDefault)
+              {
+                EnsureNoOtherDefaults(tree, node.Id, node.OverlayData.IsTextOverlay);
+              }
             }
 
             tree.Update(node);
@@ -381,7 +414,17 @@ namespace EQLogParser
       }
     }
 
-    private TriggerTreeViewNode CreateNode(string parentId, string name, string type = null, bool isTimer = false)
+    private void EnsureNoOtherDefaults(ILiteCollection<TriggerNode> tree, string id, bool isTextOverlay)
+    {
+      foreach (var node in tree?.Query().Where(o => o.Id != id && o.OverlayData != null &&
+        o.OverlayData.IsTextOverlay == isTextOverlay && o.OverlayData.IsDefault).ToEnumerable())
+      {
+        node.OverlayData.IsDefault = false;
+        tree.Update(node);
+      }
+    }
+
+    private TriggerTreeViewNode CreateNode(string parentId, string name, string type = null, bool isTextOverlay = false)
     {
       TriggerTreeViewNode viewNode = null;
       if (DB?.GetCollection<TriggerNode>(TREE_COL) is ILiteCollection<TriggerNode> tree)
@@ -405,8 +448,8 @@ namespace EQLogParser
           {
             newNode.OverlayData = new Overlay();
             newNode.IsExpanded = false;
-            newNode.OverlayData.IsTimerOverlay = isTimer;
-            newNode.OverlayData.IsTextOverlay = !isTimer;
+            newNode.OverlayData.IsTimerOverlay = !isTextOverlay;
+            newNode.OverlayData.IsTextOverlay = isTextOverlay;
 
             // better default for text
             if (newNode.OverlayData.IsTextOverlay)

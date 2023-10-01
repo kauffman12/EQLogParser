@@ -91,6 +91,7 @@ namespace EQLogParser
     public bool UseStandardTime { get; set; } = false;
     public bool IsTimerOverlay { get; set; }
     public bool IsTextOverlay { get; set; }
+    public bool IsDefault { get; set; }
     public int TimerMode { get; set; } = 0;
     public long Height { get; set; } = 400;
     public long Width { get; set; } = 300;

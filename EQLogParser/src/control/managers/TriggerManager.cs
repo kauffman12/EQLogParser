@@ -249,7 +249,7 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(text))
       {
         var beginTicks = DateTime.Now.Ticks;
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        UIUtil.InvokeAsync(() =>
         {
           text = TriggerUtil.ProcessText(text, originalMatches);
           text = TriggerUtil.ProcessText(text, matches);
@@ -266,9 +266,7 @@ namespace EQLogParser
                 if (TriggerStateManager.Instance.GetOverlayById(overlayId) is TriggerNode node
                   && node?.OverlayData?.IsTextOverlay == true)
                 {
-                  windowData = new OverlayWindowData { TheWindow = new TextOverlayWindow(node) };
-                  TextWindows[overlayId] = windowData;
-                  windowData.TheWindow.Show();
+                  windowData = GetWindowData(node);
                 }
               }
 
@@ -281,17 +279,41 @@ namespace EQLogParser
             }
           });
 
+          if (!textOverlayFound && TriggerStateManager.Instance.GetDefaultTextOverlay() is TriggerNode node)
+          {
+            lock (TextWindows)
+            {
+              if (!TextWindows.TryGetValue(node.Id, out var windowData))
+              {
+                windowData = GetWindowData(node);
+              }
+
+              // using default
+              var brush = TriggerUtil.GetBrush(trigger.FontColor);
+              (windowData?.TheWindow as TextOverlayWindow).AddTriggerText(text, beginTicks, brush);
+              textOverlayFound = true;
+            }
+          }
+
           if (textOverlayFound && !TextOverlayTimer.IsEnabled)
           {
             TextOverlayTimer.Start();
           }
         }, DispatcherPriority.Render);
+
+        OverlayWindowData GetWindowData(TriggerNode node)
+        {
+          var windowData = new OverlayWindowData { TheWindow = new TextOverlayWindow(node) };
+          TextWindows[node.Id] = windowData;
+          windowData.TheWindow.Show();
+          return windowData;
+        }
       }
     }
 
     private void AddTimerEvent(Trigger trigger, List<TimerData> data)
     {
-      Application.Current.Dispatcher.InvokeAsync(() =>
+      UIUtil.InvokeAsync(() =>
       {
         var timerOverlayFound = false;
         trigger.SelectedOverlays?.ForEach(overlayId =>
@@ -304,10 +326,7 @@ namespace EQLogParser
               if (TriggerStateManager.Instance.GetOverlayById(overlayId) is TriggerNode node
                 && node?.OverlayData?.IsTimerOverlay == true)
               {
-                windowData = new OverlayWindowData { TheWindow = new TimerOverlayWindow(node) };
-                TimerWindows[overlayId] = windowData;
-                windowData.TheWindow.Show();
-                ((TimerOverlayWindow)windowData?.TheWindow).Tick(data);
+                windowData = GetWindowData(node, data);
               }
             }
 
@@ -319,11 +338,34 @@ namespace EQLogParser
           }
         });
 
+        if (!timerOverlayFound && TriggerStateManager.Instance.GetDefaultTimerOverlay() is TriggerNode node)
+        {
+          lock (TimerWindows)
+          {
+            if (!TimerWindows.TryGetValue(node.Id, out var windowData))
+            {
+              windowData = GetWindowData(node, data);
+            }
+
+            // using default
+            timerOverlayFound = true;
+          }
+        }
+
         if (timerOverlayFound && !TimerOverlayTimer.IsEnabled)
         {
           TimerOverlayTimer.Start();
         }
       }, DispatcherPriority.Render);
+
+      OverlayWindowData GetWindowData(TriggerNode node, List<TimerData> timerData)
+      {
+        var windowData = new OverlayWindowData { TheWindow = new TimerOverlayWindow(node) };
+        TimerWindows[node.Id] = windowData;
+        windowData.TheWindow.Show();
+        ((TimerOverlayWindow)windowData?.TheWindow).Tick(timerData);
+        return windowData;
+      }
     }
   }
 }

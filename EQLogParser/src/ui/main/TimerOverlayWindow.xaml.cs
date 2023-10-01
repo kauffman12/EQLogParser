@@ -72,7 +72,7 @@ namespace EQLogParser
       if (timerList.Count > 0)
       {
         var currentTicks = DateTime.Now.Ticks;
-        foreach (var timerData in timerList.Where(timerData => timerData.TimerType == 2 && timerData.SelectedOverlays.Contains(Node.Id)))
+        foreach (var timerData in timerList.Where(timerData => timerData.TimerType == 2 && ShouldProcess(timerData)))
         {
           if (ShortDurationBars.TryGetValue(timerData.Key, out var value))
           {
@@ -116,12 +116,12 @@ namespace EQLogParser
         if (Node.OverlayData.SortBy == 0)
         {
           // create order
-          orderedList = timerList.Where(timerData => timerData.SelectedOverlays.Contains(Node.Id));
+          orderedList = timerList.Where(timerData => ShouldProcess(timerData));
         }
         else
         {
           // remaining order
-          orderedList = timerList.Where(timerData => timerData.SelectedOverlays.Contains(Node.Id))
+          orderedList = timerList.Where(timerData => ShouldProcess(timerData))
             .OrderBy(timerData => timerData.EndTicks - currentTicks);
         }
 
@@ -361,18 +361,21 @@ namespace EQLogParser
 
     private void TriggerUpdateEvent(TriggerNode node)
     {
-      if (Node != node)
+      if (Node.Id == node.Id)
       {
-        Node = node;
-      }
+        if (Node != node)
+        {
+          Node = node;
+        }
 
-      Height = Node.OverlayData.Height;
-      Width = Node.OverlayData.Width;
-      Top = Node.OverlayData.Top;
-      Left = Node.OverlayData.Left;
-      saveButton.IsEnabled = false;
-      cancelButton.IsEnabled = false;
-      closeButton.IsEnabled = true;
+        Height = Node.OverlayData.Height;
+        Width = Node.OverlayData.Width;
+        Top = Node.OverlayData.Top;
+        Left = Node.OverlayData.Left;
+        saveButton.IsEnabled = false;
+        cancelButton.IsEnabled = false;
+        closeButton.IsEnabled = true;
+      }
     }
 
     private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)
@@ -390,6 +393,16 @@ namespace EQLogParser
         cancelButton.IsEnabled = true;
         closeButton.IsEnabled = false;
       }
+    }
+
+    private bool ShouldProcess(TimerData timerData)
+    {
+      if (timerData.SelectedOverlays.Count == 0 && Node?.OverlayData.IsDefault == true)
+      {
+        return true;
+      }
+
+      return timerData.SelectedOverlays.Contains(Node.Id);
     }
 
     private void WindowLoaded(object sender, RoutedEventArgs e)
