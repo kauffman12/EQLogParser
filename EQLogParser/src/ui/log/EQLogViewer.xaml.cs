@@ -94,7 +94,7 @@ namespace EQLogParser
       (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
     }
 
-    private void EventsThemeChanged(object sender, string e) => UpdateCurrentTextColor();
+    private void EventsThemeChanged(string _) => UpdateCurrentTextColor();
     private void SelectLineTypes(object sender, EventArgs e) => UpdateUI();
 
     private void UpdateCurrentTextColor()

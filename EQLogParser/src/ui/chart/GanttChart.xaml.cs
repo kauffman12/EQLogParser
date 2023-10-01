@@ -168,7 +168,7 @@ namespace EQLogParser
       Display();
     }
 
-    private void EventsThemeChanged(object sender, string e)
+    private void EventsThemeChanged(string _)
     {
       ROW_HEIGHT = (int)MainWindow.CurrentFontSize + 12;
       Display();

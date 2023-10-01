@@ -61,7 +61,7 @@ namespace EQLogParser
 
     private void CreateImageClick(object sender, RoutedEventArgs e) => UIElementUtil.CreateImage(Dispatcher, sfChart);
 
-    private void EventsThemeChanged(object sender, string e)
+    private void EventsThemeChanged(string _)
     {
       if (sfChart?.Series is ChartSeriesCollection collection && collection.Count > 0)
       {

@@ -149,8 +149,8 @@ namespace EQLogParser
         }
         else if (fromTrigger is TriggerPropertyModel fromModel)
         {
-          toTrigger.ActiveColor = (fromModel.TriggerActiveBrush == null) ? null : fromModel.TriggerActiveBrush.Color.ToString();
-          toTrigger.FontColor = (fromModel.TriggerFontBrush == null) ? null : fromModel.TriggerFontBrush.Color.ToString();
+          toTrigger.ActiveColor = (fromModel.TriggerActiveBrush == null) ? null : fromModel.TriggerActiveBrush.Color.ToHexString();
+          toTrigger.FontColor = (fromModel.TriggerFontBrush == null) ? null : fromModel.TriggerFontBrush.Color.ToHexString();
           var selectedOverlays = fromModel.SelectedTextOverlays.Where(item => item.IsChecked).Select(item => item.Value).ToList();
           selectedOverlays.AddRange(fromModel.SelectedTimerOverlays.Where(item => item.IsChecked).Select(item => item.Value));
           toTrigger.SelectedOverlays = selectedOverlays;
@@ -204,12 +204,12 @@ namespace EQLogParser
           toModel.IdleTimeoutTimeSpan = new TimeSpan(0, 0, (int)toModel.IdleTimeoutSeconds);
           Application.Current.Resources["OverlayText-" + toModel.Node.Id] = toModel.Node.Name;
 
-          AssignResource(toModel, fromOverlay, "OverlayColor", "OverlayBrushColor");
-          AssignResource(toModel, fromOverlay, "FontColor", "TimerBarFontColor");
-          AssignResource(toModel, fromOverlay, "ActiveColor", "TimerBarActiveColor");
-          AssignResource(toModel, fromOverlay, "IdleColor", "TimerBarIdleColor");
-          AssignResource(toModel, fromOverlay, "ResetColor", "TimerBarResetColor");
-          AssignResource(toModel, fromOverlay, "BackgroundColor", "TimerBarTrackColor");
+          AssignResource(toModel, fromOverlay, "OverlayColor", "OverlayBrush", "OverlayBrushColor");
+          AssignResource(toModel, fromOverlay, "FontColor", "FontBrush", "TimerBarFontColor");
+          AssignResource(toModel, fromOverlay, "ActiveColor", "ActiveBrush", "TimerBarActiveColor");
+          AssignResource(toModel, fromOverlay, "IdleColor", "IdleBrush", "TimerBarIdleColor");
+          AssignResource(toModel, fromOverlay, "ResetColor", "ResetBrush", "TimerBarResetColor");
+          AssignResource(toModel, fromOverlay, "BackgroundColor", "BackgroundBrush", "TimerBarTrackColor");
 
           if (!string.IsNullOrEmpty(fromOverlay.FontSize) && fromOverlay.FontSize.Split("pt") is string[] split && split.Length == 2
              && double.TryParse(split[0], out var newFontSize))
@@ -221,19 +221,19 @@ namespace EQLogParser
         else if (fromOverlay is TimerOverlayPropertyModel fromModel)
         {
           toOverlay.IdleTimeoutSeconds = fromModel.IdleTimeoutTimeSpan.TotalSeconds;
-          toOverlay.OverlayColor = fromModel.OverlayBrush.Color.ToString();
-          toOverlay.FontColor = fromModel.FontBrush.Color.ToString();
-          toOverlay.ActiveColor = fromModel.ActiveBrush.Color.ToString();
-          toOverlay.BackgroundColor = fromModel.BackgroundBrush.Color.ToString();
-          toOverlay.IdleColor = fromModel.IdleBrush.Color.ToString();
-          toOverlay.ResetColor = fromModel.ResetBrush.Color.ToString();
+          toOverlay.OverlayColor = fromModel.OverlayBrush.Color.ToHexString();
+          toOverlay.FontColor = fromModel.FontBrush.Color.ToHexString();
+          toOverlay.ActiveColor = fromModel.ActiveBrush.Color.ToHexString();
+          toOverlay.BackgroundColor = fromModel.BackgroundBrush.Color.ToHexString();
+          toOverlay.IdleColor = fromModel.IdleBrush.Color.ToHexString();
+          toOverlay.ResetColor = fromModel.ResetBrush.Color.ToHexString();
         }
         else if (toOverlay is TextOverlayPropertyModel toTextModel)
         {
           Application.Current.Resources["OverlayText-" + toTextModel.Node.Id] = toTextModel.Node.Name;
 
-          AssignResource(toTextModel, fromOverlay, "OverlayColor", "OverlayBrushColor");
-          AssignResource(toTextModel, fromOverlay, "FontColor", "TextOverlayFontColor");
+          AssignResource(toTextModel, fromOverlay, "OverlayColor", "OverlayBrush", "OverlayBrushColor");
+          AssignResource(toTextModel, fromOverlay, "FontColor", "FontBrush", "TextOverlayFontColor");
 
           if (!string.IsNullOrEmpty(fromOverlay.FontFamily))
           {
@@ -249,8 +249,8 @@ namespace EQLogParser
         }
         else if (fromOverlay is TextOverlayPropertyModel fromTextModel)
         {
-          toOverlay.FontColor = fromTextModel.FontBrush.Color.ToString();
-          toOverlay.OverlayColor = fromTextModel.OverlayBrush.Color.ToString();
+          toOverlay.FontColor = fromTextModel.FontBrush.Color.ToHexString();
+          toOverlay.OverlayColor = fromTextModel.OverlayBrush.Color.ToHexString();
         }
       }
     }
@@ -299,14 +299,14 @@ namespace EQLogParser
       }
     }
 
-    private static void AssignResource(dynamic toModel, object fromOverlay, string colorPropertyName, string resourceKeyPrefix)
+    private static void AssignResource(dynamic toModel, object fromOverlay, string colorProperty, string brushProperty, string prefixx)
     {
-      var colorPropertyValue = (string)fromOverlay.GetType().GetProperty(colorPropertyName)?.GetValue(fromOverlay);
-      if (!string.IsNullOrEmpty(colorPropertyValue))
+      var colorValue = (string)fromOverlay.GetType().GetProperty(colorProperty)?.GetValue(fromOverlay);
+      if (!string.IsNullOrEmpty(colorValue))
       {
-        var brush = GetBrush(colorPropertyValue);
-        toModel.GetType().GetProperty($"{colorPropertyName}Brush")?.SetValue(toModel, brush);
-        Application.Current.Resources[$"{resourceKeyPrefix}-{toModel.Node.Id}"] = brush;
+        var brush = GetBrush(colorValue);
+        toModel.GetType().GetProperty(brushProperty)?.SetValue(toModel, brush);
+        Application.Current.Resources[$"{prefixx}-{toModel.Node.Id}"] = brush;
       }
     }
 
@@ -377,6 +377,26 @@ namespace EQLogParser
         }
       }
       return success;
+    }
+
+    internal static string ProcessText(string text, MatchCollection matches)
+    {
+      if (matches != null && !string.IsNullOrEmpty(text))
+      {
+        foreach (Match match in matches)
+        {
+          for (var i = 1; i < match.Groups.Count; i++)
+          {
+            if (!string.IsNullOrEmpty(match.Groups[i].Name))
+            {
+              text = text.Replace("${" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
+              text = text.Replace("{" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
+            }
+          }
+        }
+      }
+
+      return text;
     }
 
     internal static bool CheckOptions(List<NumberOptions> options, MatchCollection matches, out double duration)

@@ -24,7 +24,7 @@ namespace EQLogParser
     private long CurrentPos;
     private long NextUpdateThreshold;
 
-    public LogReader(IDisposable logProcessor, string fileName, int minBack)
+    public LogReader(IDisposable logProcessor, string fileName, int minBack = 0)
     {
       LogProcessor = logProcessor;
       FileName = fileName;
@@ -47,6 +47,8 @@ namespace EQLogParser
     }
 
     public double Progress => CurrentPos / (double)InitSize * 100;
+    public IDisposable GetProcessor() => LogProcessor;
+
     private void OnFileCreated(object sender, FileSystemEventArgs e) => StartReadingFile();
     private void OnFileChanged(object sender, FileSystemEventArgs e) => NewDataAvailable.Set();
 

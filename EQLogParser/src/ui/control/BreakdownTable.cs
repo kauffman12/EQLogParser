@@ -48,7 +48,7 @@ namespace EQLogParser
     internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
     internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(TheColumnsCombo, TheDataGrid);
 
-    private void EventsThemeChanged(object sender, string e)
+    private void EventsThemeChanged(string _)
     {
       DataGridUtil.RefreshTableColumns(TheDataGrid);
     }

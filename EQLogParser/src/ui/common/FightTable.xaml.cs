@@ -135,7 +135,7 @@ namespace EQLogParser
     private void ClearClick(object sender, RoutedEventArgs e) => DataManager.Instance.Clear();
     private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
-    private void EventsThemeChanged(object sender, string e)
+    private void EventsThemeChanged(string _)
     {
       // just toggle row style to get it to refresh
       var style = dataGrid.RowStyle;

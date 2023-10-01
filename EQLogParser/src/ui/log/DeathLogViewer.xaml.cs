@@ -42,7 +42,7 @@ namespace EQLogParser
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
-    private void EventsThemeChanged(object sender, string e) => DataGridUtil.RefreshTableColumns(dataGrid);
+    private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
 
     private void Display()
     {
