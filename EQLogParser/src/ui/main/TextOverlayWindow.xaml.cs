@@ -249,18 +249,21 @@ namespace EQLogParser
 
     private void TriggerUpdateEvent(TriggerNode node)
     {
-      if (Node != node)
+      if (Node.Id == node.Id)
       {
-        Node = node;
-      }
+        if (Node != node)
+        {
+          Node = node;
+        }
 
-      Height = Node.OverlayData.Height;
-      Width = Node.OverlayData.Width;
-      Top = Node.OverlayData.Top;
-      Left = Node.OverlayData.Left;
-      saveButton.IsEnabled = false;
-      cancelButton.IsEnabled = false;
-      closeButton.IsEnabled = true;
+        Height = Node.OverlayData.Height;
+        Width = Node.OverlayData.Width;
+        Top = Node.OverlayData.Top;
+        Left = Node.OverlayData.Left;
+        saveButton.IsEnabled = false;
+        cancelButton.IsEnabled = false;
+        closeButton.IsEnabled = true;
+      }
     }
 
     private void WindowSizeChanged(object sender, SizeChangedEventArgs e)

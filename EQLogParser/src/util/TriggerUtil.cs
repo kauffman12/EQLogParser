@@ -189,6 +189,7 @@ namespace EQLogParser
         toOverlay.IdleTimeoutSeconds = fromOverlay.IdleTimeoutSeconds;
         toOverlay.IsTextOverlay = fromOverlay.IsTextOverlay;
         toOverlay.IsTimerOverlay = fromOverlay.IsTimerOverlay;
+        toOverlay.IsDefault = fromOverlay.IsDefault;
         toOverlay.Left = fromOverlay.Left;
         toOverlay.OverlayColor = fromOverlay.OverlayColor;
         toOverlay.OverlayComments = fromOverlay.OverlayComments;

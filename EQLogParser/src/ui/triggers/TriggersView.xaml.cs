@@ -134,8 +134,8 @@ namespace EQLogParser
     private void AssignTextOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender, true);
     private void AssignTimerOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender, false);
     private void CloseOverlaysClick(object sender, RoutedEventArgs e) => TriggerManager.Instance.CloseOverlays();
-    private void CreateTextOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(false);
-    private void CreateTimerOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(true);
+    private void CreateTextOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(true);
+    private void CreateTimerOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(false);
     private void ExportClick(object sender, RoutedEventArgs e) => TriggerUtil.Export(treeView?.SelectedItems?.Cast<TriggerTreeViewNode>());
     private void EventsSelectTrigger(Trigger e) => Dispatcher.InvokeAsync(() => SelectFile(e));
     private void NodeExpanded(object sender, NodeExpandedCollapsedEventArgs e) => TriggerStateManager.Instance.SetExpanded(e.Node as TriggerTreeViewNode);
@@ -323,12 +323,12 @@ namespace EQLogParser
       }
     }
 
-    private void CreateOverlay(bool isTimer)
+    private void CreateOverlay(bool isTextOverlay)
     {
       if (treeView.SelectedItem is TriggerTreeViewNode parent)
       {
-        var label = isTimer ? LABEL_NEW_TIMER_OVERLAY : LABEL_NEW_TEXT_OVERLAY;
-        if (TriggerStateManager.Instance.CreateOverlay(parent.SerializedData.Id, label, isTimer) is TriggerTreeViewNode newNode)
+        var label = isTextOverlay ? LABEL_NEW_TEXT_OVERLAY : LABEL_NEW_TIMER_OVERLAY;
+        if (TriggerStateManager.Instance.CreateOverlay(parent.SerializedData.Id, label, isTextOverlay) is TriggerTreeViewNode newNode)
         {
           parent.ChildNodes.Add(newNode);
           SelectFile(newNode.SerializedData.OverlayData);
@@ -982,14 +982,23 @@ namespace EQLogParser
       else if (model is TextOverlayPropertyModel || model is TimerOverlayPropertyModel)
       {
         // only close overlay if non-style attributes have changed
-        var old = model.Node.OverlayData;
+        var old = model.Node.OverlayData as Overlay;
         if (old.Top != model.Top || old.Left != model.Left || old.Height != model.Height || old.Width != model.Width)
         {
           TriggerManager.Instance.CloseOverlay(model.Node.Id);
         }
 
+        // if this overlay is changing to default and it wasn't previously then need to refresh Overlay tree
+        var needRefresh = model.IsDefault && (old.IsDefault != model.IsDefault);
+
         TriggerUtil.Copy(model.Node.OverlayData, model);
         TriggerStateManager.Instance.Update(model.Node);
+
+        // if this node is a default then refresh 
+        if (needRefresh)
+        {
+          RefreshOverlayNode();
+        }
       }
 
       cancelButton.IsEnabled = false;
