@@ -1,11 +1,8 @@
 ﻿using Syncfusion.Linq;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Windows;
 using System.Windows.Threading;
@@ -18,6 +15,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly Lazy<TriggerManager> _lazy = new Lazy<TriggerManager>(() => new TriggerManager());
     internal static TriggerManager Instance => _lazy.Value; // instance
+    private readonly DispatcherTimer ConfigUpdateTimer;
     private readonly DispatcherTimer TriggerUpdateTimer;
     private readonly DispatcherTimer TextOverlayTimer;
     private readonly DispatcherTimer TimerOverlayTimer;
@@ -26,7 +24,6 @@ namespace EQLogParser
     private readonly List<LogReader> LogReaders = new List<LogReader>();
     private readonly TriggerProcessor TestProcessor;
     private readonly BufferBlock<Tuple<string, double, bool>> TestBuffer = new BufferBlock<Tuple<string, double, bool>>();
-    private Task RefreshTask = null;
     private int TimerIncrement = 0;
 
     public TriggerManager()
@@ -42,26 +39,35 @@ namespace EQLogParser
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += TriggerManagerEventsLogLoadingComplete;
 
       TriggerUtil.LoadOverlayStyles();
-      TriggerUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
-      TriggerUpdateTimer.Tick += TriggerDataUpdated;
+      ConfigUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
+      ConfigUpdateTimer.Tick += ConfigDoUpdate;
+      TriggerUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
+      TriggerUpdateTimer.Tick += TriggersDoUpdate;
       TextOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 450) };
       TimerOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 50) };
-
-      LOG.Info("Starting Trigger Manager");
-      TextOverlayTimer.Tick += TextTick;
-      TimerOverlayTimer.Tick += TimerTick;
-      (Application.Current.MainWindow as MainWindow).ShowTriggersEnabled(true);
-      ConfigUtil.SetSetting("TriggersEnabled", true.ToString(CultureInfo.CurrentCulture));
 
       // testing
       TestProcessor = new TriggerProcessor(TriggerStateManager.DEFAULT_USER, AddTextEvent, AddTimerEvent);
       TestProcessor.LinkTo(TestBuffer);
     }
 
+    internal bool Init() => true;
+    internal BufferBlock<Tuple<string, double, bool>> GetTestBuffer() => TestBuffer;
     internal void Select(Trigger trigger) => EventsSelectTrigger?.Invoke(trigger);
     internal void SetVoice(string voice) => GetProcessors().ForEach(processor => processor.SetVoice(voice));
     internal void SetVoiceRate(int rate) => GetProcessors().ForEach(processor => processor.SetVoiceRate(rate));
-    private string ModLine(string text, string line) => string.IsNullOrEmpty(text) ? null : text.Replace("{l}", line, StringComparison.OrdinalIgnoreCase);
+
+    internal void ConfigUpdated()
+    {
+      ConfigUpdateTimer.Stop();
+      ConfigUpdateTimer.Start();
+    }
+
+    internal void TriggersUpdated()
+    {
+      TriggerUpdateTimer.Stop();
+      TriggerUpdateTimer.Start();
+    }
 
     internal void CloseOverlay(string id)
     {
@@ -69,68 +75,76 @@ namespace EQLogParser
       TriggerUtil.CloseOverlay(TimerWindows, id);
     }
 
-    internal BufferBlock<Tuple<string, double, bool>> GetTestBuffer() => TestBuffer;
-
-    [MethodImpl(MethodImplOptions.Synchronized)]
-    internal void Stop()
-    {
-      LOG.Info("Shutting Down Trigger Manager");
-      if (TextOverlayTimer != null)
-      {
-        TextOverlayTimer.Stop();
-        TextOverlayTimer.Tick -= TextTick;
-      }
-
-      if (TimerOverlayTimer != null)
-      {
-        TimerOverlayTimer.Stop();
-        TimerOverlayTimer.Tick -= TimerTick;
-      }
-
-      CloseOverlays();
-      (Application.Current.MainWindow as MainWindow)?.ShowTriggersEnabled(false);
-    }
-
-    internal void UpdateTriggers()
-    {
-      TriggerUpdateTimer.Stop();
-      TriggerUpdateTimer.Start();
-    }
-
-
-    private void TriggerManagerEventsLogLoadingComplete(string currentFile)
-    {
-      lock (LogReaders)
-      {
-        LogReaders.ForEach(reader => reader.Dispose());
-        LogReaders.Add(new LogReader(new TriggerProcessor(TriggerStateManager.DEFAULT_USER, AddTextEvent, AddTimerEvent), currentFile));
-      }
-    }
-
-    private void TriggerDataUpdated(object sender, EventArgs e)
-    {
-      TriggerUpdateTimer.Stop();
-
-      if (RefreshTask?.IsCompleted == true)
-      {
-        RefreshTask?.Dispose();
-        RefreshTask = null;
-      }
-
-      if (RefreshTask == null)
-      {
-        RefreshTask = Task.Run(() =>
-        {
-          UIUtil.InvokeAsync(() => CloseOverlays());
-          GetProcessors().ForEach(processor => processor.UpdateActiveTriggers());
-        });
-      }
-    }
-
-    private void CloseOverlays()
+    internal void CloseOverlays()
     {
       TriggerUtil.CloseOverlays(TextWindows);
       TriggerUtil.CloseOverlays(TimerWindows);
+    }
+
+    internal void Stop()
+    {
+      TextOverlayTimer.Stop();
+      TimerOverlayTimer.Stop();
+      TextOverlayTimer.Tick -= TextTick;
+      TimerOverlayTimer.Tick -= TimerTick;
+
+      lock (LogReaders)
+      {
+        LogReaders.ForEach(reader => reader.Dispose());
+        LogReaders.Clear();
+      }
+    }
+
+    private void TextTick(object sender, EventArgs e) => WindowTick(TextWindows, TextOverlayTimer);
+    private string ModLine(string text, string line) => string.IsNullOrEmpty(text) ? null : text.Replace("{l}", line, StringComparison.OrdinalIgnoreCase);
+    private void TriggerManagerEventsLogLoadingComplete(string _) => ConfigDoUpdate(this, null);
+
+    private void ConfigDoUpdate(object sender, EventArgs e)
+    {
+      ConfigUpdateTimer.Stop();
+      UIUtil.InvokeAsync(() => CloseOverlays());
+
+      if (TriggerStateManager.Instance.GetConfig() is TriggerConfig config)
+      {
+        if (!config.IsAdvanced)
+        {
+          lock (LogReaders)
+          {
+            LogReaders.ForEach(reader => reader.Dispose());
+            LogReaders.Clear();
+
+            if (config.IsEnabled)
+            {
+              if (MainWindow.CurrentLogFile != null)
+              {
+                LogReaders.Add(new LogReader(new TriggerProcessor(TriggerStateManager.DEFAULT_USER, AddTextEvent, AddTimerEvent),
+                  MainWindow.CurrentLogFile));
+              }
+
+              LOG.Info("Triggers Active");
+              TextOverlayTimer.Tick += TextTick;
+              TimerOverlayTimer.Tick += TimerTick;
+              (Application.Current.MainWindow as MainWindow).ShowTriggersEnabled(true);
+            }
+            else
+            {
+              LOG.Info("Triggers Have Been Deactivated");
+              TextOverlayTimer.Stop();
+              TimerOverlayTimer.Stop();
+              TextOverlayTimer.Tick -= TextTick;
+              TimerOverlayTimer.Tick -= TimerTick;
+              (Application.Current.MainWindow as MainWindow).ShowTriggersEnabled(false);
+            }
+          }
+        }
+      }
+    }
+
+    private void TriggersDoUpdate(object sender, EventArgs e)
+    {
+      TriggerUpdateTimer.Stop();
+      UIUtil.InvokeAsync(() => CloseOverlays());
+      GetProcessors().ForEach(processor => processor.UpdateActiveTriggers());
     }
 
     private IEnumerable<TriggerProcessor> GetProcessors()
@@ -150,8 +164,6 @@ namespace EQLogParser
       }
       return list;
     }
-
-    private void TextTick(object sender, EventArgs e) => WindowTick(TextWindows, TextOverlayTimer);
 
     private void TimerTick(object sender, EventArgs e)
     {
