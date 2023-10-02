@@ -131,8 +131,6 @@ namespace EQLogParser
       Ready = true;
     }
 
-    private void AssignTextOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender, true);
-    private void AssignTimerOverlayClick(object sender, RoutedEventArgs e) => AssignOverlay(sender, false);
     private void CloseOverlaysClick(object sender, RoutedEventArgs e) => TriggerManager.Instance.CloseOverlays();
     private void CreateTextOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(true);
     private void CreateTimerOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(false);
@@ -141,6 +139,8 @@ namespace EQLogParser
     private void NodeExpanded(object sender, NodeExpandedCollapsedEventArgs e) => TriggerStateManager.Instance.SetExpanded(e.Node as TriggerTreeViewNode);
     private void RenameClick(object sender, RoutedEventArgs e) => treeView?.BeginEdit(treeView.SelectedItem as TriggerTreeViewNode);
     private void SelectionChanging(object sender, ItemSelectionChangingEventArgs e) => e.Cancel = IsCancelSelection();
+    private void AddOverlayClick(object sender, RoutedEventArgs e) => SetOverlay(sender);
+    private void RemoveOverlayClick(object sender, RoutedEventArgs e) => SetOverlay(sender, true);
 
     private void BasicChecked(object sender, RoutedEventArgs e)
     {
@@ -524,8 +524,7 @@ namespace EQLogParser
       {
         var anyTriggers = treeView.SelectedItems.Cast<TriggerTreeViewNode>().Any(node => !node.IsOverlay() && node != treeView.Nodes[1]);
         var anyOverlays = treeView.SelectedItems.Cast<TriggerTreeViewNode>().Any(node => node.IsOverlay() || node == treeView.Nodes[1]);
-        assignOverlayMenuItem.IsEnabled = anyTriggers;
-        assignPriorityMenuItem.IsEnabled = anyTriggers;
+        setTriggerMenuItem.Visibility = anyTriggers ? Visibility.Visible : Visibility.Collapsed;
         exportMenuItem.IsEnabled = !(anyTriggers && anyOverlays);
         deleteTriggerMenuItem.IsEnabled = (node != treeView.Nodes[0] && node != treeView.Nodes[1]) || count > 1;
         renameMenuItem.IsEnabled = node != treeView.Nodes[0] && node != treeView.Nodes[1] && count == 1;
@@ -538,13 +537,12 @@ namespace EQLogParser
       }
       else
       {
+        setTriggerMenuItem.Visibility = Visibility.Collapsed;
         deleteTriggerMenuItem.IsEnabled = false;
         renameMenuItem.IsEnabled = false;
         importMenuItem.IsEnabled = false;
         exportMenuItem.IsEnabled = false;
         newMenuItem.IsEnabled = false;
-        assignOverlayMenuItem.IsEnabled = false;
-        assignPriorityMenuItem.IsEnabled = false;
         copyItem.IsEnabled = false;
         cutItem.IsEnabled = false;
         pasteItem.IsEnabled = false;
@@ -560,53 +558,57 @@ namespace EQLogParser
         newTextOverlay.Visibility = node == treeView.Nodes[1] ? Visibility.Visible : Visibility.Collapsed;
       }
 
-      if (assignPriorityMenuItem.IsEnabled)
+      if (setPriorityMenuItem.IsEnabled)
       {
-        UIElementUtil.ClearMenuEvents(assignPriorityMenuItem.Items, AssignPriorityClick);
+        UIElementUtil.ClearMenuEvents(setPriorityMenuItem.Items, SetPriorityClick);
       }
 
-      assignPriorityMenuItem.Items.Clear();
+      setPriorityMenuItem.Items.Clear();
 
       for (var i = 1; i <= 5; i++)
       {
         var menuItem = new MenuItem { Header = "Priority " + i, Tag = i };
-        menuItem.Click += AssignPriorityClick;
-        assignPriorityMenuItem.Items.Add(menuItem);
+        menuItem.Click += SetPriorityClick;
+        setPriorityMenuItem.Items.Add(menuItem);
       }
 
-      if (assignOverlayMenuItem.IsEnabled)
+      if (setTriggerMenuItem.Visibility == Visibility.Visible)
       {
-        UIElementUtil.ClearMenuEvents(assignTextOverlaysMenuItem.Items, AssignTextOverlayClick);
-        UIElementUtil.ClearMenuEvents(assignTimerOverlaysMenuItem.Items, AssignTimerOverlayClick);
-        assignTextOverlaysMenuItem.Items.Clear();
-        assignTimerOverlaysMenuItem.Items.Clear();
+        UIElementUtil.ClearMenuEvents(addTextOverlaysMenuItem.Items, AddOverlayClick);
+        UIElementUtil.ClearMenuEvents(addTimerOverlaysMenuItem.Items, AddOverlayClick);
+        UIElementUtil.ClearMenuEvents(removeTextOverlaysMenuItem.Items, RemoveOverlayClick);
+        UIElementUtil.ClearMenuEvents(removeTimerOverlaysMenuItem.Items, RemoveOverlayClick);
+        addTextOverlaysMenuItem.Items.Clear();
+        addTimerOverlaysMenuItem.Items.Clear();
+        removeTextOverlaysMenuItem.Items.Clear();
+        removeTimerOverlaysMenuItem.Items.Clear();
 
         foreach (var overlay in TriggerStateManager.Instance.GetAllOverlays())
         {
-          var menuItem = new MenuItem { Header = overlay.Name, Tag = $"{overlay.Name}={overlay.Id}" };
+          var addMenuItem = CreateMenuItem(overlay, AddOverlayClick);
+          var removeMenuItem = CreateMenuItem(overlay, RemoveOverlayClick);
           if (overlay.OverlayData?.IsTextOverlay == true)
           {
-            menuItem.Click += AssignTextOverlayClick;
-            assignTextOverlaysMenuItem.Items.Add(menuItem);
+            addTextOverlaysMenuItem.Items.Add(addMenuItem);
+            removeTextOverlaysMenuItem.Items.Add(removeMenuItem);
           }
           else
           {
-            menuItem.Click += AssignTimerOverlayClick;
-            assignTimerOverlaysMenuItem.Items.Add(menuItem);
+            addTimerOverlaysMenuItem.Items.Add(addMenuItem);
+            removeTimerOverlaysMenuItem.Items.Add(removeMenuItem);
           }
         }
+      }
 
-        var removeTextOverlays = new MenuItem { Header = "Unassign All Text Overlays" };
-        removeTextOverlays.Click += AssignTextOverlayClick;
-        assignTextOverlaysMenuItem.Items.Add(removeTextOverlays);
-        var removeTimerOverlays = new MenuItem { Header = "Unassign All Timer Overlays" };
-        removeTimerOverlays.Click += AssignTimerOverlayClick;
-        assignTimerOverlaysMenuItem.Items.Add(removeTimerOverlays);
-
+      MenuItem CreateMenuItem(OTData overlay, RoutedEventHandler eventHandler)
+      {
+        var menuItem = new MenuItem { Header = overlay.Name, Tag = $"{overlay.Name}={overlay.Id}" };
+        menuItem.Click += eventHandler;
+        return menuItem;
       }
     }
 
-    private void AssignPriorityClick(object sender, RoutedEventArgs e)
+    private void SetPriorityClick(object sender, RoutedEventArgs e)
     {
       if (sender is MenuItem menuItem && int.TryParse(menuItem.Tag.ToString(), out var newPriority))
       {
@@ -618,7 +620,7 @@ namespace EQLogParser
         }
         else
         {
-          var msgDialog = new MessageWindow($"Are you sure? This will Assign Priority {newPriority} to all selected Triggers and those in all sub folders.",
+          var msgDialog = new MessageWindow($"Are you sure? This will Set Priority {newPriority} to all selected Triggers and those in all sub folders.",
             EQLogParser.Resource.ASSIGN_PRIORITY, MessageWindow.IconType.Question, "Yes");
           msgDialog.ShowDialog();
           if (msgDialog.IsYes1Clicked)
@@ -633,7 +635,7 @@ namespace EQLogParser
       }
     }
 
-    private void AssignOverlay(object sender, bool isTextOverlay)
+    private void SetOverlay(object sender, bool remove = false)
     {
       if (sender is MenuItem menuItem)
       {
@@ -649,34 +651,31 @@ namespace EQLogParser
 
           if (!anyFolders)
           {
-            TriggerStateManager.Instance.AssignOverlay(id, selected.Select(treeView => treeView.SerializedData));
+            if (!remove)
+            {
+              TriggerStateManager.Instance.AssignOverlay(id, selected.Select(treeView => treeView.SerializedData));
+            }
+            else
+            {
+              TriggerStateManager.Instance.UnassignOverlay(id, selected.Select(treeView => treeView.SerializedData));
+            }
           }
           else
           {
-            var msgDialog = new MessageWindow($"Are you sure? This will Assign all selected Triggers and those in all sub folders to {name}.",
+            var action = remove ? "Remove" : "Add";
+            var msgDialog = new MessageWindow($"Are you sure? This will {action} {name} from all selected Triggers and those in all sub folders.",
               EQLogParser.Resource.ASSIGN_OVERLAY, MessageWindow.IconType.Question, "Yes");
             msgDialog.ShowDialog();
             if (msgDialog.IsYes1Clicked)
             {
-              TriggerStateManager.Instance.AssignOverlay(id, selected.Select(treeView => treeView.SerializedData));
-            }
-          }
-        }
-        else if (menuItem.Tag == null)
-        {
-          if (!anyFolders)
-          {
-            TriggerStateManager.Instance.UnassignOverlay(isTextOverlay, selected.Select(treeView => treeView.SerializedData));
-          }
-          else
-          {
-            var type = isTextOverlay ? "Text Overlays" : "Timer Overlays";
-            var msgDialog = new MessageWindow($"Are you sure? This will Unassign all selected Triggers and those in all sub folders from all {type}.",
-              EQLogParser.Resource.UNASSIGN_OVERLAY, MessageWindow.IconType.Question, "Yes");
-            msgDialog.ShowDialog();
-            if (msgDialog.IsYes1Clicked)
-            {
-              TriggerStateManager.Instance.UnassignOverlay(isTextOverlay, selected.Select(treeView => treeView.SerializedData));
+              if (!remove)
+              {
+                TriggerStateManager.Instance.AssignOverlay(id, selected.Select(treeView => treeView.SerializedData));
+              }
+              else
+              {
+                TriggerStateManager.Instance.UnassignOverlay(id, selected.Select(treeView => treeView.SerializedData));
+              }
             }
           }
         }

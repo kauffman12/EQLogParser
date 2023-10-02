@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns:local="clr-namespace:EQLogParser"
              mc:Ignorable="d" 
@@ -73,12 +72,18 @@
            ShowRootLines="False">
           <syncfusion:SfTreeView.ItemContextMenu>
             <ContextMenu>
-              <MenuItem x:Name="assignOverlayMenuItem" Header="Assign Triggers to Overlay">
-                <MenuItem x:Name="assignTextOverlaysMenuItem" Header="Text Overlay" />
-                <MenuItem x:Name="assignTimerOverlaysMenuItem" Header="Timer Overlay" />
+              <MenuItem x:Name="setTriggerMenuItem" Header="Update Selected Triggers">
+                <MenuItem x:Name="setTextOverlayMenuItem" Header="Text Overlay">
+                  <MenuItem x:Name="addTextOverlaysMenuItem" Header="Add" />
+                  <MenuItem x:Name="removeTextOverlaysMenuItem" Header="Remove" />
+                </MenuItem>
+                <MenuItem x:Name="setTimerOverlayMenuItem" Header="Timer Overlay">
+                  <MenuItem x:Name="addTimerOverlaysMenuItem" Header="Add" />
+                  <MenuItem x:Name="removeTimerOverlaysMenuItem" Header="Remove" />
+                </MenuItem>
+                <MenuItem x:Name="setPriorityMenuItem" Header="Priority" />
               </MenuItem>
-              <MenuItem x:Name="assignPriorityMenuItem" Header="Assign Priority to Triggers" />
-              <Separator />
+              <Separator x:Name="quickSetSeparator"/>
               <MenuItem x:Name="collapseMenuItem" Header="Collapse All" Click="CollapseAllClick" />
               <MenuItem x:Name="expandMenuItem" Header="Expand All" Click="ExpandAllClick" />
               <Separator />
