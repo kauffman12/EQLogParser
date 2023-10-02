@@ -8,7 +8,7 @@
         x:Class="EQLogParser.MainWindow"
         Icon="EQLogParser.ico"
         Title="EQLogParser"
-        Closed="WindowClosed"
+        Closing="WindowClosing"
         ResizeMode="CanResize"
         BorderThickness="2"
         MinWidth="400"

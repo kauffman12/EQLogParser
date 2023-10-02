@@ -13,6 +13,7 @@ namespace EQLogParser
   internal class TriggerStateManager
   {
     internal event Action<TriggerNode> TriggerUpdateEvent;
+    internal event Action<TriggerConfig> TriggerConfigUpdateEvent;
     internal const string DEFAULT_USER = "Default";
     internal const string OVERLAYS = "Overlays";
     internal const string TRIGGERS = "Triggers";
@@ -112,6 +113,7 @@ namespace EQLogParser
       lock (ConfigLock)
       {
         DB?.GetCollection<TriggerConfig>(CONFIG_COL).Update(config);
+        TriggerConfigUpdateEvent?.Invoke(config);
       }
     }
 

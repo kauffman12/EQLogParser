@@ -275,31 +275,6 @@ namespace EQLogParser
       }
     }
 
-    internal static void CloseOverlay(Dictionary<string, OverlayWindowData> windows, string id)
-    {
-      if (id != null)
-      {
-        lock (windows)
-        {
-          windows.Remove(id, out var windowData);
-          windowData?.TheWindow.Close();
-        }
-      }
-    }
-
-    internal static void CloseOverlays(Dictionary<string, OverlayWindowData> windows)
-    {
-      lock (windows)
-      {
-        foreach (var windowData in windows.Values)
-        {
-          windowData?.TheWindow?.Close();
-        }
-
-        windows.Clear();
-      }
-    }
-
     private static void AssignResource(dynamic toModel, object fromOverlay, string colorProperty, string brushProperty, string prefixx)
     {
       var colorValue = (string)fromOverlay.GetType().GetProperty(colorProperty)?.GetValue(fromOverlay);
