@@ -69,6 +69,7 @@ namespace EQLogParser
     }
 
     internal void AssignOverlay(string id, IEnumerable<TriggerNode> nodes) => AssignOverlay(DB?.GetCollection<TriggerNode>(TREE_COL), id, nodes);
+    internal void UnassignOverlay(string id, IEnumerable<TriggerNode> nodes) => UnassignOverlay(DB?.GetCollection<TriggerNode>(TREE_COL), id, nodes);
     internal void AssignPriority(int pri, IEnumerable<TriggerNode> nodes) => AssignPriority(DB?.GetCollection<TriggerNode>(TREE_COL), pri, nodes);
     internal TriggerTreeViewNode CreateFolder(string parentId, string name) => CreateNode(parentId, name);
     internal TriggerTreeViewNode CreateTrigger(string parentId, string name) => CreateNode(parentId, name, TRIGGERS);
@@ -171,18 +172,6 @@ namespace EQLogParser
         }
       }
       return active;
-    }
-
-    internal void UnassignOverlay(bool isTextOverlay, IEnumerable<TriggerNode> nodes)
-    {
-      if (DB?.GetCollection<TriggerNode>(TREE_COL) is ILiteCollection<TriggerNode> tree)
-      {
-        lock (LockObject)
-        {
-          var found = tree.Query().Where(n => n.OverlayData != null && n.OverlayData.IsTextOverlay == isTextOverlay);
-          UnassignOverlay(tree, nodes, found.Select(n => n.Id).ToList());
-        }
-      }
     }
 
     // node already updated with new parentId that it wants
@@ -376,6 +365,28 @@ namespace EQLogParser
       }
     }
 
+    private void UnassignOverlay(ILiteCollection<TriggerNode> tree, string id, IEnumerable<TriggerNode> nodes)
+    {
+      if (tree != null && nodes != null)
+      {
+        lock (LockObject)
+        {
+          foreach (var node in nodes)
+          {
+            if (node.TriggerData?.SelectedOverlays.Contains(id) == true)
+            {
+              node.TriggerData.SelectedOverlays.Remove(id);
+              tree.Update(node);
+            }
+            else if (node.TriggerData == null && node.OverlayData == null)
+            {
+              UnassignOverlay(tree, id, tree.Find(n => n.Parent == node.Id));
+            }
+          }
+        }
+      }
+    }
+
     private void AssignPriority(ILiteCollection<TriggerNode> tree, int pri, IEnumerable<TriggerNode> nodes)
     {
       if (tree != null && nodes != null)
@@ -393,24 +404,6 @@ namespace EQLogParser
             {
               AssignPriority(tree, pri, tree.Find(n => n.Parent == node.Id));
             }
-          }
-        }
-      }
-    }
-
-    private void UnassignOverlay(ILiteCollection<TriggerNode> tree, IEnumerable<TriggerNode> nodes, List<string> toRemove)
-    {
-      if (tree != null && nodes != null)
-      {
-        foreach (var node in nodes)
-        {
-          if (node.TriggerData?.SelectedOverlays.RemoveAll(o => toRemove.Contains(o)) is int count && count > 0)
-          {
-            tree.Update(node);
-          }
-          else if (node.TriggerData == null && node.OverlayData == null)
-          {
-            UnassignOverlay(tree, tree.Find(n => n.Parent == node.Id), toRemove);
           }
         }
       }
