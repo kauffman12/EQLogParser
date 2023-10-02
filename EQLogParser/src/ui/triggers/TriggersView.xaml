@@ -22,7 +22,7 @@
       <Label x:Name="titleLabel" Content="Check to Activate Triggers" Style="{StaticResource EQTitleStyle}" Foreground="{DynamicResource EQStopForegroundBrush}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <Button Margin="0,0,8,2" Padding="8,0,8,0" Height="24" Click="CloseOverlaysClick">Close All Overlays</Button>
+      <Button Margin="0,0,8,2" Padding="8,0,8,0" Height="24" Click="CloseOverlaysClick">Close Overlays</Button>
       <CheckBox x:Name="watchGina" IsChecked="False" Margin="0,0,8,2" Checked="OptionsChanged" Unchecked="OptionsChanged">Watch for GINA Triggers</CheckBox>
       <ComboBox x:Name="voices" SelectedIndex="0" Margin="0,0,0,2" SelectionChanged="OptionsChanged" />
       <ComboBox x:Name="rateOption" SelectedIndex="0" Margin="0,0,8,2" SelectionChanged="OptionsChanged">

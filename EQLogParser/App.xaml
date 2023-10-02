@@ -74,6 +74,20 @@
       <Grid>
         <StackPanel Orientation="Horizontal">
           <CheckBox x:Name="CheckBox" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+          <fa:ImageAwesome Margin="5,0,0,0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}">
+            <fa:ImageAwesome.Style>
+              <Style TargetType="fa:ImageAwesome">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                    <Setter Property="Icon" Value="Solid_FolderOpen"/>
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding IsExpanded}" Value="False">
+                    <Setter Property="Icon" Value="Solid_Folder"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </fa:ImageAwesome.Style>
+          </fa:ImageAwesome>
           <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" />
         </StackPanel>
       </Grid>
@@ -82,6 +96,20 @@
     <DataTemplate x:Key="OverlayNodeTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
+          <fa:ImageAwesome Margin="5,0,0,0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}">
+            <fa:ImageAwesome.Style>
+              <Style TargetType="fa:ImageAwesome">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                    <Setter Property="Icon" Value="Solid_FolderOpen"/>
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding IsExpanded}" Value="False">
+                    <Setter Property="Icon" Value="Solid_Folder"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </fa:ImageAwesome.Style>
+          </fa:ImageAwesome>
           <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" />
         </StackPanel>
       </Grid>
