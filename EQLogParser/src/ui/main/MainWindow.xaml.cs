@@ -21,7 +21,7 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  public partial class MainWindow : ChromelessWindow, IDisposable
+  public partial class MainWindow : ChromelessWindow
   {
     internal event Action<string> EventsLogLoadingComplete;
     internal event Action<string> EventsThemeChanged;
@@ -248,7 +248,7 @@ namespace EQLogParser
         SystemEvents.PowerModeChanged += SystemEventsPowerModeChanged;
 
         // Init Trigger Manager
-        TriggerManager.Instance.Init();
+        TriggerManager.Instance.Start();
 
         // cleanup downloads
         Dispatcher.InvokeAsync(() => MainActions.Cleanup());
@@ -272,10 +272,10 @@ namespace EQLogParser
           break;
         case PowerModes.Resume:
           LOG.Warn("Resume");
+          TriggerManager.Instance.Start();
           DataManager.Instance.ResetOverlayFights(true);
           OpenDamageOverlayIfEnabled(true, false);
           DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
-          TriggerManager.Instance.ConfigUpdated();
           break;
       }
     }
@@ -1006,7 +1006,7 @@ namespace EQLogParser
             DockingManager.SetState(npcWindow, DockState.Dock);
           }
 
-          StopProcessing();
+          EQLogReader?.Dispose();
 
           fileText.Text = "-- " + theFile;
           StartLoadTime = DateTime.Now;
@@ -1125,11 +1125,6 @@ namespace EQLogParser
       }
     }
 
-    private void StopProcessing()
-    {
-      EQLogReader?.Dispose();
-    }
-
     private void WindowIconLoaded(object sender, RoutedEventArgs e)
     {
       if (sender is FrameworkElement icon)
@@ -1221,7 +1216,7 @@ namespace EQLogParser
       }
     }
 
-    private void WindowClosed(object sender, EventArgs e)
+    private void WindowClosing(object sender, EventArgs e)
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
       ConfigUtil.SetSetting("ShowDamageSummaryAtStartup", opened.ContainsKey(damageSummaryIcon.Tag as string).ToString());
@@ -1237,12 +1232,15 @@ namespace EQLogParser
         ConfigUtil.SetSetting("WindowWidth", Width.ToString());
       }
 
-      StopProcessing();
-      ChatManager.Instance.Stop();
-      TriggerStateManager.Instance.Stop();
-      TriggerManager.Instance.Stop();
       ConfigUtil.Save();
       PlayerManager.Instance?.Save();
+      ChatManager.Instance.Stop();
+      TriggerStateManager.Instance.Stop();
+      EQLogReader?.Dispose();
+      TriggerManager.Instance.Stop();
+      petMappingGrid?.Dispose();
+      verifiedPetsGrid?.Dispose();
+      verifiedPlayersGrid?.Dispose();
       Application.Current.Shutdown();
     }
 
@@ -1273,29 +1271,5 @@ namespace EQLogParser
     private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
     private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
     private void WindowClose(object sender, EventArgs e) => Close();
-
-    #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
-    {
-      if (!disposedValue)
-      {
-        petMappingGrid?.Dispose();
-        verifiedPetsGrid?.Dispose();
-        verifiedPlayersGrid?.Dispose();
-        disposedValue = true;
-      }
-    }
-
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
-    {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
-    }
-    #endregion
   }
 }

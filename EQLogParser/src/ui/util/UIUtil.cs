@@ -15,7 +15,7 @@ namespace EQLogParser
 
   internal static class UIUtil
   {
-    internal static void InvokeAsync(Action action, DispatcherPriority priority = DispatcherPriority.Normal)
+    internal static void InvokeNow(Action action, DispatcherPriority priority = DispatcherPriority.Normal)
     {
       if (Application.Current?.Dispatcher is Dispatcher dispatcher)
       {
@@ -27,6 +27,14 @@ namespace EQLogParser
         {
           dispatcher.InvokeAsync(action, priority);
         }
+      }
+    }
+
+    internal static void InvokeAsync(Action action, DispatcherPriority priority = DispatcherPriority.Normal)
+    {
+      if (Application.Current?.Dispatcher is Dispatcher dispatcher)
+      {
+        dispatcher.InvokeAsync(action, priority);
       }
     }
   }

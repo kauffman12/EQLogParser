@@ -158,7 +158,6 @@ namespace EQLogParser
         }
 
         TriggerStateManager.Instance.UpdateConfig(TheConfig);
-        TriggerManager.Instance.ConfigUpdated();
       }
     }
 
