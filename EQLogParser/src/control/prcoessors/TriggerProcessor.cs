@@ -15,6 +15,8 @@ namespace EQLogParser
 {
   internal class TriggerProcessor : IDisposable
   {
+    public readonly ObservableCollection<AlertEntry> AlertLog = new ObservableCollection<AlertEntry>();
+    public readonly string CurrentUser;
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private const long COUNT_TIME = TimeSpan.TicksPerMillisecond * 750;
     private readonly object CollectionLock = new object();
@@ -24,10 +26,8 @@ namespace EQLogParser
     private readonly ActionBlock<Tuple<string, double, bool>> Process;
     private readonly ActionBlock<Tuple<LinkedListNode<TriggerWrapper>, LineData>> ProcessLowPri;
     private readonly ActionBlock<Speak> ProcessSpeech;
-    private readonly ObservableCollection<AlertEntry> AlertLog = new ObservableCollection<AlertEntry>();
     private readonly Action<string, string, Trigger, MatchCollection, MatchCollection> AddTextEvent;
     private readonly Action<Trigger, List<TimerData>> AddTimerEvent;
-    private readonly string CurrentUser;
     private LinkedList<TriggerWrapper> ActiveTriggers;
     private SpeechSynthesizer Synth = null;
     private SoundPlayer SoundPlayer = null;
