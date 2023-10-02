@@ -13,15 +13,26 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for TriggersTester.xaml
   /// </summary>
-  public partial class TriggersTester : UserControl
+  public partial class TriggersTester : UserControl, IDisposable
   {
     private static readonly ILog LOG = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private readonly BufferBlock<Tuple<string, double, bool>> Buffer;
 
     public TriggersTester()
     {
       InitializeComponent();
-
+      Buffer = new BufferBlock<Tuple<string, double, bool>>();
+      TriggerManager.Instance.SetTestProcessor(TriggerStateManager.DEFAULT_USER, Buffer);
+      TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
       (Application.Current.MainWindow as MainWindow).Closing += TriggersTesterClosing;
+    }
+
+    private void TriggerConfigUpdateEvent(TriggerConfig config)
+    {
+      if (config?.IsAdvanced == false)
+      {
+        TriggerManager.Instance.SetTestProcessor(TriggerStateManager.DEFAULT_USER, Buffer);
+      }
     }
 
     private void TriggersTesterClosing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -61,8 +72,6 @@ namespace EQLogParser
 
     private async void RunTest(List<string> allLines, bool realTime)
     {
-      var buffer = TriggerManager.Instance.GetTestBuffer();
-
       if (!realTime)
       {
         allLines.ForEach(line =>
@@ -73,7 +82,7 @@ namespace EQLogParser
             if (dateTime != DateTime.MinValue)
             {
               var beginTime = DateUtil.ToDouble(dateTime);
-              buffer.Post(Tuple.Create(line, beginTime, true));
+              Buffer.Post(Tuple.Create(line, beginTime, true));
             }
           }
         });
@@ -171,7 +180,7 @@ namespace EQLogParser
                         var start = DateTime.Now;
                         foreach (var line in list)
                         {
-                          buffer.Post(Tuple.Create(line, nowTime, true));
+                          Buffer.Post(Tuple.Create(line, nowTime, true));
                         }
 
                         var took = (DateTime.Now - start).Ticks;
@@ -207,5 +216,30 @@ namespace EQLogParser
         });
       }
     }
+
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (!disposedValue)
+      {
+        Buffer?.Complete();
+        TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
+        (Application.Current.MainWindow as MainWindow).Closing -= TriggersTesterClosing;
+        testTriggersBox?.Dispose();
+        disposedValue = true;
+      }
+    }
+
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
+    {
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
+    }
+    #endregion
   }
 }

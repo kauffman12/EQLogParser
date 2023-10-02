@@ -1241,6 +1241,8 @@ namespace EQLogParser
       petMappingGrid?.Dispose();
       verifiedPetsGrid?.Dispose();
       verifiedPlayersGrid?.Dispose();
+      (triggerLogWindow?.Content as TriggersLogView)?.Dispose();
+      (triggerTestWindow?.Content as TriggersTester)?.Dispose();
       Application.Current.Shutdown();
     }
 

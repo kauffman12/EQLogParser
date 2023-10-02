@@ -10,8 +10,13 @@
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.RowDefinitions>
+      <RowDefinition Height="30"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
+      <Label Content="Available Logs: " Style="{StaticResource EQTitleStyle}" />
+      <ComboBox x:Name="logList" SelectionChanged="SelectionChanged" />
+    </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
                            AllowSorting="False"
@@ -19,7 +24,7 @@
                            ColumnSizer="Auto"
                            CurrentCellBorderThickness="0"
                            FrozenColumnCount="1"
-                           Grid.Row="0"
+                           Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
