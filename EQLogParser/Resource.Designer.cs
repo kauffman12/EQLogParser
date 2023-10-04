@@ -466,6 +466,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Delete Character Settings.
+        /// </summary>
+        internal static string TRIGGER_CHARACTER_DELETE {
+            get {
+                return ResourceManager.GetString("TRIGGER_CHARACTER_DELETE", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Unassign Overlay.
         /// </summary>
         internal static string UNASSIGN_OVERLAY {
