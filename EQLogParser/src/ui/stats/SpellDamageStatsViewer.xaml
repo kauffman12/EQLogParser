@@ -25,7 +25,7 @@
       <ComboBox Margin="0,0,0,2" x:Name="playerList" IsEnabled="True" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,0,2" x:Name="spellList" IsEnabled="True" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,8,2" x:Name="typeList" IsEnabled="True" SelectionChanged="OptionsChanged" />
-      <Button Margin="0,0,8,2" Padding="16,0,16,0" Click="RefreshClick">Refresh</Button>
+      <Button Margin="0,0,8,2" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Refresh</Button>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"

@@ -91,6 +91,79 @@ namespace EQLogParser
       }
     }
 
+    internal void AddCharacter(string name, string filePath)
+    {
+      lock (LockObject)
+      {
+        if (GetConfig() is TriggerConfig config)
+        {
+          var newCharacter = new TriggerCharacter
+          {
+            Name = name,
+            FilePath = filePath,
+            Id = Guid.NewGuid().ToString()
+          };
+
+          config.Characters.Add(newCharacter);
+          config.Characters.Sort((x, y) => x.Name.CompareTo(y.Name));
+          UpdateConfig(config);
+        }
+      }
+    }
+
+    internal void DeleteCharacter(string id)
+    {
+      lock (LockObject)
+      {
+        if (GetConfig() is TriggerConfig config)
+        {
+          if (config.Characters.FirstOrDefault(character => character.Id == id) is TriggerCharacter existing)
+          {
+            config.Characters.Remove(existing);
+            UpdateConfig(config);
+
+            if (GetPlayerState(id) is TriggerState state)
+            {
+              DB?.GetCollection<TriggerState>(STATES_COL)?.Delete(state.Id);
+            }
+          }
+        }
+      }
+    }
+
+    internal void UpdateCharacter(TriggerCharacter update)
+    {
+      lock (LockObject)
+      {
+        if (GetConfig() is TriggerConfig config)
+        {
+          if (config.Characters.FirstOrDefault(character => character.Id == update.Id) is TriggerCharacter existing)
+          {
+            existing.Name = update.Name;
+            existing.FilePath = update.FilePath;
+            existing.IsEnabled = update.IsEnabled;
+            UpdateConfig(config);
+          }
+        }
+      }
+    }
+
+    internal void UpdateCharacter(string id, string name, string filePath)
+    {
+      lock (LockObject)
+      {
+        if (GetConfig() is TriggerConfig config)
+        {
+          if (config.Characters.FirstOrDefault(character => character.Id == id) is TriggerCharacter existing)
+          {
+            existing.Name = name;
+            existing.FilePath = filePath;
+            UpdateConfig(config);
+          }
+        }
+      }
+    }
+
     internal TriggerConfig GetConfig()
     {
       if (DB?.GetCollection<TriggerConfig>(CONFIG_COL) is ILiteCollection<TriggerConfig> configs)
@@ -601,7 +674,7 @@ namespace EQLogParser
           Populate(root, state, tree);
         }
 
-        if (name == TRIGGERS)
+        if (name == TRIGGERS && state != null)
         {
           var needUpdate = false;
           FixEnabledState(root, state, ref needUpdate);
@@ -619,7 +692,7 @@ namespace EQLogParser
     private TriggerState GetPlayerState(string playerId)
     {
       TriggerState state = null;
-      if (DB?.GetCollection<TriggerState>(STATES_COL) is ILiteCollection<TriggerState> states)
+      if (playerId != null && DB?.GetCollection<TriggerState>(STATES_COL) is ILiteCollection<TriggerState> states)
       {
         state = states.FindOne(s => s.Id == playerId);
 

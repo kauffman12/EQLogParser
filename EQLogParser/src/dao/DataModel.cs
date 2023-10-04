@@ -201,11 +201,11 @@ namespace EQLogParser
     public string Parent { get; set; }
   }
 
-  internal class TriggerUser
+  internal class TriggerCharacter
   {
     public string Id { get; set; }
     public string Name { get; set; }
-    public string FileName { get; set; }
+    public string FilePath { get; set; }
     public bool IsEnabled { get; set; }
   }
 
@@ -213,7 +213,7 @@ namespace EQLogParser
   {
     public string Id { get; set; }
     public bool IsAdvanced { get; set; }
-    public List<TriggerUser> Users { get; set; } = new List<TriggerUser>();
+    public List<TriggerCharacter> Characters { get; set; } = new List<TriggerCharacter>();
     public bool IsEnabled { get; set; }
   }
 

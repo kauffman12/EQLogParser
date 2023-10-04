@@ -17,11 +17,19 @@
       <local:ZeroConverter x:Key="ZeroConverter" />
     </Grid.Resources>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <CheckBox x:Name="basicCheckBox" Margin="4,0,4,0" FontWeight="Normal" FocusVisualStyle="{x:Null}" Unchecked="BasicChecked" Checked="BasicChecked"/>
-      <Label x:Name="titleLabel" Content="Check to Activate Triggers" Style="{StaticResource EQTitleStyle}" Foreground="{DynamicResource EQStopForegroundBrush}"/>
+      <CheckBox x:Name="basicCheckBox" Margin="4,0,0,0" FontWeight="Normal" FocusVisualStyle="{x:Null}" Unchecked="BasicChecked" Checked="BasicChecked"/>
+      <Label x:Name="titleLabel" Margin="6,0,8,0" VerticalContentAlignment="Center" Padding="0,0,0,2" Content="Check to Activate Triggers" Style="{DynamicResource EQTitleStyle}" Foreground="{DynamicResource EQStopForegroundBrush}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <Button Margin="0,0,8,2" Padding="8,0,8,0" Height="24" Click="CloseOverlaysClick">Close Overlays</Button>
+      <TextBlock VerticalAlignment="Center" Margin="8,0,30,4" PreviewMouseDown="ToggleAdvancedPreviewMouseDown">
+        <InlineUIContainer>
+          <StackPanel Orientation="Vertical">
+            <TextBlock x:Name="advancedText" Cursor="Hand" FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource EQWarnForegroundBrush}" Text="Switch to Advanced Settings"/>
+            <Rectangle x:Name="underlineRect" Fill="{DynamicResource EQWarnForegroundBrush}" Height="1" Width="{Binding ActualWidth, ElementName=advancedText}" />
+          </StackPanel>
+        </InlineUIContainer>
+      </TextBlock>
+      <Button Margin="0,0,8,2" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="CloseOverlaysClick">Close Overlays</Button>
       <CheckBox x:Name="watchGina" IsChecked="False" Margin="0,0,8,2" Checked="OptionsChanged" Unchecked="OptionsChanged">Watch for GINA Triggers</CheckBox>
       <ComboBox x:Name="voices" SelectedIndex="0" Margin="0,0,0,2" SelectionChanged="OptionsChanged" />
       <ComboBox x:Name="rateOption" SelectedIndex="0" Margin="0,0,8,2" SelectionChanged="OptionsChanged">
@@ -33,13 +41,17 @@
         <ComboBoxItem>Increased Rate 5</ComboBoxItem>
       </ComboBox>
     </StackPanel>
-    <Grid Grid.Row="1">
+    <Grid x:Name="mainGrid" Grid.Row="1">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="350"></ColumnDefinition>
+        <ColumnDefinition Width="230"></ColumnDefinition>
         <ColumnDefinition Width="2"></ColumnDefinition>
-        <ColumnDefinition Width="400*"></ColumnDefinition>
+        <ColumnDefinition Width="330"></ColumnDefinition>
+        <ColumnDefinition Width="2"></ColumnDefinition>
+        <ColumnDefinition Width="350*"></ColumnDefinition>
       </Grid.ColumnDefinitions>
-      <Grid Grid.Column="0">
+      <local:TriggersCharacterView x:Name="characterView" Grid.Column="0" />
+      <GridSplitter Grid.Column="1" ResizeDirection="Columns" HorizontalAlignment="Stretch" />
+      <Grid Grid.Column="2">
         <Grid.RowDefinitions>
           <RowDefinition Height="300*"></RowDefinition>
         </Grid.RowDefinitions>
@@ -73,11 +85,11 @@
           <syncfusion:SfTreeView.ItemContextMenu>
             <ContextMenu>
               <MenuItem x:Name="setTriggerMenuItem" Header="Update Selected Triggers">
-                <MenuItem x:Name="setTextOverlayMenuItem" Header="Text Overlay">
+                <MenuItem x:Name="setTextOverlayMenuItem" Header="Text Overlays">
                   <MenuItem x:Name="addTextOverlaysMenuItem" Header="Add" />
                   <MenuItem x:Name="removeTextOverlaysMenuItem" Header="Remove" />
                 </MenuItem>
-                <MenuItem x:Name="setTimerOverlayMenuItem" Header="Timer Overlay">
+                <MenuItem x:Name="setTimerOverlayMenuItem" Header="Timer Overlays">
                   <MenuItem x:Name="addTimerOverlaysMenuItem" Header="Add" />
                   <MenuItem x:Name="removeTimerOverlaysMenuItem" Header="Remove" />
                 </MenuItem>
@@ -107,8 +119,8 @@
           </syncfusion:SfTreeView.ItemContextMenu>
         </syncfusion:SfTreeView>
       </Grid>
-      <GridSplitter Grid.Column="1" ResizeDirection="Columns" HorizontalAlignment="Stretch" />
-      <Grid Grid.Column="2">
+      <GridSplitter Grid.Column="3" ResizeDirection="Columns" HorizontalAlignment="Stretch" />
+      <Grid Grid.Column="4">
         <Grid.RowDefinitions>
           <RowDefinition Height="35"></RowDefinition>
           <RowDefinition Height="100*"></RowDefinition>

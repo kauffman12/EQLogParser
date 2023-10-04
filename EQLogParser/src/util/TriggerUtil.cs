@@ -445,6 +445,44 @@ namespace EQLogParser
       return true;
     }
 
+    internal static List<TriggerCharacter> UpdateCharacterList(List<TriggerCharacter> list, TriggerConfig config)
+    {
+      var characters = config.Characters.ToList();
+
+      if (list != null)
+      {
+        if (list.Count != characters.Count)
+        {
+          return characters;
+        }
+        else
+        {
+          for (var i = 0; i < list.Count; i++)
+          {
+            if (list[i].Id == characters[i].Id)
+            {
+              if (list[i].Name != characters[i].Name)
+              {
+                return characters;
+              }
+
+              list[i] = characters[i];
+            }
+            else
+            {
+              return characters;
+            }
+          }
+        }
+      }
+      else
+      {
+        return characters;
+      }
+
+      return null;
+    }
+
     internal static FileSystemWatcher CreateSoundsWatcher(ObservableCollection<string> fileList)
     {
       FileSystemWatcher watcher = null;
