@@ -40,23 +40,18 @@ namespace EQLogParser
     private SpeechSynthesizer TestSynth = null;
     private TriggerTreeViewNode CopiedNode = null;
     private bool CutNode = false;
-    private string CurrentPlayer = TriggerStateManager.DEFAULT_USER;
+    private string CurrentCharacterId = null;
+    private GridLength CharacterViewWidth;
     private bool Ready = false;
 
     public TriggersView()
     {
       InitializeComponent();
 
-      if (TriggerStateManager.Instance.GetConfig() is TriggerConfig config)
-      {
-        TheConfig = config;
-
-        if (!TheConfig.IsAdvanced)
-        {
-          basicCheckBox.IsChecked = config.IsEnabled;
-          SetTitle(config.IsEnabled);
-        }
-      }
+      CharacterViewWidth = mainGrid.ColumnDefinitions[0].Width;
+      TheConfig = TriggerStateManager.Instance.GetConfig();
+      characterView.SetConfig(TheConfig);
+      UpdateConfig(TheConfig);
 
       if ((TestSynth = TriggerUtil.GetSpeechSynthesizer()) != null)
       {
@@ -124,13 +119,16 @@ namespace EQLogParser
         return editor.Editor;
       }
 
-      treeView.Nodes.Add(TriggerStateManager.Instance.GetTriggerTreeView(CurrentPlayer));
+      treeView.Nodes.Add(TriggerStateManager.Instance.GetTriggerTreeView(CurrentCharacterId));
       treeView.Nodes.Add(TriggerStateManager.Instance.GetOverlayTreeView());
       TriggerManager.Instance.EventsSelectTrigger += EventsSelectTrigger;
       TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
+      TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+      characterView.SelectedCharacterEvent += CharacterSelectedCharacterEvent;
       Ready = true;
     }
 
+    private void TriggerConfigUpdateEvent(TriggerConfig config) => UpdateConfig(config);
     private void CloseOverlaysClick(object sender, RoutedEventArgs e) => TriggerManager.Instance.CloseOverlays();
     private void CreateTextOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(true);
     private void CreateTimerOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(false);
@@ -146,33 +144,114 @@ namespace EQLogParser
     {
       if (Ready && sender is CheckBox checkBox)
       {
-        if (checkBox?.IsChecked == true)
+        TheConfig.IsEnabled = checkBox?.IsChecked == true;
+        TriggerStateManager.Instance.UpdateConfig(TheConfig);
+      }
+    }
+
+    private void CharacterSelectedCharacterEvent(TriggerCharacter character)
+    {
+      if (character == null)
+      {
+        if (CurrentCharacterId != null)
         {
-          SetTitle(true);
-          TheConfig.IsEnabled = true;
+          CurrentCharacterId = null;
+          treeView.IsEnabled = false;
+          thePropertyGrid.SelectedObject = null;
+          RefreshTriggerNode();
+        }
+      }
+      else
+      {
+        if (CurrentCharacterId != character.Id)
+        {
+          CurrentCharacterId = character.Id;
+          treeView.IsEnabled = true;
+          thePropertyGrid.SelectedObject = null;
+          RefreshTriggerNode();
+        }
+      }
+    }
+
+    private void ToggleAdvancedPreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+      if (advancedText != null)
+      {
+        if (advancedText.Text == "Switch to Advanced Settings")
+        {
+          TheConfig.IsAdvanced = true;
+          basicCheckBox.Visibility = Visibility.Collapsed;
         }
         else
         {
-          SetTitle(false);
-          TheConfig.IsEnabled = false;
+          TheConfig.IsAdvanced = false;
+          basicCheckBox.Visibility = Visibility.Visible;
         }
 
         TriggerStateManager.Instance.UpdateConfig(TheConfig);
       }
     }
 
-    private void SetTitle(bool active)
+    private void UpdateConfig(TriggerConfig config)
     {
-      if (active)
+      TheConfig = config;
+      basicCheckBox.Visibility = !TheConfig.IsAdvanced ? Visibility.Visible : Visibility.Collapsed;
+      basicCheckBox.IsChecked = TheConfig.IsEnabled;
+
+      if (TheConfig.IsAdvanced)
       {
-        titleLabel.SetResourceReference(Label.ForegroundProperty, "EQGoodForegroundBrush");
-        titleLabel.Content = "Triggers Active";
+        CharacterSelectedCharacterEvent(characterView.GetSelectedCharacter());
+
+        if (TheConfig.Characters.Count(user => user.IsEnabled) is int count && count > 0)
+        {
+          titleLabel.SetResourceReference(Label.ForegroundProperty, "EQGoodForegroundBrush");
+          var updatedTitle = $"Triggers Active for {count} Character";
+          if (count > 1)
+          {
+            updatedTitle = $"{updatedTitle}s";
+          }
+          titleLabel.Content = updatedTitle;
+        }
+        else
+        {
+          titleLabel.SetResourceReference(Label.ForegroundProperty, "EQStopForegroundBrush");
+          titleLabel.Content = "No Triggers Active";
+        }
+
+        advancedText.Text = "Switch to Basic Settings";
+        mainGrid.ColumnDefinitions[0].Width = CharacterViewWidth;
+        mainGrid.ColumnDefinitions[1].Width = new GridLength(2);
       }
       else
       {
-        titleLabel.SetResourceReference(Label.ForegroundProperty, "EQStopForegroundBrush");
-        titleLabel.Content = "Check to Activate Triggers";
+        if (CurrentCharacterId != TriggerStateManager.DEFAULT_USER)
+        {
+          CurrentCharacterId = TriggerStateManager.DEFAULT_USER;
+          treeView.IsEnabled = true;
+          thePropertyGrid.SelectedObject = null;
+          RefreshTriggerNode();
+        }
+
+        if (TheConfig.IsEnabled)
+        {
+          titleLabel.SetResourceReference(Label.ForegroundProperty, "EQGoodForegroundBrush");
+          titleLabel.Content = "Triggers Active";
+        }
+        else
+        {
+          titleLabel.SetResourceReference(Label.ForegroundProperty, "EQStopForegroundBrush");
+          titleLabel.Content = "Check to Activate Triggers";
+        }
+
+        advancedText.Text = "Switch to Advanced Settings";
+        mainGrid.ColumnDefinitions[0].Width = new GridLength(0);
+        mainGrid.ColumnDefinitions[1].Width = new GridLength(0);
       }
+
+      advancedText.UpdateLayout();
+      advancedText.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+      advancedText.Arrange(new Rect(advancedText.DesiredSize));
+      underlineRect.Width = advancedText.ActualWidth;
     }
 
     private void CollapseAllClick(object sender, RoutedEventArgs e)
@@ -191,7 +270,7 @@ namespace EQLogParser
     {
       if (e.Node is TriggerTreeViewNode viewNode)
       {
-        TriggerStateManager.Instance.SetState(CurrentPlayer, viewNode);
+        TriggerStateManager.Instance.SetState(CurrentCharacterId, viewNode);
         TriggerManager.Instance.TriggersUpdated();
       }
     }
@@ -228,14 +307,20 @@ namespace EQLogParser
 
     private void RefreshTriggerNode()
     {
-      treeView.Nodes.Remove(treeView.Nodes[0]);
-      treeView.Nodes.Insert(0, TriggerStateManager.Instance.GetTriggerTreeView(CurrentPlayer));
+      if (treeView.Nodes.Count == 2)
+      {
+        treeView.Nodes.Remove(treeView.Nodes[0]);
+        treeView.Nodes.Insert(0, TriggerStateManager.Instance.GetTriggerTreeView(CurrentCharacterId));
+      }
     }
 
     private void RefreshOverlayNode()
     {
-      treeView.Nodes.Remove(treeView.Nodes[1]);
-      treeView.Nodes.Add(TriggerStateManager.Instance.GetOverlayTreeView());
+      if (treeView.Nodes.Count == 2)
+      {
+        treeView.Nodes.Remove(treeView.Nodes[1]);
+        treeView.Nodes.Add(TriggerStateManager.Instance.GetOverlayTreeView());
+      }
     }
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
@@ -621,7 +706,7 @@ namespace EQLogParser
         else
         {
           var msgDialog = new MessageWindow($"Are you sure? This will Set Priority {newPriority} to all selected Triggers and those in all sub folders.",
-            EQLogParser.Resource.ASSIGN_PRIORITY, MessageWindow.IconType.Question, "Yes");
+            EQLogParser.Resource.ASSIGN_PRIORITY, MessageWindow.IconType.Warn, "Yes");
           msgDialog.ShowDialog();
           if (msgDialog.IsYes1Clicked)
           {
@@ -1066,6 +1151,7 @@ namespace EQLogParser
         PreviewWindows.Clear();
         TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
         TriggerManager.Instance.EventsSelectTrigger -= EventsSelectTrigger;
+        TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
         TestSynth?.Dispose();
         Watcher?.Dispose();
         thePropertyGrid?.Dispose();

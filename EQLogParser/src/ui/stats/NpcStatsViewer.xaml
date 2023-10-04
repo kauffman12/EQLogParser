@@ -32,7 +32,7 @@
       <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <Button Margin="0,0,8,2" Padding="16,0,16,0" Click="RefreshClick">Refresh</Button>
+      <Button Margin="0,0,8,2" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Refresh</Button>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"

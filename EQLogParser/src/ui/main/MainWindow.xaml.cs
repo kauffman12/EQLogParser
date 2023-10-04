@@ -383,8 +383,8 @@ namespace EQLogParser
 
         item.Click += (object sender, RoutedEventArgs e) =>
         {
-          var msgDialog = new MessageWindow("Clear Chat Archive for " + player + "?", EQLogParser.Resource.CLEAR_CHAT,
-            MessageWindow.IconType.Question, "Yes");
+          var msgDialog = new MessageWindow($"Clear Chat Archive for {player}?", EQLogParser.Resource.CLEAR_CHAT,
+            MessageWindow.IconType.Warn, "Yes");
           msgDialog.ShowDialog();
 
           if (msgDialog.IsYes1Clicked)

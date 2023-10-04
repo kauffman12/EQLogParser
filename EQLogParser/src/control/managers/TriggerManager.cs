@@ -101,7 +101,15 @@ namespace EQLogParser
 
     private void TextTick(object sender, EventArgs e) => WindowTick(TextWindows, TextOverlayTimer);
     private string ModLine(string text, string line) => string.IsNullOrEmpty(text) ? null : text.Replace("{l}", line, StringComparison.OrdinalIgnoreCase);
-    private void TriggerManagerEventsLogLoadingComplete(string _) => ConfigDoUpdate(this, null);
+
+    private void TriggerManagerEventsLogLoadingComplete(string _)
+    {
+      // ignore event if in advanced mode
+      if (TriggerStateManager.Instance.GetConfig() is TriggerConfig config && !config.IsAdvanced)
+      {
+        ConfigDoUpdate(this, null);
+      }
+    }
 
     private void TriggerConfigUpdateEvent(TriggerConfig _)
     {
@@ -113,25 +121,76 @@ namespace EQLogParser
     {
       ConfigUpdateTimer.Stop();
       UIUtil.InvokeNow(() => CloseOverlays());
+      TextOverlayTimer?.Stop();
+      TimerOverlayTimer?.Stop();
 
       if (TriggerStateManager.Instance.GetConfig() is TriggerConfig config)
       {
-        if (!config.IsAdvanced)
+        lock (LogReaders)
         {
-          lock (LogReaders)
+          if (config.IsAdvanced)
           {
-            // make sure we don't double up on readers/listeners
+            // Only clear out everything if switcehd from basic
+            if (GetProcessors().FirstOrDefault(p => p.CurrentUser == TriggerStateManager.DEFAULT_USER) != null)
+            {
+              LogReaders.ForEach(reader => reader.Dispose());
+              LogReaders.Clear();
+            }
+
+            // remove stales readers first
+            var toRemove = new List<LogReader>();
+            var alreadyRunning = new List<string>();
+            foreach (var reader in LogReaders)
+            {
+              // remove readers if the character no longer exists
+              if (reader.GetProcessor() is TriggerProcessor processor)
+              {
+                var found = config.Characters.FirstOrDefault(character => character.Id == processor.CurrentUser);
+                if (found == null || !found.IsEnabled)
+                {
+                  reader.Dispose();
+                  toRemove.Add(reader);
+                }
+                else
+                {
+                  alreadyRunning.Add(found.Id);
+                }
+              }
+            }
+
+            toRemove.ForEach(remove => LogReaders.Remove(remove));
+
+            // add characters that aren't enabled yet
+            foreach (var character in config.Characters)
+            {
+              if (character.IsEnabled && !alreadyRunning.Contains(character.Id))
+              {
+                LogReaders.Add(new LogReader(new TriggerProcessor(character.Id, AddTextEvent, AddTimerEvent),
+                  character.FilePath));
+              }
+            }
+
+            if (LogReaders.Count > 0)
+            {
+              (Application.Current?.MainWindow as MainWindow).ShowTriggersEnabled(true);
+            }
+            else
+            {
+              (Application.Current?.MainWindow as MainWindow).ShowTriggersEnabled(false);
+            }
+          }
+          else
+          {
+            // Basic always clear out everything
             LogReaders.ForEach(reader => reader.Dispose());
             LogReaders.Clear();
-            TextOverlayTimer?.Stop();
-            TimerOverlayTimer?.Stop();
 
             if (config.IsEnabled)
             {
               if (MainWindow.CurrentLogFile != null)
               {
-                LogReaders.Add(new LogReader(new TriggerProcessor(TriggerStateManager.DEFAULT_USER, AddTextEvent, AddTimerEvent),
-                  MainWindow.CurrentLogFile));
+                LogReaders.Add(new LogReader(new TriggerProcessor(TriggerStateManager.DEFAULT_USER,
+                  AddTextEvent, AddTimerEvent), MainWindow.CurrentLogFile));
                 (Application.Current?.MainWindow as MainWindow).ShowTriggersEnabled(true);
               }
             }
@@ -140,14 +199,9 @@ namespace EQLogParser
               (Application.Current?.MainWindow as MainWindow).ShowTriggersEnabled(false);
             }
           }
+        }
 
-          EventsProcessorsUpdated?.Invoke(true);
-        }
-        else if (e == null)
-        {
-          // came from reading new log event so ignore
-          return;
-        }
+        EventsProcessorsUpdated?.Invoke(true);
       }
     }
 

@@ -22,16 +22,60 @@ namespace EQLogParser
     {
       InitializeComponent();
       Buffer = new BufferBlock<Tuple<string, double, bool>>();
-      TriggerManager.Instance.SetTestProcessor(TriggerStateManager.DEFAULT_USER, Buffer);
       TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
       (Application.Current.MainWindow as MainWindow).Closing += TriggersTesterClosing;
+      UpdateCharacterList(TriggerStateManager.Instance.GetConfig());
     }
 
-    private void TriggerConfigUpdateEvent(TriggerConfig config)
+    private void TriggerConfigUpdateEvent(TriggerConfig config) => UpdateCharacterList(config);
+
+    private void UpdateCharacterList(TriggerConfig config)
     {
-      if (config?.IsAdvanced == false)
+      if (characterList != null)
       {
-        TriggerManager.Instance.SetTestProcessor(TriggerStateManager.DEFAULT_USER, Buffer);
+        if (!config.IsAdvanced)
+        {
+          if (characterList.Visibility != Visibility.Collapsed)
+          {
+            characterList.Visibility = Visibility.Collapsed;
+          }
+        }
+        else
+        {
+          if (characterList.Visibility != Visibility.Visible)
+          {
+            characterList.Visibility = Visibility.Visible;
+          }
+
+          string selectedId = null;
+          if (characterList.SelectedItem is TriggerCharacter selected)
+          {
+            selectedId = selected.Id;
+          }
+
+          var updatedSource = TriggerUtil.UpdateCharacterList(characterList.ItemsSource as List<TriggerCharacter>, config);
+          if (updatedSource != null)
+          {
+            characterList.ItemsSource = updatedSource;
+          }
+
+          if (characterList.Items.Count > 0)
+          {
+            if (selectedId != null && characterList.ItemsSource is List<TriggerCharacter> list)
+            {
+              var foundIndex = list.FindIndex(x => x.Id == selectedId);
+              if (foundIndex > -1 && characterList.SelectedIndex != foundIndex)
+              {
+                characterList.SelectedIndex = foundIndex;
+              }
+            }
+
+            if (characterList.SelectedIndex == -1 && characterList.Items.Count > 0)
+            {
+              characterList.SelectedIndex = 0;
+            }
+          }
+        }
       }
     }
 
@@ -51,11 +95,27 @@ namespace EQLogParser
         {
           if (testTriggersBox.Lines?.Count > 0)
           {
-            var allLines = testTriggersBox.Lines.ToList().Where(line => !string.IsNullOrEmpty(line.Text) && line.Text.Length > MainWindow.ACTION_INDEX)
-              .Select(line => line.Text).ToList();
+            if (characterList.Visibility != Visibility.Visible)
+            {
+              TriggerManager.Instance.SetTestProcessor(TriggerStateManager.DEFAULT_USER, Buffer);
+            }
+            else
+            {
+              if (characterList.SelectedItem is TriggerCharacter character)
+              {
+                TriggerManager.Instance.SetTestProcessor(character.Id, Buffer);
+              }
+              else
+              {
+                return;
+              }
+            }
+
+            var allLines = testTriggersBox.Lines.ToList().Where(line => !string.IsNullOrEmpty(line.Text)
+              && line.Text.Length > MainWindow.ACTION_INDEX).Select(line => line.Text).ToList();
             if (allLines.Count > 0)
             {
-              RunTest(allLines, realTime.IsChecked == true);
+              RunTest(allLines);
             }
           }
         }
@@ -70,10 +130,12 @@ namespace EQLogParser
       }
     }
 
-    private async void RunTest(List<string> allLines, bool realTime)
+    private async void RunTest(List<string> allLines)
     {
-      if (!realTime)
+      if (realTime.IsChecked == false)
       {
+        characterList.IsEnabled = false;
+        realTime.IsEnabled = false;
         allLines.ForEach(line =>
         {
           if (line.Length > MainWindow.ACTION_INDEX)
@@ -86,10 +148,13 @@ namespace EQLogParser
             }
           }
         });
+        characterList.IsEnabled = true;
       }
       else
       {
         testButton.Content = "Stop Test";
+        characterList.IsEnabled = false;
+        realTime.IsEnabled = false;
 
         await Task.Run(() =>
         {
@@ -211,6 +276,8 @@ namespace EQLogParser
             {
               testStatus.Visibility = Visibility.Collapsed;
               testButton.Content = "Run Test";
+              characterList.IsEnabled = true;
+              realTime.IsEnabled = true;
             });
           }
         });
