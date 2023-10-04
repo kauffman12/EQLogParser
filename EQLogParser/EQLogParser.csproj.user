@@ -21,6 +21,12 @@
     <Compile Update="src\ui\common\DamageBar.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="src\ui\main\TriggerPlayerConfigWindow.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="src\ui\triggers\TriggersCharacterView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="src\ui\triggers\TriggersTester.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -54,6 +60,12 @@
   </ItemGroup>
   <ItemGroup>
     <Page Update="src\ui\common\DamageBar.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="src\ui\main\TriggerPlayerConfigWindow.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="src\ui\triggers\TriggersCharacterView.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\triggers\TriggersTester.xaml">

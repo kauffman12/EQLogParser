@@ -17,7 +17,7 @@
       <Setter Property="Foreground" Value="{DynamicResource EQMenuIconBrush}" />
       <Setter Property="Height" Value="30"/>
       <Setter Property="FontSize" Value="{DynamicResource EQTitleSize}" />
-      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="FontWeight" Value="DemiBold" />
       <Setter Property="Margin" Value="0" />
     </Style>
 
