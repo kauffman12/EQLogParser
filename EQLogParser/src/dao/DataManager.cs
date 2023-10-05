@@ -495,7 +495,7 @@ namespace EQLogParser
       }
     }
 
-    internal void AddSpellCast(SpellCast cast, double beginTime)
+    internal void AddSpellCast(SpellCast cast, double beginTime, string specialKey = null)
     {
       if (SpellsNameDB.ContainsKey(cast.Spell))
       {
@@ -505,6 +505,28 @@ namespace EQLogParser
         if (SpellsToClass.TryGetValue(cast.Spell, out var theClass))
         {
           PlayerManager.Instance.UpdatePlayerClassFromSpell(cast, theClass);
+        }
+
+        if (specialKey != null)
+        {
+          var updated = false;
+          lock (LockObject)
+          {
+            foreach (ref var key in AdpsKeys.ToArray().AsSpan())
+            {
+              if (AdpsValues[key].TryGetValue(cast.SpellData.NameAbbrv, out var value))
+              {
+                var msg = string.IsNullOrEmpty(cast.SpellData.LandsOnYou) ? cast.SpellData.Name : cast.SpellData.LandsOnYou;
+                AdpsActive[key][msg] = value;
+                updated = true;
+              }
+            }
+          }
+
+          if (updated)
+          {
+            RecalculateAdps();
+          }
         }
       }
     }
@@ -555,16 +577,22 @@ namespace EQLogParser
           // need to handle older spells and multiple rate values
           if (spellData != null)
           {
+            var updated = false;
             lock (LockObject)
             {
-              AdpsKeys.ForEach(key =>
+              foreach (ref var key in AdpsKeys.ToArray().AsSpan())
               {
                 if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out var value))
                 {
                   AdpsActive[key][spellData.LandsOnYou] = value;
-                  RecalculateAdps();
+                  updated = true;
                 }
-              });
+              }
+            }
+
+            if (updated)
+            {
+              RecalculateAdps();
             }
           }
         }
@@ -585,15 +613,25 @@ namespace EQLogParser
         if (AdpsWearOff.TryGetValue(found.SpellData[0].WearOff, out var spellDataSet) && spellDataSet.Count > 0)
         {
           var spellData = spellDataSet.First();
+          var updated = false;
 
-          AdpsKeys.ForEach(key =>
+          lock (LockObject)
           {
-            if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out var value))
+            foreach (ref var key in AdpsKeys.ToArray().AsSpan())
             {
-              AdpsActive[key].Remove(spellData.LandsOnYou);
-              RecalculateAdps();
+              if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out var value))
+              {
+                var msg = string.IsNullOrEmpty(spellData.LandsOnYou) ? spellData.Name : spellData.LandsOnYou;
+                AdpsActive[key].Remove(msg);
+                updated = true;
+              }
             }
-          });
+          }
+
+          if (updated)
+          {
+            RecalculateAdps();
+          }
         }
       }
 
@@ -686,11 +724,9 @@ namespace EQLogParser
     internal SpellData ParseCustomSpellData(string line)
     {
       SpellData spellData = null;
-
       if (!string.IsNullOrEmpty(line))
       {
         var data = line.Split('^');
-
         if (data.Length >= 11)
         {
           var duration = int.Parse(data[3], CultureInfo.CurrentCulture) * 6; // as seconds
