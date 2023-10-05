@@ -706,10 +706,15 @@ namespace EQLogParser
         {
           active.Value.Keys.ToList().ForEach(landsOn =>
           {
-            if (AdpsLandsOn[landsOn].Any(spellData => spellData.SongWindow))
+            if (AdpsLandsOn.TryGetValue(landsOn, out var value))
             {
-              AdpsActive[active.Key].Remove(landsOn);
-              updated = true;
+              // Need this check since Glyph may be present and there's no
+              // lands on data for it as it's a special cast
+              if (value.Any(spellData => spellData.SongWindow))
+              {
+                AdpsActive[active.Key].Remove(landsOn);
+                updated = true;
+              }
             }
           });
         }
