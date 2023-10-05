@@ -31,6 +31,7 @@ namespace EQLogParser
           string spellName = null;
           var isSpell = false;
           var isInterrupted = false;
+          var isYou = false;
 
           // [Sat Mar 14 19:57:48 2020] You activate Venon's Vindication.
           // [Mon Mar 02 19:46:09 2020] You begin casting Shield of Destiny Rk. II.
@@ -47,6 +48,7 @@ namespace EQLogParser
           // [Sun Mar 01 22:34:58 2020] You have entered The Eastern Wastes.
           if (split[0] == "You")
           {
+            isYou = true;
             player = ConfigUtil.PlayerName;
             if (split[1] == "activate" && split.Length > 2)
             {
@@ -120,14 +122,27 @@ namespace EQLogParser
 
             if (!isInterrupted)
             {
+              string specialKey = null;
+
               if (isSpell)
               {
-                // For some reason Glyphs don't show up for current player
-                CheckForSpecial(SpecialCastCodes, spellName, player, currentTime);
+                // For some reason Glyphs don't show up for current player so this special case should limit the checks
+                // and allow glyph to work
+                if (CheckForSpecial(SpecialCastCodes, spellName, player, currentTime) is string found && isYou)
+                {
+                  specialKey = found;
+                }
               }
 
               var spellData = DataManager.Instance.GetSpellByName(spellName);
-              DataManager.Instance.AddSpellCast(new SpellCast { Caster = player, Spell = string.Intern(spellName), SpellData = spellData, BeginTime = currentTime }, currentTime);
+              DataManager.Instance.AddSpellCast(new SpellCast
+              {
+                Caster = player,
+                Spell = string.Intern(spellName),
+                SpellData = spellData,
+                BeginTime = currentTime
+              },
+              currentTime, specialKey);
             }
             else
             {
@@ -233,12 +248,15 @@ namespace EQLogParser
       return false;
     }
 
-    private static void CheckForSpecial(Dictionary<string, string> codes, string spellName, string player, double currentTime)
+    private static string CheckForSpecial(Dictionary<string, string> codes, string spellName, string player, double currentTime)
     {
+      string found = null;
       if (codes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(spellName) && spellName.Contains(special)) is string key && !string.IsNullOrEmpty(key))
       {
-        DataManager.Instance.AddSpecial(new SpecialSpell() { Code = codes[key], Player = player, BeginTime = currentTime });
+        DataManager.Instance.AddSpecial(new SpecialSpell { Code = codes[key], Player = player, BeginTime = currentTime });
+        found = key;
       }
+      return found;
     }
 
     private static string ParseOldSpellName(string[] split, int spellIndex)
