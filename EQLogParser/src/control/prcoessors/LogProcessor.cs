@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
 namespace EQLogParser
@@ -13,7 +12,7 @@ namespace EQLogParser
     internal LogProcessor()
     {
       // Setup the pre-processor block
-      var options = new ExecutionDataflowBlockOptions { BoundedCapacity = 20000 };
+      var options = new ExecutionDataflowBlockOptions { BoundedCapacity = 25000 };
       PreProcess = new ActionBlock<Tuple<string, double, bool>>(data => DoPreProcess(data.Item1, data.Item2, data.Item3), options);
       Process = new ActionBlock<LineData>(data => DoProcess(data));
       ChatManager.Instance.Init();
@@ -24,16 +23,19 @@ namespace EQLogParser
       sourceBlock.LinkTo(PreProcess, new DataflowLinkOptions { PropagateCompletion = false });
     }
 
-    private async Task DoPreProcess(string line, double dateTime, bool monitor)
+    private void DoPreProcess(string line, double dateTime, bool monitor)
     {
       var lineData = new LineData { Action = line.Substring(27), BeginTime = dateTime, LineNumber = LineCount };
 
-      if (monitor && TriggerStateManager.Instance.IsActive())
+      if (monitor)
       {
-        // Look for GINA entries in the log
-        if (ConfigUtil.IfSetOrElse("TriggersWatchForGINA", false))
+        if (TriggerStateManager.Instance.IsActive())
         {
-          GinaUtil.CheckGina(lineData);
+          // Look for GINA entries in the log
+          if (ConfigUtil.IfSetOrElse("TriggersWatchForGINA", false))
+          {
+            GinaUtil.CheckGina(lineData);
+          }
         }
       }
 
@@ -67,13 +69,13 @@ namespace EQLogParser
         {
           // may as split once if most things use it
           lineData.Split = lineData.Action.Split(' ');
-          await Process.SendAsync(lineData);
+          Process.Post(lineData);
           LineCount++;
         }
 
         if (doubleLine != null)
         {
-          await DoPreProcess(doubleLine, extraDouble, monitor);
+          DoPreProcess(doubleLine, extraDouble, monitor);
         }
       }
     }
@@ -82,11 +84,11 @@ namespace EQLogParser
     {
       if (!DamageLineParser.Process(lineData))
       {
-        if (!CastLineParser.Process(lineData))
+        if (!HealingLineParser.Process(lineData))
         {
-          if (!HealingLineParser.Process(lineData))
+          if (!MiscLineParser.Process(lineData))
           {
-            MiscLineParser.Process(lineData);
+            CastLineParser.Process(lineData);
           }
         }
       }
