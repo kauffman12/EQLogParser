@@ -11,7 +11,7 @@ namespace EQLogParser
   class LogReader : IDisposable
   {
     private BufferBlock<Tuple<string, double, bool>> Lines { get; } =
-      new BufferBlock<Tuple<string, double, bool>>(new DataflowBlockOptions { BoundedCapacity = 20000 });
+      new BufferBlock<Tuple<string, double, bool>>(new DataflowBlockOptions { BoundedCapacity = 25000 });
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private readonly FileSystemWatcher FileWatcher;
     private readonly string FileName;

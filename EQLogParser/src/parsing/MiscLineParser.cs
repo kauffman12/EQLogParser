@@ -18,7 +18,7 @@ namespace EQLogParser
       { "sliced", 1 }, { "stabbed", 1 }, { "surrounded", 1 }, { "struck", 1 }, { "stunned", 1 }, { "targeted", 1 }, { "withered", 1 }
     };
 
-    public static void Process(LineData lineData)
+    public static bool Process(LineData lineData)
     {
       var handled = false;
 
@@ -107,6 +107,7 @@ namespace EQLogParser
                     {
                       DataManager.Instance.AddRandomRecord(new RandomRecord { Player = player, Rolled = rolledNumber, To = toNumber, From = fromNumber },
                         lineData.BeginTime);
+                      handled = true;
                     }
                   }
                   break;
@@ -179,7 +180,7 @@ namespace EQLogParser
                   else if (isIndex > 0 && StruckByTypes.ContainsKey(split[i - 1]))
                   {
                     // ignore common lines like: is struck by
-                    handled = true;
+                    return false;
                   }
                   break;
                 case "from":
@@ -274,6 +275,7 @@ namespace EQLogParser
                   PlayerManager.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
                   var record = new LootRecord { Item = item, Player = looter, Quantity = count, IsCurrency = false, Npc = "" };
                   DataManager.Instance.AddLootRecord(record, lineData.BeginTime);
+                  handled = true;
                 }
               }
             }
@@ -296,6 +298,8 @@ namespace EQLogParser
       {
         LOG.Error(ae);
       }
+
+      return handled;
     }
 
     private static bool ParseCurrency(string[] pieces, int startIndex, int toIndex, out string item, out uint count)
