@@ -97,13 +97,13 @@ namespace EQLogParser
           {
             if (characterList.Visibility != Visibility.Visible)
             {
-              TriggerManager.Instance.SetTestProcessor(TriggerStateManager.DEFAULT_USER, Buffer);
+              TriggerManager.Instance.SetTestProcessor(TriggerStateManager.DEFAULT_USER, TriggerStateManager.DEFAULT_USER, Buffer);
             }
             else
             {
               if (characterList.SelectedItem is TriggerCharacter character)
               {
-                TriggerManager.Instance.SetTestProcessor(character.Id, Buffer);
+                TriggerManager.Instance.SetTestProcessor(character.Id, character.Name, Buffer);
               }
               else
               {
@@ -149,6 +149,7 @@ namespace EQLogParser
           }
         });
         characterList.IsEnabled = true;
+        realTime.IsEnabled = true;
       }
       else
       {

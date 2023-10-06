@@ -46,12 +46,10 @@ namespace EQLogParser
 
         var config = DB.GetCollection<TriggerConfig>(CONFIG_COL);
         config.EnsureIndex(x => x.Id);
-
         var tree = DB.GetCollection<TriggerNode>(TREE_COL);
         tree.EnsureIndex(x => x.Id);
         tree.EnsureIndex(x => x.Parent);
         tree.EnsureIndex(x => x.Name);
-
         var states = DB.GetCollection<TriggerState>(STATES_COL);
         states.EnsureIndex(x => x.Id);
       }
@@ -858,6 +856,11 @@ namespace EQLogParser
         Parent = parent,
         Index = index
       };
+
+      if (newNode.Name == null)
+      {
+        newNode.Name = "Name Unknown";
+      }
 
       // overlays don't have a state
       if (old.OverlayData == null)

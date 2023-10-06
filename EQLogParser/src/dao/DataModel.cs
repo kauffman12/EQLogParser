@@ -62,7 +62,7 @@ namespace EQLogParser
     public List<NumberOptions> EndEarlyRegexNOptions { get; set; }
     public List<NumberOptions> EndEarlyRegex2NOptions { get; set; }
     public MatchCollection OriginalMatches { get; set; }
-    public int Repeated { get; set; } = -1;
+    public long RepeatedCount { get; set; } = -1;
     public string ActiveColor { get; set; }
     public string FontColor { get; set; }
   }
@@ -117,6 +117,7 @@ namespace EQLogParser
     public double LastTriggered;
     public string AltTimerName { get; set; }
     public string Comments { get; set; }
+    public double RepeatedResetTime { get; set; } = 0.75;
     public double DurationSeconds { get; set; }
     public bool EnableTimer { get; set; }
     public int TimerType { get; set; }

@@ -325,9 +325,9 @@ namespace EQLogParser
 
     private string GetDisplayName(TimerData timerData)
     {
-      if (timerData.Repeated > -1)
+      if (timerData.RepeatedCount > -1)
       {
-        return timerData.DisplayName.Replace("{repeated}", timerData.Repeated.ToString(), StringComparison.OrdinalIgnoreCase);
+        return timerData.DisplayName.Replace("{repeated}", timerData.RepeatedCount.ToString(), StringComparison.OrdinalIgnoreCase);
       }
       else
       {

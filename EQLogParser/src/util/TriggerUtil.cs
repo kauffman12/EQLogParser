@@ -97,6 +97,7 @@ namespace EQLogParser
         toTrigger.WorstEvalTime = fromTrigger.WorstEvalTime;
         toTrigger.ResetDurationSeconds = fromTrigger.ResetDurationSeconds;
         toTrigger.Priority = fromTrigger.Priority;
+        toTrigger.RepeatedResetTime = fromTrigger.RepeatedResetTime;
         toTrigger.SelectedOverlays = fromTrigger.SelectedOverlays;
         toTrigger.TriggerAgainOption = fromTrigger.TriggerAgainOption;
         toTrigger.TimerType = fromTrigger.TimerType;
@@ -353,26 +354,6 @@ namespace EQLogParser
         }
       }
       return success;
-    }
-
-    internal static string ProcessText(string text, MatchCollection matches)
-    {
-      if (matches != null && !string.IsNullOrEmpty(text))
-      {
-        foreach (Match match in matches)
-        {
-          for (var i = 1; i < match.Groups.Count; i++)
-          {
-            if (!string.IsNullOrEmpty(match.Groups[i].Name))
-            {
-              text = text.Replace("${" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
-              text = text.Replace("{" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
-            }
-          }
-        }
-      }
-
-      return text;
     }
 
     internal static bool CheckOptions(List<NumberOptions> options, MatchCollection matches, out double duration)
