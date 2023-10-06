@@ -46,10 +46,19 @@ namespace EQLogParser
 
         var config = DB.GetCollection<TriggerConfig>(CONFIG_COL);
         config.EnsureIndex(x => x.Id);
+
         var tree = DB.GetCollection<TriggerNode>(TREE_COL);
+        // create root nodes if none exist
+        if (tree.Count() == 0)
+        {
+          tree.Insert(new TriggerNode { Name = TRIGGERS, Id = Guid.NewGuid().ToString() });
+          tree.Insert(new TriggerNode { Name = OVERLAYS, Id = Guid.NewGuid().ToString() });
+        }
+
         tree.EnsureIndex(x => x.Id);
         tree.EnsureIndex(x => x.Parent);
         tree.EnsureIndex(x => x.Name);
+
         var states = DB.GetCollection<TriggerState>(STATES_COL);
         states.EnsureIndex(x => x.Id);
       }
