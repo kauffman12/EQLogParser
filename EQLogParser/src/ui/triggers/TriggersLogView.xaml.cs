@@ -14,7 +14,7 @@ namespace EQLogParser
   /// </summary>
   public partial class TriggersLogView : UserControl, IDisposable
   {
-    private List<Tuple<string, ObservableCollection<AlertEntry>, bool>> AlertLogs = null;
+    private List<Tuple<string, ObservableCollection<AlertEntry>>> AlertLogs = null;
 
     public TriggersLogView()
     {
@@ -22,12 +22,32 @@ namespace EQLogParser
       TriggerManager.Instance.EventsProcessorsUpdated += EventsProcessorsUpdated;
     }
 
-    private void EventsProcessorsUpdated(bool obj)
+    private void EventsProcessorsUpdated(bool _)
     {
-      AlertLogs = TriggerManager.Instance.GetAlertLogs().OrderBy(logs => logs.Item1).ToList();
-      logList.ItemsSource = AlertLogs.Select(log => log.Item3 ? "Trigger Tester" : log.Item1).ToList();
-      logList.SelectedIndex = -1;
-      logList.SelectedIndex = 0;
+      AlertLogs = TriggerManager.Instance.GetAlertLogs().ToList();
+      if (AlertLogs != null)
+      {
+        var selected = logList?.SelectedItem as string;
+        var list = AlertLogs.Select(log => log.Item1).ToList();
+        logList.ItemsSource = list;
+        logList.SelectedIndex = -1;
+
+        if (AlertLogs?.Count > 0)
+        {
+          if (selected != null && list.IndexOf(selected) is int found && found > -1)
+          {
+            logList.SelectedIndex = found;
+          }
+          else
+          {
+            logList.SelectedIndex = 0;
+          }
+        }
+      }
+      else
+      {
+        logList.ItemsSource = null;
+      }
     }
 
     private void SelectionChanged(object sender, SelectionChangedEventArgs e)

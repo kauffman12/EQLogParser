@@ -105,6 +105,9 @@ namespace EQLogParser
     private readonly SpellTreeNode LandsOnYouTree = new SpellTreeNode();
     private readonly SpellTreeNode WearOffTree = new SpellTreeNode();
 
+    // defnitely used in single thread
+    private readonly Dictionary<string, string> TitleToClass = new Dictionary<string, string>();
+
     // locking was causing a problem for OverlayFights? I don't know
     private readonly Dictionary<long, Fight> OverlayFights = new Dictionary<long, Fight>();
     private readonly ConcurrentDictionary<string, byte> AllNpcs = new ConcurrentDictionary<string, byte>();
@@ -116,7 +119,6 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> LifetimeFights = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, string> SpellAbbrvCache = new ConcurrentDictionary<string, string>();
     private readonly ConcurrentDictionary<string, string> RanksCache = new ConcurrentDictionary<string, string>();
-    private readonly ConcurrentDictionary<string, string> TitleToClass = new ConcurrentDictionary<string, string>();
 
     private int LastSpellIndex = -1;
 
@@ -286,7 +288,6 @@ namespace EQLogParser
     internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => Helpers.AddAction(AllReceivedSpellBlocks, received, beginTime);
     internal List<ActionGroup> GetAllLoot() => AllLootBlocks.ToList();
     internal List<ActionGroup> GetAllRandoms() => AllRandomBlocks.ToList();
-    internal string GetClassFromTitle(string title) => TitleToClass.ContainsKey(title) ? TitleToClass[title] : null;
     internal List<ActionGroup> GetCastsDuring(double beginTime, double endTime) => SearchActions(AllSpellCastBlocks, beginTime, endTime);
     internal List<ActionGroup> GetDeathsDuring(double beginTime, double endTime) => SearchActions(AllDeathBlocks, beginTime, endTime);
     internal List<ActionGroup> GetHealsDuring(double beginTime, double endTime) => SearchActions(AllHealBlocks, beginTime, endTime);
@@ -465,6 +466,15 @@ namespace EQLogParser
       }
 
       return spellData;
+    }
+
+    internal string GetClassFromTitle(string title)
+    {
+      if (TitleToClass.TryGetValue(title, out var value))
+      {
+        return value;
+      }
+      return null;
     }
 
     internal void AddSpecial(TimedAction action)

@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks.Dataflow;
 using System.Windows;
 using System.Windows.Threading;
@@ -82,25 +81,25 @@ namespace EQLogParser
       TimerOverlayTimer.Stop();
     }
 
-    internal void SetTestProcessor(string playerId, ISourceBlock<Tuple<string, double, bool>> source)
+    internal void SetTestProcessor(string playerId, string name, ISourceBlock<Tuple<string, double, bool>> source)
     {
       TestProcessor?.Dispose();
-      TestProcessor = new TriggerProcessor(playerId, AddTextEvent, AddTimerEvent);
+      TestProcessor = new TriggerProcessor(playerId, $"Trigger Tester ({name})", AddTextEvent, AddTimerEvent);
       TestProcessor.LinkTo(source);
+      UIUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
     }
 
-    internal List<Tuple<string, ObservableCollection<AlertEntry>, bool>> GetAlertLogs()
+    internal List<Tuple<string, ObservableCollection<AlertEntry>>> GetAlertLogs()
     {
-      var list = new List<Tuple<string, ObservableCollection<AlertEntry>, bool>>();
+      var list = new List<Tuple<string, ObservableCollection<AlertEntry>>>();
       foreach (var p in GetProcessors())
       {
-        list.Add(Tuple.Create(p.CurrentUser, p.AlertLog, p == TestProcessor));
+        list.Add(Tuple.Create(p.CurrentCharacterName, p.AlertLog));
       }
       return list;
     }
 
     private void TextTick(object sender, EventArgs e) => WindowTick(TextWindows, TextOverlayTimer);
-    private string ModLine(string text, string line) => string.IsNullOrEmpty(text) ? null : text.Replace("{l}", line, StringComparison.OrdinalIgnoreCase);
 
     private void TriggerManagerEventsLogLoadingComplete(string _)
     {
@@ -131,7 +130,7 @@ namespace EQLogParser
           if (config.IsAdvanced)
           {
             // Only clear out everything if switcehd from basic
-            if (GetProcessors().FirstOrDefault(p => p.CurrentUser == TriggerStateManager.DEFAULT_USER) != null)
+            if (GetProcessors().FirstOrDefault(p => p.CurrentCharacterId == TriggerStateManager.DEFAULT_USER) != null)
             {
               LogReaders.ForEach(reader => reader.Dispose());
               LogReaders.Clear();
@@ -145,7 +144,7 @@ namespace EQLogParser
               // remove readers if the character no longer exists
               if (reader.GetProcessor() is TriggerProcessor processor)
               {
-                var found = config.Characters.FirstOrDefault(character => character.Id == processor.CurrentUser);
+                var found = config.Characters.FirstOrDefault(character => character.Id == processor.CurrentCharacterId);
                 if (found == null || !found.IsEnabled)
                 {
                   reader.Dispose();
@@ -165,7 +164,7 @@ namespace EQLogParser
             {
               if (character.IsEnabled && !alreadyRunning.Contains(character.Id))
               {
-                LogReaders.Add(new LogReader(new TriggerProcessor(character.Id, AddTextEvent, AddTimerEvent),
+                LogReaders.Add(new LogReader(new TriggerProcessor(character.Id, character.Name, AddTextEvent, AddTimerEvent),
                   character.FilePath));
               }
             }
@@ -190,7 +189,7 @@ namespace EQLogParser
               if (MainWindow.CurrentLogFile != null)
               {
                 LogReaders.Add(new LogReader(new TriggerProcessor(TriggerStateManager.DEFAULT_USER,
-                  AddTextEvent, AddTimerEvent), MainWindow.CurrentLogFile));
+                  TriggerStateManager.DEFAULT_USER, AddTextEvent, AddTimerEvent), MainWindow.CurrentLogFile));
                 (Application.Current?.MainWindow as MainWindow).ShowTriggersEnabled(true);
               }
             }
@@ -349,70 +348,64 @@ namespace EQLogParser
       }
     }
 
-    private void AddTextEvent(string action, string text, Trigger trigger, MatchCollection matches, MatchCollection originalMatches = null)
+    private void AddTextEvent(string text, Trigger trigger)
     {
-      if (!string.IsNullOrEmpty(text))
+      var beginTicks = DateTime.Now.Ticks;
+      UIUtil.InvokeAsync(() =>
       {
-        var beginTicks = DateTime.Now.Ticks;
-        UIUtil.InvokeAsync(() =>
+        var textOverlayFound = false;
+
+        trigger.SelectedOverlays?.ForEach(overlayId =>
         {
-          text = TriggerUtil.ProcessText(text, originalMatches);
-          text = TriggerUtil.ProcessText(text, matches);
-          text = ModLine(text, action);
-          var textOverlayFound = false;
-
-          trigger.SelectedOverlays?.ForEach(overlayId =>
+          OverlayWindowData windowData = null;
+          lock (TextWindows)
           {
-            OverlayWindowData windowData = null;
-            lock (TextWindows)
+            if (!TextWindows.TryGetValue(overlayId, out windowData))
             {
-              if (!TextWindows.TryGetValue(overlayId, out windowData))
-              {
-                if (TriggerStateManager.Instance.GetOverlayById(overlayId) is TriggerNode node
-                  && node?.OverlayData?.IsTextOverlay == true)
-                {
-                  windowData = GetWindowData(node);
-                }
-              }
-
-              if (windowData != null)
-              {
-                var brush = TriggerUtil.GetBrush(trigger.FontColor);
-                (windowData?.TheWindow as TextOverlayWindow).AddTriggerText(text, beginTicks, brush);
-                textOverlayFound = true;
-              }
-            }
-          });
-
-          if (!textOverlayFound && TriggerStateManager.Instance.GetDefaultTextOverlay() is TriggerNode node)
-          {
-            lock (TextWindows)
-            {
-              if (!TextWindows.TryGetValue(node.Id, out var windowData))
+              if (TriggerStateManager.Instance.GetOverlayById(overlayId) is TriggerNode node
+                && node?.OverlayData?.IsTextOverlay == true)
               {
                 windowData = GetWindowData(node);
               }
+            }
 
-              // using default
+            if (windowData != null)
+            {
               var brush = TriggerUtil.GetBrush(trigger.FontColor);
               (windowData?.TheWindow as TextOverlayWindow).AddTriggerText(text, beginTicks, brush);
               textOverlayFound = true;
             }
           }
+        });
 
-          if (textOverlayFound && !TextOverlayTimer.IsEnabled)
-          {
-            TextOverlayTimer.Start();
-          }
-        }, DispatcherPriority.Render);
-
-        OverlayWindowData GetWindowData(TriggerNode node)
+        if (!textOverlayFound && TriggerStateManager.Instance.GetDefaultTextOverlay() is TriggerNode node)
         {
-          var windowData = new OverlayWindowData { TheWindow = new TextOverlayWindow(node) };
-          TextWindows[node.Id] = windowData;
-          windowData.TheWindow.Show();
-          return windowData;
+          lock (TextWindows)
+          {
+            if (!TextWindows.TryGetValue(node.Id, out var windowData))
+            {
+              windowData = GetWindowData(node);
+            }
+
+            // using default
+            var brush = TriggerUtil.GetBrush(trigger.FontColor);
+            (windowData?.TheWindow as TextOverlayWindow).AddTriggerText(text, beginTicks, brush);
+            textOverlayFound = true;
+          }
         }
+
+        if (textOverlayFound && !TextOverlayTimer.IsEnabled)
+        {
+          TextOverlayTimer.Start();
+        }
+      }, DispatcherPriority.Render);
+
+      OverlayWindowData GetWindowData(TriggerNode node)
+      {
+        var windowData = new OverlayWindowData { TheWindow = new TextOverlayWindow(node) };
+        TextWindows[node.Id] = windowData;
+        windowData.TheWindow.Show();
+        return windowData;
       }
     }
 

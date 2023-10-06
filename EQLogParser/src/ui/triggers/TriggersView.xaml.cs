@@ -98,6 +98,7 @@ namespace EQLogParser
       AddEditorInstance(new TextSoundEditor(fileList), "WarningSoundOrText");
       AddEditorInstance(new RangeEditor(typeof(long), 1, 5), "Priority");
       AddEditorInstance(new RangeEditor(typeof(long), 0, 99999), "WarningSeconds");
+      AddEditorInstance(new RangeEditor(typeof(double), 0, 99999), "RepeatedResetTime");
       AddEditorInstance(new DurationEditor(2), "DurationTimeSpan");
       AddEditorInstance(new RangeEditor(typeof(long), 1, 60), "FadeDelay");
 
