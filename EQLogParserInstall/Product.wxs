@@ -177,6 +177,9 @@
       <Component Win64="yes" Id="DotLiquid.dll" Guid="C7818EAF-8DF1-4411-8821-FC66BFB42AB2">
         <File CompanionFile="EQLogParser.dll" Id="DotLiquid.dll" Name="DotLiquid.dll" Source="$(var.EQLogParser.TargetDir)DotLiquid.dll" />
       </Component>
+      <Component Win64="yes" Id="Syncfusion.SfAccordion.WPF.dll" Guid="5D37DD38-16A6-4E15-A50B-2128DB6A47AB">
+        <File CompanionFile="EQLogParser.dll" Id="Syncfusion.SfAccordion.WPF.dll" Name="Syncfusion.SfAccordion.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.SfAccordion.WPF.dll" />
+      </Component>
       <Component Win64="yes" Id="Syncfusion.Compression.Base.dll" Guid="9CB53E4C-9D9E-431F-BC2B-3342D39E63A2">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Compression.Base.dll" Name="Syncfusion.Compression.Base.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Compression.Base.dll" />
       </Component>

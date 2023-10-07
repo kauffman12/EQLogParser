@@ -84,17 +84,17 @@
             </MenuItem>            
           </MenuItem>
           <Separator />
-          <MenuItem IsEnabled="True" x:Name="importClick" Header="Import (scf)" Click="ImportClick">
+          <MenuItem IsEnabled="True" x:Name="exportClick" Header="Export (scf)" Click="ExportClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Upload" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem IsEnabled="True" x:Name="exportClick" Header="Export (scf)" Click="ExportClick">
+          <MenuItem IsEnabled="True" x:Name="importClick" Header="Import (scf)" Click="ImportClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Download" />
             </MenuItem.Icon>
           </MenuItem>
-          <Separator />
+           <Separator />
           <MenuItem InputGestureText="Ctrl+A" Header="Select All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.SelectAll}}" 
                     CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
             <MenuItem.Icon>

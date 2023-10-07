@@ -479,7 +479,7 @@ namespace EQLogParser
       var activeTriggers = new LinkedList<TriggerWrapper>();
       var enabledTriggers = TriggerStateManager.Instance.GetEnabledTriggers(CurrentCharacterId);
 
-      var playerName = ConfigUtil.PlayerName;
+      var playerName = (TriggerStateManager.DEFAULT_USER == CurrentCharacterId) ? ConfigUtil.PlayerName : CurrentCharacterName;
       foreach (var enabled in enabledTriggers.OrderByDescending(enabled => enabled.Trigger.LastTriggered))
       {
         var trigger = enabled.Trigger;

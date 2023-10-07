@@ -24,7 +24,11 @@ namespace EQLogParser
       Buffer = new BufferBlock<Tuple<string, double, bool>>();
       TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
       (Application.Current.MainWindow as MainWindow).Closing += TriggersTesterClosing;
-      UpdateCharacterList(TriggerStateManager.Instance.GetConfig());
+
+      if (TriggerStateManager.Instance.GetConfig() is TriggerConfig config)
+      {
+        UpdateCharacterList(config);
+      }
     }
 
     private void TriggerConfigUpdateEvent(TriggerConfig config) => UpdateCharacterList(config);

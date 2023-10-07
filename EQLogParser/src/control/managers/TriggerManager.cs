@@ -1,5 +1,4 @@
-﻿using Syncfusion.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -73,12 +72,12 @@ namespace EQLogParser
 
       lock (LogReaders)
       {
-        LogReaders.ForEach(reader => reader.Dispose());
-        LogReaders.Clear();
+        LogReaders?.ForEach(reader => reader.Dispose());
+        LogReaders?.Clear();
       }
 
-      TextOverlayTimer.Stop();
-      TimerOverlayTimer.Stop();
+      TextOverlayTimer?.Stop();
+      TimerOverlayTimer?.Stop();
     }
 
     internal void SetTestProcessor(string playerId, string name, ISourceBlock<Tuple<string, double, bool>> source)
@@ -112,8 +111,8 @@ namespace EQLogParser
 
     private void TriggerConfigUpdateEvent(TriggerConfig _)
     {
-      ConfigUpdateTimer.Stop();
-      ConfigUpdateTimer.Start();
+      ConfigUpdateTimer?.Stop();
+      ConfigUpdateTimer?.Start();
     }
 
     private void ConfigDoUpdate(object sender, EventArgs e)
@@ -248,7 +247,7 @@ namespace EQLogParser
       });
     }
 
-    private IEnumerable<TriggerProcessor> GetProcessors()
+    private List<TriggerProcessor> GetProcessors()
     {
       var list = new List<TriggerProcessor>();
       lock (LogReaders)

@@ -113,8 +113,9 @@ namespace EQLogParser
         return editor.Editor;
       }
 
-      theTreeView.Init(CurrentCharacterId, IsCancelSelection);
+      theTreeView.Init(CurrentCharacterId, IsCancelSelection, !TheConfig.IsAdvanced);
       theTreeView.TreeSelectionChangedEvent += TreeSelectionChangedEvent;
+      theTreeView.ClosePreviewOverlaysEvent += ClosePreviewOverlaysEvent;
       TriggerStateManager.Instance.DeleteEvent += TriggerOverlayDeleteEvent;
       TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
       TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
@@ -148,7 +149,6 @@ namespace EQLogParser
     }
 
     private void TriggerConfigUpdateEvent(TriggerConfig config) => UpdateConfig(config);
-    private void CloseOverlaysClick(object sender, RoutedEventArgs e) => TriggerManager.Instance.CloseOverlays();
 
     private void BasicChecked(object sender, RoutedEventArgs e)
     {
@@ -167,7 +167,7 @@ namespace EQLogParser
         {
           CurrentCharacterId = null;
           thePropertyGrid.SelectedObject = null;
-          theTreeView.EnableAndRefreshTriggers(false);
+          theTreeView.EnableAndRefreshTriggers(false, CurrentCharacterId);
         }
       }
       else
@@ -176,7 +176,7 @@ namespace EQLogParser
         {
           CurrentCharacterId = character.Id;
           thePropertyGrid.SelectedObject = null;
-          theTreeView.EnableAndRefreshTriggers(true);
+          theTreeView.EnableAndRefreshTriggers(true, CurrentCharacterId);
         }
       }
     }
@@ -236,7 +236,7 @@ namespace EQLogParser
         {
           CurrentCharacterId = TriggerStateManager.DEFAULT_USER;
           thePropertyGrid.SelectedObject = null;
-          theTreeView.EnableAndRefreshTriggers(true);
+          theTreeView.EnableAndRefreshTriggers(true, CurrentCharacterId);
         }
 
         if (TheConfig.IsEnabled)
@@ -259,6 +259,12 @@ namespace EQLogParser
       advancedText.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
       advancedText.Arrange(new Rect(advancedText.DesiredSize));
       underlineRect.Width = advancedText.ActualWidth;
+    }
+
+    private void ClosePreviewOverlaysEvent(bool _)
+    {
+      PreviewWindows.Values.ToList().ForEach(window => window.Close());
+      PreviewWindows.Clear();
     }
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
@@ -583,12 +589,8 @@ namespace EQLogParser
       var isTimerOverlay = data.Item1?.SerializedData?.OverlayData?.IsTimerOverlay == true;
       var isCooldownOverlay = isTimerOverlay && (data.Item1?.SerializedData?.OverlayData?.TimerMode == 1);
 
-      if (data.Item1.IsTrigger() || data.Item1.IsOverlay())
-      {
-        saveButton.IsEnabled = false;
-        cancelButton.IsEnabled = false;
-      }
-
+      saveButton.IsEnabled = false;
+      cancelButton.IsEnabled = false;
       thePropertyGrid.SelectedObject = data.Item2;
       thePropertyGrid.IsEnabled = thePropertyGrid.SelectedObject != null;
       thePropertyGrid.DescriptionPanelVisibility = (data.Item1.IsTrigger() || data.Item1.IsOverlay()) ? Visibility.Visible : Visibility.Collapsed;
