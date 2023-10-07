@@ -313,7 +313,12 @@ namespace EQLogParser
 
     internal void DisableTriggers()
     {
-      Dispatcher.InvokeAsync(() => triggersMenuItem.IsEnabled = false);
+      Dispatcher.InvokeAsync(() =>
+      {
+        triggersMenuItem.IsEnabled = false;
+        triggerTestMenuItem.IsEnabled = false;
+        triggerLogMenuItem.IsEnabled = false;
+      });
     }
 
     internal void ShowTriggersEnabled(bool active)

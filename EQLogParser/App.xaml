@@ -30,8 +30,8 @@
     <DataTemplate x:Key="TextOverlayFileTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
-          <fa:ImageAwesome Margin="5,0,0,0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Font" />
-          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" FontStyle="Normal" FontWeight="DemiBold" />
+          <fa:ImageAwesome Margin="0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Font" />
+          <TextBlock Margin="5,0,0,0" Padding="0" VerticalAlignment="Center" Text="{Binding Content}" FontStyle="Normal" FontWeight="DemiBold" />
         </StackPanel>
       </Grid>
     </DataTemplate>
@@ -39,8 +39,8 @@
     <DataTemplate x:Key="TimerOverlayFileTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
-          <fa:ImageAwesome Margin="5,0,0,0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Clock" />
-          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" FontStyle="Normal" FontWeight="DemiBold" />
+          <fa:ImageAwesome Margin="0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Clock" />
+          <TextBlock Margin="5,0,0,0" Padding="0" VerticalAlignment="Center" Text="{Binding Content}" FontStyle="Normal" FontWeight="DemiBold" />
         </StackPanel>
       </Grid>
     </DataTemplate>
@@ -48,8 +48,8 @@
     <DataTemplate x:Key="TriggerFileTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
-          <CheckBox x:Name="CheckBox" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
-          <fa:ImageAwesome Margin="5,0,0,0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Tasks" />
+          <CheckBox x:Name="CheckBox" Margin="0" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+          <fa:ImageAwesome Margin="5,0,0,0" Height="16" Width="16" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Regular_FileAudio" />
           <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}">
             <TextBlock.Style>
               <Style TargetType="TextBlock">
@@ -73,8 +73,8 @@
     <DataTemplate x:Key="TriggerNodeTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
-          <CheckBox x:Name="CheckBox" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
-          <fa:ImageAwesome Margin="5,0,0,0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}">
+          <CheckBox x:Name="CheckBox" Margin="0" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+          <fa:ImageAwesome Margin="5,0,0,0" Height="16" Width="16" HorizontalAlignment="Center" Foreground="{DynamicResource Border}">
             <fa:ImageAwesome.Style>
               <Style TargetType="fa:ImageAwesome">
                 <Style.Triggers>
@@ -96,7 +96,7 @@
     <DataTemplate x:Key="OverlayNodeTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
-          <fa:ImageAwesome Margin="5,0,0,0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}">
+          <fa:ImageAwesome Margin="5,0,0,0" Height="16" Width="16" HorizontalAlignment="Center" Foreground="{DynamicResource Border}">
             <fa:ImageAwesome.Style>
               <Style TargetType="fa:ImageAwesome">
                 <Style.Triggers>

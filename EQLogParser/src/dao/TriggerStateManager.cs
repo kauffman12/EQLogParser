@@ -228,6 +228,11 @@ namespace EQLogParser
             {
               copied.TriggerData.WorstEvalTime = -1;
             }
+            else if (copied.OverlayData != null)
+            {
+              // can only be one
+              copied.OverlayData.IsDefault = false;
+            }
 
             tree?.Insert(copied);
           }

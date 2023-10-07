@@ -70,7 +70,7 @@ namespace EQLogParser {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Assign Overlay.
+        ///   Looks up a localized string similar to Update Overlay.
         /// </summary>
         internal static string ASSIGN_OVERLAY {
             get {
@@ -79,7 +79,7 @@ namespace EQLogParser {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Assign Priority.
+        ///   Looks up a localized string similar to Set Priority.
         /// </summary>
         internal static string ASSIGN_PRIORITY {
             get {

@@ -25,7 +25,6 @@
           </StackPanel>
         </InlineUIContainer>
       </TextBlock>
-      <Button Margin="0,0,8,2" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="CloseOverlaysClick">Close Overlays</Button>
       <CheckBox x:Name="watchGina" IsChecked="False" Margin="0,0,8,2" Checked="OptionsChanged" Unchecked="OptionsChanged">Watch for GINA Triggers</CheckBox>
       <ComboBox x:Name="voices" SelectedIndex="0" Margin="0,0,0,2" SelectionChanged="OptionsChanged" />
       <ComboBox x:Name="rateOption" SelectedIndex="0" Margin="0,0,8,2" SelectionChanged="OptionsChanged">
@@ -131,9 +130,9 @@
         </syncfusion:PropertyGrid>
         <Border Grid.Row="0" BorderBrush="{DynamicResource ContentBackgroundAlt2}" BorderThickness="1">
           <StackPanel Orientation="Horizontal" Margin="4,4,0,0">
-            <Button x:Name="showButton" Visibility="Collapsed" Margin="0,0,4,0" Padding="8,0,8,0" VerticalAlignment="Top" IsEnabled="True" Height="24" HorizontalAlignment="Left" Click="ShowClick">Preview Overlay</Button>
-            <Button x:Name="saveButton" Margin="0,0,4,0" Padding="10,0,10,0" VerticalAlignment="Top" IsEnabled="False" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
-            <Button x:Name="cancelButton" Margin="0" Padding="8,0,8,0" VerticalAlignment="Top" IsEnabled="False" Height="24" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
+            <Button x:Name="showButton" Visibility="Collapsed" Margin="0,0,4,0" Padding="16,0,16,0" VerticalAlignment="Top" IsEnabled="True" Height="{DynamicResource EQButtonHeight}" HorizontalAlignment="Left" Click="ShowClick">Preview Overlay</Button>
+            <Button x:Name="saveButton" Margin="0,0,4,0" Width="80" VerticalAlignment="Top" IsEnabled="False" Height="{DynamicResource EQButtonHeight}" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
+            <Button x:Name="cancelButton" Margin="0" Width="80" VerticalAlignment="Top" IsEnabled="False" Height="{DynamicResource EQButtonHeight}" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
           </StackPanel>
         </Border>
       </Grid>
