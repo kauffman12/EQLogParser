@@ -12,10 +12,6 @@
       <RowDefinition Height="30"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
-    <Grid.Resources>
-      <local:TriggerTemplateSelector x:Key="triggerTemplateSelector"/>
-      <local:ZeroConverter x:Key="ZeroConverter" />
-    </Grid.Resources>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <CheckBox x:Name="basicCheckBox" Margin="4,0,0,0" FontWeight="Normal" FocusVisualStyle="{x:Null}" Unchecked="BasicChecked" Checked="BasicChecked"/>
       <Label x:Name="titleLabel" Margin="6,0,8,0" VerticalContentAlignment="Center" Padding="0,0,0,2" Content="Check to Activate Triggers" Style="{DynamicResource EQTitleStyle}" Foreground="{DynamicResource EQStopForegroundBrush}"/>
@@ -55,69 +51,7 @@
         <Grid.RowDefinitions>
           <RowDefinition Height="300*"></RowDefinition>
         </Grid.RowDefinitions>
-        <syncfusion:SfTreeView
-           x:Name="treeView"
-           Grid.Row="0"
-           AllowDragging="True"
-           AllowEditing="True"
-           BorderBrush="{DynamicResource ContentBackgroundAlt2}"
-           BorderThickness="0"
-           CheckBoxMode="Recursive"
-           NodeExpanded="NodeExpanded"
-           NodeCollapsed="NodeExpanded"
-           FullRowSelect="False"
-           IsAnimationEnabled="False"
-           ItemContextMenuOpening="ItemContextMenuOpening"
-           ItemDropping="ItemDropping"
-           ItemDropped="ItemDropped"
-           ItemEndEdit="ItemEndEdit"
-           ItemTemplateDataContextType="Node"
-           ItemTemplateSelector="{StaticResource triggerTemplateSelector}"
-           Margin="0"
-           NodeChecked="NodeChecked"
-           NodePopulationMode="OnDemand"
-           PreviewMouseRightButtonDown="TreeViewPreviewMouseRightButtonDown"
-           Padding="0"
-           SelectionMode="Extended"
-           SelectionChanging="SelectionChanging"
-           SelectionChanged="SelectionChanged"
-           ShowRootLines="False">
-          <syncfusion:SfTreeView.ItemContextMenu>
-            <ContextMenu>
-              <MenuItem x:Name="setTriggerMenuItem" Header="Update Selected Triggers">
-                <MenuItem x:Name="setTextOverlayMenuItem" Header="Text Overlays">
-                  <MenuItem x:Name="addTextOverlaysMenuItem" Header="Add" />
-                  <MenuItem x:Name="removeTextOverlaysMenuItem" Header="Remove" />
-                </MenuItem>
-                <MenuItem x:Name="setTimerOverlayMenuItem" Header="Timer Overlays">
-                  <MenuItem x:Name="addTimerOverlaysMenuItem" Header="Add" />
-                  <MenuItem x:Name="removeTimerOverlaysMenuItem" Header="Remove" />
-                </MenuItem>
-                <MenuItem x:Name="setPriorityMenuItem" Header="Priority" />
-              </MenuItem>
-              <Separator x:Name="quickSetSeparator"/>
-              <MenuItem x:Name="collapseMenuItem" Header="Collapse All" Click="CollapseAllClick" />
-              <MenuItem x:Name="expandMenuItem" Header="Expand All" Click="ExpandAllClick" />
-              <Separator />
-              <MenuItem x:Name="copyItem" Header="Copy" Click="CopyClick" />
-              <MenuItem x:Name="cutItem" Header="Cut" Click="CutClick" />
-              <MenuItem x:Name="pasteItem" Header="Paste" Click="PasteClick" />
-              <Separator />
-              <MenuItem x:Name="deleteTriggerMenuItem" Header="Delete" Click="DeleteClick" />
-              <MenuItem x:Name="renameMenuItem" Header="Rename" Click="RenameClick" />
-              <Separator />
-              <MenuItem x:Name="newMenuItem" Header="New">
-                <MenuItem x:Name="newFolder" Header="Folder" Click="CreateNodeClick" />
-                <MenuItem x:Name="newTrigger" Header="Trigger" Click="CreateTriggerClick" />
-                <MenuItem x:Name="newTextOverlay" Header="Text Overlay" Click="CreateTextOverlayClick" />
-                <MenuItem x:Name="newTimerOverlay" Header="Timer Overlay" Click="CreateTimerOverlayClick" />
-              </MenuItem>
-              <Separator />
-              <MenuItem x:Name="exportMenuItem" Header="Export" ToolTip="Exports Selected Folders" Click="ExportClick" />
-              <MenuItem x:Name="importMenuItem" Header="Import" ToolTip="Imports and Merges to the Selected Folder" Click="ImportClick" />
-            </ContextMenu>
-          </syncfusion:SfTreeView.ItemContextMenu>
-        </syncfusion:SfTreeView>
+        <local:TriggersTreeView x:Name="theTreeView" Grid.Row="0" />
       </Grid>
       <GridSplitter Grid.Column="3" ResizeDirection="Columns" HorizontalAlignment="Stretch" />
       <Grid Grid.Column="4">

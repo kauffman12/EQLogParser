@@ -1,0 +1,82 @@
+﻿<UserControl x:Class="EQLogParser.TriggersTreeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+             xmlns:local="clr-namespace:EQLogParser"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid>
+    <Grid.Resources>
+      <local:TriggerTemplateSelector x:Key="triggerTemplateSelector"/>
+      <local:ZeroConverter x:Key="ZeroConverter" />
+    </Grid.Resources>
+    <syncfusion:SfAccordion Grid.Row="0">
+      <syncfusion:SfAccordionItem Header="Triggers">
+        <syncfusion:SfTreeView
+           x:Name="treeView"
+           AllowDragging="True"
+           AllowEditing="True"
+           BorderBrush="{DynamicResource ContentBackgroundAlt2}"
+           BorderThickness="0"
+           CheckBoxMode="Recursive"
+           NodeExpanded="NodeExpanded"
+           NodeCollapsed="NodeExpanded"
+           FullRowSelect="False"
+           IsAnimationEnabled="False"
+           ItemContextMenuOpening="ItemContextMenuOpening"
+           ItemDropping="ItemDropping"
+           ItemDropped="ItemDropped"
+           ItemEndEdit="ItemEndEdit"
+           ItemTemplateDataContextType="Node"
+           ItemTemplateSelector="{StaticResource triggerTemplateSelector}"
+           Margin="0"
+           NodeChecked="NodeChecked"
+           NodePopulationMode="OnDemand"
+           PreviewMouseRightButtonDown="TreeViewPreviewMouseRightButtonDown"
+           Padding="0"
+           SelectionMode="Extended"
+           SelectionChanging="SelectionChanging"
+           SelectionChanged="SelectionChanged"
+           ShowRootLines="False">
+          <syncfusion:SfTreeView.ItemContextMenu>
+            <ContextMenu>
+              <MenuItem x:Name="setTriggerMenuItem" Header="Update Selected Triggers">
+                <MenuItem x:Name="setTextOverlayMenuItem" Header="Text Overlays">
+                  <MenuItem x:Name="addTextOverlaysMenuItem" Header="Add" />
+                  <MenuItem x:Name="removeTextOverlaysMenuItem" Header="Remove" />
+                </MenuItem>
+                <MenuItem x:Name="setTimerOverlayMenuItem" Header="Timer Overlays">
+                  <MenuItem x:Name="addTimerOverlaysMenuItem" Header="Add" />
+                  <MenuItem x:Name="removeTimerOverlaysMenuItem" Header="Remove" />
+                </MenuItem>
+                <MenuItem x:Name="setPriorityMenuItem" Header="Priority" />
+              </MenuItem>
+              <Separator x:Name="quickSetSeparator"/>
+              <MenuItem x:Name="collapseMenuItem" Header="Collapse All" Click="CollapseAllClick" />
+              <MenuItem x:Name="expandMenuItem" Header="Expand All" Click="ExpandAllClick" />
+              <Separator />
+              <MenuItem x:Name="copyItem" Header="Copy" Click="CopyClick" />
+              <MenuItem x:Name="cutItem" Header="Cut" Click="CutClick" />
+              <MenuItem x:Name="pasteItem" Header="Paste" Click="PasteClick" />
+              <Separator />
+              <MenuItem x:Name="deleteTriggerMenuItem" Header="Delete" Click="DeleteClick" />
+              <MenuItem x:Name="renameMenuItem" Header="Rename" Click="RenameClick" />
+              <Separator />
+              <MenuItem x:Name="newMenuItem" Header="New">
+                <MenuItem x:Name="newFolder" Header="Folder" Click="CreateNodeClick" />
+                <MenuItem x:Name="newTrigger" Header="Trigger" Click="CreateTriggerClick" />
+                <MenuItem x:Name="newTextOverlay" Header="Text Overlay" Click="CreateTextOverlayClick" />
+                <MenuItem x:Name="newTimerOverlay" Header="Timer Overlay" Click="CreateTimerOverlayClick" />
+              </MenuItem>
+              <Separator />
+              <MenuItem x:Name="exportMenuItem" Header="Export" ToolTip="Exports Selected Folders" Click="ExportClick" />
+              <MenuItem x:Name="importMenuItem" Header="Import" ToolTip="Imports and Merges to the Selected Folder" Click="ImportClick" />
+            </ContextMenu>
+          </syncfusion:SfTreeView.ItemContextMenu>
+        </syncfusion:SfTreeView>
+      </syncfusion:SfAccordionItem>
+    </syncfusion:SfAccordion>
+  </Grid>
+</UserControl>
