@@ -156,6 +156,15 @@
       <Component Win64="yes" Id="EQLogParser.deps.json" Guid="0F544A17-9D4F-4A62-B714-7FEC8174E175">
         <File CompanionFile="EQLogParser.dll" Id="EQLogParser.deps.json" Name="EQLogParser.deps.json" Source="$(var.EQLogParser.TargetDir)EQLogParser.deps.json" />
       </Component>
+      <Component Win64="yes" Id="AutoMapper.dll" Guid="FE375F38-E7E8-4950-94D8-162F8AB3D9D1">
+        <File CompanionFile="EQLogParser.dll" Id="AutoMapper.dll" Name="AutoMapper.dll" Source="$(var.EQLogParser.TargetDir)AutoMapper.dll" />
+      </Component>
+      <Component Win64="yes" Id="LiteDB.dll" Guid="91181C93-173F-4AB2-B132-D141F215FC85">
+        <File CompanionFile="EQLogParser.dll" Id="LiteDB.dll" Name="LiteDB.dll" Source="$(var.EQLogParser.TargetDir)LiteDB.dll" />
+      </Component>
+      <Component Win64="yes" Id="System.Threading.Tasks.Dataflow.dll" Guid="6DF790CE-E508-4B4A-B66F-F94802128D87">
+        <File CompanionFile="EQLogParser.dll" Id="System.Threading.Tasks.Dataflow.dll" Name="System.Threading.Tasks.Dataflow.dll" Source="$(var.EQLogParser.TargetDir)System.Threading.Tasks.Dataflow.dll" />
+      </Component>
       <Component Win64="yes" Id="log4net.dll" Guid="912D9D56-4980-4F05-BB88-02C8AA5A356F">
         <File CompanionFile="EQLogParser.dll" Id="log4net.dll" Name="log4net.dll" Source="$(var.EQLogParser.TargetDir)log4net.dll" />
       </Component>

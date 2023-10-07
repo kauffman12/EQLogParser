@@ -12,6 +12,7 @@ namespace EQLogParser
 {
   internal class TriggerStateManager
   {
+    internal event Action<string> DeleteEvent;
     internal event Action<TriggerNode> TriggerUpdateEvent;
     internal event Action<TriggerConfig> TriggerConfigUpdateEvent;
     internal const string DEFAULT_USER = "Default";
@@ -359,6 +360,8 @@ namespace EQLogParser
           }
         }
       }
+
+      DeleteEvent?.Invoke(id);
     }
 
     internal void SetExpanded(TriggerTreeViewNode viewNode)

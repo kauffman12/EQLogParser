@@ -30,6 +30,9 @@
     <Compile Update="src\ui\triggers\TriggersTester.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="src\ui\triggers\TriggersTreeView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="src\ui\triggers\TriggersView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -69,6 +72,9 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\triggers\TriggersTester.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="src\ui\triggers\TriggersTreeView.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\triggers\TriggersView.xaml">
