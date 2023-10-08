@@ -18,6 +18,7 @@ namespace EQLogParser
     public readonly ObservableCollection<AlertEntry> AlertLog = new ObservableCollection<AlertEntry>();
     public readonly string CurrentCharacterId;
     public readonly string CurrentCharacterName;
+    public readonly string CurrentPlayer;
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private readonly object CollectionLock = new object();
     private readonly object LockObject = new object();
@@ -40,6 +41,8 @@ namespace EQLogParser
     {
       CurrentCharacterId = id;
       CurrentCharacterName = name;
+      CurrentPlayer = (CurrentCharacterId == TriggerStateManager.DEFAULT_USER) ? ConfigUtil.PlayerName : CurrentCharacterName;
+
       AddTextEvent = addTextEvent;
       AddTimerEvent = addTimerEvent;
       BindingOperations.EnableCollectionSynchronization(AlertLog, CollectionLock);
@@ -96,12 +99,9 @@ namespace EQLogParser
       }
     }
 
-    private string ModLine(string text, string line) => string.IsNullOrEmpty(text) ? null : text.Replace("{l}", line, StringComparison.OrdinalIgnoreCase);
-
-    private string ModPlayer(string text)
-    {
-      return string.IsNullOrEmpty(text) ? null : text.Replace("{c}", ConfigUtil.PlayerName, StringComparison.OrdinalIgnoreCase);
-    }
+    private string ModLine(string text, string line) => !string.IsNullOrEmpty(text) ? text.Replace("{l}", line, StringComparison.OrdinalIgnoreCase) : text;
+    private string ModCounter(string text) => !string.IsNullOrEmpty(text) ? text.Replace("{counter}", "{repeated}", StringComparison.OrdinalIgnoreCase) : text;
+    private string ModPlayer(string text) => !string.IsNullOrEmpty(text) ? text.Replace("{c}", CurrentPlayer, StringComparison.OrdinalIgnoreCase) : text;
 
     private void DoProcess(string line, double dateTime)
     {
@@ -478,8 +478,6 @@ namespace EQLogParser
     {
       var activeTriggers = new LinkedList<TriggerWrapper>();
       var enabledTriggers = TriggerStateManager.Instance.GetEnabledTriggers(CurrentCharacterId);
-
-      var playerName = (TriggerStateManager.DEFAULT_USER == CurrentCharacterId) ? ConfigUtil.PlayerName : CurrentCharacterName;
       foreach (var enabled in enabledTriggers.OrderByDescending(enabled => enabled.Trigger.LastTriggered))
       {
         var trigger = enabled.Trigger;
@@ -504,11 +502,14 @@ namespace EQLogParser
               ModifiedDurationSeconds = trigger.DurationSeconds
             };
 
+            // replace GINA counted with repeated
+            wrapper.ModifiedDisplay = ModCounter(wrapper.ModifiedDisplay);
+            wrapper.ModifiedTimerName = ModCounter(wrapper.ModifiedTimerName);
+
             wrapper.ModifiedTimerName = string.IsNullOrEmpty(wrapper.ModifiedTimerName) ? "" : wrapper.ModifiedTimerName;
-            wrapper.HasRepeatedText = !string.IsNullOrEmpty(wrapper.ModifiedDisplay) &&
-              wrapper.ModifiedDisplay.Contains("{repeated}", StringComparison.OrdinalIgnoreCase);
-            wrapper.HasRepeatedTimer = wrapper.ModifiedTimerName.Contains("{repeated}", StringComparison.OrdinalIgnoreCase);
-            pattern = UpdatePattern(trigger.UseRegex, playerName, pattern, out var numberOptions);
+            wrapper.HasRepeatedText = wrapper.ModifiedDisplay?.Contains("{repeated}", StringComparison.OrdinalIgnoreCase) == true;
+            wrapper.HasRepeatedTimer = wrapper.ModifiedTimerName?.Contains("{repeated}", StringComparison.OrdinalIgnoreCase) == true;
+            pattern = UpdatePattern(trigger.UseRegex, CurrentPlayer, pattern, out var numberOptions);
             pattern = UpdateTimePattern(trigger.UseRegex, pattern);
 
             // temp
