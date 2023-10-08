@@ -95,7 +95,7 @@ namespace EQLogParser
       var diff = lastTimes.TryGetValue(name, out var lastTime) ? dataPoint.CurrentTime - lastTime : 0;
       diffs[name] = diff;
 
-      if (!firstTimes.TryGetValue(name, out var _) || diff > DataManager.MAXTIMEOUT)
+      if (!firstTimes.TryGetValue(name, out var _))
       {
         firstTimes[name] = dataPoint.CurrentTime;
       }
@@ -489,26 +489,35 @@ namespace EQLogParser
       var firstTime = firstTimes[aggregate.Name];
       lastTimes.TryGetValue(aggregate.Name, out var lastTime);
 
-      if (diff > DataManager.MAXTIMEOUT)
+      if (aggregate.BeginTime == 0)
+      {
+        aggregate.BeginTime = firstTime;
+      }
+
+      if (diff > DataManager.FIGHTTIMEOUT)
       {
         aggregate.CritsPerSecond = 0;
         aggregate.TcPerSecond = 0;
         aggregate.AttemptsPerSecond = 0;
         aggregate.HitsPerSecond = 0;
         aggregate.TotalPerSecond = 0;
-        aggregate.FightTotal = 0;
-        aggregate.FightCritHits = 0;
-        aggregate.FightTcHits = 0;
-        aggregate.FightHits = 0;
-        aggregate.CurrentTime = lastTime + 6;
-        aggregate.DateTime = DateUtil.FromDouble(aggregate.CurrentTime);
-        Insert(aggregate, theValues);
-        aggregate.CurrentTime = firstTime - 6;
-        aggregate.DateTime = DateUtil.FromDouble(aggregate.CurrentTime);
-        Insert(aggregate, theValues);
+
+        // is this good? i dont know
+        var noData = new DataPoint
+        {
+          Name = aggregate.Name,
+          PlayerName = aggregate.PlayerName,
+          CurrentTime = lastTime + 6,
+          DateTime = DateUtil.FromDouble(lastTime + 6)
+        };
+
+        Insert(noData, theValues);
+        noData.CurrentTime = dataPoint.CurrentTime - 6;
+        noData.DateTime = DateUtil.FromDouble(noData.CurrentTime);
+        Insert(noData, theValues);
       }
 
-      if (diff >= 1)
+      else if (diff >= 1)
       {
         aggregate.DateTime = DateUtil.FromDouble(dataPoint.CurrentTime);
 
@@ -535,7 +544,6 @@ namespace EQLogParser
       aggregate.FightHits += 1;
       aggregate.FightCritHits += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
       aggregate.FightTcHits += LineModifiersParser.IsTwincast(dataPoint.ModifiersMask) ? (uint)1 : 0;
-      aggregate.BeginTime = firstTime;
     }
 
     private static void UpdateRemaining(Dictionary<string, List<DataPoint>> chartValues, Dictionary<string, DataPoint> needAccounting,
