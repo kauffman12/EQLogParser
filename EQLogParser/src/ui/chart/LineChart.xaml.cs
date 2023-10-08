@@ -89,23 +89,23 @@ namespace EQLogParser
       numLabel.FontSize = MainWindow.CurrentFontSize;
     }
 
-    private void UpdateTimes(string name, DataPoint dataPoint, Dictionary<string, double> diffs, Dictionary<string, double> firstTimes,
-      Dictionary<string, double> lastTimes)
+    private void UpdateTimes(string name, DataPoint dataPoint, Dictionary<string, double> diffs, Dictionary<string, double> lastTimes)
     {
-      var diff = lastTimes.TryGetValue(name, out var lastTime) ? dataPoint.CurrentTime - lastTime : 0;
-      diffs[name] = diff;
-
-      if (!firstTimes.TryGetValue(name, out var _))
+      if (lastTimes.TryGetValue(name, out var lastTime))
       {
-        firstTimes[name] = dataPoint.CurrentTime;
+        diffs[name] = dataPoint.CurrentTime - lastTime;
+      }
+      else
+      {
+        diffs[name] = 0;
       }
     }
 
     private void AddDataPoints(RecordGroupCollection recordIterator, List<PlayerStats> selected = null)
     {
       var diffs = new Dictionary<string, double>();
-      var firstTimes = new Dictionary<string, double>();
       var lastTimes = new Dictionary<string, double>();
+      var timeRanges = new Dictionary<string, TimeRange>();
       var petData = new Dictionary<string, DataPoint>();
       var playerData = new Dictionary<string, DataPoint>();
       var totalPlayerData = new Dictionary<string, DataPoint>();
@@ -121,36 +121,35 @@ namespace EQLogParser
         var playerName = dataPoint.PlayerName ?? dataPoint.Name;
         var totalName = playerName + " +Pets";
 
-        UpdateTimes(dataPoint.Name, dataPoint, diffs, firstTimes, lastTimes);
-        UpdateTimes(raidName, dataPoint, diffs, firstTimes, lastTimes);
+        UpdateTimes(dataPoint.Name, dataPoint, diffs, lastTimes);
+        UpdateTimes(raidName, dataPoint, diffs, lastTimes);
+        UpdateTimes(totalName, dataPoint, diffs, lastTimes);
 
         if (!raidData.TryGetValue(raidName, out var raidAggregate))
         {
-          raidAggregate = new DataPoint() { Name = raidName };
+          raidAggregate = new DataPoint { Name = raidName };
           raidData[raidName] = raidAggregate;
         }
 
-        Aggregate(RaidValues, needRaidAccounting, dataPoint, raidAggregate, firstTimes, lastTimes, diffs);
+        Aggregate(RaidValues, needRaidAccounting, dataPoint, raidAggregate, lastTimes, timeRanges, diffs);
 
-        var petName = dataPoint.PlayerName == null ? null : dataPoint.Name;
-        UpdateTimes(totalName, dataPoint, diffs, firstTimes, lastTimes);
         if (!totalPlayerData.TryGetValue(totalName, out var totalAggregate))
         {
-          totalAggregate = new DataPoint() { Name = totalName, PlayerName = playerName };
+          totalAggregate = new DataPoint { Name = totalName, PlayerName = playerName };
           totalPlayerData[totalName] = totalAggregate;
         }
 
-        Aggregate(PlayerPetValues, needTotalAccounting, dataPoint, totalAggregate, firstTimes, lastTimes, diffs);
+        Aggregate(PlayerPetValues, needTotalAccounting, dataPoint, totalAggregate, lastTimes, timeRanges, diffs);
 
         if (dataPoint.PlayerName == null)
         {
           if (!playerData.TryGetValue(dataPoint.Name, out var aggregate))
           {
-            aggregate = new DataPoint() { Name = dataPoint.Name, PlayerName = dataPoint.Name };
+            aggregate = new DataPoint { Name = dataPoint.Name, PlayerName = dataPoint.Name };
             playerData[dataPoint.Name] = aggregate;
           }
 
-          Aggregate(PlayerValues, needPlayerAccounting, dataPoint, aggregate, firstTimes, lastTimes, diffs);
+          Aggregate(PlayerValues, needPlayerAccounting, dataPoint, aggregate, lastTimes, timeRanges, diffs);
         }
         else if (dataPoint.PlayerName != null)
         {
@@ -159,14 +158,14 @@ namespace EQLogParser
             HasPets[totalName] = new Dictionary<string, byte>();
           }
 
-          HasPets[totalName][petName] = 1;
-          if (!petData.TryGetValue(petName, out var petAggregate))
+          HasPets[totalName][dataPoint.Name] = 1;
+          if (!petData.TryGetValue(dataPoint.Name, out var petAggregate))
           {
-            petAggregate = new DataPoint() { Name = petName, PlayerName = playerName };
-            petData[petName] = petAggregate;
+            petAggregate = new DataPoint() { Name = dataPoint.Name, PlayerName = playerName };
+            petData[dataPoint.Name] = petAggregate;
           }
 
-          Aggregate(PetValues, needPetAccounting, dataPoint, petAggregate, firstTimes, lastTimes, diffs);
+          Aggregate(PetValues, needPetAccounting, dataPoint, petAggregate, lastTimes, timeRanges, diffs);
         }
 
         lastTimes[dataPoint.Name] = dataPoint.CurrentTime;
@@ -174,10 +173,10 @@ namespace EQLogParser
         lastTimes[totalName] = dataPoint.CurrentTime;
       }
 
-      UpdateRemaining(RaidValues, needRaidAccounting, firstTimes, lastTimes);
-      UpdateRemaining(PlayerPetValues, needTotalAccounting, firstTimes, lastTimes);
-      UpdateRemaining(PlayerValues, needPlayerAccounting, firstTimes, lastTimes);
-      UpdateRemaining(PetValues, needPetAccounting, firstTimes, lastTimes);
+      UpdateRemaining(RaidValues, needRaidAccounting, lastTimes, timeRanges);
+      UpdateRemaining(PlayerPetValues, needTotalAccounting, lastTimes, timeRanges);
+      UpdateRemaining(PlayerValues, needPlayerAccounting, lastTimes, timeRanges);
+      UpdateRemaining(PetValues, needPetAccounting, lastTimes, timeRanges);
 
       PopulateRolling(RaidValues);
       PopulateRolling(PlayerPetValues);
@@ -483,19 +482,20 @@ namespace EQLogParser
 
     private static void Aggregate(Dictionary<string, List<DataPoint>> theValues,
       Dictionary<string, DataPoint> needAccounting, DataPoint dataPoint, DataPoint aggregate,
-      Dictionary<string, double> firstTimes, Dictionary<string, double> lastTimes, Dictionary<string, double> diffs)
+      Dictionary<string, double> lastTimes, Dictionary<string, TimeRange> timeRanges, Dictionary<string, double> diffs)
     {
-      var diff = diffs[aggregate.Name];
-      var firstTime = firstTimes[aggregate.Name];
       lastTimes.TryGetValue(aggregate.Name, out var lastTime);
 
-      if (aggregate.BeginTime == 0)
+      if (!timeRanges.ContainsKey(aggregate.Name))
       {
-        aggregate.BeginTime = firstTime;
+        timeRanges[aggregate.Name] = new TimeRange(new TimeSegment(dataPoint.CurrentTime, dataPoint.CurrentTime));
       }
 
+      var diff = diffs[aggregate.Name];
       if (diff > DataManager.FIGHTTIMEOUT)
       {
+        timeRanges[aggregate.Name].Add(new TimeSegment(dataPoint.CurrentTime, dataPoint.CurrentTime));
+        Insert(aggregate, theValues, timeRanges);
         aggregate.CritsPerSecond = 0;
         aggregate.TcPerSecond = 0;
         aggregate.AttemptsPerSecond = 0;
@@ -503,25 +503,22 @@ namespace EQLogParser
         aggregate.TotalPerSecond = 0;
 
         // is this good? i dont know
+        // trying to insert null for time not seen
         var noData = new DataPoint
         {
           Name = aggregate.Name,
           PlayerName = aggregate.PlayerName,
-          CurrentTime = lastTime + 6,
-          DateTime = DateUtil.FromDouble(lastTime + 6)
+          CurrentTime = lastTime + 6
         };
 
-        Insert(noData, theValues);
+        Insert(noData, theValues, timeRanges);
         noData.CurrentTime = dataPoint.CurrentTime - 6;
-        noData.DateTime = DateUtil.FromDouble(noData.CurrentTime);
-        Insert(noData, theValues);
+        Insert(noData, theValues, timeRanges);
       }
-
       else if (diff >= 1)
       {
-        aggregate.DateTime = DateUtil.FromDouble(dataPoint.CurrentTime);
-
-        Insert(aggregate, theValues);
+        timeRanges[aggregate.Name].Add(new TimeSegment(aggregate.CurrentTime, dataPoint.CurrentTime));
+        Insert(aggregate, theValues, timeRanges);
         aggregate.CritsPerSecond = 0;
         aggregate.TcPerSecond = 0;
         aggregate.AttemptsPerSecond = 0;
@@ -547,46 +544,28 @@ namespace EQLogParser
     }
 
     private static void UpdateRemaining(Dictionary<string, List<DataPoint>> chartValues, Dictionary<string, DataPoint> needAccounting,
-      Dictionary<string, double> firstTimes, Dictionary<string, double> lastTimes, string ignore = null)
+      Dictionary<string, double> lastTimes, Dictionary<string, TimeRange> timeRanges)
     {
       foreach (ref var remaining in needAccounting.Values.ToArray().AsSpan())
       {
-        if (ignore != remaining.Name)
-        {
-          var firstTime = firstTimes[remaining.Name];
-          var lastTime = lastTimes[remaining.Name];
-          if (remaining.BeginTime != firstTime)
-          {
-            remaining.BeginTime = firstTime;
-            remaining.Total = 0;
-            remaining.FightTotal = 0;
-            remaining.FightHits = 0;
-            remaining.FightCritHits = 0;
-            remaining.FightTcHits = 0;
-            remaining.CritsPerSecond = 0;
-            remaining.TcPerSecond = 0;
-            remaining.AttemptsPerSecond = 0;
-            remaining.HitsPerSecond = 0;
-            remaining.TotalPerSecond = 0;
-          }
-
-          remaining.CurrentTime = lastTime;
-          remaining.DateTime = DateUtil.FromDouble(lastTime);
-          Insert(remaining, chartValues);
-        }
+        var lastTime = lastTimes[remaining.Name];
+        var lastSegment = timeRanges[remaining.Name].TimeSegments.Last();
+        timeRanges[remaining.Name].Add(new TimeSegment(lastSegment.BeginTime, lastTime));
+        remaining.CurrentTime = lastTime;
+        Insert(remaining, chartValues, timeRanges);
       }
 
       needAccounting.Clear();
     }
 
-    private static void Insert(DataPoint aggregate, Dictionary<string, List<DataPoint>> chartValues)
+    private static void Insert(DataPoint aggregate, Dictionary<string, List<DataPoint>> chartValues,
+      Dictionary<string, TimeRange> timeRanges)
     {
       var newEntry = new DataPoint
       {
         Name = aggregate.Name,
         PlayerName = aggregate.PlayerName,
         CurrentTime = aggregate.CurrentTime,
-        DateTime = DateUtil.FromDouble(aggregate.CurrentTime),
         Total = aggregate.Total,
         CritsPerSecond = aggregate.CritsPerSecond,
         TcPerSecond = aggregate.TcPerSecond,
@@ -595,7 +574,9 @@ namespace EQLogParser
         TotalPerSecond = aggregate.TotalPerSecond
       };
 
-      var totalSeconds = aggregate.CurrentTime - aggregate.BeginTime + 1;
+      newEntry.DateTime = DateUtil.FromDouble(aggregate.CurrentTime);
+
+      var totalSeconds = timeRanges[aggregate.Name].GetTotal();
       newEntry.ValuePerSecond = (long)Math.Round(aggregate.FightTotal / totalSeconds, 2);
 
       if (aggregate.FightHits > 0)
