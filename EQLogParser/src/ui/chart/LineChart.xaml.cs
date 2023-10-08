@@ -95,7 +95,7 @@ namespace EQLogParser
       var diff = lastTimes.TryGetValue(name, out var lastTime) ? dataPoint.CurrentTime - lastTime : 0;
       diffs[name] = diff;
 
-      if (!firstTimes.TryGetValue(name, out var _) || diff > DataManager.FIGHTTIMEOUT)
+      if (!firstTimes.TryGetValue(name, out var _) || diff > DataManager.MAXTIMEOUT)
       {
         firstTimes[name] = dataPoint.CurrentTime;
       }
@@ -489,7 +489,7 @@ namespace EQLogParser
       var firstTime = firstTimes[aggregate.Name];
       lastTimes.TryGetValue(aggregate.Name, out var lastTime);
 
-      if (diff > DataManager.FIGHTTIMEOUT)
+      if (diff > DataManager.MAXTIMEOUT)
       {
         aggregate.CritsPerSecond = 0;
         aggregate.TcPerSecond = 0;
