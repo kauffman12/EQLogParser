@@ -107,6 +107,7 @@ Troubadour's Synergy Effect III
 Troubadour's Synergy Effect IV
 Troubadour's Synergy Effect V
 Troubadour's Synergy Effect VI
+Troubadour's Synergy Effect VII
 
 # Bard Song of the Storm
 Song of the Storm Strike
@@ -198,6 +199,9 @@ Bite of the Asp XXVIII
 Bite of the Asp XXIX
 Bite of the Asp XXX
 Bite of the Asp XXXI
+Bite of the Asp XXXII
+Bite of the Asp XXXIII
+Bite of the Asp XXXIV
 
 # Beastlord Bestial Bloodrage
 Bestial Bloodrage Recourse
@@ -217,6 +221,7 @@ Blood Frenzy IX
 Blood Frenzy X
 Blood Frenzy XI
 Blood Frenzy XII
+Blood Frenzy XIII
 
 # Beastlord Epic
 Wild Spirit Strike
@@ -260,6 +265,9 @@ Gelid Claw XV
 Gelid Claw XVI
 Gelid Claw XVII
 Gelid Claw XVIII
+Gelid Claw XIX
+Gelid Claw XX
+Gelid Claw XXI
 
 # Beastlord Gorilla Smash
 Gorilla Smash I
@@ -293,6 +301,9 @@ Gorilla Smash XXVIII
 Gorilla Smash XXIX
 Gorilla Smash XXX
 Gorilla Smash XXXI
+Gorilla Smash XXXII
+Gorilla Smash XXXIII
+Gorilla Smash XXXIV
 
 # Beastlord Feral Swipe
 Feral Swipe I
@@ -316,6 +327,7 @@ Feral Swipe XVIII
 Feral Swipe XIX
 Feral Swipe XX
 Feral Swipe XXI
+Feral Swipe XXII
 
 # Beastlord Jaws Strike
 Deadlock Jaws Strike
@@ -363,6 +375,9 @@ Raven's Claw XXVIII
 Raven's Claw XXIX
 Raven's Claw XXX
 Raven's Claw XXXI
+Raven's Claw XXXII
+Raven's Claw XXXIII
+Raven's Claw XXXIV
 
 # Beastlord Pet Proc
 Bolstering Heal
@@ -658,6 +673,9 @@ Decapitation XV
 Decapitation XVI
 Decapitation XVII
 Decapitation XVIII
+Decapitation XIX
+Decapitation XX
+Decapitation XXI
 Decapitation Strike
 
 # Berserker Distracting Strike
@@ -700,6 +718,9 @@ Distracting Strike XXXVI
 Distracting Strike XXXVII
 Distracting Strike XXXVIII
 Distracting Strike XXXIX
+Distracting Strike XL
+Distracting Strike XLI
+Distracting Strike XLII
 
 # Berserker Frenzy Strike
 Amplified Frenzy Strike
@@ -814,6 +835,8 @@ Uncontained Frenzy XV
 Uncontained Frenzy XVI
 Uncontained Frenzy XVII
 Uncontained Frenzy XVIII
+Uncontained Frenzy XIX
+Uncontained Frenzy XX
 
 # Berserker Untamed Rage
 Untamed Rage Recursion V
@@ -914,6 +937,9 @@ Sanctified Blessing XVII
 Sanctified Blessing XVIII
 Sanctified Blessing XIX
 Sanctified Blessing XX
+Sanctified Blessing XXI
+Sanctified Blessing XXII
+Sanctified Blessing XXIII
 
 # Cleric Sermon
 Aquifer Slow
@@ -954,6 +980,9 @@ Infusion of Holy Light IX
 Infusion of Holy Light X
 Infusion of Holy Light XI
 Infusion of Holy Light XII
+Infusion of Holy Light XIII
+Infusion of Holy Light XIV
+Infusion of Holy Light XV
 
 # Cleric Vow of Valor
 Pernicious Strike
@@ -1162,6 +1191,9 @@ Wild Vinespurs
 Arboreal Infusion
 Arboreal Infusion II
 Arboreal Infusion III
+Arboreal Infusion II Azia
+Arboreal Infusion II Beza
+Arboreal Infusion II Caza
 
 # Druid Mysterious Ways
 Mending Enigma
@@ -1265,6 +1297,9 @@ Mana Re-Re-Re-Re-Resurgence
 Mana Re-Re-Re-Re-Reverberation
 Mana Re-Re-Re-Re-Reverberation II
 Mana Re-Re-Re-Re-Reverberation III
+Mana Re-Re-Re-Re-Reproduction I
+Mana Re-Re-Re-Re-Reproduction II
+Mana Re-Re-Re-Re-Reproduction III
 Mana Re-Re-Re-Rebirth
 Mana Re-Re-Re-Rebirth II
 Mana Re-Re-Re-Rebirth III
@@ -1289,6 +1324,9 @@ Mana Re-Re-Re-Resurgence
 Mana Re-Re-Re-Reverberation
 Mana Re-Re-Re-Reverberation II
 Mana Re-Re-Re-Reverberation III
+Mana Re-Re-Re-Reproduction I
+Mana Re-Re-Re-Reproduction II
+Mana Re-Re-Re-Reproduction III
 Mana Re-Re-Rebirth
 Mana Re-Re-Rebirth II
 Mana Re-Re-Rebirth III
@@ -1313,6 +1351,9 @@ Mana Re-Re-Resurgence
 Mana Re-Re-Reverberation
 Mana Re-Re-Reverberation II
 Mana Re-Re-Reverberation III
+Mana Re-Re-Reproduction I
+Mana Re-Re-Reproduction II
+Mana Re-Re-Reproduction III
 Mana Re-Rebirth
 Mana Re-Rebirth II
 Mana Re-Rebirth III
@@ -1337,6 +1378,9 @@ Mana Re-Resurgence
 Mana Re-Reverberation
 Mana Re-Reverberation II
 Mana Re-Reverberation III
+Mana Re-Reproduction I
+Mana Re-Reproduction II
+Mana Re-Reproduction III
 Mana Rebirth Strike
 Mana Rebirth Strike II
 Mana Rebirth Strike III
@@ -1357,10 +1401,16 @@ Mana Repetition Strike III
 Mana Replication Strike
 Mana Replication Strike II
 Mana Replication Strike III
+Mana Reproduction Strike I
+Mana Reproduction Strike II
+Mana Reproduction Strike III
 Mana Resurgence Strike
 Mana Reverberation Strike
 Mana Reverberation Strike II
 Mana Reverberation Strike III
+Mana Ripple I
+Mana Ripple II
+Mana Ripple III
 
 # Enchanter NET
 Lifetap Strike
@@ -1591,11 +1641,14 @@ Flames of Power Azia VII
 Flames of Power Beza VII
 Flames of Power Caza VII
 Flames of Power Dena VII
+Flames of Power Azia VIII
+Flames of Power Beza VIII
+Flames of Power Caza VIII
+Flames of Power Dena VIII
 Flames of Weakness I
 Flames of Weakness II
 Flames of Weakness III
 Flames of Weakness IV
-Syllable of Refreshment
 
 # Mage Dicho
 Composite Companion Strike 1
@@ -1621,7 +1674,7 @@ Ecliptic Companion Strike 2
 Ecliptic Companion Strike 3
 Ecliptic Companion Strike 4
 Ecliptic Companion Strike 5
-Ecloptic Companion Strike 6
+Ecliptic Companion Strike 6
 
 # Mage Elemental Form
 Elemental Air I
@@ -1629,16 +1682,19 @@ Elemental Air II
 Elemental Air III
 Elemental Air IV
 Elemental Air V
+Elemental Air VI
 Elemental Earth I
 Elemental Earth II
 Elemental Earth III
 Elemental Earth IV
 Elemental Earth V
+Elemental Earth VI
 Elemental Flames I
 Elemental Flames II
 Elemental Flames III
 Elemental Flames IV
 Elemental Flames V
+Elemental Flames VI
 
 # Mage Minion
 Minion Strike
@@ -1683,6 +1739,7 @@ Air Elemental Strike XI
 Air Elemental Strike XII
 Air Elemental Strike XIII
 Air Elemental Strike XIV
+Air Elemental Strike XV
 Allied Elemental Strike I
 Allied Elemental Strike II
 Allied Elemental Strike III
@@ -1719,6 +1776,8 @@ Water Elemental Strike XI
 Water Elemental Strike XII
 Water Elemental Strike XIII
 Water Elemental Strike XIV
+Water Elemental Strike XV
+Earth Elemental Strike XV
 
 # Mage Pet Weapons
 Flamebrand
@@ -1727,6 +1786,7 @@ Flamebrand III
 Flamebrand IV
 Flamebrand V
 Flamebrand VI
+Flamebrand VII
 Flamelick
 Frenzying Blow
 Frenzying Burst
@@ -1735,12 +1795,14 @@ Frenzying Burst III
 Frenzying Burst IV
 Frenzying Burst V
 Frenzying Burst VI
+Frenzying Burst VII
 Frostchill
 Frostchill II
 Frostchill III
 Frostchill IV
 Frostchill V
 Frostchill VI
+Frostchill VII
 Icesnap
 Jolting Burst
 Jolting Burst II
@@ -1748,6 +1810,7 @@ Jolting Burst III
 Jolting Burst IV
 Jolting Burst V
 Jolting Burst VI
+Jolting Burst VII
 Jolting Strike
 Windgust
 Windgust II
@@ -1755,6 +1818,8 @@ Windgust III
 Windgust IV
 Windgust V
 Windgust VI
+Windgust VII
+
 Windstrike
 
 # Mage Robe
@@ -1762,6 +1827,7 @@ Companion's Assault XXX
 Companion's Assault XXXI
 Companion's Assault XXXII
 Companion's Assault XXXIII
+Companion's Assault XXXIV
 
 # Monk Alliance
 Doomwalker's Soulstrike
@@ -1855,6 +1921,9 @@ Divine Surge of Battle VIII
 Divine Surge of Battle IX
 Divine Surge of Battle X
 Divine Surge of Battle XI
+Divine Surge of Battle XII
+Divine Surge of Battle XIII
+Divine Surge of Battle XIV
 
 # Monk Epic
 Peace of the Disciple Strike
@@ -1897,12 +1966,16 @@ Eye Gouge XXXIV
 Eye Gouge XXXV
 Eye Gouge XXXVI
 Eye Gouge XXXVII
+Eye Gouge XL
+Eye Gouge XXXIX
+Eye Gouge XXXVIII
 
 # Monk Fists of Steel
 Fists of Fury I
 Fists of Fury II
 Fists of Fury III
 Fists of Fury IV
+Fists of Fury V
 
 # Monk Flinch
 Flinch Recourse
@@ -2003,6 +2076,9 @@ Resonant Kick XXXIX
 Resonant Kick XL
 Resonant Kick XLI
 Resonant Kick XLII
+Resonant Kick XLIII
+Resonant Kick XLIV
+Resonant Kick XLV
 
 # Monk Resonant Strike
 Resonant Strike I
@@ -2047,6 +2123,9 @@ Resonant Strike XXXIX
 Resonant Strike XL
 Resonant Strike XLI
 Resonant Strike XLII
+Resonant Strike XLIII
+Resonant Strike XLIV
+Resonant Strike XLV
 
 # Monk Robe (Seven Chakras Heel Technique)
 Demon Crusher
@@ -2082,6 +2161,11 @@ Thunderfoot XVI
 Thunderfoot XVII
 Thunderfoot XVIII
 Thunderfoot XIX
+Thunderfoot XX
+Thunderfoot XXI
+Thunderfoot XXII
+Thunderfoot XXIII
+Thunderfoot XXIV
 
 # Monk Zan Fi
 Zan Fi's Echoes Strike I
@@ -2151,6 +2235,9 @@ Nightmare Draw II
 Nightmare Draw III
 Nightmare Draw IV
 Nightmare Draw V
+Nightmare Draw VI
+Nightmare Draw VII
+Nightmare Draw VIII
 
 # Necro Pet Proc
 Empowered Lifeclaw
@@ -2449,6 +2536,8 @@ Flames of Kesh`yk XVIII
 Flames of Kesh`yk XIX
 Flames of Kesh`yk XX
 Flames of Kesh`yk XXI
+Flames of Kesh`yk XXII
+Flames of Kesh`yk XXIII
 Poison of Kesh`yk I
 Poison of Kesh`yk II
 Poison of Kesh`yk III
@@ -2465,6 +2554,8 @@ Poison of Kesh`yk XIII
 Poison of Kesh`yk XIV
 Poison of Kesh`yk XV
 Poison of Kesh`yk XVI
+Poison of Kesh`yk XVII
+Poison of Kesh`yk XVIII
 
 # Ranger BP
 Major Lightning Call Effect
@@ -2592,6 +2683,7 @@ Ferocious Kick XIII
 Ferocious Kick XIV
 Ferocious Kick XV
 Ferocious Kick XVI
+Ferocious Kick XVII
 Fury of the Forest I
 Fury of the Forest II
 Fury of the Forest III
@@ -2604,6 +2696,7 @@ Heavy Arrow IV
 Heavy Arrow V
 Heavy Arrow VI
 Heavy Arrow VII
+Heavy Arrow VIII
 
 # Ranger Hunter's Fury
 Hunter's Fury I
@@ -2627,6 +2720,8 @@ Hunter's Fury XVIII
 Hunter's Fury XIX
 Hunter's Fury XX
 Hunter's Fury XXI
+Hunter's Fury XXII
+Hunter's Fury XXIII
 
 # Ranger Jolting Blades
 Jolting Blades Strike
@@ -2684,6 +2779,7 @@ Outrider's Synergy Strike I
 Outrider's Synergy Strike II
 Outrider's Synergy Strike III
 Outrider's Synergy Strike IV
+Outrider's Synergy Strike V
 
 # Rogue Aim Effect
 Baleful Aim Effect
@@ -2754,6 +2850,7 @@ Strike Fury I
 Strike Fury II
 Strike Fury III
 Strike Fury IV
+Strike Fury V
 
 # Rogue Envenomed Blade
 Envenomed Blade I
@@ -2799,6 +2896,7 @@ Shadow's Intimidation VIII
 Shadow's Intimidation IX
 Shadow's Intimidation X
 Shadow's Intimidation XI
+Shadow's Intimidation XII
 
 # Rogue Massive Strike
 Massive Strike I
@@ -2827,6 +2925,8 @@ Massive Strike XXIII
 Massive Strike XXIV
 Massive Strike XXV
 Massive Strike XXVI
+Massive Strike XXVII
+Massive Strike XXVIII
 
 # Rogue Shrouding Speed Disc
 Cloaking Speed Shock
@@ -2848,6 +2948,7 @@ Blackguard's Synergy Strike I
 Blackguard's Synergy Strike II
 Blackguard's Synergy Strike III
 Blackguard's Synergy Strike IV
+Blackguard's Synergy Strike V
 
 # Shaman Apathy
 Apathetic Health
@@ -3567,20 +3668,25 @@ Arcane Fusion V
 Arcane Fusion VI
 Arcane Fusion VII
 Arcane Fusion VIII
+Arcane Fusion IX
 
 # Wizard Claw
 Blazing Infiltration
 Blazing Infiltration IX
 Blazing Infiltration X
+Blazing Infiltration XI
 Icy Infiltration
 Icy Infiltration IX
 Icy Infiltration X
+Icy Infiltration XI
 Magical Infiltration
 Magical Infiltration IX
 Magical Infiltration X
+Magical Infiltration XI
 Syllable of Angerwarding
 Syllable of Angerwarding IX
 Syllable of Angerwarding X
+Syllable of Angerwarding XI
 Syllable of Convalescence
 Syllable of Convalescence Rk. II
 Syllable of Convalescence Rk. III
@@ -3644,6 +3750,7 @@ Syllable of Mending Rk. III
 Syllable of Refreshment
 Syllable of Refreshment IX
 Syllable of Refreshment X
+Syllable of Refreshment XI
 Syllable of Renewal
 Syllable of Renewal Rk. II
 Syllable of Renewal Rk. III
@@ -3657,11 +3764,13 @@ Concussive Chill
 Concussive Chill VIII
 Concussive Chill IX
 Concussive Chill X
+Concussive Chill XI
 Concussive Flames
 Concussive Magic
 Concussive Magic VIII
 Concussive Magic IX
 Concussive Magic X
+Concussive Magic XI
 
 # Wizard Mana Weave
 Thricewoven Power I
@@ -3672,9 +3781,11 @@ Thricewoven Power V
 Thricewoven Power VI
 Thricewoven Power VII
 Thricewoven Power VIII
+Thricewoven Power IX
 Thricewoven Weakness
 Thricewoven Weakness VII
 Thricewoven Weakness VIII
+Thricewoven Weakness IX
 Weave of Power
 Weave of Weakness
 
@@ -3685,18 +3796,21 @@ Gift of Arcana III
 Gift of Arcana IV
 Gift of Arcana V
 Gift of Arcana VI
+Gift of Arcana VII
 Gift of Fire I
 Gift of Fire II
 Gift of Fire III
 Gift of Fire IV
 Gift of Fire V
 Gift of Fire VI
+Gift of Fire VII
 Gift of Ice I
 Gift of Ice II
 Gift of Ice III
 Gift of Ice IV
 Gift of Ice V
 Gift of Ice VI
+Gift of Ice VII
 
 # Wizard Synergy
 Evoker's Synergy Strike I
@@ -3705,6 +3819,7 @@ Evoker's Synergy Strike III
 Evoker's Synergy Strike IV
 Evoker's Synergy Strike V
 Evoker's Synergy Strike VI
+Evoker's Synergy Strike VII
 
 # Wizard Tendrilmist Guard
 Tendrilmist Guard Effect
@@ -3743,6 +3858,9 @@ Arcomancy XXX
 Arcomancy XXXI
 Arcomancy XXXII
 Arcomancy XXXIII
+Arcomancy XXXIV
+Arcomancy XXXV
+Arcomancy XXXVI
 Cryomancy I
 Cryomancy II
 Cryomancy III
@@ -3776,6 +3894,9 @@ Cryomancy XXX
 Cryomancy XXXI
 Cryomancy XXXII
 Cryomancy XXXIII
+Cryomancy XXXIV
+Cryomancy XXXV
+Cryomancy XXXVI
 Pyromancy I
 Pyromancy II
 Pyromancy III
@@ -3809,12 +3930,17 @@ Pyromancy XXX
 Pyromancy XXXI
 Pyromancy XXXII
 Pyromancy XXXIII
+Pyromancy XXXIV
+Pyromancy XXXV
+Pyromancy XXXVI
 
 # Melee
 Draconic Rage Strike
 
 # Face of Impenitence
 Impenitence
+Impenitence II
+Impenitence III
 Impenitence Rk. II
 Impenitence Rk. III
 
@@ -3839,6 +3965,7 @@ Alleviating Burst XVII
 Alleviating Burst XVIII
 Alleviating Burst XIX
 Alleviating Burst XX
+Alleviating Burst XXI
 Alleviating Hand XI
 Alleviating Hand XII
 Alleviating Hand XIII
@@ -3846,6 +3973,7 @@ Alleviating Hand XIV
 Alleviating Hand XV
 Alleviating Hand XVI
 Alleviating Hand XVII
+Alleviating Hand XVIII
 Alleviating Light I
 Alleviating Light II
 Alleviating Light III
@@ -3880,6 +4008,7 @@ Arms of Holy Wrath VII
 Arms of Holy Wrath VIII
 Arms of Holy Wrath IX
 Arms of Holy Wrath X
+Arms of Holy Wrath XI
 Arms of Holy Wrath VI Recourse
 Arms of Holy Wrath VII Recourse
 Arms of Holy Wrath III Recourse
@@ -3934,6 +4063,7 @@ Bite of the Shissar Poison Strike X
 Bite of the Shissar Poison Strike XI
 Bite of the Shissar Poison Strike XII
 Bite of the Shissar Poison Strike XIII
+Bite of the Shissar Poison Strike XIV
 Blaze of Fire
 Blaze of Fire I
 Blaze of Fire II
@@ -4022,6 +4152,7 @@ Calming Strike XV
 Chaos V
 Chaos VI
 Chaos VII
+Chaos Strike
 Consoling Strike
 Consoling Strike I
 Consoling Strike II
@@ -4074,6 +4205,8 @@ Fiery Strike V
 Fiery Strike VI
 Fiery Strike VII
 Fiery Strike VIII
+Fiery Strike IX
+Fire Strike
 Flame Strike
 Focused Apothic Healing
 Focused Sarnak's Strike
@@ -4157,6 +4290,7 @@ Hand of Holy Wrath VII
 Hand of Holy Wrath VIII
 Hand of Holy Wrath IX
 Hand of Holy Wrath X
+Hand of Holy Wrath XI
 Hand of Remedy IV
 Hand of Remedy V
 Hand of Remedy VI
@@ -4180,12 +4314,14 @@ Healing Burst V
 Healing Burst VI
 Healing Burst VII
 Healing Burst VIII
+Healing Burst IX
 Healing Burst X
 Healing Burst XI
 Healing Burst XII
 Healing Burst XIII
 Healing Burst XIV
 Healing Burst XV
+# sympathetic not paladin AA
 Healing Light VIII
 Healing Light IX
 Healing Light X
@@ -4425,6 +4561,7 @@ Scorpion's Agony Poison Strike X
 Scorpion's Agony Poison Strike XI
 Scorpion's Agony Poison Strike XII
 Scorpion's Agony Poison Strike XIII
+Scorpion's Agony Poison Strike XIV
 Servant Strike
 Servant Strike II
 Servant Strike III
@@ -4465,6 +4602,7 @@ Spider's Bite Poison Strike IX
 Spider's Bite Poison Strike X
 Spider's Bite Poison Strike XI
 Spider's Bite Poison Strike XII
+Spider's Bite Poison Strike XIII
 Spike of Anger
 Spike of Anger I
 Spike of Anger II
@@ -4611,6 +4749,7 @@ Strike of the Shissar Poison Strike X
 Strike of the Shissar Poison Strike XI
 Strike of the Shissar Poison Strike XII
 Strike of the Shissar Poison Strike XIII
+Strike of the Shissar Poison Strike XIV
 Surge of Cold I
 Surge of Cold II
 Surge of Cold III

@@ -35,8 +35,6 @@ namespace EQLogParser
       {
         brush = "EQMenuIconBrush";
         image = EFontAwesomeIcon.Solid_Save;
-        Height -= 15;
-        Width -= 30;
       }
 
       cancelButton.Content = "Ok";
