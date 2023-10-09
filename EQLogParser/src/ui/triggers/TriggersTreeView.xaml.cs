@@ -74,7 +74,7 @@ namespace EQLogParser
 
     private void CreateTextOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(true);
     private void CreateTimerOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(false);
-    private void EventsSelectTrigger(Trigger e) => Dispatcher.InvokeAsync(() => SelectNode(triggerTreeView, e));
+    private void EventsSelectTrigger(string id) => Dispatcher.InvokeAsync(() => SelectNode(triggerTreeView, id));
     private void NodeExpanded(object sender, NodeExpandedCollapsedEventArgs e) => TriggerStateManager.Instance.SetExpanded(e.Node as TriggerTreeViewNode);
     private void AssignOverlayClick(object sender, RoutedEventArgs e) => SetOverlay(sender);
     private void UnassignOverlayClick(object sender, RoutedEventArgs e) => SetOverlay(sender, true);
@@ -181,13 +181,13 @@ namespace EQLogParser
       }
     }
 
-    private void SelectNode(SfTreeView treeView, object file)
+    private void SelectNode(SfTreeView treeView, string id)
     {
-      if (file != null && IsCancelSelection != null && !IsCancelSelection())
+      if (id != null && IsCancelSelection != null && !IsCancelSelection())
       {
         if (treeView?.Nodes.Count > 0 && treeView.Nodes[0] is TriggerTreeViewNode node)
         {
-          if (FindAndExpandNode(treeView, node, file) is TriggerTreeViewNode found)
+          if (FindAndExpandNode(treeView, node, id) is TriggerTreeViewNode found)
           {
             treeView.SelectedItems?.Clear();
             treeView.SelectedItem = found;
@@ -197,16 +197,16 @@ namespace EQLogParser
       }
     }
 
-    private TriggerTreeViewNode FindAndExpandNode(SfTreeView treeView, TriggerTreeViewNode node, object file)
+    private TriggerTreeViewNode FindAndExpandNode(SfTreeView treeView, TriggerTreeViewNode node, string id)
     {
-      if (node.SerializedData?.TriggerData == file || node.SerializedData?.OverlayData == file)
+      if (node.SerializedData?.Id == id || node.SerializedData?.Id == id)
       {
         return node;
       }
 
       foreach (var child in node.ChildNodes.Cast<TriggerTreeViewNode>())
       {
-        if (FindAndExpandNode(treeView, child, file) is TriggerTreeViewNode found && found != null)
+        if (FindAndExpandNode(treeView, child, id) is TriggerTreeViewNode found && found != null)
         {
           treeView.ExpandNode(node);
           return found;
@@ -236,7 +236,7 @@ namespace EQLogParser
         if (TriggerStateManager.Instance.CreateOverlay(parent.SerializedData.Id, label, isTextOverlay) is TriggerTreeViewNode newNode)
         {
           parent.ChildNodes.Add(newNode);
-          SelectNode(overlayTreeView, newNode.SerializedData.OverlayData);
+          SelectNode(overlayTreeView, newNode.SerializedData.Id);
         }
       }
     }
@@ -248,7 +248,7 @@ namespace EQLogParser
         if (TriggerStateManager.Instance.CreateTrigger(parent.SerializedData.Id, LABEL_NEW_TRIGGER) is TriggerTreeViewNode newNode)
         {
           parent.ChildNodes.Add(newNode);
-          SelectNode(triggerTreeView, newNode.SerializedData.TriggerData);
+          SelectNode(triggerTreeView, newNode.SerializedData.Id);
         }
       }
     }

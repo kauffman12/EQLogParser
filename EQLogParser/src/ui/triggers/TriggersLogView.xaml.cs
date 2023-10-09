@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Dynamic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -72,14 +71,14 @@ namespace EQLogParser
         return;
       }
       // case where click happened but selection event doesn't fire
-      if (e.OriginalSource is FrameworkElement element && element.DataContext is ExpandoObject data)
+      if (e.OriginalSource is FrameworkElement element && element.DataContext is AlertEntry entry)
       {
-        if (dataGrid.SelectedItem != data)
+        if (dataGrid.SelectedItem != entry)
         {
-          dataGrid.SelectedItem = data;
+          dataGrid.SelectedItem = entry;
         }
 
-        TriggerManager.Instance.Select((data as dynamic).Trigger);
+        TriggerManager.Instance.Select(entry.NodeId);
       }
     }
 

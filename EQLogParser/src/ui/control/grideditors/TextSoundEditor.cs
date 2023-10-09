@@ -51,7 +51,7 @@ namespace EQLogParser
     {
       var grid = new Grid();
       grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
-      grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(130) });
+      grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
 
       TheOptionsCombo = new ComboBox();
       TheOptionsCombo.SetValue(Grid.ColumnProperty, 1);

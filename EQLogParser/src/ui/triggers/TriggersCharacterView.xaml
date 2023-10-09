@@ -7,13 +7,24 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
-    <StackPanel Grid.Column="0" Orientation="Vertical">
-      <syncfusion:ToolBarAdv GripperVisibility="Hidden" Margin="0">
-        <Button x:Name="addCharacter" Width="60" Padding="0,4,0,4" Click="AddClick">Add</Button>
-        <Button x:Name="modifyCharacter" Width="60" IsEnabled="False" Click="ModifyClick">Modify</Button>
-        <Button x:Name="deleteCharacter" Width="60" IsEnabled="False" Click="DeleteClick">Delete</Button>
+    <Grid Grid.Column="0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="40" />
+        <RowDefinition Height="32" />
+        <RowDefinition Height="100*" />
+      </Grid.RowDefinitions>
+      <Border Grid.Row="0" Padding="8,2,0,0" Background="{DynamicResource ContentBackgroundAlt}">
+        <DockPanel>
+          <TextBlock Text="Manage Characters" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
+        </DockPanel>
+      </Border>
+      <syncfusion:ToolBarAdv Grid.Row="1" GripperVisibility="Hidden" Margin="0" Background="{DynamicResource ContentBackground}">
+        <Button x:Name="addCharacter" FontSize="{DynamicResource EQContentSize}" Width="60" Padding="0,4,0,4" Click="AddClick">Add</Button>
+        <Button x:Name="modifyCharacter" FontSize="{DynamicResource EQContentSize}" Width="60" IsEnabled="False" Click="ModifyClick">Modify</Button>
+        <Button x:Name="deleteCharacter" FontSize="{DynamicResource EQContentSize}" Width="60" IsEnabled="False" Click="DeleteClick">Delete</Button>
       </syncfusion:ToolBarAdv>
       <syncfusion:SfDataGrid x:Name="dataGrid"
+                               Grid.Row="2"
                                AllowResizingColumns="False"
                                AutoGenerateColumns="False"
                                ColumnSizer="AutoLastColumnFill"
@@ -59,6 +70,6 @@
           </syncfusion:GridTemplateColumn>
         </syncfusion:SfDataGrid.Columns>
       </syncfusion:SfDataGrid>
-    </StackPanel>
+    </Grid>
   </Grid>
 </UserControl>

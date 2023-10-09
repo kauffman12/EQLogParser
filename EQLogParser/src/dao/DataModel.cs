@@ -37,9 +37,9 @@ namespace EQLogParser
     public string Line { get; set; }
     public string Name { get; set; }
     public string Type { get; set; }
+    public string NodeId { get; set; }
     public long Eval { get; set; }
     public long Priority { get; set; }
-    public Trigger Trigger { get; set; }
   }
 
   internal class TimerData

@@ -479,6 +479,14 @@ namespace EQLogParser
       FilterTimer?.Start();
     }
 
+    private void WindowPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+      if (e.OriginalSource is ScrollViewer)
+      {
+        e.Handled = true;
+      }
+    }
+
     private void PlayerChanged(object sender, SelectionChangedEventArgs e)
     {
       if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
