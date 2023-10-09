@@ -119,8 +119,16 @@ namespace EQLogParser
       TriggerStateManager.Instance.DeleteEvent += TriggerOverlayDeleteEvent;
       TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
       TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+      TriggerStateManager.Instance.TriggerImportEvent += TriggerImportEvent;
       characterView.SelectedCharacterEvent += CharacterSelectedCharacterEvent;
       Ready = true;
+    }
+
+    private void TriggerImportEvent(bool _)
+    {
+      theTreeView.RefreshTriggers();
+      // incase of merge
+      TriggerManager.Instance.TriggersUpdated();
     }
 
     internal bool IsCancelSelection()

@@ -45,6 +45,7 @@ namespace EQLogParser
     }
 
     internal void RefreshOverlays() => RefreshOverlayNode();
+    internal void RefreshTriggers() => RefreshTriggerNode();
 
     internal void Init(string characterId, Func<bool> isCanceled, bool enable)
     {

@@ -15,6 +15,7 @@ namespace EQLogParser
     internal event Action<string> DeleteEvent;
     internal event Action<TriggerNode> TriggerUpdateEvent;
     internal event Action<TriggerConfig> TriggerConfigUpdateEvent;
+    internal event Action<bool> TriggerImportEvent;
     internal const string DEFAULT_USER = "Default";
     internal const string OVERLAYS = "Overlays";
     internal const string TRIGGERS = "Triggers";
@@ -427,6 +428,7 @@ namespace EQLogParser
           var root = tree.FindOne(n => n.Parent == null && n.Name == TRIGGERS);
           parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name, null).SerializedData;
           Import(parent, imported, TRIGGERS);
+          TriggerImportEvent?.Invoke(true);
         }
       }
     }
