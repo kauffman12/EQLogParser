@@ -11,7 +11,7 @@ namespace EQLogParser
   internal class TriggerManager
   {
     internal event Action<bool> EventsProcessorsUpdated;
-    internal event Action<Trigger> EventsSelectTrigger;
+    internal event Action<string> EventsSelectTrigger;
     internal static TriggerManager Instance => _lazy.Value; // instance
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly Lazy<TriggerManager> _lazy = new Lazy<TriggerManager>(() => new TriggerManager());
@@ -49,7 +49,7 @@ namespace EQLogParser
 
     internal void CloseOverlay(string id) => CloseOverlay(id, TextWindows, TimerWindows);
     internal void CloseOverlays() => CloseOverlays(TextWindows, TimerWindows);
-    internal void Select(Trigger trigger) => EventsSelectTrigger?.Invoke(trigger);
+    internal void Select(string id) => EventsSelectTrigger?.Invoke(id);
     internal void SetVoice(string voice) => GetProcessors().ForEach(p => p.SetVoice(voice));
     internal void SetVoiceRate(int rate) => GetProcessors().ForEach(p => p.SetVoiceRate(rate));
 

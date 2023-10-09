@@ -38,11 +38,11 @@
     </StackPanel>
     <Grid x:Name="mainGrid" Grid.Row="1">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="230"></ColumnDefinition>
+        <ColumnDefinition Width="215"></ColumnDefinition>
         <ColumnDefinition Width="3"></ColumnDefinition>
         <ColumnDefinition Width="350"></ColumnDefinition>
         <ColumnDefinition Width="3"></ColumnDefinition>
-        <ColumnDefinition Width="350*"></ColumnDefinition>
+        <ColumnDefinition Width="200*"></ColumnDefinition>
       </Grid.ColumnDefinitions>
       <local:TriggersCharacterView x:Name="characterView" Grid.Column="0" />
       <GridSplitter Grid.Column="1" ResizeDirection="Columns" HorizontalAlignment="Stretch" />
@@ -55,13 +55,13 @@
       <GridSplitter Grid.Column="3" ResizeDirection="Columns" HorizontalAlignment="Stretch" />
       <Grid Grid.Column="4">
         <Grid.RowDefinitions>
-          <RowDefinition Height="35"></RowDefinition>
+          <RowDefinition Height="40"></RowDefinition>
           <RowDefinition Height="100*"></RowDefinition>
         </Grid.RowDefinitions>
         <syncfusion:PropertyGrid
           x:Name="thePropertyGrid"
           BorderBrush="{DynamicResource ContentBackgroundAlt2}"
-          BorderThickness="1"
+          BorderThickness="0"
           ButtonPanelVisibility="Collapsed"
           EnableGrouping="True"
           DescriptionPanelVisibility="Collapsed"
@@ -76,7 +76,7 @@
           UpdateSourceMode="Immediately"
           ValueChanged="ValueChanged">
           <syncfusion:PropertyGrid.PropertyNameColumnDefinition>
-            <GridLength>220</GridLength>
+            <GridLength>200</GridLength>
           </syncfusion:PropertyGrid.PropertyNameColumnDefinition>
           <syncfusion:PropertyGrid.Items>
             <syncfusion:PropertyGridItem CategoryName="Overlays" PropertyName="SelectedTextOverlays" DisplayName="Assigned Text" Visibility="Collapsed" Description="Overlays used to display spoken Text associated with this Trigger."/>
@@ -128,12 +128,18 @@
             <syncfusion:PropertyGridItem x:Name="fadeDelayItem" CategoryName="Text Overlay" PropertyName="FadeDelay" DisplayName="Fade Delay (s)" Visibility="Collapsed" Description="Seconds before Text fades from screen."/>
           </syncfusion:PropertyGrid.Items>
         </syncfusion:PropertyGrid>
-        <Border Grid.Row="0" BorderBrush="{DynamicResource ContentBackgroundAlt2}" BorderThickness="1">
-          <StackPanel Orientation="Horizontal" Margin="4,4,0,0">
-            <Button x:Name="showButton" Visibility="Collapsed" Margin="0,0,4,0" Padding="16,0,16,0" VerticalAlignment="Top" IsEnabled="True" Height="{DynamicResource EQButtonHeight}" HorizontalAlignment="Left" Click="ShowClick">Preview Overlay</Button>
-            <Button x:Name="saveButton" Margin="0,0,4,0" Width="80" VerticalAlignment="Top" IsEnabled="False" Height="{DynamicResource EQButtonHeight}" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
-            <Button x:Name="cancelButton" Margin="0" Width="80" VerticalAlignment="Top" IsEnabled="False" Height="{DynamicResource EQButtonHeight}" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
-          </StackPanel>
+        <Border Grid.Row="0" Padding="10,1,0,0" Background="{DynamicResource ContentBackgroundAlt}" BorderThickness="0">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="40" />
+            </Grid.RowDefinitions>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+              <TextBlock Text="Edit Properties" Margin="0,1,20,0" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
+              <Button x:Name="showButton" Visibility="Collapsed" Margin="0,0,4,3" Padding="16,0,16,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}" Click="ShowClick">Preview Overlay</Button>
+              <Button x:Name="saveButton" Margin="0,0,4,3" Width="80" IsEnabled="False" Height="{DynamicResource EQButtonHeight}" Click="SaveClick">Save</Button>
+              <Button x:Name="cancelButton" Margin="0,0,0,3" Width="80" IsEnabled="False" Height="{DynamicResource EQButtonHeight}" Click="CancelClick">Cancel</Button>
+            </StackPanel>
+          </Grid>
         </Border>
       </Grid>
     </Grid>

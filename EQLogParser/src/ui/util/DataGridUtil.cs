@@ -361,15 +361,22 @@ namespace EQLogParser
     {
       DataGridUtil.UpdateTableMargin(gridBase);
 
-      if (gridBase is SfDataGrid dataGrid)
+      try
       {
-        dataGrid.GridColumnSizer.ResetAutoCalculationforAllColumns();
-        dataGrid.GridColumnSizer.Refresh();
+        if (gridBase is SfDataGrid dataGrid && dataGrid.ItemsSource != null)
+        {
+          dataGrid.GridColumnSizer?.ResetAutoCalculationforAllColumns();
+          dataGrid.GridColumnSizer?.Refresh();
+        }
+        else if (gridBase is SfTreeGrid treeGrid && treeGrid.ItemsSource != null)
+        {
+          treeGrid.TreeGridColumnSizer?.ResetAutoCalculationforAllColumns();
+          treeGrid.TreeGridColumnSizer?.Refresh();
+        }
       }
-      else if (gridBase is SfTreeGrid treeGrid)
+      catch (Exception ex)
       {
-        treeGrid.TreeGridColumnSizer.ResetAutoCalculationforAllColumns();
-        treeGrid.TreeGridColumnSizer.Refresh();
+        LOG.Debug(ex);
       }
     }
 

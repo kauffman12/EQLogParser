@@ -33,10 +33,14 @@ namespace EQLogParser
     private Dictionary<long, long> FilteredLinePositionMap = new Dictionary<long, long>();
     private Dictionary<long, long> LinePositions = new Dictionary<long, long>();
     private int LineTypeCount = 0;
+    private bool Ready = false;
 
     public EQLogViewer()
     {
       InitializeComponent();
+      FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
+      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+
       logSearchTime.ItemsSource = Times;
 
       var allFonts = UIElementUtil.GetSystemFontFamilies();
@@ -62,15 +66,7 @@ namespace EQLogParser
 
       logSearch.Text = EQLogParser.Resource.LOG_SEARCH_TEXT;
       logSearch2.Text = EQLogParser.Resource.LOG_SEARCH_TEXT;
-      logBox.Focus();
-
       logFilter.Text = EQLogParser.Resource.LOG_FILTER_TEXT;
-      FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
-      FilterTimer.Tick += (sender, e) =>
-      {
-        FilterTimer.Stop();
-        UpdateUI();
-      };
 
       var list = new List<ComboBoxItemDetails>();
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = DAMAGEAVOIDED, Value = DAMAGEAVOIDED });
@@ -91,7 +87,14 @@ namespace EQLogParser
 
       lineTypes.ItemsSource = list;
       UIElementUtil.SetComboBoxTitle(lineTypes, list.Count, EQLogParser.Resource.LINE_TYPES_SELECTED);
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+
+      FilterTimer.Tick += (sender, e) =>
+      {
+        FilterTimer.Stop();
+        UpdateUI();
+      };
+
+      Ready = true;
     }
 
     private void EventsThemeChanged(string _) => UpdateCurrentTextColor();
@@ -115,81 +118,58 @@ namespace EQLogParser
 
     private void UpdateUI()
     {
-      logFilter.IsEnabled = false;
-      lineTypes.IsEnabled = false;
-      FilteredLinePositionMap.Clear();
-
-      var types = (lineTypes.ItemsSource as List<ComboBoxItemDetails>).Where(item => item.IsChecked).ToDictionary(item => item.Value, item => true);
-      UIElementUtil.SetComboBoxTitle(lineTypes, types.Count, EQLogParser.Resource.LINE_TYPES_SELECTED);
-
-      if (logFilter.FontStyle == FontStyles.Italic && types.Count == LineTypeCount)
+      if (Ready && logBox?.Lines != null)
       {
-        logBox.Text = string.Join(Environment.NewLine, UnFiltered);
-        UpdateStatusCount(UnFiltered.Count);
-        if (logBox.Lines.Count > 0)
-        {
-          GoToLine(logBox, logBox.Lines.Count);
-        }
-      }
-      else if ((logFilter.FontStyle != FontStyles.Italic && logFilter.Text.Length > 1) || types.Count < LineTypeCount)
-      {
-        var filtered = new List<string>();
-        var lineCount = -1;
-        foreach (ref var line in UnFiltered.ToArray().AsSpan())
-        {
-          lineCount++;
+        logFilter.IsEnabled = false;
+        lineTypes.IsEnabled = false;
+        FilteredLinePositionMap.Clear();
 
-          if (types.Count < LineTypeCount)
+        var types = (lineTypes.ItemsSource as List<ComboBoxItemDetails>).Where(item => item.IsChecked).ToDictionary(item => item.Value, item => true);
+        UIElementUtil.SetComboBoxTitle(lineTypes, types.Count, EQLogParser.Resource.LINE_TYPES_SELECTED);
+
+        if (logFilter.FontStyle == FontStyles.Italic && types.Count == LineTypeCount)
+        {
+          logBox.Text = string.Join(Environment.NewLine, UnFiltered);
+          UpdateStatusCount(UnFiltered.Count);
+          if (logBox.Lines.Count > 0)
           {
-            ChatType chatType = null;
-            var action = line.Substring(MainWindow.ACTION_INDEX);
-            var damageRecord = DamageLineParser.ParseLine(action);
+            GoToLine(logBox, logBox.Lines.Count);
+          }
+        }
+        else if ((logFilter.FontStyle != FontStyles.Italic && logFilter.Text.Length > 1) || types.Count < LineTypeCount)
+        {
+          var filtered = new List<string>();
+          var lineCount = -1;
+          foreach (ref var line in UnFiltered.ToArray().AsSpan())
+          {
+            lineCount++;
 
-            if (damageRecord != null)
+            if (types.Count < LineTypeCount)
             {
-              var ignore = false;
-              switch (damageRecord.Type)
-              {
-                case Labels.DS:
-                case Labels.DD:
-                case Labels.DOT:
-                case Labels.OTHERDMG:
-                case Labels.MELEE:
-                case Labels.PROC:
-                  ignore = !types.ContainsKey(damageRecord.Type);
-                  break;
-                case Labels.ABSORB:
-                case Labels.BLOCK:
-                case Labels.DODGE:
-                case Labels.MISS:
-                case Labels.PARRY:
-                case Labels.INVULNERABLE:
-                  ignore = !types.ContainsKey(DAMAGEAVOIDED);
-                  break;
-              }
+              ChatType chatType = null;
+              var action = line.Substring(MainWindow.ACTION_INDEX);
+              var damageRecord = DamageLineParser.ParseLine(action);
 
-              if (ignore)
-              {
-                continue;
-              }
-            }
-            else
-            {
-              chatType = ChatLineParser.ParseChatType(action);
-              if (chatType != null)
+              if (damageRecord != null)
               {
                 var ignore = false;
-                switch (chatType.Channel)
+                switch (damageRecord.Type)
                 {
-                  case ChatChannels.Fellowship:
-                  case ChatChannels.Group:
-                  case ChatChannels.Guild:
-                  case ChatChannels.Raid:
-                  case ChatChannels.Say:
-                    ignore = !types.ContainsKey(chatType.Channel);
+                  case Labels.DS:
+                  case Labels.DD:
+                  case Labels.DOT:
+                  case Labels.OTHERDMG:
+                  case Labels.MELEE:
+                  case Labels.PROC:
+                    ignore = !types.ContainsKey(damageRecord.Type);
                     break;
-                  default:
-                    ignore = !types.ContainsKey(OTHERCHAT);
+                  case Labels.ABSORB:
+                  case Labels.BLOCK:
+                  case Labels.DODGE:
+                  case Labels.MISS:
+                  case Labels.PARRY:
+                  case Labels.INVULNERABLE:
+                    ignore = !types.ContainsKey(DAMAGEAVOIDED);
                     break;
                 }
 
@@ -198,33 +178,59 @@ namespace EQLogParser
                   continue;
                 }
               }
+              else
+              {
+                chatType = ChatLineParser.ParseChatType(action);
+                if (chatType != null)
+                {
+                  var ignore = false;
+                  switch (chatType.Channel)
+                  {
+                    case ChatChannels.Fellowship:
+                    case ChatChannels.Group:
+                    case ChatChannels.Guild:
+                    case ChatChannels.Raid:
+                    case ChatChannels.Say:
+                      ignore = !types.ContainsKey(chatType.Channel);
+                      break;
+                    default:
+                      ignore = !types.ContainsKey(OTHERCHAT);
+                      break;
+                  }
+
+                  if (ignore)
+                  {
+                    continue;
+                  }
+                }
+              }
+
+              if (damageRecord == null && chatType == null && !types.ContainsKey(NOCAT))
+              {
+                continue;
+              }
             }
 
-            if (damageRecord == null && chatType == null && !types.ContainsKey(NOCAT))
+            if (logFilter.FontStyle == FontStyles.Italic ||
+              (logFilterModifier.SelectedIndex == 0 && line.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) > -1) ||
+               (logFilterModifier.SelectedIndex == 1 && line.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) < 0))
             {
-              continue;
+              FilteredLinePositionMap[filtered.Count] = LinePositions[lineCount];
+              filtered.Add(line);
             }
           }
 
-          if (logFilter.FontStyle == FontStyles.Italic ||
-            (logFilterModifier.SelectedIndex == 0 && line.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) > -1) ||
-             (logFilterModifier.SelectedIndex == 1 && line.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) < 0))
+          logBox.Text = string.Join(Environment.NewLine, filtered);
+          UpdateStatusCount(filtered.Count);
+          if (logBox.Lines != null && logBox.Lines.Count > 0)
           {
-            FilteredLinePositionMap[filtered.Count] = LinePositions[lineCount];
-            filtered.Add(line);
+            GoToLine(logBox, logBox.Lines.Count);
           }
         }
 
-        logBox.Text = string.Join(Environment.NewLine, filtered);
-        UpdateStatusCount(filtered.Count);
-        if (logBox.Lines != null && logBox.Lines.Count > 0)
-        {
-          GoToLine(logBox, logBox.Lines.Count);
-        }
+        logFilter.IsEnabled = true;
+        lineTypes.IsEnabled = true;
       }
-
-      logFilter.IsEnabled = true;
-      lineTypes.IsEnabled = true;
     }
 
     private void LoadContext(long pos, string text)
@@ -645,8 +651,11 @@ namespace EQLogParser
 
     private void FilterTextChanged(object sender, TextChangedEventArgs e)
     {
-      FilterTimer?.Stop();
-      FilterTimer?.Start();
+      if (Ready)
+      {
+        FilterTimer?.Stop();
+        FilterTimer?.Start();
+      }
     }
 
     private void SelectedContext(object sender, RoutedEventArgs e)
@@ -674,6 +683,14 @@ namespace EQLogParser
       {
         var brush = searchIcon.IsEnabled ? "EQMenuIconBrush" : "ContentBackgroundAlt5";
         searchIcon.Foreground = Application.Current.Resources[brush] as SolidColorBrush;
+      }
+    }
+
+    private void WindowPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+      if (e.OriginalSource is ScrollViewer)
+      {
+        e.Handled = true;
       }
     }
 

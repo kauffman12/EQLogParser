@@ -721,8 +721,8 @@ namespace EQLogParser
         Name = wrapper.Name,
         Type = type,
         Eval = eval,
-        Priority = wrapper.TriggerData.Priority,
-        Trigger = wrapper.TriggerData
+        NodeId = wrapper.Id,
+        Priority = wrapper.TriggerData.Priority
       };
 
       lock (CollectionLock)
