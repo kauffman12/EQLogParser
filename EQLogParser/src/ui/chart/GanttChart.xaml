@@ -19,8 +19,9 @@
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <CheckBox x:Name="showCasterAdps" IsChecked="True" Margin="0,0,8,2" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange">Caster ADPS</CheckBox>
       <CheckBox x:Name="showMeleeAdps" IsChecked="True" Margin="0,0,8,2" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange">Melee ADPS</CheckBox>
-      <CheckBox x:Name="showSelfOnly" IsChecked="False" Margin="0,0,8,2" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange" ToolTip="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common.">Self Only</CheckBox>
-      <Button Margin="0,0,8,2" Padding="8,0,8,0" Height="24" Click="RefreshClick">Reload</Button>
+      <CheckBox x:Name="hideSelfOnly" IsChecked="True" Margin="0,0,8,2" IsEnabled="False" ToolTip="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common."
+      Checked="OptionsChange" Unchecked="OptionsChange">Hide Spells Only You See</CheckBox>
+      <Button Margin="0,0,8,2" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Reload</Button>
     </StackPanel>
     <Grid Grid.Row="1">
       <Grid.RowDefinitions>

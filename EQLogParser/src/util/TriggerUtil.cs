@@ -64,7 +64,7 @@ namespace EQLogParser
     internal static bool TestRegexProperty(bool useRegex, string pattern, PatternEditor editor)
     {
       var isValid = useRegex ? TextUtils.IsValidRegex(pattern) : true;
-      editor.SetForeground(isValid ? "ContentForeground" : "EQWarnForegroundBrush");
+      editor.SetForeground(isValid ? "ContentForeground" : "EQStopForegroundBrush");
       return isValid;
     }
 

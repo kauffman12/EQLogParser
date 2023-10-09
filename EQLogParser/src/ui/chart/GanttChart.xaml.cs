@@ -42,7 +42,7 @@ namespace EQLogParser
     private List<PlayerStats> Selected;
     private int TimelineType;
 
-    private bool CurrentShowSelfOnly = false;
+    private bool CurrentHideSelfOnly = true;
     private bool CurrentShowCasterAdps = true;
     private bool CurrentShowMeleeAdps = true;
 
@@ -153,7 +153,7 @@ namespace EQLogParser
       }
 
       showCasterAdps.IsEnabled = showMeleeAdps.IsEnabled = SpellRanges.Count > 0;
-      showSelfOnly.IsEnabled = SpellRanges.Count > 0 && Selected?.Find(stats => stats.OrigName == ConfigUtil.PlayerName) != null;
+      hideSelfOnly.IsEnabled = SpellRanges.Count > 0 && Selected?.Find(stats => stats.OrigName == ConfigUtil.PlayerName) != null;
 
       AddHeaderLabel(0, string.Format(CultureInfo.CurrentCulture, "Buffs (T-{0})", DataManager.BUFFS_OFFSET), 20);
       AddHeaderLabel(DataManager.BUFFS_OFFSET, DateUtil.FormatSimpleHMS(StartTime + DataManager.BUFFS_OFFSET), 10);
@@ -415,7 +415,7 @@ namespace EQLogParser
       foreach (var key in SpellRanges.Keys.OrderBy(key => key))
       {
         var spellRange = SpellRanges[key];
-        if ((CurrentShowSelfOnly || !SelfOnly.ContainsKey(key))
+        if ((!CurrentHideSelfOnly || !SelfOnly.ContainsKey(key))
           && ((CurrentShowCasterAdps && ((spellRange.Adps & CASTER_ADPS) == CASTER_ADPS))
           || (CurrentShowMeleeAdps && ((spellRange.Adps & MELEE_ADPS) == MELEE_ADPS))
           || (TimelineType == 0 && ((spellRange.Adps & TANK_ADPS) == TANK_ADPS))
@@ -576,7 +576,7 @@ namespace EQLogParser
 
     private void OptionsChange(object sender, RoutedEventArgs e)
     {
-      CurrentShowSelfOnly = showSelfOnly?.IsChecked.Value == true;
+      CurrentHideSelfOnly = hideSelfOnly?.IsChecked.Value == true;
       CurrentShowCasterAdps = showCasterAdps?.IsChecked.Value == true;
       CurrentShowMeleeAdps = showMeleeAdps?.IsChecked.Value == true;
 

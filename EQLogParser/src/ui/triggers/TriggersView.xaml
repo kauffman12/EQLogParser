@@ -14,7 +14,7 @@
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <CheckBox x:Name="basicCheckBox" Margin="4,0,0,0" FontWeight="Normal" FocusVisualStyle="{x:Null}" Unchecked="BasicChecked" Checked="BasicChecked"/>
-      <Label x:Name="titleLabel" Margin="6,0,8,0" VerticalContentAlignment="Center" Padding="0,0,0,2" Content="Check to Activate Triggers" Style="{DynamicResource EQTitleStyle}" Foreground="{DynamicResource EQStopForegroundBrush}"/>
+      <Label x:Name="titleLabel" Margin="8,0,8,0" VerticalContentAlignment="Center" Padding="0,0,0,2" Content="Check to Activate Triggers" Style="{DynamicResource EQTitleStyle}" Foreground="{DynamicResource EQStopForegroundBrush}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <TextBlock VerticalAlignment="Center" Margin="8,0,30,4" PreviewMouseDown="ToggleAdvancedPreviewMouseDown">
