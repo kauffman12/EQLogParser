@@ -177,21 +177,21 @@ namespace EQLogParser
 
     private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
     {
-      dataGrid.View.Filter = new Predicate<object>(obj =>
+      dataGrid.View.Filter = obj =>
       {
         var found = false;
 
         if (obj is LootRow row)
         {
           found = (CurrentSelectedItem == ALLITEMS || (row.IsCurrency && CurrentSelectedItem == ONLYCURR) ||
-          (!row.IsCurrency && CurrentSelectedItem == ONLYITEMS) || (CurrentSelectedItem == ONLYASS && !row.IsCurrency && row.Quantity == 0) || CurrentSelectedItem == row.Item) &&
-          (CurrentSelectedPlayer == ALLPLAYERS || row.Player == CurrentSelectedPlayer);
+                   (!row.IsCurrency && CurrentSelectedItem == ONLYITEMS) || (CurrentSelectedItem == ONLYASS && !row.IsCurrency && row.Quantity == 0) || CurrentSelectedItem == row.Item) &&
+                  (CurrentSelectedPlayer == ALLPLAYERS || row.Player == CurrentSelectedPlayer);
 
           found = found && (CurrentSelectedNpc == ALLNPCS || row.Npc == CurrentSelectedNpc);
         }
 
         return found;
-      });
+      };
 
       dataGrid.View.RefreshFilter();
       UpdateTitle();

@@ -28,7 +28,7 @@ namespace EQLogParser
     private bool CurrentShowPlayerKilling = true;
     private bool CurrentShowPlayerSlain = true;
     private int CurrentFilterModifier = 0;
-    private string CurrentFilterText = EQLogParser.Resource.EVENT_FILTER_TEXT;
+    private string CurrentFilterText = Resource.EVENT_FILTER_TEXT;
 
     public EventViewer()
     {
@@ -44,11 +44,11 @@ namespace EQLogParser
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = PLAYERSLAIN_EVENT });
 
       selectedOptions.ItemsSource = list;
-      UIElementUtil.SetComboBoxTitle(selectedOptions, list.Count, EQLogParser.Resource.EVENT_TYPES_SELECTED);
+      UIElementUtil.SetComboBoxTitle(selectedOptions, list.Count, Resource.EVENT_TYPES_SELECTED);
       DataGridUtil.UpdateTableMargin(dataGrid);
       (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
 
-      eventFilter.Text = EQLogParser.Resource.EVENT_FILTER_TEXT;
+      eventFilter.Text = Resource.EVENT_FILTER_TEXT;
       FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
       FilterTimer.Tick += (sender, e) =>
       {
@@ -131,7 +131,7 @@ namespace EQLogParser
 
     private void ItemsSourceChanged(object sender, Syncfusion.UI.Xaml.Grid.GridItemsSourceChangedEventArgs e)
     {
-      dataGrid.View.Filter = new Predicate<object>(obj =>
+      dataGrid.View.Filter = obj =>
       {
         var result = false;
         if (obj is EventRow row)
@@ -139,27 +139,27 @@ namespace EQLogParser
           result = (CurrentShowMezBreaks && row.Event == MEZBREAK_EVENT) || (CurrentShowEnterZone && row.Event == ZONE_EVENT) || (CurrentShowKillShots &&
             row.Event == KILLSHOT_EVENT) || (CurrentShowPlayerKilling && row.Event == PLAYERKILL_EVENT) || (CurrentShowPlayerSlain && row.Event == PLAYERSLAIN_EVENT);
 
-          if (result && !string.IsNullOrEmpty(CurrentFilterText) && CurrentFilterText != EQLogParser.Resource.EVENT_FILTER_TEXT)
+          if (result && !string.IsNullOrEmpty(CurrentFilterText) && CurrentFilterText != Resource.EVENT_FILTER_TEXT)
           {
             if (CurrentFilterModifier == 0)
             {
               result = row.Actor?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) > -1 ||
-              row.Target?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) > -1;
+                       row.Target?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) > -1;
             }
             else if (CurrentFilterModifier == 1)
             {
               result = row.Actor?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == -1 &&
-              row.Target?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == -1;
+                       row.Target?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == -1;
             }
             else if (CurrentFilterModifier == 2)
             {
               result = row.Actor?.Equals(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == true ||
-              row.Target?.Equals(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == true;
+                       row.Target?.Equals(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == true;
             }
           }
         }
         return result;
-      });
+      };
 
       UpdateTitleAndRefresh();
     }
@@ -205,7 +205,7 @@ namespace EQLogParser
           }
         }
 
-        UIElementUtil.SetComboBoxTitle(selectedOptions, count, EQLogParser.Resource.EVENT_TYPES_SELECTED);
+        UIElementUtil.SetComboBoxTitle(selectedOptions, count, Resource.EVENT_TYPES_SELECTED);
         UpdateTitleAndRefresh();
       }
     }
@@ -214,7 +214,7 @@ namespace EQLogParser
     {
       if (e.Key == Key.Escape)
       {
-        eventFilter.Text = EQLogParser.Resource.EVENT_FILTER_TEXT;
+        eventFilter.Text = Resource.EVENT_FILTER_TEXT;
         eventFilter.FontStyle = FontStyles.Italic;
         dataGrid.Focus();
       }
@@ -222,7 +222,7 @@ namespace EQLogParser
 
     private void FilterGotFocus(object sender, RoutedEventArgs e)
     {
-      if (eventFilter.Text == EQLogParser.Resource.EVENT_FILTER_TEXT)
+      if (eventFilter.Text == Resource.EVENT_FILTER_TEXT)
       {
         eventFilter.Text = "";
         eventFilter.FontStyle = FontStyles.Normal;
@@ -233,7 +233,7 @@ namespace EQLogParser
     {
       if (string.IsNullOrEmpty(eventFilter.Text))
       {
-        eventFilter.Text = EQLogParser.Resource.EVENT_FILTER_TEXT;
+        eventFilter.Text = Resource.EVENT_FILTER_TEXT;
         eventFilter.FontStyle = FontStyles.Italic;
       }
     }

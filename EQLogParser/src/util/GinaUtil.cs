@@ -15,7 +15,7 @@ namespace EQLogParser
   internal static class GinaUtil
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static ConcurrentDictionary<string, string> GinaCache = new ConcurrentDictionary<string, string>();
+    private static readonly ConcurrentDictionary<string, string> GinaCache = new ConcurrentDictionary<string, string>();
 
     internal static List<ExportTriggerNode> CovertToTriggerNodes(byte[] data) => Convert(ReadXml(data));
 
@@ -79,7 +79,7 @@ namespace EQLogParser
           }
 
           badMessage += " but no supported Triggers found.";
-          new MessageWindow(badMessage, EQLogParser.Resource.RECEIVE_GINA).ShowDialog();
+          new MessageWindow(badMessage, Resource.RECEIVE_GINA).ShowDialog();
         }
         else
         {
@@ -89,7 +89,7 @@ namespace EQLogParser
             message = $"Merge GINA Triggers from {player} or Import to New Folder?\r\n";
           }
 
-          var msgDialog = new MessageWindow(message, EQLogParser.Resource.RECEIVE_GINA, MessageWindow.IconType.Question, "New Folder", "Merge");
+          var msgDialog = new MessageWindow(message, Resource.RECEIVE_GINA, MessageWindow.IconType.Question, "New Folder", "Merge");
           msgDialog.ShowDialog();
 
           if (msgDialog.IsYes2Clicked)
@@ -114,16 +114,13 @@ namespace EQLogParser
     private static string ReadXml(byte[] data)
     {
       string result = null;
-      using (var zip = new ZipArchive(new MemoryStream(data), ZipArchiveMode.Read))
+      using var zip = new ZipArchive(new MemoryStream(data), ZipArchiveMode.Read);
+      if (zip.Entries.FirstOrDefault() is ZipArchiveEntry entry)
       {
-        if (zip.Entries.FirstOrDefault() is ZipArchiveEntry entry)
-        {
-          using (var sr = new StreamReader(entry.Open()))
-          {
-            result = sr.ReadToEnd();
-          }
-        }
+        using var sr = new StreamReader(entry.Open());
+        result = sr.ReadToEnd();
       }
+
       return result;
     }
 
@@ -151,7 +148,7 @@ namespace EQLogParser
           var postData = "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"><s:Body><DownloadPackageChunk xmlns=\"http://tempuri.org/\"><sessionId>" +
             ginaKey + "</sessionId><chunkNumber>0</chunkNumber></DownloadPackageChunk></s:Body></s:Envelope>";
 
-          var content = new StringContent(postData, UnicodeEncoding.UTF8, "text/xml");
+          var content = new StringContent(postData, Encoding.UTF8, "text/xml");
           content.Headers.Add("Content-Length", postData.Length.ToString());
 
           var message = new HttpRequestMessage(HttpMethod.Post, @"http://eq.gimasoft.com/GINAServices/Package.svc");
@@ -162,43 +159,35 @@ namespace EQLogParser
           var response = client.Send(message);
           if (response.IsSuccessStatusCode)
           {
-            using (var data = response.Content.ReadAsStreamAsync())
+            using var data = response.Content.ReadAsStreamAsync();
+            data.Wait();
+
+            var buffer = new byte[data.Result.Length];
+            var read = data.Result.ReadAsync(buffer, 0, buffer.Length);
+            read.Wait();
+
+            using var bufferStream = new MemoryStream(buffer);
+            using var gzip = new GZipStream(bufferStream, CompressionMode.Decompress);
+            using var memory = new MemoryStream();
+            gzip.CopyTo(memory);
+            var xml = Encoding.UTF8.GetString(memory.ToArray());
+
+            if (!string.IsNullOrEmpty(xml) && xml.IndexOf("<a:ChunkData>") is int start && start > -1
+                && xml.IndexOf("</a:ChunkData>") is int end && end > start)
             {
-              data.Wait();
-
-              var buffer = new byte[data.Result.Length];
-              var read = data.Result.ReadAsync(buffer, 0, buffer.Length);
-              read.Wait();
-
-              using (var bufferStream = new MemoryStream(buffer))
-              {
-                using (var gzip = new GZipStream(bufferStream, CompressionMode.Decompress))
-                {
-                  using (var memory = new MemoryStream())
-                  {
-                    gzip.CopyTo(memory);
-                    var xml = Encoding.UTF8.GetString(memory.ToArray());
-
-                    if (!string.IsNullOrEmpty(xml) && xml.IndexOf("<a:ChunkData>") is int start && start > -1
-                      && xml.IndexOf("</a:ChunkData>") is int end && end > start)
-                    {
-                      var encoded = xml.Substring(start + 13, end - start - 13);
-                      var decoded = System.Convert.FromBase64String(encoded);
-                      ImportFromGina(decoded, player, ginaKey);
-                    }
-                    else
-                    {
-                      // no chunk data in response. too old?
-                      NextGinaTask(ginaKey);
-                    }
-                  }
-                }
-              }
+              var encoded = xml.Substring(start + 13, end - start - 13);
+              var decoded = System.Convert.FromBase64String(encoded);
+              ImportFromGina(decoded, player, ginaKey);
+            }
+            else
+            {
+              // no chunk data in response. too old?
+              NextGinaTask(ginaKey);
             }
           }
           else
           {
-            LOG.Error("Error Downloading GINA Triggers. Received Status Code = " + response.StatusCode.ToString());
+            LOG.Error("Error Downloading GINA Triggers. Received Status Code = " + response.StatusCode);
             NextGinaTask(ginaKey);
           }
         }
@@ -208,7 +197,7 @@ namespace EQLogParser
           {
             dispatcher.InvokeAsync(() =>
             {
-              new MessageWindow("Error Downloading GINA Triggers. Blocked by Firewall?", EQLogParser.Resource.RECEIVE_GINA).ShowDialog();
+              new MessageWindow("Error Downloading GINA Triggers. Blocked by Firewall?", Resource.RECEIVE_GINA).ShowDialog();
               NextGinaTask(ginaKey);
             });
           }
@@ -262,8 +251,10 @@ namespace EQLogParser
       {
         if (node.Name == "TriggerGroup")
         {
-          var data = new ExportTriggerNode();
-          data.Name = node.SelectSingleNode("Name").InnerText;
+          var data = new ExportTriggerNode
+          {
+            Name = node.SelectSingleNode("Name").InnerText
+          };
           newNodes.Add(data);
 
           var triggers = new List<ExportTriggerNode>();

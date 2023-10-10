@@ -28,8 +28,8 @@ namespace EQLogParser
     private List<Fight> Selected;
     private string Title;
 
-    private static OverlayData OverlayDamageData = new OverlayData();
-    private static OverlayData OverlayTankData = new OverlayData();
+    private static readonly OverlayData OverlayDamageData = new OverlayData();
+    private static readonly OverlayData OverlayTankData = new OverlayData();
 
     internal static DamageOverlayStats ComputeOverlayStats(bool reset, int mode, int maxRows, string selectedClass)
     {
@@ -186,7 +186,7 @@ namespace EQLogParser
               myIndex = list.Count;
             }
 
-            if (myIndex == list.Count || selectedClass == EQLogParser.Resource.ANY_CLASS || selectedClass == playerStats.ClassName)
+            if (myIndex == list.Count || selectedClass == Resource.ANY_CLASS || selectedClass == playerStats.ClassName)
             {
               list.Add(playerStats);
             }
@@ -395,7 +395,7 @@ namespace EQLogParser
       {
         if (RaidTotals != null)
         {
-          CombinedStats combined = null;
+          CombinedStats combined;
           var childrenStats = new ConcurrentDictionary<string, Dictionary<string, PlayerStats>>();
           var topLevelStats = new ConcurrentDictionary<string, PlayerStats>();
           var damageValidator = new DamageValidator();

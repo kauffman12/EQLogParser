@@ -14,10 +14,10 @@ namespace EQLogParser
   /// </summary>
   public partial class TextOverlayWindow : Window
   {
-    private LinkedList<TextData> TextDataList = new LinkedList<TextData>();
+    private readonly LinkedList<TextData> TextDataList = new LinkedList<TextData>();
     private int MaxNodes = -1;
     private TriggerNode Node;
-    private bool Preview = false;
+    private readonly bool Preview = false;
     private long SavedHeight;
     private long SavedWidth;
     private long SavedTop = long.MaxValue;
@@ -307,9 +307,9 @@ namespace EQLogParser
 
     private class TextData
     {
-      public string Text { get; set; }
-      public double EndTicks { get; set; }
-      public SolidColorBrush Brush { get; set; }
+      public string Text { get; init; }
+      public double EndTicks { get; init; }
+      public SolidColorBrush Brush { get; init; }
     }
   }
 }

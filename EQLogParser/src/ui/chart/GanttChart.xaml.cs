@@ -464,8 +464,8 @@ namespace EQLogParser
         Margin = new Thickness(4, hPos + 6, 4, 0)
       };
 
-      image.SetResourceReference(ImageAwesome.HeightProperty, "EQContentSize");
-      image.SetResourceReference(ImageAwesome.WidthProperty, "EQContentSize");
+      image.SetResourceReference(HeightProperty, "EQContentSize");
+      image.SetResourceReference(WidthProperty, "EQContentSize");
       image.SetResourceReference(ImageAwesome.ForegroundProperty, "EQMenuIconBrush");
       image.PreviewMouseLeftButtonDown += (object sender, MouseButtonEventArgs e) =>
       {
@@ -522,8 +522,8 @@ namespace EQLogParser
 
       Dividers.Add(rectangle);
 
-      var brushName = (blockBrush == null) ? "ContentForeground" : blockBrush;
-      rectangle.SetResourceReference(Rectangle.StrokeProperty, brushName);
+      var brushName = blockBrush ?? "ContentForeground";
+      rectangle.SetResourceReference(Shape.StrokeProperty, brushName);
       target.Children.Add(rectangle);
     }
 
@@ -607,8 +607,8 @@ namespace EQLogParser
         Tag = label
       };
 
-      block.SetResourceReference(Rectangle.FillProperty, blockBrush);
-      block.SetResourceReference(Rectangle.StrokeProperty, "ContentForeground");
+      block.SetResourceReference(Shape.FillProperty, blockBrush);
+      block.SetResourceReference(Shape.StrokeProperty, "ContentForeground");
       block.SetValue(Panel.ZIndexProperty, zIndex);
       return block;
     }
@@ -623,7 +623,7 @@ namespace EQLogParser
         Margin = new Thickness(0, hPos, 0, 0)
       };
 
-      block.SetResourceReference(Rectangle.StrokeProperty, "ContentForeground");
+      block.SetResourceReference(Shape.StrokeProperty, "ContentForeground");
       return block;
     }
 
@@ -699,14 +699,14 @@ namespace EQLogParser
     private class SpellRange
     {
       public List<TimeRange> Ranges { get; } = new List<TimeRange>();
-      public ushort Adps { get; set; }
+      public ushort Adps { get; init; }
     }
 
     private class TimeRange
     {
-      public int BeginSeconds { get; set; }
+      public int BeginSeconds { get; init; }
       public int Duration { get; set; }
-      public string BlockBrush { get; set; }
+      public string BlockBrush { get; init; }
     }
   }
 }

@@ -3,12 +3,12 @@ namespace EQLogParser
 {
   class DamageValidator
   {
-    private bool AssassinateEnabled;
-    private bool BaneEnabled;
-    private bool DSEnabled;
-    private bool FinishingBlowEnabled;
-    private bool HeadshotEnabled;
-    private bool SlayUndeadEnabled;
+    private readonly bool AssassinateEnabled;
+    private readonly bool BaneEnabled;
+    private readonly bool DSEnabled;
+    private readonly bool FinishingBlowEnabled;
+    private readonly bool HeadshotEnabled;
+    private readonly bool SlayUndeadEnabled;
 
     public DamageValidator()
     {

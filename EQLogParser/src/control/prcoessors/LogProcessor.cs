@@ -14,7 +14,7 @@ namespace EQLogParser
       // Setup the pre-processor block
       var options = new ExecutionDataflowBlockOptions { BoundedCapacity = 25000 };
       PreProcess = new ActionBlock<Tuple<string, double, bool>>(data => DoPreProcess(data.Item1, data.Item2, data.Item3), options);
-      Process = new ActionBlock<LineData>(data => DoProcess(data));
+      Process = new ActionBlock<LineData>(DoProcess);
       ChatManager.Instance.Init();
     }
 

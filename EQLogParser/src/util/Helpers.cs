@@ -125,10 +125,7 @@ namespace EQLogParser
     {
       lock (dict)
       {
-        if (!dict.ContainsKey(key))
-        {
-          dict[key] = default;
-        }
+        dict.TryAdd(key, default);
 
         dynamic temp = dict[key];
         temp += value;

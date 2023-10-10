@@ -38,11 +38,11 @@ namespace EQLogParser
     public ChatViewer()
     {
       InitializeComponent();
-      textFilter.Text = EQLogParser.Resource.CHAT_TEXT_FILTER;
+      textFilter.Text = Resource.CHAT_TEXT_FILTER;
       startDate.DateTime = new DateTime(1999, 3, 16);
       endDate.DateTime = DateTime.Now;
-      toFilter.Text = EQLogParser.Resource.CHAT_TO_FILTER;
-      fromFilter.Text = EQLogParser.Resource.CHAT_FROM_FILTER;
+      toFilter.Text = Resource.CHAT_TO_FILTER;
+      fromFilter.Text = Resource.CHAT_FROM_FILTER;
 
       var allFonts = UIElementUtil.GetSystemFontFamilies();
       fontFamily.ItemsSource = allFonts;
@@ -82,15 +82,15 @@ namespace EQLogParser
     private void EventsThemeChanged(string _) => UpdateCurrentTextColor();
     private void RefreshClick(object sender, RoutedEventArgs e) => ChangeSearch(true);
     private void ChatManagerEventsUpdatePlayer(object sender, string player) => LoadPlayers(player);
-    private void ToFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(toFilter, EQLogParser.Resource.CHAT_TO_FILTER);
-    private void FromFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(fromFilter, EQLogParser.Resource.CHAT_FROM_FILTER);
-    private void TextFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(textFilter, EQLogParser.Resource.CHAT_TEXT_FILTER);
-    private void ToFilterKeyDown(object sender, KeyEventArgs e) => FilterKeyDown(toFilter, EQLogParser.Resource.CHAT_TO_FILTER, e);
-    private void FromFilterKeyDown(object sender, KeyEventArgs e) => FilterKeyDown(fromFilter, EQLogParser.Resource.CHAT_FROM_FILTER, e);
-    private void TextFilterKeyDown(object sender, KeyEventArgs e) => FilterKeyDown(textFilter, EQLogParser.Resource.CHAT_TEXT_FILTER, e);
-    private void ToFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(toFilter, EQLogParser.Resource.CHAT_TO_FILTER);
-    private void FromFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(fromFilter, EQLogParser.Resource.CHAT_FROM_FILTER);
-    private void TextFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(textFilter, EQLogParser.Resource.CHAT_TEXT_FILTER);
+    private void ToFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(toFilter, Resource.CHAT_TO_FILTER);
+    private void FromFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(fromFilter, Resource.CHAT_FROM_FILTER);
+    private void TextFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(textFilter, Resource.CHAT_TEXT_FILTER);
+    private void ToFilterKeyDown(object sender, KeyEventArgs e) => FilterKeyDown(toFilter, Resource.CHAT_TO_FILTER, e);
+    private void FromFilterKeyDown(object sender, KeyEventArgs e) => FilterKeyDown(fromFilter, Resource.CHAT_FROM_FILTER, e);
+    private void TextFilterKeyDown(object sender, KeyEventArgs e) => FilterKeyDown(textFilter, Resource.CHAT_TEXT_FILTER, e);
+    private void ToFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(toFilter, Resource.CHAT_TO_FILTER);
+    private void FromFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(fromFilter, Resource.CHAT_FROM_FILTER);
+    private void TextFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(textFilter, Resource.CHAT_TEXT_FILTER);
     private void SelectedDatesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ChangeSearch();
     private double GetEndDate() => (endDate.DateTime != null) ? endDate.DateTime.Value.Ticks / TimeSpan.FromSeconds(1).Ticks : 0;
     private double GetStartDate() => (startDate.DateTime != null) ? startDate.DateTime.Value.Ticks / TimeSpan.FromSeconds(1).Ticks : 0;
@@ -145,8 +145,8 @@ namespace EQLogParser
     {
       var items = new List<ComboBoxItemDetails>
       {
-        new ComboBoxItemDetails { Text = EQLogParser.Resource.SELECT_ALL },
-        new ComboBoxItemDetails { Text = EQLogParser.Resource.UNSELECT_ALL }
+        new ComboBoxItemDetails { Text = Resource.SELECT_ALL },
+        new ComboBoxItemDetails { Text = Resource.UNSELECT_ALL }
       };
 
       var count = 0;
@@ -157,7 +157,7 @@ namespace EQLogParser
       });
 
       channels.ItemsSource = items;
-      UIElementUtil.SetComboBoxTitle(channels, count, EQLogParser.Resource.CHANNELS_SELECTED, true);
+      UIElementUtil.SetComboBoxTitle(channels, count, Resource.CHANNELS_SELECTED, true);
     }
 
     private void LoadPlayers(string updatedPlayer = null)
@@ -219,9 +219,9 @@ namespace EQLogParser
         if (players.SelectedItem is string name && !string.IsNullOrEmpty(name) && !name.StartsWith("No ", StringComparison.Ordinal))
         {
           var channelList = GetSelectedChannels(out var changed);
-          var text = (textFilter.Text.Length != 0 && textFilter.Text != EQLogParser.Resource.CHAT_TEXT_FILTER) ? textFilter.Text : null;
-          var to = (toFilter.Text.Length != 0 && toFilter.Text != EQLogParser.Resource.CHAT_TO_FILTER) ? toFilter.Text : null;
-          var from = (fromFilter.Text.Length != 0 && fromFilter.Text != EQLogParser.Resource.CHAT_FROM_FILTER) ? fromFilter.Text : null;
+          var text = (textFilter.Text.Length != 0 && textFilter.Text != Resource.CHAT_TEXT_FILTER) ? textFilter.Text : null;
+          var to = (toFilter.Text.Length != 0 && toFilter.Text != Resource.CHAT_TO_FILTER) ? toFilter.Text : null;
+          var from = (fromFilter.Text.Length != 0 && fromFilter.Text != Resource.CHAT_FROM_FILTER) ? fromFilter.Text : null;
           var startDateValue = GetStartDate();
           var endDateValue = GetEndDate();
           if (force || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from ||
@@ -393,7 +393,7 @@ namespace EQLogParser
           }
         }
 
-        UIElementUtil.SetComboBoxTitle(channels, count, EQLogParser.Resource.CHANNELS_SELECTED, true);
+        UIElementUtil.SetComboBoxTitle(channels, count, Resource.CHANNELS_SELECTED, true);
       }
 
       if (Ready)

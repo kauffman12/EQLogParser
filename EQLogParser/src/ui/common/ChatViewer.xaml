@@ -43,7 +43,7 @@
       <Button Margin="0,0,8,2" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Refresh</Button>
     </StackPanel>
     <syncfusion:EditControl x:Name="chatBox" Grid.Row="1" HorizontalAlignment="Stretch" BorderThickness="0" FontFamily="{DynamicResource EQChatFontFamily}" FontSize="{DynamicResource EQChatFontSize}" Margin="0,0,0,15" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
-      ShowOutlining="Hidden" DocumentLanguage="Text" TextChanged="ChatTextChanged" PreviewKeyDown="ChatPreviewKeyDown" PreviewMouseWheel="ChatMouseWheel" ScrollViewer.ScrollChanged="ChatScrollChanged" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      DocumentLanguage="Text" TextChanged="ChatTextChanged" PreviewKeyDown="ChatPreviewKeyDown" PreviewMouseWheel="ChatMouseWheel" ScrollViewer.ScrollChanged="ChatScrollChanged" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
       <syncfusion:EditControl.ContextMenu>
         <ContextMenu>
           <MenuItem Command="Copy" />

@@ -118,7 +118,7 @@ namespace EQLogParser
           var playerColumns = new List<GridColumn>();
           foreach (var name in totalCountMap.Keys)
           {
-            double playerTotal = totalCountMap.ContainsKey(name) ? totalCountMap[name] : 0;
+            double playerTotal = totalCountMap.TryGetValue(name, out var value) ? value : 0;
             var header = GetHeaderValue(name, playerTotal, totalCasts);
             var playerCol = new GridTextColumn
             {
@@ -327,10 +327,7 @@ namespace EQLogParser
 
           foreach (var spellData in data.TheSpellData.UniqueSpells.Keys)
           {
-            if (!TheSpellCounts.UniqueSpells.ContainsKey(spellData))
-            {
-              TheSpellCounts.UniqueSpells[spellData] = data.TheSpellData.UniqueSpells[spellData];
-            }
+            TheSpellCounts.UniqueSpells.TryAdd(spellData, data.TheSpellData.UniqueSpells[spellData]);
           }
 
           UpdateOptions(true);
@@ -338,7 +335,7 @@ namespace EQLogParser
       }
       catch (Exception ex)
       {
-        new MessageWindow("Problem Importing Spell Counts Data. Check Error Log for details.", EQLogParser.Resource.EXPORT_ERROR).ShowDialog();
+        new MessageWindow("Problem Importing Spell Counts Data. Check Error Log for details.", Resource.EXPORT_ERROR).ShowDialog();
         LOG.Error(ex);
       }
     }
@@ -366,7 +363,7 @@ namespace EQLogParser
       }
       catch (Exception ex)
       {
-        new MessageWindow("Problem Exporting Spell Counts Data. Check Error Log for details.", EQLogParser.Resource.EXPORT_ERROR).ShowDialog();
+        new MessageWindow("Problem Exporting Spell Counts Data. Check Error Log for details.", Resource.EXPORT_ERROR).ShowDialog();
         LOG.Error(ex);
       }
     }
@@ -417,7 +414,7 @@ namespace EQLogParser
         {
           if (selected is IDictionary<string, object> spr)
           {
-            HiddenSpells[spr["Spell"] as string] = 1;
+            HiddenSpells[spr["Spell"] as string ?? string.Empty] = 1;
             dataGrid.View.Remove(spr);
             UpdateCounts();
           }
@@ -462,9 +459,9 @@ namespace EQLogParser
         {
           col.HeaderText = GetHeaderValue("Total", total, total);
         }
-        else if (counts.ContainsKey(col.MappingName))
+        else if (counts.TryGetValue(col.MappingName, out var count))
         {
-          col.HeaderText = GetHeaderValue(col.MappingName, counts[col.MappingName], total);
+          col.HeaderText = GetHeaderValue(col.MappingName, count, total);
           playerColumns.Add(col);
         }
       }

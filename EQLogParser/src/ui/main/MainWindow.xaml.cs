@@ -59,10 +59,10 @@ namespace EQLogParser
     private readonly NpcDamageManager NpcDamageManager = new NpcDamageManager();
     private DocumentTabControl ChartTab = null;
     private LogReader EQLogReader = null;
-    private List<bool> LogWindows = new List<bool>();
+    private readonly List<bool> LogWindows = new List<bool>();
     private bool DoneLoading = false;
 
-    private List<string> RecentFiles = new List<string>();
+    private readonly List<string> RecentFiles = new List<string>();
 
     public MainWindow()
     {
@@ -372,9 +372,9 @@ namespace EQLogParser
     private void HandleChartUpdate(string key, DataPointEvent e)
     {
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
-      if (opened.ContainsKey(key))
+      if (opened.TryGetValue(key, out var value))
       {
-        (opened[key].Content as LineChart)?.HandleUpdateEvent(e);
+        (value.Content as LineChart)?.HandleUpdateEvent(e);
       }
     }
 
@@ -388,7 +388,7 @@ namespace EQLogParser
 
         item.Click += (object sender, RoutedEventArgs e) =>
         {
-          var msgDialog = new MessageWindow($"Clear Chat Archive for {player}?", EQLogParser.Resource.CLEAR_CHAT,
+          var msgDialog = new MessageWindow($"Clear Chat Archive for {player}?", Resource.CLEAR_CHAT,
             MessageWindow.IconType.Warn, "Yes");
           msgDialog.ShowDialog();
 
@@ -470,7 +470,7 @@ namespace EQLogParser
       }
       else
       {
-        new MessageWindow("No Summary Views are Open. Nothing to Save.", EQLogParser.Resource.FILEMENU_EXPORT_SUMMARY).ShowDialog();
+        new MessageWindow("No Summary Views are Open. Nothing to Save.", Resource.FILEMENU_EXPORT_SUMMARY).ShowDialog();
       }
     }
 
@@ -480,7 +480,7 @@ namespace EQLogParser
 
       if (string.IsNullOrEmpty(CurrentLogFile))
       {
-        new MessageWindow("No Log File Opened. Nothing to Save.", EQLogParser.Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
+        new MessageWindow("No Log File Opened. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
       }
       else if (filtered.Count > 0)
       {
@@ -488,7 +488,7 @@ namespace EQLogParser
       }
       else
       {
-        new MessageWindow("No Fights Selected. Nothing to Save.", EQLogParser.Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
+        new MessageWindow("No Fights Selected. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
       }
     }
 
@@ -906,7 +906,7 @@ namespace EQLogParser
 
         if (!string.IsNullOrEmpty(fileName) && !File.Exists(fileName))
         {
-          new MessageWindow("Log File No Longer Exists!", EQLogParser.Resource.FILEMENU_OPEN_LOG).ShowDialog();
+          new MessageWindow("Log File No Longer Exists!", Resource.FILEMENU_OPEN_LOG).ShowDialog();
           return;
         }
 
@@ -1022,7 +1022,7 @@ namespace EQLogParser
           {
             LOG.Info("Selected Log File: " + theFile);
 
-            var file = System.IO.Path.GetFileName(theFile);
+            var file = Path.GetFileName(theFile);
             var matches = ParseFileName.Matches(file);
             if (matches.Count == 1)
             {

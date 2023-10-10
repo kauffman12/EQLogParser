@@ -50,7 +50,7 @@ namespace EQLogParser
         }
       };
 
-      customParseTitle.Text = EQLogParser.Resource.CUSTOM_PARSE_TITLE;
+      customParseTitle.Text = Resource.CUSTOM_PARSE_TITLE;
       customParseTitle.FontStyle = FontStyles.Italic;
       parseList.Focus();
       initialized = true;
@@ -169,22 +169,22 @@ namespace EQLogParser
 
     private void PlayerParseTextBoxTextChanged(object sender, TextChangedEventArgs e)
     {
-      if (string.IsNullOrEmpty(playerParseTextBox.Text) || playerParseTextBox.Text == EQLogParser.Resource.SHARE_DPS_SELECTED)
+      if (string.IsNullOrEmpty(playerParseTextBox.Text) || playerParseTextBox.Text == Resource.SHARE_DPS_SELECTED)
       {
-        sharePlayerParseLabel.Text = EQLogParser.Resource.SHARE_DPS_SELECTED;
+        sharePlayerParseLabel.Text = Resource.SHARE_DPS_SELECTED;
         sharePlayerParseLabel.SetResourceReference(TextBlock.ForegroundProperty, "ContentForeground");
         sharePlayerParseWarningLabel.Text = string.Format(CultureInfo.CurrentCulture, "{0}/{1}", playerParseTextBox.Text.Length, 509);
         sharePlayerParseWarningLabel.Visibility = Visibility.Hidden;
       }
       else if (playerParseTextBox.Text.Length > 509)
       {
-        sharePlayerParseLabel.Text = EQLogParser.Resource.SHARE_DPS_TOO_BIG;
+        sharePlayerParseLabel.Text = Resource.SHARE_DPS_TOO_BIG;
         sharePlayerParseLabel.SetResourceReference(TextBlock.ForegroundProperty, "EQWarnForegroundBrush");
         sharePlayerParseWarningLabel.Text = string.Format("{0}/{1}", playerParseTextBox.Text.Length, 509);
         sharePlayerParseWarningLabel.SetResourceReference(TextBlock.ForegroundProperty, "EQWarnForegroundBrush");
         sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
       }
-      else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != EQLogParser.Resource.SHARE_DPS_SELECTED)
+      else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != Resource.SHARE_DPS_SELECTED)
       {
         if (parseList.SelectedItem != null && Parses.TryGetValue(parseList.SelectedItem as string, out var data))
         {
@@ -237,7 +237,7 @@ namespace EQLogParser
 
     private void CustomTitleGotFocus(object sender, RoutedEventArgs e)
     {
-      if (customParseTitle.Text == EQLogParser.Resource.CUSTOM_PARSE_TITLE)
+      if (customParseTitle.Text == Resource.CUSTOM_PARSE_TITLE)
       {
         customParseTitle.Text = "";
         customParseTitle.FontStyle = FontStyles.Normal;
@@ -248,7 +248,7 @@ namespace EQLogParser
     {
       if (customParseTitle.Text.Length == 0)
       {
-        customParseTitle.Text = EQLogParser.Resource.CUSTOM_PARSE_TITLE;
+        customParseTitle.Text = Resource.CUSTOM_PARSE_TITLE;
         customParseTitle.FontStyle = FontStyles.Italic;
       }
     }
@@ -257,7 +257,7 @@ namespace EQLogParser
     {
       if (e.Key == Key.Escape)
       {
-        customParseTitle.Text = EQLogParser.Resource.CUSTOM_PARSE_TITLE;
+        customParseTitle.Text = Resource.CUSTOM_PARSE_TITLE;
         customParseTitle.FontStyle = FontStyles.Italic;
         parseList.Focus();
       }

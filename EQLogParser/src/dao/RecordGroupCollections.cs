@@ -5,7 +5,7 @@ namespace EQLogParser
 {
   internal class DamageGroupCollection : RecordGroupCollection
   {
-    private DamageValidator DamageValidator = new DamageValidator();
+    private readonly DamageValidator DamageValidator = new DamageValidator();
 
     internal DamageGroupCollection(List<List<ActionGroup>> recordGroups) : base(recordGroups)
     {

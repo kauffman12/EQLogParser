@@ -218,17 +218,16 @@ namespace EQLogParser
 
           if (!string.IsNullOrEmpty(healer) && heal != uint.MaxValue && healer.Length <= 64)
           {
-            record = new HealRecord()
+            record = new HealRecord
             {
               Total = heal,
               OverTotal = overHeal,
               Healer = string.Intern(healer),
               Healed = string.Intern(healed),
               Type = string.Intern(type),
-              ModifiersMask = -1
+              ModifiersMask = -1,
+              SubType = string.IsNullOrEmpty(spell) ? Labels.SELFHEAL : string.Intern(spell)
             };
-
-            record.SubType = string.IsNullOrEmpty(spell) ? Labels.SELFHEAL : string.Intern(spell);
 
             if (part[part.Length - 1] == ')')
             {

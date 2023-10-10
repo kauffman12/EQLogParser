@@ -56,7 +56,7 @@ namespace EQLogParser
             dispatcher.InvokeAsync(() =>
             {
               var msg = new MessageWindow("Version " + matches.Groups[1].Value + " is Available. Download and Install?",
-                EQLogParser.Resource.CHECK_VERSION, MessageWindow.IconType.Question, "Yes");
+                Resource.CHECK_VERSION, MessageWindow.IconType.Question, "Yes");
               msg.ShowDialog();
 
               if (msg.IsYes1Clicked)
@@ -68,46 +68,44 @@ namespace EQLogParser
                 try
                 {
                   client = new HttpClient();
-                  using (var download = client.GetStreamAsync(url))
+                  using var download = client.GetStreamAsync(url);
+                  download.Wait();
+
+                  var path = Environment.ExpandEnvironmentVariables("%userprofile%\\Downloads");
+                  if (!Directory.Exists(path))
                   {
-                    download.Wait();
+                    new MessageWindow("Unable to Access Downloads Folder. Can Not Download Update.",
+                      Resource.CHECK_VERSION).ShowDialog();
+                    return;
+                  }
 
-                    var path = System.Environment.ExpandEnvironmentVariables("%userprofile%\\Downloads");
-                    if (!Directory.Exists(path))
-                    {
-                      new MessageWindow("Unable to Access Downloads Folder. Can Not Download Update.",
-                        EQLogParser.Resource.CHECK_VERSION).ShowDialog();
-                      return;
-                    }
+                  path = path + "\\AutoUpdateEQLogParser";
+                  if (!Directory.Exists(path))
+                  {
+                    Directory.CreateDirectory(path);
+                  }
 
-                    path = path + "\\AutoUpdateEQLogParser";
-                    if (!Directory.Exists(path))
-                    {
-                      Directory.CreateDirectory(path);
-                    }
+                  var fullPath = path + "\\EQLogParser-" + matches.Groups[1].Value + ".msi";
+                  using (var fs = new FileStream(fullPath, FileMode.Create))
+                  {
+                    download.Result.CopyTo(fs);
+                  }
 
-                    var fullPath = path + "\\EQLogParser-" + matches.Groups[1].Value + ".msi";
-                    using (var fs = new FileStream(fullPath, FileMode.Create))
+                  if (File.Exists(fullPath))
+                  {
+                    var process = Process.Start("msiexec", "/i \"" + fullPath + "\"");
+                    if (!process.HasExited)
                     {
-                      download.Result.CopyTo(fs);
-                    }
-
-                    if (File.Exists(fullPath))
-                    {
-                      var process = Process.Start("msiexec", "/i \"" + fullPath + "\"");
-                      if (!process.HasExited)
+                      Task.Delay(1000).ContinueWith(task =>
                       {
-                        Task.Delay(1000).ContinueWith(task =>
-                        {
-                          dispatcher.InvokeAsync(() => Application.Current.MainWindow.Close());
-                        });
-                      }
+                        dispatcher.InvokeAsync(() => Application.Current.MainWindow.Close());
+                      });
                     }
                   }
                 }
                 catch (Exception ex2)
                 {
-                  new MessageWindow("Problem Install Updates. Check Error Log for Details.", EQLogParser.Resource.CHECK_VERSION).ShowDialog();
+                  new MessageWindow("Problem Install Updates. Check Error Log for Details.", Resource.CHECK_VERSION).ShowDialog();
                   LOG.Error("Error Installing Updates", ex2);
                 }
                 finally
@@ -137,7 +135,7 @@ namespace EQLogParser
     {
       try
       {
-        var path = System.Environment.ExpandEnvironmentVariables("%userprofile%\\Downloads");
+        var path = Environment.ExpandEnvironmentVariables("%userprofile%\\Downloads");
         if (!Directory.Exists(path))
         {
           return;
@@ -201,7 +199,7 @@ namespace EQLogParser
           Visibility = (size == currentSize) ? Visibility.Visible : Visibility.Hidden
         };
 
-        var menuItem = new MenuItem { Header = size.ToString() + "pt", Tag = size };
+        var menuItem = new MenuItem { Header = size + "pt", Tag = size };
         menuItem.Click += handler;
         menuItem.Icon = imageAwesome;
         return menuItem;
@@ -264,15 +262,17 @@ namespace EQLogParser
 
       if (theme == "MaterialLight")
       {
-        var themeSettings = new MaterialLightThemeSettings();
-        themeSettings.PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF343434") };
-        themeSettings.FontFamily = new FontFamily(MainWindow.CurrentFontFamily);
-        themeSettings.BodyAltFontSize = MainWindow.CurrentFontSize - 2;
-        themeSettings.BodyFontSize = MainWindow.CurrentFontSize;
-        themeSettings.HeaderFontSize = MainWindow.CurrentFontSize + 4;
-        themeSettings.SubHeaderFontSize = MainWindow.CurrentFontSize + 2;
-        themeSettings.SubTitleFontSize = MainWindow.CurrentFontSize;
-        themeSettings.TitleFontSize = MainWindow.CurrentFontSize + 2;
+        var themeSettings = new MaterialLightThemeSettings
+        {
+          PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF343434") },
+          FontFamily = new FontFamily(MainWindow.CurrentFontFamily),
+          BodyAltFontSize = MainWindow.CurrentFontSize - 2,
+          BodyFontSize = MainWindow.CurrentFontSize,
+          HeaderFontSize = MainWindow.CurrentFontSize + 4,
+          SubHeaderFontSize = MainWindow.CurrentFontSize + 2,
+          SubTitleFontSize = MainWindow.CurrentFontSize,
+          TitleFontSize = MainWindow.CurrentFontSize + 2
+        };
         SfSkinManager.RegisterThemeSettings("MaterialLight", themeSettings);
         Application.Current.Resources["EQGoodForegroundBrush"] = new SolidColorBrush { Color = Colors.DarkGreen };
         Application.Current.Resources["EQMenuIconBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF3d7baf") };
@@ -294,15 +294,17 @@ namespace EQLogParser
       }
       else
       {
-        var themeSettings = new MaterialDarkCustomThemeSettings();
-        themeSettings.PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFE1E1E1") };
-        themeSettings.FontFamily = new FontFamily(MainWindow.CurrentFontFamily);
-        themeSettings.BodyAltFontSize = MainWindow.CurrentFontSize - 2;
-        themeSettings.BodyFontSize = MainWindow.CurrentFontSize;
-        themeSettings.HeaderFontSize = MainWindow.CurrentFontSize + 4;
-        themeSettings.SubHeaderFontSize = MainWindow.CurrentFontSize + 2;
-        themeSettings.SubTitleFontSize = MainWindow.CurrentFontSize;
-        themeSettings.TitleFontSize = MainWindow.CurrentFontSize + 2;
+        var themeSettings = new MaterialDarkCustomThemeSettings
+        {
+          PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFE1E1E1") },
+          FontFamily = new FontFamily(MainWindow.CurrentFontFamily),
+          BodyAltFontSize = MainWindow.CurrentFontSize - 2,
+          BodyFontSize = MainWindow.CurrentFontSize,
+          HeaderFontSize = MainWindow.CurrentFontSize + 4,
+          SubHeaderFontSize = MainWindow.CurrentFontSize + 2,
+          SubTitleFontSize = MainWindow.CurrentFontSize,
+          TitleFontSize = MainWindow.CurrentFontSize + 2
+        };
         SfSkinManager.RegisterThemeSettings("MaterialDarkCustom", themeSettings);
 
         Application.Current.Resources["EQGoodForegroundBrush"] = new SolidColorBrush { Color = Colors.LightGreen };
@@ -514,7 +516,7 @@ namespace EQLogParser
 
       if (saveFileDialog.ShowDialog().Value)
       {
-        var dialog = new MessageWindow("Saving " + fights.Count + " Selected Fights.", EQLogParser.Resource.FILEMENU_SAVE_FIGHTS,
+        var dialog = new MessageWindow("Saving " + fights.Count + " Selected Fights.", Resource.FILEMENU_SAVE_FIGHTS,
           MessageWindow.IconType.Save);
 
         Task.Delay(150).ContinueWith(task =>
@@ -533,27 +535,25 @@ namespace EQLogParser
 
               if (range.TimeSegments.Count > 0)
               {
-                using (var f = File.OpenRead(MainWindow.CurrentLogFile))
+                using var f = File.OpenRead(MainWindow.CurrentLogFile);
+                var s = Helpers.GetStreamReader(f, range.TimeSegments[0].BeginTime);
+                while (!s.EndOfStream)
                 {
-                  var s = Helpers.GetStreamReader(f, range.TimeSegments[0].BeginTime);
-                  while (!s.EndOfStream)
+                  var line = s.ReadLine();
+                  if (!string.IsNullOrEmpty(line) && line.Length > MainWindow.ACTION_INDEX)
                   {
-                    var line = s.ReadLine();
-                    if (!string.IsNullOrEmpty(line) && line.Length > MainWindow.ACTION_INDEX)
+                    var action = line.Substring(MainWindow.ACTION_INDEX);
+                    if (ChatLineParser.ParseChatType(action) == null)
                     {
-                      var action = line.Substring(MainWindow.ACTION_INDEX);
-                      if (ChatLineParser.ParseChatType(action) == null)
+                      if (TimeRange.TimeCheck(line, range.TimeSegments[0].BeginTime, range, out var exceeds))
                       {
-                        if (TimeRange.TimeCheck(line, range.TimeSegments[0].BeginTime, range, out var exceeds))
-                        {
-                          os.Write(Encoding.UTF8.GetBytes(line));
-                          os.Write(Encoding.UTF8.GetBytes(Environment.NewLine));
-                        }
+                        os.Write(Encoding.UTF8.GetBytes(line));
+                        os.Write(Encoding.UTF8.GetBytes(Environment.NewLine));
+                      }
 
-                        if (exceeds)
-                        {
-                          break;
-                        }
+                      if (exceeds)
+                      {
+                        break;
                       }
                     }
                   }
@@ -588,7 +588,7 @@ namespace EQLogParser
             {
               Application.Current.Dispatcher.InvokeAsync(() =>
               {
-                new MessageWindow("Error Saving. Can not access save file.", EQLogParser.Resource.FILEMENU_SAVE_FIGHTS, MessageWindow.IconType.Save).Show();
+                new MessageWindow("Error Saving. Can not access save file.", Resource.FILEMENU_SAVE_FIGHTS, MessageWindow.IconType.Save).Show();
               });
             }
           }
@@ -602,8 +602,10 @@ namespace EQLogParser
     {
       try
       {
-        var saveFileDialog = new SaveFileDialog();
-        saveFileDialog.Filter = "HTML Files (*.html)|*.html";
+        var saveFileDialog = new SaveFileDialog
+        {
+          Filter = "HTML Files (*.html)|*.html"
+        };
         var fileName = DateUtil.GetCurrentDate("MM-dd-yy") + " ";
 
         if (tables.Values.FirstOrDefault() is SummaryTable summary)

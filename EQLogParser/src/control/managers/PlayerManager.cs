@@ -67,7 +67,7 @@ namespace EQLogParser
       // populate ClassNames from SpellClass enum and resource table
       foreach (var item in Enum.GetValues(typeof(SpellClass)))
       {
-        var name = EQLogParser.Resource.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), item), CultureInfo.CurrentCulture);
+        var name = Resource.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), item) ?? string.Empty, CultureInfo.CurrentCulture);
         ClassNames[(SpellClass)item] = name;
         ClassesByName[name] = (SpellClass)item;
       }
@@ -539,7 +539,7 @@ namespace EQLogParser
             counter.ClassCounts[theClass] = long.MaxValue;
             counter.CurrentMax = long.MaxValue;
             EventsUpdatePlayerClass?.Invoke(player, ClassNames[theClass]);
-            LOG.Debug("Assigning " + player + " as " + theClass.ToString() + ". " + reason);
+            LOG.Debug("Assigning " + player + " as " + theClass + ". " + reason);
             PlayersUpdated = true;
           }
         }
@@ -584,7 +584,7 @@ namespace EQLogParser
                 counter.CurrentClass = theClass;
                 counter.Reason = "Class chosen based on " + cast.Spell + ".";
                 EventsUpdatePlayerClass?.Invoke(cast.Caster, ClassNames[theClass]);
-                LOG.Debug("Assigning " + cast.Caster + " as " + theClass.ToString() + " from " + cast.Spell);
+                LOG.Debug("Assigning " + cast.Caster + " as " + theClass + " from " + cast.Spell);
                 PlayersUpdated = true;
               }
             }
@@ -674,7 +674,7 @@ namespace EQLogParser
     {
       internal long CurrentMax { get; set; }
       internal SpellClass CurrentClass { get; set; }
-      internal Dictionary<SpellClass, long> ClassCounts { get; set; }
+      internal Dictionary<SpellClass, long> ClassCounts { get; init; }
       internal string Reason { get; set; } = "";
     }
   }

@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 
@@ -60,7 +61,7 @@ namespace EQLogParser
           ValidatesOnDataErrors = true
         };
 
-        BindingOperations.SetBinding(TheCheckBox, CheckBox.IsCheckedProperty, binding);
+        BindingOperations.SetBinding(TheCheckBox, ToggleButton.IsCheckedProperty, binding);
       }
     }
 

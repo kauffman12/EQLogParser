@@ -46,7 +46,7 @@ namespace EQLogParser
       if (dataGrid?.SelectedItem is TriggerCharacter character)
       {
         var msgDialog = new MessageWindow($"Are you sure? {character.Name} will be Deleted!",
-          EQLogParser.Resource.TRIGGER_CHARACTER_DELETE, MessageWindow.IconType.Warn, "Yes");
+          Resource.TRIGGER_CHARACTER_DELETE, MessageWindow.IconType.Warn, "Yes");
         msgDialog.ShowDialog();
         if (msgDialog.IsYes1Clicked)
         {

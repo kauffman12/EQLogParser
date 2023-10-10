@@ -36,7 +36,7 @@ namespace EQLogParser
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = DET_SPELLS_TYPE });
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = RECEIVED_SPELLS_TYPE });
       selectedOptions.ItemsSource = list;
-      UIElementUtil.SetComboBoxTitle(selectedOptions, list.Sum(item => item.IsChecked ? 1 : 0), EQLogParser.Resource.SPELL_TYPES_SELECTED);
+      UIElementUtil.SetComboBoxTitle(selectedOptions, list.Sum(item => item.IsChecked ? 1 : 0), Resource.SPELL_TYPES_SELECTED);
 
       list = new List<ComboBoxItemDetails>();
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = SELF_SPELLS_TYPE });
@@ -100,7 +100,7 @@ namespace EQLogParser
         }
       }
 
-      UIElementUtil.SetComboBoxTitle(selected, count, EQLogParser.Resource.SPELL_TYPES_SELECTED);
+      UIElementUtil.SetComboBoxTitle(selected, count, Resource.SPELL_TYPES_SELECTED);
       return changed;
     }
 

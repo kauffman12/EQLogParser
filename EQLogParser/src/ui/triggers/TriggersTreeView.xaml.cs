@@ -446,7 +446,7 @@ namespace EQLogParser
     private void TriggerItemContextMenuOpening(object sender, ItemContextMenuOpeningEventArgs e)
     {
       var node = triggerTreeView.SelectedItem as TriggerTreeViewNode;
-      var count = (triggerTreeView.SelectedItems != null) ? triggerTreeView.SelectedItems.Count : 0;
+      var count = triggerTreeView.SelectedItems?.Count ?? 0;
 
 
       if (node != null)
@@ -470,7 +470,7 @@ namespace EQLogParser
         pasteTriggerItem.IsEnabled = false;
       }
 
-      importTriggerMenuItem.Header = importTriggerMenuItem.IsEnabled ? $"Import to Folder ({node.Content.ToString()})" : "Import";
+      importTriggerMenuItem.Header = importTriggerMenuItem.IsEnabled ? $"Import to Folder ({node.Content})" : "Import";
 
       if (setPriorityMenuItem.IsEnabled)
       {
@@ -485,13 +485,13 @@ namespace EQLogParser
         if (i == 1)
         {
           var icon = new FontAwesome5.ImageAwesome { Icon = FontAwesome5.EFontAwesomeIcon.Solid_ArrowUp };
-          icon.SetResourceReference(FontAwesome5.ImageAwesome.StyleProperty, "EQIconStyle");
+          icon.SetResourceReference(StyleProperty, "EQIconStyle");
           menuItem.Icon = icon;
         }
         else if (i == 5)
         {
           var icon = new FontAwesome5.ImageAwesome { Icon = FontAwesome5.EFontAwesomeIcon.Solid_ArrowDown };
-          icon.SetResourceReference(FontAwesome5.ImageAwesome.StyleProperty, "EQIconStyle");
+          icon.SetResourceReference(StyleProperty, "EQIconStyle");
           menuItem.Icon = icon;
         }
 
@@ -538,7 +538,7 @@ namespace EQLogParser
     private void OverlayItemContextMenuOpening(object sender, ItemContextMenuOpeningEventArgs e)
     {
       var node = overlayTreeView.SelectedItem as TriggerTreeViewNode;
-      var count = (overlayTreeView.SelectedItems != null) ? overlayTreeView.SelectedItems.Count : 0;
+      var count = overlayTreeView.SelectedItems?.Count ?? 0;
 
 
       if (node != null)
@@ -559,7 +559,7 @@ namespace EQLogParser
         pasteOverlayItem.IsEnabled = false;
       }
 
-      importOverlayMenuItem.Header = importOverlayMenuItem.IsEnabled ? $"Import to Folder ({node.Content.ToString()})" : "Import";
+      importOverlayMenuItem.Header = importOverlayMenuItem.IsEnabled ? $"Import to Folder ({node.Content})" : "Import";
     }
 
     private void SetPriorityClick(object sender, RoutedEventArgs e)
@@ -575,7 +575,7 @@ namespace EQLogParser
         else
         {
           var msgDialog = new MessageWindow($"Are you sure? This will Set Priority {newPriority} to all selected\nTriggers and those in all sub folders.",
-            EQLogParser.Resource.ASSIGN_PRIORITY, MessageWindow.IconType.Warn, "Yes");
+            Resource.ASSIGN_PRIORITY, MessageWindow.IconType.Warn, "Yes");
           msgDialog.ShowDialog();
           if (msgDialog.IsYes1Clicked)
           {
@@ -618,7 +618,7 @@ namespace EQLogParser
           {
             var action = remove ? "Remove" : "Add";
             var msgDialog = new MessageWindow($"Are you sure? This will {action} {name} from all selected\nTriggers and those in all sub folders.",
-              EQLogParser.Resource.ASSIGN_OVERLAY, MessageWindow.IconType.Warn, "Yes");
+              Resource.ASSIGN_OVERLAY, MessageWindow.IconType.Warn, "Yes");
             msgDialog.ShowDialog();
             if (msgDialog.IsYes1Clicked)
             {

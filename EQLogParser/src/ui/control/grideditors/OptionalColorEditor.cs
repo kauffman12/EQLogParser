@@ -61,7 +61,7 @@ namespace EQLogParser
       TheColorPicker = new ColorPicker
       {
         EnableSolidToGradientSwitch = false,
-        BorderThickness = new System.Windows.Thickness(0, 0, 0, 0),
+        BorderThickness = new Thickness(0, 0, 0, 0),
         Visibility = Visibility.Collapsed
       };
 

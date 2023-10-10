@@ -24,7 +24,7 @@ namespace EQLogParser
         ValidatesOnDataErrors = true
       };
 
-      BindingOperations.SetBinding(TheComboBox, ComboBox.ItemsSourceProperty, binding);
+      BindingOperations.SetBinding(TheComboBox, ItemsControl.ItemsSourceProperty, binding);
     }
 
     public override object Create(PropertyInfo propertyInfo) => Create();
@@ -44,7 +44,7 @@ namespace EQLogParser
       return comboBox;
     }
 
-    private void TheComboBoxDataContextChanged(object sender, System.Windows.DependencyPropertyChangedEventArgs e) => UpdateTitle(sender);
+    private void TheComboBoxDataContextChanged(object sender, DependencyPropertyChangedEventArgs e) => UpdateTitle(sender);
     private void TheComboBoxDropDownClosed(object sender, System.EventArgs e) => UpdateTitle(sender, true);
 
     private void UpdateTitle(object sender, bool save = false)

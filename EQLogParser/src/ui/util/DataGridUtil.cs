@@ -23,7 +23,7 @@ namespace EQLogParser
     internal static Style CreateHighlightForegroundStyle(string name, IValueConverter converter = null)
     {
       var style = new Style(typeof(GridCell));
-      style.Setters.Add(new Setter(GridCell.ForegroundProperty, new Binding(name) { Converter = converter }));
+      style.Setters.Add(new Setter(Control.ForegroundProperty, new Binding(name) { Converter = converter }));
       style.BasedOn = Application.Current.Resources["SyncfusionGridCellStyle"] as Style;
       return style;
     }
@@ -184,7 +184,7 @@ namespace EQLogParser
 
           if (needHeightChange || needWidthChange)
           {
-            dialog = new MessageWindow("Please Wait while Image is Processed.", EQLogParser.Resource.COPY_LARGE_IMAGE);
+            dialog = new MessageWindow("Please Wait while Image is Processed.", Resource.COPY_LARGE_IMAGE);
             dialog.Show();
 
             gridBase.Dispatcher.InvokeAsync(() =>
@@ -359,7 +359,7 @@ namespace EQLogParser
 
     internal static void RefreshTableColumns(SfGridBase gridBase)
     {
-      DataGridUtil.UpdateTableMargin(gridBase);
+      UpdateTableMargin(gridBase);
 
       try
       {
@@ -484,7 +484,7 @@ namespace EQLogParser
       ConfigUtil.RemoveSetting("ReceivedHealingBreakdownColumnsDisplayIndex");
       ConfigUtil.RemoveSetting("TankingBreakdownColumnsDisplayIndex");
       ConfigUtil.Save();
-      new MessageWindow("Need to Re-Open Summary/Breakdown Windows.", EQLogParser.Resource.RESTORE_TABLE_COLUMNS).ShowDialog();
+      new MessageWindow("Need to Re-Open Summary/Breakdown Windows.", Resource.RESTORE_TABLE_COLUMNS).ShowDialog();
     }
 
     internal static void LoadColumns(ComboBox columnCombo, dynamic gridBase)
@@ -577,7 +577,7 @@ namespace EQLogParser
       }
 
       columnCombo.ItemsSource = list;
-      UIElementUtil.SetComboBoxTitle(columnCombo, selectedCount, EQLogParser.Resource.COLUMNS_SELECTED);
+      UIElementUtil.SetComboBoxTitle(columnCombo, selectedCount, Resource.COLUMNS_SELECTED);
     }
 
     private static dynamic SetColumns(ComboBox columnCombo, SfDataGrid dataGrid, dynamic updated)
@@ -653,7 +653,7 @@ namespace EQLogParser
           }
         }
 
-        UIElementUtil.SetComboBoxTitle(columnCombo, visible.Count, EQLogParser.Resource.COLUMNS_SELECTED);
+        UIElementUtil.SetComboBoxTitle(columnCombo, visible.Count, Resource.COLUMNS_SELECTED);
 
         if (gridBase is SfDataGrid)
         {
