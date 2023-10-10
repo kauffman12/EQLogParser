@@ -259,7 +259,7 @@ namespace EQLogParser
         {
           Running = true;
           ArchiveTimer?.Dispose();
-          ArchiveTimer = new Timer(new TimerCallback(ArchiveChat));
+          ArchiveTimer = new Timer(ArchiveChat);
           ArchiveTimer.Change(TIMEOUT, Timeout.Infinite);
         }
       }
@@ -316,7 +316,7 @@ namespace EQLogParser
           if (ChatTypes.Count > 0)
           {
             ArchiveTimer?.Dispose();
-            ArchiveTimer = new Timer(new TimerCallback(ArchiveChat));
+            ArchiveTimer = new Timer(ArchiveChat);
             ArchiveTimer.Change(0, Timeout.Infinite);
           }
           else
@@ -374,39 +374,37 @@ namespace EQLogParser
         var entry = CurrentArchive.Mode != ZipArchiveMode.Create ? CurrentArchive.GetEntry(CurrentEntryKey) : null;
         if (entry != null)
         {
-          using (var reader = new StreamReader(entry.Open()))
+          using var reader = new StreamReader(entry.Open());
+          var temp = new List<string>();
+          while (reader.BaseStream.CanRead && !reader.EndOfStream)
           {
-            var temp = new List<string>();
-            while (reader.BaseStream.CanRead && !reader.EndOfStream)
+            temp.Insert(0, reader.ReadLine()); // reverse
+          }
+
+          // this is so the date precision numbers are calculated in the same order
+          // as the new lines being added
+          var lastTime = double.NaN;
+          var increment = 0.0;
+          temp.ForEach(line =>
+          {
+            var beginTime = DateUtil.ParseDate(line);
+            if (lastTime == beginTime)
             {
-              temp.Insert(0, reader.ReadLine()); // reverse
+              increment += 0.001;
+            }
+            else
+            {
+              increment = 0.0;
             }
 
-            // this is so the date precision numbers are calculated in the same order
-            // as the new lines being added
-            var lastTime = double.NaN;
-            var increment = 0.0;
-            temp.ForEach(line =>
+            var existingLine = new ChatLine { Line = line, BeginTime = beginTime + increment };
+            if (existingLine != null)
             {
-              var beginTime = DateUtil.ParseDate(line);
-              if (lastTime == beginTime)
-              {
-                increment += 0.001;
-              }
-              else
-              {
-                increment = 0.0;
-              }
+              CurrentList.Insert(0, existingLine); // reverse back
+            }
 
-              var existingLine = new ChatLine { Line = line, BeginTime = beginTime + increment };
-              if (existingLine != null)
-              {
-                CurrentList.Insert(0, existingLine); // reverse back
-              }
-
-              lastTime = beginTime;
-            });
-          }
+            lastTime = beginTime;
+          });
         }
       }
 
@@ -442,19 +440,17 @@ namespace EQLogParser
           var indexEntry = CurrentArchive.GetEntry(INDEX);
           if (indexEntry != null)
           {
-            using (var reader = new StreamReader(indexEntry.Open()))
+            using var reader = new StreamReader(indexEntry.Open());
+            while (!reader.EndOfStream)
             {
-              while (!reader.EndOfStream)
+              var temp = reader.ReadLine().Split('|');
+              if (temp != null && temp.Length == 2)
               {
-                var temp = reader.ReadLine().Split('|');
-                if (temp != null && temp.Length == 2)
+                ChannelIndex[temp[0]] = new Dictionary<string, byte>();
+                foreach (var channel in temp[1].Split(','))
                 {
-                  ChannelIndex[temp[0]] = new Dictionary<string, byte>();
-                  foreach (var channel in temp[1].Split(','))
-                  {
-                    ChannelIndex[temp[0]][channel.ToLower()] = 1;
-                    UpdateChannelCache(channel); // incase main cache is out of sync with archive
-                  }
+                  ChannelIndex[temp[0]][channel.ToLower()] = 1;
+                  UpdateChannelCache(channel); // incase main cache is out of sync with archive
                 }
               }
             }
@@ -493,11 +489,9 @@ namespace EQLogParser
       if (indexList.Count > 0)
       {
         var indexEntry = GetEntry(INDEX);
-        using (var writer = new StreamWriter(indexEntry.Open()))
-        {
-          indexList.ForEach(item => writer.WriteLine(item));
-          writer.Close();
-        }
+        using var writer = new StreamWriter(indexEntry.Open());
+        indexList.ForEach(item => writer.WriteLine(item));
+        writer.Close();
       }
     }
 
@@ -540,11 +534,9 @@ namespace EQLogParser
         if (CurrentList.Count > 0 && CurrentListModified)
         {
           var entry = GetEntry(CurrentEntryKey);
-          using (var writer = new StreamWriter(entry.Open()))
-          {
-            CurrentList.ForEach(chatLine => writer.WriteLine(chatLine.Line));
-            writer.Close();
-          }
+          using var writer = new StreamWriter(entry.Open());
+          CurrentList.ForEach(chatLine => writer.WriteLine(chatLine.Line));
+          writer.Close();
         }
       }
 

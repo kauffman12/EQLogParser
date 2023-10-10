@@ -17,8 +17,8 @@ namespace EQLogParser
     private readonly string FileName;
     private int MinBack;
     private CancellationTokenSource Cts;
-    private ManualResetEvent NewDataAvailable = new ManualResetEvent(false);
-    private IDisposable LogProcessor;
+    private readonly ManualResetEvent NewDataAvailable = new ManualResetEvent(false);
+    private readonly IDisposable LogProcessor;
     private Task ReadFileTask;
     private long InitSize;
     private long CurrentPos;
@@ -33,7 +33,7 @@ namespace EQLogParser
       dynamic processor = logProcessor;
       processor.LinkTo(Lines);
 
-      FileWatcher = new FileSystemWatcher(Path.GetDirectoryName(fileName), Path.GetFileName(fileName))
+      FileWatcher = new FileSystemWatcher(Path.GetDirectoryName(fileName) ?? string.Empty, Path.GetFileName(fileName))
       {
         NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite
       };
@@ -102,7 +102,7 @@ namespace EQLogParser
       using (fs)
       using (reader)
       {
-        string line = null;
+        string line;
         string previous = null;
         var dateTime = DateTime.MinValue;
         double doubleValue = 0;
@@ -171,28 +171,26 @@ namespace EQLogParser
         var mid = (min + max) / 2;
         fs.Seek(mid, SeekOrigin.Begin);
 
-        using (var tempReader = new StreamReader(fs, Encoding.UTF8, true, 1024, leaveOpen: true))
+        using var tempReader = new StreamReader(fs, Encoding.UTF8, true, 1024, leaveOpen: true);
+        if (mid != 0)
         {
-          if (mid != 0)
-          {
-            // Discard partial line, if not at the start
-            tempReader.ReadLine();
-          }
+          // Discard partial line, if not at the start
+          tempReader.ReadLine();
+        }
 
-          var positionBeforeReadLine = fs.Position;
-          var line = tempReader.ReadLine();
-          if (line == null) break;
+        var positionBeforeReadLine = fs.Position;
+        var line = tempReader.ReadLine();
+        if (line == null) break;
 
-          var dateTime = DateUtil.ParseStandardDate(line);
-          if (dateTime >= minimumDate)
-          {
-            closestGreaterPosition = positionBeforeReadLine;
-            max = mid;
-          }
-          else
-          {
-            min = fs.Position;
-          }
+        var dateTime = DateUtil.ParseStandardDate(line);
+        if (dateTime >= minimumDate)
+        {
+          closestGreaterPosition = positionBeforeReadLine;
+          max = mid;
+        }
+        else
+        {
+          min = fs.Position;
         }
       }
 

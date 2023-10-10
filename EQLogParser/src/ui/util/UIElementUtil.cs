@@ -40,7 +40,7 @@ namespace EQLogParser
         var height = (int)content.ActualHeight + titleHeight + titlePadding;
         var width = (int)content.ActualWidth;
 
-        var dpiScale = UIElementUtil.GetDpi();
+        var dpiScale = GetDpi();
         var rtb = new RenderTargetBitmap(width, height + 20, dpiScale, dpiScale, PixelFormats.Pbgra32);
 
         var dv = new DrawingVisual();

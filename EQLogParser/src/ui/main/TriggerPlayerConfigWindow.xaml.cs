@@ -13,7 +13,7 @@ namespace EQLogParser
   {
     private const string NONAME = "Enter Character Name";
 
-    private TriggerCharacter TheCharacter;
+    private readonly TriggerCharacter TheCharacter;
 
     internal TriggerPlayerConfigWindow(TriggerCharacter character = null)
     {
@@ -46,7 +46,7 @@ namespace EQLogParser
       }
     }
 
-    private void NamePreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    private void NamePreviewKeyDown(object sender, KeyEventArgs e)
     {
       if (e.Key == Key.Escape)
       {

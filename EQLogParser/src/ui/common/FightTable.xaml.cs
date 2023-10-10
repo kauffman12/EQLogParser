@@ -53,7 +53,7 @@ namespace EQLogParser
 
       // fight search box
       fightSearchBox.FontStyle = FontStyles.Italic;
-      fightSearchBox.Text = EQLogParser.Resource.NPC_SEARCH_TEXT;
+      fightSearchBox.Text = Resource.NPC_SEARCH_TEXT;
 
       menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled =
         menuItemSetPet.IsEnabled = menuItemSetPlayer.IsEnabled = menuItemRefresh.IsEnabled = false;
@@ -145,7 +145,7 @@ namespace EQLogParser
 
     private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
     {
-      dataGrid.View.Filter = new Predicate<object>(item => !(CurrentShowBreaks == false && ((Fight)item).IsInactivity));
+      dataGrid.View.Filter = item => !(CurrentShowBreaks == false && ((Fight)item).IsInactivity);
     }
 
     private static void RemoveFight(ObservableCollection<Fight> fights, string name)
@@ -335,10 +335,10 @@ namespace EQLogParser
         IsInactivity = true,
         BeginTimeString = Fight.BREAKTIME,
         Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds),
-        TooltipText = "No Data During This Time"
+        TooltipText = "No Data During This Time",
+        SortId = CurrentSortId++
       };
 
-      divider.SortId = CurrentSortId++;
       list.Add(divider);
     }
 
@@ -429,7 +429,7 @@ namespace EQLogParser
 
     private void FightSearchBoxGotFocus(object sender, RoutedEventArgs e)
     {
-      if (fightSearchBox.Text == EQLogParser.Resource.NPC_SEARCH_TEXT)
+      if (fightSearchBox.Text == Resource.NPC_SEARCH_TEXT)
       {
         fightSearchBox.Text = "";
         fightSearchBox.FontStyle = FontStyles.Normal;
@@ -440,7 +440,7 @@ namespace EQLogParser
     {
       if (fightSearchBox.Text.Length == 0)
       {
-        fightSearchBox.Text = EQLogParser.Resource.NPC_SEARCH_TEXT;
+        fightSearchBox.Text = Resource.NPC_SEARCH_TEXT;
         fightSearchBox.FontStyle = FontStyles.Italic;
       }
     }
@@ -451,7 +451,7 @@ namespace EQLogParser
       {
         if (e.Key == Key.Escape)
         {
-          fightSearchBox.Text = EQLogParser.Resource.NPC_SEARCH_TEXT;
+          fightSearchBox.Text = Resource.NPC_SEARCH_TEXT;
           fightSearchBox.FontStyle = FontStyles.Italic;
           if (CurrentSearchEntry != null)
           {

@@ -389,7 +389,7 @@ namespace EQLogParser
           var damage = StatsUtil.ParseUInt(split[extraIndex + 1]);
           var spell = string.Join(" ", split, fromDamage + 3, stop - fromDamage - 3);
           var spellData = DataManager.Instance.GetDamagingSpellByName(spell);
-          resist = spellData != null ? spellData.Resist : SpellResist.UNDEFINED;
+          resist = spellData?.Resist ?? SpellResist.UNDEFINED;
           attacker = UpdateAttacker(attacker, spell);
           defender = UpdateDefender(defender);
           record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.BANE, spell);
@@ -507,7 +507,7 @@ namespace EQLogParser
 
           defender = string.Join(" ", split, 0, takenIndex);
           var damage = StatsUtil.ParseUInt(split[fromDamage - 1]);
-          resist = spellData != null ? spellData.Resist : SpellResist.UNDEFINED;
+          resist = spellData?.Resist ?? SpellResist.UNDEFINED;
           attacker = UpdateAttacker(attacker, spell);
           defender = UpdateDefender(defender);
           record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, type, spell);
@@ -981,8 +981,8 @@ namespace EQLogParser
 
     private class OldCritData
     {
-      internal string Attacker { get; set; }
-      internal LineData LineData { get; set; }
+      internal string Attacker { get; init; }
+      internal LineData LineData { get; init; }
     }
   }
 }

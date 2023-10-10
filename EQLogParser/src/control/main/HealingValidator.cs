@@ -4,8 +4,8 @@ namespace EQLogParser
 {
   internal class HealingValidator
   {
-    private bool AOEEnabled;
-    private bool SwarmPetsEnabled;
+    private readonly bool AOEEnabled;
+    private readonly bool SwarmPetsEnabled;
 
     public HealingValidator()
     {

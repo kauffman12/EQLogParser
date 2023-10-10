@@ -235,7 +235,7 @@ namespace EQLogParser
               copied.OverlayData.IsDefault = false;
             }
 
-            tree?.Insert(copied);
+            tree.Insert(copied);
           }
         }
       }
@@ -251,7 +251,7 @@ namespace EQLogParser
           var tree = DB.GetCollection<TriggerNode>(TREE_COL);
           foreach (var node in tree.FindAll().Where(n => n.TriggerData != null))
           {
-            if (node?.Id is string id && state.Enabled.TryGetValue(id, out var value) && value == true)
+            if (node.Id is string id && state.Enabled.TryGetValue(id, out var value) && value == true)
             {
               active.Add(new OTData { Id = node.Id, Name = node.Name, Trigger = node.TriggerData, OverlayData = node.OverlayData });
             }
@@ -685,7 +685,7 @@ namespace EQLogParser
           state = GetPlayerState(playerId);
         }
 
-        if (tree?.FindOne(n => n.Parent == null && n.Name == name) is TriggerNode parent)
+        if (tree.FindOne(n => n.Parent == null && n.Name == name) is TriggerNode parent)
         {
           root = CreateViewNode(parent, state);
           Populate(root, state, tree);
@@ -906,7 +906,7 @@ namespace EQLogParser
         newNode.TriggerData.FontColor = FixColor(newNode.TriggerData.FontColor);
         if (newNode.TriggerData.SelectedOverlays is List<string> selected)
         {
-          var remapped = selected.Where(id => overlayIds.ContainsKey(id)).Select(id => overlayIds[id]).ToList();
+          var remapped = selected.Where(overlayIds.ContainsKey).Select(id => overlayIds[id]).ToList();
           selected.Clear();
           selected.AddRange(remapped);
         }

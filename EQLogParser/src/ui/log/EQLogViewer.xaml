@@ -39,10 +39,10 @@
       <TextBox x:Name="logFilter" Margin="0,0,0,2" FontStyle="Italic" Width="175" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged"/>
       <ComboBox x:Name="lineTypes" Width="135" Margin="0,0,8,2" DropDownClosed="SelectLineTypes" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
     </StackPanel>
-    <syncfusion:TabControlExt x:Name="tabControl" TabClosed="TabClosed" PreviewSelectedItemChangedEvent="PreviewSelectedItemChangedEvent" Grid.Row="1" AllowDragDrop="False" EnableLabelEdit="False" CloseMode="Hide" TabStripPlacement="Top" CloseButtonType="Individual" ShowTabItemContextMenu="False" ShowTabListContextMenu="False">
+    <syncfusion:TabControlExt x:Name="tabControl" TabClosed="TabClosed" PreviewSelectedItemChangedEvent="PreviewSelectedItemChangedEvent" Grid.Row="1" AllowDragDrop="False" EnableLabelEdit="False" CloseMode="Hide" TabStripPlacement="Top" CloseButtonType="Individual" ShowTabItemContextMenu="False" TabListContextMenuOptions="None">
       <syncfusion:TabItemExt x:Name="resultsTab" Background="{DynamicResource ContentBackgroundAlt2}" Header="Search Results" FontSize="{DynamicResource EQTitleSize}" CloseButtonState="Hidden" CanClose="False">
         <syncfusion:EditControl x:Name="logBox" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontFamily="{DynamicResource EQLogFontFamily}" FontSize="{DynamicResource EQLogFontSize}" Margin="0,0,0,15" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
-      ShowOutlining="Hidden" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
           <syncfusion:EditControl.ContextMenu>
             <ContextMenu>
               <MenuItem Command="Copy" />
@@ -56,7 +56,7 @@
       </syncfusion:TabItemExt>
       <syncfusion:TabItemExt x:Name="contextTab" Header="Context" CanClose="True" FontSize="{DynamicResource EQTitleSize}" Visibility="Hidden">
         <syncfusion:EditControl x:Name="contextBox" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontFamily="{DynamicResource EQLogFontFamily}" FontSize="{DynamicResource EQLogFontSize}" Margin="0" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
-      ShowOutlining="Hidden" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
           <syncfusion:EditControl.ContextMenu>
             <ContextMenu>
               <MenuItem Command="Copy" />

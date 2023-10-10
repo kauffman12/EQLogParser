@@ -289,14 +289,14 @@ namespace EQLogParser
     {
       if (dataGrid.View != null)
       {
-        dataGrid.View.Filter = new Predicate<object>(item =>
+        dataGrid.View.Filter = item =>
         {
           var record = (HitLogRow)item;
           return (string.IsNullOrEmpty(CurrentTypeFilter) || CurrentTypeFilter == record.Type) &&
-          (string.IsNullOrEmpty(CurrentActionFilter) || CurrentActionFilter == record.SubType) &&
-          (string.IsNullOrEmpty(CurrentActedFilter) || CurrentActedFilter == record.Acted) &&
-          (CurrentShowPetsFilter || !record.IsPet);
-        });
+                 (string.IsNullOrEmpty(CurrentActionFilter) || CurrentActionFilter == record.SubType) &&
+                 (string.IsNullOrEmpty(CurrentActedFilter) || CurrentActedFilter == record.Acted) &&
+                 (CurrentShowPetsFilter || !record.IsPet);
+        };
 
         dataGrid.SelectedItems.Clear();
         dataGrid.View.RefreshFilter();

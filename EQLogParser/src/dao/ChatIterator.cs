@@ -23,7 +23,7 @@ namespace EQLogParser
     private int CurrentDirectory = -1;
     private int CurrentMonth = -1;
     private int CurrentEntry = -1;
-    private DateUtil DateUtil;
+    private readonly DateUtil DateUtil;
 
     internal ChatIterator(string playerAndServer, ChatFilter ChatFilter)
     {

@@ -32,8 +32,8 @@ namespace EQLogParser
     private readonly Action<string, Trigger> AddTextEvent;
     private readonly Action<Trigger, List<TimerData>> AddTimerEvent;
     private LinkedList<TriggerWrapper> ActiveTriggers;
-    private SpeechSynthesizer Synth = null;
-    private SoundPlayer SoundPlayer = null;
+    private readonly SpeechSynthesizer Synth = null;
+    private readonly SoundPlayer SoundPlayer = null;
     private TriggerWrapper PreviousSpoken = null;
 
     internal TriggerProcessor(string id, string name, Action<string, Trigger> addTextEvent,
@@ -772,12 +772,12 @@ namespace EQLogParser
 
     private class Speak
     {
-      public TriggerWrapper Wrapper { get; set; }
-      public string TTSOrSound { get; set; }
-      public bool IsSound { get; set; }
-      public MatchCollection Matches { get; set; }
-      public MatchCollection OriginalMatches { get; set; }
-      public string Action { get; set; }
+      public TriggerWrapper Wrapper { get; init; }
+      public string TTSOrSound { get; init; }
+      public bool IsSound { get; init; }
+      public MatchCollection Matches { get; init; }
+      public MatchCollection OriginalMatches { get; init; }
+      public string Action { get; init; }
     }
 
     private class RepeatedData
@@ -788,23 +788,23 @@ namespace EQLogParser
 
     private class TriggerWrapper
     {
-      public string Id { get; set; }
-      public string Name { get; set; }
-      public List<TimerData> TimerList { get; set; } = new List<TimerData>();
+      public string Id { get; init; }
+      public string Name { get; init; }
+      public List<TimerData> TimerList { get; } = new List<TimerData>();
       public string ModifiedPattern { get; set; }
-      public string ModifiedSpeak { get; set; }
-      public string ModifiedEndSpeak { get; set; }
-      public string ModifiedEndEarlySpeak { get; set; }
-      public string ModifiedWarningSpeak { get; set; }
+      public string ModifiedSpeak { get; init; }
+      public string ModifiedEndSpeak { get; init; }
+      public string ModifiedEndEarlySpeak { get; init; }
+      public string ModifiedWarningSpeak { get; init; }
       public string ModifiedDisplay { get; set; }
-      public string ModifiedEndDisplay { get; set; }
-      public string ModifiedEndEarlyDisplay { get; set; }
-      public string ModifiedWarningDisplay { get; set; }
+      public string ModifiedEndDisplay { get; init; }
+      public string ModifiedEndEarlyDisplay { get; init; }
+      public string ModifiedWarningDisplay { get; init; }
       public string ModifiedTimerName { get; set; }
       public double ModifiedDurationSeconds { get; set; }
       public Regex Regex { get; set; }
       public List<NumberOptions> RegexNOptions { get; set; }
-      public Trigger TriggerData { get; set; }
+      public Trigger TriggerData { get; init; }
       public bool HasRepeatedTimer { get; set; }
       public bool HasRepeatedText { get; set; }
     }

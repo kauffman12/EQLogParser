@@ -13,7 +13,7 @@ namespace EQLogParser
   public partial class DeathLogViewer : UserControl
   {
     private PlayerStats CurrentPlayer;
-    private List<DeathEvent> Deaths = new List<DeathEvent>();
+    private readonly List<DeathEvent> Deaths = new List<DeathEvent>();
 
     public DeathLogViewer()
     {

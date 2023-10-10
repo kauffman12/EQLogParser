@@ -222,9 +222,9 @@ namespace EQLogParser
                 StatsUtil.UpdateStats(spellStats, record);
 
                 long value = 0;
-                if (totals.ContainsKey(record.Healed))
+                if (totals.TryGetValue(record.Healed, out var total))
                 {
-                  value = totals[record.Healed];
+                  value = total;
                 }
 
                 totals[record.Healed] = record.Total + value;
@@ -235,14 +235,13 @@ namespace EQLogParser
 
         Parallel.ForEach(playerStats, stat =>
         {
-          if (individualStats.ContainsKey(stat.Name))
+          if (individualStats.TryGetValue(stat.Name, out var indStats))
           {
-            if (totals.ContainsKey(stat.Name))
+            if (totals.TryGetValue(stat.Name, out var total))
             {
-              stat.Extra = totals[stat.Name];
+              stat.Extra = total;
             }
 
-            var indStats = individualStats[stat.Name];
             stat.MoreStats = indStats;
 
             UpdateStats(indStats, HealedBySpellTimeRanges, HealedByHealerTimeRanges);

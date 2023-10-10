@@ -21,7 +21,7 @@ namespace EQLogParser
     private readonly List<string> MinFreqs = new List<string>()
     { "Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5" };
     private int PageSize = 9;
-    private List<ColumnData> Columns = new List<ColumnData>();
+    private readonly List<ColumnData> Columns = new List<ColumnData>();
 
     public HitFreqChart()
     {
@@ -211,10 +211,8 @@ namespace EQLogParser
     {
       var player = playerList?.SelectedItem as string;
 
-      if (PlayerData.ContainsKey(player))
+      if (PlayerData.TryGetValue(player, out var data))
       {
-        var data = PlayerData[player];
-
         var canUseCrit = false;
         var playerCritTypes = new List<string>();
         if (data.Any(d => d.CritYValues.Count > 0))
@@ -238,9 +236,8 @@ namespace EQLogParser
     private void UpdateSelectedHitTypes(bool useNonCrit)
     {
       var player = playerList?.SelectedItem as string;
-      if (!string.IsNullOrEmpty(player) && PlayerData.ContainsKey(player))
+      if (!string.IsNullOrEmpty(player) && PlayerData.TryGetValue(player, out var data))
       {
-        var data = PlayerData[player];
         List<string> hitTypes;
 
         if (useNonCrit)
@@ -294,7 +291,7 @@ namespace EQLogParser
       // get chart data for player and pets if available
       if (damageStats?.Children.ContainsKey(selected.Name) == true)
       {
-        damageStats?.Children[selected.Name].ForEach(stats => AddStats(stats));
+        damageStats.Children[selected.Name].ForEach(stats => AddStats(stats));
       }
       else
       {
@@ -355,14 +352,14 @@ namespace EQLogParser
     private class ColumnData
     {
       public string X { get; set; }
-      public int Y { get; set; }
-      public long Diff { get; set; }
-      public long XLongValue { get; set; }
+      public int Y { get; init; }
+      public long Diff { get; init; }
+      public long XLongValue { get; init; }
     }
 
     private class HitFreqChartData
     {
-      public string HitType { get; set; }
+      public string HitType { get; init; }
       public List<int> CritYValues { get; } = new List<int>();
       public List<long> CritXValues { get; } = new List<long>();
       public List<int> NonCritYValues { get; } = new List<int>();

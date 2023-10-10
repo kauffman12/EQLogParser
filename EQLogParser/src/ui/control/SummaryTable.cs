@@ -160,9 +160,9 @@ namespace EQLogParser
         foreach (var stats in treeGrid.View.Nodes.Where(node => node.Level == 0).Select(node => node.Item).Cast<PlayerStats>())
         {
           results.Add(stats);
-          if (CurrentStats.Children.ContainsKey(stats.Name))
+          if (CurrentStats.Children.TryGetValue(stats.Name, out var child))
           {
-            results.AddRange(CurrentStats.Children[stats.Name]);
+            results.AddRange(child);
           }
         }
         return results;

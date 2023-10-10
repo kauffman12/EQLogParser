@@ -15,9 +15,9 @@ namespace EQLogParser
 {
   internal class TextSoundEditor : BaseTypeEditor
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private SoundPlayer SoundPlayer;
-    private ObservableCollection<string> FileList;
+    private readonly ObservableCollection<string> FileList;
     private ComboBox TheOptionsCombo;
     private ComboBox TheSoundCombo;
     private TextBox TheFakeTextBox;

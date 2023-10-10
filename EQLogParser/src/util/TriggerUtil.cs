@@ -150,8 +150,8 @@ namespace EQLogParser
         }
         else if (fromTrigger is TriggerPropertyModel fromModel)
         {
-          toTrigger.ActiveColor = (fromModel.TriggerActiveBrush == null) ? null : fromModel.TriggerActiveBrush.Color.ToHexString();
-          toTrigger.FontColor = (fromModel.TriggerFontBrush == null) ? null : fromModel.TriggerFontBrush.Color.ToHexString();
+          toTrigger.ActiveColor = fromModel.TriggerActiveBrush?.Color.ToHexString();
+          toTrigger.FontColor = fromModel.TriggerFontBrush?.Color.ToHexString();
           var selectedOverlays = fromModel.SelectedTextOverlays.Where(item => item.IsChecked).Select(item => item.Value).ToList();
           selectedOverlays.AddRange(fromModel.SelectedTimerOverlays.Where(item => item.IsChecked).Select(item => item.Value));
           toTrigger.SelectedOverlays = selectedOverlays;
@@ -266,12 +266,12 @@ namespace EQLogParser
         if (od.OverlayData?.IsTextOverlay == true)
         {
           // workaround to load styles
-          TriggerUtil.Copy(new TextOverlayPropertyModel { Node = node }, od.OverlayData);
+          Copy(new TextOverlayPropertyModel { Node = node }, od.OverlayData);
         }
         else if (od.OverlayData?.IsTextOverlay == false)
         {
           // workaround to load styles
-          TriggerUtil.Copy(new TimerOverlayPropertyModel { Node = node }, od.OverlayData);
+          Copy(new TimerOverlayPropertyModel { Node = node }, od.OverlayData);
         }
       }
     }
@@ -295,7 +295,7 @@ namespace EQLogParser
 
       foreach (var data in TriggerStateManager.Instance.GetAllOverlays())
       {
-        var isChecked = overlayIds == null ? false : overlayIds.Contains(data.Id);
+        var isChecked = overlayIds?.Contains(data.Id) ?? false;
         var details = new ComboBoxItemDetails { IsChecked = isChecked, Text = data.Name, Value = data.Id };
         if (data.OverlayData.IsTextOverlay)
         {
@@ -559,7 +559,7 @@ namespace EQLogParser
         }
         catch (Exception ex)
         {
-          new MessageWindow("Problem Exporting Triggers/Overlays. Check Error Log for Details.", EQLogParser.Resource.EXPORT_ERROR).ShowDialog();
+          new MessageWindow("Problem Exporting Triggers/Overlays. Check Error Log for Details.", Resource.EXPORT_ERROR).ShowDialog();
           LOG.Error(ex);
         }
       }
@@ -614,7 +614,7 @@ namespace EQLogParser
       }
       catch (Exception ex)
       {
-        new MessageWindow("Problem Importing Triggers. Check Error Log for details.", EQLogParser.Resource.IMPORT_ERROR).ShowDialog();
+        new MessageWindow("Problem Importing Triggers. Check Error Log for details.", Resource.IMPORT_ERROR).ShowDialog();
         LOG.Error("Import Triggers Failure", ex);
       }
     }

@@ -28,18 +28,18 @@ namespace EQLogParser
     private const string LABEL_NEW_FOLDER = "New Folder";
     private readonly Dictionary<string, Window> PreviewWindows = new Dictionary<string, Window>();
     private TriggerConfig TheConfig;
-    private FileSystemWatcher Watcher;
-    private PatternEditor PatternEditor;
-    private PatternEditor EndEarlyPatternEditor;
-    private PatternEditor EndEarlyPattern2Editor;
-    private RangeEditor TopEditor;
-    private RangeEditor LeftEditor;
-    private RangeEditor HeightEditor;
-    private RangeEditor WidthEditor;
-    private SpeechSynthesizer TestSynth = null;
+    private readonly FileSystemWatcher Watcher;
+    private readonly PatternEditor PatternEditor;
+    private readonly PatternEditor EndEarlyPatternEditor;
+    private readonly PatternEditor EndEarlyPattern2Editor;
+    private readonly RangeEditor TopEditor;
+    private readonly RangeEditor LeftEditor;
+    private readonly RangeEditor HeightEditor;
+    private readonly RangeEditor WidthEditor;
+    private readonly SpeechSynthesizer TestSynth = null;
     private string CurrentCharacterId = null;
-    private GridLength CharacterViewWidth;
-    private bool Ready = false;
+    private readonly GridLength CharacterViewWidth;
+    private readonly bool Ready = false;
 
     public TriggersView()
     {
@@ -141,7 +141,7 @@ namespace EQLogParser
         {
           if (model?.Node?.Name is string name)
           {
-            var msgDialog = new MessageWindow("Do you want to save changes to " + name + "?", EQLogParser.Resource.UNSAVED,
+            var msgDialog = new MessageWindow("Do you want to save changes to " + name + "?", Resource.UNSAVED,
               MessageWindow.IconType.Question, "Don't Save", "Save");
             msgDialog.ShowDialog();
             cancel = !msgDialog.IsYes1Clicked && !msgDialog.IsYes2Clicked;
@@ -220,7 +220,7 @@ namespace EQLogParser
 
         if (TheConfig.Characters.Count(user => user.IsEnabled) is int count && count > 0)
         {
-          titleLabel.SetResourceReference(Label.ForegroundProperty, "EQGoodForegroundBrush");
+          titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
           var updatedTitle = $"Triggers Active for {count} Character";
           if (count > 1)
           {
@@ -230,7 +230,7 @@ namespace EQLogParser
         }
         else
         {
-          titleLabel.SetResourceReference(Label.ForegroundProperty, "EQStopForegroundBrush");
+          titleLabel.SetResourceReference(ForegroundProperty, "EQStopForegroundBrush");
           titleLabel.Content = "No Triggers Active";
         }
 
@@ -249,12 +249,12 @@ namespace EQLogParser
 
         if (TheConfig.IsEnabled)
         {
-          titleLabel.SetResourceReference(Label.ForegroundProperty, "EQGoodForegroundBrush");
+          titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
           titleLabel.Content = "Triggers Active";
         }
         else
         {
-          titleLabel.SetResourceReference(Label.ForegroundProperty, "EQStopForegroundBrush");
+          titleLabel.SetResourceReference(ForegroundProperty, "EQStopForegroundBrush");
           titleLabel.Content = "Check to Activate Triggers";
         }
 
@@ -310,7 +310,7 @@ namespace EQLogParser
             {
               TestSynth.SelectVoice(voice);
             }
-            var rateText = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex.ToString();
+            var rateText = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex;
             TestSynth.SpeakAsync(rateText);
           }
         }

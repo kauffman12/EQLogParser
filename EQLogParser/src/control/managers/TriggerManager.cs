@@ -30,7 +30,7 @@ namespace EQLogParser
       if (!TriggerStateManager.Instance.IsActive())
       {
         new MessageWindow("Trigger Database not available. In use by another EQLogParser?\r\nTrigger Management disabled until restart.",
-          EQLogParser.Resource.Warning).Show();
+          Resource.Warning).Show();
         (Application.Current?.MainWindow as MainWindow)?.DisableTriggers();
         return;
       }
@@ -118,7 +118,7 @@ namespace EQLogParser
     private void ConfigDoUpdate(object sender, EventArgs e)
     {
       ConfigUpdateTimer.Stop();
-      UIUtil.InvokeNow(() => CloseOverlays());
+      UIUtil.InvokeNow(CloseOverlays);
       TextOverlayTimer?.Stop();
       TimerOverlayTimer?.Stop();
 
@@ -206,7 +206,7 @@ namespace EQLogParser
     private void TriggersDoUpdate(object sender, EventArgs e)
     {
       TriggerUpdateTimer.Stop();
-      UIUtil.InvokeNow(() => CloseOverlays());
+      UIUtil.InvokeNow(CloseOverlays);
       GetProcessors().ForEach(p => p.UpdateActiveTriggers());
     }
 

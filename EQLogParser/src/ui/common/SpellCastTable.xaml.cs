@@ -73,8 +73,7 @@ namespace EQLogParser
             size = AddToList(playerSpells, cast.Caster, cast.Spell);
           }
 
-          SpellData replaced = null;
-          if (action is ReceivedSpell received && IsValid(received, UniqueNames, received.Receiver, true, out replaced) && replaced != null)
+          if (action is ReceivedSpell received && IsValid(received, UniqueNames, received.Receiver, true, out var replaced) && replaced != null)
           {
             size = AddToList(playerSpells, received.Receiver, "Received " + replaced.NameAbbrv);
           }

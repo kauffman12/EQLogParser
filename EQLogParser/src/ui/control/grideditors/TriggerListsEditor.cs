@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 
@@ -14,7 +15,7 @@ namespace EQLogParser
   {
     private ComboBox TheComboBox;
 
-    private static Dictionary<string, List<string>> Options = new Dictionary<string, List<string>>()
+    private static readonly Dictionary<string, List<string>> Options = new Dictionary<string, List<string>>()
     {
       { "TriggerAgainOption", new  List<string>() { "Start Additional Timer", "Restart Timer", "Restart Timer If Same Name", "Do Nothing" } },
       { "FontSize", new  List<string>() { "10pt", "11pt", "12pt", "13pt", "14pt", "15pt", "16pt", "17pt",
@@ -25,14 +26,14 @@ namespace EQLogParser
       { "FontFamily", UIElementUtil.GetSystemFontFamilies().Select(font => font.Source).ToList() },
     };
 
-    private static Dictionary<string, DependencyProperty> Props = new Dictionary<string, DependencyProperty>()
+    private static readonly Dictionary<string, DependencyProperty> Props = new Dictionary<string, DependencyProperty>()
     {
-      { "TriggerAgainOption", ComboBox.SelectedIndexProperty },
-      { "FontSize", ComboBox.SelectedValueProperty },
-      { "SortBy", ComboBox.SelectedIndexProperty },
-      { "TimerMode", ComboBox.SelectedIndexProperty },
-      { "TimerType", ComboBox.SelectedIndexProperty },
-      { "FontFamily", ComboBox.SelectedValueProperty }
+      { "TriggerAgainOption", Selector.SelectedIndexProperty },
+      { "FontSize", Selector.SelectedValueProperty },
+      { "SortBy", Selector.SelectedIndexProperty },
+      { "TimerMode", Selector.SelectedIndexProperty },
+      { "TimerType", Selector.SelectedIndexProperty },
+      { "FontFamily", Selector.SelectedValueProperty }
     };
 
 
@@ -60,9 +61,9 @@ namespace EQLogParser
     {
       var comboBox = new ComboBox { Padding = new Thickness(0), Margin = new Thickness(2, 0, 0, 0) };
 
-      if (Options.ContainsKey(name))
+      if (Options.TryGetValue(name, out var option))
       {
-        Options[name].ForEach(item => comboBox.Items.Add(item));
+        option.ForEach(item => comboBox.Items.Add(item));
       }
 
       comboBox.SelectedIndex = 0;

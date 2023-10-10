@@ -30,10 +30,10 @@ namespace EQLogParser
     private static bool Running = false;
     private readonly DispatcherTimer FilterTimer;
     private List<string> UnFiltered = new List<string>();
-    private Dictionary<long, long> FilteredLinePositionMap = new Dictionary<long, long>();
-    private Dictionary<long, long> LinePositions = new Dictionary<long, long>();
-    private int LineTypeCount = 0;
-    private bool Ready = false;
+    private readonly Dictionary<long, long> FilteredLinePositionMap = new Dictionary<long, long>();
+    private readonly Dictionary<long, long> LinePositions = new Dictionary<long, long>();
+    private readonly int LineTypeCount = 0;
+    private readonly bool Ready = false;
 
     public EQLogViewer()
     {
@@ -64,9 +64,9 @@ namespace EQLogParser
 
       UpdateCurrentTextColor();
 
-      logSearch.Text = EQLogParser.Resource.LOG_SEARCH_TEXT;
-      logSearch2.Text = EQLogParser.Resource.LOG_SEARCH_TEXT;
-      logFilter.Text = EQLogParser.Resource.LOG_FILTER_TEXT;
+      logSearch.Text = Resource.LOG_SEARCH_TEXT;
+      logSearch2.Text = Resource.LOG_SEARCH_TEXT;
+      logFilter.Text = Resource.LOG_FILTER_TEXT;
 
       var list = new List<ComboBoxItemDetails>();
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = DAMAGEAVOIDED, Value = DAMAGEAVOIDED });
@@ -86,7 +86,7 @@ namespace EQLogParser
       LineTypeCount = list.Count;
 
       lineTypes.ItemsSource = list;
-      UIElementUtil.SetComboBoxTitle(lineTypes, list.Count, EQLogParser.Resource.LINE_TYPES_SELECTED);
+      UIElementUtil.SetComboBoxTitle(lineTypes, list.Count, Resource.LINE_TYPES_SELECTED);
 
       FilterTimer.Tick += (sender, e) =>
       {
@@ -125,7 +125,7 @@ namespace EQLogParser
         FilteredLinePositionMap.Clear();
 
         var types = (lineTypes.ItemsSource as List<ComboBoxItemDetails>).Where(item => item.IsChecked).ToDictionary(item => item.Value, item => true);
-        UIElementUtil.SetComboBoxTitle(lineTypes, types.Count, EQLogParser.Resource.LINE_TYPES_SELECTED);
+        UIElementUtil.SetComboBoxTitle(lineTypes, types.Count, Resource.LINE_TYPES_SELECTED);
 
         if (logFilter.FontStyle == FontStyles.Italic && types.Count == LineTypeCount)
         {
@@ -239,53 +239,51 @@ namespace EQLogParser
       {
         if (MainWindow.CurrentLogFile != null)
         {
-          using (var f = File.OpenRead(MainWindow.CurrentLogFile))
+          using var f = File.OpenRead(MainWindow.CurrentLogFile);
+          f.Seek(Math.Max(0, pos - CONTEXT), SeekOrigin.Begin);
+          var s = Helpers.GetStreamReader(f);
+          var list = new List<string>();
+
+          if (!s.EndOfStream)
           {
-            f.Seek(Math.Max(0, pos - CONTEXT), SeekOrigin.Begin);
-            var s = Helpers.GetStreamReader(f);
-            var list = new List<string>();
-
-            if (!s.EndOfStream)
-            {
-              // since position is not the start of a line just read one as junk
-              s.ReadLine();
-            }
-
-            var FoundLines = new List<int>();
-            while (!s.EndOfStream)
-            {
-              var line = s.ReadLine();
-              list.Add(line);
-
-              if (line.Contains(text))
-              {
-                FoundLines.Add(list.Count);
-              }
-
-              if (f.Position >= (pos + CONTEXT))
-              {
-                break;
-              }
-            }
-
-            var allText = string.Join(Environment.NewLine, list);
-            Dispatcher.InvokeAsync(() =>
-            {
-              var highlight = Application.Current.Resources["EQSearchBackgroundBrush"] as SolidColorBrush;
-              contextBox.Text = allText;
-              contextTab.Visibility = Visibility.Visible;
-              FoundLines.ForEach(line => contextBox.SetLineBackground(line, true, highlight));
-              tabControl.SelectedItem = contextTab;
-              UpdateStatusCount(contextBox.Lines.Count);
-
-              if (FoundLines.Count > 0)
-              {
-                GoToLine(contextBox, FoundLines[0] + 3);
-              }
-            });
-
-            f.Close();
+            // since position is not the start of a line just read one as junk
+            s.ReadLine();
           }
+
+          var FoundLines = new List<int>();
+          while (!s.EndOfStream)
+          {
+            var line = s.ReadLine();
+            list.Add(line);
+
+            if (line.Contains(text))
+            {
+              FoundLines.Add(list.Count);
+            }
+
+            if (f.Position >= (pos + CONTEXT))
+            {
+              break;
+            }
+          }
+
+          var allText = string.Join(Environment.NewLine, list);
+          Dispatcher.InvokeAsync(() =>
+          {
+            var highlight = Application.Current.Resources["EQSearchBackgroundBrush"] as SolidColorBrush;
+            contextBox.Text = allText;
+            contextTab.Visibility = Visibility.Visible;
+            FoundLines.ForEach(line => contextBox.SetLineBackground(line, true, highlight));
+            tabControl.SelectedItem = contextTab;
+            UpdateStatusCount(contextBox.Lines.Count);
+
+            if (FoundLines.Count > 0)
+            {
+              GoToLine(contextBox, FoundLines[0] + 3);
+            }
+          });
+
+          f.Close();
         }
       }, TaskScheduler.Default);
     }
@@ -328,149 +326,147 @@ namespace EQLogParser
         {
           if (MainWindow.CurrentLogFile != null)
           {
-            using (var f = File.OpenRead(MainWindow.CurrentLogFile))
+            using var f = File.OpenRead(MainWindow.CurrentLogFile);
+            double start = -1;
+            TimeRange ranges = null;
+            switch (logTimeIndex)
             {
-              double start = -1;
-              TimeRange ranges = null;
-              switch (logTimeIndex)
-              {
-                case 0:
-                  start = DateUtil.ToDouble(DateTime.Now) - (60 * 60);
-                  break;
-                case 1:
-                  start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 8);
-                  break;
-                case 2:
-                  start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24);
-                  break;
-                case 3:
-                  start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 7);
-                  break;
-                case 4:
-                  start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 14);
-                  break;
-                case 5:
-                  start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 30);
-                  break;
-                case 6:
-                  if (fights.Count > 0)
-                  {
-                    start = fights[0].BeginTime - 15;
-                    ranges = new TimeRange();
-                    fights.ForEach(fight => ranges.Add(new TimeSegment(fight.BeginTime - 15, fight.LastTime)));
-                  }
-                  break;
-                case 7:
-                  start = 0;
-                  break;
-              }
-
-              var s = Helpers.GetStreamReader(f, start);
-
-              if (!s.EndOfStream)
-              {
-                // since position is not the start of a line just read one as junk
-                s.ReadLine();
-              }
-
-              var list = new List<string>();
-              var lastPercent = -1;
-
-              Regex searchRegex = null;
-              if (logSearchText != EQLogParser.Resource.LOG_SEARCH_TEXT && logSearchText.Length > 1)
-              {
-                searchRegex = new Regex(logSearchText, RegexOptions.IgnoreCase);
-              }
-
-              Regex searchRegex2 = null;
-              if (logSearchText2 != EQLogParser.Resource.LOG_SEARCH_TEXT && logSearchText2.Length > 1)
-              {
-                searchRegex2 = new Regex(logSearchText2, RegexOptions.IgnoreCase);
-              }
-
-              while (!s.EndOfStream && Running)
-              {
-                var line = s.ReadLine();
-                if (TimeRange.TimeCheck(line, start, ranges, out var exceeds))
+              case 0:
+                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60);
+                break;
+              case 1:
+                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 8);
+                break;
+              case 2:
+                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24);
+                break;
+              case 3:
+                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 7);
+                break;
+              case 4:
+                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 14);
+                break;
+              case 5:
+                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 30);
+                break;
+              case 6:
+                if (fights.Count > 0)
                 {
-                  var match = true;
-                  var firstIndex = -2;
-                  var secondIndex = -2;
-
-                  if (searchRegex != null)
-                  {
-                    firstIndex = DoSearch(line, logSearchText, searchRegex, regexEnabled);
-                  }
-
-                  if (searchRegex2 != null)
-                  {
-                    secondIndex = DoSearch(line, logSearchText2, searchRegex2, regexEnabled);
-                  }
-
-                  // AND
-                  if (modifierIndex == 0 && (firstIndex == -1 || secondIndex == -1))
-                  {
-                    match = false;
-                  }
-                  // OR
-                  else if (modifierIndex == 1 && firstIndex < 0 && secondIndex < 0)
-                  {
-                    match = false;
-                  }
-                  // Excluding
-                  else if (modifierIndex == 2 && (firstIndex == -1 || secondIndex > -1))
-                  {
-                    match = false;
-                  }
-
-                  if (match)
-                  {
-                    LinePositions[list.Count] = f.Position;
-                    list.Add(line);
-                  }
+                  start = fights[0].BeginTime - 15;
+                  ranges = new TimeRange();
+                  fights.ForEach(fight => ranges.Add(new TimeSegment(fight.BeginTime - 15, fight.LastTime)));
                 }
-
-                var percent = Math.Min(Convert.ToInt32((double)f.Position / f.Length * 100), 100);
-                if (percent % 5 == 0 && percent != lastPercent)
-                {
-                  lastPercent = percent;
-                  Dispatcher.InvokeAsync(() =>
-                  {
-                    progress.Content = "Searching (" + percent + "% Complete)";
-                  }, DispatcherPriority.Background);
-                }
-
-                if (exceeds)
-                {
-                  break;
-                }
-              }
-
-              UnFiltered = list.Take(MAX_ROWS).ToList();
-              var allData = string.Join(Environment.NewLine, UnFiltered);
-              // adding extra new line to be away from scrollbar
-
-              Dispatcher.InvokeAsync(() =>
-              {
-                if (!string.IsNullOrEmpty(allData))
-                {
-                  logBox.Text = allData;
-                  selectedContext.IsEnabled = true;
-                }
-
-                // reset filter
-                tabControl.SelectedItem = resultsTab;
-                logFilter.Text = EQLogParser.Resource.LOG_FILTER_TEXT;
-                logFilter.FontStyle = FontStyles.Italic;
-                UpdateStatusCount(UnFiltered.Count);
-                if (logBox.Lines != null && logBox.Lines.Count > 0)
-                {
-                  GoToLine(logBox, logBox.Lines.Count);
-                }
-              });
-
-              f.Close();
+                break;
+              case 7:
+                start = 0;
+                break;
             }
+
+            var s = Helpers.GetStreamReader(f, start);
+
+            if (!s.EndOfStream)
+            {
+              // since position is not the start of a line just read one as junk
+              s.ReadLine();
+            }
+
+            var list = new List<string>();
+            var lastPercent = -1;
+
+            Regex searchRegex = null;
+            if (logSearchText != Resource.LOG_SEARCH_TEXT && logSearchText.Length > 1)
+            {
+              searchRegex = new Regex(logSearchText, RegexOptions.IgnoreCase);
+            }
+
+            Regex searchRegex2 = null;
+            if (logSearchText2 != Resource.LOG_SEARCH_TEXT && logSearchText2.Length > 1)
+            {
+              searchRegex2 = new Regex(logSearchText2, RegexOptions.IgnoreCase);
+            }
+
+            while (!s.EndOfStream && Running)
+            {
+              var line = s.ReadLine();
+              if (TimeRange.TimeCheck(line, start, ranges, out var exceeds))
+              {
+                var match = true;
+                var firstIndex = -2;
+                var secondIndex = -2;
+
+                if (searchRegex != null)
+                {
+                  firstIndex = DoSearch(line, logSearchText, searchRegex, regexEnabled);
+                }
+
+                if (searchRegex2 != null)
+                {
+                  secondIndex = DoSearch(line, logSearchText2, searchRegex2, regexEnabled);
+                }
+
+                // AND
+                if (modifierIndex == 0 && (firstIndex == -1 || secondIndex == -1))
+                {
+                  match = false;
+                }
+                // OR
+                else if (modifierIndex == 1 && firstIndex < 0 && secondIndex < 0)
+                {
+                  match = false;
+                }
+                // Excluding
+                else if (modifierIndex == 2 && (firstIndex == -1 || secondIndex > -1))
+                {
+                  match = false;
+                }
+
+                if (match)
+                {
+                  LinePositions[list.Count] = f.Position;
+                  list.Add(line);
+                }
+              }
+
+              var percent = Math.Min(Convert.ToInt32((double)f.Position / f.Length * 100), 100);
+              if (percent % 5 == 0 && percent != lastPercent)
+              {
+                lastPercent = percent;
+                Dispatcher.InvokeAsync(() =>
+                {
+                  progress.Content = "Searching (" + percent + "% Complete)";
+                }, DispatcherPriority.Background);
+              }
+
+              if (exceeds)
+              {
+                break;
+              }
+            }
+
+            UnFiltered = list.Take(MAX_ROWS).ToList();
+            var allData = string.Join(Environment.NewLine, UnFiltered);
+            // adding extra new line to be away from scrollbar
+
+            Dispatcher.InvokeAsync(() =>
+            {
+              if (!string.IsNullOrEmpty(allData))
+              {
+                logBox.Text = allData;
+                selectedContext.IsEnabled = true;
+              }
+
+              // reset filter
+              tabControl.SelectedItem = resultsTab;
+              logFilter.Text = Resource.LOG_FILTER_TEXT;
+              logFilter.FontStyle = FontStyles.Italic;
+              UpdateStatusCount(UnFiltered.Count);
+              if (logBox.Lines != null && logBox.Lines.Count > 0)
+              {
+                GoToLine(logBox, logBox.Lines.Count);
+              }
+            });
+
+            f.Close();
           }
 
           Dispatcher.InvokeAsync(() =>
@@ -550,8 +546,8 @@ namespace EQLogParser
     {
       if (searchIcon != null)
       {
-        searchIcon.IsEnabled = (logSearch.Text != EQLogParser.Resource.LOG_SEARCH_TEXT && (logSearch.Text.Length > 1)) ||
-          (logSearch2.Text != EQLogParser.Resource.LOG_SEARCH_TEXT && logSearch2.Text.Length > 1);
+        searchIcon.IsEnabled = (logSearch.Text != Resource.LOG_SEARCH_TEXT && (logSearch.Text.Length > 1)) ||
+          (logSearch2.Text != Resource.LOG_SEARCH_TEXT && logSearch2.Text.Length > 1);
       }
     }
 
@@ -563,7 +559,7 @@ namespace EQLogParser
         {
           if (logSearchModifier?.Focus() == true)
           {
-            textBox.Text = EQLogParser.Resource.LOG_SEARCH_TEXT;
+            textBox.Text = Resource.LOG_SEARCH_TEXT;
             textBox.FontStyle = FontStyles.Italic;
           }
         }
@@ -588,7 +584,7 @@ namespace EQLogParser
     {
       if (sender is TextBox textBox && string.IsNullOrEmpty(textBox.Text))
       {
-        textBox.Text = EQLogParser.Resource.LOG_SEARCH_TEXT;
+        textBox.Text = Resource.LOG_SEARCH_TEXT;
         textBox.FontStyle = FontStyles.Italic;
       }
     }
@@ -626,7 +622,7 @@ namespace EQLogParser
     {
       if (e.Key == Key.Escape && logFilterModifier?.Focus() == true)
       {
-        logFilter.Text = EQLogParser.Resource.LOG_FILTER_TEXT;
+        logFilter.Text = Resource.LOG_FILTER_TEXT;
         logFilter.FontStyle = FontStyles.Italic;
       }
     }
@@ -644,7 +640,7 @@ namespace EQLogParser
     {
       if (logFilter != null && string.IsNullOrEmpty(logFilter.Text))
       {
-        logFilter.Text = EQLogParser.Resource.LOG_FILTER_TEXT;
+        logFilter.Text = Resource.LOG_FILTER_TEXT;
         logFilter.FontStyle = FontStyles.Italic;
       }
     }
@@ -664,9 +660,9 @@ namespace EQLogParser
       {
         long start;
         var line = logBox.LineNumber - 1;
-        if (FilteredLinePositionMap.ContainsKey(line))
+        if (FilteredLinePositionMap.TryGetValue(line, out var value))
         {
-          start = FilteredLinePositionMap[line];
+          start = value;
         }
         else
         {

@@ -11,7 +11,7 @@ namespace EQLogParser
 
     public TimeRange() { }
 
-    public void Add(IReadOnlyCollection<TimeSegment> collection) => collection?.ToList().ForEach(segment => Add(segment));
+    public void Add(IReadOnlyCollection<TimeSegment> collection) => collection?.ToList().ForEach(Add);
     public TimeRange(TimeSegment segment) => TimeSegments.Add(segment);
     public TimeRange(List<TimeSegment> segments) => segments.ForEach(segment => Add(new TimeSegment(segment.BeginTime, segment.EndTime)));
 

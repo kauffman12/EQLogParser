@@ -11,7 +11,7 @@ namespace EQLogParser
   internal class DurationEditor : BaseTypeEditor
   {
     private TimeSpanEdit TheTimeSpan;
-    private int Min;
+    private readonly int Min;
 
     public DurationEditor()
     {
@@ -44,8 +44,8 @@ namespace EQLogParser
       var timeSpan = new TimeSpanEdit
       {
         IncrementOnScrolling = false,
-        MinValue = new System.TimeSpan(0, 0, Min),
-        MaxValue = new System.TimeSpan(23, 59, 59),
+        MinValue = new TimeSpan(0, 0, Min),
+        MaxValue = new TimeSpan(23, 59, 59),
         Format = "hh : mm : ss",
         Margin = new System.Windows.Thickness(0, 2, 0, 2)
       };

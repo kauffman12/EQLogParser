@@ -51,7 +51,7 @@ namespace EQLogParser
       {
         row.ToList().ForEach(item =>
         {
-          sb.AppendFormat(CultureInfo.CurrentCulture, item.GetType() == typeof(string) ? CSV_STRING_CELL : CSV_NUMBER_CELL, item);
+          sb.AppendFormat(CultureInfo.CurrentCulture, item is string ? CSV_STRING_CELL : CSV_NUMBER_CELL, item);
         });
 
         sb.AppendLine();

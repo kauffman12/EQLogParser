@@ -14,14 +14,14 @@ namespace EQLogParser
   /// </summary>
   public partial class DamageOverlayWindow : Window
   {
-    private static double DAMAGE_MODE_ZERO_TIMEOUT = TimeSpan.TicksPerSecond * 7; // with 3 second slain queue delay
-    private static object StatsLock = new object();
-    private static SolidColorBrush ActiveBrush = new SolidColorBrush(Color.FromRgb(254, 156, 30));
-    private static SolidColorBrush InActiveBrush = new SolidColorBrush(Colors.White);
+    private static readonly double DAMAGE_MODE_ZERO_TIMEOUT = TimeSpan.TicksPerSecond * 7; // with 3 second slain queue delay
+    private static readonly object StatsLock = new object();
+    private static readonly SolidColorBrush ActiveBrush = new SolidColorBrush(Color.FromRgb(254, 156, 30));
+    private static readonly SolidColorBrush InActiveBrush = new SolidColorBrush(Colors.White);
     private static DamageOverlayStats Stats = null;
 
     private readonly DispatcherTimer UpdateTimer;
-    private bool Preview = false;
+    private readonly bool Preview = false;
     private double SavedHeight;
     private double SavedWidth;
     private double SavedTop = double.NaN;
@@ -98,14 +98,14 @@ namespace EQLogParser
       UpdateDamageMode(SavedDamageMode);
 
       var list = PlayerManager.Instance.GetClassList();
-      list.Insert(0, EQLogParser.Resource.ANY_CLASS);
+      list.Insert(0, Resource.ANY_CLASS);
       classList.ItemsSource = list;
 
       // selected class
       var selectedClass = ConfigUtil.GetSetting("OverlaySelectedClass");
       if (selectedClass == null || !PlayerManager.Instance.GetClassList().Contains(selectedClass))
       {
-        selectedClass = EQLogParser.Resource.ANY_CLASS;
+        selectedClass = Resource.ANY_CLASS;
       }
 
       UpdateSelectedClass(selectedClass);
@@ -135,8 +135,8 @@ namespace EQLogParser
         UpdateTimer.Stop();
         ResizeMode = ResizeMode.CanResizeWithGrip;
         buttonsPanel.Visibility = Visibility.Visible;
-        SetResourceReference(Window.BorderBrushProperty, "PreviewBackgroundBrush");
-        SetResourceReference(Window.BackgroundProperty, "PreviewBackgroundBrush");
+        SetResourceReference(BorderBrushProperty, "PreviewBackgroundBrush");
+        SetResourceReference(BackgroundProperty, "PreviewBackgroundBrush");
         border.Background = null;
         LoadTestData(true);
         damageContent.Visibility = Visibility.Visible;
@@ -145,9 +145,9 @@ namespace EQLogParser
       {
         ResizeMode = ResizeMode.NoResize;
         buttonsPanel.Visibility = Visibility.Collapsed;
-        this.BorderBrush = null;
-        this.Background = null;
-        border.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, "DamageOverlayBackgroundBrush");
+        BorderBrush = null;
+        Background = null;
+        border.SetResourceReference(Border.BackgroundProperty, "DamageOverlayBackgroundBrush");
         UpdateTimer.Start();
       }
     }
@@ -366,15 +366,15 @@ namespace EQLogParser
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
-      ConfigUtil.SetSetting("OverlayHeight", this.Height.ToString());
-      ConfigUtil.SetSetting("OverlayWidth", this.Width.ToString());
-      SavedHeight = this.Height;
-      SavedWidth = this.Width;
+      ConfigUtil.SetSetting("OverlayHeight", Height.ToString());
+      ConfigUtil.SetSetting("OverlayWidth", Width.ToString());
+      SavedHeight = Height;
+      SavedWidth = Width;
 
-      ConfigUtil.SetSetting("OverlayTop", this.Top.ToString());
-      ConfigUtil.SetSetting("OverlayLeft", this.Left.ToString());
-      SavedTop = this.Top;
-      SavedLeft = this.Left;
+      ConfigUtil.SetSetting("OverlayTop", Top.ToString());
+      ConfigUtil.SetSetting("OverlayLeft", Left.ToString());
+      SavedTop = Top;
+      SavedLeft = Left;
 
       if (Application.Current.Resources["DamageOverlayFontSize"] is double fontSize)
       {
@@ -410,10 +410,10 @@ namespace EQLogParser
 
     private void CancelClick(object sender, RoutedEventArgs e)
     {
-      this.Height = SavedHeight;
-      this.Width = SavedWidth;
-      this.Top = SavedTop;
-      this.Left = SavedLeft;
+      Height = SavedHeight;
+      Width = SavedWidth;
+      Top = SavedTop;
+      Left = SavedLeft;
 
       if ((maxRowsList.SelectedIndex + 1) != SavedMaxRows)
       {
@@ -443,7 +443,7 @@ namespace EQLogParser
 
     private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)
     {
-      this.DragMove();
+      DragMove();
 
       if (Preview)
       {
@@ -454,10 +454,10 @@ namespace EQLogParser
     private void WindowLoaded(object sender, RoutedEventArgs e)
     {
       // delay to avoid WindowSize event from saving new values
-      SavedHeight = this.Height;
-      SavedWidth = this.Width;
-      SavedTop = this.Top;
-      SavedLeft = this.Left;
+      SavedHeight = Height;
+      SavedWidth = Width;
+      SavedTop = Top;
+      SavedLeft = Left;
     }
 
     private void SetWindowSizes(string height, string width, string top, string left)
@@ -749,9 +749,9 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         var needed = damageContent.ActualHeight + buttonsPanel.ActualHeight + 8;
-        if (needed != this.Height)
+        if (needed != Height)
         {
-          this.Height = needed;
+          Height = needed;
         }
       }, DispatcherPriority.Background);
     }
@@ -764,9 +764,9 @@ namespace EQLogParser
           Application.Current.Resources["DamageOverlayImageSize"] = 12.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(50.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(40.0);
-          titleDamage.Margin = new System.Windows.Thickness(0, 5, 20, 0);
-          titleDPS.Margin = new System.Windows.Thickness(0, 5, 19, 0);
-          titleTime.Margin = new System.Windows.Thickness(0, 5, 6, 0);
+          titleDamage.Margin = new Thickness(0, 5, 20, 0);
+          titleDPS.Margin = new Thickness(0, 5, 19, 0);
+          titleTime.Margin = new Thickness(0, 5, 6, 0);
           titleDamage.FontSize = 11;
           titleDPS.FontSize = 11;
           titleTime.FontSize = 11;
@@ -785,9 +785,9 @@ namespace EQLogParser
           Application.Current.Resources["DamageOverlayImageSize"] = 15.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(60.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(45.0);
-          titleDamage.Margin = new System.Windows.Thickness(0, 5, 27, 0);
-          titleDPS.Margin = new System.Windows.Thickness(0, 5, 21, 0);
-          titleTime.Margin = new System.Windows.Thickness(0, 5, 6, 0);
+          titleDamage.Margin = new Thickness(0, 5, 27, 0);
+          titleDPS.Margin = new Thickness(0, 5, 21, 0);
+          titleTime.Margin = new Thickness(0, 5, 6, 0);
           titleDamage.FontSize = 13;
           titleDPS.FontSize = 13;
           titleTime.FontSize = 13;
@@ -806,9 +806,9 @@ namespace EQLogParser
           Application.Current.Resources["DamageOverlayImageSize"] = 15.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(70.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(50.0);
-          titleDamage.Margin = new System.Windows.Thickness(0, 5, 35, 0);
-          titleDPS.Margin = new System.Windows.Thickness(0, 5, 21, 0);
-          titleTime.Margin = new System.Windows.Thickness(0, 5, 6, 0);
+          titleDamage.Margin = new Thickness(0, 5, 35, 0);
+          titleDPS.Margin = new Thickness(0, 5, 21, 0);
+          titleTime.Margin = new Thickness(0, 5, 6, 0);
           titleDamage.FontSize = 15;
           titleDPS.FontSize = 15;
           titleTime.FontSize = 15;
@@ -827,9 +827,9 @@ namespace EQLogParser
           Application.Current.Resources["DamageOverlayImageSize"] = 17.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(75.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(55.0);
-          titleDamage.Margin = new System.Windows.Thickness(0, 5, 34, 0);
-          titleDPS.Margin = new System.Windows.Thickness(0, 5, 25, 0);
-          titleTime.Margin = new System.Windows.Thickness(0, 5, 6, 0);
+          titleDamage.Margin = new Thickness(0, 5, 34, 0);
+          titleDPS.Margin = new Thickness(0, 5, 25, 0);
+          titleTime.Margin = new Thickness(0, 5, 6, 0);
           titleDamage.FontSize = 17;
           titleDPS.FontSize = 17;
           titleTime.FontSize = 17;
@@ -854,7 +854,7 @@ namespace EQLogParser
         UpdateTimer.Stop();
       }
 
-      this.Hide();
+      Hide();
       ((MainWindow)Application.Current.MainWindow).CloseDamageOverlay();
       ((MainWindow)Application.Current.MainWindow).OpenDamageOverlayIfEnabled(false, true);
     }

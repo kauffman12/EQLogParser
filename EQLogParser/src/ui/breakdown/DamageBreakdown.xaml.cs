@@ -45,9 +45,9 @@ namespace EQLogParser
             pets = true;
           }
 
-          if (childStats.ContainsKey(stats.Name))
+          if (childStats.TryGetValue(stats.Name, out var stat))
           {
-            foreach (ref var childStat in childStats[stats.Name].ToArray().AsSpan())
+            foreach (ref var childStat in stat.ToArray().AsSpan())
             {
               // Damage Summary is a Tree which can have child and parent selected so check that we haven't
               // already added the entry
@@ -128,30 +128,27 @@ namespace EQLogParser
 
       OtherDamage[name].ForEach(stats => list.Add(stats));
 
-      if (GroupedDD.ContainsKey(name))
+      if (GroupedDD.TryGetValue(name, out var dds))
       {
-        var dds = GroupedDD[name];
         if (dds.Total > 0)
         {
           list.Add(dds);
         }
       }
 
-      if (GroupedDoT.ContainsKey(name))
+      if (GroupedDoT.TryGetValue(name, out var dots))
       {
-        var dots = GroupedDoT[name];
         if (dots.Total > 0)
         {
           list.Add(dots);
         }
       }
 
-      if (GroupedProcs.ContainsKey(name))
+      if (GroupedProcs.TryGetValue(name, out var proc))
       {
-        var procs = GroupedProcs[name];
-        if (procs.Total > 0)
+        if (proc.Total > 0)
         {
-          list.Add(procs);
+          list.Add(proc);
         }
       }
 

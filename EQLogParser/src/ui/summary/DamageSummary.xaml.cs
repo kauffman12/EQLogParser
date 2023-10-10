@@ -28,7 +28,7 @@ namespace EQLogParser
       InitializeComponent();
 
       var list = PlayerManager.Instance.GetClassList();
-      list.Insert(0, EQLogParser.Resource.ANY_CLASS);
+      list.Insert(0, Resource.ANY_CLASS);
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
 
@@ -149,7 +149,7 @@ namespace EQLogParser
         foreach (var stats in CurrentStats.StatsList.Where(stats => PlayerManager.Instance.IsVerifiedPlayer(stats.OrigName)).OrderBy(stats => stats.OrigName))
         {
           var item = new MenuItem { IsEnabled = true, Header = stats.OrigName };
-          item.Click += new RoutedEventHandler(AssignOwnerClick);
+          item.Click += AssignOwnerClick;
           menuItemPetOptions.Children.Add(item);
         }
       }

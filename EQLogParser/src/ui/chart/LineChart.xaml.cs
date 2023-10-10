@@ -11,7 +11,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for LineChart.xaml
   /// </summary>
-  public partial class LineChart : UserControl, System.IDisposable
+  public partial class LineChart : UserControl, IDisposable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -295,9 +295,9 @@ namespace EQLogParser
       sfLineChart.Series = BuildCollection(sortedValues);
     }
 
-    private Syncfusion.UI.Xaml.Charts.ChartSeriesCollection BuildCollection(List<List<DataPoint>> sortedValues)
+    private ChartSeriesCollection BuildCollection(List<List<DataPoint>> sortedValues)
     {
-      var collection = new Syncfusion.UI.Xaml.Charts.ChartSeriesCollection();
+      var collection = new ChartSeriesCollection();
 
       var yPath = "Avg";
       switch (CurrentChoice)
@@ -571,10 +571,9 @@ namespace EQLogParser
         TcPerSecond = aggregate.TcPerSecond,
         AttemptsPerSecond = aggregate.AttemptsPerSecond,
         HitsPerSecond = aggregate.HitsPerSecond,
-        TotalPerSecond = aggregate.TotalPerSecond
+        TotalPerSecond = aggregate.TotalPerSecond,
+        DateTime = DateUtil.FromDouble(aggregate.CurrentTime)
       };
-
-      newEntry.DateTime = DateUtil.FromDouble(aggregate.CurrentTime);
 
       var totalSeconds = timeRanges[aggregate.Name].GetTotal();
       newEntry.ValuePerSecond = (long)Math.Round(aggregate.FightTotal / totalSeconds, 2);
