@@ -15,7 +15,7 @@ namespace EQLogParser
   {
     internal const string DEFAULT_TABLE_LABEL = "No NPCs Selected";
     internal const string NODATA_TABLE_LABEL = Labels.NODATA;
-    internal readonly List<PlayerStats> NoResultsList = new List<PlayerStats>();
+    internal readonly List<PlayerStats> NoResultsList = new();
 
     internal event EventHandler<PlayerStatsSelectionChangedEventArgs> EventsSelectionChange;
 

@@ -10,28 +10,27 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    internal static HealingStatsManager Instance = new HealingStatsManager();
+    internal static HealingStatsManager Instance = new();
 
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
     internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
 
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealedByHealerTimeRanges =
-      new ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>>();
+      new();
 
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealedBySpellTimeRanges =
-      new ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>>();
+      new();
 
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealerHealedTimeRanges =
-      new ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>>();
+      new();
 
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealerSpellTimeRanges =
-      new ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>>();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealerSpellTimeRanges = new();
 
-    private readonly List<List<ActionGroup>> HealingGroups = new List<List<ActionGroup>>();
+    private readonly List<List<ActionGroup>> HealingGroups = new();
     private PlayerStats RaidTotals;
     private List<Fight> Selected;
     private string Title;
-    private bool IsLimited = false;
+    private bool IsLimited;
 
     internal HealingStatsManager()
     {
@@ -314,7 +313,7 @@ namespace EQLogParser
       {
         if (RaidTotals != null)
         {
-          CombinedStats combined = null;
+          CombinedStats combined;
           var individualStats = new Dictionary<string, PlayerStats>();
 
           // always start over

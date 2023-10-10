@@ -24,7 +24,7 @@ namespace EQLogParser
 
     private const string BB_GAMPARSE_SPELL_COUNT = "   --- {0} - {1}";
 
-    private static readonly Dictionary<int, string> ROMAN = new Dictionary<int, string>()
+    private static readonly Dictionary<int, string> ROMAN = new()
     {
       { 400, "CD" }, { 100, "C" }, { 90, "XC" }, { 50, "L" }, { 40, "XL" }, { 10, "X" }, { 9, "IX" }, { 5, "V" }, { 4, "IV" }, { 1, "I" }
     };

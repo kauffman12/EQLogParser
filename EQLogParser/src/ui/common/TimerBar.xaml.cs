@@ -10,7 +10,7 @@ namespace EQLogParser
   {
     private string OverlayId;
     private bool? Active = true;
-    private TimerData LastTimerData = null;
+    private TimerData LastTimerData;
 
     public TimerBar()
     {

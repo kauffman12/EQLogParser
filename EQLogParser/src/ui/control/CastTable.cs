@@ -14,8 +14,8 @@ namespace EQLogParser
     protected bool CurrentShowCastSpells = true;
     protected bool CurrentShowDetSpells = true;
     protected bool CurrentShowReceivedSpells = true;
-    protected bool CurrentShowSelfOnly = false;
-    protected bool CurrentShowProcs = false;
+    protected bool CurrentShowSelfOnly;
+    protected bool CurrentShowProcs;
     private const string BENEFICIAL_SPELLS_TYPE = "Beneficial Spells";
     private const string CAST_SPELLS_TYPE = "Cast Spells";
     private const string DET_SPELLS_TYPE = "Detrimental Spells";
@@ -234,7 +234,7 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

@@ -7,14 +7,14 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static readonly Dictionary<string, byte> ALL_MODIFIERS = new Dictionary<string, byte>()
+    private static readonly Dictionary<string, byte> ALL_MODIFIERS = new()
     {
       { "Assassinate", 1 }, { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Double Bow Shot", 1 }, { "Finishing Blow", 1 },
       { "Flurry", 1 }, { "Headshot", 1 }, { "Lucky", 1 }, { "Rampage", 1 }, { "Riposte", 1 }, { "Slay Undead", 1 }, { "Strikethrough", 1 },
       { "Twincast", 1 }, { "Wild Rampage", 1 },
     };
 
-    private static readonly Dictionary<string, byte> CRIT_MODIFIERS = new Dictionary<string, byte>()
+    private static readonly Dictionary<string, byte> CRIT_MODIFIERS = new()
     {
       { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Finishing Blow", 1}
     };
@@ -32,7 +32,7 @@ namespace EQLogParser
     private const int FLURRY = 1024;
     private const int FINISHING = 2048;
 
-    private static readonly ConcurrentDictionary<string, int> MaskCache = new ConcurrentDictionary<string, int>();
+    private static readonly ConcurrentDictionary<string, int> MaskCache = new();
 
     internal static bool IsAssassinate(int mask) => mask > -1 && (mask & ASSASSINATE) != 0;
 

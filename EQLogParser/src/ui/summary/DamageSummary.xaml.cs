@@ -18,9 +18,9 @@ namespace EQLogParser
   /// </summary>
   public partial class DamageSummary : SummaryTable, IDisposable
   {
-    private string CurrentClass = null;
-    private int CurrentGroupCount = 0;
-    private int CurrentPetOrPlayerOption = 0;
+    private string CurrentClass;
+    private int CurrentGroupCount;
+    private int CurrentPetOrPlayerOption;
     private readonly DispatcherTimer SelectionTimer;
 
     public DamageSummary()
@@ -413,7 +413,7 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

@@ -94,10 +94,7 @@ namespace EQLogParser
         }
         else
         {
-          if (TheColorPicker.Brush == null)
-          {
-            TheColorPicker.Brush = new SolidColorBrush { Color = Colors.White };
-          }
+          TheColorPicker.Brush ??= new SolidColorBrush { Color = Colors.White };
         }
       }
     }

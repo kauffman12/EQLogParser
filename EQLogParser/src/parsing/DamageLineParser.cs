@@ -12,13 +12,13 @@ namespace EQLogParser
     public static event EventHandler<TauntEvent> EventsNewTaunt;
 
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static readonly Regex CheckEyeRegex = new Regex(@"^Eye of (\w+)");
-    private static readonly Dictionary<string, string> SpellTypeCache = new Dictionary<string, string>();
-    private static readonly List<string> SlainQueue = new List<string>();
+    private static readonly Regex CheckEyeRegex = new(@"^Eye of (\w+)");
+    private static readonly Dictionary<string, string> SpellTypeCache = new();
+    private static readonly List<string> SlainQueue = new();
     private static double SlainTime = double.NaN;
-    private static string PreviousAction = null;
+    private static string PreviousAction;
 
-    private static readonly Dictionary<string, string> HitMap = new Dictionary<string, string>
+    private static readonly Dictionary<string, string> HitMap = new()
     {
       { "bash", "bashes" }, { "backstab", "backstabs" }, { "bite", "bites" }, { "claw", "claws" }, { "crush", "crushes" },
       { "frenzy", "frenzies" }, { "gore", "gores" }, { "hit", "hits" }, { "kick", "kicks" }, { "learn", "learns" },
@@ -27,17 +27,17 @@ namespace EQLogParser
       { "sting", "stings" }, { "strike", "strikes" }, { "sweep", "sweeps" }
     };
 
-    private static readonly Dictionary<string, string> HitAdditionalMap = new Dictionary<string, string>
+    private static readonly Dictionary<string, string> HitAdditionalMap = new()
     {
       { "frenzy", "frenzies" }, { "frenzies", "frenzies" },
     };
 
-    private static readonly List<string> ChestTypes = new List<string>
+    private static readonly List<string> ChestTypes = new()
     {
       " chest", " cache", " satchel", " treasure box", " lost treasure"
     };
 
-    private static readonly Dictionary<string, SpellResist> SpellResistMap = new Dictionary<string, SpellResist>
+    private static readonly Dictionary<string, SpellResist> SpellResistMap = new()
     {
       { "fire", SpellResist.FIRE }, { "cold", SpellResist.COLD }, { "poison", SpellResist.POISON },
       { "magic", SpellResist.MAGIC }, { "disease", SpellResist.DISEASE }, { "unresistable", SpellResist.UNRESISTABLE },
@@ -45,7 +45,7 @@ namespace EQLogParser
       { "prismatic", SpellResist.AVERAGE },
     };
 
-    private static readonly Dictionary<string, string> SpecialCodes = new Dictionary<string, string>
+    private static readonly Dictionary<string, string> SpecialCodes = new()
     {
       { "Mana Burn", "M" }, { "Harm Touch", "H" }, { "Life Burn", "L" }
     };
@@ -80,7 +80,7 @@ namespace EQLogParser
           var stop = FindStop(split);
 
           // see if it's a died message right away
-          if (split.Length > 1 && stop >= 1 && split[stop] == "died." && string.Join(" ", split, 0, stop) is string test
+          if (split.Length > 1 && stop >= 1 && split[stop] == "died." && string.Join(" ", split, 0, stop) is { } test
             && !string.IsNullOrEmpty(test))
           {
             UpdateSlain(test, "", lineData);
@@ -88,7 +88,7 @@ namespace EQLogParser
           }
           else
           {
-            if (ParseLine(false, lineData, split, stop) is DamageRecord)
+            if (ParseLine(false, lineData, split, stop) is not null)
             {
               processed = true;
             }
@@ -121,7 +121,7 @@ namespace EQLogParser
             var stop = FindStop(split);
 
             // see if it's a died message right away
-            if (!(split.Length > 1 && stop >= 1 && split[stop] == "died." && string.Join(" ", split, 0, stop) is string test && !string.IsNullOrEmpty(test)))
+            if (!(split.Length > 1 && stop >= 1 && split[stop] == "died." && string.Join(" ", split, 0, stop) is { } test && !string.IsNullOrEmpty(test)))
             {
               record = ParseLine(true, lineData, split, stop);
             }
@@ -262,7 +262,7 @@ namespace EQLogParser
               break;
             case "riposte!":
             case "ripostes!":
-              missType = (stop == i && butIndex > -1 && i > tryIndex && "(Strikethrough)" != split[split.Length - 1]) ? 5 : missType;
+              missType = (stop == i && butIndex > -1 && i > tryIndex && "(Strikethrough)" != split[^1]) ? 5 : missType;
               break;
             case "blow!":
               missType = (stop == i && butIndex > -1 && i > tryIndex && split[i - 2] == "absorbs") ? 6 : missType;
@@ -416,7 +416,7 @@ namespace EQLogParser
         subType == "hits" && hitType < forIndex && split[stop].Length > 0 && split[stop][split[stop].Length - 1] == '.')
       {
         var spell = string.Join(" ", split, byIndex + 1, stop - byIndex);
-        if (!string.IsNullOrEmpty(spell) && spell[spell.Length - 1] == '.')
+        if (!string.IsNullOrEmpty(spell) && spell[^1] == '.')
         {
           spell = spell.Substring(0, spell.Length - 1);
           attacker = string.Join(" ", split, 0, hitType);
@@ -462,19 +462,19 @@ namespace EQLogParser
           }
           else
           {
-            attacker = (!string.IsNullOrEmpty(attacker) && attacker[attacker.Length - 1] == '.') ? attacker.Substring(0, attacker.Length - 1) : null;
+            attacker = (!string.IsNullOrEmpty(attacker) && attacker[^1] == '.') ? attacker.Substring(0, attacker.Length - 1) : null;
           }
         }
         else if (yourIndex > -1)
         {
           attacker = split[yourIndex];
           spell = string.Join(" ", split, yourIndex + 1, stop - yourIndex);
-          spell = (!string.IsNullOrEmpty(spell) && spell[spell.Length - 1] == '.') ? spell.Substring(0, spell.Length - 1) : Labels.DOT;
+          spell = (!string.IsNullOrEmpty(spell) && spell[^1] == '.') ? spell.Substring(0, spell.Length - 1) : Labels.DOT;
         }
         else if (isYou)
         {
           spell = string.Join(" ", split, fromDamage + 2, stop - fromDamage - 1);
-          spell = (!string.IsNullOrEmpty(spell) && spell[spell.Length - 1] == '.') ? spell.Substring(0, spell.Length - 1) : spell;
+          spell = (!string.IsNullOrEmpty(spell) && spell[^1] == '.') ? spell.Substring(0, spell.Length - 1) : spell;
           attacker = spell;
         }
 
@@ -495,14 +495,7 @@ namespace EQLogParser
           }
           else
           {
-            if (spell == attacker)
-            {
-              type = Labels.OTHERDMG;
-            }
-            else
-            {
-              type = GetTypeFromSpell(spell, Labels.DOT);
-            }
+            type = spell == attacker ? Labels.OTHERDMG : GetTypeFromSpell(spell, Labels.DOT);
           }
 
           defender = string.Join(" ", split, 0, takenIndex);
@@ -519,13 +512,13 @@ namespace EQLogParser
         defender = string.Join(" ", split, 0, takenIndex);
         var damage = StatsUtil.ParseUInt(split[byDamage - 1]);
         var spell = string.Join(" ", split, byDamage + 2, stop - byDamage - 1);
-        if (!string.IsNullOrEmpty(spell) && spell[spell.Length - 1] == '.')
+        if (!string.IsNullOrEmpty(spell) && spell[^1] == '.')
         {
           spell = spell.Substring(0, spell.Length - 1);
         }
 
         var label = Labels.OTHERDMG;
-        if (DataManager.Instance.GetDamagingSpellByName(spell) is SpellData spellData && spellData != null)
+        if (DataManager.Instance.GetDamagingSpellByName(spell) is { } spellData && spellData != null)
         {
           resist = spellData.Resist;
 
@@ -612,7 +605,7 @@ namespace EQLogParser
         {
           var hitTypeMod = hitTypeAdd > 0 ? 1 : 0;
           defender = string.Join(" ", split, hitType + hitTypeMod + 1, butIndex - hitType - hitTypeMod - 1);
-          if (!string.IsNullOrEmpty(defender) && defender[defender.Length - 1] == ',')
+          if (!string.IsNullOrEmpty(defender) && defender[^1] == ',')
           {
             defender = defender.Substring(0, defender.Length - 1);
             attacker = string.Join(" ", split, 0, tryIndex);
@@ -627,7 +620,7 @@ namespace EQLogParser
       else if (!checkLineType && slainIndex > -1 && byIndex == (slainIndex + 1) && hasIndex > 0 && stop > (slainIndex + 1) && split[hasIndex + 1] == "been")
       {
         var killer = string.Join(" ", split, byIndex + 1, stop - byIndex);
-        killer = killer.Length > 1 && killer[killer.Length - 1] == '!' ? killer.Substring(0, killer.Length - 1) : killer;
+        killer = killer.Length > 1 && killer[^1] == '!' ? killer.Substring(0, killer.Length - 1) : killer;
         var slain = string.Join(" ", split, 0, hasIndex);
         UpdateSlain(slain, killer, lineData);
         HasOwner(slain, out var t1);
@@ -637,7 +630,7 @@ namespace EQLogParser
       else if (!checkLineType && stop > 4 && slainIndex == 3 && byIndex == 4 && isYou && split[1] == "have" && split[2] == "been")
       {
         var killer = string.Join(" ", split, 5, stop - 4);
-        killer = killer.Length > 1 && killer[killer.Length - 1] == '!' ? killer.Substring(0, killer.Length - 1) : killer;
+        killer = killer.Length > 1 && killer[^1] == '!' ? killer.Substring(0, killer.Length - 1) : killer;
         var slain = ConfigUtil.PlayerName;
         UpdateSlain(slain, killer, lineData);
       }
@@ -646,7 +639,7 @@ namespace EQLogParser
       {
         var killer = ConfigUtil.PlayerName;
         var slain = string.Join(" ", split, 3, stop - 2);
-        slain = slain.Length > 1 && slain[slain.Length - 1] == '!' ? slain.Substring(0, slain.Length - 1) : slain;
+        slain = slain.Length > 1 && slain[^1] == '!' ? slain.Substring(0, slain.Length - 1) : slain;
         UpdateSlain(slain, killer, lineData);
       }
       else if (!checkLineType)
@@ -700,8 +693,8 @@ namespace EQLogParser
             var taunt = new TauntRecord { Player = name, Success = false, Npc = ToUpper(ParseSpellOrNpc(split, 3 + i)) };
             EventsNewTaunt?.Invoke(taunt, new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
-          else if (split.Length > 10 && split[split.Length - 1] == "taunt." && split[split.Length - 2] == "improved" &&
-            split[split.Length - 3] == "an" && split[split.Length - 4] == "to" && split[split.Length - 5] == "due")
+          else if (split.Length > 10 && split[^1] == "taunt." && split[^2] == "improved" &&
+            split[^3] == "an" && split[^4] == "to" && split[^5] == "due")
           {
             var last = split.Length - 5;
             for (var j = 0; j < split.Length - 9; j++)
@@ -747,7 +740,7 @@ namespace EQLogParser
             EventsDamageProcessed?.Invoke(record, e);
 
             if (record.Type == Labels.DD && SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) &&
-            record.SubType.Contains(special)) is string key && !string.IsNullOrEmpty(key))
+            record.SubType.Contains(special)) is { } key && !string.IsNullOrEmpty(key))
             {
               DataManager.Instance.AddSpecial(new SpecialSpell { Code = SpecialCodes[key], Player = record.Attacker, BeginTime = lineData.BeginTime });
             }
@@ -780,7 +773,7 @@ namespace EQLogParser
     {
       output = null;
       var npc = string.Join(" ", parts, length - 1, parts.Length - length);
-      if (!string.IsNullOrEmpty(npc) && npc.Split("'s") is string[] split && split.Length == 2)
+      if (!string.IsNullOrEmpty(npc) && npc.Split("'s") is { } split && split.Length == 2)
       {
         output = split[0];
         return true;

@@ -7,7 +7,7 @@ namespace EQLogParser
   {
     private readonly ActionBlock<Tuple<string, double, bool>> PreProcess;
     private readonly ActionBlock<LineData> Process;
-    private long LineCount = 0;
+    private long LineCount;
 
     internal LogProcessor()
     {
@@ -40,7 +40,7 @@ namespace EQLogParser
       }
 
       // avoid having other things parse chat by accident
-      if (ChatLineParser.ParseChatType(lineData.Action, lineData.BeginTime) is ChatType chatType)
+      if (ChatLineParser.ParseChatType(lineData.Action, lineData.BeginTime) is { } chatType)
       {
         chatType.BeginTime = lineData.BeginTime;
         chatType.Text = line; // workaround for now?

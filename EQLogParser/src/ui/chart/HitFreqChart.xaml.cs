@@ -17,11 +17,11 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private const string CRIT_HITTYPE = "Critical";
     private const string NON_CRIT_HITTYPE = "Non-Critical";
-    private Dictionary<string, List<HitFreqChartData>> PlayerData = null;
-    private readonly List<string> MinFreqs = new List<string>()
+    private Dictionary<string, List<HitFreqChartData>> PlayerData;
+    private readonly List<string> MinFreqs = new()
     { "Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5" };
     private int PageSize = 9;
-    private readonly List<ColumnData> Columns = new List<ColumnData>();
+    private readonly List<ColumnData> Columns = new();
 
     public HitFreqChart()
     {
@@ -63,7 +63,7 @@ namespace EQLogParser
 
     private void EventsThemeChanged(string _)
     {
-      if (sfChart?.Series is ChartSeriesCollection collection && collection.Count > 0)
+      if (sfChart?.Series is { } collection && collection.Count > 0)
       {
         if (collection[0] is FastColumnBitmapSeries series)
         {
@@ -327,7 +327,7 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
@@ -360,10 +360,10 @@ namespace EQLogParser
     private class HitFreqChartData
     {
       public string HitType { get; init; }
-      public List<int> CritYValues { get; } = new List<int>();
-      public List<long> CritXValues { get; } = new List<long>();
-      public List<int> NonCritYValues { get; } = new List<int>();
-      public List<long> NonCritXValues { get; } = new List<long>();
+      public List<int> CritYValues { get; } = new();
+      public List<long> CritXValues { get; } = new();
+      public List<int> NonCritYValues { get; } = new();
+      public List<long> NonCritXValues { get; } = new();
     }
 
     /*

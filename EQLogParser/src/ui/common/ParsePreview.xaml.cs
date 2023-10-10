@@ -15,9 +15,9 @@ namespace EQLogParser
   /// </summary>
   public partial class ParsePreview : UserControl
   {
-    private readonly ObservableCollection<string> AvailableParses = new ObservableCollection<string>();
-    private readonly ConcurrentDictionary<string, ParseData> Parses = new ConcurrentDictionary<string, ParseData>();
-    private readonly bool initialized = false;
+    private readonly ObservableCollection<string> AvailableParses = new();
+    private readonly ConcurrentDictionary<string, ParseData> Parses = new();
+    private readonly bool initialized;
     private readonly DispatcherTimer TitleTimer;
 
     public ParsePreview()
@@ -180,7 +180,7 @@ namespace EQLogParser
       {
         sharePlayerParseLabel.Text = Resource.SHARE_DPS_TOO_BIG;
         sharePlayerParseLabel.SetResourceReference(TextBlock.ForegroundProperty, "EQWarnForegroundBrush");
-        sharePlayerParseWarningLabel.Text = string.Format("{0}/{1}", playerParseTextBox.Text.Length, 509);
+        sharePlayerParseWarningLabel.Text = $"{playerParseTextBox.Text.Length}/509";
         sharePlayerParseWarningLabel.SetResourceReference(TextBlock.ForegroundProperty, "EQWarnForegroundBrush");
         sharePlayerParseWarningLabel.Visibility = Visibility.Visible;
       }
@@ -190,7 +190,7 @@ namespace EQLogParser
         {
           var count = data.Selected?.Count > 0 ? data.Selected?.Count : 0;
           var players = count == 1 ? "Player" : "Players";
-          sharePlayerParseLabel.Text = string.Format("{0} {1} Selected", count, players);
+          sharePlayerParseLabel.Text = $"{count} {players} Selected";
         }
 
         sharePlayerParseLabel.SetResourceReference(TextBlock.ForegroundProperty, "ContentForeground");

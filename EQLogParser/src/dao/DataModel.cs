@@ -78,7 +78,7 @@ namespace EQLogParser
   {
     public string OverlayComments { get; set; }
     public string FontSize { get; set; } = "12pt";
-    public int SortBy { get; set; } = 0;
+    public int SortBy { get; set; }
     public string FontColor { get; set; } = "#FFFFFFFF";
     public string FontFamily { get; set; } = "Segoe UI";
     public string ActiveColor { get; set; } = "#FF1D397E";
@@ -88,11 +88,11 @@ namespace EQLogParser
     public string OverlayColor { get; set; } = "#00000000";
     public double IdleTimeoutSeconds { get; set; }
     public long FadeDelay { get; set; } = 10;
-    public bool UseStandardTime { get; set; } = false;
+    public bool UseStandardTime { get; set; }
     public bool IsTimerOverlay { get; set; }
     public bool IsTextOverlay { get; set; }
     public bool IsDefault { get; set; }
-    public int TimerMode { get; set; } = 0;
+    public int TimerMode { get; set; }
     public long Height { get; set; } = 400;
     public long Width { get; set; } = 300;
     public long Top { get; set; } = 200;
@@ -132,7 +132,7 @@ namespace EQLogParser
     public bool UseRegex { get; set; }
     public string ActiveColor { get; set; } = null;
     public string FontColor { get; set; } = null;
-    public List<string> SelectedOverlays { get; set; } = new List<string>();
+    public List<string> SelectedOverlays { get; set; } = new();
     public double ResetDurationSeconds { get; set; }
     public long WarningSeconds { get; set; }
     public string EndEarlyTextToDisplay { get; set; }
@@ -188,12 +188,12 @@ namespace EQLogParser
   internal class TriggerState
   {
     public string Id { get; set; }
-    public Dictionary<string, bool?> Enabled { get; set; } = new Dictionary<string, bool?>();
+    public Dictionary<string, bool?> Enabled { get; set; } = new();
   }
 
   internal class TriggerNode
   {
-    public bool IsExpanded { get; set; } = false;
+    public bool IsExpanded { get; set; }
     public string Name { get; set; }
     public Trigger TriggerData { get; set; }
     public Overlay OverlayData { get; set; }
@@ -214,13 +214,13 @@ namespace EQLogParser
   {
     public string Id { get; set; }
     public bool IsAdvanced { get; set; }
-    public List<TriggerCharacter> Characters { get; set; } = new List<TriggerCharacter>();
+    public List<TriggerCharacter> Characters { get; set; } = new();
     public bool IsEnabled { get; set; }
   }
 
   internal class ExportTriggerNode : TriggerNode
   {
-    public List<ExportTriggerNode> Nodes { get; set; } = new List<ExportTriggerNode>();
+    public List<ExportTriggerNode> Nodes { get; set; } = new();
   }
 
   internal class LegacyTriggerNode
@@ -228,7 +228,7 @@ namespace EQLogParser
     public bool? IsEnabled { get; set; } = false;
     public bool IsExpanded { get; set; } = false;
     public string Name { get; set; }
-    public List<LegacyTriggerNode> Nodes { get; set; } = new List<LegacyTriggerNode>();
+    public List<LegacyTriggerNode> Nodes { get; set; } = new();
     public Trigger TriggerData { get; set; }
     public LegacyOverlay OverlayData { get; set; }
   }
@@ -281,7 +281,7 @@ namespace EQLogParser
   internal class AutoCompleteText
   {
     public string Text { get; set; }
-    public List<string> Items { get; } = new List<string>();
+    public List<string> Items { get; } = new();
   }
 
   internal class ChatType
@@ -300,7 +300,7 @@ namespace EQLogParser
   {
     public CombinedStats CombinedStats { get; set; }
     public ISummaryBuilder Builder { get; set; }
-    public List<PlayerStats> Selected { get; } = new List<PlayerStats>();
+    public List<PlayerStats> Selected { get; } = new();
   }
 
   internal class TimedAction : IAction
@@ -315,7 +315,7 @@ namespace EQLogParser
 
   internal class PlayerStatsSelectionChangedEventArgs : EventArgs
   {
-    public List<PlayerStats> Selected { get; } = new List<PlayerStats>();
+    public List<PlayerStats> Selected { get; } = new();
     public CombinedStats CurrentStats { get; set; }
   }
 
@@ -329,12 +329,12 @@ namespace EQLogParser
   {
     public string Action { get; set; }
     public RecordGroupCollection Iterator { get; set; }
-    public List<PlayerStats> Selected { get; } = new List<PlayerStats>();
+    public List<PlayerStats> Selected { get; } = new();
   }
 
   internal class GenerateStatsOptions
   {
-    public List<Fight> Npcs { get; } = new List<Fight>();
+    public List<Fight> Npcs { get; } = new();
     public long MaxSeconds { get; set; } = -1;
     public long MinSeconds { get; set; } = -1;
     public int DamageType { get; set; }
@@ -346,7 +346,7 @@ namespace EQLogParser
     public string Type { get; set; }
     public string State { get; set; }
     public CombinedStats CombinedStats { get; set; }
-    public List<List<ActionGroup>> Groups { get; } = new List<List<ActionGroup>>();
+    public List<List<ActionGroup>> Groups { get; } = new();
     public int UniqueGroupCount { get; set; }
   }
 
@@ -450,7 +450,7 @@ namespace EQLogParser
 
   internal class ActionGroup : TimedAction
   {
-    public List<IAction> Actions { get; } = new List<IAction>();
+    public List<IAction> Actions { get; } = new();
   }
 
   internal class Attempt
@@ -495,8 +495,8 @@ namespace EQLogParser
     public long TotalNonTwincastLucky { get; set; }
     public long TotalRiposte { get; set; }
     public long TotalSlay { get; set; }
-    public Dictionary<long, int> CritFreqValues { get; } = new Dictionary<long, int>();
-    public Dictionary<long, int> NonCritFreqValues { get; } = new Dictionary<long, int>();
+    public Dictionary<long, int> CritFreqValues { get; } = new();
+    public Dictionary<long, int> NonCritFreqValues { get; } = new();
   }
 
   internal class Fight : FullTimedAction, INotifyPropertyChanged
@@ -510,7 +510,7 @@ namespace EQLogParser
     private bool searchResult;
     public bool IsSearchResult
     {
-      get { return searchResult; }
+      get => searchResult;
       set
       {
         searchResult = value;
@@ -537,18 +537,18 @@ namespace EQLogParser
     public long DamageHits { get; set; }
     public long TankHits { get; set; }
     public string TooltipText { get; set; }
-    public ConcurrentDictionary<string, FightTotalDamage> PlayerDamageTotals { get; } = new ConcurrentDictionary<string, FightTotalDamage>();
-    public ConcurrentDictionary<string, FightTotalDamage> PlayerTankTotals { get; } = new ConcurrentDictionary<string, FightTotalDamage>();
-    public List<ActionGroup> DamageBlocks { get; } = new List<ActionGroup>();
-    public Dictionary<string, TimeSegment> DamageSegments { get; } = new Dictionary<string, TimeSegment>();
-    public Dictionary<string, Dictionary<string, TimeSegment>> DamageSubSegments { get; } = new Dictionary<string, Dictionary<string, TimeSegment>>();
-    public Dictionary<string, TimeSegment> TankSegments { get; } = new Dictionary<string, TimeSegment>();
-    public Dictionary<string, Dictionary<string, TimeSegment>> TankSubSegments { get; } = new Dictionary<string, Dictionary<string, TimeSegment>>();
-    public List<ActionGroup> TankingBlocks { get; } = new List<ActionGroup>();
-    public List<ActionGroup> TauntBlocks { get; } = new List<ActionGroup>();
-    public Dictionary<string, SpellDamageStats> DoTDamage { get; } = new Dictionary<string, SpellDamageStats>();
-    public Dictionary<string, SpellDamageStats> DDDamage { get; } = new Dictionary<string, SpellDamageStats>();
-    public Dictionary<string, SpellDamageStats> ProcDamage { get; } = new Dictionary<string, SpellDamageStats>();
+    public ConcurrentDictionary<string, FightTotalDamage> PlayerDamageTotals { get; } = new();
+    public ConcurrentDictionary<string, FightTotalDamage> PlayerTankTotals { get; } = new();
+    public List<ActionGroup> DamageBlocks { get; } = new();
+    public Dictionary<string, TimeSegment> DamageSegments { get; } = new();
+    public Dictionary<string, Dictionary<string, TimeSegment>> DamageSubSegments { get; } = new();
+    public Dictionary<string, TimeSegment> TankSegments { get; } = new();
+    public Dictionary<string, Dictionary<string, TimeSegment>> TankSubSegments { get; } = new();
+    public List<ActionGroup> TankingBlocks { get; } = new();
+    public List<ActionGroup> TauntBlocks { get; } = new();
+    public Dictionary<string, SpellDamageStats> DoTDamage { get; } = new();
+    public Dictionary<string, SpellDamageStats> DDDamage { get; } = new();
+    public Dictionary<string, SpellDamageStats> ProcDamage { get; } = new();
   }
 
   internal class FightTotalDamage
@@ -585,7 +585,7 @@ namespace EQLogParser
     public string Receiver { get; set; }
     public SpellData SpellData { get; set; }
 
-    public List<SpellData> Ambiguity { get; } = new List<SpellData>();
+    public List<SpellData> Ambiguity { get; } = new();
   }
 
   internal class SpellCast : ReceivedSpell
@@ -620,12 +620,12 @@ namespace EQLogParser
 
   internal class SpellCountData
   {
-    public Dictionary<string, Dictionary<string, uint>> PlayerCastCounts { get; set; } = new Dictionary<string, Dictionary<string, uint>>();
-    public Dictionary<string, Dictionary<string, uint>> PlayerInterruptedCounts { get; set; } = new Dictionary<string, Dictionary<string, uint>>();
-    public Dictionary<string, Dictionary<string, uint>> PlayerReceivedCounts { get; set; } = new Dictionary<string, Dictionary<string, uint>>();
-    public Dictionary<string, uint> MaxCastCounts { get; set; } = new Dictionary<string, uint>();
-    public Dictionary<string, uint> MaxReceivedCounts { get; set; } = new Dictionary<string, uint>();
-    public Dictionary<string, SpellData> UniqueSpells { get; set; } = new Dictionary<string, SpellData>();
+    public Dictionary<string, Dictionary<string, uint>> PlayerCastCounts { get; set; } = new();
+    public Dictionary<string, Dictionary<string, uint>> PlayerInterruptedCounts { get; set; } = new();
+    public Dictionary<string, Dictionary<string, uint>> PlayerReceivedCounts { get; set; } = new();
+    public Dictionary<string, uint> MaxCastCounts { get; set; } = new();
+    public Dictionary<string, uint> MaxReceivedCounts { get; set; } = new();
+    public Dictionary<string, SpellData> UniqueSpells { get; set; } = new();
   }
 
   internal class OverlayPlayerTotal
@@ -643,11 +643,11 @@ namespace EQLogParser
     public string TotalTitle { get; set; }
     public string FullTitle { get; set; }
     public string ShortTitle { get; set; }
-    public List<PlayerStats> StatsList { get; } = new List<PlayerStats>();
-    public List<PlayerStats> ExpandedStatsList { get; } = new List<PlayerStats>();
+    public List<PlayerStats> StatsList { get; } = new();
+    public List<PlayerStats> ExpandedStatsList { get; } = new();
     public PlayerStats RaidStats { get; set; }
-    public Dictionary<string, byte> UniqueClasses { get; } = new Dictionary<string, byte>();
-    public Dictionary<string, List<PlayerStats>> Children { get; } = new Dictionary<string, List<PlayerStats>>();
+    public Dictionary<string, byte> UniqueClasses { get; } = new();
+    public Dictionary<string, List<PlayerStats>> Children { get; } = new();
   }
 
   internal class DamageOverlayStats
@@ -700,20 +700,20 @@ namespace EQLogParser
     public uint MeleeUndefended { get; set; }
     public string ClassName { get; set; }
     public string Key { get; set; }
-    public TimeRange Ranges { get; } = new TimeRange();
+    public TimeRange Ranges { get; } = new();
   }
 
   internal class SubStatsBreakdown : PlayerSubStats
   {
-    public List<PlayerSubStats> Children { get; set; } = new List<PlayerSubStats>();
+    public List<PlayerSubStats> Children { get; set; } = new();
   }
 
   internal class PlayerStats : PlayerSubStats
   {
-    public List<DeathEvent> Deaths { get; } = new List<DeathEvent>();
-    public ConcurrentDictionary<string, string> Specials { get; } = new ConcurrentDictionary<string, string>();
-    public List<PlayerSubStats> SubStats { get; } = new List<PlayerSubStats>();
-    public List<PlayerSubStats> SubStats2 { get; } = new List<PlayerSubStats>();
+    public List<DeathEvent> Deaths { get; } = new();
+    public ConcurrentDictionary<string, string> Specials { get; } = new();
+    public List<PlayerSubStats> SubStats { get; } = new();
+    public List<PlayerSubStats> SubStats2 { get; } = new();
     public PlayerStats MoreStats { get; set; }
     public bool IsTopLevel { get; set; } = true;
     public string OrigName { get; set; }

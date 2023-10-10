@@ -18,7 +18,7 @@ namespace EQLogParser
   static class DataGridUtil
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static int StartRow = 0;
+    private static int StartRow;
 
     internal static Style CreateHighlightForegroundStyle(string name, IValueConverter converter = null)
     {

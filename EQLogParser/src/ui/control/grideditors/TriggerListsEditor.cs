@@ -15,7 +15,7 @@ namespace EQLogParser
   {
     private ComboBox TheComboBox;
 
-    private static readonly Dictionary<string, List<string>> Options = new Dictionary<string, List<string>>()
+    private static readonly Dictionary<string, List<string>> Options = new()
     {
       { "TriggerAgainOption", new  List<string>() { "Start Additional Timer", "Restart Timer", "Restart Timer If Same Name", "Do Nothing" } },
       { "FontSize", new  List<string>() { "10pt", "11pt", "12pt", "13pt", "14pt", "15pt", "16pt", "17pt",
@@ -26,7 +26,7 @@ namespace EQLogParser
       { "FontFamily", UIElementUtil.GetSystemFontFamilies().Select(font => font.Source).ToList() },
     };
 
-    private static readonly Dictionary<string, DependencyProperty> Props = new Dictionary<string, DependencyProperty>()
+    private static readonly Dictionary<string, DependencyProperty> Props = new()
     {
       { "TriggerAgainOption", Selector.SelectedIndexProperty },
       { "FontSize", Selector.SelectedValueProperty },

@@ -15,7 +15,7 @@ namespace EQLogParser
   internal static class GinaUtil
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static readonly ConcurrentDictionary<string, string> GinaCache = new ConcurrentDictionary<string, string>();
+    private static readonly ConcurrentDictionary<string, string> GinaCache = new();
 
     internal static List<ExportTriggerNode> CovertToTriggerNodes(byte[] data) => Convert(ReadXml(data));
 
@@ -115,7 +115,7 @@ namespace EQLogParser
     {
       string result = null;
       using var zip = new ZipArchive(new MemoryStream(data), ZipArchiveMode.Read);
-      if (zip.Entries.FirstOrDefault() is ZipArchiveEntry entry)
+      if (zip.Entries.FirstOrDefault() is { } entry)
       {
         using var sr = new StreamReader(entry.Open());
         result = sr.ReadToEnd();
@@ -217,7 +217,7 @@ namespace EQLogParser
 
     private static List<ExportTriggerNode> Convert(string xml)
     {
-      var result = new List<ExportTriggerNode>() { new ExportTriggerNode() };
+      var result = new List<ExportTriggerNode>() { new() };
 
       try
       {
@@ -237,7 +237,7 @@ namespace EQLogParser
 
     private static string GetText(XmlNode node, string value)
     {
-      if (node.SelectSingleNode(value) is XmlNode selected)
+      if (node.SelectSingleNode(value) is { } selected)
       {
         return selected.InnerText?.Trim();
       }
@@ -318,7 +318,7 @@ namespace EQLogParser
                 // short duration timer <= 2s
                 trigger.TimerType = (trigger.DurationSeconds < 2.0) ? 2 : 1;
 
-                if (triggerNode.SelectSingleNode("TimerEndingTrigger") is XmlNode timerEndingNode)
+                if (triggerNode.SelectSingleNode("TimerEndingTrigger") is { } timerEndingNode)
                 {
                   if (bool.TryParse(GetText(timerEndingNode, "UseText"), out var _))
                   {
@@ -357,7 +357,7 @@ namespace EQLogParser
                   trigger.TriggerAgainOption = 3;
                 }
 
-                if (triggerNode.SelectSingleNode("TimerEndedTrigger") is XmlNode timerEndedNode)
+                if (triggerNode.SelectSingleNode("TimerEndedTrigger") is { } timerEndedNode)
                 {
                   if (bool.TryParse(GetText(timerEndedNode, "UseText"), out var _))
                   {
@@ -370,9 +370,9 @@ namespace EQLogParser
                   }
                 }
 
-                if (triggerNode.SelectSingleNode("TimerEarlyEnders") is XmlNode endingEarlyNode)
+                if (triggerNode.SelectSingleNode("TimerEarlyEnders") is { } endingEarlyNode)
                 {
-                  if (endingEarlyNode.SelectNodes("EarlyEnder") is XmlNodeList enderNodes)
+                  if (endingEarlyNode.SelectNodes("EarlyEnder") is { } enderNodes)
                   {
                     // only take 2 cancel patterns
                     if (enderNodes.Count > 0)

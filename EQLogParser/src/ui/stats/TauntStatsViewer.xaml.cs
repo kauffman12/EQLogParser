@@ -95,15 +95,7 @@ namespace EQLogParser
       }
 
       dataGrid.ItemsSource = totals.Values;
-
-      if (totals.Values.Count > 0)
-      {
-        titleLabel.Content = "Taunt Usage By Player";
-      }
-      else
-      {
-        titleLabel.Content = "No Taunt Data Found";
-      }
+      titleLabel.Content = totals.Values.Count > 0 ? "Taunt Usage By Player" : "No Taunt Data Found";
     }
 
     private void UpdateRow(TauntRecord record, dynamic row)
@@ -137,7 +129,7 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

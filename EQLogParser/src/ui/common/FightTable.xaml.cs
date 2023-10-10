@@ -27,22 +27,22 @@ namespace EQLogParser
     public const int GroupTimeout = 120;
 
     // NPC Search
-    private static int CurrentFightSearchIndex = 0;
+    private static int CurrentFightSearchIndex;
     private static int CurrentFightSearchDirection = 1;
-    private static Fight CurrentSearchEntry = null;
-    private static bool NeedSelectionChange = false;
+    private static Fight CurrentSearchEntry;
+    private static bool NeedSelectionChange;
 
-    private readonly ObservableCollection<Fight> Fights = new ObservableCollection<Fight>();
-    private readonly ObservableCollection<Fight> NonTankingFights = new ObservableCollection<Fight>();
+    private readonly ObservableCollection<Fight> Fights = new();
+    private readonly ObservableCollection<Fight> NonTankingFights = new();
     private bool CurrentShowBreaks;
     private int CurrentGroup = 1;
     private int CurrentNonTankingGroup = 1;
     private uint CurrentSortId = 1;
-    private bool NeedRefresh = false;
-    private bool IsEveryOther = false;
+    private bool NeedRefresh;
+    private bool IsEveryOther;
 
-    private readonly List<Fight> FightsToProcess = new List<Fight>();
-    private readonly List<Fight> NonTankingFightsToProcess = new List<Fight>();
+    private readonly List<Fight> FightsToProcess = new();
+    private readonly List<Fight> NonTankingFightsToProcess = new();
     private readonly DispatcherTimer SelectionTimer;
     private readonly DispatcherTimer SearchTextTimer;
     private readonly DispatcherTimer UpdateTimer;
@@ -112,7 +112,7 @@ namespace EQLogParser
 
     internal IEnumerable<Fight> GetSelectedFights()
     {
-      if (dataGrid?.SelectedItems is ObservableCollection<object> selected)
+      if (dataGrid?.SelectedItems is { } selected)
       {
         return selected.ToList().Cast<Fight>().Where(item => !item.IsInactivity);
       }

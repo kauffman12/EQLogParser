@@ -16,14 +16,14 @@ namespace EQLogParser
   public partial class TimerOverlayWindow : Window
   {
     private TriggerNode Node;
-    private readonly bool Preview = false;
+    private readonly bool Preview;
     private long SavedHeight;
     private long SavedWidth;
     private long SavedTop = long.MaxValue;
     private long SavedLeft = long.MaxValue;
-    private readonly Dictionary<string, TimerData> CooldownTimerData = new Dictionary<string, TimerData>();
-    private readonly Dictionary<string, ShortDurationData> ShortDurationBars = new Dictionary<string, ShortDurationData>();
-    private Dictionary<string, Window> PreviewWindows = null;
+    private readonly Dictionary<string, TimerData> CooldownTimerData = new();
+    private readonly Dictionary<string, ShortDurationData> ShortDurationBars = new();
+    private Dictionary<string, Window> PreviewWindows;
 
     internal TimerOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
     {

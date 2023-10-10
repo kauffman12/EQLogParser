@@ -25,7 +25,7 @@ namespace EQLogParser
       TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
       (Application.Current.MainWindow as MainWindow).Closing += TriggersTesterClosing;
 
-      if (TriggerStateManager.Instance.GetConfig() is TriggerConfig config)
+      if (TriggerStateManager.Instance.GetConfig() is { } config)
       {
         UpdateCharacterList(config);
       }
@@ -290,7 +290,7 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

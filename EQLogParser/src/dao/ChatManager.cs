@@ -15,29 +15,29 @@ namespace EQLogParser
     private const string SELECTED_CHANNELS_FILE = "channels-selected.txt";
     internal const string INDEX = "index";
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static readonly Lazy<ChatManager> _lazy = new Lazy<ChatManager>(() => new ChatManager());
-    private static readonly object LockObject = new object();
-    private static readonly ReverseTimedActionComparer RTAComparer = new ReverseTimedActionComparer();
+    private static readonly Lazy<ChatManager> _lazy = new(() => new ChatManager());
+    private static readonly object LockObject = new();
+    private static readonly ReverseTimedActionComparer RTAComparer = new();
     internal static ChatManager Instance => _lazy.Value;
     internal event EventHandler<string> EventsUpdatePlayer;
     internal event EventHandler<List<string>> EventsNewChannels;
-    private readonly Dictionary<string, byte> ChannelCache = new Dictionary<string, byte>();
-    private readonly Dictionary<string, byte> PlayerCache = new Dictionary<string, byte>();
-    private DateUtil DateUtil = null;
-    private string CurrentPlayer = null;
-    private string PlayerDir = null;
+    private readonly Dictionary<string, byte> ChannelCache = new();
+    private readonly Dictionary<string, byte> PlayerCache = new();
+    private DateUtil DateUtil;
+    private string CurrentPlayer;
+    private string PlayerDir;
     private Timer ArchiveTimer;
-    private Dictionary<string, Dictionary<string, byte>> ChannelIndex = null;
-    private List<ChatType> ChatTypes = new List<ChatType>();
-    private List<ChatLine> CurrentList = null;
-    private ZipArchive CurrentArchive = null;
-    private string CurrentArchiveKey = null;
-    private string CurrentEntryKey = null;
-    private bool ChannelCacheUpdated = false;
-    private bool PlayerCacheUpdated = false;
-    private bool ChannelIndexUpdated = false;
-    private bool CurrentListModified = false;
-    private bool Running = false;
+    private Dictionary<string, Dictionary<string, byte>> ChannelIndex;
+    private List<ChatType> ChatTypes = new();
+    private List<ChatLine> CurrentList;
+    private ZipArchive CurrentArchive;
+    private string CurrentArchiveKey;
+    private string CurrentEntryKey;
+    private bool ChannelCacheUpdated;
+    private bool PlayerCacheUpdated;
+    private bool ChannelIndexUpdated;
+    private bool CurrentListModified;
+    private bool Running;
 
     private ChatManager()
     {
@@ -277,7 +277,7 @@ namespace EQLogParser
     {
       try
       {
-        List<ChatType> working = null;
+        List<ChatType> working;
 
         lock (LockObject)
         {

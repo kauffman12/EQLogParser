@@ -7,8 +7,8 @@ namespace EQLogParser
   {
     internal double LastFightProcessTime = double.NaN;
     private int CurrentNpcID = 1;
-    private static readonly Dictionary<string, bool> RecentSpellCache = new Dictionary<string, bool>();
-    private static readonly Dictionary<string, bool> ValidCombo = new Dictionary<string, bool>();
+    private static readonly Dictionary<string, bool> RecentSpellCache = new();
+    private static readonly Dictionary<string, bool> ValidCombo = new();
     private const int RECENTSPELLTIME = 300;
 
     public NpcDamageManager()
@@ -95,7 +95,7 @@ namespace EQLogParser
             if (fight.PlayerDamageTotals.TryGetValue(attacker, out var total))
             {
               total.Damage += validator.IsValid(processed.Record) ? processed.Record.Total : 0;
-              total.PetOwner = total.PetOwner ?? processed.Record.AttackerOwner;
+              total.PetOwner ??= processed.Record.AttackerOwner;
               total.UpdateTime = processed.BeginTime;
             }
             else

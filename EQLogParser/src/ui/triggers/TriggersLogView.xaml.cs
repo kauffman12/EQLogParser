@@ -13,7 +13,7 @@ namespace EQLogParser
   /// </summary>
   public partial class TriggersLogView : UserControl, IDisposable
   {
-    private List<Tuple<string, ObservableCollection<AlertEntry>>> AlertLogs = null;
+    private List<Tuple<string, ObservableCollection<AlertEntry>>> AlertLogs;
 
     public TriggersLogView()
     {
@@ -83,7 +83,7 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

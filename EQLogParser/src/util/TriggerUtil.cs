@@ -16,7 +16,7 @@ namespace EQLogParser
 {
   internal static class TriggerUtil
   {
-    private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new ConcurrentDictionary<string, SolidColorBrush>();
+    private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new();
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     internal static double GetTimerBarHeight(double fontSize) => fontSize + 2;
     internal static void ImportTriggers(TriggerNode parent) => Import(parent);
@@ -213,7 +213,7 @@ namespace EQLogParser
           AssignResource(toModel, fromOverlay, "ResetColor", "ResetBrush", "TimerBarResetColor");
           AssignResource(toModel, fromOverlay, "BackgroundColor", "BackgroundBrush", "TimerBarTrackColor");
 
-          if (!string.IsNullOrEmpty(fromOverlay.FontSize) && fromOverlay.FontSize.Split("pt") is string[] split && split.Length == 2
+          if (!string.IsNullOrEmpty(fromOverlay.FontSize) && fromOverlay.FontSize.Split("pt") is { } split && split.Length == 2
              && double.TryParse(split[0], out var newFontSize))
           {
             Application.Current.Resources["TimerBarFontSize-" + toModel.Node.Id] = newFontSize;
@@ -243,7 +243,7 @@ namespace EQLogParser
             Application.Current.Resources["TextOverlayFontFamily-" + toTextModel.Node.Id] = new FontFamily(toTextModel.FontFamily);
           }
 
-          if (!string.IsNullOrEmpty(fromOverlay.FontSize) && fromOverlay.FontSize.Split("pt") is string[] split && split.Length == 2
+          if (!string.IsNullOrEmpty(fromOverlay.FontSize) && fromOverlay.FontSize.Split("pt") is { } split && split.Length == 2
               && double.TryParse(split[0], out var newFontSize))
           {
             Application.Current.Resources["TextOverlayFontSize-" + toTextModel.Node.Id] = newFontSize;

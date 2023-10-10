@@ -18,22 +18,22 @@ namespace EQLogParser
   public partial class ChatViewer : UserControl, IDisposable
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static readonly List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
+    private static readonly List<double> FontSizeList = new() { 10, 12, 14, 16, 18, 20, 22, 24 };
 
     private const int PAGE_SIZE = 200;
     private List<string> PlayerAutoCompleteList;
     private readonly DispatcherTimer FilterTimer;
-    private ChatFilter CurrentChatFilter = null;
-    private ChatIterator CurrentIterator = null;
-    private IInputElement LastFocused = null;
-    private string LastChannelSelection = null;
-    private string LastPlayerSelection = null;
-    private string LastTextFilter = null;
-    private string LastToFilter = null;
-    private string LastFromFilter = null;
-    private double LastStartDate = 0;
-    private double LastEndDate = 0;
-    private readonly bool Ready = false;
+    private ChatFilter CurrentChatFilter;
+    private ChatIterator CurrentIterator;
+    private IInputElement LastFocused;
+    private string LastChannelSelection;
+    private string LastPlayerSelection;
+    private string LastTextFilter;
+    private string LastToFilter;
+    private string LastFromFilter;
+    private double LastStartDate;
+    private double LastEndDate;
+    private readonly bool Ready;
 
     public ChatViewer()
     {
@@ -47,7 +47,7 @@ namespace EQLogParser
       var allFonts = UIElementUtil.GetSystemFontFamilies();
       fontFamily.ItemsSource = allFonts;
       var family = ConfigUtil.GetSetting("ChatFontFamily") ?? chatBox.FontFamily?.Source;
-      if (allFonts.FirstOrDefault(item => item.Source == family) is FontFamily found)
+      if (allFonts.FirstOrDefault(item => item.Source == family) is { } found)
       {
         fontFamily.SelectedItem = found;
       }
@@ -145,8 +145,8 @@ namespace EQLogParser
     {
       var items = new List<ComboBoxItemDetails>
       {
-        new ComboBoxItemDetails { Text = Resource.SELECT_ALL },
-        new ComboBoxItemDetails { Text = Resource.UNSELECT_ALL }
+        new() { Text = Resource.SELECT_ALL },
+        new() { Text = Resource.UNSELECT_ALL }
       };
 
       var count = 0;
@@ -503,7 +503,7 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

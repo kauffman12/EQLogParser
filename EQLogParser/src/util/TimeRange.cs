@@ -7,7 +7,7 @@ namespace EQLogParser
   public class TimeRange
   {
     private const int OFFSET = 6;
-    public List<TimeSegment> TimeSegments { get; } = new List<TimeSegment>();
+    public List<TimeSegment> TimeSegments { get; } = new();
 
     public TimeRange() { }
 

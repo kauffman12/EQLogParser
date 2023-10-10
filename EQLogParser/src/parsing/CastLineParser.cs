@@ -9,13 +9,13 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly char[] OldSpellChars = new char[] { '<', '>' };
 
-    private static readonly Dictionary<string, string> SpecialCastCodes = new Dictionary<string, string>()
+    private static readonly Dictionary<string, string> SpecialCastCodes = new()
     {
       { "Glyph of Ultimate Power", "G" }, { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" },
       { "Intensity of the Resolute", "7" }, { "Staunch Recovery", "6" }, { "Glyph of Arcane Secrets", "S" }
     };
 
-    private static readonly Dictionary<string, bool> PetSpells = new Dictionary<string, bool>()
+    private static readonly Dictionary<string, bool> PetSpells = new()
     {
       { "Fortify Companion", true }, { "Zeal of the Elements", true }, { "Frenzied Burnout", true }, { "Frenzy of the Dead", true }
     };
@@ -101,7 +101,7 @@ namespace EQLogParser
               }
             }
           }
-          else if (split.Length > 4 && split[split.Length - 1] == "interrupted." && split[split.Length - 2] == "is" && split[split.Length - 3] == "spell")
+          else if (split.Length > 4 && split[^1] == "interrupted." && split[^2] == "is" && split[^3] == "spell")
           {
             isInterrupted = true;
             spellName = string.Join(" ", split.ToArray(), 1, split.Length - 4);
@@ -128,7 +128,7 @@ namespace EQLogParser
               {
                 // For some reason Glyphs don't show up for current player so this special case should limit the checks
                 // and allow glyph to work
-                if (CheckForSpecial(SpecialCastCodes, spellName, player, currentTime) is string found && isYou)
+                if (CheckForSpecial(SpecialCastCodes, spellName, player, currentTime) is { } found && isYou)
                 {
                   specialKey = found;
                 }
@@ -251,7 +251,7 @@ namespace EQLogParser
     private static string CheckForSpecial(Dictionary<string, string> codes, string spellName, string player, double currentTime)
     {
       string found = null;
-      if (codes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(spellName) && spellName.Contains(special)) is string key && !string.IsNullOrEmpty(key))
+      if (codes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(spellName) && spellName.Contains(special)) is { } key && !string.IsNullOrEmpty(key))
       {
         DataManager.Instance.AddSpecial(new SpecialSpell { Code = codes[key], Player = player, BeginTime = currentTime });
         found = key;

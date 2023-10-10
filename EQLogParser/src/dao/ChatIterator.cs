@@ -10,13 +10,13 @@ namespace EQLogParser
 {
   class ChatIterator : IEnumerable<ChatType>
   {
-    private static readonly ChatType END_RESULT = new ChatType();
+    private static readonly ChatType END_RESULT = new();
 
     private readonly string Home;
 
-    private string CurrentArchive = null;
-    private readonly ChatFilter CurrentChatFilter = null;
-    private StringReader CurrentReader = null;
+    private string CurrentArchive;
+    private readonly ChatFilter CurrentChatFilter;
+    private StringReader CurrentReader;
     private readonly List<string> Directories;
     private List<string> Months;
     private List<string> Entries;

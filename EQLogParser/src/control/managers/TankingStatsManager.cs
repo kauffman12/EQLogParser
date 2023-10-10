@@ -11,14 +11,14 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    internal static TankingStatsManager Instance = new TankingStatsManager();
+    internal static TankingStatsManager Instance = new();
 
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
     internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
-    private readonly Dictionary<int, byte> TankingGroupIds = new Dictionary<int, byte>();
-    private readonly ConcurrentDictionary<string, TimeRange> PlayerTimeRanges = new ConcurrentDictionary<string, TimeRange>();
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> PlayerSubTimeRanges = new ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>>();
-    private readonly List<List<ActionGroup>> TankingGroups = new List<List<ActionGroup>>();
+    private readonly Dictionary<int, byte> TankingGroupIds = new();
+    private readonly ConcurrentDictionary<string, TimeRange> PlayerTimeRanges = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> PlayerSubTimeRanges = new();
+    private readonly List<List<ActionGroup>> TankingGroups = new();
     private PlayerStats RaidTotals;
     private List<Fight> Selected;
     private string Title;

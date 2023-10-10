@@ -12,7 +12,7 @@ namespace EQLogParser
   /// </summary>
   public partial class SpellCastTable : CastTable
   {
-    private readonly Dictionary<string, bool> UniqueNames = new Dictionary<string, bool>();
+    private readonly Dictionary<string, bool> UniqueNames = new();
     private PlayerStats RaidStats;
     private string Title;
 

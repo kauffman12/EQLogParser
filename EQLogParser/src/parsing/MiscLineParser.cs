@@ -7,10 +7,10 @@ namespace EQLogParser
   static class MiscLineParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static readonly List<string> Currency = new List<string> { "Platinum", "Gold", "Silver", "Copper" };
-    private static readonly Dictionary<char, uint> Rates = new Dictionary<char, uint>() { { 'p', 1000 }, { 'g', 100 }, { 's', 10 }, { 'c', 1 } };
+    private static readonly List<string> Currency = new() { "Platinum", "Gold", "Silver", "Copper" };
+    private static readonly Dictionary<char, uint> Rates = new() { { 'p', 1000 }, { 'g', 100 }, { 's', 10 }, { 'c', 1 } };
     private static readonly char[] LootedFromTrim = new char[] { '-', '.' };
-    private static readonly Dictionary<string, byte> StruckByTypes = new Dictionary<string, byte>()
+    private static readonly Dictionary<string, byte> StruckByTypes = new()
     {
       { "afflicted", 1 }, { "angered", 1 }, { "assaulted", 1 }, { "beset", 1 }, { "bound", 1 }, { "burned", 1 }, { "consumed", 1 }, { "cursed", 1 },
       { "crushed", 1 }, { "cut", 1 }, { "drained", 1 }, { "engulfed", 1 }, { "enveloped", 1 }, { "chilled", 1 }, { "frozen", 1 }, { "hit", 1 },
@@ -130,7 +130,7 @@ namespace EQLogParser
                   }
                   break;
                 case "looter,":
-                  masterLootIndex = (i == 2 && split[1] == "master" && split[0] == "The") ? masterLootIndex = i + 1 : -1;
+                  masterLootIndex = (i == 2 && split[1] == "master" && split[0] == "The") ? i + 1 : -1;
                   break;
                 case "receive":
                   receiveIndex = (i == 1 && split[0] == "You") ? i : -1;
@@ -158,7 +158,7 @@ namespace EQLogParser
                   }
                   break;
                 case "your":
-                  if (resistedIndex > 0 && resistedIndex + 1 == i && split.Length > i + 1 && split[split.Length - 1].EndsWith("!", StringComparison.Ordinal))
+                  if (resistedIndex > 0 && resistedIndex + 1 == i && split.Length > i + 1 && split[^1].EndsWith("!", StringComparison.Ordinal))
                   {
                     var npc = string.Join(" ", split, 0, resistedIndex);
                     npc = TextUtils.ToUpper(npc);
@@ -317,7 +317,7 @@ namespace EQLogParser
           continue;
         }
 
-        if (StatsUtil.ParseUInt(pieces[i]) is uint value && Currency.FirstOrDefault(curr => pieces[i + 1].StartsWith(curr, StringComparison.OrdinalIgnoreCase)) is string type)
+        if (StatsUtil.ParseUInt(pieces[i]) is uint value && Currency.FirstOrDefault(curr => pieces[i + 1].StartsWith(curr, StringComparison.OrdinalIgnoreCase)) is { } type)
         {
           tmp.Add(pieces[i] + " " + type);
           count += value * Rates[pieces[i + 1][0]];

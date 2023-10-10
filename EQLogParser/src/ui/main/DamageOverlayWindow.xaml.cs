@@ -15,13 +15,13 @@ namespace EQLogParser
   public partial class DamageOverlayWindow : Window
   {
     private static readonly double DAMAGE_MODE_ZERO_TIMEOUT = TimeSpan.TicksPerSecond * 7; // with 3 second slain queue delay
-    private static readonly object StatsLock = new object();
-    private static readonly SolidColorBrush ActiveBrush = new SolidColorBrush(Color.FromRgb(254, 156, 30));
-    private static readonly SolidColorBrush InActiveBrush = new SolidColorBrush(Colors.White);
-    private static DamageOverlayStats Stats = null;
+    private static readonly object StatsLock = new();
+    private static readonly SolidColorBrush ActiveBrush = new(Color.FromRgb(254, 156, 30));
+    private static readonly SolidColorBrush InActiveBrush = new(Colors.White);
+    private static DamageOverlayStats Stats;
 
     private readonly DispatcherTimer UpdateTimer;
-    private readonly bool Preview = false;
+    private readonly bool Preview;
     private double SavedHeight;
     private double SavedWidth;
     private double SavedTop = double.NaN;
@@ -269,12 +269,12 @@ namespace EQLogParser
           string origName;
           if (CurrentHideOthers && !isMe)
           {
-            name = string.Format("{0}. Hidden Player", stat.Rank);
+            name = $"{stat.Rank}. Hidden Player";
             origName = "";
           }
           else
           {
-            name = string.Format("{0}. {1}", stat.Rank, stat.Name);
+            name = $"{stat.Rank}. {stat.Name}";
             origName = stat.OrigName;
           }
 
@@ -284,17 +284,17 @@ namespace EQLogParser
 
             if (isMe && PlayerManager.Instance.IsDoTClass(stat.ClassName) && DataManager.Instance.MyDoTCritRateMod is uint doTCritRate && doTCritRate > 0)
             {
-              critMods.Add(string.Format("DoT +{0}", doTCritRate));
+              critMods.Add($"DoT +{doTCritRate}");
             }
 
             if (isMe && DataManager.Instance.MyNukeCritRateMod is uint nukeCritRate && nukeCritRate > 0)
             {
-              critMods.Add(string.Format("Nuke +{0}", nukeCritRate));
+              critMods.Add($"Nuke +{nukeCritRate}");
             }
 
             if (critMods.Count > 0)
             {
-              name = string.Format("{0}  [{1}]", name, string.Join(", ", critMods));
+              name = $"{name}  [{string.Join(", ", critMods)}]";
             }
           }
 
@@ -316,7 +316,7 @@ namespace EQLogParser
         }
       }
 
-      var titleBar = children[children.Count - 1] as DamageBar;
+      var titleBar = children[^1] as DamageBar;
       titleBar.Update("", localStats.TargetTitle, StatsUtil.FormatTotals(localStats.RaidStats.Total, 2),
         StatsUtil.FormatTotals(localStats.RaidStats.DPS, 1), localStats.RaidStats.TotalSeconds.ToString(), 0);
 
@@ -349,12 +349,12 @@ namespace EQLogParser
 
       if (load)
       {
-        (damageContent.Children[damageContent.Children.Count - 1] as DamageBar).Update("", "Example NPC", "500.2M", "490.5K", "456", 0);
+        (damageContent.Children[^1] as DamageBar).Update("", "Example NPC", "500.2M", "490.5K", "456", 0);
       }
       else
       {
-        (damageContent.Children[damageContent.Children.Count - 1] as DamageBar).Update("", "", "", "", "", 0);
-        (damageContent.Children[damageContent.Children.Count - 1] as DamageBar).Visibility = Visibility.Collapsed;
+        (damageContent.Children[^1] as DamageBar).Update("", "", "", "", "", 0);
+        (damageContent.Children[^1] as DamageBar).Visibility = Visibility.Collapsed;
       }
     }
 

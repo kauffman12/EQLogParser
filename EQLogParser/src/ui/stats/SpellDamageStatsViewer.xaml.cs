@@ -15,13 +15,13 @@ namespace EQLogParser
   /// </summary>
   public partial class SpellDamageStatsViewer : UserControl, IDisposable
   {
-    private readonly ObservableCollection<string> Players = new ObservableCollection<string>();
-    private readonly ObservableCollection<string> Spells = new ObservableCollection<string>();
-    private readonly ObservableCollection<string> Types = new ObservableCollection<string>();
+    private readonly ObservableCollection<string> Players = new();
+    private readonly ObservableCollection<string> Spells = new();
+    private readonly ObservableCollection<string> Types = new();
     private bool CurrentShowPlayers = true;
-    private string CurrentPlayer = null;
-    private string CurrentSpell = null;
-    private string CurrentType = null;
+    private string CurrentPlayer;
+    private string CurrentSpell;
+    private string CurrentType;
 
     public SpellDamageStatsViewer()
     {
@@ -232,7 +232,7 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

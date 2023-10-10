@@ -14,15 +14,15 @@ namespace EQLogParser
   /// </summary>
   public partial class TextOverlayWindow : Window
   {
-    private readonly LinkedList<TextData> TextDataList = new LinkedList<TextData>();
+    private readonly LinkedList<TextData> TextDataList = new();
     private int MaxNodes = -1;
     private TriggerNode Node;
-    private readonly bool Preview = false;
+    private readonly bool Preview;
     private long SavedHeight;
     private long SavedWidth;
     private long SavedTop = long.MaxValue;
     private long SavedLeft = long.MaxValue;
-    private Dictionary<string, Window> PreviewWindows = null;
+    private Dictionary<string, Window> PreviewWindows;
 
     internal TextOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
     {

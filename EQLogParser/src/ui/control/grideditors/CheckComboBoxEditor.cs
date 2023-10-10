@@ -53,7 +53,7 @@ namespace EQLogParser
       if (comboBox?.ItemsSource is ObservableCollection<ComboBoxItemDetails> details)
       {
         var count = details.Where(item => item.IsChecked).Count();
-        if (count == 1 && details.First(item => item.IsChecked) is ComboBoxItemDetails single)
+        if (count == 1 && details.First(item => item.IsChecked) is { } single)
         {
           single.SelectedText = single.Text;
           comboBox.SelectedIndex = -1;

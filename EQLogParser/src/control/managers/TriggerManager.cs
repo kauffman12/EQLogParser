@@ -14,16 +14,16 @@ namespace EQLogParser
     internal event Action<string> EventsSelectTrigger;
     internal static TriggerManager Instance => _lazy.Value; // instance
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static readonly Lazy<TriggerManager> _lazy = new Lazy<TriggerManager>(() => new TriggerManager());
+    private static readonly Lazy<TriggerManager> _lazy = new(() => new TriggerManager());
     private readonly DispatcherTimer ConfigUpdateTimer;
     private readonly DispatcherTimer TriggerUpdateTimer;
     private readonly DispatcherTimer TextOverlayTimer;
     private readonly DispatcherTimer TimerOverlayTimer;
-    private readonly Dictionary<string, OverlayWindowData> TextWindows = new Dictionary<string, OverlayWindowData>();
-    private readonly Dictionary<string, OverlayWindowData> TimerWindows = new Dictionary<string, OverlayWindowData>();
-    private readonly List<LogReader> LogReaders = new List<LogReader>();
-    private TriggerProcessor TestProcessor = null;
-    private int TimerIncrement = 0;
+    private readonly Dictionary<string, OverlayWindowData> TextWindows = new();
+    private readonly Dictionary<string, OverlayWindowData> TimerWindows = new();
+    private readonly List<LogReader> LogReaders = new();
+    private TriggerProcessor TestProcessor;
+    private int TimerIncrement;
 
     public TriggerManager()
     {
@@ -103,7 +103,7 @@ namespace EQLogParser
     private void TriggerManagerEventsLogLoadingComplete(string _)
     {
       // ignore event if in advanced mode
-      if (TriggerStateManager.Instance.GetConfig() is TriggerConfig config && !config.IsAdvanced)
+      if (TriggerStateManager.Instance.GetConfig() is { } config && !config.IsAdvanced)
       {
         ConfigDoUpdate(this, null);
       }
@@ -122,7 +122,7 @@ namespace EQLogParser
       TextOverlayTimer?.Stop();
       TimerOverlayTimer?.Stop();
 
-      if (TriggerStateManager.Instance.GetConfig() is TriggerConfig config)
+      if (TriggerStateManager.Instance.GetConfig() is { } config)
       {
         lock (LogReaders)
         {
@@ -290,7 +290,7 @@ namespace EQLogParser
         {
           var done = false;
           var shortTick = false;
-          if (keypair.Value is OverlayWindowData windowData)
+          if (keypair.Value is { } windowData)
           {
             if (windowData.TheWindow is TextOverlayWindow textWindow)
             {
@@ -356,12 +356,12 @@ namespace EQLogParser
 
         trigger.SelectedOverlays?.ForEach(overlayId =>
         {
-          OverlayWindowData windowData = null;
+          OverlayWindowData windowData;
           lock (TextWindows)
           {
             if (!TextWindows.TryGetValue(overlayId, out windowData))
             {
-              if (TriggerStateManager.Instance.GetOverlayById(overlayId) is TriggerNode node
+              if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { } node
                 && node?.OverlayData?.IsTextOverlay == true)
               {
                 windowData = GetWindowData(node);
@@ -377,7 +377,7 @@ namespace EQLogParser
           }
         });
 
-        if (!textOverlayFound && TriggerStateManager.Instance.GetDefaultTextOverlay() is TriggerNode node)
+        if (!textOverlayFound && TriggerStateManager.Instance.GetDefaultTextOverlay() is { } node)
         {
           lock (TextWindows)
           {
@@ -420,7 +420,7 @@ namespace EQLogParser
           {
             if (!TimerWindows.TryGetValue(overlayId, out windowData))
             {
-              if (TriggerStateManager.Instance.GetOverlayById(overlayId) is TriggerNode node
+              if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { } node
                 && node?.OverlayData?.IsTimerOverlay == true)
               {
                 windowData = GetWindowData(node, data);
@@ -435,13 +435,13 @@ namespace EQLogParser
           }
         });
 
-        if (!timerOverlayFound && TriggerStateManager.Instance.GetDefaultTimerOverlay() is TriggerNode node)
+        if (!timerOverlayFound && TriggerStateManager.Instance.GetDefaultTimerOverlay() is { } node)
         {
           lock (TimerWindows)
           {
-            if (!TimerWindows.TryGetValue(node.Id, out var windowData))
+            if (!TimerWindows.TryGetValue(node.Id, out _))
             {
-              windowData = GetWindowData(node, data);
+              GetWindowData(node, data);
             }
 
             // using default

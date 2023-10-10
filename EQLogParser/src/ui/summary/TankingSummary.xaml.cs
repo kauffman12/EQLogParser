@@ -15,10 +15,10 @@ namespace EQLogParser
   /// </summary>
   public partial class TankingSummary : SummaryTable, IDisposable
   {
-    private int CurrentDamageType = 0;
-    private string CurrentClass = null;
+    private int CurrentDamageType;
+    private string CurrentClass;
     private bool CurrentPetValue;
-    private int CurrentGroupCount = 0;
+    private int CurrentGroupCount;
     // Made property since it's used outside this class
     public int DamageType { get => CurrentDamageType; set => CurrentDamageType = value; }
 
@@ -128,7 +128,7 @@ namespace EQLogParser
              menuItemShowDefensiveTimeline.IsEnabled = false;
         }
 
-        menuItemSetAsPet.Header = string.Format("Set {0} as Pet to", selectedName);
+        menuItemSetAsPet.Header = $"Set {selectedName} as Pet to";
       });
     }
 
@@ -363,7 +363,7 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

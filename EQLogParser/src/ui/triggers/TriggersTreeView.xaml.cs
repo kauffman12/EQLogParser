@@ -21,12 +21,12 @@ namespace EQLogParser
     private const string LABEL_NEW_TIMER_OVERLAY = "New Timer Overlay";
     private const string LABEL_NEW_TRIGGER = "New Trigger";
     private const string LABEL_NEW_FOLDER = "New Folder";
-    private TriggerTreeViewNode TriggerCopiedNode = null;
-    private TriggerTreeViewNode OverlayCopiedNode = null;
-    private bool TriggerCutNode = false;
-    private bool OverlayCutNode = false;
-    private string CurrentCharacterId = null;
-    private Func<bool> IsCancelSelection = null;
+    private TriggerTreeViewNode TriggerCopiedNode;
+    private TriggerTreeViewNode OverlayCopiedNode;
+    private bool TriggerCutNode;
+    private bool OverlayCutNode;
+    private string CurrentCharacterId;
+    private Func<bool> IsCancelSelection;
 
     public TriggersTreeView()
     {
@@ -90,7 +90,7 @@ namespace EQLogParser
 
     private void CollapseAllClick(object sender, RoutedEventArgs e)
     {
-      if (GetTreeViewFromMenu(sender) is SfTreeView treeView)
+      if (GetTreeViewFromMenu(sender) is { } treeView)
       {
         Dispatcher.InvokeAsync(() =>
         {
@@ -102,7 +102,7 @@ namespace EQLogParser
 
     private void ExpandAllClick(object sender, RoutedEventArgs e)
     {
-      if (GetTreeViewFromMenu(sender) is SfTreeView treeView)
+      if (GetTreeViewFromMenu(sender) is { } treeView)
       {
         Dispatcher.InvokeAsync(() =>
         {
@@ -114,7 +114,7 @@ namespace EQLogParser
 
     private void ExportClick(object sender, RoutedEventArgs e)
     {
-      if (GetTreeViewFromMenu(sender) is SfTreeView treeView)
+      if (GetTreeViewFromMenu(sender) is { } treeView)
       {
         TriggerUtil.Export(treeView.SelectedItems?.Cast<TriggerTreeViewNode>());
       }
@@ -131,7 +131,7 @@ namespace EQLogParser
 
     private void RenameClick(object sender, RoutedEventArgs e)
     {
-      if (GetTreeViewFromMenu(sender) is SfTreeView treeView)
+      if (GetTreeViewFromMenu(sender) is { } treeView)
       {
         treeView.BeginEdit(treeView.SelectedItem as TriggerTreeViewNode);
       }
@@ -139,7 +139,7 @@ namespace EQLogParser
 
     private void DeleteClick(object sender, RoutedEventArgs e)
     {
-      if (GetTreeViewFromMenu(sender) is SfTreeView treeView)
+      if (GetTreeViewFromMenu(sender) is { } treeView)
       {
         TriggerCutNode = false;
         TriggerCopiedNode = null;
@@ -149,7 +149,7 @@ namespace EQLogParser
 
     private void ImportClick(object sender, RoutedEventArgs e)
     {
-      if (GetTreeViewFromMenu(sender) is SfTreeView treeView)
+      if (GetTreeViewFromMenu(sender) is { } treeView)
       {
         if (treeView.SelectedItem is TriggerTreeViewNode node)
         {
@@ -188,7 +188,7 @@ namespace EQLogParser
       {
         if (treeView?.Nodes.Count > 0 && treeView.Nodes[0] is TriggerTreeViewNode node)
         {
-          if (FindAndExpandNode(treeView, node, id) is TriggerTreeViewNode found)
+          if (FindAndExpandNode(treeView, node, id) is { } found)
           {
             treeView.SelectedItems?.Clear();
             treeView.SelectedItem = found;
@@ -207,7 +207,7 @@ namespace EQLogParser
 
       foreach (var child in node.ChildNodes.Cast<TriggerTreeViewNode>())
       {
-        if (FindAndExpandNode(treeView, child, id) is TriggerTreeViewNode found && found != null)
+        if (FindAndExpandNode(treeView, child, id) is { } found && found != null)
         {
           treeView.ExpandNode(node);
           return found;
@@ -219,9 +219,9 @@ namespace EQLogParser
 
     private void CreateNodeClick(object sender, RoutedEventArgs e)
     {
-      if (GetTreeViewFromMenu(sender) is SfTreeView treeView)
+      if (GetTreeViewFromMenu(sender) is { } treeView)
       {
-        if (treeView.SelectedItem is TriggerTreeViewNode parent && parent.SerializedData?.Id is string id)
+        if (treeView.SelectedItem is TriggerTreeViewNode parent && parent.SerializedData?.Id is { } id)
         {
           var newNode = TriggerStateManager.Instance.CreateFolder(id, LABEL_NEW_FOLDER);
           parent.ChildNodes.Add(newNode);
@@ -234,7 +234,7 @@ namespace EQLogParser
       if (overlayTreeView.SelectedItem is TriggerTreeViewNode parent)
       {
         var label = isTextOverlay ? LABEL_NEW_TEXT_OVERLAY : LABEL_NEW_TIMER_OVERLAY;
-        if (TriggerStateManager.Instance.CreateOverlay(parent.SerializedData.Id, label, isTextOverlay) is TriggerTreeViewNode newNode)
+        if (TriggerStateManager.Instance.CreateOverlay(parent.SerializedData.Id, label, isTextOverlay) is { } newNode)
         {
           parent.ChildNodes.Add(newNode);
           SelectNode(overlayTreeView, newNode.SerializedData.Id);
@@ -246,7 +246,7 @@ namespace EQLogParser
     {
       if (triggerTreeView.SelectedItem is TriggerTreeViewNode parent)
       {
-        if (TriggerStateManager.Instance.CreateTrigger(parent.SerializedData.Id, LABEL_NEW_TRIGGER) is TriggerTreeViewNode newNode)
+        if (TriggerStateManager.Instance.CreateTrigger(parent.SerializedData.Id, LABEL_NEW_TRIGGER) is { } newNode)
         {
           parent.ChildNodes.Add(newNode);
           SelectNode(triggerTreeView, newNode.SerializedData.Id);
@@ -351,7 +351,7 @@ namespace EQLogParser
       var triggerDelete = false;
       foreach (var node in nodes)
       {
-        if (node?.ParentNode is TriggerTreeViewNode parent && node.SerializedData.Id is string id)
+        if (node?.ParentNode is TriggerTreeViewNode parent && node.SerializedData.Id is { } id)
         {
           parent.ChildNodes.Remove(node);
           if (!parent.HasChildNodes)
@@ -598,7 +598,7 @@ namespace EQLogParser
         var selected = triggerTreeView.SelectedItems.Cast<TriggerTreeViewNode>().ToList();
         var anyFolders = selected.Any(node => node.IsDir());
 
-        if (menuItem.Tag is string overlayTag && overlayTag.Split('=') is string[] overlayData && overlayData.Length == 2)
+        if (menuItem.Tag is string overlayTag && overlayTag.Split('=') is { } overlayData && overlayData.Length == 2)
         {
           name = overlayData[0];
           id = overlayData[1];
@@ -718,7 +718,7 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

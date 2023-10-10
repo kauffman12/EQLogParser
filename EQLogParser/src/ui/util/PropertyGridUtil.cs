@@ -32,7 +32,7 @@ namespace EQLogParser
             return item;
           }
         }
-        else if (prop is PropertyCategoryViewItemCollection sub && FindProperty(sub.Properties.ToList(), name) is PropertyItem found)
+        else if (prop is PropertyCategoryViewItemCollection sub && FindProperty(sub.Properties.ToList(), name) is { } found)
         {
           return found;
         }

@@ -9,10 +9,10 @@ namespace EQLogParser
     private readonly string Keyword;
     private readonly string To;
     private readonly string From;
-    private readonly double StartDate = 0;
-    private readonly double EndDate = 0;
-    private readonly Dictionary<string, byte> ValidChannels = null;
-    private readonly DateUtil DateUtil = new DateUtil();
+    private readonly double StartDate;
+    private readonly double EndDate;
+    private readonly Dictionary<string, byte> ValidChannels;
+    private readonly DateUtil DateUtil = new();
 
     internal ChatFilter(string player, List<string> channels = null, double startDate = 0,
       double endDate = 0, string to = null, string from = null, string keyword = null)
