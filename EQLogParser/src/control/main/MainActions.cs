@@ -27,11 +27,11 @@ namespace EQLogParser
   {
     private const string PETS_LIST_TITLE = "Verified Pets ({0})";
     private const string PLAYER_LIST_TITLE = "Verified Players ({0})";
-    private static readonly ObservableCollection<dynamic> VerifiedPlayersView = new ObservableCollection<dynamic>();
-    private static readonly ObservableCollection<dynamic> VerifiedPetsView = new ObservableCollection<dynamic>();
-    private static readonly ObservableCollection<PetMapping> PetPlayersView = new ObservableCollection<PetMapping>();
-    private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new SortablePetMappingComparer();
-    private static readonly SortableNameComparer TheSortableNameComparer = new SortableNameComparer();
+    private static readonly ObservableCollection<dynamic> VerifiedPlayersView = new();
+    private static readonly ObservableCollection<dynamic> VerifiedPetsView = new();
+    private static readonly ObservableCollection<PetMapping> PetPlayersView = new();
+    private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new();
+    private static readonly SortableNameComparer TheSortableNameComparer = new();
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     internal static void CheckVersion(TextBlock errorText)
@@ -79,7 +79,7 @@ namespace EQLogParser
                     return;
                   }
 
-                  path = path + "\\AutoUpdateEQLogParser";
+                  path += "\\AutoUpdateEQLogParser";
                   if (!Directory.Exists(path))
                   {
                     Directory.CreateDirectory(path);
@@ -141,7 +141,7 @@ namespace EQLogParser
           return;
         }
 
-        path = path + "\\AutoUpdateEQLogParser";
+        path += "\\AutoUpdateEQLogParser";
         if (Directory.Exists(path))
         {
           foreach (var file in Directory.GetFiles(path))
@@ -608,7 +608,7 @@ namespace EQLogParser
         };
         var fileName = DateUtil.GetCurrentDate("MM-dd-yy") + " ";
 
-        if (tables.Values.FirstOrDefault() is SummaryTable summary)
+        if (tables.Values.FirstOrDefault() is { } summary)
         {
           fileName += summary.GetTargetTitle();
         }

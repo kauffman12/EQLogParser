@@ -107,7 +107,7 @@ namespace EQLogParser
         else
         {
           var previous = TheTextBox.Text;
-          TheTextBox.Text = TheTextBox.Text + " ";
+          TheTextBox.Text += " ";
           TheTextBox.Text = previous;
         }
       }

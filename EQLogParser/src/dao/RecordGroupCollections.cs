@@ -5,7 +5,7 @@ namespace EQLogParser
 {
   internal class DamageGroupCollection : RecordGroupCollection
   {
-    private readonly DamageValidator DamageValidator = new DamageValidator();
+    private readonly DamageValidator DamageValidator = new();
 
     internal DamageGroupCollection(List<List<ActionGroup>> recordGroups) : base(recordGroups)
     {
@@ -78,7 +78,7 @@ namespace EQLogParser
 
   internal class TankGroupCollection : RecordGroupCollection
   {
-    readonly int DamageType = 0;
+    readonly int DamageType;
     internal TankGroupCollection(List<List<ActionGroup>> recordGroups, int damageType) : base(recordGroups)
     {
       DamageType = damageType;
@@ -116,7 +116,7 @@ namespace EQLogParser
 
   internal abstract class RecordGroupCollection : IEnumerable<DataPoint>
   {
-    private static readonly RecordWrapper StopWrapper = new RecordWrapper();
+    private static readonly RecordWrapper StopWrapper = new();
     private readonly List<List<ActionGroup>> RecordGroups;
     private int CurrentGroup;
     private int CurrentBlock;

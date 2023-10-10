@@ -15,10 +15,10 @@ namespace EQLogParser
     private PlayerStats RaidStats;
     private string Title;
     private bool CurrentShowPets = true;
-    private readonly Dictionary<string, PlayerSubStats> GroupedDD = new Dictionary<string, PlayerSubStats>();
-    private readonly Dictionary<string, PlayerSubStats> GroupedDoT = new Dictionary<string, PlayerSubStats>();
-    private readonly Dictionary<string, PlayerSubStats> GroupedProcs = new Dictionary<string, PlayerSubStats>();
-    private readonly Dictionary<string, List<PlayerSubStats>> OtherDamage = new Dictionary<string, List<PlayerSubStats>>();
+    private readonly Dictionary<string, PlayerSubStats> GroupedDD = new();
+    private readonly Dictionary<string, PlayerSubStats> GroupedDoT = new();
+    private readonly Dictionary<string, PlayerSubStats> GroupedProcs = new();
+    private readonly Dictionary<string, List<PlayerSubStats>> OtherDamage = new();
 
     public DamageBreakdown()
     {

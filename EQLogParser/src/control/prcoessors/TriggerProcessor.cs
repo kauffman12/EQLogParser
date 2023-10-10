@@ -15,26 +15,26 @@ namespace EQLogParser
 {
   internal class TriggerProcessor : IDisposable
   {
-    public readonly ObservableCollection<AlertEntry> AlertLog = new ObservableCollection<AlertEntry>();
+    public readonly ObservableCollection<AlertEntry> AlertLog = new();
     public readonly string CurrentCharacterId;
     public readonly string CurrentCharacterName;
     public readonly string CurrentPlayer;
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private readonly object CollectionLock = new object();
-    private readonly object LockObject = new object();
-    private readonly object VoiceLock = new object();
-    private readonly List<TimerData> ActiveTimers = new List<TimerData>();
-    private readonly Dictionary<string, Dictionary<string, RepeatedData>> RepeatedTextTimes = new Dictionary<string, Dictionary<string, RepeatedData>>();
-    private readonly Dictionary<string, Dictionary<string, RepeatedData>> RepeatedTimerTimes = new Dictionary<string, Dictionary<string, RepeatedData>>();
+    private readonly object CollectionLock = new();
+    private readonly object LockObject = new();
+    private readonly object VoiceLock = new();
+    private readonly List<TimerData> ActiveTimers = new();
+    private readonly Dictionary<string, Dictionary<string, RepeatedData>> RepeatedTextTimes = new();
+    private readonly Dictionary<string, Dictionary<string, RepeatedData>> RepeatedTimerTimes = new();
     private readonly ActionBlock<Tuple<string, double, bool>> Process;
     private readonly ActionBlock<Tuple<LinkedListNode<TriggerWrapper>, LineData>> ProcessLowPri;
     private readonly ActionBlock<Speak> ProcessSpeech;
     private readonly Action<string, Trigger> AddTextEvent;
     private readonly Action<Trigger, List<TimerData>> AddTimerEvent;
     private LinkedList<TriggerWrapper> ActiveTriggers;
-    private readonly SpeechSynthesizer Synth = null;
-    private readonly SoundPlayer SoundPlayer = null;
-    private TriggerWrapper PreviousSpoken = null;
+    private readonly SpeechSynthesizer Synth;
+    private readonly SoundPlayer SoundPlayer;
+    private TriggerWrapper PreviousSpoken;
 
     internal TriggerProcessor(string id, string name, Action<string, Trigger> addTextEvent,
       Action<Trigger, List<TimerData>> addTimerEvent)
@@ -166,7 +166,7 @@ namespace EQLogParser
           time = (beginTicks - start) / 10;
           wrapper.TriggerData.WorstEvalTime = Math.Max(time, wrapper.TriggerData.WorstEvalTime);
 
-          if (ProcessMatchesText(wrapper.ModifiedTimerName, matches) is string displayName)
+          if (ProcessMatchesText(wrapper.ModifiedTimerName, matches) is { } displayName)
           {
             displayName = ModLine(displayName, lineData.Action);
             if (wrapper.HasRepeatedTimer)
@@ -193,7 +193,7 @@ namespace EQLogParser
             });
           }
 
-          if (ProcessDisplayText(wrapper.ModifiedDisplay, lineData.Action, matches, null) is string updatedDisplayText)
+          if (ProcessDisplayText(wrapper.ModifiedDisplay, lineData.Action, matches, null) is { } updatedDisplayText)
           {
             if (wrapper.HasRepeatedText)
             {
@@ -235,7 +235,7 @@ namespace EQLogParser
                 Action = lineData.Action
               });
 
-              if (ProcessDisplayText(displayText, lineData.Action, earlyMatches, timerData.OriginalMatches) is string updatedDisplayText)
+              if (ProcessDisplayText(displayText, lineData.Action, earlyMatches, timerData.OriginalMatches) is { } updatedDisplayText)
               {
                 AddTextEvent(updatedDisplayText, wrapper.TriggerData);
               }
@@ -260,7 +260,7 @@ namespace EQLogParser
       else if (trigger.TriggerAgainOption == 2)
       {
         if (wrapper.TimerList.ToList().FirstOrDefault(timerData => displayName.Equals(timerData?.DisplayName, StringComparison.OrdinalIgnoreCase))
-          is TimerData timerData)
+          is { } timerData)
         {
           CleanupTimer(wrapper, timerData);
         }
@@ -299,7 +299,7 @@ namespace EQLogParser
                   Action = lineData.Action
                 });
 
-                if (ProcessDisplayText(wrapper.ModifiedWarningDisplay, lineData.Action, matches, null) is string updatedDisplayText)
+                if (ProcessDisplayText(wrapper.ModifiedWarningDisplay, lineData.Action, matches, null) is { } updatedDisplayText)
                 {
                   AddTextEvent(updatedDisplayText, trigger);
                 }
@@ -310,10 +310,7 @@ namespace EQLogParser
           }, newTimerData.WarningSource.Token);
         }
 
-        if (newTimerData == null)
-        {
-          newTimerData = new TimerData { DisplayName = displayName };
-        }
+        newTimerData ??= new TimerData { DisplayName = displayName };
 
         if (wrapper.HasRepeatedTimer)
         {
@@ -393,7 +390,7 @@ namespace EQLogParser
                 Action = lineData.Action
               });
 
-              if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, newTimerData.OriginalMatches) is string updatedDisplayText)
+              if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, newTimerData.OriginalMatches) is { } updatedDisplayText)
               {
                 AddTextEvent(updatedDisplayText, trigger);
               }
@@ -481,7 +478,7 @@ namespace EQLogParser
       foreach (var enabled in enabledTriggers.OrderByDescending(enabled => enabled.Trigger.LastTriggered))
       {
         var trigger = enabled.Trigger;
-        if (trigger.Pattern is string pattern && !string.IsNullOrEmpty(pattern))
+        if (trigger.Pattern is { } pattern && !string.IsNullOrEmpty(pattern))
         {
           try
           {
@@ -657,7 +654,7 @@ namespace EQLogParser
 
       if (useRegex)
       {
-        if (Regex.Matches(pattern, @"{(s\d?)}", RegexOptions.IgnoreCase) is MatchCollection matches && matches.Count > 0)
+        if (Regex.Matches(pattern, @"{(s\d?)}", RegexOptions.IgnoreCase) is { } matches && matches.Count > 0)
         {
           foreach (Match match in matches)
           {
@@ -668,7 +665,7 @@ namespace EQLogParser
           }
         }
 
-        if (Regex.Matches(pattern, @"{(n\d?)(<=|>=|>|<|=|==)?(\d+)?}", RegexOptions.IgnoreCase) is MatchCollection matches2 && matches2.Count > 0)
+        if (Regex.Matches(pattern, @"{(n\d?)(<=|>=|>|<|=|==)?(\d+)?}", RegexOptions.IgnoreCase) is { } matches2 && matches2.Count > 0)
         {
           foreach (Match match in matches2)
           {
@@ -693,7 +690,7 @@ namespace EQLogParser
     {
       if (useRegex)
       {
-        if (Regex.Matches(pattern, @"{(ts)}", RegexOptions.IgnoreCase) is MatchCollection matches2 && matches2.Count > 0)
+        if (Regex.Matches(pattern, @"{(ts)}", RegexOptions.IgnoreCase) is { } matches2 && matches2.Count > 0)
         {
           foreach (Match match in matches2)
           {
@@ -790,7 +787,7 @@ namespace EQLogParser
     {
       public string Id { get; init; }
       public string Name { get; init; }
-      public List<TimerData> TimerList { get; } = new List<TimerData>();
+      public List<TimerData> TimerList { get; } = new();
       public string ModifiedPattern { get; set; }
       public string ModifiedSpeak { get; init; }
       public string ModifiedEndSpeak { get; init; }

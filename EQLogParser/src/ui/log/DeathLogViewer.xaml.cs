@@ -13,7 +13,7 @@ namespace EQLogParser
   public partial class DeathLogViewer : UserControl
   {
     private PlayerStats CurrentPlayer;
-    private readonly List<DeathEvent> Deaths = new List<DeathEvent>();
+    private readonly List<DeathEvent> Deaths = new();
 
     public DeathLogViewer()
     {
@@ -226,9 +226,9 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(message))
       {
-        if (list.Count > 0 && list[list.Count - 1].Time == end && string.IsNullOrEmpty(list[list.Count - 1].Damage))
+        if (list.Count > 0 && list[^1].Time == end && string.IsNullOrEmpty(list[^1].Damage))
         {
-          list[list.Count - 1].Damage = message;
+          list[^1].Damage = message;
         }
         else
         {
@@ -249,7 +249,7 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

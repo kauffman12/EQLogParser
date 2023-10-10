@@ -17,7 +17,7 @@ namespace EQLogParser
   {
     internal static void InvokeNow(Action action, DispatcherPriority priority = DispatcherPriority.Normal)
     {
-      if (Application.Current?.Dispatcher is Dispatcher dispatcher)
+      if (Application.Current?.Dispatcher is { } dispatcher)
       {
         if (dispatcher.CheckAccess())
         {
@@ -32,7 +32,7 @@ namespace EQLogParser
 
     internal static void InvokeAsync(Action action, DispatcherPriority priority = DispatcherPriority.Normal)
     {
-      if (Application.Current?.Dispatcher is Dispatcher dispatcher)
+      if (Application.Current?.Dispatcher is { } dispatcher)
       {
         dispatcher.InvokeAsync(action, priority);
       }

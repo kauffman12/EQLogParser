@@ -11,25 +11,25 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    internal static DamageStatsManager Instance = new DamageStatsManager();
+    internal static DamageStatsManager Instance = new();
 
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
     internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
 
-    private readonly Dictionary<int, byte> DamageGroupIds = new Dictionary<int, byte>();
-    private readonly ConcurrentDictionary<string, TimeRange> PlayerTimeRanges = new ConcurrentDictionary<string, TimeRange>();
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> PlayerSubTimeRanges = new ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>>();
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> PlayerPets = new ConcurrentDictionary<string, ConcurrentDictionary<string, byte>>();
-    private readonly ConcurrentDictionary<string, string> PetToPlayer = new ConcurrentDictionary<string, string>();
-    private readonly List<IAction> Resists = new List<IAction>();
+    private readonly Dictionary<int, byte> DamageGroupIds = new();
+    private readonly ConcurrentDictionary<string, TimeRange> PlayerTimeRanges = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> PlayerSubTimeRanges = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> PlayerPets = new();
+    private readonly ConcurrentDictionary<string, string> PetToPlayer = new();
+    private readonly List<IAction> Resists = new();
     private List<List<ActionGroup>> AllDamageGroups;
-    private List<List<ActionGroup>> DamageGroups = new List<List<ActionGroup>>();
+    private List<List<ActionGroup>> DamageGroups = new();
     private PlayerStats RaidTotals;
     private List<Fight> Selected;
     private string Title;
 
-    private static readonly OverlayData OverlayDamageData = new OverlayData();
-    private static readonly OverlayData OverlayTankData = new OverlayData();
+    private static readonly OverlayData OverlayDamageData = new();
+    private static readonly OverlayData OverlayTankData = new();
 
     internal static DamageOverlayStats ComputeOverlayStats(bool reset, int mode, int maxRows, string selectedClass)
     {
@@ -253,7 +253,7 @@ namespace EQLogParser
 
         player = petOwner;
       }
-      else if (PlayerManager.Instance.GetPlayerFromPet(player) is string owner && owner != Labels.UNASSIGNED)
+      else if (PlayerManager.Instance.GetPlayerFromPet(player) is { } owner && owner != Labels.UNASSIGNED)
       {
         playerHasPet[owner] = true;
 

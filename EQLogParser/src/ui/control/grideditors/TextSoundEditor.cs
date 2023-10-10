@@ -84,11 +84,7 @@ namespace EQLogParser
       TheFakeTextBox.TextChanged += TextBoxTextChanged;
       TheSoundCombo.SelectionChanged += SoundComboSelectionChanged;
       TheOptionsCombo.SelectionChanged += TypeComboBoxSelectionChanged;
-
-      if (SoundPlayer == null)
-      {
-        SoundPlayer = new SoundPlayer();
-      }
+      SoundPlayer ??= new SoundPlayer();
 
       return grid;
     }

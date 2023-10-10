@@ -25,14 +25,14 @@ namespace EQLogParser
     private List<string> PlayerList;
     private SpellCountData TheSpellCounts;
     private double Time;
-    private readonly DictionaryAddHelper<string, uint> AddHelper = new DictionaryAddHelper<string, uint>();
-    private readonly Dictionary<string, byte> HiddenSpells = new Dictionary<string, byte>();
-    private readonly List<string> CountTypes = new List<string>() { "Counts", "Percentages", "Counts/Minute" };
-    private readonly List<string> MinFreqs = new List<string>() { "Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5" };
-    private readonly HashSet<string> SortDescs = new HashSet<string>() { "totalColumn" };
-    private readonly TotalColumnComparer TotalColumnComparer = new TotalColumnComparer();
-    private int CurrentCountType = 0;
-    private int CurrentMinFreqCount = 0;
+    private readonly DictionaryAddHelper<string, uint> AddHelper = new();
+    private readonly Dictionary<string, byte> HiddenSpells = new();
+    private readonly List<string> CountTypes = new() { "Counts", "Percentages", "Counts/Minute" };
+    private readonly List<string> MinFreqs = new() { "Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5" };
+    private readonly HashSet<string> SortDescs = new() { "totalColumn" };
+    private readonly TotalColumnComparer TotalColumnComparer = new();
+    private int CurrentCountType;
+    private int CurrentMinFreqCount;
     private string Title;
 
     public SpellCountTable()
@@ -486,7 +486,7 @@ namespace EQLogParser
           break;
       }
 
-      return string.Format("{0} = {1}", name, result.ToString());
+      return $"{name} = {result.ToString()}";
     }
 
     private string GetFormattedValue(double value, double playerTotal)
@@ -506,7 +506,7 @@ namespace EQLogParser
 
   internal class SpellCountsSerialized
   {
-    public List<string> PlayerNames { get; set; } = new List<string>();
+    public List<string> PlayerNames { get; set; } = new();
     public SpellCountData TheSpellData { get; set; }
   }
 

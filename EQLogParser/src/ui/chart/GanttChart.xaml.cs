@@ -20,7 +20,7 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private static readonly List<string> BlockBrushes = new List<string>() { "EQMenuIconBrush", "EQWarnForegroundBrush" };
+    private static readonly List<string> BlockBrushes = new() { "EQMenuIconBrush", "EQWarnForegroundBrush" };
 
     private int ROW_HEIGHT;
     private const int LABELS_WIDTH = 190;
@@ -31,11 +31,11 @@ namespace EQLogParser
     private const ushort ANY_ADPS = CASTER_ADPS + MELEE_ADPS + TANK_ADPS + HEALING_ADPS;
     private readonly string[] TYPES = new string[] { "Defensive Skills", "ADPS", "Healing Skills" };
 
-    private readonly Dictionary<string, SpellRange> SpellRanges = new Dictionary<string, SpellRange>();
-    private readonly List<Rectangle> Dividers = new List<Rectangle>();
-    private readonly List<TextBlock> Headers = new List<TextBlock>();
-    private readonly Dictionary<string, byte> SelfOnly = new Dictionary<string, byte>();
-    private readonly Dictionary<string, byte> Ignore = new Dictionary<string, byte>();
+    private readonly Dictionary<string, SpellRange> SpellRanges = new();
+    private readonly List<Rectangle> Dividers = new();
+    private readonly List<TextBlock> Headers = new();
+    private readonly Dictionary<string, byte> SelfOnly = new();
+    private readonly Dictionary<string, byte> Ignore = new();
     private double StartTime;
     private double EndTime;
     private double Length;
@@ -675,7 +675,7 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
@@ -698,7 +698,7 @@ namespace EQLogParser
 
     private class SpellRange
     {
-      public List<TimeRange> Ranges { get; } = new List<TimeRange>();
+      public List<TimeRange> Ranges { get; } = new();
       public ushort Adps { get; init; }
     }
 

@@ -20,14 +20,14 @@ namespace EQLogParser
     private const string PLAYERKILL_EVENT = "Player Killing";
     private const string MEZBREAK_EVENT = "Mez Break";
 
-    private readonly ObservableCollection<EventRow> EventRows = new ObservableCollection<EventRow>();
+    private readonly ObservableCollection<EventRow> EventRows = new();
     private readonly DispatcherTimer FilterTimer;
     private bool CurrentShowMezBreaks = true;
     private bool CurrentShowEnterZone = true;
     private bool CurrentShowKillShots = true;
     private bool CurrentShowPlayerKilling = true;
     private bool CurrentShowPlayerSlain = true;
-    private int CurrentFilterModifier = 0;
+    private int CurrentFilterModifier;
     private string CurrentFilterText = Resource.EVENT_FILTER_TEXT;
 
     public EventViewer()
@@ -248,7 +248,7 @@ namespace EQLogParser
     private void RefreshMouseClick(object sender, MouseButtonEventArgs e) => Load();
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

@@ -26,7 +26,7 @@ namespace EQLogParser
     private const string LABEL_NEW_TIMER_OVERLAY = "New Timer Overlay";
     private const string LABEL_NEW_TRIGGER = "New Trigger";
     private const string LABEL_NEW_FOLDER = "New Folder";
-    private readonly Dictionary<string, Window> PreviewWindows = new Dictionary<string, Window>();
+    private readonly Dictionary<string, Window> PreviewWindows = new();
     private TriggerConfig TheConfig;
     private readonly FileSystemWatcher Watcher;
     private readonly PatternEditor PatternEditor;
@@ -36,10 +36,10 @@ namespace EQLogParser
     private readonly RangeEditor LeftEditor;
     private readonly RangeEditor HeightEditor;
     private readonly RangeEditor WidthEditor;
-    private readonly SpeechSynthesizer TestSynth = null;
-    private string CurrentCharacterId = null;
+    private readonly SpeechSynthesizer TestSynth;
+    private string CurrentCharacterId;
     private readonly GridLength CharacterViewWidth;
-    private readonly bool Ready = false;
+    private readonly bool Ready;
 
     public TriggersView()
     {
@@ -306,7 +306,7 @@ namespace EQLogParser
           if (TestSynth != null)
           {
             TestSynth.Rate = rateOption.SelectedIndex;
-            if (TriggerUtil.GetSelectedVoice() is string voice && !string.IsNullOrEmpty(voice))
+            if (TriggerUtil.GetSelectedVoice() is { } voice && !string.IsNullOrEmpty(voice))
             {
               TestSynth.SelectVoice(voice);
             }
@@ -430,7 +430,7 @@ namespace EQLogParser
           textChange = textOverlay.FontFamily != original.FontFamily;
           Application.Current.Resources["TextOverlayFontFamily-" + textOverlay.Node.Id] = new FontFamily(textOverlay.FontFamily);
         }
-        else if (args.Property.Name == fontSizeItem.PropertyName && textOverlay.FontSize.Split("pt") is string[] split && split.Length == 2
+        else if (args.Property.Name == fontSizeItem.PropertyName && textOverlay.FontSize.Split("pt") is { } split && split.Length == 2
          && double.TryParse(split[0], out var newFontSize))
         {
           textChange = textOverlay.FontSize != original.FontSize;
@@ -478,7 +478,7 @@ namespace EQLogParser
           timerChange = !(timerOverlay.FontBrush.Color.ToHexString() == original.FontColor);
           Application.Current.Resources["TimerBarFontColor-" + timerOverlay.Node.Id] = timerOverlay.FontBrush;
         }
-        else if (args.Property.Name == fontSizeItem.PropertyName && timerOverlay.FontSize.Split("pt") is string[] split && split.Length == 2
+        else if (args.Property.Name == fontSizeItem.PropertyName && timerOverlay.FontSize.Split("pt") is { } split && split.Length == 2
          && double.TryParse(split[0], out var newFontSize))
         {
           timerChange = timerOverlay.FontSize != original.FontSize;
@@ -577,7 +577,7 @@ namespace EQLogParser
 
     private void TriggerUpdateEvent(TriggerNode node)
     {
-      if (node?.OverlayData is Overlay overlay)
+      if (node?.OverlayData is { } overlay)
       {
         var wasEnabled = saveButton.IsEnabled;
         TopEditor.Update(overlay.Top);
@@ -624,7 +624,7 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

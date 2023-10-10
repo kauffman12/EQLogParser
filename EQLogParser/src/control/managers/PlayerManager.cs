@@ -20,44 +20,44 @@ namespace EQLogParser
     internal event EventHandler<string> EventsRemoveVerifiedPlayer;
     internal event EventHandler<string> EventsUpdatePlayerClass;
 
-    internal static PlayerManager Instance = new PlayerManager();
+    internal static PlayerManager Instance = new();
 
-    internal static readonly BitmapImage BER_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Ber.png"));
-    internal static readonly BitmapImage BRD_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Brd.png"));
-    internal static readonly BitmapImage BST_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Bst.png"));
-    internal static readonly BitmapImage CLR_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Clr.png"));
-    internal static readonly BitmapImage DRU_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Dru.png"));
-    internal static readonly BitmapImage ENC_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Enc.png"));
-    internal static readonly BitmapImage MAG_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Mag.png"));
-    internal static readonly BitmapImage MNK_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Mnk.png"));
-    internal static readonly BitmapImage NEC_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Nec.png"));
-    internal static readonly BitmapImage PAL_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Pal.png"));
-    internal static readonly BitmapImage RNG_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Rng.png"));
-    internal static readonly BitmapImage ROG_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Rog.png"));
-    internal static readonly BitmapImage SHD_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Shd.png"));
-    internal static readonly BitmapImage UNK_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Unk.png"));
-    internal static readonly BitmapImage SHM_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Shm.png"));
-    internal static readonly BitmapImage WAR_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/War.png"));
-    internal static readonly BitmapImage WIZ_ICON = new BitmapImage(new Uri(@"pack://application:,,,/icons/Wiz.png"));
+    internal static readonly BitmapImage BER_ICON = new(new Uri(@"pack://application:,,,/icons/Ber.png"));
+    internal static readonly BitmapImage BRD_ICON = new(new Uri(@"pack://application:,,,/icons/Brd.png"));
+    internal static readonly BitmapImage BST_ICON = new(new Uri(@"pack://application:,,,/icons/Bst.png"));
+    internal static readonly BitmapImage CLR_ICON = new(new Uri(@"pack://application:,,,/icons/Clr.png"));
+    internal static readonly BitmapImage DRU_ICON = new(new Uri(@"pack://application:,,,/icons/Dru.png"));
+    internal static readonly BitmapImage ENC_ICON = new(new Uri(@"pack://application:,,,/icons/Enc.png"));
+    internal static readonly BitmapImage MAG_ICON = new(new Uri(@"pack://application:,,,/icons/Mag.png"));
+    internal static readonly BitmapImage MNK_ICON = new(new Uri(@"pack://application:,,,/icons/Mnk.png"));
+    internal static readonly BitmapImage NEC_ICON = new(new Uri(@"pack://application:,,,/icons/Nec.png"));
+    internal static readonly BitmapImage PAL_ICON = new(new Uri(@"pack://application:,,,/icons/Pal.png"));
+    internal static readonly BitmapImage RNG_ICON = new(new Uri(@"pack://application:,,,/icons/Rng.png"));
+    internal static readonly BitmapImage ROG_ICON = new(new Uri(@"pack://application:,,,/icons/Rog.png"));
+    internal static readonly BitmapImage SHD_ICON = new(new Uri(@"pack://application:,,,/icons/Shd.png"));
+    internal static readonly BitmapImage UNK_ICON = new(new Uri(@"pack://application:,,,/icons/Unk.png"));
+    internal static readonly BitmapImage SHM_ICON = new(new Uri(@"pack://application:,,,/icons/Shm.png"));
+    internal static readonly BitmapImage WAR_ICON = new(new Uri(@"pack://application:,,,/icons/War.png"));
+    internal static readonly BitmapImage WIZ_ICON = new(new Uri(@"pack://application:,,,/icons/Wiz.png"));
 
     // static data
-    private readonly ConcurrentDictionary<SpellClass, string> ClassNames = new ConcurrentDictionary<SpellClass, string>();
-    private readonly ConcurrentDictionary<string, SpellClass> ClassesByName = new ConcurrentDictionary<string, SpellClass>();
-    private readonly ConcurrentDictionary<string, byte> GameGeneratedPets = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, byte> SecondPerson = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, byte> ThirdPerson = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, string> PetToPlayer = new ConcurrentDictionary<string, string>();
-    private readonly ConcurrentDictionary<string, SpellClassCounter> PlayerToClass = new ConcurrentDictionary<string, SpellClassCounter>();
-    private readonly ConcurrentDictionary<string, byte> TakenPetOrPlayerAction = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, byte> VerifiedPets = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, double> VerifiedPlayers = new ConcurrentDictionary<string, double>();
-    private readonly ConcurrentDictionary<string, byte> Mercs = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, byte> DoTClasses = new ConcurrentDictionary<string, byte>();
-    private readonly List<string> SortedClassList = new List<string>();
-    private readonly List<string> SortedClassListWithNull = new List<string>();
-    private static readonly object LockObject = new object();
-    private bool PetMappingUpdated = false;
-    private bool PlayersUpdated = false;
+    private readonly ConcurrentDictionary<SpellClass, string> ClassNames = new();
+    private readonly ConcurrentDictionary<string, SpellClass> ClassesByName = new();
+    private readonly ConcurrentDictionary<string, byte> GameGeneratedPets = new();
+    private readonly ConcurrentDictionary<string, byte> SecondPerson = new();
+    private readonly ConcurrentDictionary<string, byte> ThirdPerson = new();
+    private readonly ConcurrentDictionary<string, string> PetToPlayer = new();
+    private readonly ConcurrentDictionary<string, SpellClassCounter> PlayerToClass = new();
+    private readonly ConcurrentDictionary<string, byte> TakenPetOrPlayerAction = new();
+    private readonly ConcurrentDictionary<string, byte> VerifiedPets = new();
+    private readonly ConcurrentDictionary<string, double> VerifiedPlayers = new();
+    private readonly ConcurrentDictionary<string, byte> Mercs = new();
+    private readonly ConcurrentDictionary<string, byte> DoTClasses = new();
+    private readonly List<string> SortedClassList = new();
+    private readonly List<string> SortedClassListWithNull = new();
+    private static readonly object LockObject = new();
+    private bool PetMappingUpdated;
+    private bool PlayersUpdated;
 
     private PlayerManager()
     {

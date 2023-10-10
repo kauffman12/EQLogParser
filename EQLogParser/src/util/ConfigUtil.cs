@@ -26,10 +26,10 @@ namespace EQLogParser
     private static string ServerConfigDir;
     private static string SettingsFile;
     private static string TriggersDBFile;
-    private static bool initDone = false;
-    private static bool SettingsUpdated = false;
+    private static bool initDone;
+    private static bool SettingsUpdated;
 
-    private static readonly ConcurrentDictionary<string, string> ApplicationSettings = new ConcurrentDictionary<string, string>();
+    private static readonly ConcurrentDictionary<string, string> ApplicationSettings = new();
 
     internal static string GetArchiveDir()
     {

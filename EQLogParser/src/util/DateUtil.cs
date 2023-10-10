@@ -8,12 +8,12 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     // counting this thing is really slow
-    private string LastDateTimeString = null;
+    private string LastDateTimeString;
     private double LastDateTime;
-    private double increment = 0.0;
+    private double increment;
 
     internal static double ToDouble(DateTime dateTime) => dateTime.Ticks / TimeSpan.FromSeconds(1).Ticks;
-    internal static DateTime FromDouble(double value) => new DateTime((long)value * TimeSpan.FromSeconds(1).Ticks);
+    internal static DateTime FromDouble(double value) => new((long)value * TimeSpan.FromSeconds(1).Ticks);
     internal static string GetCurrentDate(string format) => DateTime.Now.ToString(format, CultureInfo.InvariantCulture);
     internal static string FormatDate(double seconds) => new DateTime().AddSeconds(seconds).ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
     internal static string FormatSimpleDate(double seconds) => new DateTime().AddSeconds(seconds).ToString("MMM dd HH:mm:ss", CultureInfo.InvariantCulture);

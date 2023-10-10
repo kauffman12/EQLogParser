@@ -9,12 +9,12 @@ namespace EQLogParser
 {
   static class Helpers
   {
-    internal static DictionaryAddHelper<long, int> LongIntAddHelper = new DictionaryAddHelper<long, int>();
+    internal static DictionaryAddHelper<long, int> LongIntAddHelper = new();
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
     public static void AddAction(List<ActionGroup> blockList, IAction action, double beginTime)
     {
-      if (blockList.LastOrDefault() is ActionGroup last && last.BeginTime == beginTime)
+      if (blockList.LastOrDefault() is { } last && last.BeginTime == beginTime)
       {
         last.Actions.Add(action);
       }

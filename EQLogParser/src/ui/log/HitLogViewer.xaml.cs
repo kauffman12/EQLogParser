@@ -17,18 +17,17 @@ namespace EQLogParser
   /// </summary>
   public partial class HitLogViewer : UserControl, IDisposable
   {
-    private readonly Columns CheckBoxColumns = new Columns();
-    private readonly Columns TextColumns = new Columns();
-    private readonly List<string> ColumnIds = new List<string>
-    { "Hits", "Critical", "Lucky", "Twincast", "Rampage", "Riposte", "Strikethrough" };
+    private readonly Columns CheckBoxColumns = new();
+    private readonly Columns TextColumns = new();
+    private readonly List<string> ColumnIds = new() { "Hits", "Critical", "Lucky", "Twincast", "Rampage", "Riposte", "Strikethrough" };
 
     private string ActedOption = Labels.UNK;
     private List<List<ActionGroup>> CurrentGroups;
     private bool Defending;
     private PlayerStats PlayerStats;
-    private string CurrentActedFilter = null;
-    private string CurrentActionFilter = null;
-    private string CurrentTypeFilter = null;
+    private string CurrentActedFilter;
+    private string CurrentActionFilter;
+    private string CurrentTypeFilter;
     private bool CurrentShowPetsFilter = true;
     private bool CurrentGroupActionsFilter = true;
     private string Title;
@@ -171,7 +170,7 @@ namespace EQLogParser
               foreach (ref var action in block.Actions.ToArray().AsSpan())
               {
                 precise += 0.000001;
-                if (CreateRow(rowCache, PlayerStats, action, block.BeginTime + precise, Defending) is HitLogRow row && !CurrentGroupActionsFilter)
+                if (CreateRow(rowCache, PlayerStats, action, block.BeginTime + precise, Defending) is { } row && !CurrentGroupActionsFilter)
                 {
                   lock (list)
                   {
@@ -441,7 +440,7 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

@@ -15,17 +15,17 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    private readonly Dictionary<string, List<DataPoint>> PlayerPetValues = new Dictionary<string, List<DataPoint>>();
-    private readonly Dictionary<string, List<DataPoint>> PlayerValues = new Dictionary<string, List<DataPoint>>();
-    private readonly Dictionary<string, List<DataPoint>> PetValues = new Dictionary<string, List<DataPoint>>();
-    private readonly Dictionary<string, List<DataPoint>> RaidValues = new Dictionary<string, List<DataPoint>>();
-    private readonly Dictionary<string, Dictionary<string, byte>> HasPets = new Dictionary<string, Dictionary<string, byte>>();
-    private readonly static Dictionary<string, bool> MissTypes = new Dictionary<string, bool>()
+    private readonly Dictionary<string, List<DataPoint>> PlayerPetValues = new();
+    private readonly Dictionary<string, List<DataPoint>> PlayerValues = new();
+    private readonly Dictionary<string, List<DataPoint>> PetValues = new();
+    private readonly Dictionary<string, List<DataPoint>> RaidValues = new();
+    private readonly Dictionary<string, Dictionary<string, byte>> HasPets = new();
+    private readonly static Dictionary<string, bool> MissTypes = new()
     { { Labels.ABSORB, true }, { Labels.BLOCK, true } , { Labels.DODGE, true }, { Labels.PARRY, true }, { Labels.INVULNERABLE, true }, { Labels.MISS, true } };
 
     private string CurrentChoice = "";
     private string CurrentPetOrPlayerOption;
-    private List<PlayerStats> LastSelected = null;
+    private List<PlayerStats> LastSelected;
 
     public LineChart(List<string> choices, bool includePets = false)
     {
@@ -591,11 +591,11 @@ namespace EQLogParser
         chartValues[aggregate.Name] = playerValues;
       }
 
-      if (playerValues.Count > 0 && playerValues.Last() is DataPoint test && test != null)
+      if (playerValues.Count > 0 && playerValues.Last() is { } test && test != null)
       {
         if (test.CurrentTime == newEntry.CurrentTime)
         {
-          playerValues[playerValues.Count - 1] = newEntry;
+          playerValues[^1] = newEntry;
         }
         else if (newEntry.CurrentTime > test.CurrentTime)
         {
@@ -609,7 +609,7 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

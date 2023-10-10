@@ -59,7 +59,7 @@ namespace EQLogParser
 
     private void TimeSpanPreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
-      if (TheTimeSpan?.SelectionStart is int selected && TheTimeSpan.Value is TimeSpan t)
+      if (TheTimeSpan?.SelectionStart is { } selected && TheTimeSpan.Value is { } t)
       {
         var inc = e.Delta > 0 ? 1 : -1;
         if (selected >= 10)

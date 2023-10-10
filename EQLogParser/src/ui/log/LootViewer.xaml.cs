@@ -21,10 +21,10 @@ namespace EQLogParser
     private const string ONLYCURR = "Only Currency";
     private const string ONLYITEMS = "Only Items";
 
-    private readonly List<string> Options = new List<string>() { "Individual View", "Summary View" };
-    private readonly ObservableCollection<LootRow> IndividualRecords = new ObservableCollection<LootRow>();
-    private readonly ObservableCollection<LootRow> TotalRecords = new ObservableCollection<LootRow>();
-    private bool ShowSummaryView = false;
+    private readonly List<string> Options = new() { "Individual View", "Summary View" };
+    private readonly ObservableCollection<LootRow> IndividualRecords = new();
+    private readonly ObservableCollection<LootRow> TotalRecords = new();
+    private bool ShowSummaryView;
     private string CurrentSelectedItem = ALLITEMS;
     private string CurrentSelectedPlayer = ALLPLAYERS;
     private string CurrentSelectedNpc = ALLNPCS;
@@ -214,11 +214,11 @@ namespace EQLogParser
     {
       var row = CreateRow(looted);
 
-      if (totalRecords.AsParallel().FirstOrDefault(item => !looted.IsCurrency && !item.IsCurrency && looted.Player == item.Player && looted.Item == item.Item) is LootRow existingItem)
+      if (totalRecords.AsParallel().FirstOrDefault(item => !looted.IsCurrency && !item.IsCurrency && looted.Player == item.Player && looted.Item == item.Item) is { } existingItem)
       {
         existingItem.Quantity += looted.Quantity;
       }
-      else if (totalRecords.AsParallel().FirstOrDefault(item => looted.IsCurrency && item.IsCurrency && looted.Player == item.Player) is LootRow existingMoney)
+      else if (totalRecords.AsParallel().FirstOrDefault(item => looted.IsCurrency && item.IsCurrency && looted.Player == item.Player) is { } existingMoney)
       {
         existingMoney.Quantity += looted.Quantity;
         existingMoney.Item = GetMoneyDescription(existingMoney.Quantity);
@@ -259,7 +259,7 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

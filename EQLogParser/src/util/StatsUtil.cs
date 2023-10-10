@@ -17,7 +17,7 @@ namespace EQLogParser
     internal const int SPECIAL_OFFSET = 15;
     internal const int DEATH_OFFSET = 15;
 
-    private static readonly ConcurrentDictionary<string, byte> RegularMeleeTypes = new ConcurrentDictionary<string, byte>(new Dictionary<string, byte>()
+    private static readonly ConcurrentDictionary<string, byte> RegularMeleeTypes = new(new Dictionary<string, byte>()
     { { "Bites", 1 }, { "Claws", 1 },  { "Crushes", 1 }, { "Pierces", 1 }, { "Punches", 1 }, { "Slashes", 1 } });
 
     internal static PlayerStats CreatePlayerStats(Dictionary<string, PlayerStats> individualStats, string key, string origName = null)
@@ -42,7 +42,7 @@ namespace EQLogParser
 
     internal static PlayerStats CreatePlayerStats(string name, string origName = null)
     {
-      origName = origName ?? name;
+      origName ??= name;
       var className = PlayerManager.Instance.GetPlayerClass(origName);
 
       return new PlayerStats()
@@ -109,15 +109,15 @@ namespace EQLogParser
       }
       else if (total < 1000000)
       {
-        result = string.Format("{0}K", Math.Round((decimal)total / 1000, roundTo));
+        result = $"{Math.Round((decimal)total / 1000, roundTo)}K";
       }
       else if (total < 1000000000)
       {
-        result = string.Format("{0}M", Math.Round((decimal)total / 1000 / 1000, roundTo));
+        result = $"{Math.Round((decimal)total / 1000 / 1000, roundTo)}M";
       }
       else
       {
-        result = string.Format("{0}B", Math.Round((decimal)total / 1000 / 1000 / 1000, roundTo));
+        result = $"{Math.Round((decimal)total / 1000 / 1000 / 1000, roundTo)}B";
       }
 
       return result;

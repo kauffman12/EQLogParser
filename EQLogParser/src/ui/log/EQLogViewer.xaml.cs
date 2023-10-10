@@ -24,16 +24,16 @@ namespace EQLogParser
     private const string DAMAGEAVOIDED = "Damage Avoided";
     private const string NOCAT = "Uncategorized";
     private const string OTHERCHAT = "Other Chat";
-    private static readonly List<double> FontSizeList = new List<double>() { 10, 12, 14, 16, 18, 20, 22, 24 };
-    private static readonly List<string> Times = new List<string>() { "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Selected Fights", "Everything" };
+    private static readonly List<double> FontSizeList = new() { 10, 12, 14, 16, 18, 20, 22, 24 };
+    private static readonly List<string> Times = new() { "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Selected Fights", "Everything" };
     private static bool Complete = true;
-    private static bool Running = false;
+    private static bool Running;
     private readonly DispatcherTimer FilterTimer;
-    private List<string> UnFiltered = new List<string>();
-    private readonly Dictionary<long, long> FilteredLinePositionMap = new Dictionary<long, long>();
-    private readonly Dictionary<long, long> LinePositions = new Dictionary<long, long>();
-    private readonly int LineTypeCount = 0;
-    private readonly bool Ready = false;
+    private List<string> UnFiltered = new();
+    private readonly Dictionary<long, long> FilteredLinePositionMap = new();
+    private readonly Dictionary<long, long> LinePositions = new();
+    private readonly int LineTypeCount;
+    private readonly bool Ready;
 
     public EQLogViewer()
     {
@@ -46,7 +46,7 @@ namespace EQLogParser
       var allFonts = UIElementUtil.GetSystemFontFamilies();
       fontFamily.ItemsSource = allFonts;
       var family = ConfigUtil.GetSetting("EQLogViewerFontFamily") ?? logBox.FontFamily?.Source;
-      if (allFonts.FirstOrDefault(item => item.Source == family) is FontFamily found)
+      if (allFonts.FirstOrDefault(item => item.Source == family) is { } found)
       {
         fontFamily.SelectedItem = found;
       }
@@ -660,15 +660,7 @@ namespace EQLogParser
       {
         long start;
         var line = logBox.LineNumber - 1;
-        if (FilteredLinePositionMap.TryGetValue(line, out var value))
-        {
-          start = value;
-        }
-        else
-        {
-          start = LinePositions[line];
-        }
-
+        start = FilteredLinePositionMap.TryGetValue(line, out var value) ? value : LinePositions[line];
         LoadContext(start, logBox.Lines[line].Text);
       }
     }
@@ -720,7 +712,7 @@ namespace EQLogParser
     private void OptionsChange(object sender, EventArgs e) => UpdateUI();
 
     #region IDisposable Support
-    private bool disposedValue = false; // To detect redundant calls
+    private bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

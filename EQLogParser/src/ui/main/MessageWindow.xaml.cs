@@ -8,8 +8,8 @@ namespace EQLogParser
   /// </summary>
   public partial class MessageWindow : ChromelessWindow
   {
-    public bool IsYes2Clicked = false;
-    public bool IsYes1Clicked = false;
+    public bool IsYes2Clicked;
+    public bool IsYes1Clicked;
     public enum IconType { Question, Save, Warn }
 
     public MessageWindow(string text, string caption, IconType type = IconType.Warn, string yes1 = null, string yes2 = null)

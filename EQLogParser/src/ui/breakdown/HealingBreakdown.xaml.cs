@@ -9,12 +9,12 @@ namespace EQLogParser
   public partial class HealBreakdown : BreakdownTable
   {
     private bool CurrentShowSpellsChoice = true;
-    private List<PlayerStats> PlayerStats = null;
+    private List<PlayerStats> PlayerStats;
     private string Title;
     private string Setting;
 
-    private readonly List<string> ChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healed" };
-    private readonly List<string> ReceivedChoicesList = new List<string>() { "Breakdown By Spell", "Breakdown By Healer" };
+    private readonly List<string> ChoicesList = new() { "Breakdown By Spell", "Breakdown By Healed" };
+    private readonly List<string> ReceivedChoicesList = new() { "Breakdown By Spell", "Breakdown By Healer" };
 
     public HealBreakdown()
     {

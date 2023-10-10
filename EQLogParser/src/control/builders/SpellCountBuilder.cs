@@ -41,10 +41,7 @@ namespace EQLogParser
     public static double QuerySpellBlocks(PlayerStats raidStats, HashSet<TimedAction> castsDuring, HashSet<TimedAction> receivedDuring = null)
     {
       // add spells to one hashset if only one is passed in
-      if (receivedDuring == null)
-      {
-        receivedDuring = castsDuring;
-      }
+      receivedDuring ??= castsDuring;
 
       double maxTime = -1;
       var startTime = double.NaN;

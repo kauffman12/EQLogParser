@@ -36,33 +36,33 @@ namespace EQLogParser
     internal static bool IsFinishingBlowDamageEnabled = true;
     internal static bool IsHeadshotDamageEnabled = true;
     internal static bool IsSlayUndeadDamageEnabled = true;
-    internal static bool IsHideOnMinimizeEnabled = false;
-    internal static bool IsMapSendToEQEnabled = false;
+    internal static bool IsHideOnMinimizeEnabled;
+    internal static bool IsMapSendToEQEnabled;
     internal const int ACTION_INDEX = 27;
     internal static string CurrentTheme;
     internal static string CurrentFontFamily;
     internal static double CurrentFontSize;
 
     private static readonly ILog LOG = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static readonly Regex ParseFileName = new Regex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline);
-    private static readonly List<string> DAMAGE_CHOICES = new List<string>()
+    private static readonly Regex ParseFileName = new(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline);
+    private static readonly List<string> DAMAGE_CHOICES = new()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damage", "Aggregate Crit Rate", "Aggregate Twincast Rate", "DPS", "Rolling DPS", "Rolling Damage", "# Attempts", "# Crits", "# Hits", "# Twincasts" };
-    private static readonly List<string> HEALING_CHOICES = new List<string>()
+    private static readonly List<string> HEALING_CHOICES = new()
     { "Aggregate HPS", "Aggregate Av Heal", "Aggregate Healing", "Aggregate Crit Rate", "Aggregate Twincast Rate", "HPS", "Rolling HPS", "Rolling Healing", "# Crits", "# Heals", "# Twincasts" };
-    private static readonly List<string> TANKING_CHOICES = new List<string>()
+    private static readonly List<string> TANKING_CHOICES = new()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damaged", "DPS", "Rolling DPS", "Rolling Damage", "# Attempts", "# Hits", "# Twincasts" };
 
     // progress window
     private static DateTime StartLoadTime;
     private DamageOverlayWindow DamageOverlay;
     private readonly DispatcherTimer ComputeStatsTimer;
-    private readonly NpcDamageManager NpcDamageManager = new NpcDamageManager();
-    private DocumentTabControl ChartTab = null;
-    private LogReader EQLogReader = null;
-    private readonly List<bool> LogWindows = new List<bool>();
-    private bool DoneLoading = false;
+    private readonly NpcDamageManager NpcDamageManager = new();
+    private DocumentTabControl ChartTab;
+    private LogReader EQLogReader;
+    private readonly List<bool> LogWindows = new();
+    private bool DoneLoading;
 
-    private readonly List<string> RecentFiles = new List<string>();
+    private readonly List<string> RecentFiles = new();
 
     public MainWindow()
     {
@@ -193,7 +193,7 @@ namespace EQLogParser
         MainActions.CreateFontSizesMenuItems(appFontSizes, MenuItemFontSizeClicked, CurrentFontSize);
 
         // Load recent files
-        if (ConfigUtil.GetSetting("RecentFiles") is string recentFiles && !string.IsNullOrEmpty(recentFiles))
+        if (ConfigUtil.GetSetting("RecentFiles") is { } recentFiles && !string.IsNullOrEmpty(recentFiles))
         {
           var files = recentFiles.Split(',');
           if (files.Length > 0)

@@ -10,14 +10,13 @@ namespace EQLogParser
 {
   class LogReader : IDisposable
   {
-    private BufferBlock<Tuple<string, double, bool>> Lines { get; } =
-      new BufferBlock<Tuple<string, double, bool>>(new DataflowBlockOptions { BoundedCapacity = 25000 });
+    private BufferBlock<Tuple<string, double, bool>> Lines { get; } = new(new DataflowBlockOptions { BoundedCapacity = 25000 });
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private readonly FileSystemWatcher FileWatcher;
     private readonly string FileName;
     private int MinBack;
     private CancellationTokenSource Cts;
-    private readonly ManualResetEvent NewDataAvailable = new ManualResetEvent(false);
+    private readonly ManualResetEvent NewDataAvailable = new(false);
     private readonly IDisposable LogProcessor;
     private Task ReadFileTask;
     private long InitSize;

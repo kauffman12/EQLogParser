@@ -64,7 +64,7 @@ namespace EQLogParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-    internal static DataManager Instance = new DataManager();
+    internal static DataManager Instance = new();
     internal event EventHandler<string> EventsRemovedFight;
     internal event EventHandler<Fight> EventsNewFight;
     internal event EventHandler<Fight> EventsNewNonTankingFight;
@@ -76,49 +76,49 @@ namespace EQLogParser
     internal const int MAXTIMEOUT = 60;
     internal const int FIGHTTIMEOUT = 30;
     internal const double BUFFS_OFFSET = 90;
-    internal uint MyNukeCritRateMod { get; private set; } = 0;
-    internal uint MyDoTCritRateMod { get; private set; } = 0;
+    internal uint MyNukeCritRateMod { get; private set; }
+    internal uint MyDoTCritRateMod { get; private set; }
 
-    private static readonly SpellAbbrvComparer AbbrvComparer = new SpellAbbrvComparer();
-    private static readonly TimedActionComparer TAComparer = new TimedActionComparer();
-    private static readonly object LockObject = new object();
+    private static readonly SpellAbbrvComparer AbbrvComparer = new();
+    private static readonly TimedActionComparer TAComparer = new();
+    private static readonly object LockObject = new();
 
-    private readonly List<ActionGroup> AllMiscBlocks = new List<ActionGroup>();
-    private readonly List<ActionGroup> AllDeathBlocks = new List<ActionGroup>();
-    private readonly List<ActionGroup> AllHealBlocks = new List<ActionGroup>();
-    private readonly List<ActionGroup> AllSpellCastBlocks = new List<ActionGroup>();
-    private readonly List<ActionGroup> AllReceivedSpellBlocks = new List<ActionGroup>();
-    private readonly List<ActionGroup> AllResistBlocks = new List<ActionGroup>();
-    private readonly List<ActionGroup> AllRandomBlocks = new List<ActionGroup>();
-    private readonly List<ActionGroup> AllLootBlocks = new List<ActionGroup>();
-    private readonly List<TimedAction> AllSpecialActions = new List<TimedAction>();
-    private readonly List<LootRecord> AssignedLoot = new List<LootRecord>();
+    private readonly List<ActionGroup> AllMiscBlocks = new();
+    private readonly List<ActionGroup> AllDeathBlocks = new();
+    private readonly List<ActionGroup> AllHealBlocks = new();
+    private readonly List<ActionGroup> AllSpellCastBlocks = new();
+    private readonly List<ActionGroup> AllReceivedSpellBlocks = new();
+    private readonly List<ActionGroup> AllResistBlocks = new();
+    private readonly List<ActionGroup> AllRandomBlocks = new();
+    private readonly List<ActionGroup> AllLootBlocks = new();
+    private readonly List<TimedAction> AllSpecialActions = new();
+    private readonly List<LootRecord> AssignedLoot = new();
 
-    private readonly List<string> AdpsKeys = new List<string> { "#DoTCritRate", "#NukeCritRate" };
-    private readonly Dictionary<string, Dictionary<string, uint>> AdpsActive = new Dictionary<string, Dictionary<string, uint>>();
-    private readonly Dictionary<string, Dictionary<string, uint>> AdpsValues = new Dictionary<string, Dictionary<string, uint>>();
-    private readonly Dictionary<string, HashSet<SpellData>> AdpsLandsOn = new Dictionary<string, HashSet<SpellData>>();
-    private readonly Dictionary<string, HashSet<SpellData>> AdpsWearOff = new Dictionary<string, HashSet<SpellData>>();
-    private readonly Dictionary<string, List<SpellData>> SpellsNameDB = new Dictionary<string, List<SpellData>>();
-    private readonly Dictionary<string, bool> OldSpellNamesDB = new Dictionary<string, bool>();
-    private readonly SpellTreeNode LandsOnOtherTree = new SpellTreeNode();
-    private readonly SpellTreeNode LandsOnYouTree = new SpellTreeNode();
-    private readonly SpellTreeNode WearOffTree = new SpellTreeNode();
+    private readonly List<string> AdpsKeys = new() { "#DoTCritRate", "#NukeCritRate" };
+    private readonly Dictionary<string, Dictionary<string, uint>> AdpsActive = new();
+    private readonly Dictionary<string, Dictionary<string, uint>> AdpsValues = new();
+    private readonly Dictionary<string, HashSet<SpellData>> AdpsLandsOn = new();
+    private readonly Dictionary<string, HashSet<SpellData>> AdpsWearOff = new();
+    private readonly Dictionary<string, List<SpellData>> SpellsNameDB = new();
+    private readonly Dictionary<string, bool> OldSpellNamesDB = new();
+    private readonly SpellTreeNode LandsOnOtherTree = new();
+    private readonly SpellTreeNode LandsOnYouTree = new();
+    private readonly SpellTreeNode WearOffTree = new();
 
     // defnitely used in single thread
-    private readonly Dictionary<string, string> TitleToClass = new Dictionary<string, string>();
+    private readonly Dictionary<string, string> TitleToClass = new();
 
     // locking was causing a problem for OverlayFights? I don't know
-    private readonly Dictionary<long, Fight> OverlayFights = new Dictionary<long, Fight>();
-    private readonly ConcurrentDictionary<string, byte> AllNpcs = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>> NpcResistStats = new ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>>();
-    private readonly ConcurrentDictionary<string, TotalCount> NpcTotalSpellCounts = new ConcurrentDictionary<string, TotalCount>();
-    private readonly ConcurrentDictionary<string, SpellData> SpellsAbbrvDB = new ConcurrentDictionary<string, SpellData>();
-    private readonly ConcurrentDictionary<string, SpellClass> SpellsToClass = new ConcurrentDictionary<string, SpellClass>();
-    private readonly ConcurrentDictionary<string, Fight> ActiveFights = new ConcurrentDictionary<string, Fight>();
-    private readonly ConcurrentDictionary<string, byte> LifetimeFights = new ConcurrentDictionary<string, byte>();
-    private readonly ConcurrentDictionary<string, string> SpellAbbrvCache = new ConcurrentDictionary<string, string>();
-    private readonly ConcurrentDictionary<string, string> RanksCache = new ConcurrentDictionary<string, string>();
+    private readonly Dictionary<long, Fight> OverlayFights = new();
+    private readonly ConcurrentDictionary<string, byte> AllNpcs = new();
+    private readonly ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>> NpcResistStats = new();
+    private readonly ConcurrentDictionary<string, TotalCount> NpcTotalSpellCounts = new();
+    private readonly ConcurrentDictionary<string, SpellData> SpellsAbbrvDB = new();
+    private readonly ConcurrentDictionary<string, SpellClass> SpellsToClass = new();
+    private readonly ConcurrentDictionary<string, Fight> ActiveFights = new();
+    private readonly ConcurrentDictionary<string, byte> LifetimeFights = new();
+    private readonly ConcurrentDictionary<string, string> SpellAbbrvCache = new();
+    private readonly ConcurrentDictionary<string, string> RanksCache = new();
 
     private int LastSpellIndex = -1;
 
@@ -239,17 +239,17 @@ namespace EQLogParser
       string key = null;
       foreach (var line in ConfigUtil.ReadList(@"data\adpsMeter.txt"))
       {
-        if (!string.IsNullOrEmpty(line) && line.Trim() is string trimmed && trimmed.Length > 0)
+        if (!string.IsNullOrEmpty(line) && line.Trim() is { } trimmed && trimmed.Length > 0)
         {
           if (trimmed[0] != '#' && !string.IsNullOrEmpty(key))
           {
-            if (trimmed.Split('|') is string[] multiple && multiple.Length > 0)
+            if (trimmed.Split('|') is { } multiple && multiple.Length > 0)
             {
               foreach (var spellLine in multiple)
               {
-                if (spellLine.Split('=') is string[] list && list.Length == 2 && uint.TryParse(list[1], out var rate))
+                if (spellLine.Split('=') is { } list && list.Length == 2 && uint.TryParse(list[1], out var rate))
                 {
-                  if (GetAdpsByName(list[0]) is SpellData spellData)
+                  if (GetAdpsByName(list[0]) is { } spellData)
                   {
                     AdpsValues[key][spellData.NameAbbrv] = rate;
 
@@ -374,7 +374,7 @@ namespace EQLogParser
 
       if (SpellsNameDB.TryGetValue(record.Spell, out var spellList))
       {
-        if (spellList.Find(item => !item.IsBeneficial) is SpellData spellData)
+        if (spellList.Find(item => !item.IsBeneficial) is { } spellData)
         {
           UpdateNpcSpellResistStats(record.Defender, spellData.Resist, true);
         }
@@ -1156,8 +1156,8 @@ namespace EQLogParser
 
     public class SpellTreeNode
     {
-      internal List<SpellData> SpellData { get; set; } = new List<SpellData>();
-      internal Dictionary<string, SpellTreeNode> Words { get; set; } = new Dictionary<string, SpellTreeNode>();
+      internal List<SpellData> SpellData { get; set; } = new();
+      internal Dictionary<string, SpellTreeNode> Words { get; set; } = new();
     }
 
     public class SpellTreeResult
