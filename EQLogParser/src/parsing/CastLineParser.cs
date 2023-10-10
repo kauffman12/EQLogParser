@@ -110,9 +110,9 @@ namespace EQLogParser
             {
               player = ConfigUtil.PlayerName;
             }
-            else if (split[0].Length > 3 && split[0][split[0].Length - 1] == 's' && split[0][split[0].Length - 2] == '\'')
+            else if (split[0].Length > 3 && split[0][^1] == 's' && split[0][^2] == '\'')
             {
-              player = split[0].Substring(0, split[0].Length - 2);
+              player = split[0][..^2];
             }
           }
 

@@ -105,7 +105,7 @@ namespace EQLogParser
 
     private void DoProcess(string line, double dateTime)
     {
-      var lineData = new LineData { Action = line.Substring(27), BeginTime = dateTime };
+      var lineData = new LineData { Action = line[27..], BeginTime = dateTime };
       LinkedListNode<TriggerWrapper> node = null;
 
       lock (LockObject)
@@ -594,7 +594,7 @@ namespace EQLogParser
       return text;
     }
 
-    private long GetRepeatedCount(Dictionary<string, Dictionary<string, RepeatedData>> times, TriggerWrapper wrapper, string displayValue)
+    private static long GetRepeatedCount(Dictionary<string, Dictionary<string, RepeatedData>> times, TriggerWrapper wrapper, string displayValue)
     {
       if (!string.IsNullOrEmpty(wrapper.Id) && times.TryGetValue(wrapper.Id, out var displayTimes))
       {
@@ -647,7 +647,7 @@ namespace EQLogParser
       return currentCount;
     }
 
-    private string UpdatePattern(bool useRegex, string playerName, string pattern, out List<NumberOptions> numberOptions)
+    private static string UpdatePattern(bool useRegex, string playerName, string pattern, out List<NumberOptions> numberOptions)
     {
       numberOptions = new List<NumberOptions>();
       pattern = pattern.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
@@ -667,7 +667,7 @@ namespace EQLogParser
 
         if (Regex.Matches(pattern, @"{(n\d?)(<=|>=|>|<|=|==)?(\d+)?}", RegexOptions.IgnoreCase) is { } matches2 && matches2.Count > 0)
         {
-          foreach (Match match in matches2)
+          foreach (var match in matches2.Cast<Match>())
           {
             if (match.Groups.Count == 4)
             {
@@ -686,13 +686,13 @@ namespace EQLogParser
       return pattern;
     }
 
-    private string UpdateTimePattern(bool useRegex, string pattern)
+    private static string UpdateTimePattern(bool useRegex, string pattern)
     {
       if (useRegex)
       {
         if (Regex.Matches(pattern, @"{(ts)}", RegexOptions.IgnoreCase) is { } matches2 && matches2.Count > 0)
         {
-          foreach (Match match in matches2)
+          foreach (var match in matches2.Cast<Match>())
           {
             if (match.Groups.Count == 2)
             {

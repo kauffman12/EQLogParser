@@ -310,15 +310,15 @@ namespace EQLogParser
         int index;
         if ((index = spell.IndexOf(" Rk. ", StringComparison.Ordinal)) > -1)
         {
-          result = spell.Substring(0, index);
+          result = spell[..index];
         }
         else if ((index = spell.LastIndexOf(" ", StringComparison.Ordinal)) > -1)
         {
-          var lastWord = spell.Substring(index + 1);
+          var lastWord = spell[(index + 1)..];
 
           if (RanksCache.TryGetValue(lastWord, out var root))
           {
-            result = spell.Substring(0, index);
+            result = spell[..index];
             if (!string.IsNullOrEmpty(root))
             {
               result += " " + root;
@@ -560,7 +560,7 @@ namespace EQLogParser
         if (player.EndsWith("'s"))
         {
           // if string is only 2 then it must be invalid
-          player = (player.Length > 2) ? player.Substring(0, player.Length - 2) : null;
+          player = (player.Length > 2) ? player[..^2] : null;
         }
 
         found.SpellData = FindByLandsOn(player, found.SpellData);

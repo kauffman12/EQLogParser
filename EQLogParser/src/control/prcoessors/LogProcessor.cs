@@ -25,7 +25,7 @@ namespace EQLogParser
 
     private void DoPreProcess(string line, double dateTime, bool monitor)
     {
-      var lineData = new LineData { Action = line.Substring(27), BeginTime = dateTime, LineNumber = LineCount };
+      var lineData = new LineData { Action = line[27..], BeginTime = dateTime, LineNumber = LineCount };
 
       if (monitor)
       {
@@ -56,8 +56,8 @@ namespace EQLogParser
           char.IsDigit(lineData.Action[index + 24]))
         {
           var original = lineData.Action;
-          lineData.Action = original.Substring(0, index);
-          doubleLine = original.Substring(index);
+          lineData.Action = original[..index];
+          doubleLine = original[index..];
 
           if (DateUtil.ParseStandardDate(doubleLine) is DateTime newDate && newDate != DateTime.MinValue)
           {

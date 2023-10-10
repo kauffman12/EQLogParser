@@ -147,7 +147,7 @@ namespace EQLogParser
             if (types.Count < LineTypeCount)
             {
               ChatType chatType = null;
-              var action = line.Substring(MainWindow.ACTION_INDEX);
+              var action = line[MainWindow.ACTION_INDEX..];
               var damageRecord = DamageLineParser.ParseLine(action);
 
               if (damageRecord != null)
@@ -487,7 +487,7 @@ namespace EQLogParser
       }
     }
 
-    private int DoSearch(string line, string text, Regex searchRegex, bool regexEnabled)
+    private static int DoSearch(string line, string text, Regex searchRegex, bool regexEnabled)
     {
       if (regexEnabled)
       {

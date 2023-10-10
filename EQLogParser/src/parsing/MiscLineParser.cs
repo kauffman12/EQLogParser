@@ -63,24 +63,24 @@ namespace EQLogParser
             // [Wed Jan 26 22:41:48 2022] [65 Overlord (Warrior)] Jenfo (Halfling)
             else if (i == 0 && split[0].StartsWith("[", StringComparison.Ordinal) && split[0].Length > 1 && split.Length > 4)
             {
-              var level = split[0].Substring(1);
+              var level = split[0][1..];
               if (int.TryParse(level, out var intLevel))
               {
                 string player = null;
                 string className = null;
                 if (split[1].EndsWith("]") && split[1].Length > 2)
                 {
-                  className = DataManager.Instance.GetClassFromTitle(split[1].Substring(0, split[1].Length - 1));
+                  className = DataManager.Instance.GetClassFromTitle(split[1][..^1]);
                   player = split[2];
                 }
                 else if (split[2].EndsWith("]") && split[2].Length > 2)
                 {
-                  className = DataManager.Instance.GetClassFromTitle(split[1] + " " + split[2].Substring(0, split[2].Length - 1));
+                  className = DataManager.Instance.GetClassFromTitle(split[1] + " " + split[2][..^1]);
                   player = split[3];
                 }
                 else if (split[3].EndsWith("]") && split[3].Length > 2)
                 {
-                  className = DataManager.Instance.GetClassFromTitle(split[1] + " " + split[2] + " " + split[3].Substring(0, split[3].Length - 1));
+                  className = DataManager.Instance.GetClassFromTitle(split[1] + " " + split[2] + " " + split[3][..^1]);
                   player = split[4];
                 }
 
@@ -100,9 +100,9 @@ namespace EQLogParser
                   if (i == 0 && split.Length == 25 && split[1] == "Magic" && split[2] == "Die" && split[4] == "rolled" &&
                     split[12] == "number" && split[6].Length > 2 && split[16].Length > 1 && split[24].Length > 1)
                   {
-                    var player = split[6].Substring(0, split[6].Length - 1);
-                    var to = split[16].Substring(0, split[16].Length - 1);
-                    var rolled = split[24].Substring(0, split[24].Length - 1);
+                    var player = split[6][..^1];
+                    var to = split[16][..^1];
+                    var rolled = split[24][..^1];
                     if (int.TryParse(split[14], out var fromNumber) && int.TryParse(to, out var toNumber) && int.TryParse(rolled, out var rolledNumber))
                     {
                       DataManager.Instance.AddRandomRecord(new RandomRecord { Player = player, Rolled = rolledNumber, To = toNumber, From = fromNumber },
@@ -233,7 +233,7 @@ namespace EQLogParser
                     var player = split[i + 2];
                     if (player.Length > 3)
                     {
-                      looter = player.Substring(0, player.Length - 1);
+                      looter = player[..^1];
                       looter = looter.Equals("you", StringComparison.OrdinalIgnoreCase) ? ConfigUtil.PlayerName : looter;
                       PlayerManager.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
                       var item = string.Join(" ", split, 1, i - 2);
@@ -269,7 +269,7 @@ namespace EQLogParser
               if (item.Length > 3 && item.EndsWith(".--"))
               {
                 // covers "a" or "an"
-                var count = split[3][0] == 'a' ? 1 : StatsUtil.ParseUInt(split[3]); item = item.Substring(0, item.Length - 3);
+                var count = split[3][0] == 'a' ? 1 : StatsUtil.ParseUInt(split[3]); item = item[..^3];
                 if (count > 0 && count != ushort.MaxValue)
                 {
                   PlayerManager.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);

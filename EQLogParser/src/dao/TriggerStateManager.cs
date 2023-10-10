@@ -38,8 +38,10 @@ namespace EQLogParser
 
       try
       {
-        DB = new LiteDatabase(path);
-        DB.CheckpointSize = 10;
+        DB = new LiteDatabase(path)
+        {
+          CheckpointSize = 10
+        };
 
         if (needUpgrade)
         {
@@ -499,7 +501,7 @@ namespace EQLogParser
       }
     }
 
-    private void EnsureNoOtherDefaults(ILiteCollection<TriggerNode> tree, string id, bool isTextOverlay)
+    private static void EnsureNoOtherDefaults(ILiteCollection<TriggerNode> tree, string id, bool isTextOverlay)
     {
       foreach (var node in tree?.Query().Where(o => o.Id != id && o.OverlayData != null &&
         o.OverlayData.IsTextOverlay == isTextOverlay && o.OverlayData.IsDefault).ToEnumerable())
@@ -722,7 +724,7 @@ namespace EQLogParser
       return state;
     }
 
-    private TriggerTreeViewNode CreateViewNode(TriggerNode node, TriggerState state = null)
+    private static TriggerTreeViewNode CreateViewNode(TriggerNode node, TriggerState state = null)
     {
       var treeNode = new TriggerTreeViewNode
       {
@@ -809,13 +811,13 @@ namespace EQLogParser
       }
     }
 
-    private int GetNextIndex(ILiteCollection<TriggerNode> tree, string parentId)
+    private static int GetNextIndex(ILiteCollection<TriggerNode> tree, string parentId)
     {
       var highest = tree.Query().Where(n => n.Parent == parentId).OrderByDescending(n => n.Index).FirstOrDefault();
       return highest?.Index + 1 ?? 0;
     }
 
-    private List<string> ValidateOverlays(ILiteCollection<TriggerNode> tree, IEnumerable<string> existing)
+    private static List<string> ValidateOverlays(ILiteCollection<TriggerNode> tree, IEnumerable<string> existing)
     {
       return existing?.Where(id => tree.Exists(o => o.Id == id && o.OverlayData != null)).ToList() ?? new List<string>();
     }
@@ -920,7 +922,7 @@ namespace EQLogParser
       }
     }
 
-    string FixColor(string value)
+    private static string FixColor(string value)
     {
       if (!string.IsNullOrEmpty(value))
       {

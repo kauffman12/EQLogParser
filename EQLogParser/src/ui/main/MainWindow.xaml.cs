@@ -123,7 +123,7 @@ namespace EQLogParser
         ((DocumentContainer)dockSite.DocContainer).AddTabDocumentAtLast = true;
 
         var version = Application.ResourceAssembly.GetName().Version.ToString();
-        version = version.Substring(0, version.Length - 2);
+        version = version[..^2];
 
         // update titles
         versionText.Text = "v" + version;
@@ -1103,7 +1103,7 @@ namespace EQLogParser
         if (RecentFiles.Count > count)
         {
           var m = 75;
-          var theFile = RecentFiles[count].Length > m ? "... " + RecentFiles[count].Substring(RecentFiles[count].Length - m) : RecentFiles[count];
+          var theFile = RecentFiles[count].Length > m ? "... " + RecentFiles[count][(RecentFiles[count].Length - m)..] : RecentFiles[count];
           var escapedFile = theFile.Replace("_", "__");
           menuItem.Header = count + 1 + ": " + escapedFile;
           menuItem.Visibility = Visibility.Visible;

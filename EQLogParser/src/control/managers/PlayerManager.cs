@@ -664,7 +664,7 @@ namespace EQLogParser
           {
             dict[value] = 1;
             dict[value.ToUpper(CultureInfo.CurrentCulture)] = 1;
-            dict[char.ToUpper(value[0], CultureInfo.CurrentCulture) + value.Substring(1)] = 1;
+            dict[char.ToUpper(value[0], CultureInfo.CurrentCulture) + value[1..]] = 1;
           }
         }
       }

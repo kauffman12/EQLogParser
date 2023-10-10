@@ -167,7 +167,7 @@ namespace EQLogParser
         var text = countString + " " + value + ((total == count) ? "" : " Selected");
         if (text[0] == '0')
         {
-          text = "No" + text.Substring(1);
+          text = "No" + text[1..];
         }
         selected.SelectedText = text;
         columns.SelectedIndex = -1;

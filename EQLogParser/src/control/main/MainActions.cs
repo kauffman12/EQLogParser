@@ -53,7 +53,7 @@ namespace EQLogParser
             && (v1 > version.Major || (v1 == version.Major && v2 > version.Minor) ||
             (v1 == version.Major && v2 == version.Minor && v3 > version.Build)))
           {
-            dispatcher.InvokeAsync(() =>
+            dispatcher.InvokeAsync((Action)(async () =>
             {
               var msg = new MessageWindow("Version " + matches.Groups[1].Value + " is Available. Download and Install?",
                 Resource.CHECK_VERSION, MessageWindow.IconType.Question, "Yes");
@@ -61,15 +61,14 @@ namespace EQLogParser
 
               if (msg.IsYes1Clicked)
               {
-                HttpClient client = null;
+                HttpClient downloadClient = null;
                 var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-" +
                   matches.Groups[1].Value + "." + matches.Groups[5].Value;
 
                 try
                 {
-                  client = new HttpClient();
-                  using var download = client.GetStreamAsync(url);
-                  download.Wait();
+                  downloadClient = new HttpClient();
+                  await using var download = await downloadClient.GetStreamAsync(url);
 
                   var path = Environment.ExpandEnvironmentVariables("%userprofile%\\Downloads");
                   if (!Directory.Exists(path))
@@ -86,9 +85,9 @@ namespace EQLogParser
                   }
 
                   var fullPath = path + "\\EQLogParser-" + matches.Groups[1].Value + ".msi";
-                  using (var fs = new FileStream(fullPath, FileMode.Create))
+                  await using (var fs = new FileStream(fullPath, FileMode.Create))
                   {
-                    download.Result.CopyTo(fs);
+                    await download.CopyToAsync(fs);
                   }
 
                   if (File.Exists(fullPath))
@@ -110,10 +109,10 @@ namespace EQLogParser
                 }
                 finally
                 {
-                  client?.Dispose();
+                  downloadClient?.Dispose();
                 }
               }
-            });
+            }));
           }
         }
         catch (Exception ex)
@@ -208,15 +207,15 @@ namespace EQLogParser
 
     internal static void CreateOpenLogMenuItems(MenuItem parent, RoutedEventHandler callback)
     {
-      parent.Items.Add(createMenuItem("Now", "0", callback, EFontAwesomeIcon.Solid_CalendarDay));
-      parent.Items.Add(createMenuItem("Last Hour", "1", callback, EFontAwesomeIcon.Solid_CalendarDay));
-      parent.Items.Add(createMenuItem("Last  8 Hours", "8", callback, EFontAwesomeIcon.Solid_CalendarDay));
-      parent.Items.Add(createMenuItem("Last 24 Hours", "24", callback, EFontAwesomeIcon.Solid_CalendarDay));
-      parent.Items.Add(createMenuItem("Last  7 Days", "168", callback, EFontAwesomeIcon.Solid_CalendarAlt));
-      parent.Items.Add(createMenuItem("Last 14 Days", "336", callback, EFontAwesomeIcon.Solid_CalendarAlt));
-      parent.Items.Add(createMenuItem("Last 30 Days", "720", callback, EFontAwesomeIcon.Solid_CalendarAlt));
-      parent.Items.Add(createMenuItem("Everything", null, callback, EFontAwesomeIcon.Solid_Infinity));
-      MenuItem createMenuItem(string name, string value, RoutedEventHandler handler, EFontAwesomeIcon awesome)
+      parent.Items.Add(CreateMenuItem("Now", "0", callback, EFontAwesomeIcon.Solid_CalendarDay));
+      parent.Items.Add(CreateMenuItem("Last Hour", "1", callback, EFontAwesomeIcon.Solid_CalendarDay));
+      parent.Items.Add(CreateMenuItem("Last  8 Hours", "8", callback, EFontAwesomeIcon.Solid_CalendarDay));
+      parent.Items.Add(CreateMenuItem("Last 24 Hours", "24", callback, EFontAwesomeIcon.Solid_CalendarDay));
+      parent.Items.Add(CreateMenuItem("Last  7 Days", "168", callback, EFontAwesomeIcon.Solid_CalendarAlt));
+      parent.Items.Add(CreateMenuItem("Last 14 Days", "336", callback, EFontAwesomeIcon.Solid_CalendarAlt));
+      parent.Items.Add(CreateMenuItem("Last 30 Days", "720", callback, EFontAwesomeIcon.Solid_CalendarAlt));
+      parent.Items.Add(CreateMenuItem("Everything", null, callback, EFontAwesomeIcon.Solid_Infinity));
+      MenuItem CreateMenuItem(string name, string value, RoutedEventHandler handler, EFontAwesomeIcon awesome)
       {
         var imageAwesome = new ImageAwesome { Icon = awesome, Style = (Style)Application.Current.Resources["EQIconStyle"] };
         var menuItem = new MenuItem { Header = name, Tag = value };
@@ -542,7 +541,7 @@ namespace EQLogParser
                   var line = s.ReadLine();
                   if (!string.IsNullOrEmpty(line) && line.Length > MainWindow.ACTION_INDEX)
                   {
-                    var action = line.Substring(MainWindow.ACTION_INDEX);
+                    var action = line[MainWindow.ACTION_INDEX..];
                     if (ChatLineParser.ParseChatType(action) == null)
                     {
                       if (TimeRange.TimeCheck(line, range.TimeSegments[0].BeginTime, range, out var exceeds))

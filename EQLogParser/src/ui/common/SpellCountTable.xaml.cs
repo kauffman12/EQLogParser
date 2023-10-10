@@ -3,6 +3,7 @@ using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -486,21 +487,21 @@ namespace EQLogParser
           break;
       }
 
-      return $"{name} = {result.ToString()}";
+      return $"{name} = {result}";
     }
 
     private string GetFormattedValue(double value, double playerTotal)
     {
       if (CurrentCountType == 1)
       {
-        return (playerTotal > 0 ? Math.Round(value / playerTotal * 100, 2) : 0.0).ToString();
+        return (playerTotal > 0 ? Math.Round(value / playerTotal * 100, 2) : 0.0).ToString(CultureInfo.InvariantCulture);
       }
       else if (CurrentCountType == 2)
       {
-        return (Time > 0 ? Math.Round(value / Time * 60, 2) : 0.0).ToString();
+        return (Time > 0 ? Math.Round(value / Time * 60, 2) : 0.0).ToString(CultureInfo.InvariantCulture);
       }
 
-      return value.ToString();
+      return value.ToString(CultureInfo.InvariantCulture);
     }
   }
 
