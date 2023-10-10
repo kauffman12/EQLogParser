@@ -2,6 +2,7 @@
   <PropertyGroup>
     <PublishSingleFile>false</PublishSingleFile>
     <TargetFramework>net6.0-windows10.0.17763.0</TargetFramework>
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
     <OutputType>WinExe</OutputType>
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <MapFileExtensions>true</MapFileExtensions>
@@ -160,10 +161,6 @@
       <Version>2.0.15</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Roslynator.Analyzers" Version="4.4.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="Syncfusion.DocIO.Wpf" Version="22.2.5" />
     <PackageReference Include="Syncfusion.Edit.WPF" Version="22.2.5" />
     <PackageReference Include="Syncfusion.PropertyGrid.WPF" Version="22.2.5" />
