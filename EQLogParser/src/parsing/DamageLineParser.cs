@@ -332,7 +332,7 @@ namespace EQLogParser
           var valid = attacker == "YOUR";
           if (!valid && attacker.EndsWith("'s", StringComparison.OrdinalIgnoreCase))
           {
-            attacker = attacker.Substring(0, attacker.Length - 2);
+            attacker = attacker[..^2];
             valid = true;
           }
 
@@ -364,7 +364,7 @@ namespace EQLogParser
         var attackerSplit = split[fromDamage + 2];
         if (attackerSplit.EndsWith("'s", StringComparison.OrdinalIgnoreCase))
         {
-          attacker = split[fromDamage + 2].Substring(0, split[fromDamage + 2].Length - 2);
+          attacker = split[fromDamage + 2][..(split[fromDamage + 2].Length - 2)];
           defender = string.Join(" ", split, 0, takenIndex);
           isExtra = true;
         }
@@ -418,7 +418,7 @@ namespace EQLogParser
         var spell = string.Join(" ", split, byIndex + 1, stop - byIndex);
         if (!string.IsNullOrEmpty(spell) && spell[^1] == '.')
         {
-          spell = spell.Substring(0, spell.Length - 1);
+          spell = spell[..^1];
           attacker = string.Join(" ", split, 0, hitType);
           defender = string.Join(" ", split, hitType + 1, forIndex - hitType - 1);
           var type = GetTypeFromSpell(spell, Labels.DD);
@@ -462,19 +462,19 @@ namespace EQLogParser
           }
           else
           {
-            attacker = (!string.IsNullOrEmpty(attacker) && attacker[^1] == '.') ? attacker.Substring(0, attacker.Length - 1) : null;
+            attacker = (!string.IsNullOrEmpty(attacker) && attacker[^1] == '.') ? attacker[..^1] : null;
           }
         }
         else if (yourIndex > -1)
         {
           attacker = split[yourIndex];
           spell = string.Join(" ", split, yourIndex + 1, stop - yourIndex);
-          spell = (!string.IsNullOrEmpty(spell) && spell[^1] == '.') ? spell.Substring(0, spell.Length - 1) : Labels.DOT;
+          spell = (!string.IsNullOrEmpty(spell) && spell[^1] == '.') ? spell[..^1] : Labels.DOT;
         }
         else if (isYou)
         {
           spell = string.Join(" ", split, fromDamage + 2, stop - fromDamage - 1);
-          spell = (!string.IsNullOrEmpty(spell) && spell[^1] == '.') ? spell.Substring(0, spell.Length - 1) : spell;
+          spell = (!string.IsNullOrEmpty(spell) && spell[^1] == '.') ? spell[..^1] : spell;
           attacker = spell;
         }
 
@@ -514,7 +514,7 @@ namespace EQLogParser
         var spell = string.Join(" ", split, byDamage + 2, stop - byDamage - 1);
         if (!string.IsNullOrEmpty(spell) && spell[^1] == '.')
         {
-          spell = spell.Substring(0, spell.Length - 1);
+          spell = spell[..^1];
         }
 
         var label = Labels.OTHERDMG;
@@ -607,7 +607,7 @@ namespace EQLogParser
           defender = string.Join(" ", split, hitType + hitTypeMod + 1, butIndex - hitType - hitTypeMod - 1);
           if (!string.IsNullOrEmpty(defender) && defender[^1] == ',')
           {
-            defender = defender.Substring(0, defender.Length - 1);
+            defender = defender[..^1];
             attacker = string.Join(" ", split, 0, tryIndex);
             subType = ToUpper(subType);
             attacker = UpdateAttacker(attacker, subType);
@@ -620,7 +620,7 @@ namespace EQLogParser
       else if (!checkLineType && slainIndex > -1 && byIndex == (slainIndex + 1) && hasIndex > 0 && stop > (slainIndex + 1) && split[hasIndex + 1] == "been")
       {
         var killer = string.Join(" ", split, byIndex + 1, stop - byIndex);
-        killer = killer.Length > 1 && killer[^1] == '!' ? killer.Substring(0, killer.Length - 1) : killer;
+        killer = killer.Length > 1 && killer[^1] == '!' ? killer[..^1] : killer;
         var slain = string.Join(" ", split, 0, hasIndex);
         UpdateSlain(slain, killer, lineData);
         HasOwner(slain, out var t1);
@@ -630,7 +630,7 @@ namespace EQLogParser
       else if (!checkLineType && stop > 4 && slainIndex == 3 && byIndex == 4 && isYou && split[1] == "have" && split[2] == "been")
       {
         var killer = string.Join(" ", split, 5, stop - 4);
-        killer = killer.Length > 1 && killer[^1] == '!' ? killer.Substring(0, killer.Length - 1) : killer;
+        killer = killer.Length > 1 && killer[^1] == '!' ? killer[..^1] : killer;
         var slain = ConfigUtil.PlayerName;
         UpdateSlain(slain, killer, lineData);
       }
@@ -639,7 +639,7 @@ namespace EQLogParser
       {
         var killer = ConfigUtil.PlayerName;
         var slain = string.Join(" ", split, 3, stop - 2);
-        slain = slain.Length > 1 && slain[^1] == '!' ? slain.Substring(0, slain.Length - 1) : slain;
+        slain = slain.Length > 1 && slain[^1] == '!' ? slain[..^1] : slain;
         UpdateSlain(slain, killer, lineData);
       }
       else if (!checkLineType)
@@ -872,7 +872,7 @@ namespace EQLogParser
       }
       else if (attacker.EndsWith("'s corpse", StringComparison.Ordinal))
       {
-        attacker = attacker.Substring(0, attacker.Length - 9);
+        attacker = attacker[..^9];
       }
       else
       {
@@ -904,7 +904,7 @@ namespace EQLogParser
           var verifiedPet = PlayerManager.Instance.IsVerifiedPet(name);
           if (verifiedPet || PlayerManager.IsPossiblePlayerName(name, pIndex))
           {
-            owner = name.Substring(0, pIndex);
+            owner = name[..pIndex];
             hasOwner = true;
 
             if (!verifiedPet && PlayerManager.Instance.IsVerifiedPlayer(owner))

@@ -239,7 +239,7 @@ namespace EQLogParser
 
             if (changed)
             {
-              ChatManager.Instance.SaveSelectedChannels(name, channelList);
+              ChatManager.SaveSelectedChannels(name, channelList);
             }
 
             chatBox.Text = "";

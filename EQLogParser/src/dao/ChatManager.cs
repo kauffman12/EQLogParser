@@ -175,7 +175,7 @@ namespace EQLogParser
       return result.OrderBy(name => name).ToList();
     }
 
-    internal void SaveSelectedChannels(string playerAndServer, List<string> channels)
+    internal static void SaveSelectedChannels(string playerAndServer, List<string> channels)
     {
       try
       {
@@ -193,7 +193,7 @@ namespace EQLogParser
       }
     }
 
-    internal ZipArchive OpenArchive(string fileName, ZipArchiveMode mode)
+    internal static ZipArchive OpenArchive(string fileName, ZipArchiveMode mode)
     {
       ZipArchive result = null;
       var tries = 10;
@@ -265,7 +265,7 @@ namespace EQLogParser
       }
     }
 
-    private List<string> GetSavedChannels(string playerAndServer)
+    private static List<string> GetSavedChannels(string playerAndServer)
     {
       var playerDir = ConfigUtil.GetArchiveDir() + playerAndServer;
       var file = playerDir + @"\" + CHANNELS_FILE;

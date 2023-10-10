@@ -98,8 +98,8 @@ namespace EQLogParser
         string nextLine;
         while (result == END_RESULT && (nextLine = CurrentReader.ReadLine()) != null)
         {
-          var timeString = nextLine.Substring(0, MainWindow.ACTION_INDEX - 1);
-          var action = nextLine.Substring(MainWindow.ACTION_INDEX);
+          var timeString = nextLine[..(MainWindow.ACTION_INDEX - 1)];
+          var action = nextLine[MainWindow.ACTION_INDEX..];
           var chatType = ChatLineParser.ParseChatType(action);
           if (chatType != null)
           {
@@ -163,7 +163,7 @@ namespace EQLogParser
       CurrentEntry++;
       if (CurrentEntry < Entries.Count)
       {
-        var archive = ChatManager.Instance.OpenArchive(Months[CurrentMonth], ZipArchiveMode.Read);
+        var archive = ChatManager.OpenArchive(Months[CurrentMonth], ZipArchiveMode.Read);
         if (archive != null)
         {
           var reader = new StreamReader(archive.GetEntry(Entries[CurrentEntry]).Open());
@@ -189,7 +189,7 @@ namespace EQLogParser
           var monthString = dir + "-" + fileName.Substring(5, 2);
           if (DateTime.TryParseExact(monthString, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed) && CurrentChatFilter.DuringMonth(parsed))
           {
-            var archive = ChatManager.Instance.OpenArchive(Months[CurrentMonth], ZipArchiveMode.Read);
+            var archive = ChatManager.OpenArchive(Months[CurrentMonth], ZipArchiveMode.Read);
             if (archive != null)
             {
               Entries = archive.Entries.Where(entry =>

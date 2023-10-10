@@ -136,7 +136,7 @@
             {
               Channel = ChatChannels.Tell,
               TextStart = end1 + 1,
-              Sender = action.Substring(0, end1)
+              Sender = action[..end1]
             };
             chatType.SenderIsYou = you == chatType.Sender;
             chatType.Receiver = action.Substring(end1 + 4, end2 - (end1 + 4));
@@ -152,7 +152,7 @@
               Channel = ChatChannels.Say,
               SenderIsYou = false,
               TextStart = end1 + 7,
-              Sender = action.Substring(0, end1)
+              Sender = action[..end1]
             };
 
             if (!double.IsNaN(beginTime))
@@ -168,7 +168,7 @@
               Channel = ChatChannels.Ooc,
               SenderIsYou = false,
               TextStart = end1 + 24,
-              Sender = action.Substring(0, end1)
+              Sender = action[..end1]
             };
           }
           else if (!double.IsNaN(beginTime))
@@ -188,7 +188,7 @@
               SenderIsYou = false,
               Receiver = you,
               TextStart = end1 + 12,
-              Sender = action.Substring(0, end1)
+              Sender = action[..end1]
             };
           }
           else if (action.Length > (end1 + 17) && action.IndexOf("the ", end1 + 7, 4) == end1 + 7)
@@ -201,7 +201,7 @@
                 Channel = ChatChannels.Raid,
                 SenderIsYou = false,
                 TextStart = end1 + 17,
-                Sender = action.Substring(0, end1)
+                Sender = action[..end1]
               };
             }
             // Kizant tells the group,
@@ -212,7 +212,7 @@
                 Channel = ChatChannels.Group,
                 SenderIsYou = false,
                 TextStart = end1 + 18,
-                Sender = action.Substring(0, end1)
+                Sender = action[..end1]
               };
             }
             // Kizant tells the guild,
@@ -223,7 +223,7 @@
                 Channel = ChatChannels.Guild,
                 SenderIsYou = false,
                 TextStart = end1 + 18,
-                Sender = action.Substring(0, end1)
+                Sender = action[..end1]
               };
             }
             // Kizant tells the fellowship,
@@ -234,7 +234,7 @@
                 Channel = ChatChannels.Fellowship,
                 SenderIsYou = false,
                 TextStart = end1 + 23,
-                Sender = action.Substring(0, end1)
+                Sender = action[..end1]
               };
             }
           }
@@ -246,7 +246,7 @@
               chatType = new ChatType
               {
                 SenderIsYou = false,
-                Sender = action.Substring(0, end1),
+                Sender = action[..end1],
                 TextStart = end2 + 3,
                 Channel = action.Substring(end1 + 7, end2 - (end1 + 7)).ToLower()
               };
@@ -262,7 +262,7 @@
             SenderIsYou = false,
             Receiver = you,
             TextStart = end1 + 11,
-            Sender = action.Substring(0, end1)
+            Sender = action[..end1]
           };
         }
         // Kizant shouts,
@@ -273,7 +273,7 @@
             Channel = ChatChannels.Shout,
             SenderIsYou = false,
             TextStart = end1 + 9,
-            Sender = action.Substring(0, end1)
+            Sender = action[..end1]
           };
         }
         // Kizant auctions,
@@ -284,7 +284,7 @@
             Channel = ChatChannels.Auction,
             SenderIsYou = false,
             TextStart = end1 + 11,
-            Sender = action.Substring(0, end1)
+            Sender = action[..end1]
           };
         }
 
@@ -306,7 +306,7 @@
         {
           if (string.IsNullOrEmpty(pet))
           {
-            pet = action.Substring(0, petEnd);
+            pet = action[..petEnd];
           }
 
           if (!PlayerManager.Instance.IsVerifiedPlayer(pet)) // thanks idiots for this

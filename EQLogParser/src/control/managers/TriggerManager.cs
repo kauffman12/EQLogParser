@@ -13,7 +13,6 @@ namespace EQLogParser
     internal event Action<bool> EventsProcessorsUpdated;
     internal event Action<string> EventsSelectTrigger;
     internal static TriggerManager Instance => _lazy.Value; // instance
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly Lazy<TriggerManager> _lazy = new(() => new TriggerManager());
     private readonly DispatcherTimer ConfigUpdateTimer;
     private readonly DispatcherTimer TriggerUpdateTimer;

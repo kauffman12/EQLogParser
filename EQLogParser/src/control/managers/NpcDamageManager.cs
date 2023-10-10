@@ -27,13 +27,7 @@ namespace EQLogParser
 
     private void HandleNewTaunt(object sender, TauntEvent e)
     {
-      var fight = DataManager.Instance.GetFight(e.Record.Npc);
-
-      if (fight == null)
-      {
-        fight = Create(e.Record.Npc, e.BeginTime);
-      }
-
+      var fight = DataManager.Instance.GetFight(e.Record.Npc) ?? Create(e.Record.Npc, e.BeginTime);
       Helpers.AddAction(fight.TauntBlocks, e.Record, e.BeginTime);
     }
 
@@ -179,14 +173,7 @@ namespace EQLogParser
     private Fight Get(DamageRecord record, double currentTime, bool defender)
     {
       var npc = defender ? record.Defender : record.Attacker;
-
-      var fight = DataManager.Instance.GetFight(npc);
-      if (fight == null)
-      {
-        fight = Create(npc, currentTime);
-      }
-
-      return fight;
+      return DataManager.Instance.GetFight(npc) ?? Create(npc, currentTime);
     }
 
     private Fight Create(string defender, double currentTime)

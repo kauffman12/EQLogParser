@@ -98,7 +98,7 @@ namespace EQLogParser
       titleLabel.Content = totals.Values.Count > 0 ? "Taunt Usage By Player" : "No Taunt Data Found";
     }
 
-    private void UpdateRow(TauntRecord record, dynamic row)
+    private static void UpdateRow(TauntRecord record, dynamic row)
     {
       row.Taunt += record.IsImproved ? 0 : record.Success ? 1 : 0;
       row.Failed += record.IsImproved ? 0 : record.Success ? 0 : 1;

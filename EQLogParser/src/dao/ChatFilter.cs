@@ -20,7 +20,7 @@ namespace EQLogParser
       if (player.Length > 0)
       {
         var index = player.IndexOf(".", StringComparison.Ordinal);
-        Player = (index > -1) ? player.Substring(0, index) : player;
+        Player = (index > -1) ? player[..index] : player;
       }
 
       if (channels != null)

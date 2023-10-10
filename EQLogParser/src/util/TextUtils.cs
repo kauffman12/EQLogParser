@@ -31,7 +31,7 @@ namespace EQLogParser
 
     internal static bool SCompare(string s, int start, int count, string test) => s.AsSpan(start, count).SequenceEqual(test);
     internal static string ParseSpellOrNpc(string[] split, int index) => string.Join(" ", split, index, split.Length - index).Trim('.');
-    internal static string ToUpper(string name) => string.IsNullOrEmpty(name) ? "" : (char.ToUpper(name[0]) + (name.Length > 1 ? name.Substring(1) : ""));
+    internal static string ToUpper(string name) => string.IsNullOrEmpty(name) ? "" : (char.ToUpper(name[0]) + (name.Length > 1 ? name[1..] : ""));
 
     internal static string BuildCsv(List<string> header, List<List<object>> data, string title = null)
     {

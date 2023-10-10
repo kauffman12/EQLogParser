@@ -63,7 +63,7 @@ namespace EQLogParser
       // [Wed Nov 06 14:19:54 2019] Your ward heals you as it breaks! You healed Niktaza for 8970 (86306) hit points by Healing Ward. (Critical)
 
       HealRecord record = null;
-      var test = part.Substring(0, optional);
+      var test = part[..optional];
 
       var done = false;
       var healer = "";
@@ -82,11 +82,11 @@ namespace EQLogParser
         }
         else if ((previous - 1 >= 0 && (test[previous - 1] == '.' || test[previous - 1] == '!')) || (previous - 9 > 0 && test.IndexOf("fulfilled", previous - 9, StringComparison.Ordinal) > -1))
         {
-          healer = test.Substring(previous + 1);
+          healer = test[(previous + 1)..];
         }
         else if (previous - 4 >= 0 && test.IndexOf("has been", previous - 3, StringComparison.Ordinal) > -1)
         {
-          healed = test.Substring(0, previous - 4);
+          healed = test[..(previous - 4)];
 
           if (part.Length > optional + 17 && part.IndexOf("over time", optional + 8, 9, StringComparison.Ordinal) > -1)
           {
@@ -95,7 +95,7 @@ namespace EQLogParser
         }
         else if (previous - 5 >= 0 && test.IndexOf("have been", previous - 4, StringComparison.Ordinal) > -1)
         {
-          healed = test.Substring(0, previous - 5);
+          healed = test[..(previous - 5)];
 
           if (part.Length > optional + 17 && part.IndexOf("over time", optional + 8, 9, StringComparison.Ordinal) > -1)
           {
@@ -108,13 +108,13 @@ namespace EQLogParser
           if (wardIndex > 0)
           {
             // assign owner of ward as healer
-            healer = test.Substring(0, wardIndex);
+            healer = test[..wardIndex];
           }
         }
       }
       else
       {
-        healer = test.Substring(0, optional);
+        healer = test[..optional];
       }
 
       if (!done)
@@ -201,7 +201,7 @@ namespace EQLogParser
           var possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
           if (possessive > -1)
           {
-            if (PlayerManager.Instance.IsVerifiedPlayer(healed.Substring(0, possessive)))
+            if (PlayerManager.Instance.IsVerifiedPlayer(healed[..possessive]))
             {
               PlayerManager.Instance.AddVerifiedPet(healed);
             }
