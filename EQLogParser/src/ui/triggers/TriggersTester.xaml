@@ -12,7 +12,7 @@
       <RowDefinition Height="100*" />
     </Grid.RowDefinitions>
     <StackPanel Orientation="Horizontal" Grid.Row="0">
-      <Label Content="Trigger Settings for:" Style="{StaticResource EQTitleStyle}" />
+      <Label x:Name="theLabel" Content="Trigger Settings for:" Style="{StaticResource EQTitleStyle}" />
       <ComboBox x:Name="characterList" DisplayMemberPath="Name" SelectedIndex="0" Margin="8,0,0,2" />
       <Button x:Name="testButton" Margin="8,0,0,0" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="TestTriggersClick">Run Test</Button>
       <CheckBox x:Name="realTime" Margin="8,1,0,0" Content="Real-Time"/>
