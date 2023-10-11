@@ -331,7 +331,7 @@ namespace EQLogParser
     private void EnableCategories(bool trigger, bool basicTimer, bool shortTimer, bool overlay, bool overlayTimer,
       bool overlayAssigned, bool overlayText, bool cooldownTimer)
     {
-      PropertyGridUtil.EnableCategories(thePropertyGrid, new[]
+      PropertyGridUtil.EnableCategories(thePropertyGrid, new dynamic[]
       {
         new { Name = patternItem.CategoryName, IsEnabled = trigger },
         new { Name = timerDurationItem.CategoryName, IsEnabled = basicTimer },
@@ -487,7 +487,8 @@ namespace EQLogParser
         }
         else if (args.Property.Name == timerModeItem.PropertyName)
         {
-          PropertyGridUtil.EnableCategories(thePropertyGrid, new[] { new { Name = idleBrushItem.CategoryName, IsEnabled = (int)args.Property.Value == 1 } });
+          PropertyGridUtil.EnableCategories(thePropertyGrid,
+            new dynamic[] { new { Name = idleBrushItem.CategoryName, IsEnabled = (int)args.Property.Value == 1 } });
         }
 
         if (timerChange)
