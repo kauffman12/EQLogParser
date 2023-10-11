@@ -12,8 +12,8 @@ namespace EQLogParser
   {
     internal event Action<bool> EventsProcessorsUpdated;
     internal event Action<string> EventsSelectTrigger;
-    internal static TriggerManager Instance => _lazy.Value; // instance
-    private static readonly Lazy<TriggerManager> _lazy = new(() => new TriggerManager());
+    internal static TriggerManager Instance => Lazy.Value; // instance
+    private static readonly Lazy<TriggerManager> Lazy = new(() => new TriggerManager());
     private readonly DispatcherTimer ConfigUpdateTimer;
     private readonly DispatcherTimer TriggerUpdateTimer;
     private readonly DispatcherTimer TextOverlayTimer;
@@ -217,11 +217,8 @@ namespace EQLogParser
         {
           foreach (var windows in windowList)
           {
-            lock (windows)
-            {
-              windows.Remove(id, out var windowData);
-              windowData?.TheWindow.Close();
-            }
+            windows.Remove(id, out var windowData);
+            windowData?.TheWindow.Close();
           }
         });
       }
@@ -233,15 +230,12 @@ namespace EQLogParser
       {
         foreach (var windows in windowList)
         {
-          lock (windows)
+          foreach (var windowData in windows.Values)
           {
-            foreach (var windowData in windows.Values)
-            {
-              windowData?.TheWindow?.Close();
-            }
-
-            windows.Clear();
+            windowData?.TheWindow?.Close();
           }
+
+          windows.Clear();
         }
       });
     }
@@ -283,66 +277,63 @@ namespace EQLogParser
       var removeList = new List<string>();
       var data = GetProcessors().SelectMany(processor => processor.GetActiveTimers()).ToList();
 
-      lock (windows)
+      foreach (var keypair in windows)
       {
-        foreach (var keypair in windows)
+        var done = false;
+        var shortTick = false;
+        if (keypair.Value is { } windowData)
         {
-          var done = false;
-          var shortTick = false;
-          if (keypair.Value is { } windowData)
+          if (windowData.TheWindow is TextOverlayWindow textWindow)
           {
-            if (windowData.TheWindow is TextOverlayWindow textWindow)
+            done = textWindow.Tick();
+          }
+          else if (windowData.TheWindow is TimerOverlayWindow timerWindow)
+          {
+            // full tick every 500ms
+            if (increment == 10)
             {
-              done = textWindow.Tick();
+              done = timerWindow.Tick(data);
             }
-            else if (windowData.TheWindow is TimerOverlayWindow timerWindow)
+            else
             {
-              // full tick every 500ms
-              if (increment == 10)
-              {
-                done = timerWindow.Tick(data);
-              }
-              else
-              {
-                timerWindow.ShortTick(data);
-                shortTick = true;
-              }
+              timerWindow.ShortTick(data);
+              shortTick = true;
             }
+          }
 
-            if (!shortTick)
+          if (!shortTick)
+          {
+            if (done)
             {
-              if (done)
+              var nowTicks = DateTime.Now.Ticks;
+              if (windowData.RemoveTicks == -1)
               {
-                var nowTicks = DateTime.Now.Ticks;
-                if (windowData.RemoveTicks == -1)
-                {
-                  windowData.RemoveTicks = nowTicks + (TimeSpan.TicksPerMinute * 2);
-                }
-                else if (nowTicks > windowData.RemoveTicks)
-                {
-                  removeList.Add(keypair.Key);
-                }
+                windowData.RemoveTicks = nowTicks + (TimeSpan.TicksPerMinute * 2);
               }
-              else
+              else if (nowTicks > windowData.RemoveTicks)
               {
-                windowData.RemoveTicks = -1;
+                removeList.Add(keypair.Key);
               }
+            }
+            else
+            {
+              windowData.RemoveTicks = -1;
             }
           }
         }
+      }
 
-        foreach (var id in removeList)
+      foreach (var id in removeList)
+      {
+        if (windows.Remove(id, out var windowData))
         {
-          if (windows.Remove(id, out var windowData))
-          {
-            windowData.TheWindow?.Close();
-          }
+          windowData.TheWindow?.Close();
         }
+      }
 
-        if (windows.Count == 0)
-        {
-          dispatchTimer.Stop();
-        }
+      if (windows.Count == 0)
+      {
+        dispatchTimer.Stop();
       }
     }
 
@@ -353,41 +344,35 @@ namespace EQLogParser
       {
         var textOverlayFound = false;
 
-        trigger.SelectedOverlays?.ForEach(overlayId =>
+        foreach (var overlayId in trigger.SelectedOverlays)
         {
-          lock (TextWindows)
+          if (!TextWindows.TryGetValue(overlayId, out var windowData))
           {
-            if (!TextWindows.TryGetValue(overlayId, out var windowData))
-            {
-              if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { OverlayData.IsTextOverlay: true } node)
-              {
-                windowData = GetWindowData(node);
-              }
-            }
-
-            if (windowData != null)
-            {
-              var brush = TriggerUtil.GetBrush(trigger.FontColor);
-              (windowData.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
-              textOverlayFound = true;
-            }
-          }
-        });
-
-        if (!textOverlayFound && TriggerStateManager.Instance.GetDefaultTextOverlay() is { } node)
-        {
-          lock (TextWindows)
-          {
-            if (!TextWindows.TryGetValue(node.Id, out var windowData))
+            if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { OverlayData.IsTextOverlay: true } node)
             {
               windowData = GetWindowData(node);
             }
+          }
 
-            // using default
+          if (windowData != null)
+          {
             var brush = TriggerUtil.GetBrush(trigger.FontColor);
-            (windowData?.TheWindow as TextOverlayWindow).AddTriggerText(text, beginTicks, brush);
+            (windowData.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
             textOverlayFound = true;
           }
+        }
+
+        if (!textOverlayFound && TriggerStateManager.Instance.GetDefaultTextOverlay() is { } node2)
+        {
+          if (!TextWindows.TryGetValue(node2.Id, out var windowData))
+          {
+            windowData = GetWindowData(node2);
+          }
+
+          // using default
+          var brush = TriggerUtil.GetBrush(trigger.FontColor);
+          (windowData?.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
+          textOverlayFound = true;
         }
 
         if (textOverlayFound && !TextOverlayTimer.IsEnabled)
@@ -412,36 +397,30 @@ namespace EQLogParser
         var timerOverlayFound = false;
         trigger.SelectedOverlays?.ForEach(overlayId =>
         {
-          lock (TimerWindows)
+          if (!TimerWindows.TryGetValue(overlayId, out var windowData))
           {
-            if (!TimerWindows.TryGetValue(overlayId, out var windowData))
+            if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { OverlayData.IsTimerOverlay: true } node)
             {
-              if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { OverlayData.IsTimerOverlay: true } node)
-              {
-                windowData = GetWindowData(node, data);
-              }
+              windowData = GetWindowData(node, data);
             }
+          }
 
-            // may not have found a timer overlay
-            if (windowData != null)
-            {
-              timerOverlayFound = true;
-            }
+          // may not have found a timer overlay
+          if (windowData != null)
+          {
+            timerOverlayFound = true;
           }
         });
 
-        if (!timerOverlayFound && TriggerStateManager.Instance.GetDefaultTimerOverlay() is { } node)
+        if (!timerOverlayFound && TriggerStateManager.Instance.GetDefaultTimerOverlay() is { } node2)
         {
-          lock (TimerWindows)
+          if (!TimerWindows.TryGetValue(node2.Id, out _))
           {
-            if (!TimerWindows.TryGetValue(node.Id, out _))
-            {
-              GetWindowData(node, data);
-            }
-
-            // using default
-            timerOverlayFound = true;
+            GetWindowData(node2, data);
           }
+
+          // using default
+          timerOverlayFound = true;
         }
 
         if (timerOverlayFound && !TimerOverlayTimer.IsEnabled)

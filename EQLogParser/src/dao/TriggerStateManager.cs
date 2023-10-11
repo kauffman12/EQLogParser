@@ -27,8 +27,8 @@ namespace EQLogParser
     private const string STATES_COL = "States";
     private const string TREE_COL = "Tree";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-    private static readonly Lazy<TriggerStateManager> _lazy = new(() => new TriggerStateManager());
-    internal static TriggerStateManager Instance => _lazy.Value; // instance
+    private static readonly Lazy<TriggerStateManager> Lazy = new(() => new TriggerStateManager());
+    internal static TriggerStateManager Instance => Lazy.Value; // instance
     private readonly object LockObject = new();
     private readonly object ConfigLock = new();
     private LiteDatabase DB;

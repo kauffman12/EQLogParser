@@ -17,10 +17,10 @@ namespace EQLogParser
     private const string SELECTED_CHANNELS_FILE = "channels-selected.txt";
     internal const string INDEX = "index";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-    private static readonly Lazy<ChatManager> _lazy = new(() => new ChatManager());
+    private static readonly Lazy<ChatManager> Lazy = new(() => new ChatManager());
     private static readonly object LockObject = new();
     private static readonly ReverseTimedActionComparer RTAComparer = new();
-    internal static ChatManager Instance => _lazy.Value;
+    internal static ChatManager Instance => Lazy.Value;
     internal event EventHandler<string> EventsUpdatePlayer;
     internal event EventHandler<List<string>> EventsNewChannels;
     private readonly Dictionary<string, byte> ChannelCache = new();
