@@ -61,8 +61,8 @@ namespace EQLogParser
 
     private PlayerManager()
     {
-      AddMultiCase(new string[] { "you", "your", "yourself" }, SecondPerson);
-      AddMultiCase(new string[] { "himself", "herself", "itself" }, ThirdPerson);
+      AddMultiCase(new[] { "you", "your", "yourself" }, SecondPerson);
+      AddMultiCase(new[] { "himself", "herself", "itself" }, ThirdPerson);
 
       // populate ClassNames from SpellClass enum and resource table
       foreach (var item in Enum.GetValues(typeof(SpellClass)))

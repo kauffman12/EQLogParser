@@ -1,6 +1,4 @@
-﻿using DotLiquid.Util;
-using Syncfusion.Data.Extensions;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -116,12 +114,12 @@ namespace EQLogParser
         if (Node.OverlayData.SortBy == 0)
         {
           // create order
-          orderedList = timerList.Where(timerData => ShouldProcess(timerData));
+          orderedList = timerList.Where(ShouldProcess);
         }
         else
         {
           // remaining order
-          orderedList = timerList.Where(timerData => ShouldProcess(timerData))
+          orderedList = timerList.Where(ShouldProcess)
             .OrderBy(timerData => timerData.EndTicks - currentTicks);
         }
 

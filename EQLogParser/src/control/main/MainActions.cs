@@ -95,7 +95,7 @@ namespace EQLogParser
                     var process = Process.Start("msiexec", "/i \"" + fullPath + "\"");
                     if (!process.HasExited)
                     {
-                      Task.Delay(1000).ContinueWith(task =>
+                      await Task.Delay(1000).ContinueWith(task =>
                       {
                         dispatcher.InvokeAsync(() => Application.Current.MainWindow.Close());
                       });
@@ -215,6 +215,8 @@ namespace EQLogParser
       parent.Items.Add(CreateMenuItem("Last 14 Days", "336", callback, EFontAwesomeIcon.Solid_CalendarAlt));
       parent.Items.Add(CreateMenuItem("Last 30 Days", "720", callback, EFontAwesomeIcon.Solid_CalendarAlt));
       parent.Items.Add(CreateMenuItem("Everything", null, callback, EFontAwesomeIcon.Solid_Infinity));
+      return;
+
       MenuItem CreateMenuItem(string name, string value, RoutedEventHandler handler, EFontAwesomeIcon awesome)
       {
         var imageAwesome = new ImageAwesome { Icon = awesome, Style = (Style)Application.Current.Resources["EQIconStyle"] };
@@ -229,7 +231,7 @@ namespace EQLogParser
     {
       foreach (var item in items)
       {
-        if (item is MenuItem menuItem && menuItem.Icon is ImageAwesome image)
+        if (item is MenuItem { Icon: ImageAwesome image } menuItem)
         {
           image.Visibility = (menuItem == selectedItem) ? Visibility.Visible : Visibility.Hidden;
         }
@@ -356,7 +358,7 @@ namespace EQLogParser
         }
       }
 
-      if (ChartTab != null && ChartTab.Container != null)
+      if (ChartTab is { Container: not null })
       {
         foreach (var child in ChartTab.Container.Items)
         {
@@ -560,7 +562,7 @@ namespace EQLogParser
               }
             }
 
-            Application.Current.Dispatcher.InvokeAsync(() => dialog?.Close());
+            UIUtil.InvokeNow(() => dialog.Close());
           }
           catch (IOException ex)
           {

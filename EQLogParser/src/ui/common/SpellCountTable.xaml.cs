@@ -158,18 +158,18 @@ namespace EQLogParser
           var row = (list.Count > existingIndex) ? list[existingIndex] : new ExpandoObject();
           row["Spell"] = spell;
 
-          for (var i = 0; i < playerNames.Count; i++)
+          foreach (var name in playerNames)
           {
-            if (filteredPlayerMap.ContainsKey(playerNames[i]))
+            if (filteredPlayerMap.ContainsKey(name))
             {
-              if (filteredPlayerMap[playerNames[i]].ContainsKey(spell))
+              if (filteredPlayerMap[name].ContainsKey(spell))
               {
-                AddPlayerRow(playerNames[i], spell, filteredPlayerMap[playerNames[i]][spell], totalCountMap[playerNames[i]], row);
+                AddPlayerRow(name, spell, filteredPlayerMap[name][spell], totalCountMap[name], row);
               }
               else
               {
-                row[playerNames[i] + "Text"] = CurrentCountType == 0 ? "0" : "0.0";
-                row[playerNames[i]] = 0d;
+                row[name + "Text"] = CurrentCountType == 0 ? "0" : "0.0";
+                row[name] = 0d;
               }
             }
           }
@@ -427,7 +427,7 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        if (sender is Border border && border.DataContext is IDictionary<string, object> spr)
+        if (sender is Border { DataContext: IDictionary<string, object> spr })
         {
           HiddenSpells[spr["Spell"] as string] = 1;
           dataGrid.View.Remove(spr);

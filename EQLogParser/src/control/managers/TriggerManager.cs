@@ -102,7 +102,7 @@ namespace EQLogParser
     private void TriggerManagerEventsLogLoadingComplete(string _)
     {
       // ignore event if in advanced mode
-      if (TriggerStateManager.Instance.GetConfig() is { } config && !config.IsAdvanced)
+      if (TriggerStateManager.Instance.GetConfig() is { IsAdvanced: false })
       {
         ConfigDoUpdate(this, null);
       }
@@ -355,13 +355,11 @@ namespace EQLogParser
 
         trigger.SelectedOverlays?.ForEach(overlayId =>
         {
-          OverlayWindowData windowData;
           lock (TextWindows)
           {
-            if (!TextWindows.TryGetValue(overlayId, out windowData))
+            if (!TextWindows.TryGetValue(overlayId, out var windowData))
             {
-              if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { } node
-                && node?.OverlayData?.IsTextOverlay == true)
+              if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { OverlayData.IsTextOverlay: true } node)
               {
                 windowData = GetWindowData(node);
               }
@@ -370,7 +368,7 @@ namespace EQLogParser
             if (windowData != null)
             {
               var brush = TriggerUtil.GetBrush(trigger.FontColor);
-              (windowData?.TheWindow as TextOverlayWindow).AddTriggerText(text, beginTicks, brush);
+              (windowData.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
               textOverlayFound = true;
             }
           }
@@ -414,13 +412,12 @@ namespace EQLogParser
         var timerOverlayFound = false;
         trigger.SelectedOverlays?.ForEach(overlayId =>
         {
-          OverlayWindowData windowData = null;
+          OverlayWindowData windowData;
           lock (TimerWindows)
           {
             if (!TimerWindows.TryGetValue(overlayId, out windowData))
             {
-              if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { } node
-                && node?.OverlayData?.IsTimerOverlay == true)
+              if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { OverlayData.IsTimerOverlay: true } node)
               {
                 windowData = GetWindowData(node, data);
               }
@@ -459,7 +456,7 @@ namespace EQLogParser
         var windowData = new OverlayWindowData { TheWindow = new TimerOverlayWindow(node) };
         TimerWindows[node.Id] = windowData;
         windowData.TheWindow.Show();
-        ((TimerOverlayWindow)windowData?.TheWindow).Tick(timerData);
+        ((TimerOverlayWindow)windowData.TheWindow).Tick(timerData);
         return windowData;
       }
     }

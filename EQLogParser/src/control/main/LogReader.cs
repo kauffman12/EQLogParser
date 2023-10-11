@@ -201,8 +201,7 @@ namespace EQLogParser
     {
       var minimumDate = DateTime.Now.AddMinutes(-minBack.Value);
 
-      string line;
-      while ((line = reader.ReadLine()) != null)
+      while (reader.ReadLine() is { } line)
       {
         var dateTime = DateUtil.ParseStandardDate(line);
         if (dateTime >= minimumDate)

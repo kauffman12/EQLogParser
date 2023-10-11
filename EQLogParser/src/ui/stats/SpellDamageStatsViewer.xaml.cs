@@ -39,7 +39,7 @@ namespace EQLogParser
       (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange += SelectionChange;
 
       // default these columns to descending
-      var desc = new string[] { "Avg", "Max", "Total", "Hits" };
+      var desc = new[] { "Avg", "Max", "Total", "Hits" };
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
@@ -165,8 +165,8 @@ namespace EQLogParser
         Players.Add(key);
       }
 
-      spellList.SelectedIndex = (Spells.IndexOf(selectedSpell) is int s && s > -1) ? s : 0;
-      playerList.SelectedIndex = (Players.IndexOf(selectedPlayer) is int p && p > -1) ? p : 0;
+      spellList.SelectedIndex = Spells.IndexOf(selectedSpell) is int s and > -1 ? s : 0;
+      playerList.SelectedIndex = Players.IndexOf(selectedPlayer) is int p and > -1 ? p : 0;
       dataGrid.ItemsSource = list;
     }
 
@@ -213,7 +213,7 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, EventArgs e)
     {
-      if (dataGrid != null && dataGrid.View != null)
+      if (dataGrid is { View: not null })
       {
         CurrentType = typeList.SelectedIndex > 0 ? typeList.SelectedItem as string : null;
         CurrentSpell = spellList.SelectedIndex > 0 ? spellList.SelectedItem as string : null;

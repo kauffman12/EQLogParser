@@ -9,7 +9,7 @@ namespace EQLogParser
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly List<string> Currency = new() { "Platinum", "Gold", "Silver", "Copper" };
     private static readonly Dictionary<char, uint> Rates = new() { { 'p', 1000 }, { 'g', 100 }, { 's', 10 }, { 'c', 1 } };
-    private static readonly char[] LootedFromTrim = new char[] { '-', '.' };
+    private static readonly char[] LootedFromTrim = new[] { '-', '.' };
     private static readonly Dictionary<string, byte> StruckByTypes = new()
     {
       { "afflicted", 1 }, { "angered", 1 }, { "assaulted", 1 }, { "beset", 1 }, { "bound", 1 }, { "burned", 1 }, { "consumed", 1 }, { "cursed", 1 },
@@ -25,7 +25,7 @@ namespace EQLogParser
       try
       {
         var split = lineData.Split;
-        if (split != null && split.Length >= 2)
+        if (split is { Length: >= 2 })
         {
           // [Sun Mar 01 22:20:36 2020] A shaded torch has been awakened by Drogbaa.
           // [Sun Mar 01 20:35:55 2020] The master looter, Qulas, looted 32426 platinum from the corpse.

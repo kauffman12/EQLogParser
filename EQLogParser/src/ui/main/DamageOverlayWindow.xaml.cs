@@ -38,7 +38,7 @@ namespace EQLogParser
     private bool SavedShowCritRate;
     private bool SavedMiniBars;
     private string SavedProgressColor;
-    private bool CurrentShowDps = true;
+    private bool CurrentShowDps;
 
     internal DamageOverlayWindow(bool preview = false, bool reset = false)
     {
@@ -83,10 +83,11 @@ namespace EQLogParser
 
       // Max Rows
       var maxRowsString = ConfigUtil.GetSetting("OverlayMaxRows");
-      if (maxRowsString == null || !int.TryParse(maxRowsString, out SavedMaxRows) || (SavedMaxRows < 5 && SavedMaxRows > 10))
+      if (maxRowsString == null || !int.TryParse(maxRowsString, out SavedMaxRows) || SavedMaxRows < 5 || SavedMaxRows > 10)
       {
         SavedMaxRows = 5;
       }
+
       UpdateMaxRows(SavedMaxRows);
 
       // damage mode
@@ -282,12 +283,12 @@ namespace EQLogParser
           {
             var critMods = new List<string>();
 
-            if (isMe && PlayerManager.Instance.IsDoTClass(stat.ClassName) && DataManager.Instance.MyDoTCritRateMod is uint doTCritRate && doTCritRate > 0)
+            if (isMe && PlayerManager.Instance.IsDoTClass(stat.ClassName) && DataManager.Instance.MyDoTCritRateMod is uint doTCritRate and > 0)
             {
               critMods.Add($"DoT +{doTCritRate}");
             }
 
-            if (isMe && DataManager.Instance.MyNukeCritRateMod is uint nukeCritRate && nukeCritRate > 0)
+            if (isMe && DataManager.Instance.MyNukeCritRateMod is uint nukeCritRate and > 0)
             {
               critMods.Add($"Nuke +{nukeCritRate}");
             }

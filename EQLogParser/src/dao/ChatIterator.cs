@@ -51,8 +51,7 @@ namespace EQLogParser
 
     public IEnumerator<ChatType> GetEnumerator()
     {
-      ChatType line;
-      while ((line = GetNextChat()) != null)
+      while (GetNextChat() is { } line)
       {
         yield return line;
       }
@@ -95,8 +94,7 @@ namespace EQLogParser
       if (CurrentReader != null)
       {
         result = END_RESULT;
-        string nextLine;
-        while (result == END_RESULT && (nextLine = CurrentReader.ReadLine()) != null)
+        while (result == END_RESULT && CurrentReader.ReadLine() is { } nextLine)
         {
           var timeString = nextLine[..(MainWindow.ACTION_INDEX - 1)];
           var action = nextLine[MainWindow.ACTION_INDEX..];

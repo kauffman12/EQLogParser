@@ -52,8 +52,8 @@ namespace EQLogParser
         double extraDouble = 0;
 
         // only if it's not a chat line check if two lines are on the same line
-        if (lineData.Action.IndexOf("[") is int index && index > -1 && lineData.Action.Length > (index + 28) && lineData.Action[index + 25] == ']' &&
-          char.IsDigit(lineData.Action[index + 24]))
+        if (lineData.Action.IndexOf("[") is int index and > -1 && lineData.Action.Length > (index + 28) && lineData.Action[index + 25] == ']' &&
+            char.IsDigit(lineData.Action[index + 24]))
         {
           var original = lineData.Action;
           lineData.Action = original[..index];

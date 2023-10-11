@@ -415,7 +415,7 @@ namespace EQLogParser
         stats.Avg = (long)Math.Round(Convert.ToDecimal(stats.Total) / stats.Hits, 2);
         stats.Potential = stats.Total + stats.Extra;
 
-        if ((stats.CritHits - stats.LuckyHits) is uint nonLucky && nonLucky > 0)
+        if ((stats.CritHits - stats.LuckyHits) is uint nonLucky and > 0)
         {
           stats.AvgCrit = (long)Math.Round(Convert.ToDecimal(stats.TotalCrit) / nonLucky, 2);
         }
@@ -440,7 +440,7 @@ namespace EQLogParser
           stats.ExtraRate = (float)Math.Round((float)stats.Extra / stats.Total * 100, 2);
         }
 
-        if ((stats.Hits - stats.TwincastHits) is uint nonTwincast && nonTwincast > 0)
+        if ((stats.Hits - stats.TwincastHits) is uint nonTwincast and > 0)
         {
           stats.AvgNonTwincast = (long)Math.Round(Convert.ToDecimal(stats.TotalNonTwincast) / nonTwincast, 2);
         }
@@ -481,7 +481,7 @@ namespace EQLogParser
           stats.ResistRate = (float)Math.Round((float)stats.Resists / (stats.SpellHits + stats.Resists) * 100, 2);
         }
 
-        if (superStats != null && superStats.Total > 0)
+        if (superStats is { Total: > 0 })
         {
           stats.Percent = (float)Math.Round(superStats.Percent / 100 * ((float)stats.Total / superStats.Total) * 100, 2);
           stats.SDPS = (long)Math.Round(stats.Total / superStats.TotalSeconds, 2);

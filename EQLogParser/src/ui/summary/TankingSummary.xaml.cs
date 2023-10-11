@@ -15,12 +15,11 @@ namespace EQLogParser
   /// </summary>
   public partial class TankingSummary : SummaryTable, IDisposable
   {
-    private int CurrentDamageType;
     private string CurrentClass;
     private bool CurrentPetValue;
     private int CurrentGroupCount;
     // Made property since it's used outside this class
-    public int DamageType { get => CurrentDamageType; set => CurrentDamageType = value; }
+    public int DamageType { get; set; }
 
     public TankingSummary()
     {
@@ -31,7 +30,7 @@ namespace EQLogParser
 
       // default damage types to display
       var damageType = ConfigUtil.GetSetting("TankingSummaryDamageType");
-      if (!string.IsNullOrEmpty(damageType) && int.TryParse(damageType, out var type) && type > -1 && type < 3)
+      if (!string.IsNullOrEmpty(damageType) && int.TryParse(damageType, out var type) && type is > -1 and < 3)
       {
         damageTypes.SelectedIndex = type;
       }
@@ -343,7 +342,7 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
     {
-      if (dataGrid != null && dataGrid.ItemsSource != null)
+      if (dataGrid is { ItemsSource: not null })
       {
         var needRequery = DamageType != damageTypes.SelectedIndex;
         CurrentPetValue = showPets.IsChecked.Value;

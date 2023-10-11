@@ -149,20 +149,17 @@ namespace EQLogParser
 
     private void ImportClick(object sender, RoutedEventArgs e)
     {
-      if (GetTreeViewFromMenu(sender) is { } treeView)
+      if (GetTreeViewFromMenu(sender) is { SelectedItem: TriggerTreeViewNode node } treeView)
       {
-        if (treeView.SelectedItem is TriggerTreeViewNode node)
+        if (treeView == triggerTreeView)
         {
-          if (treeView == triggerTreeView)
-          {
-            TriggerUtil.ImportTriggers(node.SerializedData);
-            RefreshTriggerNode();
-          }
-          else if (treeView == overlayTreeView)
-          {
-            TriggerUtil.ImportOverlays(node.SerializedData);
-            RefreshOverlayNode();
-          }
+          TriggerUtil.ImportTriggers(node.SerializedData);
+          RefreshTriggerNode();
+        }
+        else if (treeView == overlayTreeView)
+        {
+          TriggerUtil.ImportOverlays(node.SerializedData);
+          RefreshOverlayNode();
         }
       }
     }
@@ -207,7 +204,7 @@ namespace EQLogParser
 
       foreach (var child in node.ChildNodes.Cast<TriggerTreeViewNode>())
       {
-        if (FindAndExpandNode(treeView, child, id) is { } found && found != null)
+        if (FindAndExpandNode(treeView, child, id) is { } found)
         {
           treeView.ExpandNode(node);
           return found;
@@ -221,7 +218,7 @@ namespace EQLogParser
     {
       if (GetTreeViewFromMenu(sender) is { } treeView)
       {
-        if (treeView.SelectedItem is TriggerTreeViewNode parent && parent.SerializedData?.Id is { } id)
+        if (treeView.SelectedItem is TriggerTreeViewNode { SerializedData.Id: { } id } parent)
         {
           var newNode = TriggerStateManager.Instance.CreateFolder(id, LABEL_NEW_FOLDER);
           parent.ChildNodes.Add(newNode);
@@ -598,7 +595,7 @@ namespace EQLogParser
         var selected = triggerTreeView.SelectedItems.Cast<TriggerTreeViewNode>().ToList();
         var anyFolders = selected.Any(node => node.IsDir());
 
-        if (menuItem.Tag is string overlayTag && overlayTag.Split('=') is { } overlayData && overlayData.Length == 2)
+        if (menuItem.Tag is string overlayTag && overlayTag.Split('=') is { Length: 2 } overlayData)
         {
           name = overlayData[0];
           id = overlayData[1];
@@ -691,7 +688,7 @@ namespace EQLogParser
 
     private SfTreeView GetTreeViewFromMenu(object sender)
     {
-      if (sender is MenuItem menuItem && menuItem.DataContext is TreeViewItemContextMenuInfo info)
+      if (sender is MenuItem { DataContext: TreeViewItemContextMenuInfo info })
       {
         return info.TreeView;
       }
@@ -703,7 +700,7 @@ namespace EQLogParser
     {
       if (sender is SfTreeView treeView)
       {
-        if (e.OriginalSource is FrameworkElement element && element.DataContext is TriggerTreeViewNode node)
+        if (e.OriginalSource is FrameworkElement { DataContext: TriggerTreeViewNode node })
         {
           if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl) ||
             Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))

@@ -98,7 +98,7 @@ namespace EQLogParser
       dataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? Fights : NonTankingFights;
 
       // default these columns to descending
-      var desc = new string[] { "SortId" };
+      var desc = new[] { "SortId" };
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
@@ -188,7 +188,7 @@ namespace EQLogParser
 
     private void SetPetClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItem is Fight npc && !npc.IsInactivity)
+      if (dataGrid.SelectedItem is Fight { IsInactivity: false } npc)
       {
         var name = npc.Name;
         Task.Delay(120).ContinueWith(_ =>
@@ -201,7 +201,7 @@ namespace EQLogParser
 
     private void SetPlayerClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItem is Fight npc && !npc.IsInactivity)
+      if (dataGrid.SelectedItem is Fight { IsInactivity: false } npc)
       {
         var name = npc.Name;
         Task.Delay(120).ContinueWith(_ => PlayerManager.Instance.AddVerifiedPlayer(name, DateUtil.ToDouble(DateTime.Now)), TaskScheduler.Default);
@@ -468,7 +468,7 @@ namespace EQLogParser
 
     private IEnumerable<Fight> GetFightGroup()
     {
-      if (dataGrid.CurrentItem is Fight npc && !npc.IsInactivity)
+      if (dataGrid.CurrentItem is Fight { IsInactivity: false } npc)
       {
         if (dataGrid.ItemsSource == Fights)
         {
@@ -534,7 +534,7 @@ namespace EQLogParser
         {
           for (var i = CurrentFightSearchIndex; i < records.Count && i >= 0; i += 1 * direction)
           {
-            if (records.GetItemAt(i) is Fight npc && npc.Name != null && npc.Name.IndexOf(fightSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
+            if (records.GetItemAt(i) is Fight { Name: not null } npc && npc.Name.IndexOf(fightSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
             {
               npc.IsSearchResult = true;
               CurrentSearchEntry = npc;

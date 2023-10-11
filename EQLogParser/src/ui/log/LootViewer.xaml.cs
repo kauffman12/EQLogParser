@@ -37,7 +37,7 @@ namespace EQLogParser
       optionsList.SelectedIndex = 0;
 
       // default these columns to descending
-      var desc = new string[] { "Quantity", "Time" };
+      var desc = new[] { "Quantity", "Time" };
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
@@ -149,7 +149,7 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
-      if (dataGrid != null && dataGrid.View != null)
+      if (dataGrid is { View: not null })
       {
         ShowSummaryView = optionsList.SelectedIndex != 0;
         CurrentSelectedPlayer = playersList.SelectedItem as string;
@@ -233,24 +233,24 @@ namespace EQLogParser
     {
       var values = new List<string>();
 
-      if (amount / 1000 is uint plat && plat > 0)
+      if (amount / 1000 is uint plat and > 0)
       {
         values.Add(plat + " Platinum");
       }
 
       var rem = amount % 1000;
-      if (rem / 100 is uint gold && gold > 0)
+      if (rem / 100 is uint gold and > 0)
       {
         values.Add(gold + " Gold");
       }
 
       rem = amount % 100;
-      if (rem / 10 is uint silver && silver > 0)
+      if (rem / 10 is uint silver and > 0)
       {
         values.Add(silver.ToString(CultureInfo.CurrentCulture) + " Silver");
       }
 
-      if (rem % 10 is uint copper && copper > 0)
+      if (rem % 10 is uint copper and > 0)
       {
         values.Add(copper.ToString(CultureInfo.CurrentCulture) + " Copper");
       }

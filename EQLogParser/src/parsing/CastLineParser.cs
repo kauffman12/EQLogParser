@@ -7,7 +7,7 @@ namespace EQLogParser
   static class CastLineParser
   {
     private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static readonly char[] OldSpellChars = new char[] { '<', '>' };
+    private static readonly char[] OldSpellChars = new[] { '<', '>' };
 
     private static readonly Dictionary<string, string> SpecialCastCodes = new()
     {
@@ -72,8 +72,7 @@ namespace EQLogParser
             player = split[0];
             spellName = TextUtils.ParseSpellOrNpc(split.ToArray(), 2);
           }
-          else if (split.Length > 3 && Array.FindIndex(split, 1, split.Length - 1, s => s == "begins") is int bIndex
-            && bIndex > -1 && (bIndex + 2) < split.Length)
+          else if (split.Length > 3 && Array.FindIndex(split, 1, split.Length - 1, s => s == "begins") is int bIndex and > -1 && (bIndex + 2) < split.Length)
           {
             if (split[bIndex + 1] == "casting")
             {

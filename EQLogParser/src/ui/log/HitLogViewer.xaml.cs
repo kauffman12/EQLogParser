@@ -203,7 +203,7 @@ namespace EQLogParser
           if (lastSeen.TryGetValue(row.SubType, out var lastTime)) // 1 day
           {
             var diff = Math.Floor(row.Time) - lastTime;
-            if (diff > 0 && diff < 3600)
+            if (diff is > 0 and < 3600)
             {
               var t = TimeSpan.FromSeconds(diff);
               row.TimeSince = string.Format(CultureInfo.CurrentCulture, "{0:D2}:{1:D2}", t.Minutes, t.Seconds);
@@ -228,7 +228,7 @@ namespace EQLogParser
           {
             actedList.SelectedIndex = 0;
           }
-          else if (acted.IndexOf(CurrentActedFilter) is int actedIndex && actedIndex > -1)
+          else if (acted.IndexOf(CurrentActedFilter) is int actedIndex and > -1)
           {
             actedList.SelectedIndex = actedIndex;
           }
@@ -402,7 +402,7 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, EventArgs e)
     {
-      if (dataGrid != null && dataGrid.View != null)
+      if (dataGrid is { View: not null })
       {
         CurrentActedFilter = actedList.SelectedIndex == 0 ? null : actedList.SelectedItem as string;
         CurrentActionFilter = actionList.SelectedIndex == 0 ? null : actionList.SelectedItem as string;

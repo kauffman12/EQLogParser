@@ -213,8 +213,8 @@ namespace EQLogParser
           AssignResource(toModel, fromOverlay, "ResetColor", "ResetBrush", "TimerBarResetColor");
           AssignResource(toModel, fromOverlay, "BackgroundColor", "BackgroundBrush", "TimerBarTrackColor");
 
-          if (!string.IsNullOrEmpty(fromOverlay.FontSize) && fromOverlay.FontSize.Split("pt") is { } split && split.Length == 2
-             && double.TryParse(split[0], out var newFontSize))
+          if (!string.IsNullOrEmpty(fromOverlay.FontSize) && fromOverlay.FontSize.Split("pt") is { Length: 2 } split
+                                                          && double.TryParse(split[0], out var newFontSize))
           {
             Application.Current.Resources["TimerBarFontSize-" + toModel.Node.Id] = newFontSize;
             Application.Current.Resources["TimerBarHeight-" + toModel.Node.Id] = GetTimerBarHeight(newFontSize);
@@ -243,8 +243,8 @@ namespace EQLogParser
             Application.Current.Resources["TextOverlayFontFamily-" + toTextModel.Node.Id] = new FontFamily(toTextModel.FontFamily);
           }
 
-          if (!string.IsNullOrEmpty(fromOverlay.FontSize) && fromOverlay.FontSize.Split("pt") is { } split && split.Length == 2
-              && double.TryParse(split[0], out var newFontSize))
+          if (!string.IsNullOrEmpty(fromOverlay.FontSize) && fromOverlay.FontSize.Split("pt") is { Length: 2 } split
+                                                          && double.TryParse(split[0], out var newFontSize))
           {
             Application.Current.Resources["TextOverlayFontSize-" + toTextModel.Node.Id] = newFontSize;
           }
@@ -358,7 +358,7 @@ namespace EQLogParser
 
     internal static bool CheckOptions(List<NumberOptions> options, MatchCollection matches, out double duration)
     {
-      duration = -1;
+      duration = double.NaN;
 
       foreach (Match match in matches)
       {
@@ -390,7 +390,7 @@ namespace EQLogParser
             {
               if (groupName == option.Key && !string.IsNullOrEmpty(option.Op))
               {
-                if (StatsUtil.ParseUInt(groupValue) is uint value && value != uint.MaxValue)
+                if (StatsUtil.ParseUInt(groupValue) is var value && value != uint.MaxValue)
                 {
                   switch (option.Op)
                   {
@@ -491,7 +491,7 @@ namespace EQLogParser
 
     internal static void LoadSounds(ObservableCollection<string> fileList)
     {
-      var current = Directory.GetFiles(@"data/sounds", "*.wav").Select(file => Path.GetFileName(file)).OrderBy(file => file).ToList();
+      var current = Directory.GetFiles(@"data/sounds", "*.wav").Select(Path.GetFileName).OrderBy(file => file).ToList();
 
       Application.Current.Dispatcher.InvokeAsync(() =>
       {

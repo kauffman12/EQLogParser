@@ -1,5 +1,4 @@
 ﻿using FontAwesome5;
-using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -29,7 +28,7 @@ namespace EQLogParser
     private const ushort TANK_ADPS = 4;
     private const ushort HEALING_ADPS = 8;
     private const ushort ANY_ADPS = CASTER_ADPS + MELEE_ADPS + TANK_ADPS + HEALING_ADPS;
-    private readonly string[] TYPES = new string[] { "Defensive Skills", "ADPS", "Healing Skills" };
+    private readonly string[] TYPES = new[] { "Defensive Skills", "ADPS", "Healing Skills" };
 
     private readonly Dictionary<string, SpellRange> SpellRanges = new();
     private readonly List<Rectangle> Dividers = new();
@@ -56,7 +55,7 @@ namespace EQLogParser
     // timelineType 0 = tanking, 1 = dps, 2 = healing
     internal void Init(CombinedStats currentStats, List<PlayerStats> selected, List<List<ActionGroup>> groups, int timelineType)
     {
-      if (selected != null && selected.Count > 0 && timelineType >= 0 && timelineType <= 2)
+      if (selected is { Count: > 0 } && timelineType is >= 0 and <= 2)
       {
         TimelineType = timelineType;
         Selected = selected;
@@ -124,8 +123,10 @@ namespace EQLogParser
           {
             foreach (var action in block.Actions)
             {
-              if (action is SpellCast cast && !cast.Interrupted && cast.Caster == player && cast.SpellData != null && cast.SpellData.Target == (int)SpellTarget.SELF &&
-                cast.SpellData.Adps > 0 && (cast.SpellData.MaxHits > 0 || cast.SpellData.Duration <= 1800) && ClassFilter(cast.SpellData))
+              if (action is SpellCast { Interrupted: false } cast && cast.Caster == player && cast.SpellData is
+                {
+                  Target: (int)SpellTarget.SELF, Adps: > 0
+                } && (cast.SpellData.MaxHits > 0 || cast.SpellData.Duration <= 1800) && ClassFilter(cast.SpellData))
               {
                 UpdateSpellRange(cast.SpellData, block.BeginTime, BlockBrushes[i], deathTimes);
               }
@@ -137,7 +138,7 @@ namespace EQLogParser
                   spellData = replaced;
                 }
 
-                if (spellData != null && spellData.Adps > 0 && (spellData.MaxHits > 0 || spellData.Duration <= 1800) && ClassFilter(spellData))
+                if (spellData is { Adps: > 0 } && (spellData.MaxHits > 0 || spellData.Duration <= 1800) && ClassFilter(spellData))
                 {
                   if (string.IsNullOrEmpty(spellData.LandsOnOther))
                   {

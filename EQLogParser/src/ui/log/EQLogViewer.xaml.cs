@@ -183,7 +183,7 @@ namespace EQLogParser
                 chatType = ChatLineParser.ParseChatType(action);
                 if (chatType != null)
                 {
-                  var ignore = false;
+                  bool ignore;
                   switch (chatType.Channel)
                   {
                     case ChatChannels.Fellowship:
@@ -222,7 +222,7 @@ namespace EQLogParser
 
           logBox.Text = string.Join(Environment.NewLine, filtered);
           UpdateStatusCount(filtered.Count);
-          if (logBox.Lines != null && logBox.Lines.Count > 0)
+          if (logBox.Lines is { Count: > 0 })
           {
             GoToLine(logBox, logBox.Lines.Count);
           }
@@ -350,7 +350,7 @@ namespace EQLogParser
                 start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 30);
                 break;
               case 6:
-                if (fights.Count > 0)
+                if (fights?.Count > 0)
                 {
                   start = fights[0].BeginTime - 15;
                   ranges = new TimeRange();
@@ -460,7 +460,7 @@ namespace EQLogParser
               logFilter.Text = Resource.LOG_FILTER_TEXT;
               logFilter.FontStyle = FontStyles.Italic;
               UpdateStatusCount(UnFiltered.Count);
-              if (logBox.Lines != null && logBox.Lines.Count > 0)
+              if (logBox.Lines is { Count: > 0 })
               {
                 GoToLine(logBox, logBox.Lines.Count);
               }

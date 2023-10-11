@@ -185,11 +185,11 @@ namespace EQLogParser
 
     private void RequestTreeItems(object sender, TreeGridRequestTreeItemsEventArgs e)
     {
-      if (dataGrid.ItemsSource is List<PlayerStats>)
+      if (dataGrid.ItemsSource is List<PlayerStats> list)
       {
         if (e.ParentItem == null)
         {
-          e.ChildItems = dataGrid.ItemsSource as List<PlayerStats>;
+          e.ChildItems = list;
         }
         else if (e.ParentItem is PlayerStats stats)
         {

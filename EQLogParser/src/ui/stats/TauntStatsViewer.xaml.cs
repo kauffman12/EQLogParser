@@ -24,7 +24,7 @@ namespace EQLogParser
       dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Taunt", SortDirection = ListSortDirection.Descending });
 
       // default these columns to descending
-      var desc = new string[] { "Taunt", "Failed", "Improved", "SuccessRate" };
+      var desc = new[] { "Taunt", "Failed", "Improved", "SuccessRate" };
       dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 

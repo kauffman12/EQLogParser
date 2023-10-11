@@ -282,7 +282,7 @@ namespace EQLogParser
 
       var result = DateTime.MinValue;
 
-      if (year > 0 && month > 0 && month < 13 && day > 0 && day < 32 && hour >= 0 && hour < 24 && minute >= 0 && minute < 60 && second >= 0 && second < 60)
+      if (year > 0 && month is > 0 and < 13 && day is > 0 and < 32 && hour is >= 0 and < 24 && minute is >= 0 and < 60 && second is >= 0 and < 60)
       {
         try
         {

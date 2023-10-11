@@ -270,9 +270,7 @@ namespace EQLogParser
     private static int BuildVector(string player, string modifiers, double currentTime)
     {
       var result = 0;
-
       var lucky = false;
-      var critical = false;
 
       var temp = "";
       foreach (var modifier in modifiers.Split(' '))
@@ -280,7 +278,7 @@ namespace EQLogParser
         temp += modifier;
         if (ALL_MODIFIERS.ContainsKey(temp))
         {
-          if (!critical && CRIT_MODIFIERS.ContainsKey(temp))
+          if (CRIT_MODIFIERS.ContainsKey(temp))
           {
             result |= CRIT;
           }

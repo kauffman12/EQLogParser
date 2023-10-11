@@ -60,7 +60,7 @@
         if (action.IndexOf("told ", 4, 5) == 4)
         {
           // start at 11 since names have to be at least a few characters
-          if (action.IndexOf(",", 11) is int end && end > -1)
+          if (action.IndexOf(",", 11) is int end and > -1)
           {
             chatType = new ChatType
             {
@@ -86,7 +86,7 @@
               chatType = new ChatType { Channel = ChatChannels.Raid, SenderIsYou = true, Sender = you, TextStart = 20 };
             }
           }
-          else if (action.IndexOf(":", 11) is int end && end > -1)
+          else if (action.IndexOf(":", 11) is int end and > -1)
           {
             if (action.Length > end + 3 && (action[end + 2] == ',' || action[end + 3] == ','))
             {
@@ -239,7 +239,7 @@
             }
           }
           // Kizant tells General:1,
-          else if (action.IndexOf(":", end1 + 7) is int end2 && end2 > -1)
+          else if (action.IndexOf(":", end1 + 7) is int end2 and > -1)
           {
             if (action.Length > end2 + 3 && (action[end2 + 2] == ',' || action[end2 + 3] == ','))
             {

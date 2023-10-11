@@ -179,7 +179,7 @@ namespace EQLogParser
             }
           }
 
-          if (playerList.IndexOf(player) is int index && index > -1)
+          if (playerList.IndexOf(player) is int index and > -1)
           {
             players.SelectedIndex = index;
           }
@@ -195,7 +195,7 @@ namespace EQLogParser
       var builder = new StringBuilder();
       for (var i = 2; i < channels.Items.Count; i++)
       {
-        if (channels.Items[i] is ComboBoxItemDetails checkedItem && checkedItem.IsChecked)
+        if (channels.Items[i] is ComboBoxItemDetails { IsChecked: true } checkedItem)
         {
           selected.Add(checkedItem.Text);
           builder.Append(checkedItem.Text);
@@ -489,7 +489,7 @@ namespace EQLogParser
 
     private void PlayerChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (players.SelectedItem is string name && name.Length > 0 && !name.StartsWith("No ", StringComparison.Ordinal))
+      if (players.SelectedItem is string { Length: > 0 } name && !name.StartsWith("No ", StringComparison.Ordinal))
       {
         LoadChannels(players.SelectedItem as string);
         PlayerAutoCompleteList = ChatManager.Instance.GetPlayers(name);
