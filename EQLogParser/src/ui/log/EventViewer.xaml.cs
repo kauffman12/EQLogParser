@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Syncfusion.UI.Xaml.Grid;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -129,7 +130,7 @@ namespace EQLogParser
       titleLabel.Content = count == 0 ? "No Events Found" : count + " Events Found";
     }
 
-    private void ItemsSourceChanged(object sender, Syncfusion.UI.Xaml.Grid.GridItemsSourceChangedEventArgs e)
+    private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
     {
       dataGrid.View.Filter = obj =>
       {

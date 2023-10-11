@@ -1,5 +1,6 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Dynamic;
@@ -25,8 +26,8 @@ namespace EQLogParser
 
       // default these columns to descending
       var desc = new[] { "Taunt", "Failed", "Improved", "SuccessRate" };
-      dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
-      dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+      dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+      dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
       DataGridUtil.UpdateTableMargin(dataGrid);
       (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
@@ -41,7 +42,7 @@ namespace EQLogParser
     private void RefreshClick(object sender, RoutedEventArgs e) => Load();
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
 
-    private void SelectionChange(object sender, System.Collections.IList e)
+    private void SelectionChange(object sender, IList e)
     {
       if (fightOption.SelectedIndex != 0)
       {

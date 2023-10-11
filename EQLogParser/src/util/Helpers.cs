@@ -1,15 +1,18 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 
 namespace EQLogParser
 {
   static class Helpers
   {
     internal static DictionaryAddHelper<long, int> LongIntAddHelper = new();
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     public static void AddAction(List<ActionGroup> blockList, IAction action, double beginTime)
     {
@@ -40,7 +43,7 @@ namespace EQLogParser
       else
       {
         var gs = new GZipStream(f, CompressionMode.Decompress);
-        s = new StreamReader(gs, System.Text.Encoding.UTF8, true, 4096);
+        s = new StreamReader(gs, Encoding.UTF8, true, 4096);
       }
 
       return s;
@@ -63,7 +66,7 @@ namespace EQLogParser
           var check = TimeRange.TimeCheck(s.ReadLine(), time);
           s.DiscardBufferedData();
 
-          long pos = 0;
+          long pos;
           if (check)
           {
             pos = left + ((f.Position - left) / 2);

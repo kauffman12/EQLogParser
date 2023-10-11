@@ -1,23 +1,25 @@
 ﻿using FontAwesome5;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
   public partial class GanttChart : UserControl, IDisposable
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     private static readonly List<string> BlockBrushes = new() { "EQMenuIconBrush", "EQWarnForegroundBrush" };
 
@@ -28,10 +30,9 @@ namespace EQLogParser
     private const ushort TANK_ADPS = 4;
     private const ushort HEALING_ADPS = 8;
     private const ushort ANY_ADPS = CASTER_ADPS + MELEE_ADPS + TANK_ADPS + HEALING_ADPS;
-    private readonly string[] TYPES = new[] { "Defensive Skills", "ADPS", "Healing Skills" };
+    private readonly string[] TYPES = { "Defensive Skills", "ADPS", "Healing Skills" };
 
     private readonly Dictionary<string, SpellRange> SpellRanges = new();
-    private readonly List<Rectangle> Dividers = new();
     private readonly List<TextBlock> Headers = new();
     private readonly Dictionary<string, byte> SelfOnly = new();
     private readonly Dictionary<string, byte> Ignore = new();
@@ -237,7 +238,7 @@ namespace EQLogParser
           {
             if (rectangle.Tag is string adps && !string.IsNullOrEmpty(adps))
             {
-              if (titleLabel1.Foreground.ToString() == rectangle?.Fill.ToString())
+              if (titleLabel1.Foreground.ToString() == rectangle.Fill.ToString())
               {
                 helper.AddToList(player1, adps, rectangle);
               }
@@ -288,7 +289,7 @@ namespace EQLogParser
       }
     }
 
-    private void CreateImage(object sender, RoutedEventArgs e) => CreateImage(false);
+    private void CreateImage(object sender, RoutedEventArgs e) => CreateImage();
     private void CreateLargeImage(object sender, RoutedEventArgs e) => CreateImage(true);
 
     private void CreateImage(bool everything = false)
@@ -323,7 +324,6 @@ namespace EQLogParser
 
           var dpiScale = UIElementUtil.GetDpi();
           var titleHeight = titlePane.ActualHeight;
-          var titleWidth = titlePane.DesiredSize.Width;
 
           // create title image
           var rtb = new RenderTargetBitmap((int)contentLabels.ActualWidth + (int)content.ActualWidth,
@@ -403,7 +403,7 @@ namespace EQLogParser
             hidden.ForEach(header => header.Visibility = Visibility.Hidden);
             contentScroller.ScrollToHorizontalOffset(previousOffset);
           }
-        }, System.Windows.Threading.DispatcherPriority.Background);
+        }, DispatcherPriority.Background);
       });
     }
 
@@ -468,7 +468,7 @@ namespace EQLogParser
       image.SetResourceReference(HeightProperty, "EQContentSize");
       image.SetResourceReference(WidthProperty, "EQContentSize");
       image.SetResourceReference(ImageAwesome.ForegroundProperty, "EQMenuIconBrush");
-      image.PreviewMouseLeftButtonDown += (object sender, MouseButtonEventArgs e) =>
+      image.PreviewMouseLeftButtonDown += (sender, e) =>
       {
         Ignore[name] = 1;
         Display();
@@ -493,7 +493,7 @@ namespace EQLogParser
 
     private void AddHeaderLabel(double left, string text, int offset)
     {
-      var textBlock = new TextBlock()
+      var textBlock = new TextBlock
       {
         HorizontalAlignment = HorizontalAlignment.Left,
         VerticalAlignment = VerticalAlignment.Center,
@@ -520,8 +520,6 @@ namespace EQLogParser
         VerticalAlignment = VerticalAlignment.Top,
         Margin = new Thickness(left, 0, 0, 0)
       };
-
-      Dividers.Add(rectangle);
 
       var brushName = blockBrush ?? "ContentForeground";
       rectangle.SetResourceReference(Shape.StrokeProperty, brushName);
@@ -602,7 +600,7 @@ namespace EQLogParser
         Opacity = 1.0,
         Width = length,
         Margin = new Thickness(start, hPos + (ROW_HEIGHT / 3) + offset, 0, 0),
-        Effect = new DropShadowEffect() { ShadowDepth = 2, Direction = 240, BlurRadius = 0.5, Opacity = 0.5 },
+        Effect = new DropShadowEffect { ShadowDepth = 2, Direction = 240, BlurRadius = 0.5, Opacity = 0.5 },
         RadiusX = 2,
         RadiusY = 2,
         Tag = label

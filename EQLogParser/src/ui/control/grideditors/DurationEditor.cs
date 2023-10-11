@@ -3,6 +3,7 @@ using Syncfusion.Windows.Shared;
 using System;
 using System.ComponentModel;
 using System.Reflection;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 
@@ -47,7 +48,7 @@ namespace EQLogParser
         MinValue = new TimeSpan(0, 0, Min),
         MaxValue = new TimeSpan(23, 59, 59),
         Format = "hh : mm : ss",
-        Margin = new System.Windows.Thickness(0, 2, 0, 2)
+        Margin = new Thickness(0, 2, 0, 2)
       };
 
       TheTimeSpan = timeSpan;
@@ -78,7 +79,7 @@ namespace EQLogParser
       }
     }
 
-    private void TimeSpanLostFocus(object sender, System.Windows.RoutedEventArgs e)
+    private void TimeSpanLostFocus(object sender, RoutedEventArgs e)
     {
       if (sender is TimeSpanEdit edit)
       {
@@ -86,7 +87,7 @@ namespace EQLogParser
       }
     }
 
-    private void TimeSpanGotFocus(object sender, System.Windows.RoutedEventArgs e)
+    private void TimeSpanGotFocus(object sender, RoutedEventArgs e)
     {
       if (sender is TimeSpanEdit edit)
       {

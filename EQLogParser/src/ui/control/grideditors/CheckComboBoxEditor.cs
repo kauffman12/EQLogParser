@@ -1,4 +1,5 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -45,7 +46,7 @@ namespace EQLogParser
     }
 
     private void TheComboBoxDataContextChanged(object sender, DependencyPropertyChangedEventArgs e) => UpdateTitle(sender);
-    private void TheComboBoxDropDownClosed(object sender, System.EventArgs e) => UpdateTitle(sender, true);
+    private void TheComboBoxDropDownClosed(object sender, EventArgs e) => UpdateTitle(sender, true);
 
     private void UpdateTitle(object sender, bool save = false)
     {

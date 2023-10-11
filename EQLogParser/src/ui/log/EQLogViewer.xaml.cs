@@ -1,5 +1,6 @@
 ﻿using FontAwesome5;
 using Syncfusion.Windows.Edit;
+using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -493,10 +494,8 @@ namespace EQLogParser
       {
         return searchRegex.IsMatch(line) ? 1 : -1;
       }
-      else
-      {
-        return line.IndexOf(text, StringComparison.OrdinalIgnoreCase);
-      }
+
+      return line.IndexOf(text, StringComparison.OrdinalIgnoreCase);
     }
 
     private void UpdateStatusCount(int count)
@@ -682,7 +681,7 @@ namespace EQLogParser
       }
     }
 
-    private void PreviewSelectedItemChangedEvent(object sender, Syncfusion.Windows.Tools.Controls.PreviewSelectedItemChangedEventArgs e)
+    private void PreviewSelectedItemChangedEvent(object sender, PreviewSelectedItemChangedEventArgs e)
     {
       if (e.NewSelectedItem == resultsTab)
       {
@@ -700,7 +699,7 @@ namespace EQLogParser
       }
     }
 
-    private void TabClosed(object sender, Syncfusion.Windows.Tools.Controls.CloseTabEventArgs e)
+    private void TabClosed(object sender, CloseTabEventArgs e)
     {
       // can only close the context and display the results
       if (logBox?.Lines != null)

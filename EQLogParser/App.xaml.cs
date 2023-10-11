@@ -2,6 +2,7 @@ using AutoMapper;
 using log4net;
 using Syncfusion.Licensing;
 using System;
+using System.Reflection;
 using System.Windows;
 
 namespace EQLogParser
@@ -12,7 +13,7 @@ namespace EQLogParser
   public partial class App : Application
   {
     internal IMapper AutoMap;
-    private static readonly ILog LOG = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     public App()
     {
@@ -24,13 +25,13 @@ namespace EQLogParser
       base.OnStartup(e);
       AppDomain.CurrentDomain.UnhandledException += DomainUnhandledException;
       AutoMap = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
-      LOG.Info($"Using DotNet {Environment.Version}");
+      Log.Info($"Using DotNet {Environment.Version}");
     }
 
     private void DomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
       var exception = e.ExceptionObject as Exception;
-      LOG.Error(exception.Message, exception);
+      Log.Error(exception?.Message, exception);
     }
   }
 }

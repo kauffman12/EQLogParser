@@ -17,12 +17,11 @@ namespace EQLogParser
     internal const int SPECIAL_OFFSET = 15;
     internal const int DEATH_OFFSET = 15;
 
-    private static readonly ConcurrentDictionary<string, byte> RegularMeleeTypes = new(new Dictionary<string, byte>()
-    { { "Bites", 1 }, { "Claws", 1 },  { "Crushes", 1 }, { "Pierces", 1 }, { "Punches", 1 }, { "Slashes", 1 } });
+    private static readonly ConcurrentDictionary<string, byte> RegularMeleeTypes = new(new Dictionary<string, byte> { { "Bites", 1 }, { "Claws", 1 }, { "Crushes", 1 }, { "Pierces", 1 }, { "Punches", 1 }, { "Slashes", 1 } });
 
     internal static PlayerStats CreatePlayerStats(Dictionary<string, PlayerStats> individualStats, string key, string origName = null)
     {
-      PlayerStats stats = null;
+      PlayerStats stats;
 
       lock (individualStats)
       {
@@ -45,7 +44,7 @@ namespace EQLogParser
       origName ??= name;
       var className = PlayerManager.Instance.GetPlayerClass(origName);
 
-      return new PlayerStats()
+      return new PlayerStats
       {
         Name = string.Intern(name),
         ClassName = string.Intern(className),
@@ -57,7 +56,7 @@ namespace EQLogParser
     internal static PlayerSubStats CreatePlayerSubStats(ICollection<PlayerSubStats> individualStats, string subType, string type)
     {
       var key = CreateRecordKey(type, subType);
-      PlayerSubStats stats = null;
+      PlayerSubStats stats;
 
       lock (individualStats)
       {
@@ -129,14 +128,14 @@ namespace EQLogParser
     {
       uint y = 0;
 
-      for (var i = 0; i < span.Length; i++)
+      foreach (var c in span)
       {
-        if (!char.IsDigit(span[i]))
+        if (!char.IsDigit(c))
         {
           return defValue;
         }
 
-        y = (y * 10) + (uint)(span[i] - '0');
+        y = (y * 10) + (uint)(c - '0');
       }
 
       return y;
@@ -681,7 +680,8 @@ namespace EQLogParser
       {
         return from;
       }
-      else if (from == 0 && to > 0)
+
+      if (from == 0 && to > 0)
       {
         return to;
       }

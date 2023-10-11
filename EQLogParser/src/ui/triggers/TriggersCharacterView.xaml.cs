@@ -1,6 +1,7 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 
@@ -35,13 +36,13 @@ namespace EQLogParser
       }
     }
 
-    private void AddClick(object sender, System.Windows.RoutedEventArgs e)
+    private void AddClick(object sender, RoutedEventArgs e)
     {
       var configWindow = new TriggerPlayerConfigWindow();
       configWindow.ShowDialog();
     }
 
-    private void DeleteClick(object sender, System.Windows.RoutedEventArgs e)
+    private void DeleteClick(object sender, RoutedEventArgs e)
     {
       if (dataGrid?.SelectedItem is TriggerCharacter character)
       {
@@ -55,7 +56,7 @@ namespace EQLogParser
       }
     }
 
-    private void ModifyClick(object sender, System.Windows.RoutedEventArgs e)
+    private void ModifyClick(object sender, RoutedEventArgs e)
     {
       if (dataGrid?.SelectedItem is TriggerCharacter character)
       {

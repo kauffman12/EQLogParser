@@ -1,4 +1,5 @@
-﻿using Syncfusion.Windows.PropertyGrid;
+﻿using log4net;
+using Syncfusion.Windows.PropertyGrid;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -15,7 +16,7 @@ namespace EQLogParser
 {
   internal class TextSoundEditor : BaseTypeEditor
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private SoundPlayer SoundPlayer;
     private readonly ObservableCollection<string> FileList;
     private ComboBox TheOptionsCombo;

@@ -39,13 +39,13 @@ namespace EQLogParser
 
       if (TheDataGrid is SfTreeGrid treeGrid)
       {
-        treeGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
-        treeGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+        treeGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+        treeGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       }
       else if (TheDataGrid is SfDataGrid dataGrid)
       {
-        dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
-        dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+        dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+        dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       }
 
       DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
@@ -138,14 +138,13 @@ namespace EQLogParser
       {
         return treeGrid.SelectedItems.Cast<PlayerStats>().ToList();
       }
-      else if (TheDataGrid is SfDataGrid dataGrid)
+
+      if (TheDataGrid is SfDataGrid dataGrid)
       {
         return dataGrid.SelectedItems.Cast<PlayerStats>().ToList();
       }
-      else
-      {
-        return new List<PlayerStats>();
-      }
+
+      return new List<PlayerStats>();
     }
 
     internal List<PlayerStats> GetPlayerStats()
@@ -154,7 +153,8 @@ namespace EQLogParser
       {
         return dataGrid.View.Records.Select(record => record.Data).Cast<PlayerStats>().ToList();
       }
-      else if (TheDataGrid is SfTreeGrid { View.Nodes: not null } treeGrid)
+
+      if (TheDataGrid is SfTreeGrid { View.Nodes: not null } treeGrid)
       {
         var results = new List<PlayerStats>();
         foreach (var stats in treeGrid.View.Nodes.Where(node => node.Level == 0).Select(node => node.Item).Cast<PlayerStats>())

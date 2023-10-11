@@ -412,10 +412,9 @@ namespace EQLogParser
         var timerOverlayFound = false;
         trigger.SelectedOverlays?.ForEach(overlayId =>
         {
-          OverlayWindowData windowData;
           lock (TimerWindows)
           {
-            if (!TimerWindows.TryGetValue(overlayId, out windowData))
+            if (!TimerWindows.TryGetValue(overlayId, out var windowData))
             {
               if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { OverlayData.IsTimerOverlay: true } node)
               {

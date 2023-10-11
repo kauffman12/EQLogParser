@@ -1,6 +1,8 @@
 ﻿using FontAwesome5;
 using log4net;
+using log4net.Appender;
 using log4net.Core;
+using log4net.Repository.Hierarchy;
 using Microsoft.Win32;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Shared;
@@ -11,13 +13,17 @@ using System.Dynamic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Application = System.Windows.Application;
+using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
 namespace EQLogParser
 {
@@ -43,7 +49,7 @@ namespace EQLogParser
     internal static string CurrentFontFamily;
     internal static double CurrentFontSize;
 
-    private static readonly ILog LOG = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly Regex ParseFileName = new(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline);
     private static readonly List<string> DAMAGE_CHOICES = new()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damage", "Aggregate Crit Rate", "Aggregate Twincast Rate", "DPS", "Rolling DPS", "Rolling Damage", "# Attempts", "# Crits", "# Hits", "# Twincasts" };
@@ -70,7 +76,7 @@ namespace EQLogParser
       {
         // DPI and sizing
         var dpi = UIElementUtil.GetDpi();
-        var resolution = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
+        var resolution = Screen.PrimaryScreen.Bounds;
         var defaultHeight = resolution.Height * 0.75 / dpi;
         var defaultWidth = resolution.Width * 0.85 / dpi;
         Height = ConfigUtil.GetSettingAsDouble("WindowHeight", defaultHeight);
@@ -241,8 +247,8 @@ namespace EQLogParser
 
         if (ConfigUtil.IfSet("Debug"))
         {
-          ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).Root.Level = Level.Debug;
-          ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
+          ((Hierarchy)LogManager.GetRepository()).Root.Level = Level.Debug;
+          ((Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
         }
 
         SystemEvents.PowerModeChanged += SystemEventsPowerModeChanged;
@@ -386,7 +392,7 @@ namespace EQLogParser
         var item = new MenuItem { IsEnabled = true, Header = player };
         deleteChat.Items.Add(item);
 
-        item.Click += (object sender, RoutedEventArgs e) =>
+        item.Click += (sender, e) =>
         {
           var msgDialog = new MessageWindow($"Clear Chat Archive for {player}?", Resource.CLEAR_CHAT,
             MessageWindow.IconType.Warn, "Yes");
@@ -420,21 +426,21 @@ namespace EQLogParser
       var filtered = (npcWindow?.Content as FightTable)?.GetSelectedFights().OrderBy(npc => npc.Id);
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
 
-      var damageOptions = new GenerateStatsOptions();
-      damageOptions.Npcs.AddRange(filtered);
-      Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(damageOptions));
+      var damageStatsOptions = new GenerateStatsOptions();
+      damageStatsOptions.Npcs.AddRange(filtered);
+      Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(damageStatsOptions));
 
-      var healingOptions = new GenerateStatsOptions();
-      healingOptions.Npcs.AddRange(filtered);
-      Task.Run(() => HealingStatsManager.Instance.BuildTotalStats(healingOptions));
+      var healingStatsOptions = new GenerateStatsOptions();
+      healingStatsOptions.Npcs.AddRange(filtered);
+      Task.Run(() => HealingStatsManager.Instance.BuildTotalStats(healingStatsOptions));
 
-      var tankingOptions = new GenerateStatsOptions();
-      tankingOptions.Npcs.AddRange(filtered);
+      var tankingStatsOptions = new GenerateStatsOptions();
+      tankingStatsOptions.Npcs.AddRange(filtered);
       if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out var control) && control != null)
       {
-        tankingOptions.DamageType = ((TankingSummary)control.Content).DamageType;
+        tankingStatsOptions.DamageType = ((TankingSummary)control.Content).DamageType;
       }
-      Task.Run(() => TankingStatsManager.Instance.BuildTotalStats(tankingOptions));
+      Task.Run(() => TankingStatsManager.Instance.BuildTotalStats(tankingStatsOptions));
     }
 
     private void MenuItemClearOpenRecentClick(object sender, RoutedEventArgs e)
@@ -497,7 +503,7 @@ namespace EQLogParser
       var appender = LOG.Logger.Repository.GetAppenders().FirstOrDefault(test => "file".Equals(test.Name, StringComparison.OrdinalIgnoreCase));
       if (appender != null)
       {
-        MainActions.OpenFileWithDefault("\"" + (appender as log4net.Appender.FileAppender).File + "\"");
+        MainActions.OpenFileWithDefault("\"" + (appender as FileAppender).File + "\"");
       }
     }
 
@@ -922,16 +928,7 @@ namespace EQLogParser
         {
           var seconds = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds);
           var filePercent = Math.Round(EQLogReader.Progress);
-
-          if (filePercent < 100.0)
-          {
-            statusText.Text = $"Reading Log.. {filePercent}% in {seconds} seconds";
-          }
-          else
-          {
-            statusText.Text = $"Additional Processing... {seconds} seconds";
-          }
-
+          statusText.Text = filePercent < 100.0 ? $"Reading Log.. {filePercent}% in {seconds} seconds" : $"Additional Processing... {seconds} seconds";
           statusText.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;
 
           if (filePercent >= 100)
@@ -1082,10 +1079,8 @@ namespace EQLogParser
         {
           throw;
         }
-        else
-        {
-          LOG.Error("Problem During Initialization", e);
-        }
+
+        LOG.Error("Problem During Initialization", e);
       }
     }
 

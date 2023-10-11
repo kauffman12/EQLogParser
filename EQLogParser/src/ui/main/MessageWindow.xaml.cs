@@ -1,5 +1,6 @@
 ﻿using FontAwesome5;
 using Syncfusion.Windows.Shared;
+using System.Windows;
 
 namespace EQLogParser
 {
@@ -42,14 +43,14 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(yes1))
       {
         yesButton1.Content = yes1;
-        yesButton1.Visibility = System.Windows.Visibility.Visible;
+        yesButton1.Visibility = Visibility.Visible;
         cancelButton.Content = "Cancel";
       }
 
       if (!string.IsNullOrEmpty(yes2))
       {
         yesButton2.Content = yes2;
-        yesButton2.Visibility = System.Windows.Visibility.Visible;
+        yesButton2.Visibility = Visibility.Visible;
         cancelButton.Content = "Cancel";
       }
 
@@ -57,18 +58,18 @@ namespace EQLogParser
       iconImage.Icon = image;
     }
 
-    private void ButtonCancelClick(object sender, System.Windows.RoutedEventArgs e)
+    private void ButtonCancelClick(object sender, RoutedEventArgs e)
     {
       Close();
     }
 
-    private void ButtonYes1Click(object sender, System.Windows.RoutedEventArgs e)
+    private void ButtonYes1Click(object sender, RoutedEventArgs e)
     {
       IsYes1Clicked = true;
       Close();
     }
 
-    private void ButtonYes2Click(object sender, System.Windows.RoutedEventArgs e)
+    private void ButtonYes2Click(object sender, RoutedEventArgs e)
     {
       IsYes2Clicked = true;
       Close();

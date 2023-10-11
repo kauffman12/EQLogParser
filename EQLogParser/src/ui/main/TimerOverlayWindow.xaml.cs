@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -327,10 +328,8 @@ namespace EQLogParser
       {
         return timerData.DisplayName.Replace("{repeated}", timerData.RepeatedCount.ToString(), StringComparison.OrdinalIgnoreCase);
       }
-      else
-      {
-        return timerData.DisplayName;
-      }
+
+      return timerData.DisplayName;
     }
 
     private void SaveClick(object sender, RoutedEventArgs e)
@@ -429,7 +428,7 @@ namespace EQLogParser
       }
     }
 
-    private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
+    private void WindowClosing(object sender, CancelEventArgs e)
     {
       TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
       content.Children.Clear();

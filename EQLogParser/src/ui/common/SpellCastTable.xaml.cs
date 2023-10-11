@@ -10,7 +10,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for SpellCastTable.xaml
   /// </summary>
-  public partial class SpellCastTable : CastTable
+  public partial class SpellCastTable
   {
     private readonly Dictionary<string, bool> UniqueNames = new();
     private PlayerStats RaidStats;

@@ -1,15 +1,17 @@
-﻿using Syncfusion.Data.Extensions;
+﻿using log4net;
+using Syncfusion.Data.Extensions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace EQLogParser
 {
   class DamageStatsManager : ISummaryBuilder
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     internal static DamageStatsManager Instance = new();
 
@@ -170,7 +172,7 @@ namespace EQLogParser
           var time = total.Range.GetTotal();
           if (time > 0 && (DateTime.Now - DateTime.MinValue.AddSeconds(total.UpdateTime)).TotalSeconds <= DataManager.MAXTIMEOUT)
           {
-            var playerStats = new PlayerStats()
+            var playerStats = new PlayerStats
             {
               Name = playerHasPet.ContainsKey(total.Name) ? total.Name + " +Pets" : total.Name,
               Total = total.Damage,
@@ -272,7 +274,7 @@ namespace EQLogParser
 
     internal DamageStatsManager()
     {
-      DataManager.Instance.EventsClearedActiveData += (object sender, bool e) =>
+      DataManager.Instance.EventsClearedActiveData += (sender, e) =>
       {
         lock (DamageGroupIds)
         {
@@ -395,7 +397,6 @@ namespace EQLogParser
       {
         if (RaidTotals != null)
         {
-          CombinedStats combined;
           var childrenStats = new ConcurrentDictionary<string, Dictionary<string, PlayerStats>>();
           var topLevelStats = new ConcurrentDictionary<string, PlayerStats>();
           var damageValidator = new DamageValidator();
@@ -423,10 +424,8 @@ namespace EQLogParser
                     stopTime = range.EndTime - removeFromEnd;
                     break;
                   }
-                  else
-                  {
-                    removeFromEnd -= range.Total;
-                  }
+
+                  removeFromEnd -= range.Total;
                 }
               }
 
@@ -440,10 +439,8 @@ namespace EQLogParser
                     startTime = range.BeginTime + removeFromStart;
                     break;
                   }
-                  else
-                  {
-                    removeFromStart -= range.Total;
-                  }
+
+                  removeFromStart -= range.Total;
                 }
               }
 
@@ -521,7 +518,7 @@ namespace EQLogParser
                         StatsUtil.UpdateStats(aggregatePlayerStats, record, isNewFrame, isAttackerPet);
                         topLevelStats[aggregateName] = aggregatePlayerStats;
 
-                        if (!childrenStats.TryGetValue(aggregateName, out var children))
+                        if (!childrenStats.TryGetValue(aggregateName, out _))
                         {
                           childrenStats[aggregateName] = new Dictionary<string, PlayerStats>();
                         }
@@ -599,7 +596,7 @@ namespace EQLogParser
               }
             });
 
-            combined = new CombinedStats
+            var combined = new CombinedStats
             {
               RaidStats = RaidTotals,
               TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title,
@@ -609,7 +606,7 @@ namespace EQLogParser
 
             combined.StatsList.AddRange(topLevelStats.Values.AsParallel().OrderByDescending(item => item.Total));
             combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
-            combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
+            combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle);
             combined.ExpandedStatsList.AddRange(expandedStats.AsParallel().OrderByDescending(item => item.Total));
 
             for (var i = 0; i < combined.ExpandedStatsList.Count; i++)

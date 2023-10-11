@@ -1,14 +1,16 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace EQLogParser
 {
   class HealingStatsManager : ISummaryBuilder
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     internal static HealingStatsManager Instance = new();
 
@@ -34,7 +36,7 @@ namespace EQLogParser
 
     internal HealingStatsManager()
     {
-      DataManager.Instance.EventsClearedActiveData += (object sender, bool e) =>
+      DataManager.Instance.EventsClearedActiveData += (sender, e) =>
       {
         lock (HealingGroups)
         {
@@ -136,7 +138,7 @@ namespace EQLogParser
 
               filtered.ForEach(heal =>
               {
-                var updatedHeal = new ActionGroup() { BeginTime = heal.BeginTime };
+                var updatedHeal = new ActionGroup { BeginTime = heal.BeginTime };
                 foreach (var record in heal.Actions.Cast<HealRecord>())
                 {
                   var ignoreKey = heal.BeginTime + "|" + record.Healer + "|" + record.SubType;
@@ -296,13 +298,13 @@ namespace EQLogParser
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.HEALPARSE, State = "STARTED" });
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.HEALPARSE, State = "STARTED" });
     }
 
     private void FireNoDataEvent(string state)
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.HEALPARSE, State = state });
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.HEALPARSE, State = state });
 
       FireChartEvent("CLEAR");
     }
@@ -313,7 +315,6 @@ namespace EQLogParser
       {
         if (RaidTotals != null)
         {
-          CombinedStats combined;
           var individualStats = new Dictionary<string, PlayerStats>();
 
           // always start over
@@ -356,7 +357,7 @@ namespace EQLogParser
               }
             });
 
-            combined = new CombinedStats
+            var combined = new CombinedStats
             {
               RaidStats = RaidTotals,
               TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title,
@@ -366,7 +367,7 @@ namespace EQLogParser
 
             combined.StatsList.AddRange(individualStats.Values.AsParallel().OrderByDescending(item => item.Total));
             combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
-            combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
+            combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle);
 
             for (var i = 0; i < combined.StatsList.Count; i++)
             {
@@ -375,7 +376,7 @@ namespace EQLogParser
             }
 
             // generating new stats
-            var genEvent = new StatsGenerationEvent()
+            var genEvent = new StatsGenerationEvent
             {
               Type = Labels.HEALPARSE,
               State = "COMPLETED",

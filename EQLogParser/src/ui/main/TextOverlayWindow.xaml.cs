@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -287,7 +288,7 @@ namespace EQLogParser
       }
     }
 
-    private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
+    private void WindowClosing(object sender, CancelEventArgs e)
     {
       TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
       PreviewWindows?.Remove(Node.Id);

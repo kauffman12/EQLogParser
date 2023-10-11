@@ -1,4 +1,5 @@
 ﻿using FontAwesome5;
+using log4net;
 using Microsoft.Win32;
 using Syncfusion.SfSkinManager;
 using Syncfusion.Themes.MaterialDarkCustom.WPF;
@@ -13,6 +14,7 @@ using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
 using System.Security;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -32,7 +34,7 @@ namespace EQLogParser
     private static readonly ObservableCollection<PetMapping> PetPlayersView = new();
     private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new();
     private static readonly SortableNameComparer TheSortableNameComparer = new();
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     internal static void CheckVersion(TextBlock errorText)
     {
@@ -93,11 +95,11 @@ namespace EQLogParser
                   if (File.Exists(fullPath))
                   {
                     var process = Process.Start("msiexec", "/i \"" + fullPath + "\"");
-                    if (!process.HasExited)
+                    if (process is { HasExited: false })
                     {
-                      await Task.Delay(1000).ContinueWith(task =>
+                      await Task.Delay(1000).ContinueWith(_ =>
                       {
-                        dispatcher.InvokeAsync(() => Application.Current.MainWindow.Close());
+                        dispatcher.InvokeAsync(() => Application.Current.MainWindow?.Close());
                       });
                     }
                   }
@@ -583,7 +585,7 @@ namespace EQLogParser
           }
           finally
           {
-            Application.Current.Dispatcher.InvokeAsync(() => dialog?.Close());
+            Application.Current.Dispatcher.InvokeAsync(() => dialog.Close());
 
             if (accessError)
             {

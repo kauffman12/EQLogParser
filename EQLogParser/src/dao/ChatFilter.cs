@@ -109,7 +109,7 @@ namespace EQLogParser
       }
 
       var found = stop < 3 ? false : true;
-      for (var i = 0; found != false && i < stop; i++)
+      for (var i = 0; found && i < stop; i++)
       {
         if (!char.IsLetter(part, i) && part[i] != '.')
         {

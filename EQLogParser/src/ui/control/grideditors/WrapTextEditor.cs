@@ -1,6 +1,7 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
 using System.ComponentModel;
 using System.Reflection;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
@@ -24,8 +25,8 @@ namespace EQLogParser
     public override object Create(PropertyInfo propertyInfo)
     {
       var textBox = base.Create(propertyInfo) as TextBox;
-      textBox.TextWrapping = System.Windows.TextWrapping.Wrap;
-      textBox.Padding = new System.Windows.Thickness(0, 2, 0, 2);
+      textBox.TextWrapping = TextWrapping.Wrap;
+      textBox.Padding = new Thickness(0, 2, 0, 2);
       TheTextBox = textBox;
       return textBox;
     }
@@ -33,8 +34,8 @@ namespace EQLogParser
     public override object Create(PropertyDescriptor descriptor)
     {
       var textBox = base.Create(descriptor) as TextBox;
-      textBox.TextWrapping = System.Windows.TextWrapping.Wrap;
-      textBox.Padding = new System.Windows.Thickness(2);
+      textBox.TextWrapping = TextWrapping.Wrap;
+      textBox.Padding = new Thickness(2);
       TheTextBox = textBox;
       return textBox;
     }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DotLiquid;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -133,7 +134,7 @@ namespace EQLogParser
 
     internal static void SaveHTML(string selectedFileName, Dictionary<string, SummaryTable> tables)
     {
-      var headerTemplate = DotLiquid.Template.Parse(File.ReadAllText(@"data\html\header.html"));
+      var headerTemplate = Template.Parse(File.ReadAllText(@"data\html\header.html"));
       var tableKeys = tables.Keys.OrderBy(key => key);
       var tablechoices = new List<object>();
 
@@ -142,12 +143,10 @@ namespace EQLogParser
         tablechoices.Add(new { type = key, title = tables[key].GetTitle() });
       }
 
-      var headerValue = headerTemplate.Render(DotLiquid.Hash.FromAnonymousObject(new { tablechoices }));
+      var headerValue = headerTemplate.Render(Hash.FromAnonymousObject(new { tablechoices }));
       File.WriteAllText(selectedFileName, headerValue);
-      headerValue = null;
-      headerTemplate = null;
 
-      var contentTemplate = DotLiquid.Template.Parse(File.ReadAllText(@"data\html\content.html"));
+      var contentTemplate = Template.Parse(File.ReadAllText(@"data\html\content.html"));
       foreach (var key in tableKeys)
       {
         var headers = tables[key].GetHeaders();
@@ -189,7 +188,7 @@ namespace EQLogParser
           rows.Add(row);
         }
 
-        var content = contentTemplate.Render(DotLiquid.Hash.FromAnonymousObject(new { columns, rows, tableid = key }));
+        var content = contentTemplate.Render(Hash.FromAnonymousObject(new { columns, rows, tableid = key }));
         File.AppendAllText(selectedFileName, content);
       }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -299,7 +300,7 @@ namespace EQLogParser
             }
           }
 
-          damageBar.Update(origName, name, StatsUtil.FormatTotals(stat.Total, 2),
+          damageBar.Update(origName, name, StatsUtil.FormatTotals(stat.Total),
           StatsUtil.FormatTotals(stat.DPS, 1), stat.TotalSeconds.ToString(), barPercent);
 
           if (damageBar.Visibility == Visibility.Collapsed)
@@ -318,7 +319,7 @@ namespace EQLogParser
       }
 
       var titleBar = children[^1] as DamageBar;
-      titleBar.Update("", localStats.TargetTitle, StatsUtil.FormatTotals(localStats.RaidStats.Total, 2),
+      titleBar.Update("", localStats.TargetTitle, StatsUtil.FormatTotals(localStats.RaidStats.Total),
         StatsUtil.FormatTotals(localStats.RaidStats.DPS, 1), localStats.RaidStats.TotalSeconds.ToString(), 0);
 
       if (titleBar.Visibility == Visibility.Collapsed)
@@ -919,7 +920,7 @@ namespace EQLogParser
       }
     }
 
-    private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
+    private void WindowClosing(object sender, CancelEventArgs e)
     {
       UpdateTimer?.Stop();
       damageContent.Children.Clear();

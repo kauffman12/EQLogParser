@@ -1,6 +1,7 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
 using System.ComponentModel;
 using System.Reflection;
+using System.Windows;
 using System.Windows.Input;
 
 namespace EQLogParser
@@ -21,7 +22,7 @@ namespace EQLogParser
 
     private object Create()
     {
-      var timerBar = new TimerBar { Margin = new System.Windows.Thickness(5) };
+      var timerBar = new TimerBar { Margin = new Thickness(5) };
       TheTimerBar = timerBar;
       return timerBar;
     }

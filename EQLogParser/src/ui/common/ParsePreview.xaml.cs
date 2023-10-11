@@ -13,7 +13,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for ParsePreview.xaml
   /// </summary>
-  public partial class ParsePreview : UserControl
+  public partial class ParsePreview
   {
     private readonly ObservableCollection<string> AvailableParses = new();
     private readonly ConcurrentDictionary<string, ParseData> Parses = new();
@@ -68,7 +68,7 @@ namespace EQLogParser
 
     internal void AddParse(string type, ISummaryBuilder builder, CombinedStats combined, List<PlayerStats> selected = null, bool copy = false)
     {
-      Parses[type] = new ParseData() { Builder = builder, CombinedStats = combined };
+      Parses[type] = new ParseData { Builder = builder, CombinedStats = combined };
 
       if (selected != null)
       {

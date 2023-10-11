@@ -1,4 +1,6 @@
-﻿namespace EQLogParser
+﻿using System;
+
+namespace EQLogParser
 {
   static class ChatLineParser
   {
@@ -17,7 +19,7 @@
       ChatType chatType = null;
       var you = "You";
 
-      if (action.Length > 7 && action.IndexOf("say", 4, 3) == 4)
+      if (action.Length > 7 && action.IndexOf("say", 4, 3, StringComparison.Ordinal) == 4)
       {
         // "You say,"
         if (action.Length > 9 && action[7] == ',')
@@ -25,9 +27,9 @@
           chatType = new ChatType { Channel = ChatChannels.Say, SenderIsYou = true, Sender = you, TextStart = 9 };
         }
         // "You say to "
-        else if (action.Length > 23 && action.IndexOf(" to your ", 7, 9) == 7)
+        else if (action.Length > 23 && action.IndexOf(" to your ", 7, 9, StringComparison.Ordinal) == 7)
         {
-          if (action.IndexOf("guild, ", 16, 7) == 16)
+          if (action.IndexOf("guild, ", 16, 7, StringComparison.Ordinal) == 16)
           {
             chatType = new ChatType
             {
@@ -37,7 +39,7 @@
               TextStart = 23
             };
           }
-          else if (action.Length > 27 && action.IndexOf("fellowship, ", 16, 12) == 16)
+          else if (action.Length > 27 && action.IndexOf("fellowship, ", 16, 12, StringComparison.Ordinal) == 16)
           {
             chatType = new ChatType
             {
@@ -49,7 +51,7 @@
           }
         }
         // "You say out of"
-        else if (action.Length > 14 && action.IndexOf(" out of character, ", 7, 19) == 7)
+        else if (action.Length > 14 && action.IndexOf(" out of character, ", 7, 19, StringComparison.Ordinal) == 7)
         {
           chatType = new ChatType { Channel = ChatChannels.Ooc, SenderIsYou = true, Sender = you, TextStart = 26 };
         }
@@ -57,7 +59,7 @@
       else if (action.Length > 10 && action[3] == ' ')
       {
         // "You told "
-        if (action.IndexOf("told ", 4, 5) == 4)
+        if (action.IndexOf("told ", 4, 5, StringComparison.Ordinal) == 4)
         {
           // start at 11 since names have to be at least a few characters
           if (action.IndexOf(",", 11) is int end and > -1)
@@ -73,15 +75,15 @@
           }
         }
         // "You tell "
-        else if (action.IndexOf("tell ", 4, 5) == 4)
+        else if (action.IndexOf("tell ", 4, 5, StringComparison.Ordinal) == 4)
         {
-          if (action.Length > 20 && action.IndexOf("your ", 9, 5) == 9)
+          if (action.Length > 20 && action.IndexOf("your ", 9, 5, StringComparison.Ordinal) == 9)
           {
-            if (action.IndexOf("party, ", 14, 7) == 14)
+            if (action.IndexOf("party, ", 14, 7, StringComparison.Ordinal) == 14)
             {
               chatType = new ChatType { Channel = ChatChannels.Group, SenderIsYou = true, Sender = you, TextStart = 21 };
             }
-            else if (action.IndexOf("raid, ", 14, 6) == 14)
+            else if (action.IndexOf("raid, ", 14, 6, StringComparison.Ordinal) == 14)
             {
               chatType = new ChatType { Channel = ChatChannels.Raid, SenderIsYou = true, Sender = you, TextStart = 20 };
             }
@@ -101,12 +103,12 @@
           }
         }
         // "You shout,"
-        else if (action.IndexOf("shout, ", 4, 7) == 4)
+        else if (action.IndexOf("shout, ", 4, 7, StringComparison.Ordinal) == 4)
         {
           chatType = new ChatType { Channel = ChatChannels.Shout, SenderIsYou = true, Sender = you, TextStart = 10 };
         }
         // "You auction,"
-        else if (action.Length > 12 && action.IndexOf("auction, ", 4, 9) == 4)
+        else if (action.Length > 12 && action.IndexOf("auction, ", 4, 9, StringComparison.Ordinal) == 4)
         {
           chatType = new ChatType { Channel = ChatChannels.Auction, SenderIsYou = true, Sender = you, TextStart = 12 };
         }
@@ -127,7 +129,7 @@
       if (end1 > -1 && action.Length > (end1 + 5))
       {
         // "Kant -> Kazint:
-        if (action.IndexOf("-> ", end1 + 1, 3) == (end1 + 1))
+        if (action.IndexOf("-> ", end1 + 1, 3, StringComparison.Ordinal) == (end1 + 1))
         {
           var end2 = PlayerManager.FindPossiblePlayerName(action, out var _, end1 + 4, -1, ':');
           if (end2 > -1)
@@ -142,7 +144,7 @@
             chatType.Receiver = action.Substring(end1 + 4, end2 - (end1 + 4));
           }
         }
-        else if (action.IndexOf("says", end1 + 1, 4) == (end1 + 1))
+        else if (action.IndexOf("says", end1 + 1, 4, StringComparison.Ordinal) == (end1 + 1))
         {
           // Kizant says, 
           if (action.Length > (end1 + 7) && (action[end1 + 5] == ',' || action[end1 + 6] == ' '))
@@ -161,7 +163,7 @@
             }
           }
           // Kizant says out of character,
-          else if (action.Length > (end1 + 24) && action.IndexOf(" out of character, ", end1 + 5, 19) == (end1 + 5))
+          else if (action.Length > (end1 + 24) && action.IndexOf(" out of character, ", end1 + 5, 19, StringComparison.Ordinal) == (end1 + 5))
           {
             chatType = new ChatType
             {
@@ -177,10 +179,10 @@
             CheckPetLeader(action, end1, beginTime);
           }
         }
-        else if (action.Length > (end1 + 9) && action.IndexOf("tells ", end1 + 1, 6) == (end1 + 1))
+        else if (action.Length > (end1 + 9) && action.IndexOf("tells ", end1 + 1, 6, StringComparison.Ordinal) == (end1 + 1))
         {
           // Kizant tells you,
-          if (action.Length > (end1 + 12) && action.IndexOf("you, ", end1 + 7, 5) == (end1 + 7))
+          if (action.Length > (end1 + 12) && action.IndexOf("you, ", end1 + 7, 5, StringComparison.Ordinal) == (end1 + 7))
           {
             chatType = new ChatType
             {
@@ -191,10 +193,10 @@
               Sender = action[..end1]
             };
           }
-          else if (action.Length > (end1 + 17) && action.IndexOf("the ", end1 + 7, 4) == end1 + 7)
+          else if (action.Length > (end1 + 17) && action.IndexOf("the ", end1 + 7, 4, StringComparison.Ordinal) == end1 + 7)
           {
             // Kizant tells the raid,
-            if (action.IndexOf("raid, ", end1 + 11, 6) == end1 + 11)
+            if (action.IndexOf("raid, ", end1 + 11, 6, StringComparison.Ordinal) == end1 + 11)
             {
               chatType = new ChatType
               {
@@ -205,7 +207,7 @@
               };
             }
             // Kizant tells the group,
-            else if (action.Length > (end1 + 18) && action.IndexOf("group, ", end1 + 11, 7) == end1 + 11)
+            else if (action.Length > (end1 + 18) && action.IndexOf("group, ", end1 + 11, 7, StringComparison.Ordinal) == end1 + 11)
             {
               chatType = new ChatType
               {
@@ -216,7 +218,7 @@
               };
             }
             // Kizant tells the guild,
-            else if (action.Length > (end1 + 18) && action.IndexOf("guild, ", end1 + 11, 7) == end1 + 11)
+            else if (action.Length > (end1 + 18) && action.IndexOf("guild, ", end1 + 11, 7, StringComparison.Ordinal) == end1 + 11)
             {
               chatType = new ChatType
               {
@@ -227,7 +229,7 @@
               };
             }
             // Kizant tells the fellowship,
-            else if (action.Length > (end1 + 23) && action.IndexOf("fellowship, ", end1 + 11, 12) == end1 + 11)
+            else if (action.Length > (end1 + 23) && action.IndexOf("fellowship, ", end1 + 11, 12, StringComparison.Ordinal) == end1 + 11)
             {
               chatType = new ChatType
               {
@@ -254,7 +256,7 @@
           }
         }
         // Kizant told you,
-        else if (action.Length > (end1 + 11) && action.IndexOf("told you, ", end1 + 1, 10) == (end1 + 1))
+        else if (action.Length > (end1 + 11) && action.IndexOf("told you, ", end1 + 1, 10, StringComparison.Ordinal) == (end1 + 1))
         {
           chatType = new ChatType
           {
@@ -266,7 +268,7 @@
           };
         }
         // Kizant shouts,
-        else if (action.Length > (end1 + 9) && action.IndexOf("shouts, ", end1 + 1, 8) == (end1 + 1))
+        else if (action.Length > (end1 + 9) && action.IndexOf("shouts, ", end1 + 1, 8, StringComparison.Ordinal) == (end1 + 1))
         {
           chatType = new ChatType
           {
@@ -277,7 +279,7 @@
           };
         }
         // Kizant auctions,
-        else if (action.Length > (end1 + 11) && action.IndexOf("auctions, ", end1 + 1, 10) == (end1 + 1))
+        else if (action.Length > (end1 + 11) && action.IndexOf("auctions, ", end1 + 1, 10, StringComparison.Ordinal) == (end1 + 1))
         {
           chatType = new ChatType
           {

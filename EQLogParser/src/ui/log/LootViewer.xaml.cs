@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 
 namespace EQLogParser
 {
@@ -38,8 +39,8 @@ namespace EQLogParser
 
       // default these columns to descending
       var desc = new[] { "Quantity", "Time" };
-      dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
-      dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+      dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+      dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
       DataGridUtil.UpdateTableMargin(dataGrid);
       (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
@@ -147,7 +148,7 @@ namespace EQLogParser
       titleLabel.Content = count == 0 ? "No Loot Found" : count + " Loot Entries Found";
     }
 
-    private void OptionsChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    private void OptionsChanged(object sender, SelectionChangedEventArgs e)
     {
       if (dataGrid is { View: not null })
       {

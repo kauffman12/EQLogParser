@@ -1,15 +1,17 @@
 ﻿
+using log4net;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace EQLogParser
 {
   class TankingStatsManager : ISummaryBuilder
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     internal static TankingStatsManager Instance = new();
 
@@ -33,7 +35,7 @@ namespace EQLogParser
     {
       lock (TankingGroupIds)
       {
-        DataManager.Instance.EventsClearedActiveData += (object sender, bool e) =>
+        DataManager.Instance.EventsClearedActiveData += (sender, e) =>
         {
           Reset();
         };
@@ -146,7 +148,7 @@ namespace EQLogParser
       lock (TankingGroupIds)
       {
         // send update
-        var de = new DataPointEvent() { Action = action, Iterator = new TankGroupCollection(TankingGroups, options.DamageType) };
+        var de = new DataPointEvent { Action = action, Iterator = new TankGroupCollection(TankingGroups, options.DamageType) };
 
         if (selected != null)
         {
@@ -160,13 +162,13 @@ namespace EQLogParser
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.TANKPARSE, State = "STARTED" });
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.TANKPARSE, State = "STARTED" });
     }
 
     private void FireNoDataEvent(GenerateStatsOptions options, string state)
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent() { Type = Labels.TANKPARSE, State = state });
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.TANKPARSE, State = state });
       FireChartEvent(options, "CLEAR");
     }
 
@@ -235,7 +237,7 @@ namespace EQLogParser
 
             combined.StatsList.AddRange(individualStats.Values.AsParallel().OrderByDescending(item => item.Total));
             combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
-            combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, "");
+            combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle);
 
             for (var i = 0; i < combined.StatsList.Count; i++)
             {
@@ -244,7 +246,7 @@ namespace EQLogParser
             }
 
             // generating new stats
-            var genEvent = new StatsGenerationEvent()
+            var genEvent = new StatsGenerationEvent
             {
               Type = Labels.TANKPARSE,
               State = "COMPLETED",
@@ -324,7 +326,7 @@ namespace EQLogParser
         }
       }
 
-      return new StatsSummary() { Title = title, RankedPlayers = details, };
+      return new StatsSummary { Title = title, RankedPlayers = details, };
     }
   }
 }

@@ -1,6 +1,8 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.IO;
 using System.IO.Compression;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,26 +13,25 @@ namespace EQLogParser
   class LogReader : IDisposable
   {
     private BufferBlock<Tuple<string, double, bool>> Lines { get; } = new(new DataflowBlockOptions { BoundedCapacity = 25000 });
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private readonly FileSystemWatcher FileWatcher;
     private readonly string FileName;
     private int MinBack;
     private CancellationTokenSource Cts;
     private readonly ManualResetEvent NewDataAvailable = new(false);
-    private readonly IDisposable LogProcessor;
+    private readonly ILogProcessor LogProcessor;
     private Task ReadFileTask;
     private long InitSize;
     private long CurrentPos;
     private long NextUpdateThreshold;
 
-    public LogReader(IDisposable logProcessor, string fileName, int minBack = 0)
+    public LogReader(ILogProcessor logProcessor, string fileName, int minBack = 0)
     {
       LogProcessor = logProcessor;
       FileName = fileName;
       MinBack = minBack;
 
-      dynamic processor = logProcessor;
-      processor.LinkTo(Lines);
+      logProcessor.LinkTo(Lines);
 
       FileWatcher = new FileSystemWatcher(Path.GetDirectoryName(fileName) ?? string.Empty, Path.GetFileName(fileName))
       {
@@ -98,7 +99,7 @@ namespace EQLogParser
         reader = new StreamReader(fs, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: bufferSize);
       }
 
-      using (fs)
+      await using (fs)
       using (reader)
       {
         string line;
@@ -124,7 +125,7 @@ namespace EQLogParser
             CurrentPos = fs.Position;
           }
 
-          await HandleLine();
+          await HandleLine(line);
         }
 
         // continue reading for new updates
@@ -132,7 +133,7 @@ namespace EQLogParser
         {
           while ((line = await reader.ReadLineAsync()) != null)
           {
-            await HandleLine(true);
+            await HandleLine(line, true);
           }
 
           if (cancelToken.IsCancellationRequested) break;
@@ -140,19 +141,19 @@ namespace EQLogParser
           NewDataAvailable.Reset();
         }
 
-        async Task HandleLine(bool monitor = false)
+        async Task HandleLine(string theLine, bool monitor = false)
         {
-          if (line.Length > 28)
+          if (theLine.Length > 28)
           {
-            if (previous == null || !line.AsSpan(1, 24).SequenceEqual(previous.AsSpan(1, 24)))
+            if (previous == null || !theLine.AsSpan(1, 24).SequenceEqual(previous.AsSpan(1, 24)))
             {
-              dateTime = DateUtil.ParseStandardDate(line);
+              dateTime = DateUtil.ParseStandardDate(theLine);
               doubleValue = DateUtil.ToDouble(dateTime);
             }
 
             if (cancelToken.IsCancellationRequested) return;
-            await Lines.SendAsync(Tuple.Create(line, doubleValue, monitor), cancelToken);
-            previous = line;
+            await Lines.SendAsync(Tuple.Create(theLine, doubleValue, monitor), cancelToken);
+            previous = theLine;
           }
         }
       }
@@ -163,33 +164,36 @@ namespace EQLogParser
       long min = 0;
       var max = fs.Length;
       long? closestGreaterPosition = null;
-      var minimumDate = DateTime.Now.AddMinutes(-minBack.Value);
-
-      while (min < max)
+      if (minBack != null)
       {
-        var mid = (min + max) / 2;
-        fs.Seek(mid, SeekOrigin.Begin);
+        var minimumDate = DateTime.Now.AddMinutes(-minBack.Value);
 
-        using var tempReader = new StreamReader(fs, Encoding.UTF8, true, 1024, leaveOpen: true);
-        if (mid != 0)
+        while (min < max)
         {
-          // Discard partial line, if not at the start
-          tempReader.ReadLine();
-        }
+          var mid = (min + max) / 2;
+          fs.Seek(mid, SeekOrigin.Begin);
 
-        var positionBeforeReadLine = fs.Position;
-        var line = tempReader.ReadLine();
-        if (line == null) break;
+          using var tempReader = new StreamReader(fs, Encoding.UTF8, true, 1024, leaveOpen: true);
+          if (mid != 0)
+          {
+            // Discard partial line, if not at the start
+            tempReader.ReadLine();
+          }
 
-        var dateTime = DateUtil.ParseStandardDate(line);
-        if (dateTime >= minimumDate)
-        {
-          closestGreaterPosition = positionBeforeReadLine;
-          max = mid;
-        }
-        else
-        {
-          min = fs.Position;
+          var positionBeforeReadLine = fs.Position;
+          var line = tempReader.ReadLine();
+          if (line == null) break;
+
+          var dateTime = DateUtil.ParseStandardDate(line);
+          if (dateTime >= minimumDate)
+          {
+            closestGreaterPosition = positionBeforeReadLine;
+            max = mid;
+          }
+          else
+          {
+            min = fs.Position;
+          }
         }
       }
 
@@ -199,14 +203,17 @@ namespace EQLogParser
 
     private void SearchCompressed(StreamReader reader, int? minBack)
     {
-      var minimumDate = DateTime.Now.AddMinutes(-minBack.Value);
-
-      while (reader.ReadLine() is { } line)
+      if (minBack != null)
       {
-        var dateTime = DateUtil.ParseStandardDate(line);
-        if (dateTime >= minimumDate)
+        var minimumDate = DateTime.Now.AddMinutes(-minBack.Value);
+
+        while (reader.ReadLine() is { } line)
         {
-          break;
+          var dateTime = DateUtil.ParseStandardDate(line);
+          if (dateTime >= minimumDate)
+          {
+            break;
+          }
         }
       }
     }
@@ -230,5 +237,10 @@ namespace EQLogParser
       Lines.Complete();
       LogProcessor?.Dispose();
     }
+  }
+
+  internal interface ILogProcessor : IDisposable
+  {
+    public void LinkTo(ISourceBlock<Tuple<string, double, bool>> sourceBlock);
   }
 }

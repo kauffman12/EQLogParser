@@ -1,13 +1,15 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace EQLogParser
 {
   static class CastLineParser
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-    private static readonly char[] OldSpellChars = new[] { '<', '>' };
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly char[] OldSpellChars = { '<', '>' };
 
     private static readonly Dictionary<string, string> SpecialCastCodes = new()
     {
@@ -177,7 +179,8 @@ namespace EQLogParser
           {
             return false;
           }
-          else if (i < lastIndex)
+
+          if (i < lastIndex)
           {
             split = split.Take(i + 1).ToArray();
           }

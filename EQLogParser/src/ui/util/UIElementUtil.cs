@@ -1,7 +1,9 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,7 +15,7 @@ namespace EQLogParser
 {
   static class UIElementUtil
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly string[] CommonFontFamilies =
     {
       "Arial", "Calibri", "Cambria", "Cascadia Code", "Century Gothic", "Lucida Sans",
@@ -22,7 +24,7 @@ namespace EQLogParser
 
     internal static void CreateImage(Dispatcher dispatcher, FrameworkElement content, Label titleLabel = null)
     {
-      Task.Delay(100).ContinueWith((task) => dispatcher.InvokeAsync(() =>
+      Task.Delay(100).ContinueWith(task => dispatcher.InvokeAsync(() =>
       {
         var wasHidden = content.Visibility != Visibility.Visible;
         content.Visibility = Visibility.Visible;
@@ -111,8 +113,6 @@ namespace EQLogParser
       var source = PresentationSource.FromVisual(Application.Current.MainWindow);
       if (source != null)
       {
-        var matrix = source.CompositionTarget.TransformToDevice;
-        dpi = 96.0 * matrix.M11; // DPI X value
       }
       else
       {

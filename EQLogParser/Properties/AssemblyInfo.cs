@@ -1,6 +1,8 @@
-﻿using System.Reflection;
+﻿using log4net.Config;
+using System.Reflection;
 using System.Resources;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Windows;
 
 // General Information about an assembly is controlled through the following
@@ -53,5 +55,5 @@ using System.Windows;
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("2.1.40")]
 [assembly: AssemblyFileVersion("2.1.40")]
-[assembly: log4net.Config.XmlConfigurator(Watch = true)]
-[assembly: System.Runtime.Versioning.SupportedOSPlatform("windows10.0")]
+[assembly: XmlConfigurator(Watch = true)]
+[assembly: SupportedOSPlatform("windows10.0")]

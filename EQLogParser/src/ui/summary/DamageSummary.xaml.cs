@@ -1,4 +1,5 @@
-﻿using Syncfusion.UI.Xaml.Grid;
+﻿using FontAwesome5;
+using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
@@ -9,7 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
-using Keyboard = System.Windows.Input.Keyboard;
+using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 
 namespace EQLogParser
 {
@@ -48,15 +49,15 @@ namespace EQLogParser
       SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
       SelectionTimer.Tick += (sender, e) =>
       {
-        if (prog.Icon == FontAwesome5.EFontAwesomeIcon.Solid_HourglassStart)
+        if (prog.Icon == EFontAwesomeIcon.Solid_HourglassStart)
         {
-          prog.Icon = FontAwesome5.EFontAwesomeIcon.Solid_HourglassHalf;
+          prog.Icon = EFontAwesomeIcon.Solid_HourglassHalf;
         }
-        else if (prog.Icon == FontAwesome5.EFontAwesomeIcon.Solid_HourglassHalf)
+        else if (prog.Icon == EFontAwesomeIcon.Solid_HourglassHalf)
         {
-          prog.Icon = FontAwesome5.EFontAwesomeIcon.Solid_HourglassEnd;
+          prog.Icon = EFontAwesomeIcon.Solid_HourglassEnd;
         }
-        else if (prog.Icon == FontAwesome5.EFontAwesomeIcon.Solid_HourglassEnd)
+        else if (prog.Icon == EFontAwesomeIcon.Solid_HourglassEnd)
         {
           prog.Visibility = Visibility.Hidden;
 
@@ -84,7 +85,7 @@ namespace EQLogParser
       }
     }
 
-    override internal void UpdateDataGridMenuItems()
+    internal override void UpdateDataGridMenuItems()
     {
       var selectedName = "Unknown";
 
@@ -128,7 +129,7 @@ namespace EQLogParser
     internal override bool IsPetsCombined() => CurrentPetOrPlayerOption == 0;
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
-    private void ClassSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       var update = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
       var needUpdate = CurrentClass != update;
@@ -164,7 +165,7 @@ namespace EQLogParser
       }
     }
 
-    private void ListSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       var needUpdate = CurrentPetOrPlayerOption != petOrPlayerList.SelectedIndex;
       CurrentPetOrPlayerOption = petOrPlayerList.SelectedIndex;
@@ -340,7 +341,7 @@ namespace EQLogParser
     {
       if (dataGrid.View != null)
       {
-        dataGrid.View.Filter = (stats) =>
+        dataGrid.View.Filter = stats =>
         {
           var name = "";
           var className = "";
@@ -355,7 +356,7 @@ namespace EQLogParser
             className = PlayerManager.Instance.GetPlayerClass(name);
           }
 
-          var result = false;
+          bool result;
           if (CurrentPetOrPlayerOption == 1)
           {
             result = !PlayerManager.Instance.IsVerifiedPet(name) && (string.IsNullOrEmpty(CurrentClass) || CurrentClass == className);
@@ -388,7 +389,7 @@ namespace EQLogParser
         SelectionTimer.Stop();
         SelectionTimer.Start();
 
-        prog.Icon = FontAwesome5.EFontAwesomeIcon.Solid_HourglassStart;
+        prog.Icon = EFontAwesomeIcon.Solid_HourglassStart;
         prog.Visibility = Visibility.Visible;
       }
     }

@@ -1,7 +1,9 @@
-﻿using Syncfusion.UI.Xaml.Charts;
+﻿using log4net;
+using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,16 +13,16 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for LineChart.xaml
   /// </summary>
-  public partial class LineChart : UserControl, IDisposable
+  public partial class LineChart : IDisposable
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     private readonly Dictionary<string, List<DataPoint>> PlayerPetValues = new();
     private readonly Dictionary<string, List<DataPoint>> PlayerValues = new();
     private readonly Dictionary<string, List<DataPoint>> PetValues = new();
     private readonly Dictionary<string, List<DataPoint>> RaidValues = new();
     private readonly Dictionary<string, Dictionary<string, byte>> HasPets = new();
-    private readonly static Dictionary<string, bool> MissTypes = new()
+    private static readonly Dictionary<string, bool> MissTypes = new()
     { { Labels.ABSORB, true }, { Labels.BLOCK, true } , { Labels.DODGE, true }, { Labels.PARRY, true }, { Labels.INVULNERABLE, true }, { Labels.MISS, true } };
 
     private string CurrentChoice;
@@ -161,7 +163,7 @@ namespace EQLogParser
           HasPets[totalName][dataPoint.Name] = 1;
           if (!petData.TryGetValue(dataPoint.Name, out var petAggregate))
           {
-            petAggregate = new DataPoint() { Name = dataPoint.Name, PlayerName = playerName };
+            petAggregate = new DataPoint { Name = dataPoint.Name, PlayerName = playerName };
             petData[dataPoint.Name] = petAggregate;
           }
 

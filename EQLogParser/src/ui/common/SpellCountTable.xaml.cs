@@ -1,4 +1,6 @@
-﻿using Microsoft.Win32;
+﻿using log4net;
+using Microsoft.Win32;
+using Syncfusion.Data;
 using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
@@ -7,12 +9,16 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Threading;
+using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 
 namespace EQLogParser
 {
@@ -21,7 +27,7 @@ namespace EQLogParser
   /// </summary>
   public partial class SpellCountTable : CastTable
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     private List<string> PlayerList;
     private SpellCountData TheSpellCounts;
@@ -48,22 +54,23 @@ namespace EQLogParser
 
       InitCastTable(dataGrid, titleLabel, selectedCastTypes, selectedSpellRestrictions);
       // default these columns to descending
-      dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, SortDescs);
-      dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, SortDescs);
+      dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, SortDescs);
+      dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, SortDescs);
     }
 
     internal void Init(List<PlayerStats> selectedStats, CombinedStats currentStats)
     {
       Title = currentStats?.ShortTitle ?? "";
-      Time = currentStats.RaidStats.TotalSeconds;
-
-      var raidStats = currentStats?.RaidStats;
-
-      if (selectedStats != null && raidStats != null)
+      if (currentStats != null)
       {
-        PlayerList = selectedStats.Select(stats => stats.OrigName).Distinct().ToList();
-        TheSpellCounts = SpellCountBuilder.GetSpellCounts(PlayerList, raidStats);
-        Display();
+        Time = currentStats.RaidStats.TotalSeconds;
+        var raidStats = currentStats.RaidStats;
+        if (selectedStats != null && raidStats != null)
+        {
+          PlayerList = selectedStats.Select(stats => stats.OrigName).Distinct().ToList();
+          TheSpellCounts = SpellCountBuilder.GetSpellCounts(PlayerList, raidStats);
+          Display();
+        }
       }
     }
 
@@ -125,7 +132,7 @@ namespace EQLogParser
             {
               HeaderText = header,
               MappingName = name,
-              SortMode = Syncfusion.Data.DataReflectionMode.Value,
+              SortMode = DataReflectionMode.Value,
               DisplayBinding = new Binding(name + "Text"),
               TextAlignment = TextAlignment.Right,
               ShowHeaderToolTip = true,
@@ -142,7 +149,7 @@ namespace EQLogParser
           {
             HeaderText = GetHeaderValue("Total", totalCasts, totalCasts),
             MappingName = "totalColumn",
-            SortMode = Syncfusion.Data.DataReflectionMode.Value,
+            SortMode = DataReflectionMode.Value,
             DisplayBinding = new Binding("totalColumnText"),
             TextAlignment = TextAlignment.Right
           };
@@ -197,7 +204,7 @@ namespace EQLogParser
 
     private void CreateLargeImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel, true);
     private void GridSizeChanged(object sender, SizeChangedEventArgs e) => UIElementUtil.CheckHideTitlePanel(titlePanel, controlPanel);
-    private void OptionsChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => UpdateOptions(true);
+    private void OptionsChanged(object sender, SelectionChangedEventArgs e) => UpdateOptions(true);
 
     private void AddPlayerRow(string player, string spell, double value, double playerTotal, IDictionary<string, object> row)
     {
@@ -290,7 +297,7 @@ namespace EQLogParser
           var json = reader?.ReadToEnd();
           reader?.Close();
 
-          var data = System.Text.Json.JsonSerializer.Deserialize<SpellCountsSerialized>(json);
+          var data = JsonSerializer.Deserialize<SpellCountsSerialized>(json);
 
           // copy data
           PlayerList = PlayerList.Union(data.PlayerNames).ToList();
@@ -348,7 +355,7 @@ namespace EQLogParser
         var data = new SpellCountsSerialized { TheSpellData = TheSpellCounts };
         data.PlayerNames.AddRange(PlayerList);
 
-        var result = System.Text.Json.JsonSerializer.Serialize(data);
+        var result = JsonSerializer.Serialize(data);
         var saveFileDialog = new SaveFileDialog();
         var filter = "Spell Count File (*.scf.gz)|*.scf.gz";
         saveFileDialog.Filter = filter;
@@ -420,7 +427,7 @@ namespace EQLogParser
             UpdateCounts();
           }
         }
-      }, System.Windows.Threading.DispatcherPriority.Background);
+      }, DispatcherPriority.Background);
     }
 
     private void RemoveSpellMouseDown(object sender, MouseButtonEventArgs e)
@@ -496,7 +503,8 @@ namespace EQLogParser
       {
         return (playerTotal > 0 ? Math.Round(value / playerTotal * 100, 2) : 0.0).ToString(CultureInfo.InvariantCulture);
       }
-      else if (CurrentCountType == 2)
+
+      if (CurrentCountType == 2)
       {
         return (Time > 0 ? Math.Round(value / Time * 60, 2) : 0.0).ToString(CultureInfo.InvariantCulture);
       }
@@ -524,7 +532,8 @@ namespace EQLogParser
       {
         return 1;
       }
-      else if (yDouble < xDouble)
+
+      if (yDouble < xDouble)
       {
         return -1;
       }

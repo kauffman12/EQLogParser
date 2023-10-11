@@ -60,7 +60,7 @@ namespace EQLogParser
       object result;
       if (Type == typeof(long))
       {
-        var intTextBox = new IntegerTextBox() { ApplyZeroColor = false, ShowSpinButton = true };
+        var intTextBox = new IntegerTextBox { ApplyZeroColor = false, ShowSpinButton = true };
 
         if (Min != Max)
         {
@@ -74,7 +74,7 @@ namespace EQLogParser
       }
       else
       {
-        var doubleTextBox = new DoubleTextBox() { ApplyZeroColor = false, ShowSpinButton = true, ScrollInterval = 0.1 };
+        var doubleTextBox = new DoubleTextBox { ApplyZeroColor = false, ShowSpinButton = true, ScrollInterval = 0.1 };
 
         if (Min != Max)
         {

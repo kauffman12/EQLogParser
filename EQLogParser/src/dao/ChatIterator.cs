@@ -55,8 +55,6 @@ namespace EQLogParser
       {
         yield return line;
       }
-
-      yield break;
     }
 
     IEnumerator IEnumerable.GetEnumerator()

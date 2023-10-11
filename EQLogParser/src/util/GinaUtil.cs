@@ -1,10 +1,12 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -14,7 +16,7 @@ namespace EQLogParser
 {
   internal static class GinaUtil
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly ConcurrentDictionary<string, string> GinaCache = new();
 
     internal static List<ExportTriggerNode> CovertToTriggerNodes(byte[] data) => Convert(ReadXml(data));
@@ -25,7 +27,7 @@ namespace EQLogParser
 
       // if GINA data is recent then try to handle it
       if (action.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is int index and > -1 &&
-          (DateTime.Now - DateUtil.FromDouble(lineData.BeginTime)).TotalSeconds <= 20 && action.IndexOf("}") is int end && end > (index + 40))
+          (DateTime.Now - DateUtil.FromDouble(lineData.BeginTime)).TotalSeconds <= 20 && action.IndexOf("}", StringComparison.Ordinal) is int end && end > (index + 40))
       {
         string player = null;
         var split = action.Split(' ');
@@ -172,8 +174,8 @@ namespace EQLogParser
             gzip.CopyTo(memory);
             var xml = Encoding.UTF8.GetString(memory.ToArray());
 
-            if (!string.IsNullOrEmpty(xml) && xml.IndexOf("<a:ChunkData>") is int start and > -1
-                                           && xml.IndexOf("</a:ChunkData>") is int end && end > start)
+            if (!string.IsNullOrEmpty(xml) && xml.IndexOf("<a:ChunkData>", StringComparison.Ordinal) is var start and > -1
+                                           && xml.IndexOf("</a:ChunkData>", StringComparison.Ordinal) is var end && end > start)
             {
               var encoded = xml.Substring(start + 13, end - start - 13);
               var decoded = System.Convert.FromBase64String(encoded);
@@ -217,7 +219,7 @@ namespace EQLogParser
 
     private static List<ExportTriggerNode> Convert(string xml)
     {
-      var result = new List<ExportTriggerNode>() { new() };
+      var result = new List<ExportTriggerNode> { new() };
 
       try
       {

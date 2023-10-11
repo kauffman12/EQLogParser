@@ -1,23 +1,28 @@
-﻿using Syncfusion.Data;
+﻿using log4net;
+using Syncfusion.Data;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
   static class DataGridUtil
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static int StartRow;
 
     internal static Style CreateHighlightForegroundStyle(string name, IValueConverter converter = null)
@@ -31,7 +36,7 @@ namespace EQLogParser
     internal static void SortColumnsChanged(object sender, GridSortColumnsChangedEventArgs e, IReadOnlyCollection<string> descending)
     {
       // Here, we have updated the column's items in view based on SortDescriptions. 
-      if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+      if (e.Action == NotifyCollectionChangedAction.Add)
       {
         if (sender is SfDataGrid grid)
         {
@@ -73,7 +78,7 @@ namespace EQLogParser
     internal static void SortColumnsChanging(object sender, GridSortColumnsChangingEventArgs e, IReadOnlyCollection<string> descending)
     {
       // Initially, we can change the SortDirection of particular column based on columnchanged action. 
-      if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+      if (e.Action == NotifyCollectionChangedAction.Add)
       {
         if (descending != null && descending.Contains(e.AddedItems[0].ColumnName))
         {
@@ -196,7 +201,7 @@ namespace EQLogParser
               {
                 parent.Width = tableWidth + 200;
               }
-            }, System.Windows.Threading.DispatcherPriority.Background);
+            }, DispatcherPriority.Background);
           }
 
           gridBase.Dispatcher.InvokeAsync(() =>
@@ -214,7 +219,6 @@ namespace EQLogParser
               }
 
               var titleHeight = titleLabel.ActualHeight;
-              var titleWidth = titleLabel.DesiredSize.Width;
               var dpiScale = UIElementUtil.GetDpi();
 
               // create title image
@@ -266,8 +270,8 @@ namespace EQLogParser
                 dialog.Close();
               }
             }
-          }, System.Windows.Threading.DispatcherPriority.Background);
-        }, System.Windows.Threading.DispatcherPriority.Background);
+          }, DispatcherPriority.Background);
+        }, DispatcherPriority.Background);
       });
     }
 
@@ -308,7 +312,7 @@ namespace EQLogParser
       }
     }
 
-    internal static void EnableMouseSelection(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    internal static void EnableMouseSelection(object sender, MouseButtonEventArgs e)
     {
       dynamic elem = e.OriginalSource;
       if (sender is SfTreeGrid treeGrid && elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is int row and > -1)
@@ -413,7 +417,7 @@ namespace EQLogParser
       return allData ? width : Math.Min(width, gridBase.ActualWidth);
     }
 
-    private static void PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private static void PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
       if (sender is SfTreeGrid treeGrid)
       {
@@ -423,12 +427,12 @@ namespace EQLogParser
       }
     }
 
-    private static void MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    private static void MouseMove(object sender, MouseEventArgs e)
     {
       dynamic elem = e.OriginalSource;
       if (sender is SfTreeGrid treeGrid)
       {
-        if (e.LeftButton == System.Windows.Input.MouseButtonState.Released)
+        if (e.LeftButton == MouseButtonState.Released)
         {
           // remove listeners if left button released
           treeGrid.PreviewMouseLeftButtonUp -= PreviewMouseLeftButtonUp;
@@ -583,7 +587,7 @@ namespace EQLogParser
       dataGrid.Columns = updated;
 
       // save column order if it changes
-      dataGrid.QueryColumnDragging += (object sender, QueryColumnDraggingEventArgs e) =>
+      dataGrid.QueryColumnDragging += (sender, e) =>
       {
         if (e.Reason == QueryColumnDraggingReason.Dropped && sender is SfDataGrid dataGrid)
         {
@@ -601,7 +605,7 @@ namespace EQLogParser
       treeGrid.Columns = updated;
 
       // save column order if it changes
-      treeGrid.ColumnDragging += (object sender, TreeGridColumnDraggingEventArgs e) =>
+      treeGrid.ColumnDragging += (sender, e) =>
       {
         if (e.Reason == QueryColumnDraggingReason.Dropped && sender is SfTreeGrid treeGrid)
         {

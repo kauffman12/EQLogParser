@@ -1,4 +1,6 @@
 ﻿using System;
+using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace EQLogParser
@@ -28,11 +30,11 @@ namespace EQLogParser
     const int SWP_NOMOVE = 0x0002;
     const int SWP_NOACTIVATE = 0x0010;
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Portability", "CA1901:PInvokeDeclarationsShouldBePortable", MessageId = "return")]
+    [SuppressMessage("Microsoft.Portability", "CA1901:PInvokeDeclarationsShouldBePortable", MessageId = "return")]
     [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
     private static extern IntPtr GetWindowLongPtr32(IntPtr hWnd, int nIndex);
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Interoperability", "CA1400:PInvokeEntryPointsShouldExist")]
+    [SuppressMessage("Microsoft.Interoperability", "CA1400:PInvokeEntryPointsShouldExist")]
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
     private static extern IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
 
@@ -44,10 +46,8 @@ namespace EQLogParser
       {
         return GetWindowLongPtr64(hWnd, nIndex);
       }
-      else
-      {
-        return GetWindowLongPtr32(hWnd, nIndex);
-      }
+
+      return GetWindowLongPtr32(hWnd, nIndex);
     }
 
     internal static IntPtr SetWindowLong(IntPtr hWnd, int nIndex, IntPtr dwNewLong)
@@ -73,7 +73,7 @@ namespace EQLogParser
 
       if ((result == IntPtr.Zero) && (error != 0))
       {
-        throw new System.ComponentModel.Win32Exception(error);
+        throw new Win32Exception(error);
       }
 
       return result;
@@ -84,7 +84,7 @@ namespace EQLogParser
       SetWindowPos(hWnd, new IntPtr(-1), 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Interoperability", "CA1400:PInvokeEntryPointsShouldExist")]
+    [SuppressMessage("Microsoft.Interoperability", "CA1400:PInvokeEntryPointsShouldExist")]
     [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr", SetLastError = true)]
     private static extern IntPtr IntSetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 

@@ -1,7 +1,9 @@
-﻿using Syncfusion.Windows.Controls.Input;
+﻿using log4net;
+using Syncfusion.Windows.Controls.Input;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -15,9 +17,9 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for ChatViewer.xaml
   /// </summary>
-  public partial class ChatViewer : UserControl, IDisposable
+  public partial class ChatViewer : IDisposable
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly List<double> FontSizeList = new() { 10, 12, 14, 16, 18, 20, 22, 24 };
 
     private const int PAGE_SIZE = 200;
@@ -461,7 +463,7 @@ namespace EQLogParser
 
     private static void FilterLostFocus(TextBox filter, string text)
     {
-      if (filter?.Text?.Length == 0)
+      if (filter?.Text.Length == 0)
       {
         if (filter is SfTextBoxExt filterExt)
         {

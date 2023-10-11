@@ -1,15 +1,17 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace EQLogParser
 {
   static class MiscLineParser
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly List<string> Currency = new() { "Platinum", "Gold", "Silver", "Copper" };
     private static readonly Dictionary<char, uint> Rates = new() { { 'p', 1000 }, { 'g', 100 }, { 's', 10 }, { 'c', 1 } };
-    private static readonly char[] LootedFromTrim = new[] { '-', '.' };
+    private static readonly char[] LootedFromTrim = { '-', '.' };
     private static readonly Dictionary<string, byte> StruckByTypes = new()
     {
       { "afflicted", 1 }, { "angered", 1 }, { "assaulted", 1 }, { "beset", 1 }, { "bound", 1 }, { "burned", 1 }, { "consumed", 1 }, { "cursed", 1 },
@@ -64,7 +66,7 @@ namespace EQLogParser
             else if (i == 0 && split[0].StartsWith("[", StringComparison.Ordinal) && split[0].Length > 1 && split.Length > 4)
             {
               var level = split[0][1..];
-              if (int.TryParse(level, out var intLevel))
+              if (int.TryParse(level, out _))
               {
                 string player = null;
                 string className = null;
