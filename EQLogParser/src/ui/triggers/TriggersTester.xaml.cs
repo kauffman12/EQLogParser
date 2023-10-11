@@ -44,6 +44,7 @@ namespace EQLogParser
           if (characterList.Visibility != Visibility.Collapsed)
           {
             characterList.Visibility = Visibility.Collapsed;
+            theLabel.Visibility = Visibility.Collapsed;
           }
         }
         else
@@ -51,6 +52,7 @@ namespace EQLogParser
           if (characterList.Visibility != Visibility.Visible)
           {
             characterList.Visibility = Visibility.Visible;
+            theLabel.Visibility = Visibility.Visible;
           }
 
           string selectedId = null;
