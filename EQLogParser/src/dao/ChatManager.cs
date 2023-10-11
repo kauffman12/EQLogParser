@@ -16,7 +16,7 @@ namespace EQLogParser
     private const string CHANNELS_FILE = "channels.txt";
     private const string SELECTED_CHANNELS_FILE = "channels-selected.txt";
     internal const string INDEX = "index";
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly Lazy<ChatManager> _lazy = new(() => new ChatManager());
     private static readonly object LockObject = new();
     private static readonly ReverseTimedActionComparer RTAComparer = new();
@@ -82,11 +82,11 @@ namespace EQLogParser
         }
         catch (IOException ex)
         {
-          LOG.Error(ex);
+          Log.Error(ex);
         }
         catch (UnauthorizedAccessException uax)
         {
-          LOG.Error(uax);
+          Log.Error(uax);
         }
       }
     }
@@ -109,11 +109,11 @@ namespace EQLogParser
         }
         catch (IOException ex)
         {
-          LOG.Error(ex);
+          Log.Error(ex);
         }
         catch (UnauthorizedAccessException uax)
         {
-          LOG.Error(uax);
+          Log.Error(uax);
         }
       }
 
@@ -133,11 +133,11 @@ namespace EQLogParser
         }
         catch (IOException ex)
         {
-          LOG.Error(ex);
+          Log.Error(ex);
         }
         catch (UnauthorizedAccessException uax)
         {
-          LOG.Error(uax);
+          Log.Error(uax);
         }
       }
 
@@ -187,11 +187,11 @@ namespace EQLogParser
       }
       catch (IOException ex)
       {
-        LOG.Error(ex);
+        Log.Error(ex);
       }
       catch (UnauthorizedAccessException uax)
       {
-        LOG.Error(uax);
+        Log.Error(uax);
       }
     }
 
@@ -212,7 +212,7 @@ namespace EQLogParser
         }
         catch (InvalidDataException)
         {
-          LOG.Error("Could not open " + fileName + ", deleting and trying again");
+          Log.Error("Could not open " + fileName + ", deleting and trying again");
           ConfigUtil.RemoveFileIfExists(fileName);
         }
       }
@@ -347,7 +347,7 @@ namespace EQLogParser
       }
       catch (Exception ex)
       {
-        LOG.Error(ex);
+        Log.Error(ex);
       }
     }
 
@@ -457,11 +457,11 @@ namespace EQLogParser
         }
         catch (IOException ex)
         {
-          LOG.Error(ex);
+          Log.Error(ex);
         }
         catch (InvalidDataException ide)
         {
-          LOG.Error(ide);
+          Log.Error(ide);
         }
       }
     }

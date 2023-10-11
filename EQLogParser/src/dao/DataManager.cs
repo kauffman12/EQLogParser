@@ -64,7 +64,7 @@ namespace EQLogParser
 
   class DataManager
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     internal static DataManager Instance = new();
     internal event EventHandler<string> EventsRemovedFight;
@@ -196,7 +196,7 @@ namespace EQLogParser
         }
         catch (OverflowException ex)
         {
-          LOG.Error("Error reading spell data", ex);
+          Log.Error("Error reading spell data", ex);
         }
       });
 

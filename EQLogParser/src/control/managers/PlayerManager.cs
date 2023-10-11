@@ -12,7 +12,7 @@ namespace EQLogParser
 {
   class PlayerManager
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     internal event EventHandler<PetMapping> EventsNewPetMapping;
     internal event EventHandler<string> EventsNewTakenPetOrPlayerAction;
@@ -541,7 +541,7 @@ namespace EQLogParser
             counter.ClassCounts[theClass] = long.MaxValue;
             counter.CurrentMax = long.MaxValue;
             EventsUpdatePlayerClass?.Invoke(player, ClassNames[theClass]);
-            LOG.Debug("Assigning " + player + " as " + theClass + ". " + reason);
+            Log.Debug("Assigning " + player + " as " + theClass + ". " + reason);
             PlayersUpdated = true;
           }
         }
@@ -586,7 +586,7 @@ namespace EQLogParser
                 counter.CurrentClass = theClass;
                 counter.Reason = "Class chosen based on " + cast.Spell + ".";
                 EventsUpdatePlayerClass?.Invoke(cast.Caster, ClassNames[theClass]);
-                LOG.Debug("Assigning " + cast.Caster + " as " + theClass + " from " + cast.Spell);
+                Log.Debug("Assigning " + cast.Caster + " as " + theClass + " from " + cast.Spell);
                 PlayersUpdated = true;
               }
             }

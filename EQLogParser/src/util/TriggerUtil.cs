@@ -19,7 +19,7 @@ namespace EQLogParser
   internal static class TriggerUtil
   {
     private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new();
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     internal static double GetTimerBarHeight(double fontSize) => fontSize + 2;
     internal static void ImportTriggers(TriggerNode parent) => Import(parent);
     internal static void ImportOverlays(TriggerNode triggerNode) => Import(triggerNode, false);
@@ -35,7 +35,7 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        LOG.Debug(e);
+        Log.Debug(e);
       }
 
       defaultVoice = string.IsNullOrEmpty(defaultVoice) ? "" : defaultVoice;
@@ -52,7 +52,7 @@ namespace EQLogParser
       }
       catch (Exception ex)
       {
-        LOG.Error(ex);
+        Log.Error(ex);
       }
       return result;
     }
@@ -475,7 +475,7 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        LOG.Debug(e);
+        Log.Debug(e);
       }
 
       void OnWatcherUpdated(object sender, FileSystemEventArgs _, ObservableCollection<string> fileList)
@@ -515,7 +515,7 @@ namespace EQLogParser
         }
         catch (Exception e)
         {
-          LOG.Debug(e);
+          Log.Debug(e);
         }
       });
     }
@@ -556,7 +556,7 @@ namespace EQLogParser
         catch (Exception ex)
         {
           new MessageWindow("Problem Exporting Triggers/Overlays. Check Error Log for Details.", Resource.EXPORT_ERROR).ShowDialog();
-          LOG.Error(ex);
+          Log.Error(ex);
         }
       }
     }
@@ -611,7 +611,7 @@ namespace EQLogParser
       catch (Exception ex)
       {
         new MessageWindow("Problem Importing Triggers. Check Error Log for details.", Resource.IMPORT_ERROR).ShowDialog();
-        LOG.Error("Import Triggers Failure", ex);
+        Log.Error("Import Triggers Failure", ex);
       }
     }
 

@@ -27,7 +27,7 @@ namespace EQLogParser
   /// </summary>
   public partial class SpellCountTable : CastTable
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     private List<string> PlayerList;
     private SpellCountData TheSpellCounts;
@@ -344,7 +344,7 @@ namespace EQLogParser
       catch (Exception ex)
       {
         new MessageWindow("Problem Importing Spell Counts Data. Check Error Log for details.", Resource.EXPORT_ERROR).ShowDialog();
-        LOG.Error(ex);
+        Log.Error(ex);
       }
     }
 
@@ -372,7 +372,7 @@ namespace EQLogParser
       catch (Exception ex)
       {
         new MessageWindow("Problem Exporting Spell Counts Data. Check Error Log for details.", Resource.EXPORT_ERROR).ShowDialog();
-        LOG.Error(ex);
+        Log.Error(ex);
       }
     }
 
@@ -387,11 +387,11 @@ namespace EQLogParser
       catch (ArgumentNullException ane)
       {
         Clipboard.SetDataObject("EQLogParser Error: Failed to create BBCode\r\n");
-        LOG.Error(ane);
+        Log.Error(ane);
       }
       catch (ExternalException ex)
       {
-        LOG.Error(ex);
+        Log.Error(ex);
       }
     }
 
@@ -406,11 +406,11 @@ namespace EQLogParser
       catch (ArgumentNullException ane)
       {
         Clipboard.SetDataObject("EQ Log Parser Error: Failed to create BBCode\r\n");
-        LOG.Error(ane);
+        Log.Error(ane);
       }
       catch (ExternalException ex)
       {
-        LOG.Error(ex);
+        Log.Error(ex);
       }
     }
 

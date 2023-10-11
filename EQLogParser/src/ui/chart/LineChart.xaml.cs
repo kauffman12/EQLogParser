@@ -15,7 +15,7 @@ namespace EQLogParser
   /// </summary>
   public partial class LineChart : IDisposable
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     private readonly Dictionary<string, List<DataPoint>> PlayerPetValues = new();
     private readonly Dictionary<string, List<DataPoint>> PlayerValues = new();
@@ -477,7 +477,7 @@ namespace EQLogParser
         }
         catch (ExternalException ex)
         {
-          LOG.Error(ex);
+          Log.Error(ex);
         }
       }
     }

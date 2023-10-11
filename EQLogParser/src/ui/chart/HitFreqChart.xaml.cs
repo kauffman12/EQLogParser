@@ -17,7 +17,7 @@ namespace EQLogParser
   /// </summary>
   public partial class HitFreqChart : UserControl, IDisposable
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private const string CRIT_HITTYPE = "Critical";
     private const string NON_CRIT_HITTYPE = "Non-Critical";
     private Dictionary<string, List<HitFreqChartData>> PlayerData;
@@ -58,7 +58,7 @@ namespace EQLogParser
       }
       catch (ExternalException ex)
       {
-        LOG.Error(ex);
+        Log.Error(ex);
       }
     }
 
@@ -137,11 +137,11 @@ namespace EQLogParser
       }
       catch (ArgumentNullException ex)
       {
-        LOG.Error(ex);
+        Log.Error(ex);
       }
       catch (InvalidOperationException ioe)
       {
-        LOG.Error(ioe);
+        Log.Error(ioe);
       }
     }
 

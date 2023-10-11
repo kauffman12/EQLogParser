@@ -17,7 +17,7 @@ namespace EQLogParser
   /// </summary>
   public partial class TriggersTester : UserControl, IDisposable
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private readonly BufferBlock<Tuple<string, double, bool>> Buffer;
 
     public TriggersTester()
@@ -127,7 +127,7 @@ namespace EQLogParser
         }
         catch (Exception ex)
         {
-          LOG.Error(ex);
+          Log.Error(ex);
         }
       }
       else if (testButton.Content.ToString() == "Stop Test")
@@ -274,7 +274,7 @@ namespace EQLogParser
           {
             if (Application.Current != null)
             {
-              LOG.Error(ex);
+              Log.Error(ex);
             }
           }
           finally

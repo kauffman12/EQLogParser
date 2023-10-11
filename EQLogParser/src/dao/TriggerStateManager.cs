@@ -26,7 +26,7 @@ namespace EQLogParser
     private const string CONFIG_COL = "Config";
     private const string STATES_COL = "States";
     private const string TREE_COL = "Tree";
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly Lazy<TriggerStateManager> _lazy = new(() => new TriggerStateManager());
     internal static TriggerStateManager Instance => _lazy.Value; // instance
     private readonly object LockObject = new();
@@ -72,11 +72,11 @@ namespace EQLogParser
       {
         if (ex is IOException)
         {
-          LOG.Warn("Trigger Database already in use.");
+          Log.Warn("Trigger Database already in use.");
         }
         else
         {
-          LOG.Error(ex);
+          Log.Error(ex);
         }
       }
     }
@@ -843,7 +843,7 @@ namespace EQLogParser
           }
           catch (Exception ex)
           {
-            LOG.Error($"Error Upgrading Triggers {file}", ex);
+            Log.Error($"Error Upgrading Triggers {file}", ex);
           }
         }
       }

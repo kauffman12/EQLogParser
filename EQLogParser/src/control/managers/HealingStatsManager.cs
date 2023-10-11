@@ -10,7 +10,7 @@ namespace EQLogParser
 {
   class HealingStatsManager : ISummaryBuilder
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     internal static HealingStatsManager Instance = new();
 
@@ -184,7 +184,7 @@ namespace EQLogParser
         }
         catch (Exception ex)
         {
-          LOG.Error(ex);
+          Log.Error(ex);
         }
       }
     }
@@ -390,7 +390,7 @@ namespace EQLogParser
           }
           catch (Exception ex)
           {
-            LOG.Error(ex);
+            Log.Error(ex);
           }
         }
       }

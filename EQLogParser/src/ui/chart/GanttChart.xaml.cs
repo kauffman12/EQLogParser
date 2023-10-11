@@ -19,7 +19,7 @@ namespace EQLogParser
 {
   public partial class GanttChart : UserControl, IDisposable
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     private static readonly List<string> BlockBrushes = new() { "EQMenuIconBrush", "EQWarnForegroundBrush" };
 
@@ -285,7 +285,7 @@ namespace EQLogParser
       }
       catch (ExternalException ex)
       {
-        LOG.Error(ex);
+        Log.Error(ex);
       }
     }
 

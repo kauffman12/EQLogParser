@@ -21,7 +21,7 @@ namespace EQLogParser
     public readonly string CurrentCharacterId;
     public readonly string CurrentCharacterName;
     public readonly string CurrentPlayer;
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private readonly object CollectionLock = new();
     private readonly object LockObject = new();
     private readonly object VoiceLock = new();
@@ -455,7 +455,7 @@ namespace EQLogParser
             }
             catch (Exception e)
             {
-              LOG.Debug(e);
+              Log.Debug(e);
             }
           }
         }
@@ -533,7 +533,7 @@ namespace EQLogParser
           }
           catch (Exception ex)
           {
-            LOG.Debug("Bad Trigger?", ex);
+            Log.Debug("Bad Trigger?", ex);
           }
         }
       }

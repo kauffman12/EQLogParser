@@ -22,7 +22,7 @@ namespace EQLogParser
 {
   static class DataGridUtil
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static int StartRow;
 
     internal static Style CreateHighlightForegroundStyle(string name, IValueConverter converter = null)
@@ -102,11 +102,11 @@ namespace EQLogParser
       catch (ArgumentNullException ane)
       {
         Clipboard.SetDataObject("EQ Log Parser Error: Failed to create CSV\r\n");
-        LOG.Error(ane);
+        Log.Error(ane);
       }
       catch (ExternalException ex)
       {
-        LOG.Error(ex);
+        Log.Error(ex);
       }
     }
 
@@ -259,7 +259,7 @@ namespace EQLogParser
             }
             catch (Exception ex)
             {
-              LOG.Error("Could not Copy Image", ex);
+              Log.Error("Could not Copy Image", ex);
             }
             finally
             {
@@ -378,7 +378,7 @@ namespace EQLogParser
       }
       catch (Exception ex)
       {
-        LOG.Debug(ex);
+        Log.Debug(ex);
       }
     }
 

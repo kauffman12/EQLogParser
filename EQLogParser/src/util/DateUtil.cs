@@ -7,7 +7,7 @@ namespace EQLogParser
 {
   internal class DateUtil
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     // counting this thing is really slow
     private string LastDateTimeString;
@@ -186,7 +186,7 @@ namespace EQLogParser
 
       if (double.IsNaN(result))
       {
-        LOG.Debug("Invalid Date: " + timeString);
+        Log.Debug("Invalid Date: " + timeString);
       }
 
       return result;
