@@ -34,7 +34,7 @@ namespace EQLogParser
     private static readonly ObservableCollection<PetMapping> PetPlayersView = new();
     private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new();
     private static readonly SortableNameComparer TheSortableNameComparer = new();
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     internal static void CheckVersion(TextBlock errorText)
     {
@@ -107,7 +107,7 @@ namespace EQLogParser
                 catch (Exception ex2)
                 {
                   new MessageWindow("Problem Install Updates. Check Error Log for Details.", Resource.CHECK_VERSION).ShowDialog();
-                  LOG.Error("Error Installing Updates", ex2);
+                  Log.Error("Error Installing Updates", ex2);
                 }
                 finally
                 {
@@ -119,7 +119,7 @@ namespace EQLogParser
         }
         catch (Exception ex)
         {
-          LOG.Error("Error Checking for Updates", ex);
+          Log.Error("Error Checking for Updates", ex);
           Application.Current.Dispatcher.InvokeAsync(() =>
           {
             errorText.Text = "Update Check Failed. Firewall?";
@@ -157,7 +157,7 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        LOG.Error(e);
+        Log.Error(e);
       }
     }
 
@@ -568,20 +568,20 @@ namespace EQLogParser
           }
           catch (IOException ex)
           {
-            LOG.Error(ex);
+            Log.Error(ex);
             accessError = true;
           }
           catch (UnauthorizedAccessException uax)
           {
-            LOG.Error(uax);
+            Log.Error(uax);
           }
           catch (SecurityException se)
           {
-            LOG.Error(se);
+            Log.Error(se);
           }
           catch (ArgumentNullException ane)
           {
-            LOG.Error(ane);
+            Log.Error(ane);
           }
           finally
           {
@@ -629,19 +629,19 @@ namespace EQLogParser
       }
       catch (IOException ex)
       {
-        LOG.Error(ex);
+        Log.Error(ex);
       }
       catch (UnauthorizedAccessException uax)
       {
-        LOG.Error(uax);
+        Log.Error(uax);
       }
       catch (SecurityException se)
       {
-        LOG.Error(se);
+        Log.Error(se);
       }
       catch (ArgumentNullException ane)
       {
-        LOG.Error(ane);
+        Log.Error(ane);
       }
     }
 
@@ -653,7 +653,7 @@ namespace EQLogParser
       }
       catch (Exception ex)
       {
-        LOG.Error(ex);
+        Log.Error(ex);
       }
     }
 

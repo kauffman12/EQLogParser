@@ -6,7 +6,7 @@ namespace EQLogParser
 {
   class HealingLineParser
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     private HealingLineParser()
     {
@@ -31,19 +31,19 @@ namespace EQLogParser
       }
       catch (ArgumentNullException ne)
       {
-        LOG.Error(ne);
+        Log.Error(ne);
       }
       catch (NullReferenceException nr)
       {
-        LOG.Error(nr);
+        Log.Error(nr);
       }
       catch (ArgumentOutOfRangeException aor)
       {
-        LOG.Error(aor);
+        Log.Error(aor);
       }
       catch (ArgumentException ae)
       {
-        LOG.Error(ae);
+        Log.Error(ae);
       }
 
       return false;

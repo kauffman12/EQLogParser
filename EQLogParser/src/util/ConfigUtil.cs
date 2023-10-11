@@ -16,7 +16,7 @@ namespace EQLogParser
     public static string ServerName;
     public static string LogsDir;
 
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_DATA = @"%AppData%\EQLogParser";
     private const string PETMAP_FILE = "petmapping.txt";
@@ -217,15 +217,15 @@ namespace EQLogParser
       }
       catch (IOException ex)
       {
-        LOG.Error(ex);
+        Log.Error(ex);
       }
       catch (UnauthorizedAccessException uax)
       {
-        LOG.Error(uax);
+        Log.Error(uax);
       }
       catch (SecurityException se)
       {
-        LOG.Error(se);
+        Log.Error(se);
       }
 
       return result;
@@ -245,15 +245,15 @@ namespace EQLogParser
       }
       catch (IOException ex)
       {
-        LOG.Error(ex);
+        Log.Error(ex);
       }
       catch (UnauthorizedAccessException uax)
       {
-        LOG.Error(uax);
+        Log.Error(uax);
       }
       catch (SecurityException se)
       {
-        LOG.Error(se);
+        Log.Error(se);
       }
 
       return result;
@@ -267,15 +267,15 @@ namespace EQLogParser
       }
       catch (IOException ex)
       {
-        LOG.Error(ex);
+        Log.Error(ex);
       }
       catch (UnauthorizedAccessException uax)
       {
-        LOG.Error(uax);
+        Log.Error(uax);
       }
       catch (SecurityException se)
       {
-        LOG.Error(se);
+        Log.Error(se);
       }
     }
 
@@ -324,15 +324,15 @@ namespace EQLogParser
       }
       catch (IOException ex)
       {
-        LOG.Error(ex);
+        Log.Error(ex);
       }
       catch (UnauthorizedAccessException uax)
       {
-        LOG.Error(uax);
+        Log.Error(uax);
       }
       catch (SecurityException se)
       {
-        LOG.Error(se);
+        Log.Error(se);
       }
     }
   }

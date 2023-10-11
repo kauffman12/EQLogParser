@@ -16,7 +16,7 @@ namespace EQLogParser
 {
   internal class TextSoundEditor : BaseTypeEditor
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private SoundPlayer SoundPlayer;
     private readonly ObservableCollection<string> FileList;
     private ComboBox TheOptionsCombo;
@@ -174,7 +174,7 @@ namespace EQLogParser
             }
             catch (Exception ex)
             {
-              LOG.Error("Error playing sound file.", ex);
+              Log.Error("Error playing sound file.", ex);
             }
 
             var codedName = "<<" + selected + ">>";

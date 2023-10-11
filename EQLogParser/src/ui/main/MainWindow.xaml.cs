@@ -49,7 +49,7 @@ namespace EQLogParser
     internal static string CurrentFontFamily;
     internal static double CurrentFontSize;
 
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly Regex ParseFileName = new(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline);
     private static readonly List<string> DAMAGE_CHOICES = new()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damage", "Aggregate Crit Rate", "Aggregate Twincast Rate", "DPS", "Rolling DPS", "Rolling Damage", "# Attempts", "# Crits", "# Hits", "# Twincasts" };
@@ -93,8 +93,8 @@ namespace EQLogParser
         Top = top;
         Left = left;
 
-        LOG.Info($"Window Pos ({Top}, {Left})");
-        LOG.Info($"Window Size ({Width}, {Height})");
+        Log.Info($"Window Pos ({Top}, {Left})");
+        Log.Info($"Window Size ({Width}, {Height})");
 
         switch (ConfigUtil.GetSetting("WindowState", "Normal"))
         {
@@ -113,7 +113,7 @@ namespace EQLogParser
 
         if (UIElementUtil.GetSystemFontFamilies().FirstOrDefault(font => font.Source == CurrentFontFamily) == null)
         {
-          LOG.Info(CurrentFontFamily + " Not Found, Trying Default");
+          Log.Info(CurrentFontFamily + " Not Found, Trying Default");
           CurrentFontFamily = "Segoe UI";
         }
 
@@ -209,7 +209,7 @@ namespace EQLogParser
           }
         }
 
-        LOG.Info("Initialized Components");
+        Log.Info("Initialized Components");
 
         if (ConfigUtil.IfSet("CheckUpdatesAtStartup"))
         {
@@ -261,7 +261,7 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        LOG.Error(e);
+        Log.Error(e);
         throw;
       }
     }
@@ -271,13 +271,13 @@ namespace EQLogParser
       switch (e.Mode)
       {
         case PowerModes.Suspend:
-          LOG.Warn("Suspending");
+          Log.Warn("Suspending");
           TriggerManager.Instance.Stop();
           DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
           CloseDamageOverlay();
           break;
         case PowerModes.Resume:
-          LOG.Warn("Resume");
+          Log.Warn("Resume");
           TriggerManager.Instance.Start();
           DataManager.Instance.ResetOverlayFights(true);
           OpenDamageOverlayIfEnabled(true, false);
@@ -500,7 +500,7 @@ namespace EQLogParser
 
     private void ViewErrorLogClick(object sender, RoutedEventArgs e)
     {
-      var appender = LOG.Logger.Repository.GetAppenders().FirstOrDefault(test => "file".Equals(test.Name, StringComparison.OrdinalIgnoreCase));
+      var appender = Log.Logger.Repository.GetAppenders().FirstOrDefault(test => "file".Equals(test.Name, StringComparison.OrdinalIgnoreCase));
       if (appender != null)
       {
         MainActions.OpenFileWithDefault("\"" + (appender as FileAppender).File + "\"");
@@ -937,7 +937,7 @@ namespace EQLogParser
             statusText.Text = "Monitoring Active";
 
             ConfigUtil.SetSetting("LastOpenedFile", CurrentLogFile);
-            LOG.Info($"Finished Loading Log File in {seconds} seconds.");
+            Log.Info($"Finished Loading Log File in {seconds} seconds.");
 
             Task.Delay(1000).ContinueWith(task => Dispatcher.InvokeAsync(() =>
             {
@@ -1017,7 +1017,7 @@ namespace EQLogParser
           var server = "Unknown";
           if (theFile.Length > 0)
           {
-            LOG.Info("Selected Log File: " + theFile);
+            Log.Info("Selected Log File: " + theFile);
 
             var file = Path.GetFileName(theFile);
             var matches = ParseFileName.Matches(file);
@@ -1080,7 +1080,7 @@ namespace EQLogParser
           throw;
         }
 
-        LOG.Error("Problem During Initialization", e);
+        Log.Error("Problem During Initialization", e);
       }
     }
 

@@ -16,7 +16,7 @@ namespace EQLogParser
 {
   internal static class GinaUtil
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly ConcurrentDictionary<string, string> GinaCache = new();
 
     internal static List<ExportTriggerNode> CovertToTriggerNodes(byte[] data) => Convert(ReadXml(data));
@@ -189,7 +189,7 @@ namespace EQLogParser
           }
           else
           {
-            LOG.Error("Error Downloading GINA Triggers. Received Status Code = " + response.StatusCode);
+            Log.Error("Error Downloading GINA Triggers. Received Status Code = " + response.StatusCode);
             NextGinaTask(ginaKey);
           }
         }
@@ -208,7 +208,7 @@ namespace EQLogParser
             NextGinaTask(ginaKey);
           }
 
-          LOG.Error("Error Downloading GINA Triggers", ex);
+          Log.Error("Error Downloading GINA Triggers", ex);
         }
         finally
         {
@@ -231,7 +231,7 @@ namespace EQLogParser
       }
       catch (Exception ex)
       {
-        LOG.Error("Error Parsing GINA Data", ex);
+        Log.Error("Error Parsing GINA Data", ex);
       }
 
       return result;

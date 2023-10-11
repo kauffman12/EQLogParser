@@ -10,7 +10,7 @@ namespace EQLogParser
 {
   static class SyncFusionUtil
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     internal static void CloseWindow(DockingManager dockSite, ContentControl window)
     {
@@ -39,7 +39,7 @@ namespace EQLogParser
               }
               catch (Exception ex)
               {
-                LOG.Debug(ex);
+                Log.Debug(ex);
               }
             }, DispatcherPriority.Background);
           }
@@ -50,7 +50,7 @@ namespace EQLogParser
         }
         catch (Exception e)
         {
-          LOG.Debug(e);
+          Log.Debug(e);
         }
       }
     }

@@ -19,7 +19,7 @@ namespace EQLogParser
   /// </summary>
   public partial class ChatViewer : IDisposable
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly List<double> FontSizeList = new() { 10, 12, 14, 16, 18, 20, 22, 24 };
 
     private const int PAGE_SIZE = 200;
@@ -252,7 +252,7 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        LOG.Error(e);
+        Log.Error(e);
       }
     }
 

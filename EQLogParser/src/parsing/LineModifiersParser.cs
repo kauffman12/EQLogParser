@@ -7,7 +7,7 @@ namespace EQLogParser
 {
   static class LineModifiersParser
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     private static readonly Dictionary<string, byte> ALL_MODIFIERS = new()
     {

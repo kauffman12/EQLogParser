@@ -15,7 +15,7 @@ namespace EQLogParser
 {
   static class UIElementUtil
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly string[] CommonFontFamilies =
     {
       "Arial", "Calibri", "Cambria", "Cascadia Code", "Century Gothic", "Lucida Sans",
@@ -87,7 +87,7 @@ namespace EQLogParser
         catch (ArgumentException e)
         {
           // certain fonts cause WPF 4 to throw an exception when the FamilyNames property is accessed; ignore them
-          LOG.Debug(e);
+          Log.Debug(e);
         }
       }
 

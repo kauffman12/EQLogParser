@@ -8,7 +8,7 @@ namespace EQLogParser
 {
   static class CastLineParser
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly char[] OldSpellChars = { '<', '>' };
 
     private static readonly Dictionary<string, string> SpecialCastCodes = new()
@@ -156,7 +156,7 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        LOG.Error(e);
+        Log.Error(e);
       }
 
       return false;

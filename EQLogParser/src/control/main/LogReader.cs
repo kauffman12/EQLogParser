@@ -13,7 +13,7 @@ namespace EQLogParser
   class LogReader : IDisposable
   {
     private BufferBlock<Tuple<string, double, bool>> Lines { get; } = new(new DataflowBlockOptions { BoundedCapacity = 25000 });
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private readonly FileSystemWatcher FileWatcher;
     private readonly string FileName;
     private int MinBack;
@@ -228,7 +228,7 @@ namespace EQLogParser
       }
       catch (AggregateException ex)
       {
-        LOG.Warn(ex);
+        Log.Warn(ex);
       }
 
       Cts?.Dispose();

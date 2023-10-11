@@ -12,7 +12,7 @@ namespace EQLogParser
   static class Helpers
   {
     internal static DictionaryAddHelper<long, int> LongIntAddHelper = new();
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     public static void AddAction(List<ActionGroup> blockList, IAction action, double beginTime)
     {
@@ -83,11 +83,11 @@ namespace EQLogParser
         }
         catch (IOException ioe)
         {
-          LOG.Error("Problem searching log file", ioe);
+          Log.Error("Problem searching log file", ioe);
         }
         catch (OutOfMemoryException ome)
         {
-          LOG.Debug("Out of memory", ome);
+          Log.Debug("Out of memory", ome);
         }
       }
       else if (f.Position != good)

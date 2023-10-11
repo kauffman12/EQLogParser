@@ -13,7 +13,7 @@ namespace EQLogParser
     public static event EventHandler<DamageProcessedEvent> EventsDamageProcessed;
     public static event EventHandler<TauntEvent> EventsNewTaunt;
 
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly Regex CheckEyeRegex = new(@"^Eye of (\w+)");
     private static readonly Dictionary<string, string> SpellTypeCache = new();
     private static readonly List<string> SlainQueue = new();
@@ -101,7 +101,7 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        LOG.Error(e);
+        Log.Error(e);
       }
 
       return processed;
@@ -131,7 +131,7 @@ namespace EQLogParser
         }
         catch (Exception e)
         {
-          LOG.Error(e);
+          Log.Error(e);
         }
       }
 

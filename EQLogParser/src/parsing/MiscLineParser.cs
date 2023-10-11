@@ -8,7 +8,7 @@ namespace EQLogParser
 {
   static class MiscLineParser
   {
-    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly List<string> Currency = new() { "Platinum", "Gold", "Silver", "Copper" };
     private static readonly Dictionary<char, uint> Rates = new() { { 'p', 1000 }, { 'g', 100 }, { 's', 10 }, { 'c', 1 } };
     private static readonly char[] LootedFromTrim = { '-', '.' };
@@ -286,19 +286,19 @@ namespace EQLogParser
       }
       catch (ArgumentNullException ne)
       {
-        LOG.Error(ne);
+        Log.Error(ne);
       }
       catch (NullReferenceException nr)
       {
-        LOG.Error(nr);
+        Log.Error(nr);
       }
       catch (ArgumentOutOfRangeException aor)
       {
-        LOG.Error(aor);
+        Log.Error(aor);
       }
       catch (ArgumentException ae)
       {
-        LOG.Error(ae);
+        Log.Error(ae);
       }
 
       return handled;
