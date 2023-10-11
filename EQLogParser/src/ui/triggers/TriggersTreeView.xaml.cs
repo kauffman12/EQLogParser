@@ -1,7 +1,10 @@
-﻿using Syncfusion.UI.Xaml.TreeView;
+﻿using FontAwesome5;
+using log4net;
+using Syncfusion.UI.Xaml.TreeView;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -16,7 +19,7 @@ namespace EQLogParser
   {
     internal event Action<bool> ClosePreviewOverlaysEvent;
     internal event Action<Tuple<TriggerTreeViewNode, object>> TreeSelectionChangedEvent;
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private const string LABEL_NEW_TEXT_OVERLAY = "New Text Overlay";
     private const string LABEL_NEW_TIMER_OVERLAY = "New Timer Overlay";
     private const string LABEL_NEW_TRIGGER = "New Trigger";
@@ -481,13 +484,13 @@ namespace EQLogParser
         var menuItem = new MenuItem { Header = "Priority " + i, Tag = i };
         if (i == 1)
         {
-          var icon = new FontAwesome5.ImageAwesome { Icon = FontAwesome5.EFontAwesomeIcon.Solid_ArrowUp };
+          var icon = new ImageAwesome { Icon = EFontAwesomeIcon.Solid_ArrowUp };
           icon.SetResourceReference(StyleProperty, "EQIconStyle");
           menuItem.Icon = icon;
         }
         else if (i == 5)
         {
-          var icon = new FontAwesome5.ImageAwesome { Icon = FontAwesome5.EFontAwesomeIcon.Solid_ArrowDown };
+          var icon = new ImageAwesome { Icon = EFontAwesomeIcon.Solid_ArrowDown };
           icon.SetResourceReference(StyleProperty, "EQIconStyle");
           menuItem.Icon = icon;
         }
@@ -590,15 +593,13 @@ namespace EQLogParser
     {
       if (sender is MenuItem menuItem)
       {
-        string name;
-        string id;
         var selected = triggerTreeView.SelectedItems.Cast<TriggerTreeViewNode>().ToList();
         var anyFolders = selected.Any(node => node.IsDir());
 
         if (menuItem.Tag is string overlayTag && overlayTag.Split('=') is { Length: 2 } overlayData)
         {
-          name = overlayData[0];
-          id = overlayData[1];
+          var name = overlayData[0];
+          var id = overlayData[1];
 
           if (!anyFolders)
           {

@@ -6,7 +6,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for TankingBreakdown.xaml
   /// </summary>
-  public partial class TankingBreakdown : BreakdownTable
+  public partial class TankingBreakdown
   {
     public TankingBreakdown()
     {

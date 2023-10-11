@@ -1,9 +1,11 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Media;
+using System.Reflection;
 using System.Speech.Synthesis;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -13,13 +15,13 @@ using System.Windows.Data;
 
 namespace EQLogParser
 {
-  internal class TriggerProcessor : IDisposable
+  internal class TriggerProcessor : ILogProcessor
   {
     public readonly ObservableCollection<AlertEntry> AlertLog = new();
     public readonly string CurrentCharacterId;
     public readonly string CurrentCharacterName;
     public readonly string CurrentPlayer;
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private readonly object CollectionLock = new();
     private readonly object LockObject = new();
     private readonly object VoiceLock = new();
@@ -58,7 +60,7 @@ namespace EQLogParser
       SoundPlayer = new SoundPlayer();
     }
 
-    internal void LinkTo(ISourceBlock<Tuple<string, double, bool>> source)
+    public void LinkTo(ISourceBlock<Tuple<string, double, bool>> source)
     {
       source.LinkTo(Process, new DataflowLinkOptions { PropagateCompletion = false });
     }

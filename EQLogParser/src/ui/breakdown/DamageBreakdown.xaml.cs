@@ -10,12 +10,12 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for DamageBreakdownTable.xaml
   /// </summary>
-  public partial class DamageBreakdown : BreakdownTable
+  public partial class DamageBreakdown
   {
     private PlayerStats RaidStats;
     private string Title;
     private bool CurrentShowPets = true;
-    private readonly Dictionary<string, PlayerSubStats> GroupedDD = new();
+    private readonly Dictionary<string, PlayerSubStats> GroupedDd = new();
     private readonly Dictionary<string, PlayerSubStats> GroupedDoT = new();
     private readonly Dictionary<string, PlayerSubStats> GroupedProcs = new();
     private readonly Dictionary<string, List<PlayerSubStats>> OtherDamage = new();
@@ -115,7 +115,7 @@ namespace EQLogParser
         StatsUtil.CalculateRates(stats, RaidStats, playerStats);
       }
 
-      GroupedDD[playerStats.Name] = dds;
+      GroupedDd[playerStats.Name] = dds;
       GroupedDoT[playerStats.Name] = dots;
       GroupedProcs[playerStats.Name] = procs;
       OtherDamage[playerStats.Name] = list;
@@ -128,7 +128,7 @@ namespace EQLogParser
 
       OtherDamage[name].ForEach(stats => list.Add(stats));
 
-      if (GroupedDD.TryGetValue(name, out var dds))
+      if (GroupedDd.TryGetValue(name, out var dds))
       {
         if (dds.Total > 0)
         {
@@ -159,7 +159,7 @@ namespace EQLogParser
     {
       if (dataGrid.View != null)
       {
-        dataGrid.View.Filter = (value) =>
+        dataGrid.View.Filter = value =>
         {
           var result = true;
           if (value is PlayerStats stats)

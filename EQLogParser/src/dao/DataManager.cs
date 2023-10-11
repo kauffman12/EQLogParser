@@ -1,8 +1,10 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 
 namespace EQLogParser
 {
@@ -62,7 +64,7 @@ namespace EQLogParser
 
   class DataManager
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     internal static DataManager Instance = new();
     internal event EventHandler<string> EventsRemovedFight;
@@ -253,14 +255,14 @@ namespace EQLogParser
                   {
                     AdpsValues[key][spellData.NameAbbrv] = rate;
 
-                    if (!AdpsWearOff.TryGetValue(spellData.WearOff, out var wearOffList))
+                    if (!AdpsWearOff.TryGetValue(spellData.WearOff, out _))
                     {
                       AdpsWearOff[spellData.WearOff] = new HashSet<SpellData>();
                     }
 
                     AdpsWearOff[spellData.WearOff].Add(spellData);
 
-                    if (!AdpsLandsOn.TryGetValue(spellData.LandsOnYou, out var landsOnList))
+                    if (!AdpsLandsOn.TryGetValue(spellData.LandsOnYou, out _))
                     {
                       AdpsLandsOn[spellData.LandsOnYou] = new HashSet<SpellData>();
                     }
@@ -396,7 +398,7 @@ namespace EQLogParser
 
     internal SpellData GetAdpsByName(string name)
     {
-      SpellData spellData = null;
+      SpellData spellData;
 
       if (!SpellsAbbrvDB.TryGetValue(name, out spellData))
       {
@@ -629,7 +631,7 @@ namespace EQLogParser
           {
             foreach (ref var key in AdpsKeys.ToArray().AsSpan())
             {
-              if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out var value))
+              if (AdpsValues[key].TryGetValue(spellData.NameAbbrv, out _))
               {
                 var msg = string.IsNullOrEmpty(spellData.LandsOnYou) ? spellData.Name : spellData.LandsOnYou;
                 AdpsActive[key].Remove(msg);
@@ -883,7 +885,7 @@ namespace EQLogParser
 
       if (fight.DamageHits > 0)
       {
-        var needEvent = false;
+        bool needEvent;
 
         lock (OverlayFights)
         {
@@ -918,7 +920,7 @@ namespace EQLogParser
 
     internal bool HasOverlayFights()
     {
-      var result = false;
+      bool result;
       lock (OverlayFights)
       {
         result = OverlayFights.Count > 0;
@@ -1018,8 +1020,8 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(name))
       {
-        var removed = ActiveFights.TryRemove(name, out var npc);
-        removed = LifetimeFights.TryRemove(name, out var bnpc) || removed;
+        var removed = ActiveFights.TryRemove(name, out _);
+        removed = LifetimeFights.TryRemove(name, out _) || removed;
 
         if (removed)
         {
@@ -1077,10 +1079,8 @@ namespace EQLogParser
         {
           return SearchSpellPath(child, split, lastIndex - 1);
         }
-        else
-        {
-          return new SpellTreeResult { SpellData = child.SpellData, DataIndex = lastIndex };
-        }
+
+        return new SpellTreeResult { SpellData = child.SpellData, DataIndex = lastIndex };
       }
 
       return new SpellTreeResult { SpellData = node.SpellData, DataIndex = lastIndex };

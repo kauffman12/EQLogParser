@@ -198,52 +198,65 @@ namespace EQLogParser
 
     private static bool IsValidAttack(DamageRecord record, bool isAttackerPlayer, out bool npcDefender)
     {
-      var valid = false;
       npcDefender = false;
 
-      if (!record.Attacker.Equals(record.Defender, StringComparison.OrdinalIgnoreCase))
+      if (IsSelfAttack(record))
       {
-        var isAttackerPlayerSpell = record.AttackerIsSpell && RecentSpellCache.ContainsKey(record.Attacker);
-        isAttackerPlayer = isAttackerPlayer || isAttackerPlayerSpell;
-        var isDefenderPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Defender);
-        var isAttackerNpc = (!isAttackerPlayer && DataManager.Instance.IsKnownNpc(record.Attacker)) || (record.AttackerIsSpell && !isAttackerPlayerSpell);
-        var isDefenderNpc = (!isDefenderPlayer && DataManager.Instance.IsKnownNpc(record.Defender)) || isAttackerPlayerSpell;
+        return false;
+      }
 
-        if (isDefenderNpc && !isAttackerNpc)
+      var isAttackerPlayerSpell = IsAttackerPlayerSpell(record, isAttackerPlayer);
+      var isDefenderPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Defender);
+      var isAttackerNpc = IsAttackerNpc(record, isAttackerPlayerSpell, isAttackerPlayer);
+      var isDefenderNpc = IsDefenderNpc(record, isAttackerPlayerSpell, isDefenderPlayer);
+
+      if (isDefenderNpc)
+      {
+        if (!isAttackerNpc)
         {
-          valid = isAttackerPlayer || PlayerManager.IsPossiblePlayerName(record.Attacker);
           npcDefender = true;
+          return isAttackerPlayer || PlayerManager.IsPossiblePlayerName(record.Attacker);
         }
-        else if (!isDefenderNpc && isAttackerNpc)
+        else if (DataManager.Instance.GetFight(record.Defender) != null && DataManager.Instance.GetFight(record.Attacker) == null)
         {
-          valid = isDefenderPlayer || PlayerManager.IsPossiblePlayerName(record.Defender);
-          npcDefender = false;
-        }
-        else if (!isDefenderNpc && !isAttackerNpc)
-        {
-          if (isDefenderPlayer || isAttackerPlayer)
-          {
-            valid = isDefenderPlayer != isAttackerPlayer;
-            if (valid)
-            {
-              npcDefender = !isDefenderPlayer;
-            }
-          }
-          else
-          {
-            npcDefender = PlayerManager.IsPossiblePlayerName(record.Attacker) || !PlayerManager.IsPossiblePlayerName(record.Defender);
-            valid = true;
-          }
-        }
-        else if (isDefenderNpc && isAttackerNpc && DataManager.Instance.GetFight(record.Defender) != null
-          && DataManager.Instance.GetFight(record.Attacker) == null)
-        {
-          valid = true;
           npcDefender = true;
+          return true;
+        }
+      }
+      else
+      {
+        if (isAttackerNpc)
+        {
+          return isDefenderPlayer || PlayerManager.IsPossiblePlayerName(record.Defender);
+        }
+        else if (isDefenderPlayer != isAttackerPlayer)
+        {
+          npcDefender = !isDefenderPlayer;
+          return true;
         }
       }
 
-      return valid;
+      return false;
+    }
+
+    private static bool IsSelfAttack(DamageRecord record)
+    {
+      return record.Attacker.Equals(record.Defender, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsAttackerPlayerSpell(DamageRecord record, bool isAttackerPlayer)
+    {
+      return record.AttackerIsSpell && (RecentSpellCache.ContainsKey(record.Attacker) || isAttackerPlayer);
+    }
+
+    private static bool IsAttackerNpc(DamageRecord record, bool isAttackerPlayerSpell, bool isAttackerPlayer)
+    {
+      return (!isAttackerPlayer && DataManager.Instance.IsKnownNpc(record.Attacker)) || (record.AttackerIsSpell && !isAttackerPlayerSpell);
+    }
+
+    private static bool IsDefenderNpc(DamageRecord record, bool isAttackerPlayerSpell, bool isDefenderPlayer)
+    {
+      return (!isDefenderPlayer && DataManager.Instance.IsKnownNpc(record.Defender)) || isAttackerPlayerSpell;
     }
   }
 }

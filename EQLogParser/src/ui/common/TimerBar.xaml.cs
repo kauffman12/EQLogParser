@@ -1,4 +1,5 @@
 ﻿using Syncfusion.UI.Xaml.ProgressBar;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace EQLogParser
@@ -87,7 +88,7 @@ namespace EQLogParser
       }
     }
 
-    private void UnloadWindow(object sender, System.Windows.RoutedEventArgs e)
+    private void UnloadWindow(object sender, RoutedEventArgs e)
     {
       LastTimerData = null;
     }

@@ -1,4 +1,5 @@
-﻿using Syncfusion.UI.Xaml.Grid;
+﻿using Syncfusion.Data;
+using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -49,7 +51,7 @@ namespace EQLogParser
         CheckBoxColumns.Add(new GridCheckBoxColumn
         {
           MappingName = name,
-          SortMode = Syncfusion.Data.DataReflectionMode.Value,
+          SortMode = DataReflectionMode.Value,
           HeaderText = name
         });
       });
@@ -59,7 +61,7 @@ namespace EQLogParser
         TextColumns.Add(new GridTextColumn
         {
           MappingName = name,
-          SortMode = Syncfusion.Data.DataReflectionMode.Value,
+          SortMode = DataReflectionMode.Value,
           HeaderText = name,
           TextAlignment = TextAlignment.Right
         });
@@ -78,8 +80,8 @@ namespace EQLogParser
       desc.Add("Total");
       desc.Add("OverTotal");
 
-      dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
-      dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+      dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+      dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
     }
 
@@ -213,9 +215,9 @@ namespace EQLogParser
           lastSeen[row.SubType] = Math.Floor(row.Time);
         }
 
-        var actions = new List<string>() { "All Actions" };
+        var actions = new List<string> { "All Actions" };
         var acted = new List<string> { ActedOption };
-        var types = new List<string>() { "All Types" };
+        var types = new List<string> { "All Types" };
         actions.AddRange(uniqueActions.Keys.OrderBy(x => x));
         acted.AddRange(uniqueDefenders.Keys.OrderBy(x => x));
         types.AddRange(uniqueTypes.Keys.OrderBy(x => x));
@@ -434,7 +436,7 @@ namespace EQLogParser
             }
 
             Display();
-          }, System.Windows.Threading.DispatcherPriority.Background);
+          }, DispatcherPriority.Background);
         }
       }
     }

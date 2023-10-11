@@ -1,8 +1,10 @@
 ﻿using LiteDB;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
@@ -24,7 +26,7 @@ namespace EQLogParser
     private const string CONFIG_COL = "Config";
     private const string STATES_COL = "States";
     private const string TREE_COL = "Tree";
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly Lazy<TriggerStateManager> _lazy = new(() => new TriggerStateManager());
     internal static TriggerStateManager Instance => _lazy.Value; // instance
     private readonly object LockObject = new();
@@ -402,7 +404,7 @@ namespace EQLogParser
 
     internal void SetState(string playerId, TriggerTreeViewNode viewNode)
     {
-      if (viewNode?.SerializedData is { } node && !viewNode.IsOverlay() &&
+      if (viewNode?.SerializedData is not null && !viewNode.IsOverlay() &&
         DB?.GetCollection<TriggerState>(STATES_COL) is { } states)
       {
         lock (LockObject)
@@ -419,13 +421,12 @@ namespace EQLogParser
     // from GINA with custom Folder name
     internal void ImportTriggers(string name, IEnumerable<ExportTriggerNode> imported)
     {
-      TriggerNode parent = null;
       if (DB?.GetCollection<TriggerNode>(TREE_COL) is { } tree)
       {
         lock (LockObject)
         {
           var root = tree.FindOne(n => n.Parent == null && n.Name == TRIGGERS);
-          parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name, null).SerializedData;
+          var parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name).SerializedData;
           Import(parent, imported, TRIGGERS);
           TriggerImportEvent?.Invoke(true);
         }
@@ -853,7 +854,7 @@ namespace EQLogParser
         states?.Insert(new TriggerState { Id = DEFAULT_USER, Enabled = defaultEnabled });
       }
 
-      if (ConfigUtil.IfSetOrElse("TriggersEnabled", false))
+      if (ConfigUtil.IfSetOrElse("TriggersEnabled"))
       {
         var config = new TriggerConfig { IsEnabled = true, Id = Guid.NewGuid().ToString() };
         DB?.GetCollection<TriggerConfig>(CONFIG_COL).Insert(config);

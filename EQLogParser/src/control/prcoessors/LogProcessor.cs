@@ -3,7 +3,7 @@ using System.Threading.Tasks.Dataflow;
 
 namespace EQLogParser
 {
-  class LogProcessor : IDisposable
+  class LogProcessor : ILogProcessor
   {
     private readonly ActionBlock<Tuple<string, double, bool>> PreProcess;
     private readonly ActionBlock<LineData> Process;
@@ -18,7 +18,7 @@ namespace EQLogParser
       ChatManager.Instance.Init();
     }
 
-    internal void LinkTo(ISourceBlock<Tuple<string, double, bool>> sourceBlock)
+    public void LinkTo(ISourceBlock<Tuple<string, double, bool>> sourceBlock)
     {
       sourceBlock.LinkTo(PreProcess, new DataflowLinkOptions { PropagateCompletion = false });
     }
@@ -32,7 +32,7 @@ namespace EQLogParser
         if (TriggerStateManager.Instance.IsActive())
         {
           // Look for GINA entries in the log
-          if (ConfigUtil.IfSetOrElse("TriggersWatchForGINA", false))
+          if (ConfigUtil.IfSetOrElse("TriggersWatchForGINA"))
           {
             GinaUtil.CheckGina(lineData);
           }
@@ -52,8 +52,8 @@ namespace EQLogParser
         double extraDouble = 0;
 
         // only if it's not a chat line check if two lines are on the same line
-        if (lineData.Action.IndexOf("[") is int index and > -1 && lineData.Action.Length > (index + 28) && lineData.Action[index + 25] == ']' &&
-            char.IsDigit(lineData.Action[index + 24]))
+        if (lineData.Action.IndexOf("[", StringComparison.Ordinal) is int index and > -1 && lineData.Action.Length > (index + 28) &&
+            lineData.Action[index + 25] == ']' && char.IsDigit(lineData.Action[index + 24]))
         {
           var original = lineData.Action;
           lineData.Action = original[..index];

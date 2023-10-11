@@ -32,8 +32,8 @@ namespace EQLogParser
         "TotalFinishing", "TotalHead", "TotalRiposte", "TotalSlay", "AvgNonTwincast", "AvgNonTwincastCrit", "AvgNonTwincastLucky",
         "TwincastHits", "Resists", "DoubleBowRate", "FlurryRate", "ResistRate", "MeleeAttempts", "MeleeUndefended"};
 
-      TheDataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
-      TheDataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+      TheDataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+      TheDataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
       DataGridUtil.UpdateTableMargin(TheDataGrid);
       (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;

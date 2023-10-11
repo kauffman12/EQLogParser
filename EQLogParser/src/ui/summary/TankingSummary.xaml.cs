@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 
 namespace EQLogParser
 {
@@ -88,7 +89,7 @@ namespace EQLogParser
       }
     }
 
-    override internal void UpdateDataGridMenuItems()
+    internal override void UpdateDataGridMenuItems()
     {
       var selectedName = "Unknown";
 
@@ -135,7 +136,7 @@ namespace EQLogParser
     private void CopyReceivedHealingToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.RECEIVEDHEALPARSE);
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
-    private void ClassSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       var update = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
       var needUpdate = CurrentClass != update;
@@ -306,7 +307,7 @@ namespace EQLogParser
     {
       if (dataGrid.View != null)
       {
-        dataGrid.View.Filter = (stats) =>
+        dataGrid.View.Filter = stats =>
         {
           string className = null;
           string name = null;

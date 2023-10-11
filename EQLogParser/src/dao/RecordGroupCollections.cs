@@ -141,8 +141,6 @@ namespace EQLogParser
           yield return Create(record);
         }
       }
-
-      yield break;
     }
 
     protected virtual bool IsValid(RecordWrapper wrapper)
@@ -174,7 +172,7 @@ namespace EQLogParser
 
           if (block.Actions.Count > CurrentRecord)
           {
-            wrapper = new RecordWrapper() { Record = block.Actions[CurrentRecord], BeginTime = block.BeginTime };
+            wrapper = new RecordWrapper { Record = block.Actions[CurrentRecord], BeginTime = block.BeginTime };
             CurrentRecord++;
           }
           else

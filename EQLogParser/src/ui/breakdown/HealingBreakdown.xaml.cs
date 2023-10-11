@@ -1,12 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Windows.Controls;
 
 namespace EQLogParser
 {
   /// <summary>
   /// Interaction logic for HealTable.xaml
   /// </summary>
-  public partial class HealBreakdown : BreakdownTable
+  public partial class HealBreakdown
   {
     private bool CurrentShowSpellsChoice = true;
     private List<PlayerStats> PlayerStats;
@@ -59,7 +60,7 @@ namespace EQLogParser
       });
     }
 
-    private void ListSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       if (PlayerStats != null)
       {

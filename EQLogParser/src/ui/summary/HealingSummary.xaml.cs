@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
+using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 
 namespace EQLogParser
 {
@@ -83,7 +85,7 @@ namespace EQLogParser
     private void CopyTopHealsToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.TOPHEALSPARSE);
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
-    private void ClassSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       var update = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
       var needUpdate = CurrentClass != update;
@@ -186,14 +188,14 @@ namespace EQLogParser
             UpdateDataGridMenuItems();
             break;
         }
-      }, System.Windows.Threading.DispatcherPriority.Render);
+      }, DispatcherPriority.Render);
     }
 
     private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
     {
       if (dataGrid.View != null)
       {
-        dataGrid.View.Filter = (stats) =>
+        dataGrid.View.Filter = stats =>
         {
           string className = null;
           if (stats is PlayerStats playerStats)

@@ -1,11 +1,13 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Globalization;
+using System.Reflection;
 
 namespace EQLogParser
 {
   internal class DateUtil
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     // counting this thing is really slow
     private string LastDateTimeString;

@@ -54,7 +54,8 @@ namespace EQLogParser
       {
         return dataGrid.SelectedItems.Count < dataGrid.View.Records.Count;
       }
-      else if (obj is SfTreeGrid treeGrid && treeGrid.View?.Nodes.Count > 0)
+
+      if (obj is SfTreeGrid treeGrid && treeGrid.View?.Nodes.Count > 0)
       {
         return treeGrid.SelectedItems.Count < treeGrid.View.Nodes.Count;
       }
@@ -108,7 +109,8 @@ namespace EQLogParser
       {
         return dataGrid.SelectedItems.Count > 0;
       }
-      else if (obj is SfTreeGrid treeGrid)
+
+      if (obj is SfTreeGrid treeGrid)
       {
         return treeGrid.SelectedItems.Count > 0;
       }

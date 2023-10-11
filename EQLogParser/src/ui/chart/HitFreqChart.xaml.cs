@@ -1,10 +1,13 @@
-﻿using Syncfusion.UI.Xaml.Charts;
+﻿using log4net;
+using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace EQLogParser
@@ -14,7 +17,7 @@ namespace EQLogParser
   /// </summary>
   public partial class HitFreqChart : UserControl, IDisposable
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private const string CRIT_HITTYPE = "Critical";
     private const string NON_CRIT_HITTYPE = "Non-Critical";
     private Dictionary<string, List<HitFreqChartData>> PlayerData;
@@ -272,7 +275,7 @@ namespace EQLogParser
       DisplayPage();
     }
 
-    private void sfChart_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+    private void sfChart_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
       if (e.Delta < 0 && pageSlider.Value < pageSlider.Maximum)
       {

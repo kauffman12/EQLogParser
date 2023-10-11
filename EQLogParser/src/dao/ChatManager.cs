@@ -1,9 +1,11 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 
 namespace EQLogParser
@@ -14,7 +16,7 @@ namespace EQLogParser
     private const string CHANNELS_FILE = "channels.txt";
     private const string SELECTED_CHANNELS_FILE = "channels-selected.txt";
     internal const string INDEX = "index";
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly Lazy<ChatManager> _lazy = new(() => new ChatManager());
     private static readonly object LockObject = new();
     private static readonly ReverseTimedActionComparer RTAComparer = new();
@@ -157,7 +159,7 @@ namespace EQLogParser
             var found = false;
             foreach (var sub in Directory.GetDirectories(dir))
             {
-              if (int.TryParse(Path.GetFileName(sub), out var year))
+              if (int.TryParse(Path.GetFileName(sub), out _))
               {
                 found = true;
                 break;

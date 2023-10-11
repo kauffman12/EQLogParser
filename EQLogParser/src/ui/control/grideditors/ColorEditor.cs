@@ -2,6 +2,7 @@
 using Syncfusion.Windows.Shared;
 using System.ComponentModel;
 using System.Reflection;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 
@@ -29,7 +30,7 @@ namespace EQLogParser
 
     private object Create()
     {
-      var colorPicker = new ColorPicker { EnableSolidToGradientSwitch = false, BorderThickness = new System.Windows.Thickness(0, 0, 0, 0) };
+      var colorPicker = new ColorPicker { EnableSolidToGradientSwitch = false, BorderThickness = new Thickness(0, 0, 0, 0) };
       TheColorPicker = colorPicker;
       return colorPicker;
     }

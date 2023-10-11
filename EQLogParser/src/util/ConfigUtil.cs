@@ -1,8 +1,10 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Security;
 
 namespace EQLogParser
@@ -14,7 +16,7 @@ namespace EQLogParser
     public static string ServerName;
     public static string LogsDir;
 
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     private const string APP_DATA = @"%AppData%\EQLogParser";
     private const string PETMAP_FILE = "petmapping.txt";
@@ -240,31 +242,6 @@ namespace EQLogParser
         {
           result = File.ReadAllText(path);
         }
-      }
-      catch (IOException ex)
-      {
-        LOG.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        LOG.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        LOG.Error(se);
-      }
-
-      return result;
-    }
-
-    internal static string WriteConfigFile(string fileName, string contents)
-    {
-      string result = null;
-      var path = ConfigDir + fileName;
-
-      try
-      {
-        File.WriteAllText(path, contents);
       }
       catch (IOException ex)
       {

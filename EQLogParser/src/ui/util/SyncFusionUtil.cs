@@ -1,6 +1,8 @@
-﻿using Syncfusion.Windows.Tools.Controls;
+﻿using log4net;
+using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Windows.Controls;
 using System.Windows.Threading;
 
@@ -8,7 +10,7 @@ namespace EQLogParser
 {
   static class SyncFusionUtil
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     internal static void CloseWindow(DockingManager dockSite, ContentControl window)
     {

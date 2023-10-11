@@ -1,10 +1,12 @@
-﻿using Syncfusion.Windows.PropertyGrid;
+﻿using log4net;
+using Syncfusion.Windows.PropertyGrid;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Speech.Synthesis;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,7 +21,7 @@ namespace EQLogParser
   /// </summary>
   public partial class TriggersView : UserControl, IDisposable
   {
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private const string LABEL_NEW_TEXT_OVERLAY = "New Text Overlay";
     private const string LABEL_NEW_TIMER_OVERLAY = "New Timer Overlay";
     private const string LABEL_NEW_TRIGGER = "New Trigger";
@@ -53,7 +55,7 @@ namespace EQLogParser
         voices.ItemsSource = TestSynth.GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList();
       }
 
-      if (ConfigUtil.IfSetOrElse("TriggersWatchForGINA", false))
+      if (ConfigUtil.IfSetOrElse("TriggersWatchForGINA"))
       {
         watchGina.IsChecked = true;
       }

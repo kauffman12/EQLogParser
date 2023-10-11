@@ -1,7 +1,9 @@
 ﻿using log4net;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
@@ -15,7 +17,7 @@ namespace EQLogParser
   /// </summary>
   public partial class TriggersTester : UserControl, IDisposable
   {
-    private static readonly ILog LOG = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private readonly BufferBlock<Tuple<string, double, bool>> Buffer;
 
     public TriggersTester()
@@ -83,7 +85,7 @@ namespace EQLogParser
       }
     }
 
-    private void TriggersTesterClosing(object sender, System.ComponentModel.CancelEventArgs e)
+    private void TriggersTesterClosing(object sender, CancelEventArgs e)
     {
       if (testButton.Content.ToString() == "Stop Test")
       {
@@ -195,7 +197,7 @@ namespace EQLogParser
                         if (diff == 1)
                         {
                           dataIndex++;
-                          data[dataIndex] = new List<string>() { line };
+                          data[dataIndex] = new List<string> { line };
                           startTime++;
                         }
                         else if (diff > 1)
@@ -207,7 +209,7 @@ namespace EQLogParser
                           }
 
                           dataIndex++;
-                          data[dataIndex] = new List<string>() { line };
+                          data[dataIndex] = new List<string> { line };
                           startTime += diff;
                         }
                       }

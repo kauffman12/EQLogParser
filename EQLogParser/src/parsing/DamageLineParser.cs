@@ -1,6 +1,8 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using static EQLogParser.TextUtils;
 
@@ -11,7 +13,7 @@ namespace EQLogParser
     public static event EventHandler<DamageProcessedEvent> EventsDamageProcessed;
     public static event EventHandler<TauntEvent> EventsNewTaunt;
 
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly Regex CheckEyeRegex = new(@"^Eye of (\w+)");
     private static readonly Dictionary<string, string> SpellTypeCache = new();
     private static readonly List<string> SlainQueue = new();
@@ -548,7 +550,6 @@ namespace EQLogParser
       // [Mon Oct 23 22:18:46 2022] Demonstrated Depletion was hit by non-melee for 6734 points of damage.
       else if (hitType > -1 && forIndex > -1 && forIndex < pointsOfIndex && nonMeleeIndex < pointsOfIndex && byIndex == (nonMeleeIndex - 1) && isIndex > -1 && isIndex < hitType)
       {
-        var hitTypeMod = hitTypeAdd > 0 ? 1 : 0;
         defender = string.Join(" ", split, 0, isIndex);
         attacker = Labels.UNK;
         var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
@@ -623,8 +624,8 @@ namespace EQLogParser
         killer = killer.Length > 1 && killer[^1] == '!' ? killer[..^1] : killer;
         var slain = string.Join(" ", split, 0, hasIndex);
         UpdateSlain(slain, killer, lineData);
-        HasOwner(slain, out var t1);
-        HasOwner(killer, out var t2);
+        HasOwner(slain, out _);
+        HasOwner(killer, out _);
       }
       // [Mon Apr 19 02:22:09 2021] You have been slain by an armed flyer!
       else if (!checkLineType && stop > 4 && slainIndex == 3 && byIndex == 4 && isYou && split[1] == "have" && split[2] == "been")

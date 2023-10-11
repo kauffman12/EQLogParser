@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using log4net;
+using Microsoft.Win32;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -6,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Speech.Synthesis;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -17,7 +19,7 @@ namespace EQLogParser
   internal static class TriggerUtil
   {
     private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new();
-    private static readonly log4net.ILog LOG = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog LOG = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     internal static double GetTimerBarHeight(double fontSize) => fontSize + 2;
     internal static void ImportTriggers(TriggerNode parent) => Import(parent);
     internal static void ImportOverlays(TriggerNode triggerNode) => Import(triggerNode, false);
@@ -318,10 +320,8 @@ namespace EQLogParser
         isSound = true;
         return "<<" + soundToPlay + ">>";
       }
-      else
-      {
-        return text;
-      }
+
+      return text;
     }
 
     internal static string GetFromDecodedSoundOrText(string soundToPlay, string text, out bool isSound)
@@ -332,10 +332,8 @@ namespace EQLogParser
         isSound = true;
         return soundToPlay;
       }
-      else
-      {
-        return text;
-      }
+
+      return text;
     }
 
     internal static bool MatchSoundFile(string text, out string file, out string notFile)
@@ -436,23 +434,21 @@ namespace EQLogParser
         {
           return characters;
         }
-        else
-        {
-          for (var i = 0; i < list.Count; i++)
-          {
-            if (list[i].Id == characters[i].Id)
-            {
-              if (list[i].Name != characters[i].Name)
-              {
-                return characters;
-              }
 
-              list[i] = characters[i];
-            }
-            else
+        for (var i = 0; i < list.Count; i++)
+        {
+          if (list[i].Id == characters[i].Id)
+          {
+            if (list[i].Name != characters[i].Name)
             {
               return characters;
             }
+
+            list[i] = characters[i];
+          }
+          else
+          {
+            return characters;
           }
         }
       }

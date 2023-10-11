@@ -18,7 +18,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for NpcTable.xaml
   /// </summary>
-  public partial class FightTable : UserControl
+  public partial class FightTable
   {
     // events
     public event EventHandler<IList> EventsSelectionChange;
@@ -99,8 +99,8 @@ namespace EQLogParser
 
       // default these columns to descending
       var desc = new[] { "SortId" };
-      dataGrid.SortColumnsChanging += (object s, GridSortColumnsChangingEventArgs e) => DataGridUtil.SortColumnsChanging(s, e, desc);
-      dataGrid.SortColumnsChanged += (object s, GridSortColumnsChangedEventArgs e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+      dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+      dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
       DataManager.Instance.EventsClearedActiveData += Instance_EventsCleardActiveData;
       DataManager.Instance.EventsRemovedFight += EventsRemovedFight;
@@ -400,7 +400,7 @@ namespace EQLogParser
 
     private void ShowBreakChange(object sender, RoutedEventArgs e)
     {
-      if (dataGrid?.ItemsSource is ObservableCollection<Fight> list)
+      if (dataGrid?.ItemsSource is ObservableCollection<Fight>)
       {
         CurrentShowBreaks = fightShowBreaks.IsChecked.Value;
         ConfigUtil.SetSetting("NpcShowInactivityBreaks", CurrentShowBreaks.ToString(CultureInfo.CurrentCulture));
@@ -474,7 +474,8 @@ namespace EQLogParser
         {
           return Fights.Where(fight => fight.GroupId == npc.GroupId);
         }
-        else if (dataGrid.ItemsSource == NonTankingFights)
+
+        if (dataGrid.ItemsSource == NonTankingFights)
         {
           return NonTankingFights.Where(fight => fight.NonTankingGroupId == npc.NonTankingGroupId);
         }

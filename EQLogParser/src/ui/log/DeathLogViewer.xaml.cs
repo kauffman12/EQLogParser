@@ -200,7 +200,7 @@ namespace EQLogParser
         var split = death.Previous.Split(' ');
         foreach (var value in split)
         {
-          if (int.TryParse(value, out var result))
+          if (int.TryParse(value, out _))
           {
             found = false;
             break;

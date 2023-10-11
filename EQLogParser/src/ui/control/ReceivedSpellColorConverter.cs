@@ -14,10 +14,8 @@ namespace EQLogParser
       {
         return Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
       }
-      else
-      {
-        return Application.Current.Resources["ContentForeground"] as SolidColorBrush;
-      }
+
+      return Application.Current.Resources["ContentForeground"] as SolidColorBrush;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
