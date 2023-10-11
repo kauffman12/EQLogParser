@@ -68,7 +68,7 @@ namespace EQLogParser
 
     internal void AddTriggerText(string text, double beginTicks, SolidColorBrush brush)
     {
-      if (MaxNodes == -1 && content.Children.Count > 0 && content.Children[0] is TextBlock textBlock && textBlock.ActualHeight > 0)
+      if (MaxNodes == -1 && content.Children.Count > 0 && content.Children[0] is TextBlock { ActualHeight: > 0 } textBlock)
       {
         MaxNodes = (int)(Height / textBlock.ActualHeight) + 1;
       }
@@ -88,16 +88,19 @@ namespace EQLogParser
         }
       }
 
-      if (content.Children.Count < MaxNodes && content.Children.Count < TextDataList.Count)
+      lock (TextDataList)
       {
-        content.Children.Add(CreateBlock());
+        if (content.Children.Count < MaxNodes && content.Children.Count < TextDataList.Count)
+        {
+          content.Children.Add(CreateBlock());
+        }
       }
     }
 
     internal bool Tick()
     {
       var currentTicks = DateTime.Now.Ticks;
-      var done = false;
+      bool done;
 
       if (Node.OverlayData.Width != Width)
       {

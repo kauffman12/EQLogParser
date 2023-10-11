@@ -10,12 +10,9 @@ namespace EQLogParser
   {
     object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-      if (value is Fight npc)
+      if (value is Fight { BeginTimeString: Fight.BREAKTIME })
       {
-        if (npc.BeginTimeString == Fight.BREAKTIME)
-        {
-          return Application.Current.Resources["EQWarnBackgroundBrush"] as SolidColorBrush;
-        }
+        return Application.Current.Resources["EQWarnBackgroundBrush"] as SolidColorBrush;
       }
       return null;
     }

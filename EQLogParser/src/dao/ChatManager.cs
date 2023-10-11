@@ -287,11 +287,11 @@ namespace EQLogParser
 
         var lastTime = double.NaN;
         var increment = 0.0;
-        for (var i = 0; i < working.Count; i++)
+        foreach (var t in working)
         {
-          if (working[i] != null)
+          if (t != null)
           {
-            var chatType = working[i];
+            var chatType = t;
             if (lastTime == chatType.BeginTime)
             {
               increment += 0.001;
@@ -398,10 +398,7 @@ namespace EQLogParser
             }
 
             var existingLine = new ChatLine { Line = line, BeginTime = beginTime + increment };
-            if (existingLine != null)
-            {
-              CurrentList.Insert(0, existingLine); // reverse back
-            }
+            CurrentList.Insert(0, existingLine); // reverse back
 
             lastTime = beginTime;
           });
@@ -443,8 +440,8 @@ namespace EQLogParser
             using var reader = new StreamReader(indexEntry.Open());
             while (!reader.EndOfStream)
             {
-              var temp = reader.ReadLine().Split('|');
-              if (temp != null && temp.Length == 2)
+              var temp = reader.ReadLine()?.Split('|');
+              if (temp?.Length == 2)
               {
                 ChannelIndex[temp[0]] = new Dictionary<string, byte>();
                 foreach (var channel in temp[1].Split(','))

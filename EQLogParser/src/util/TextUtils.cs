@@ -164,7 +164,7 @@ namespace EQLogParser
             var value = stats.GetType().GetProperty(column[0]).GetValue(stats, null);
             if (column[1].Contains("%"))
             {
-              if (value is double doubleValue && doubleValue == 0)
+              if (value is double and 0)
               {
                 value = "-";
               }

@@ -75,7 +75,7 @@ namespace EQLogParser
       try
       {
         var split = lineData.Split;
-        if (split != null && split.Length >= 2)
+        if (split is { Length: >= 2 })
         {
           var stop = FindStop(split);
 
@@ -116,7 +116,7 @@ namespace EQLogParser
         try
         {
           var split = lineData.Action.Split(' ');
-          if (split != null && split.Length >= 2)
+          if (split.Length >= 2)
           {
             var stop = FindStop(split);
 
@@ -413,7 +413,7 @@ namespace EQLogParser
       }
       // [Sun Apr 18 20:24:56 2021] Sonozen hit Jortreva the Crusader for 38948 points of fire damage by Burst of Flames. (Lucky Critical Twincast)
       else if (byDamage > 3 && pointsOfIndex == (byDamage - 3) && byIndex == (byDamage + 1) && forIndex > -1 &&
-        subType == "hits" && hitType < forIndex && split[stop].Length > 0 && split[stop][split[stop].Length - 1] == '.')
+        subType == "hits" && hitType < forIndex && split[stop].Length > 0 && split[stop][^1] == '.')
       {
         var spell = string.Join(" ", split, byIndex + 1, stop - byIndex);
         if (!string.IsNullOrEmpty(spell) && spell[^1] == '.')
@@ -518,7 +518,7 @@ namespace EQLogParser
         }
 
         var label = Labels.OTHERDMG;
-        if (DataManager.Instance.GetDamagingSpellByName(spell) is { } spellData && spellData != null)
+        if (DataManager.Instance.GetDamagingSpellByName(spell) is { } spellData)
         {
           resist = spellData.Resist;
 
@@ -773,7 +773,7 @@ namespace EQLogParser
     {
       output = null;
       var npc = string.Join(" ", parts, length - 1, parts.Length - length);
-      if (!string.IsNullOrEmpty(npc) && npc.Split("'s") is { } split && split.Length == 2)
+      if (!string.IsNullOrEmpty(npc) && npc.Split("'s") is { Length: 2 } split)
       {
         output = split[0];
         return true;
@@ -837,7 +837,7 @@ namespace EQLogParser
         {
           // improve this later so maybe the string doesn't have to be re-joined
           var modifiers = string.Join(" ", split, stop + 1, split.Length - stop - 1);
-          modifiersMask = LineModifiersParser.Parse(attacker, modifiers.Substring(1, modifiers.Length - 2), currentTime);
+          modifiersMask = LineModifiersParser.Parse(attacker, modifiers[1..^1], currentTime);
         }
 
         // check for pets

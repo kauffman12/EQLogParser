@@ -129,7 +129,7 @@ namespace EQLogParser
 
     private void TypeComboBoxSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (sender is ComboBox combo && combo.SelectedIndex > -1)
+      if (sender is ComboBox { SelectedIndex: > -1 } combo)
       {
         var hideText = combo.SelectedIndex == 0 ? false : true;
         TheFakeTextBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;
@@ -159,7 +159,7 @@ namespace EQLogParser
 
     private void SoundComboSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (sender is ComboBox combo && combo.SelectedValue is string selected)
+      if (sender is ComboBox { SelectedValue: string selected } combo)
       {
         if (!string.IsNullOrEmpty(selected))
         {

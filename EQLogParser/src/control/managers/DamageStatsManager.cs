@@ -772,7 +772,7 @@ namespace EQLogParser
 
         details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
         var timeTitle = showTime ? currentStats.TimeTitle : "";
-        var totals = showDPS ? currentStats.TotalTitle : currentStats.TotalTitle.Split(new string[] { " @" }, 2, StringSplitOptions.RemoveEmptyEntries)[0];
+        var totals = showDPS ? currentStats.TotalTitle : currentStats.TotalTitle.Split(new[] { " @" }, 2, StringSplitOptions.RemoveEmptyEntries)[0];
         title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, showTotals ? totals : "");
       }
 

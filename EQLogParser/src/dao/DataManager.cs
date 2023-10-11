@@ -239,15 +239,15 @@ namespace EQLogParser
       string key = null;
       foreach (var line in ConfigUtil.ReadList(@"data\adpsMeter.txt"))
       {
-        if (!string.IsNullOrEmpty(line) && line.Trim() is { } trimmed && trimmed.Length > 0)
+        if (!string.IsNullOrEmpty(line) && line.Trim() is { Length: > 0 } trimmed)
         {
           if (trimmed[0] != '#' && !string.IsNullOrEmpty(key))
           {
-            if (trimmed.Split('|') is { } multiple && multiple.Length > 0)
+            if (trimmed.Split('|') is { Length: > 0 } multiple)
             {
               foreach (var spellLine in multiple)
               {
-                if (spellLine.Split('=') is { } list && list.Length == 2 && uint.TryParse(list[1], out var rate))
+                if (spellLine.Split('=') is { Length: 2 } list && uint.TryParse(list[1], out var rate))
                 {
                   if (GetAdpsByName(list[0]) is { } spellData)
                   {
@@ -807,7 +807,7 @@ namespace EQLogParser
         {
           for (var j = AllSpellCastBlocks[i].Actions.Count - 1; j >= 0; j--)
           {
-            if (AllSpellCastBlocks[i].Actions[j] is SpellCast cast && !cast.Interrupted)
+            if (AllSpellCastBlocks[i].Actions[j] is SpellCast { Interrupted: false } cast)
             {
               foreach (var value in outputSpan)
               {
@@ -960,7 +960,7 @@ namespace EQLogParser
         }
       }
 
-      removeList.ForEach(id => RemoveOverlayFight(id));
+      removeList.ForEach(RemoveOverlayFight);
     }
 
     internal void Clear()
@@ -1096,7 +1096,7 @@ namespace EQLogParser
       if (data[lastIndex] == "'s")
       {
         node.SpellData.Add(spellData);
-        node.SpellData.Sort((a, b) => DurationCompare(a, b));
+        node.SpellData.Sort(DurationCompare);
       }
       else
       {
@@ -1109,7 +1109,7 @@ namespace EQLogParser
         if (lastIndex == 0)
         {
           child.SpellData.Add(spellData);
-          child.SpellData.Sort((a, b) => DurationCompare(a, b));
+          child.SpellData.Sort(DurationCompare);
         }
         else
         {
@@ -1120,9 +1120,12 @@ namespace EQLogParser
 
     static int DurationCompare(SpellData a, SpellData b)
     {
-      if (b.Duration.CompareTo(a.Duration) is int result && result == 0)
+      var result = b.Duration.CompareTo(a.Duration);
+
+      if (result == 0 && int.TryParse(a.ID, out var aInt) && int.TryParse(b.ID, out var bInt))
       {
-        if (int.TryParse(a.ID, out var aInt) && int.TryParse(b.ID, out var bInt) && aInt != bInt)
+        // Check if the durations are equal
+        if (aInt != bInt)
         {
           result = aInt > bInt ? -1 : 1;
         }
@@ -1131,10 +1134,11 @@ namespace EQLogParser
       return result;
     }
 
+
     private class SpellAbbrvComparer : IEqualityComparer<SpellData>
     {
       public bool Equals(SpellData x, SpellData y) => x?.NameAbbrv == y?.NameAbbrv;
-      public int GetHashCode(SpellData obj) => obj == null ? 0 : obj.NameAbbrv.GetHashCode();
+      public int GetHashCode(SpellData obj) => obj.NameAbbrv.GetHashCode();
     }
 
     private class TimedActionComparer : IComparer<TimedAction>

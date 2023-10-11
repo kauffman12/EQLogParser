@@ -7,31 +7,26 @@ namespace EQLogParser
   {
     public override DataTemplate SelectTemplate(object item, DependencyObject container)
     {
-      if (item is TriggerTreeViewNode node)
+      switch (item)
       {
-        if (node.IsTrigger())
-        {
-          return Application.Current.Resources["TriggerFileTemplate"] as DataTemplate;
-        }
-        else if (node.IsOverlay())
-        {
-          if (node.SerializedData?.OverlayData?.IsTimerOverlay == true)
+        case TriggerTreeViewNode node when node.IsTrigger():
           {
-            return Application.Current.Resources["TimerOverlayFileTemplate"] as DataTemplate;
+            return Application.Current.Resources["TriggerFileTemplate"] as DataTemplate;
           }
-          else
+        case TriggerTreeViewNode node when node.IsOverlay():
           {
+            if (node.SerializedData?.OverlayData?.IsTimerOverlay == true)
+            {
+              return Application.Current.Resources["TimerOverlayFileTemplate"] as DataTemplate;
+            }
+
             return Application.Current.Resources["TextOverlayFileTemplate"] as DataTemplate;
           }
-        }
-        else if (TriggerStateManager.OVERLAYS.Equals(node?.Content?.ToString()))
-        {
-          return Application.Current.Resources["OverlayNodeTemplate"] as DataTemplate;
-        }
-
-        return Application.Current.Resources["TriggerNodeTemplate"] as DataTemplate;
+        case TriggerTreeViewNode node when TriggerStateManager.OVERLAYS.Equals(node.Content?.ToString()):
+          {
+            return Application.Current.Resources["OverlayNodeTemplate"] as DataTemplate;
+          }
       }
-
       return null;
     }
   }

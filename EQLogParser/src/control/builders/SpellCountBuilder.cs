@@ -76,7 +76,7 @@ namespace EQLogParser
           {
             if (action is SpellCast cast)
             {
-              Add(block, cast.SpellData, action as TimedAction);
+              Add(block, cast.SpellData, cast);
             }
             else if (action is ReceivedSpell received)
             {
@@ -87,7 +87,7 @@ namespace EQLogParser
 
               if (received.SpellData != null)
               {
-                Add(block, received.SpellData, action as TimedAction);
+                Add(block, received.SpellData, received);
               }
             }
           });

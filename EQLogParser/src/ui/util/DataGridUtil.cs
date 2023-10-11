@@ -33,10 +33,10 @@ namespace EQLogParser
       // Here, we have updated the column's items in view based on SortDescriptions. 
       if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
       {
-        if (sender is SfDataGrid)
+        if (sender is SfDataGrid grid)
         {
-          var sortcolumn = ((SfDataGrid)sender).View.SortDescriptions.FirstOrDefault(x => x.PropertyName == e.AddedItems[0].ColumnName);
-          ((SfDataGrid)sender).View.SortDescriptions.Remove(sortcolumn);
+          var sortcolumn = grid.View.SortDescriptions.FirstOrDefault(x => x.PropertyName == e.AddedItems[0].ColumnName);
+          grid.View.SortDescriptions.Remove(sortcolumn);
 
           SortDescription sortDescription;
           if (descending != null && descending.Contains(e.AddedItems[0].ColumnName))
@@ -48,12 +48,12 @@ namespace EQLogParser
             sortDescription = new SortDescription(sortcolumn.PropertyName, ListSortDirection.Ascending);
           }
 
-          ((SfDataGrid)sender).View.SortDescriptions.Add(sortDescription);
+          grid.View.SortDescriptions.Add(sortDescription);
         }
-        else if (sender is SfTreeGrid)
+        else if (sender is SfTreeGrid treeGrid)
         {
-          var sortcolumn = ((SfTreeGrid)sender).View.SortDescriptions.FirstOrDefault(x => x.ColumnName == e.AddedItems[0].ColumnName);
-          ((SfTreeGrid)sender).View.SortDescriptions.Remove(sortcolumn);
+          var sortcolumn = treeGrid.View.SortDescriptions.FirstOrDefault(x => x.ColumnName == e.AddedItems[0].ColumnName);
+          treeGrid.View.SortDescriptions.Remove(sortcolumn);
 
           SortColumnDescription sortDescription;
           if (descending != null && descending.Contains(e.AddedItems[0].ColumnName))
@@ -65,7 +65,7 @@ namespace EQLogParser
             sortDescription = new SortColumnDescription { ColumnName = sortcolumn.ColumnName, SortDirection = ListSortDirection.Ascending };
           }
 
-          ((SfTreeGrid)sender).View.SortDescriptions.Add(sortDescription);
+          treeGrid.View.SortDescriptions.Add(sortDescription);
         }
       }
     }
@@ -113,30 +113,28 @@ namespace EQLogParser
       IPropertyAccessProvider props = null;
       List<object> records = null;
 
-      if (gridBase is SfDataGrid)
+      if (gridBase is SfDataGrid dataGrid)
       {
-        var dataGrid = gridBase as SfDataGrid;
         props = dataGrid.View.GetPropertyAccessProvider();
-        for (var i = 0; i < dataGrid.Columns.Count; i++)
+        foreach (var col in dataGrid.Columns)
         {
-          if (!dataGrid.Columns[i].IsHidden && dataGrid.Columns[i].ValueBinding is Binding binding)
+          if (!col.IsHidden && col.ValueBinding is Binding binding)
           {
-            headers.Add(dataGrid.Columns[i].HeaderText);
+            headers.Add(col.HeaderText);
             headerKeys.Add(binding.Path.Path);
           }
         }
 
         records = dataGrid.View.Records.Select(record => record.Data).ToList();
       }
-      else if (gridBase is SfTreeGrid)
+      else if (gridBase is SfTreeGrid treeGrid)
       {
-        var treeGrid = gridBase as SfTreeGrid;
         props = treeGrid.View.GetPropertyAccessProvider();
-        for (var i = 0; i < treeGrid.Columns.Count; i++)
+        foreach (var col in treeGrid.Columns)
         {
-          if (!treeGrid.Columns[i].IsHidden && treeGrid.Columns[i].ValueBinding is Binding binding)
+          if (!col.IsHidden && col.ValueBinding is Binding binding)
           {
-            headers.Add(treeGrid.Columns[i].HeaderText);
+            headers.Add(col.HeaderText);
             headerKeys.Add(binding.Path.Path);
           }
         }
@@ -313,7 +311,7 @@ namespace EQLogParser
     internal static void EnableMouseSelection(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
       dynamic elem = e.OriginalSource;
-      if (sender is SfTreeGrid treeGrid && elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is int row && row > -1)
+      if (sender is SfTreeGrid treeGrid && elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is int row and > -1)
       {
         StartRow = row;
         // Left click happened, current item is selected, now listen for mouse movement and release of left button
@@ -363,12 +361,12 @@ namespace EQLogParser
 
       try
       {
-        if (gridBase is SfDataGrid dataGrid && dataGrid.ItemsSource != null)
+        if (gridBase is SfDataGrid { ItemsSource: not null } dataGrid)
         {
           dataGrid.GridColumnSizer?.ResetAutoCalculationforAllColumns();
           dataGrid.GridColumnSizer?.Refresh();
         }
-        else if (gridBase is SfTreeGrid treeGrid && treeGrid.ItemsSource != null)
+        else if (gridBase is SfTreeGrid { ItemsSource: not null } treeGrid)
         {
           treeGrid.TreeGridColumnSizer?.ResetAutoCalculationforAllColumns();
           treeGrid.TreeGridColumnSizer?.Refresh();
@@ -436,7 +434,7 @@ namespace EQLogParser
           treeGrid.PreviewMouseLeftButtonUp -= PreviewMouseLeftButtonUp;
           treeGrid.PreviewMouseMove -= MouseMove;
         }
-        else if (elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is int row && row > -1)
+        else if (elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is int row and > -1)
         {
           if (treeGrid.CurrentItem != stats)
           {
@@ -499,14 +497,14 @@ namespace EQLogParser
 
       dynamic columns = null;
       dynamic updated = null;
-      if (gridBase is SfDataGrid)
+      if (gridBase is SfDataGrid grid)
       {
-        columns = ((SfDataGrid)gridBase).Columns;
+        columns = grid.Columns;
         updated = new Columns();
       }
-      else if (gridBase is SfTreeGrid)
+      else if (gridBase is SfTreeGrid treeGrid)
       {
-        columns = ((SfTreeGrid)gridBase).Columns;
+        columns = treeGrid.Columns;
         updated = new TreeGridColumns();
       }
 
@@ -642,12 +640,12 @@ namespace EQLogParser
     {
       var visible = new HashSet<string>();
 
-      if (columnCombo.Items.Count > 0)
+      if (columnCombo?.Items.Count > 0)
       {
-        for (var i = 0; i < columnCombo.Items.Count; i++)
+        foreach (var col in columnCombo.Items)
         {
-          var checkedItem = columnCombo.Items[i] as ComboBoxItemDetails;
-          if (checkedItem.IsChecked)
+          var checkedItem = col as ComboBoxItemDetails;
+          if (checkedItem?.IsChecked == true)
           {
             visible.Add(checkedItem.Value);
           }
@@ -655,9 +653,9 @@ namespace EQLogParser
 
         UIElementUtil.SetComboBoxTitle(columnCombo, visible.Count, Resource.COLUMNS_SELECTED);
 
-        if (gridBase is SfDataGrid)
+        if (gridBase is SfDataGrid grid)
         {
-          var columns = ((SfDataGrid)gridBase).Columns;
+          var columns = grid.Columns;
           for (var i = 0; i < columns.Count; i++)
           {
             columns[i].IsHidden = !IsColumnVisible(visible, columns, i);
@@ -666,7 +664,7 @@ namespace EQLogParser
         else if (gridBase is SfTreeGrid treeGrid)
         {
           var expanderSet = false;
-          var columns = ((SfTreeGrid)gridBase).Columns;
+          var columns = treeGrid.Columns;
           for (var i = 0; i < columns.Count; i++)
           {
             columns[i].IsHidden = !IsColumnVisible(visible, columns, i);

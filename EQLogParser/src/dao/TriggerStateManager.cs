@@ -277,12 +277,9 @@ namespace EQLogParser
               node.Index = GetNextIndex(tree, node.Parent);
             }
 
-            if (node.OverlayData != null)
+            if (node.OverlayData is { IsDefault: true })
             {
-              if (node.OverlayData.IsDefault)
-              {
-                EnsureNoOtherDefaults(tree, node.Id, node.OverlayData.IsTextOverlay);
-              }
+              EnsureNoOtherDefaults(tree, node.Id, node.OverlayData.IsTextOverlay);
             }
 
             tree.Update(node);

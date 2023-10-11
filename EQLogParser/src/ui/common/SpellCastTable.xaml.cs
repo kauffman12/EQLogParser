@@ -68,7 +68,7 @@ namespace EQLogParser
           }
 
           var size = 0;
-          if (action is SpellCast cast && !cast.Interrupted && IsValid(cast, UniqueNames, cast.Caster, false, out _))
+          if (action is SpellCast { Interrupted: false } cast && IsValid(cast, UniqueNames, cast.Caster, false, out _))
           {
             size = AddToList(playerSpells, cast.Caster, cast.Spell);
           }

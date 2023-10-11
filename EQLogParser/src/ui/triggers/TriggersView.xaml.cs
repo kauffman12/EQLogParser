@@ -1,9 +1,7 @@
-﻿using Syncfusion.Data.Extensions;
-using Syncfusion.Windows.PropertyGrid;
+﻿using Syncfusion.Windows.PropertyGrid;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Data;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -61,7 +59,7 @@ namespace EQLogParser
       }
 
       var selectedVoice = TriggerUtil.GetSelectedVoice();
-      if (voices.ItemsSource is List<string> populated && populated.IndexOf(selectedVoice) is int found && found > -1)
+      if (voices.ItemsSource is List<string> populated && populated.IndexOf(selectedVoice) is int found and > -1)
       {
         voices.SelectedIndex = found;
       }
@@ -218,7 +216,7 @@ namespace EQLogParser
       {
         CharacterSelectedCharacterEvent(characterView.GetSelectedCharacter());
 
-        if (TheConfig.Characters.Count(user => user.IsEnabled) is int count && count > 0)
+        if (TheConfig.Characters.Count(user => user.IsEnabled) is int count and > 0)
         {
           titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
           var updatedTitle = $"Triggers Active for {count} Character";
@@ -430,8 +428,8 @@ namespace EQLogParser
           textChange = textOverlay.FontFamily != original.FontFamily;
           Application.Current.Resources["TextOverlayFontFamily-" + textOverlay.Node.Id] = new FontFamily(textOverlay.FontFamily);
         }
-        else if (args.Property.Name == fontSizeItem.PropertyName && textOverlay.FontSize.Split("pt") is { } split && split.Length == 2
-         && double.TryParse(split[0], out var newFontSize))
+        else if (args.Property.Name == fontSizeItem.PropertyName && textOverlay.FontSize.Split("pt") is { Length: 2 } split
+                                                                 && double.TryParse(split[0], out var newFontSize))
         {
           textChange = textOverlay.FontSize != original.FontSize;
           Application.Current.Resources["TextOverlayFontSize-" + textOverlay.Node.Id] = newFontSize;
@@ -478,8 +476,8 @@ namespace EQLogParser
           timerChange = !(timerOverlay.FontBrush.Color.ToHexString() == original.FontColor);
           Application.Current.Resources["TimerBarFontColor-" + timerOverlay.Node.Id] = timerOverlay.FontBrush;
         }
-        else if (args.Property.Name == fontSizeItem.PropertyName && timerOverlay.FontSize.Split("pt") is { } split && split.Length == 2
-         && double.TryParse(split[0], out var newFontSize))
+        else if (args.Property.Name == fontSizeItem.PropertyName && timerOverlay.FontSize.Split("pt") is { Length: 2 } split
+                                                                 && double.TryParse(split[0], out var newFontSize))
         {
           timerChange = timerOverlay.FontSize != original.FontSize;
           Application.Current.Resources["TimerBarFontSize-" + timerOverlay.Node.Id] = newFontSize;

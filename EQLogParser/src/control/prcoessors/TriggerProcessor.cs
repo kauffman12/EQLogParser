@@ -49,7 +49,7 @@ namespace EQLogParser
 
       Process = new ActionBlock<Tuple<string, double, bool>>(data => DoProcess(data.Item1, data.Item2));
       ProcessLowPri = new ActionBlock<Tuple<LinkedListNode<TriggerWrapper>, LineData>>(data => HandleTrigger(data.Item1, data.Item2));
-      ProcessSpeech = new ActionBlock<Speak>(date => HandleSpeech(date));
+      ProcessSpeech = new ActionBlock<Speak>(HandleSpeech);
 
       ActiveTriggers = GetActiveTriggers();
       Synth = TriggerUtil.GetSpeechSynthesizer();
@@ -94,19 +94,22 @@ namespace EQLogParser
     {
       lock (LockObject)
       {
-        ActiveTriggers.ToList().ForEach(wrapper => CleanupWrapper(wrapper));
+        ActiveTriggers.ToList().ForEach(CleanupWrapper);
         ActiveTriggers = GetActiveTriggers();
       }
     }
 
-    private string ModLine(string text, string line) => !string.IsNullOrEmpty(text) ? text.Replace("{l}", line, StringComparison.OrdinalIgnoreCase) : text;
-    private string ModCounter(string text) => !string.IsNullOrEmpty(text) ? text.Replace("{counter}", "{repeated}", StringComparison.OrdinalIgnoreCase) : text;
-    private string ModPlayer(string text) => !string.IsNullOrEmpty(text) ? text.Replace("{c}", CurrentPlayer, StringComparison.OrdinalIgnoreCase) : text;
+    private static string ModLine(string text, string line) => !string.IsNullOrEmpty(text) ?
+      text.Replace("{l}", line, StringComparison.OrdinalIgnoreCase) : text;
+    private string ModCounter(string text) => !string.IsNullOrEmpty(text) ?
+      text.Replace("{counter}", "{repeated}", StringComparison.OrdinalIgnoreCase) : text;
+    private string ModPlayer(string text) => !string.IsNullOrEmpty(text) ?
+      text.Replace("{c}", CurrentPlayer, StringComparison.OrdinalIgnoreCase) : text;
 
     private void DoProcess(string line, double dateTime)
     {
       var lineData = new LineData { Action = line[27..], BeginTime = dateTime };
-      LinkedListNode<TriggerWrapper> node = null;
+      LinkedListNode<TriggerWrapper> node;
 
       lock (LockObject)
       {
@@ -134,7 +137,6 @@ namespace EQLogParser
 
     private void HandleTrigger(LinkedListNode<TriggerWrapper> node, LineData lineData)
     {
-      var time = long.MinValue;
       var start = DateTime.Now.Ticks;
       var action = lineData.Action;
       MatchCollection matches = null;
@@ -143,12 +145,12 @@ namespace EQLogParser
       lock (node.Value)
       {
         var wrapper = node.Value;
-        double dynamicDuration = -1;
+        var dynamicDuration = double.NaN;
         if (wrapper.Regex != null)
         {
           matches = wrapper.Regex.Matches(action);
-          found = matches != null && matches.Count > 0 && TriggerUtil.CheckOptions(wrapper.RegexNOptions, matches, out dynamicDuration);
-          if (dynamicDuration != -1 && wrapper.TriggerData.TimerType == 1)
+          found = matches.Count > 0 && TriggerUtil.CheckOptions(wrapper.RegexNOptions, matches, out dynamicDuration);
+          if (!double.IsNaN(dynamicDuration) && wrapper.TriggerData.TimerType == 1)
           {
             wrapper.ModifiedDurationSeconds = dynamicDuration;
           }
@@ -163,7 +165,7 @@ namespace EQLogParser
           var beginTicks = DateTime.Now.Ticks;
           node.Value.TriggerData.LastTriggered = new TimeSpan(beginTicks).TotalMilliseconds;
 
-          time = (beginTicks - start) / 10;
+          var time = (beginTicks - start) / 10;
           wrapper.TriggerData.WorstEvalTime = Math.Max(time, wrapper.TriggerData.WorstEvalTime);
 
           if (ProcessMatchesText(wrapper.ModifiedTimerName, matches) is { } displayName)
@@ -210,8 +212,8 @@ namespace EQLogParser
         {
           wrapper.TimerList.ToList().ForEach(timerData =>
           {
-            MatchCollection earlyMatches;
-            var endEarly = CheckEndEarly(timerData.EndEarlyRegex, timerData.EndEarlyRegexNOptions, timerData.EndEarlyPattern, action, out earlyMatches);
+            var endEarly = CheckEndEarly(timerData.EndEarlyRegex, timerData.EndEarlyRegexNOptions, timerData.EndEarlyPattern,
+              action, out var earlyMatches);
 
             // try 2nd
             if (!endEarly)
@@ -271,7 +273,7 @@ namespace EQLogParser
       if (!(trigger.TriggerAgainOption == 3 && wrapper.TimerList.Count > 0))
       {
         TimerData newTimerData = null;
-        if (trigger.WarningSeconds > 0 && wrapper.ModifiedDurationSeconds - trigger.WarningSeconds is double diff && diff > 0)
+        if (trigger.WarningSeconds > 0 && wrapper.ModifiedDurationSeconds - trigger.WarningSeconds is double diff and > 0)
         {
           newTimerData = new TimerData { DisplayName = displayName, WarningSource = new CancellationTokenSource() };
 
@@ -537,7 +539,7 @@ namespace EQLogParser
       return activeTriggers;
     }
 
-    private bool CheckEndEarly(Regex endEarlyRegex, List<NumberOptions> options, string endEarlyPattern,
+    private static bool CheckEndEarly(Regex endEarlyRegex, List<NumberOptions> options, string endEarlyPattern,
       string action, out MatchCollection earlyMatches)
     {
       earlyMatches = null;
@@ -546,7 +548,7 @@ namespace EQLogParser
       if (endEarlyRegex != null)
       {
         earlyMatches = endEarlyRegex.Matches(action);
-        if (earlyMatches != null && earlyMatches.Count > 0 && TriggerUtil.CheckOptions(options, earlyMatches, out _))
+        if (earlyMatches is { Count: > 0 } && TriggerUtil.CheckOptions(options, earlyMatches, out _))
         {
           endEarly = true;
         }
@@ -606,7 +608,7 @@ namespace EQLogParser
       return -1;
     }
 
-    private long UpdateRepeatedTimes(Dictionary<string, Dictionary<string, RepeatedData>> times, TriggerWrapper wrapper,
+    private static long UpdateRepeatedTimes(Dictionary<string, Dictionary<string, RepeatedData>> times, TriggerWrapper wrapper,
       string displayValue, long beginTicks)
     {
       long currentCount = -1;
@@ -654,7 +656,7 @@ namespace EQLogParser
 
       if (useRegex)
       {
-        if (Regex.Matches(pattern, @"{(s\d?)}", RegexOptions.IgnoreCase) is { } matches && matches.Count > 0)
+        if (Regex.Matches(pattern, @"{(s\d?)}", RegexOptions.IgnoreCase) is { Count: > 0 } matches)
         {
           foreach (Match match in matches)
           {
@@ -665,7 +667,7 @@ namespace EQLogParser
           }
         }
 
-        if (Regex.Matches(pattern, @"{(n\d?)(<=|>=|>|<|=|==)?(\d+)?}", RegexOptions.IgnoreCase) is { } matches2 && matches2.Count > 0)
+        if (Regex.Matches(pattern, @"{(n\d?)(<=|>=|>|<|=|==)?(\d+)?}", RegexOptions.IgnoreCase) is { Count: > 0 } matches2)
         {
           foreach (var match in matches2.Cast<Match>())
           {
@@ -690,7 +692,7 @@ namespace EQLogParser
     {
       if (useRegex)
       {
-        if (Regex.Matches(pattern, @"{(ts)}", RegexOptions.IgnoreCase) is { } matches2 && matches2.Count > 0)
+        if (Regex.Matches(pattern, @"{(ts)}", RegexOptions.IgnoreCase) is { Count: > 0 } matches2)
         {
           foreach (var match in matches2.Cast<Match>())
           {
@@ -764,7 +766,7 @@ namespace EQLogParser
       ProcessSpeech?.Complete();
       Synth?.Dispose();
       SoundPlayer?.Dispose();
-      ActiveTriggers.ToList().ForEach(wrapper => CleanupWrapper(wrapper));
+      ActiveTriggers.ToList().ForEach(CleanupWrapper);
     }
 
     private class Speak

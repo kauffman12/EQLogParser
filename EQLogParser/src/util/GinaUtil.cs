@@ -24,8 +24,8 @@ namespace EQLogParser
       var action = lineData.Action;
 
       // if GINA data is recent then try to handle it
-      if (action.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is int index && index > -1 &&
-        (DateTime.Now - DateUtil.FromDouble(lineData.BeginTime)).TotalSeconds <= 20 && action.IndexOf("}") is int end && end > (index + 40))
+      if (action.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is int index and > -1 &&
+          (DateTime.Now - DateUtil.FromDouble(lineData.BeginTime)).TotalSeconds <= 20 && action.IndexOf("}") is int end && end > (index + 40))
       {
         string player = null;
         var split = action.Split(' ');
@@ -172,8 +172,8 @@ namespace EQLogParser
             gzip.CopyTo(memory);
             var xml = Encoding.UTF8.GetString(memory.ToArray());
 
-            if (!string.IsNullOrEmpty(xml) && xml.IndexOf("<a:ChunkData>") is int start && start > -1
-                && xml.IndexOf("</a:ChunkData>") is int end && end > start)
+            if (!string.IsNullOrEmpty(xml) && xml.IndexOf("<a:ChunkData>") is int start and > -1
+                                           && xml.IndexOf("</a:ChunkData>") is int end && end > start)
             {
               var encoded = xml.Substring(start + 13, end - start - 13);
               var decoded = System.Convert.FromBase64String(encoded);
@@ -309,7 +309,7 @@ namespace EQLogParser
                 if (int.TryParse(GetText(triggerNode, "TimerMillisecondDuration"), out var millis) && millis > 0)
                 {
                   trigger.DurationSeconds = millis / (double)1000;
-                  if (trigger.DurationSeconds > 0 && trigger.DurationSeconds < 0.2)
+                  if (trigger.DurationSeconds is > 0 and < 0.2)
                   {
                     trigger.DurationSeconds = 0.2;
                   }

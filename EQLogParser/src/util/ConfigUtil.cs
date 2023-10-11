@@ -326,7 +326,7 @@ namespace EQLogParser
       list.ForEach(line =>
       {
         var parts = line.Split('=');
-        if (parts != null && parts.Length == 2 && parts[0].Length > 0 && parts[1].Length > 0)
+        if (parts is { Length: 2 } && parts[0].Length > 0 && parts[1].Length > 0)
         {
           properties[parts[0]] = parts[1];
         }

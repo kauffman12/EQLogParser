@@ -34,7 +34,7 @@ namespace EQLogParser
       TheTitle.Content = DEFAULT_TABLE_LABEL;
 
       // default these columns to descending
-      var desc = new string[] { "PercentOfRaid", "Total", "Extra", "Potential", "DPS", "SDPS", "TotalSeconds", "Hits", "Max",
+      var desc = new[] { "PercentOfRaid", "Total", "Extra", "Potential", "DPS", "SDPS", "TotalSeconds", "Hits", "Max",
         "Avg", "AvgCrit", "AvgLucky", "ExtraRate", "CritRate", "LuckRate", "MeleeHitRate", "MeleeAccRate", "RampageRate", "Special"};
 
       if (TheDataGrid is SfTreeGrid treeGrid)
@@ -108,7 +108,7 @@ namespace EQLogParser
 
     internal List<string[]> GetHeaders()
     {
-      var headers = new List<string[]> { new string[] { "Rank", "Rank" } };
+      var headers = new List<string[]> { new[] { "Rank", "Rank" } };
 
       if (TheDataGrid is SfTreeGrid treeGrid)
       {
@@ -116,7 +116,7 @@ namespace EQLogParser
         {
           var binding = (column.ValueBinding as Binding).Path.Path;
           var title = column.HeaderText;
-          headers.Add(new string[] { binding, title });
+          headers.Add(new[] { binding, title });
         }
       }
       else if (TheDataGrid is SfDataGrid dataGrid)
@@ -125,7 +125,7 @@ namespace EQLogParser
         {
           var binding = (column.ValueBinding as Binding).Path.Path;
           var title = column.HeaderText;
-          headers.Add(new string[] { binding, title });
+          headers.Add(new[] { binding, title });
         }
       }
 
@@ -150,11 +150,11 @@ namespace EQLogParser
 
     internal List<PlayerStats> GetPlayerStats()
     {
-      if (TheDataGrid is SfDataGrid dataGrid && dataGrid.View != null && dataGrid.View.Records != null)
+      if (TheDataGrid is SfDataGrid { View.Records: not null } dataGrid)
       {
         return dataGrid.View.Records.Select(record => record.Data).Cast<PlayerStats>().ToList();
       }
-      else if (TheDataGrid is SfTreeGrid treeGrid && treeGrid.View != null && treeGrid.View.Nodes != null)
+      else if (TheDataGrid is SfTreeGrid { View.Nodes: not null } treeGrid)
       {
         var results = new List<PlayerStats>();
         foreach (var stats in treeGrid.View.Nodes.Where(node => node.Level == 0).Select(node => node.Item).Cast<PlayerStats>())

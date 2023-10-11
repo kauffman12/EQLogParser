@@ -6,10 +6,10 @@ namespace EQLogParser
   class NpcDamageManager
   {
     internal double LastFightProcessTime = double.NaN;
-    private int CurrentNpcID = 1;
+    private int CurrentNpcId = 1;
     private static readonly Dictionary<string, bool> RecentSpellCache = new();
     private static readonly Dictionary<string, bool> ValidCombo = new();
-    private const int RECENTSPELLTIME = 300;
+    private const int RecentSpellTime = 300;
 
     public NpcDamageManager()
     {
@@ -20,7 +20,7 @@ namespace EQLogParser
     internal void Reset()
     {
       LastFightProcessTime = double.NaN;
-      CurrentNpcID = 1;
+      CurrentNpcId = 1;
       RecentSpellCache.Clear();
       ValidCombo.Clear();
     }
@@ -38,7 +38,7 @@ namespace EQLogParser
         DataManager.Instance.CheckExpireFights(processed.BeginTime);
         ValidCombo.Clear();
 
-        if (processed.BeginTime - LastFightProcessTime > RECENTSPELLTIME)
+        if (processed.BeginTime - LastFightProcessTime > RecentSpellTime)
         {
           RecentSpellCache.Clear();
         }
@@ -185,7 +185,7 @@ namespace EQLogParser
         BeginTimeString = string.Intern(timeString),
         BeginTime = currentTime,
         LastTime = currentTime,
-        Id = CurrentNpcID++,
+        Id = CurrentNpcId++,
         CorrectMapKey = string.Intern(defender)
       };
     }

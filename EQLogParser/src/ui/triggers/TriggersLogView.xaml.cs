@@ -33,7 +33,7 @@ namespace EQLogParser
 
         if (AlertLogs?.Count > 0)
         {
-          if (selected != null && list.IndexOf(selected) is int found && found > -1)
+          if (selected != null && list.IndexOf(selected) is int found and > -1)
           {
             logList.SelectedIndex = found;
           }
@@ -71,7 +71,7 @@ namespace EQLogParser
         return;
       }
       // case where click happened but selection event doesn't fire
-      if (e.OriginalSource is FrameworkElement element && element.DataContext is AlertEntry entry)
+      if (e.OriginalSource is FrameworkElement { DataContext: AlertEntry entry })
       {
         if (dataGrid.SelectedItem != entry)
         {

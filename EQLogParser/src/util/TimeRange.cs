@@ -30,7 +30,7 @@ namespace EQLogParser
         }
       }
 
-      additional.ForEach(segment => Add(segment));
+      additional.ForEach(Add);
       return TimeSegments.Sum(segment => segment.Total);
     }
 

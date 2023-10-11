@@ -251,7 +251,7 @@ namespace EQLogParser
         TriggerManager.Instance.Start();
 
         // cleanup downloads
-        Dispatcher.InvokeAsync(() => MainActions.Cleanup());
+        Dispatcher.InvokeAsync(MainActions.Cleanup);
       }
       catch (Exception e)
       {
@@ -640,56 +640,56 @@ namespace EQLogParser
     // Main Menu
     private void MenuItemWindowClick(object sender, RoutedEventArgs e)
     {
-      if (e.Source == damageChartMenuItem)
+      if (ReferenceEquals(e.Source, damageChartMenuItem))
       {
         OpenDamageChart();
       }
-      else if (e.Source == healingChartMenuItem)
+      else if (ReferenceEquals(e.Source, healingChartMenuItem))
       {
         OpenHealingChart();
       }
-      else if (e.Source == tankingChartMenuItem)
+      else if (ReferenceEquals(e.Source, tankingChartMenuItem))
       {
         OpenTankingChart();
       }
-      else if (e.Source == damageSummaryMenuItem)
+      else if (ReferenceEquals(e.Source, damageSummaryMenuItem))
       {
         OpenDamageSummary();
       }
-      else if (e.Source == healingSummaryMenuItem)
+      else if (ReferenceEquals(e.Source, healingSummaryMenuItem))
       {
         OpenHealingSummary();
       }
-      else if (e.Source == tankingSummaryMenuItem)
+      else if (ReferenceEquals(e.Source, tankingSummaryMenuItem))
       {
         OpenTankingSummary();
       }
-      else if (e.Source == chatMenuItem)
+      else if (ReferenceEquals(e.Source, chatMenuItem))
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
         SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(ChatViewer), chatIcon.Tag as string, "Chat Archive");
       }
-      else if (e.Source == eventMenuItem)
+      else if (ReferenceEquals(e.Source, eventMenuItem))
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
         SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(EventViewer), eventIcon.Tag as string, "Misc Events");
       }
-      else if (e.Source == randomsMenuItem)
+      else if (ReferenceEquals(e.Source, randomsMenuItem))
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
         SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(RandomViewer), randomsIcon.Tag as string, "Random Rolls");
       }
-      else if (e.Source == playerLootMenuItem)
+      else if (ReferenceEquals(e.Source, playerLootMenuItem))
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
         SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(LootViewer), playerLootIcon.Tag as string, "Looted Items");
       }
-      else if (e.Source == triggersMenuItem)
+      else if (ReferenceEquals(e.Source, triggersMenuItem))
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
         SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(TriggersView), triggersIcon.Tag as string, "Trigger Manager");
       }
-      else if (e.Source == eqLogMenuItem)
+      else if (ReferenceEquals(e.Source, eqLogMenuItem))
       {
         var found = LogWindows.FindIndex(used => !used);
         if (found == -1)
@@ -720,7 +720,7 @@ namespace EQLogParser
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
         SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(TauntStatsViewer), tauntStatsIcon.Tag as string, "Taunt Usage");
       }
-      else if ((sender as MenuItem)?.Icon is ImageAwesome icon && icon.Tag is string name)
+      else if ((sender as MenuItem)?.Icon is ImageAwesome { Tag: string name })
       {
         // any other core windows that just get hidden
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
@@ -740,7 +740,7 @@ namespace EQLogParser
         List<PlayerStats> selected = null;
         if (opened.TryGetValue(damageSummaryIcon.Tag as string, out var window) && window.Content is DamageSummary summary)
         {
-          selected = summary?.GetSelectedStats();
+          selected = summary.GetSelectedStats();
         }
 
         DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "UPDATE", selected);
@@ -1170,7 +1170,7 @@ namespace EQLogParser
 
     private void RemovePetMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is Border border && border.DataContext is ExpandoObject sortable)
+      if (sender is Border { DataContext: ExpandoObject sortable })
       {
         PlayerManager.Instance.RemoveVerifiedPet(((dynamic)sortable)?.Name);
       }
@@ -1178,7 +1178,7 @@ namespace EQLogParser
 
     private void RemovePlayerMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is Border border && border.DataContext is ExpandoObject sortable)
+      if (sender is Border { DataContext: ExpandoObject sortable })
       {
         PlayerManager.Instance.RemoveVerifiedPlayer(((dynamic)sortable)?.Name);
       }

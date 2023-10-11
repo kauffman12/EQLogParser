@@ -63,7 +63,7 @@ namespace EQLogParser
 
     private void EventsThemeChanged(string _)
     {
-      if (sfChart?.Series is { } collection && collection.Count > 0)
+      if (sfChart?.Series is { Count: > 0 } collection)
       {
         if (collection[0] is FastColumnBitmapSeries series)
         {
@@ -291,7 +291,7 @@ namespace EQLogParser
       // get chart data for player and pets if available
       if (damageStats?.Children.ContainsKey(selected.Name) == true)
       {
-        damageStats.Children[selected.Name].ForEach(stats => AddStats(stats));
+        damageStats.Children[selected.Name].ForEach(AddStats);
       }
       else
       {

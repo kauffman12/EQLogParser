@@ -23,7 +23,7 @@ namespace EQLogParser
     private readonly static Dictionary<string, bool> MissTypes = new()
     { { Labels.ABSORB, true }, { Labels.BLOCK, true } , { Labels.DODGE, true }, { Labels.PARRY, true }, { Labels.INVULNERABLE, true }, { Labels.MISS, true } };
 
-    private string CurrentChoice = "";
+    private string CurrentChoice;
     private string CurrentPetOrPlayerOption;
     private List<PlayerStats> LastSelected;
 
@@ -220,7 +220,7 @@ namespace EQLogParser
     {
       LastSelected = selected;
 
-      Dictionary<string, List<DataPoint>> workingData = null;
+      Dictionary<string, List<DataPoint>> workingData;
 
       var selectedLabel = "Selected Player(s)";
       var nonSelectedLabel = " Player(s)";
@@ -591,7 +591,7 @@ namespace EQLogParser
         chartValues[aggregate.Name] = playerValues;
       }
 
-      if (playerValues.Count > 0 && playerValues.Last() is { } test && test != null)
+      if (playerValues.Count > 0 && playerValues.Last() is { } test)
       {
         if (test.CurrentTime == newEntry.CurrentTime)
         {
