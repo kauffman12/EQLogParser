@@ -1,31 +1,15 @@
 ﻿using log4net;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 
 namespace EQLogParser
 {
-  static class Helpers
+  static class FileUtil
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-
-    public static void AddAction(List<ActionGroup> blockList, IAction action, double beginTime)
-    {
-      if (blockList.LastOrDefault() is { } last && last.BeginTime == beginTime)
-      {
-        last.Actions.Add(action);
-      }
-      else
-      {
-        var newSegment = new ActionGroup { BeginTime = beginTime };
-        newSegment.Actions.Add(action);
-        blockList.Add(newSegment);
-      }
-    }
 
     internal static StreamReader GetStreamReader(FileStream f, double start = 0)
     {

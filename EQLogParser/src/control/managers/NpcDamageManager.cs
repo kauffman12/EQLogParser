@@ -28,7 +28,7 @@ namespace EQLogParser
     private void HandleNewTaunt(object sender, TauntEvent e)
     {
       var fight = DataManager.Instance.GetFight(e.Record.Npc) ?? Create(e.Record.Npc, e.BeginTime);
-      Helpers.AddAction(fight.TauntBlocks, e.Record, e.BeginTime);
+      DataManager.AddAction(fight.TauntBlocks, e.Record, e.BeginTime);
     }
 
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
@@ -73,7 +73,7 @@ namespace EQLogParser
 
         if (defender)
         {
-          Helpers.AddAction(fight.DamageBlocks, processed.Record, processed.BeginTime);
+          DataManager.AddAction(fight.DamageBlocks, processed.Record, processed.BeginTime);
           AddPlayerTime(fight.DamageSegments, fight.DamageSubSegments, processed.Record, processed.Record.Attacker, processed.BeginTime);
           fight.BeginDamageTime = double.IsNaN(fight.BeginDamageTime) ? processed.BeginTime : fight.BeginDamageTime;
           fight.LastDamageTime = processed.BeginTime;
@@ -140,7 +140,7 @@ namespace EQLogParser
         }
         else
         {
-          Helpers.AddAction(fight.TankingBlocks, processed.Record, processed.BeginTime);
+          DataManager.AddAction(fight.TankingBlocks, processed.Record, processed.BeginTime);
           AddPlayerTime(fight.TankSegments, fight.TankSubSegments, processed.Record, processed.Record.Defender, processed.BeginTime);
           fight.BeginTankingTime = double.IsNaN(fight.BeginTankingTime) ? processed.BeginTime : fight.BeginTankingTime;
           fight.LastTankingTime = processed.BeginTime;
