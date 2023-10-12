@@ -26,7 +26,7 @@
                 DropDownClosed="CastTypesChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
       <ComboBox x:Name="selectedCastTypes" Width="140" Margin="0,0,8,2" 
                 DropDownClosed="CastTypesChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
-      <Button Margin="0,0,8,2" Padding="8,0,8,0" Height="24" Click="RefreshClick">Reload</Button>
+      <Button Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Reload</Button>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"

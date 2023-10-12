@@ -42,7 +42,7 @@
       <TextBox x:Name="eventFilter" Margin="0,0,8,2"  FontStyle="Italic" Width="170" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged" />
       <ComboBox x:Name="selectedOptions" Width="145" Margin="0,0,8,2" 
                 DropDownClosed="SelectOptions" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
-      <Button Margin="0,0,8,2" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Refresh</Button>
+      <Button Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Refresh</Button>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"

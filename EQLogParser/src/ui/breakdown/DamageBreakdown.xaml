@@ -97,10 +97,10 @@
         <syncfusion:TreeGridNumericColumn NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="TotalSlay" TextAlignment="Right" HeaderText="Slay Undead" />
         <syncfusion:TreeGridNumericColumn MappingName="DPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
         <syncfusion:TreeGridNumericColumn MappingName="SDPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
-        <syncfusion:TreeGridNumericColumn MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
-        <syncfusion:TreeGridNumericColumn MaximumWidth="80" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
+        <syncfusion:TreeGridNumericColumn MaximumWidth="65"  MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
+        <syncfusion:TreeGridNumericColumn MaximumWidth="70" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
         <syncfusion:TreeGridNumericColumn MappingName="Min" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Min Hit" />
-        <syncfusion:TreeGridNumericColumn MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
+        <syncfusion:TreeGridNumericColumn MaximumWidth="95" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
         <syncfusion:TreeGridNumericColumn MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Hit" />
         <syncfusion:TreeGridNumericColumn NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="AvgCrit" TextAlignment="Right" HeaderText="Av Crit" />
         <syncfusion:TreeGridNumericColumn NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="AvgLucky" TextAlignment="Right" HeaderText="Av Lucky" />
@@ -117,7 +117,7 @@
         <syncfusion:TreeGridNumericColumn MappingName="Parries" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Parried" />
         <syncfusion:TreeGridNumericColumn MappingName="TwincastHits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# TC" />
         <syncfusion:TreeGridNumericColumn MappingName="Resists" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Resists" />
-        <syncfusion:TreeGridTextColumn MaximumWidth="75" MappingName="CritRate" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Crit" />
+        <syncfusion:TreeGridTextColumn MaximumWidth="70" MappingName="CritRate" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Crit" />
         <syncfusion:TreeGridTextColumn MaximumWidth="75" MappingName="LuckRate" DisplayBinding="{Binding Path=LuckRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Lucky" />
         <syncfusion:TreeGridTextColumn MaximumWidth="75" MappingName="TwincastRate" DisplayBinding="{Binding Path=TwincastRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% TC" />
         <syncfusion:TreeGridTextColumn MappingName="DoubleBowRate" DisplayBinding="{Binding Path=DoubleBowRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Double Bow" />

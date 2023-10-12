@@ -21,7 +21,7 @@ namespace EQLogParser
     public readonly string CurrentCharacterId;
     public readonly string CurrentCharacterName;
     public readonly string CurrentPlayer;
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly object CollectionLock = new();
     private readonly object LockObject = new();
     private readonly object VoiceLock = new();
@@ -261,159 +261,165 @@ namespace EQLogParser
       {
         CleanupWrapper(wrapper);
       }
+      // Restart Timer only if it is already running
       else if (trigger.TriggerAgainOption == 2)
       {
-        if (wrapper.TimerList.ToList().FirstOrDefault(timerData => displayName.Equals(timerData?.DisplayName, StringComparison.OrdinalIgnoreCase))
+        if (wrapper.TimerList.ToList().FirstOrDefault(data => displayName.Equals(data?.DisplayName, StringComparison.OrdinalIgnoreCase))
           is { } timerData)
         {
           CleanupTimer(wrapper, timerData);
         }
       }
-
-      // Start a New independent Timer as long as one is not already running when Option 3 is selected
-      // Option 3 is to Do Nothing when a 2nd timer is triggered so you onlu have the original timer running
-      if (!(trigger.TriggerAgainOption == 3 && wrapper.TimerList.Count > 0))
+      else if (trigger.TriggerAgainOption == 3)
       {
-        TimerData newTimerData = null;
-        if (trigger.WarningSeconds > 0 && wrapper.ModifiedDurationSeconds - trigger.WarningSeconds is double diff and > 0)
+        // Do nothing only if a timer with this name is already running
+        if (wrapper.TimerList.ToList().FirstOrDefault(data => displayName.Equals(data?.DisplayName, StringComparison.OrdinalIgnoreCase))
+            is { } timerData)
         {
-          newTimerData = new TimerData { DisplayName = displayName, WarningSource = new CancellationTokenSource() };
-
-          Task.Delay((int)diff * 1000).ContinueWith(task =>
-          {
-            var proceed = false;
-            lock (wrapper)
-            {
-              if (newTimerData.WarningSource != null)
-              {
-                proceed = !newTimerData.WarningSource.Token.IsCancellationRequested;
-                newTimerData.WarningSource.Dispose();
-                newTimerData.WarningSource = null;
-              }
-
-              if (proceed)
-              {
-                var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out var isSound);
-                ProcessSpeech.Post(new Speak
-                {
-                  Wrapper = wrapper,
-                  TTSOrSound = speak,
-                  IsSound = isSound,
-                  Matches = matches,
-                  Action = lineData.Action
-                });
-
-                if (ProcessDisplayText(wrapper.ModifiedWarningDisplay, lineData.Action, matches, null) is { } updatedDisplayText)
-                {
-                  AddTextEvent(updatedDisplayText, trigger);
-                }
-
-                AddEntry(lineData, wrapper, "Timer Warning");
-              }
-            }
-          }, newTimerData.WarningSource.Token);
+          return;
         }
+      }
 
-        newTimerData ??= new TimerData { DisplayName = displayName };
+      TimerData newTimerData = null;
+      if (trigger.WarningSeconds > 0 && wrapper.ModifiedDurationSeconds - trigger.WarningSeconds is var diff and > 0)
+      {
+        newTimerData = new TimerData { DisplayName = displayName, WarningSource = new CancellationTokenSource() };
 
-        if (wrapper.HasRepeatedTimer)
-        {
-          newTimerData.RepeatedCount = GetRepeatedCount(RepeatedTimerTimes, wrapper, displayName);
-        }
-
-        newTimerData.EndTicks = beginTicks + (long)(TimeSpan.TicksPerMillisecond * wrapper.ModifiedDurationSeconds * 1000);
-        newTimerData.DurationTicks = newTimerData.EndTicks - beginTicks;
-        newTimerData.ResetTicks = trigger.ResetDurationSeconds > 0 ?
-          beginTicks + (long)(TimeSpan.TicksPerSecond * trigger.ResetDurationSeconds) : 0;
-        newTimerData.ResetDurationTicks = newTimerData.ResetTicks - beginTicks;
-        newTimerData.SelectedOverlays = trigger.SelectedOverlays.ToList();
-        newTimerData.TriggerAgainOption = trigger.TriggerAgainOption;
-        newTimerData.TimerType = trigger.TimerType;
-        newTimerData.OriginalMatches = matches;
-        newTimerData.ActiveColor = trigger.ActiveColor;
-        newTimerData.FontColor = trigger.FontColor;
-        newTimerData.Key = wrapper.Name + "-" + trigger.Pattern;
-        newTimerData.CancelSource = new CancellationTokenSource();
-
-        if (!string.IsNullOrEmpty(trigger.EndEarlyPattern))
-        {
-          var endEarlyPattern = ProcessMatchesText(trigger.EndEarlyPattern, matches);
-          endEarlyPattern = UpdatePattern(trigger.EndUseRegex, ConfigUtil.PlayerName, endEarlyPattern, out var numberOptions2);
-
-          if (trigger.EndUseRegex)
-          {
-            newTimerData.EndEarlyRegex = new Regex(endEarlyPattern, RegexOptions.IgnoreCase);
-            newTimerData.EndEarlyRegexNOptions = numberOptions2;
-          }
-          else
-          {
-            newTimerData.EndEarlyPattern = endEarlyPattern;
-          }
-        }
-
-        if (!string.IsNullOrEmpty(trigger.EndEarlyPattern2))
-        {
-          var endEarlyPattern2 = ProcessMatchesText(trigger.EndEarlyPattern2, matches);
-          endEarlyPattern2 = UpdatePattern(trigger.EndUseRegex2, ConfigUtil.PlayerName, endEarlyPattern2, out var numberOptions3);
-
-          if (trigger.EndUseRegex2)
-          {
-            newTimerData.EndEarlyRegex2 = new Regex(endEarlyPattern2, RegexOptions.IgnoreCase);
-            newTimerData.EndEarlyRegex2NOptions = numberOptions3;
-          }
-          else
-          {
-            newTimerData.EndEarlyPattern2 = endEarlyPattern2;
-          }
-        }
-
-        wrapper.TimerList.Add(newTimerData);
-        var needEvent = wrapper.TimerList.Count == 1;
-
-        Task.Delay((int)(wrapper.ModifiedDurationSeconds * 1000)).ContinueWith(task =>
+        var data = newTimerData;
+        Task.Delay((int)diff * 1000).ContinueWith(task =>
         {
           var proceed = false;
           lock (wrapper)
           {
-            if (newTimerData.CancelSource != null)
+            if (data.WarningSource != null)
             {
-              proceed = !newTimerData.CancelSource.Token.IsCancellationRequested;
+              proceed = !data.WarningSource.Token.IsCancellationRequested;
+              data.WarningSource.Dispose();
+              data.WarningSource = null;
             }
 
             if (proceed)
             {
-              var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.EndSoundToPlay, wrapper.ModifiedEndSpeak, out var isSound);
-
+              var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out var isSound);
               ProcessSpeech.Post(new Speak
               {
                 Wrapper = wrapper,
                 TTSOrSound = speak,
                 IsSound = isSound,
                 Matches = matches,
-                OriginalMatches = newTimerData.OriginalMatches,
                 Action = lineData.Action
               });
 
-              if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, newTimerData.OriginalMatches) is { } updatedDisplayText)
+              if (ProcessDisplayText(wrapper.ModifiedWarningDisplay, lineData.Action, matches, null) is { } updatedDisplayText)
               {
                 AddTextEvent(updatedDisplayText, trigger);
               }
 
-              AddEntry(lineData, wrapper, "Timer End");
-              CleanupTimer(wrapper, newTimerData);
+              AddEntry(lineData, wrapper, "Timer Warning");
             }
           }
-        }, newTimerData.CancelSource.Token);
+        }, newTimerData.WarningSource.Token);
+      }
 
-        lock (ActiveTimers)
-        {
-          ActiveTimers.Add(newTimerData);
-        }
+      newTimerData ??= new TimerData { DisplayName = displayName };
 
-        if (needEvent)
+      if (wrapper.HasRepeatedTimer)
+      {
+        newTimerData.RepeatedCount = GetRepeatedCount(RepeatedTimerTimes, wrapper, displayName);
+      }
+
+      newTimerData.EndTicks = beginTicks + (long)(TimeSpan.TicksPerMillisecond * wrapper.ModifiedDurationSeconds * 1000);
+      newTimerData.DurationTicks = newTimerData.EndTicks - beginTicks;
+      newTimerData.ResetTicks = trigger.ResetDurationSeconds > 0 ?
+        beginTicks + (long)(TimeSpan.TicksPerSecond * trigger.ResetDurationSeconds) : 0;
+      newTimerData.ResetDurationTicks = newTimerData.ResetTicks - beginTicks;
+      newTimerData.SelectedOverlays = trigger.SelectedOverlays.ToList();
+      newTimerData.TriggerAgainOption = trigger.TriggerAgainOption;
+      newTimerData.TimerType = trigger.TimerType;
+      newTimerData.OriginalMatches = matches;
+      newTimerData.ActiveColor = trigger.ActiveColor;
+      newTimerData.FontColor = trigger.FontColor;
+      newTimerData.Key = wrapper.Name + "-" + trigger.Pattern;
+      newTimerData.CancelSource = new CancellationTokenSource();
+
+      if (!string.IsNullOrEmpty(trigger.EndEarlyPattern))
+      {
+        var endEarlyPattern = ProcessMatchesText(trigger.EndEarlyPattern, matches);
+        endEarlyPattern = UpdatePattern(trigger.EndUseRegex, ConfigUtil.PlayerName, endEarlyPattern, out var numberOptions2);
+
+        if (trigger.EndUseRegex)
         {
-          AddTimerEvent(trigger, GetActiveTimers());
+          newTimerData.EndEarlyRegex = new Regex(endEarlyPattern, RegexOptions.IgnoreCase);
+          newTimerData.EndEarlyRegexNOptions = numberOptions2;
         }
+        else
+        {
+          newTimerData.EndEarlyPattern = endEarlyPattern;
+        }
+      }
+
+      if (!string.IsNullOrEmpty(trigger.EndEarlyPattern2))
+      {
+        var endEarlyPattern2 = ProcessMatchesText(trigger.EndEarlyPattern2, matches);
+        endEarlyPattern2 = UpdatePattern(trigger.EndUseRegex2, ConfigUtil.PlayerName, endEarlyPattern2, out var numberOptions3);
+
+        if (trigger.EndUseRegex2)
+        {
+          newTimerData.EndEarlyRegex2 = new Regex(endEarlyPattern2, RegexOptions.IgnoreCase);
+          newTimerData.EndEarlyRegex2NOptions = numberOptions3;
+        }
+        else
+        {
+          newTimerData.EndEarlyPattern2 = endEarlyPattern2;
+        }
+      }
+
+      wrapper.TimerList.Add(newTimerData);
+      var needEvent = wrapper.TimerList.Count == 1;
+
+      Task.Delay((int)(wrapper.ModifiedDurationSeconds * 1000)).ContinueWith(task =>
+      {
+        var proceed = false;
+        lock (wrapper)
+        {
+          if (newTimerData.CancelSource != null)
+          {
+            proceed = !newTimerData.CancelSource.Token.IsCancellationRequested;
+          }
+
+          if (proceed)
+          {
+            var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.EndSoundToPlay, wrapper.ModifiedEndSpeak, out var isSound);
+
+            ProcessSpeech.Post(new Speak
+            {
+              Wrapper = wrapper,
+              TTSOrSound = speak,
+              IsSound = isSound,
+              Matches = matches,
+              OriginalMatches = newTimerData.OriginalMatches,
+              Action = lineData.Action
+            });
+
+            if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, newTimerData.OriginalMatches) is { } updatedDisplayText)
+            {
+              AddTextEvent(updatedDisplayText, trigger);
+            }
+
+            AddEntry(lineData, wrapper, "Timer End");
+            CleanupTimer(wrapper, newTimerData);
+          }
+        }
+      }, newTimerData.CancelSource.Token);
+
+      lock (ActiveTimers)
+      {
+        ActiveTimers.Add(newTimerData);
+      }
+
+      if (needEvent)
+      {
+        AddTimerEvent(trigger, GetActiveTimers());
       }
     }
 

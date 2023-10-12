@@ -350,12 +350,10 @@ namespace EQLogParser
 
     private void ValueChanged(object sender, ValueChangedEventArgs args)
     {
-      if (args.Property.Name != evalTimeItem.PropertyName &&
-        args.Property.SelectedObject is TriggerPropertyModel trigger)
+      if (args.Property.SelectedObject is TriggerPropertyModel trigger)
       {
         var triggerChange = true;
         var list = thePropertyGrid.Properties.ToList();
-        var longestProp = PropertyGridUtil.FindProperty(list, evalTimeItem.PropertyName);
 
         var isValid = TriggerUtil.TestRegexProperty(trigger.UseRegex, trigger.Pattern, PatternEditor);
         isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex, trigger.EndEarlyPattern, EndEarlyPatternEditor);
@@ -365,7 +363,6 @@ namespace EQLogParser
         if (args.Property.Name == patternItem.PropertyName)
         {
           trigger.WorstEvalTime = -1;
-          longestProp.Value = -1;
         }
         else if (args.Property.Name == timerTypeItem.PropertyName && args.Property.Value is int timerType)
         {
@@ -382,7 +379,7 @@ namespace EQLogParser
           {
             triggerChange = (trigger.TriggerActiveBrush == null && original.ActiveColor != null) ||
               (trigger.TriggerActiveBrush != null && original.ActiveColor == null) ||
-              (trigger.TriggerActiveBrush.Color.ToHexString() != original.ActiveColor);
+              (trigger.TriggerActiveBrush?.Color.ToHexString() != original.ActiveColor);
           }
         }
         else if (args.Property.Name == triggerFontBrushItem.PropertyName)
@@ -396,7 +393,7 @@ namespace EQLogParser
           {
             triggerChange = (trigger.TriggerFontBrush == null && original.FontColor != null) ||
               (trigger.TriggerFontBrush != null && original.FontColor == null) ||
-              (trigger.TriggerFontBrush.Color.ToHexString() != original.FontColor);
+              (trigger.TriggerFontBrush?.Color.ToHexString() != original.FontColor);
           }
         }
         else if (args.Property.Name == "DurationTimeSpan" && timerDurationItem.Visibility == Visibility.Collapsed)
