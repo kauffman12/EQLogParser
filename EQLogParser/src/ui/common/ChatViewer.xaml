@@ -40,7 +40,7 @@
       <syncfusion:SfTextBoxExt x:Name="fromFilter" Margin="0,0,0,2" VerticalContentAlignment="Center" FontStyle="Italic"
                                AutoCompleteMode="SuggestAppend" Width="80" LostFocus="FromFilterLostFocus" GotFocus="FromFilterGotFocus" PreviewKeyDown="FromFilterKeyDown" TextChanged="FilterTextChanged" />
       <TextBox x:Name="textFilter" Margin="0,0,8,2" FontStyle="Italic" Width="170" LostFocus="TextFilterLostFocus" GotFocus="TextFilterGotFocus" PreviewKeyDown="TextFilterKeyDown" TextChanged="FilterTextChanged" />
-      <Button Margin="0,0,8,2" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Refresh</Button>
+      <Button Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Refresh</Button>
     </StackPanel>
     <syncfusion:EditControl x:Name="chatBox" Grid.Row="1" HorizontalAlignment="Stretch" BorderThickness="0" FontFamily="{DynamicResource EQChatFontFamily}" FontSize="{DynamicResource EQChatFontSize}" Margin="0,0,0,15" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
       DocumentLanguage="Text" TextChanged="ChatTextChanged" PreviewKeyDown="ChatPreviewKeyDown" PreviewMouseWheel="ChatMouseWheel" ScrollViewer.ScrollChanged="ChatScrollChanged" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">

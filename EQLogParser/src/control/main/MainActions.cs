@@ -259,7 +259,7 @@ namespace EQLogParser
     {
       Application.Current.Resources["EQTitleSize"] = MainWindow.CurrentFontSize + 2;
       Application.Current.Resources["EQContentSize"] = MainWindow.CurrentFontSize;
-      Application.Current.Resources["EQButtonHeight"] = MainWindow.CurrentFontSize + 14;
+      Application.Current.Resources["EQButtonHeight"] = MainWindow.CurrentFontSize + 12 + (MainWindow.CurrentFontSize % 2 == 0 ? 1 : 0);
       Application.Current.Resources["EQTableHeaderRowHeight"] = MainWindow.CurrentFontSize + 14;
       Application.Current.Resources["EQTableRowHeight"] = MainWindow.CurrentFontSize + 12;
 
