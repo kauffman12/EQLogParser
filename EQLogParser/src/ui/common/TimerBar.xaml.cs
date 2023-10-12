@@ -9,8 +9,16 @@ namespace EQLogParser
   /// </summary>
   public partial class TimerBar : UserControl
   {
+    private enum State
+    {
+      None,
+      Active,
+      Idle,
+      Reset
+    };
+
     private string OverlayId;
-    private bool? Active = true;
+    private State TheState = State.None;
     private TimerData LastTimerData;
 
     public TimerBar()
@@ -44,6 +52,18 @@ namespace EQLogParser
           title.SetResourceReference(TextBlock.ForegroundProperty, "TimerBarFontColor-" + OverlayId);
         }
 
+        LastTimerData = timerData;
+      }
+
+      title.Text = displayName;
+      time.Text = timeText;
+      progress.Progress = remaining;
+    }
+
+    internal void SetActive(TimerData timerData)
+    {
+      if (TheState != State.Active)
+      {
         if (timerData?.ActiveColor != null)
         {
           progress.ProgressColor = TriggerUtil.GetBrush(timerData.ActiveColor);
@@ -53,38 +73,25 @@ namespace EQLogParser
           progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarActiveColor-" + OverlayId);
         }
 
-        LastTimerData = timerData;
-      }
-
-      title.Text = displayName;
-      time.Text = timeText;
-      progress.Progress = remaining;
-    }
-
-    internal void SetActive()
-    {
-      if (Active != true)
-      {
-        progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarActiveColor-" + OverlayId);
-        Active = true;
+        TheState = State.Active;
       }
     }
 
     internal void SetReset()
     {
-      if (Active != false)
+      if (TheState != State.Reset)
       {
         progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarResetColor-" + OverlayId);
-        Active = false;
+        TheState = State.Reset;
       }
     }
 
     internal void SetIdle()
     {
-      if (Active != null)
+      if (TheState != State.Idle)
       {
         progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarIdleColor-" + OverlayId);
-        Active = null;
+        TheState = State.Idle;
       }
     }
 

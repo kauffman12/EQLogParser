@@ -11,7 +11,7 @@ namespace EQLogParser
 {
   class DamageStatsManager : ISummaryBuilder
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     internal static DamageStatsManager Instance = new();
 
@@ -156,7 +156,7 @@ namespace EQLogParser
         data.FightName = oldestFight.Name;
       }
 
-      var timeout = mode == 0 ? DataManager.FIGHTTIMEOUT : mode;
+      var timeout = mode == 0 ? DataManager.FIGHT_IMEOUT : mode;
       var totalSeconds = allTime.GetTotal();
       var diff = (DateTime.Now - DateTime.MinValue.AddSeconds(data.UpdateTime)).TotalSeconds;
       // added >= 0 check because this broke while testing when clocks moved an hour back in the fall
@@ -170,7 +170,7 @@ namespace EQLogParser
         foreach (var total in playerTotals.Values.OrderByDescending(total => total.Damage))
         {
           var time = total.Range.GetTotal();
-          if (time > 0 && (DateTime.Now - DateTime.MinValue.AddSeconds(total.UpdateTime)).TotalSeconds <= DataManager.MAXTIMEOUT)
+          if (time > 0 && (DateTime.Now - DateTime.MinValue.AddSeconds(total.UpdateTime)).TotalSeconds <= DataManager.MAX_TIMEOUT)
           {
             var playerStats = new PlayerStats
             {
@@ -535,7 +535,7 @@ namespace EQLogParser
                       if (record.Total > 0)
                       {
                         var values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
-                        Helpers.LongIntAddHelper.Add(values, record.Total, 1);
+                        AddValue(values, record.Total, 1);
                       }
                     }
                   }
@@ -627,7 +627,7 @@ namespace EQLogParser
             // generating new stats
             var genEvent = new StatsGenerationEvent
             {
-              Type = Labels.DAMAGEPARSE,
+              Type = Labels.DAMAGE_PARSE,
               State = "COMPLETED",
               CombinedStats = combined,
               Limited = damageValidator.IsDamageLimited()
@@ -643,6 +643,14 @@ namespace EQLogParser
           {
             Log.Error(ex);
           }
+        }
+      }
+
+      void AddValue(Dictionary<long, int> dict, long key, int amount)
+      {
+        if (!dict.TryAdd(key, amount))
+        {
+          dict[key] += amount;
         }
       }
     }
@@ -668,13 +676,13 @@ namespace EQLogParser
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.DAMAGEPARSE, State = "STARTED" });
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.DAMAGE_PARSE, State = "STARTED" });
     }
 
     private void FireNoDataEvent(GenerateStatsOptions options, string state)
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.DAMAGEPARSE, State = state });
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.DAMAGE_PARSE, State = state });
       FireChartEvent(options, "CLEAR");
     }
 
@@ -705,7 +713,7 @@ namespace EQLogParser
       AllDamageGroups = DamageGroups;
       DamageGroups.Clear();
       DamageGroupIds.Clear();
-      RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAIDTOTALS);
+      RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_TOTALS);
       PlayerPets.Clear();
       PetToPlayer.Clear();
       Resists.Clear();
@@ -739,7 +747,7 @@ namespace EQLogParser
       var title = "";
       var details = "";
 
-      if (currentStats != null && type == Labels.DAMAGEPARSE)
+      if (currentStats != null && type == Labels.DAMAGE_PARSE)
       {
         if (selected?.Count > 0)
         {

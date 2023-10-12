@@ -228,7 +228,6 @@ namespace EQLogParser
           }
         }
 
-        var helper = new DictionaryUniqueListHelper<string, Rectangle>();
         var player1 = new Dictionary<string, List<Rectangle>>();
         var player2 = new Dictionary<string, List<Rectangle>>();
 
@@ -240,11 +239,11 @@ namespace EQLogParser
             {
               if (titleLabel1.Foreground.ToString() == rectangle.Fill.ToString())
               {
-                helper.AddToList(player1, adps, rectangle);
+                AddValue(player1, adps, rectangle);
               }
               else
               {
-                helper.AddToList(player2, adps, rectangle);
+                AddValue(player2, adps, rectangle);
               }
             }
           }
@@ -286,6 +285,18 @@ namespace EQLogParser
       catch (ExternalException ex)
       {
         Log.Error(ex);
+      }
+
+      void AddValue(Dictionary<string, List<Rectangle>> dict, string name, Rectangle value)
+      {
+        if (dict.TryGetValue(name, out var list))
+        {
+          list.Add(value);
+        }
+        else
+        {
+          dict[name] = new List<Rectangle> { value };
+        }
       }
     }
 

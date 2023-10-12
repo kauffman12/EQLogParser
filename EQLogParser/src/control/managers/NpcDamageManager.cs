@@ -206,6 +206,7 @@ namespace EQLogParser
       }
 
       var isAttackerPlayerSpell = IsAttackerPlayerSpell(record, isAttackerPlayer);
+      isAttackerPlayer = isAttackerPlayer || isAttackerPlayerSpell;
       var isDefenderPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Defender);
       var isAttackerNpc = IsAttackerNpc(record, isAttackerPlayerSpell, isAttackerPlayer);
       var isDefenderNpc = IsDefenderNpc(record, isAttackerPlayerSpell, isDefenderPlayer);
@@ -246,7 +247,7 @@ namespace EQLogParser
 
     private static bool IsAttackerPlayerSpell(DamageRecord record, bool isAttackerPlayer)
     {
-      return record.AttackerIsSpell && (RecentSpellCache.ContainsKey(record.Attacker) || isAttackerPlayer);
+      return record.AttackerIsSpell && RecentSpellCache.ContainsKey(record.Attacker);
     }
 
     private static bool IsAttackerNpc(DamageRecord record, bool isAttackerPlayerSpell, bool isAttackerPlayer)
