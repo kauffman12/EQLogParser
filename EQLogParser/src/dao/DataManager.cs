@@ -308,9 +308,9 @@ namespace EQLogParser
       }
     }
 
-    internal void AddDeathRecord(DeathRecord record, double beginTime) => Helpers.AddAction(AllDeathBlocks, record, beginTime);
-    internal void AddMiscRecord(IAction action, double beginTime) => Helpers.AddAction(AllMiscBlocks, action, beginTime);
-    internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => Helpers.AddAction(AllReceivedSpellBlocks, received, beginTime);
+    internal void AddDeathRecord(DeathRecord record, double beginTime) => AddAction(AllDeathBlocks, record, beginTime);
+    internal void AddMiscRecord(IAction action, double beginTime) => AddAction(AllMiscBlocks, action, beginTime);
+    internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => AddAction(AllReceivedSpellBlocks, received, beginTime);
     internal List<ActionGroup> GetAllLoot() => AllLootBlocks.ToList();
     internal List<ActionGroup> GetAllRandoms() => AllRandomBlocks.ToList();
     internal List<ActionGroup> GetCastsDuring(double beginTime, double endTime) => SearchActions(AllSpellCastBlocks, beginTime, endTime);
@@ -323,6 +323,20 @@ namespace EQLogParser
     internal bool IsOldSpell(string name) => OldSpellNamesDb.ContainsKey(name);
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
     internal bool IsLifetimeNpc(string name) => LifetimeFights.ContainsKey(name);
+
+    public static void AddAction(List<ActionGroup> blockList, IAction action, double beginTime)
+    {
+      if (blockList.LastOrDefault() is { } last && last.BeginTime == beginTime)
+      {
+        last.Actions.Add(action);
+      }
+      else
+      {
+        var newSegment = new ActionGroup { BeginTime = beginTime };
+        newSegment.Actions.Add(action);
+        blockList.Add(newSegment);
+      }
+    }
 
     internal string AbbreviateSpellName(string spell)
     {
@@ -356,7 +370,7 @@ namespace EQLogParser
 
     internal void AddLootRecord(LootRecord record, double beginTime)
     {
-      Helpers.AddAction(AllLootBlocks, record, beginTime);
+      AddAction(AllLootBlocks, record, beginTime);
 
       if (!record.IsCurrency && record.Quantity > 0 && AssignedLoot.Count > 0)
       {
@@ -386,13 +400,13 @@ namespace EQLogParser
 
     internal void AddRandomRecord(RandomRecord record, double beginTime)
     {
-      Helpers.AddAction(AllRandomBlocks, record, beginTime);
+      AddAction(AllRandomBlocks, record, beginTime);
       EventsNewRandomRecord?.Invoke(this, record);
     }
 
     internal void AddResistRecord(ResistRecord record, double beginTime)
     {
-      Helpers.AddAction(AllResistBlocks, record, beginTime);
+      AddAction(AllResistBlocks, record, beginTime);
 
       if (SpellsNameDb.TryGetValue(record.Spell, out var spellList))
       {
@@ -522,7 +536,7 @@ namespace EQLogParser
     {
       record.Healer = PlayerManager.Instance.ReplacePlayer(record.Healer, record.Healed);
       record.Healed = PlayerManager.Instance.ReplacePlayer(record.Healed, record.Healer);
-      Helpers.AddAction(AllHealBlocks, record, beginTime);
+      AddAction(AllHealBlocks, record, beginTime);
     }
 
     internal void HandleSpellInterrupt(string player, string spell, double beginTime)
@@ -542,7 +556,7 @@ namespace EQLogParser
     {
       if (SpellsNameDb.ContainsKey(cast.Spell))
       {
-        Helpers.AddAction(AllSpellCastBlocks, cast, beginTime);
+        AddAction(AllSpellCastBlocks, cast, beginTime);
         LastSpellIndex = AllSpellCastBlocks.Count - 1;
 
         if (SpellsToClass.TryGetValue(cast.Spell, out var theClass))

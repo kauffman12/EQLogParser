@@ -242,7 +242,7 @@ namespace EQLogParser
         {
           using var f = File.OpenRead(MainWindow.CurrentLogFile);
           f.Seek(Math.Max(0, pos - CONTEXT), SeekOrigin.Begin);
-          var s = Helpers.GetStreamReader(f);
+          var s = FileUtil.GetStreamReader(f);
           var list = new List<string>();
 
           if (!s.EndOfStream)
@@ -363,7 +363,7 @@ namespace EQLogParser
                 break;
             }
 
-            var s = Helpers.GetStreamReader(f, start);
+            var s = FileUtil.GetStreamReader(f, start);
 
             if (!s.EndOfStream)
             {

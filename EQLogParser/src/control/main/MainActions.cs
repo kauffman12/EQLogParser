@@ -539,7 +539,7 @@ namespace EQLogParser
               if (range.TimeSegments.Count > 0)
               {
                 using var f = File.OpenRead(MainWindow.CurrentLogFile);
-                var s = Helpers.GetStreamReader(f, range.TimeSegments[0].BeginTime);
+                var s = FileUtil.GetStreamReader(f, range.TimeSegments[0].BeginTime);
                 while (!s.EndOfStream)
                 {
                   var line = s.ReadLine();
