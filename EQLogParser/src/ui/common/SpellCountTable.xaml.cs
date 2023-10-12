@@ -32,7 +32,6 @@ namespace EQLogParser
     private List<string> PlayerList;
     private SpellCountData TheSpellCounts;
     private double Time;
-    private readonly DictionaryAddHelper<string, uint> AddHelper = new();
     private readonly Dictionary<string, byte> HiddenSpells = new();
     private readonly List<string> CountTypes = new() { "Counts", "Percentages", "Counts/Minute" };
     private readonly List<string> MinFreqs = new() { "Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5" };
@@ -231,13 +230,21 @@ namespace EQLogParser
 
       if (!HiddenSpells.ContainsKey(name) && maxCounts[id] > CurrentMinFreqCount)
       {
-        AddHelper.Add(totalCountMap, player, playerCount);
-        AddHelper.Add(uniqueSpellsMap, name, playerCount);
-        AddHelper.Add(filteredPlayerMap[player], name, playerCount);
+        AddValue(totalCountMap, player, playerCount);
+        AddValue(uniqueSpellsMap, name, playerCount);
+        AddValue(filteredPlayerMap[player], name, playerCount);
         totalCasts += playerCount;
       }
 
       return totalCasts;
+
+      void AddValue(Dictionary<string, uint> dict, string name, uint amount)
+      {
+        if (!dict.TryAdd(name, amount))
+        {
+          dict[name] += amount;
+        }
+      }
     }
 
     private void UpdateOptions(bool force = false)

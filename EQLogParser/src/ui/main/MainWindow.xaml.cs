@@ -309,12 +309,12 @@ namespace EQLogParser
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
-      (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.DAMAGEPARSE, DamageStatsManager.Instance, combined, selected, true);
+      (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.DAMAGE_PARSE, DamageStatsManager.Instance, combined, selected, true);
     }
 
     internal void AddAndCopyTankParse(CombinedStats combined, List<PlayerStats> selected)
     {
-      (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.TANKPARSE, TankingStatsManager.Instance, combined, selected, true);
+      (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.TANK_PARSE, TankingStatsManager.Instance, combined, selected, true);
     }
 
     internal void DisableTriggers()
@@ -831,7 +831,7 @@ namespace EQLogParser
     {
       DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "SELECT", data.Selected);
       var preview = playerParseTextWindow.Content as ParsePreview;
-      preview?.UpdateParse(Labels.DAMAGEPARSE, data.Selected);
+      preview?.UpdateParse(Labels.DAMAGE_PARSE, data.Selected);
     }
 
     private void HealingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
@@ -839,7 +839,7 @@ namespace EQLogParser
       HealingStatsManager.Instance.FireChartEvent("SELECT", data.Selected);
       var addTopParse = data.Selected?.Count == 1 && data.Selected[0].SubStats?.Count > 0;
       var preview = playerParseTextWindow.Content as ParsePreview;
-      preview.UpdateParse(data, HealingStatsManager.Instance, addTopParse, Labels.HEALPARSE, Labels.TOPHEALSPARSE);
+      preview.UpdateParse(data, HealingStatsManager.Instance, addTopParse, Labels.HEAL_PARSE, Labels.TOP_HEAL_PARSE);
     }
 
     private void TankingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
@@ -847,7 +847,7 @@ namespace EQLogParser
       TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "SELECT", data.Selected);
       var addReceiveParse = data.Selected?.Count == 1 && data.Selected[0].MoreStats != null;
       var preview = playerParseTextWindow.Content as ParsePreview;
-      preview.UpdateParse(data, TankingStatsManager.Instance, addReceiveParse, Labels.TANKPARSE, Labels.RECEIVEDHEALPARSE);
+      preview.UpdateParse(data, TankingStatsManager.Instance, addReceiveParse, Labels.TANK_PARSE, Labels.RECEIVED_HEAL_PARSE);
     }
 
     private void MenuItemFontFamilyClicked(object sender, RoutedEventArgs e)

@@ -218,7 +218,7 @@ namespace EQLogParser
                 var subStats2 = StatsUtil.CreatePlayerSubStats(stats.SubStats2, record.Healer, record.Type);
                 StatsUtil.UpdateStats(subStats2, record);
 
-                var spellStatName = record.SubType ?? Labels.SELFHEAL;
+                var spellStatName = record.SubType ?? Labels.SELF_HEAL;
                 var spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
                 StatsUtil.UpdateStats(spellStats, record);
 
@@ -298,13 +298,13 @@ namespace EQLogParser
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.HEALPARSE, State = "STARTED" });
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.HEAL_PARSE, State = "STARTED" });
     }
 
     private void FireNoDataEvent(string state)
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.HEALPARSE, State = state });
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.HEAL_PARSE, State = state });
 
       FireChartEvent("CLEAR");
     }
@@ -334,7 +334,7 @@ namespace EQLogParser
                     var stats = StatsUtil.CreatePlayerStats(individualStats, record.Healer);
                     StatsUtil.UpdateStats(stats, record);
 
-                    var spellStatName = record.SubType ?? Labels.SELFHEAL;
+                    var spellStatName = record.SubType ?? Labels.SELF_HEAL;
                     var spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
                     StatsUtil.UpdateStats(spellStats, record);
 
@@ -378,7 +378,7 @@ namespace EQLogParser
             // generating new stats
             var genEvent = new StatsGenerationEvent
             {
-              Type = Labels.HEALPARSE,
+              Type = Labels.HEAL_PARSE,
               State = "COMPLETED",
               CombinedStats = combined,
               Limited = IsLimited
@@ -403,7 +403,7 @@ namespace EQLogParser
       HealerHealedTimeRanges.Clear();
       HealerSpellTimeRanges.Clear();
       HealingGroups.Clear();
-      RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAIDTOTALS);
+      RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_TOTALS);
       Selected = null;
       Title = "";
     }
@@ -418,7 +418,7 @@ namespace EQLogParser
 
       if (currentStats != null)
       {
-        if (type == Labels.HEALPARSE)
+        if (type == Labels.HEAL_PARSE)
         {
           if (selected?.Count > 0)
           {
@@ -435,7 +435,7 @@ namespace EQLogParser
           var totals = showDPS ? currentStats.TotalTitle : currentStats.TotalTitle.Split(new[] { " @" }, 2, StringSplitOptions.RemoveEmptyEntries)[0];
           title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, showTotals ? totals : "");
         }
-        else if (type == Labels.TOPHEALSPARSE)
+        else if (type == Labels.TOP_HEAL_PARSE)
         {
           if (selected?.Count == 1 && selected[0].SubStats.Count > 0)
           {

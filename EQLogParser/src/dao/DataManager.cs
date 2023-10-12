@@ -33,28 +33,28 @@ namespace EQLogParser
     public const string DS = "Damage Shield";
     public const string RS = "Reverse DS";
     public const string BANE = "Bane Damage";
-    public const string OTHERDMG = "Other Damage";
+    public const string OTHER_DMG = "Other Damage";
     public const string PROC = "Proc";
     public const string HOT = "HoT Tick";
     public const string HEAL = "Direct Heal";
     public const string MELEE = "Melee";
-    public const string SELFHEAL = "Melee Heal";
-    public const string NODATA = "No Data Available";
-    public const string PETPLAYEROPTION = "Players +Pets";
-    public const string PLAYEROPTION = "Players";
-    public const string PETOPTION = "Pets";
-    public const string RAIDOPTION = "Raid";
-    public const string RAIDTOTALS = "Totals";
+    public const string SELF_HEAL = "Melee Heal";
+    public const string NO_DATA = "No Data Available";
+    public const string PET_PLAYER_OPTION = "Players +Pets";
+    public const string PLAYER_OPTION = "Players";
+    public const string PET_OPTION = "Pets";
+    public const string RAID_OPTION = "Raid";
+    public const string RAID_TOTALS = "Totals";
     public const string RIPOSTE = "Riposte";
-    public const string EVERYTHINGOPTION = "Uncategorized";
+    public const string ALL_OPTION = "Uncategorized";
     public const string UNASSIGNED = "Unknown Pet Owner";
     public const string UNK = "Unknown";
-    public const string UNKSPELL = "Unknown Spell";
-    public const string RECEIVEDHEALPARSE = "Received Healing";
-    public const string HEALPARSE = "Healing";
-    public const string TANKPARSE = "Tanking";
-    public const string TOPHEALSPARSE = "Top Heals";
-    public const string DAMAGEPARSE = "Damage";
+    public const string UNK_SPELL = "Unknown Spell";
+    public const string RECEIVED_HEAL_PARSE = "Received Healing";
+    public const string HEAL_PARSE = "Healing";
+    public const string TANK_PARSE = "Tanking";
+    public const string TOP_HEAL_PARSE = "Top Heals";
+    public const string DAMAGE_PARSE = "Damage";
     public const string MISS = "Miss";
     public const string DODGE = "Dodge";
     public const string PARRY = "Parry";
@@ -75,8 +75,8 @@ namespace EQLogParser
     internal event EventHandler<bool> EventsClearedActiveData;
     internal event EventHandler<Fight> EventsNewOverlayFight;
 
-    internal const int MAXTIMEOUT = 60;
-    internal const int FIGHTTIMEOUT = 30;
+    internal const int MAX_TIMEOUT = 60;
+    internal const int FIGHT_IMEOUT = 30;
     internal const double BUFFS_OFFSET = 90;
     internal uint MyNukeCritRateMod { get; private set; }
     internal uint MyDoTCritRateMod { get; private set; }
@@ -101,8 +101,9 @@ namespace EQLogParser
     private readonly Dictionary<string, Dictionary<string, uint>> AdpsValues = new();
     private readonly Dictionary<string, HashSet<SpellData>> AdpsLandsOn = new();
     private readonly Dictionary<string, HashSet<SpellData>> AdpsWearOff = new();
-    private readonly Dictionary<string, List<SpellData>> SpellsNameDB = new();
-    private readonly Dictionary<string, bool> OldSpellNamesDB = new();
+    private readonly Dictionary<string, bool> OldSpellNamesDb = new();
+    private readonly Dictionary<string, Dictionary<SpellResist, ResistCount>> NpcResistStats = new();
+    private readonly Dictionary<string, TotalCount> NpcTotalSpellCounts = new();
     private readonly SpellTreeNode LandsOnOtherTree = new();
     private readonly SpellTreeNode LandsOnYouTree = new();
     private readonly SpellTreeNode WearOffTree = new();
@@ -113,20 +114,19 @@ namespace EQLogParser
     // locking was causing a problem for OverlayFights? I don't know
     private readonly Dictionary<long, Fight> OverlayFights = new();
     private readonly ConcurrentDictionary<string, byte> AllNpcs = new();
-    private readonly ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>> NpcResistStats = new();
-    private readonly ConcurrentDictionary<string, TotalCount> NpcTotalSpellCounts = new();
-    private readonly ConcurrentDictionary<string, SpellData> SpellsAbbrvDB = new();
+    private readonly ConcurrentDictionary<string, SpellData> SpellsAbbrvDb = new();
     private readonly ConcurrentDictionary<string, SpellClass> SpellsToClass = new();
     private readonly ConcurrentDictionary<string, Fight> ActiveFights = new();
     private readonly ConcurrentDictionary<string, byte> LifetimeFights = new();
     private readonly ConcurrentDictionary<string, string> SpellAbbrvCache = new();
     private readonly ConcurrentDictionary<string, string> RanksCache = new();
+    private readonly ConcurrentDictionary<string, List<SpellData>> SpellsNameDb = new();
+
 
     private int LastSpellIndex = -1;
 
     private DataManager()
     {
-      var helper = new DictionaryUniqueListHelper<string, SpellData>();
       var spellList = new List<SpellData>();
 
       // build ranks cache
@@ -151,7 +151,7 @@ namespace EQLogParser
       });
 
       // Old Spell cache (EQEMU)
-      ConfigUtil.ReadList(@"data\oldspells.txt").ForEach(line => OldSpellNamesDB[line] = true);
+      ConfigUtil.ReadList(@"data\oldspells.txt").ForEach(line => OldSpellNamesDb[line] = true);
 
       var procCache = new Dictionary<string, bool>();
       ConfigUtil.ReadList(@"data\procs.txt").Where(line => line.Length > 0 && line[0] != '#').ToList().ForEach(line => procCache[line] = true);
@@ -165,16 +165,24 @@ namespace EQLogParser
           {
             spellData.Proc = procCache.ContainsKey(spellData.Name) ? (byte)1 : (byte)0;
             spellList.Add(spellData);
-            helper.AddToList(SpellsNameDB, spellData.Name, spellData);
 
-            if (!SpellsAbbrvDB.ContainsKey(spellData.NameAbbrv))
+            if (SpellsNameDb.TryGetValue(spellData.Name, out var spellDataList))
             {
-              SpellsAbbrvDB[spellData.NameAbbrv] = spellData;
+              spellDataList.Add(spellData);
             }
-            else if (string.Compare(SpellsAbbrvDB[spellData.NameAbbrv].Name, spellData.Name, true, CultureInfo.CurrentCulture) < 0)
+            else
+            {
+              SpellsNameDb[spellData.Name] = new() { spellData };
+            }
+
+            if (!SpellsAbbrvDb.ContainsKey(spellData.NameAbbrv))
+            {
+              SpellsAbbrvDb[spellData.NameAbbrv] = spellData;
+            }
+            else if (string.Compare(SpellsAbbrvDb[spellData.NameAbbrv].Name, spellData.Name, true, CultureInfo.CurrentCulture) < 0)
             {
               // try to keep the newest version
-              SpellsAbbrvDB[spellData.NameAbbrv] = spellData;
+              SpellsAbbrvDb[spellData.NameAbbrv] = spellData;
             }
 
             // restricted received spells to only ADPS related
@@ -283,6 +291,21 @@ namespace EQLogParser
       PlayerManager.Instance.EventsNewTakenPetOrPlayerAction += (sender, name) => RemoveFight(name);
       PlayerManager.Instance.EventsNewVerifiedPlayer += (sender, name) => RemoveFight(name);
       PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => RemoveFight(name);
+
+      SpellData GetAdpsByName(string name)
+      {
+        SpellData spellData = null;
+
+        if (!SpellsAbbrvDb.TryGetValue(name, out spellData))
+        {
+          if (SpellsNameDb.TryGetValue(name, out var spellList))
+          {
+            spellData = spellList.Find(item => item.Adps > 0);
+          }
+        }
+
+        return spellData;
+      }
     }
 
     internal void AddDeathRecord(DeathRecord record, double beginTime) => Helpers.AddAction(AllDeathBlocks, record, beginTime);
@@ -294,13 +317,10 @@ namespace EQLogParser
     internal List<ActionGroup> GetDeathsDuring(double beginTime, double endTime) => SearchActions(AllDeathBlocks, beginTime, endTime);
     internal List<ActionGroup> GetHealsDuring(double beginTime, double endTime) => SearchActions(AllHealBlocks, beginTime, endTime);
     internal List<ActionGroup> GetMiscDuring(double beginTime, double endTime) => SearchActions(AllMiscBlocks, beginTime, endTime);
-    internal ConcurrentDictionary<string, Dictionary<SpellResist, ResistCount>> GetNpcResistStats() => NpcResistStats;
-    internal ConcurrentDictionary<string, TotalCount> GetNpcTotalSpellCounts() => NpcTotalSpellCounts;
     internal List<ActionGroup> GetResistsDuring(double beginTime, double endTime) => SearchActions(AllResistBlocks, beginTime, endTime);
     internal List<ActionGroup> GetReceivedSpellsDuring(double beginTime, double endTime) => SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
-    internal SpellData GetSpellByAbbrv(string abbrv) => (!string.IsNullOrEmpty(abbrv) && abbrv != Labels.UNKSPELL && SpellsAbbrvDB.ContainsKey(abbrv)) ? SpellsAbbrvDB[abbrv] : null;
     internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && AllNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
-    internal bool IsOldSpell(string name) => OldSpellNamesDB.ContainsKey(name);
+    internal bool IsOldSpell(string name) => OldSpellNamesDb.ContainsKey(name);
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
     internal bool IsLifetimeNpc(string name) => LifetimeFights.ContainsKey(name);
 
@@ -374,7 +394,7 @@ namespace EQLogParser
     {
       Helpers.AddAction(AllResistBlocks, record, beginTime);
 
-      if (SpellsNameDB.TryGetValue(record.Spell, out var spellList))
+      if (SpellsNameDb.TryGetValue(record.Spell, out var spellList))
       {
         if (spellList.Find(item => !item.IsBeneficial) is { } spellData)
         {
@@ -388,7 +408,7 @@ namespace EQLogParser
       foreach (ref var fight in ActiveFights.Values.ToArray().AsSpan())
       {
         var diff = currentTime - fight.LastTime;
-        if (diff > MAXTIMEOUT || (diff > FIGHTTIMEOUT && fight.DamageBlocks.Count > 0))
+        if (diff > MAX_TIMEOUT || (diff > FIGHT_IMEOUT && fight.DamageBlocks.Count > 0))
         {
           RemoveActiveFight(fight.CorrectMapKey);
           RemoveOverlayFight(fight.Id);
@@ -396,19 +416,30 @@ namespace EQLogParser
       }
     }
 
-    internal SpellData GetAdpsByName(string name)
+    internal SpellData GetSpellByAbbrv(string abbrv)
     {
-      SpellData spellData;
-
-      if (!SpellsAbbrvDB.TryGetValue(name, out spellData))
+      if (!string.IsNullOrEmpty(abbrv) && abbrv != Labels.UNASSIGNED && SpellsAbbrvDb.TryGetValue(abbrv, out var value))
       {
-        if (SpellsNameDB.TryGetValue(name, out var spellList))
-        {
-          spellData = spellList.Find(item => item.Adps > 0);
-        }
+        return value;
       }
 
-      return spellData;
+      return null;
+    }
+
+    internal Dictionary<string, Dictionary<SpellResist, ResistCount>> GetNpcResistStats()
+    {
+      lock (NpcResistStats)
+      {
+        return NpcResistStats.ToDictionary(entry => entry.Key, entry => entry.Value);
+      }
+    }
+
+    internal Dictionary<string, TotalCount> GetNpcTotalSpellCounts()
+    {
+      lock (NpcTotalSpellCounts)
+      {
+        return NpcTotalSpellCounts.ToDictionary(entry => entry.Key, entry => entry.Value);
+      }
     }
 
     internal Fight GetFight(string name)
@@ -425,7 +456,7 @@ namespace EQLogParser
     {
       SpellData spellData = null;
 
-      if (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.TryGetValue(name, out var spellList))
+      if (!string.IsNullOrEmpty(name) && name != Labels.UNK_SPELL && SpellsNameDb.TryGetValue(name, out var spellList))
       {
         spellData = spellList.Find(item => item.Damaging > 0);
       }
@@ -437,7 +468,7 @@ namespace EQLogParser
     {
       SpellData spellData = null;
 
-      if (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.TryGetValue(name, out var spellList))
+      if (!string.IsNullOrEmpty(name) && name != Labels.UNK_SPELL && SpellsNameDb.TryGetValue(name, out var spellList))
       {
         spellData = spellList.Find(item => item.Damaging < 0);
       }
@@ -449,7 +480,7 @@ namespace EQLogParser
     {
       SpellData spellData = null;
 
-      if (!string.IsNullOrEmpty(name) && name != Labels.UNKSPELL && SpellsNameDB.TryGetValue(name, out var spellList))
+      if (!string.IsNullOrEmpty(name) && name != Labels.UNK_SPELL && SpellsNameDb.TryGetValue(name, out var spellList))
       {
         if (spellList.Count <= 10)
         {
@@ -509,7 +540,7 @@ namespace EQLogParser
 
     internal void AddSpellCast(SpellCast cast, double beginTime, string specialKey = null)
     {
-      if (SpellsNameDB.ContainsKey(cast.Spell))
+      if (SpellsNameDb.ContainsKey(cast.Spell))
       {
         Helpers.AddAction(AllSpellCastBlocks, cast, beginTime);
         LastSpellIndex = AllSpellCastBlocks.Count - 1;
@@ -656,8 +687,7 @@ namespace EQLogParser
       {
         if (!NpcTotalSpellCounts.TryGetValue(npc, out var value))
         {
-          value = new TotalCount { Reflected = 1 };
-          NpcTotalSpellCounts[npc] = value;
+          NpcTotalSpellCounts[npc] = new TotalCount { Reflected = 1 };
         }
         else
         {
@@ -698,8 +728,7 @@ namespace EQLogParser
       {
         if (!NpcTotalSpellCounts.TryGetValue(npc, out var value))
         {
-          value = new TotalCount { Landed = 1 };
-          NpcTotalSpellCounts[npc] = value;
+          NpcTotalSpellCounts[npc] = new TotalCount { Landed = 1 };
         }
         else
         {
@@ -983,11 +1012,19 @@ namespace EQLogParser
         AllRandomBlocks.Clear();
         AllSpecialActions.Clear();
         SpellAbbrvCache.Clear();
-        NpcTotalSpellCounts.Clear();
-        NpcResistStats.Clear();
         AssignedLoot.Clear();
         ClearActiveAdps();
         EventsClearedActiveData?.Invoke(this, true);
+      }
+
+      lock (NpcTotalSpellCounts)
+      {
+        NpcTotalSpellCounts.Clear();
+      }
+
+      lock (NpcResistStats)
+      {
+        NpcResistStats.Clear();
       }
     }
 

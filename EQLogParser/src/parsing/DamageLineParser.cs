@@ -497,7 +497,7 @@ namespace EQLogParser
           }
           else
           {
-            type = spell == attacker ? Labels.OTHERDMG : GetTypeFromSpell(spell, Labels.DOT);
+            type = spell == attacker ? Labels.OTHER_DMG : GetTypeFromSpell(spell, Labels.DOT);
           }
 
           defender = string.Join(" ", split, 0, takenIndex);
@@ -519,7 +519,7 @@ namespace EQLogParser
           spell = spell[..^1];
         }
 
-        var label = Labels.OTHERDMG;
+        var label = Labels.OTHER_DMG;
         if (DataManager.Instance.GetDamagingSpellByName(spell) is { } spellData)
         {
           resist = spellData.Resist;
@@ -548,7 +548,8 @@ namespace EQLogParser
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.DD, Labels.DD);
       }
       // [Mon Oct 23 22:18:46 2022] Demonstrated Depletion was hit by non-melee for 6734 points of damage.
-      else if (hitType > -1 && forIndex > -1 && forIndex < pointsOfIndex && nonMeleeIndex < pointsOfIndex && byIndex == (nonMeleeIndex - 1) && isIndex > -1 && isIndex < hitType)
+      else if (hitType > -1 && forIndex > -1 && forIndex < pointsOfIndex && nonMeleeIndex < pointsOfIndex &&
+               byIndex == (nonMeleeIndex - 1) && isIndex > -1 && isIndex < hitType)
       {
         defender = string.Join(" ", split, 0, isIndex);
         attacker = Labels.UNK;

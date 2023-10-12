@@ -132,8 +132,8 @@ namespace EQLogParser
       });
     }
 
-    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.TANKPARSE);
-    private void CopyReceivedHealingToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.RECEIVEDHEALPARSE);
+    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.TANK_PARSE);
+    private void CopyReceivedHealingToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.RECEIVED_HEAL_PARSE);
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -240,7 +240,7 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        if (e.Type == Labels.HEALPARSE && e.State == "COMPLETED")
+        if (e.Type == Labels.HEAL_PARSE && e.State == "COMPLETED")
         {
           if (CurrentStats != null)
           {
@@ -258,7 +258,7 @@ namespace EQLogParser
             }
           }
         }
-        else if (e.Type == Labels.TANKPARSE)
+        else if (e.Type == Labels.TANK_PARSE)
         {
           switch (e.State)
           {

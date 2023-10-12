@@ -162,13 +162,13 @@ namespace EQLogParser
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.TANKPARSE, State = "STARTED" });
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.TANK_PARSE, State = "STARTED" });
     }
 
     private void FireNoDataEvent(GenerateStatsOptions options, string state)
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.TANKPARSE, State = state });
+      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.TANK_PARSE, State = state });
       FireChartEvent(options, "CLEAR");
     }
 
@@ -207,7 +207,7 @@ namespace EQLogParser
                       if (record.Total > 0)
                       {
                         var values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
-                        Helpers.LongIntAddHelper.Add(values, record.Total, 1);
+                        AddValue(values, record.Total, 1);
                       }
                     }
                   }
@@ -248,7 +248,7 @@ namespace EQLogParser
             // generating new stats
             var genEvent = new StatsGenerationEvent
             {
-              Type = Labels.TANKPARSE,
+              Type = Labels.TANK_PARSE,
               State = "COMPLETED",
               CombinedStats = combined
             };
@@ -264,6 +264,14 @@ namespace EQLogParser
           }
         }
       }
+
+      void AddValue(Dictionary<long, int> dict, long key, int amount)
+      {
+        if (!dict.TryAdd(key, amount))
+        {
+          dict[key] += amount;
+        }
+      }
     }
 
     private void Reset()
@@ -272,7 +280,7 @@ namespace EQLogParser
       PlayerSubTimeRanges.Clear();
       TankingGroups.Clear();
       TankingGroupIds.Clear();
-      RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAIDTOTALS);
+      RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_TOTALS);
       Selected = null;
       Title = "";
     }
@@ -287,7 +295,7 @@ namespace EQLogParser
 
       if (currentStats != null)
       {
-        if (type == Labels.TANKPARSE)
+        if (type == Labels.TANK_PARSE)
         {
           if (selected?.Count > 0)
           {
@@ -304,7 +312,7 @@ namespace EQLogParser
           var totals = showDPS ? currentStats.TotalTitle : currentStats.TotalTitle.Split(new[] { " @" }, 2, StringSplitOptions.RemoveEmptyEntries)[0];
           title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, showTotals ? totals : "");
         }
-        else if (type == Labels.RECEIVEDHEALPARSE)
+        else if (type == Labels.RECEIVED_HEAL_PARSE)
         {
           if (selected?.Count == 1 && selected[0].MoreStats != null)
           {

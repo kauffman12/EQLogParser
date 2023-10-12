@@ -228,7 +228,7 @@ namespace EQLogParser
               Healed = string.Intern(healed),
               Type = string.Intern(type),
               ModifiersMask = -1,
-              SubType = string.IsNullOrEmpty(spell) ? Labels.SELFHEAL : string.Intern(spell)
+              SubType = string.IsNullOrEmpty(spell) ? Labels.SELF_HEAL : string.Intern(spell)
             };
 
             if (part[^1] == ')')

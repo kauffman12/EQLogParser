@@ -11,8 +11,7 @@ namespace EQLogParser
 {
   static class Helpers
   {
-    internal static DictionaryAddHelper<long, int> LongIntAddHelper = new();
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     public static void AddAction(List<ActionGroup> blockList, IAction action, double beginTime)
     {
@@ -93,43 +92,6 @@ namespace EQLogParser
       else if (f.Position != good)
       {
         f.Seek(good, SeekOrigin.Begin);
-      }
-    }
-  }
-
-  internal class DictionaryUniqueListHelper<T1, T2>
-  {
-    internal int AddToList(Dictionary<T1, List<T2>> dict, T1 key, T2 value)
-    {
-      var size = 0;
-      lock (dict)
-      {
-        if (!dict.ContainsKey(key))
-        {
-          dict[key] = new List<T2>();
-        }
-
-        if (!dict[key].Contains(value))
-        {
-          dict[key].Add(value);
-          size = dict[key].Count;
-        }
-      }
-      return size;
-    }
-  }
-
-  internal class DictionaryAddHelper<T1, T2>
-  {
-    internal void Add(Dictionary<T1, T2> dict, T1 key, T2 value)
-    {
-      lock (dict)
-      {
-        dict.TryAdd(key, default);
-
-        dynamic temp = dict[key];
-        temp += value;
-        dict[key] = temp;
       }
     }
   }

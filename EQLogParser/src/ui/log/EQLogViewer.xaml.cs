@@ -79,7 +79,7 @@ namespace EQLogParser
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = "Guild", Value = ChatChannels.Guild });
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = Labels.MELEE, Value = Labels.MELEE });
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = OTHERCHAT, Value = OTHERCHAT });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = Labels.OTHERDMG, Value = Labels.OTHERDMG });
+      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = Labels.OTHER_DMG, Value = Labels.OTHER_DMG });
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = Labels.PROC, Value = Labels.PROC });
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = "Raid", Value = ChatChannels.Raid });
       list.Add(new ComboBoxItemDetails { IsChecked = true, Text = "Say", Value = ChatChannels.Say });
@@ -159,7 +159,7 @@ namespace EQLogParser
                   case Labels.DS:
                   case Labels.DD:
                   case Labels.DOT:
-                  case Labels.OTHERDMG:
+                  case Labels.OTHER_DMG:
                   case Labels.MELEE:
                   case Labels.PROC:
                     ignore = !types.ContainsKey(damageRecord.Type);
