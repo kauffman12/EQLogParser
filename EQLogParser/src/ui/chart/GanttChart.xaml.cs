@@ -50,7 +50,7 @@ namespace EQLogParser
     {
       InitializeComponent();
       ROW_HEIGHT = (int)MainWindow.CurrentFontSize + 12;
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
     // timelineType 0 = tanking, 1 = dps, 2 = healing
@@ -324,7 +324,7 @@ namespace EQLogParser
         headerScroller.ScrollToHorizontalOffset(0);
       }
 
-      Task.Delay(150).ContinueWith(t =>
+      Task.Delay(150).ContinueWith(_ =>
       {
         Dispatcher.InvokeAsync(() =>
         {
@@ -479,7 +479,7 @@ namespace EQLogParser
       image.SetResourceReference(HeightProperty, "EQContentSize");
       image.SetResourceReference(WidthProperty, "EQContentSize");
       image.SetResourceReference(ImageAwesome.ForegroundProperty, "EQMenuIconBrush");
-      image.PreviewMouseLeftButtonDown += (sender, e) =>
+      image.PreviewMouseLeftButtonDown += (_, _) =>
       {
         Ignore[name] = 1;
         Display();
@@ -691,7 +691,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
+        MainActions.EventsThemeChanged -= EventsThemeChanged;
         disposedValue = true;
       }
     }

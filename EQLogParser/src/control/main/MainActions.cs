@@ -27,6 +27,8 @@ namespace EQLogParser
 {
   static class MainActions
   {
+    internal static event Action<string> EventsLogLoadingComplete;
+    internal static event Action<string> EventsThemeChanged;
     private const string PETS_LIST_TITLE = "Verified Pets ({0})";
     private const string PLAYER_LIST_TITLE = "Verified Players ({0})";
     private static readonly ObservableCollection<dynamic> VerifiedPlayersView = new();
@@ -34,13 +36,15 @@ namespace EQLogParser
     private static readonly ObservableCollection<PetMapping> PetPlayersView = new();
     private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new();
     private static readonly SortableNameComparer TheSortableNameComparer = new();
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
+    internal static void FireLoadingEvent(string log) => EventsLogLoadingComplete?.Invoke(log);
+    internal static void FireThemeChanged(string theme) => EventsThemeChanged?.Invoke(theme);
 
     internal static void CheckVersion(TextBlock errorText)
     {
       var version = Application.ResourceAssembly.GetName().Version;
-      var dispatcher = Application.Current.Dispatcher;
-      Task.Delay(2000).ContinueWith(task =>
+      Task.Delay(2000).ContinueWith(_ =>
       {
         HttpClient client = null;
         try
@@ -55,7 +59,7 @@ namespace EQLogParser
             && (v1 > version.Major || (v1 == version.Major && v2 > version.Minor) ||
             (v1 == version.Major && v2 == version.Minor && v3 > version.Build)))
           {
-            dispatcher.InvokeAsync((Action)(async () =>
+            UIUtil.InvokeAsync(async () =>
             {
               var msg = new MessageWindow("Version " + matches.Groups[1].Value + " is Available. Download and Install?",
                 Resource.CHECK_VERSION, MessageWindow.IconType.Question, "Yes");
@@ -99,7 +103,7 @@ namespace EQLogParser
                     {
                       await Task.Delay(1000).ContinueWith(_ =>
                       {
-                        dispatcher.InvokeAsync(() => Application.Current.MainWindow?.Close());
+                        UIUtil.InvokeAsync(() => Application.Current.MainWindow?.Close());
                       });
                     }
                   }
@@ -114,16 +118,13 @@ namespace EQLogParser
                   downloadClient?.Dispose();
                 }
               }
-            }));
+            });
           }
         }
         catch (Exception ex)
         {
           Log.Error("Error Checking for Updates", ex);
-          Application.Current.Dispatcher.InvokeAsync(() =>
-          {
-            errorText.Text = "Update Check Failed. Firewall?";
-          });
+          UIUtil.InvokeAsync(() => errorText.Text = "Update Check Failed. Firewall?");
         }
         finally
         {
@@ -333,6 +334,8 @@ namespace EQLogParser
       Application.Current.Resources["DamageOverlayBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#99000000") };
       Application.Current.Resources["DamageOverlayDamageBrush"] = new SolidColorBrush { Color = Colors.White };
       Application.Current.Resources["DamageOverlayProgressBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF1D397E") };
+
+      MainActions.FireThemeChanged(theme);
     }
 
     // should already run on the UI thread
@@ -398,9 +401,9 @@ namespace EQLogParser
       // pet -> players
       petMappingGrid.ItemsSource = PetPlayersView;
       ownerList.ItemsSource = VerifiedPlayersView;
-      PlayerManager.Instance.EventsNewPetMapping += (sender, mapping) =>
+      PlayerManager.Instance.EventsNewPetMapping += (_, mapping) =>
       {
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        UIUtil.InvokeNow(() =>
         {
           var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(mapping.Pet, StringComparison.OrdinalIgnoreCase));
           if (existing != null)
@@ -430,9 +433,9 @@ namespace EQLogParser
       // verified player table
       playersGrid.ItemsSource = VerifiedPlayersView;
       classList.ItemsSource = PlayerManager.Instance.GetClassList(true);
-      PlayerManager.Instance.EventsNewVerifiedPlayer += (sender, name) =>
+      PlayerManager.Instance.EventsNewVerifiedPlayer += (_, name) =>
       {
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        UIUtil.InvokeNow(() =>
         {
           var entry = InsertNameIntoSortedList(name, VerifiedPlayersView);
           entry.PlayerClass = PlayerManager.Instance.GetPlayerClass(name);
@@ -442,7 +445,7 @@ namespace EQLogParser
 
       PlayerManager.Instance.EventsUpdatePlayerClass += (name, playerClass) =>
       {
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        UIUtil.InvokeNow(() =>
         {
           var entry = new ExpandoObject() as dynamic;
           entry.Name = name;
@@ -454,9 +457,9 @@ namespace EQLogParser
         });
       };
 
-      PlayerManager.Instance.EventsRemoveVerifiedPlayer += (sender, name) =>
+      PlayerManager.Instance.EventsRemoveVerifiedPlayer += (_, name) =>
       {
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        UIUtil.InvokeNow(() =>
         {
           var found = VerifiedPlayersView.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
           if (found != null)
@@ -481,15 +484,15 @@ namespace EQLogParser
     {
       // verified pets table
       petsGrid.ItemsSource = VerifiedPetsView;
-      PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => main.Dispatcher.InvokeAsync(() =>
+      PlayerManager.Instance.EventsNewVerifiedPet += (_, name) => main.Dispatcher.InvokeAsync(() =>
       {
         InsertNameIntoSortedList(name, VerifiedPetsView);
         DockingManager.SetHeader(petsWindow, string.Format(PETS_LIST_TITLE, VerifiedPetsView.Count));
       });
 
-      PlayerManager.Instance.EventsRemoveVerifiedPet += (sender, name) =>
+      PlayerManager.Instance.EventsRemoveVerifiedPet += (_, name) =>
       {
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        UIUtil.InvokeNow(() =>
         {
           var found = VerifiedPetsView.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
           if (found != null)
@@ -522,7 +525,7 @@ namespace EQLogParser
         var dialog = new MessageWindow("Saving " + fights.Count + " Selected Fights.", Resource.FILEMENU_SAVE_FIGHTS,
           MessageWindow.IconType.Save);
 
-        Task.Delay(150).ContinueWith(task =>
+        Task.Delay(150).ContinueWith(_ =>
         {
           var accessError = false;
 
@@ -585,7 +588,7 @@ namespace EQLogParser
           }
           finally
           {
-            Application.Current.Dispatcher.InvokeAsync(() => dialog.Close());
+            UIUtil.InvokeAsync(() => dialog.Close());
 
             if (accessError)
             {
@@ -601,7 +604,7 @@ namespace EQLogParser
       }
     }
 
-    internal static void ExportAsHTML(Dictionary<string, SummaryTable> tables)
+    internal static void ExportAsHtml(Dictionary<string, SummaryTable> tables)
     {
       try
       {
@@ -609,8 +612,8 @@ namespace EQLogParser
         {
           Filter = "HTML Files (*.html)|*.html"
         };
-        var fileName = DateUtil.GetCurrentDate("MM-dd-yy") + " ";
 
+        var fileName = DateUtil.GetCurrentDate("MM-dd-yy") + " ";
         if (tables.Values.FirstOrDefault() is { } summary)
         {
           fileName += summary.GetTargetTitle();

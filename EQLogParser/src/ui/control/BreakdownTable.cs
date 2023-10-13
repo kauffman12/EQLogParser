@@ -11,8 +11,6 @@ namespace EQLogParser
 {
   public abstract class BreakdownTable : UserControl, IDisposable
   {
-    private protected string CurrentSortKey = "Total";
-    private protected ListSortDirection CurrentSortDirection = ListSortDirection.Descending;
     private protected DataGridTextColumn CurrentColumn = null;
     private SfTreeGrid TheDataGrid;
     private ComboBox TheColumnsCombo;
@@ -36,7 +34,7 @@ namespace EQLogParser
       TheDataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
       DataGridUtil.UpdateTableMargin(TheDataGrid);
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
 
       // workaround to avoid drag/drop failing when grid has no data
       TheDataGrid.ItemsSource = new List<PlayerStats>();
@@ -60,7 +58,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
+        MainActions.EventsThemeChanged -= EventsThemeChanged;
         TheDataGrid.Dispose();
         disposedValue = true;
       }

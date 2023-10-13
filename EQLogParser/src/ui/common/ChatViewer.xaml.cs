@@ -67,7 +67,7 @@ namespace EQLogParser
 
       UpdateCurrentTextColor();
       FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
-      FilterTimer.Tick += (sender, e) =>
+      FilterTimer.Tick += (_, _) =>
       {
         FilterTimer.Stop();
         ChangeSearch();
@@ -77,7 +77,7 @@ namespace EQLogParser
       Ready = true;
       ChatManager.Instance.EventsUpdatePlayer += ChatManagerEventsUpdatePlayer;
       ChatManager.Instance.EventsNewChannels += ChatManagerEventsNewChannels;
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
       ChangeSearch();
     }
 
@@ -181,7 +181,7 @@ namespace EQLogParser
             }
           }
 
-          if (playerList.IndexOf(player) is int index and > -1)
+          if (playerList.IndexOf(player) is var index and > -1)
           {
             players.SelectedIndex = index;
           }
@@ -278,7 +278,7 @@ namespace EQLogParser
     {
       if (chatBox?.Text != null && chatBox.Lines.Count <= PAGE_SIZE)
       {
-        Task.Delay(100).ContinueWith(task => Dispatcher.InvokeAsync(() =>
+        Task.Delay(100).ContinueWith(_ => Dispatcher.InvokeAsync(() =>
         {
           chatBox.GoToLine(chatBox.Lines.Count);
           LastFocused?.Focus();
@@ -511,7 +511,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
+        MainActions.EventsThemeChanged -= EventsThemeChanged;
         ChatManager.Instance.EventsUpdatePlayer -= ChatManagerEventsUpdatePlayer;
         ChatManager.Instance.EventsNewChannels -= ChatManagerEventsNewChannels;
 

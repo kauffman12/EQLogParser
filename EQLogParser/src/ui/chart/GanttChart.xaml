@@ -53,7 +53,7 @@
         </ContextMenu>
       </Grid.ContextMenu>
       <ScrollViewer x:Name="headerScroller" Grid.Row="0" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Hidden">
-        <Grid x:Name="contentHeader" Grid.Row="0">
+        <Grid x:Name="contentHeader">
           <Grid.RowDefinitions>
             <RowDefinition Height="*" />
           </Grid.RowDefinitions>

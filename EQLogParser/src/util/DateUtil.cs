@@ -17,7 +17,6 @@ namespace EQLogParser
     internal static double ToDouble(DateTime dateTime) => dateTime.Ticks / TimeSpan.FromSeconds(1).Ticks;
     internal static DateTime FromDouble(double value) => new((long)value * TimeSpan.FromSeconds(1).Ticks);
     internal static string GetCurrentDate(string format) => DateTime.Now.ToString(format, CultureInfo.InvariantCulture);
-    internal static string FormatDate(double seconds) => new DateTime().AddSeconds(seconds).ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
     internal static string FormatSimpleDate(double seconds) => new DateTime().AddSeconds(seconds).ToString("MMM dd HH:mm:ss", CultureInfo.InvariantCulture);
     internal static string FormatSimpleHMS(double seconds) => new DateTime().AddSeconds(seconds).ToString("HH:mm:ss", CultureInfo.InvariantCulture);
 

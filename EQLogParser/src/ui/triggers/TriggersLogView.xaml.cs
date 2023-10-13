@@ -33,7 +33,7 @@ namespace EQLogParser
 
         if (AlertLogs?.Count > 0)
         {
-          if (selected != null && list.IndexOf(selected) is int found and > -1)
+          if (selected != null && list.IndexOf(selected) is var found and > -1)
           {
             logList.SelectedIndex = found;
           }

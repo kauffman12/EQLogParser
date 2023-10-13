@@ -35,23 +35,25 @@ namespace EQLogParser
     {
       InitializeComponent();
 
-      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
+      MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
 
-      var list = new List<ComboBoxItemDetails>();
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = ZONE_EVENT });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = KILLSHOT_EVENT });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = MEZBREAK_EVENT });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = PLAYERKILL_EVENT });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = PLAYERSLAIN_EVENT });
+      var list = new List<ComboBoxItemDetails>
+      {
+        new() { IsChecked = true, Text = ZONE_EVENT },
+        new() { IsChecked = true, Text = KILLSHOT_EVENT },
+        new() { IsChecked = true, Text = MEZBREAK_EVENT },
+        new() { IsChecked = true, Text = PLAYERKILL_EVENT },
+        new() { IsChecked = true, Text = PLAYERSLAIN_EVENT }
+      };
 
       selectedOptions.ItemsSource = list;
       UIElementUtil.SetComboBoxTitle(selectedOptions, list.Count, Resource.EVENT_TYPES_SELECTED);
       DataGridUtil.UpdateTableMargin(dataGrid);
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
 
       eventFilter.Text = Resource.EVENT_FILTER_TEXT;
       FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
-      FilterTimer.Tick += (sender, e) =>
+      FilterTimer.Tick += (_, _) =>
       {
         FilterTimer.Stop();
         if (CurrentFilterText != eventFilter.Text)
@@ -246,7 +248,6 @@ namespace EQLogParser
     }
 
     private void EventsLogLoadingComplete(string _) => Load();
-    private void RefreshMouseClick(object sender, MouseButtonEventArgs e) => Load();
 
     #region IDisposable Support
     private bool disposedValue; // To detect redundant calls
@@ -255,8 +256,8 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
-        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventsLogLoadingComplete;
+        MainActions.EventsThemeChanged -= EventsThemeChanged;
+        MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
         dataGrid.Dispose();
         disposedValue = true;
       }

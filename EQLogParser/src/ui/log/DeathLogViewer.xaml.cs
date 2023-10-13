@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
 
 namespace EQLogParser
 {
   /// <summary>
   /// Interaction logic for DeathLogViewer.xaml
   /// </summary>
-  public partial class DeathLogViewer : UserControl
+  public partial class DeathLogViewer : IDisposable
   {
     private PlayerStats CurrentPlayer;
     private readonly List<DeathEvent> Deaths = new();
@@ -18,7 +17,7 @@ namespace EQLogParser
     public DeathLogViewer()
     {
       InitializeComponent();
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
     internal void Init(CombinedStats combined, PlayerStats playerStats)
@@ -49,7 +48,7 @@ namespace EQLogParser
       var death = Deaths[deathList.SelectedIndex];
       var end = death.BeginTime;
       var start = end - 20;
-      var allFights = (Application.Current.MainWindow as MainWindow).GetFightTable()?.GetFights();
+      var allFights = (Application.Current.MainWindow as MainWindow)?.GetFightTable()?.GetFights();
       var allHeals = DataManager.Instance.GetHealsDuring(start, end + 1);
       var allSpells = DataManager.Instance.GetReceivedSpellsDuring(start, end + 1);
       var damages = new Dictionary<double, List<string>>();
@@ -148,6 +147,8 @@ namespace EQLogParser
             var row = new ExpandoObject() as dynamic;
             row.Time = time;
             row.Damage = damage;
+            row.Healing = null;
+            row.Spell = null;
             sub.Add(row);
           });
         }
@@ -166,6 +167,8 @@ namespace EQLogParser
               var row = new ExpandoObject() as dynamic;
               row.Time = time;
               row.Healing = heal;
+              row.Damage = null;
+              row.Spell = null;
               sub.Add(row);
             }
           });
@@ -185,6 +188,8 @@ namespace EQLogParser
               var row = new ExpandoObject() as dynamic;
               row.Time = time;
               row.Spell = spell;
+              row.Damage = null;
+              row.Healing = null;
               sub.Add(row);
             }
           });
@@ -255,7 +260,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
+        MainActions.EventsThemeChanged -= EventsThemeChanged;
         dataGrid?.Dispose();
         disposedValue = true;
       }

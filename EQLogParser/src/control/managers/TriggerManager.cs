@@ -61,13 +61,13 @@ namespace EQLogParser
     internal void Start()
     {
       TriggerUtil.LoadOverlayStyles();
-      (Application.Current?.MainWindow as MainWindow).EventsLogLoadingComplete += TriggerManagerEventsLogLoadingComplete;
+      MainActions.EventsLogLoadingComplete += TriggerManagerEventsLogLoadingComplete;
       TriggerConfigUpdateEvent(null);
     }
 
     internal void Stop()
     {
-      (Application.Current?.MainWindow as MainWindow).EventsLogLoadingComplete -= TriggerManagerEventsLogLoadingComplete;
+      MainActions.EventsLogLoadingComplete -= TriggerManagerEventsLogLoadingComplete;
 
       lock (LogReaders)
       {

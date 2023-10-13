@@ -65,7 +65,7 @@ namespace EQLogParser
 
     internal static bool TestRegexProperty(bool useRegex, string pattern, PatternEditor editor)
     {
-      var isValid = useRegex ? TextUtils.IsValidRegex(pattern) : true;
+      var isValid = !useRegex || TextUtils.IsValidRegex(pattern);
       editor.SetForeground(isValid ? "ContentForeground" : "EQStopForegroundBrush");
       return isValid;
     }
@@ -370,7 +370,7 @@ namespace EQLogParser
           var groupName = match.Groups[i].Name;
           var groupValue = match.Groups[i].Value;
 
-          if ("TS".Equals(groupName, StringComparison.OrdinalIgnoreCase) && DateUtil.SimpleTimeToSeconds(groupValue) is uint sec)
+          if ("TS".Equals(groupName, StringComparison.OrdinalIgnoreCase) && DateUtil.SimpleTimeToSeconds(groupValue) is var sec)
           {
             if (sec > 0)
             {

@@ -274,7 +274,7 @@ namespace EQLogParser
 
     internal DamageStatsManager()
     {
-      DataManager.Instance.EventsClearedActiveData += (sender, e) =>
+      DataManager.Instance.EventsClearedActiveData += (_, _) =>
       {
         lock (DamageGroupIds)
         {

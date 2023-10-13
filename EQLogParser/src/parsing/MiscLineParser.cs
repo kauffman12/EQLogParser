@@ -319,7 +319,7 @@ namespace EQLogParser
           continue;
         }
 
-        if (StatsUtil.ParseUInt(pieces[i]) is uint value && Currency.FirstOrDefault(curr => pieces[i + 1].StartsWith(curr, StringComparison.OrdinalIgnoreCase)) is { } type)
+        if (StatsUtil.ParseUInt(pieces[i]) is var value && Currency.FirstOrDefault(curr => pieces[i + 1].StartsWith(curr, StringComparison.OrdinalIgnoreCase)) is { } type)
         {
           tmp.Add(pieces[i] + " " + type);
           count += value * Rates[pieces[i + 1][0]];

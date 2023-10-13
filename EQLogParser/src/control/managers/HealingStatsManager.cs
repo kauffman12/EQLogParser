@@ -36,7 +36,7 @@ namespace EQLogParser
 
     internal HealingStatsManager()
     {
-      DataManager.Instance.EventsClearedActiveData += (sender, e) =>
+      DataManager.Instance.EventsClearedActiveData += (_, _) =>
       {
         lock (HealingGroups)
         {

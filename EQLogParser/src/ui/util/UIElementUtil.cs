@@ -24,7 +24,7 @@ namespace EQLogParser
 
     internal static void CreateImage(Dispatcher dispatcher, FrameworkElement content, Label titleLabel = null)
     {
-      Task.Delay(100).ContinueWith(task => dispatcher.InvokeAsync(() =>
+      Task.Delay(100).ContinueWith(_ => dispatcher.InvokeAsync(() =>
       {
         var wasHidden = content.Visibility != Visibility.Visible;
         content.Visibility = Visibility.Visible;
@@ -79,7 +79,7 @@ namespace EQLogParser
         try
         {
           // trigger the exception
-          var unused = fontFamily.FamilyNames;
+          _ = fontFamily.FamilyNames;
 
           // add the font if it didn't throw
           systemFontFamilies.Add(fontFamily);
@@ -183,19 +183,6 @@ namespace EQLogParser
         {
           elem.IsEnabled = isEnabled;
         }
-      }
-    }
-
-    internal static void SetSize(FrameworkElement element, double height, double width)
-    {
-      if (!double.IsNaN(height) && element.Height != height)
-      {
-        element.Height = height;
-      }
-
-      if (!double.IsNaN(width) && element.Width != width)
-      {
-        element.Width = width;
       }
     }
   }

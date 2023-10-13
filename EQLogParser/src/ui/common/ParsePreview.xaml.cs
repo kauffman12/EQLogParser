@@ -40,7 +40,7 @@ namespace EQLogParser
       TankingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
 
       TitleTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
-      TitleTimer.Tick += (sender, e) =>
+      TitleTimer.Tick += (_, _) =>
       {
         TitleTimer.Stop();
 

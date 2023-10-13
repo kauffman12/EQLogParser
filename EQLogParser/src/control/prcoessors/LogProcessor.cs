@@ -52,14 +52,14 @@ namespace EQLogParser
         double extraDouble = 0;
 
         // only if it's not a chat line check if two lines are on the same line
-        if (lineData.Action.IndexOf("[", StringComparison.Ordinal) is int index and > -1 && lineData.Action.Length > (index + 28) &&
+        if (lineData.Action.IndexOf("[", StringComparison.Ordinal) is var index and > -1 && lineData.Action.Length > (index + 28) &&
             lineData.Action[index + 25] == ']' && char.IsDigit(lineData.Action[index + 24]))
         {
           var original = lineData.Action;
           lineData.Action = original[..index];
           doubleLine = original[index..];
 
-          if (DateUtil.ParseStandardDate(doubleLine) is DateTime newDate && newDate != DateTime.MinValue)
+          if (DateUtil.ParseStandardDate(doubleLine) is var newDate && newDate != DateTime.MinValue)
           {
             extraDouble = DateUtil.ToDouble(newDate);
           }

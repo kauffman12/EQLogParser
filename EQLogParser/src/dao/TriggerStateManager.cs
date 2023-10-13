@@ -118,7 +118,7 @@ namespace EQLogParser
           };
 
           config.Characters.Add(newCharacter);
-          config.Characters.Sort((x, y) => x.Name.CompareTo(y.Name));
+          config.Characters.Sort((x, y) => String.Compare(x.Name, y.Name, StringComparison.Ordinal));
           UpdateConfig(config);
         }
       }

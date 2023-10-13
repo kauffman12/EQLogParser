@@ -414,7 +414,7 @@ namespace EQLogParser
         stats.Avg = (long)Math.Round(Convert.ToDecimal(stats.Total) / stats.Hits, 2);
         stats.Potential = stats.Total + stats.Extra;
 
-        if ((stats.CritHits - stats.LuckyHits) is uint nonLucky and > 0)
+        if ((stats.CritHits - stats.LuckyHits) is var nonLucky and > 0)
         {
           stats.AvgCrit = (long)Math.Round(Convert.ToDecimal(stats.TotalCrit) / nonLucky, 2);
         }
@@ -439,7 +439,7 @@ namespace EQLogParser
           stats.ExtraRate = (float)Math.Round((float)stats.Extra / stats.Total * 100, 2);
         }
 
-        if ((stats.Hits - stats.TwincastHits) is uint nonTwincast and > 0)
+        if ((stats.Hits - stats.TwincastHits) is var nonTwincast and > 0)
         {
           stats.AvgNonTwincast = (long)Math.Round(Convert.ToDecimal(stats.TotalNonTwincast) / nonTwincast, 2);
         }

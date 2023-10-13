@@ -22,13 +22,13 @@ namespace EQLogParser
     {
       InitializeComponent();
 
-      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += LogLoadingComplete;
+      MainActions.EventsLogLoadingComplete += LogLoadingComplete;
       DataManager.Instance.EventsNewRandomRecord += EventsNewRandomRecord;
       DataGridUtil.UpdateTableMargin(dataGrid);
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
 
       ReloadTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 2000) };
-      ReloadTimer.Tick += (sender, e) =>
+      ReloadTimer.Tick += (_, _) =>
       {
         GetLatest();
         ReloadTimer.Stop();
@@ -246,8 +246,8 @@ namespace EQLogParser
       if (!disposedValue)
       {
         ReloadTimer?.Stop();
-        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
-        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= LogLoadingComplete;
+        MainActions.EventsThemeChanged -= EventsThemeChanged;
+        MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
         DataManager.Instance.EventsNewRandomRecord -= EventsNewRandomRecord;
         dataGrid.Dispose();
         disposedValue = true;

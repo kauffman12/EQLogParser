@@ -82,7 +82,7 @@ namespace EQLogParser
 
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
     internal void Init(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionGroup>> groups, bool defending = false)
@@ -154,7 +154,7 @@ namespace EQLogParser
     {
       TextColumns[6].IsHidden = CheckBoxColumns[6].IsHidden = !CurrentGroupActionsFilter;
 
-      Task.Delay(100).ContinueWith(task =>
+      Task.Delay(100).ContinueWith(_ =>
       {
         var uniqueDefenders = new ConcurrentDictionary<string, bool>();
         var uniqueActions = new ConcurrentDictionary<string, bool>();
@@ -230,7 +230,7 @@ namespace EQLogParser
           {
             actedList.SelectedIndex = 0;
           }
-          else if (acted.IndexOf(CurrentActedFilter) is int actedIndex and > -1)
+          else if (acted.IndexOf(CurrentActedFilter) is var actedIndex and > -1)
           {
             actedList.SelectedIndex = actedIndex;
           }
@@ -448,7 +448,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
+        MainActions.EventsThemeChanged -= EventsThemeChanged;
         dataGrid?.Dispose();
         disposedValue = true;
       }

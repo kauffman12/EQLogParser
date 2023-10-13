@@ -30,21 +30,26 @@ namespace EQLogParser
       TheDataGrid = dataGrid;
       TheTitleLabel = titleLabel;
 
-      var list = new List<ComboBoxItemDetails>();
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = BENEFICIAL_SPELLS_TYPE });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = CAST_SPELLS_TYPE });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = DET_SPELLS_TYPE });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = RECEIVED_SPELLS_TYPE });
+      var list = new List<ComboBoxItemDetails>
+      {
+        new() { IsChecked = true, Text = BENEFICIAL_SPELLS_TYPE },
+        new() { IsChecked = true, Text = CAST_SPELLS_TYPE },
+        new() { IsChecked = true, Text = DET_SPELLS_TYPE },
+        new() { IsChecked = true, Text = RECEIVED_SPELLS_TYPE }
+      };
+
       selectedOptions.ItemsSource = list;
       UIElementUtil.SetComboBoxTitle(selectedOptions, list.Sum(item => item.IsChecked ? 1 : 0), Resource.SPELL_TYPES_SELECTED);
 
-      list = new List<ComboBoxItemDetails>();
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = SELF_SPELLS_TYPE });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = PROC_SPELLS_TYPE });
+      list = new List<ComboBoxItemDetails>
+      {
+        new(isChecked: true, text: SELF_SPELLS_TYPE),
+        new() { IsChecked = true, Text = PROC_SPELLS_TYPE }
+      };
+
       selectedSpellRestrictions.ItemsSource = list;
       UpdateRestrictionsTitle(selectedSpellRestrictions);
-
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
     protected void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitleLabel.Content.ToString());
@@ -107,14 +112,8 @@ namespace EQLogParser
     protected bool UpdateSelectedRestrictions(ComboBox selected)
     {
       var changed = false;
-      var count = 0;
       foreach (var item in selected.Items.Cast<ComboBoxItemDetails>())
       {
-        if (item.IsChecked)
-        {
-          count++;
-        }
-
         switch (item.Text)
         {
           case PROC_SPELLS_TYPE:
@@ -240,7 +239,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
+        MainActions.EventsThemeChanged -= EventsThemeChanged;
         TheDataGrid?.Dispose();
         disposedValue = true;
       }

@@ -20,7 +20,7 @@ namespace EQLogParser
     {
       InitializeComponent();
 
-      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += LogLoadingComplete;
+      MainActions.EventsLogLoadingComplete += LogLoadingComplete;
       (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange += SelectionChange;
       dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Taunt", SortDirection = ListSortDirection.Descending });
 
@@ -30,7 +30,7 @@ namespace EQLogParser
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
       DataGridUtil.UpdateTableMargin(dataGrid);
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
       Load();
     }
 
@@ -136,8 +136,8 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
-        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= LogLoadingComplete;
+        MainActions.EventsThemeChanged -= EventsThemeChanged;
+        MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
         (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange -= SelectionChange;
         dataGrid.Dispose();
         disposedValue = true;

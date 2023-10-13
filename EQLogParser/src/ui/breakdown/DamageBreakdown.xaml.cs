@@ -36,7 +36,7 @@ namespace EQLogParser
       var list = new List<PlayerStats>();
       var pets = showPets.IsEnabled;
 
-      Task.Delay(100).ContinueWith(task =>
+      Task.Delay(100).ContinueWith(_ =>
       {
         foreach (ref var stats in selectedStats.ToArray().AsSpan())
         {

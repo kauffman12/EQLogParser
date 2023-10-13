@@ -40,7 +40,7 @@ namespace EQLogParser
       numLabel.FontSize = MainWindow.CurrentFontSize;
 
       DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
-      ((MainWindow)Application.Current.MainWindow)!.EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
 
       if (includePets)
       {
@@ -617,7 +617,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
+        MainActions.EventsThemeChanged -= EventsThemeChanged;
         DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
         sfLineChart.Dispose();
         disposedValue = true;

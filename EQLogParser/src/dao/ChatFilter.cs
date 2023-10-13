@@ -57,12 +57,6 @@ namespace EQLogParser
       return (StartDate == 0 || (StartDate < end)) && (EndDate == 0 || (EndDate >= begin));
     }
 
-    internal bool PastLiveFilter(ChatType chatType)
-    {
-      var endOfDay = EndDate + 86400;
-      return (StartDate == 0 || chatType.BeginTime >= StartDate) && (EndDate == 0 || chatType.BeginTime < endOfDay) && PassFilter(chatType);
-    }
-
     internal bool PassFilter(ChatType chatType)
     {
       var passed = false;
@@ -108,7 +102,7 @@ namespace EQLogParser
         stop = part.Length;
       }
 
-      var found = stop < 3 ? false : true;
+      var found = stop >= 3;
       for (var i = 0; found && i < stop; i++)
       {
         if (!char.IsLetter(part, i) && part[i] != '.')

@@ -41,9 +41,9 @@ namespace EQLogParser
       var desc = new[] { "Quantity", "Time" };
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
+      MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
       DataGridUtil.UpdateTableMargin(dataGrid);
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
 
       dataGrid.ItemsSource = IndividualRecords;
       Load();
@@ -234,24 +234,24 @@ namespace EQLogParser
     {
       var values = new List<string>();
 
-      if (amount / 1000 is uint plat and > 0)
+      if (amount / 1000 is var plat and > 0)
       {
         values.Add(plat + " Platinum");
       }
 
       var rem = amount % 1000;
-      if (rem / 100 is uint gold and > 0)
+      if (rem / 100 is var gold and > 0)
       {
         values.Add(gold + " Gold");
       }
 
       rem = amount % 100;
-      if (rem / 10 is uint silver and > 0)
+      if (rem / 10 is var silver and > 0)
       {
         values.Add(silver.ToString(CultureInfo.CurrentCulture) + " Silver");
       }
 
-      if (rem % 10 is uint copper and > 0)
+      if (rem % 10 is var copper and > 0)
       {
         values.Add(copper.ToString(CultureInfo.CurrentCulture) + " Copper");
       }
@@ -266,8 +266,8 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
-        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventsLogLoadingComplete;
+        MainActions.EventsThemeChanged -= EventsThemeChanged;
+        MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
         dataGrid.Dispose();
         disposedValue = true;
       }

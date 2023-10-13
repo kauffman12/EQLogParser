@@ -62,7 +62,7 @@ namespace EQLogParser
         if (action.IndexOf("told ", 4, 5, StringComparison.Ordinal) == 4)
         {
           // start at 11 since names have to be at least a few characters
-          if (action.IndexOf(",", 11) is int end and > -1)
+          if (action.IndexOf(",", 11, StringComparison.Ordinal) is var end and > -1)
           {
             chatType = new ChatType
             {
@@ -88,7 +88,7 @@ namespace EQLogParser
               chatType = new ChatType { Channel = ChatChannels.Raid, SenderIsYou = true, Sender = you, TextStart = 20 };
             }
           }
-          else if (action.IndexOf(":", 11) is int end and > -1)
+          else if (action.IndexOf(":", 11, StringComparison.Ordinal) is var end and > -1)
           {
             if (action.Length > end + 3 && (action[end + 2] == ',' || action[end + 3] == ','))
             {
@@ -241,7 +241,7 @@ namespace EQLogParser
             }
           }
           // Kizant tells General:1,
-          else if (action.IndexOf(":", end1 + 7) is int end2 and > -1)
+          else if (action.IndexOf(":", end1 + 7, StringComparison.Ordinal) is var end2 and > -1)
           {
             if (action.Length > end2 + 3 && (action[end2 + 2] == ',' || action[end2 + 3] == ','))
             {
@@ -303,7 +303,7 @@ namespace EQLogParser
     {
       if (!double.IsNaN(beginTime) && action.Length > (petEnd + 15))
       {
-        var petLeaderIndex = action.IndexOf("'My leader is ", petEnd + 6);
+        var petLeaderIndex = action.IndexOf("'My leader is ", petEnd + 6, StringComparison.Ordinal);
         if (petLeaderIndex > -1)
         {
           if (string.IsNullOrEmpty(pet))
@@ -313,7 +313,7 @@ namespace EQLogParser
 
           if (!PlayerManager.Instance.IsVerifiedPlayer(pet)) // thanks idiots for this
           {
-            var period = action.IndexOf(".", petLeaderIndex + 16);
+            var period = action.IndexOf(".", petLeaderIndex + 16, StringComparison.Ordinal);
             if (period > -1)
             {
               var owner = action.Substring(petLeaderIndex + 14, period - (petLeaderIndex + 14));

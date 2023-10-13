@@ -26,8 +26,8 @@ namespace EQLogParser
       var action = lineData.Action;
 
       // if GINA data is recent then try to handle it
-      if (action.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is int index and > -1 &&
-          (DateTime.Now - DateUtil.FromDouble(lineData.BeginTime)).TotalSeconds <= 20 && action.IndexOf("}", StringComparison.Ordinal) is int end && end > (index + 40))
+      if (action.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
+          (DateTime.Now - DateUtil.FromDouble(lineData.BeginTime)).TotalSeconds <= 20 && action.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 40))
       {
         string player = null;
         var split = action.Split(' ');
@@ -141,7 +141,7 @@ namespace EQLogParser
     {
       var dispatcher = Application.Current.Dispatcher;
 
-      Task.Delay(500).ContinueWith(task =>
+      Task.Delay(500).ContinueWith(_ =>
       {
         var client = new HttpClient();
 
@@ -356,7 +356,8 @@ namespace EQLogParser
                 }
                 else
                 {
-                  trigger.TriggerAgainOption = 3;
+                  // do nothing if same timer name
+                  trigger.TriggerAgainOption = 4;
                 }
 
                 if (triggerNode.SelectSingleNode("TimerEndedTrigger") is { } timerEndedNode)

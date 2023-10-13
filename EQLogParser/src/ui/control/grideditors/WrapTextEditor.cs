@@ -12,16 +12,6 @@ namespace EQLogParser
   {
     private TextBox TheTextBox;
 
-    public void SetForeground(string foreground)
-    {
-      // this only works if there's one reference to this editor...
-      // TODO figure out better way
-      if (TheTextBox != null)
-      {
-        TheTextBox.SetResourceReference(Control.ForegroundProperty, foreground);
-      }
-    }
-
     public override object Create(PropertyInfo propertyInfo)
     {
       var textBox = base.Create(propertyInfo) as TextBox;

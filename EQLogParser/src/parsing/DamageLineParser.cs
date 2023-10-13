@@ -490,9 +490,7 @@ namespace EQLogParser
           if (spellData == null && DataManager.Instance.IsOldSpell(attacker))
           {
             // check that we can't find a spell where the player name is
-            var temp = attacker;
-            attacker = spell;
-            spell = temp;
+            (attacker, spell) = (spell, attacker);
             type = Labels.DOT;
           }
           else
@@ -625,8 +623,8 @@ namespace EQLogParser
         killer = killer.Length > 1 && killer[^1] == '!' ? killer[..^1] : killer;
         var slain = string.Join(" ", split, 0, hasIndex);
         UpdateSlain(slain, killer, lineData);
-        HasOwner(slain, out _);
-        HasOwner(killer, out _);
+        CheckOwner(slain, out _);
+        CheckOwner(killer, out _);
       }
       // [Mon Apr 19 02:22:09 2021] You have been slain by an armed flyer!
       else if (!checkLineType && stop > 4 && slainIndex == 3 && byIndex == 4 && isYou && split[1] == "have" && split[2] == "been")
@@ -843,8 +841,8 @@ namespace EQLogParser
         }
 
         // check for pets
-        HasOwner(attacker, out var attackerOwner);
-        HasOwner(defender, out var defenderOwner);
+        CheckOwner(attacker, out var attackerOwner);
+        CheckOwner(defender, out var defenderOwner);
 
         if (attacker.Length <= 64 && defender.Length <= 64)
         {
@@ -893,11 +891,9 @@ namespace EQLogParser
       return ToUpper(defender);
     }
 
-    private static bool HasOwner(string name, out string owner)
+    private static void CheckOwner(string name, out string owner)
     {
-      var hasOwner = false;
       owner = null;
-
       if (!string.IsNullOrEmpty(name))
       {
         var pIndex = name.IndexOf("`s ", StringComparison.Ordinal);
@@ -907,8 +903,6 @@ namespace EQLogParser
           if (verifiedPet || PlayerManager.IsPossiblePlayerName(name, pIndex))
           {
             owner = name[..pIndex];
-            hasOwner = true;
-
             if (!verifiedPet && PlayerManager.Instance.IsVerifiedPlayer(owner))
             {
               PlayerManager.Instance.AddVerifiedPet(name);
@@ -916,8 +910,6 @@ namespace EQLogParser
           }
         }
       }
-
-      return hasOwner;
     }
 
     private static bool IsPetOrMount(string part, int start, out int len)

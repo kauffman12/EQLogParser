@@ -18,7 +18,7 @@ namespace EQLogParser
 
     internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats)
     {
-      Task.Delay(100).ContinueWith(task =>
+      Task.Delay(100).ContinueWith(_ =>
       {
         Dispatcher.InvokeAsync(() =>
         {
