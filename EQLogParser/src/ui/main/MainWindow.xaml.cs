@@ -40,7 +40,7 @@ namespace EQLogParser
     internal static bool IsHeadshotDamageEnabled = true;
     internal static bool IsSlayUndeadDamageEnabled = true;
     internal static bool IsHideOnMinimizeEnabled;
-    internal static bool IsMapSendToEQEnabled;
+    internal static bool IsMapSendToEqEnabled;
     internal const int ACTION_INDEX = 27;
     internal static string CurrentTheme;
     internal static string CurrentFontFamily;
@@ -93,15 +93,11 @@ namespace EQLogParser
         Log.Info($"Window Pos ({Top}, {Left})");
         Log.Info($"Window Size ({Width}, {Height})");
 
-        switch (ConfigUtil.GetSetting("WindowState", "Normal"))
+        WindowState = ConfigUtil.GetSetting("WindowState", "Normal") switch
         {
-          case "Maximized":
-            WindowState = WindowState.Maximized;
-            break;
-          default:
-            WindowState = WindowState.Normal;
-            break;
-        }
+          "Maximized" => WindowState.Maximized,
+          _ => WindowState.Normal
+        };
 
         // load theme and fonts
         CurrentFontFamily = ConfigUtil.GetSetting("ApplicationFontFamily", "Segoe UI");
@@ -179,8 +175,8 @@ namespace EQLogParser
         enableHideOnMinimizeIcon.Visibility = IsHideOnMinimizeEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // Allow Ctrl+C for SendToEQ
-        IsMapSendToEQEnabled = ConfigUtil.IfSet("MapSendToEQAsCtrlC");
-        enableMapSendToEQIcon.Visibility = IsMapSendToEQEnabled ? Visibility.Visible : Visibility.Hidden;
+        IsMapSendToEqEnabled = ConfigUtil.IfSet("MapSendToEQAsCtrlC");
+        enableMapSendToEQIcon.Visibility = IsMapSendToEqEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // Damage Overlay
         enableDamageOverlayIcon.Visibility = ConfigUtil.IfSet("IsDamageOverlayEnabled") ? Visibility.Visible : Visibility.Hidden;
@@ -541,7 +537,7 @@ namespace EQLogParser
 
     private void ToggleMapSendToEQClick(object sender, RoutedEventArgs e)
     {
-      IsMapSendToEQEnabled = !IsMapSendToEQEnabled;
+      IsMapSendToEqEnabled = !IsMapSendToEqEnabled;
       ConfigUtil.SetSetting("MapSendToEQAsCtrlC", (enableMapSendToEQIcon.Visibility == Visibility.Hidden).ToString());
       enableMapSendToEQIcon.Visibility = enableMapSendToEQIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
     }
@@ -721,7 +717,7 @@ namespace EQLogParser
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
         SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(TauntStatsViewer), tauntStatsIcon.Tag as string, "Taunt Usage");
       }
-      else if ((sender as MenuItem)?.Icon is ImageAwesome { Tag: string name })
+      else if (sender as MenuItem is { Icon: ImageAwesome { Tag: string name } })
       {
         // any other core windows that just get hidden
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
@@ -783,7 +779,7 @@ namespace EQLogParser
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
       if (SyncFusionUtil.OpenWindow(dockSite, opened, out var control, typeof(DamageSummary), damageSummaryIcon.Tag as string, "DPS Summary"))
       {
-        (control.Content as DamageSummary).EventsSelectionChange += DamageSummary_SelectionChanged;
+        ((DamageSummary)control.Content).EventsSelectionChange += DamageSummary_SelectionChanged;
         if (DamageStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
@@ -798,7 +794,7 @@ namespace EQLogParser
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
       if (SyncFusionUtil.OpenWindow(dockSite, opened, out var control, typeof(HealingSummary), healingSummaryIcon.Tag as string, "Healing Summary"))
       {
-        (control.Content as HealingSummary).EventsSelectionChange += HealingSummary_SelectionChanged;
+        ((HealingSummary)control.Content).EventsSelectionChange += HealingSummary_SelectionChanged;
         if (HealingStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
@@ -812,11 +808,11 @@ namespace EQLogParser
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
       if (SyncFusionUtil.OpenWindow(dockSite, opened, out var control, typeof(TankingSummary), tankingSummaryIcon.Tag as string, "Tanking Summary"))
       {
-        (control.Content as TankingSummary).EventsSelectionChange += TankingSummary_SelectionChanged;
+        ((TankingSummary)control.Content).EventsSelectionChange += TankingSummary_SelectionChanged;
         if (TankingStatsManager.Instance.GetGroupCount() > 0)
         {
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var tankingOptions = new GenerateStatsOptions { DamageType = (control.Content as TankingSummary).DamageType };
+          var tankingOptions = new GenerateStatsOptions { DamageType = ((TankingSummary)control.Content).DamageType };
           Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
         }
       }
@@ -834,7 +830,7 @@ namespace EQLogParser
       HealingStatsManager.Instance.FireChartEvent("SELECT", data.Selected);
       var addTopParse = data.Selected?.Count == 1 && data.Selected[0].SubStats?.Count > 0;
       var preview = playerParseTextWindow.Content as ParsePreview;
-      preview.UpdateParse(data, HealingStatsManager.Instance, addTopParse, Labels.HEAL_PARSE, Labels.TOP_HEAL_PARSE);
+      preview?.UpdateParse(data, HealingStatsManager.Instance, addTopParse, Labels.HEAL_PARSE, Labels.TOP_HEAL_PARSE);
     }
 
     private void TankingSummary_SelectionChanged(object sender, PlayerStatsSelectionChangedEventArgs data)
@@ -842,7 +838,7 @@ namespace EQLogParser
       TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "SELECT", data.Selected);
       var addReceiveParse = data.Selected?.Count == 1 && data.Selected[0].MoreStats != null;
       var preview = playerParseTextWindow.Content as ParsePreview;
-      preview.UpdateParse(data, TankingStatsManager.Instance, addReceiveParse, Labels.TANK_PARSE, Labels.RECEIVED_HEAL_PARSE);
+      preview?.UpdateParse(data, TankingStatsManager.Instance, addReceiveParse, Labels.TANK_PARSE, Labels.RECEIVED_HEAL_PARSE);
     }
 
     private void MenuItemFontFamilyClicked(object sender, RoutedEventArgs e)
@@ -1079,14 +1075,14 @@ namespace EQLogParser
 
     private void UpdateRecentFiles()
     {
-      setRecentVisible(recent1File, 0);
-      setRecentVisible(recent2File, 1);
-      setRecentVisible(recent3File, 2);
-      setRecentVisible(recent4File, 3);
-      setRecentVisible(recent5File, 4);
-      setRecentVisible(recent6File, 5);
+      SetRecentVisible(recent1File, 0);
+      SetRecentVisible(recent2File, 1);
+      SetRecentVisible(recent3File, 2);
+      SetRecentVisible(recent4File, 3);
+      SetRecentVisible(recent5File, 4);
+      SetRecentVisible(recent6File, 5);
 
-      void setRecentVisible(MenuItem menuItem, int count)
+      void SetRecentVisible(MenuItem menuItem, int count)
       {
         if (RecentFiles.Count > count)
         {

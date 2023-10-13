@@ -17,7 +17,7 @@ namespace EQLogParser
 
       foreach (var action in castsDuring.AsParallel().Where(cast => playerList.Contains((cast as SpellCast)?.Caster)))
       {
-        if (action is SpellCast cast && cast.SpellData != null)
+        if (action is SpellCast { SpellData: not null } cast)
         {
           UpdateMaps(cast.SpellData, cast.Caster, result.PlayerCastCounts, result.PlayerInterruptedCounts, result.MaxCastCounts, result.UniqueSpells, cast.Interrupted);
         }
@@ -26,7 +26,7 @@ namespace EQLogParser
       foreach (var action in receivedDuring.AsParallel().Where(received => playerList.Contains((received as ReceivedSpell)?.Receiver)))
       {
         // dont include detrimental received spells since they're mostly things like being nuked
-        if (action is ReceivedSpell received && received.SpellData != null)
+        if (action is ReceivedSpell { SpellData: not null } received)
         {
           UpdateMaps(received.SpellData, received.Receiver, result.PlayerReceivedCounts, null, result.MaxReceivedCounts, result.UniqueSpells);
         }

@@ -13,7 +13,7 @@ namespace EQLogParser
   class LogReader : IDisposable
   {
     private BufferBlock<Tuple<string, double, bool>> Lines { get; } = new(new DataflowBlockOptions { BoundedCapacity = 25000 });
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly FileSystemWatcher FileWatcher;
     private readonly string FileName;
     private int MinBack;
@@ -31,19 +31,26 @@ namespace EQLogParser
       FileName = fileName;
       MinBack = minBack;
 
-      logProcessor.LinkTo(Lines);
-
-      FileWatcher = new FileSystemWatcher(Path.GetDirectoryName(fileName) ?? string.Empty, Path.GetFileName(fileName))
+      if (Path.GetDirectoryName(fileName) is { } directory)
       {
-        NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite
-      };
+        logProcessor.LinkTo(Lines);
 
-      FileWatcher.Created += OnFileCreated;
-      FileWatcher.Deleted += OnFileMoved;
-      FileWatcher.Renamed += OnFileMoved;
-      FileWatcher.Changed += OnFileChanged;
-      FileWatcher.EnableRaisingEvents = true;
-      StartReadingFile();
+        FileWatcher = new FileSystemWatcher(directory, Path.GetFileName(fileName))
+        {
+          NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite
+        };
+
+        FileWatcher.Created += OnFileCreated;
+        FileWatcher.Deleted += OnFileMoved;
+        FileWatcher.Renamed += OnFileMoved;
+        FileWatcher.Changed += OnFileChanged;
+        FileWatcher.EnableRaisingEvents = true;
+        StartReadingFile();
+      }
+      else
+      {
+        Log.Error($"Can not open file: {fileName}.");
+      }
     }
 
     public double Progress => CurrentPos / (double)InitSize * 100;
@@ -62,10 +69,10 @@ namespace EQLogParser
     private void StartReadingFile()
     {
       Cts = new CancellationTokenSource();
-      ReadFileTask = Task.Run(() => ReadFile(FileName, Cts.Token, MinBack), Cts.Token);
+      ReadFileTask = Task.Run(() => ReadFile(FileName, MinBack, Cts.Token), Cts.Token);
     }
 
-    private async Task ReadFile(string fileName, CancellationToken cancelToken, int? minBack)
+    private async Task ReadFile(string fileName, int minBack, CancellationToken cancelToken)
     {
       var bufferSize = 147456;
       var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, bufferSize);
@@ -159,7 +166,7 @@ namespace EQLogParser
       }
     }
 
-    private void Search(FileStream fs, int? minBack)
+    private static void Search(FileStream fs, int? minBack)
     {
       long min = 0;
       var max = fs.Length;
@@ -201,7 +208,7 @@ namespace EQLogParser
         fs.Seek(closestGreaterPosition.Value, SeekOrigin.Begin);
     }
 
-    private void SearchCompressed(StreamReader reader, int? minBack)
+    private static void SearchCompressed(StreamReader reader, int? minBack)
     {
       if (minBack != null)
       {
