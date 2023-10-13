@@ -38,9 +38,9 @@ namespace EQLogParser
 
       void SetupDragNDrop(SfTreeView treeView)
       {
-        treeView.DragDropController = new TreeViewDragDropController();
+        treeView.DragDropController = new();
         treeView.DragDropController.CanAutoExpand = true;
-        treeView.DragDropController.AutoExpandDelay = new TimeSpan(0, 0, 1);
+        treeView.DragDropController.AutoExpandDelay = new(0, 0, 1);
       }
     }
 
@@ -216,13 +216,10 @@ namespace EQLogParser
 
     private void CreateNodeClick(object sender, RoutedEventArgs e)
     {
-      if (GetTreeViewFromMenu(sender) is { } treeView)
+      if (GetTreeViewFromMenu(sender) is { SelectedItem: TriggerTreeViewNode { SerializedData.Id: { } id } parent })
       {
-        if (treeView.SelectedItem is TriggerTreeViewNode { SerializedData.Id: { } id } parent)
-        {
-          var newNode = TriggerStateManager.Instance.CreateFolder(id, LABEL_NEW_FOLDER);
-          parent.ChildNodes.Add(newNode);
-        }
+        var newNode = TriggerStateManager.Instance.CreateFolder(id, LABEL_NEW_FOLDER);
+        parent.ChildNodes.Add(newNode);
       }
     }
 
@@ -324,7 +321,7 @@ namespace EQLogParser
           {
             if (isCutNode)
             {
-              Delete(new List<TriggerTreeViewNode> { copiedNode });
+              Delete(new() { copiedNode });
             }
 
             TriggerStateManager.Instance.Copy(copiedNode.SerializedData, node.SerializedData);
@@ -524,7 +521,7 @@ namespace EQLogParser
         }
       }
 
-      MenuItem CreateMenuItem(OTData overlay, RoutedEventHandler eventHandler)
+      static MenuItem CreateMenuItem(OTData overlay, RoutedEventHandler eventHandler)
       {
         var menuItem = new MenuItem { Header = overlay.Name, Tag = $"{overlay.Name}={overlay.Id}" };
         menuItem.Click += eventHandler;

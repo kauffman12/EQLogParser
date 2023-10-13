@@ -166,10 +166,10 @@ namespace EQLogParser
     {
       foreach (var family in UIElementUtil.GetCommonFontFamilyNames())
       {
-        parent.Items.Add(createMenuItem(family, callback, EFontAwesomeIcon.Solid_Check));
+        parent.Items.Add(CreateMenuItem(family, callback, EFontAwesomeIcon.Solid_Check));
       }
 
-      MenuItem createMenuItem(string name, RoutedEventHandler handler, EFontAwesomeIcon awesome)
+      MenuItem CreateMenuItem(string name, RoutedEventHandler handler, EFontAwesomeIcon awesome)
       {
         var imageAwesome = new ImageAwesome
         {
@@ -220,7 +220,7 @@ namespace EQLogParser
       parent.Items.Add(CreateMenuItem("Everything", null, callback, EFontAwesomeIcon.Solid_Infinity));
       return;
 
-      MenuItem CreateMenuItem(string name, string value, RoutedEventHandler handler, EFontAwesomeIcon awesome)
+      static MenuItem CreateMenuItem(string name, string value, RoutedEventHandler handler, EFontAwesomeIcon awesome)
       {
         var imageAwesome = new ImageAwesome { Icon = awesome, Style = (Style)Application.Current.Resources["EQIconStyle"] };
         var menuItem = new MenuItem { Header = name, Tag = value };
@@ -268,7 +268,7 @@ namespace EQLogParser
       {
         var themeSettings = new MaterialLightThemeSettings
         {
-          PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF343434") },
+          PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF343434")! },
           FontFamily = new FontFamily(MainWindow.CurrentFontFamily),
           BodyAltFontSize = MainWindow.CurrentFontSize - 2,
           BodyFontSize = MainWindow.CurrentFontSize,
@@ -279,12 +279,12 @@ namespace EQLogParser
         };
         SfSkinManager.RegisterThemeSettings("MaterialLight", themeSettings);
         Application.Current.Resources["EQGoodForegroundBrush"] = new SolidColorBrush { Color = Colors.DarkGreen };
-        Application.Current.Resources["EQMenuIconBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF3d7baf") };
-        Application.Current.Resources["EQSearchBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFa7baab") };
-        Application.Current.Resources["EQWarnBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFeaa6ac") };
-        Application.Current.Resources["EQWarnForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFb02021") };
-        Application.Current.Resources["EQStopForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFcc434d") };
-        Application.Current.Resources["EQDisabledBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#88000000") };
+        Application.Current.Resources["EQMenuIconBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF3d7baf")! };
+        Application.Current.Resources["EQSearchBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFa7baab")! };
+        Application.Current.Resources["EQWarnBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFeaa6ac")! };
+        Application.Current.Resources["EQWarnForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFb02021")! };
+        Application.Current.Resources["EQStopForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFcc434d")! };
+        Application.Current.Resources["EQDisabledBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#88000000")! };
         SfSkinManager.SetTheme(main, new Theme("MaterialLight"));
         LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/MSControl/CheckBox.xaml");
         LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/SfDataGrid/SfDataGrid.xaml");
@@ -300,7 +300,7 @@ namespace EQLogParser
       {
         var themeSettings = new MaterialDarkCustomThemeSettings
         {
-          PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFE1E1E1") },
+          PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFE1E1E1")! },
           FontFamily = new FontFamily(MainWindow.CurrentFontFamily),
           BodyAltFontSize = MainWindow.CurrentFontSize - 2,
           BodyFontSize = MainWindow.CurrentFontSize,
@@ -312,12 +312,12 @@ namespace EQLogParser
         SfSkinManager.RegisterThemeSettings("MaterialDarkCustom", themeSettings);
 
         Application.Current.Resources["EQGoodForegroundBrush"] = new SolidColorBrush { Color = Colors.LightGreen };
-        Application.Current.Resources["EQMenuIconBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF4F9FE2") };
-        Application.Current.Resources["EQSearchBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF314435") };
-        Application.Current.Resources["EQWarnBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF96410d") };
+        Application.Current.Resources["EQMenuIconBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF4F9FE2")! };
+        Application.Current.Resources["EQSearchBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF314435")! };
+        Application.Current.Resources["EQWarnBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF96410d")! };
         Application.Current.Resources["EQWarnForegroundBrush"] = new SolidColorBrush { Color = Colors.Orange };
-        Application.Current.Resources["EQStopForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFcc434d") };
-        Application.Current.Resources["EQDisabledBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#88FFFFFF") };
+        Application.Current.Resources["EQStopForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFcc434d")! };
+        Application.Current.Resources["EQDisabledBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#88FFFFFF")! };
         SfSkinManager.SetTheme(main, new Theme("MaterialDarkCustom"));
         LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/CheckBox.xaml");
         LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfDataGrid/SfDataGrid.xaml");
@@ -330,10 +330,10 @@ namespace EQLogParser
         }
       }
 
-      Application.Current.Resources["PreviewBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#BB000000") };
-      Application.Current.Resources["DamageOverlayBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#99000000") };
+      Application.Current.Resources["PreviewBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#BB000000")! };
+      Application.Current.Resources["DamageOverlayBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#99000000")! };
       Application.Current.Resources["DamageOverlayDamageBrush"] = new SolidColorBrush { Color = Colors.White };
-      Application.Current.Resources["DamageOverlayProgressBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF1D397E") };
+      Application.Current.Resources["DamageOverlayProgressBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF1D397E")! };
 
       MainActions.FireThemeChanged(theme);
     }
@@ -516,13 +516,13 @@ namespace EQLogParser
     internal static void ExportFights(List<Fight> fights)
     {
       var saveFileDialog = new SaveFileDialog();
-      var fileName = "eqlog_" + ConfigUtil.PlayerName + "_" + ConfigUtil.ServerName + "-selected.txt";
+      var fileName = $"eqlog_{ConfigUtil.PlayerName}_{ConfigUtil.ServerName}-selected.txt";
       saveFileDialog.Filter = "Text Files (*.txt)|*.txt";
       saveFileDialog.FileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()));
 
       if (saveFileDialog.ShowDialog().Value)
       {
-        var dialog = new MessageWindow("Saving " + fights.Count + " Selected Fights.", Resource.FILEMENU_SAVE_FIGHTS,
+        var dialog = new MessageWindow($"Saving {fights.Count} Selected Fights.", Resource.FILEMENU_SAVE_FIGHTS,
           MessageWindow.IconType.Save);
 
         Task.Delay(150).ContinueWith(_ =>
@@ -546,21 +546,23 @@ namespace EQLogParser
                 while (!s.EndOfStream)
                 {
                   var line = s.ReadLine();
-                  if (!string.IsNullOrEmpty(line) && line.Length > MainWindow.ACTION_INDEX)
+                  if (string.IsNullOrEmpty(line) || line.Length <= MainWindow.ACTION_INDEX)
                   {
-                    var action = line[MainWindow.ACTION_INDEX..];
-                    if (ChatLineParser.ParseChatType(action) == null)
-                    {
-                      if (TimeRange.TimeCheck(line, range.TimeSegments[0].BeginTime, range, out var exceeds))
-                      {
-                        os.Write(Encoding.UTF8.GetBytes(line));
-                        os.Write(Encoding.UTF8.GetBytes(Environment.NewLine));
-                      }
+                    continue;
+                  }
 
-                      if (exceeds)
-                      {
-                        break;
-                      }
+                  var action = line[MainWindow.ACTION_INDEX..];
+                  if (ChatLineParser.ParseChatType(action) == null)
+                  {
+                    if (TimeRange.TimeCheck(line, range.TimeSegments[0].BeginTime, range, out var exceeds))
+                    {
+                      os.Write(Encoding.UTF8.GetBytes(line));
+                      os.Write(Encoding.UTF8.GetBytes(Environment.NewLine));
+                    }
+
+                    if (exceeds)
+                    {
+                      break;
                     }
                   }
                 }
@@ -592,7 +594,7 @@ namespace EQLogParser
 
             if (accessError)
             {
-              Application.Current.Dispatcher.InvokeAsync(() =>
+              UIUtil.InvokeAsync(() =>
               {
                 new MessageWindow("Error Saving. Can not access save file.", Resource.FILEMENU_SAVE_FIGHTS, MessageWindow.IconType.Save).Show();
               });
