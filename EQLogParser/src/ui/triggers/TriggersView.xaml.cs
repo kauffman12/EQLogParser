@@ -1,12 +1,10 @@
-﻿using log4net;
-using Syncfusion.Windows.PropertyGrid;
+﻿using Syncfusion.Windows.PropertyGrid;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Speech.Synthesis;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,11 +19,6 @@ namespace EQLogParser
   /// </summary>
   public partial class TriggersView : UserControl, IDisposable
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-    private const string LABEL_NEW_TEXT_OVERLAY = "New Text Overlay";
-    private const string LABEL_NEW_TIMER_OVERLAY = "New Timer Overlay";
-    private const string LABEL_NEW_TRIGGER = "New Trigger";
-    private const string LABEL_NEW_FOLDER = "New Folder";
     private readonly Dictionary<string, Window> PreviewWindows = new();
     private TriggerConfig TheConfig;
     private readonly FileSystemWatcher Watcher;
@@ -61,7 +54,7 @@ namespace EQLogParser
       }
 
       var selectedVoice = TriggerUtil.GetSelectedVoice();
-      if (voices.ItemsSource is List<string> populated && populated.IndexOf(selectedVoice) is int found and > -1)
+      if (voices.ItemsSource is List<string> populated && populated.IndexOf(selectedVoice) is var found and > -1)
       {
         voices.SelectedIndex = found;
       }
@@ -218,7 +211,7 @@ namespace EQLogParser
       {
         CharacterSelectedCharacterEvent(characterView.GetSelectedCharacter());
 
-        if (TheConfig.Characters.Count(user => user.IsEnabled) is int count and > 0)
+        if (TheConfig.Characters.Count(user => user.IsEnabled) is var count and > 0)
         {
           titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
           var updatedTitle = $"Triggers Active for {count} Character";
@@ -353,8 +346,6 @@ namespace EQLogParser
       if (args.Property.SelectedObject is TriggerPropertyModel trigger)
       {
         var triggerChange = true;
-        var list = thePropertyGrid.Properties.ToList();
-
         var isValid = TriggerUtil.TestRegexProperty(trigger.UseRegex, trigger.Pattern, PatternEditor);
         isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex, trigger.EndEarlyPattern, EndEarlyPatternEditor);
         isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex2, trigger.EndEarlyPattern2, EndEarlyPattern2Editor);
@@ -414,12 +405,12 @@ namespace EQLogParser
 
         if (args.Property.Name == overlayBrushItem.PropertyName)
         {
-          textChange = !(textOverlay.OverlayBrush.Color.ToHexString() == original.OverlayColor);
+          textChange = textOverlay.OverlayBrush.Color.ToHexString() != original.OverlayColor;
           Application.Current.Resources["OverlayBrushColor-" + textOverlay.Node.Id] = textOverlay.OverlayBrush;
         }
         else if (args.Property.Name == fontBrushItem.PropertyName)
         {
-          textChange = !(textOverlay.FontBrush.Color.ToHexString() == original.FontColor);
+          textChange = textOverlay.FontBrush.Color.ToHexString() != original.FontColor;
           Application.Current.Resources["TextOverlayFontColor-" + textOverlay.Node.Id] = textOverlay.FontBrush;
         }
         else if (args.Property.Name == fontFamilyItem.PropertyName)
@@ -447,32 +438,32 @@ namespace EQLogParser
 
         if (args.Property.Name == overlayBrushItem.PropertyName)
         {
-          timerChange = !(timerOverlay.OverlayBrush.Color.ToHexString() == original.OverlayColor);
+          timerChange = timerOverlay.OverlayBrush.Color.ToHexString() != original.OverlayColor;
           Application.Current.Resources["OverlayBrushColor-" + timerOverlay.Node.Id] = timerOverlay.OverlayBrush;
         }
         else if (args.Property.Name == activeBrushItem.PropertyName)
         {
-          timerChange = !(timerOverlay.ActiveBrush.Color.ToHexString() == original.ActiveColor);
+          timerChange = timerOverlay.ActiveBrush.Color.ToHexString() != original.ActiveColor;
           Application.Current.Resources["TimerBarActiveColor-" + timerOverlay.Node.Id] = timerOverlay.ActiveBrush;
         }
         else if (args.Property.Name == idleBrushItem.PropertyName)
         {
-          timerChange = !(timerOverlay.IdleBrush.Color.ToHexString() == original.IdleColor);
+          timerChange = timerOverlay.IdleBrush.Color.ToHexString() != original.IdleColor;
           Application.Current.Resources["TimerBarIdleColor-" + timerOverlay.Node.Id] = timerOverlay.IdleBrush;
         }
         else if (args.Property.Name == resetBrushItem.PropertyName)
         {
-          timerChange = !(timerOverlay.ResetBrush.Color.ToHexString() == original.ResetColor);
+          timerChange = timerOverlay.ResetBrush.Color.ToHexString() != original.ResetColor;
           Application.Current.Resources["TimerBarResetColor-" + timerOverlay.Node.Id] = timerOverlay.ResetBrush;
         }
         else if (args.Property.Name == backgroundBrushItem.PropertyName)
         {
-          timerChange = !(timerOverlay.BackgroundBrush.Color.ToHexString() == original.BackgroundColor);
+          timerChange = timerOverlay.BackgroundBrush.Color.ToHexString() != original.BackgroundColor;
           Application.Current.Resources["TimerBarTrackColor-" + timerOverlay.Node.Id] = timerOverlay.BackgroundBrush;
         }
         else if (args.Property.Name == fontBrushItem.PropertyName)
         {
-          timerChange = !(timerOverlay.FontBrush.Color.ToHexString() == original.FontColor);
+          timerChange = timerOverlay.FontBrush.Color.ToHexString() != original.FontColor;
           Application.Current.Resources["TimerBarFontColor-" + timerOverlay.Node.Id] = timerOverlay.FontBrush;
         }
         else if (args.Property.Name == fontSizeItem.PropertyName && timerOverlay.FontSize.Split("pt") is { Length: 2 } split

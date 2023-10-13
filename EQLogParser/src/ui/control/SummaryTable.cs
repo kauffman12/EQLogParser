@@ -50,7 +50,7 @@ namespace EQLogParser
 
       DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
       DataGridUtil.UpdateTableMargin(TheDataGrid);
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
 
       // workaround to avoid drag/drop failing when grid has no data
       TheDataGrid.ItemsSource = NoResultsList;
@@ -226,7 +226,7 @@ namespace EQLogParser
 
     protected void SummaryCleanup()
     {
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
+      MainActions.EventsThemeChanged -= EventsThemeChanged;
     }
   }
 }

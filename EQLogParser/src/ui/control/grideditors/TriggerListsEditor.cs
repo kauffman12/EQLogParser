@@ -17,7 +17,7 @@ namespace EQLogParser
 
     private static readonly Dictionary<string, List<string>> Options = new()
     {
-      { "TriggerAgainOption", new  List<string> { "Start Additional Timer", "Restart Timer", "Restart Timer If Same Name", "Do Nothing" } },
+      { "TriggerAgainOption", new  List<string> { "Start Additional Timer", "Restart Timer", "Restart Timer If Same Name", "Do Nothing", "Do Nothing If Same Name" } },
       { "FontSize", new  List<string>
       { "10pt", "11pt", "12pt", "13pt", "14pt", "15pt", "16pt", "17pt",
           "18pt", "20pt", "22pt", "24pt", "26pt", "28pt", "30pt", "34pt", "38pt", "42pt", "46pt", "50pt" } },

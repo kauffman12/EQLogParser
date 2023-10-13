@@ -284,12 +284,12 @@ namespace EQLogParser
           {
             var critMods = new List<string>();
 
-            if (isMe && PlayerManager.Instance.IsDoTClass(stat.ClassName) && DataManager.Instance.MyDoTCritRateMod is uint doTCritRate and > 0)
+            if (isMe && PlayerManager.Instance.IsDoTClass(stat.ClassName) && DataManager.Instance.MyDoTCritRateMod is var doTCritRate and > 0)
             {
               critMods.Add($"DoT +{doTCritRate}");
             }
 
-            if (isMe && DataManager.Instance.MyNukeCritRateMod is uint nukeCritRate and > 0)
+            if (isMe && DataManager.Instance.MyNukeCritRateMod is var nukeCritRate and > 0)
             {
               critMods.Add($"Nuke +{nukeCritRate}");
             }

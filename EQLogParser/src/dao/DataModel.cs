@@ -158,7 +158,7 @@ namespace EQLogParser
     public SolidColorBrush ResetBrush { get; set; }
     public SolidColorBrush BackgroundBrush { get; set; }
     public SolidColorBrush OverlayBrush { get; set; }
-    // referenced dynamically
+    // preview referenced dynamically
     public string TimerBarPreview { get; set; }
     public TriggerNode Node { get; set; }
   }
@@ -272,16 +272,20 @@ namespace EQLogParser
 
   internal class ComboBoxItemDetails : NotificationObject
   {
+    public ComboBoxItemDetails()
+    {
+    }
+
+    public ComboBoxItemDetails(bool isChecked, string text)
+    {
+      IsChecked = isChecked;
+      Text = text;
+    }
+
     public string Text { get; set; }
     public string SelectedText { get; set; }
     public bool IsChecked { get; set; }
     public string Value { get; set; }
-  }
-
-  internal class AutoCompleteText
-  {
-    public string Text { get; set; }
-    public List<string> Items { get; } = new();
   }
 
   internal class ChatType

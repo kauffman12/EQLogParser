@@ -47,7 +47,7 @@ namespace EQLogParser
       dataGrid.CopyContent += DataGridCopyContent;
 
       SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
-      SelectionTimer.Tick += (sender, e) =>
+      SelectionTimer.Tick += (_, _) =>
       {
         if (prog.Icon == EFontAwesomeIcon.Solid_HourglassStart)
         {

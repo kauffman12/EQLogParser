@@ -85,7 +85,7 @@ namespace EQLogParser
 
       dataGrid.Columns.Add(headerCol);
 
-      Task.Delay(100).ContinueWith(task =>
+      Task.Delay(100).ContinueWith(_ =>
       {
         var filteredPlayerMap = new Dictionary<string, Dictionary<string, uint>>();
         var totalCountMap = new Dictionary<string, uint>();
@@ -452,7 +452,7 @@ namespace EQLogParser
 
     private void UpdateCounts()
     {
-      var counts = PlayerList.ToDictionary(key => key, value => 0.0);
+      var counts = PlayerList.ToDictionary(key => key, _ => 0.0);
       foreach (var record in dataGrid.View.Records)
       {
         var data = record.Data as dynamic;

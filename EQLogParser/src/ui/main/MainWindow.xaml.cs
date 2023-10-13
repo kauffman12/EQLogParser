@@ -29,9 +29,6 @@ namespace EQLogParser
 {
   public partial class MainWindow : ChromelessWindow
   {
-    internal event Action<string> EventsLogLoadingComplete;
-    internal event Action<string> EventsThemeChanged;
-
     // global settings
     internal static string CurrentLogFile;
     internal static bool IsAoEHealingEnabled = true;
@@ -138,7 +135,7 @@ namespace EQLogParser
         MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, classList, verifiedPlayersWindow, petMappingWindow);
         MainActions.InitVerifiedPets(this, verifiedPetsGrid, verifiedPetsWindow, petMappingWindow);
 
-        (npcWindow.Content as FightTable).EventsSelectionChange += (_, __) => ComputeStats();
+        (npcWindow.Content as FightTable).EventsSelectionChange += (_, _) => ComputeStats();
         DamageStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(damageChartIcon.Tag as string, data));
         HealingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(healingChartIcon.Tag as string, data));
         TankingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(tankingChartIcon.Tag as string, data));
@@ -237,7 +234,7 @@ namespace EQLogParser
         }
 
         ComputeStatsTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 500) };
-        ComputeStatsTimer.Tick += (sender, e) =>
+        ComputeStatsTimer.Tick += (_, _) =>
         {
           ComputeStats();
           ComputeStatsTimer.Stop();
@@ -392,7 +389,7 @@ namespace EQLogParser
         var item = new MenuItem { IsEnabled = true, Header = player };
         deleteChat.Items.Add(item);
 
-        item.Click += (sender, e) =>
+        item.Click += (_, _) =>
         {
           var msgDialog = new MessageWindow($"Clear Chat Archive for {player}?", Resource.CLEAR_CHAT,
             MessageWindow.IconType.Warn, "Yes");
@@ -472,7 +469,7 @@ namespace EQLogParser
 
       if (tables.Count > 0)
       {
-        MainActions.ExportAsHTML(tables);
+        MainActions.ExportAsHtml(tables);
       }
       else
       {
@@ -620,7 +617,6 @@ namespace EQLogParser
         CurrentTheme = "MaterialDark";
         MainActions.LoadTheme(this, CurrentTheme);
         ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
-        EventsThemeChanged?.Invoke(CurrentTheme);
       }
     }
 
@@ -631,7 +627,6 @@ namespace EQLogParser
         CurrentTheme = "MaterialLight";
         MainActions.LoadTheme(this, CurrentTheme);
         ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
-        EventsThemeChanged?.Invoke(CurrentTheme);
       }
     }
 
@@ -858,7 +853,6 @@ namespace EQLogParser
         CurrentFontFamily = menuItem.Header as string;
         ConfigUtil.SetSetting("ApplicationFontFamily", CurrentFontFamily);
         MainActions.LoadTheme(this, CurrentTheme);
-        EventsThemeChanged?.Invoke(CurrentTheme);
       }
     }
 
@@ -870,7 +864,6 @@ namespace EQLogParser
         CurrentFontSize = (double)menuItem.Tag;
         ConfigUtil.SetSetting("ApplicationFontSize", CurrentFontSize.ToString());
         MainActions.LoadTheme(this, CurrentTheme);
-        EventsThemeChanged?.Invoke(CurrentTheme);
       }
     }
 
@@ -939,9 +932,9 @@ namespace EQLogParser
             ConfigUtil.SetSetting("LastOpenedFile", CurrentLogFile);
             Log.Info($"Finished Loading Log File in {seconds} seconds.");
 
-            Task.Delay(1000).ContinueWith(task => Dispatcher.InvokeAsync(() =>
+            Task.Delay(1000).ContinueWith(_ => Dispatcher.InvokeAsync(() =>
             {
-              EventsLogLoadingComplete?.Invoke(CurrentLogFile);
+              MainActions.FireLoadingEvent(CurrentLogFile);
               Dispatcher.InvokeAsync(() =>
               {
                 DataManager.Instance.ResetOverlayFights(true);
@@ -952,7 +945,7 @@ namespace EQLogParser
           }
           else
           {
-            Task.Delay(500).ContinueWith(task => UpdateLoadingProgress(), TaskScheduler.Default);
+            Task.Delay(500).ContinueWith(_ => UpdateLoadingProgress(), TaskScheduler.Default);
           }
         }
       });
@@ -1156,7 +1149,7 @@ namespace EQLogParser
     {
       if (e.Record is ExpandoObject)
       {
-        var data = e.Record as dynamic;
+        var data = (dynamic)e.Record;
         e.ToolTip.Content = PlayerManager.Instance.GetPlayerClassReason(data.Name);
       }
 
@@ -1251,14 +1244,16 @@ namespace EQLogParser
     {
       if (window.Content is EQLogViewer)
       {
-        var title = DockingManager.GetHeader(window) as string;
-        var last = title.LastIndexOf(" ");
-        if (last > -1)
+        if (DockingManager.GetHeader(window) is string title)
         {
-          var value = title.Substring(last, title.Length - last);
-          if (int.TryParse(value, out var result) && result > 0 && LogWindows.Count >= result)
+          var last = title.LastIndexOf(" ", StringComparison.Ordinal);
+          if (last > -1)
           {
-            LogWindows[result - 1] = false;
+            var value = title.Substring(last, title.Length - last);
+            if (int.TryParse(value, out var result) && result > 0 && LogWindows.Count >= result)
+            {
+              LogWindows[result - 1] = false;
+            }
           }
         }
 

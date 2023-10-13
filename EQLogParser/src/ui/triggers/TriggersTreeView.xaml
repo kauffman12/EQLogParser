@@ -11,7 +11,6 @@
     <Grid>
     <Grid.Resources>
       <local:TriggerTemplateSelector x:Key="triggerTemplateSelector"/>
-      <local:ZeroConverter x:Key="ZeroConverter" />
     </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="70*" />
@@ -31,7 +30,7 @@
         </Border>
         <Grid Grid.Row="1">
           <Viewbox Margin="20" x:Name="noCharacterSelected" Visibility="Collapsed">
-            <TextBlock Grid.Row="0" Margin="0" Text="Select Character to View Triggers" Padding="0" Foreground="#33FFFFFF" TextWrapping="WrapWithOverflow" />
+            <TextBlock Margin="0" Text="Select Character to View Triggers" Padding="0" Foreground="#33FFFFFF" TextWrapping="WrapWithOverflow" />
           </Viewbox>
           <syncfusion:SfTreeView
              x:Name="triggerTreeView"

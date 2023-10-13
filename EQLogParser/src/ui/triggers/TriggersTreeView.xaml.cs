@@ -1,10 +1,8 @@
 ﻿using FontAwesome5;
-using log4net;
 using Syncfusion.UI.Xaml.TreeView;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -19,7 +17,6 @@ namespace EQLogParser
   {
     internal event Action<bool> ClosePreviewOverlaysEvent;
     internal event Action<Tuple<TriggerTreeViewNode, object>> TreeSelectionChangedEvent;
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private const string LABEL_NEW_TEXT_OVERLAY = "New Text Overlay";
     private const string LABEL_NEW_TIMER_OVERLAY = "New Timer Overlay";
     private const string LABEL_NEW_TRIGGER = "New Trigger";
@@ -684,7 +681,7 @@ namespace EQLogParser
         }
       }
 
-      TreeSelectionChangedEvent?.Invoke(Tuple.Create(node, model as object));
+      TreeSelectionChangedEvent?.Invoke(Tuple.Create(node, (object)model));
     }
 
     private SfTreeView GetTreeViewFromMenu(object sender)

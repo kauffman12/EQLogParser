@@ -59,7 +59,7 @@ namespace EQLogParser
         menuItemSetPet.IsEnabled = menuItemSetPlayer.IsEnabled = menuItemRefresh.IsEnabled = false;
 
       SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
-      SelectionTimer.Tick += (sender, e) =>
+      SelectionTimer.Tick += (_, _) =>
       {
         if (!rightClickMenu.IsOpen)
         {
@@ -74,7 +74,7 @@ namespace EQLogParser
       };
 
       SearchTextTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
-      SearchTextTimer.Tick += (sender, e) =>
+      SearchTextTimer.Tick += (_, _) =>
       {
         if (fightSearchBox.Text.Length > 0)
         {
@@ -85,7 +85,7 @@ namespace EQLogParser
       };
 
       UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
-      UpdateTimer.Tick += (sender, e) => DoProcessFights();
+      UpdateTimer.Tick += (_, _) => DoProcessFights();
       UpdateTimer.Start();
 
       // read show hp setting
@@ -107,7 +107,7 @@ namespace EQLogParser
       DataManager.Instance.EventsNewFight += EventsNewFight;
       DataManager.Instance.EventsUpdateFight += EventsUpdateFight;
       DataManager.Instance.EventsNewNonTankingFight += EventsNewNonTankingFight;
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
     internal IEnumerable<Fight> GetSelectedFights()

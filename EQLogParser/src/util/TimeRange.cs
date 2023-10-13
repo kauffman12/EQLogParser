@@ -21,7 +21,7 @@ namespace EQLogParser
 
       for (var i = 0; i < TimeSegments.Count; i++)
       {
-        if (i + 1 is int next && next < TimeSegments.Count)
+        if (i + 1 is var next && next < TimeSegments.Count)
         {
           if (TimeSegments[i].EndTime + OFFSET >= TimeSegments[next].BeginTime)
           {
@@ -79,7 +79,7 @@ namespace EQLogParser
           }
           else
           {
-            pass = (start > 0) ? logTime >= start : false;
+            pass = start > 0 && logTime >= start;
           }
         }
       }
@@ -98,7 +98,7 @@ namespace EQLogParser
         {
           if (range == null)
           {
-            pass = (start > -1) ? logTime >= start : false;
+            pass = start > -1 && logTime >= start;
           }
           else
           {
@@ -136,7 +136,6 @@ namespace EQLogParser
       EndTime = end;
     }
 
-    public bool Equals(TimeSegment check) => check?.BeginTime == BeginTime && check?.EndTime == EndTime;
     public double Total => EndTime - BeginTime + 1;
   }
 }

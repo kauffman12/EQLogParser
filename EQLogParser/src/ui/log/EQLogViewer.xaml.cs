@@ -40,7 +40,7 @@ namespace EQLogParser
     {
       InitializeComponent();
       FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
 
       logSearchTime.ItemsSource = Times;
 
@@ -69,27 +69,30 @@ namespace EQLogParser
       logSearch2.Text = Resource.LOG_SEARCH_TEXT;
       logFilter.Text = Resource.LOG_FILTER_TEXT;
 
-      var list = new List<ComboBoxItemDetails>();
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = DAMAGEAVOIDED, Value = DAMAGEAVOIDED });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = Labels.DS, Value = Labels.DS });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = Labels.DD, Value = Labels.DD });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = Labels.DOT, Value = Labels.DOT });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = "Fellowship", Value = ChatChannels.Fellowship });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = "Group", Value = ChatChannels.Group });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = "Guild", Value = ChatChannels.Guild });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = Labels.MELEE, Value = Labels.MELEE });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = OTHERCHAT, Value = OTHERCHAT });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = Labels.OTHER_DMG, Value = Labels.OTHER_DMG });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = Labels.PROC, Value = Labels.PROC });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = "Raid", Value = ChatChannels.Raid });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = "Say", Value = ChatChannels.Say });
-      list.Add(new ComboBoxItemDetails { IsChecked = true, Text = NOCAT, Value = NOCAT });
+      var list = new List<ComboBoxItemDetails>
+      {
+        new() { IsChecked = true, Text = DAMAGEAVOIDED, Value = DAMAGEAVOIDED },
+        new() { IsChecked = true, Text = Labels.DS, Value = Labels.DS },
+        new() { IsChecked = true, Text = Labels.DD, Value = Labels.DD },
+        new() { IsChecked = true, Text = Labels.DOT, Value = Labels.DOT },
+        new() { IsChecked = true, Text = "Fellowship", Value = ChatChannels.Fellowship },
+        new() { IsChecked = true, Text = "Group", Value = ChatChannels.Group },
+        new() { IsChecked = true, Text = "Guild", Value = ChatChannels.Guild },
+        new() { IsChecked = true, Text = Labels.MELEE, Value = Labels.MELEE },
+        new() { IsChecked = true, Text = OTHERCHAT, Value = OTHERCHAT },
+        new() { IsChecked = true, Text = Labels.OTHER_DMG, Value = Labels.OTHER_DMG },
+        new() { IsChecked = true, Text = Labels.PROC, Value = Labels.PROC },
+        new() { IsChecked = true, Text = "Raid", Value = ChatChannels.Raid },
+        new() { IsChecked = true, Text = "Say", Value = ChatChannels.Say },
+        new() { IsChecked = true, Text = NOCAT, Value = NOCAT }
+      };
+
       LineTypeCount = list.Count;
 
       lineTypes.ItemsSource = list;
       UIElementUtil.SetComboBoxTitle(lineTypes, list.Count, Resource.LINE_TYPES_SELECTED);
 
-      FilterTimer.Tick += (sender, e) =>
+      FilterTimer.Tick += (_, _) =>
       {
         FilterTimer.Stop();
         UpdateUI();
@@ -125,7 +128,7 @@ namespace EQLogParser
         lineTypes.IsEnabled = false;
         FilteredLinePositionMap.Clear();
 
-        var types = (lineTypes.ItemsSource as List<ComboBoxItemDetails>).Where(item => item.IsChecked).ToDictionary(item => item.Value, item => true);
+        var types = (lineTypes.ItemsSource as List<ComboBoxItemDetails>).Where(item => item.IsChecked).ToDictionary(item => item.Value, _ => true);
         UIElementUtil.SetComboBoxTitle(lineTypes, types.Count, Resource.LINE_TYPES_SELECTED);
 
         if (logFilter.FontStyle == FontStyles.Italic && types.Count == LineTypeCount)
@@ -236,7 +239,7 @@ namespace EQLogParser
 
     private void LoadContext(long pos, string text)
     {
-      Task.Delay(50).ContinueWith(task =>
+      Task.Delay(50).ContinueWith(_ =>
       {
         if (MainWindow.CurrentLogFile != null)
         {
@@ -292,7 +295,7 @@ namespace EQLogParser
     private void GoToLine(EditControl control, int line)
     {
       // GoToLine just doesnt work until UI is fully rendered
-      Task.Delay(250).ContinueWith(task => Dispatcher.Invoke(() =>
+      Task.Delay(250).ContinueWith(_ => Dispatcher.Invoke(() =>
       {
         try
         {
@@ -323,7 +326,7 @@ namespace EQLogParser
         LinePositions.Clear();
         var fights = (Application.Current.MainWindow as MainWindow).GetFightTable()?.GetSelectedFights().OrderBy(sel => sel.Id).ToList();
 
-        Task.Delay(75).ContinueWith(task =>
+        Task.Delay(75).ContinueWith(_ =>
         {
           if (MainWindow.CurrentLogFile != null)
           {
@@ -717,7 +720,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
+        MainActions.EventsThemeChanged -= EventsThemeChanged;
         logBox.Dispose();
         contextBox.Dispose();
         tabControl.Dispose();

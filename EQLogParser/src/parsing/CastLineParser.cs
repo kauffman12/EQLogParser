@@ -74,7 +74,7 @@ namespace EQLogParser
             player = split[0];
             spellName = TextUtils.ParseSpellOrNpc(split.ToArray(), 2);
           }
-          else if (split.Length > 3 && Array.FindIndex(split, 1, split.Length - 1, s => s == "begins") is int bIndex and > -1 && (bIndex + 2) < split.Length)
+          else if (split.Length > 3 && Array.FindIndex(split, 1, split.Length - 1, s => s == "begins") is var bIndex and > -1 && (bIndex + 2) < split.Length)
           {
             if (split[bIndex + 1] == "casting")
             {

@@ -1,14 +1,10 @@
-﻿using log4net;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Reflection;
 
 namespace EQLogParser
 {
   static class LineModifiersParser
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-
     private static readonly Dictionary<string, byte> ALL_MODIFIERS = new()
     {
       { "Assassinate", 1 }, { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Double Bow Shot", 1 }, { "Finishing Blow", 1 },

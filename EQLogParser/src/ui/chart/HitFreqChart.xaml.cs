@@ -31,7 +31,7 @@ namespace EQLogParser
       InitializeComponent();
       minFreqList.ItemsSource = MinFreqs;
       minFreqList.SelectedIndex = 0;
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
     internal void Update(PlayerStats playerStats, CombinedStats combined)
@@ -336,7 +336,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
+        MainActions.EventsThemeChanged -= EventsThemeChanged;
         sfChart?.Dispose();
         disposedValue = true;
       }

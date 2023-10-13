@@ -171,7 +171,7 @@ namespace EQLogParser
 
     internal static void CreateImage(SfGridBase gridBase, Label titleLabel, bool allData = false)
     {
-      Task.Delay(250).ContinueWith(t =>
+      Task.Delay(250).ContinueWith(_ =>
       {
         gridBase.Dispatcher.InvokeAsync(() =>
         {
@@ -315,7 +315,7 @@ namespace EQLogParser
     internal static void EnableMouseSelection(object sender, MouseButtonEventArgs e)
     {
       dynamic elem = e.OriginalSource;
-      if (sender is SfTreeGrid treeGrid && elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is int row and > -1)
+      if (sender is SfTreeGrid treeGrid && elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is var row and > -1)
       {
         StartRow = row;
         // Left click happened, current item is selected, now listen for mouse movement and release of left button
@@ -438,7 +438,7 @@ namespace EQLogParser
           treeGrid.PreviewMouseLeftButtonUp -= PreviewMouseLeftButtonUp;
           treeGrid.PreviewMouseMove -= MouseMove;
         }
-        else if (elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is int row and > -1)
+        else if (elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is var row and > -1)
         {
           if (treeGrid.CurrentItem != stats)
           {

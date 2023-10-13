@@ -46,7 +46,6 @@
                            ShowSortNumbers="True">
         <syncfusion:SfTreeGrid.Resources>
           <local:DateTimeConverter x:Key="DateTimeConverter" />
-          <local:ZeroConverter x:Key="ZeroConverter" />
         </syncfusion:SfTreeGrid.Resources>
         <syncfusion:SfTreeGrid.SortColumnDescriptions>
           <syncfusion:SortColumnDescription ColumnName="StartTime" SortDirection="Descending" />

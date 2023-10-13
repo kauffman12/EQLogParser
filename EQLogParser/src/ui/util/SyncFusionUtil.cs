@@ -22,7 +22,7 @@ namespace EQLogParser
         {
           if (state == DockState.Hidden && (window?.Tag as string) != "Hide")
           {
-            Dispatcher.CurrentDispatcher.InvokeAsync(() =>
+            UIUtil.InvokeNow(() =>
             {
               try
               {

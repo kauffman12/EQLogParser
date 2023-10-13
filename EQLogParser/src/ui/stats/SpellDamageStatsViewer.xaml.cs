@@ -36,7 +36,7 @@ namespace EQLogParser
       Types.Add(Labels.PROC);
       typeList.SelectedIndex = 0;
 
-      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += LogLoadingComplete;
+      MainActions.EventsLogLoadingComplete += LogLoadingComplete;
       (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange += SelectionChange;
 
       // default these columns to descending
@@ -45,7 +45,7 @@ namespace EQLogParser
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
       DataGridUtil.UpdateTableMargin(dataGrid);
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
       Load();
     }
 
@@ -166,8 +166,8 @@ namespace EQLogParser
         Players.Add(key);
       }
 
-      spellList.SelectedIndex = Spells.IndexOf(selectedSpell) is int s and > -1 ? s : 0;
-      playerList.SelectedIndex = Players.IndexOf(selectedPlayer) is int p and > -1 ? p : 0;
+      spellList.SelectedIndex = Spells.IndexOf(selectedSpell) is var s and > -1 ? s : 0;
+      playerList.SelectedIndex = Players.IndexOf(selectedPlayer) is var p and > -1 ? p : 0;
       dataGrid.ItemsSource = list;
     }
 
@@ -239,8 +239,8 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
-        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= LogLoadingComplete;
+        MainActions.EventsThemeChanged -= EventsThemeChanged;
+        MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
         (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange -= SelectionChange;
         dataGrid.Dispose();
         disposedValue = true;

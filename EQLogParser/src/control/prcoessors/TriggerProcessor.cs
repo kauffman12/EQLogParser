@@ -29,7 +29,7 @@ namespace EQLogParser
     private readonly Dictionary<string, Dictionary<string, RepeatedData>> RepeatedTextTimes = new();
     private readonly Dictionary<string, Dictionary<string, RepeatedData>> RepeatedTimerTimes = new();
     private readonly ActionBlock<Tuple<string, double, bool>> Process;
-    private readonly ActionBlock<Tuple<LinkedListNode<TriggerWrapper>, LineData>> ProcessLowPri;
+    private readonly ActionBlock<Tuple<TriggerWrapper, LineData>> ProcessLowPri;
     private readonly ActionBlock<Speak> ProcessSpeech;
     private readonly Action<string, Trigger> AddTextEvent;
     private readonly Action<Trigger, List<TimerData>> AddTimerEvent;
@@ -50,7 +50,7 @@ namespace EQLogParser
       BindingOperations.EnableCollectionSynchronization(AlertLog, CollectionLock);
 
       Process = new ActionBlock<Tuple<string, double, bool>>(data => DoProcess(data.Item1, data.Item2));
-      ProcessLowPri = new ActionBlock<Tuple<LinkedListNode<TriggerWrapper>, LineData>>(data => HandleTrigger(data.Item1, data.Item2));
+      ProcessLowPri = new ActionBlock<Tuple<TriggerWrapper, LineData>>(data => HandleTrigger(data.Item1, data.Item2));
       ProcessSpeech = new ActionBlock<Speak>(HandleSpeech);
 
       ActiveTriggers = GetActiveTriggers();
@@ -121,32 +121,34 @@ namespace EQLogParser
       while (node != null)
       {
         // save since the nodes may get reordered
-        var nextNode = node.Next;
+        var wrapper = node.Value;
+        node = node.Next;
 
-        // if within a month assume handle it right away (2592000000 millis is 30 days)
-        if ((new TimeSpan(DateTime.Now.Ticks).TotalMilliseconds - node.Value.TriggerData.LastTriggered) <= 2592000000)
+        lock (wrapper)
         {
-          HandleTrigger(node, lineData);
+          // if within a month assume handle it right away (2592000000 millis is 30 days)
+          if ((new TimeSpan(DateTime.Now.Ticks).TotalMilliseconds - wrapper.TriggerData.LastTriggered) <= 2592000000)
+          {
+            HandleTrigger(wrapper, lineData);
+          }
+          else
+          {
+            ProcessLowPri.Post(Tuple.Create(wrapper, lineData));
+          }
         }
-        else
-        {
-          ProcessLowPri.Post(Tuple.Create(node, lineData));
-        }
-
-        node = nextNode;
       }
     }
 
-    private void HandleTrigger(LinkedListNode<TriggerWrapper> node, LineData lineData)
+    private void HandleTrigger(TriggerWrapper wrapper, LineData lineData)
     {
-      var start = DateTime.Now.Ticks;
-      var action = lineData.Action;
-      MatchCollection matches = null;
-      var found = false;
-
-      lock (node.Value)
+      // lock here because lowPri queue also calls this
+      lock (wrapper)
       {
-        var wrapper = node.Value;
+        var start = DateTime.Now.Ticks;
+        var action = lineData.Action;
+        MatchCollection matches = null;
+        var found = false;
+
         var dynamicDuration = double.NaN;
         if (wrapper.Regex != null)
         {
@@ -165,8 +167,7 @@ namespace EQLogParser
         if (found)
         {
           var beginTicks = DateTime.Now.Ticks;
-          node.Value.TriggerData.LastTriggered = new TimeSpan(beginTicks).TotalMilliseconds;
-
+          wrapper.TriggerData.LastTriggered = new TimeSpan(beginTicks).TotalMilliseconds;
           var time = (beginTicks - start) / 10;
           wrapper.TriggerData.WorstEvalTime = Math.Max(time, wrapper.TriggerData.WorstEvalTime);
 
@@ -212,7 +213,7 @@ namespace EQLogParser
         }
         else
         {
-          wrapper.TimerList.ToList().ForEach(timerData =>
+          foreach (ref var timerData in wrapper.TimerList.ToArray().AsSpan())
           {
             var endEarly = CheckEndEarly(timerData.EndEarlyRegex, timerData.EndEarlyRegexNOptions, timerData.EndEarlyPattern,
               action, out var earlyMatches);
@@ -247,7 +248,7 @@ namespace EQLogParser
               AddEntry(lineData, wrapper, "Timer End Early");
               CleanupTimer(wrapper, timerData);
             }
-          });
+          }
         }
       }
     }
@@ -255,29 +256,31 @@ namespace EQLogParser
     private void StartTimer(TriggerWrapper wrapper, string displayName, long beginTicks, LineData lineData, MatchCollection matches)
     {
       var trigger = wrapper.TriggerData;
+      switch (trigger.TriggerAgainOption)
+      {
+        // Restart Timer Option so clear out everything
+        case 1:
+          CleanupWrapper(wrapper);
+          break;
+        // Restart Timer only if it is already running
+        case 2:
+          {
+            if (wrapper.TimerList.FirstOrDefault(data => displayName.Equals(data?.DisplayName, StringComparison.OrdinalIgnoreCase))
+                is { } timerData)
+            {
+              CleanupTimer(wrapper, timerData);
+            }
 
-      // Restart Timer Option so clear out everything
-      if (trigger.TriggerAgainOption == 1)
-      {
-        CleanupWrapper(wrapper);
-      }
-      // Restart Timer only if it is already running
-      else if (trigger.TriggerAgainOption == 2)
-      {
-        if (wrapper.TimerList.ToList().FirstOrDefault(data => displayName.Equals(data?.DisplayName, StringComparison.OrdinalIgnoreCase))
-          is { } timerData)
-        {
-          CleanupTimer(wrapper, timerData);
-        }
-      }
-      else if (trigger.TriggerAgainOption == 3)
-      {
+            break;
+          }
+        // Do nothing if any exist
+        case 3 when wrapper.TimerList.Any():
         // Do nothing only if a timer with this name is already running
-        if (wrapper.TimerList.ToList().FirstOrDefault(data => displayName.Equals(data?.DisplayName, StringComparison.OrdinalIgnoreCase))
-            is { } timerData)
-        {
-          return;
-        }
+        case 4 when wrapper.TimerList.FirstOrDefault(data => displayName.Equals(data?.DisplayName, StringComparison.OrdinalIgnoreCase))
+          is not null:
+          {
+            return;
+          }
       }
 
       TimerData newTimerData = null;
@@ -286,7 +289,7 @@ namespace EQLogParser
         newTimerData = new TimerData { DisplayName = displayName, WarningSource = new CancellationTokenSource() };
 
         var data = newTimerData;
-        Task.Delay((int)diff * 1000).ContinueWith(task =>
+        Task.Delay((int)diff * 1000).ContinueWith(_ =>
         {
           var proceed = false;
           lock (wrapper)
@@ -377,7 +380,7 @@ namespace EQLogParser
       wrapper.TimerList.Add(newTimerData);
       var needEvent = wrapper.TimerList.Count == 1;
 
-      Task.Delay((int)(wrapper.ModifiedDurationSeconds * 1000)).ContinueWith(task =>
+      Task.Delay((int)(wrapper.ModifiedDurationSeconds * 1000)).ContinueWith(_ =>
       {
         var proceed = false;
         lock (wrapper)
@@ -648,7 +651,11 @@ namespace EQLogParser
         }
         else
         {
-          displayTimes = new Dictionary<string, RepeatedData> { { displayValue, new RepeatedData { Count = 1, CountTicks = beginTicks } } };
+          displayTimes = new Dictionary<string, RepeatedData>
+          {
+            { displayValue, new RepeatedData { Count = 1, CountTicks = beginTicks } }
+          };
+
           times[wrapper.Id] = displayTimes;
           currentCount = 1;
         }
@@ -682,7 +689,6 @@ namespace EQLogParser
             if (match.Groups.Count == 4)
             {
               pattern = pattern.Replace(match.Value, "(?<" + match.Groups[1].Value + @">\d+)");
-
               if (!string.IsNullOrEmpty(match.Groups[2].Value) && !string.IsNullOrEmpty(match.Groups[3].Value) &&
                 uint.TryParse(match.Groups[3].Value, out var value))
               {
@@ -763,6 +769,7 @@ namespace EQLogParser
     {
       lock (wrapper)
       {
+        // need an ew list because CleanupTimer will update TimerList
         wrapper.TimerList.ToList().ForEach(timerData => CleanupTimer(wrapper, timerData));
       }
     }

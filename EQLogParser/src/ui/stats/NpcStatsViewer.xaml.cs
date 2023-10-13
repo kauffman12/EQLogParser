@@ -17,14 +17,14 @@ namespace EQLogParser
     public NpcStatsViewer()
     {
       InitializeComponent();
-      (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete += EventsLogLoadingComplete;
+      MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
       // default these columns to descending
       var desc = new[] { "Lowest", "Cold", "Corruption", "Disease", "Magic", "Fire", "Physical", "Poison", "Average", "Reflected" };
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
       DataGridUtil.UpdateTableMargin(dataGrid);
-      (Application.Current.MainWindow as MainWindow).EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
       Load();
     }
 
@@ -154,8 +154,8 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        (Application.Current.MainWindow as MainWindow).EventsThemeChanged -= EventsThemeChanged;
-        (Application.Current.MainWindow as MainWindow).EventsLogLoadingComplete -= EventsLogLoadingComplete;
+        MainActions.EventsThemeChanged -= EventsThemeChanged;
+        MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
         dataGrid.Dispose();
         disposedValue = true;
       }

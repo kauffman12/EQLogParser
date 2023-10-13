@@ -288,9 +288,9 @@ namespace EQLogParser
         }
       }
 
-      PlayerManager.Instance.EventsNewTakenPetOrPlayerAction += (sender, name) => RemoveFight(name);
-      PlayerManager.Instance.EventsNewVerifiedPlayer += (sender, name) => RemoveFight(name);
-      PlayerManager.Instance.EventsNewVerifiedPet += (sender, name) => RemoveFight(name);
+      PlayerManager.Instance.EventsNewTakenPetOrPlayerAction += (_, name) => RemoveFight(name);
+      PlayerManager.Instance.EventsNewVerifiedPlayer += (_, name) => RemoveFight(name);
+      PlayerManager.Instance.EventsNewVerifiedPet += (_, name) => RemoveFight(name);
 
       SpellData GetAdpsByName(string name)
       {

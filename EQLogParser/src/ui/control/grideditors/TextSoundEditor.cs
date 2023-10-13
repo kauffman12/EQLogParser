@@ -132,7 +132,7 @@ namespace EQLogParser
     {
       if (sender is ComboBox { SelectedIndex: > -1 } combo)
       {
-        var hideText = combo.SelectedIndex == 0 ? false : true;
+        var hideText = combo.SelectedIndex != 0;
         TheFakeTextBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;
         TheSoundCombo.Visibility = hideText ? Visibility.Visible : Visibility.Collapsed;
 
