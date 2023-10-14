@@ -41,6 +41,12 @@ Arcane Melody Effect III
 Arcane Melody Strike
 Arcane Melody Strike II
 Arcane Melody Strike III
+Arcane Rhythm Effect
+Arcane Rhythm Effect II
+Arcane Rhythm Effect III
+Arcane Rhythm Strike
+Arcane Rhythm Strike II
+Arcane Rhythm Strike III
 Arcane Symphony Effect
 Arcane Symphony Effect II
 Arcane Symphony Effect III
@@ -55,6 +61,9 @@ Autarchian Shrilling III
 Echoing Stun
 Echoing Stun II
 Echoing Stun III
+Resonating Stun
+Resonating Stun II
+Resonating Stun III
 Reverberating Stun
 Reverberating Stun II
 Reverberating Stun III
@@ -129,6 +138,9 @@ Lyrin's Spite III
 Omorden's Spite
 Omorden's Spite II
 Omorden's Spite III
+Tatalros' Spite
+Tatalros' Spite II
+Tatalros' Spite III
 Travenro's Spite
 Travenro's Spite II
 Travenro's Spite III
@@ -146,6 +158,9 @@ Hykast's Strike III
 Kaficus' Strike
 Kaficus' Strike II
 Kaficus' Strike III
+Kanghammer's Strike
+Kanghammer's Strike II
+Kanghammer's Strike III
 Noira's Strike
 Noira's Strike II
 Noira's Strike III
@@ -228,13 +243,7 @@ Wild Spirit Strike
 
 # Beastlord Forecasted Aid
 Forecasted Aid
-Forecasted Aid
-Forecasted Aid
 Forecasted Aid II
-Forecasted Aid II
-Forecasted Aid II
-Forecasted Aid III
-Forecasted Aid III
 Forecasted Aid III
 Forecasted Aid Azia IV
 Forecasted Aid Beza IV
@@ -242,9 +251,15 @@ Forecasted Aid Caza IV
 Foreseen Aid Azia IV
 Foreseen Aid Beza IV
 Foreseen Aid Caza IV
-Projected Aid Azia IV
-Projected Aid Beza IV
-Projected Aid Caza IV
+Forecasted Aid V Azia
+Forecasted Aid V Beza
+Forecasted Aid V Caza
+Forecasted Aid VI Azia
+Forecasted Aid VI Beza
+Forecasted Aid VI Caza
+Forecasted Aid VII Azia
+Forecasted Aid VII Beza
+Forecasted Aid VII Caza
 
 # Beastlord Gelid Claw
 Gelid Claw I
@@ -436,6 +451,9 @@ Prism Skin
 Protective Heal
 Protective Heal II
 Protective Heal III
+Sapping Bite
+Sapping Bite II
+Sapping Bite III
 Spirit of Bale Strike
 Spirit of Bale Strike II
 Spirit of Bale Strike III
@@ -465,6 +483,9 @@ Spirit of Nak Strike III
 Spirit of Oroshar Strike
 Spirit of Rellic Strike
 Spirit of Scorpion Strike
+Spirit of Shoru Strike
+Spirit of Shoru Strike II
+Spirit of Shoru Strike III
 Spirit of Siver Strike
 Spirit of Siver Strike II
 Spirit of Siver Strike III
@@ -510,6 +531,7 @@ Scream at the Moon Call
 Scream at the Moon Call II
 Scream at the Moon Call III
 Screaming at the Moon
+Shriek at the Moon Call
 Shout at the Moon Call
 Shout at the Moon Call II
 Shout at the Moon Call III
@@ -534,6 +556,9 @@ Ikatiar's Vindication Effect III
 Ikatiar's Vindictiveness
 Ikatiar's Vindictiveness II
 Ikatiar's Vindictiveness III
+Kejaan's Vindication Effect
+Kejaan's Vindication Effect II
+Kejaan's Vindication Effect III
 Venon's Vindication Effect
 Venon's Vindication Effect II
 Venon's Vindication Effect III
@@ -542,6 +567,9 @@ Venon's Vindictiveness II
 Venon's Vindictiveness III
 
 # Berserker Alliance
+Conqueror's Bladestrike IV Azia
+Conqueror's Bladestrike IV Beza
+Conqueror's Bladestrike IV Caza
 Demolisher's Bladestrike
 Demolisher's Bladestrike II
 Demolisher's Bladestrike III
@@ -740,6 +768,9 @@ Buttressed Frenzy Strike
 Buttressed Frenzy Strike II
 Buttressed Frenzy Strike III
 Combat Frenzy Strike
+Desperate Frenzy Strike
+Desperate Frenzy Strike II
+Desperate Frenzy Strike III
 Fearless Frenzy Strike
 Fearless Frenzy Strike II
 Fearless Frenzy Strike III
@@ -786,6 +817,12 @@ Frothing Rage Strike
 Frothing Rage Strike II
 Frothing Rage Strike III
 Increase Damage Effect
+Roiling Rage Strike
+Roiling Rage Strike II
+Roiling Rage Strike III
+Roiling Rage Reprisal
+Roiling Rage Reprisal Rk. II
+Roiling Rage Reprisal Rk. III
 Seething Rage Doom Effect
 Seething Rage Reprisal
 Seething Rage Reprisal Rk. II
@@ -812,6 +849,9 @@ Reflexive Retaliation Trigger III
 Sapping Strike
 Sapping Strike II
 Sapping Strike III
+Sapping Strikes Effect
+Sapping Strikes Effect II
+Sapping Strikes Effect III
 Shriveling Strike
 Shriveling Strike II
 Shriveling Strike III
@@ -867,12 +907,16 @@ Abolish Destruction
 Abrogate Destruction
 Annihilate Destruction
 Annihilate Weakness
+Banish Destruction
 Eradicate Destruction
 Extirpate Destruction
 Obliterate Destruction
 Repudiate Destruction
 
 # Cleric Infusion
+Avowed Infusion
+Avowed Infusion Rk. II
+Avowed Infusion Rk. III
 Devout Infusion
 Devout Infusion Rk. II
 Devout Infusion Rk. III
@@ -890,6 +934,9 @@ Sincere Infusion Rk. II
 Sincere Infusion Rk. III
 
 # Cleric Retort
+Axoeviq's Retort Effect
+Axoeviq's Retort Effect II
+Axoeviq's Retort Effect III
 Curate's Retort Effect
 Curate's Retort Effect II
 Curate's Retort Effect III
@@ -966,6 +1013,9 @@ Crippling Glare Caza IV
 Crippling Glare Caza V
 Crippling Glare Caza VI
 Crippling Glare Caza VII
+Crippling Glare VIII Azia
+Crippling Glare VIII Beza
+Crippling Glare VIII Caza
 
 # Cleric Turn Undead
 Infusion of Holy Light I
@@ -991,6 +1041,12 @@ Pernicious Strike III
 Pernicious Strike Recourse
 Pernicious Strike Recourse II
 Pernicious Strike Recourse III
+Retribution Strike
+Retribution Strike II
+Retribution Strike III
+Retribution Strike Recourse
+Retribution Strike Recourse II
+Retribution Strike Recourse III
 Tenacious Strike
 Tenacious Strike II
 Tenacious Strike III
@@ -1097,6 +1153,9 @@ Ward of Rebuke Parry
 Ward of Recrimination Parry
 Ward of Recrimination Parry II
 Ward of Recrimination Parry III
+Ward of Repudiation Parry
+Ward of Repudiation Parry II
+Ward of Repudiation Parry III
 Ward of Reprisal Parry
 Ward of Requital Parry
 Ward of Retaliation Parry
@@ -1120,6 +1179,9 @@ Adrenaline Deluge Effect III
 Adrenaline Flood Effect
 Adrenaline Flood Effect II
 Adrenaline Flood Effect III
+Adrenaline Fury Effect
+Adrenaline Fury Effect II
+Adrenaline Fury Effect III
 Adrenaline Rush Effect
 Adrenaline Rush Effect II
 Adrenaline Rush Effect III
@@ -1133,6 +1195,9 @@ Adrenaline Torrent Effect II
 Adrenaline Torrent Effect III
 
 # Druid Aura
+Coldburst Strike
+Coldburst Strike II
+Coldburst Strike III
 Frostcloak Strike
 Frostcloak Strike II
 Frostcloak Strike III
@@ -1169,6 +1234,7 @@ Abolish Destruction
 Annihilate Destruction
 Annihilate Havoc
 Annihilate Resistances
+Dismantle Destruction
 Eradicate Destruction
 Exterminate Destruction
 Obliterate Destruction
@@ -1180,6 +1246,7 @@ Wild Daggerthorns
 Wild Duskthorns
 Wild Fernspikes
 Wild Fernspurs
+Wild Frondbarbs
 Wild Frondspurs
 Wild Stemfangs
 Wild Thornspikes
@@ -1202,6 +1269,9 @@ Mending Enigma III
 Mending Ether
 Mending Ether II
 Mending Ether III
+Mending Heal
+Mending Heal II
+Mending Heal III
 Mending Mystery
 Mending Mystery II
 Mending Mystery III
@@ -1221,6 +1291,9 @@ Bulwark of the Reptile Trigger
 Bulwark of the Reptile Trigger II
 Bulwark of the Reptile Trigger III
 Carapace of the Reptile Trigger
+Chitin of the Reptile Trigger
+Chitin of the Reptile Trigger II
+Chitin of the Reptile Trigger III
 Defense of the Reptile Trigger
 Defense of the Reptile Trigger II
 Defense of the Reptile Trigger III
@@ -1297,6 +1370,7 @@ Mana Re-Re-Re-Re-Resurgence
 Mana Re-Re-Re-Re-Reverberation
 Mana Re-Re-Re-Re-Reverberation II
 Mana Re-Re-Re-Re-Reverberation III
+Mana Re-Re-Re-Re-Reproduction
 Mana Re-Re-Re-Re-Reproduction I
 Mana Re-Re-Re-Re-Reproduction II
 Mana Re-Re-Re-Re-Reproduction III
@@ -1324,6 +1398,7 @@ Mana Re-Re-Re-Resurgence
 Mana Re-Re-Re-Reverberation
 Mana Re-Re-Re-Reverberation II
 Mana Re-Re-Re-Reverberation III
+Mana Re-Re-Re-Reproduction
 Mana Re-Re-Re-Reproduction I
 Mana Re-Re-Re-Reproduction II
 Mana Re-Re-Re-Reproduction III
@@ -1351,6 +1426,7 @@ Mana Re-Re-Resurgence
 Mana Re-Re-Reverberation
 Mana Re-Re-Reverberation II
 Mana Re-Re-Reverberation III
+Mana Re-Re-Reproduction
 Mana Re-Re-Reproduction I
 Mana Re-Re-Reproduction II
 Mana Re-Re-Reproduction III
@@ -1378,6 +1454,7 @@ Mana Re-Resurgence
 Mana Re-Reverberation
 Mana Re-Reverberation II
 Mana Re-Reverberation III
+Mana Re-Reproduction
 Mana Re-Reproduction I
 Mana Re-Reproduction II
 Mana Re-Reproduction III
@@ -1473,6 +1550,8 @@ Phantasmic Reflex XVI
 Phantasmic Reflex XVII
 Phantasmic Reflex XVIII
 Phantasmic Reflex XIX
+Phantasmic Reflex XX
+Phantasmic Reflex XXI
 
 # Enchanter Spire
 Enchanted Doppelganger I
@@ -1493,6 +1572,9 @@ Obscuring Darkness III
 Obscuring Eclipse
 Obscuring Eclipse II
 Obscuring Eclipse III
+Obscuring Gloam
+Obscuring Gloam II
+Obscuring Gloam III
 Obscuring Shadows
 Obscuring Shadows II
 Obscuring Shadows III
@@ -1509,6 +1591,7 @@ Twilight Shadows III
 # Enchanter Target Ring Mez
 Anodyne Stare Mindwipe
 Deceiving Stare Mindwipe
+Entrancing Stare Mindwipe
 Hypnotic Stare Mindwipe
 Mesmeric Stare Mindwipe
 Mesmerizing Stare Mindwipe
@@ -1539,6 +1622,9 @@ Mastermind's Warding Effect
 Mastermind's Warding Effect II
 Mastermind's Warding Effect III
 Mystifying Effect
+Stupefier's Warding Effect
+Stupefier's Warding Effect II
+Stupefier's Warding Effect III
 Transfixer's Warding Effect
 Transfixer's Warding Effect II
 Transfixer's Warding Effect III
@@ -1548,6 +1634,7 @@ Abolish Destruction
 Annihilate Destruction
 Annihilate Havoc
 Annihilate Resistances
+Dismantle Destruction
 Eradicate Destruction
 Exterminate Destruction
 Obliterate Destruction
@@ -1561,6 +1648,9 @@ Groundswell Bodyguard III
 Lunashade Bodyguard
 Lunashade Bodyguard II
 Lunashade Bodyguard III
+Labradorite Bodyguard
+Labradorite Bodyguard II
+Labradorite Bodyguard III
 Pyroxenite Bodyguard
 Pyroxenite Bodyguard II
 Pyroxenite Bodyguard III
@@ -1587,6 +1677,9 @@ Burning Vengeance
 Exothermic Lash
 Exothermic Lash II
 Exothermic Lash III
+Igneous Lash
+Igneous Lash II
+Igneous Lash III
 Magmatic Lash
 Magmatic Lash II
 Magmatic Lash III
@@ -1607,6 +1700,8 @@ Chaotic Fire Jolt
 Chaotic Fire Refreshment
 Chaotic Inferno Jolt
 Chaotic Inferno Refreshment
+Chaotic Magma Jolt
+Chaotic Magma Refreshment
 Chaotic Pyroclasm Jolt
 Chaotic Pyroclasm Refreshment
 Flames of Power I
@@ -1819,7 +1914,6 @@ Windgust IV
 Windgust V
 Windgust VI
 Windgust VII
-
 Windstrike
 
 # Mage Robe
@@ -1828,8 +1922,12 @@ Companion's Assault XXXI
 Companion's Assault XXXII
 Companion's Assault XXXIII
 Companion's Assault XXXIV
+Companion's Assault XXXV
 
 # Monk Alliance
+Bloodwalker's Soulstrike IV Azia
+Bloodwalker's Soulstrike IV Beza
+Bloodwalker's Soulstrike IV Caza
 Doomwalker's Soulstrike
 Doomwalker's Soulstrike II
 Doomwalker's Soulstrike III
@@ -1859,6 +1957,18 @@ Tiger's Balance Effect III
 Tiger's Strike
 Tiger's Strike II
 Tiger's Strike III
+Dragon's Poised Strike
+Dragon's Poised Strike II
+Dragon's Poised Strike III
+Eagle's Poised Strike
+Eagle's Poised Strike II
+Eagle's Poised Strike III
+Tiger's Poised Strike
+Tiger's Poised Strike II
+Tiger's Poised Strike III
+Tiger's Symmetry Strike I
+Tiger's Symmetry Strike II
+Tiger's Symmetry Strike III
 
 # Monk Counterforce
 Contraforce Effect
@@ -1882,6 +1992,9 @@ Curse of Fourteen Fists III
 Curse of the Thirteen Fingers I
 Curse of the Thirteen Fingers II
 Curse of the Thirteen Fingers III
+Curse of Sixteen Shadows
+Curse of Sixteen Shadows II
+Curse of Sixteen Shadows III
 Doom of Fifteen Strikes I
 Doom of Fifteen Strikes II
 Doom of Fifteen Strikes III
@@ -1891,6 +2004,9 @@ Doom of Fourteen Fists III
 Doom of the Thirteen Fingers I
 Doom of the Thirteen Fingers II
 Doom of the Thirteen Fingers III
+Doom of Sixteen Shadows I
+Doom of Sixteen Shadows II
+Doom of Sixteen Shadows III
 
 # Monk Distant Strike
 Distant Strike I
@@ -2000,17 +2116,6 @@ Infusion of Thunder Shock VI
 Infusion of Thunder Shock VII
 Infusion of Thunder Shock VIII
 
-# Monk Poise
-Dragon's Poised Strike
-Dragon's Poised Strike II
-Dragon's Poised Strike III
-Eagle's Poised Strike
-Eagle's Poised Strike II
-Eagle's Poised Strike III
-Tiger's Poised Strike
-Tiger's Poised Strike II
-Tiger's Poised Strike III
-
 # Monk Protection of the Shadewalker
 Shadewalker's Mending
 Shadewalker's Mending II
@@ -2029,6 +2134,9 @@ Nimble Reflexes Block III
 Rapid Reflexes Block
 Rapid Reflexes Block II
 Rapid Reflexes Block III
+Storied Reflexes Block
+Storied Reflexes Block II
+Storied Reflexes Block III
 Swift Reflexes Block
 Swift Reflexes Block II
 Swift Reflexes Block III
@@ -2194,7 +2302,7 @@ Cascade of Decay Rot XVIII
 Cascade of Decay Rot XIX
 Cascade of Decay Rot XX
 
-# Necro Pet Proc
+# Necro Pet Proc from Spire
 Companion's Necromantic Bite I
 Companion's Necromantic Bite II
 Companion's Necromantic Bite III
@@ -2225,6 +2333,9 @@ Bestowed Relife Strike III
 Burning Poison
 Burning Poison II
 Burning Poison III
+Burning Toxin
+Burning Toxin II
+Burning Toxin III
 Burning Venom
 Burning Venom II
 Burning Venom III
@@ -2258,6 +2369,9 @@ Infused Lifeclaw III
 Inspired Lifeclaw
 Inspired Lifeclaw II
 Inspired Lifeclaw III
+Instilled Lifeclaw
+Instilled Lifeclaw II
+Instilled Lifeclaw III
 Sanctioned Lifeclaw
 Sanctioned Lifeclaw II
 Sanctioned Lifeclaw III
@@ -2313,6 +2427,9 @@ Confluent Illumination III
 Harmonious Illumination
 Harmonious Illumination II
 Harmonious Illumination III
+Penumbral Illumination
+Penumbral Illumination II
+Penumbral Illumination III
 
 # Paladin Inquisitor's Judgment
 Inquisitor's Judgment Strike I
@@ -2375,6 +2492,9 @@ Remembrance Trigger III
 Requiem Trigger
 Requiem Trigger II
 Requiem Trigger III
+Revelation Trigger
+Revelation Trigger II
+Revelation Trigger III
 
 # Paladin Mending
 Penitent Mending
@@ -2386,6 +2506,9 @@ Penitent Mending III Caza
 Penitent Mending IV Azia
 Penitent Mending IV Beza
 Penitent Mending IV Caza
+Penitent Mending V Azia
+Penitent Mending V Beza
+Penitent Mending V Caza
 Penitent Reward
 Penitent Reward II
 Penitent Reward III
@@ -2395,6 +2518,9 @@ Penitent Reward III Caza
 Penitent Reward IV Azia
 Penitent Reward IV Beza
 Penitent Reward IV Caza
+Penitent Reward V Azia
+Penitent Reward V Beza
+Penitent Reward V Caza
 
 # Paladin Remorse for the Fallen
 Remorseful Effect
@@ -2414,6 +2540,9 @@ Steely Rejuvenation III
 Steely Renewal
 Steely Renewal II
 Steely Renewal III
+Steely Restoration
+Steely Restoration II
+Steely Restoration III
 
 # Paladin Strike
 Antipathetic Strike
@@ -2428,6 +2557,9 @@ Ardent Strike III
 Armor of Ardency Strike
 Armor of Ardency Strike II
 Armor of Ardency Strike III
+Armor of Avowal Strike
+Armor of Avowal Strike II
+Armor of Avowal Strike III
 Armor of Courage Strike
 Armor of Courage Strike II
 Armor of Courage Strike III
@@ -2446,6 +2578,9 @@ Armor of Zeal Strike III
 Armor of the Forthright Strike
 Armor of the Forthright Strike II
 Armor of the Forthright Strike III
+Avowed Fury Strike
+Avowed Fury Strike II
+Avowed Fury Strike III
 Blunted Strike
 Blunted Strike II
 Blunted Strike III
@@ -2506,6 +2641,9 @@ Preservation of the Basilica Effect III
 Preservation of the Grotto Effect
 Preservation of the Grotto Effect II
 Preservation of the Grotto Effect III
+Preservation of the Fern Effect
+Preservation of the Fern Effect Rk. II
+Preservation of the Fern Effect RK. III
 Preservation of the Iceclad Effect
 Preservation of the Iceclad Effect II
 Preservation of the Iceclad Effect III
@@ -2562,6 +2700,9 @@ Major Lightning Call Effect
 Nature's Fury
 
 # Ranger Call/Blade Strike
+Arcing Blades Strike
+Arcing Blades Strike II
+Arcing Blades Strike III
 Call of Fire Strike
 Call of Ice Strike
 Call of Lightning Strike
@@ -2597,6 +2738,9 @@ Devastating Impact Strike III
 Devastating Slashes Strike
 Devastating Slashes Strike II
 Devastating Slashes Strike III
+Devastating Spate Strike
+Devastating Spate Strike II
+Devastating Spate Strike III
 Devastating Steel Strike
 Devastating Steel Strike II
 Devastating Steel Strike III
@@ -2630,6 +2774,9 @@ Consumed Effect
 Energized Effect
 Energized Effect II
 Energized Effect III
+Engulfed Effect
+Engulfed Effect II
+Engulfed Effect III
 Galvanized Effect
 Galvanized Effect II
 Galvanized Effect III
@@ -2665,6 +2812,9 @@ Outrider's Ever-Burning Gaze III
 Ro's Burning Gaze
 Ro's Burning Gaze II
 Ro's Burning Gaze III
+Shalowain's Crucible Gaze
+Shalowain's Crucible Gaze II
+Shalowain's Crucible Gaze III
 
 # Ranger Ferocious Kick
 Ferocious Kick I
@@ -2728,6 +2878,9 @@ Jolting Blades Strike
 Jolting Edges Strike
 Jolting Edges Strike II
 Jolting Edges Strike III
+Jolting Emberquartz Strike
+Jolting Emberquartz Strike II
+Jolting Emberquartz Strike III
 Jolting Impact Strike
 Jolting Impact Strike II
 Jolting Impact Strike III
@@ -2764,6 +2917,9 @@ Frostveil Parry
 Frostveil Parry II
 Frostveil Parry III
 Nature's Veil Parry
+Shadowveil Parry
+Shadowveil Parry II
+Shadowveil Parry III
 Shimmering Veil Parry
 Shimmering Veil Parry II
 Shimmering Veil Parry III
@@ -2780,6 +2936,7 @@ Outrider's Synergy Strike II
 Outrider's Synergy Strike III
 Outrider's Synergy Strike IV
 Outrider's Synergy Strike V
+Outrider's Synergy Strike VI
 
 # Rogue Aim Effect
 Baleful Aim Effect
@@ -2812,6 +2969,9 @@ Obfuscated Blade Stab III
 Secret Blade Stab
 Secret Blade Stab II
 Secret Blade Stab III
+Veiled Blade Stab
+Veiled Blade Stab II
+Veiled Blade Stab III
 
 # Rogue Blade Strike
 Asp Blade Strike
@@ -2832,6 +2992,9 @@ Skorpikis Blade Strike III
 Toxic Blade Strike
 Toxic Blade Strike II
 Toxic Blade Strike III
+Venomous Blade Strike
+Venomous Blade Strike II
+Venomous Blade Strike III
 
 # Rogue Calming
 Imperceptible Calming
@@ -2932,6 +3095,9 @@ Massive Strike XXVIII
 Cloaking Speed Shock
 Cloaking Speed Shock II
 Cloaking Speed Shock III
+Shadowed Speed Shock
+Shadowed Speed Shock II
+Shadowed Speed Shock III
 Shrouding Speed Shock
 Shrouding Speed Shock II
 Shrouding Speed Shock III
@@ -2949,18 +3115,11 @@ Blackguard's Synergy Strike II
 Blackguard's Synergy Strike III
 Blackguard's Synergy Strike IV
 Blackguard's Synergy Strike V
-
-# Shaman Apathy
-Apathetic Health
-Apathetic Health Chance
-Apathetic Health Chance II
-Apathetic Health Chance III
-Apathy Trigger
-Apathy Trigger II
-Apathy Trigger III
+Blackguard's Synergy Strike VI
 
 # Shaman Chaotic
 Direfang's Bite Chance
+Fleshrot's Spear of Venom Chance
 Mawmun's Bite Chance
 Narandi's Spear of Venom Chance
 Nexona's Spear of Venom Chance
@@ -3008,6 +3167,13 @@ Feral Bite XI
 Feral Bite XII
 
 # Shaman Lingering Sloth
+Apathetic Health
+Apathetic Health Chance
+Apathetic Health Chance II
+Apathetic Health Chance III
+Apathy Trigger
+Apathy Trigger II
+Apathy Trigger III
 Ennui Health
 Ennui Health Chance
 Ennui Health Chance II
@@ -3053,6 +3219,12 @@ Melancholy Health Chance III
 Melancholy Trigger
 Melancholy Trigger II
 Melancholy Trigger III
+Morose Health Chance
+Morose Health Chance II
+Morose Health Chance III
+Moroseness Trigger
+Moroseness Trigger II
+Moroseness Trigger III
 Sluggish Health
 Sluggish Health Chance
 Sluggish Health Chance II
@@ -3086,6 +3258,9 @@ Call the Pack Caza V
 Call the Pack Caza VI
 Call the Pack Caza VII
 Call the Pack Caza VIII
+Call the Pack IX Azia
+Call the Pack IX Beza
+Call the Pack IX Caza
 
 # Shaman Responsive Spirit
 Spiritual Restitution
@@ -3122,6 +3297,9 @@ Sabretooth Maw III
 Snow Leopard Maw
 Snow Leopard Maw II
 Snow Leopard Maw III
+Sumxu Maw
+Sumxu Maw II
+Sumxu Maw III
 Tiger Maw
 Tiger Maw II
 Tiger Maw III
@@ -3183,6 +3361,8 @@ Cascading Theft of Defense XXIII
 Cascading Theft of Defense XXIV
 Cascading Theft of Defense XXV
 Cascading Theft of Defense XXVI
+Cascading Theft of Defense XXVII
+Cascading Theft of Defense XXVIII
 Cascading Theft of Life I
 Cascading Theft of Life II
 Cascading Theft of Life III
@@ -3199,6 +3379,9 @@ Cascading Theft of Life XIII
 Cascading Theft of Life XIV
 Cascading Theft of Life XV
 Cascading Theft of Life XVI
+Cascading Theft of Life XIX
+Cascading Theft of Life XVII
+Cascading Theft of Life XVIII
 
 # SK Corrupted Guardian Disc
 Corrupted Guardian Lifetap
@@ -3233,6 +3416,9 @@ Precise Disruption III
 Precise Disruption III Azia
 Precise Disruption III Beza
 Precise Disruption III Caza
+Precise Disruption IV Azia
+Precise Disruption IV Beza
+Precise Disruption IV Caza
 
 # SK Focused Bites
 Ragged Bite of Agony I
@@ -3240,6 +3426,7 @@ Ragged Bite of Agony II
 Ragged Bite of Agony III
 Ragged Bite of Agony IV
 Ragged Bite of Agony V
+Ragged Bite of Agony VI
 
 # SK Lifedraw
 Cadcane's Lifedraw
@@ -3251,6 +3438,9 @@ Gorgon Lifedraw III
 Grelleth's Lifedraw
 Grelleth's Lifedraw II
 Grelleth's Lifedraw III
+Kanghammer's Lifedraw
+Kanghammer's Lifedraw II
+Kanghammer's Lifedraw III
 Sholothian Lifedraw
 Sholothian Lifedraw II
 Sholothian Lifedraw III
@@ -3295,6 +3485,12 @@ Mental Horror Recourse
 Mental Horror Strike
 Mindshear Horror Recourse
 Mindshear Horror Strike
+Mortimus' Horror Recourse
+Mortimus' Horror Recourse II
+Mortimus' Horror Recourse III
+Mortimus' Horror Strike
+Mortimus' Horror Strike II
+Mortimus' Horror Strike III
 Sholothian Horror Recourse
 Sholothian Horror Recourse II
 Sholothian Horror Recourse III
@@ -3317,6 +3513,15 @@ Vizat's Horror Strike II
 Vizat's Horror Strike III
 
 # SK Insolent Influence
+Ignominious Agitation
+Ignominious Agitation II
+Ignominious Agitation III
+Ignominious Influence Heal
+Ignominious Influence Heal II
+Ignominious Influence Heal III
+Ignominious Reward
+Ignominious Reward II
+Ignominious Reward III
 Impenitent Agitation
 Impenitent Agitation II
 Impenitent Agitation III
@@ -3378,6 +3583,9 @@ Mental Terror Strike III
 Mental Torment Strike
 Mental Torment Strike II
 Mental Torment Strike III
+Mental Wretchedness Strike
+Mental Wretchedness Strike II
+Mental Wretchedness Strike III
 
 # SK Remorseless Demeanor
 Remorselessness
@@ -3415,6 +3623,9 @@ Shroud of the Plagueborne Strike III
 Shroud of the Restless Strike
 Shroud of the Restless Strike II
 Shroud of the Restless Strike III
+Shroud of Rimeclaw Strike
+Shroud of Rimeclaw Strike II
+Shroud of Rimeclaw Strike III
 Shroud of the Shadeborne Strike
 Shroud of the Shadeborne Strike II
 Shroud of the Shadeborne Strike III
@@ -3437,6 +3648,9 @@ Soul Flay XIV
 Soul Flay XV
 Soul Flay XVI
 Soul Flay XVII
+Soul Flay XIX
+Soul Flay XVIII
+Soul Flay XX
 
 # SK Touch of the Cursed
 Touch of the Cursed I
@@ -3481,6 +3695,9 @@ Touch of the Cursed XXXIX
 Touch of the Cursed XL
 Touch of the Cursed XLI
 Touch of the Cursed XLII
+Touch of the Cursed XLIII
+Touch of the Cursed XLIV
+Touch of the Cursed XLV
 
 # SK Skin
 Cadcane's Skin Effect
@@ -3492,6 +3709,9 @@ Gorgon Skin Effect III
 Grelleth's Skin Effect
 Grelleth's Skin Effect II
 Grelleth's Skin Effect III
+Krizad's Skin Effect
+Krizad's Skin Effect II
+Krizad's Skin Effect III
 Malarian Skin Effect
 Sholothian Skin Effect
 Sholothian Skin Effect II
@@ -3507,19 +3727,35 @@ Xenacious' Skin Effect
 Xenacious' Skin Effect II
 Xenacious' Skin Effect III
 
+# Necro Chaotic
+Chaotic Power I
+Chaotic Power II
+Chaotic Power III
+Chaotic Power IV
+Chaotic Power V
+Chaotic Power VI
+Chaotic Power VII
+Chaotic Power VIII
+Chaotic Power IX
+Chaotic Power X
+Chaotic Weakness
+Chaotic Weakness IX
+Chaotic Weakness X
+
 # Necro Vampiric Embrace
 Vampiric Embrace
 Vampiric Embrace Strike
 
-# Warrior Barbed Tongue
+# Warrior Biting/Barbed Tongue
 Barbed Tongue Strike
 Barbed Tongue Strike II
 Barbed Tongue Strike III
-
-# Warrior Biting Tongue
 Biting Tongue Strike
 Biting Tongue Strike II
 Biting Tongue Strike III
+Razor Tongue Strike
+Razor Tongue Strike II
+Razor Tongue Strike III
 
 # Warrior Determined Reprisal
 Determined Reprisal Recourse
@@ -3533,6 +3769,9 @@ Expansive Discord III
 Expansive Discord III Azia
 Expansive Discord III Beza
 Expansive Discord III Caza
+Expansive Discord IV Azia
+Expansive Discord IV Beza
+Expansive Discord IV Caza
 Expansive Disharmony
 Expansive Disharmony II
 Expansive Disharmony III
@@ -3553,6 +3792,9 @@ Precise Discord III
 Precise Discord III Azia
 Precise Discord III Beza
 Precise Discord III Caza
+Precise Discord IV Azia
+Precise Discord IV Beza
+Precise Discord IV Caza
 Precise Disharmony
 Precise Disharmony II
 Precise Disharmony III
@@ -3583,6 +3825,9 @@ Infusion of Rage XXII
 Infusion of Rage XXIII
 Infusion of Rage XXIV
 Infusion of Rage XXV
+Infusion of Rage XXVI
+Infusion of Rage XXVII
+Infusion of Rage XXVIII
 Strike of Ire I
 Strike of Ire II
 Strike of Ire III
@@ -3590,6 +3835,9 @@ Strike of Ire IV
 Strike of Ire V
 Strike of Ire VI
 Strike of Ire VII
+Strike of Ire IX
+Strike of Ire VIII
+Strike of Ire X
 
 # Warrior Runes
 Akhevan Rune Effect
@@ -3610,6 +3858,9 @@ Mystical Rune Effect III
 Phantasmic Runes Effect
 Phantasmic Runes Effect II
 Phantasmic Runes Effect III
+Rallosian Rune Effect
+Rallosian Rune Effect II
+Rallosian Rune Effect III
 Relentless Rune Effect
 Relentless Rune Effect II
 Relentless Rune Effect III
@@ -3641,6 +3892,9 @@ Martial Rage Strike
 Provacative Strike
 
 # Warrior Last Stand
+Climactic Stand Effect
+Climactic Stand Effect II
+Climactic Stand Effect III
 Culminating Stand Effect
 Culminating Stand Effect II
 Culminating Stand Effect III
@@ -3937,12 +4191,14 @@ Pyromancy XXXVI
 # Melee
 Draconic Rage Strike
 
-# Face of Impenitence
+# Kill Shot procs Face of Impenitence
 Impenitence
 Impenitence II
 Impenitence III
 Impenitence Rk. II
 Impenitence Rk. III
+Remorselessness
+Remorselessness Rk. II
 
 # AnyoneAlleviating Burst I
 Alleviating Burst I
@@ -4017,6 +4273,8 @@ Arms of Holy Wrath VIII Recourse
 Arms of Holy Wrath V Recourse
 Arms of Holy Wrath IX Recourse
 Arms of Holy Wrath X Recourse
+Arms of Holy Wrath XI Recourse
+# Old parsing of banestrike
 Banestrike
 Banestrike I
 Banestrike II
@@ -4064,6 +4322,7 @@ Bite of the Shissar Poison Strike XI
 Bite of the Shissar Poison Strike XII
 Bite of the Shissar Poison Strike XIII
 Bite of the Shissar Poison Strike XIV
+Blast of Evocations
 Blaze of Fire
 Blaze of Fire I
 Blaze of Fire II

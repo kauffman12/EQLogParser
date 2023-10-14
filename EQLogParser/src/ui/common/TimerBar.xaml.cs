@@ -57,7 +57,8 @@ namespace EQLogParser
 
       title.Text = displayName;
       time.Text = timeText;
-      progress.Progress = remaining;
+      // 3 is an increasing timer. obviously.
+      progress.Progress = timerData?.TimerType == 3 ? 100 - remaining : remaining;
     }
 
     internal void SetActive(TimerData timerData)

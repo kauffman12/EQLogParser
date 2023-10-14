@@ -264,7 +264,14 @@ namespace EQLogParser
     {
       var endTicks = double.IsNaN(maxDurationTicks) ? timerData.DurationTicks : maxDurationTicks;
       var progress = remainingTicks / endTicks * 100.0;
-      var timeText = timerData.TimerType == 2 ? DateUtil.FormatSimpleMillis((long)remainingTicks) : DateUtil.FormatSimpleMS((long)remainingTicks);
+
+      var timeText = timerData.TimerType switch
+      {
+        2 => DateUtil.FormatSimpleMillis((long)remainingTicks),
+        3 => DateUtil.FormatSimpleMS((long)(endTicks - remainingTicks)),
+        _ => DateUtil.FormatSimpleMS((long)remainingTicks)
+      };
+
       timerBar.SetActive(timerData);
       timerBar.Update(GetDisplayName(timerData), timeText, progress, timerData);
 
