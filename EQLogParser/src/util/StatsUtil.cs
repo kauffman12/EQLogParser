@@ -349,6 +349,9 @@ namespace EQLogParser
         stats.Extra += record.OverTotal - record.Total;
       }
 
+      var hitPotential = record.Total + record.OverTotal;
+      stats.MaxPotentialHit = Math.Max(hitPotential, stats.MaxPotentialHit);
+
       if (parseModifiers)
       {
         LineModifiersParser.UpdateStats(record, stats);
@@ -382,6 +385,7 @@ namespace EQLogParser
         to.TotalSlay += from.TotalSlay;
         to.Hits += from.Hits;
         to.Max = Math.Max(to.Max, from.Max);
+        to.MaxPotentialHit = Math.Max(to.MaxPotentialHit, from.MaxPotentialHit);
         to.Min = GetMin(to.Min, from.Min);
         to.Extra += from.Extra;
         to.AssHits += from.AssHits;

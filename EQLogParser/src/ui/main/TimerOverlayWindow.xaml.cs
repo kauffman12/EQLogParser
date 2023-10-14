@@ -12,7 +12,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for TimerOverlayWindow.xaml
   /// </summary>
-  public partial class TimerOverlayWindow : Window
+  public partial class TimerOverlayWindow
   {
     private TriggerNode Node;
     private readonly bool Preview;
@@ -91,45 +91,43 @@ namespace EQLogParser
     {
       var currentTicks = DateTime.Now.Ticks;
       var maxDurationTicks = double.NaN;
-      IEnumerable<TimerData> orderedList = null;
 
-      if (Node.OverlayData.Width != Width)
+      if (!UIUtil.DoubleEquals(Node.OverlayData.Width, Width))
       {
         Width = Node.OverlayData.Width;
       }
-      else if (Node.OverlayData.Height != Height)
+      else if (!UIUtil.DoubleEquals(Node.OverlayData.Height, Height))
       {
         Height = Node.OverlayData.Height;
       }
-      else if (Node.OverlayData.Top != Top)
+      else if (!UIUtil.DoubleEquals(Node.OverlayData.Top, Top))
       {
         Top = Node.OverlayData.Top;
       }
-      else if (Node.OverlayData.Left != Left)
+      else if (!UIUtil.DoubleEquals(Node.OverlayData.Left, Left))
       {
         Left = Node.OverlayData.Left;
       }
+
+      TimerData[] orderedList = null;
 
       if (timerList.Count > 0)
       {
         if (Node.OverlayData.SortBy == 0)
         {
           // create order
-          orderedList = timerList.Where(ShouldProcess);
+          orderedList = timerList.Where(ShouldProcess).ToArray();
         }
         else
         {
           // remaining order
           orderedList = timerList.Where(ShouldProcess)
-            .OrderBy(timerData => timerData.EndTicks - currentTicks);
+            .OrderBy(timerData => timerData.EndTicks - currentTicks).ToArray();
         }
 
         if (Node.OverlayData.UseStandardTime)
         {
-          if (orderedList.Any())
-          {
-            maxDurationTicks = orderedList.Select(timerData => timerData.DurationTicks).Max();
-          }
+          maxDurationTicks = orderedList.Select(timerData => timerData.DurationTicks).Max();
         }
       }
 

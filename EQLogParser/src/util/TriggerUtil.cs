@@ -77,7 +77,7 @@ namespace EQLogParser
       {
         if (!BrushCache.TryGetValue(color, out brush))
         {
-          brush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(color) };
+          brush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(color)! };
           BrushCache[color] = brush;
         }
       }
