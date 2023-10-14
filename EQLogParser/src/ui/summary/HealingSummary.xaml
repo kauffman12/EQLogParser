@@ -150,6 +150,7 @@
         <syncfusion:GridNumericColumn MaximumWidth="65" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
         <syncfusion:GridNumericColumn MaximumWidth="70" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Heals" />
         <syncfusion:GridNumericColumn MaximumWidth="90" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Heal" />
+        <syncfusion:GridNumericColumn MaximumWidth="130" MappingName="MaxPotentialHit" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource PotentialHealTemplateToolTip}" TextAlignment="Right" HeaderText="Max Potential Heal" />
         <syncfusion:GridNumericColumn MaximumWidth="80" MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Heal" />
         <syncfusion:GridNumericColumn MaximumWidth="85" MappingName="AvgCrit" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Crit" />
         <syncfusion:GridNumericColumn MaximumWidth="85" MappingName="AvgLucky" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Lucky" />

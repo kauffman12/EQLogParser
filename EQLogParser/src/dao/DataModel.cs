@@ -466,6 +466,7 @@ namespace EQLogParser
     public uint Parries { get; set; }
     public uint Invulnerable { get; set; }
     public uint Max { get; set; }
+    public uint MaxPotentialHit { get; set; }
     public uint Min { get; set; }
     public uint BaneHits { get; set; }
     public uint Hits { get; set; }

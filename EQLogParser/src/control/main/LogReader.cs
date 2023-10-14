@@ -75,94 +75,102 @@ namespace EQLogParser
     private async Task ReadFile(string fileName, int minBack, CancellationToken cancelToken)
     {
       var bufferSize = 147456;
-      var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, bufferSize);
-      InitSize = fs.Length;
-      NextUpdateThreshold = InitSize / 50;
 
-      if (minBack == 0)
+      try
       {
-        fs.Seek(0, SeekOrigin.End);
-        CurrentPos = fs.Position;
-      }
+        var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, bufferSize);
+        InitSize = fs.Length;
+        NextUpdateThreshold = InitSize / 50;
 
-      StreamReader reader;
-      if (fileName.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
-      {
-        var gzipStream = new GZipStream(fs, CompressionMode.Decompress);
-        reader = new StreamReader(gzipStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: bufferSize);
-
-        if (minBack > 0)
+        if (minBack == 0)
         {
-          SearchCompressed(reader, minBack);
-        }
-      }
-      else
-      {
-        if (minBack > 0)
-        {
-          Search(fs, minBack);
+          fs.Seek(0, SeekOrigin.End);
+          CurrentPos = fs.Position;
         }
 
-        reader = new StreamReader(fs, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: bufferSize);
-      }
-
-      await using (fs)
-      using (reader)
-      {
-        string line;
-        string previous = null;
-        var dateTime = DateTime.MinValue;
-        double doubleValue = 0;
-        var bytesRead = fs.Position;
-
-        // date is now valid so read every line
-        while ((line = await reader.ReadLineAsync()) != null && !cancelToken.IsCancellationRequested)
+        StreamReader reader;
+        if (fileName.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
         {
-          if (cancelToken.IsCancellationRequested) break;
+          var gzipStream = new GZipStream(fs, CompressionMode.Decompress);
+          reader = new StreamReader(gzipStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: bufferSize);
 
-          // update progress during intitial load
-          bytesRead += Encoding.UTF8.GetByteCount(line) + 2;
-          if (bytesRead >= NextUpdateThreshold)
+          if (minBack > 0)
           {
-            CurrentPos = fs.Position;
-            NextUpdateThreshold += InitSize / 50; // 2% of InitSize
+            SearchCompressed(reader, minBack);
           }
-          else if ((InitSize - bytesRead) < 10000)
+        }
+        else
+        {
+          if (minBack > 0)
           {
-            CurrentPos = fs.Position;
+            Search(fs, minBack);
           }
 
-          await HandleLine(line);
+          reader = new StreamReader(fs, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: bufferSize);
         }
 
-        // continue reading for new updates
-        while (!cancelToken.IsCancellationRequested)
+        await using (fs)
+        using (reader)
         {
-          while ((line = await reader.ReadLineAsync()) != null)
-          {
-            await HandleLine(line, true);
-          }
+          string line;
+          string previous = null;
+          var dateTime = DateTime.MinValue;
+          double doubleValue = 0;
+          var bytesRead = fs.Position;
 
-          if (cancelToken.IsCancellationRequested) break;
-          WaitHandle.WaitAny(new[] { NewDataAvailable, cancelToken.WaitHandle });
-          NewDataAvailable.Reset();
-        }
-
-        async Task HandleLine(string theLine, bool monitor = false)
-        {
-          if (theLine.Length > 28)
+          // date is now valid so read every line
+          while ((line = await reader.ReadLineAsync()) != null && !cancelToken.IsCancellationRequested)
           {
-            if (previous == null || !theLine.AsSpan(1, 24).SequenceEqual(previous.AsSpan(1, 24)))
+            if (cancelToken.IsCancellationRequested) break;
+
+            // update progress during intitial load
+            bytesRead += Encoding.UTF8.GetByteCount(line) + 2;
+            if (bytesRead >= NextUpdateThreshold)
             {
-              dateTime = DateUtil.ParseStandardDate(theLine);
-              doubleValue = DateUtil.ToDouble(dateTime);
+              CurrentPos = fs.Position;
+              NextUpdateThreshold += InitSize / 50; // 2% of InitSize
+            }
+            else if ((InitSize - bytesRead) < 10000)
+            {
+              CurrentPos = fs.Position;
             }
 
-            if (cancelToken.IsCancellationRequested) return;
-            await Lines.SendAsync(Tuple.Create(theLine, doubleValue, monitor), cancelToken);
-            previous = theLine;
+            await HandleLine(line);
+          }
+
+          // continue reading for new updates
+          while (!cancelToken.IsCancellationRequested)
+          {
+            while ((line = await reader.ReadLineAsync()) != null)
+            {
+              await HandleLine(line, true);
+            }
+
+            if (cancelToken.IsCancellationRequested) break;
+            WaitHandle.WaitAny(new[] { NewDataAvailable, cancelToken.WaitHandle });
+            NewDataAvailable.Reset();
+          }
+
+          async Task HandleLine(string theLine, bool monitor = false)
+          {
+            if (theLine.Length > 28)
+            {
+              if (previous == null || !theLine.AsSpan(1, 24).SequenceEqual(previous.AsSpan(1, 24)))
+              {
+                dateTime = DateUtil.ParseStandardDate(theLine);
+                doubleValue = DateUtil.ToDouble(dateTime);
+              }
+
+              if (cancelToken.IsCancellationRequested) return;
+              await Lines.SendAsync(Tuple.Create(theLine, doubleValue, monitor), cancelToken);
+              previous = theLine;
+            }
           }
         }
+      }
+      catch (IOException e)
+      {
+        Log.Debug(e);
       }
     }
 
