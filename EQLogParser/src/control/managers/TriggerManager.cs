@@ -205,7 +205,7 @@ namespace EQLogParser
     private void TriggersDoUpdate(object sender, EventArgs e)
     {
       TriggerUpdateTimer.Stop();
-      UIUtil.InvokeNow(CloseOverlays);
+      CloseOverlays();
       GetProcessors().ForEach(p => p.UpdateActiveTriggers());
     }
 

@@ -29,6 +29,7 @@ namespace EQLogParser
     internal void Init(string overlayId)
     {
       OverlayId = overlayId;
+      progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarActiveColor-" + OverlayId);
       progress.SetResourceReference(ProgressBarBase.TrackColorProperty, "TimerBarTrackColor-" + OverlayId);
       progress.SetResourceReference(HeightProperty, "TimerBarHeight-" + OverlayId);
       time.SetResourceReference(TextBlock.FontSizeProperty, "TimerBarFontSize-" + OverlayId);
@@ -63,17 +64,17 @@ namespace EQLogParser
 
     internal void SetActive(TimerData timerData)
     {
-      if (TheState != State.Active)
+      if (timerData?.ActiveColor != null)
       {
-        if (timerData?.ActiveColor != null)
+        if (TriggerUtil.GetBrush(timerData.ActiveColor) is var color && progress.ProgressColor != color)
         {
-          progress.ProgressColor = TriggerUtil.GetBrush(timerData.ActiveColor);
+          progress.ProgressColor = color;
+          TheState = State.None;
         }
-        else
-        {
-          progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarActiveColor-" + OverlayId);
-        }
-
+      }
+      else if (TheState != State.Active)
+      {
+        progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarActiveColor-" + OverlayId);
         TheState = State.Active;
       }
     }

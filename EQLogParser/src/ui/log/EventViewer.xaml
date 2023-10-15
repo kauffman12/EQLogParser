@@ -48,7 +48,7 @@
                            AllowResizingColumns="True"
                            AllowSorting="True"
                            AutoGenerateColumns="False"
-                           ColumnSizer="Auto"
+                           ColumnSizer="AutoWithLastColumnFill"
                            CurrentCellBorderThickness="0"
                            FrozenColumnCount="1"
                            Grid.Row="1"

@@ -125,7 +125,7 @@ namespace EQLogParser
             .OrderBy(timerData => timerData.EndTicks - currentTicks).ToArray();
         }
 
-        if (Node.OverlayData.UseStandardTime)
+        if (Node.OverlayData.UseStandardTime && orderedList.Length > 0)
         {
           maxDurationTicks = orderedList.Select(timerData => timerData.DurationTicks).Max();
         }

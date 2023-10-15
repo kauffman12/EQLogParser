@@ -125,7 +125,7 @@ namespace EQLogParser
       });
     }
 
-    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEQClick(Labels.DAMAGE_PARSE);
+    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEqClick(Labels.DAMAGE_PARSE);
     internal override bool IsPetsCombined() => CurrentPetOrPlayerOption == 0;
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 

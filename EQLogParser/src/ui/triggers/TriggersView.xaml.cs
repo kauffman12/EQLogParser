@@ -522,14 +522,10 @@ namespace EQLogParser
       }
       else if (model is TextOverlayPropertyModel || model is TimerOverlayPropertyModel)
       {
-        // only close overlay if non-style attributes have changed
-        var old = model.Node.OverlayData as Overlay;
-        if (old.Top != model.Top || old.Left != model.Left || old.Height != model.Height || old.Width != model.Width)
-        {
-          TriggerManager.Instance.CloseOverlay(model.Node.Id);
-        }
+        TriggerManager.Instance.CloseOverlay(model.Node.Id);
 
         // if this overlay is changing to default and it wasn't previously then need to refresh Overlay tree
+        var old = model.Node.OverlayData as Overlay;
         var needRefresh = model.IsDefault && (old.IsDefault != model.IsDefault);
 
         TriggerUtil.Copy(model.Node.OverlayData, model);
