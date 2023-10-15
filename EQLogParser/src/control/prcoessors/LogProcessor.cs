@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
 namespace EQLogParser
@@ -12,9 +13,9 @@ namespace EQLogParser
     internal LogProcessor()
     {
       // Setup the pre-processor block
-      var options = new ExecutionDataflowBlockOptions { BoundedCapacity = 25000 };
+      var options = new ExecutionDataflowBlockOptions { BoundedCapacity = 20000 };
       PreProcess = new ActionBlock<Tuple<string, double, bool>>(data => DoPreProcess(data.Item1, data.Item2, data.Item3), options);
-      Process = new ActionBlock<LineData>(DoProcess);
+      Process = new ActionBlock<LineData>(DoProcess, options);
       ChatManager.Instance.Init();
     }
 
@@ -23,7 +24,7 @@ namespace EQLogParser
       sourceBlock.LinkTo(PreProcess, new DataflowLinkOptions { PropagateCompletion = false });
     }
 
-    private void DoPreProcess(string line, double dateTime, bool monitor)
+    private async Task DoPreProcess(string line, double dateTime, bool monitor)
     {
       var lineData = new LineData { Action = line[27..], BeginTime = dateTime, LineNumber = LineCount };
 
@@ -69,13 +70,13 @@ namespace EQLogParser
         {
           // may as split once if most things use it
           lineData.Split = lineData.Action.Split(' ');
-          Process.Post(lineData);
+          await Process.SendAsync(lineData);
           LineCount++;
         }
 
         if (doubleLine != null)
         {
-          DoPreProcess(doubleLine, extraDouble, monitor);
+          await DoPreProcess(doubleLine, extraDouble, monitor);
         }
       }
     }

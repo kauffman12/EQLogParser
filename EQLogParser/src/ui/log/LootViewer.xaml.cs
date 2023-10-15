@@ -137,8 +137,8 @@ namespace EQLogParser
       itemsList.SelectedItem = CurrentSelectedItem;
       playersList.SelectedItem = CurrentSelectedPlayer;
       npcsList.SelectedItem = CurrentSelectedNpc;
-
       dataGrid?.View?.Refresh();
+      dataGrid?.GridColumnSizer.ResetAutoCalculationforAllColumns();
       UpdateTitle();
     }
 
@@ -178,23 +178,29 @@ namespace EQLogParser
 
     private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
     {
-      dataGrid.View.Filter = obj =>
+      if (dataGrid.View != null)
       {
-        var found = false;
-
-        if (obj is LootRow row)
+        dataGrid.View.Filter = obj =>
         {
-          found = (CurrentSelectedItem == ALLITEMS || (row.IsCurrency && CurrentSelectedItem == ONLYCURR) ||
-                   (!row.IsCurrency && CurrentSelectedItem == ONLYITEMS) || (CurrentSelectedItem == ONLYASS && !row.IsCurrency && row.Quantity == 0) || CurrentSelectedItem == row.Item) &&
-                  (CurrentSelectedPlayer == ALLPLAYERS || row.Player == CurrentSelectedPlayer);
+          var found = false;
 
-          found = found && (CurrentSelectedNpc == ALLNPCS || row.Npc == CurrentSelectedNpc);
-        }
+          if (obj is LootRow row)
+          {
+            found = (CurrentSelectedItem == ALLITEMS || (row.IsCurrency && CurrentSelectedItem == ONLYCURR) ||
+                     (!row.IsCurrency && CurrentSelectedItem == ONLYITEMS) ||
+                     (CurrentSelectedItem == ONLYASS && !row.IsCurrency && row.Quantity == 0) ||
+                     CurrentSelectedItem == row.Item) &&
+                    (CurrentSelectedPlayer == ALLPLAYERS || row.Player == CurrentSelectedPlayer);
 
-        return found;
-      };
+            found = found && (CurrentSelectedNpc == ALLNPCS || row.Npc == CurrentSelectedNpc);
+          }
 
-      dataGrid.View.RefreshFilter();
+          return found;
+        };
+
+        dataGrid.View.RefreshFilter();
+      }
+
       UpdateTitle();
     }
 
@@ -214,7 +220,6 @@ namespace EQLogParser
     private static void UpdateTotals(List<LootRow> totalRecords, LootRecord looted)
     {
       var row = CreateRow(looted);
-
       if (totalRecords.AsParallel().FirstOrDefault(item => !looted.IsCurrency && !item.IsCurrency && looted.Player == item.Player && looted.Item == item.Item) is { } existingItem)
       {
         existingItem.Quantity += looted.Quantity;

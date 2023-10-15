@@ -1,7 +1,6 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,7 +20,6 @@ namespace EQLogParser
     private const string PLAYERKILL_EVENT = "Player Killing";
     private const string MEZBREAK_EVENT = "Mez Break";
 
-    private readonly ObservableCollection<EventRow> EventRows = new();
     private readonly DispatcherTimer FilterTimer;
     private bool CurrentShowMezBreaks = true;
     private bool CurrentShowEnterZone = true;
@@ -63,7 +61,6 @@ namespace EQLogParser
         }
       };
 
-      dataGrid.ItemsSource = EventRows;
       Load();
     }
 
@@ -74,8 +71,6 @@ namespace EQLogParser
 
     private void Load()
     {
-      EventRows.Clear();
-
       var rows = new List<EventRow>();
       DataManager.Instance.GetDeathsDuring(0, double.MaxValue).ForEach(block =>
       {
@@ -121,7 +116,7 @@ namespace EQLogParser
         });
       });
 
-      rows.ForEach(row => EventRows.Add(row));
+      dataGrid.ItemsSource = rows;
       UpdateTitleAndRefresh();
     }
 

@@ -40,7 +40,7 @@
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Save" />
             </MenuItem.Icon>
-            <MenuItem Header="_HTML Summary" Click="MenuItemExportHTMLClick" ToolTip="Save Open Summary Tables As HTML">
+            <MenuItem Header="_HTML Summary" Click="MenuItemExportHtmlClick" ToolTip="Save Open Summary Tables As HTML">
               <MenuItem.Icon>
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Table" />
               </MenuItem.Icon>
@@ -249,7 +249,7 @@
               <fa:ImageAwesome x:Name="enableHideOnMinimizeIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="enableMapSendtoEQ" Header="_Send To EQ With Ctrl+C" Click="ToggleMapSendToEQClick">
+          <MenuItem x:Name="enableMapSendtoEQ" Header="_Send To EQ With Ctrl+C" Click="ToggleMapSendToEqClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableMapSendToEQIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
@@ -392,7 +392,8 @@
   </syncfusion:ChromelessWindow.RightHeaderItemsSource>
   <Grid Margin="0">
     <syncfusion:NotifyIcon x:Name="notifyIcon" ShowInTaskBar="True" Header="NotifyIcon" Text="EQLogParser" Icon="EQLogParser.ico" Click="NotifyIconClick"/>
-    <syncfusion:DockingManager x:Name="dockSite" Margin="0" UseDocumentContainer="True" TabGroupCreated="TabGroupCreated" Loaded="DockSiteLoaded" DocumentCloseButtonType="Individual" CloseButtonClick="DockSiteCloseButtonClick" WindowClosing="DockSiteWindowClosing">
+    <syncfusion:DockingManager x:Name="dockSite" Margin="0" UseDocumentContainer="True" TabGroupCreated="TabGroupCreated" Loaded="DockSiteLoaded" DocumentCloseButtonType="Individual" CloseButtonClick="DockSiteCloseButtonClick"
+                               WindowClosing="DockSiteWindowClosing">
       <ContentControl x:Name="playerParseTextWindow" Tag="Hide" syncfusion:DockingManager.Header="Preview Parse" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
                       syncfusion:DockingManager.DesiredHeightInDockedMode="150" syncfusion:DockingManager.CanDocument="False" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="150">
         <local:ParsePreview />
@@ -401,8 +402,9 @@
                       syncfusion:DockingManager.DesiredHeightInDockedMode="300" syncfusion:DockingManager.CanDocument="False" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="100">
         <local:TriggersLogView />
       </ContentControl>
-      <ContentControl x:Name="triggerTestWindow" Tag="Hide" syncfusion:DockingManager.Header="Trigger Tester" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
-                      syncfusion:DockingManager.DesiredHeightInDockedMode="300" syncfusion:DockingManager.CanDocument="False" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="100">
+      <ContentControl x:Name="triggerTestWindow" Tag="Hide" syncfusion:DockingManager.Header="Trigger Tester" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Tabbed"
+                      syncfusion:DockingManager.TargetNameInDockedMode="triggerLogWindow" syncfusion:DockingManager.DesiredHeightInDockedMode="300" syncfusion:DockingManager.CanDocument="False"
+                      syncfusion:DockingManager.DesiredMinHeightInFloatingMode="100">
         <local:TriggersTester />
       </ContentControl>
       <ContentControl x:Name="npcWindow" Tag="Hide" Padding="0" Margin="0" syncfusion:DockingManager.Header="Fight List" syncfusion:DockingManager.State="Dock" 

@@ -12,7 +12,7 @@ namespace EQLogParser
 {
   class LogReader : IDisposable
   {
-    private BufferBlock<Tuple<string, double, bool>> Lines { get; } = new(new DataflowBlockOptions { BoundedCapacity = 25000 });
+    private BufferBlock<Tuple<string, double, bool>> Lines { get; } = new(new DataflowBlockOptions { BoundedCapacity = 20000 });
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly FileSystemWatcher FileWatcher;
     private readonly string FileName;
