@@ -29,6 +29,7 @@ namespace EQLogParser
   {
     internal static event Action<string> EventsLogLoadingComplete;
     internal static event Action<string> EventsThemeChanged;
+    internal static readonly HttpClient TheHttpClient = new();
     private const string PETS_LIST_TITLE = "Verified Pets ({0})";
     private const string PLAYER_LIST_TITLE = "Verified Players ({0})";
     private static readonly ObservableCollection<dynamic> VerifiedPlayersView = new();
@@ -46,11 +47,9 @@ namespace EQLogParser
       var version = Application.ResourceAssembly.GetName().Version;
       Task.Delay(2000).ContinueWith(_ =>
       {
-        HttpClient client = null;
         try
         {
-          client = new HttpClient();
-          var request = client.GetStringAsync(@"https://github.com/kauffman12/EQLogParser/blob/master/README.md");
+          var request = TheHttpClient.GetStringAsync(@"https://github.com/kauffman12/EQLogParser/blob/master/README.md");
           request.Wait();
 
           var matches = new Regex(@"EQLogParser-((\d)\.(\d)\.(\d?\d?\d))\.(msi|exe)").Match(request.Result);
@@ -125,10 +124,6 @@ namespace EQLogParser
         {
           Log.Error("Error Checking for Updates", ex);
           UIUtil.InvokeAsync(() => errorText.Text = "Update Check Failed. Firewall?");
-        }
-        finally
-        {
-          client?.Dispose();
         }
       });
     }

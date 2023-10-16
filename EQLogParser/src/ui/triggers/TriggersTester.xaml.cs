@@ -17,7 +17,7 @@ namespace EQLogParser
   /// </summary>
   public partial class TriggersTester : UserControl, IDisposable
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly BufferBlock<Tuple<string, double, bool>> Buffer;
 
     public TriggersTester()
@@ -25,12 +25,19 @@ namespace EQLogParser
       InitializeComponent();
       Buffer = new BufferBlock<Tuple<string, double, bool>>();
       TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
-      (Application.Current.MainWindow as MainWindow).Closing += TriggersTesterClosing;
+      ((MainWindow)Application.Current.MainWindow)!.Closing += TriggersTesterClosing;
+      MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
+      theBasicLabel.Content = $"Current Player {{C}} " + (string.IsNullOrEmpty(ConfigUtil.PlayerName) ? "is not set" : "set to " + ConfigUtil.PlayerName);
 
       if (TriggerStateManager.Instance.GetConfig() is { } config)
       {
         UpdateCharacterList(config);
       }
+    }
+
+    private void EventsLogLoadingComplete(string obj)
+    {
+      theBasicLabel.Content = $"Current Player {{C}} " + (string.IsNullOrEmpty(ConfigUtil.PlayerName) ? "is not set" : "set to " + ConfigUtil.PlayerName);
     }
 
     private void TriggerConfigUpdateEvent(TriggerConfig config) => UpdateCharacterList(config);
@@ -41,19 +48,15 @@ namespace EQLogParser
       {
         if (!config.IsAdvanced)
         {
-          if (characterList.Visibility != Visibility.Collapsed)
-          {
-            characterList.Visibility = Visibility.Collapsed;
-            theLabel.Visibility = Visibility.Collapsed;
-          }
+          characterList.Visibility = Visibility.Collapsed;
+          theLabel.Visibility = Visibility.Collapsed;
+          theBasicLabel.Visibility = Visibility.Visible;
         }
         else
         {
-          if (characterList.Visibility != Visibility.Visible)
-          {
-            characterList.Visibility = Visibility.Visible;
-            theLabel.Visibility = Visibility.Visible;
-          }
+          characterList.Visibility = Visibility.Visible;
+          theLabel.Visibility = Visibility.Visible;
+          theBasicLabel.Visibility = Visibility.Collapsed;
 
           string selectedId = null;
           if (characterList.SelectedItem is TriggerCharacter selected)
@@ -105,13 +108,13 @@ namespace EQLogParser
           {
             if (characterList.Visibility != Visibility.Visible)
             {
-              TriggerManager.Instance.SetTestProcessor(TriggerStateManager.DEFAULT_USER, TriggerStateManager.DEFAULT_USER, Buffer);
+              TriggerManager.Instance.SetTestProcessor(Buffer);
             }
             else
             {
               if (characterList.SelectedItem is TriggerCharacter character)
               {
-                TriggerManager.Instance.SetTestProcessor(character.Id, character.Name, Buffer);
+                TriggerManager.Instance.SetTestProcessor(character, Buffer);
               }
               else
               {
@@ -302,7 +305,8 @@ namespace EQLogParser
       {
         Buffer?.Complete();
         TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
-        (Application.Current.MainWindow as MainWindow).Closing -= TriggersTesterClosing;
+        ((MainWindow)Application.Current.MainWindow)!.Closing -= TriggersTesterClosing;
+        MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
         testTriggersBox?.Dispose();
         disposedValue = true;
       }

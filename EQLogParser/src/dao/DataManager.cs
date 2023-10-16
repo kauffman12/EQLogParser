@@ -2,9 +2,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Windows.Data;
 
 namespace EQLogParser
 {
@@ -64,7 +66,7 @@ namespace EQLogParser
 
   class DataManager
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     internal static DataManager Instance = new();
     internal event EventHandler<string> EventsRemovedFight;
@@ -83,7 +85,6 @@ namespace EQLogParser
 
     private static readonly SpellAbbrvComparer AbbrvComparer = new();
     private static readonly TimedActionComparer TAComparer = new();
-    private static readonly object LockObject = new();
 
     private readonly List<ActionGroup> AllMiscBlocks = new();
     private readonly List<ActionGroup> AllDeathBlocks = new();
@@ -93,8 +94,9 @@ namespace EQLogParser
     private readonly List<ActionGroup> AllResistBlocks = new();
     private readonly List<ActionGroup> AllRandomBlocks = new();
     private readonly List<ActionGroup> AllLootBlocks = new();
-    private readonly List<TimedAction> AllSpecialActions = new();
+    private readonly List<SpecialSpell> AllSpecialActions = new();
     private readonly List<LootRecord> AssignedLoot = new();
+    private readonly ObservableCollection<QuickShareRecord> AllQuickShareRecords = new();
 
     private readonly List<string> AdpsKeys = new() { "#DoTCritRate", "#NukeCritRate" };
     private readonly Dictionary<string, Dictionary<string, uint>> AdpsActive = new();
@@ -108,7 +110,7 @@ namespace EQLogParser
     private readonly SpellTreeNode LandsOnYouTree = new();
     private readonly SpellTreeNode WearOffTree = new();
 
-    // defnitely used in single thread
+    // definitely used in single thread
     private readonly Dictionary<string, string> TitleToClass = new();
 
     // locking was causing a problem for OverlayFights? I don't know
@@ -121,12 +123,13 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, string> SpellAbbrvCache = new();
     private readonly ConcurrentDictionary<string, string> RanksCache = new();
     private readonly ConcurrentDictionary<string, List<SpellData>> SpellsNameDb = new();
-
+    private readonly object CollectionLock = new();
 
     private int LastSpellIndex = -1;
 
     private DataManager()
     {
+      BindingOperations.EnableCollectionSynchronization(AllQuickShareRecords, CollectionLock);
       var spellList = new List<SpellData>();
 
       // build ranks cache
@@ -222,7 +225,7 @@ namespace EQLogParser
           // Call of Fire is Ranger only and self target but VT clickie lets warriors use it
           if (spell.Name.IndexOf("Illusion", StringComparison.OrdinalIgnoreCase) == -1 &&
           !spell.Name.EndsWith(" gate", StringComparison.OrdinalIgnoreCase) &&
-          spell.Name.IndexOf(" Synergy", StringComparison.OrdinalIgnoreCase) == -1 &&
+          !spell.Name.Contains(" Synergy", StringComparison.OrdinalIgnoreCase) &&
           spell.Name.IndexOf("Call of Fire", StringComparison.OrdinalIgnoreCase) == -1)
           {
             // these need to be unique and keep track if a conflict is found
@@ -294,25 +297,21 @@ namespace EQLogParser
 
       SpellData GetAdpsByName(string name)
       {
-        SpellData spellData = null;
-
-        if (!SpellsAbbrvDb.TryGetValue(name, out spellData))
+        if (!SpellsAbbrvDb.TryGetValue(name, out var spellData))
         {
-          if (SpellsNameDb.TryGetValue(name, out var spellList))
+          if (SpellsNameDb.TryGetValue(name, out var list))
           {
-            spellData = spellList.Find(item => item.Adps > 0);
+            return list.Find(item => item.Adps > 0);
           }
         }
-
         return spellData;
       }
     }
 
+    internal ObservableCollection<QuickShareRecord> GetQuickShareRecords() => AllQuickShareRecords;
     internal void AddDeathRecord(DeathRecord record, double beginTime) => AddAction(AllDeathBlocks, record, beginTime);
     internal void AddMiscRecord(IAction action, double beginTime) => AddAction(AllMiscBlocks, action, beginTime);
     internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => AddAction(AllReceivedSpellBlocks, received, beginTime);
-    internal List<ActionGroup> GetAllLoot() => AllLootBlocks.ToList();
-    internal List<ActionGroup> GetAllRandoms() => AllRandomBlocks.ToList();
     internal List<ActionGroup> GetCastsDuring(double beginTime, double endTime) => SearchActions(AllSpellCastBlocks, beginTime, endTime);
     internal List<ActionGroup> GetDeathsDuring(double beginTime, double endTime) => SearchActions(AllDeathBlocks, beginTime, endTime);
     internal List<ActionGroup> GetHealsDuring(double beginTime, double endTime) => SearchActions(AllHealBlocks, beginTime, endTime);
@@ -326,15 +325,26 @@ namespace EQLogParser
 
     public static void AddAction(List<ActionGroup> blockList, IAction action, double beginTime)
     {
-      if (blockList.LastOrDefault() is { } last && last.BeginTime == beginTime)
+      lock (blockList)
       {
-        last.Actions.Add(action);
+        if (blockList.LastOrDefault() is { } last && UIUtil.DoubleEquals(last.BeginTime, beginTime))
+        {
+          last.Actions.Add(action);
+        }
+        else
+        {
+          var newSegment = new ActionGroup { BeginTime = beginTime };
+          newSegment.Actions.Add(action);
+          blockList.Add(newSegment);
+        }
       }
-      else
+    }
+
+    internal void AddQuickShare(QuickShareRecord action)
+    {
+      lock (CollectionLock)
       {
-        var newSegment = new ActionGroup { BeginTime = beginTime };
-        newSegment.Actions.Add(action);
-        blockList.Add(newSegment);
+        AllQuickShareRecords.Insert(0, action);
       }
     }
 
@@ -370,37 +380,43 @@ namespace EQLogParser
 
     internal void AddLootRecord(LootRecord record, double beginTime)
     {
-      AddAction(AllLootBlocks, record, beginTime);
-
-      if (!record.IsCurrency && record.Quantity > 0 && AssignedLoot.Count > 0)
+      lock (AllLootBlocks)
       {
-        var found = AssignedLoot.FindLastIndex(item => item.Player == record.Player && item.Item == record.Item);
-        if (found > -1)
-        {
-          AssignedLoot.RemoveAt(found);
+        AddAction(AllLootBlocks, record, beginTime);
 
-          foreach (var block in AllLootBlocks.OrderByDescending(block => block.BeginTime))
+        if (!record.IsCurrency && record.Quantity > 0 && AssignedLoot.Count > 0)
+        {
+          var found = AssignedLoot.FindLastIndex(item => item.Player == record.Player && item.Item == record.Item);
+          if (found > -1)
           {
-            found = block.Actions.FindLastIndex(item => item is LootRecord loot && loot.Player == record.Player && loot.Item == record.Item && loot.Quantity == 0);
-            if (found > -1)
+            AssignedLoot.RemoveAt(found);
+            foreach (var block in AllLootBlocks.OrderByDescending(block => block.BeginTime))
             {
-              lock (block.Actions)
+              found = block.Actions.FindLastIndex(item => item is LootRecord loot && loot.Player == record.Player && loot.Item == record.Item && loot.Quantity == 0);
+              if (found > -1)
               {
-                block.Actions.RemoveAt(found);
+                lock (block.Actions)
+                {
+                  block.Actions.RemoveAt(found);
+                }
               }
             }
           }
         }
-      }
-      else if (!record.IsCurrency && record.Quantity == 0)
-      {
-        AssignedLoot.Add(record);
+        else if (!record.IsCurrency && record.Quantity == 0)
+        {
+          AssignedLoot.Add(record);
+        }
       }
     }
 
     internal void AddRandomRecord(RandomRecord record, double beginTime)
     {
-      AddAction(AllRandomBlocks, record, beginTime);
+      lock (AllRandomBlocks)
+      {
+        AddAction(AllRandomBlocks, record, beginTime);
+      }
+
       EventsNewRandomRecord?.Invoke(this, record);
     }
 
@@ -427,6 +443,22 @@ namespace EQLogParser
           RemoveActiveFight(fight.CorrectMapKey);
           RemoveOverlayFight(fight.Id);
         }
+      }
+    }
+
+    internal List<ActionGroup> GetAllLoot()
+    {
+      lock (AllLootBlocks)
+      {
+        return AllLootBlocks.ToList();
+      }
+    }
+
+    internal List<ActionGroup> GetAllRandoms()
+    {
+      lock (AllRandomBlocks)
+      {
+        return AllRandomBlocks.ToList();
       }
     }
 
@@ -524,11 +556,19 @@ namespace EQLogParser
       return null;
     }
 
-    internal void AddSpecial(TimedAction action)
+    internal void AddSpecial(SpecialSpell action)
     {
       lock (AllSpecialActions)
       {
         AllSpecialActions.Add(action);
+      }
+    }
+
+    internal bool IsQuickShareMine(string key)
+    {
+      lock (CollectionLock)
+      {
+        return AllQuickShareRecords.FirstOrDefault(share => share.IsMine && share.Key == key) != null;
       }
     }
 
@@ -541,13 +581,16 @@ namespace EQLogParser
 
     internal void HandleSpellInterrupt(string player, string spell, double beginTime)
     {
-      for (var i = AllSpellCastBlocks.Count - 1; i >= 0 && beginTime - AllSpellCastBlocks[i].BeginTime <= 5; i--)
+      lock (AllSpellCastBlocks)
       {
-        var index = AllSpellCastBlocks[i].Actions.FindLastIndex(action => action is SpellCast sc && sc.Spell == spell && sc.Caster == player);
-        if (index > -1 && AllSpellCastBlocks[i].Actions[index] is SpellCast cast)
+        for (var i = AllSpellCastBlocks.Count - 1; i >= 0 && beginTime - AllSpellCastBlocks[i].BeginTime <= 5; i--)
         {
-          cast.Interrupted = true;
-          break;
+          var index = AllSpellCastBlocks[i].Actions.FindLastIndex(action => action is SpellCast sc && sc.Spell == spell && sc.Caster == player);
+          if (index > -1 && AllSpellCastBlocks[i].Actions[index] is SpellCast cast)
+          {
+            cast.Interrupted = true;
+            break;
+          }
         }
       }
     }
@@ -557,7 +600,11 @@ namespace EQLogParser
       if (SpellsNameDb.ContainsKey(cast.Spell))
       {
         AddAction(AllSpellCastBlocks, cast, beginTime);
-        LastSpellIndex = AllSpellCastBlocks.Count - 1;
+
+        lock (AllSpellCastBlocks)
+        {
+          LastSpellIndex = AllSpellCastBlocks.Count - 1;
+        }
 
         if (SpellsToClass.TryGetValue(cast.Spell, out var theClass))
         {
@@ -567,7 +614,7 @@ namespace EQLogParser
         if (specialKey != null)
         {
           var updated = false;
-          lock (LockObject)
+          lock (AdpsKeys)
           {
             foreach (ref var key in AdpsKeys.ToArray().AsSpan())
             {
@@ -588,7 +635,7 @@ namespace EQLogParser
       }
     }
 
-    internal List<TimedAction> GetSpecials()
+    internal List<SpecialSpell> GetSpecials()
     {
       lock (AllSpecialActions)
       {
@@ -635,7 +682,7 @@ namespace EQLogParser
           if (spellData != null)
           {
             var updated = false;
-            lock (LockObject)
+            lock (AdpsKeys)
             {
               foreach (ref var key in AdpsKeys.ToArray().AsSpan())
               {
@@ -672,7 +719,7 @@ namespace EQLogParser
           var spellData = spellDataSet.First();
           var updated = false;
 
-          lock (LockObject)
+          lock (AdpsKeys)
           {
             foreach (ref var key in AdpsKeys.ToArray().AsSpan())
             {
@@ -755,7 +802,7 @@ namespace EQLogParser
     {
       var updated = false;
 
-      lock (LockObject)
+      lock (AdpsKeys)
       {
         foreach (var active in AdpsActive)
         {
@@ -835,7 +882,7 @@ namespace EQLogParser
 
     private void RecalculateAdps()
     {
-      lock (LockObject)
+      lock (AdpsKeys)
       {
         MyDoTCritRateMod = (uint)AdpsActive[AdpsKeys[0]].Sum(kv => kv.Value);
         MyNukeCritRateMod = (uint)AdpsActive[AdpsKeys[1]].Sum(kv => kv.Value);
@@ -844,22 +891,25 @@ namespace EQLogParser
 
     private SpellData FindPreviousCast(string player, List<SpellData> output, bool isAdps = false)
     {
-      if (LastSpellIndex > -1)
+      lock (AllSpellCastBlocks)
       {
-        var outputSpan = output.ToArray().AsSpan();
-        var endTime = AllSpellCastBlocks[LastSpellIndex].BeginTime - 5;
-        for (var i = LastSpellIndex; i >= 0 && AllSpellCastBlocks[i].BeginTime >= endTime; i--)
+        if (LastSpellIndex > -1)
         {
-          for (var j = AllSpellCastBlocks[i].Actions.Count - 1; j >= 0; j--)
+          var outputSpan = output.ToArray().AsSpan();
+          var endTime = AllSpellCastBlocks[LastSpellIndex].BeginTime - 5;
+          for (var i = LastSpellIndex; i >= 0 && AllSpellCastBlocks[i].BeginTime >= endTime; i--)
           {
-            if (AllSpellCastBlocks[i].Actions[j] is SpellCast { Interrupted: false } cast)
+            for (var j = AllSpellCastBlocks[i].Actions.Count - 1; j >= 0; j--)
             {
-              foreach (var value in outputSpan)
+              if (AllSpellCastBlocks[i].Actions[j] is SpellCast { Interrupted: false } cast)
               {
-                if ((!isAdps || value.Adps > 0) && (value.Target != (int)SpellTarget.SELF || cast.Caster == player) &&
-                  value.Name == cast.Spell)
+                foreach (var value in outputSpan)
                 {
-                  return value;
+                  if ((!isAdps || value.Adps > 0) && (value.Target != (int)SpellTarget.SELF || cast.Caster == player) &&
+                      value.Name == cast.Spell)
+                  {
+                    return value;
+                  }
                 }
               }
             }
@@ -1010,25 +1060,59 @@ namespace EQLogParser
 
     internal void Clear()
     {
-      lock (LockObject)
+      ActiveFights.Clear();
+      LifetimeFights.Clear();
+
+      lock (AllDeathBlocks)
+      {
+        AllDeathBlocks.Clear();
+      }
+
+      lock (AllMiscBlocks)
+      {
+        AllMiscBlocks.Clear();
+      }
+
+      lock (AllSpellCastBlocks)
       {
         LastSpellIndex = -1;
-        ActiveFights.Clear();
-        LifetimeFights.Clear();
-        OverlayFights.Clear();
-        AllDeathBlocks.Clear();
-        AllMiscBlocks.Clear();
         AllSpellCastBlocks.Clear();
+      }
+
+      lock (AllReceivedSpellBlocks)
+      {
         AllReceivedSpellBlocks.Clear();
+      }
+
+      lock (AllResistBlocks)
+      {
         AllResistBlocks.Clear();
+      }
+
+      lock (AllHealBlocks)
+      {
         AllHealBlocks.Clear();
-        AllLootBlocks.Clear();
+      }
+
+      lock (OverlayFights)
+      {
+        OverlayFights.Clear();
+      }
+
+      lock (AllRandomBlocks)
+      {
         AllRandomBlocks.Clear();
-        AllSpecialActions.Clear();
-        SpellAbbrvCache.Clear();
+      }
+
+      lock (AllLootBlocks)
+      {
         AssignedLoot.Clear();
-        ClearActiveAdps();
-        EventsClearedActiveData?.Invoke(this, true);
+        AllLootBlocks.Clear();
+      }
+
+      lock (NpcResistStats)
+      {
+        NpcResistStats.Clear();
       }
 
       lock (NpcTotalSpellCounts)
@@ -1036,15 +1120,23 @@ namespace EQLogParser
         NpcTotalSpellCounts.Clear();
       }
 
-      lock (NpcResistStats)
+      lock (AllSpecialActions)
       {
-        NpcResistStats.Clear();
+        AllSpecialActions.Clear();
       }
+
+      lock (CollectionLock)
+      {
+        AllQuickShareRecords.Clear();
+      }
+
+      ClearActiveAdps();
+      EventsClearedActiveData?.Invoke(this, true);
     }
 
     internal void ClearActiveAdps()
     {
-      lock (LockObject)
+      lock (AdpsKeys)
       {
         AdpsKeys.ForEach(key => AdpsActive[key].Clear());
         MyDoTCritRateMod = 0;
@@ -1098,23 +1190,26 @@ namespace EQLogParser
 
     private static List<ActionGroup> SearchActions(List<ActionGroup> allActions, double beginTime, double endTime)
     {
-      var startBlock = new ActionGroup { BeginTime = beginTime };
-      var endBlock = new ActionGroup { BeginTime = endTime + 1 };
-
-      var startIndex = allActions.BinarySearch(startBlock, TAComparer);
-      if (startIndex < 0)
+      lock (allActions)
       {
-        startIndex = Math.Abs(startIndex) - 1;
-      }
+        var startBlock = new ActionGroup { BeginTime = beginTime };
+        var endBlock = new ActionGroup { BeginTime = endTime + 1 };
 
-      var endIndex = allActions.BinarySearch(endBlock, TAComparer);
-      if (endIndex < 0)
-      {
-        endIndex = Math.Abs(endIndex) - 1;
-      }
+        var startIndex = allActions.BinarySearch(startBlock, TAComparer);
+        if (startIndex < 0)
+        {
+          startIndex = Math.Abs(startIndex) - 1;
+        }
 
-      var last = endIndex - startIndex;
-      return last > 0 ? allActions.GetRange(startIndex, last) : new List<ActionGroup>();
+        var endIndex = allActions.BinarySearch(endBlock, TAComparer);
+        if (endIndex < 0)
+        {
+          endIndex = Math.Abs(endIndex) - 1;
+        }
+
+        var last = endIndex - startIndex;
+        return last > 0 ? allActions.GetRange(startIndex, last) : new List<ActionGroup>();
+      }
     }
 
     public static SpellTreeResult SearchSpellPath(SpellTreeNode node, string[] split, int lastIndex = -1)
@@ -1172,7 +1267,6 @@ namespace EQLogParser
     static int DurationCompare(SpellData a, SpellData b)
     {
       var result = b.Duration.CompareTo(a.Duration);
-
       if (result == 0 && int.TryParse(a.ID, out var aInt) && int.TryParse(b.ID, out var bInt))
       {
         // Check if the durations are equal
@@ -1181,7 +1275,6 @@ namespace EQLogParser
           result = aInt > bInt ? -1 : 1;
         }
       }
-
       return result;
     }
 
@@ -1197,28 +1290,28 @@ namespace EQLogParser
       public int Compare(TimedAction x, TimedAction y) => (x != null && y != null) ? x.BeginTime.CompareTo(y.BeginTime) : 0;
     }
 
-    public class ResistCount
+    internal class ResistCount
     {
-      internal uint Landed { get; set; }
-      internal uint Resisted { get; set; }
+      public uint Landed { get; set; }
+      public uint Resisted { get; set; }
     }
 
-    public class TotalCount
+    internal class TotalCount
     {
-      internal uint Landed { get; set; }
-      internal uint Reflected { get; set; }
+      public uint Landed { get; set; }
+      public uint Reflected { get; set; }
     }
 
-    public class SpellTreeNode
+    internal class SpellTreeNode
     {
-      internal List<SpellData> SpellData { get; set; } = new();
-      internal Dictionary<string, SpellTreeNode> Words { get; set; } = new();
+      public List<SpellData> SpellData { get; set; } = new();
+      public Dictionary<string, SpellTreeNode> Words { get; set; } = new();
     }
 
-    public class SpellTreeResult
+    internal class SpellTreeResult
     {
-      internal List<SpellData> SpellData { get; set; }
-      internal int DataIndex { get; set; }
+      public List<SpellData> SpellData { get; set; }
+      public int DataIndex { get; set; }
     }
   }
 }

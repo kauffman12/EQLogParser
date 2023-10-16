@@ -354,6 +354,15 @@ namespace EQLogParser
     public int UniqueGroupCount { get; set; }
   }
 
+  internal class QuickShareRecord : TimedAction
+  {
+    public string Key { get; set; }
+    public string From { get; set; }
+    public string To { get; set; }
+    public string Type { get; set; }
+    public bool IsMine { get; set; }
+  }
+
   internal class ResistRecord : IAction
   {
     public string Spell { get; set; }
@@ -678,6 +687,7 @@ namespace EQLogParser
     public double TotalSeconds { get; set; }
     public long DPS { get; set; }
     public long SDPS { get; set; }
+    public long PDPS { get; set; }
     public long Extra { get; set; }
     public long Potential { get; set; }
     public int Resists { get; set; }

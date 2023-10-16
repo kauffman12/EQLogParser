@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.1.41" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.1.42" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -67,26 +67,26 @@
         </Control>
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
       </Dialog>
-      <Dialog Id="WhatsNewDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="no">
-        <Control Id="WhatsNewText" Type="ScrollableText" X="5" Y="50" Width="358" Height="180" Sunken="yes" TabSkip="no">
+      <Dialog Id="WhatsNewDlg" Width="420" Height="300" Title="[ProductName] Setup" NoMinimize="no">
+        <Control Id="WhatsNewText" Type="ScrollableText" X="5" Y="50" Width="408" Height="210" Sunken="yes" TabSkip="no">
           <Text SourceFile="..\EQLogParser\data\releasenotes.rtf" />
         </Control>
-        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Text="!(loc.WixUINext)">
+        <Control Id="Next" Type="PushButton" X="286" Y="273" Width="56" Height="17" Text="!(loc.WixUINext)">
           <Publish Event="NewDialog" Value="InstallDirDlg">1</Publish>
         </Control>
-        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
+        <Control Id="Back" Type="PushButton" X="230" Y="273" Width="56" Height="17" Text="&amp;Back">
           <Publish Event="NewDialog" Value="WelcomeDlg">1</Publish>
          </Control>
-        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
+        <Control Id="Cancel" Type="PushButton" X="354" Y="273" Width="56" Height="17" Cancel="yes" Text="Cancel">
           <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
         </Control>
-        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
-        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
-        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="420" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="264" Width="420" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="250" Height="15" Transparent="yes" NoPrefix="yes">
           <Text>{\WixUI_Font_Title}Release Notes</Text>
         </Control>
-        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="What's New in the latest version of EQLogParser." />
-        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="330" Height="15" Transparent="yes" NoPrefix="yes" Text="What's New in the latest version of EQLogParser." />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="420" Height="0" />
       </Dialog>      
     </UI>
   </Fragment>

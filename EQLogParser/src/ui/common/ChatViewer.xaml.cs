@@ -19,7 +19,7 @@ namespace EQLogParser
   /// </summary>
   public partial class ChatViewer : IDisposable
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly List<double> FontSizeList = new() { 10, 12, 14, 16, 18, 20, 22, 24 };
 
     private const int PAGE_SIZE = 200;
@@ -481,9 +481,10 @@ namespace EQLogParser
       FilterTimer?.Start();
     }
 
+    // fix for edit control crashing if empty
     private void WindowPreviewKeyDown(object sender, KeyEventArgs e)
     {
-      if (e.OriginalSource is ScrollViewer)
+      if (e.OriginalSource is ScrollViewer && chatBox?.Lines?.Count == 0)
       {
         e.Handled = true;
       }

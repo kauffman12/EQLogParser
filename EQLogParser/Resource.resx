@@ -219,8 +219,11 @@
   <data name="PAL" xml:space="preserve">
     <value>Paladin</value>
   </data>
-  <data name="RECEIVE_GINA" xml:space="preserve">
-    <value>Shared GINA Triggers</value>
+  <data name="RECEIVED_GINA" xml:space="preserve">
+    <value>Received GINA Triggers</value>
+  </data>
+  <data name="RECEIVED_SHARE" xml:space="preserve">
+    <value>Received Quick Share</value>
   </data>
   <data name="RESTART_NEEDED" xml:space="preserve">
     <value>Restart Required</value>
@@ -242,6 +245,12 @@
   </data>
   <data name="SHARE_DPS_TOO_BIG" xml:space="preserve">
     <value>Exceeded Copy/Paste Limit for EQ</value>
+  </data>
+  <data name="SHARE_ERROR" xml:space="preserve">
+    <value>Quick Share Failed</value>
+  </data>
+  <data name="SHARE_MESSAGE" xml:space="preserve">
+    <value>Quick Share (Thanks to https://transfer.sh)</value>
   </data>
   <data name="SHD" xml:space="preserve">
     <value>Shadow Knight</value>

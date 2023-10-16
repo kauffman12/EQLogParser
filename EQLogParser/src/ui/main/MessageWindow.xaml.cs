@@ -1,6 +1,7 @@
 ﻿using FontAwesome5;
 using Syncfusion.Windows.Shared;
 using System.Windows;
+using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -11,13 +12,21 @@ namespace EQLogParser
   {
     public bool IsYes2Clicked;
     public bool IsYes1Clicked;
-    public enum IconType { Question, Save, Warn }
+    public enum IconType { Question, Save, Warn, Info }
+    private readonly string CopyData;
+
+    public MessageWindow(string text, string caption, string copyData) : this(text, caption, IconType.Info)
+    {
+      CopyData = copyData;
+      copyLink.Visibility = Visibility.Visible;
+      Clipboard.SetText(copyData);
+    }
 
     public MessageWindow(string text, string caption, IconType type = IconType.Warn, string yes1 = null, string yes2 = null)
     {
       MainActions.SetTheme(this, MainWindow.CurrentTheme);
       InitializeComponent();
-      textBlock.Text = text;
+      textBox.Text = text;
       Title = caption;
 
       var brush = "";
@@ -36,6 +45,11 @@ namespace EQLogParser
       {
         brush = "EQMenuIconBrush";
         image = EFontAwesomeIcon.Solid_Save;
+      }
+      else if (type == IconType.Info)
+      {
+        brush = "EQMenuIconBrush";
+        image = EFontAwesomeIcon.Solid_InfoCircle;
       }
 
       cancelButton.Content = "Ok";
@@ -73,6 +87,14 @@ namespace EQLogParser
     {
       IsYes2Clicked = true;
       Close();
+    }
+
+    private void CopyLinkPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+      if (CopyData != null)
+      {
+        Clipboard.SetText(CopyData);
+      }
     }
   }
 }

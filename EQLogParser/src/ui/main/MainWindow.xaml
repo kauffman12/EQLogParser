@@ -151,14 +151,19 @@
                 <fa:ImageAwesome x:Name="triggersIcon" Tag="triggersWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
+            <MenuItem x:Name="triggerTestMenuItem" Header="Trigger _Tester" Click="MenuItemWindowClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="triggerTestIcon" Tag="triggerTestWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              </MenuItem.Icon>
+            </MenuItem>
             <MenuItem x:Name="triggerLogMenuItem" Header="Trigger _Log" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="triggerLogIcon" Tag="triggerLogWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="triggerTestMenuItem" Header="Trigger _Tester" Click="MenuItemWindowClick">
+            <MenuItem x:Name="quickShareLogMenuItem" Header="Quick _Share Log" Click="MenuItemWindowClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="triggerTestIcon" Tag="triggerTestWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+                <fa:ImageAwesome x:Name="quickShareLogIcon" Tag="quickShareLogWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
@@ -406,6 +411,11 @@
                       syncfusion:DockingManager.TargetNameInDockedMode="triggerLogWindow" syncfusion:DockingManager.DesiredHeightInDockedMode="300" syncfusion:DockingManager.CanDocument="False"
                       syncfusion:DockingManager.DesiredMinHeightInFloatingMode="100">
         <local:TriggersTester />
+      </ContentControl>
+      <ContentControl x:Name="quickShareLogWindow" Tag="Hide" syncfusion:DockingManager.Header="Quick Share Log" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Tabbed"
+                      syncfusion:DockingManager.TargetNameInDockedMode="triggerLogWindow" syncfusion:DockingManager.DesiredHeightInDockedMode="300" syncfusion:DockingManager.CanDocument="False"
+                      syncfusion:DockingManager.DesiredMinHeightInFloatingMode="100">
+        <local:QuickShareLogView />
       </ContentControl>
       <ContentControl x:Name="npcWindow" Tag="Hide" Padding="0" Margin="0" syncfusion:DockingManager.Header="Fight List" syncfusion:DockingManager.State="Dock" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="360" syncfusion:DockingManager.DesiredWidthInFloatingMode="360">

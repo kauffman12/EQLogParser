@@ -106,13 +106,13 @@ namespace EQLogParser
 
     private void UpdateCurrentTextColor()
     {
-      var defaultColor = (Color)Application.Current.Resources["ContentForeground.Color"];
+      var defaultColor = (Color)Application.Current.Resources["ContentForeground.Color"]!;
 
       try
       {
         var colorSetting = "EQLogViewerFontFgColor" + MainWindow.CurrentTheme;
         var fgColor = ConfigUtil.GetSetting(colorSetting, defaultColor.ToString());
-        colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor);
+        colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor)!;
       }
       catch (FormatException)
       {
@@ -128,7 +128,7 @@ namespace EQLogParser
         lineTypes.IsEnabled = false;
         FilteredLinePositionMap.Clear();
 
-        var types = (lineTypes.ItemsSource as List<ComboBoxItemDetails>).Where(item => item.IsChecked).ToDictionary(item => item.Value, _ => true);
+        var types = (lineTypes.ItemsSource as List<ComboBoxItemDetails>)!.Where(item => item.IsChecked).ToDictionary(item => item.Value, _ => true);
         UIElementUtil.SetComboBoxTitle(lineTypes, types.Count, Resource.LINE_TYPES_SELECTED);
 
         if (logFilter.FontStyle == FontStyles.Italic && types.Count == LineTypeCount)
@@ -676,9 +676,10 @@ namespace EQLogParser
       }
     }
 
+    // fix for edit control crashing if empty
     private void WindowPreviewKeyDown(object sender, KeyEventArgs e)
     {
-      if (e.OriginalSource is ScrollViewer)
+      if (e.OriginalSource is ScrollViewer && logBox?.Lines?.Count == 0)
       {
         e.Handled = true;
       }

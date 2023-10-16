@@ -1,5 +1,4 @@
 ﻿using log4net;
-using Syncfusion.Data.Extensions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -41,7 +40,7 @@ namespace EQLogParser
       var deadFights = new HashSet<long>();
       var damage = ComputeOverlayDamageStats(OverlayDamageData, true, reset, mode, maxRows, selectedClass, deadFights);
       var tank = ComputeOverlayDamageStats(OverlayTankData, false, reset, mode, maxRows, selectedClass, deadFights);
-      deadFights.ForEach(id => DataManager.Instance.RemoveOverlayFight(id));
+      deadFights.ToList().ForEach(id => DataManager.Instance.RemoveOverlayFight(id));
       return (damage == null && tank == null) ? null : new DamageOverlayStats { DamageStats = damage, TankStats = tank };
     }
 

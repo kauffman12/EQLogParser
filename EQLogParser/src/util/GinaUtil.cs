@@ -9,79 +9,106 @@ using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Xml;
 
 namespace EQLogParser
 {
   internal static class GinaUtil
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly ConcurrentDictionary<string, string> GinaCache = new();
 
     internal static List<ExportTriggerNode> CovertToTriggerNodes(byte[] data) => Convert(ReadXml(data));
 
-    internal static void CheckGina(LineData lineData)
+    internal static void CheckGina(bool monitor, ChatType chatType, string action, double dateTime)
     {
-      var action = lineData.Action;
-
       // if GINA data is recent then try to handle it
-      if (action.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
-          (DateTime.Now - DateUtil.FromDouble(lineData.BeginTime)).TotalSeconds <= 20 && action.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 40))
+      if (chatType.Sender != null && action.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
+          action.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 10))
       {
-        string player = null;
-        var split = action.Split(' ');
-        if (split.Length > 0)
-        {
-          if (split[0] == ConfigUtil.PlayerName)
-          {
-            return;
-          }
-
-          if (PlayerManager.IsPossiblePlayerName(split[0]))
-          {
-            player = split[0];
-          }
-        }
-
-        string ginaKey = null;
         var start = index + 6;
-        var finish = end - index - 6;
-        if (start < finish)
+        var finish = end - start;
+        if (action.Length > (start + finish))
         {
-          ginaKey = action.Substring(index + 6, end - index - 6);
-        }
+          var ginaKey = action.Substring(start, finish);
+          var fullKey = $"{{GINA:{ginaKey}}}";
+          if (!string.IsNullOrEmpty(ginaKey))
+          {
+            var to = string.IsNullOrEmpty(chatType.Receiver) ? chatType.Channel : chatType.Receiver;
+            var record = new QuickShareRecord
+            {
+              BeginTime = dateTime,
+              Key = fullKey,
+              From = chatType.Sender,
+              To = TextUtils.ToUpper(to),
+              IsMine = chatType.SenderIsYou,
+              Type = "GINA"
+            };
 
-        // ignore if we're still processing plus avoid spam
-        if (string.IsNullOrEmpty(ginaKey) || GinaCache.ContainsKey(ginaKey) || GinaCache.Count > 5)
-        {
-          return;
-        }
+            DataManager.Instance.AddQuickShare(record);
 
-        GinaCache[ginaKey] = player;
+            // don't handle immediately unless enabled
+            if (monitor && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild
+                  or ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") &&
+                !DataManager.Instance.IsQuickShareMine(fullKey))
+            {
+              // ignore if we're still processing plus avoid spam
+              if (GinaCache.ContainsKey(ginaKey) || GinaCache.Count > 5)
+              {
+                return;
+              }
 
-        if (GinaCache.Count == 1)
-        {
-          RunGinaTask(ginaKey, player);
+              var runTask = GinaCache.Count == 0;
+              GinaCache[ginaKey] = chatType.Sender;
+
+              if (runTask)
+              {
+                RunGinaTask(ginaKey, chatType.Sender);
+              }
+            }
+          }
         }
       }
     }
 
-    internal static void ImportFromGina(byte[] data, string player, string ginaKey)
+    internal static void ImportQuickShare(string shareKey, string from)
+    {
+      // if Quick Share data is recent then try to handle it
+      if (shareKey.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
+          shareKey.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 10))
+      {
+        var start = index + 6;
+        var finish = end - start;
+        if (shareKey.Length > (start + finish))
+        {
+          var quickShareKey = shareKey.Substring(start, finish);
+          if (!string.IsNullOrEmpty(quickShareKey))
+          {
+            GinaCache[quickShareKey] = from;
+            if (GinaCache.Count == 1)
+            {
+              RunGinaTask(quickShareKey, from, true);
+            }
+          }
+        }
+      }
+    }
+
+    private static void ImportFromGina(byte[] data, string player, string ginaKey)
     {
       var nodes = Convert(ReadXml(data));
-      Application.Current.Dispatcher.InvokeAsync(() =>
+      UIUtil.InvokeAsync(() =>
       {
-        if (nodes[0].Nodes.Count == 0)
+        if (nodes.Count > 0 && nodes[0].Nodes.Count == 0)
         {
-          var badMessage = "GINA Triggers received";
+          var badMessage = "GINA Triggers Received";
           if (!string.IsNullOrEmpty(player))
           {
             badMessage += " from " + player;
           }
 
           badMessage += " but no supported Triggers found.";
-          new MessageWindow(badMessage, Resource.RECEIVE_GINA).ShowDialog();
+          new MessageWindow(badMessage, Resource.RECEIVED_GINA).ShowDialog();
         }
         else
         {
@@ -91,7 +118,7 @@ namespace EQLogParser
             message = $"Merge GINA Triggers from {player} or Import to New Folder?\r\n";
           }
 
-          var msgDialog = new MessageWindow(message, Resource.RECEIVE_GINA, MessageWindow.IconType.Question, "New Folder", "Merge");
+          var msgDialog = new MessageWindow(message, Resource.RECEIVED_GINA, MessageWindow.IconType.Question, "New Folder", "Merge");
           msgDialog.ShowDialog();
 
           if (msgDialog.IsYes2Clicked)
@@ -137,18 +164,14 @@ namespace EQLogParser
       }
     }
 
-    private static void RunGinaTask(string ginaKey, string player)
+    private static void RunGinaTask(string ginaKey, string player, bool isManual = false)
     {
-      var dispatcher = Application.Current.Dispatcher;
-
       Task.Delay(500).ContinueWith(_ =>
       {
-        var client = new HttpClient();
-
         try
         {
           var postData = "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"><s:Body><DownloadPackageChunk xmlns=\"http://tempuri.org/\"><sessionId>" +
-            ginaKey + "</sessionId><chunkNumber>0</chunkNumber></DownloadPackageChunk></s:Body></s:Envelope>";
+                         ginaKey + "</sessionId><chunkNumber>0</chunkNumber></DownloadPackageChunk></s:Body></s:Envelope>";
 
           var content = new StringContent(postData, Encoding.UTF8, "text/xml");
           content.Headers.Add("Content-Length", postData.Length.ToString());
@@ -158,15 +181,12 @@ namespace EQLogParser
           message.Headers.Add("SOAPAction", "http://tempuri.org/IPackageService/DownloadPackageChunk");
           message.Headers.Add("Accept-Encoding", "gzip, deflate");
 
-          var response = client.Send(message);
+          var response = MainActions.TheHttpClient.Send(message);
           if (response.IsSuccessStatusCode)
           {
-            using var data = response.Content.ReadAsStreamAsync();
-            data.Wait();
-
-            var buffer = new byte[data.Result.Length];
-            var read = data.Result.ReadAsync(buffer, 0, buffer.Length);
-            read.Wait();
+            using var data = response.Content.ReadAsStream();
+            var buffer = new byte[data.Length];
+            data.Read(buffer, 0, buffer.Length);
 
             using var bufferStream = new MemoryStream(buffer);
             using var gzip = new GZipStream(bufferStream, CompressionMode.Decompress);
@@ -183,36 +203,44 @@ namespace EQLogParser
             }
             else
             {
+              if (isManual)
+              {
+                UIUtil.InvokeAsync(() =>
+                  new MessageWindow("Unable to Import. Probably Expired.", Resource.RECEIVED_GINA).ShowDialog());
+              }
+
               // no chunk data in response. too old?
               NextGinaTask(ginaKey);
             }
           }
           else
           {
+            if (isManual)
+            {
+              UIUtil.InvokeAsync(() =>
+                new MessageWindow("Unable to Import. Probably Expired.", Resource.RECEIVED_GINA).ShowDialog());
+            }
+
             Log.Error("Error Downloading GINA Triggers. Received Status Code = " + response.StatusCode);
             NextGinaTask(ginaKey);
           }
         }
         catch (Exception ex)
         {
-          if (ex.Message != null && ex.Message.Contains("An attempt was made to access a socket in a way forbidden by its access permissions"))
+          if (ex.Message.Contains("An attempt was made to access a socket in a way forbidden by its access permissions"))
           {
-            dispatcher.InvokeAsync(() =>
+            UIUtil.InvokeAsync(() =>
             {
-              new MessageWindow("Error Downloading GINA Triggers. Blocked by Firewall?", Resource.RECEIVE_GINA).ShowDialog();
+              new MessageWindow("Error Downloading GINA Triggers. Blocked by Firewall?", Resource.RECEIVED_GINA).ShowDialog();
+              Log.Error("Error Downloading GINA Triggers", ex);
               NextGinaTask(ginaKey);
             });
           }
           else
           {
+            Log.Error("Error Downloading GINA Triggers", ex);
             NextGinaTask(ginaKey);
           }
-
-          Log.Error("Error Downloading GINA Triggers", ex);
-        }
-        finally
-        {
-          client.Dispose();
         }
       });
     }
@@ -226,8 +254,8 @@ namespace EQLogParser
         var doc = new XmlDocument();
         doc.LoadXml(xml);
 
-        var nodeList = doc.DocumentElement.SelectSingleNode("/SharedData");
-        ParseGinaTriggerGroups(nodeList.ChildNodes, result[0].Nodes);
+        var nodeList = doc.DocumentElement?.SelectSingleNode("/SharedData");
+        ParseGinaTriggerGroups(nodeList?.ChildNodes, result[0].Nodes);
       }
       catch (Exception ex)
       {
@@ -249,178 +277,190 @@ namespace EQLogParser
 
     private static void ParseGinaTriggerGroups(XmlNodeList nodeList, List<ExportTriggerNode> newNodes)
     {
-      foreach (XmlNode node in nodeList)
+      if (nodeList != null)
       {
-        if (node.Name == "TriggerGroup")
+        foreach (XmlNode node in nodeList)
         {
-          var data = new ExportTriggerNode
+          if (node.Name == "TriggerGroup")
           {
-            Name = node.SelectSingleNode("Name").InnerText
-          };
-          newNodes.Add(data);
-
-          var triggers = new List<ExportTriggerNode>();
-          var triggersList = node.SelectSingleNode("Triggers");
-          if (triggersList != null)
-          {
-            foreach (XmlNode triggerNode in triggersList.SelectNodes("Trigger"))
+            var data = new ExportTriggerNode
             {
-              var goodTrigger = false;
-              var trigger = new Trigger();
-              var triggerName = GetText(triggerNode, "Name");
-              trigger.Pattern = GetText(triggerNode, "TriggerText");
-              trigger.Comments = GetText(triggerNode, "Comments");
+              Name = node.SelectSingleNode("Name").InnerText
+            };
+            newNodes.Add(data);
 
-              var timerName = GetText(triggerNode, "TimerName");
-              if (!string.IsNullOrEmpty(timerName) && timerName != triggerName)
+            var triggers = new List<ExportTriggerNode>();
+            var triggersList = node.SelectSingleNode("Triggers");
+            if (triggersList != null)
+            {
+              foreach (XmlNode triggerNode in triggersList.SelectNodes("Trigger"))
               {
-                trigger.AltTimerName = timerName;
-              }
+                var goodTrigger = false;
+                var trigger = new Trigger();
+                var triggerName = GetText(triggerNode, "Name");
+                trigger.Pattern = GetText(triggerNode, "TriggerText");
+                trigger.Comments = GetText(triggerNode, "Comments");
 
-              if (bool.TryParse(GetText(triggerNode, "UseText"), out var _))
-              {
-                goodTrigger = true;
-                trigger.TextToDisplay = GetText(triggerNode, "DisplayText");
-              }
-
-              if (bool.TryParse(GetText(triggerNode, "UseTextToVoice"), out var _))
-              {
-                goodTrigger = true;
-                trigger.TextToSpeak = GetText(triggerNode, "TextToVoiceText");
-              }
-
-              if (bool.TryParse(GetText(triggerNode, "EnableRegex"), out var regex))
-              {
-                trigger.UseRegex = regex;
-              }
-
-              if (bool.TryParse(GetText(triggerNode, "InterruptSpeech"), out var interrupt))
-              {
-                trigger.Priority = interrupt ? 1 : 3;
-              }
-
-              if ("Timer".Equals(GetText(triggerNode, "TimerType")))
-              {
-                goodTrigger = true;
-
-                if (int.TryParse(GetText(triggerNode, "TimerDuration"), out var duration) && duration > 0)
+                var timerName = GetText(triggerNode, "TimerName");
+                if (!string.IsNullOrEmpty(timerName) && timerName != triggerName)
                 {
-                  trigger.DurationSeconds = duration;
+                  trigger.AltTimerName = timerName;
                 }
 
-                if (int.TryParse(GetText(triggerNode, "TimerMillisecondDuration"), out var millis) && millis > 0)
+                if (bool.TryParse(GetText(triggerNode, "UseText"), out var _))
                 {
-                  trigger.DurationSeconds = millis / (double)1000;
-                  if (trigger.DurationSeconds is > 0 and < 0.2)
+                  goodTrigger = true;
+                  trigger.TextToDisplay = GetText(triggerNode, "DisplayText");
+                }
+
+                if (bool.TryParse(GetText(triggerNode, "UseTextToVoice"), out var _))
+                {
+                  goodTrigger = true;
+                  trigger.TextToSpeak = GetText(triggerNode, "TextToVoiceText");
+                }
+
+                if (bool.TryParse(GetText(triggerNode, "EnableRegex"), out var regex))
+                {
+                  trigger.UseRegex = regex;
+                }
+
+                if (bool.TryParse(GetText(triggerNode, "InterruptSpeech"), out var interrupt))
+                {
+                  trigger.Priority = interrupt ? 1 : 3;
+                }
+
+                if ((GetText(triggerNode, "TimerType") is var timerType && timerType == "Timer") || timerType == "Stopwatch")
+                {
+                  goodTrigger = true;
+
+                  // default stopwatches to a minute since they don't use a duration in GINA
+                  if (timerType == "Stopwatch")
                   {
-                    trigger.DurationSeconds = 0.2;
+                    trigger.DurationSeconds = 60;
+                    trigger.TimerType = 3;
                   }
-                }
-
-                // short duration timer <= 2s
-                trigger.TimerType = (trigger.DurationSeconds < 2.0) ? 2 : 1;
-
-                if (triggerNode.SelectSingleNode("TimerEndingTrigger") is { } timerEndingNode)
-                {
-                  if (bool.TryParse(GetText(timerEndingNode, "UseText"), out var _))
+                  else
                   {
-                    trigger.WarningTextToDisplay = GetText(timerEndingNode, "DisplayText");
-                  }
-
-                  if (bool.TryParse(GetText(timerEndingNode, "UseTextToVoice"), out var _))
-                  {
-                    trigger.WarningTextToSpeak = GetText(timerEndingNode, "TextToVoiceText");
-                  }
-                }
-
-                if (int.TryParse(GetText(triggerNode, "TimerEndingTime"), out var endTime))
-                {
-                  // GINA defaults to 1 even if there's no text?
-                  if (!string.IsNullOrEmpty(trigger.WarningTextToSpeak) || endTime > 1)
-                  {
-                    trigger.WarningSeconds = endTime;
-                  }
-                }
-
-                var behavior = GetText(triggerNode, "TimerStartBehavior");
-                if ("StartNewTimer".Equals(behavior))
-                {
-                  trigger.TriggerAgainOption = 0;
-                }
-                else if ("RestartTimer".Equals(behavior))
-                {
-                  if (bool.TryParse(GetText(triggerNode, "RestartBasedOnTimerName"), out var onTimerName))
-                  {
-                    trigger.TriggerAgainOption = onTimerName ? 2 : 1;
-                  }
-                }
-                else
-                {
-                  // do nothing if same timer name
-                  trigger.TriggerAgainOption = 4;
-                }
-
-                if (triggerNode.SelectSingleNode("TimerEndedTrigger") is { } timerEndedNode)
-                {
-                  if (bool.TryParse(GetText(timerEndedNode, "UseText"), out var _))
-                  {
-                    trigger.EndTextToDisplay = GetText(timerEndedNode, "DisplayText");
-                  }
-
-                  if (bool.TryParse(GetText(timerEndedNode, "UseTextToVoice"), out var _))
-                  {
-                    trigger.EndTextToSpeak = GetText(timerEndedNode, "TextToVoiceText");
-                  }
-                }
-
-                if (triggerNode.SelectSingleNode("TimerEarlyEnders") is { } endingEarlyNode)
-                {
-                  if (endingEarlyNode.SelectNodes("EarlyEnder") is { } enderNodes)
-                  {
-                    // only take 2 cancel patterns
-                    if (enderNodes.Count > 0)
+                    if (int.TryParse(GetText(triggerNode, "TimerDuration"), out var duration) && duration > 0)
                     {
-                      trigger.EndEarlyPattern = GetText(enderNodes[0], "EarlyEndText");
-                      if (bool.TryParse(GetText(enderNodes[0], "EnableRegex"), out var regex2))
+                      trigger.DurationSeconds = duration;
+                    }
+
+                    if (int.TryParse(GetText(triggerNode, "TimerMillisecondDuration"), out var millis) && millis > 0)
+                    {
+                      trigger.DurationSeconds = millis / (double)1000;
+                      if (trigger.DurationSeconds is > 0 and < 0.2)
                       {
-                        trigger.EndUseRegex = regex2;
+                        trigger.DurationSeconds = 0.2;
                       }
                     }
 
-                    if (enderNodes.Count > 1)
+                    // short duration timer <= 2s
+                    trigger.TimerType = (trigger.DurationSeconds < 2.0) ? 2 : 1;
+                  }
+
+                  if (triggerNode.SelectSingleNode("TimerEndingTrigger") is { } timerEndingNode)
+                  {
+                    if (bool.TryParse(GetText(timerEndingNode, "UseText"), out var _))
                     {
-                      trigger.EndEarlyPattern2 = GetText(enderNodes[1], "EarlyEndText");
-                      if (bool.TryParse(GetText(enderNodes[1], "EnableRegex"), out var regex2))
+                      trigger.WarningTextToDisplay = GetText(timerEndingNode, "DisplayText");
+                    }
+
+                    if (bool.TryParse(GetText(timerEndingNode, "UseTextToVoice"), out var _))
+                    {
+                      trigger.WarningTextToSpeak = GetText(timerEndingNode, "TextToVoiceText");
+                    }
+                  }
+
+                  if (int.TryParse(GetText(triggerNode, "TimerEndingTime"), out var endTime))
+                  {
+                    // GINA defaults to 1 even if there's no text?
+                    if (!string.IsNullOrEmpty(trigger.WarningTextToSpeak) || endTime > 1)
+                    {
+                      trigger.WarningSeconds = endTime;
+                    }
+                  }
+
+                  var behavior = GetText(triggerNode, "TimerStartBehavior");
+                  if ("StartNewTimer".Equals(behavior))
+                  {
+                    trigger.TriggerAgainOption = 0;
+                  }
+                  else if ("RestartTimer".Equals(behavior))
+                  {
+                    if (bool.TryParse(GetText(triggerNode, "RestartBasedOnTimerName"), out var onTimerName))
+                    {
+                      trigger.TriggerAgainOption = onTimerName ? 2 : 1;
+                    }
+                  }
+                  else
+                  {
+                    // do nothing if same timer name
+                    trigger.TriggerAgainOption = 4;
+                  }
+
+                  if (triggerNode.SelectSingleNode("TimerEndedTrigger") is { } timerEndedNode)
+                  {
+                    if (bool.TryParse(GetText(timerEndedNode, "UseText"), out var _))
+                    {
+                      trigger.EndTextToDisplay = GetText(timerEndedNode, "DisplayText");
+                    }
+
+                    if (bool.TryParse(GetText(timerEndedNode, "UseTextToVoice"), out var _))
+                    {
+                      trigger.EndTextToSpeak = GetText(timerEndedNode, "TextToVoiceText");
+                    }
+                  }
+
+                  if (triggerNode.SelectSingleNode("TimerEarlyEnders") is { } endingEarlyNode)
+                  {
+                    if (endingEarlyNode.SelectNodes("EarlyEnder") is { } enderNodes)
+                    {
+                      // only take 2 cancel patterns
+                      if (enderNodes.Count > 0)
                       {
-                        trigger.EndUseRegex2 = regex2;
+                        trigger.EndEarlyPattern = GetText(enderNodes[0], "EarlyEndText");
+                        if (bool.TryParse(GetText(enderNodes[0], "EnableRegex"), out var regex2))
+                        {
+                          trigger.EndUseRegex = regex2;
+                        }
+                      }
+
+                      if (enderNodes.Count > 1)
+                      {
+                        trigger.EndEarlyPattern2 = GetText(enderNodes[1], "EarlyEndText");
+                        if (bool.TryParse(GetText(enderNodes[1], "EnableRegex"), out var regex2))
+                        {
+                          trigger.EndUseRegex2 = regex2;
+                        }
                       }
                     }
                   }
                 }
-              }
 
-              if (goodTrigger)
-              {
-                triggers.Add(new ExportTriggerNode { Name = triggerName, TriggerData = trigger });
+                if (goodTrigger)
+                {
+                  triggers.Add(new ExportTriggerNode { Name = triggerName, TriggerData = trigger });
+                }
               }
             }
-          }
 
-          var moreGroups = node.SelectNodes("TriggerGroups");
-          ParseGinaTriggerGroups(moreGroups, data.Nodes);
+            var moreGroups = node.SelectNodes("TriggerGroups");
+            ParseGinaTriggerGroups(moreGroups, data.Nodes);
 
-          // GINA UI sorts by default
-          data.Nodes = data.Nodes.OrderBy(n => n.Name).ToList();
-
-          if (triggers.Count > 0)
-          {
             // GINA UI sorts by default
-            data.Nodes.AddRange(triggers.OrderBy(trigger => trigger.Name).ToList());
+            data.Nodes = data.Nodes.OrderBy(n => n.Name).ToList();
+
+            if (triggers.Count > 0)
+            {
+              // GINA UI sorts by default
+              data.Nodes.AddRange(triggers.OrderBy(trigger => trigger.Name).ToList());
+            }
           }
-        }
-        else if (node.Name == "TriggerGroups")
-        {
-          ParseGinaTriggerGroups(node.ChildNodes, newNodes);
+          else if (node.Name == "TriggerGroups")
+          {
+            ParseGinaTriggerGroups(node.ChildNodes, newNodes);
+          }
         }
       }
     }

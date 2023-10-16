@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks.Dataflow;
-using System.Windows;
 using System.Windows.Threading;
+using Application = System.Windows.Application;
 
 namespace EQLogParser
 {
@@ -79,10 +79,22 @@ namespace EQLogParser
       TimerOverlayTimer?.Stop();
     }
 
-    internal void SetTestProcessor(string playerId, string name, ISourceBlock<Tuple<string, double, bool>> source)
+    internal void SetTestProcessor(ISourceBlock<Tuple<string, double, bool>> source)
     {
       TestProcessor?.Dispose();
-      TestProcessor = new TriggerProcessor(playerId, $"Trigger Tester ({name})", AddTextEvent, AddTimerEvent);
+      var name = TriggerStateManager.DEFAULT_USER;
+      TestProcessor = new TriggerProcessor(name, $"Trigger Tester ({name})", ConfigUtil.PlayerName, AddTextEvent, AddTimerEvent);
+      TestProcessor.LinkTo(source);
+      UIUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
+    }
+
+    internal void SetTestProcessor(TriggerCharacter character, ISourceBlock<Tuple<string, double, bool>> source)
+    {
+      TestProcessor?.Dispose();
+      string server = null;
+      var playerName = character.Name;
+      FileUtil.ParseFileName(character.FilePath, ref playerName, ref server);
+      TestProcessor = new TriggerProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, AddTextEvent, AddTimerEvent);
       TestProcessor.LinkTo(source);
       UIUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
     }
@@ -92,7 +104,7 @@ namespace EQLogParser
       var list = new List<Tuple<string, ObservableCollection<AlertEntry>>>();
       foreach (var p in GetProcessors())
       {
-        list.Add(Tuple.Create(p.CurrentCharacterName, p.AlertLog));
+        list.Add(Tuple.Create(p.CurrentProcessorName, p.AlertLog));
       }
       return list;
     }
@@ -127,7 +139,7 @@ namespace EQLogParser
         {
           if (config.IsAdvanced)
           {
-            // Only clear out everything if switcehd from basic
+            // Only clear out everything if switched from basic
             if (GetProcessors().FirstOrDefault(p => p.CurrentCharacterId == TriggerStateManager.DEFAULT_USER) != null)
             {
               LogReaders.ForEach(reader => reader.Dispose());
@@ -142,7 +154,9 @@ namespace EQLogParser
               // remove readers if the character no longer exists
               if (reader.GetProcessor() is TriggerProcessor processor)
               {
-                var found = config.Characters.FirstOrDefault(character => character.Id == processor.CurrentCharacterId);
+                // use processor name as well incase it's a rename
+                var found = config.Characters.FirstOrDefault(character =>
+                  character.Id == processor.CurrentCharacterId && character.Name == processor.CurrentProcessorName);
                 if (found == null || !found.IsEnabled)
                 {
                   reader.Dispose();
@@ -150,6 +164,7 @@ namespace EQLogParser
                 }
                 else
                 {
+
                   alreadyRunning.Add(found.Id);
                 }
               }
@@ -162,18 +177,21 @@ namespace EQLogParser
             {
               if (character.IsEnabled && !alreadyRunning.Contains(character.Id))
               {
-                LogReaders.Add(new LogReader(new TriggerProcessor(character.Id, character.Name, AddTextEvent, AddTimerEvent),
+                string server = null;
+                var playerName = character.Name;
+                FileUtil.ParseFileName(character.FilePath, ref playerName, ref server);
+                LogReaders.Add(new LogReader(new TriggerProcessor(character.Id, character.Name, playerName, AddTextEvent, AddTimerEvent),
                   character.FilePath));
               }
             }
 
             if (LogReaders.Count > 0)
             {
-              (Application.Current?.MainWindow as MainWindow).ShowTriggersEnabled(true);
+              (Application.Current?.MainWindow as MainWindow)?.ShowTriggersEnabled(true);
             }
             else
             {
-              (Application.Current?.MainWindow as MainWindow).ShowTriggersEnabled(false);
+              (Application.Current?.MainWindow as MainWindow)?.ShowTriggersEnabled(false);
             }
           }
           else
@@ -187,13 +205,13 @@ namespace EQLogParser
               if (MainWindow.CurrentLogFile != null)
               {
                 LogReaders.Add(new LogReader(new TriggerProcessor(TriggerStateManager.DEFAULT_USER,
-                  TriggerStateManager.DEFAULT_USER, AddTextEvent, AddTimerEvent), MainWindow.CurrentLogFile));
-                (Application.Current?.MainWindow as MainWindow).ShowTriggersEnabled(true);
+                  TriggerStateManager.DEFAULT_USER, ConfigUtil.PlayerName, AddTextEvent, AddTimerEvent), MainWindow.CurrentLogFile));
+                ((MainWindow)Application.Current?.MainWindow)?.ShowTriggersEnabled(true);
               }
             }
             else
             {
-              (Application.Current?.MainWindow as MainWindow).ShowTriggersEnabled(false);
+              ((MainWindow)Application.Current?.MainWindow)?.ShowTriggersEnabled(false);
             }
           }
         }

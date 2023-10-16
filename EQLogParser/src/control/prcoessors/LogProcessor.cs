@@ -28,21 +28,16 @@ namespace EQLogParser
     {
       var lineData = new LineData { Action = line[27..], BeginTime = dateTime, LineNumber = LineCount };
 
-      if (monitor)
-      {
-        if (TriggerStateManager.Instance.IsActive())
-        {
-          // Look for GINA entries in the log
-          if (ConfigUtil.IfSetOrElse("TriggersWatchForGINA"))
-          {
-            GinaUtil.CheckGina(lineData);
-          }
-        }
-      }
-
       // avoid having other things parse chat by accident
       if (ChatLineParser.ParseChatType(lineData.Action, lineData.BeginTime) is { } chatType)
       {
+        if (TriggerStateManager.Instance.IsActive())
+        {
+          // Look for Quick Share entries
+          TriggerUtil.CheckQuickShare(monitor, chatType, lineData.Action, dateTime);
+          GinaUtil.CheckGina(monitor, chatType, lineData.Action, dateTime);
+        }
+
         chatType.BeginTime = lineData.BeginTime;
         chatType.Text = line; // workaround for now?
         ChatManager.Instance.Add(chatType);

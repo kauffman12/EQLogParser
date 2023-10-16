@@ -32,7 +32,6 @@ namespace EQLogParser
     public EventViewer()
     {
       InitializeComponent();
-
       MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
 
       var list = new List<ComboBoxItemDetails>
