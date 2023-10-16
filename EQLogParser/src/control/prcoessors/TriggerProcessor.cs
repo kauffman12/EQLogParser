@@ -19,8 +19,8 @@ namespace EQLogParser
   {
     public readonly ObservableCollection<AlertEntry> AlertLog = new();
     public readonly string CurrentCharacterId;
-    public readonly string CurrentCharacterName;
-    public readonly string CurrentPlayer;
+    public readonly string CurrentProcessorName;
+    private readonly string CurrentPlayer;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly object CollectionLock = new();
     private readonly object LockObject = new();
@@ -38,12 +38,12 @@ namespace EQLogParser
     private readonly SoundPlayer SoundPlayer;
     private TriggerWrapper PreviousSpoken;
 
-    internal TriggerProcessor(string id, string name, Action<string, Trigger> addTextEvent,
+    internal TriggerProcessor(string id, string name, string playerName, Action<string, Trigger> addTextEvent,
       Action<Trigger, List<TimerData>> addTimerEvent)
     {
       CurrentCharacterId = id;
-      CurrentCharacterName = name;
-      CurrentPlayer = (CurrentCharacterId == TriggerStateManager.DEFAULT_USER) ? ConfigUtil.PlayerName : CurrentCharacterName;
+      CurrentProcessorName = name;
+      CurrentPlayer = playerName;
 
       AddTextEvent = addTextEvent;
       AddTimerEvent = addTimerEvent;
@@ -106,7 +106,7 @@ namespace EQLogParser
     private string ModCounter(string text) => !string.IsNullOrEmpty(text) ?
       text.Replace("{counter}", "{repeated}", StringComparison.OrdinalIgnoreCase) : text;
     private string ModPlayer(string text) => !string.IsNullOrEmpty(text) ?
-      text.Replace("{c}", CurrentPlayer, StringComparison.OrdinalIgnoreCase) : text;
+      text.Replace("{c}", CurrentPlayer ?? string.Empty, StringComparison.OrdinalIgnoreCase) : text;
 
     private void DoProcess(string line, double dateTime)
     {
@@ -348,7 +348,7 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(trigger.EndEarlyPattern))
       {
         var endEarlyPattern = ProcessMatchesText(trigger.EndEarlyPattern, matches);
-        endEarlyPattern = UpdatePattern(trigger.EndUseRegex, ConfigUtil.PlayerName, endEarlyPattern, out var numberOptions2);
+        endEarlyPattern = UpdatePattern(trigger.EndUseRegex, endEarlyPattern, out var numberOptions2);
 
         if (trigger.EndUseRegex)
         {
@@ -364,7 +364,7 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(trigger.EndEarlyPattern2))
       {
         var endEarlyPattern2 = ProcessMatchesText(trigger.EndEarlyPattern2, matches);
-        endEarlyPattern2 = UpdatePattern(trigger.EndUseRegex2, ConfigUtil.PlayerName, endEarlyPattern2, out var numberOptions3);
+        endEarlyPattern2 = UpdatePattern(trigger.EndUseRegex2, endEarlyPattern2, out var numberOptions3);
 
         if (trigger.EndUseRegex2)
         {
@@ -519,7 +519,7 @@ namespace EQLogParser
             wrapper.ModifiedTimerName = string.IsNullOrEmpty(wrapper.ModifiedTimerName) ? "" : wrapper.ModifiedTimerName;
             wrapper.HasRepeatedText = wrapper.ModifiedDisplay?.Contains("{repeated}", StringComparison.OrdinalIgnoreCase) == true;
             wrapper.HasRepeatedTimer = wrapper.ModifiedTimerName?.Contains("{repeated}", StringComparison.OrdinalIgnoreCase) == true;
-            pattern = UpdatePattern(trigger.UseRegex, CurrentPlayer, pattern, out var numberOptions);
+            pattern = UpdatePattern(trigger.UseRegex, pattern, out var numberOptions);
             pattern = UpdateTimePattern(trigger.UseRegex, pattern);
 
             // temp
@@ -664,10 +664,10 @@ namespace EQLogParser
       return currentCount;
     }
 
-    private static string UpdatePattern(bool useRegex, string playerName, string pattern, out List<NumberOptions> numberOptions)
+    private string UpdatePattern(bool useRegex, string pattern, out List<NumberOptions> numberOptions)
     {
       numberOptions = new List<NumberOptions>();
-      pattern = pattern.Replace("{c}", playerName, StringComparison.OrdinalIgnoreCase);
+      pattern = ModPlayer(pattern);
 
       if (useRegex)
       {

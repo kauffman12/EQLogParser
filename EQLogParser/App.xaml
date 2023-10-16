@@ -159,6 +159,9 @@
     <DataTemplate x:Key="HeaderHPSTemplateToolTip">
       <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Healing/Second based on Player Time" />
     </DataTemplate>
+    <DataTemplate x:Key="HeaderPHPSTemplateToolTip">
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Potential Healing/Second based on Player Time" />
+    </DataTemplate>
     <DataTemplate x:Key="HeaderSHPSTemplateToolTip">
       <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Scaled Healing/Second based on Total Time (raid time)" />
     </DataTemplate>

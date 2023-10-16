@@ -48,9 +48,9 @@ namespace EQLogParser
         voices.ItemsSource = TestSynth.GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList();
       }
 
-      if (ConfigUtil.IfSetOrElse("TriggersWatchForGINA"))
+      if (ConfigUtil.IfSet("TriggersWatchForQuickShare"))
       {
-        watchGina.IsChecked = true;
+        watchQuickShare.IsChecked = true;
       }
 
       var selectedVoice = TriggerUtil.GetSelectedVoice();
@@ -272,11 +272,11 @@ namespace EQLogParser
     {
       if (Ready)
       {
-        if (sender == watchGina)
+        if (Equals(sender, watchQuickShare))
         {
-          ConfigUtil.SetSetting("TriggersWatchForGINA", watchGina.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
+          ConfigUtil.SetSetting("TriggersWatchForQuickShare", watchQuickShare.IsChecked?.ToString(CultureInfo.CurrentCulture));
         }
-        else if (sender == voices)
+        else if (Equals(sender, voices))
         {
           if (voices.SelectedValue is string voiceName)
           {
@@ -291,7 +291,7 @@ namespace EQLogParser
             }
           }
         }
-        else if (sender == rateOption)
+        else if (Equals(sender, rateOption))
         {
           ConfigUtil.SetSetting("TriggersVoiceRate", rateOption.SelectedIndex.ToString(CultureInfo.CurrentCulture));
           TriggerManager.Instance.SetVoiceRate(rateOption.SelectedIndex);
@@ -321,15 +321,15 @@ namespace EQLogParser
       thePropertyGrid.IsEnabled = false;
     }
 
-    private void EnableCategories(bool trigger, bool basicTimer, bool shortTimer, bool overlay, bool overlayTimer,
+    private void EnableCategories(bool trigger, bool isTimer, bool isShortTimer, bool overlay, bool overlayTimer,
       bool overlayAssigned, bool overlayText, bool cooldownTimer)
     {
       PropertyGridUtil.EnableCategories(thePropertyGrid, new dynamic[]
       {
         new { Name = patternItem.CategoryName, IsEnabled = trigger },
-        new { Name = timerDurationItem.CategoryName, IsEnabled = basicTimer },
-        new { Name = resetDurationItem.CategoryName, IsEnabled = basicTimer && !shortTimer },
-        new { Name = endEarlyPatternItem.CategoryName, IsEnabled = basicTimer && !shortTimer },
+        new { Name = timerDurationItem.CategoryName, IsEnabled = isTimer },
+        new { Name = resetDurationItem.CategoryName, IsEnabled = isTimer && !isShortTimer },
+        new { Name = endEarlyPatternItem.CategoryName, IsEnabled = isTimer && !isShortTimer },
         new { Name = fontSizeItem.CategoryName, IsEnabled = overlay },
         new { Name = activeBrushItem.CategoryName, IsEnabled = overlayTimer },
         new { Name = idleBrushItem.CategoryName, IsEnabled = cooldownTimer },
@@ -337,8 +337,8 @@ namespace EQLogParser
         new { Name = fadeDelayItem.CategoryName, IsEnabled = overlayText }
       });
 
-      timerDurationItem.Visibility = (basicTimer && !shortTimer) ? Visibility.Visible : Visibility.Collapsed;
-      timerShortDurationItem.Visibility = shortTimer ? Visibility.Visible : Visibility.Collapsed;
+      timerDurationItem.Visibility = (isTimer && !isShortTimer) ? Visibility.Visible : Visibility.Collapsed;
+      timerShortDurationItem.Visibility = isShortTimer ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void ValueChanged(object sender, ValueChangedEventArgs args)
@@ -556,7 +556,7 @@ namespace EQLogParser
         TriggerUtil.Copy(model, model.Node.OverlayData);
       }
 
-      thePropertyGrid.RefreshPropertygrid();
+      thePropertyGrid?.RefreshPropertygrid();
       Dispatcher.InvokeAsync(() => cancelButton.IsEnabled = saveButton.IsEnabled = false, DispatcherPriority.Background);
     }
 
@@ -587,15 +587,15 @@ namespace EQLogParser
       cancelButton.IsEnabled = false;
       thePropertyGrid.SelectedObject = data.Item2;
       thePropertyGrid.IsEnabled = thePropertyGrid.SelectedObject != null;
-      thePropertyGrid.DescriptionPanelVisibility = (data.Item1.IsTrigger() || data.Item1.IsOverlay()) ? Visibility.Visible : Visibility.Collapsed;
-      showButton.Visibility = data.Item1.IsOverlay() ? Visibility.Visible : Visibility.Collapsed;
+      thePropertyGrid.DescriptionPanelVisibility = (data.Item1?.IsTrigger() == true || data.Item1?.IsOverlay() == true) ? Visibility.Visible : Visibility.Collapsed;
+      showButton.Visibility = data.Item1?.IsOverlay() == true ? Visibility.Visible : Visibility.Collapsed;
 
-      if (data.Item1.IsTrigger())
+      if (data.Item1?.IsTrigger() == true)
       {
-        var timerType = data.Item1.SerializedData.TriggerData.TimerType;
+        var timerType = data.Item1.SerializedData?.TriggerData.TimerType;
         EnableCategories(true, timerType > 0, timerType == 2, false, false, true, false, false);
       }
-      else if (data.Item1.IsOverlay())
+      else if (data.Item1?.IsOverlay() == true)
       {
         if (isTimerOverlay)
         {

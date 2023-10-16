@@ -7,19 +7,27 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
 using System.Speech.Synthesis;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
+using Path = System.IO.Path;
+using SolidColorBrush = System.Windows.Media.SolidColorBrush;
 
 namespace EQLogParser
 {
   internal static class TriggerUtil
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new();
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ConcurrentDictionary<string, string> QuickShareCache = new();
+    private const string ExtTrigger = "tgf";
+    private const string ExtOverlay = "ogf";
     internal static double GetTimerBarHeight(double fontSize) => fontSize + 2;
     internal static void ImportTriggers(TriggerNode parent) => Import(parent);
     internal static void ImportOverlays(TriggerNode triggerNode) => Import(triggerNode, false);
@@ -27,11 +35,9 @@ namespace EQLogParser
     internal static string GetSelectedVoice()
     {
       string defaultVoice = null;
-
       try
       {
-        var testSynth = new SpeechSynthesizer();
-        defaultVoice = testSynth.GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList().FirstOrDefault();
+        defaultVoice = new SpeechSynthesizer()?.GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList().FirstOrDefault();
       }
       catch (Exception e)
       {
@@ -73,13 +79,10 @@ namespace EQLogParser
     internal static SolidColorBrush GetBrush(string color)
     {
       SolidColorBrush brush = null;
-      if (!string.IsNullOrEmpty(color))
+      if (!string.IsNullOrEmpty(color) && !BrushCache.TryGetValue(color, out brush))
       {
-        if (!BrushCache.TryGetValue(color, out brush))
-        {
-          brush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(color)! };
-          BrushCache[color] = brush;
-        }
+        brush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(color)! };
+        BrushCache[color] = brush;
       }
       return brush;
     }
@@ -145,7 +148,8 @@ namespace EQLogParser
             toModel.Node.TriggerData.TimerType = 1;
           }
 
-          if (toModel.TimerType == 1)
+          // any timer type except short duration
+          if (toModel.TimerType > 0 && toModel.TimerType != 2)
           {
             toModel.DurationTimeSpan = new TimeSpan(0, 0, (int)toModel.DurationSeconds);
           }
@@ -171,8 +175,8 @@ namespace EQLogParser
           MatchSoundFile(fromModel.WarningSoundOrText, out soundFile, out text);
           toTrigger.WarningSoundToPlay = soundFile;
           toTrigger.WarningTextToSpeak = text;
-
           toTrigger.EnableTimer = fromModel.TimerType > 0;
+
           if (fromModel.TimerType == 1)
           {
             toTrigger.DurationSeconds = fromModel.DurationTimeSpan.TotalSeconds;
@@ -489,7 +493,7 @@ namespace EQLogParser
     {
       var current = Directory.GetFiles(@"data/sounds", "*.wav").Select(Path.GetFileName).OrderBy(file => file).ToList();
 
-      Application.Current.Dispatcher.InvokeAsync(() =>
+      UIUtil.InvokeNow(() =>
       {
         try
         {
@@ -497,7 +501,7 @@ namespace EQLogParser
           {
             if (i < fileList.Count)
             {
-              if (fileList[i] != current[i])
+              if (current != null && fileList[i] != current[i])
               {
                 fileList[i] = current[i];
               }
@@ -522,26 +526,18 @@ namespace EQLogParser
 
     internal static void Export(IEnumerable<TriggerTreeViewNode> viewNodes)
     {
-      if (viewNodes != null)
+      if (BuildExportList(viewNodes) is { } exportList)
       {
         try
         {
-          var exportList = new List<ExportTriggerNode>();
-          foreach (var viewNode in viewNodes)
-          {
-            var node = Create(viewNode);
-            var top = BuildUpTree(viewNode.ParentNode as TriggerTreeViewNode, node);
-            BuildDownTree(viewNode, node);
-            exportList.Add(top);
-          }
-
           if (exportList.Count > 0)
           {
             var isTriggers = exportList[0].Name == TriggerStateManager.TRIGGERS;
             var result = JsonSerializer.Serialize(exportList);
             var saveFileDialog = new SaveFileDialog();
-            var filter = isTriggers ? "Triggers File (*.tgf.gz)|*.tgf.gz" : "Overlays File (*.ogf.gz)|*.ogf.gz";
+            var filter = isTriggers ? $"Triggers File (*.{ExtTrigger}.gz)|*.{ExtTrigger}.gz" : $"Overlays File (*.{ExtOverlay}.gz)|*.{ExtOverlay}.gz";
             saveFileDialog.Filter = filter;
+
             if (saveFileDialog.ShowDialog().Value)
             {
               var gzipFileName = new FileInfo(saveFileDialog.FileName);
@@ -552,6 +548,10 @@ namespace EQLogParser
               writer?.Close();
             }
           }
+          else
+          {
+            new MessageWindow("No Triggers found in Selection. Nothing to Export.", Resource.EXPORT_ERROR).ShowDialog();
+          }
         }
         catch (Exception ex)
         {
@@ -561,12 +561,276 @@ namespace EQLogParser
       }
     }
 
+    internal static void CheckQuickShare(bool monitor, ChatType chatType, string action, double dateTime)
+    {
+      // if Quick Share data is recent then try to handle it
+      if (chatType.Sender != null && action.IndexOf("{EQLP:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
+          action.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 10))
+      {
+        var start = index + 6;
+        var finish = end - start;
+        if (action.Length > (start + finish))
+        {
+          var quickShareKey = action.Substring(start, finish);
+          var fullKey = $"{{EQLP:{quickShareKey}}}";
+          if (!string.IsNullOrEmpty(quickShareKey))
+          {
+            var to = string.IsNullOrEmpty(chatType.Receiver) ? chatType.Channel : chatType.Receiver;
+            var record = new QuickShareRecord
+            {
+              BeginTime = dateTime,
+              Key = fullKey,
+              From = chatType.Sender,
+              To = TextUtils.ToUpper(to),
+              IsMine = chatType.SenderIsYou,
+              Type = "EQLP"
+            };
+
+            DataManager.Instance.AddQuickShare(record);
+
+            // don't handle immediately unless enabled
+            if (monitor && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild
+                  or ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare")
+                && !DataManager.Instance.IsQuickShareMine(fullKey))
+            {
+              // ignore if we're still processing plus avoid spam
+              if (QuickShareCache.ContainsKey(quickShareKey) || QuickShareCache.Count > 5)
+              {
+                return;
+              }
+
+              var runTask = QuickShareCache.Count == 0;
+              QuickShareCache[quickShareKey] = chatType.Sender;
+
+              if (runTask)
+              {
+                RunQuickShareTask(quickShareKey, chatType.Sender);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    internal static void ImportQuickShare(string shareKey, string from)
+    {
+      // if Quick Share data is recent then try to handle it
+      if (shareKey.IndexOf("{EQLP:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
+          shareKey.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 10))
+      {
+        var start = index + 6;
+        var finish = end - start;
+        if (shareKey.Length > (start + finish))
+        {
+          var quickShareKey = shareKey.Substring(start, finish);
+          if (!string.IsNullOrEmpty(quickShareKey))
+          {
+            QuickShareCache[quickShareKey] = from;
+            if (QuickShareCache.Count == 1)
+            {
+              RunQuickShareTask(quickShareKey, from, true);
+            }
+          }
+        }
+      }
+    }
+
+    internal static async Task ShareAsync(List<TriggerTreeViewNode> viewNodes, bool isTriggers = true)
+    {
+      if (BuildExportList(viewNodes) is { Count: > 0 } exportList)
+      {
+        try
+        {
+          var result = JsonSerializer.Serialize(exportList);
+          var inputBytes = Encoding.UTF8.GetBytes(result);
+          using var stream = new MemoryStream();
+          await using (var gzipStream = new GZipStream(stream, CompressionMode.Compress))
+          {
+            gzipStream.Write(inputBytes, 0, inputBytes.Length);
+            await gzipStream.FlushAsync();
+          }
+
+          var content = new ByteArrayContent(stream.ToArray());
+          content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+
+          // make unique name for now. support overlays later?
+          var randomName = viewNodes[0].Content.ToString()?.Replace(" ", "_") ?? "Unknown";
+          if (randomName?.Length > 10)
+          {
+            randomName = randomName[10..];
+          }
+
+          randomName += new Random().Next(10, 100);
+          randomName = isTriggers ? $"{randomName}.{ExtTrigger}" : $"{randomName}.{ExtOverlay}";
+          var response = await MainActions.TheHttpClient.PutAsync($"https://transfer.sh/{randomName}", content);
+
+          if (response.IsSuccessStatusCode)
+          {
+            var handled = false;
+            if (await response.Content.ReadAsStringAsync() is var shareLink)
+            {
+              var parts = shareLink.Split("transfer.sh/");
+              if (parts.Length > 1)
+              {
+                handled = true;
+                var encodedLink = Convert.ToBase64String(Encoding.UTF8.GetBytes(parts[1]));
+                var withKey = $"{{EQLP:{encodedLink}}}";
+
+                var record = new QuickShareRecord
+                {
+                  BeginTime = DateUtil.ToDouble(DateTime.Now),
+                  Key = withKey,
+                  From = "You",
+                  IsMine = true,
+                  To = "Created New Share Key",
+                  Type = "EQLP"
+                };
+
+                DataManager.Instance.AddQuickShare(record);
+                new MessageWindow($"{withKey}\nNote: Code has been copied to Clipboard.", Resource.SHARE_MESSAGE, withKey).ShowDialog();
+              }
+            }
+
+            if (!handled)
+            {
+              new MessageWindow("Problem Sharing Triggers. Check Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
+              Log.Error($"Problem with Quick Share Link: {shareLink}");
+            }
+          }
+          else
+          {
+            new MessageWindow("Problem Sharing Triggers. Check Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
+            Log.Error(response.ReasonPhrase);
+          }
+        }
+        catch (Exception ex)
+        {
+          new MessageWindow("Problem Sharing Triggers. Check Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
+          Log.Error(ex);
+        }
+      }
+    }
+
+    private static void RunQuickShareTask(string quickShareKey, string player, bool isManual = false)
+    {
+      Task.Delay(500).ContinueWith(_ =>
+      {
+        try
+        {
+          var converted = Convert.FromBase64String(quickShareKey);
+          var decoded = Encoding.UTF8.GetString(converted);
+          var url = $"https://transfer.sh/{decoded}";
+          var response = MainActions.TheHttpClient.GetAsync(url).Result;
+          using var decompressionStream = new GZipStream(response.Content.ReadAsStream(), CompressionMode.Decompress);
+          using var ms = new MemoryStream();
+          decompressionStream.CopyTo(ms);
+          ms.Position = 0;
+          ImportFromQuickShare(Encoding.UTF8.GetString(ms.ToArray()), player, quickShareKey);
+        }
+        catch (Exception ex)
+        {
+          if (ex.Message.Contains("An attempt was made to access a socket in a way forbidden by its access permissions"))
+          {
+            UIUtil.InvokeAsync(() =>
+            {
+              new MessageWindow("Error Downloading Quick Share. Blocked by Firewall?", Resource.RECEIVED_SHARE).ShowDialog();
+              Log.Error("Error Downloading Quick Share", ex);
+              NextQuickShareTask(quickShareKey);
+            });
+          }
+          else
+          {
+            if (isManual)
+            {
+              new MessageWindow("Unable to Import. Probably Expired.", Resource.RECEIVED_SHARE).ShowDialog();
+            }
+
+            Log.Error("Error Downloading Quick Share", ex);
+            NextQuickShareTask(quickShareKey);
+          }
+        }
+      });
+    }
+
+    private static void ImportFromQuickShare(string data, string player, string quickShareKey)
+    {
+      UIUtil.InvokeAsync(() =>
+      {
+        var nodes = JsonSerializer.Deserialize<List<ExportTriggerNode>>(data, new JsonSerializerOptions { IncludeFields = true });
+        if (nodes.Count > 0 && nodes[0].Nodes.Count == 0)
+        {
+          var badMessage = "Quick Share Received";
+          if (!string.IsNullOrEmpty(player))
+          {
+            badMessage += " from " + player;
+          }
+
+          badMessage += " but no supported Triggers or Overlays found.";
+          new MessageWindow(badMessage, Resource.RECEIVED_SHARE).ShowDialog();
+        }
+        else
+        {
+          var message = "Merge Quick Share or Import to New Folder?\r\n";
+          if (!string.IsNullOrEmpty(player))
+          {
+            message = $"Merge Quick Share from {player} or Import to New Folder?\r\n";
+          }
+
+          var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question, "New Folder", "Merge");
+          msgDialog.ShowDialog();
+
+          if (msgDialog.IsYes2Clicked)
+          {
+            TriggerStateManager.Instance.ImportTriggers("", nodes);
+          }
+          if (msgDialog.IsYes1Clicked)
+          {
+            var folderName = (player == null) ? "New Folder" : "From " + player;
+            folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
+            TriggerStateManager.Instance.ImportTriggers(folderName, nodes);
+          }
+        }
+
+        if (quickShareKey != null)
+        {
+          NextQuickShareTask(quickShareKey);
+        }
+      });
+    }
+
+    private static void NextQuickShareTask(string quickShareKey)
+    {
+      QuickShareCache.TryRemove(quickShareKey, out var _);
+
+      if (QuickShareCache.Count > 0)
+      {
+        var nextKey = QuickShareCache.Keys.First();
+        RunQuickShareTask(nextKey, QuickShareCache[nextKey]);
+      }
+    }
+
+    private static List<ExportTriggerNode> BuildExportList(IEnumerable<TriggerTreeViewNode> viewNodes)
+    {
+      var exportList = new List<ExportTriggerNode>();
+      if (viewNodes != null)
+      {
+        foreach (var viewNode in viewNodes)
+        {
+          var node = Create(viewNode);
+          var top = BuildUpTree(viewNode.ParentNode as TriggerTreeViewNode, node);
+          BuildDownTree(viewNode, node);
+          exportList.Add(top);
+        }
+      }
+      return exportList;
+    }
+
     private static void Import(TriggerNode parent, bool triggers = true)
     {
       try
       {
-        var defExt = triggers ? ".tgf.gz" : ".ogf.gz";
-        var filter = triggers ? "All Supported Files|*.tgf.gz;*.gtp" : "All Supported Files|*.ogf.gz";
+        var defExt = triggers ? $".{ExtTrigger}.gz" : $".{ExtOverlay}.gz";
+        var filter = triggers ? $"All Supported Files|*.{ExtTrigger}.gz;*.gtp" : $"All Supported Files|*.{ExtOverlay}.gz";
 
         // WPF doesn't have its own file chooser so use Win32 Version
         var dialog = new OpenFileDialog
@@ -582,7 +846,7 @@ namespace EQLogParser
           var fileInfo = new FileInfo(dialog.FileName);
           if (fileInfo.Exists && fileInfo.Length < 100000000)
           {
-            if (dialog.FileName.EndsWith("tgf.gz") || dialog.FileName.EndsWith("ogf.gz"))
+            if (dialog.FileName.EndsWith($"{ExtTrigger}.gz") || dialog.FileName.EndsWith($"{ExtOverlay}.gz"))
             {
               var decompressionStream = new GZipStream(fileInfo.OpenRead(), CompressionMode.Decompress);
               var reader = new StreamReader(decompressionStream);
@@ -630,7 +894,6 @@ namespace EQLogParser
       if (viewNode != null)
       {
         var node = Create(viewNode);
-
         if (child != null)
         {
           node.Nodes.Add(child);

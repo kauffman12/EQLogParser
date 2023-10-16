@@ -122,14 +122,20 @@
                   </MenuItem>
                 </MenuItem>
                 <Separator />
-                <MenuItem x:Name="exportTriggerMenuItem" Header="Export" ToolTip="Exports Selected Folders" Click="ExportClick">
+                <MenuItem x:Name="importTriggerMenuItem" Header="Import" ToolTip="Imports and Merges to the Selected Folder" Click="ImportClick">
+                  <MenuItem.Icon>
+                    <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Download" />
+                  </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem x:Name="exportTriggerMenuItem" Header="Export" ToolTip="Exports Selected Triggers" Click="ExportClick">
                   <MenuItem.Icon>
                     <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Upload" />
                   </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem x:Name="importTriggerMenuItem" Header="Import" ToolTip="Imports and Merges to the Selected Folder" Click="ImportClick">
+                <Separator />
+                <MenuItem x:Name="shareTriggerMenuItem" Header="Quick Share" ToolTip="Share Selected Triggers via URL" Click="ShareTriggersClick">
                   <MenuItem.Icon>
-                    <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Download" />
+                    <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_ExternalLinkAlt" />
                   </MenuItem.Icon>
                 </MenuItem>
               </ContextMenu>

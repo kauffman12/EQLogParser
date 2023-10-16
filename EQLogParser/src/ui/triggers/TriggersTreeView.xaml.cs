@@ -79,7 +79,6 @@ namespace EQLogParser
     private void NodeExpanded(object sender, NodeExpandedCollapsedEventArgs e) => TriggerStateManager.Instance.SetExpanded(e.Node as TriggerTreeViewNode);
     private void AssignOverlayClick(object sender, RoutedEventArgs e) => SetOverlay(sender);
     private void UnassignOverlayClick(object sender, RoutedEventArgs e) => SetOverlay(sender, true);
-    private void SelectionChanging(object sender, ItemSelectionChangingEventArgs e) => IsCancelSelection();
 
     private void CloseOverlaysClick(object sender, RoutedEventArgs e)
     {
@@ -118,6 +117,20 @@ namespace EQLogParser
       {
         TriggerUtil.Export(treeView.SelectedItems?.Cast<TriggerTreeViewNode>());
       }
+    }
+
+    private void ShareTriggersClick(object sender, RoutedEventArgs e)
+    {
+      if (GetTreeViewFromMenu(sender) is { } treeView)
+      {
+        var nodes = treeView.SelectedItems?.Cast<TriggerTreeViewNode>().ToList();
+        Dispatcher.InvokeAsync(() => TriggerUtil.ShareAsync(nodes, true));
+      }
+    }
+
+    private void SelectionChanging(object sender, ItemSelectionChangingEventArgs e)
+    {
+      e.Cancel = IsCancelSelection();
     }
 
     private void NodeChecked(object sender, NodeCheckedEventArgs e)
@@ -464,7 +477,7 @@ namespace EQLogParser
         pasteTriggerItem.IsEnabled = false;
       }
 
-      importTriggerMenuItem.Header = importTriggerMenuItem.IsEnabled ? $"Import to Folder ({node.Content})" : "Import";
+      importTriggerMenuItem.Header = importTriggerMenuItem.IsEnabled ? $"Import to ({node.Content})" : "Import";
 
       if (setPriorityMenuItem.IsEnabled)
       {

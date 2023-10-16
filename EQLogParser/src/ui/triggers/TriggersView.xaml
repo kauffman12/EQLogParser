@@ -17,7 +17,7 @@
       <Label x:Name="titleLabel" Margin="8,0,8,0" VerticalContentAlignment="Center" Padding="0,0,0,2" Content="Check to Activate Triggers" Style="{DynamicResource EQTitleStyle}" Foreground="{DynamicResource EQStopForegroundBrush}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <TextBlock VerticalAlignment="Center" Margin="8,0,30,4" PreviewMouseDown="ToggleAdvancedPreviewMouseDown">
+      <TextBlock VerticalAlignment="Center" Margin="8,0,20,4" PreviewMouseDown="ToggleAdvancedPreviewMouseDown">
         <InlineUIContainer>
           <StackPanel Orientation="Vertical">
             <TextBlock x:Name="advancedText" Cursor="Hand" FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource EQWarnForegroundBrush}" Text="Switch to Advanced Settings"/>
@@ -25,7 +25,7 @@
           </StackPanel>
         </InlineUIContainer>
       </TextBlock>
-      <CheckBox x:Name="watchGina" IsChecked="False" Margin="0,0,8,2" Checked="OptionsChanged" Unchecked="OptionsChanged">Watch for GINA Triggers</CheckBox>
+      <CheckBox x:Name="watchQuickShare" IsChecked="False" Margin="0,0,8,2" Checked="OptionsChanged" Unchecked="OptionsChanged">Watch for Quick Shares</CheckBox>
       <ComboBox x:Name="voices" SelectedIndex="0" Margin="0,0,0,2" SelectionChanged="OptionsChanged" />
       <ComboBox x:Name="rateOption" SelectedIndex="0" Margin="0,0,8,2" SelectionChanged="OptionsChanged">
         <ComboBoxItem>Default Voice Rate</ComboBoxItem>

@@ -4,12 +4,33 @@ using System.IO;
 using System.IO.Compression;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace EQLogParser
 {
   static class FileUtil
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+    private static readonly Regex FileNameRegex = new(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline);
+
+    internal static void ParseFileName(string theFile, ref string name, ref string server)
+    {
+      var file = Path.GetFileName(theFile);
+      var matches = FileNameRegex.Matches(file);
+
+      if (matches.Count == 1)
+      {
+        if (matches[0].Groups.Count > 1)
+        {
+          name = matches[0].Groups[1].Value;
+        }
+
+        if (matches[0].Groups.Count > 2)
+        {
+          server = matches[0].Groups[2].Value;
+        }
+      }
+    }
 
     internal static StreamReader GetStreamReader(FileStream f, double start = 0)
     {

@@ -11,7 +11,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for TriggersLogView.xaml
   /// </summary>
-  public partial class TriggersLogView : UserControl, IDisposable
+  public partial class TriggersLogView : IDisposable
   {
     private List<Tuple<string, ObservableCollection<AlertEntry>>> AlertLogs;
 
@@ -28,18 +28,21 @@ namespace EQLogParser
       {
         var selected = logList?.SelectedItem as string;
         var list = AlertLogs.Select(log => log.Item1).ToList();
-        logList.ItemsSource = list;
-        logList.SelectedIndex = -1;
-
-        if (AlertLogs?.Count > 0)
+        if (logList != null)
         {
-          if (selected != null && list.IndexOf(selected) is var found and > -1)
+          logList.ItemsSource = list;
+          logList.SelectedIndex = -1;
+
+          if (AlertLogs?.Count > 0)
           {
-            logList.SelectedIndex = found;
-          }
-          else
-          {
-            logList.SelectedIndex = 0;
+            if (selected != null && list.IndexOf(selected) is var found and > -1)
+            {
+              logList.SelectedIndex = found;
+            }
+            else
+            {
+              logList.SelectedIndex = 0;
+            }
           }
         }
       }

@@ -26,7 +26,7 @@ namespace EQLogParser
     private const string CONFIG_COL = "Config";
     private const string STATES_COL = "States";
     private const string TREE_COL = "Tree";
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<TriggerStateManager> Lazy = new(() => new TriggerStateManager());
     internal static TriggerStateManager Instance => Lazy.Value; // instance
     private readonly object LockObject = new();
@@ -418,7 +418,7 @@ namespace EQLogParser
       }
     }
 
-    // from GINA with custom Folder name
+    // from GINA or Quick Share with custom Folder name
     internal void ImportTriggers(string name, IEnumerable<ExportTriggerNode> imported)
     {
       if (DB?.GetCollection<TriggerNode>(TREE_COL) is { } tree)
@@ -774,7 +774,7 @@ namespace EQLogParser
             FixEnabledState(child as TriggerTreeViewNode, state, ref needUpdate);
           }
 
-          var chkCount = viewNode.ChildNodes.Count(c => c.IsChecked == true);
+          var chkCount = viewNode.ChildNodes.Count(c => c.IsChecked != false);
           var unchkCount = viewNode.ChildNodes.Count - chkCount;
           var changed = false;
 
@@ -800,10 +800,21 @@ namespace EQLogParser
             changed = true;
           }
 
-          if (changed && state.Enabled.TryGetValue(viewNode.SerializedData.Id, out var value) && value != viewNode.IsChecked)
+          if (changed)
           {
-            state.Enabled[viewNode.SerializedData.Id] = viewNode.IsChecked;
-            needUpdate = true;
+            if (state.Enabled.TryGetValue(viewNode.SerializedData.Id, out var value))
+            {
+              if (value != viewNode.IsChecked)
+              {
+                state.Enabled[viewNode.SerializedData.Id] = viewNode.IsChecked;
+                needUpdate = true;
+              }
+            }
+            else
+            {
+              state.Enabled[viewNode.SerializedData.Id] = viewNode.IsChecked;
+              needUpdate = true;
+            }
           }
         }
       }

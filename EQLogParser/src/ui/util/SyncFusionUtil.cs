@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Windows.Controls;
-using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -22,26 +21,23 @@ namespace EQLogParser
         {
           if (state == DockState.Hidden && (window?.Tag as string) != "Hide")
           {
-            UIUtil.InvokeNow(() =>
+            try
             {
-              try
+              if (dockSite.Children.Contains(window))
               {
-                (window.Content as IDisposable)?.Dispose();
+                dockSite.Children.Remove(window);
+              }
+              else if (dockSite.DocContainer != null && dockSite.DocContainer.Items.Contains(window))
+              {
+                dockSite.DocContainer.Items.Remove(window);
+              }
+            }
+            catch (Exception ex)
+            {
+              Log.Debug(ex);
+            }
 
-                if (dockSite.Children.Contains(window))
-                {
-                  dockSite.Children.Remove(window);
-                }
-                else if (dockSite.DocContainer != null && dockSite.DocContainer.Items.Contains(window))
-                {
-                  dockSite.DocContainer.Items.Remove(window);
-                }
-              }
-              catch (Exception ex)
-              {
-                Log.Debug(ex);
-              }
-            }, DispatcherPriority.Background);
+            (window.Content as IDisposable)?.Dispose();
           }
           else
           {

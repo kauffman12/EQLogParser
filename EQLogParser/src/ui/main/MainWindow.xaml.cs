@@ -14,7 +14,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -47,7 +46,6 @@ namespace EQLogParser
     internal static double CurrentFontSize;
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-    private static readonly Regex ParseFileName = new(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline);
     private static readonly List<string> DAMAGE_CHOICES = new()
     { "Aggregate DPS", "Aggregate Av Hit", "Aggregate Damage", "Aggregate Crit Rate", "Aggregate Twincast Rate", "DPS", "Rolling DPS", "Rolling Damage", "# Attempts", "# Crits", "# Hits", "# Twincasts" };
     private static readonly List<string> HEALING_CHOICES = new()
@@ -245,6 +243,16 @@ namespace EQLogParser
 
         SystemEvents.PowerModeChanged += SystemEventsPowerModeChanged;
 
+        // data old stuff
+        if (ConfigUtil.IfSet("TriggersWatchForGINA"))
+        {
+          ConfigUtil.SetSetting("TriggersWatchForQuickShare", true.ToString(CultureInfo.CurrentCulture));
+        }
+
+        ConfigUtil.RemoveSetting("AudioTriggersWatchForGINA");
+        ConfigUtil.RemoveSetting("TriggersWatchForGINA");
+        ConfigUtil.RemoveSetting("AudioTriggersEnabled");
+
         // Init Trigger Manager
         TriggerManager.Instance.Start();
 
@@ -316,6 +324,7 @@ namespace EQLogParser
         triggersMenuItem.IsEnabled = false;
         triggerTestMenuItem.IsEnabled = false;
         triggerLogMenuItem.IsEnabled = false;
+        quickShareLogMenuItem.IsEnabled = false;
       });
     }
 
@@ -1006,21 +1015,7 @@ namespace EQLogParser
             if (theFile.Length > 0)
             {
               Log.Info("Selected Log File: " + theFile);
-
-              var file = Path.GetFileName(theFile);
-              var matches = ParseFileName.Matches(file);
-              if (matches.Count == 1)
-              {
-                if (matches[0].Groups.Count > 1)
-                {
-                  name = matches[0].Groups[1].Value;
-                }
-
-                if (matches[0].Groups.Count > 2)
-                {
-                  server = matches[0].Groups[2].Value;
-                }
-              }
+              FileUtil.ParseFileName(theFile, ref name, ref server);
             }
 
             var changed = ConfigUtil.ServerName != server;
@@ -1232,6 +1227,7 @@ namespace EQLogParser
       verifiedPlayersGrid?.Dispose();
       (triggerLogWindow?.Content as TriggersLogView)?.Dispose();
       (triggerTestWindow?.Content as TriggersTester)?.Dispose();
+      (quickShareLogWindow?.Content as QuickShareLogView)?.Dispose();
       Application.Current.Shutdown();
     }
 

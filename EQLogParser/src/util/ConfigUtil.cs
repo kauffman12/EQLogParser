@@ -95,7 +95,10 @@ namespace EQLogParser
       Init();
       if (!string.IsNullOrEmpty(key))
       {
-        ApplicationSettings.TryRemove(key, out var _);
+        if (ApplicationSettings.TryRemove(key, out var _))
+        {
+          SettingsUpdated = true;
+        }
       }
     }
 

@@ -409,14 +409,15 @@ namespace EQLogParser
       }
     }
 
-    internal static void CalculateRates(PlayerSubStats stats, PlayerStats raidStats, PlayerStats superStats)
+    internal static void CalculateRates(PlayerSubStats stats, PlayerStats raidStats, PlayerStats subStats)
     {
       if (stats.Hits > 0)
       {
+        stats.Potential = stats.Total + stats.Extra;
         stats.DPS = (long)Math.Round(stats.Total / stats.TotalSeconds, 2);
         stats.SDPS = (long)Math.Round(stats.Total / raidStats.TotalSeconds, 2);
+        stats.PDPS = (long)Math.Round(stats.Potential / stats.TotalSeconds, 2);
         stats.Avg = (long)Math.Round(Convert.ToDecimal(stats.Total) / stats.Hits, 2);
-        stats.Potential = stats.Total + stats.Extra;
 
         if ((stats.CritHits - stats.LuckyHits) is var nonLucky and > 0)
         {
@@ -478,18 +479,18 @@ namespace EQLogParser
 
         if (stats.SpellHits > 0)
         {
-          var tcMult = stats.Type == Labels.DD ? 2 : 1;
-          stats.TwincastRate = (float)Math.Round((float)stats.TwincastHits / stats.SpellHits * tcMult * 100, 2);
+          var tcMulti = stats.Type == Labels.DD ? 2 : 1;
+          stats.TwincastRate = (float)Math.Round((float)stats.TwincastHits / stats.SpellHits * tcMulti * 100, 2);
           stats.TwincastRate = (float)(stats.TwincastRate > 100.0 ? 100.0 : stats.TwincastRate);
           stats.ResistRate = (float)Math.Round((float)stats.Resists / (stats.SpellHits + stats.Resists) * 100, 2);
         }
 
-        if (superStats is { Total: > 0 })
+        if (subStats is { Total: > 0 })
         {
-          stats.Percent = (float)Math.Round(superStats.Percent / 100 * ((float)stats.Total / superStats.Total) * 100, 2);
-          stats.SDPS = (long)Math.Round(stats.Total / superStats.TotalSeconds, 2);
+          stats.Percent = (float)Math.Round(subStats.Percent / 100 * ((float)stats.Total / subStats.Total) * 100, 2);
+          stats.SDPS = (long)Math.Round(stats.Total / subStats.TotalSeconds, 2);
         }
-        else if (superStats == null)
+        else if (subStats == null)
         {
           stats.SDPS = (long)Math.Round(stats.Total / raidStats.TotalSeconds, 2);
         }
