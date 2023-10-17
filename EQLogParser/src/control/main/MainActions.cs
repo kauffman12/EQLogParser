@@ -29,7 +29,9 @@ namespace EQLogParser
   {
     internal static event Action<string> EventsLogLoadingComplete;
     internal static event Action<string> EventsThemeChanged;
+    internal static event Action<List<Fight>> EventsFightSelectionChanged;
     internal static readonly HttpClient THE_HTTP_CLIENT = new();
+
     private const string PetsListTitle = "Verified Pets ({0})";
     private const string PlayerListTitle = "Verified Players ({0})";
     private static readonly ObservableCollection<dynamic> VerifiedPlayersView = new();
@@ -41,6 +43,29 @@ namespace EQLogParser
 
     internal static void FireLoadingEvent(string log) => EventsLogLoadingComplete?.Invoke(log);
     internal static void FireThemeChanged(string theme) => EventsThemeChanged?.Invoke(theme);
+    internal static void FireFightSelectionChanged(List<Fight> fights) => EventsFightSelectionChanged?.Invoke(fights);
+
+    internal static List<Fight> GetFights()
+    {
+      List<Fight> result = null;
+      UIUtil.InvokeNow(() =>
+      {
+        result = (Application.Current.MainWindow as MainWindow)?.GetFightTable()?.GetFights();
+      });
+
+      return result;
+    }
+
+    internal static List<Fight> GetSelectedFights()
+    {
+      List<Fight> result = null;
+      UIUtil.InvokeNow(() =>
+      {
+        result = (Application.Current.MainWindow as MainWindow)?.GetFightTable()?.GetSelectedFights();
+      });
+
+      return result;
+    }
 
     internal static void CheckVersion(TextBlock errorText)
     {
@@ -71,7 +96,6 @@ namespace EQLogParser
                 try
                 {
                   await using var download = await THE_HTTP_CLIENT.GetStreamAsync(url);
-
                   var path = Environment.ExpandEnvironmentVariables("%userprofile%\\Downloads");
                   if (!Directory.Exists(path))
                   {
@@ -392,7 +416,7 @@ namespace EQLogParser
       ownerList.ItemsSource = VerifiedPlayersView;
       PlayerManager.Instance.EventsNewPetMapping += (_, mapping) =>
       {
-        UIUtil.InvokeNow(() =>
+        UIUtil.InvokeAsync(() =>
         {
           var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(mapping.Pet, StringComparison.OrdinalIgnoreCase));
           if (existing != null)
@@ -424,7 +448,7 @@ namespace EQLogParser
       classList.ItemsSource = PlayerManager.Instance.GetClassList(true);
       PlayerManager.Instance.EventsNewVerifiedPlayer += (_, name) =>
       {
-        UIUtil.InvokeNow(() =>
+        UIUtil.InvokeAsync(() =>
         {
           var entry = InsertNameIntoSortedList(name, VerifiedPlayersView);
           entry.PlayerClass = PlayerManager.Instance.GetPlayerClass(name);
@@ -434,7 +458,7 @@ namespace EQLogParser
 
       PlayerManager.Instance.EventsUpdatePlayerClass += (name, playerClass) =>
       {
-        UIUtil.InvokeNow(() =>
+        UIUtil.InvokeAsync(() =>
         {
           var entry = new ExpandoObject() as dynamic;
           entry.Name = name;
@@ -448,7 +472,7 @@ namespace EQLogParser
 
       PlayerManager.Instance.EventsRemoveVerifiedPlayer += (_, name) =>
       {
-        UIUtil.InvokeNow(() =>
+        UIUtil.InvokeAsync(() =>
         {
           var found = VerifiedPlayersView.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
           if (found != null)
@@ -481,7 +505,7 @@ namespace EQLogParser
 
       PlayerManager.Instance.EventsRemoveVerifiedPet += (_, name) =>
       {
-        UIUtil.InvokeNow(() =>
+        UIUtil.InvokeAsync(() =>
         {
           var found = VerifiedPetsView.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
           if (found != null)

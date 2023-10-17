@@ -1,6 +1,5 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Dynamic;
@@ -21,7 +20,7 @@ namespace EQLogParser
       InitializeComponent();
 
       MainActions.EventsLogLoadingComplete += LogLoadingComplete;
-      (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange += SelectionChange;
+      MainActions.EventsFightSelectionChanged += SelectionChange;
       dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Taunt", SortDirection = ListSortDirection.Descending });
 
       // default these columns to descending
@@ -42,9 +41,9 @@ namespace EQLogParser
     private void RefreshClick(object sender, RoutedEventArgs e) => Load();
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
 
-    private void SelectionChange(object sender, IList e)
+    private void SelectionChange(List<Fight> _)
     {
-      if (fightOption.SelectedIndex != 0)
+      if (fightOption?.SelectedIndex != 0)
       {
         Load();
       }
@@ -62,8 +61,7 @@ namespace EQLogParser
     {
       var totals = new Dictionary<string, dynamic>();
       var childTotals = new Dictionary<string, dynamic>();
-      var fights = fightOption.SelectedIndex == 0 ? (Application.Current.MainWindow as MainWindow).GetFightTable()?.GetFights() :
-  (Application.Current.MainWindow as MainWindow).GetFightTable()?.GetSelectedFights();
+      var fights = fightOption.SelectedIndex == 0 ? MainActions.GetFights() : MainActions.GetSelectedFights();
 
       foreach (var fight in fights)
       {
@@ -138,7 +136,7 @@ namespace EQLogParser
       {
         MainActions.EventsThemeChanged -= EventsThemeChanged;
         MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
-        (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange -= SelectionChange;
+        MainActions.EventsFightSelectionChanged -= SelectionChange;
         dataGrid.Dispose();
         disposedValue = true;
       }

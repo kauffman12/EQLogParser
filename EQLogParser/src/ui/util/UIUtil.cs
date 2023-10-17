@@ -25,7 +25,7 @@ namespace EQLogParser
         }
         else
         {
-          dispatcher.InvokeAsync(action, priority);
+          dispatcher.Invoke(action, priority);
         }
       }
     }

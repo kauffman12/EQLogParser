@@ -324,7 +324,6 @@ namespace EQLogParser
         var logTimeIndex = logSearchTime.SelectedIndex;
         var regexEnabled = useRegex.IsChecked.Value;
         LinePositions.Clear();
-        var fights = (Application.Current.MainWindow as MainWindow).GetFightTable()?.GetSelectedFights().OrderBy(sel => sel.Id).ToList();
 
         Task.Delay(75).ContinueWith(_ =>
         {
@@ -354,6 +353,7 @@ namespace EQLogParser
                 start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 30);
                 break;
               case 6:
+                var fights = MainActions.GetSelectedFights().OrderBy(sel => sel.Id).ToList();
                 if (fights?.Count > 0)
                 {
                   start = fights[0].BeginTime - 15;
@@ -612,9 +612,8 @@ namespace EQLogParser
 
     private void FontFamily_Changed(object sender, SelectionChangedEventArgs e)
     {
-      if (fontFamily?.SelectedItem != null)
+      if (fontFamily?.SelectedItem is FontFamily family)
       {
-        var family = fontFamily.SelectedItem as FontFamily;
         Application.Current.Resources["EQLogFontFamily"] = family;
         ConfigUtil.SetSetting("EQLogViewerFontFamily", family.ToString());
       }
@@ -631,7 +630,7 @@ namespace EQLogParser
 
     private void FilterGotFocus(object sender, RoutedEventArgs e)
     {
-      if (logFilter != null && logFilter.FontStyle == FontStyles.Italic)
+      if (logFilter?.FontStyle == FontStyles.Italic)
       {
         logFilter.Text = "";
         logFilter.FontStyle = FontStyles.Normal;

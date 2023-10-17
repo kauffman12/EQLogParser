@@ -1,6 +1,5 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Dynamic;
@@ -37,7 +36,7 @@ namespace EQLogParser
       typeList.SelectedIndex = 0;
 
       MainActions.EventsLogLoadingComplete += LogLoadingComplete;
-      (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange += SelectionChange;
+      MainActions.EventsFightSelectionChanged += SelectionChange;
 
       // default these columns to descending
       var desc = new[] { "Avg", "Max", "Total", "Hits" };
@@ -55,9 +54,9 @@ namespace EQLogParser
     private void RefreshClick(object sender, RoutedEventArgs e) => Load();
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
 
-    private void SelectionChange(object sender, IList e)
+    private void SelectionChange(List<Fight> _)
     {
-      if (fightOption.SelectedIndex != 0)
+      if (fightOption?.SelectedIndex != 0)
       {
         Load();
       }
@@ -67,7 +66,7 @@ namespace EQLogParser
     {
       var selectedSpell = spellList.SelectedItem as string;
       var selectedPlayer = playerList.SelectedItem as string;
-      var isPlayerOnly = showPlayers.IsChecked.Value;
+      var isPlayerOnly = showPlayers.IsChecked == true;
 
       Spells.Clear();
       Spells.Add("All Spells");
@@ -79,9 +78,7 @@ namespace EQLogParser
       var playerProcTotals = new Dictionary<string, SpellDamageStats>();
       var uniqueSpells = new Dictionary<string, byte>();
       var uniquePlayers = new Dictionary<string, byte>();
-
-      var fights = fightOption.SelectedIndex == 0 ? (Application.Current.MainWindow as MainWindow).GetFightTable()?.GetFights() :
-        (Application.Current.MainWindow as MainWindow).GetFightTable()?.GetSelectedFights();
+      var fights = fightOption.SelectedIndex == 0 ? MainActions.GetFights() : MainActions.GetSelectedFights();
 
       foreach (var fight in fights)
       {
@@ -171,7 +168,7 @@ namespace EQLogParser
       dataGrid.ItemsSource = list;
     }
 
-    private void AddRow(List<IDictionary<string, object>> list, SpellDamageStats stats, string type)
+    private void AddRow(ICollection<IDictionary<string, object>> list, SpellDamageStats stats, string type)
     {
       var row = new ExpandoObject() as IDictionary<string, object>;
       row["Caster"] = stats.Caster;
@@ -219,7 +216,7 @@ namespace EQLogParser
         CurrentType = typeList.SelectedIndex > 0 ? typeList.SelectedItem as string : null;
         CurrentSpell = spellList.SelectedIndex > 0 ? spellList.SelectedItem as string : null;
         CurrentPlayer = playerList.SelectedIndex > 0 ? playerList.SelectedItem as string : null;
-        CurrentShowPlayers = showPlayers.IsChecked.Value;
+        CurrentShowPlayers = showPlayers.IsChecked == true;
 
         if (sender == fightOption)
         {
@@ -241,7 +238,7 @@ namespace EQLogParser
       {
         MainActions.EventsThemeChanged -= EventsThemeChanged;
         MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
-        (Application.Current.MainWindow as MainWindow).GetFightTable().EventsSelectionChange -= SelectionChange;
+        MainActions.EventsFightSelectionChanged -= SelectionChange;
         dataGrid.Dispose();
         disposedValue = true;
       }

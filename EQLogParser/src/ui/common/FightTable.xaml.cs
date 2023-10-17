@@ -2,7 +2,6 @@
 using Syncfusion.UI.Xaml.ScrollAxis;
 using Syncfusion.Windows.Tools.Controls;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -20,11 +19,8 @@ namespace EQLogParser
   /// </summary>
   public partial class FightTable
   {
-    // events
-    public event EventHandler<IList> EventsSelectionChange;
-
     // time before creating new group
-    public const int GroupTimeout = 120;
+    public const int GROUP_TIMEOUT = 120;
 
     // NPC Search
     private static int CurrentFightSearchIndex;
@@ -63,7 +59,7 @@ namespace EQLogParser
       {
         if (!rightClickMenu.IsOpen)
         {
-          EventsSelectionChange(this, dataGrid.SelectedItems);
+          MainActions.FireFightSelectionChanged(dataGrid.SelectedItems?.Cast<Fight>().ToList());
         }
         else
         {
@@ -110,22 +106,24 @@ namespace EQLogParser
       MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
-    internal IEnumerable<Fight> GetSelectedFights()
+    internal List<Fight> GetSelectedFights()
     {
       if (dataGrid?.SelectedItems is { } selected)
       {
-        return selected.ToList().Cast<Fight>().Where(item => !item.IsInactivity);
+        return selected.Cast<Fight>().Where(item => !item.IsInactivity).ToList();
       }
-      return Enumerable.Empty<Fight>();
+
+      return new List<Fight>();
     }
 
-    internal IEnumerable<Fight> GetFights()
+    internal List<Fight> GetFights()
     {
       if (dataGrid?.ItemsSource is ObservableCollection<Fight> fights)
       {
-        return fights.ToList().Where(item => !item.IsInactivity);
+        return fights.Where(item => !item.IsInactivity).ToList();
       }
-      return Enumerable.Empty<Fight>();
+
+      return new List<Fight>();
     }
 
     private void EventsUpdateFight(object sender, Fight fight) => NeedRefresh = true;
@@ -163,7 +161,7 @@ namespace EQLogParser
     {
       if (NeedSelectionChange)
       {
-        EventsSelectionChange(this, dataGrid.SelectedItems);
+        MainActions.FireFightSelectionChanged(dataGrid.SelectedItems?.Cast<Fight>().ToList());
         NeedSelectionChange = false;
       }
     }
@@ -264,7 +262,7 @@ namespace EQLogParser
 
         processList.ForEach(fight =>
         {
-          if (!double.IsNaN(lastWithTankingTime) && fight.BeginTime - lastWithTankingTime >= GroupTimeout)
+          if (!double.IsNaN(lastWithTankingTime) && fight.BeginTime - lastWithTankingTime >= GROUP_TIMEOUT)
           {
             CurrentGroup++;
             AddDivider(fight, Fights, lastWithTankingTime);
@@ -295,7 +293,7 @@ namespace EQLogParser
 
         processNonTankingList.ForEach(fight =>
         {
-          if (!double.IsNaN(lastNonTankingTime) && fight.DamageHits > 0 && fight.BeginTime - lastNonTankingTime >= GroupTimeout)
+          if (!double.IsNaN(lastNonTankingTime) && fight.DamageHits > 0 && fight.BeginTime - lastNonTankingTime >= GROUP_TIMEOUT)
           {
             CurrentNonTankingGroup++;
             AddDivider(fight, NonTankingFights, lastNonTankingTime);
@@ -366,15 +364,15 @@ namespace EQLogParser
       menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled = items.Count > 0;
 
       var selected = dataGrid.SelectedItem as Fight;
-      menuItemSetPet.IsEnabled = dataGrid.SelectedItems.Count == 1 && !selected.IsInactivity;
-      menuItemSetPlayer.IsEnabled = dataGrid.SelectedItems.Count == 1 && !selected.IsInactivity &&
+      menuItemSetPet.IsEnabled = dataGrid.SelectedItems.Count == 1 && selected?.IsInactivity == false;
+      menuItemSetPlayer.IsEnabled = dataGrid.SelectedItems.Count == 1 && selected?.IsInactivity == false &&
         PlayerManager.IsPossiblePlayerName((dataGrid.SelectedItem as Fight)?.Name);
       menuItemRefresh.IsEnabled = dataGrid.SelectedItems.Count > 0;
     }
 
     private void RefreshClick(object sender, RoutedEventArgs e)
     {
-      EventsSelectionChange(this, dataGrid.SelectedItems);
+      MainActions.FireFightSelectionChanged(dataGrid.SelectedItems?.Cast<Fight>().ToList());
     }
 
     private void SelectGroupClick(object sender, RoutedEventArgs e)
