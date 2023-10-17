@@ -100,22 +100,22 @@ namespace EQLogParser
 
     internal bool Tick()
     {
-      var currentTicks = DateTime.Now.Ticks;
       bool done;
+      var currentTicks = DateTime.Now.Ticks;
 
-      if (Node.OverlayData.Width != Width)
+      if (!StatsUtil.DoubleEquals(Node.OverlayData.Width, Width))
       {
         Width = Node.OverlayData.Width;
       }
-      else if (Node.OverlayData.Height != Height)
+      else if (!StatsUtil.DoubleEquals(Node.OverlayData.Height, Height))
       {
         Height = Node.OverlayData.Height;
       }
-      else if (Node.OverlayData.Top != Top)
+      else if (!StatsUtil.DoubleEquals(Node.OverlayData.Top, Top))
       {
         Top = Node.OverlayData.Top;
       }
-      else if (Node.OverlayData.Left != Left)
+      else if (!StatsUtil.DoubleEquals(Node.OverlayData.Left, Left))
       {
         Left = Node.OverlayData.Left;
       }
@@ -253,9 +253,9 @@ namespace EQLogParser
 
     private void TriggerUpdateEvent(TriggerNode node)
     {
-      if (Node?.Id == node.Id)
+      if (Node != null && Node.Id == node.Id)
       {
-        if (Node != null && Node != node)
+        if (Node != node)
         {
           Node = node;
         }
@@ -302,10 +302,13 @@ namespace EQLogParser
       if (!Preview)
       {
         var source = (HwndSource)PresentationSource.FromVisual(this);
-        // set to layered and topmost by xaml
-        var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
-        exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
-        NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
+        if (source != null)
+        {
+          // set to layered and topmost by xaml
+          var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
+          exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
+          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
+        }
       }
     }
 
