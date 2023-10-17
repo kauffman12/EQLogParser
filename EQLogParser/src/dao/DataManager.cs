@@ -223,10 +223,10 @@ namespace EQLogParser
         {
           // Obviously illusions are bad to look for
           // Call of Fire is Ranger only and self target but VT clickie lets warriors use it
-          if (spell.Name.IndexOf("Illusion", StringComparison.OrdinalIgnoreCase) == -1 &&
-          !spell.Name.EndsWith(" gate", StringComparison.OrdinalIgnoreCase) &&
-          !spell.Name.Contains(" Synergy", StringComparison.OrdinalIgnoreCase) &&
-          spell.Name.IndexOf("Call of Fire", StringComparison.OrdinalIgnoreCase) == -1)
+          if (!spell.Name.Contains("Illusion", StringComparison.OrdinalIgnoreCase) &&
+            !spell.Name.EndsWith(" gate", StringComparison.OrdinalIgnoreCase) &&
+            !spell.Name.Contains(" Synergy", StringComparison.OrdinalIgnoreCase) &&
+            !spell.Name.Contains("Call of Fire", StringComparison.OrdinalIgnoreCase))
           {
             // these need to be unique and keep track if a conflict is found
             if (SpellsToClass.ContainsKey(spell.Name))
@@ -327,7 +327,7 @@ namespace EQLogParser
     {
       lock (blockList)
       {
-        if (blockList.LastOrDefault() is { } last && UIUtil.DoubleEquals(last.BeginTime, beginTime))
+        if (blockList.LastOrDefault() is { } last && StatsUtil.DoubleEquals(last.BeginTime, beginTime))
         {
           last.Actions.Add(action);
         }

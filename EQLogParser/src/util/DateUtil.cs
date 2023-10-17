@@ -7,18 +7,20 @@ namespace EQLogParser
 {
   internal class DateUtil
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     // counting this thing is really slow
     private string LastDateTimeString;
     private double LastDateTime;
-    private double increment;
+    private double Increment;
 
     internal static double ToDouble(DateTime dateTime) => dateTime.Ticks / TimeSpan.FromSeconds(1).Ticks;
     internal static DateTime FromDouble(double value) => new((long)value * TimeSpan.FromSeconds(1).Ticks);
     internal static string GetCurrentDate(string format) => DateTime.Now.ToString(format, CultureInfo.InvariantCulture);
     internal static string FormatSimpleDate(double seconds) => new DateTime().AddSeconds(seconds).ToString("MMM dd HH:mm:ss", CultureInfo.InvariantCulture);
     internal static string FormatSimpleHMS(double seconds) => new DateTime().AddSeconds(seconds).ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+    internal static double StandardDateToDouble(string source) => ToDouble(ParseStandardDate(source));
+    internal static DateTime ParseStandardDate(string source) => CustomDateTimeParser("MMM dd HH:mm:ss yyyy", source, 5);
 
     internal static string FormatSimpleMS(long ticks)
     {
@@ -149,51 +151,6 @@ namespace EQLogParser
       return result;
     }
 
-    internal double ParseDate(string timeString) => ParseDateTime(timeString, out var _);
-
-    internal double ParsePreciseDate(string timeString)
-    {
-      ParseDateTime(timeString, out var precise);
-      return precise;
-    }
-
-    private double ParseDateTime(string timeString, out double precise)
-    {
-      var result = double.NaN;
-
-      if (LastDateTimeString == timeString)
-      {
-        increment += 0.001;
-        precise = LastDateTime + increment;
-        return LastDateTime;
-      }
-
-      increment = 0.0;
-      var dateTime = ParseStandardDate(timeString);
-
-      if (dateTime == DateTime.MinValue)
-      {
-        LastDateTime = double.NaN;
-      }
-      else
-      {
-        result = LastDateTime = ToDouble(dateTime);
-      }
-
-      LastDateTimeString = timeString;
-      precise = result;
-
-      if (double.IsNaN(result))
-      {
-        Log.Debug("Invalid Date: " + timeString);
-      }
-
-      return result;
-    }
-
-    internal static double StandardDateToDouble(string source) => ToDouble(ParseStandardDate(source));
-    internal static DateTime ParseStandardDate(string source) => CustomDateTimeParser("MMM dd HH:mm:ss yyyy", source, 5);
-
     internal static DateTime CustomDateTimeParser(string dateFormat, string source, int offset = 0)
     {
       var year = 0;
@@ -293,6 +250,48 @@ namespace EQLogParser
         {
           // do nothing
         }
+      }
+
+      return result;
+    }
+
+    internal double ParseDate(string timeString) => ParseDateTime(timeString, out _);
+
+    internal double ParsePreciseDate(string timeString)
+    {
+      ParseDateTime(timeString, out var precise);
+      return precise;
+    }
+
+    private double ParseDateTime(string timeString, out double precise)
+    {
+      var result = double.NaN;
+
+      if (LastDateTimeString == timeString)
+      {
+        Increment += 0.001;
+        precise = LastDateTime + Increment;
+        return LastDateTime;
+      }
+
+      Increment = 0.0;
+      var dateTime = ParseStandardDate(timeString);
+
+      if (dateTime == DateTime.MinValue)
+      {
+        LastDateTime = double.NaN;
+      }
+      else
+      {
+        result = LastDateTime = ToDouble(dateTime);
+      }
+
+      LastDateTimeString = timeString;
+      precise = result;
+
+      if (double.IsNaN(result))
+      {
+        Log.Debug("Invalid Date: " + timeString);
       }
 
       return result;

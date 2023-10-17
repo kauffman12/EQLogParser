@@ -19,6 +19,11 @@ namespace EQLogParser
 
     private static readonly ConcurrentDictionary<string, byte> RegularMeleeTypes = new(new Dictionary<string, byte> { { "Bites", 1 }, { "Claws", 1 }, { "Crushes", 1 }, { "Pierces", 1 }, { "Punches", 1 }, { "Slashes", 1 } });
 
+    internal static bool DoubleEquals(double a, double b)
+    {
+      return Math.Abs(a - b) < 0.01;
+    }
+
     internal static PlayerStats CreatePlayerStats(Dictionary<string, PlayerStats> individualStats, string key, string origName = null)
     {
       PlayerStats stats;

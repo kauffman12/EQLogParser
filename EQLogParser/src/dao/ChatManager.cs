@@ -390,7 +390,7 @@ namespace EQLogParser
           temp.ForEach(line =>
           {
             var beginTime = DateUtil.ParseDate(line);
-            if (lastTime == beginTime)
+            if (StatsUtil.DoubleEquals(lastTime, beginTime))
             {
               increment += 0.001;
             }
