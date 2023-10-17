@@ -70,15 +70,17 @@ namespace EQLogParser
       foreach (var item in Enum.GetValues(typeof(SpellClass)))
       {
         var name = Resource.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), item) ?? string.Empty, CultureInfo.CurrentCulture);
-        ClassNames[(SpellClass)item] = name;
-        ClassesByName[name] = (SpellClass)item;
+        if (name != null)
+        {
+          ClassNames[(SpellClass)item] = name;
+          ClassesByName[name] = (SpellClass)item;
+        }
       }
 
       SortedClassList.AddRange(ClassNames.Values);
       SortedClassList.Sort();
       SortedClassListWithNull.AddRange(SortedClassList);
       SortedClassListWithNull.Insert(0, "");
-
       DoTClasses[ClassNames[SpellClass.BRD]] = 1;
       DoTClasses[ClassNames[SpellClass.BST]] = 1;
       DoTClasses[ClassNames[SpellClass.DRU]] = 1;

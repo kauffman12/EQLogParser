@@ -267,9 +267,9 @@ namespace EQLogParser
 
     private static string GetText(XmlNode node, string value)
     {
-      if (node.SelectSingleNode(value) is { } selected)
+      if (node.SelectSingleNode(value) is { } selected && !string.IsNullOrEmpty(selected.InnerText))
       {
-        return selected.InnerText?.Trim();
+        return selected.InnerText.Trim();
       }
 
       return "";

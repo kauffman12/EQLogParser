@@ -42,7 +42,7 @@ namespace EQLogParser
       if (saveButton != null)
       {
         saveButton.IsEnabled = characterName?.FontStyle != FontStyles.Italic && txtFilePath?.FontStyle != FontStyles.Italic &&
-          characterName?.Text?.Length > 0 && txtFilePath?.Text?.Length > 0;
+          characterName?.Text.Length > 0 && txtFilePath?.Text.Length > 0;
       }
     }
 

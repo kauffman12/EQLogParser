@@ -295,14 +295,14 @@ namespace EQLogParser
         };
 
         // show dialog and read result
-        if (dialog.ShowDialog().Value)
+        if (dialog.ShowDialog() == true)
         {
           var gzipFileName = new FileInfo(dialog.FileName);
 
           var decompressionStream = new GZipStream(gzipFileName.OpenRead(), CompressionMode.Decompress);
           var reader = new StreamReader(decompressionStream);
-          var json = reader?.ReadToEnd();
-          reader?.Close();
+          var json = reader.ReadToEnd();
+          reader.Close();
 
           var data = JsonSerializer.Deserialize<SpellCountsSerialized>(json);
 
@@ -366,14 +366,14 @@ namespace EQLogParser
         var saveFileDialog = new SaveFileDialog();
         var filter = "Spell Count File (*.scf.gz)|*.scf.gz";
         saveFileDialog.Filter = filter;
-        if (saveFileDialog.ShowDialog().Value)
+        if (saveFileDialog.ShowDialog() == true)
         {
           var gzipFileName = new FileInfo(saveFileDialog.FileName);
           var gzipTargetAsStream = gzipFileName.Create();
           var gzipStream = new GZipStream(gzipTargetAsStream, CompressionMode.Compress);
           var writer = new StreamWriter(gzipStream);
-          writer?.Write(result);
-          writer?.Close();
+          writer.Write(result);
+          writer.Close();
         }
       }
       catch (Exception ex)

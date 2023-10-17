@@ -212,27 +212,28 @@ namespace EQLogParser
 
     private void PlayerListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      var player = playerList?.SelectedItem as string;
-
-      if (PlayerData.TryGetValue(player, out var data))
+      if (playerList?.SelectedItem is string player)
       {
-        var canUseCrit = false;
-        var playerCritTypes = new List<string>();
-        if (data.Any(d => d.CritYValues.Count > 0))
+        if (PlayerData.TryGetValue(player, out var data))
         {
-          playerCritTypes.Add(CRIT_HITTYPE);
-          canUseCrit = true;
-        }
+          var canUseCrit = false;
+          var playerCritTypes = new List<string>();
+          if (data.Any(d => d.CritYValues.Count > 0))
+          {
+            playerCritTypes.Add(CRIT_HITTYPE);
+            canUseCrit = true;
+          }
 
-        if (data.Any(d => d.NonCritYValues.Count > 0))
-        {
-          playerCritTypes.Add(NON_CRIT_HITTYPE);
-        }
+          if (data.Any(d => d.NonCritYValues.Count > 0))
+          {
+            playerCritTypes.Add(NON_CRIT_HITTYPE);
+          }
 
-        critTypeList.ItemsSource = playerCritTypes;
-        critTypeList.SelectedIndex = playerCritTypes.Count == 1 ? 0 : canUseCrit ? 1 : 0;
-        UpdateSelectedHitTypes((critTypeList?.SelectedItem as string) == NON_CRIT_HITTYPE);
-        UserSelectionChanged();
+          critTypeList.ItemsSource = playerCritTypes;
+          critTypeList.SelectedIndex = playerCritTypes.Count == 1 ? 0 : canUseCrit ? 1 : 0;
+          UpdateSelectedHitTypes((critTypeList?.SelectedItem as string) == NON_CRIT_HITTYPE);
+          UserSelectionChanged();
+        }
       }
     }
 
@@ -257,7 +258,7 @@ namespace EQLogParser
         {
           hitTypeList.SelectedItem = selectedHitType;
         }
-        else if (hitTypes.Count > 0)
+        else if (hitTypes.Count > 0 && hitTypeList != null)
         {
           hitTypeList.SelectedItem = hitTypes.First();
         }

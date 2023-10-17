@@ -132,7 +132,7 @@ namespace EQLogParser
       {
         if (model is TriggerPropertyModel || model is TextOverlayPropertyModel || model is TimerOverlayPropertyModel)
         {
-          if (model?.Node?.Name is string name)
+          if (model.Node?.Name is string name)
           {
             var msgDialog = new MessageWindow("Do you want to save changes to " + name + "?", Resource.UNSAVED,
               MessageWindow.IconType.Question, "Don't Save", "Save");
@@ -155,7 +155,7 @@ namespace EQLogParser
     {
       if (Ready && sender is CheckBox checkBox)
       {
-        TheConfig.IsEnabled = checkBox?.IsChecked == true;
+        TheConfig.IsEnabled = checkBox.IsChecked == true;
         TriggerStateManager.Instance.UpdateConfig(TheConfig);
       }
     }
@@ -490,7 +490,7 @@ namespace EQLogParser
     private void ShowClick(object sender, RoutedEventArgs e)
     {
       dynamic model = thePropertyGrid?.SelectedObject;
-      if ((model is TimerOverlayPropertyModel || model is TextOverlayPropertyModel) && model?.Node?.Id is string id)
+      if ((model is TimerOverlayPropertyModel || model is TextOverlayPropertyModel) && model.Node?.Id is string id)
       {
         if (!PreviewWindows.TryGetValue(id, out var window))
         {

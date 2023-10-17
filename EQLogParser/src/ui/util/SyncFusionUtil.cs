@@ -19,7 +19,7 @@ namespace EQLogParser
         // delay so windows can be cleaned up before we manually try to do it
         try
         {
-          if (state == DockState.Hidden && (window?.Tag as string) != "Hide")
+          if (state == DockState.Hidden && (window.Tag as string) != "Hide")
           {
             try
             {
