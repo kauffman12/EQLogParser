@@ -545,7 +545,7 @@ namespace EQLogParser
         return -1;
       }
 
-      return x.CompareTo(y);
+      return String.Compare(x, y, StringComparison.Ordinal);
     }
   }
 }

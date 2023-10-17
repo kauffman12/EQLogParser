@@ -233,13 +233,14 @@ namespace EQLogParser
     {
       if (window != null)
       {
-        if (theme == "MaterialLight")
+        switch (theme)
         {
-          SfSkinManager.SetTheme(window, new Theme("MaterialLight"));
-        }
-        else
-        {
-          SfSkinManager.SetTheme(window, new Theme("MaterialDarkCustom;MaterialDark"));
+          case "MaterialLight":
+            SfSkinManager.SetTheme(window, new Theme("MaterialLight"));
+            break;
+          default:
+            SfSkinManager.SetTheme(window, new Theme("MaterialDarkCustom;MaterialDark"));
+            break;
         }
       }
     }
@@ -586,7 +587,7 @@ namespace EQLogParser
 
               if (accessError)
               {
-                new MessageWindow("Error Saving. Can not access save file.", Resource.FILEMENU_SAVE_FIGHTS, MessageWindow.IconType.Save).Show();
+                new MessageWindow("Error Saving. Can not access save file.", Resource.FILEMENU_SAVE_FIGHTS, MessageWindow.IconType.Save).ShowDialog();
               }
             });
           }

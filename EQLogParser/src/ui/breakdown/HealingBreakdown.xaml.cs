@@ -42,15 +42,7 @@ namespace EQLogParser
       {
         Dispatcher.InvokeAsync(() =>
         {
-          if (CurrentShowSpellsChoice)
-          {
-            dataGrid.ChildPropertyName = "SubStats";
-          }
-          else
-          {
-            dataGrid.ChildPropertyName = "SubStats2";
-          }
-
+          dataGrid.ChildPropertyName = CurrentShowSpellsChoice ? "SubStats" : "SubStats2";
           titleLabel.Content = Title;
           dataGrid.IsEnabled = true;
           UIElementUtil.SetEnabled(controlPanel.Children, true);

@@ -23,16 +23,16 @@
         <ContextMenu>
           <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
             <MenuItem.Icon>
-              <fa:ImageAwesome HorizontalAlignment="Center" Icon="Solid_Copy" Style="{StaticResource EQIconStyle}" />
+              <fa:ImageAwesome Icon="Solid_Copy" Style="{StaticResource EQIconStyle}" />
             </MenuItem.Icon>
             <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome HorizontalAlignment="Center" Icon="Solid_Table" Style="{StaticResource EQIconStyle}" />
+                <fa:ImageAwesome Icon="Solid_Table" Style="{StaticResource EQIconStyle}" />
               </MenuItem.Icon>
             </MenuItem>
             <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
               <MenuItem.Icon>
-                <fa:ImageAwesome HorizontalAlignment="Center" Icon="Solid_Image" Style="{StaticResource EQIconStyle}" />
+                <fa:ImageAwesome Icon="Solid_Image" Style="{StaticResource EQIconStyle}" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>

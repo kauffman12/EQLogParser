@@ -124,7 +124,7 @@ namespace EQLogParser
       if (GetTreeViewFromMenu(sender) is { } treeView)
       {
         var nodes = treeView.SelectedItems?.Cast<TriggerTreeViewNode>().ToList();
-        Dispatcher.InvokeAsync(() => TriggerUtil.ShareAsync(nodes, true));
+        Dispatcher.InvokeAsync(() => TriggerUtil.ShareAsync(nodes));
       }
     }
 

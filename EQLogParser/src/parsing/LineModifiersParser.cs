@@ -33,27 +33,16 @@ namespace EQLogParser
     private static readonly ConcurrentDictionary<string, int> MaskCache = new();
 
     internal static bool IsAssassinate(int mask) => mask > -1 && (mask & ASSASSINATE) != 0;
-
     internal static bool IsCrit(int mask) => mask > -1 && (mask & CRIT) != 0;
-
     internal static bool IsDoubleBowShot(int mask) => mask > -1 && (mask & DOUBLEBOW) != 0;
-
     internal static bool IsFinishingBlow(int mask) => mask > -1 && (mask & FINISHING) != 0;
-
     internal static bool IsFlurry(int mask) => mask > -1 && (mask & FLURRY) != 0;
-
     internal static bool IsHeadshot(int mask) => mask > -1 && (mask & HEADSHOT) != 0;
-
     internal static bool IsLucky(int mask) => mask > -1 && (mask & LUCKY) != 0;
-
     internal static bool IsTwincast(int mask) => mask > -1 && (mask & TWINCAST) != 0;
-
     internal static bool IsSlayUndead(int mask) => mask > -1 && (mask & SLAY) != 0;
-
     internal static bool IsRampage(int mask) => mask > -1 && (mask & RAMPAGE) != 0;
-
     internal static bool IsRiposte(int mask) => mask > -1 && (mask & RIPOSTE) != 0 && (mask & STRIKETHROUGH) == 0;
-
     internal static bool IsStrikethrough(int mask) => mask > -1 && (mask & STRIKETHROUGH) != 0;
 
     internal static void UpdateStats(HitRecord record, Attempt playerStats, Attempt theHit = null)
@@ -268,7 +257,6 @@ namespace EQLogParser
     private static int BuildVector(string player, string modifiers, double currentTime)
     {
       var result = 0;
-      var lucky = false;
 
       var temp = "";
       foreach (var modifier in modifiers.Split(' '))
@@ -281,13 +269,11 @@ namespace EQLogParser
             result |= CRIT;
           }
 
-          if (!lucky && "Lucky" == temp)
-          {
-            result |= LUCKY;
-          }
-
           switch (temp)
           {
+            case "Lucky":
+              result |= LUCKY;
+              break;
             case "Assassinate":
               result |= ASSASSINATE;
               PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);

@@ -185,14 +185,7 @@ namespace EQLogParser
               }
             }
 
-            if (LogReaders.Count > 0)
-            {
-              (Application.Current?.MainWindow as MainWindow)?.ShowTriggersEnabled(true);
-            }
-            else
-            {
-              (Application.Current?.MainWindow as MainWindow)?.ShowTriggersEnabled(false);
-            }
+            (Application.Current?.MainWindow as MainWindow)?.ShowTriggersEnabled(LogReaders.Count > 0);
           }
           else
           {

@@ -233,41 +233,45 @@ namespace EQLogParser
 
         foreach (var visual in content.Children)
         {
-          if (visual is Rectangle rectangle)
+          if (visual is Rectangle { Tag: string adps } rectangle && !string.IsNullOrEmpty(adps))
           {
-            if (rectangle.Tag is string adps && !string.IsNullOrEmpty(adps))
-            {
-              if (titleLabel1.Foreground.ToString() == rectangle.Fill.ToString())
-              {
-                AddValue(player1, adps, rectangle);
-              }
-              else
-              {
-                AddValue(player2, adps, rectangle);
-              }
-            }
+            var selected = titleLabel1.Foreground.ToString() == rectangle.Fill.ToString() ? player1 : player2;
+            AddValue(selected, adps, rectangle);
           }
         }
 
         var playerData = new List<List<object>>();
-        labels.ForEach(label =>
+        foreach (ref var label in labels.ToArray().AsSpan())
         {
-          if (player1.TryGetValue(label, out var l1))
+          if (player1.TryGetValue(label, out var rectangles1))
           {
-            l1.ForEach(rectangle =>
+            foreach (ref var rectangle in rectangles1.ToArray().AsSpan())
             {
-              playerData.Add(new List<object> { label, Selected[0].OrigName, StartTime + rectangle.Margin.Left, StartTime + rectangle.Margin.Left + rectangle.ActualWidth });
-            });
+              playerData.Add(
+                new List<object>
+                {
+                  label,
+                  Selected[0].OrigName,
+                  StartTime + rectangle.Margin.Left,
+                  StartTime + rectangle.Margin.Left + rectangle.ActualWidth
+                });
+            }
           }
 
-          if (player2.TryGetValue(label, out var l2))
+          if (player2.TryGetValue(label, out var rectangles2))
           {
-            l2.ForEach(rectangle =>
+            foreach (ref var rectangle in rectangles2.ToArray().AsSpan())
             {
-              playerData.Add(new List<object> { label, Selected[1].OrigName, StartTime + rectangle.Margin.Left, StartTime + rectangle.Margin.Left + rectangle.ActualWidth });
-            });
+              playerData.Add(
+                new List<object>
+                {
+                  label,
+                  Selected[1].OrigName, StartTime + rectangle.Margin.Left,
+                  StartTime + rectangle.Margin.Left + rectangle.ActualWidth
+                });
+            }
           }
-        });
+        }
 
         string title;
         if (string.IsNullOrEmpty(titleLabel2.Content as string))
@@ -276,7 +280,8 @@ namespace EQLogParser
         }
         else
         {
-          title = string.Format(CultureInfo.CurrentCulture, "{0} {1} {2}", titleLabel1.Content as string, titleLabel2.Content as string, titleLabel3.Content as string);
+          title = string.Format(CultureInfo.CurrentCulture, "{0} {1} {2}", titleLabel1.Content as string,
+            titleLabel2.Content as string, titleLabel3.Content as string);
         }
 
         var header = new List<string> { "Adps", "Player", "Start", "End" };
@@ -286,22 +291,22 @@ namespace EQLogParser
       {
         Log.Error(ex);
       }
-
-      void AddValue(Dictionary<string, List<Rectangle>> dict, string name, Rectangle value)
-      {
-        if (dict.TryGetValue(name, out var list))
-        {
-          list.Add(value);
-        }
-        else
-        {
-          dict[name] = new List<Rectangle> { value };
-        }
-      }
     }
 
     private void CreateImage(object sender, RoutedEventArgs e) => CreateImage();
     private void CreateLargeImage(object sender, RoutedEventArgs e) => CreateImage(true);
+
+    private static void AddValue(IDictionary<string, List<Rectangle>> dict, string name, Rectangle value)
+    {
+      if (dict.TryGetValue(name, out var list))
+      {
+        list.Add(value);
+      }
+      else
+      {
+        dict[name] = new List<Rectangle> { value };
+      }
+    }
 
     private void CreateImage(bool everything = false)
     {

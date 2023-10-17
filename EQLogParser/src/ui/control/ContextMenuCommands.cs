@@ -14,11 +14,7 @@ namespace EQLogParser
     {
       get
       {
-        if (copy == null)
-        {
-          copy = new BaseCommand(OnCopyClicked);
-        }
-
+        copy ??= new BaseCommand(OnCopyClicked);
         return copy;
       }
     }
@@ -39,11 +35,7 @@ namespace EQLogParser
     {
       get
       {
-        if (selectAll == null)
-        {
-          selectAll = new BaseCommand(OnSelectAllClicked, CanSelectAll);
-        }
-
+        selectAll ??= new BaseCommand(OnSelectAllClicked, CanSelectAll);
         return selectAll;
       }
     }
@@ -82,11 +74,7 @@ namespace EQLogParser
     {
       get
       {
-        if (unselectAll == null)
-        {
-          unselectAll = new BaseCommand(OnUnselectAllClicked, CanUnselectAll);
-        }
-
+        unselectAll ??= new BaseCommand(OnUnselectAllClicked, CanUnselectAll);
         return unselectAll;
       }
     }
