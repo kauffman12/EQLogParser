@@ -660,9 +660,8 @@ namespace EQLogParser
     {
       if (logBox?.LineNumber > 0)
       {
-        long start;
         var line = logBox.LineNumber - 1;
-        start = FilteredLinePositionMap.TryGetValue(line, out var value) ? value : LinePositions[line];
+        var start = FilteredLinePositionMap.TryGetValue(line, out var value) ? value : LinePositions[line];
         LoadContext(start, logBox.Lines[line].Text);
       }
     }

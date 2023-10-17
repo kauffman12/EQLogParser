@@ -760,7 +760,7 @@ namespace EQLogParser
         List<PlayerStats> selected = null;
         if (opened.TryGetValue((healingSummaryIcon.Tag as string)!, out var window) && window.Content is HealingSummary summary)
         {
-          selected = summary?.GetSelectedStats();
+          selected = summary.GetSelectedStats();
         }
 
         HealingStatsManager.Instance.FireChartEvent("UPDATE", selected);
@@ -775,7 +775,7 @@ namespace EQLogParser
         List<PlayerStats> selected = null;
         if (opened.TryGetValue((tankingSummaryIcon.Tag as string)!, out var window) && window.Content is TankingSummary summary)
         {
-          selected = summary?.GetSelectedStats();
+          selected = summary.GetSelectedStats();
         }
 
         TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "UPDATE", selected);
@@ -959,7 +959,7 @@ namespace EQLogParser
       if (sender is SfDataGrid dataGrid && e.RowColumnIndex.RowIndex > 0 && dataGrid.View.GetRecordAt(e.RowColumnIndex.RowIndex - 1).Data is ExpandoObject obj)
       {
         dataGrid.SelectionController.CurrentCellManager.EndEdit();
-        PlayerManager.Instance.SetPlayerClass(((dynamic)obj)?.Name, ((dynamic)obj)?.PlayerClass, "Class selected by user.");
+        PlayerManager.Instance.SetPlayerClass(((dynamic)obj).Name, ((dynamic)obj).PlayerClass, "Class selected by user.");
       }
     }
 
@@ -1152,7 +1152,7 @@ namespace EQLogParser
     {
       if (sender is Border { DataContext: ExpandoObject sortable })
       {
-        PlayerManager.Instance.RemoveVerifiedPet(((dynamic)sortable)?.Name);
+        PlayerManager.Instance.RemoveVerifiedPet(((dynamic)sortable).Name);
       }
     }
 
@@ -1160,7 +1160,7 @@ namespace EQLogParser
     {
       if (sender is Border { DataContext: ExpandoObject sortable })
       {
-        PlayerManager.Instance.RemoveVerifiedPlayer(((dynamic)sortable)?.Name);
+        PlayerManager.Instance.RemoveVerifiedPlayer(((dynamic)sortable).Name);
       }
     }
 

@@ -458,12 +458,12 @@ namespace EQLogParser
 
       if (node != null)
       {
-        renameTriggerMenuItem.IsEnabled = node?.ParentNode != null;
-        deleteTriggerMenuItem.IsEnabled = node?.ParentNode != null;
+        renameTriggerMenuItem.IsEnabled = node.ParentNode != null;
+        deleteTriggerMenuItem.IsEnabled = node.ParentNode != null;
         importTriggerMenuItem.IsEnabled = node.IsDir() && count == 1;
         newTriggerMenuItem.IsEnabled = node.IsDir() && count == 1;
         copyTriggerItem.IsEnabled = !node.IsDir() && count == 1;
-        cutTriggerItem.IsEnabled = node?.ParentNode != null && (copyTriggerItem.IsEnabled || (node.IsDir() && count == 1));
+        cutTriggerItem.IsEnabled = node.ParentNode != null && (copyTriggerItem.IsEnabled || (node.IsDir() && count == 1));
         pasteTriggerItem.IsEnabled = node.IsDir() && count == 1 && TriggerCopiedNode != null;
       }
       else
@@ -550,8 +550,8 @@ namespace EQLogParser
 
       if (node != null)
       {
-        renameOverlayMenuItem.IsEnabled = node?.ParentNode != null;
-        deleteOverlayMenuItem.IsEnabled = node?.ParentNode != null;
+        renameOverlayMenuItem.IsEnabled = node.ParentNode != null;
+        deleteOverlayMenuItem.IsEnabled = node.ParentNode != null;
         importOverlayMenuItem.IsEnabled = node.IsDir() && count == 1;
         newOverlayMenuItem.IsEnabled = node.IsDir() && count == 1;
         copyOverlayItem.IsEnabled = !node.IsDir() && count == 1;
