@@ -401,7 +401,6 @@ namespace EQLogParser
 
             var existingLine = new ChatLine { Line = line, BeginTime = beginTime + increment };
             CurrentList.Insert(0, existingLine); // reverse back
-
             lastTime = beginTime;
           });
         }
@@ -443,14 +442,17 @@ namespace EQLogParser
             while (!reader.EndOfStream)
             {
               var temp = reader.ReadLine()?.Split('|');
-              if (temp?.Length == 2)
+
+              if (temp?.Length != 2)
               {
-                ChannelIndex[temp[0]] = new Dictionary<string, byte>();
-                foreach (var channel in temp[1].Split(','))
-                {
-                  ChannelIndex[temp[0]][channel.ToLower()] = 1;
-                  UpdateChannelCache(channel); // incase main cache is out of sync with archive
-                }
+                continue;
+              }
+
+              ChannelIndex[temp[0]] = new Dictionary<string, byte>();
+              foreach (var channel in temp[1].Split(','))
+              {
+                ChannelIndex[temp[0]][channel.ToLower()] = 1;
+                UpdateChannelCache(channel); // in case main cache is out of sync with archive
               }
             }
           }
