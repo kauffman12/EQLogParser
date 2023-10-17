@@ -37,10 +37,5 @@ namespace EQLogParser
         dispatcher.InvokeAsync(action, priority);
       }
     }
-
-    internal static bool DoubleEquals(double a, double b)
-    {
-      return Math.Abs(a - b) < 0.01;
-    }
   }
 }

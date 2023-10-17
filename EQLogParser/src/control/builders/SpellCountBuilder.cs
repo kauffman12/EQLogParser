@@ -69,7 +69,7 @@ namespace EQLogParser
     {
       foreach (ref var block in blocks.ToArray().AsSpan())
       {
-        if (!UIUtil.DoubleEquals(raidStats.MaxTime, raidStats.TotalSeconds) && !(block.BeginTime <= maxTime))
+        if (!StatsUtil.DoubleEquals(raidStats.MaxTime, raidStats.TotalSeconds) && !(block.BeginTime <= maxTime))
         {
           continue;
         }
