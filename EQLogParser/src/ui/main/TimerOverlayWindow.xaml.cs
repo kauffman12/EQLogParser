@@ -110,7 +110,6 @@ namespace EQLogParser
       }
 
       TimerData[] orderedList = null;
-
       if (timerList.Count > 0)
       {
         if (Node.OverlayData.SortBy == 0)
@@ -363,9 +362,9 @@ namespace EQLogParser
 
     private void TriggerUpdateEvent(TriggerNode node)
     {
-      if (Node?.Id == node.Id)
+      if (Node != null && Node.Id == node.Id)
       {
-        if (Node != null && Node != node)
+        if (Node != node)
         {
           Node = node;
         }
@@ -374,6 +373,7 @@ namespace EQLogParser
         Width = Node.OverlayData.Width;
         Top = Node.OverlayData.Top;
         Left = Node.OverlayData.Left;
+
         saveButton.IsEnabled = false;
         cancelButton.IsEnabled = false;
         closeButton.IsEnabled = true;
@@ -404,7 +404,7 @@ namespace EQLogParser
         return true;
       }
 
-      return timerData.SelectedOverlays.Contains(Node.Id);
+      return timerData.SelectedOverlays.Contains(Node?.Id);
     }
 
     private void WindowLoaded(object sender, RoutedEventArgs e)
@@ -450,10 +450,13 @@ namespace EQLogParser
       if (!Preview)
       {
         var source = (HwndSource)PresentationSource.FromVisual(this);
-        // set to layered and topmost by xaml
-        var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
-        exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
-        NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
+        if (source != null)
+        {
+          // set to layered and topmost by xaml
+          var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
+          exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
+          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
+        }
       }
     }
 
