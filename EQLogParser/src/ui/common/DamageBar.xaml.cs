@@ -40,7 +40,7 @@ namespace EQLogParser
       }
     }
 
-    internal void Update(string origName, string player, string damage, string dps, string time, double barPercent)
+    internal void Update(string origName, string playerName, string damageValue, string dpsValue, string timeValue, double barPercent)
     {
       if (Visibility != Visibility.Visible)
       {
@@ -48,10 +48,10 @@ namespace EQLogParser
       }
 
       classImage.Source = PlayerManager.Instance.GetPlayerIcon(origName);
-      this.player.Text = player;
-      this.damage.Text = damage;
-      this.dps.Text = dps;
-      this.time.Text = time;
+      player.Text = playerName;
+      damage.Text = damageValue;
+      dps.Text = dpsValue;
+      time.Text = timeValue;
       progress.Progress = barPercent;
     }
   }

@@ -109,17 +109,8 @@ namespace EQLogParser
 
     internal static double GetDpi()
     {
-      var dpi = 96.0;
-      var source = PresentationSource.FromVisual(Application.Current.MainWindow);
-      if (source != null)
-      {
-      }
-      else
-      {
-        var dpiTransform = VisualTreeHelper.GetDpi(Application.Current.MainWindow);
-        dpi = dpiTransform.PixelsPerInchX; // DPI X value
-      }
-
+      // var dpiTransform = VisualTreeHelper.GetDpi(Application.Current.MainWindow);
+      //dpi = dpiTransform.PixelsPerInchX; // DPI X value
       return 96.0; // workaround since I think the framework is scaling for us. This was breaking with 4K displays (120 DPI)
     }
 

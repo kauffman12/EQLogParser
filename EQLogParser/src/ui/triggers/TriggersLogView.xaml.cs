@@ -73,6 +73,7 @@ namespace EQLogParser
       {
         return;
       }
+
       // case where click happened but selection event doesn't fire
       if (e.OriginalSource is FrameworkElement { DataContext: AlertEntry entry })
       {

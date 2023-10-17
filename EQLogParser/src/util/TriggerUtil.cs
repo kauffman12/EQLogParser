@@ -469,29 +469,33 @@ namespace EQLogParser
       FileSystemWatcher watcher = null;
       try
       {
-        LoadSounds(fileList);
-        watcher = new FileSystemWatcher(@"data/sounds");
-        watcher.Created += (sender, e) => OnWatcherUpdated(sender, e, fileList);
-        watcher.Deleted += (sender, e) => OnWatcherUpdated(sender, e, fileList);
-        watcher.Changed += (sender, e) => OnWatcherUpdated(sender, e, fileList);
-        watcher.Filter = "*.wav";
-        watcher.EnableRaisingEvents = true;
+        if (Directory.Exists("data/sounds"))
+        {
+          LoadSounds(fileList);
+          watcher = new FileSystemWatcher(@"data/sounds");
+          watcher.Created += (_, _) => OnWatcherUpdated(fileList);
+          watcher.Deleted += (_, _) => OnWatcherUpdated(fileList);
+          watcher.Changed += (_, _) => OnWatcherUpdated(fileList);
+          watcher.Filter = "*.wav";
+          watcher.EnableRaisingEvents = true;
+        }
       }
       catch (Exception e)
       {
         Log.Debug(e);
       }
 
-      void OnWatcherUpdated(object sender, FileSystemEventArgs _, ObservableCollection<string> fileList)
-      {
-        LoadSounds(fileList);
-      }
       return watcher;
+
+      void OnWatcherUpdated(ObservableCollection<string> soundFiles)
+      {
+        LoadSounds(soundFiles);
+      }
     }
 
-    internal static void LoadSounds(ObservableCollection<string> fileList)
+    private static void LoadSounds(ObservableCollection<string> fileList)
     {
-      var current = Directory.GetFiles(@"data/sounds", "*.wav").Select(Path.GetFileName).OrderBy(file => file).ToList();
+      var current = Directory.GetFiles("data/sounds", "*.wav").Select(Path.GetFileName).OrderBy(file => file).ToList();
 
       UIUtil.InvokeNow(() =>
       {
@@ -501,7 +505,7 @@ namespace EQLogParser
           {
             if (i < fileList.Count)
             {
-              if (current != null && fileList[i] != current[i])
+              if (fileList[i] == null || fileList[i] != current[i])
               {
                 fileList[i] = current[i];
               }
@@ -538,7 +542,7 @@ namespace EQLogParser
             var filter = isTriggers ? $"Triggers File (*.{ExtTrigger}.gz)|*.{ExtTrigger}.gz" : $"Overlays File (*.{ExtOverlay}.gz)|*.{ExtOverlay}.gz";
             saveFileDialog.Filter = filter;
 
-            if (saveFileDialog.ShowDialog().Value)
+            if (saveFileDialog.ShowDialog() == true)
             {
               var gzipFileName = new FileInfo(saveFileDialog.FileName);
               var gzipTargetAsStream = gzipFileName.Create();
@@ -840,9 +844,9 @@ namespace EQLogParser
           Filter = filter
         };
 
-        if (dialog.ShowDialog().Value)
+        if (dialog.ShowDialog() == true)
         {
-          // limit to 100 megs just incase
+          // limit to 100 megs just in case
           var fileInfo = new FileInfo(dialog.FileName);
           if (fileInfo.Exists && fileInfo.Length < 100000000)
           {

@@ -205,7 +205,7 @@ namespace EQLogParser
         return false;
       }
 
-      var isAttackerPlayerSpell = IsAttackerPlayerSpell(record, isAttackerPlayer);
+      var isAttackerPlayerSpell = IsAttackerPlayerSpell(record);
       isAttackerPlayer = isAttackerPlayer || isAttackerPlayerSpell;
       var isDefenderPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Defender);
       var isAttackerNpc = IsAttackerNpc(record, isAttackerPlayerSpell, isAttackerPlayer);
@@ -245,7 +245,7 @@ namespace EQLogParser
       return record.Attacker.Equals(record.Defender, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsAttackerPlayerSpell(DamageRecord record, bool isAttackerPlayer)
+    private static bool IsAttackerPlayerSpell(DamageRecord record)
     {
       return record.AttackerIsSpell && RecentSpellCache.ContainsKey(record.Attacker);
     }

@@ -363,9 +363,9 @@ namespace EQLogParser
 
     private void TriggerUpdateEvent(TriggerNode node)
     {
-      if (Node.Id == node.Id)
+      if (Node?.Id == node.Id)
       {
-        if (Node != node)
+        if (Node != null && Node != node)
         {
           Node = node;
         }

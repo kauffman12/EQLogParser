@@ -120,7 +120,7 @@ namespace EQLogParser
         TextColumns[15].HeaderText = "Defender";
         showPets.Visibility = Visibility.Visible;
       }
-      else if (firstAction is DamageRecord && defending)
+      else if (firstAction is DamageRecord)
       {
         ActedOption = "All Attackers";
         TextColumns[4].HeaderText = "Damage";
