@@ -129,7 +129,7 @@ namespace EQLogParser
     private void ConfigDoUpdate(object sender, EventArgs e)
     {
       ConfigUpdateTimer.Stop();
-      UIUtil.InvokeNow(CloseOverlays);
+      UIUtil.InvokeAsync(CloseOverlays);
       TextOverlayTimer?.Stop();
       TimerOverlayTimer?.Stop();
 
@@ -224,7 +224,7 @@ namespace EQLogParser
     {
       if (id != null)
       {
-        UIUtil.InvokeNow(() =>
+        UIUtil.InvokeAsync(() =>
         {
           foreach (var windows in windowList)
           {
@@ -237,7 +237,7 @@ namespace EQLogParser
 
     private static void CloseOverlays(params Dictionary<string, OverlayWindowData>[] windowList)
     {
-      UIUtil.InvokeNow(() =>
+      UIUtil.InvokeAsync(() =>
       {
         foreach (var windows in windowList)
         {

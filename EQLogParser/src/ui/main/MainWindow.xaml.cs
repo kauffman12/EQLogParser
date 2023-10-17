@@ -129,7 +129,7 @@ namespace EQLogParser
         MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, classList, verifiedPlayersWindow, petMappingWindow);
         MainActions.InitVerifiedPets(this, verifiedPetsGrid, verifiedPetsWindow, petMappingWindow);
 
-        ((FightTable)npcWindow.Content).EventsSelectionChange += (_, _) => ComputeStats();
+        MainActions.EventsFightSelectionChanged += (_) => ComputeStats();
         DamageStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(damageChartIcon.Tag as string, data));
         HealingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(healingChartIcon.Tag as string, data));
         TankingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(tankingChartIcon.Tag as string, data));
@@ -424,7 +424,7 @@ namespace EQLogParser
 
     private void ComputeStats()
     {
-      var filtered = (npcWindow?.Content as FightTable)?.GetSelectedFights().OrderBy(npc => npc.Id);
+      var filtered = MainActions.GetSelectedFights().OrderBy(npc => npc.Id);
       var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
 
       var damageStatsOptions = new GenerateStatsOptions();
@@ -483,7 +483,7 @@ namespace EQLogParser
 
     private void MenuItemExportFightsClick(object sender, RoutedEventArgs e)
     {
-      var filtered = (npcWindow?.Content as FightTable)?.GetSelectedFights().OrderBy(npc => npc.Id).ToList();
+      var filtered = MainActions.GetSelectedFights().OrderBy(npc => npc.Id).ToList();
 
       if (string.IsNullOrEmpty(CurrentLogFile))
       {
