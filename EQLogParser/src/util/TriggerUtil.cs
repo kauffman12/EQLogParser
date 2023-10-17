@@ -662,7 +662,7 @@ namespace EQLogParser
 
           randomName += new Random().Next(10, 100);
           randomName = isTriggers ? $"{randomName}.{ExtTrigger}" : $"{randomName}.{ExtOverlay}";
-          var response = await MainActions.TheHttpClient.PutAsync($"https://transfer.sh/{randomName}", content);
+          var response = await MainActions.THE_HTTP_CLIENT.PutAsync($"https://transfer.sh/{randomName}", content);
 
           if (response.IsSuccessStatusCode)
           {
@@ -720,7 +720,7 @@ namespace EQLogParser
           var converted = Convert.FromBase64String(quickShareKey);
           var decoded = Encoding.UTF8.GetString(converted);
           var url = $"https://transfer.sh/{decoded}";
-          var response = MainActions.TheHttpClient.GetAsync(url).Result;
+          var response = MainActions.THE_HTTP_CLIENT.GetAsync(url).Result;
           using var decompressionStream = new GZipStream(response.Content.ReadAsStream(), CompressionMode.Decompress);
           using var ms = new MemoryStream();
           decompressionStream.CopyTo(ms);

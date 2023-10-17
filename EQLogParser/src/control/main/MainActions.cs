@@ -29,9 +29,9 @@ namespace EQLogParser
   {
     internal static event Action<string> EventsLogLoadingComplete;
     internal static event Action<string> EventsThemeChanged;
-    internal static readonly HttpClient TheHttpClient = new();
-    private const string PETS_LIST_TITLE = "Verified Pets ({0})";
-    private const string PLAYER_LIST_TITLE = "Verified Players ({0})";
+    internal static readonly HttpClient THE_HTTP_CLIENT = new();
+    private const string PetsListTitle = "Verified Pets ({0})";
+    private const string PlayerListTitle = "Verified Players ({0})";
     private static readonly ObservableCollection<dynamic> VerifiedPlayersView = new();
     private static readonly ObservableCollection<dynamic> VerifiedPetsView = new();
     private static readonly ObservableCollection<PetMapping> PetPlayersView = new();
@@ -49,37 +49,33 @@ namespace EQLogParser
       {
         try
         {
-          var request = TheHttpClient.GetStringAsync(@"https://github.com/kauffman12/EQLogParser/blob/master/README.md");
+          var request = THE_HTTP_CLIENT.GetStringAsync("https://github.com/kauffman12/EQLogParser/blob/master/README.md");
           request.Wait();
 
           var matches = new Regex(@"EQLogParser-((\d)\.(\d)\.(\d?\d?\d))\.(msi|exe)").Match(request.Result);
-          if (matches.Success && matches.Groups.Count == 6 && int.TryParse(matches.Groups[2].Value, out var v1) &&
-            int.TryParse(matches.Groups[3].Value, out var v2) && int.TryParse(matches.Groups[4].Value, out var v3)
-            && (v1 > version.Major || (v1 == version.Major && v2 > version.Minor) ||
-            (v1 == version.Major && v2 == version.Minor && v3 > version.Build)))
+          if (version != null && matches.Success && matches.Groups.Count == 6 && int.TryParse(matches.Groups[2].Value, out var v1) &&
+              int.TryParse(matches.Groups[3].Value, out var v2) && int.TryParse(matches.Groups[4].Value, out var v3)
+              && (v1 > version.Major || (v1 == version.Major && v2 > version.Minor) ||
+                  (v1 == version.Major && v2 == version.Minor && v3 > version.Build)))
           {
             UIUtil.InvokeAsync(async () =>
             {
-              var msg = new MessageWindow("Version " + matches.Groups[1].Value + " is Available. Download and Install?",
+              var msg = new MessageWindow($"Version {matches.Groups[1].Value} is Available. Download and Install?",
                 Resource.CHECK_VERSION, MessageWindow.IconType.Question, "Yes");
               msg.ShowDialog();
 
               if (msg.IsYes1Clicked)
               {
-                HttpClient downloadClient = null;
-                var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-" +
-                  matches.Groups[1].Value + "." + matches.Groups[5].Value;
+                var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-" + matches.Groups[1].Value + "." + matches.Groups[5].Value;
 
                 try
                 {
-                  downloadClient = new HttpClient();
-                  await using var download = await downloadClient.GetStreamAsync(url);
+                  await using var download = await THE_HTTP_CLIENT.GetStreamAsync(url);
 
                   var path = Environment.ExpandEnvironmentVariables("%userprofile%\\Downloads");
                   if (!Directory.Exists(path))
                   {
-                    new MessageWindow("Unable to Access Downloads Folder. Can Not Download Update.",
-                      Resource.CHECK_VERSION).ShowDialog();
+                    new MessageWindow("Unable to Access Downloads Folder. Can Not Download Update.", Resource.CHECK_VERSION).ShowDialog();
                     return;
                   }
 
@@ -89,7 +85,7 @@ namespace EQLogParser
                     Directory.CreateDirectory(path);
                   }
 
-                  var fullPath = path + "\\EQLogParser-" + matches.Groups[1].Value + ".msi";
+                  var fullPath = $"{path}\\EQLogParser-{matches.Groups[1].Value}.msi";
                   await using (var fs = new FileStream(fullPath, FileMode.Create))
                   {
                     await download.CopyToAsync(fs);
@@ -100,10 +96,7 @@ namespace EQLogParser
                     var process = Process.Start("msiexec", "/i \"" + fullPath + "\"");
                     if (process is { HasExited: false })
                     {
-                      await Task.Delay(1000).ContinueWith(_ =>
-                      {
-                        UIUtil.InvokeAsync(() => Application.Current.MainWindow?.Close());
-                      });
+                      await Task.Delay(1000).ContinueWith(_ => { UIUtil.InvokeAsync(() => Application.Current.MainWindow?.Close()); });
                     }
                   }
                 }
@@ -111,10 +104,6 @@ namespace EQLogParser
                 {
                   new MessageWindow("Problem Install Updates. Check Error Log for Details.", Resource.CHECK_VERSION).ShowDialog();
                   Log.Error("Error Installing Updates", ex2);
-                }
-                finally
-                {
-                  downloadClient?.Dispose();
                 }
               }
             });
@@ -164,6 +153,8 @@ namespace EQLogParser
         parent.Items.Add(CreateMenuItem(family, callback, EFontAwesomeIcon.Solid_Check));
       }
 
+      return;
+
       MenuItem CreateMenuItem(string name, RoutedEventHandler handler, EFontAwesomeIcon awesome)
       {
         var imageAwesome = new ImageAwesome
@@ -182,18 +173,20 @@ namespace EQLogParser
 
     internal static void CreateFontSizesMenuItems(MenuItem parent, RoutedEventHandler callback, double currentSize)
     {
-      parent.Items.Add(createMenuItem(10, callback, EFontAwesomeIcon.Solid_Check));
-      parent.Items.Add(createMenuItem(11, callback, EFontAwesomeIcon.Solid_Check));
-      parent.Items.Add(createMenuItem(12, callback, EFontAwesomeIcon.Solid_Check));
-      parent.Items.Add(createMenuItem(13, callback, EFontAwesomeIcon.Solid_Check));
-      parent.Items.Add(createMenuItem(14, callback, EFontAwesomeIcon.Solid_Check));
-      MenuItem createMenuItem(double size, RoutedEventHandler handler, EFontAwesomeIcon awesome)
+      parent.Items.Add(CreateMenuItem(10, callback, EFontAwesomeIcon.Solid_Check));
+      parent.Items.Add(CreateMenuItem(11, callback, EFontAwesomeIcon.Solid_Check));
+      parent.Items.Add(CreateMenuItem(12, callback, EFontAwesomeIcon.Solid_Check));
+      parent.Items.Add(CreateMenuItem(13, callback, EFontAwesomeIcon.Solid_Check));
+      parent.Items.Add(CreateMenuItem(14, callback, EFontAwesomeIcon.Solid_Check));
+      return;
+
+      MenuItem CreateMenuItem(double size, RoutedEventHandler handler, EFontAwesomeIcon awesome)
       {
         var imageAwesome = new ImageAwesome
         {
           Icon = awesome,
           Style = (Style)Application.Current.Resources["EQIconStyle"],
-          Visibility = (size == currentSize) ? Visibility.Visible : Visibility.Hidden
+          Visibility = UIUtil.DoubleEquals(size, currentSize) ? Visibility.Visible : Visibility.Hidden
         };
 
         var menuItem = new MenuItem { Header = size + "pt", Tag = size };
@@ -343,11 +336,11 @@ namespace EQLogParser
       var entry = new ExpandoObject() as dynamic;
       entry.Name = Labels.UNASSIGNED;
       VerifiedPlayersView.Add(entry);
-      DockingManager.SetHeader(petsWindow, string.Format(PETS_LIST_TITLE, VerifiedPetsView.Count));
-      DockingManager.SetHeader(playersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
+      DockingManager.SetHeader(petsWindow, string.Format(PetsListTitle, VerifiedPetsView.Count));
+      DockingManager.SetHeader(playersWindow, string.Format(PlayerListTitle, VerifiedPlayersView.Count));
     }
 
-    internal static Dictionary<string, ContentControl> GetOpenWindows(DockingManager dockSite, DocumentTabControl ChartTab)
+    internal static Dictionary<string, ContentControl> GetOpenWindows(DockingManager dockSite, DocumentTabControl chartTab)
     {
       var opened = new Dictionary<string, ContentControl>();
       foreach (var child in dockSite.Children)
@@ -358,9 +351,9 @@ namespace EQLogParser
         }
       }
 
-      if (ChartTab is { Container: not null })
+      if (chartTab is { Container: not null })
       {
-        foreach (var child in ChartTab.Container.Items)
+        foreach (var child in chartTab.Container.Items)
         {
           if (child is ContentControl control)
           {
@@ -434,7 +427,7 @@ namespace EQLogParser
         {
           var entry = InsertNameIntoSortedList(name, VerifiedPlayersView);
           entry.PlayerClass = PlayerManager.Instance.GetPlayerClass(name);
-          DockingManager.SetHeader(playersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
+          DockingManager.SetHeader(playersWindow, string.Format(PlayerListTitle, VerifiedPlayersView.Count));
         });
       };
 
@@ -460,7 +453,7 @@ namespace EQLogParser
           if (found != null)
           {
             VerifiedPlayersView.Remove(found);
-            DockingManager.SetHeader(playersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
+            DockingManager.SetHeader(playersWindow, string.Format(PlayerListTitle, VerifiedPlayersView.Count));
 
             var existing = PetPlayersView.FirstOrDefault(item => item.Owner.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (existing != null)
@@ -482,7 +475,7 @@ namespace EQLogParser
       PlayerManager.Instance.EventsNewVerifiedPet += (_, name) => main.Dispatcher.InvokeAsync(() =>
       {
         InsertNameIntoSortedList(name, VerifiedPetsView);
-        DockingManager.SetHeader(petsWindow, string.Format(PETS_LIST_TITLE, VerifiedPetsView.Count));
+        DockingManager.SetHeader(petsWindow, string.Format(PetsListTitle, VerifiedPetsView.Count));
       });
 
       PlayerManager.Instance.EventsRemoveVerifiedPet += (_, name) =>
@@ -493,7 +486,7 @@ namespace EQLogParser
           if (found != null)
           {
             VerifiedPetsView.Remove(found);
-            DockingManager.SetHeader(petsWindow, string.Format(PETS_LIST_TITLE, VerifiedPetsView.Count));
+            DockingManager.SetHeader(petsWindow, string.Format(PetsListTitle, VerifiedPetsView.Count));
 
             var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (existing != null)
@@ -515,7 +508,7 @@ namespace EQLogParser
       saveFileDialog.Filter = "Text Files (*.txt)|*.txt";
       saveFileDialog.FileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()));
 
-      if (saveFileDialog.ShowDialog().Value)
+      if (saveFileDialog.ShowDialog() == true)
       {
         var dialog = new MessageWindow($"Saving {fights.Count} Selected Fights.", Resource.FILEMENU_SAVE_FIGHTS,
           MessageWindow.IconType.Save);
@@ -547,18 +540,20 @@ namespace EQLogParser
                   }
 
                   var action = line[MainWindow.ACTION_INDEX..];
-                  if (ChatLineParser.ParseChatType(action) == null)
+                  if (ChatLineParser.ParseChatType(action) != null)
                   {
-                    if (TimeRange.TimeCheck(line, range.TimeSegments[0].BeginTime, range, out var exceeds))
-                    {
-                      os.Write(Encoding.UTF8.GetBytes(line));
-                      os.Write(Encoding.UTF8.GetBytes(Environment.NewLine));
-                    }
+                    continue;
+                  }
 
-                    if (exceeds)
-                    {
-                      break;
-                    }
+                  if (TimeRange.TimeCheck(line, range.TimeSegments[0].BeginTime, range, out var exceeds))
+                  {
+                    os.Write(Encoding.UTF8.GetBytes(line));
+                    os.Write(Encoding.UTF8.GetBytes(Environment.NewLine));
+                  }
+
+                  if (exceeds)
+                  {
+                    break;
                   }
                 }
               }
@@ -585,15 +580,15 @@ namespace EQLogParser
           }
           finally
           {
-            UIUtil.InvokeAsync(() => dialog.Close());
-
-            if (accessError)
+            UIUtil.InvokeAsync(() =>
             {
-              UIUtil.InvokeAsync(() =>
+              dialog.Close();
+
+              if (accessError)
               {
                 new MessageWindow("Error Saving. Can not access save file.", Resource.FILEMENU_SAVE_FIGHTS, MessageWindow.IconType.Save).Show();
-              });
-            }
+              }
+            });
           }
         });
 
@@ -622,7 +617,7 @@ namespace EQLogParser
 
         saveFileDialog.FileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()));
 
-        if (saveFileDialog.ShowDialog().Value)
+        if (saveFileDialog.ShowDialog() == true)
         {
           TextUtils.SaveHTML(saveFileDialog.FileName, tables);
         }

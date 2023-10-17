@@ -4,10 +4,12 @@ using System.Linq;
 
 namespace EQLogParser
 {
-  static class SpellCountBuilder
+  internal static class SpellCountBuilder
   {
-    public const int BUFF_OFFSET = 30;
-    public const int DMG_OFFSET = 5;
+    public const double BUFF_OFFSET = 30d;
+    public const double HALF_OFFSET = BUFF_OFFSET / 2;
+    public const double DMG_OFFSET = 5d;
+
     internal static SpellCountData GetSpellCounts(List<string> playerList, PlayerStats raidStats)
     {
       var result = new SpellCountData();
@@ -15,15 +17,16 @@ namespace EQLogParser
       var receivedDuring = new HashSet<TimedAction>();
       QuerySpellBlocks(raidStats, castsDuring, receivedDuring);
 
-      foreach (var action in castsDuring.AsParallel().Where(cast => playerList.Contains((cast as SpellCast)?.Caster)))
+      foreach (var action in castsDuring.Where(cast => playerList.Contains((cast as SpellCast)?.Caster)))
       {
         if (action is SpellCast { SpellData: not null } cast)
         {
-          UpdateMaps(cast.SpellData, cast.Caster, result.PlayerCastCounts, result.PlayerInterruptedCounts, result.MaxCastCounts, result.UniqueSpells, cast.Interrupted);
+          UpdateMaps(cast.SpellData, cast.Caster, result.PlayerCastCounts, result.PlayerInterruptedCounts, result.MaxCastCounts,
+            result.UniqueSpells, cast.Interrupted);
         }
       }
 
-      foreach (var action in receivedDuring.AsParallel().Where(received => playerList.Contains((received as ReceivedSpell)?.Receiver)))
+      foreach (var action in receivedDuring.Where(received => playerList.Contains((received as ReceivedSpell)?.Receiver)))
       {
         // dont include detrimental received spells since they're mostly things like being nuked
         if (action is ReceivedSpell { SpellData: not null } received)
@@ -40,58 +43,62 @@ namespace EQLogParser
       // add spells to one hashset if only one is passed in
       receivedDuring ??= castsDuring;
 
-      double maxTime = -1;
+      var maxTime = double.NaN;
       var startTime = double.NaN;
-
-      raidStats.Ranges.TimeSegments.ForEach(segment =>
+      foreach (ref var segment in raidStats.Ranges.TimeSegments.ToArray().AsSpan())
       {
         var damageAfter = segment.BeginTime - DMG_OFFSET;
         var damageBefore = segment.EndTime;
 
         startTime = double.IsNaN(startTime) ? segment.BeginTime : Math.Min(startTime, segment.BeginTime);
-        maxTime = maxTime == -1 ? segment.BeginTime + raidStats.TotalSeconds : maxTime;
+        maxTime = double.IsNaN(maxTime) ? segment.BeginTime + raidStats.TotalSeconds : maxTime;
 
         // damage section is a subset of this query
-        var blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + (BUFF_OFFSET / 2));
+        var blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + HALF_OFFSET);
         AddGroups(raidStats, blocks, maxTime, castsDuring, damageAfter, damageBefore);
 
-        blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + (BUFF_OFFSET / 2));
+        blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + HALF_OFFSET);
         AddGroups(raidStats, blocks, maxTime, receivedDuring, damageAfter, damageBefore);
-      });
+      }
 
       return startTime;
     }
 
-    private static void AddGroups(PlayerStats raidStats, List<ActionGroup> blocks, double maxTime, HashSet<TimedAction> actions, double damageAfter,
-      double damageBefore)
+    private static void AddGroups(PlayerStats raidStats, List<ActionGroup> blocks, double maxTime,
+      ISet<TimedAction> actions, double damageAfter, double damageBefore)
     {
-      blocks.ForEach(block =>
+      foreach (ref var block in blocks.ToArray().AsSpan())
       {
-        if (raidStats.MaxTime == raidStats.TotalSeconds || block.BeginTime <= maxTime)
+        if (!UIUtil.DoubleEquals(raidStats.MaxTime, raidStats.TotalSeconds) && !(block.BeginTime <= maxTime))
         {
-          block.Actions.ForEach(action =>
-          {
-            if (action is SpellCast cast)
-            {
-              Add(block, cast.SpellData, cast);
-            }
-            else if (action is ReceivedSpell received)
-            {
-              if (received.SpellData == null && received.Ambiguity.Count > 0 && DataManager.ResolveSpellAmbiguity(received, out var replaced))
-              {
-                received.SpellData = replaced;
-              }
-
-              if (received.SpellData != null)
-              {
-                Add(block, received.SpellData, received);
-              }
-            }
-          });
+          continue;
         }
-      });
 
-      void Add(ActionGroup block, SpellData spellData, TimedAction action)
+        foreach (ref var action in block.Actions.ToArray().AsSpan())
+        {
+          if (action is SpellCast cast)
+          {
+            Add(block, cast.SpellData, cast);
+          }
+          else if (action is ReceivedSpell received)
+          {
+            if (received.SpellData == null && received.Ambiguity.Count > 0 &&
+                DataManager.ResolveSpellAmbiguity(received, out var replaced))
+            {
+              received.SpellData = replaced;
+            }
+
+            if (received.SpellData != null)
+            {
+              Add(block, received.SpellData, received);
+            }
+          }
+        }
+      }
+
+      return;
+
+      void Add(TimedAction block, SpellData spellData, TimedAction action)
       {
         if ((block.BeginTime >= damageAfter && block.BeginTime <= damageBefore) || spellData.Damaging < 1)
         {
@@ -100,8 +107,9 @@ namespace EQLogParser
       }
     }
 
-    private static void UpdateMaps(SpellData theSpell, string thePlayer, Dictionary<string, Dictionary<string, uint>> playerCounts,
-      Dictionary<string, Dictionary<string, uint>> interruptedCounts, Dictionary<string, uint> maxSpellCounts, Dictionary<string, SpellData> spellMap, bool interrupted = false)
+    private static void UpdateMaps(SpellData theSpell, string thePlayer, IDictionary<string, Dictionary<string, uint>> playerCounts,
+      IDictionary<string, Dictionary<string, uint>> interruptedCounts, IDictionary<string, uint> maxSpellCounts,
+      IDictionary<string, SpellData> spellMap, bool interrupted = false)
     {
       if (!playerCounts.ContainsKey(thePlayer))
       {

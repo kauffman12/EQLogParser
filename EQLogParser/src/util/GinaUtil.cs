@@ -181,7 +181,7 @@ namespace EQLogParser
           message.Headers.Add("SOAPAction", "http://tempuri.org/IPackageService/DownloadPackageChunk");
           message.Headers.Add("Accept-Encoding", "gzip, deflate");
 
-          var response = MainActions.TheHttpClient.Send(message);
+          var response = MainActions.THE_HTTP_CLIENT.Send(message);
           if (response.IsSuccessStatusCode)
           {
             using var data = response.Content.ReadAsStream();
