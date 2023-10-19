@@ -157,6 +157,10 @@ namespace EQLogParser
       {
         if (!string.IsNullOrEmpty(split[i]))
         {
+          if (split[i][0] == '(')
+          {
+            return null;  // short circuit over heal
+          }
           switch (split[i])
           {
             case "attention!":
@@ -164,8 +168,8 @@ namespace EQLogParser
               attentionIndex = i;
               break;
             case "healed":
-              found = true; // short circuit
-              break;
+            case "casting":
+              return null; // short circuit
             case "but":
               butIndex = i;
               break;
@@ -187,7 +191,7 @@ namespace EQLogParser
 
               if (slainIndex > -1)
               {
-                found = true; // short circut
+                found = true; // short circuit
               }
               else if (i > 4 && split[i - 1] == "damage")
               {
