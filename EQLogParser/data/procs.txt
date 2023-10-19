@@ -3289,6 +3289,9 @@ Lioness Maw
 Lioness Maw II
 Lioness Maw III
 Lynx Maw
+Manul Maw
+Manul Maw II
+Manul Maw III
 Panther Maw
 Puma Maw
 Sabretooth Maw
@@ -3297,9 +3300,6 @@ Sabretooth Maw III
 Snow Leopard Maw
 Snow Leopard Maw II
 Snow Leopard Maw III
-Sumxu Maw
-Sumxu Maw II
-Sumxu Maw III
 Tiger Maw
 Tiger Maw II
 Tiger Maw III
