@@ -6,7 +6,7 @@ namespace EQLogParser
 {
   class HealingLineParser
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     private HealingLineParser()
     {
@@ -82,7 +82,8 @@ namespace EQLogParser
         {
           done = true;
         }
-        else if ((previous - 1 >= 0 && (test[previous - 1] == '.' || test[previous - 1] == '!')) || (previous - 9 > 0 && test.IndexOf("fulfilled", previous - 9, StringComparison.Ordinal) > -1))
+        else if ((previous - 1 >= 0 && (test[previous - 1] == '.' || test[previous - 1] == '!')) || (previous - 9 > 0 &&
+          test.IndexOf("fulfilled", previous - 9, StringComparison.Ordinal) > -1))
         {
           healer = test[(previous + 1)..];
         }

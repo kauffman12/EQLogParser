@@ -33,7 +33,7 @@ namespace EQLogParser
 
     private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
     {
-      if (LastFightProcessTime != processed.BeginTime)
+      if (!StatsUtil.DoubleEquals(LastFightProcessTime, processed.BeginTime))
       {
         DataManager.Instance.CheckExpireFights(processed.BeginTime);
         ValidCombo.Clear();
