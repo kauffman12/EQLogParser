@@ -11,7 +11,7 @@ namespace EQLogParser
 {
   class TankingStatsManager : ISummaryBuilder
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     internal static TankingStatsManager Instance = new();
 

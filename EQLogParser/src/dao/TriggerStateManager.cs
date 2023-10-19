@@ -54,11 +54,17 @@ namespace EQLogParser
         config.EnsureIndex(x => x.Id);
 
         var tree = DB.GetCollection<TriggerNode>(TREE_COL);
-        // create root nodes if none exist
-        if (tree.Count() == 0)
+
+        // create overlay node if it doesn't exist
+        if (tree.FindOne(n => n.Parent == null && n.Name == OVERLAYS) == null)
+        {
+          tree.Insert(new TriggerNode { Name = OVERLAYS, Id = Guid.NewGuid().ToString() });
+        }
+
+        // create trigger node if it doesn't exist
+        if (tree.FindOne(n => n.Parent == null && n.Name == TRIGGERS) == null)
         {
           tree.Insert(new TriggerNode { Name = TRIGGERS, Id = Guid.NewGuid().ToString() });
-          tree.Insert(new TriggerNode { Name = OVERLAYS, Id = Guid.NewGuid().ToString() });
         }
 
         tree.EnsureIndex(x => x.Id);
@@ -643,7 +649,7 @@ namespace EQLogParser
           }
           // make sure it's a new directory
           else if (newNode.OverlayData == null && newNode.TriggerData == null &&
-            (Application.Current as App).AutoMap.Map(newNode, new TriggerNode()) is { } node)
+            ((App)Application.Current).AutoMap.Map(newNode, new TriggerNode()) is { } node)
           {
             Insert(node, index);
             Import(tree, node.Id, newNode.Nodes, type);
@@ -896,7 +902,7 @@ namespace EQLogParser
       }
       else if (old.OverlayData != null)
       {
-        newNode.OverlayData = (Application.Current as App).AutoMap.Map(old.OverlayData, new Overlay());
+        newNode.OverlayData = ((App)Application.Current).AutoMap.Map(old.OverlayData, new Overlay());
         newNode.OverlayData.OverlayColor = FixColor(newNode.OverlayData.OverlayColor);
         newNode.OverlayData.FontColor = FixColor(newNode.OverlayData.FontColor);
         newNode.OverlayData.ActiveColor = FixColor(newNode.OverlayData.ActiveColor);

@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace EQLogParser
 {
-  static class StatsUtil
+  internal static class StatsUtil
   {
     internal const string TIME_FORMAT = "in {0}s";
     internal const string TOTAL_FORMAT = "{0}{1}@{2}";
@@ -492,7 +492,7 @@ namespace EQLogParser
 
         if (subStats is { Total: > 0 })
         {
-          stats.Percent = (float)Math.Round(subStats.Percent / 100 * ((float)stats.Total / subStats.Total) * 100, 2);
+          stats.Percent = (float)Math.Round((float)stats.Total / subStats.Total * 100, 2);
           stats.SDPS = (long)Math.Round(stats.Total / subStats.TotalSeconds, 2);
         }
         else if (subStats == null)
