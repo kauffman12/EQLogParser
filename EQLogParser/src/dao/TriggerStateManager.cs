@@ -224,7 +224,7 @@ namespace EQLogParser
 
     internal void Copy(TriggerNode src, TriggerNode dst)
     {
-      if (dst?.Id is { } parentId && (Application.Current as App).AutoMap.Map(src, new TriggerNode()) is { } copied)
+      if (dst?.Id is { } parentId && (Application.Current as App)?.AutoMap.Map(src, new TriggerNode()) is { } copied)
       {
         if (DB?.GetCollection<TriggerNode>(TREE_COL) is { } tree)
         {

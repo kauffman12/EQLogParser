@@ -211,7 +211,10 @@ namespace EQLogParser
 
       if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out var counter))
       {
-        className = ClassNames[counter.CurrentClass];
+        if (ClassNames.TryGetValue(counter.CurrentClass, out var found))
+        {
+          className = found;
+        }
       }
 
       return className;

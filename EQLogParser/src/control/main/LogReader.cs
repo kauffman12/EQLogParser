@@ -10,7 +10,7 @@ using System.Threading.Tasks.Dataflow;
 
 namespace EQLogParser
 {
-  class LogReader : IDisposable
+  internal class LogReader : IDisposable
   {
     private BufferBlock<Tuple<string, double, bool>> Lines { get; } = new(new DataflowBlockOptions { BoundedCapacity = 20000 });
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -174,7 +174,7 @@ namespace EQLogParser
       }
     }
 
-    private static void Search(FileStream fs, int? minBack)
+    private static void Search(Stream fs, int? minBack)
     {
       long min = 0;
       var max = fs.Length;

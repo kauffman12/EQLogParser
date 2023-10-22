@@ -75,15 +75,15 @@ namespace EQLogParser
         new() { IsChecked = true, Text = Labels.DS, Value = Labels.DS },
         new() { IsChecked = true, Text = Labels.DD, Value = Labels.DD },
         new() { IsChecked = true, Text = Labels.DOT, Value = Labels.DOT },
-        new() { IsChecked = true, Text = "Fellowship", Value = ChatChannels.Fellowship },
-        new() { IsChecked = true, Text = "Group", Value = ChatChannels.Group },
-        new() { IsChecked = true, Text = "Guild", Value = ChatChannels.Guild },
+        new() { IsChecked = true, Text = "Fellowship", Value = ChatChannels.FELLOWSHIP },
+        new() { IsChecked = true, Text = "Group", Value = ChatChannels.GROUP },
+        new() { IsChecked = true, Text = "Guild", Value = ChatChannels.GUILD },
         new() { IsChecked = true, Text = Labels.MELEE, Value = Labels.MELEE },
         new() { IsChecked = true, Text = OTHERCHAT, Value = OTHERCHAT },
         new() { IsChecked = true, Text = Labels.OTHER_DMG, Value = Labels.OTHER_DMG },
         new() { IsChecked = true, Text = Labels.PROC, Value = Labels.PROC },
-        new() { IsChecked = true, Text = "Raid", Value = ChatChannels.Raid },
-        new() { IsChecked = true, Text = "Say", Value = ChatChannels.Say },
+        new() { IsChecked = true, Text = "Raid", Value = ChatChannels.RAID },
+        new() { IsChecked = true, Text = "Say", Value = ChatChannels.SAY },
         new() { IsChecked = true, Text = NOCAT, Value = NOCAT }
       };
 
@@ -190,11 +190,11 @@ namespace EQLogParser
                   bool ignore;
                   switch (chatType.Channel)
                   {
-                    case ChatChannels.Fellowship:
-                    case ChatChannels.Group:
-                    case ChatChannels.Guild:
-                    case ChatChannels.Raid:
-                    case ChatChannels.Say:
+                    case ChatChannels.FELLOWSHIP:
+                    case ChatChannels.GROUP:
+                    case ChatChannels.GUILD:
+                    case ChatChannels.RAID:
+                    case ChatChannels.SAY:
                       ignore = !types.ContainsKey(chatType.Channel);
                       break;
                     default:

@@ -48,8 +48,8 @@ namespace EQLogParser
             DataManager.Instance.AddQuickShare(record);
 
             // don't handle immediately unless enabled
-            if (monitor && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild
-                  or ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") &&
+            if (monitor && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.GROUP or ChatChannels.GUILD
+                  or ChatChannels.RAID or ChatChannels.TELL) && ConfigUtil.IfSet("TriggersWatchForQuickShare") &&
                 !DataManager.Instance.IsQuickShareMine(fullKey))
             {
               // ignore if we're still processing plus avoid spam

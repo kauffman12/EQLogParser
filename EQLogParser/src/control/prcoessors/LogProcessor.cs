@@ -29,7 +29,7 @@ namespace EQLogParser
       var lineData = new LineData { Action = line[27..], BeginTime = dateTime, LineNumber = LineCount };
 
       // avoid having other things parse chat by accident
-      if (ChatLineParser.ParseChatType(lineData.Action, lineData.BeginTime) is { } chatType)
+      if (ChatLineParser.ParseChatType(lineData.Action) is { } chatType)
       {
         if (TriggerStateManager.Instance.IsActive())
         {

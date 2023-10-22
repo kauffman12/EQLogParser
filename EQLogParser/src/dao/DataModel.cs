@@ -288,18 +288,6 @@ namespace EQLogParser
     public string Value { get; set; }
   }
 
-  internal class ChatType
-  {
-    public string Channel { get; set; }
-    public string Sender { get; set; }
-    public string Receiver { get; set; }
-    public bool SenderIsYou { get; set; }
-    public string Text { get; set; }
-    public int TextStart { get; set; }
-    public int KeywordStart { get; set; }
-    public double BeginTime { get; set; }
-  }
-
   internal class ParseData
   {
     public CombinedStats CombinedStats { get; set; }
