@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks.Dataflow;
 using System.Windows.Threading;
 using Application = System.Windows.Application;
 
@@ -79,23 +79,23 @@ namespace EQLogParser
       TimerOverlayTimer?.Stop();
     }
 
-    internal void SetTestProcessor(ISourceBlock<Tuple<string, double, bool>> source)
+    internal void SetTestProcessor(BlockingCollection<Tuple<string, double, bool>> collection)
     {
       TestProcessor?.Dispose();
       var name = TriggerStateManager.DEFAULT_USER;
       TestProcessor = new TriggerProcessor(name, $"Trigger Tester ({name})", ConfigUtil.PlayerName, AddTextEvent, AddTimerEvent);
-      TestProcessor.LinkTo(source);
+      TestProcessor.LinkTo(collection);
       UIUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
     }
 
-    internal void SetTestProcessor(TriggerCharacter character, ISourceBlock<Tuple<string, double, bool>> source)
+    internal void SetTestProcessor(TriggerCharacter character, BlockingCollection<Tuple<string, double, bool>> collection)
     {
       TestProcessor?.Dispose();
       string server = null;
       var playerName = character.Name;
       FileUtil.ParseFileName(character.FilePath, ref playerName, ref server);
       TestProcessor = new TriggerProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, AddTextEvent, AddTimerEvent);
-      TestProcessor.LinkTo(source);
+      TestProcessor.LinkTo(collection);
       UIUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
     }
 

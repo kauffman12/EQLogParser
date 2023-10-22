@@ -1,18 +1,18 @@
 ﻿using log4net;
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Compression;
 using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
 
 namespace EQLogParser
 {
   internal class LogReader : IDisposable
   {
-    private BufferBlock<Tuple<string, double, bool>> Lines { get; } = new(new DataflowBlockOptions { BoundedCapacity = 100000 });
+    private readonly BlockingCollection<Tuple<string, double, bool>> Lines = new(new ConcurrentQueue<Tuple<string, double, bool>>(), 100000);
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly FileSystemWatcher FileWatcher;
     private readonly string FileName;
@@ -135,7 +135,7 @@ namespace EQLogParser
               CurrentPos = fs.Position;
             }
 
-            await HandleLine(line);
+            HandleLine(line);
           }
 
           // continue reading for new updates
@@ -143,15 +143,26 @@ namespace EQLogParser
           {
             while ((line = await reader.ReadLineAsync()) != null)
             {
-              await HandleLine(line, true);
+              HandleLine(line, true);
             }
 
             if (cancelToken.IsCancellationRequested) break;
             WaitHandle.WaitAny(new[] { NewDataAvailable, cancelToken.WaitHandle });
-            NewDataAvailable.Reset();
+
+            if (!cancelToken.IsCancellationRequested)
+            {
+              try
+              {
+                NewDataAvailable.Reset();
+              }
+              catch (Exception)
+              {
+                // ignore already disposed
+              }
+            }
           }
 
-          async Task HandleLine(string theLine, bool monitor = false)
+          void HandleLine(string theLine, bool monitor = false)
           {
             if (theLine.Length > 28)
             {
@@ -162,7 +173,7 @@ namespace EQLogParser
               }
 
               if (cancelToken.IsCancellationRequested) return;
-              await Lines.SendAsync(Tuple.Create(theLine, doubleValue, monitor), cancelToken);
+              Lines.Add(Tuple.Create(theLine, doubleValue, monitor), cancelToken);
               previous = theLine;
             }
           }
@@ -233,29 +244,37 @@ namespace EQLogParser
       }
     }
 
+    #region IDisposable Support
+    private bool DisposedValue; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (!DisposedValue)
+      {
+        FileWatcher?.Dispose();
+        Lines.CompleteAdding();
+        Cts?.Cancel();
+        Cts?.Dispose();
+        LogProcessor?.Dispose();
+        DisposedValue = true;
+        NewDataAvailable.Close();
+        NewDataAvailable.Dispose();
+      }
+    }
+
+    // This code added to correctly implement the disposable pattern.
     public void Dispose()
     {
-      Cts?.Cancel();
-
-      try
-      {
-        ReadFileTask?.Wait();
-      }
-      catch (AggregateException ex)
-      {
-        Log.Warn(ex);
-      }
-
-      Cts?.Dispose();
-      FileWatcher?.Dispose();
-      NewDataAvailable?.Dispose();
-      Lines.Complete();
-      LogProcessor?.Dispose();
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
     }
+    #endregion
   }
 
   internal interface ILogProcessor : IDisposable
   {
-    public void LinkTo(ISourceBlock<Tuple<string, double, bool>> sourceBlock);
+    public void LinkTo(BlockingCollection<Tuple<string, double, bool>> collection);
   }
 }

@@ -366,32 +366,5 @@ namespace EQLogParser
 
       return -1;
     }
-
-    private static void CheckPetLeader(string action, int petEnd, double beginTime, string pet = null)
-    {
-      if (!double.IsNaN(beginTime) && action.Length > (petEnd + 15))
-      {
-        var petLeaderIndex = action.IndexOf("'My leader is ", petEnd + 6, StringComparison.Ordinal);
-        if (petLeaderIndex > -1)
-        {
-          if (string.IsNullOrEmpty(pet))
-          {
-            pet = action[..petEnd];
-          }
-
-          if (!PlayerManager.Instance.IsVerifiedPlayer(pet)) // thanks idiots for this
-          {
-            var period = action.IndexOf(".", petLeaderIndex + 16, StringComparison.Ordinal);
-            if (period > -1)
-            {
-              var owner = action.Substring(petLeaderIndex + 14, period - (petLeaderIndex + 14));
-              PlayerManager.Instance.AddVerifiedPlayer(owner, beginTime);
-              PlayerManager.Instance.AddVerifiedPet(pet);
-              PlayerManager.Instance.AddPetToPlayer(pet, owner);
-            }
-          }
-        }
-      }
-    }
   }
 }
