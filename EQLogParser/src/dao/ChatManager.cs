@@ -248,9 +248,23 @@ namespace EQLogParser
         {
           if (chatType.SenderIsYou == false && chatType.Sender != null)
           {
-            if (chatType.Channel == ChatChannels.GUILD || chatType.Channel == ChatChannels.RAID || chatType.Channel == ChatChannels.FELLOWSHIP)
+            if (chatType.Channel is ChatChannels.GUILD or ChatChannels.RAID or ChatChannels.FELLOWSHIP)
             {
               PlayerManager.Instance.AddVerifiedPlayer(chatType.Sender, chatType.BeginTime);
+            }
+            else if (chatType.Channel is ChatChannels.SAY)
+            {
+              var span = chatType.Text.AsSpan()[chatType.TextStart..];
+              if (span.StartsWith("My leader is "))
+              {
+                span = span["My leader is ".Length..];
+                if (span.IndexOf(".") is var found and > 2)
+                {
+                  var player = span[..found].ToString();
+                  PlayerManager.Instance.AddVerifiedPlayer(player, chatType.BeginTime);
+                  PlayerManager.Instance.AddPetToPlayer(chatType.Sender, player); // also adds verified pet
+                }
+              }
             }
           }
 

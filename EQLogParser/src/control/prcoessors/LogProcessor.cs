@@ -1,30 +1,31 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
 
 namespace EQLogParser
 {
   class LogProcessor : ILogProcessor
   {
-    private readonly ActionBlock<Tuple<string, double, bool>> PreProcess;
-    private readonly ActionBlock<LineData> Process;
     private long LineCount;
 
     internal LogProcessor()
     {
       // Setup the pre-processor block
-      var options = new ExecutionDataflowBlockOptions { BoundedCapacity = 100000 };
-      PreProcess = new ActionBlock<Tuple<string, double, bool>>(data => DoPreProcess(data.Item1, data.Item2, data.Item3), options);
-      Process = new ActionBlock<LineData>(DoProcess, options);
       ChatManager.Instance.Init();
     }
 
-    public void LinkTo(ISourceBlock<Tuple<string, double, bool>> sourceBlock)
+    public void LinkTo(BlockingCollection<Tuple<string, double, bool>> collection)
     {
-      sourceBlock.LinkTo(PreProcess, new DataflowLinkOptions { PropagateCompletion = false });
+      Task.Run(() =>
+      {
+        foreach (var data in collection.GetConsumingEnumerable())
+        {
+          DoPreProcess(data.Item1, data.Item2, data.Item3);
+        }
+      });
     }
 
-    private async Task DoPreProcess(string line, double dateTime, bool monitor)
+    private void DoPreProcess(string line, double dateTime, bool monitor)
     {
       var lineData = new LineData { Action = line[27..], BeginTime = dateTime, LineNumber = LineCount };
 
@@ -65,35 +66,31 @@ namespace EQLogParser
         {
           // may as split once if most things use it
           lineData.Split = lineData.Action.Split(' ');
-          await Process.SendAsync(lineData);
+
+          if (!DamageLineParser.Process(lineData))
+          {
+            if (!HealingLineParser.Process(lineData))
+            {
+              if (!MiscLineParser.Process(lineData))
+              {
+                CastLineParser.Process(lineData);
+              }
+            }
+          }
+
           LineCount++;
         }
 
         if (doubleLine != null)
         {
-          await DoPreProcess(doubleLine, extraDouble, monitor);
-        }
-      }
-    }
-
-    private void DoProcess(LineData lineData)
-    {
-      if (!DamageLineParser.Process(lineData))
-      {
-        if (!HealingLineParser.Process(lineData))
-        {
-          if (!MiscLineParser.Process(lineData))
-          {
-            CastLineParser.Process(lineData);
-          }
+          DoPreProcess(doubleLine, extraDouble, monitor);
         }
       }
     }
 
     public void Dispose()
     {
-      PreProcess?.Complete();
-      Process?.Complete();
+
     }
   }
 }

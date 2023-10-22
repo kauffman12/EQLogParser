@@ -1,12 +1,12 @@
 ﻿using log4net;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -18,12 +18,11 @@ namespace EQLogParser
   public partial class TriggersTester : UserControl, IDisposable
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private readonly BufferBlock<Tuple<string, double, bool>> Buffer;
+    private BlockingCollection<Tuple<string, double, bool>> Buffer;
 
     public TriggersTester()
     {
       InitializeComponent();
-      Buffer = new BufferBlock<Tuple<string, double, bool>>();
       TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
       ((MainWindow)Application.Current.MainWindow)!.Closing += TriggersTesterClosing;
       MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
@@ -108,12 +107,16 @@ namespace EQLogParser
           {
             if (characterList.Visibility != Visibility.Visible)
             {
+              Buffer?.CompleteAdding();
+              Buffer = new(new ConcurrentQueue<Tuple<string, double, bool>>());
               TriggerManager.Instance.SetTestProcessor(Buffer);
             }
             else
             {
               if (characterList.SelectedItem is TriggerCharacter character)
               {
+                Buffer?.CompleteAdding();
+                Buffer = new(new ConcurrentQueue<Tuple<string, double, bool>>());
                 TriggerManager.Instance.SetTestProcessor(character, Buffer);
               }
               else
@@ -155,7 +158,7 @@ namespace EQLogParser
             if (dateTime != DateTime.MinValue)
             {
               var beginTime = DateUtil.ToDouble(dateTime);
-              Buffer.Post(Tuple.Create(line, beginTime, true));
+              Buffer.Add(Tuple.Create(line, beginTime, true));
             }
           }
         });
@@ -257,7 +260,7 @@ namespace EQLogParser
                         var start = DateTime.Now;
                         foreach (var line in list)
                         {
-                          Buffer.Post(Tuple.Create(line, nowTime, true));
+                          Buffer.Add(Tuple.Create(line, nowTime, true));
                         }
 
                         var took = (DateTime.Now - start).Ticks;
@@ -303,7 +306,7 @@ namespace EQLogParser
     {
       if (!disposedValue)
       {
-        Buffer?.Complete();
+        Buffer?.CompleteAdding();
         TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
         ((MainWindow)Application.Current.MainWindow)!.Closing -= TriggersTesterClosing;
         MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;

@@ -1,5 +1,6 @@
 ﻿using log4net;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -9,8 +10,8 @@ using System.Reflection;
 using System.Speech.Synthesis;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
 using System.Windows.Data;
 
 namespace EQLogParser
@@ -23,20 +24,22 @@ namespace EQLogParser
     private readonly string CurrentPlayer;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly object CollectionLock = new();
-    private readonly object LockObject = new();
+    private readonly object ActiveTriggerLock = new();
     private readonly object VoiceLock = new();
     private readonly List<TimerData> ActiveTimers = new();
     private readonly Dictionary<string, Dictionary<string, RepeatedData>> RepeatedTextTimes = new();
     private readonly Dictionary<string, Dictionary<string, RepeatedData>> RepeatedTimerTimes = new();
-    private readonly ActionBlock<Tuple<string, double, bool>> Process;
-    private readonly ActionBlock<Tuple<TriggerWrapper, LineData>> ProcessLowPri;
-    private readonly ActionBlock<Speak> ProcessSpeech;
     private readonly Action<string, Trigger> AddTextEvent;
     private readonly Action<Trigger, List<TimerData>> AddTimerEvent;
-    private LinkedList<TriggerWrapper> ActiveTriggers;
     private readonly SpeechSynthesizer Synth;
     private readonly SoundPlayer SoundPlayer;
+    private readonly Channel<Tuple<TriggerWrapper, LineData>> LowPriChannel = Channel.CreateUnbounded<Tuple<TriggerWrapper, LineData>>();
+    private readonly Channel<Speak> SpeechChannel = Channel.CreateBounded<Speak>(new BoundedChannelOptions(10)
+    {
+      FullMode = BoundedChannelFullMode.DropOldest
+    });
     private TriggerWrapper PreviousSpoken;
+    private LinkedList<TriggerWrapper> ActiveTriggers;
 
     internal TriggerProcessor(string id, string name, string playerName, Action<string, Trigger> addTextEvent,
       Action<Trigger, List<TimerData>> addTimerEvent)
@@ -49,10 +52,6 @@ namespace EQLogParser
       AddTimerEvent = addTimerEvent;
       BindingOperations.EnableCollectionSynchronization(AlertLog, CollectionLock);
 
-      Process = new ActionBlock<Tuple<string, double, bool>>(data => DoProcess(data.Item1, data.Item2));
-      ProcessLowPri = new ActionBlock<Tuple<TriggerWrapper, LineData>>(data => HandleTrigger(data.Item1, data.Item2));
-      ProcessSpeech = new ActionBlock<Speak>(HandleSpeech);
-
       ActiveTriggers = GetActiveTriggers();
       Synth = TriggerUtil.GetSpeechSynthesizer();
       SetVoice(TriggerUtil.GetSelectedVoice());
@@ -60,9 +59,32 @@ namespace EQLogParser
       SoundPlayer = new SoundPlayer();
     }
 
-    public void LinkTo(ISourceBlock<Tuple<string, double, bool>> source)
+    public void LinkTo(BlockingCollection<Tuple<string, double, bool>> collection)
     {
-      source.LinkTo(Process, new DataflowLinkOptions { PropagateCompletion = false });
+      // setup processors before reading from the log
+      Task.Run(async () =>
+      {
+        await foreach (var data in LowPriChannel.Reader.ReadAllAsync())
+        {
+          HandleTrigger(data.Item1, data.Item2);
+        }
+      });
+
+      Task.Run(async () =>
+      {
+        await foreach (var data in SpeechChannel.Reader.ReadAllAsync())
+        {
+          HandleSpeech(data);
+        }
+      });
+
+      Task.Run(() =>
+      {
+        foreach (var data in collection.GetConsumingEnumerable())
+        {
+          DoProcess(data.Item1, data.Item2);
+        }
+      });
     }
 
     internal List<TimerData> GetActiveTimers()
@@ -94,7 +116,7 @@ namespace EQLogParser
 
     internal void UpdateActiveTriggers()
     {
-      lock (LockObject)
+      lock (ActiveTriggerLock)
       {
         ActiveTriggers.ToList().ForEach(CleanupWrapper);
         ActiveTriggers = GetActiveTriggers();
@@ -113,7 +135,7 @@ namespace EQLogParser
       var lineData = new LineData { Action = line[27..], BeginTime = dateTime };
       LinkedListNode<TriggerWrapper> node;
 
-      lock (LockObject)
+      lock (ActiveTriggerLock)
       {
         node = ActiveTriggers.First;
       }
@@ -133,7 +155,7 @@ namespace EQLogParser
           }
           else
           {
-            ProcessLowPri.Post(Tuple.Create(wrapper, lineData));
+            LowPriChannel?.Writer.WriteAsync(Tuple.Create(wrapper, lineData));
           }
         }
       }
@@ -141,6 +163,8 @@ namespace EQLogParser
 
     private void HandleTrigger(TriggerWrapper wrapper, LineData lineData)
     {
+      Speak speak = null;
+
       // lock here because lowPri queue also calls this
       lock (wrapper)
       {
@@ -185,17 +209,17 @@ namespace EQLogParser
             }
           }
 
-          var speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.SoundToPlay, wrapper.ModifiedSpeak, out var isSound);
-          if (!string.IsNullOrEmpty(speak))
+          var tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.SoundToPlay, wrapper.ModifiedSpeak, out var isSound);
+          if (!string.IsNullOrEmpty(tts))
           {
-            ProcessSpeech.Post(new Speak
+            speak = new Speak
             {
               Wrapper = wrapper,
-              TTSOrSound = speak,
+              TTSOrSound = tts,
               IsSound = isSound,
               Matches = matches,
               Action = lineData.Action
-            });
+            };
           }
 
           if (ProcessDisplayText(wrapper.ModifiedDisplay, lineData.Action, matches, null) is { } updatedDisplayText)
@@ -226,19 +250,19 @@ namespace EQLogParser
 
             if (endEarly)
             {
-              var speak = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out var isSound);
-              speak = string.IsNullOrEmpty(speak) ? TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound) : speak;
+              var tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out var isSound);
+              tts = string.IsNullOrEmpty(tts) ? TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound) : tts;
               var displayText = string.IsNullOrEmpty(wrapper.ModifiedEndEarlyDisplay) ? wrapper.ModifiedEndDisplay : wrapper.ModifiedEndEarlyDisplay;
 
-              ProcessSpeech.Post(new Speak
+              speak = new Speak
               {
                 Wrapper = wrapper,
-                TTSOrSound = speak,
+                TTSOrSound = tts,
                 IsSound = isSound,
                 Matches = earlyMatches,
                 OriginalMatches = timerData.OriginalMatches,
                 Action = lineData.Action
-              });
+              };
 
               if (ProcessDisplayText(displayText, lineData.Action, earlyMatches, timerData.OriginalMatches) is { } updatedDisplayText)
               {
@@ -250,6 +274,11 @@ namespace EQLogParser
             }
           }
         }
+      }
+
+      if (speak != null)
+      {
+        SpeechChannel.Writer.WriteAsync(speak);
       }
     }
 
@@ -304,7 +333,7 @@ namespace EQLogParser
             if (proceed)
             {
               var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out var isSound);
-              ProcessSpeech.Post(new Speak
+              SpeechChannel?.Writer.WriteAsync(new Speak
               {
                 Wrapper = wrapper,
                 TTSOrSound = speak,
@@ -394,7 +423,7 @@ namespace EQLogParser
           {
             var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.EndSoundToPlay, wrapper.ModifiedEndSpeak, out var isSound);
 
-            ProcessSpeech.Post(new Speak
+            SpeechChannel?.Writer.WriteAsync(new Speak
             {
               Wrapper = wrapper,
               TTSOrSound = speak,
@@ -776,12 +805,19 @@ namespace EQLogParser
 
     public void Dispose()
     {
-      Process?.Complete();
-      ProcessLowPri?.Complete();
-      ProcessSpeech?.Complete();
-      Synth?.Dispose();
+      LowPriChannel?.Writer.Complete();
+      SpeechChannel?.Writer.Complete();
       SoundPlayer?.Dispose();
-      ActiveTriggers.ToList().ForEach(CleanupWrapper);
+
+      lock (VoiceLock)
+      {
+        Synth?.Dispose();
+      }
+
+      lock (ActiveTriggerLock)
+      {
+        ActiveTriggers.ToList().ForEach(CleanupWrapper);
+      }
     }
 
     private class Speak
