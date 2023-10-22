@@ -10,7 +10,7 @@ namespace EQLogParser
 {
   class ChatIterator : IEnumerable<ChatType>
   {
-    private static readonly ChatType END_RESULT = new();
+    private static readonly ChatType EndResult = new();
 
     private readonly string Home;
 
@@ -91,8 +91,8 @@ namespace EQLogParser
 
       if (CurrentReader != null)
       {
-        result = END_RESULT;
-        while (result == END_RESULT && CurrentReader.ReadLine() is { } nextLine)
+        result = EndResult;
+        while (result == EndResult && CurrentReader.ReadLine() is { } nextLine)
         {
           var timeString = nextLine[..(MainWindow.ACTION_INDEX - 1)];
           var action = nextLine[MainWindow.ACTION_INDEX..];
@@ -111,7 +111,7 @@ namespace EQLogParser
           }
         }
 
-        if (result == END_RESULT)
+        if (result == EndResult)
         {
           CurrentReader.Close();
           CurrentReader = null;

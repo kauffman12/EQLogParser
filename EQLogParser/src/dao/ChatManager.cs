@@ -248,7 +248,7 @@ namespace EQLogParser
         {
           if (chatType.SenderIsYou == false && chatType.Sender != null)
           {
-            if (chatType.Channel == ChatChannels.Guild || chatType.Channel == ChatChannels.Raid || chatType.Channel == ChatChannels.Fellowship)
+            if (chatType.Channel == ChatChannels.GUILD || chatType.Channel == ChatChannels.RAID || chatType.Channel == ChatChannels.FELLOWSHIP)
             {
               PlayerManager.Instance.AddVerifiedPlayer(chatType.Sender, chatType.BeginTime);
             }

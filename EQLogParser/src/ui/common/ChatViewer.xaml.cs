@@ -276,9 +276,9 @@ namespace EQLogParser
 
     private void ChatTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-      if (chatBox?.Text != null && chatBox.Lines.Count <= PAGE_SIZE)
+      if (chatBox is { Text: not null, Lines.Count: <= PAGE_SIZE })
       {
-        Task.Delay(100).ContinueWith(_ => Dispatcher.InvokeAsync(() =>
+        Task.Delay(250).ContinueWith(_ => Dispatcher.InvokeAsync(() =>
         {
           chatBox.GoToLine(chatBox.Lines.Count);
           LastFocused?.Focus();
