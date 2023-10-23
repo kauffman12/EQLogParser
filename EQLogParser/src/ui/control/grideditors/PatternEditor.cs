@@ -18,10 +18,7 @@ namespace EQLogParser
     {
       // this only works if there's one reference to this editor...
       // TODO figure out better way
-      if (TheTextBox != null)
-      {
-        TheTextBox.SetResourceReference(Control.ForegroundProperty, foreground);
-      }
+      TheTextBox?.SetResourceReference(Control.ForegroundProperty, foreground);
     }
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
@@ -81,8 +78,7 @@ namespace EQLogParser
         Padding = new Thickness(0, 2, 0, 2),
         TextWrapping = TextWrapping.Wrap,
         VerticalContentAlignment = VerticalAlignment.Center,
-        BorderThickness = new Thickness(0, 0, 0, 0),
-        Tag = true
+        BorderThickness = new Thickness(0, 0, 0, 0)
       };
 
       TheTextBox.SetValue(Grid.ColumnProperty, 0);
@@ -97,14 +93,10 @@ namespace EQLogParser
 
     private void TheCheckBoxChecked(object sender, RoutedEventArgs e)
     {
-      if (TheTextBox != null)
+      if (sender is CheckBox checkBox)
       {
         // used for init check
-        if (TheTextBox.Tag != null)
-        {
-          TheTextBox.Tag = null;
-        }
-        else
+        if (checkBox.DataContext != null)
         {
           var previous = TheTextBox.Text;
           TheTextBox.Text += " ";
