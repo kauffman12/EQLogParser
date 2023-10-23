@@ -666,17 +666,14 @@ namespace EQLogParser
 
           randomName += new Random().Next(10, 100);
           randomName = isTriggers ? $"{randomName}.{ExtTrigger}" : $"{randomName}.{ExtOverlay}";
+          var response = await MainActions.THE_HTTP_CLIENT.PutAsync($"https://transfer.sh/{randomName}", content);
 
-          using var multiPart = new MultipartFormDataContent();
-          multiPart.Add(content, "file", randomName);
-
-          var response = await MainActions.THE_HTTP_CLIENT.PutAsync("https://temp.sh/upload", multiPart);
           if (response.IsSuccessStatusCode)
           {
             var handled = false;
             if (await response.Content.ReadAsStringAsync() is var shareLink)
             {
-              var parts = shareLink.Split("temp.sh/");
+              var parts = shareLink.Split("transfer.sh/");
               if (parts.Length > 1)
               {
                 handled = true;
@@ -727,8 +724,8 @@ namespace EQLogParser
         {
           var converted = Convert.FromBase64String(quickShareKey);
           var decoded = Encoding.UTF8.GetString(converted);
-          var url = $"https://temp.sh/{decoded}";
-          var response = await MainActions.THE_HTTP_CLIENT.PostAsync(url, new ByteArrayContent(Array.Empty<byte>()));
+          var url = $"https://transfer.sh/{decoded}";
+          var response = MainActions.THE_HTTP_CLIENT.GetAsync(url).Result;
           if (response.IsSuccessStatusCode)
           {
             await using var decompressionStream = new GZipStream(await response.Content.ReadAsStreamAsync(), CompressionMode.Decompress);
