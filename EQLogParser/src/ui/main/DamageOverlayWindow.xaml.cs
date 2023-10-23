@@ -15,7 +15,7 @@ namespace EQLogParser
   /// </summary>
   public partial class DamageOverlayWindow : Window
   {
-    private static readonly double DAMAGE_MODE_ZERO_TIMEOUT = TimeSpan.TicksPerSecond * 7; // with 3 second slain queue delay
+    private const double DamageModeZeroTimeout = TimeSpan.TicksPerSecond * 7; // with 3 second slain queue delay
     private static readonly object StatsLock = new();
     private static readonly SolidColorBrush ActiveBrush = new(Color.FromRgb(254, 156, 30));
     private static readonly SolidColorBrush InActiveBrush = new(Colors.White);
@@ -84,7 +84,7 @@ namespace EQLogParser
 
       // Max Rows
       var maxRowsString = ConfigUtil.GetSetting("OverlayMaxRows");
-      if (maxRowsString == null || !int.TryParse(maxRowsString, out SavedMaxRows) || SavedMaxRows < 5 || SavedMaxRows > 10)
+      if (maxRowsString == null || !int.TryParse(maxRowsString, out SavedMaxRows) || SavedMaxRows < 1 || SavedMaxRows > 10)
       {
         SavedMaxRows = 5;
       }
@@ -173,7 +173,7 @@ namespace EQLogParser
 
         if (update == null)
         {
-          if (Stats != null && (CurrentDamageMode != 0 || (DateTime.Now.Ticks - Stats.LastUpdateTicks) >= DAMAGE_MODE_ZERO_TIMEOUT))
+          if (Stats != null && (CurrentDamageMode != 0 || (DateTime.Now.Ticks - Stats.LastUpdateTicks) >= DamageModeZeroTimeout))
           {
             damageOverlayStats = Stats = null;
           }

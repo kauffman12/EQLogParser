@@ -60,22 +60,25 @@ namespace EQLogParser
 
     private void TimeSpanPreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
-      if (TheTimeSpan is { SelectionStart: var selected, Value: { } t })
+      if (sender is TimeSpanEdit { SelectionStart: var selected, Value: { } t, DataContext: PropertyItem item })
       {
-        var inc = e.Delta > 0 ? 1 : -1;
-        if (selected >= 10)
+        if (item.PropertyGrid.SelectedPropertyItem is { Editor: DurationEditor editor } && editor == this)
         {
-          TheTimeSpan.Value = new TimeSpan(t.Hours, t.Minutes, t.Seconds + inc);
+          var inc = e.Delta > 0 ? 1 : -1;
+          if (selected >= 10)
+          {
+            TheTimeSpan.Value = new TimeSpan(t.Hours, t.Minutes, t.Seconds + inc);
+          }
+          else if (selected >= 5)
+          {
+            TheTimeSpan.Value = new TimeSpan(t.Hours, t.Minutes + inc, t.Seconds);
+          }
+          else if (selected >= 0)
+          {
+            TheTimeSpan.Value = new TimeSpan(t.Hours + inc, t.Minutes, t.Seconds);
+          }
+          e.Handled = true;
         }
-        else if (selected >= 5)
-        {
-          TheTimeSpan.Value = new TimeSpan(t.Hours, t.Minutes + inc, t.Seconds);
-        }
-        else if (selected >= 0)
-        {
-          TheTimeSpan.Value = new TimeSpan(t.Hours + inc, t.Minutes, t.Seconds);
-        }
-        e.Handled = true;
       }
     }
 

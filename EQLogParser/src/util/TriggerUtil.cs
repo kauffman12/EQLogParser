@@ -666,14 +666,17 @@ namespace EQLogParser
 
           randomName += new Random().Next(10, 100);
           randomName = isTriggers ? $"{randomName}.{ExtTrigger}" : $"{randomName}.{ExtOverlay}";
-          var response = await MainActions.THE_HTTP_CLIENT.PutAsync($"https://transfer.sh/{randomName}", content);
 
+          using var multiPart = new MultipartFormDataContent();
+          multiPart.Add(content, "file", randomName);
+
+          var response = await MainActions.THE_HTTP_CLIENT.PutAsync("https://temp.sh/upload", multiPart);
           if (response.IsSuccessStatusCode)
           {
             var handled = false;
             if (await response.Content.ReadAsStringAsync() is var shareLink)
             {
-              var parts = shareLink.Split("transfer.sh/");
+              var parts = shareLink.Split("temp.sh/");
               if (parts.Length > 1)
               {
                 handled = true;
@@ -691,25 +694,26 @@ namespace EQLogParser
                 };
 
                 DataManager.Instance.AddQuickShare(record);
-                new MessageWindow($"{withKey}\nNote: Code has been copied to Clipboard.", Resource.SHARE_MESSAGE, withKey).ShowDialog();
+                new MessageWindow($"{withKey}\nCopied to Clipboard.", Resource.SHARE_MESSAGE, withKey).ShowDialog();
               }
             }
 
             if (!handled)
             {
-              new MessageWindow("Problem Sharing Triggers. Check Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
-              Log.Error($"Problem with Quick Share Link: {shareLink}");
+              new MessageWindow("Problem Sharing. Check Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
+              Log.Error($"Invalid Quick Share Link: {shareLink}");
             }
           }
           else
           {
-            new MessageWindow("Problem Sharing Triggers. Check Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
-            Log.Error(response.ReasonPhrase);
+            new MessageWindow($"Problem Sharing: {response.ReasonPhrase}", Resource.SHARE_ERROR).ShowDialog();
+            var detailedErrorResponse = await response.Content.ReadAsStringAsync();
+            Log.Error(detailedErrorResponse);
           }
         }
         catch (Exception ex)
         {
-          new MessageWindow("Problem Sharing Triggers. Check Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
+          new MessageWindow("Problem Sharing. Check Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
           Log.Error(ex);
         }
       }
@@ -717,19 +721,32 @@ namespace EQLogParser
 
     private static void RunQuickShareTask(string quickShareKey, string player, bool isManual = false)
     {
-      Task.Delay(500).ContinueWith(_ =>
+      Task.Delay(500).ContinueWith(async _ =>
       {
         try
         {
           var converted = Convert.FromBase64String(quickShareKey);
           var decoded = Encoding.UTF8.GetString(converted);
-          var url = $"https://transfer.sh/{decoded}";
-          var response = MainActions.THE_HTTP_CLIENT.GetAsync(url).Result;
-          using var decompressionStream = new GZipStream(response.Content.ReadAsStream(), CompressionMode.Decompress);
-          using var ms = new MemoryStream();
-          decompressionStream.CopyTo(ms);
-          ms.Position = 0;
-          ImportFromQuickShare(Encoding.UTF8.GetString(ms.ToArray()), player, quickShareKey);
+          var url = $"https://temp.sh/{decoded}";
+          var response = await MainActions.THE_HTTP_CLIENT.PostAsync(url, new ByteArrayContent(Array.Empty<byte>()));
+          if (response.IsSuccessStatusCode)
+          {
+            await using var decompressionStream = new GZipStream(await response.Content.ReadAsStreamAsync(), CompressionMode.Decompress);
+            using var ms = new MemoryStream();
+            await decompressionStream.CopyToAsync(ms);
+            ms.Position = 0;
+            ImportFromQuickShare(Encoding.UTF8.GetString(ms.ToArray()), player, quickShareKey);
+          }
+          else
+          {
+            UIUtil.InvokeAsync(() =>
+            {
+              new MessageWindow($"Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.RECEIVED_SHARE).ShowDialog();
+            });
+
+            var detailedErrorResponse = await response.Content.ReadAsStringAsync();
+            Log.Error(detailedErrorResponse);
+          }
         }
         catch (Exception ex)
         {
@@ -737,7 +754,7 @@ namespace EQLogParser
           {
             UIUtil.InvokeAsync(() =>
             {
-              new MessageWindow("Error Downloading Quick Share. Blocked by Firewall?", Resource.RECEIVED_SHARE).ShowDialog();
+              new MessageWindow("Unable to Import. Blocked by Firewall?", Resource.SHARE_ERROR).ShowDialog();
               Log.Error("Error Downloading Quick Share", ex);
               NextQuickShareTask(quickShareKey);
             });
@@ -746,7 +763,10 @@ namespace EQLogParser
           {
             if (isManual)
             {
-              new MessageWindow("Unable to Import. Probably Expired.", Resource.RECEIVED_SHARE).ShowDialog();
+              UIUtil.InvokeAsync(() =>
+              {
+                new MessageWindow("Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
+              });
             }
 
             Log.Error("Error Downloading Quick Share", ex);

@@ -120,7 +120,7 @@ namespace EQLogParser
     private void TriggerImportEvent(bool _)
     {
       theTreeView.RefreshTriggers();
-      // incase of merge
+      // in case of merge
       TriggerManager.Instance.TriggersUpdated();
     }
 
@@ -392,6 +392,12 @@ namespace EQLogParser
           triggerChange = false;
         }
 
+        // make sure there is a pattern
+        if (string.IsNullOrEmpty(trigger.Pattern?.Trim()))
+        {
+          isValid = false;
+        }
+
         if (triggerChange)
         {
           saveButton.IsEnabled = isValid;
@@ -526,7 +532,7 @@ namespace EQLogParser
 
         // if this overlay is changing to default and it wasn't previously then need to refresh Overlay tree
         var old = model.Node.OverlayData as Overlay;
-        var needRefresh = model.IsDefault && (old.IsDefault != model.IsDefault);
+        var needRefresh = model.IsDefault && (old?.IsDefault != model.IsDefault);
 
         TriggerUtil.Copy(model.Node.OverlayData, model);
         TriggerStateManager.Instance.Update(model.Node);
@@ -609,13 +615,13 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
+    private bool DisposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!disposedValue)
+      if (!DisposedValue)
       {
-        disposedValue = true;
+        DisposedValue = true;
         PreviewWindows.Values.ToList().ForEach(window => window.Close());
         PreviewWindows.Clear();
         TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;

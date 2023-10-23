@@ -52,7 +52,7 @@ namespace EQLogParser
       }
     }
 
-    public override object Create(PropertyDescriptor PropertyDescriptor) => Create();
+    public override object Create(PropertyDescriptor propertyDescriptor) => Create();
     public override object Create(PropertyInfo propertyInfo) => Create();
 
     public object Create()
@@ -62,7 +62,7 @@ namespace EQLogParser
       {
         var intTextBox = new IntegerTextBox { ApplyZeroColor = false, ShowSpinButton = true };
 
-        if (Min != Max)
+        if (!StatsUtil.DoubleEquals(Min, Max))
         {
           intTextBox.MinValue = (long)Min;
           intTextBox.MaxValue = (long)Max;
@@ -76,7 +76,7 @@ namespace EQLogParser
       {
         var doubleTextBox = new DoubleTextBox { ApplyZeroColor = false, ShowSpinButton = true, ScrollInterval = 0.1 };
 
-        if (Min != Max)
+        if (!StatsUtil.DoubleEquals(Min, Max))
         {
           doubleTextBox.MinValue = Min;
           doubleTextBox.MaxValue = Max;

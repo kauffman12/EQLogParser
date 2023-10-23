@@ -97,6 +97,7 @@ namespace EQLogParser
           if (minBack > 0)
           {
             SearchCompressed(reader, minBack);
+            CurrentPos = fs.Position;
           }
         }
         else
@@ -104,6 +105,7 @@ namespace EQLogParser
           if (minBack > 0)
           {
             Search(fs, minBack);
+            CurrentPos = fs.Position;
           }
 
           reader = new StreamReader(fs, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: bufferSize);
@@ -224,7 +226,13 @@ namespace EQLogParser
       }
 
       if (closestGreaterPosition.HasValue)
+      {
         fs.Seek(closestGreaterPosition.Value, SeekOrigin.Begin);
+      }
+      else
+      {
+        fs.Seek(0, SeekOrigin.End);
+      }
     }
 
     private static void SearchCompressed(StreamReader reader, int? minBack)

@@ -249,9 +249,21 @@ namespace EQLogParser
           ConfigUtil.SetSetting("TriggersWatchForQuickShare", true.ToString(CultureInfo.CurrentCulture));
         }
 
+        // not used anymore. time to cleanup
         ConfigUtil.RemoveSetting("AudioTriggersWatchForGINA");
         ConfigUtil.RemoveSetting("TriggersWatchForGINA");
         ConfigUtil.RemoveSetting("AudioTriggersEnabled");
+        ConfigUtil.RemoveSetting("OverlayRankColor");
+        ConfigUtil.RemoveSetting("OverlayRankColor1");
+        ConfigUtil.RemoveSetting("OverlayRankColor2");
+        ConfigUtil.RemoveSetting("OverlayRankColor3");
+        ConfigUtil.RemoveSetting("OverlayRankColor4");
+        ConfigUtil.RemoveSetting("OverlayRankColor5");
+        ConfigUtil.RemoveSetting("OverlayRankColor6");
+        ConfigUtil.RemoveSetting("OverlayRankColor7");
+        ConfigUtil.RemoveSetting("OverlayRankColor8");
+        ConfigUtil.RemoveSetting("OverlayRankColor9");
+        ConfigUtil.RemoveSetting("OverlayRankColor10");
 
         // Init Trigger Manager
         TriggerManager.Instance.Start();
