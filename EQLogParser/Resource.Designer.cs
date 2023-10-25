@@ -457,7 +457,7 @@ namespace EQLogParser {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Quick Share (Thanks to https://transfer.sh).
+        ///   Looks up a localized string similar to Quick Share.
         /// </summary>
         internal static string SHARE_MESSAGE {
             get {

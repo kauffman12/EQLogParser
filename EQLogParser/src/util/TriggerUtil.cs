@@ -23,6 +23,7 @@ namespace EQLogParser
 {
   internal static class TriggerUtil
   {
+    public const string SHARE_TRIGGER = "EQLPT";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new();
     private static readonly ConcurrentDictionary<string, string> QuickShareCache = new();
@@ -528,6 +529,21 @@ namespace EQLogParser
       });
     }
 
+    internal static string GetCurrentCharacterId()
+    {
+      if (TriggerStateManager.Instance.GetConfig() is { } config)
+      {
+        if (!config.IsAdvanced)
+        {
+          return TriggerStateManager.DEFAULT_USER;
+        }
+
+        return config.Characters.FirstOrDefault(c => c.FilePath == MainWindow.CurrentLogFile)?.Id;
+      }
+
+      return null;
+    }
+
     internal static void Export(IEnumerable<TriggerTreeViewNode> viewNodes)
     {
       if (BuildExportList(viewNodes) is { } exportList)
@@ -568,7 +584,7 @@ namespace EQLogParser
     internal static void CheckQuickShare(bool monitor, ChatType chatType, string action, double dateTime)
     {
       // if Quick Share data is recent then try to handle it
-      if (chatType.Sender != null && action.IndexOf("{EQLP:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
+      if (chatType.Sender != null && action.IndexOf($"{SHARE_TRIGGER}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
           action.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 10))
       {
         var start = index + 6;
@@ -576,7 +592,7 @@ namespace EQLogParser
         if (action.Length > (start + finish))
         {
           var quickShareKey = action.Substring(start, finish);
-          var fullKey = $"{{EQLP:{quickShareKey}}}";
+          var fullKey = $"{{{SHARE_TRIGGER}:{quickShareKey}}}";
           if (!string.IsNullOrEmpty(quickShareKey))
           {
             var to = string.IsNullOrEmpty(chatType.Receiver) ? chatType.Channel : chatType.Receiver;
@@ -587,7 +603,7 @@ namespace EQLogParser
               From = chatType.Sender,
               To = TextUtils.ToUpper(to),
               IsMine = chatType.SenderIsYou,
-              Type = "EQLP"
+              Type = SHARE_TRIGGER
             };
 
             DataManager.Instance.AddQuickShare(record);
@@ -619,7 +635,7 @@ namespace EQLogParser
     internal static void ImportQuickShare(string shareKey, string from)
     {
       // if Quick Share data is recent then try to handle it
-      if (shareKey.IndexOf("{EQLP:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
+      if (shareKey.IndexOf($"{SHARE_TRIGGER}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
           shareKey.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 10))
       {
         var start = index + 6;
@@ -639,7 +655,7 @@ namespace EQLogParser
       }
     }
 
-    internal static async Task ShareAsync(List<TriggerTreeViewNode> viewNodes, bool isTriggers = true)
+    internal static async Task ShareAsync(List<TriggerTreeViewNode> viewNodes)
     {
       if (BuildExportList(viewNodes) is { Count: > 0 } exportList)
       {
@@ -656,56 +672,51 @@ namespace EQLogParser
 
           var content = new ByteArrayContent(stream.ToArray());
           content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
-
-          // make unique name for now. support overlays later?
-          var randomName = viewNodes[0].Content.ToString()?.Replace(" ", "_") ?? "Unknown";
-          if (randomName?.Length > 10)
+          content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("form-data")
           {
-            randomName = randomName[10..];
-          }
+            Name = "file",
+            FileName = "test"
+          };
 
-          randomName += new Random().Next(10, 100);
-          randomName = isTriggers ? $"{randomName}.{ExtTrigger}" : $"{randomName}.{ExtOverlay}";
-          var response = await MainActions.THE_HTTP_CLIENT.PutAsync($"https://transfer.sh/{randomName}", content);
+          using var multiPart = new MultipartFormDataContent();
+          multiPart.Add(content, "file");
 
+          var request = new HttpRequestMessage(HttpMethod.Post, "http://share.kizant.net:8080/upload");
+          request.Headers.Add("EQLogParser", "true");
+          request.Content = multiPart;
+
+          var response = await MainActions.THE_HTTP_CLIENT.SendAsync(request);
           if (response.IsSuccessStatusCode)
           {
-            var handled = false;
-            if (await response.Content.ReadAsStringAsync() is var shareLink)
+            if (await response.Content.ReadAsStringAsync() is var shareLink && shareLink != "")
             {
-              var parts = shareLink.Split("transfer.sh/");
-              if (parts.Length > 1)
+              var withKey = $"{{{SHARE_TRIGGER}:{shareLink}}}";
+
+              var record = new QuickShareRecord
               {
-                handled = true;
-                var encodedLink = Convert.ToBase64String(Encoding.UTF8.GetBytes(parts[1]));
-                var withKey = $"{{EQLP:{encodedLink}}}";
+                BeginTime = DateUtil.ToDouble(DateTime.Now),
+                Key = withKey,
+                From = "You",
+                IsMine = true,
+                To = "Created New Share Key",
+                Type = SHARE_TRIGGER
+              };
 
-                var record = new QuickShareRecord
-                {
-                  BeginTime = DateUtil.ToDouble(DateTime.Now),
-                  Key = withKey,
-                  From = "You",
-                  IsMine = true,
-                  To = "Created New Share Key",
-                  Type = "EQLP"
-                };
-
-                DataManager.Instance.AddQuickShare(record);
-                new MessageWindow($"{withKey}\nCopied to Clipboard.", Resource.SHARE_MESSAGE, withKey).ShowDialog();
-              }
-            }
-
-            if (!handled)
-            {
-              new MessageWindow("Problem Sharing. Check Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
-              Log.Error($"Invalid Quick Share Link: {shareLink}");
+              DataManager.Instance.AddQuickShare(record);
+              new MessageWindow($"Share Key: {withKey}", Resource.SHARE_MESSAGE, withKey).ShowDialog();
             }
           }
           else
           {
-            new MessageWindow($"Problem Sharing: {response.ReasonPhrase}", Resource.SHARE_ERROR).ShowDialog();
             var detailedErrorResponse = await response.Content.ReadAsStringAsync();
-            Log.Error(detailedErrorResponse);
+            if (detailedErrorResponse == "Content is too large")
+            {
+              new MessageWindow($"Problem Sharing: Maximum Share Size Exceeded", Resource.SHARE_ERROR).ShowDialog();
+            }
+            else
+            {
+              new MessageWindow($"Problem Sharing: {response.ReasonPhrase}", Resource.SHARE_ERROR).ShowDialog();
+            }
           }
         }
         catch (Exception ex)
@@ -722,9 +733,7 @@ namespace EQLogParser
       {
         try
         {
-          var converted = Convert.FromBase64String(quickShareKey);
-          var decoded = Encoding.UTF8.GetString(converted);
-          var url = $"https://transfer.sh/{decoded}";
+          var url = $"http://share.kizant.net:8080/download/{quickShareKey}";
           var response = MainActions.THE_HTTP_CLIENT.GetAsync(url).Result;
           if (response.IsSuccessStatusCode)
           {
@@ -738,11 +747,8 @@ namespace EQLogParser
           {
             UIUtil.InvokeAsync(() =>
             {
-              new MessageWindow($"Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.RECEIVED_SHARE).ShowDialog();
+              new MessageWindow($"Unable to Import. Key Expired.", Resource.RECEIVED_SHARE).ShowDialog();
             });
-
-            var detailedErrorResponse = await response.Content.ReadAsStringAsync();
-            Log.Error(detailedErrorResponse);
           }
         }
         catch (Exception ex)
@@ -797,18 +803,19 @@ namespace EQLogParser
             message = $"Merge Quick Share from {player} or Import to New Folder?\r\n";
           }
 
-          var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question, "New Folder", "Merge");
+          var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question, "New Folder", "Merge", true);
           msgDialog.ShowDialog();
 
+          var characterId = msgDialog.MergeOption ? GetCurrentCharacterId() : null;
           if (msgDialog.IsYes2Clicked)
           {
-            TriggerStateManager.Instance.ImportTriggers("", nodes);
+            TriggerStateManager.Instance.ImportTriggers("", nodes, characterId);
           }
           if (msgDialog.IsYes1Clicked)
           {
             var folderName = (player == null) ? "New Folder" : "From " + player;
             folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
-            TriggerStateManager.Instance.ImportTriggers(folderName, nodes);
+            TriggerStateManager.Instance.ImportTriggers(folderName, nodes, characterId);
           }
         }
 

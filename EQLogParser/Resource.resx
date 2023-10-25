@@ -250,7 +250,7 @@
     <value>Quick Share Failed</value>
   </data>
   <data name="SHARE_MESSAGE" xml:space="preserve">
-    <value>Quick Share (Thanks to https://transfer.sh)</value>
+    <value>Quick Share</value>
   </data>
   <data name="SHD" xml:space="preserve">
     <value>Shadow Knight</value>
