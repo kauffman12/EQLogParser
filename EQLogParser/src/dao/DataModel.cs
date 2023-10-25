@@ -113,8 +113,7 @@ namespace EQLogParser
 
   internal class Trigger
   {
-    // fields to not serialize during export
-    public double LastTriggered;
+    public double LastTriggered { get; set; }
     public string AltTimerName { get; set; }
     public string Comments { get; set; }
     public double RepeatedResetTime { get; set; } = 0.75;

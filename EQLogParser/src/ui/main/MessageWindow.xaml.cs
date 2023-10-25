@@ -12,6 +12,7 @@ namespace EQLogParser
   {
     public bool IsYes2Clicked;
     public bool IsYes1Clicked;
+    public bool MergeOption;
     public enum IconType { Question, Save, Warn, Info }
     private readonly string CopyData;
 
@@ -22,7 +23,7 @@ namespace EQLogParser
       Clipboard.SetText(copyData);
     }
 
-    public MessageWindow(string text, string caption, IconType type = IconType.Warn, string yes1 = null, string yes2 = null)
+    public MessageWindow(string text, string caption, IconType type = IconType.Warn, string yes1 = null, string yes2 = null, bool extra = false)
     {
       MainActions.SetTheme(this, MainWindow.CurrentTheme);
       InitializeComponent();
@@ -66,6 +67,12 @@ namespace EQLogParser
         yesButton2.Content = yes2;
         yesButton2.Visibility = Visibility.Visible;
         cancelButton.Content = "Cancel";
+
+        if (extra)
+        {
+          mergeLabel.Visibility = Visibility.Visible;
+          mergeOption.Visibility = Visibility.Visible;
+        }
       }
 
       iconImage.SetResourceReference(ImageAwesome.ForegroundProperty, brush);
@@ -79,12 +86,14 @@ namespace EQLogParser
 
     private void ButtonYes1Click(object sender, RoutedEventArgs e)
     {
+      MergeOption = mergeOption.IsChecked == true;
       IsYes1Clicked = true;
       Close();
     }
 
     private void ButtonYes2Click(object sender, RoutedEventArgs e)
     {
+      MergeOption = mergeOption.IsChecked == true;
       IsYes2Clicked = true;
       Close();
     }

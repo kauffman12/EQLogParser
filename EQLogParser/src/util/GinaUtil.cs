@@ -118,18 +118,19 @@ namespace EQLogParser
             message = $"Merge GINA Triggers from {player} or Import to New Folder?\r\n";
           }
 
-          var msgDialog = new MessageWindow(message, Resource.RECEIVED_GINA, MessageWindow.IconType.Question, "New Folder", "Merge");
+          var msgDialog = new MessageWindow(message, Resource.RECEIVED_GINA, MessageWindow.IconType.Question, "New Folder", "Merge", true);
           msgDialog.ShowDialog();
 
+          var characterId = msgDialog.MergeOption ? TriggerUtil.GetCurrentCharacterId() : null;
           if (msgDialog.IsYes2Clicked)
           {
-            TriggerStateManager.Instance.ImportTriggers("", nodes);
+            TriggerStateManager.Instance.ImportTriggers("", nodes, characterId);
           }
           if (msgDialog.IsYes1Clicked)
           {
             var folderName = (player == null) ? "New Folder" : "From " + player;
             folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
-            TriggerStateManager.Instance.ImportTriggers(folderName, nodes);
+            TriggerStateManager.Instance.ImportTriggers(folderName, nodes, characterId);
           }
         }
 

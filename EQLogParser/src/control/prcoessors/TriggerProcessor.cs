@@ -21,6 +21,7 @@ namespace EQLogParser
     public readonly ObservableCollection<AlertEntry> AlertLog = new();
     public readonly string CurrentCharacterId;
     public readonly string CurrentProcessorName;
+    private const long SixHours = 6 * 60 * 60 * 1000;
     private readonly string CurrentPlayer;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly object CollectionLock = new();
@@ -125,7 +126,7 @@ namespace EQLogParser
 
     private static string ModLine(string text, string line) => !string.IsNullOrEmpty(text) ?
       text.Replace("{l}", line, StringComparison.OrdinalIgnoreCase) : text;
-    private string ModCounter(string text) => !string.IsNullOrEmpty(text) ?
+    private static string ModCounter(string text) => !string.IsNullOrEmpty(text) ?
       text.Replace("{counter}", "{repeated}", StringComparison.OrdinalIgnoreCase) : text;
     private string ModPlayer(string text) => !string.IsNullOrEmpty(text) ?
       text.Replace("{c}", CurrentPlayer ?? string.Empty, StringComparison.OrdinalIgnoreCase) : text;
@@ -191,7 +192,15 @@ namespace EQLogParser
         if (found)
         {
           var beginTicks = DateTime.Now.Ticks;
-          wrapper.TriggerData.LastTriggered = new TimeSpan(beginTicks).TotalMilliseconds;
+          var updatedTime = new TimeSpan(beginTicks).TotalMilliseconds;
+
+          // no need to constantly updated the DB. 6 hour check
+          if (updatedTime - wrapper.TriggerData.LastTriggered > SixHours)
+          {
+            TriggerStateManager.Instance.UpdateLastTriggered(wrapper.Id, updatedTime);
+          }
+
+          wrapper.TriggerData.LastTriggered = updatedTime;
           var time = (beginTicks - start) / 10;
           wrapper.TriggerData.WorstEvalTime = Math.Max(time, wrapper.TriggerData.WorstEvalTime);
 
@@ -215,7 +224,7 @@ namespace EQLogParser
             speak = new Speak
             {
               Wrapper = wrapper,
-              TTSOrSound = tts,
+              TtsOrSound = tts,
               IsSound = isSound,
               Matches = matches,
               Action = lineData.Action
@@ -257,7 +266,7 @@ namespace EQLogParser
               speak = new Speak
               {
                 Wrapper = wrapper,
-                TTSOrSound = tts,
+                TtsOrSound = tts,
                 IsSound = isSound,
                 Matches = earlyMatches,
                 OriginalMatches = timerData.OriginalMatches,
@@ -336,7 +345,7 @@ namespace EQLogParser
               SpeechChannel?.Writer.WriteAsync(new Speak
               {
                 Wrapper = wrapper,
-                TTSOrSound = speak,
+                TtsOrSound = speak,
                 IsSound = isSound,
                 Matches = matches,
                 Action = lineData.Action
@@ -426,7 +435,7 @@ namespace EQLogParser
             SpeechChannel?.Writer.WriteAsync(new Speak
             {
               Wrapper = wrapper,
-              TTSOrSound = speak,
+              TtsOrSound = speak,
               IsSound = isSound,
               Matches = matches,
               OriginalMatches = newTimerData.OriginalMatches,
@@ -457,7 +466,7 @@ namespace EQLogParser
 
     private void HandleSpeech(Speak speak)
     {
-      if (!string.IsNullOrEmpty(speak.TTSOrSound))
+      if (!string.IsNullOrEmpty(speak.TtsOrSound))
       {
         var cancel = speak.Wrapper.TriggerData.Priority < PreviousSpoken?.TriggerData?.Priority;
 
@@ -480,7 +489,7 @@ namespace EQLogParser
                 SoundPlayer.Stop();
               }
 
-              var theFile = @"data\sounds\" + speak.TTSOrSound;
+              var theFile = @"data\sounds\" + speak.TtsOrSound;
               if (SoundPlayer.SoundLocation != theFile && File.Exists(theFile))
               {
                 SoundPlayer.SoundLocation = theFile;
@@ -499,7 +508,7 @@ namespace EQLogParser
         }
         else
         {
-          var tts = ProcessMatchesText(speak.TTSOrSound, speak.OriginalMatches);
+          var tts = ProcessMatchesText(speak.TtsOrSound, speak.OriginalMatches);
           tts = ProcessMatchesText(tts, speak.Matches);
           tts = ModLine(tts, speak.Action);
 
@@ -823,7 +832,7 @@ namespace EQLogParser
     private class Speak
     {
       public TriggerWrapper Wrapper { get; init; }
-      public string TTSOrSound { get; init; }
+      public string TtsOrSound { get; init; }
       public bool IsSound { get; init; }
       public MatchCollection Matches { get; init; }
       public MatchCollection OriginalMatches { get; init; }

@@ -183,6 +183,24 @@ namespace EQLogParser
       }
     }
 
+    internal void UpdateLastTriggered(string id, double updatedTime)
+    {
+      if (id is not null)
+      {
+        if (Db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+        {
+          lock (LockObject)
+          {
+            if (tree.FindOne(n => n.Id == id && n.TriggerData != null) is { } found)
+            {
+              found.TriggerData.LastTriggered = updatedTime;
+              tree.Update(found);
+            }
+          }
+        }
+      }
+    }
+
     internal TriggerConfig GetConfig()
     {
       if (Db?.GetCollection<TriggerConfig>(ConfigCol) is { } configs)
@@ -427,7 +445,7 @@ namespace EQLogParser
     }
 
     // from GINA or Quick Share with custom Folder name
-    internal void ImportTriggers(string name, IEnumerable<ExportTriggerNode> imported)
+    internal void ImportTriggers(string name, IEnumerable<ExportTriggerNode> imported, string characterId = null)
     {
       if (Db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
       {
@@ -435,7 +453,7 @@ namespace EQLogParser
         {
           var root = tree.FindOne(n => n.Parent == null && n.Name == TRIGGERS);
           var parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name).SerializedData;
-          Import(parent, imported, TRIGGERS);
+          Import(parent, imported, TRIGGERS, characterId);
           TriggerImportEvent?.Invoke(true);
         }
       }
@@ -590,7 +608,7 @@ namespace EQLogParser
       }
     }
 
-    private void Import(TriggerNode parent, IEnumerable<ExportTriggerNode> imported, string type)
+    private void Import(TriggerNode parent, IEnumerable<ExportTriggerNode> imported, string type, string characterId = null)
     {
       if (parent?.Id is { } parentId && imported != null)
       {
@@ -603,7 +621,7 @@ namespace EQLogParser
             {
               if (newNode.Nodes?.Count > 0)
               {
-                Import(tree, parentId, newNode.Nodes, type);
+                Import(tree, parentId, newNode.Nodes, type, characterId);
               }
             }
           }
@@ -611,9 +629,12 @@ namespace EQLogParser
       }
     }
 
-    private void Import(ILiteCollection<TriggerNode> tree, string parentId, IEnumerable<ExportTriggerNode> imported, string type)
+    private void Import(ILiteCollection<TriggerNode> tree, string parentId,
+      IEnumerable<ExportTriggerNode> imported, string type, string characterId = null)
     {
       var triggers = type == TRIGGERS;
+      string enableId = null;
+
       foreach (var newNode in imported)
       {
         if (tree.FindOne(n => n.Parent == parentId && n.Name == newNode.Name) is { } found)
@@ -623,6 +644,7 @@ namespace EQLogParser
           {
             found.TriggerData = newNode.TriggerData;
             tree.Update(found);
+            enableId = found.Id;
           }
           // overlay
           else if (!triggers && found.OverlayData != null)
@@ -633,7 +655,8 @@ namespace EQLogParser
           // make sure it is a directory
           else if (found.OverlayData == null && found.TriggerData == null && newNode.Nodes?.Count > 0)
           {
-            Import(tree, found.Id, newNode.Nodes, type);
+            Import(tree, found.Id, newNode.Nodes, type, characterId);
+            enableId = found.Id;
           }
         }
         else
@@ -645,6 +668,7 @@ namespace EQLogParser
           {
             newNode.TriggerData.SelectedOverlays = ValidateOverlays(tree, newNode.TriggerData.SelectedOverlays);
             Insert(newNode, index);
+            enableId = newNode.Id;
           }
           // new overlay
           if (!triggers && newNode.OverlayData != null)
@@ -657,7 +681,17 @@ namespace EQLogParser
             ((App)Application.Current).AutoMap.Map(newNode, new TriggerNode()) is { } node)
           {
             Insert(node, index);
-            Import(tree, node.Id, newNode.Nodes, type);
+            Import(tree, node.Id, newNode.Nodes, type, characterId);
+            enableId = node.Id;
+          }
+        }
+
+        if (enableId != null && characterId != null && Db?.GetCollection<TriggerState>(StatesCol) is { } states)
+        {
+          if (states.FindOne(s => s.Id == characterId) is { } state)
+          {
+            state.Enabled[enableId] = true;
+            states.Update(state);
           }
         }
       }
