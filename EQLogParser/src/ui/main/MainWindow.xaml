@@ -398,7 +398,7 @@
   <Grid Margin="0">
     <syncfusion:NotifyIcon x:Name="notifyIcon" ShowInTaskBar="True" Header="NotifyIcon" Text="EQLogParser" Icon="EQLogParser.ico" Click="NotifyIconClick"/>
     <syncfusion:DockingManager x:Name="dockSite" Margin="0" UseDocumentContainer="True" TabGroupCreated="TabGroupCreated" Loaded="DockSiteLoaded" DocumentCloseButtonType="Individual" CloseButtonClick="DockSiteCloseButtonClick"
-                               WindowClosing="DockSiteWindowClosing">
+                               WindowClosing="DockSiteWindowClosing" CloseTabOnMiddleClick="True">
       <ContentControl x:Name="playerParseTextWindow" Tag="Hide" syncfusion:DockingManager.Header="Preview Parse" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
                       syncfusion:DockingManager.DesiredHeightInDockedMode="150" syncfusion:DockingManager.CanDocument="False" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="150">
         <local:ParsePreview />
