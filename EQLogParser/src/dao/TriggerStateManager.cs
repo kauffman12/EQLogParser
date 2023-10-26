@@ -1,6 +1,7 @@
 ﻿using LiteDB;
 using log4net;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -21,6 +22,8 @@ namespace EQLogParser
     internal const string DEFAULT_USER = "Default";
     internal const string OVERLAYS = "Overlays";
     internal const string TRIGGERS = "Triggers";
+    internal readonly ConcurrentDictionary<string, bool> RecentlyMerged = new();
+
     private const string LegacyOverlayFile = "triggerOverlays.json";
     private const string LegacyTriggersFile = "triggers.json";
     private const string ConfigCol = "Config";
@@ -403,7 +406,7 @@ namespace EQLogParser
       {
         lock (LockObject)
         {
-          // update UI model just incase
+          // update UI model just in case
           node.IsExpanded = viewNode.IsExpanded;
           Db?.GetCollection<TriggerNode>(TreeCol).Update(node);
         }
@@ -616,12 +619,19 @@ namespace EQLogParser
         {
           lock (LockObject)
           {
+            // get character state if needed (here so we can search once)
+            TriggerState characterState = null;
+            if (characterId != null && Db?.GetCollection<TriggerState>(StatesCol) is { } states)
+            {
+              characterState = states.FindOne(s => s.Id == characterId);
+            }
+
             // exports include the tree root so ignore
             foreach (var newNode in imported)
             {
               if (newNode.Nodes?.Count > 0)
               {
-                Import(tree, parentId, newNode.Nodes, type, characterId);
+                Import(tree, parentId, newNode.Nodes, type, characterState);
               }
             }
           }
@@ -630,7 +640,7 @@ namespace EQLogParser
     }
 
     private void Import(ILiteCollection<TriggerNode> tree, string parentId,
-      IEnumerable<ExportTriggerNode> imported, string type, string characterId = null)
+      IEnumerable<ExportTriggerNode> imported, string type, TriggerState characterState = null)
     {
       var triggers = type == TRIGGERS;
       string enableId = null;
@@ -655,7 +665,7 @@ namespace EQLogParser
           // make sure it is a directory
           else if (found.OverlayData == null && found.TriggerData == null && newNode.Nodes?.Count > 0)
           {
-            Import(tree, found.Id, newNode.Nodes, type, characterId);
+            Import(tree, found.Id, newNode.Nodes, type, characterState);
             enableId = found.Id;
           }
         }
@@ -681,20 +691,23 @@ namespace EQLogParser
             ((App)Application.Current).AutoMap.Map(newNode, new TriggerNode()) is { } node)
           {
             Insert(node, index);
-            Import(tree, node.Id, newNode.Nodes, type, characterId);
+            Import(tree, node.Id, newNode.Nodes, type, characterState);
             enableId = node.Id;
           }
         }
 
-        if (enableId != null && characterId != null && Db?.GetCollection<TriggerState>(StatesCol) is { } states)
+        if (enableId != null)
         {
-          if (states.FindOne(s => s.Id == characterId) is { } state)
+          RecentlyMerged[enableId] = true;
+          if (characterState != null && Db?.GetCollection<TriggerState>(StatesCol) is { } states)
           {
-            state.Enabled[enableId] = true;
-            states.Update(state);
+            characterState.Enabled[enableId] = true;
+            states.Update(characterState);
           }
         }
       }
+
+      return;
 
       void Insert(TriggerNode node, int index)
       {
@@ -706,7 +719,7 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateChildState(TriggerState state, TriggerTreeViewNode node)
+    private static void UpdateChildState(TriggerState state, TriggerTreeViewNode node)
     {
       if (node?.SerializedData?.Id is { } id)
       {
@@ -767,13 +780,14 @@ namespace EQLogParser
       return state;
     }
 
-    private static TriggerTreeViewNode CreateViewNode(TriggerNode node, TriggerState state = null)
+    private TriggerTreeViewNode CreateViewNode(TriggerNode node, TriggerState state = null)
     {
       var treeNode = new TriggerTreeViewNode
       {
         Content = node.Name,
         IsExpanded = node.IsExpanded,
         SerializedData = node,
+        IsRecentlyMerged = RecentlyMerged.ContainsKey(node.Id)
       };
 
       if (node.OverlayData == null && state != null)
@@ -819,11 +833,11 @@ namespace EQLogParser
             FixEnabledState(child as TriggerTreeViewNode, state, ref needUpdate);
           }
 
-          var chkCount = viewNode.ChildNodes.Count(c => c.IsChecked == true);
-          var unchkCount = viewNode.ChildNodes.Count(c => c.IsChecked == false);
+          var checkedCount = viewNode.ChildNodes.Count(c => c.IsChecked == true);
+          var uncheckCount = viewNode.ChildNodes.Count(c => c.IsChecked == false);
           var changed = false;
 
-          if (chkCount == viewNode.ChildNodes.Count)
+          if (checkedCount == viewNode.ChildNodes.Count)
           {
             if (viewNode.IsChecked != true)
             {
@@ -831,7 +845,7 @@ namespace EQLogParser
               changed = true;
             }
           }
-          else if (unchkCount == viewNode.ChildNodes.Count)
+          else if (uncheckCount == viewNode.ChildNodes.Count)
           {
             if (viewNode.IsChecked != false)
             {

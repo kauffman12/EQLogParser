@@ -73,6 +73,12 @@ namespace EQLogParser
     private void AssignOverlayClick(object sender, RoutedEventArgs e) => SetOverlay(sender);
     private void UnassignOverlayClick(object sender, RoutedEventArgs e) => SetOverlay(sender, true);
 
+    private void ClearRecentlyMergedClick(object sender, RoutedEventArgs e)
+    {
+      TriggerStateManager.Instance.RecentlyMerged.Clear();
+      RefreshTriggers();
+    }
+
     private void SetupDragNDrop(SfTreeView treeView)
     {
       treeView.DragDropController = new TreeViewDragDropController();
@@ -480,6 +486,7 @@ namespace EQLogParser
         pasteTriggerItem.IsEnabled = false;
       }
 
+      clearRecentlyMergedMenuItem.IsEnabled = !TriggerStateManager.Instance.RecentlyMerged.IsEmpty;
       importTriggerMenuItem.Header = node != null && importTriggerMenuItem.IsEnabled ? $"Import to ({node.Content})" : "Import";
 
       if (setPriorityMenuItem.IsEnabled)
@@ -753,5 +760,6 @@ namespace EQLogParser
       GC.SuppressFinalize(this);
     }
     #endregion
+
   }
 }
