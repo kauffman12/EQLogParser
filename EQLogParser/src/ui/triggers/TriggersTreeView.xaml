@@ -6,6 +6,7 @@
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:local="clr-namespace:EQLogParser"
+             UseLayoutRounding="True"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
@@ -61,6 +62,7 @@
              ShowRootLines="False">
             <syncfusion:SfTreeView.ItemContextMenu>
               <ContextMenu>
+                <MenuItem x:Name="clearRecentlyMergedMenuItem" Header="Clear Highlighting" Click="ClearRecentlyMergedClick" />
                 <MenuItem x:Name="setTriggerMenuItem" Header="Update Selected Triggers">
                   <MenuItem x:Name="setTextOverlayMenuItem" Header="Text Overlays">
                     <MenuItem.Icon>
@@ -153,7 +155,7 @@
       <Border Grid.Row="0" Padding="8,1,0,0" Background="{DynamicResource ContentBackgroundAlt}">
         <DockPanel>
           <TextBlock Text="Manage Overlays" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
-          <Button DockPanel.Dock="Right" Width="110" HorizontalAlignment="Right" Margin="0,0,8,3" Height="{DynamicResource EQButtonHeight}" Content="Close Overlays" Click="CloseOverlaysClick" />
+          <Button DockPanel.Dock="Right" Width="110" HorizontalAlignment="Right" Margin="0,0,8,4" Height="{DynamicResource EQButtonHeight}" Content="Close Overlays" Click="CloseOverlaysClick" />
         </DockPanel>
       </Border>
       <syncfusion:SfTreeView

@@ -238,6 +238,7 @@ namespace EQLogParser
     public bool IsTrigger() => SerializedData?.TriggerData != null;
     public bool IsOverlay() => SerializedData?.OverlayData != null;
     public bool IsDir() => !IsOverlay() && !IsTrigger();
+    public bool IsRecentlyMerged { get; set; }
   }
 
   internal interface IAction { }

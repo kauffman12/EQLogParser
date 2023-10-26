@@ -45,6 +45,16 @@
       </Grid>
     </DataTemplate>
 
+    <ToolTip x:Key="RecentTriggerTipTemplate">
+      <TextBlock Text="This Trigger have been recently updated via Import/Merge"
+                 FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryColor}" />
+    </ToolTip>
+
+    <ToolTip x:Key="RecentFolderTipTemplate">
+      <TextBlock Text="Triggers in this Folder have been recently updated via Import/Merge"
+                 FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryColor}" />
+    </ToolTip>
+
     <DataTemplate x:Key="TriggerFileTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
@@ -61,6 +71,10 @@
                   <DataTrigger Binding="{Binding IsChecked}" Value="False">
                     <Setter Property="FontStyle" Value="Italic"/>
                     <Setter Property="FontWeight" Value="Normal" />
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding IsRecentlyMerged}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource EQGoodForegroundBrush}"/>
+                    <Setter Property="ToolTip" Value="{StaticResource RecentTriggerTipTemplate}"/>
                   </DataTrigger>
                 </Style.Triggers>
               </Style>
@@ -88,7 +102,18 @@
               </Style>
             </fa:ImageAwesome.Style>
           </fa:ImageAwesome>
-          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" />
+          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding IsRecentlyMerged}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource EQGoodForegroundBrush}"/>
+                    <Setter Property="ToolTip" Value="{StaticResource RecentFolderTipTemplate}"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
         </StackPanel>
       </Grid>
     </DataTemplate>
