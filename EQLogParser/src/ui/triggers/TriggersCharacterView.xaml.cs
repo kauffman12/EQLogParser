@@ -10,7 +10,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for TriggersCharacterView.xaml
   /// </summary>
-  public partial class TriggersCharacterView : UserControl, IDisposable
+  public partial class TriggersCharacterView : IDisposable
   {
     internal event Action<TriggerCharacter> SelectedCharacterEvent;
 
@@ -97,14 +97,14 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
+    private bool DisposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!disposedValue)
+      if (!DisposedValue)
       {
         TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
-        disposedValue = true;
+        DisposedValue = true;
         dataGrid?.Dispose();
       }
     }

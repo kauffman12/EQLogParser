@@ -127,8 +127,25 @@ namespace EQLogParser
           };
 
           config.Characters.Add(newCharacter);
-          config.Characters.Sort((x, y) => String.Compare(x.Name, y.Name, StringComparison.Ordinal));
+          config.Characters.Sort((x, y) => string.Compare(x.Name, y.Name, StringComparison.Ordinal));
           UpdateConfig(config);
+        }
+      }
+    }
+
+    internal void CopyState(TriggerTreeViewNode treeView, string from, string to)
+    {
+      lock (LockObject)
+      {
+        if (treeView?.SerializedData is { } node && Db?.GetCollection<TriggerState>(StatesCol) is { } states)
+        {
+          var fromState = states.FindOne(s => s.Id == from);
+          var toState = states.FindOne(s => s.Id == to);
+          if (fromState != null && toState != null)
+          {
+            CopyState(node, fromState, toState);
+            states.Update(toState);
+          }
         }
       }
     }
@@ -537,6 +554,21 @@ namespace EQLogParser
         {
           node.OverlayData.IsDefault = false;
           tree.Update(node);
+        }
+      }
+    }
+
+    private void CopyState(TriggerNode node, TriggerState fromState, TriggerState toState)
+    {
+      if (node?.Id != null)
+      {
+        toState.Enabled[node.Id] = fromState.Enabled[node.Id];
+        if (Db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+        {
+          foreach (var child in tree.Query().Where(n => n.Parent == node.Id).ToEnumerable())
+          {
+            CopyState(child, fromState, toState);
+          }
         }
       }
     }
