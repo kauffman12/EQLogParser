@@ -18,15 +18,18 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for EQLogViewer.xaml
   /// </summary>
-  public partial class EQLogViewer : UserControl, IDisposable
+  public partial class EQLogViewer : IDisposable
   {
-    private const int CONTEXT = 30000;
-    private const int MAX_ROWS = 250000;
-    private const string DAMAGEAVOIDED = "Damage Avoided";
-    private const string NOCAT = "Uncategorized";
-    private const string OTHERCHAT = "Other Chat";
+    private const int Context = 30000;
+    private const int MaxRows = 250000;
+    private const string Damageavoided = "Damage Avoided";
+    private const string Nocat = "Uncategorized";
+    private const string Otherchat = "Other Chat";
     private static readonly List<double> FontSizeList = new() { 10, 12, 14, 16, 18, 20, 22, 24 };
-    private static readonly List<string> Times = new() { "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Selected Fights", "Everything" };
+    private static readonly List<string> Times = new()
+    {
+      "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Selected Fights", "Everything"
+    };
     private static bool Complete = true;
     private static bool Running;
     private readonly DispatcherTimer FilterTimer;
@@ -35,6 +38,7 @@ namespace EQLogParser
     private readonly Dictionary<long, long> LinePositions = new();
     private readonly int LineTypeCount;
     private readonly bool Ready;
+    private string CurrentFile = null;
 
     public EQLogViewer()
     {
@@ -71,7 +75,7 @@ namespace EQLogParser
 
       var list = new List<ComboBoxItemDetails>
       {
-        new() { IsChecked = true, Text = DAMAGEAVOIDED, Value = DAMAGEAVOIDED },
+        new() { IsChecked = true, Text = Damageavoided, Value = Damageavoided },
         new() { IsChecked = true, Text = Labels.DS, Value = Labels.DS },
         new() { IsChecked = true, Text = Labels.DD, Value = Labels.DD },
         new() { IsChecked = true, Text = Labels.DOT, Value = Labels.DOT },
@@ -79,12 +83,12 @@ namespace EQLogParser
         new() { IsChecked = true, Text = "Group", Value = ChatChannels.GROUP },
         new() { IsChecked = true, Text = "Guild", Value = ChatChannels.GUILD },
         new() { IsChecked = true, Text = Labels.MELEE, Value = Labels.MELEE },
-        new() { IsChecked = true, Text = OTHERCHAT, Value = OTHERCHAT },
+        new() { IsChecked = true, Text = Otherchat, Value = Otherchat },
         new() { IsChecked = true, Text = Labels.OTHER_DMG, Value = Labels.OTHER_DMG },
         new() { IsChecked = true, Text = Labels.PROC, Value = Labels.PROC },
         new() { IsChecked = true, Text = "Raid", Value = ChatChannels.RAID },
         new() { IsChecked = true, Text = "Say", Value = ChatChannels.SAY },
-        new() { IsChecked = true, Text = NOCAT, Value = NOCAT }
+        new() { IsChecked = true, Text = Nocat, Value = Nocat }
       };
 
       LineTypeCount = list.Count;
@@ -95,14 +99,14 @@ namespace EQLogParser
       FilterTimer.Tick += (_, _) =>
       {
         FilterTimer.Stop();
-        UpdateUI();
+        UpdateUi();
       };
 
       Ready = true;
     }
 
     private void EventsThemeChanged(string _) => UpdateCurrentTextColor();
-    private void SelectLineTypes(object sender, EventArgs e) => UpdateUI();
+    private void SelectLineTypes(object sender, EventArgs e) => UpdateUi();
 
     private void UpdateCurrentTextColor()
     {
@@ -120,7 +124,7 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateUI()
+    private void UpdateUi()
     {
       if (Ready && logBox?.Lines != null)
       {
@@ -173,7 +177,7 @@ namespace EQLogParser
                   case Labels.MISS:
                   case Labels.PARRY:
                   case Labels.INVULNERABLE:
-                    ignore = !types.ContainsKey(DAMAGEAVOIDED);
+                    ignore = !types.ContainsKey(Damageavoided);
                     break;
                 }
 
@@ -198,7 +202,7 @@ namespace EQLogParser
                       ignore = !types.ContainsKey(chatType.Channel);
                       break;
                     default:
-                      ignore = !types.ContainsKey(OTHERCHAT);
+                      ignore = !types.ContainsKey(Otherchat);
                       break;
                   }
 
@@ -209,7 +213,7 @@ namespace EQLogParser
                 }
               }
 
-              if (damageRecord == null && chatType == null && !types.ContainsKey(NOCAT))
+              if (damageRecord == null && chatType == null && !types.ContainsKey(Nocat))
               {
                 continue;
               }
@@ -241,54 +245,52 @@ namespace EQLogParser
     {
       Task.Delay(50).ContinueWith(_ =>
       {
-        if (MainWindow.CurrentLogFile != null)
+        using var f = File.OpenRead(CurrentFile);
+        f.Seek(Math.Max(0, pos - Context), SeekOrigin.Begin);
+        var s = FileUtil.GetStreamReader(f);
+        var list = new List<string>();
+
+        if (!s.EndOfStream)
         {
-          using var f = File.OpenRead(MainWindow.CurrentLogFile);
-          f.Seek(Math.Max(0, pos - CONTEXT), SeekOrigin.Begin);
-          var s = FileUtil.GetStreamReader(f);
-          var list = new List<string>();
+          // since position is not the start of a line just read one as junk
+          s.ReadLine();
+        }
 
-          if (!s.EndOfStream)
+        var foundLines = new List<int>();
+        while (!s.EndOfStream)
+        {
+          if (s.ReadLine() is { } line)
           {
-            // since position is not the start of a line just read one as junk
-            s.ReadLine();
-          }
-
-          var FoundLines = new List<int>();
-          while (!s.EndOfStream)
-          {
-            var line = s.ReadLine();
             list.Add(line);
-
             if (line.Contains(text))
             {
-              FoundLines.Add(list.Count);
+              foundLines.Add(list.Count);
             }
 
-            if (f.Position >= (pos + CONTEXT))
+            if (f.Position >= (pos + Context))
             {
               break;
             }
           }
-
-          var allText = string.Join(Environment.NewLine, list);
-          Dispatcher.InvokeAsync(() =>
-          {
-            var highlight = Application.Current.Resources["EQSearchBackgroundBrush"] as SolidColorBrush;
-            contextBox.Text = allText;
-            contextTab.Visibility = Visibility.Visible;
-            FoundLines.ForEach(line => contextBox.SetLineBackground(line, true, highlight));
-            tabControl.SelectedItem = contextTab;
-            UpdateStatusCount(contextBox.Lines.Count);
-
-            if (FoundLines.Count > 0)
-            {
-              GoToLine(contextBox, FoundLines[0] + 3);
-            }
-          });
-
-          f.Close();
         }
+
+        var allText = string.Join(Environment.NewLine, list);
+        Dispatcher.InvokeAsync(() =>
+        {
+          var highlight = Application.Current.Resources["EQSearchBackgroundBrush"] as SolidColorBrush;
+          contextBox.Text = allText;
+          contextTab.Visibility = Visibility.Visible;
+          foundLines.ForEach(line => contextBox.SetLineBackground(line, true, highlight));
+          tabControl.SelectedItem = contextTab;
+          UpdateStatusCount(contextBox.Lines.Count);
+
+          if (foundLines.Count > 0)
+          {
+            GoToLine(contextBox, foundLines[0] + 3);
+          }
+        });
+
+        f.Close();
       }, TaskScheduler.Default);
     }
 
@@ -322,14 +324,15 @@ namespace EQLogParser
         var logSearchText2 = logSearch2.Text;
         var modifierIndex = logSearchModifier.SelectedIndex;
         var logTimeIndex = logSearchTime.SelectedIndex;
-        var regexEnabled = useRegex.IsChecked.Value;
+        var regexEnabled = useRegex.IsChecked == true;
         LinePositions.Clear();
 
-        Task.Delay(75).ContinueWith(_ =>
+        if (MainWindow.CurrentLogFile is { } currentFile)
         {
-          if (MainWindow.CurrentLogFile != null)
+          CurrentFile = currentFile;
+          Task.Delay(75).ContinueWith(_ =>
           {
-            using var f = File.OpenRead(MainWindow.CurrentLogFile);
+            using var f = File.OpenRead(CurrentFile);
             double start = -1;
             TimeRange ranges = null;
             switch (logTimeIndex)
@@ -354,7 +357,7 @@ namespace EQLogParser
                 break;
               case 6:
                 var fights = MainActions.GetSelectedFights().OrderBy(sel => sel.Id).ToList();
-                if (fights?.Count > 0)
+                if (fights.Count > 0)
                 {
                   start = fights[0].BeginTime - 15;
                   ranges = new TimeRange();
@@ -447,7 +450,7 @@ namespace EQLogParser
               }
             }
 
-            UnFiltered = list.Take(MAX_ROWS).ToList();
+            UnFiltered = list.Take(MaxRows).ToList();
             var allData = string.Join(Environment.NewLine, UnFiltered);
             // adding extra new line to be away from scrollbar
 
@@ -471,18 +474,18 @@ namespace EQLogParser
             });
 
             f.Close();
-          }
 
-          Dispatcher.InvokeAsync(() =>
-          {
-            searchIcon.IsEnabled = true;
-            searchIcon.Icon = EFontAwesomeIcon.Solid_Search;
-            progress.Visibility = Visibility.Hidden;
-            Running = false;
-            Complete = true;
-            UpdateUI();
-          });
-        }, TaskScheduler.Default);
+            Dispatcher.InvokeAsync(() =>
+            {
+              searchIcon.IsEnabled = true;
+              searchIcon.Icon = EFontAwesomeIcon.Solid_Search;
+              progress.Visibility = Visibility.Hidden;
+              Running = false;
+              Complete = true;
+              UpdateUi();
+            });
+          }, TaskScheduler.Default);
+        }
       }
       else
       {
@@ -506,7 +509,7 @@ namespace EQLogParser
       if (statusCount != null)
       {
         statusCount.Text = count + " Lines";
-        if (count == MAX_ROWS)
+        if (count == MaxRows)
         {
           statusCount.Text += " (Maximum Reached)";
         }
@@ -710,7 +713,7 @@ namespace EQLogParser
       }
     }
 
-    private void OptionsChange(object sender, EventArgs e) => UpdateUI();
+    private void OptionsChange(object sender, EventArgs e) => UpdateUi();
 
     #region IDisposable Support
     private bool disposedValue; // To detect redundant calls

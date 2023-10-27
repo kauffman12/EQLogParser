@@ -29,7 +29,7 @@ namespace EQLogParser
   public partial class MainWindow : ChromelessWindow
   {
     // global settings
-    internal static string CurrentLogFile;
+    internal static string CurrentLogFile = null;
     internal static bool IsAoEHealingEnabled = true;
     internal static bool IsHealingSwarmPetsEnabled = true;
     internal static bool IsAssassinateDamageEnabled = true;
@@ -449,7 +449,7 @@ namespace EQLogParser
 
       var tankingStatsOptions = new GenerateStatsOptions();
       tankingStatsOptions.Npcs.AddRange(filtered);
-      if (opened.TryGetValue(tankingSummaryIcon.Tag as string, out var control) && control != null)
+      if (opened.TryGetValue((tankingSummaryIcon.Tag as string)!, out var control) && control != null)
       {
         tankingStatsOptions.DamageType = ((TankingSummary)control.Content).DamageType;
       }
@@ -501,9 +501,9 @@ namespace EQLogParser
       {
         new MessageWindow("No Log File Opened. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
       }
-      else if (filtered?.Count > 0)
+      else if (filtered.Count > 0)
       {
-        MainActions.ExportFights(filtered);
+        MainActions.ExportFights(CurrentLogFile, filtered);
       }
       else
       {
@@ -516,7 +516,7 @@ namespace EQLogParser
       var appender = Log.Logger.Repository.GetAppenders().FirstOrDefault(test => "file".Equals(test.Name, StringComparison.OrdinalIgnoreCase));
       if (appender != null)
       {
-        MainActions.OpenFileWithDefault("\"" + (appender as FileAppender).File + "\"");
+        MainActions.OpenFileWithDefault("\"" + ((FileAppender)appender).File + "\"");
       }
     }
 
@@ -722,17 +722,17 @@ namespace EQLogParser
 
         SyncFusionUtil.OpenWindow(dockSite, null, out _, typeof(EQLogViewer), "eqLogWindow", "Log Search " + found);
       }
-      else if (e.Source == spellResistsMenuItem)
+      else if (ReferenceEquals(e.Source, spellResistsMenuItem))
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
         SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(NpcStatsViewer), spellResistsIcon.Tag as string, "Spell Resists");
       }
-      else if (e.Source == spellDamageStatsMenuItem)
+      else if (ReferenceEquals(e.Source, spellDamageStatsMenuItem))
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
         SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(SpellDamageStatsViewer), npcSpellDamageIcon.Tag as string, "Spell Damage");
       }
-      else if (e.Source == tauntStatsMenuItem)
+      else if (ReferenceEquals(e.Source, tauntStatsMenuItem))
       {
         var opened = MainActions.GetOpenWindows(dockSite, ChartTab);
         SyncFusionUtil.OpenWindow(dockSite, opened, out _, typeof(TauntStatsViewer), tauntStatsIcon.Tag as string, "Taunt Usage");
@@ -1064,7 +1064,7 @@ namespace EQLogParser
             DataManager.Instance.Clear();
             CurrentLogFile = theFile;
             NpcDamageManager.Reset();
-            EqLogReader = new LogReader(new LogProcessor(), theFile, lastMins);
+            EqLogReader = new LogReader(new LogProcessor(theFile), theFile, lastMins);
             UpdateLoadingProgress();
           });
         }

@@ -361,6 +361,17 @@ namespace EQLogParser
       }
     }
 
+    internal void SetExpanded(TriggerTreeViewNode viewNode)
+    {
+      if (viewNode?.SerializedData is { Id: not null } node)
+      {
+        lock (LockObject)
+        {
+          Db?.Execute($"UPDATE {TreeCol} SET IsExpanded = {viewNode.IsExpanded} WHERE _id = '{node.Id}'");
+        }
+      }
+    }
+
     internal void Delete(string id)
     {
       var removed = new HashSet<string>();
@@ -417,19 +428,6 @@ namespace EQLogParser
       }
     }
 
-    internal void SetExpanded(TriggerTreeViewNode viewNode)
-    {
-      if (viewNode?.SerializedData is { } node)
-      {
-        lock (LockObject)
-        {
-          // update UI model just in case
-          node.IsExpanded = viewNode.IsExpanded;
-          Db?.GetCollection<TriggerNode>(TreeCol).Update(node);
-        }
-      }
-    }
-
     internal bool IsAnyEnabled(string triggerId)
     {
       if (triggerId != null && Db?.GetCollection<TriggerState>(StatesCol) is { } states)
@@ -465,7 +463,7 @@ namespace EQLogParser
     }
 
     // from GINA or Quick Share with custom Folder name
-    internal void ImportTriggers(string name, IEnumerable<ExportTriggerNode> imported, string characterId = null)
+    internal void ImportTriggers(string name, IEnumerable<ExportTriggerNode> imported, HashSet<string> characterIds)
     {
       if (Db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
       {
@@ -473,7 +471,7 @@ namespace EQLogParser
         {
           var root = tree.FindOne(n => n.Parent == null && n.Name == TRIGGERS);
           var parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name).SerializedData;
-          Import(parent, imported, TRIGGERS, characterId);
+          Import(parent, imported, TRIGGERS, characterIds);
           TriggerImportEvent?.Invoke(true);
         }
       }
@@ -620,7 +618,7 @@ namespace EQLogParser
       return viewNode;
     }
 
-    private void Delete(ILiteCollection<TriggerNode> tree, TriggerNode node, HashSet<string> removed, HashSet<string> removedOverlays)
+    private static void Delete(ILiteCollection<TriggerNode> tree, TriggerNode node, HashSet<string> removed, HashSet<string> removedOverlays)
     {
       if (node?.Id is { } id)
       {
@@ -643,7 +641,7 @@ namespace EQLogParser
       }
     }
 
-    private void Import(TriggerNode parent, IEnumerable<ExportTriggerNode> imported, string type, string characterId = null)
+    private void Import(TriggerNode parent, IEnumerable<ExportTriggerNode> imported, string type, HashSet<string> characterIds = null)
     {
       if (parent?.Id is { } parentId && imported != null)
       {
@@ -652,10 +650,10 @@ namespace EQLogParser
           lock (LockObject)
           {
             // get character state if needed (here so we can search once)
-            TriggerState characterState = null;
-            if (characterId != null && Db?.GetCollection<TriggerState>(StatesCol) is { } states)
+            List<TriggerState> characterStates = null;
+            if (characterIds?.Count > 0 && Db?.GetCollection<TriggerState>(StatesCol) is { } states)
             {
-              characterState = states.FindOne(s => s.Id == characterId);
+              characterStates = states.Query().Where(s => characterIds.Contains(s.Id)).ToList();
             }
 
             // exports include the tree root so ignore
@@ -663,7 +661,7 @@ namespace EQLogParser
             {
               if (newNode.Nodes?.Count > 0)
               {
-                Import(tree, parentId, newNode.Nodes, type, characterState);
+                Import(tree, parentId, newNode.Nodes, type, characterStates);
               }
             }
           }
@@ -672,7 +670,7 @@ namespace EQLogParser
     }
 
     private void Import(ILiteCollection<TriggerNode> tree, string parentId,
-      IEnumerable<ExportTriggerNode> imported, string type, TriggerState characterState = null)
+      IEnumerable<ExportTriggerNode> imported, string type, List<TriggerState> characterStates)
     {
       var triggers = type == TRIGGERS;
       string enableId = null;
@@ -697,7 +695,7 @@ namespace EQLogParser
           // make sure it is a directory
           else if (found.OverlayData == null && found.TriggerData == null && newNode.Nodes?.Count > 0)
           {
-            Import(tree, found.Id, newNode.Nodes, type, characterState);
+            Import(tree, found.Id, newNode.Nodes, type, characterStates);
             enableId = found.Id;
           }
         }
@@ -723,7 +721,7 @@ namespace EQLogParser
             ((App)Application.Current).AutoMap.Map(newNode, new TriggerNode()) is { } node)
           {
             Insert(node, index);
-            Import(tree, node.Id, newNode.Nodes, type, characterState);
+            Import(tree, node.Id, newNode.Nodes, type, characterStates);
             enableId = node.Id;
           }
         }
@@ -731,10 +729,13 @@ namespace EQLogParser
         if (enableId != null)
         {
           RecentlyMerged[enableId] = true;
-          if (characterState != null && Db?.GetCollection<TriggerState>(StatesCol) is { } states)
+          if (characterStates != null && Db?.GetCollection<TriggerState>(StatesCol) is { } states)
           {
-            characterState.Enabled[enableId] = true;
-            states.Update(characterState);
+            foreach (var state in characterStates)
+            {
+              state.Enabled[enableId] = true;
+              states.Update(state);
+            }
           }
         }
       }
@@ -837,11 +838,12 @@ namespace EQLogParser
         foreach (var node in tree.Query().Where(n => n.Parent == parentId).OrderBy(n => n.Index).ToEnumerable())
         {
           var child = CreateViewNode(node, state);
-          parent.ChildNodes.Add(child);
           if (child.IsDir())
           {
             Populate(child, state, tree);
           }
+
+          parent.ChildNodes.Add(child);
         }
       }
     }
@@ -850,15 +852,7 @@ namespace EQLogParser
     {
       if (viewNode.IsDir())
       {
-        if (!viewNode.HasChildNodes)
-        {
-          if (viewNode.IsChecked != false)
-          {
-            state.Enabled[viewNode.SerializedData.Id] = false;
-            needUpdate = true;
-          }
-        }
-        else
+        if (viewNode.HasChildNodes)
         {
           foreach (var child in viewNode.ChildNodes)
           {

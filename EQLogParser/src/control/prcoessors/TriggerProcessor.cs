@@ -160,6 +160,16 @@ namespace EQLogParser
           }
         }
       }
+
+      // look for quick shares after triggers have been processed
+      var chatType = ChatLineParser.ParseChatType(lineData.Action);
+      if (chatType != null && TriggerStateManager.Instance.IsActive())
+      {
+        // Look for Quick Share entries
+        TriggerUtil.CheckQuickShare(chatType, lineData.Action, dateTime, CurrentCharacterId, CurrentProcessorName);
+        GinaUtil.CheckGina(chatType, lineData.Action, dateTime, CurrentCharacterId, CurrentProcessorName);
+      }
+
     }
 
     private void HandleTrigger(TriggerWrapper wrapper, LineData lineData)

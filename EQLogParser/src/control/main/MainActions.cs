@@ -526,7 +526,7 @@ namespace EQLogParser
       };
     }
 
-    internal static void ExportFights(List<Fight> fights)
+    internal static void ExportFights(string currentFile, List<Fight> fights)
     {
       var saveFileDialog = new SaveFileDialog();
       var fileName = $"eqlog_{ConfigUtil.PlayerName}_{ConfigUtil.ServerName}-selected.txt";
@@ -554,7 +554,7 @@ namespace EQLogParser
 
               if (range.TimeSegments.Count > 0)
               {
-                using var f = File.OpenRead(MainWindow.CurrentLogFile);
+                using var f = File.OpenRead(currentFile);
                 var s = FileUtil.GetStreamReader(f, range.TimeSegments[0].BeginTime);
                 while (!s.EndOfStream)
                 {

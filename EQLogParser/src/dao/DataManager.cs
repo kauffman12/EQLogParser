@@ -344,7 +344,11 @@ namespace EQLogParser
     {
       lock (CollectionLock)
       {
-        AllQuickShareRecords.Insert(0, action);
+        if (AllQuickShareRecords.Count == 0 || AllQuickShareRecords[0].Key != action.Key ||
+          !StatsUtil.DoubleEquals(AllQuickShareRecords[0].BeginTime, action.BeginTime))
+        {
+          AllQuickShareRecords.Insert(0, action);
+        }
       }
     }
 
