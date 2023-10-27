@@ -17,7 +17,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for TriggersView.xaml
   /// </summary>
-  public partial class TriggersView : UserControl, IDisposable
+  public partial class TriggersView : IDisposable
   {
     private readonly Dictionary<string, Window> PreviewWindows = new();
     private TriggerConfig TheConfig;
@@ -37,11 +37,10 @@ namespace EQLogParser
     public TriggersView()
     {
       InitializeComponent();
-
       CharacterViewWidth = mainGrid.ColumnDefinitions[0].Width;
-      TheConfig = TriggerStateManager.Instance.GetConfig();
-      characterView.SetConfig(TheConfig);
-      UpdateConfig(TheConfig);
+      var config = TriggerStateManager.Instance.GetConfig();
+      characterView.SetConfig(config);
+      UpdateConfig(config);
 
       if ((TestSynth = TriggerUtil.GetSpeechSynthesizer()) != null)
       {
@@ -106,7 +105,7 @@ namespace EQLogParser
         return editor.Editor;
       }
 
-      theTreeView.Init(CurrentCharacterId, IsCancelSelection, !TheConfig.IsAdvanced);
+      theTreeView.Init(CurrentCharacterId, IsCancelSelection, !config.IsAdvanced);
       theTreeView.TreeSelectionChangedEvent += TreeSelectionChangedEvent;
       theTreeView.ClosePreviewOverlaysEvent += ClosePreviewOverlaysEvent;
       TriggerStateManager.Instance.DeleteEvent += TriggerOverlayDeleteEvent;
@@ -203,7 +202,8 @@ namespace EQLogParser
 
     private void UpdateConfig(TriggerConfig config)
     {
-      TheConfig = config;
+      TheConfig = config; // use latest
+      theTreeView.SetConfig(TheConfig);
       basicCheckBox.Visibility = !TheConfig.IsAdvanced ? Visibility.Visible : Visibility.Collapsed;
       basicCheckBox.IsChecked = TheConfig.IsEnabled;
 

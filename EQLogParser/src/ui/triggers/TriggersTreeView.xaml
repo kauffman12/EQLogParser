@@ -62,7 +62,7 @@
              ShowRootLines="False">
             <syncfusion:SfTreeView.ItemContextMenu>
               <ContextMenu>
-                <MenuItem x:Name="clearRecentlyMergedMenuItem" Header="Clear Highlighting" Click="ClearRecentlyMergedClick" />
+                <MenuItem x:Name="copySettingsMenuItem" Header="Copy Settings To" Visibility="Collapsed" ToolTip="Copy Selected Trigger Settings to another Character" />
                 <MenuItem x:Name="setTriggerMenuItem" Header="Update Selected Triggers">
                   <MenuItem x:Name="setTextOverlayMenuItem" Header="Text Overlays">
                     <MenuItem.Icon>
@@ -135,6 +135,7 @@
                   </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
+                <MenuItem x:Name="clearRecentlyMergedMenuItem" Header="Clear Highlighting" Click="ClearRecentlyMergedClick" ToolTip="Clear Highlighting for recently Imported/Merged Triggers"/>
                 <MenuItem x:Name="shareTriggerMenuItem" Header="Quick Share" ToolTip="Share Selected Triggers via URL" Click="ShareTriggersClick">
                   <MenuItem.Icon>
                     <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_ExternalLinkAlt" />

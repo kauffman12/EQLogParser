@@ -13,7 +13,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for TriggersTreeView.xaml
   /// </summary>
-  public partial class TriggersTreeView : UserControl, IDisposable
+  public partial class TriggersTreeView : IDisposable
   {
     internal event Action<bool> ClosePreviewOverlaysEvent;
     internal event Action<Tuple<TriggerTreeViewNode, object>> TreeSelectionChangedEvent;
@@ -27,11 +27,11 @@ namespace EQLogParser
     private bool OverlayCutNode;
     private string CurrentCharacterId;
     private Func<bool> IsCancelSelection;
+    private TriggerConfig TheConfig;
 
     public TriggersTreeView()
     {
       InitializeComponent();
-
       SetupDragNDrop(triggerTreeView);
       SetupDragNDrop(overlayTreeView);
       TriggerManager.Instance.EventsSelectTrigger += EventsSelectTrigger;
@@ -39,6 +39,7 @@ namespace EQLogParser
 
     internal void RefreshOverlays() => RefreshOverlayNode();
     internal void RefreshTriggers() => RefreshTriggerNode();
+    internal void SetConfig(TriggerConfig config) => TheConfig = config;
 
     internal void Init(string characterId, Func<bool> isCanceled, bool enable)
     {
@@ -489,11 +490,34 @@ namespace EQLogParser
       clearRecentlyMergedMenuItem.IsEnabled = !TriggerStateManager.Instance.RecentlyMerged.IsEmpty;
       importTriggerMenuItem.Header = node != null && importTriggerMenuItem.IsEnabled ? $"Import to ({node.Content})" : "Import";
 
-      if (setPriorityMenuItem.IsEnabled)
+      UIElementUtil.ClearMenuEvents(copySettingsMenuItem.Items, CopySettingsClick);
+      copySettingsMenuItem.Items.Clear();
+
+      if (TheConfig?.IsAdvanced == true)
       {
-        UIElementUtil.ClearMenuEvents(setPriorityMenuItem.Items, SetPriorityClick);
+        copySettingsMenuItem.Visibility = Visibility.Visible;
+        if (TheConfig.Characters.Count > 1 && triggerTreeView.SelectedItems?.Count == 1)
+        {
+          copySettingsMenuItem.IsEnabled = true;
+          foreach (var character in TheConfig.Characters.Where(c => c.Id != CurrentCharacterId))
+          {
+            var menuItem = new MenuItem { Header = character.Name, Tag = character.Id };
+            menuItem.Click += CopySettingsClick;
+            copySettingsMenuItem.Items.Add(menuItem);
+          }
+        }
+        else
+        {
+          copySettingsMenuItem.IsEnabled = false;
+        }
+      }
+      else
+      {
+        copySettingsMenuItem.IsEnabled = false;
+        copySettingsMenuItem.Visibility = Visibility.Collapsed;
       }
 
+      UIElementUtil.ClearMenuEvents(setPriorityMenuItem.Items, SetPriorityClick);
       setPriorityMenuItem.Items.Clear();
 
       for (var i = 1; i <= 5; i++)
@@ -577,6 +601,14 @@ namespace EQLogParser
       }
 
       importOverlayMenuItem.Header = node != null && importOverlayMenuItem.IsEnabled ? $"Import to Folder ({node.Content})" : "Import";
+    }
+
+    private void CopySettingsClick(object sender, RoutedEventArgs e)
+    {
+      if (sender is MenuItem { Tag: string id })
+      {
+        TriggerStateManager.Instance.CopyState((TriggerTreeViewNode)triggerTreeView.SelectedItem, CurrentCharacterId, id);
+      }
     }
 
     private void SetPriorityClick(object sender, RoutedEventArgs e)
