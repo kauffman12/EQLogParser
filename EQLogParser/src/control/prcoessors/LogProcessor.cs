@@ -7,9 +7,11 @@ namespace EQLogParser
   class LogProcessor : ILogProcessor
   {
     private long LineCount;
+    private readonly string FileName;
 
-    internal LogProcessor()
+    internal LogProcessor(string fileName)
     {
+      FileName = fileName ?? string.Empty;
       // Setup the pre-processor block
       ChatManager.Instance.Init();
     }
@@ -32,16 +34,15 @@ namespace EQLogParser
       // avoid having other things parse chat by accident
       if (ChatLineParser.ParseChatType(lineData.Action) is { } chatType)
       {
-        if (TriggerStateManager.Instance.IsActive())
-        {
-          // Look for Quick Share entries
-          TriggerUtil.CheckQuickShare(monitor, chatType, lineData.Action, dateTime);
-          GinaUtil.CheckGina(monitor, chatType, lineData.Action, dateTime);
-        }
-
         chatType.BeginTime = lineData.BeginTime;
         chatType.Text = line; // workaround for now?
         ChatManager.Instance.Add(chatType);
+
+        if (!monitor || !TriggerManager.Instance.RunningFiles.ContainsKey(FileName))
+        {
+          TriggerUtil.CheckQuickShare(chatType, lineData.Action, dateTime, null, null);
+          GinaUtil.CheckGina(chatType, lineData.Action, dateTime, null, null);
+        }
       }
       else
       {

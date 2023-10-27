@@ -16,11 +16,11 @@ namespace EQLogParser
   internal static class GinaUtil
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly ConcurrentDictionary<string, string> GinaCache = new();
+    private static readonly ConcurrentDictionary<string, CharacterData> GinaCache = new();
 
     internal static List<ExportTriggerNode> CovertToTriggerNodes(byte[] data) => Convert(ReadXml(data));
 
-    internal static void CheckGina(bool monitor, ChatType chatType, string action, double dateTime)
+    internal static void CheckGina(ChatType chatType, string action, double dateTime, string characterId, string processorName)
     {
       // if GINA data is recent then try to handle it
       if (chatType.Sender != null && action.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
@@ -34,13 +34,13 @@ namespace EQLogParser
           var fullKey = $"{{GINA:{ginaKey}}}";
           if (!string.IsNullOrEmpty(ginaKey))
           {
-            var to = string.IsNullOrEmpty(chatType.Receiver) ? chatType.Channel : chatType.Receiver;
+            var to = chatType.Channel == ChatChannels.TELL ? "You" : chatType.Channel;
             var record = new QuickShareRecord
             {
               BeginTime = dateTime,
               Key = fullKey,
               From = chatType.Sender,
-              To = TextUtils.ToUpper(to),
+              To = (to == "You" && processorName != null && characterId != TriggerStateManager.DEFAULT_USER) ? processorName : to,
               IsMine = chatType.SenderIsYou,
               Type = "GINA"
             };
@@ -48,22 +48,28 @@ namespace EQLogParser
             DataManager.Instance.AddQuickShare(record);
 
             // don't handle immediately unless enabled
-            if (monitor && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.GROUP or ChatChannels.GUILD
+            if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.GROUP or ChatChannels.GUILD
                   or ChatChannels.RAID or ChatChannels.TELL) && ConfigUtil.IfSet("TriggersWatchForQuickShare") &&
                 !DataManager.Instance.IsQuickShareMine(fullKey))
             {
-              // ignore if we're still processing plus avoid spam
-              if (GinaCache.ContainsKey(ginaKey) || GinaCache.Count > 5)
+              // ignore if we're still processing a bunch
+              if (GinaCache.Count > 5)
               {
                 return;
               }
 
-              var runTask = GinaCache.Count == 0;
-              GinaCache[ginaKey] = chatType.Sender;
-
-              if (runTask)
+              lock (GinaCache)
               {
-                RunGinaTask(ginaKey, chatType.Sender);
+                if (!GinaCache.ContainsKey(ginaKey))
+                {
+                  GinaCache[ginaKey] = new CharacterData { Sender = chatType.Sender };
+                  GinaCache[ginaKey].CharacterIds.Add(characterId);
+                  RunGinaTask(ginaKey);
+                }
+                else
+                {
+                  GinaCache[ginaKey].CharacterIds.Add(characterId);
+                }
               }
             }
           }
@@ -84,61 +90,64 @@ namespace EQLogParser
           var quickShareKey = shareKey.Substring(start, finish);
           if (!string.IsNullOrEmpty(quickShareKey))
           {
-            GinaCache[quickShareKey] = from;
+            GinaCache.TryAdd(quickShareKey, new CharacterData { Sender = from });
             if (GinaCache.Count == 1)
             {
-              RunGinaTask(quickShareKey, from, true);
+              RunGinaTask(quickShareKey);
             }
           }
         }
       }
     }
 
-    private static void ImportFromGina(byte[] data, string player, string ginaKey)
+    private static void ImportFromGina(byte[] data, string ginaKey)
     {
       var nodes = Convert(ReadXml(data));
-      UIUtil.InvokeAsync(() =>
+      if (GinaCache.TryGetValue(ginaKey, out var quickShareData))
       {
-        if (nodes.Count > 0 && nodes[0].Nodes.Count == 0)
+        var player = quickShareData.Sender;
+        var characterIds = quickShareData.CharacterIds;
+
+        UIUtil.InvokeAsync(() =>
         {
-          var badMessage = "GINA Triggers Received";
-          if (!string.IsNullOrEmpty(player))
+          if (nodes.Count > 0 && nodes[0].Nodes.Count == 0)
           {
-            badMessage += " from " + player;
+            var badMessage = "GINA Triggers Received";
+            if (!string.IsNullOrEmpty(player))
+            {
+              badMessage += " from " + player;
+            }
+
+            badMessage += " but no supported Triggers found.";
+            new MessageWindow(badMessage, Resource.RECEIVED_GINA).ShowDialog();
+          }
+          else
+          {
+            var message = "Merge GINA Triggers or Import to New Folder?\r\n";
+            if (!string.IsNullOrEmpty(player))
+            {
+              message = $"Merge GINA Triggers from {player} or Import to New Folder?\r\n";
+            }
+
+            var msgDialog = new MessageWindow(message, Resource.RECEIVED_GINA, MessageWindow.IconType.Question,
+              "New Folder", "Merge", characterIds.Count > 0);
+            msgDialog.ShowDialog();
+
+            if (msgDialog.IsYes2Clicked)
+            {
+              TriggerStateManager.Instance.ImportTriggers("", nodes, characterIds);
+            }
+            if (msgDialog.IsYes1Clicked)
+            {
+              var folderName = (player == null) ? "New Folder" : "From " + player;
+              folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
+              TriggerStateManager.Instance.ImportTriggers(folderName, nodes, characterIds);
+            }
           }
 
-          badMessage += " but no supported Triggers found.";
-          new MessageWindow(badMessage, Resource.RECEIVED_GINA).ShowDialog();
-        }
-        else
-        {
-          var message = "Merge GINA Triggers or Import to New Folder?\r\n";
-          if (!string.IsNullOrEmpty(player))
-          {
-            message = $"Merge GINA Triggers from {player} or Import to New Folder?\r\n";
-          }
-
-          var msgDialog = new MessageWindow(message, Resource.RECEIVED_GINA, MessageWindow.IconType.Question, "New Folder", "Merge", true);
-          msgDialog.ShowDialog();
-
-          var characterId = msgDialog.MergeOption ? TriggerUtil.GetCurrentCharacterId() : null;
-          if (msgDialog.IsYes2Clicked)
-          {
-            TriggerStateManager.Instance.ImportTriggers("", nodes, characterId);
-          }
-          if (msgDialog.IsYes1Clicked)
-          {
-            var folderName = (player == null) ? "New Folder" : "From " + player;
-            folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
-            TriggerStateManager.Instance.ImportTriggers(folderName, nodes, characterId);
-          }
-        }
-
-        if (ginaKey != null)
-        {
           NextGinaTask(ginaKey);
-        }
-      });
+        });
+      }
     }
 
     private static string ReadXml(byte[] data)
@@ -161,13 +170,13 @@ namespace EQLogParser
       if (GinaCache.Count > 0)
       {
         var nextKey = GinaCache.Keys.First();
-        RunGinaTask(nextKey, GinaCache[nextKey]);
+        RunGinaTask(nextKey);
       }
     }
 
-    private static void RunGinaTask(string ginaKey, string player, bool isManual = false)
+    private static void RunGinaTask(string ginaKey)
     {
-      Task.Delay(500).ContinueWith(_ =>
+      Task.Delay(1000).ContinueWith(_ =>
       {
         try
         {
@@ -200,15 +209,12 @@ namespace EQLogParser
             {
               var encoded = xml.Substring(start + 13, end - start - 13);
               var decoded = System.Convert.FromBase64String(encoded);
-              ImportFromGina(decoded, player, ginaKey);
+              ImportFromGina(decoded, ginaKey);
             }
             else
             {
-              if (isManual)
-              {
-                UIUtil.InvokeAsync(() =>
-                  new MessageWindow("Unable to Import. Probably Expired.", Resource.RECEIVED_GINA).ShowDialog());
-              }
+              UIUtil.InvokeAsync(() =>
+                new MessageWindow("Unable to Import. No supported data found.", Resource.RECEIVED_GINA).ShowDialog());
 
               // no chunk data in response. too old?
               NextGinaTask(ginaKey);
@@ -216,11 +222,8 @@ namespace EQLogParser
           }
           else
           {
-            if (isManual)
-            {
-              UIUtil.InvokeAsync(() =>
-                new MessageWindow("Unable to Import. Probably Expired.", Resource.RECEIVED_GINA).ShowDialog());
-            }
+            UIUtil.InvokeAsync(() =>
+              new MessageWindow("Unable to Import. Probably Expired.", Resource.RECEIVED_GINA).ShowDialog());
 
             Log.Error("Error Downloading GINA Triggers. Received Status Code = " + response.StatusCode);
             NextGinaTask(ginaKey);
@@ -239,6 +242,11 @@ namespace EQLogParser
           }
           else
           {
+            UIUtil.InvokeAsync(() =>
+            {
+              new MessageWindow("Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
+            });
+
             Log.Error("Error Downloading GINA Triggers", ex);
             NextGinaTask(ginaKey);
           }

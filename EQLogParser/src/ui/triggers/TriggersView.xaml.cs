@@ -61,7 +61,6 @@ namespace EQLogParser
       rateOption.SelectedIndex = TriggerUtil.GetVoiceRate();
       var fileList = new ObservableCollection<string>();
       Watcher = TriggerUtil.CreateSoundsWatcher(fileList);
-
       TopEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Top");
       HeightEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Height");
       LeftEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Left");

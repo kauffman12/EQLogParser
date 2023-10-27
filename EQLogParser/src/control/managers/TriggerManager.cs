@@ -13,6 +13,7 @@ namespace EQLogParser
     internal event Action<bool> EventsProcessorsUpdated;
     internal event Action<string> EventsSelectTrigger;
     internal static TriggerManager Instance => Lazy.Value; // instance
+    public readonly Dictionary<string, bool> RunningFiles = new();
     private static readonly Lazy<TriggerManager> Lazy = new(() => new TriggerManager());
     private readonly DispatcherTimer ConfigUpdateTimer;
     private readonly DispatcherTimer TriggerUpdateTimer;
@@ -170,6 +171,7 @@ namespace EQLogParser
               }
             }
 
+            RunningFiles.Clear();
             toRemove.ForEach(remove => LogReaders.Remove(remove));
 
             // add characters that aren't enabled yet
@@ -182,6 +184,7 @@ namespace EQLogParser
                 FileUtil.ParseFileName(character.FilePath, ref playerName, ref server);
                 LogReaders.Add(new LogReader(new TriggerProcessor(character.Id, character.Name, playerName, AddTextEvent, AddTimerEvent),
                   character.FilePath));
+                RunningFiles[character.FilePath] = true;
               }
             }
 
@@ -195,16 +198,21 @@ namespace EQLogParser
 
             if (config.IsEnabled)
             {
-              if (MainWindow.CurrentLogFile != null)
+              if (MainWindow.CurrentLogFile is { } currentFile)
               {
                 LogReaders.Add(new LogReader(new TriggerProcessor(TriggerStateManager.DEFAULT_USER,
-                  TriggerStateManager.DEFAULT_USER, ConfigUtil.PlayerName, AddTextEvent, AddTimerEvent), MainWindow.CurrentLogFile));
+                  TriggerStateManager.DEFAULT_USER, ConfigUtil.PlayerName, AddTextEvent, AddTimerEvent), currentFile));
                 ((MainWindow)Application.Current?.MainWindow)?.ShowTriggersEnabled(true);
+
+                // only 1 running file in basic mode
+                RunningFiles.Clear();
+                RunningFiles[currentFile] = true;
               }
             }
             else
             {
               ((MainWindow)Application.Current?.MainWindow)?.ShowTriggersEnabled(false);
+              RunningFiles.Clear();
             }
           }
         }

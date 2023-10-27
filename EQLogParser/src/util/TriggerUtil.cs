@@ -26,7 +26,7 @@ namespace EQLogParser
     public const string SHARE_TRIGGER = "EQLPT";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new();
-    private static readonly ConcurrentDictionary<string, string> QuickShareCache = new();
+    private static readonly ConcurrentDictionary<string, CharacterData> QuickShareCache = new();
     private const string ExtTrigger = "tgf";
     private const string ExtOverlay = "ogf";
     internal static double GetTimerBarHeight(double fontSize) => fontSize + 2;
@@ -38,7 +38,7 @@ namespace EQLogParser
       string defaultVoice = null;
       try
       {
-        defaultVoice = new SpeechSynthesizer()?.GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList().FirstOrDefault();
+        defaultVoice = new SpeechSynthesizer().GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList().FirstOrDefault();
       }
       catch (Exception e)
       {
@@ -529,21 +529,6 @@ namespace EQLogParser
       });
     }
 
-    internal static string GetCurrentCharacterId()
-    {
-      if (TriggerStateManager.Instance.GetConfig() is { } config)
-      {
-        if (!config.IsAdvanced)
-        {
-          return TriggerStateManager.DEFAULT_USER;
-        }
-
-        return config.Characters.FirstOrDefault(c => c.FilePath == MainWindow.CurrentLogFile)?.Id;
-      }
-
-      return null;
-    }
-
     internal static void Export(IEnumerable<TriggerTreeViewNode> viewNodes)
     {
       if (BuildExportList(viewNodes) is { } exportList)
@@ -564,8 +549,8 @@ namespace EQLogParser
               var gzipTargetAsStream = gzipFileName.Create();
               var gzipStream = new GZipStream(gzipTargetAsStream, CompressionMode.Compress);
               var writer = new StreamWriter(gzipStream);
-              writer?.Write(result);
-              writer?.Close();
+              writer.Write(result);
+              writer.Close();
             }
           }
           else
@@ -581,13 +566,13 @@ namespace EQLogParser
       }
     }
 
-    internal static void CheckQuickShare(bool monitor, ChatType chatType, string action, double dateTime)
+    internal static void CheckQuickShare(ChatType chatType, string action, double dateTime, string characterId, string processorName)
     {
       // if Quick Share data is recent then try to handle it
-      if (chatType.Sender != null && action.IndexOf($"{SHARE_TRIGGER}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
+      if (chatType.Sender != null && action.IndexOf($"{{{SHARE_TRIGGER}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
           action.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 10))
       {
-        var start = index + 6;
+        var start = index + 7;
         var finish = end - start;
         if (action.Length > (start + finish))
         {
@@ -595,13 +580,13 @@ namespace EQLogParser
           var fullKey = $"{{{SHARE_TRIGGER}:{quickShareKey}}}";
           if (!string.IsNullOrEmpty(quickShareKey))
           {
-            var to = string.IsNullOrEmpty(chatType.Receiver) ? chatType.Channel : chatType.Receiver;
+            var to = chatType.Channel == ChatChannels.TELL ? "You" : chatType.Channel;
             var record = new QuickShareRecord
             {
               BeginTime = dateTime,
               Key = fullKey,
               From = chatType.Sender,
-              To = TextUtils.ToUpper(to),
+              To = (to == "You" && processorName != null && characterId != TriggerStateManager.DEFAULT_USER) ? processorName : to,
               IsMine = chatType.SenderIsYou,
               Type = SHARE_TRIGGER
             };
@@ -609,22 +594,28 @@ namespace EQLogParser
             DataManager.Instance.AddQuickShare(record);
 
             // don't handle immediately unless enabled
-            if (monitor && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.GROUP or ChatChannels.GUILD
+            if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.GROUP or ChatChannels.GUILD
                   or ChatChannels.RAID or ChatChannels.TELL) && ConfigUtil.IfSet("TriggersWatchForQuickShare")
                 && !DataManager.Instance.IsQuickShareMine(fullKey))
             {
-              // ignore if we're still processing plus avoid spam
-              if (QuickShareCache.ContainsKey(quickShareKey) || QuickShareCache.Count > 5)
+              // ignore if we're still processing a bunch
+              if (QuickShareCache.Count > 5)
               {
                 return;
               }
 
-              var runTask = QuickShareCache.Count == 0;
-              QuickShareCache[quickShareKey] = chatType.Sender;
-
-              if (runTask)
+              lock (QuickShareCache)
               {
-                RunQuickShareTask(quickShareKey, chatType.Sender);
+                if (!QuickShareCache.ContainsKey(quickShareKey))
+                {
+                  QuickShareCache[quickShareKey] = new CharacterData { Sender = chatType.Sender };
+                  QuickShareCache[quickShareKey].CharacterIds.Add(characterId);
+                  RunQuickShareTask(quickShareKey);
+                }
+                else
+                {
+                  QuickShareCache[quickShareKey].CharacterIds.Add(characterId);
+                }
               }
             }
           }
@@ -635,20 +626,20 @@ namespace EQLogParser
     internal static void ImportQuickShare(string shareKey, string from)
     {
       // if Quick Share data is recent then try to handle it
-      if (shareKey.IndexOf($"{SHARE_TRIGGER}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
+      if (shareKey.IndexOf($"{{{SHARE_TRIGGER}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
           shareKey.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 10))
       {
-        var start = index + 6;
+        var start = index + 7;
         var finish = end - start;
         if (shareKey.Length > (start + finish))
         {
           var quickShareKey = shareKey.Substring(start, finish);
           if (!string.IsNullOrEmpty(quickShareKey))
           {
-            QuickShareCache[quickShareKey] = from;
+            QuickShareCache.TryAdd(quickShareKey, new CharacterData { Sender = from });
             if (QuickShareCache.Count == 1)
             {
-              RunQuickShareTask(quickShareKey, from, true);
+              RunQuickShareTask(quickShareKey);
             }
           }
         }
@@ -727,9 +718,9 @@ namespace EQLogParser
       }
     }
 
-    private static void RunQuickShareTask(string quickShareKey, string player, bool isManual = false)
+    private static void RunQuickShareTask(string quickShareKey)
     {
-      Task.Delay(500).ContinueWith(async _ =>
+      Task.Delay(1000).ContinueWith(async _ =>
       {
         try
         {
@@ -741,7 +732,7 @@ namespace EQLogParser
             using var ms = new MemoryStream();
             await decompressionStream.CopyToAsync(ms);
             ms.Position = 0;
-            ImportFromQuickShare(Encoding.UTF8.GetString(ms.ToArray()), player, quickShareKey);
+            ImportFromQuickShare(Encoding.UTF8.GetString(ms.ToArray()), quickShareKey);
           }
           else
           {
@@ -764,13 +755,10 @@ namespace EQLogParser
           }
           else
           {
-            if (isManual)
+            UIUtil.InvokeAsync(() =>
             {
-              UIUtil.InvokeAsync(() =>
-              {
-                new MessageWindow("Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
-              });
-            }
+              new MessageWindow("Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
+            });
 
             Log.Error("Error Downloading Quick Share", ex);
             NextQuickShareTask(quickShareKey);
@@ -779,51 +767,54 @@ namespace EQLogParser
       });
     }
 
-    private static void ImportFromQuickShare(string data, string player, string quickShareKey)
+    private static void ImportFromQuickShare(string data, string quickShareKey)
     {
-      UIUtil.InvokeAsync(() =>
+      if (QuickShareCache.TryGetValue(quickShareKey, out var quickShareData))
       {
-        var nodes = JsonSerializer.Deserialize<List<ExportTriggerNode>>(data, new JsonSerializerOptions { IncludeFields = true });
-        if (nodes.Count > 0 && nodes[0].Nodes.Count == 0)
+        var player = quickShareData.Sender;
+        var characterIds = quickShareData.CharacterIds;
+
+        UIUtil.InvokeAsync(() =>
         {
-          var badMessage = "Quick Share Received";
-          if (!string.IsNullOrEmpty(player))
+          var nodes = JsonSerializer.Deserialize<List<ExportTriggerNode>>(data, new JsonSerializerOptions { IncludeFields = true });
+          if (nodes.Count > 0 && nodes[0].Nodes.Count == 0)
           {
-            badMessage += " from " + player;
+            var badMessage = "Quick Share Received";
+            if (!string.IsNullOrEmpty(player))
+            {
+              badMessage += " from " + player;
+            }
+
+            badMessage += " but no supported Triggers or Overlays found.";
+            new MessageWindow(badMessage, Resource.RECEIVED_SHARE).ShowDialog();
+          }
+          else
+          {
+            var message = "Merge Quick Share or Import to New Folder?\r\n";
+            if (!string.IsNullOrEmpty(player))
+            {
+              message = $"Merge Quick Share from {player} or Import to New Folder?\r\n";
+            }
+
+            var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question,
+              "New Folder", "Merge", characterIds.Count > 0);
+            msgDialog.ShowDialog();
+
+            if (msgDialog.IsYes2Clicked)
+            {
+              TriggerStateManager.Instance.ImportTriggers("", nodes, characterIds);
+            }
+            if (msgDialog.IsYes1Clicked)
+            {
+              var folderName = (player == null) ? "New Folder" : "From " + player;
+              folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
+              TriggerStateManager.Instance.ImportTriggers(folderName, nodes, characterIds);
+            }
           }
 
-          badMessage += " but no supported Triggers or Overlays found.";
-          new MessageWindow(badMessage, Resource.RECEIVED_SHARE).ShowDialog();
-        }
-        else
-        {
-          var message = "Merge Quick Share or Import to New Folder?\r\n";
-          if (!string.IsNullOrEmpty(player))
-          {
-            message = $"Merge Quick Share from {player} or Import to New Folder?\r\n";
-          }
-
-          var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question, "New Folder", "Merge", true);
-          msgDialog.ShowDialog();
-
-          var characterId = msgDialog.MergeOption ? GetCurrentCharacterId() : null;
-          if (msgDialog.IsYes2Clicked)
-          {
-            TriggerStateManager.Instance.ImportTriggers("", nodes, characterId);
-          }
-          if (msgDialog.IsYes1Clicked)
-          {
-            var folderName = (player == null) ? "New Folder" : "From " + player;
-            folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
-            TriggerStateManager.Instance.ImportTriggers(folderName, nodes, characterId);
-          }
-        }
-
-        if (quickShareKey != null)
-        {
           NextQuickShareTask(quickShareKey);
-        }
-      });
+        });
+      }
     }
 
     private static void NextQuickShareTask(string quickShareKey)
@@ -833,7 +824,7 @@ namespace EQLogParser
       if (QuickShareCache.Count > 0)
       {
         var nextKey = QuickShareCache.Keys.First();
-        RunQuickShareTask(nextKey, QuickShareCache[nextKey]);
+        RunQuickShareTask(nextKey);
       }
     }
 
@@ -878,8 +869,8 @@ namespace EQLogParser
             {
               var decompressionStream = new GZipStream(fileInfo.OpenRead(), CompressionMode.Decompress);
               var reader = new StreamReader(decompressionStream);
-              var json = reader?.ReadToEnd();
-              reader?.Close();
+              var json = reader.ReadToEnd();
+              reader.Close();
               var data = JsonSerializer.Deserialize<List<ExportTriggerNode>>(json, new JsonSerializerOptions { IncludeFields = true });
               if (triggers)
               {
@@ -950,5 +941,11 @@ namespace EQLogParser
         }
       }
     }
+  }
+
+  internal class CharacterData
+  {
+    public string Sender { get; set; }
+    public HashSet<string> CharacterIds { get; set; } = new HashSet<string>();
   }
 }
