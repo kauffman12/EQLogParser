@@ -39,6 +39,7 @@ namespace EQLogParser
           // [Sat Feb 08 01:20:26 2020] --Proximoe has looted a Velium Infused Spider Silk from a restless devourer's corpse.--
           // [Sat Feb 08 21:21:36 2020] --You have looted a Cold-Forged Cudgel from Queen Dracnia's corpse.--
           // [Mon Apr 27 22:32:04 2020] Restless Tijoely resisted your Stormjolt Vortex Effect!
+          // [Fri Oct 27 17:29:29 2023] Test Ten resisted Xartik's Arcane Harmony Strike II!
           // [Mon Apr 27 20:51:22 2020] Kazint's Scorching Beam Rk. III spell has been reflected by a shadow reflection.
           // [Sun Mar 28 19:42:46 2021] A Draconic Lava Chain Feet Ornament was given to Aldryn.
           // [Mon Apr 05 19:42:24 2021] Hacket won the need roll on 1 item(s): Restless Velium Tainted Pelt with a roll of 996.
@@ -50,7 +51,6 @@ namespace EQLogParser
           var lootedIndex = -1;
           var masterLootIndex = -1;
           var receiveIndex = -1;
-          var resistedIndex = -1;
           var isIndex = -1;
           var itemsIndex = -1;
 
@@ -123,7 +123,33 @@ namespace EQLogParser
                   lootedIndex = i;
                   break;
                 case "resisted":
-                  resistedIndex = i;
+                  if (split.Length > i + 3 && split[i + 1].Length > 2 && split[^1].EndsWith("!", StringComparison.Ordinal))
+                  {
+                    var npc = string.Join(" ", split, 0, i);
+                    npc = TextUtils.ToUpper(npc);
+                    string spell;
+                    string attacker;
+                    if (split[i + 1] != "your")
+                    {
+                      if (split[i + 2] == "pet's")
+                      {
+                        attacker = split[i + 1] + " pet";
+                        spell = string.Join(" ", split, i + 3, split.Length - i - 3).TrimEnd('!');
+                      }
+                      else
+                      {
+                        attacker = split[i + 1][..^2];
+                        spell = string.Join(" ", split, i + 2, split.Length - i - 2).TrimEnd('!');
+                      }
+                    }
+                    else
+                    {
+                      attacker = ConfigUtil.PlayerName;
+                      spell = string.Join(" ", split, i + 2, split.Length - i - 2).TrimEnd('!');
+                    }
+                    DataManager.Instance.AddResistRecord(new ResistRecord { Attacker = attacker, Defender = npc, Spell = spell }, lineData.BeginTime);
+                    handled = true;
+                  }
                   break;
                 case "item(s):":
                   if (split.Length > 9 && split[1] == "won" && split[4] == "roll")
@@ -156,16 +182,6 @@ namespace EQLogParser
                     var npc = string.Join(" ", split, i + 2, split.Length - i - 2).TrimEnd('.');
                     npc = TextUtils.ToUpper(npc);
                     DataManager.Instance.UpdateNpcSpellReflectStats(npc);
-                    handled = true;
-                  }
-                  break;
-                case "your":
-                  if (resistedIndex > 0 && resistedIndex + 1 == i && split.Length > i + 1 && split[^1].EndsWith("!", StringComparison.Ordinal))
-                  {
-                    var npc = string.Join(" ", split, 0, resistedIndex);
-                    npc = TextUtils.ToUpper(npc);
-                    var spell = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd('!');
-                    DataManager.Instance.AddResistRecord(new ResistRecord { Defender = npc, Spell = spell }, lineData.BeginTime);
                     handled = true;
                   }
                   break;

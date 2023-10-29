@@ -502,11 +502,19 @@ namespace EQLogParser
       }
     }
 
-    internal static void UpdateCalculations(PlayerSubStats stats, PlayerStats raidTotals, Dictionary<string, int> resistCounts = null, PlayerStats superStats = null)
+    internal static void UpdateCalculations(PlayerSubStats stats, PlayerStats raidTotals,
+      ConcurrentDictionary<string, int> resistCounts = null, PlayerStats superStats = null)
     {
       if (superStats != null)
       {
-        if (resistCounts != null && superStats.Name == ConfigUtil.PlayerName && resistCounts.TryGetValue(stats.Name, out var value))
+        if (resistCounts != null)
+        {
+          if (true)
+          {
+
+          }
+        }
+        if (resistCounts != null && resistCounts.TryGetValue(stats.Name, out var value))
         {
           stats.Resists = value;
         }
