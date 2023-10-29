@@ -22,7 +22,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> PlayerSubTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> PlayerPets = new();
     private readonly ConcurrentDictionary<string, string> PetToPlayer = new();
-    private readonly List<IAction> Resists = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, int>> ResistCounts = new();
     private List<List<ActionGroup>> AllDamageGroups;
     private List<List<ActionGroup>> DamageGroups = new();
     private PlayerStats RaidTotals;
@@ -352,7 +352,7 @@ namespace EQLogParser
                 newBlock = new List<ActionGroup>();
               }
 
-              if (lastTime != block.BeginTime)
+              if (!StatsUtil.DoubleEquals(lastTime, block.BeginTime))
               {
                 var copy = new ActionGroup();
                 copy.Actions.AddRange(block.Actions);
@@ -370,8 +370,34 @@ namespace EQLogParser
             });
 
             DamageGroups.Add(newBlock);
-            RaidTotals.Ranges.TimeSegments.ForEach(segment => DataManager.Instance.GetResistsDuring(segment.BeginTime, segment.EndTime).ForEach(block =>
-              Resists.AddRange(block.Actions)));
+
+            Parallel.ForEach(RaidTotals.Ranges.TimeSegments, segment =>
+            {
+              foreach (ref var block in DataManager.Instance.GetResistsDuring(segment.BeginTime, segment.EndTime).ToArray().AsSpan())
+              {
+                foreach (var action in block.Actions)
+                {
+                  if (action is ResistRecord record)
+                  {
+                    if (!ResistCounts.TryGetValue(record.Attacker, out var perPlayer))
+                    {
+                      perPlayer = new ConcurrentDictionary<string, int>();
+                      ResistCounts[record.Attacker] = perPlayer;
+                    }
+
+                    if (perPlayer.TryGetValue(record.Spell, out var currentCount))
+                    {
+                      perPlayer[record.Spell] = currentCount + 1;
+                    }
+                    else
+                    {
+                      perPlayer[record.Spell] = 1;
+                    }
+                  }
+                }
+              }
+            });
+
             ComputeDamageStats(options);
           }
           else if (Selected == null || Selected.Count == 0)
@@ -403,13 +429,13 @@ namespace EQLogParser
 
           // always start over
           RaidTotals.Total = 0;
-          double startTime = -1;
-          double stopTime = -1;
+          var startTime = double.NaN;
+          var stopTime = double.NaN;
 
           try
           {
-            if ((options.MaxSeconds > -1 && options.MaxSeconds < RaidTotals.MaxTime && options.MaxSeconds != RaidTotals.TotalSeconds) ||
-              (options.MinSeconds > 0 && options.MinSeconds <= RaidTotals.MaxTime && options.MinSeconds != RaidTotals.MinTime))
+            if ((options.MaxSeconds > -1 && options.MaxSeconds < RaidTotals.MaxTime && !StatsUtil.DoubleEquals(options.MaxSeconds, RaidTotals.TotalSeconds)) ||
+              (options.MinSeconds > 0 && options.MinSeconds <= RaidTotals.MaxTime && !StatsUtil.DoubleEquals(options.MinSeconds, RaidTotals.MinTime)))
             {
               var removeFromEnd = RaidTotals.MaxTime - options.MaxSeconds;
               if (removeFromEnd > 0)
@@ -449,7 +475,7 @@ namespace EQLogParser
                 var filteredBlocks = new List<ActionGroup>();
                 group.ForEach(block =>
                 {
-                  if ((startTime == -1 || block.BeginTime >= startTime) && (stopTime == -1 || block.BeginTime <= stopTime))
+                  if ((double.IsNaN(startTime) || block.BeginTime >= startTime) && (double.IsNaN(stopTime) || block.BeginTime <= stopTime))
                   {
                     filteredBlocks.Add(block);
                   }
@@ -496,7 +522,7 @@ namespace EQLogParser
                     else if (isValid)
                     {
                       var isAttackerPet = PlayerManager.Instance.IsVerifiedPet(record.Attacker);
-                      var isNewFrame = checkNewFrame(prevPlayerTimes, stats.Name, block.BeginTime);
+                      var isNewFrame = CheckNewFrame(prevPlayerTimes, stats.Name, block.BeginTime);
 
                       RaidTotals.Total += record.Total;
                       StatsUtil.UpdateStats(stats, record, isNewFrame, isAttackerPet);
@@ -511,7 +537,7 @@ namespace EQLogParser
                       {
                         var origName = player ?? record.Attacker;
                         var aggregateName = origName + " +Pets";
-                        isNewFrame = checkNewFrame(prevPlayerTimes, aggregateName, block.BeginTime);
+                        isNewFrame = CheckNewFrame(prevPlayerTimes, aggregateName, block.BeginTime);
 
                         var aggregatePlayerStats = StatsUtil.CreatePlayerStats(individualStats, aggregateName, origName);
                         StatsUtil.UpdateStats(aggregatePlayerStats, record, isNewFrame, isAttackerPet);
@@ -544,8 +570,6 @@ namespace EQLogParser
 
             RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
             StatsUtil.PopulateSpecials(RaidTotals);
-
-            var resistCounts = Resists.Cast<ResistRecord>().GroupBy(x => x.Spell).ToDictionary(g => g.Key, g => g.ToList().Count);
             var expandedStats = new ConcurrentBag<PlayerStats>();
 
             Parallel.ForEach(individualStats.Values, stats =>
@@ -564,7 +588,8 @@ namespace EQLogParser
                     }
 
                     expandedStats.Add(child);
-                    StatsUtil.UpdateCalculations(child, RaidTotals, resistCounts);
+                    ResistCounts.TryGetValue(child.Name, out var childResists);
+                    StatsUtil.UpdateCalculations(child, RaidTotals, childResists);
 
                     if (stats.Total > 0)
                     {
@@ -586,7 +611,8 @@ namespace EQLogParser
                   StatsUtil.UpdateAllStatsTimeRanges(stats, PlayerTimeRanges, PlayerSubTimeRanges, startTime, stopTime);
                 }
 
-                StatsUtil.UpdateCalculations(stats, RaidTotals, resistCounts);
+                ResistCounts.TryGetValue(stats.Name, out var resists);
+                StatsUtil.UpdateCalculations(stats, RaidTotals, resists);
 
                 if (RaidTotals.Specials.TryGetValue(stats.OrigName, out var special2))
                 {
@@ -645,6 +671,8 @@ namespace EQLogParser
         }
       }
 
+      return;
+
       void AddValue(Dictionary<long, int> dict, long key, int amount)
       {
         if (!dict.TryAdd(key, amount))
@@ -654,7 +682,7 @@ namespace EQLogParser
       }
     }
 
-    private bool checkNewFrame(Dictionary<string, double> prevPlayerTimes, string name, double beginTime)
+    private static bool CheckNewFrame(Dictionary<string, double> prevPlayerTimes, string name, double beginTime)
     {
       if (!prevPlayerTimes.TryGetValue(name, out var prevTime))
       {
@@ -715,7 +743,7 @@ namespace EQLogParser
       RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_TOTALS);
       PlayerPets.Clear();
       PetToPlayer.Clear();
-      Resists.Clear();
+      ResistCounts.Clear();
       PlayerTimeRanges.Clear();
       PlayerSubTimeRanges.Clear();
       Selected = null;
@@ -738,8 +766,8 @@ namespace EQLogParser
       }
     }
 
-    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showPetLabel, bool showDPS,
-      bool showTotals, bool rankPlayers, bool showSpecial, bool showTime, string customTitle)
+    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected,
+      bool showPetLabel, bool showDps, bool showTotals, bool rankPlayers, bool showSpecial, bool showTime, string customTitle)
     {
       var list = new List<string>();
 
@@ -754,7 +782,7 @@ namespace EQLogParser
           {
             var name = showPetLabel ? stats.Name : stats.Name.Replace(" +Pets", "");
             var playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, name) : string.Format(StatsUtil.PLAYER_FORMAT, name);
-            var damageFormat = showDPS ? string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(stats.Total), "", StatsUtil.FormatTotals(stats.DPS)) :
+            var damageFormat = showDps ? string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(stats.Total), "", StatsUtil.FormatTotals(stats.DPS)) :
               string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
             var timeFormat = string.Format(StatsUtil.TIME_FORMAT, stats.TotalSeconds);
 
@@ -776,7 +804,7 @@ namespace EQLogParser
 
         details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
         var timeTitle = showTime ? currentStats.TimeTitle : "";
-        var totals = showDPS ? currentStats.TotalTitle : currentStats.TotalTitle.Split(new[] { " @" }, 2, StringSplitOptions.RemoveEmptyEntries)[0];
+        var totals = showDps ? currentStats.TotalTitle : currentStats.TotalTitle.Split(new[] { " @" }, 2, StringSplitOptions.RemoveEmptyEntries)[0];
         title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, showTotals ? totals : "");
       }
 

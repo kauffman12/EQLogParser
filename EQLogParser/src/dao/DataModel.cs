@@ -353,6 +353,7 @@ namespace EQLogParser
 
   internal class ResistRecord : IAction
   {
+    public string Attacker { get; set; }
     public string Spell { get; set; }
     public string Defender { get; set; }
   }
