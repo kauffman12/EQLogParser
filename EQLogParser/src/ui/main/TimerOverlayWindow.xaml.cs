@@ -117,11 +117,17 @@ namespace EQLogParser
           // create order
           orderedList = timerList.Where(ShouldProcess).ToArray();
         }
-        else
+        else if (Node.OverlayData.SortBy == 1)
         {
           // remaining order
           orderedList = timerList.Where(ShouldProcess)
             .OrderBy(timerData => timerData.EndTicks - currentTicks).ToArray();
+        }
+        else if (Node.OverlayData.SortBy == 2)
+        {
+          // alpha
+          orderedList = timerList.Where(ShouldProcess)
+            .OrderBy(timerData => timerData.DisplayName).ToArray();
         }
 
         if (Node.OverlayData.UseStandardTime && orderedList.Length > 0)

@@ -114,7 +114,7 @@ namespace EQLogParser
       {
         foreach (var spell in block.Actions.Cast<ReceivedSpell>())
         {
-          if (spell.Receiver == CurrentPlayer.OrigName && spell.SpellData != null)
+          if (!spell.IsWearOff && spell.Receiver == CurrentPlayer.OrigName && spell.SpellData != null)
           {
             var message = string.IsNullOrEmpty(spell.SpellData.LandsOnYou) ? spell.SpellData.LandsOnOther : spell.SpellData.LandsOnYou;
             if (!string.IsNullOrEmpty(message) && spell.Ambiguity.Count <= 1)

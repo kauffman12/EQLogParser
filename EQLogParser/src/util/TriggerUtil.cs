@@ -112,6 +112,7 @@ namespace EQLogParser
         toTrigger.EndTextToDisplay = TextUtils.Trim(fromTrigger.EndTextToDisplay);
         toTrigger.EndEarlyTextToDisplay = TextUtils.Trim(fromTrigger.EndEarlyTextToDisplay);
         toTrigger.TextToDisplay = TextUtils.Trim(fromTrigger.TextToDisplay);
+        toTrigger.TextToShare = TextUtils.Trim(fromTrigger.TextToShare);
         toTrigger.WarningTextToDisplay = TextUtils.Trim(fromTrigger.WarningTextToDisplay);
         toTrigger.EndTextToSpeak = TextUtils.Trim(fromTrigger.EndTextToSpeak);
         toTrigger.EndEarlyTextToSpeak = TextUtils.Trim(fromTrigger.EndEarlyTextToSpeak);
@@ -689,7 +690,7 @@ namespace EQLogParser
                 Key = withKey,
                 From = "You",
                 IsMine = true,
-                To = "Created New Share Key",
+                To = "Created Share Key",
                 Type = SHARE_TRIGGER
               };
 

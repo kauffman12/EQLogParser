@@ -29,7 +29,7 @@ namespace EQLogParser
       foreach (var action in receivedDuring.Where(received => playerList.Contains((received as ReceivedSpell)?.Receiver)))
       {
         // dont include detrimental received spells since they're mostly things like being nuked
-        if (action is ReceivedSpell { SpellData: not null } received)
+        if (action is ReceivedSpell { SpellData: not null, IsWearOff: false } received)
         {
           UpdateMaps(received.SpellData, received.Receiver, result.PlayerReceivedCounts, null, result.MaxReceivedCounts, result.UniqueSpells);
         }
@@ -80,7 +80,7 @@ namespace EQLogParser
           {
             Add(block, cast.SpellData, cast);
           }
-          else if (action is ReceivedSpell received)
+          else if (action is ReceivedSpell { IsWearOff: false } received)
           {
             if (received.SpellData == null && received.Ambiguity.Count > 0 &&
                 DataManager.ResolveSpellAmbiguity(received, out var replaced))
