@@ -642,7 +642,7 @@ namespace EQLogParser
       return null;
     }
 
-    private string ProcessMatchesText(string text, MatchCollection matches)
+    private static string ProcessMatchesText(string text, MatchCollection matches)
     {
       if (matches != null && !string.IsNullOrEmpty(text))
       {

@@ -45,6 +45,11 @@
       </Grid>
     </DataTemplate>
 
+    <ToolTip x:Key="AdpsHideMineToolTipTemplate">
+      <TextBlock Text="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common."
+                 FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryColor}" />
+    </ToolTip>
+
     <ToolTip x:Key="RecentTriggerTipTemplate">
       <TextBlock Text="This Trigger have been recently updated via Import/Merge"
                  FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryColor}" />
