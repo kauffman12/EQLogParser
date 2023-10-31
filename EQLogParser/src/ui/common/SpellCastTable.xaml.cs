@@ -60,7 +60,7 @@ namespace EQLogParser
         var list = new List<IDictionary<string, object>>();
         foreach (var action in allSpells.OrderBy(action => action.BeginTime).ThenBy(action => (action is ReceivedSpell) ? 1 : -1))
         {
-          if (!double.IsNaN(lastTime) && action.BeginTime != lastTime)
+          if (!double.IsNaN(lastTime) && !StatsUtil.DoubleEquals(action.BeginTime, lastTime))
           {
             AddRow(list, playerSpells, max, lastTime, startTime);
             playerSpells.Clear();
@@ -116,7 +116,7 @@ namespace EQLogParser
       var valid = false;
       replaced = spell.SpellData;
 
-      if (!string.IsNullOrEmpty(player) && unique.ContainsKey(player))
+      if (!spell.IsWearOff && !string.IsNullOrEmpty(player) && unique.ContainsKey(player))
       {
         var spellData = spell.SpellData ?? null;
 

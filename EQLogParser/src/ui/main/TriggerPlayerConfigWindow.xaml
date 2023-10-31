@@ -13,7 +13,7 @@
         TitleTextAlignment="Left"
         Topmost="True"
         UseLayoutRounding="True"
-        WindowStartupLocation="CenterScreen"
+        WindowStartupLocation="CenterOwner"
         SizeToContent="WidthAndHeight"
         MinHeight="135"
         Title="Add New Character" 

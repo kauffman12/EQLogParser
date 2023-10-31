@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Data;
 
 namespace EQLogParser
@@ -250,6 +251,11 @@ namespace EQLogParser
             }
 
             AddTextEvent(updatedDisplayText, wrapper.TriggerData);
+          }
+
+          if (ProcessDisplayText(wrapper.ModifiedShare, lineData.Action, matches, null) is { } updatedShareText)
+          {
+            UIUtil.InvokeAsync(() => Clipboard.SetText(updatedShareText));
           }
 
           AddEntry(lineData, wrapper, "Trigger", time);
@@ -553,6 +559,7 @@ namespace EQLogParser
               ModifiedEndSpeak = ModPlayer(trigger.EndTextToSpeak),
               ModifiedEndEarlySpeak = ModPlayer(trigger.EndEarlyTextToSpeak),
               ModifiedDisplay = ModPlayer(trigger.TextToDisplay),
+              ModifiedShare = ModPlayer(trigger.TextToShare),
               ModifiedWarningDisplay = ModPlayer(trigger.WarningTextToDisplay),
               ModifiedEndDisplay = ModPlayer(trigger.EndTextToDisplay),
               ModifiedEndEarlyDisplay = ModPlayer(trigger.EndEarlyTextToDisplay),
@@ -866,6 +873,7 @@ namespace EQLogParser
       public string ModifiedEndEarlySpeak { get; init; }
       public string ModifiedWarningSpeak { get; init; }
       public string ModifiedDisplay { get; set; }
+      public string ModifiedShare { get; set; }
       public string ModifiedEndDisplay { get; init; }
       public string ModifiedEndEarlyDisplay { get; init; }
       public string ModifiedWarningDisplay { get; init; }

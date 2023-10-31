@@ -1,5 +1,4 @@
 ﻿using Microsoft.Win32;
-using Syncfusion.Windows.Shared;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -9,10 +8,9 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for TriggerPlayerConfig.xaml
   /// </summary>
-  public partial class TriggerPlayerConfigWindow : ChromelessWindow
+  public partial class TriggerPlayerConfigWindow
   {
-    private const string NONAME = "Enter Character Name";
-
+    private const string EnterName = "Enter Character Name";
     private readonly TriggerCharacter TheCharacter;
 
     internal TriggerPlayerConfigWindow(TriggerCharacter character = null)
@@ -20,18 +18,19 @@ namespace EQLogParser
       MainActions.SetTheme(this, MainWindow.CurrentTheme);
       InitializeComponent();
 
+      Owner = Application.Current.MainWindow;
       TheCharacter = character;
       if (TheCharacter != null)
       {
-        characterName.Text = character.Name;
+        characterName.Text = TheCharacter.Name;
         characterName.FontStyle = FontStyles.Normal;
-        txtFilePath.Text = character.FilePath;
+        txtFilePath.Text = TheCharacter.FilePath;
         txtFilePath.FontStyle = FontStyles.Normal;
         Title = "Modify Character Settings";
       }
       else
       {
-        characterName.Text = NONAME;
+        characterName.Text = EnterName;
       }
     }
 
@@ -69,7 +68,7 @@ namespace EQLogParser
       if (string.IsNullOrEmpty(characterName.Text))
       {
         characterName.FontStyle = FontStyles.Italic;
-        characterName.Text = NONAME;
+        characterName.Text = EnterName;
       }
     }
 

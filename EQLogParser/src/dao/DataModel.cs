@@ -146,6 +146,7 @@ namespace EQLogParser
     public string EndEarlySoundToPlay { get; set; }
     public string EndSoundToPlay { get; set; }
     public string WarningSoundToPlay { get; set; }
+    public string TextToShare { get; set; }
   }
 
   internal class TimerOverlayPropertyModel : Overlay
@@ -587,7 +588,7 @@ namespace EQLogParser
   {
     public string Receiver { get; set; }
     public SpellData SpellData { get; set; }
-
+    public bool IsWearOff { get; set; }
     public List<SpellData> Ambiguity { get; } = new();
   }
 

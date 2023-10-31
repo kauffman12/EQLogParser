@@ -8,7 +8,7 @@ namespace EQLogParser
 {
   static class CastLineParser
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly char[] OldSpellChars = { '<', '>' };
 
     private static readonly Dictionary<string, string> SpecialCastCodes = new()
@@ -190,10 +190,24 @@ namespace EQLogParser
       var searchResult = DataManager.Instance.GetLandsOnYou(split);
       if (searchResult.SpellData.Count == 0 || searchResult.DataIndex != 0)
       {
-        // WearOff messages can only apply to use so DataIndex has to also be zero meaing that every word was matched
+        // WearOff messages can only apply to use so DataIndex has to also be zero meaning that every word was matched
         searchResult = DataManager.Instance.GetWearOff(split);
         if (searchResult.SpellData.Count > 0 && searchResult.DataIndex == 0)
         {
+          if (!string.IsNullOrEmpty(player))
+          {
+            var newSpell = new ReceivedSpell { Receiver = player, BeginTime = beginTime, IsWearOff = true };
+            if (searchResult.SpellData.Count == 1)
+            {
+              newSpell.SpellData = searchResult.SpellData.First();
+            }
+            else
+            {
+              newSpell.Ambiguity.AddRange(searchResult.SpellData);
+            }
+
+            DataManager.Instance.AddReceivedSpell(newSpell, beginTime);
+          }
           return true;
         }
 

@@ -19,18 +19,18 @@ namespace EQLogParser
 {
   public partial class GanttChart : UserControl, IDisposable
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     private static readonly List<string> BlockBrushes = new() { "EQMenuIconBrush", "EQWarnForegroundBrush" };
 
-    private int ROW_HEIGHT;
-    private const int LABELS_WIDTH = 190;
-    private const ushort CASTER_ADPS = 1;
-    private const ushort MELEE_ADPS = 2;
-    private const ushort TANK_ADPS = 4;
-    private const ushort HEALING_ADPS = 8;
-    private const ushort ANY_ADPS = CASTER_ADPS + MELEE_ADPS + TANK_ADPS + HEALING_ADPS;
-    private readonly string[] TYPES = { "Defensive Skills", "ADPS", "Healing Skills" };
+    private double RowHeight;
+    private const int LabelsWidth = 190;
+    private const ushort CasterAdps = 1;
+    private const ushort MeleeAdps = 2;
+    private const ushort TankAdps = 4;
+    private const ushort HealingAdps = 8;
+    private const ushort AnyAdps = CasterAdps + MeleeAdps + TankAdps + HealingAdps;
+    private readonly string[] Types = { "Defensive Skills", "ADPS", "Healing Skills" };
 
     private readonly Dictionary<string, SpellRange> SpellRanges = new();
     private readonly List<TextBlock> Headers = new();
@@ -49,7 +49,7 @@ namespace EQLogParser
     public GanttChart()
     {
       InitializeComponent();
-      ROW_HEIGHT = (int)MainWindow.CurrentFontSize + 12;
+      RowHeight = (int)MainWindow.CurrentFontSize + 12;
       MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
@@ -67,12 +67,12 @@ namespace EQLogParser
         switch (Selected.Count)
         {
           case 1:
-            titleLabel1.Content = Selected[0].OrigName + "'s " + TYPES[TimelineType] + " | " + currentStats?.ShortTitle;
+            titleLabel1.Content = Selected[0].OrigName + "'s " + Types[TimelineType] + " | " + currentStats?.ShortTitle;
             break;
           case 2:
             titleLabel1.Content = Selected[0].OrigName + " vs ";
             titleLabel2.Content = Selected[1].OrigName + "'s ";
-            titleLabel3.Content = TYPES[TimelineType] + " | " + currentStats?.ShortTitle;
+            titleLabel3.Content = Types[TimelineType] + " | " + currentStats?.ShortTitle;
             break;
         }
 
@@ -113,30 +113,48 @@ namespace EQLogParser
 
           if (deathMap.TryGetValue(Selected[i].OrigName, out var deathTimes))
           {
-            var death = new SpellData { Adps = (byte)ANY_ADPS, Duration = 3, NameAbbrv = "Player Death", Name = "Player Death" };
+            var death = new SpellData { Adps = (byte)AnyAdps, Duration = 3, NameAbbrv = "Player Death", Name = "Player Death" };
             foreach (var time in deathTimes)
             {
               UpdateSpellRange(death, time, BlockBrushes[i]);
             }
           }
 
+          var castSpells = new List<SpellData>();
           foreach (var block in allSpells.OrderBy(block => block.BeginTime).ThenBy(block => (block.Actions.Count > 0 && block.Actions[0] is ReceivedSpell) ? 1 : -1))
           {
             foreach (var action in block.Actions)
             {
-              if (action is SpellCast { Interrupted: false } cast && cast.Caster == player && cast.SpellData is
-                {
-                  Target: (int)SpellTarget.SELF, Adps: > 0
-                } && (cast.SpellData.MaxHits > 0 || cast.SpellData.Duration <= 1800) && ClassFilter(cast.SpellData))
+              if (action is SpellCast { Interrupted: false } cast && cast.Caster == player && cast.SpellData is { Target: (int)SpellTarget.SELF, Adps: > 0 }
+                && (cast.SpellData.MaxHits > 0 || cast.SpellData.Duration <= 1800) && ClassFilter(cast.SpellData))
               {
+                castSpells.Add(cast.SpellData);
                 UpdateSpellRange(cast.SpellData, block.BeginTime, BlockBrushes[i], deathTimes);
               }
               else if (action is ReceivedSpell received && received.Receiver == player)
               {
                 var spellData = received.SpellData;
-                if (spellData == null && received.Ambiguity.Count > 0 && DataManager.ResolveSpellAmbiguity(received, out var replaced))
+                if (spellData == null && received.Ambiguity.Count > 0)
                 {
-                  spellData = replaced;
+                  if (!received.IsWearOff)
+                  {
+                    if (DataManager.ResolveSpellAmbiguity(received, out var replaced))
+                    {
+                      castSpells.Add(replaced);
+                      spellData = replaced;
+                    }
+                  }
+                  else
+                  {
+                    foreach (var possible in received.Ambiguity)
+                    {
+                      if (castSpells.Find(spell => spell.WearOff == possible.WearOff || spell.LandsOnYou == possible.LandsOnYou
+                            || spell.LandsOnOther == possible.LandsOnOther) is { } found)
+                      {
+                        spellData = found;
+                      }
+                    }
+                  }
                 }
 
                 if (spellData is { Adps: > 0 } && (spellData.MaxHits > 0 || spellData.Duration <= 1800) && ClassFilter(spellData))
@@ -146,7 +164,7 @@ namespace EQLogParser
                     SelfOnly[spellData.NameAbbrv] = 1;
                   }
 
-                  UpdateSpellRange(spellData, block.BeginTime, BlockBrushes[i], deathTimes);
+                  UpdateSpellRange(spellData, block.BeginTime, BlockBrushes[i], deathTimes, received.IsWearOff);
                 }
               }
             }
@@ -172,7 +190,7 @@ namespace EQLogParser
 
     private void EventsThemeChanged(string _)
     {
-      ROW_HEIGHT = (int)MainWindow.CurrentFontSize + 12;
+      RowHeight = (int)MainWindow.CurrentFontSize + 12;
       Display();
     }
 
@@ -184,33 +202,48 @@ namespace EQLogParser
 
     private bool ClassFilter(SpellData data)
     {
-      return (TimelineType == 0 && (data.Adps & TANK_ADPS) != 0) || (TimelineType == 1 && ((data.Adps & CASTER_ADPS) != 0 || (data.Adps & MELEE_ADPS) != 0)) ||
-        (TimelineType == 2 && (data.Adps & HEALING_ADPS) != 0);
+      return (TimelineType == 0 && (data.Adps & TankAdps) != 0) || (TimelineType == 1 && ((data.Adps & CasterAdps) != 0 || (data.Adps & MeleeAdps) != 0)) ||
+        (TimelineType == 2 && (data.Adps & HealingAdps) != 0);
     }
 
-    private void UpdateSpellRange(SpellData spellData, double beginTime, string brush, HashSet<double> deathTimes = null)
+    private void UpdateSpellRange(SpellData spellData, double beginTime, string brush, HashSet<double> deathTimes = null, bool isWearOff = false)
     {
       if (!SpellRanges.TryGetValue(spellData.NameAbbrv, out var spellRange))
       {
-        spellRange = new SpellRange { Adps = spellData.Adps };
-        var duration = GetDuration(spellData, EndTime, beginTime, deathTimes);
-        var range = new TimeRange { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration };
-        spellRange.Ranges.Add(range);
-        SpellRanges[spellData.NameAbbrv] = spellRange;
+        if (!isWearOff)
+        {
+          spellRange = new SpellRange { Adps = spellData.Adps };
+          var duration = GetDuration(spellData, EndTime, beginTime, deathTimes);
+          var range = new TimeRange { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration };
+          spellRange.Ranges.Add(range);
+          SpellRanges[spellData.NameAbbrv] = spellRange;
+        }
       }
       else
       {
         var last = spellRange.Ranges.LastOrDefault(range => range.BlockBrush == brush);
         var offsetSeconds = (int)(beginTime - StartTime);
-        if (last != null && offsetSeconds >= last.BeginSeconds && offsetSeconds <= (last.BeginSeconds + last.Duration))
+
+        if (last != null)
         {
-          last.Duration = GetDuration(spellData, EndTime, beginTime, deathTimes) + (offsetSeconds - last.BeginSeconds);
-        }
-        else
-        {
-          var duration = GetDuration(spellData, EndTime, beginTime, deathTimes);
-          var range = new TimeRange { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration };
-          spellRange.Ranges.Add(range);
+          if (isWearOff)
+          {
+            var newOffset = offsetSeconds - last.BeginSeconds;
+            last.Duration = newOffset - last.Duration <= 6 ? newOffset : last.Duration;
+          }
+          else
+          {
+            if (offsetSeconds >= last.BeginSeconds && offsetSeconds <= (last.BeginSeconds + last.Duration))
+            {
+              last.Duration = GetDuration(spellData, EndTime, beginTime, deathTimes) + (offsetSeconds - last.BeginSeconds);
+            }
+            else
+            {
+              var duration = GetDuration(spellData, EndTime, beginTime, deathTimes);
+              var range = new TimeRange { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration };
+              spellRange.Ranges.Add(range);
+            }
+          }
         }
       }
     }
@@ -433,19 +466,20 @@ namespace EQLogParser
       {
         var spellRange = SpellRanges[key];
         if ((!CurrentHideSelfOnly || !SelfOnly.ContainsKey(key))
-          && ((CurrentShowCasterAdps && ((spellRange.Adps & CASTER_ADPS) == CASTER_ADPS))
-          || (CurrentShowMeleeAdps && ((spellRange.Adps & MELEE_ADPS) == MELEE_ADPS))
-          || (TimelineType == 0 && ((spellRange.Adps & TANK_ADPS) == TANK_ADPS))
-          || (TimelineType == 2 && ((spellRange.Adps & HEALING_ADPS) == HEALING_ADPS))) && !Ignore.ContainsKey(key))
+          && ((CurrentShowCasterAdps && ((spellRange.Adps & CasterAdps) == CasterAdps))
+          || (CurrentShowMeleeAdps && ((spellRange.Adps & MeleeAdps) == MeleeAdps))
+          || (TimelineType == 0 && ((spellRange.Adps & TankAdps) == TankAdps))
+          || (TimelineType == 2 && ((spellRange.Adps & HealingAdps) == HealingAdps))) && !Ignore.ContainsKey(key))
         {
-          var hPos = ROW_HEIGHT * row;
+          var hPos = RowHeight * row;
           AddGridRow(hPos, key);
-          spellRange.Ranges.ForEach(range => content.Children.Add(CreateAdpsBlock(key, hPos, range.BeginSeconds, range.Duration, range.BlockBrush, Selected.Count)));
+          spellRange.Ranges.ForEach(timeRange => content.Children.Add(
+            CreateAdpsBlock(key, hPos, timeRange.BeginSeconds, timeRange.Duration, timeRange.BlockBrush, Selected.Count)));
           row++;
         }
       }
 
-      var finalHeight = ROW_HEIGHT * row;
+      var finalHeight = RowHeight * row;
       AddDivider(contentLabels, finalHeight, 20);
       AddDivider(content, finalHeight, DataManager.BUFFS_OFFSET);
       AddDivider(content, finalHeight, Length);
@@ -465,7 +499,7 @@ namespace EQLogParser
       }
     }
 
-    private void AddGridRow(int hPos, string name)
+    private void AddGridRow(double hPos, string name)
     {
       var labelsRow = CreateRowBlock(hPos);
       var contentRow = CreateRowBlock(hPos);
@@ -495,7 +529,7 @@ namespace EQLogParser
         HorizontalAlignment = HorizontalAlignment.Left,
         VerticalAlignment = VerticalAlignment.Top,
         Text = name,
-        Width = LABELS_WIDTH - 20,
+        Width = LabelsWidth - 20,
         Margin = new Thickness(24, hPos + 4, 0, 0)
       };
 
@@ -515,7 +549,7 @@ namespace EQLogParser
         VerticalAlignment = VerticalAlignment.Center,
         Text = text,
         Width = 80,
-        Margin = new Thickness(LABELS_WIDTH + left - offset, 0, 0, 0)
+        Margin = new Thickness(LabelsWidth + left - offset, 0, 0, 0)
       };
 
       Headers.Add(textBlock);
@@ -525,7 +559,7 @@ namespace EQLogParser
       contentHeader.Children.Add(textBlock);
     }
 
-    private void AddDivider(Grid target, int hPos, double left, string blockBrush = null)
+    private void AddDivider(Grid target, double hPos, double left, string blockBrush = null)
     {
       var rectangle = new Rectangle
       {
@@ -551,19 +585,19 @@ namespace EQLogParser
           labelsScroller.HorizontalScrollBarVisibility = scroller.ComputedHorizontalScrollBarVisibility == Visibility.Visible ? ScrollBarVisibility.Visible : ScrollBarVisibility.Hidden;
         }
 
-        if (labelsScroller.VerticalOffset != e.VerticalOffset)
+        if (!StatsUtil.DoubleEquals(labelsScroller.VerticalOffset, e.VerticalOffset))
         {
           labelsScroller.ScrollToVerticalOffset(e.VerticalOffset);
         }
 
-        if (headerScroller.HorizontalOffset != e.HorizontalOffset)
+        if (!StatsUtil.DoubleEquals(headerScroller.HorizontalOffset, e.HorizontalOffset))
         {
           headerScroller.ScrollToHorizontalOffset(e.HorizontalOffset);
         }
 
         Headers.ForEach(header =>
         {
-          if (header.Margin.Left + (header.ActualWidth / 2) < (e.HorizontalOffset + 10 + LABELS_WIDTH))
+          if (header.Margin.Left + (header.ActualWidth / 2) < (e.HorizontalOffset + 10 + LabelsWidth))
           {
             if (header.Visibility != Visibility.Hidden)
             {
@@ -583,7 +617,7 @@ namespace EQLogParser
 
     private void LabelsScrollViewChanged(object sender, ScrollChangedEventArgs e)
     {
-      if (contentScroller.VerticalOffset != e.VerticalOffset)
+      if (!StatsUtil.DoubleEquals(contentScroller.VerticalOffset, e.VerticalOffset))
       {
         contentScroller.ScrollToVerticalOffset(e.VerticalOffset);
       }
@@ -591,9 +625,9 @@ namespace EQLogParser
 
     private void OptionsChange(object sender, RoutedEventArgs e)
     {
-      CurrentHideSelfOnly = hideSelfOnly?.IsChecked.Value == true;
-      CurrentShowCasterAdps = showCasterAdps?.IsChecked.Value == true;
-      CurrentShowMeleeAdps = showMeleeAdps?.IsChecked.Value == true;
+      CurrentHideSelfOnly = hideSelfOnly?.IsChecked == true;
+      CurrentShowCasterAdps = showCasterAdps?.IsChecked == true;
+      CurrentShowMeleeAdps = showMeleeAdps?.IsChecked == true;
 
       // when the UI is ready basically
       if (Selected != null)
@@ -602,7 +636,7 @@ namespace EQLogParser
       }
     }
 
-    private Rectangle CreateAdpsBlock(string label, int hPos, int start, int length, string blockBrush, int count)
+    private Rectangle CreateAdpsBlock(string label, double hPos, int start, int length, string blockBrush, int count)
     {
       var offset = count == 1 ? 0 : blockBrush == BlockBrushes[0] ? -3 : 3;
       var zIndex = blockBrush == BlockBrushes[0] ? 11 : 10;
@@ -610,12 +644,12 @@ namespace EQLogParser
       var block = new Rectangle
       {
         StrokeThickness = 0.2,
-        Height = ROW_HEIGHT / 3,
+        Height = RowHeight / 3,
         HorizontalAlignment = HorizontalAlignment.Left,
         VerticalAlignment = VerticalAlignment.Top,
         Opacity = 1.0,
         Width = length,
-        Margin = new Thickness(start, hPos + (ROW_HEIGHT / 3) + offset, 0, 0),
+        Margin = new Thickness(start, hPos + (RowHeight / 3) + offset, 0, 0),
         Effect = new DropShadowEffect { ShadowDepth = 2, Direction = 240, BlurRadius = 0.5, Opacity = 0.5 },
         RadiusX = 2,
         RadiusY = 2,
@@ -628,11 +662,11 @@ namespace EQLogParser
       return block;
     }
 
-    private Rectangle CreateRowBlock(int hPos)
+    private Rectangle CreateRowBlock(double hPos)
     {
       var block = new Rectangle
       {
-        Height = ROW_HEIGHT,
+        Height = RowHeight,
         StrokeThickness = 0.2,
         VerticalAlignment = VerticalAlignment.Top,
         Margin = new Thickness(0, hPos, 0, 0)
@@ -649,28 +683,31 @@ namespace EQLogParser
       // tanking hits happen a lot faster than spell casting so have our guesses be 1/3 as long
       var mod = TimelineType == 0 ? 3 : 1;
 
+      var maxHitDuration = 0;
       if (spell.MaxHits > 0)
       {
         if (spell.MaxHits == 1)
         {
-          duration = duration > 6 ? 6 / mod : duration;
+          maxHitDuration = duration > 6 ? 6 / mod : duration;
         }
         else if (spell.MaxHits <= 3)
         {
-          duration = duration > 12 ? 12 / mod : duration;
+          maxHitDuration = duration > 12 ? 12 / mod : duration;
         }
         else if (spell.MaxHits == 4)
         {
-          duration = duration > 18 ? 18 / mod : duration;
+          maxHitDuration = duration > 18 ? 18 / mod : duration;
         }
         else
         {
           var guess = spell.MaxHits / 5 * 18 / mod;
-          duration = duration > guess ? guess : duration;
+          maxHitDuration = duration > guess ? guess : duration;
         }
       }
 
-      if (deathTimes != null && !spell.Name.StartsWith("Glyph of"))
+      duration = spell.MaxHits > 0 ? Math.Min(maxHitDuration, duration) : duration;
+
+      if (deathTimes != null && !spell.Name.StartsWith("Glyph of", StringComparison.OrdinalIgnoreCase))
       {
         foreach (var time in deathTimes)
         {
@@ -690,14 +727,14 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
+    private bool DisposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!disposedValue)
+      if (!DisposedValue)
       {
         MainActions.EventsThemeChanged -= EventsThemeChanged;
-        disposedValue = true;
+        DisposedValue = true;
       }
     }
 

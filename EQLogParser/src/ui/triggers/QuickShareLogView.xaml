@@ -48,7 +48,7 @@
         <syncfusion:GridTextColumn MappingName="BeginTime" SortMode="Value" DisplayBinding="{Binding BeginTime, Converter={StaticResource DateTimeConverter}}"
                                    TextAlignment="Center" HeaderText="Share Time" MinimumWidth="110" />
         <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" MinimumWidth="70" TextAlignment="Center"/>
-        <syncfusion:GridTextColumn MappingName="To" HeaderText="To" MinimumWidth="100"/>
+        <syncfusion:GridTextColumn MappingName="To" HeaderText="To" MinimumWidth="120"/>
         <syncfusion:GridTextColumn MappingName="From" HeaderText="From" MinimumWidth="100"/>
         <syncfusion:GridTextColumn MappingName="Key" HeaderText="Share Key" MinimumWidth="500"/>
       </syncfusion:SfDataGrid.Columns>
