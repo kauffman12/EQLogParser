@@ -316,13 +316,19 @@ namespace EQLogParser
                   trigger.AltTimerName = timerName;
                 }
 
-                if (bool.TryParse(GetText(triggerNode, "UseText"), out var _))
+                if (bool.TryParse(GetText(triggerNode, "UseText"), out _))
                 {
                   goodTrigger = true;
                   trigger.TextToDisplay = GetText(triggerNode, "DisplayText");
                 }
 
-                if (bool.TryParse(GetText(triggerNode, "UseTextToVoice"), out var _))
+                if (bool.TryParse(GetText(triggerNode, "CopyToClipboard"), out _))
+                {
+                  goodTrigger = true;
+                  trigger.TextToShare = GetText(triggerNode, "ClipboardText");
+                }
+
+                if (bool.TryParse(GetText(triggerNode, "UseTextToVoice"), out _))
                 {
                   goodTrigger = true;
                   trigger.TextToSpeak = GetText(triggerNode, "TextToVoiceText");
