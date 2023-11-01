@@ -100,6 +100,12 @@ namespace EQLogParser
       UIUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
     }
 
+    internal void StopTestProcessor()
+    {
+      TestProcessor?.Dispose();
+      TestProcessor = null;
+    }
+
     internal List<Tuple<string, ObservableCollection<AlertEntry>>> GetAlertLogs()
     {
       var list = new List<Tuple<string, ObservableCollection<AlertEntry>>>();

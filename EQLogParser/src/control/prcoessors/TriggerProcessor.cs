@@ -42,6 +42,7 @@ namespace EQLogParser
     });
     private TriggerWrapper PreviousSpoken;
     private LinkedList<TriggerWrapper> ActiveTriggers;
+    private bool Running = true;
 
     internal TriggerProcessor(string id, string name, string playerName, Action<string, Trigger> addTextEvent,
       Action<Trigger, List<TimerData>> addTimerEvent)
@@ -173,7 +174,7 @@ namespace EQLogParser
 
     }
 
-    private void HandleTrigger(TriggerWrapper wrapper, LineData lineData)
+    private void HandleTrigger(TriggerWrapper wrapper, LineData lineData, int loopCount = 0)
     {
       Speak speak = null;
 
@@ -190,7 +191,7 @@ namespace EQLogParser
         {
           matches = wrapper.Regex.Matches(action);
           found = matches.Count > 0 && TriggerUtil.CheckOptions(wrapper.RegexNOptions, matches, out dynamicDuration);
-          if (!double.IsNaN(dynamicDuration) && wrapper.TriggerData.TimerType == 1)
+          if (!double.IsNaN(dynamicDuration) && wrapper.TriggerData.TimerType is 1 or 3) // countdown or progress
           {
             wrapper.ModifiedDurationSeconds = dynamicDuration;
           }
@@ -225,7 +226,7 @@ namespace EQLogParser
 
             if (wrapper.TriggerData.TimerType > 0 && wrapper.TriggerData.DurationSeconds > 0)
             {
-              StartTimer(wrapper, displayName, beginTicks, lineData, matches);
+              StartTimer(wrapper, displayName, beginTicks, lineData, matches, loopCount);
             }
           }
 
@@ -307,7 +308,8 @@ namespace EQLogParser
       }
     }
 
-    private void StartTimer(TriggerWrapper wrapper, string displayName, long beginTicks, LineData lineData, MatchCollection matches)
+    private void StartTimer(TriggerWrapper wrapper, string displayName, long beginTicks, LineData lineData,
+      MatchCollection matches, int loopCount = 0)
     {
       var trigger = wrapper.TriggerData;
       switch (trigger.TriggerAgainOption)
@@ -398,6 +400,13 @@ namespace EQLogParser
       newTimerData.FontColor = trigger.FontColor;
       newTimerData.Key = wrapper.Name + "-" + trigger.Pattern;
       newTimerData.CancelSource = new CancellationTokenSource();
+      newTimerData.TimesToLoopCount = loopCount;
+
+      // save line data if repeating timer
+      if (wrapper.TriggerData.TimerType == 4)
+      {
+        newTimerData.RepeatingTimerLineData = lineData;
+      }
 
       if (!string.IsNullOrEmpty(trigger.EndEarlyPattern))
       {
@@ -434,14 +443,15 @@ namespace EQLogParser
       wrapper.TimerList.Add(newTimerData);
       var needEvent = wrapper.TimerList.Count == 1;
 
+      var data2 = newTimerData;
       Task.Delay((int)(wrapper.ModifiedDurationSeconds * 1000)).ContinueWith(_ =>
       {
         var proceed = false;
         lock (wrapper)
         {
-          if (newTimerData.CancelSource != null)
+          if (data2.CancelSource != null)
           {
-            proceed = !newTimerData.CancelSource.Token.IsCancellationRequested;
+            proceed = !data2.CancelSource.Token.IsCancellationRequested;
           }
 
           if (proceed)
@@ -454,17 +464,26 @@ namespace EQLogParser
               TtsOrSound = speak,
               IsSound = isSound,
               Matches = matches,
-              OriginalMatches = newTimerData.OriginalMatches,
+              OriginalMatches = data2.OriginalMatches,
               Action = lineData.Action
             });
 
-            if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, newTimerData.OriginalMatches) is { } updatedDisplayText)
+            if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, data2.OriginalMatches) is { } updatedDisplayText)
             {
               AddTextEvent(updatedDisplayText, trigger);
             }
 
             AddEntry(lineData, wrapper, "Timer End");
-            CleanupTimer(wrapper, newTimerData);
+            CleanupTimer(wrapper, data2);
+
+            // repeating
+            if (wrapper.TriggerData.TimerType == 4 && Running)
+            {
+              if (wrapper.TriggerData.TimesToLoop > data2.TimesToLoopCount)
+              {
+                HandleTrigger(wrapper, data2.RepeatingTimerLineData, data2.TimesToLoopCount + 1);
+              }
+            }
           }
         }
       }, newTimerData.CancelSource.Token);
@@ -831,6 +850,7 @@ namespace EQLogParser
 
     public void Dispose()
     {
+      Running = false;
       LowPriChannel?.Writer.Complete();
       SpeechChannel?.Writer.Complete();
       SoundPlayer?.Dispose();

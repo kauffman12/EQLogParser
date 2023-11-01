@@ -195,7 +195,7 @@ namespace EQLogParser
                     if (current != DateTime.MinValue)
                     {
                       var currentTime = DateUtil.ToDouble(current);
-                      if (currentTime == startTime)
+                      if (StatsUtil.DoubleEquals(currentTime, startTime))
                       {
                         data[dataIndex].Add(line);
                       }
@@ -241,6 +241,8 @@ namespace EQLogParser
                       if (content.ToString() == "Stopping Test")
                       {
                         stop = true;
+                        Buffer?.CompleteAdding();
+                        TriggerManager.Instance.StopTestProcessor();
                       }
                     });
 

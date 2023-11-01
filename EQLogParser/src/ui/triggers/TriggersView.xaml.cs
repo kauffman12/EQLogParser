@@ -83,6 +83,7 @@ namespace EQLogParser
       AddEditorInstance(new TextSoundEditor(fileList), "WarningSoundOrText");
       AddEditorInstance(new RangeEditor(typeof(long), 1, 5), "Priority");
       AddEditorInstance(new RangeEditor(typeof(long), 0, 99999), "WarningSeconds");
+      AddEditorInstance(new RangeEditor(typeof(long), 1, 99999), "TimesToLoop");
       AddEditorInstance(new RangeEditor(typeof(double), 0, 99999), "RepeatedResetTime");
       AddEditorInstance(new DurationEditor(2), "DurationTimeSpan");
       AddEditorInstance(new RangeEditor(typeof(long), 1, 60), "FadeDelay");
@@ -321,15 +322,15 @@ namespace EQLogParser
       thePropertyGrid.IsEnabled = false;
     }
 
-    private void EnableCategories(bool trigger, bool isTimer, bool isShortTimer, bool overlay, bool overlayTimer,
+    private void EnableCategories(bool trigger, int timerType, bool overlay, bool overlayTimer,
       bool overlayAssigned, bool overlayText, bool cooldownTimer)
     {
       PropertyGridUtil.EnableCategories(thePropertyGrid, new dynamic[]
       {
         new { Name = patternItem.CategoryName, IsEnabled = trigger },
-        new { Name = timerDurationItem.CategoryName, IsEnabled = isTimer },
-        new { Name = resetDurationItem.CategoryName, IsEnabled = isTimer && !isShortTimer },
-        new { Name = endEarlyPatternItem.CategoryName, IsEnabled = isTimer && !isShortTimer },
+        new { Name = timerDurationItem.CategoryName, IsEnabled = timerType > 0 },
+        new { Name = endEarlyPatternItem.CategoryName, IsEnabled = timerType > 0 && timerType != 2 },
+        new { Name = warningSecondsItem.CategoryName, IsEnabled = timerType > 0 && timerType != 2 },
         new { Name = fontSizeItem.CategoryName, IsEnabled = overlay },
         new { Name = activeBrushItem.CategoryName, IsEnabled = overlayTimer },
         new { Name = idleBrushItem.CategoryName, IsEnabled = cooldownTimer },
@@ -337,8 +338,10 @@ namespace EQLogParser
         new { Name = fadeDelayItem.CategoryName, IsEnabled = overlayText }
       });
 
-      timerDurationItem.Visibility = (isTimer && !isShortTimer) ? Visibility.Visible : Visibility.Collapsed;
-      timerShortDurationItem.Visibility = isShortTimer ? Visibility.Visible : Visibility.Collapsed;
+      resetDurationItem.Visibility = (timerType > 0 && timerType != 2 && timerType != 4) ? Visibility.Visible : Visibility.Collapsed;
+      timerDurationItem.Visibility = (timerType > 0 && timerType != 2) ? Visibility.Visible : Visibility.Collapsed;
+      timerShortDurationItem.Visibility = timerType == 2 ? Visibility.Visible : Visibility.Collapsed;
+      loopingTimerItem.Visibility = timerType == 4 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void ValueChanged(object sender, ValueChangedEventArgs args)
@@ -357,7 +360,7 @@ namespace EQLogParser
         }
         else if (args.Property.Name == timerTypeItem.PropertyName && args.Property.Value is int timerType)
         {
-          EnableCategories(true, timerType > 0, timerType == 2, false, false, true, false, false);
+          EnableCategories(true, timerType, false, false, true, false, false);
         }
         else if (args.Property.Name == triggerActiveBrushItem.PropertyName)
         {
@@ -555,7 +558,7 @@ namespace EQLogParser
       {
         TriggerUtil.Copy(model, model.Node.TriggerData);
         var timerType = model.Node.TriggerData.TimerType;
-        EnableCategories(true, timerType > 0, timerType == 2, false, false, true, false, false);
+        EnableCategories(true, timerType, false, false, true, false, false);
       }
       else if (model is TimerOverlayPropertyModel || model is TextOverlayPropertyModel)
       {
@@ -598,18 +601,18 @@ namespace EQLogParser
 
       if (data.Item1?.IsTrigger() == true)
       {
-        var timerType = data.Item1.SerializedData?.TriggerData.TimerType;
-        EnableCategories(true, timerType > 0, timerType == 2, false, false, true, false, false);
+        var timerType = data.Item1.SerializedData?.TriggerData.TimerType ?? 0;
+        EnableCategories(true, timerType, false, false, true, false, false);
       }
       else if (data.Item1?.IsOverlay() == true)
       {
         if (isTimerOverlay)
         {
-          EnableCategories(false, false, false, true, true, false, false, isCooldownOverlay);
+          EnableCategories(false, 0, true, true, false, false, isCooldownOverlay);
         }
         else
         {
-          EnableCategories(false, false, false, true, false, false, true, false);
+          EnableCategories(false, 0, true, false, false, true, false);
         }
       }
     }

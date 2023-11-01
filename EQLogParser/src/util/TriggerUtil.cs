@@ -109,6 +109,7 @@ namespace EQLogParser
         toTrigger.TimerType = fromTrigger.TimerType;
         toTrigger.UseRegex = fromTrigger.UseRegex;
         toTrigger.WarningSeconds = fromTrigger.WarningSeconds;
+        toTrigger.TimesToLoop = fromTrigger.TimesToLoop;
         toTrigger.EndTextToDisplay = TextUtils.Trim(fromTrigger.EndTextToDisplay);
         toTrigger.EndEarlyTextToDisplay = TextUtils.Trim(fromTrigger.EndEarlyTextToDisplay);
         toTrigger.TextToDisplay = TextUtils.Trim(fromTrigger.TextToDisplay);
@@ -179,7 +180,7 @@ namespace EQLogParser
           toTrigger.WarningTextToSpeak = text;
           toTrigger.EnableTimer = fromModel.TimerType > 0;
 
-          if (fromModel.TimerType == 1)
+          if (fromModel.TimerType > 0 && fromModel.TimerType != 2)
           {
             toTrigger.DurationSeconds = fromModel.DurationTimeSpan.TotalSeconds;
           }
