@@ -51,7 +51,7 @@
                 <Button x:Name="resetButton" FontFamily="Segoe MDL2 Assets" Click="ResetClick" ToolTip="Clear Parse" Content="&#xE75C;" FontSize="13" Margin="0,0,0,0" Padding="3" Foreground="White" Background="Transparent" Focusable="False"/>
                 <Button x:Name="exitButton" FontFamily="Segoe MDL2 Assets" Click="CloseClick" ToolTip="Close" Content="&#xE8BB;" FontSize="10" Margin="0,0,0,0" Padding="3" Foreground="White" Background="Transparent" Focusable="False"/>
                 <Rectangle x:Name="rect1" Width="1" Fill="White" Height="14" Margin="4,1,0,0"/>
-                <Button x:Name="dpsButton" Content="DPS" FontFamily="Tahoma" Click="DPSClick" Margin="0,1,0,1" Padding="4" FontSize="13" Focusable="False" BorderBrush="Transparent" Foreground="White" Background="Transparent"/>
+                <Button x:Name="dpsButton" Content="DPS" FontFamily="Tahoma" Click="DpsClick" Margin="0,1,0,1" Padding="4" FontSize="13" Focusable="False" BorderBrush="Transparent" Foreground="White" Background="Transparent"/>
                 <Rectangle x:Name="rect2" Width="1" Fill="White" Height="14" Margin="0,1,0,0"/>
                 <Button x:Name="tankButton" Content="Tank" FontFamily="Tahoma" Click="TankClick" Margin="0,1,0,1" Padding="4" FontSize="13" Focusable="False" BorderBrush="Transparent" Foreground="White" Background="Transparent"/>
               </StackPanel>

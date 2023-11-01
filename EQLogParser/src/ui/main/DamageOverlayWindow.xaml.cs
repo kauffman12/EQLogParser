@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -13,7 +14,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for DamageOverlayWindow.xaml
   /// </summary>
-  public partial class DamageOverlayWindow : Window
+  public partial class DamageOverlayWindow
   {
     private const double DamageModeZeroTimeout = TimeSpan.TicksPerSecond * 7; // with 3 second slain queue delay
     private static readonly object StatsLock = new();
@@ -247,7 +248,7 @@ namespace EQLogParser
 
         if (!DataManager.Instance.HasOverlayFights())
         {
-          ((MainWindow)Application.Current.MainWindow).CloseDamageOverlay();
+          ((MainWindow)Application.Current.MainWindow)?.CloseDamageOverlay();
         }
       }
     }
@@ -300,17 +301,17 @@ namespace EQLogParser
             }
           }
 
-          damageBar.Update(origName, name, StatsUtil.FormatTotals(stat.Total),
-          StatsUtil.FormatTotals(stat.DPS, 1), stat.TotalSeconds.ToString(), barPercent);
+          damageBar?.Update(origName, name, StatsUtil.FormatTotals(stat.Total),
+          StatsUtil.FormatTotals(stat.DPS, 1), stat.TotalSeconds.ToString(CultureInfo.InvariantCulture), barPercent);
 
-          if (damageBar.Visibility == Visibility.Collapsed)
+          if (damageBar?.Visibility == Visibility.Collapsed)
           {
             damageBar.Visibility = Visibility.Visible;
           }
         }
         else
         {
-          if (damageBar.Visibility == Visibility.Visible)
+          if (damageBar?.Visibility == Visibility.Visible)
           {
             damageBar.Update("", "", "", "", "", 0);
             damageBar.Visibility = Visibility.Collapsed;
@@ -319,10 +320,10 @@ namespace EQLogParser
       }
 
       var titleBar = children[^1] as DamageBar;
-      titleBar.Update("", localStats.TargetTitle, StatsUtil.FormatTotals(localStats.RaidStats.Total),
-        StatsUtil.FormatTotals(localStats.RaidStats.DPS, 1), localStats.RaidStats.TotalSeconds.ToString(), 0);
+      titleBar?.Update("", localStats.TargetTitle, StatsUtil.FormatTotals(localStats.RaidStats.Total),
+        StatsUtil.FormatTotals(localStats.RaidStats.DPS, 1), localStats.RaidStats.TotalSeconds.ToString(CultureInfo.InvariantCulture), 0);
 
-      if (titleBar.Visibility == Visibility.Collapsed)
+      if (titleBar?.Visibility == Visibility.Collapsed)
       {
         titleBar.Visibility = Visibility.Visible;
       }
@@ -340,47 +341,47 @@ namespace EQLogParser
       {
         if (load)
         {
-          (damageContent.Children[i] as DamageBar).Update(ConfigUtil.PlayerName, i + 1 + ". Example Player " + i, "120.5M", "100.1K", "123", 120 - (i * 10));
+          (damageContent.Children[i] as DamageBar)?.Update(ConfigUtil.PlayerName, i + 1 + ". Example Player " + i, "120.5M", "100.1K", "123", 120 - (i * 10));
         }
         else
         {
-          (damageContent.Children[i] as DamageBar).Update("", "", "", "", "", 0);
-          (damageContent.Children[i] as DamageBar).Visibility = Visibility.Collapsed;
+          (damageContent.Children[i] as DamageBar)?.Update("", "", "", "", "", 0);
+          ((DamageBar)damageContent.Children[i]).Visibility = Visibility.Collapsed;
         }
       }
 
       if (load)
       {
-        (damageContent.Children[^1] as DamageBar).Update("", "Example NPC", "500.2M", "490.5K", "456", 0);
+        (damageContent.Children[^1] as DamageBar)?.Update("", "Example NPC", "500.2M", "490.5K", "456", 0);
       }
       else
       {
-        (damageContent.Children[^1] as DamageBar).Update("", "", "", "", "", 0);
-        (damageContent.Children[^1] as DamageBar).Visibility = Visibility.Collapsed;
+        (damageContent.Children[^1] as DamageBar)?.Update("", "", "", "", "", 0);
+        ((DamageBar)damageContent.Children[^1]).Visibility = Visibility.Collapsed;
       }
     }
 
     private void CloseClick(object sender, RoutedEventArgs e)
     {
-      ((MainWindow)Application.Current.MainWindow).CloseDamageOverlay();
-      ((MainWindow)Application.Current.MainWindow).OpenDamageOverlayIfEnabled(false, false);
+      ((MainWindow)Application.Current.MainWindow)?.CloseDamageOverlay();
+      ((MainWindow)Application.Current.MainWindow)?.OpenDamageOverlayIfEnabled(false, false);
     }
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
-      ConfigUtil.SetSetting("OverlayHeight", Height.ToString());
-      ConfigUtil.SetSetting("OverlayWidth", Width.ToString());
+      ConfigUtil.SetSetting("OverlayHeight", Height.ToString(CultureInfo.InvariantCulture));
+      ConfigUtil.SetSetting("OverlayWidth", Width.ToString(CultureInfo.InvariantCulture));
       SavedHeight = Height;
       SavedWidth = Width;
 
-      ConfigUtil.SetSetting("OverlayTop", Top.ToString());
-      ConfigUtil.SetSetting("OverlayLeft", Left.ToString());
+      ConfigUtil.SetSetting("OverlayTop", Top.ToString(CultureInfo.InvariantCulture));
+      ConfigUtil.SetSetting("OverlayLeft", Left.ToString(CultureInfo.InvariantCulture));
       SavedTop = Top;
       SavedLeft = Left;
 
       if (Application.Current.Resources["DamageOverlayFontSize"] is double fontSize)
       {
-        ConfigUtil.SetSetting("OverlayFontSize", fontSize.ToString());
+        ConfigUtil.SetSetting("OverlayFontSize", fontSize.ToString(CultureInfo.InvariantCulture));
         SavedFontSize = (int)fontSize;
       }
 
@@ -396,8 +397,8 @@ namespace EQLogParser
       ConfigUtil.SetSetting("OverlayShowCritRate", CurrentShowCritRate.ToString());
       SavedShowCritRate = CurrentShowCritRate;
 
-      ConfigUtil.SetSetting("OverlayMiniBars", miniBars.IsChecked.Value.ToString());
-      SavedMiniBars = miniBars.IsChecked.Value;
+      ConfigUtil.SetSetting("OverlayMiniBars", miniBars.IsChecked.ToString());
+      SavedMiniBars = miniBars.IsChecked == true;
 
       ConfigUtil.SetSetting("OverlayMaxRows", (maxRowsList.SelectedIndex + 1).ToString());
       SavedMaxRows = maxRowsList.SelectedIndex + 1;
@@ -515,8 +516,8 @@ namespace EQLogParser
     {
       if (miniBars.IsChecked != null)
       {
-        if ((Application.Current.Resources["DamageOverlayBarHeight"].ToString() == "3" && miniBars.IsChecked == false) ||
-          (Application.Current.Resources["DamageOverlayBarHeight"].ToString() != "3" && miniBars.IsChecked == true))
+        if ((Application.Current.Resources["DamageOverlayBarHeight"]?.ToString() == "3" && miniBars.IsChecked == false) ||
+          (Application.Current.Resources["DamageOverlayBarHeight"]?.ToString() != "3" && miniBars.IsChecked == true))
         {
           UpdateMiniBars(miniBars.IsChecked.Value);
           DataChanged();
@@ -657,11 +658,11 @@ namespace EQLogParser
     {
       if (progressBrush.Color.ToString() != colorString)
       {
-        progressBrush.Brush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(colorString) };
-        progressBrush.Color = (Color)ColorConverter.ConvertFromString(colorString);
+        progressBrush.Brush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(colorString)! };
+        progressBrush.Color = (Color)ColorConverter.ConvertFromString(colorString)!;
       }
 
-      Application.Current.Resources["DamageOverlayProgressBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(colorString) };
+      Application.Current.Resources["DamageOverlayProgressBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(colorString)! };
     }
 
     private void SelectedProgressBrush(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -751,7 +752,7 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         var needed = damageContent.ActualHeight + buttonsPanel.ActualHeight + 8;
-        if (needed != Height)
+        if (!StatsUtil.DoubleEquals(needed, Height))
         {
           Height = needed;
         }
@@ -857,8 +858,8 @@ namespace EQLogParser
       }
 
       Hide();
-      ((MainWindow)Application.Current.MainWindow).CloseDamageOverlay();
-      ((MainWindow)Application.Current.MainWindow).OpenDamageOverlayIfEnabled(false, true);
+      ((MainWindow)Application.Current.MainWindow)?.CloseDamageOverlay();
+      ((MainWindow)Application.Current.MainWindow)?.OpenDamageOverlayIfEnabled(false, true);
     }
 
     private void CopyClick(object sender, RoutedEventArgs e)
@@ -882,7 +883,7 @@ namespace EQLogParser
       }
     }
 
-    private void DPSClick(object sender, RoutedEventArgs e)
+    private void DpsClick(object sender, RoutedEventArgs e)
     {
       dpsButton.Foreground = ActiveBrush;
       tankButton.Foreground = InActiveBrush;
@@ -960,9 +961,12 @@ namespace EQLogParser
       {
         var source = (HwndSource)PresentationSource.FromVisual(this);
         // set to layered and topmost by xaml
-        var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
-        exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
-        NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
+        if (source != null)
+        {
+          var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
+          exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
+          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
+        }
       }
     }
   }
