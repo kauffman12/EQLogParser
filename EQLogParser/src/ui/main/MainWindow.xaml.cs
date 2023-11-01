@@ -1231,9 +1231,9 @@ namespace EQLogParser
       ConfigUtil.Save();
       PlayerManager.Instance?.Save();
       ChatManager.Instance.Stop();
+      TriggerManager.Instance.Stop();
       TriggerStateManager.Instance.Stop();
       EqLogReader?.Dispose();
-      TriggerManager.Instance.Stop();
       petMappingGrid?.Dispose();
       verifiedPetsGrid?.Dispose();
       verifiedPlayersGrid?.Dispose();
