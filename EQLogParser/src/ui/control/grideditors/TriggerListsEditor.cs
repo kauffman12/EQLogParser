@@ -23,7 +23,7 @@ namespace EQLogParser
           "18pt", "20pt", "22pt", "24pt", "26pt", "28pt", "30pt", "34pt", "38pt", "42pt", "46pt", "50pt" } },
       { "SortBy", new List<string> { "Trigger Time", "Remaining Time", "Timer Name" } },
       { "TimerMode", new List<string> { "Standard", "Cooldown" } },
-      { "TimerType", new List<string> { "No Timer", "Countdown", "Fast Countdown", "Progress" } },
+      { "TimerType", new List<string> { "No Timer", "Countdown", "Fast Countdown", "Progress", "Looping" } },
       { "FontFamily", UIElementUtil.GetSystemFontFamilies().Select(font => font.Source).ToList() },
     };
 

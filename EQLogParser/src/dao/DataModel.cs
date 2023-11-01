@@ -65,6 +65,8 @@ namespace EQLogParser
     public long RepeatedCount { get; set; } = -1;
     public string ActiveColor { get; set; }
     public string FontColor { get; set; }
+    public LineData RepeatingTimerLineData { get; set; }
+    public int TimesToLoopCount { get; set; }
   }
 
   internal class NumberOptions
@@ -147,6 +149,7 @@ namespace EQLogParser
     public string EndSoundToPlay { get; set; }
     public string WarningSoundToPlay { get; set; }
     public string TextToShare { get; set; }
+    public long TimesToLoop { get; set; }
   }
 
   internal class TimerOverlayPropertyModel : Overlay
@@ -511,13 +514,13 @@ namespace EQLogParser
       PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
-    private bool searchResult;
+    private bool SearchResult;
     public bool IsSearchResult
     {
-      get => searchResult;
+      get => SearchResult;
       set
       {
-        searchResult = value;
+        SearchResult = value;
         OnPropertyChanged();
       }
     }

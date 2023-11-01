@@ -344,7 +344,7 @@ namespace EQLogParser
                   trigger.Priority = interrupt ? 1 : 3;
                 }
 
-                if ((GetText(triggerNode, "TimerType") is var timerType && timerType == "Timer") || timerType == "Stopwatch")
+                if (GetText(triggerNode, "TimerType") is { } timerType)
                 {
                   goodTrigger = true;
 
@@ -370,8 +370,17 @@ namespace EQLogParser
                       }
                     }
 
-                    // short duration timer <= 2s
-                    trigger.TimerType = (trigger.DurationSeconds < 2.0) ? 2 : 1;
+                    if (timerType == "RepeatingTimer")
+                    {
+                      trigger.TimerType = 4;
+                      // default to 5 so it doesn't run forever 
+                      trigger.TimesToLoop = 5;
+                    }
+                    else
+                    {
+                      // short duration timer <= 2s
+                      trigger.TimerType = (trigger.DurationSeconds < 2.0) ? 2 : 1;
+                    }
                   }
 
                   if (triggerNode.SelectSingleNode("TimerEndingTrigger") is { } timerEndingNode)
