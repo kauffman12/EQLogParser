@@ -189,7 +189,7 @@ namespace EQLogParser
     }
 
     internal static void UpdateAllStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, TimeRange> playerTimeRanges,
-      ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges, double minTime = -1, double maxTime = -1)
+      ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges, double minTime = double.NaN, double maxTime = double.NaN)
     {
       if (playerTimeRanges.TryGetValue(stats.Name, out var range))
       {
@@ -201,7 +201,7 @@ namespace EQLogParser
     }
 
     internal static void UpdateSubStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges,
-      double minTime = -1, double maxTime = -1)
+      double minTime = double.NaN, double maxTime = double.NaN)
     {
       if (playerSubTimeRanges.TryGetValue(stats.Name, out var subRanges))
       {
@@ -641,20 +641,20 @@ namespace EQLogParser
     {
       TimeRange result;
 
-      if (maxTime > -1 || minTime > -1)
+      if (!double.IsNaN(maxTime) || !double.IsNaN(minTime))
       {
         result = new TimeRange();
         range.TimeSegments.ForEach(segment =>
         {
-          if ((minTime == -1 || segment.BeginTime >= minTime) && (maxTime == -1 || segment.EndTime <= maxTime))
+          if ((double.IsNaN(minTime) || segment.BeginTime >= minTime) && (double.IsNaN(maxTime) || segment.EndTime <= maxTime))
           {
             result.Add(segment);
           }
-          else if ((minTime == -1 || segment.BeginTime >= minTime) && maxTime >= segment.BeginTime)
+          else if ((double.IsNaN(minTime) || segment.BeginTime >= minTime) && maxTime >= segment.BeginTime)
           {
             result.Add(new TimeSegment(segment.BeginTime, maxTime));
           }
-          else if ((maxTime == -1 || segment.EndTime <= maxTime) && minTime <= segment.EndTime)
+          else if ((double.IsNaN(maxTime) || segment.EndTime <= maxTime) && minTime <= segment.EndTime)
           {
             result.Add(new TimeSegment(minTime, segment.EndTime));
           }

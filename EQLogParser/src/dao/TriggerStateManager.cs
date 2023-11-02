@@ -872,7 +872,7 @@ namespace EQLogParser
     }
 
     private void UpgradeTree(LegacyTriggerNode old, Dictionary<string, string> overlayIds,
-      Dictionary<string, bool?> defaultEnabled, string parent = null, int index = -1)
+      IDictionary<string, bool?> defaultEnabled, string parent = null, int index = -1)
     {
       var newNode = new TriggerNode
       {
