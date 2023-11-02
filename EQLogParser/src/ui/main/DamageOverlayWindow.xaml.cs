@@ -36,8 +36,8 @@ namespace EQLogParser
     private int SavedDamageMode;
     private bool CurrentHideOthers;
     private bool SavedHideOthers;
-    private bool CurrentShowCritRate;
-    private bool SavedShowCritRate;
+    private int CurrentShowCritRate;
+    private int SavedShowCritRate;
     private bool SavedMiniBars;
     private string SavedProgressColor;
     private bool CurrentShowDps;
@@ -119,7 +119,7 @@ namespace EQLogParser
       UpdateHideOthers(SavedHideOthers);
 
       // Hide/Show crit rate
-      SavedShowCritRate = ConfigUtil.IfSet("OverlayShowCritRate");
+      SavedShowCritRate = ConfigUtil.GetSettingAsInteger("OverlayEnableCritRate");
       UpdateShowCritRate(SavedShowCritRate);
 
       // Mini bars
@@ -281,16 +281,15 @@ namespace EQLogParser
             origName = stat.OrigName;
           }
 
-          if (CurrentShowCritRate)
+          if (CurrentShowCritRate > 0)
           {
             var critMods = new List<string>();
-
-            if (isMe && PlayerManager.Instance.IsDoTClass(stat.ClassName) && DataManager.Instance.MyDoTCritRateMod is var doTCritRate and > 0)
+            if (CurrentShowCritRate is 1 or 3 && isMe && DataManager.Instance.MyDoTCritRateMod is var doTCritRate and > 0)
             {
               critMods.Add($"DoT +{doTCritRate}");
             }
 
-            if (isMe && DataManager.Instance.MyNukeCritRateMod is var nukeCritRate and > 0)
+            if (CurrentShowCritRate is 2 or 3 && isMe && DataManager.Instance.MyNukeCritRateMod is var nukeCritRate and > 0)
             {
               critMods.Add($"Nuke +{nukeCritRate}");
             }
@@ -394,7 +393,7 @@ namespace EQLogParser
       ConfigUtil.SetSetting("OverlayHideOtherPlayers", CurrentHideOthers.ToString());
       SavedHideOthers = CurrentHideOthers;
 
-      ConfigUtil.SetSetting("OverlayShowCritRate", CurrentShowCritRate.ToString());
+      ConfigUtil.SetSetting("OverlayEnableCritRate", CurrentShowCritRate.ToString());
       SavedShowCritRate = CurrentShowCritRate;
 
       ConfigUtil.SetSetting("OverlayMiniBars", miniBars.IsChecked.ToString());
@@ -603,16 +602,16 @@ namespace EQLogParser
     {
       if (showCritRate.SelectedIndex != -1 && e.RemovedItems.Count > 0)
       {
-        UpdateShowCritRate(showCritRate.SelectedIndex == 1);
+        UpdateShowCritRate(showCritRate.SelectedIndex);
         DataChanged();
       }
     }
 
-    private void UpdateShowCritRate(bool show)
+    private void UpdateShowCritRate(int show)
     {
       CurrentShowCritRate = show;
 
-      var selectedIndex = CurrentShowCritRate ? 1 : 0;
+      var selectedIndex = show;
       if (showCritRate.SelectedIndex != selectedIndex)
       {
         showCritRate.SelectedIndex = selectedIndex;

@@ -54,7 +54,6 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> VerifiedPets = new();
     private readonly ConcurrentDictionary<string, double> VerifiedPlayers = new();
     private readonly ConcurrentDictionary<string, byte> Mercs = new();
-    private readonly ConcurrentDictionary<string, byte> DoTClasses = new();
     private readonly List<string> SortedClassList = new();
     private readonly List<string> SortedClassListWithNull = new();
     private static readonly object LockObject = new();
@@ -81,14 +80,6 @@ namespace EQLogParser
       SortedClassList.Sort();
       SortedClassListWithNull.AddRange(SortedClassList);
       SortedClassListWithNull.Insert(0, "");
-      DoTClasses[ClassNames[SpellClass.BRD]] = 1;
-      DoTClasses[ClassNames[SpellClass.BST]] = 1;
-      DoTClasses[ClassNames[SpellClass.DRU]] = 1;
-      DoTClasses[ClassNames[SpellClass.ENC]] = 1;
-      DoTClasses[ClassNames[SpellClass.NEC]] = 1;
-      DoTClasses[ClassNames[SpellClass.RNG]] = 1;
-      DoTClasses[ClassNames[SpellClass.SHD]] = 1;
-      DoTClasses[ClassNames[SpellClass.SHM]] = 1;
 
       // Populate generated pets
       ConfigUtil.ReadList(@"data\petnames.txt").ForEach(line => GameGeneratedPets[line.TrimEnd()] = 1);
@@ -100,7 +91,6 @@ namespace EQLogParser
     }
 
     private void SaveTimer_Tick(object sender, EventArgs e) => Save();
-    internal bool IsDoTClass(string name) => !string.IsNullOrEmpty(name) && DoTClasses.ContainsKey(name);
     internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.UNASSIGNED || SecondPerson.ContainsKey(name)
       || ThirdPerson.ContainsKey(name) || VerifiedPlayers.ContainsKey(name));
     internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name) || TakenPetOrPlayerAction.ContainsKey(name));
