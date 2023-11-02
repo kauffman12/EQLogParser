@@ -249,6 +249,12 @@ namespace EQLogParser
           ConfigUtil.SetSetting("TriggersWatchForQuickShare", true.ToString(CultureInfo.CurrentCulture));
         }
 
+        // upgrade
+        if (ConfigUtil.IfSet("OverlayShowCritRate"))
+        {
+          ConfigUtil.SetSetting("OverlayEnableCritRate", "3");
+        }
+
         // not used anymore. time to cleanup
         ConfigUtil.RemoveSetting("AudioTriggersWatchForGINA");
         ConfigUtil.RemoveSetting("TriggersWatchForGINA");
@@ -264,6 +270,7 @@ namespace EQLogParser
         ConfigUtil.RemoveSetting("OverlayRankColor8");
         ConfigUtil.RemoveSetting("OverlayRankColor9");
         ConfigUtil.RemoveSetting("OverlayRankColor10");
+        ConfigUtil.RemoveSetting("OverlayShowCritRate");
 
         // Init Trigger Manager
         TriggerManager.Instance.Start();

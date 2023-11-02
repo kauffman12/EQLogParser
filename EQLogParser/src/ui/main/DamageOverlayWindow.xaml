@@ -67,10 +67,12 @@
             <ComboBoxItem>All Names</ComboBoxItem>
             <ComboBoxItem>Hide Others</ComboBoxItem>
           </ComboBox>
-          <ComboBox x:Name="showCritRate" SelectionChanged="ShowCritRateChanged" FontStretch="Condensed" FontSize="11"
+          <ComboBox x:Name="showCritRate" SelectionChanged="ShowCritRateChanged" SelectedIndex="0" FontStretch="Condensed" FontSize="11"
             ToolTip="Displays Additional Crit Rate for DD or DoT based ADPS. Assumes Max Level/AAs.">
             <ComboBoxItem>Crit% Off</ComboBoxItem>
-            <ComboBoxItem>Crit% On</ComboBoxItem>
+            <ComboBoxItem>DoT Crit%</ComboBoxItem>
+            <ComboBoxItem>Nuke Crit%</ComboBoxItem>
+            <ComboBoxItem>Both Crit%</ComboBoxItem>
           </ComboBox>
           <ComboBox x:Name="damageModeList" SelectionChanged="DamageModeChanged" FontStretch="Condensed" FontSize="11"
             ToolTip="Choose On Kill for the Damage Meter to reset damage after NPCs are killed. Otherwise the Damage Meter stays up and continues counting until the selected timeout.">
