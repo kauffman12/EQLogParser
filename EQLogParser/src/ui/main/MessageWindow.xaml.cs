@@ -29,7 +29,11 @@ namespace EQLogParser
       InitializeComponent();
       textBox.Text = text;
       Title = caption;
-      Owner = Application.Current.MainWindow;
+
+      if (Application.Current.MainWindow?.IsLoaded == true)
+      {
+        Owner = Application.Current.MainWindow;
+      }
 
       var brush = "";
       var image = EFontAwesomeIcon.None;

@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Threading;
 using Application = System.Windows.Application;
 
@@ -29,8 +30,16 @@ namespace EQLogParser
     {
       if (!TriggerStateManager.Instance.IsActive())
       {
-        new MessageWindow("Trigger Database not available. In use by another EQLogParser?\r\nTrigger Management disabled until restart.",
-          Resource.Warning).Show();
+        // delay so window owner can be set correctly
+        Task.Delay(1000).ContinueWith(_ =>
+        {
+          UIUtil.InvokeAsync(() =>
+          {
+            new MessageWindow("Trigger Database not available. In use by another EQLogParser?\r\nTrigger Management disabled until restart.",
+              Resource.Warning).Show();
+          });
+        });
+
         (Application.Current?.MainWindow as MainWindow)?.DisableTriggers();
         return;
       }
