@@ -120,41 +120,23 @@ namespace EQLogParser
             }
           }
 
-          var castSpells = new List<SpellData>();
           foreach (var block in allSpells.OrderBy(block => block.BeginTime).ThenBy(block => (block.Actions.Count > 0 && block.Actions[0] is ReceivedSpell) ? 1 : -1))
           {
             foreach (var action in block.Actions)
             {
-              if (action is SpellCast { Interrupted: false } cast && cast.Caster == player && cast.SpellData is { Target: (int)SpellTarget.SELF, Adps: > 0 }
-                && (cast.SpellData.MaxHits > 0 || cast.SpellData.Duration <= 1800) && ClassFilter(cast.SpellData))
+              if (action is SpellCast { Interrupted: false } cast && cast.Caster == player && cast.SpellData is
+                {
+                  Target: (int)SpellTarget.SELF, Adps: > 0
+                } && (cast.SpellData.MaxHits > 0 || cast.SpellData.Duration <= 1800) && ClassFilter(cast.SpellData))
               {
-                castSpells.Add(cast.SpellData);
                 UpdateSpellRange(cast.SpellData, block.BeginTime, BlockBrushes[i], deathTimes);
               }
               else if (action is ReceivedSpell received && received.Receiver == player)
               {
                 var spellData = received.SpellData;
-                if (spellData == null && received.Ambiguity.Count > 0)
+                if (spellData == null && received.Ambiguity.Count > 0 && DataManager.ResolveSpellAmbiguity(received, out var replaced))
                 {
-                  if (!received.IsWearOff)
-                  {
-                    if (DataManager.ResolveSpellAmbiguity(received, out var replaced))
-                    {
-                      castSpells.Add(replaced);
-                      spellData = replaced;
-                    }
-                  }
-                  else
-                  {
-                    foreach (var possible in received.Ambiguity)
-                    {
-                      if (castSpells.Find(spell => spell.WearOff == possible.WearOff || spell.LandsOnYou == possible.LandsOnYou
-                            || spell.LandsOnOther == possible.LandsOnOther) is { } found)
-                      {
-                        spellData = found;
-                      }
-                    }
-                  }
+                  spellData = replaced;
                 }
 
                 if (spellData is { Adps: > 0 } && (spellData.MaxHits > 0 || spellData.Duration <= 1800) && ClassFilter(spellData))
@@ -164,7 +146,7 @@ namespace EQLogParser
                     SelfOnly[spellData.NameAbbrv] = 1;
                   }
 
-                  UpdateSpellRange(spellData, block.BeginTime, BlockBrushes[i], deathTimes, received.IsWearOff);
+                  UpdateSpellRange(spellData, block.BeginTime, BlockBrushes[i], deathTimes);
                 }
               }
             }
@@ -206,44 +188,29 @@ namespace EQLogParser
         (TimelineType == 2 && (data.Adps & HealingAdps) != 0);
     }
 
-    private void UpdateSpellRange(SpellData spellData, double beginTime, string brush, HashSet<double> deathTimes = null, bool isWearOff = false)
+    private void UpdateSpellRange(SpellData spellData, double beginTime, string brush, HashSet<double> deathTimes = null)
     {
       if (!SpellRanges.TryGetValue(spellData.NameAbbrv, out var spellRange))
       {
-        if (!isWearOff)
-        {
-          spellRange = new SpellRange { Adps = spellData.Adps };
-          var duration = GetDuration(spellData, EndTime, beginTime, deathTimes);
-          var range = new TimeRange { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration };
-          spellRange.Ranges.Add(range);
-          SpellRanges[spellData.NameAbbrv] = spellRange;
-        }
+        spellRange = new SpellRange { Adps = spellData.Adps };
+        var duration = GetDuration(spellData, EndTime, beginTime, deathTimes);
+        var range = new TimeRange { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration };
+        spellRange.Ranges.Add(range);
+        SpellRanges[spellData.NameAbbrv] = spellRange;
       }
       else
       {
         var last = spellRange.Ranges.LastOrDefault(range => range.BlockBrush == brush);
         var offsetSeconds = (int)(beginTime - StartTime);
-
-        if (last != null)
+        if (last != null && offsetSeconds >= last.BeginSeconds && offsetSeconds <= (last.BeginSeconds + last.Duration))
         {
-          if (isWearOff)
-          {
-            var newOffset = offsetSeconds - last.BeginSeconds;
-            last.Duration = newOffset - last.Duration <= 6 ? newOffset : last.Duration;
-          }
-          else
-          {
-            if (offsetSeconds >= last.BeginSeconds && offsetSeconds <= (last.BeginSeconds + last.Duration))
-            {
-              last.Duration = GetDuration(spellData, EndTime, beginTime, deathTimes) + (offsetSeconds - last.BeginSeconds);
-            }
-            else
-            {
-              var duration = GetDuration(spellData, EndTime, beginTime, deathTimes);
-              var range = new TimeRange { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration };
-              spellRange.Ranges.Add(range);
-            }
-          }
+          last.Duration = GetDuration(spellData, EndTime, beginTime, deathTimes) + (offsetSeconds - last.BeginSeconds);
+        }
+        else
+        {
+          var duration = GetDuration(spellData, EndTime, beginTime, deathTimes);
+          var range = new TimeRange { BlockBrush = brush, BeginSeconds = (int)(beginTime - StartTime), Duration = duration };
+          spellRange.Ranges.Add(range);
         }
       }
     }
@@ -473,8 +440,7 @@ namespace EQLogParser
         {
           var hPos = RowHeight * row;
           AddGridRow(hPos, key);
-          spellRange.Ranges.ForEach(timeRange => content.Children.Add(
-            CreateAdpsBlock(key, hPos, timeRange.BeginSeconds, timeRange.Duration, timeRange.BlockBrush, Selected.Count)));
+          spellRange.Ranges.ForEach(timeRange => content.Children.Add(CreateAdpsBlock(key, hPos, timeRange.BeginSeconds, timeRange.Duration, timeRange.BlockBrush, Selected.Count)));
           row++;
         }
       }
@@ -683,31 +649,28 @@ namespace EQLogParser
       // tanking hits happen a lot faster than spell casting so have our guesses be 1/3 as long
       var mod = TimelineType == 0 ? 3 : 1;
 
-      var maxHitDuration = 0;
       if (spell.MaxHits > 0)
       {
         if (spell.MaxHits == 1)
         {
-          maxHitDuration = duration > 6 ? 6 / mod : duration;
+          duration = duration > 6 ? 6 / mod : duration;
         }
         else if (spell.MaxHits <= 3)
         {
-          maxHitDuration = duration > 12 ? 12 / mod : duration;
+          duration = duration > 12 ? 12 / mod : duration;
         }
         else if (spell.MaxHits == 4)
         {
-          maxHitDuration = duration > 18 ? 18 / mod : duration;
+          duration = duration > 18 ? 18 / mod : duration;
         }
         else
         {
           var guess = spell.MaxHits / 5 * 18 / mod;
-          maxHitDuration = duration > guess ? guess : duration;
+          duration = duration > guess ? guess : duration;
         }
       }
 
-      duration = spell.MaxHits > 0 ? Math.Min(maxHitDuration, duration) : duration;
-
-      if (deathTimes != null && !spell.Name.StartsWith("Glyph of", StringComparison.OrdinalIgnoreCase))
+      if (deathTimes != null && !spell.Name.StartsWith("Glyph of"))
       {
         foreach (var time in deathTimes)
         {
