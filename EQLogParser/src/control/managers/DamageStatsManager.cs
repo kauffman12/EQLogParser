@@ -10,13 +10,11 @@ namespace EQLogParser
 {
   class DamageStatsManager : ISummaryBuilder
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-
     internal static DamageStatsManager Instance = new();
-
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
     internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
 
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly Dictionary<int, byte> DamageGroupIds = new();
     private readonly ConcurrentDictionary<string, TimeRange> PlayerTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> PlayerSubTimeRanges = new();
@@ -556,7 +554,7 @@ namespace EQLogParser
                       var critHits = subStats.CritHits;
                       StatsUtil.UpdateStats(subStats, record, false, isAttackerPet);
 
-                      // dont count misses/dodges or where no damage was done
+                      // don't count misses/dodges or where no damage was done
                       if (record.Total > 0)
                       {
                         var values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
