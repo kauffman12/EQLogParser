@@ -253,7 +253,7 @@ namespace EQLogParser
       if (split[1] == "have" && split[2] == "entered")
       {
         var zone = string.Join(" ", split.ToArray(), 3, split.Length - 3).TrimEnd('.');
-        DataManager.Instance.AddMiscRecord(new ZoneRecord { Zone = zone }, beginTime);
+        RecordManager.Instance.Add(new ZoneRecord { Zone = zone }, beginTime);
         if (!zone.StartsWith("an area", StringComparison.OrdinalIgnoreCase))
         {
           DataManager.Instance.ZoneChanged();

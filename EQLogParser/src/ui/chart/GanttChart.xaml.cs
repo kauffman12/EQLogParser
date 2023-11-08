@@ -83,23 +83,17 @@ namespace EQLogParser
         }
 
         var deathMap = new Dictionary<string, HashSet<double>>();
-        foreach (var block in DataManager.Instance.GetDeathsDuring(StartTime, EndTime))
+        foreach (var (beginTime, record) in RecordManager.Instance.GetDeathsDuring(StartTime, EndTime))
         {
-          foreach (var action in block.Actions)
+          if (Selected.FindIndex(stats => stats.OrigName == record.Killed) > -1)
           {
-            if (action is DeathRecord death)
+            if (deathMap.TryGetValue(record.Killed, out var values))
             {
-              if (Selected.FindIndex(stats => stats.OrigName == death.Killed) > -1)
-              {
-                if (deathMap.TryGetValue(death.Killed, out var values))
-                {
-                  values.Add(block.BeginTime);
-                }
-                else
-                {
-                  deathMap[death.Killed] = new HashSet<double> { block.BeginTime };
-                }
-              }
+              values.Add(beginTime);
+            }
+            else
+            {
+              deathMap[record.Killed] = new HashSet<double> { beginTime };
             }
           }
         }
