@@ -42,6 +42,18 @@ namespace EQLogParser
     public long Priority { get; set; }
   }
 
+  internal class ResistCount
+  {
+    public uint Landed { get; set; }
+    public uint Resisted { get; set; }
+  }
+
+  internal class NpcResistStats
+  {
+    public string Id { get; set; }
+    public Dictionary<SpellResist, ResistCount> ByResist { get; set; } = new();
+  }
+
   internal class TimerData
   {
     public CancellationTokenSource CancelSource { get; set; }

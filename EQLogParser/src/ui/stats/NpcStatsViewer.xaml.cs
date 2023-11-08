@@ -3,16 +3,15 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
 
 namespace EQLogParser
 {
   /// <summary>
   /// Interaction logic for NpcStatsViewer.xaml
   /// </summary>
-  public partial class NpcStatsViewer : UserControl, IDisposable
+  public partial class NpcStatsViewer : IDisposable
   {
-    private const string NODATA = "No Spell Resist Data Found";
+    private const string Nodata = "No Spell Resist Data Found";
 
     public NpcStatsViewer()
     {
@@ -108,7 +107,7 @@ namespace EQLogParser
       }
 
       dataGrid.ItemsSource = npcStatsRows.Values.OrderBy(row => row.Name).ToList();
-      titleLabel.Content = npcStatsRows.Values.Count == 0 ? NODATA : "Spell Resists vs " + npcStatsRows.Count + " Unique NPCs";
+      titleLabel.Content = npcStatsRows.Values.Count == 0 ? Nodata : "Spell Resists vs " + npcStatsRows.Count + " Unique NPCs";
 
       Tuple<double, string> GetRate(uint landed, uint notLanded)
       {
@@ -148,16 +147,16 @@ namespace EQLogParser
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
 
     #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
+    private bool DisposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!disposedValue)
+      if (!DisposedValue)
       {
         MainActions.EventsThemeChanged -= EventsThemeChanged;
         MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
         dataGrid.Dispose();
-        disposedValue = true;
+        DisposedValue = true;
       }
     }
 

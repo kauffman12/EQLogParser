@@ -720,9 +720,9 @@ namespace EQLogParser
       {
         if (!checkLineType && !InIgnoreList(defender))
         {
-          if (resist != SpellResist.UNDEFINED && ConfigUtil.PlayerName == attacker && defender != attacker)
+          if (resist != SpellResist.UNDEFINED && defender != attacker)
           {
-            DataManager.Instance.UpdateNpcSpellResistStats(defender, resist);
+            RecordManager.Instance.UpdateNpcResistStats(defender, resist);
           }
 
           if (!double.IsNaN(lineData.BeginTime))
@@ -823,7 +823,7 @@ namespace EQLogParser
             death.Previous = PreviousAction;
           }
 
-          DataManager.Instance.AddDeathRecord(death, currentTime);
+          RecordManager.Instance.Add(death, currentTime);
         }
       }
     }
