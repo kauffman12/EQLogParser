@@ -72,7 +72,6 @@ namespace EQLogParser
     internal event EventHandler<string> EventsRemovedFight;
     internal event EventHandler<Fight> EventsNewFight;
     internal event EventHandler<Fight> EventsNewNonTankingFight;
-    internal event EventHandler<RandomRecord> EventsNewRandomRecord;
     internal event EventHandler<Fight> EventsUpdateFight;
     internal event EventHandler<bool> EventsClearedActiveData;
     internal event EventHandler<Fight> EventsNewOverlayFight;
@@ -86,16 +85,10 @@ namespace EQLogParser
     private static readonly SpellAbbrvComparer AbbrvComparer = new();
     private static readonly TimedActionComparer TAComparer = new();
 
-    private readonly List<ActionGroup> AllMiscBlocks = new();
-    private readonly List<ActionGroup> AllDeathBlocks = new();
     private readonly List<ActionGroup> AllHealBlocks = new();
     private readonly List<ActionGroup> AllSpellCastBlocks = new();
     private readonly List<ActionGroup> AllReceivedSpellBlocks = new();
-    private readonly List<ActionGroup> AllResistBlocks = new();
-    private readonly List<ActionGroup> AllRandomBlocks = new();
-    private readonly List<ActionGroup> AllLootBlocks = new();
     private readonly List<SpecialSpell> AllSpecialActions = new();
-    private readonly List<LootRecord> AssignedLoot = new();
     private readonly ObservableCollection<QuickShareRecord> AllQuickShareRecords = new();
 
     private readonly List<string> AdpsKeys = new() { "#DoTCritRate", "#NukeCritRate" };
@@ -309,19 +302,14 @@ namespace EQLogParser
     }
 
     internal ObservableCollection<QuickShareRecord> GetQuickShareRecords() => AllQuickShareRecords;
-    internal void AddDeathRecord(DeathRecord record, double beginTime) => AddAction(AllDeathBlocks, record, beginTime);
-    internal void AddMiscRecord(IAction action, double beginTime) => AddAction(AllMiscBlocks, action, beginTime);
     internal void AddReceivedSpell(ReceivedSpell received, double beginTime) => AddAction(AllReceivedSpellBlocks, received, beginTime);
     internal List<ActionGroup> GetCastsDuring(double beginTime, double endTime) => SearchActions(AllSpellCastBlocks, beginTime, endTime);
-    internal List<ActionGroup> GetDeathsDuring(double beginTime, double endTime) => SearchActions(AllDeathBlocks, beginTime, endTime);
     internal List<ActionGroup> GetHealsDuring(double beginTime, double endTime) => SearchActions(AllHealBlocks, beginTime, endTime);
-    internal List<ActionGroup> GetMiscDuring(double beginTime, double endTime) => SearchActions(AllMiscBlocks, beginTime, endTime);
-    internal List<ActionGroup> GetResistsDuring(double beginTime, double endTime) => SearchActions(AllResistBlocks, beginTime, endTime);
     internal List<ActionGroup> GetReceivedSpellsDuring(double beginTime, double endTime) => SearchActions(AllReceivedSpellBlocks, beginTime, endTime);
     internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && AllNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
-    internal bool IsOldSpell(string name) => OldSpellNamesDb.ContainsKey(name);
+    internal bool IsOldSpell(string name) => !string.IsNullOrEmpty(name) && OldSpellNamesDb.ContainsKey(name);
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
-    internal bool IsLifetimeNpc(string name) => LifetimeFights.ContainsKey(name);
+    internal bool IsLifetimeNpc(string name) => !string.IsNullOrEmpty(name) && LifetimeFights.ContainsKey(name);
 
     public static void AddAction(List<ActionGroup> blockList, IAction action, double beginTime)
     {
@@ -382,61 +370,6 @@ namespace EQLogParser
       return string.Intern(result);
     }
 
-    internal void AddLootRecord(LootRecord record, double beginTime)
-    {
-      lock (AllLootBlocks)
-      {
-        AddAction(AllLootBlocks, record, beginTime);
-
-        if (!record.IsCurrency && record.Quantity > 0 && AssignedLoot.Count > 0)
-        {
-          var found = AssignedLoot.FindLastIndex(item => item.Player == record.Player && item.Item == record.Item);
-          if (found > -1)
-          {
-            AssignedLoot.RemoveAt(found);
-            foreach (var block in AllLootBlocks.OrderByDescending(block => block.BeginTime))
-            {
-              found = block.Actions.FindLastIndex(item => item is LootRecord loot && loot.Player == record.Player && loot.Item == record.Item && loot.Quantity == 0);
-              if (found > -1)
-              {
-                lock (block.Actions)
-                {
-                  block.Actions.RemoveAt(found);
-                }
-              }
-            }
-          }
-        }
-        else if (!record.IsCurrency && record.Quantity == 0)
-        {
-          AssignedLoot.Add(record);
-        }
-      }
-    }
-
-    internal void AddRandomRecord(RandomRecord record, double beginTime)
-    {
-      lock (AllRandomBlocks)
-      {
-        AddAction(AllRandomBlocks, record, beginTime);
-      }
-
-      EventsNewRandomRecord?.Invoke(this, record);
-    }
-
-    internal void AddResistRecord(ResistRecord record, double beginTime)
-    {
-      AddAction(AllResistBlocks, record, beginTime);
-
-      if (SpellsNameDb.TryGetValue(record.Spell, out var spellList))
-      {
-        if (spellList.Find(item => !item.IsBeneficial) is { } spellData)
-        {
-          UpdateNpcSpellResistStats(record.Defender, spellData.Resist, true);
-        }
-      }
-    }
-
     internal void CheckExpireFights(double currentTime)
     {
       foreach (ref var fight in ActiveFights.Values.ToArray().AsSpan())
@@ -447,22 +380,6 @@ namespace EQLogParser
           RemoveActiveFight(fight.CorrectMapKey);
           RemoveOverlayFight(fight.Id);
         }
-      }
-    }
-
-    internal List<ActionGroup> GetAllLoot()
-    {
-      lock (AllLootBlocks)
-      {
-        return AllLootBlocks.ToList();
-      }
-    }
-
-    internal List<ActionGroup> GetAllRandoms()
-    {
-      lock (AllRandomBlocks)
-      {
-        return AllRandomBlocks.ToList();
       }
     }
 
@@ -502,10 +419,20 @@ namespace EQLogParser
       return result;
     }
 
+    internal SpellData GetDetSpellByName(string name)
+    {
+      SpellData spellData = null;
+      if (!string.IsNullOrEmpty(name) && name != Labels.UNK_SPELL && SpellsNameDb.TryGetValue(name, out var spellList))
+      {
+        spellData = spellList.Find(item => !item.IsBeneficial);
+      }
+
+      return spellData;
+    }
+
     internal SpellData GetDamagingSpellByName(string name)
     {
       SpellData spellData = null;
-
       if (!string.IsNullOrEmpty(name) && name != Labels.UNK_SPELL && SpellsNameDb.TryGetValue(name, out var spellList))
       {
         spellData = spellList.Find(item => item.Damaging > 0);
@@ -517,7 +444,6 @@ namespace EQLogParser
     internal SpellData GetHealingSpellByName(string name)
     {
       SpellData spellData = null;
-
       if (!string.IsNullOrEmpty(name) && name != Labels.UNK_SPELL && SpellsNameDb.TryGetValue(name, out var spellList))
       {
         spellData = spellList.Find(item => item.Damaging < 0);
@@ -761,47 +687,6 @@ namespace EQLogParser
       }
     }
 
-    internal void UpdateNpcSpellResistStats(string npc, SpellResist resist, bool resisted = false)
-    {
-      // NPC is always upper case after it is parsed
-      lock (NpcResistStats)
-      {
-        if (!NpcResistStats.TryGetValue(npc, out var stats))
-        {
-          stats = new Dictionary<SpellResist, ResistCount>();
-          NpcResistStats[npc] = stats;
-        }
-
-        if (!stats.TryGetValue(resist, out var count))
-        {
-          stats[resist] = resisted ? new ResistCount { Resisted = 1 } : new ResistCount { Landed = 1 };
-        }
-        else
-        {
-          if (resisted)
-          {
-            count.Resisted++;
-          }
-          else
-          {
-            count.Landed++;
-          }
-        }
-      }
-
-      lock (NpcTotalSpellCounts)
-      {
-        if (!NpcTotalSpellCounts.TryGetValue(npc, out var value))
-        {
-          NpcTotalSpellCounts[npc] = new TotalCount { Landed = 1 };
-        }
-        else
-        {
-          value.Landed++;
-        }
-      }
-    }
-
     internal void ZoneChanged()
     {
       var updated = false;
@@ -937,7 +822,7 @@ namespace EQLogParser
         var foundSpellData = FindPreviousCast(player, output);
         if (foundSpellData == null)
         {
-          // one more thing, if all the abbrviations look the same then we know the spell
+          // one more thing, if all the abbreviations look the same then we know the spell
           // even if the version is wrong. grab the newest
           result = (output.Distinct(AbbrvComparer).Count() == 1) ? new List<SpellData> { output.First() } : output;
         }
@@ -1067,16 +952,6 @@ namespace EQLogParser
       ActiveFights.Clear();
       LifetimeFights.Clear();
 
-      lock (AllDeathBlocks)
-      {
-        AllDeathBlocks.Clear();
-      }
-
-      lock (AllMiscBlocks)
-      {
-        AllMiscBlocks.Clear();
-      }
-
       lock (AllSpellCastBlocks)
       {
         LastSpellIndex = -1;
@@ -1088,11 +963,6 @@ namespace EQLogParser
         AllReceivedSpellBlocks.Clear();
       }
 
-      lock (AllResistBlocks)
-      {
-        AllResistBlocks.Clear();
-      }
-
       lock (AllHealBlocks)
       {
         AllHealBlocks.Clear();
@@ -1101,17 +971,6 @@ namespace EQLogParser
       lock (OverlayFights)
       {
         OverlayFights.Clear();
-      }
-
-      lock (AllRandomBlocks)
-      {
-        AllRandomBlocks.Clear();
-      }
-
-      lock (AllLootBlocks)
-      {
-        AssignedLoot.Clear();
-        AllLootBlocks.Clear();
       }
 
       lock (NpcResistStats)
@@ -1292,12 +1151,6 @@ namespace EQLogParser
     private class TimedActionComparer : IComparer<TimedAction>
     {
       public int Compare(TimedAction x, TimedAction y) => (x != null && y != null) ? x.BeginTime.CompareTo(y.BeginTime) : 0;
-    }
-
-    internal class ResistCount
-    {
-      public uint Landed { get; set; }
-      public uint Resisted { get; set; }
     }
 
     internal class TotalCount

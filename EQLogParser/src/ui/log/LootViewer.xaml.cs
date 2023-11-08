@@ -83,33 +83,23 @@ namespace EQLogParser
        ALLNPCS
       };
 
-      DataManager.Instance.GetAllLoot().ForEach(block =>
+      foreach (var (beginTime, looted) in RecordManager.Instance.GetAllLoot())
       {
-        // lock since actions can be removed by the parsing thread
-        lock (block.Actions)
+        IndividualRecords.Add(CreateRow(looted, beginTime));
+        UpdateTotals(totalRecords, looted);
+        uniquePlayers[looted.Player] = 1;
+
+        // currency loots/splits
+        if (!string.IsNullOrEmpty(looted.Npc))
         {
-          block.Actions.ForEach(record =>
-          {
-            if (record is LootRecord looted)
-            {
-              IndividualRecords.Add(CreateRow(looted, block.BeginTime));
-              UpdateTotals(totalRecords, looted);
-              uniquePlayers[looted.Player] = 1;
-
-              // currency loots/splits
-              if (!string.IsNullOrEmpty(looted.Npc))
-              {
-                uniqueNpcs[looted.Npc] = 1;
-              }
-
-              if (!looted.IsCurrency)
-              {
-                uniqueItems[looted.Item] = 1;
-              }
-            }
-          });
+          uniqueNpcs[looted.Npc] = 1;
         }
-      });
+
+        if (!looted.IsCurrency)
+        {
+          uniqueItems[looted.Item] = 1;
+        }
+      }
 
       foreach (ref var player in uniquePlayers.Keys.OrderBy(player => player).ToArray().AsSpan())
       {
@@ -265,16 +255,16 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
+    private bool DisposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!disposedValue)
+      if (!DisposedValue)
       {
         MainActions.EventsThemeChanged -= EventsThemeChanged;
         MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
         dataGrid.Dispose();
-        disposedValue = true;
+        DisposedValue = true;
       }
     }
 

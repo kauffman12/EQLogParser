@@ -71,49 +71,38 @@ namespace EQLogParser
     private void Load()
     {
       var rows = new List<EventRow>();
-      DataManager.Instance.GetDeathsDuring(0, double.MaxValue).ForEach(block =>
+      foreach (var (beginTime, record) in RecordManager.Instance.GetAllDeaths())
       {
-        block.Actions.ForEach(action =>
+        if (!(PlayerManager.Instance.IsVerifiedPet(record.Killed) && !PlayerManager.IsPossiblePlayerName(record.Killed)))
         {
-          if (action is DeathRecord death)
+          var isActorNpc = DataManager.Instance.IsLifetimeNpc(record.Killer) || DataManager.Instance.IsKnownNpc(record.Killer);
+          var isTargetNpc = DataManager.Instance.IsLifetimeNpc(record.Killed) || DataManager.Instance.IsKnownNpc(record.Killed);
+          var isActorPlayer = PlayerManager.Instance.IsPetOrPlayerOrSpell(record.Killer);
+          var isTargetPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Killed);
+
+          var text = KILLSHOT_EVENT;
+          if (isTargetPlayer && isActorPlayer)
           {
-            if (!(PlayerManager.Instance.IsVerifiedPet(death.Killed) && !PlayerManager.IsPossiblePlayerName(death.Killed)))
-            {
-              var isActorNpc = DataManager.Instance.IsLifetimeNpc(death.Killer) || DataManager.Instance.IsKnownNpc(death.Killer);
-              var isTargetNpc = DataManager.Instance.IsLifetimeNpc(death.Killed) || DataManager.Instance.IsKnownNpc(death.Killed);
-              var isActorPlayer = PlayerManager.Instance.IsPetOrPlayerOrSpell(death.Killer);
-              var isTargetPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(death.Killed);
-
-              var text = KILLSHOT_EVENT;
-              if (isTargetPlayer && isActorPlayer)
-              {
-                text = PLAYERKILL_EVENT;
-              }
-              else if (isTargetPlayer || (isActorNpc && !isTargetNpc && PlayerManager.IsPossiblePlayerName(death.Killed)))
-              {
-                text = PLAYERSLAIN_EVENT;
-              }
-
-              rows.Add(new EventRow { Time = block.BeginTime, Actor = death.Killer, Target = death.Killed, Event = text });
-            }
+            text = PLAYERKILL_EVENT;
           }
-        });
-      });
+          else if (isTargetPlayer || (isActorNpc && !isTargetNpc && PlayerManager.IsPossiblePlayerName(record.Killed)))
+          {
+            text = PLAYERSLAIN_EVENT;
+          }
 
-      DataManager.Instance.GetMiscDuring(0, double.MaxValue).ForEach(block =>
+          rows.Add(new EventRow { Time = beginTime, Actor = record.Killer, Target = record.Killed, Event = text });
+        }
+      }
+
+      foreach (var (beginTime, record) in RecordManager.Instance.GetAllMezBreaks())
       {
-        block.Actions.ForEach(action =>
-        {
-          if (action is MezBreakRecord mezBreak)
-          {
-            rows.Add(new EventRow { Time = block.BeginTime, Actor = mezBreak.Breaker, Target = mezBreak.Awakened, Event = MEZBREAK_EVENT });
-          }
-          else if (action is ZoneRecord zone)
-          {
-            rows.Add(new EventRow { Time = block.BeginTime, Actor = ConfigUtil.PlayerName, Event = ZONE_EVENT, Target = zone.Zone });
-          }
-        });
-      });
+        rows.Add(new EventRow { Time = beginTime, Actor = record.Breaker, Target = record.Awakened, Event = MEZBREAK_EVENT });
+      }
+
+      foreach (var (beginTime, record) in RecordManager.Instance.GetAllZoning())
+      {
+        rows.Add(new EventRow { Time = beginTime, Actor = ConfigUtil.PlayerName, Event = ZONE_EVENT, Target = record.Zone });
+      }
 
       dataGrid.ItemsSource = rows;
       UpdateTitleAndRefresh();

@@ -1088,6 +1088,7 @@ namespace EQLogParser
             DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
             CloseDamageOverlay();
             DataManager.Instance.Clear();
+            RecordManager.Instance.Clear();
             CurrentLogFile = theFile;
             NpcDamageManager.Reset();
             EqLogReader = new LogReader(new LogProcessor(theFile), theFile, lastMins);
@@ -1255,10 +1256,6 @@ namespace EQLogParser
       }
 
       ConfigUtil.Save();
-      PlayerManager.Instance?.Save();
-      ChatManager.Instance.Stop();
-      TriggerManager.Instance.Stop();
-      TriggerStateManager.Instance.Stop();
       EqLogReader?.Dispose();
       petMappingGrid?.Dispose();
       verifiedPetsGrid?.Dispose();
@@ -1266,6 +1263,11 @@ namespace EQLogParser
       (triggerLogWindow?.Content as TriggersLogView)?.Dispose();
       (triggerTestWindow?.Content as TriggersTester)?.Dispose();
       (quickShareLogWindow?.Content as QuickShareLogView)?.Dispose();
+      PlayerManager.Instance?.Save();
+      ChatManager.Instance.Stop();
+      TriggerManager.Instance.Stop();
+      TriggerStateManager.Instance.Stop();
+      RecordManager.Instance.Stop();
       Application.Current.Shutdown();
     }
 

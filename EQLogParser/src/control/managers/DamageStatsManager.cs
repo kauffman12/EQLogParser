@@ -369,32 +369,26 @@ namespace EQLogParser
 
             DamageGroups.Add(newBlock);
 
-            Parallel.ForEach(RaidTotals.Ranges.TimeSegments, segment =>
+            foreach (ref var segment in RaidTotals.Ranges.TimeSegments.ToArray().AsSpan())
             {
-              foreach (ref var block in DataManager.Instance.GetResistsDuring(segment.BeginTime, segment.EndTime).ToArray().AsSpan())
+              foreach (var (_, record) in RecordManager.Instance.GetResistsDuring(segment.BeginTime, segment.EndTime).ToArray())
               {
-                foreach (var action in block.Actions)
+                if (!ResistCounts.TryGetValue(record.Attacker, out var perPlayer))
                 {
-                  if (action is ResistRecord record)
-                  {
-                    if (!ResistCounts.TryGetValue(record.Attacker, out var perPlayer))
-                    {
-                      perPlayer = new ConcurrentDictionary<string, int>();
-                      ResistCounts[record.Attacker] = perPlayer;
-                    }
+                  perPlayer = new ConcurrentDictionary<string, int>();
+                  ResistCounts[record.Attacker] = perPlayer;
+                }
 
-                    if (perPlayer.TryGetValue(record.Spell, out var currentCount))
-                    {
-                      perPlayer[record.Spell] = currentCount + 1;
-                    }
-                    else
-                    {
-                      perPlayer[record.Spell] = 1;
-                    }
-                  }
+                if (perPlayer.TryGetValue(record.Spell, out var currentCount))
+                {
+                  perPlayer[record.Spell] = currentCount + 1;
+                }
+                else
+                {
+                  perPlayer[record.Spell] = 1;
                 }
               }
-            });
+            }
 
             ComputeDamageStats(options);
           }

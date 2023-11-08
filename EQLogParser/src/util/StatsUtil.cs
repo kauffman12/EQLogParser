@@ -582,22 +582,19 @@ namespace EQLogParser
           }
         }
 
-        foreach (var block in DataManager.Instance.GetDeathsDuring(offsetBegin, segment.EndTime + DEATH_OFFSET))
+        foreach (var (beginTime, record) in RecordManager.Instance.GetDeathsDuring(offsetBegin, segment.EndTime + DEATH_OFFSET))
         {
-          foreach (var death in block.Actions.Cast<DeathRecord>())
+          if (PlayerManager.Instance.IsVerifiedPlayer(record.Killed) || PlayerManager.Instance.IsMerc(record.Killed))
           {
-            if (PlayerManager.Instance.IsVerifiedPlayer(death.Killed) || PlayerManager.Instance.IsMerc(death.Killed))
+            actions.Add(record);
+            raidStats.Deaths.Add(new DeathEvent
             {
-              actions.Add(death);
-              raidStats.Deaths.Add(new DeathEvent
-              {
-                BeginTime = block.BeginTime,
-                Killed = death.Killed,
-                Killer = death.Killer,
-                Message = death.Message,
-                Previous = death.Previous
-              });
-            }
+              BeginTime = beginTime,
+              Killed = record.Killed,
+              Killer = record.Killer,
+              Message = record.Message,
+              Previous = record.Previous
+            });
           }
         }
 
