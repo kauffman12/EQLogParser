@@ -70,6 +70,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Application Settings.
+        /// </summary>
+        internal static string APP_SETTINGS {
+            get {
+                return ResourceManager.GetString("APP_SETTINGS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Update Overlay.
         /// </summary>
         internal static string ASSIGN_OVERLAY {
