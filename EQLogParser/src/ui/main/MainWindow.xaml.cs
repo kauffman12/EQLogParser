@@ -14,11 +14,13 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Forms;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Application = System.Windows.Application;
@@ -38,6 +40,7 @@ namespace EQLogParser
     internal static bool IsFinishingBlowDamageEnabled = true;
     internal static bool IsHeadshotDamageEnabled = true;
     internal static bool IsSlayUndeadDamageEnabled = true;
+    internal static bool IsHardwareAccelerationEnabled = true;
     internal static bool IsHideOnMinimizeEnabled;
     internal static bool IsMapSendToEqEnabled;
     internal const int ACTION_INDEX = 27;
@@ -102,6 +105,10 @@ namespace EQLogParser
         CurrentFontSize = ConfigUtil.GetSettingAsDouble("ApplicationFontSize", 12);
         CurrentTheme = ConfigUtil.GetSetting("CurrentTheme", "MaterialDark");
 
+        IsHardwareAccelerationEnabled = ConfigUtil.IfSetOrElse("EnableHardwareAcceleration", IsHardwareAccelerationEnabled);
+        RenderOptions.ProcessRenderMode = IsHardwareAccelerationEnabled ? RenderMode.Default : RenderMode.SoftwareOnly;
+        Log.Info("RenderMode: " + RenderOptions.ProcessRenderMode);
+
         if (UIElementUtil.GetSystemFontFamilies().FirstOrDefault(font => font.Source == CurrentFontFamily) == null)
         {
           Log.Info(CurrentFontFamily + " Not Found, Trying Default");
@@ -115,6 +122,10 @@ namespace EQLogParser
         Application.Current.Resources["EQLogFontFamily"] = new FontFamily("Segoe UI");
 
         InitializeComponent();
+
+        // update after initialize components
+        enableHardwareAccelerationIcon.Visibility =
+          IsHardwareAccelerationEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // add tabs to the right
         ((DocumentContainer)dockSite.DocContainer).AddTabDocumentAtLast = true;
@@ -548,6 +559,14 @@ namespace EQLogParser
       ConfigUtil.SetSetting("IncludeHealingSwarmPets", IsHealingSwarmPetsEnabled.ToString());
       enableHealingSwarmPetsIcon.Visibility = IsHealingSwarmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
       Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats());
+    }
+
+    private void ToggleHardwareAccelerationClick(object sender, RoutedEventArgs e)
+    {
+      IsHardwareAccelerationEnabled = !IsHardwareAccelerationEnabled;
+      ConfigUtil.SetSetting("EnableHardwareAcceleration", IsHardwareAccelerationEnabled.ToString());
+      enableHardwareAccelerationIcon.Visibility = IsHardwareAccelerationEnabled ? Visibility.Visible : Visibility.Hidden;
+      new MessageWindow("Restart required for changes to take effect.", Resource.APP_SETTINGS).ShowDialog();
     }
 
     private void ToggleAutoMonitorClick(object sender, RoutedEventArgs e)
@@ -1279,5 +1298,32 @@ namespace EQLogParser
     private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
     private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
     private void WindowClose(object sender, EventArgs e) => Close();
+
+    // Possible workaround for data area passed to system call is too small
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+      base.OnSourceInitialized(e);
+      var source = (HwndSource)PresentationSource.FromVisual(this)!;
+      source.AddHook(BandAidHook); // Make sure this is hooked first. That ensures it runs last
+      source.AddHook(ProblemHook);
+    }
+
+    IntPtr ProblemHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+      if (msg == 0x000D) // WM_GETTEXT
+      {
+        Marshal.SetLastSystemError(122);
+      }
+      return IntPtr.Zero;
+    }
+
+    IntPtr BandAidHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+      if (msg == 0x000D) // WM_GETTEXT
+      {
+        Marshal.SetLastSystemError(0);
+      }
+      return IntPtr.Zero;
+    }
   }
 }

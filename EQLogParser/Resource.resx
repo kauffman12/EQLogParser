@@ -120,6 +120,9 @@
   <data name="ANY_CLASS" xml:space="preserve">
     <value>All Classes</value>
   </data>
+  <data name="APP_SETTINGS" xml:space="preserve">
+    <value>Application Settings</value>
+  </data>
   <data name="ASSIGN_OVERLAY" xml:space="preserve">
     <value>Update Overlay</value>
   </data>

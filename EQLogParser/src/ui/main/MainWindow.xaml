@@ -311,6 +311,11 @@
             </MenuItem>
           </MenuItem>
           <Separator />
+          <MenuItem x:Name="enableHardwareAcceleration" Header="Hardware Acceleration (GPU)" Click="ToggleHardwareAccelerationClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="enableHardwareAccelerationIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+            </MenuItem.Icon>
+          </MenuItem>
           <MenuItem Header="_Look And Feel">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_PaintBrush" />
