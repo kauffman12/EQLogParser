@@ -92,19 +92,19 @@ namespace EQLogParser
       var currentTicks = DateTime.Now.Ticks;
       var maxDurationTicks = double.NaN;
 
-      if (!StatsUtil.DoubleEquals(Node.OverlayData.Width, Width))
+      if (!Node.OverlayData.Width.Equals((long)Width))
       {
         Width = Node.OverlayData.Width;
       }
-      else if (!StatsUtil.DoubleEquals(Node.OverlayData.Height, Height))
+      else if (!Node.OverlayData.Height.Equals((long)Height))
       {
         Height = Node.OverlayData.Height;
       }
-      else if (!StatsUtil.DoubleEquals(Node.OverlayData.Top, Top))
+      else if (!Node.OverlayData.Top.Equals((long)Top))
       {
         Top = Node.OverlayData.Top;
       }
-      else if (!StatsUtil.DoubleEquals(Node.OverlayData.Left, Left))
+      else if (!Node.OverlayData.Left.Equals((long)Left))
       {
         Left = Node.OverlayData.Left;
       }

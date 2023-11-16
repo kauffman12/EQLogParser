@@ -751,7 +751,7 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         var needed = damageContent.ActualHeight + buttonsPanel.ActualHeight + 8;
-        if (!StatsUtil.DoubleEquals(needed, Height))
+        if (!needed.Equals(Height))
         {
           Height = needed;
         }
