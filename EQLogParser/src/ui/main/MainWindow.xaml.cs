@@ -40,7 +40,6 @@ namespace EQLogParser
     internal static bool IsFinishingBlowDamageEnabled = true;
     internal static bool IsHeadshotDamageEnabled = true;
     internal static bool IsSlayUndeadDamageEnabled = true;
-    internal static bool IsHardwareAccelerationEnabled = true;
     internal static bool IsHideOnMinimizeEnabled;
     internal static bool IsMapSendToEqEnabled;
     internal const int ACTION_INDEX = 27;
@@ -105,8 +104,7 @@ namespace EQLogParser
         CurrentFontSize = ConfigUtil.GetSettingAsDouble("ApplicationFontSize", 12);
         CurrentTheme = ConfigUtil.GetSetting("CurrentTheme", "MaterialDark");
 
-        IsHardwareAccelerationEnabled = ConfigUtil.IfSetOrElse("EnableHardwareAcceleration", IsHardwareAccelerationEnabled);
-        RenderOptions.ProcessRenderMode = IsHardwareAccelerationEnabled ? RenderMode.Default : RenderMode.SoftwareOnly;
+        RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
         Log.Info("RenderMode: " + RenderOptions.ProcessRenderMode);
 
         if (UIElementUtil.GetSystemFontFamilies().FirstOrDefault(font => font.Source == CurrentFontFamily) == null)
@@ -122,10 +120,6 @@ namespace EQLogParser
         Application.Current.Resources["EQLogFontFamily"] = new FontFamily("Segoe UI");
 
         InitializeComponent();
-
-        // update after initialize components
-        enableHardwareAccelerationIcon.Visibility =
-          IsHardwareAccelerationEnabled ? Visibility.Visible : Visibility.Hidden;
 
         // add tabs to the right
         ((DocumentContainer)dockSite.DocContainer).AddTabDocumentAtLast = true;
@@ -257,7 +251,7 @@ namespace EQLogParser
         // data old stuff
         if (ConfigUtil.IfSet("TriggersWatchForGINA"))
         {
-          ConfigUtil.SetSetting("TriggersWatchForQuickShare", true.ToString(CultureInfo.CurrentCulture));
+          ConfigUtil.SetSetting("TriggersWatchForQuickShare", true);
         }
 
         // upgrade
@@ -270,7 +264,6 @@ namespace EQLogParser
         ConfigUtil.RemoveSetting("AudioTriggersWatchForGINA");
         ConfigUtil.RemoveSetting("TriggersWatchForGINA");
         ConfigUtil.RemoveSetting("AudioTriggersEnabled");
-        ConfigUtil.RemoveSetting("OverlayRankColor");
         ConfigUtil.RemoveSetting("OverlayRankColor1");
         ConfigUtil.RemoveSetting("OverlayRankColor2");
         ConfigUtil.RemoveSetting("OverlayRankColor3");
@@ -282,6 +275,7 @@ namespace EQLogParser
         ConfigUtil.RemoveSetting("OverlayRankColor9");
         ConfigUtil.RemoveSetting("OverlayRankColor10");
         ConfigUtil.RemoveSetting("OverlayShowCritRate");
+        ConfigUtil.RemoveSetting("EnableHardwareAcceleration");
 
         // Init Trigger Manager
         TriggerManager.Instance.Start();
@@ -541,14 +535,14 @@ namespace EQLogParser
     private void ToggleHideOnMinimizeClick(object sender, RoutedEventArgs e)
     {
       IsHideOnMinimizeEnabled = !IsHideOnMinimizeEnabled;
-      ConfigUtil.SetSetting("HideWindowOnMinimize", IsHideOnMinimizeEnabled.ToString());
+      ConfigUtil.SetSetting("HideWindowOnMinimize", IsHideOnMinimizeEnabled);
       enableHideOnMinimizeIcon.Visibility = IsHideOnMinimizeEnabled ? Visibility.Visible : Visibility.Hidden;
     }
 
     private void ToggleAoEHealingClick(object sender, RoutedEventArgs e)
     {
       IsAoEHealingEnabled = !IsAoEHealingEnabled;
-      ConfigUtil.SetSetting("IncludeAoEHealing", IsAoEHealingEnabled.ToString());
+      ConfigUtil.SetSetting("IncludeAoEHealing", IsAoEHealingEnabled);
       enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
       Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats());
     }
@@ -556,35 +550,27 @@ namespace EQLogParser
     private void ToggleHealingSwarmPetsClick(object sender, RoutedEventArgs e)
     {
       IsHealingSwarmPetsEnabled = !IsHealingSwarmPetsEnabled;
-      ConfigUtil.SetSetting("IncludeHealingSwarmPets", IsHealingSwarmPetsEnabled.ToString());
+      ConfigUtil.SetSetting("IncludeHealingSwarmPets", IsHealingSwarmPetsEnabled);
       enableHealingSwarmPetsIcon.Visibility = IsHealingSwarmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
       Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats());
     }
 
-    private void ToggleHardwareAccelerationClick(object sender, RoutedEventArgs e)
-    {
-      IsHardwareAccelerationEnabled = !IsHardwareAccelerationEnabled;
-      ConfigUtil.SetSetting("EnableHardwareAcceleration", IsHardwareAccelerationEnabled.ToString());
-      enableHardwareAccelerationIcon.Visibility = IsHardwareAccelerationEnabled ? Visibility.Visible : Visibility.Hidden;
-      new MessageWindow("Restart required for changes to take effect.", Resource.APP_SETTINGS).ShowDialog();
-    }
-
     private void ToggleAutoMonitorClick(object sender, RoutedEventArgs e)
     {
-      ConfigUtil.SetSetting("AutoMonitor", (enableAutoMonitorIcon.Visibility == Visibility.Hidden).ToString());
+      ConfigUtil.SetSetting("AutoMonitor", enableAutoMonitorIcon.Visibility == Visibility.Hidden);
       enableAutoMonitorIcon.Visibility = enableAutoMonitorIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
     }
 
     private void ToggleCheckUpdatesClick(object sender, RoutedEventArgs e)
     {
-      ConfigUtil.SetSetting("CheckUpdatesAtStartup", (checkUpdatesIcon.Visibility == Visibility.Hidden).ToString());
+      ConfigUtil.SetSetting("CheckUpdatesAtStartup", checkUpdatesIcon.Visibility == Visibility.Hidden);
       checkUpdatesIcon.Visibility = checkUpdatesIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
     }
 
     private void ToggleMapSendToEqClick(object sender, RoutedEventArgs e)
     {
       IsMapSendToEqEnabled = !IsMapSendToEqEnabled;
-      ConfigUtil.SetSetting("MapSendToEQAsCtrlC", (enableMapSendToEQIcon.Visibility == Visibility.Hidden).ToString());
+      ConfigUtil.SetSetting("MapSendToEQAsCtrlC", enableMapSendToEQIcon.Visibility == Visibility.Hidden);
       enableMapSendToEQIcon.Visibility = enableMapSendToEQIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
     }
 
@@ -592,7 +578,7 @@ namespace EQLogParser
     {
       enableDamageOverlayIcon.Visibility = enableDamageOverlayIcon.Visibility == Visibility.Hidden ? Visibility.Visible : Visibility.Hidden;
       var enabled = enableDamageOverlayIcon.Visibility == Visibility.Visible;
-      ConfigUtil.SetSetting("IsDamageOverlayEnabled", enabled.ToString());
+      ConfigUtil.SetSetting("IsDamageOverlayEnabled", enabled);
 
       if (enabled)
       {
@@ -674,7 +660,7 @@ namespace EQLogParser
 
     private void UpdateDamageOption(ImageAwesome icon, bool enabled, string option)
     {
-      ConfigUtil.SetSetting(option, enabled.ToString(CultureInfo.CurrentCulture));
+      ConfigUtil.SetSetting(option, enabled);
       icon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
       var options = new GenerateStatsOptions();
       Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
@@ -903,7 +889,7 @@ namespace EQLogParser
       {
         MainActions.UpdateCheckedMenuItem(menuItem, (menuItem.Parent as MenuItem)?.Items);
         CurrentFontSize = (double)menuItem.Tag;
-        ConfigUtil.SetSetting("ApplicationFontSize", CurrentFontSize.ToString(CultureInfo.InvariantCulture));
+        ConfigUtil.SetSetting("ApplicationFontSize", CurrentFontSize);
         MainActions.LoadTheme(this, CurrentTheme);
       }
     }
@@ -1248,10 +1234,10 @@ namespace EQLogParser
 
       if (WindowState != WindowState.Maximized)
       {
-        ConfigUtil.SetSetting("WindowLeft", Left.ToString(CultureInfo.InvariantCulture));
-        ConfigUtil.SetSetting("WindowTop", Top.ToString(CultureInfo.InvariantCulture));
-        ConfigUtil.SetSetting("WindowHeight", Height.ToString(CultureInfo.InvariantCulture));
-        ConfigUtil.SetSetting("WindowWidth", Width.ToString(CultureInfo.InvariantCulture));
+        ConfigUtil.SetSetting("WindowLeft", Left);
+        ConfigUtil.SetSetting("WindowTop", Top);
+        ConfigUtil.SetSetting("WindowHeight", Height);
+        ConfigUtil.SetSetting("WindowWidth", Width);
       }
 
       ConfigUtil.Save();

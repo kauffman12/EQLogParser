@@ -210,12 +210,12 @@ namespace EQLogParser
       // dont call these until after init/load
       if (initialized)
       {
-        ConfigUtil.SetSetting("PlayerParseShowPetLabel", playerParseTextDoPetLabel.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
-        ConfigUtil.SetSetting("PlayerParseShowDPS", playerParseTextDoDPS.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
-        ConfigUtil.SetSetting("PlayerParseShowRank", playerParseTextDoRank.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
-        ConfigUtil.SetSetting("PlayerParseShowTotals", playerParseTextDoTotals.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
-        ConfigUtil.SetSetting("PlayerParseShowSpecials", playerParseTextDoSpecials.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
-        ConfigUtil.SetSetting("PlayerParseShowTime", playerParseTextDoTime.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("PlayerParseShowPetLabel", playerParseTextDoPetLabel.IsChecked.Value);
+        ConfigUtil.SetSetting("PlayerParseShowDPS", playerParseTextDoDPS.IsChecked.Value);
+        ConfigUtil.SetSetting("PlayerParseShowRank", playerParseTextDoRank.IsChecked.Value);
+        ConfigUtil.SetSetting("PlayerParseShowTotals", playerParseTextDoTotals.IsChecked.Value);
+        ConfigUtil.SetSetting("PlayerParseShowSpecials", playerParseTextDoSpecials.IsChecked.Value);
+        ConfigUtil.SetSetting("PlayerParseShowTime", playerParseTextDoTime.IsChecked.Value);
       }
     }
 

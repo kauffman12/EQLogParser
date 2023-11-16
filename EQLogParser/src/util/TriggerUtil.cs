@@ -720,9 +720,9 @@ namespace EQLogParser
       }
     }
 
-    private static void RunQuickShareTask(string quickShareKey)
+    private static void RunQuickShareTask(string quickShareKey, int tries = 0)
     {
-      Task.Delay(1000).ContinueWith(async _ =>
+      Task.Delay(1200).ContinueWith(async _ =>
       {
         try
         {
@@ -738,6 +738,13 @@ namespace EQLogParser
           }
           else
           {
+            if (tries == 0)
+            {
+              // try a 2nd time
+              RunQuickShareTask(quickShareKey, 1);
+              return;
+            }
+
             UIUtil.InvokeAsync(() =>
             {
               new MessageWindow($"Unable to Import. Key Expired.", Resource.RECEIVED_SHARE).ShowDialog();
@@ -757,6 +764,13 @@ namespace EQLogParser
           }
           else
           {
+            if (tries == 0)
+            {
+              // try a 2nd time
+              RunQuickShareTask(quickShareKey, 1);
+              return;
+            }
+
             UIUtil.InvokeAsync(() =>
             {
               new MessageWindow("Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();

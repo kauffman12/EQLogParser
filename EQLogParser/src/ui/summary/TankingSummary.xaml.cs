@@ -1,7 +1,6 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -348,8 +347,8 @@ namespace EQLogParser
         var needRequery = DamageType != damageTypes.SelectedIndex;
         CurrentPetValue = showPets.IsChecked.Value;
         DamageType = damageTypes.SelectedIndex;
-        ConfigUtil.SetSetting("TankingSummaryShowPets", CurrentPetValue.ToString(CultureInfo.CurrentCulture));
-        ConfigUtil.SetSetting("TankingSummaryDamageType", DamageType.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("TankingSummaryShowPets", CurrentPetValue);
+        ConfigUtil.SetSetting("TankingSummaryDamageType", DamageType);
 
         dataGrid.SelectedItems.Clear();
         dataGrid.View.RefreshFilter();
