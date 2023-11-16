@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using LiteDB;
 using Syncfusion.UI.Xaml.TreeView.Engine;
 using Syncfusion.Windows.Shared;
 using System;
@@ -50,7 +51,8 @@ namespace EQLogParser
 
   internal class NpcResistStats
   {
-    public string Id { get; set; }
+    public ObjectId Id { get; set; }
+    public string Npc { get; set; }
     public Dictionary<SpellResist, ResistCount> ByResist { get; set; } = new();
   }
 
@@ -415,6 +417,12 @@ namespace EQLogParser
     public bool IsCurrency { get; set; }
   }
 
+  internal class SpecialRecord : IAction
+  {
+    public string Code { get; set; }
+    public string Player { get; set; }
+  }
+
   internal class TauntRecord : IAction
   {
     public string Player { get; set; }
@@ -437,8 +445,9 @@ namespace EQLogParser
     public string Previous { get; set; }
   }
 
-  internal class DeathEvent : DeathRecord
+  internal class DeathEvent
   {
+    public DeathRecord Record { get; set; }
     public double BeginTime { get; set; }
   }
 
@@ -593,13 +602,7 @@ namespace EQLogParser
     public string Pet { get; set; }
   }
 
-  internal class SpecialSpell : TimedAction
-  {
-    public string Code { get; set; }
-    public string Player { get; set; }
-  }
-
-  internal class ReceivedSpell : TimedAction
+  internal class ReceivedSpell : IAction
   {
     public string Receiver { get; set; }
     public SpellData SpellData { get; set; }
@@ -732,6 +735,7 @@ namespace EQLogParser
   {
     public List<DeathEvent> Deaths { get; } = new();
     public ConcurrentDictionary<string, string> Specials { get; } = new();
+    public ConcurrentDictionary<string, ConcurrentDictionary<string, int>> ResistCounts { get; } = new();
     public List<PlayerSubStats> SubStats { get; } = new();
     public List<PlayerSubStats> SubStats2 { get; } = new();
     public PlayerStats MoreStats { get; set; }

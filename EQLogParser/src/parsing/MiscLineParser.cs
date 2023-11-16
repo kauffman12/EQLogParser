@@ -147,7 +147,14 @@ namespace EQLogParser
                       attacker = ConfigUtil.PlayerName;
                       spell = string.Join(" ", split, i + 2, split.Length - i - 2).TrimEnd('!');
                     }
-                    RecordManager.Instance.Add(new ResistRecord { Attacker = attacker, Defender = npc, Spell = spell }, lineData.BeginTime);
+                    var record = new ResistRecord { Attacker = attacker, Defender = npc, Spell = spell };
+                    RecordManager.Instance.Add(record, lineData.BeginTime);
+
+                    // also update npc resist stats
+                    if (DataManager.Instance.GetDetSpellByName(record.Spell) is { } spellData && spellData.Resist != SpellResist.Undefined)
+                    {
+                      RecordManager.Instance.UpdateNpcSpellStats(record.Defender, spellData.Resist, true);
+                    }
                     handled = true;
                   }
                   break;
@@ -181,7 +188,7 @@ namespace EQLogParser
                     // var spell = string.Join(" ", split, 1, i - 4);
                     var npc = string.Join(" ", split, i + 2, split.Length - i - 2).TrimEnd('.');
                     npc = TextUtils.ToUpper(npc);
-                    DataManager.Instance.UpdateNpcSpellReflectStats(npc);
+                    RecordManager.Instance.UpdateNpcSpellStats(npc, SpellResist.Reflected, true);
                     handled = true;
                   }
                   break;

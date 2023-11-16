@@ -24,7 +24,7 @@ namespace EQLogParser
     {
       var i = 1;
       var list = new List<string>();
-      foreach (var death in combined.RaidStats.Deaths.Where(death => death.Killed == playerStats.OrigName))
+      foreach (var death in combined.RaidStats.Deaths.Where(death => death.Record.Killed == playerStats.OrigName))
       {
         list.Add("Death #" + i++);
         Deaths.Add(death);
@@ -49,8 +49,8 @@ namespace EQLogParser
       var end = death.BeginTime;
       var start = end - 20;
       var allFights = (Application.Current.MainWindow as MainWindow)?.GetFightTable()?.GetFights();
-      var allHeals = DataManager.Instance.GetHealsDuring(start, end + 1);
-      var allSpells = DataManager.Instance.GetReceivedSpellsDuring(start, end + 1);
+      var allHeals = RecordManager.Instance.GetHealsDuring(start, end + 1);
+      var allSpells = RecordManager.Instance.GetSpellsDuring(start, end + 1);
       var damages = new Dictionary<double, List<string>>();
       var heals = new Dictionary<double, List<string>>();
       var spells = new Dictionary<double, List<string>>();
@@ -89,49 +89,46 @@ namespace EQLogParser
         }
       }
 
-      allHeals.ForEach(block =>
+      foreach (var (beginTime, record) in allHeals)
       {
-        block.Actions.Cast<HealRecord>().ToList().ForEach(heal =>
+        if (record.Healed == CurrentPlayer.OrigName && record.Total > 0)
         {
-          if (heal.Healed == CurrentPlayer.OrigName && heal.Total > 0)
+          var value = record.Healer + " heals " + CurrentPlayer.OrigName + " for " + record.Total + " (" + record.SubType + ")";
+          if (heals.TryGetValue(beginTime, out var values))
           {
-            var value = heal.Healer + " heals " + CurrentPlayer.OrigName + " for " + heal.Total + " (" + heal.SubType + ")";
-            if (heals.TryGetValue(block.BeginTime, out var values))
-            {
-              values.Add(value);
-            }
-            else
-            {
-              heals[block.BeginTime] = new List<string> { value };
-            }
-
-            times[block.BeginTime] = true;
+            values.Add(value);
           }
-        });
-      });
-
-      foreach (ref var block in allSpells.ToArray().AsSpan())
-      {
-        foreach (var spell in block.Actions.Cast<ReceivedSpell>())
-        {
-          if (!spell.IsWearOff && spell.Receiver == CurrentPlayer.OrigName && spell.SpellData != null)
+          else
           {
-            var message = string.IsNullOrEmpty(spell.SpellData.LandsOnYou) ? spell.SpellData.LandsOnOther : spell.SpellData.LandsOnYou;
-            if (!string.IsNullOrEmpty(message) && spell.Ambiguity.Count <= 1)
+            heals[beginTime] = new List<string> { value };
+          }
+
+          times[beginTime] = true;
+        }
+      }
+
+      foreach (var (beginTime, action) in allSpells)
+      {
+        if (action is ReceivedSpell received)
+        {
+          if (!received.IsWearOff && received.Receiver == CurrentPlayer.OrigName && received.SpellData != null)
+          {
+            var message = string.IsNullOrEmpty(received.SpellData.LandsOnYou) ? received.SpellData.LandsOnOther : received.SpellData.LandsOnYou;
+            if (!string.IsNullOrEmpty(message) && received.Ambiguity.Count <= 1)
             {
-              message += " (" + spell.SpellData.NameAbbrv + ")";
+              message += " (" + received.SpellData.NameAbbrv + ")";
             }
 
-            if (spells.TryGetValue(block.BeginTime, out var values))
+            if (spells.TryGetValue(beginTime, out var values))
             {
               values.Add(message);
             }
             else
             {
-              spells[block.BeginTime] = new List<string> { message };
+              spells[beginTime] = new List<string> { message };
             }
 
-            times[block.BeginTime] = true;
+            times[beginTime] = true;
           }
         }
       }
@@ -198,11 +195,11 @@ namespace EQLogParser
         list.AddRange(sub);
       }
 
-      var combined = death.Message;
-      if (!string.IsNullOrEmpty(death.Previous))
+      var combined = death.Record.Message;
+      if (!string.IsNullOrEmpty(death.Record.Previous))
       {
         var found = false;
-        var split = death.Previous.Split(' ');
+        var split = death.Record.Previous.Split(' ');
         foreach (var value in split)
         {
           if (int.TryParse(value, out _))
@@ -219,7 +216,7 @@ namespace EQLogParser
 
         if (found)
         {
-          combined += " (Previous? " + death.Previous + ")";
+          combined += " (Previous? " + death.Record.Previous + ")";
         }
       }
 

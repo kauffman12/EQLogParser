@@ -6,14 +6,8 @@ namespace EQLogParser
 {
   public class TimeRange
   {
-    private const int OFFSET = 6;
-    public List<TimeSegment> TimeSegments { get; } = new();
-
-    public TimeRange() { }
-
-    public void Add(IReadOnlyCollection<TimeSegment> collection) => collection?.ToList().ForEach(Add);
-    public TimeRange(TimeSegment segment) => TimeSegments.Add(segment);
-    public TimeRange(List<TimeSegment> segments) => segments.ForEach(segment => Add(new TimeSegment(segment.BeginTime, segment.EndTime)));
+    private const int Offset = 6;
+    public List<TimeSegment> TimeSegments { get; } = new List<TimeSegment>();
 
     public double GetTotal()
     {
@@ -23,7 +17,7 @@ namespace EQLogParser
       {
         if (i + 1 is var next && next < TimeSegments.Count)
         {
-          if (TimeSegments[i].EndTime + OFFSET >= TimeSegments[next].BeginTime)
+          if (TimeSegments[i].EndTime + Offset >= TimeSegments[next].BeginTime)
           {
             additional.Add(new TimeSegment(TimeSegments[i].EndTime, TimeSegments[next].BeginTime));
           }
@@ -34,34 +28,107 @@ namespace EQLogParser
       return TimeSegments.Sum(segment => segment.Total);
     }
 
+    public void Add(IReadOnlyCollection<TimeSegment> collection) => collection?.ToList().ForEach(Add);
+
+    public TimeRange() { }
+
+    public TimeRange(TimeSegment segment)
+    {
+      TimeSegments.Add(segment);
+    }
+
+    public TimeRange(List<TimeSegment> segments)
+    {
+      segments.ForEach(segment => Add(new TimeSegment(segment.BeginTime, segment.EndTime)));
+    }
+
     public void Add(TimeSegment segment)
     {
       if (segment != null && segment.BeginTime <= segment.EndTime)
       {
-        TimeSegments.Add(segment);
-        TimeSegments.Sort((s1, s2) => s1.BeginTime.CompareTo(s2.BeginTime)); // Sort in-place.
-
-        var mergedSegments = new List<TimeSegment>();
-        var current = TimeSegments[0];
-
-        for (var i = 1; i < TimeSegments.Count; i++)
+        if (TimeSegments.Count == 0)
         {
-          if (current.EndTime >= TimeSegments[i].BeginTime)
+          TimeSegments.Add(segment);
+        }
+        else
+        {
+          var leftIndex = -1;
+          var rightIndex = -1;
+          var handled = false;
+
+          for (var i = 0; i < TimeSegments.Count; i++)
           {
-            // Merge segments
-            current.EndTime = Math.Max(current.EndTime, TimeSegments[i].EndTime);
+            if (TimeSegments[i].Equals(segment))
+            {
+              handled = true;
+              break;
+            }
+
+            if (IsSurrounding(TimeSegments[i], segment))
+            {
+              TimeSegments[i].BeginTime = segment.BeginTime;
+              TimeSegments[i].EndTime = segment.EndTime;
+              CollapseLeft(i);
+              CollapseRight(i);
+              handled = true;
+              break;
+            }
+
+            if (IsWithin(TimeSegments[i], segment.BeginTime))
+            {
+              if (segment.EndTime > TimeSegments[i].EndTime)
+              {
+                TimeSegments[i].EndTime = segment.EndTime;
+                CollapseRight(i);
+              }
+
+              handled = true;
+              break;
+            }
+
+            if (IsWithin(TimeSegments[i], segment.EndTime))
+            {
+              if (segment.BeginTime < TimeSegments[i].BeginTime)
+              {
+                TimeSegments[i].BeginTime = segment.BeginTime;
+                CollapseLeft(i);
+              }
+
+              handled = true;
+              break;
+            }
+
+            if (IsLeftOf(segment, TimeSegments[i].BeginTime))
+            {
+              leftIndex = i;
+              break;
+            }
+
+            if (IsRightOf(segment, TimeSegments[i].EndTime))
+            {
+              rightIndex = i;
+            }
           }
-          else
+
+          if (!handled)
           {
-            mergedSegments.Add(current);
-            current = TimeSegments[i];
+            if (rightIndex + 1 is var newIndex and >= 1)
+            {
+              if (TimeSegments.Count > newIndex)
+              {
+                TimeSegments.Insert(newIndex, segment);
+              }
+              else
+              {
+                TimeSegments.Add(segment);
+              }
+            }
+            else if (leftIndex >= 0)
+            {
+              TimeSegments.Insert(leftIndex, segment);
+            }
           }
         }
-
-        mergedSegments.Add(current);
-
-        TimeSegments.Clear(); // Clear the existing list.
-        TimeSegments.AddRange(mergedSegments); // Add the merged segments back.
       }
     }
 
@@ -123,6 +190,37 @@ namespace EQLogParser
 
       return pass;
     }
+
+    private void CollapseLeft(int index)
+    {
+      if (index - 1 is var prev and >= 0)
+      {
+        if (TimeSegments[index].BeginTime <= TimeSegments[prev].EndTime)
+        {
+          TimeSegments[index].BeginTime = Math.Min(TimeSegments[index].BeginTime, TimeSegments[prev].BeginTime);
+          TimeSegments.RemoveAt(prev);
+          CollapseLeft(prev);
+        }
+      }
+    }
+
+    private void CollapseRight(int index)
+    {
+      if (index + 1 is var next && next < TimeSegments.Count)
+      {
+        if (TimeSegments[index].EndTime >= TimeSegments[next].BeginTime)
+        {
+          TimeSegments[index].EndTime = Math.Max(TimeSegments[index].EndTime, TimeSegments[next].EndTime);
+          TimeSegments.RemoveAt(next);
+          CollapseRight(index);
+        }
+      }
+    }
+
+    private static bool IsLeftOf(TimeSegment one, double value) => value > one.BeginTime && value > one.EndTime;
+    private static bool IsRightOf(TimeSegment one, double value) => value < one.BeginTime && value < one.EndTime;
+    private static bool IsSurrounding(TimeSegment one, TimeSegment two) => two.BeginTime <= one.BeginTime && two.EndTime >= one.EndTime;
+    private static bool IsWithin(TimeSegment one, double value) => value >= one.BeginTime && value <= one.EndTime;
   }
 
   public class TimeSegment
@@ -136,6 +234,7 @@ namespace EQLogParser
       EndTime = end;
     }
 
+    public bool Equals(TimeSegment check) => check != null && check.BeginTime.Equals(BeginTime) && check.EndTime.Equals(EndTime);
     public double Total => EndTime - BeginTime + 1;
   }
 }

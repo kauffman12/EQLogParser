@@ -10,10 +10,10 @@ namespace EQLogParser
 {
   static class DamageLineParser
   {
-    public static event EventHandler<DamageProcessedEvent> EventsDamageProcessed;
-    public static event EventHandler<TauntEvent> EventsNewTaunt;
+    public static event Action<DamageProcessedEvent> EventsDamageProcessed;
+    public static event Action<TauntEvent> EventsNewTaunt;
 
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Regex CheckEyeRegex = new(@"^Eye of (\w+)");
     private static readonly Dictionary<string, string> SpellTypeCache = new();
     private static readonly List<string> SlainQueue = new();
@@ -41,10 +41,10 @@ namespace EQLogParser
 
     private static readonly Dictionary<string, SpellResist> SpellResistMap = new()
     {
-      { "fire", SpellResist.FIRE }, { "cold", SpellResist.COLD }, { "poison", SpellResist.POISON },
-      { "magic", SpellResist.MAGIC }, { "disease", SpellResist.DISEASE }, { "unresistable", SpellResist.UNRESISTABLE },
-      { "chromatic", SpellResist.LOWEST }, { "physical", SpellResist.PHYSICAL }, { "corruption", SpellResist.CORRUPTION },
-      { "prismatic", SpellResist.AVERAGE },
+      { "fire", SpellResist.Fire }, { "cold", SpellResist.Cold }, { "poison", SpellResist.Poison },
+      { "magic", SpellResist.Magic }, { "disease", SpellResist.Disease }, { "unresistable", SpellResist.Unresistable },
+      { "chromatic", SpellResist.Lowest }, { "physical", SpellResist.Physical }, { "corruption", SpellResist.Corruption },
+      { "prismatic", SpellResist.Average },
     };
 
     private static readonly Dictionary<string, string> SpecialCodes = new()
@@ -141,7 +141,7 @@ namespace EQLogParser
     private static DamageRecord ParseLine(bool checkLineType, LineData lineData, string[] split, int stop)
     {
       DamageRecord record = null;
-      var resist = SpellResist.UNDEFINED;
+      var resist = SpellResist.Undefined;
       string attacker = null;
       string defender = null;
 
@@ -395,7 +395,7 @@ namespace EQLogParser
           var damage = StatsUtil.ParseUInt(split[extraIndex + 1]);
           var spell = string.Join(" ", split, fromDamage + 3, stop - fromDamage - 3);
           var spellData = DataManager.Instance.GetDamagingSpellByName(spell);
-          resist = spellData?.Resist ?? SpellResist.UNDEFINED;
+          resist = spellData?.Resist ?? SpellResist.Undefined;
           attacker = UpdateAttacker(attacker, spell);
           defender = UpdateDefender(defender);
           record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.BANE, spell);
@@ -504,7 +504,7 @@ namespace EQLogParser
 
           defender = string.Join(" ", split, 0, takenIndex);
           var damage = StatsUtil.ParseUInt(split[fromDamage - 1]);
-          resist = spellData?.Resist ?? SpellResist.UNDEFINED;
+          resist = spellData?.Resist ?? SpellResist.Undefined;
           attacker = UpdateAttacker(attacker, spell);
           defender = UpdateDefender(defender);
           record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, type, spell);
@@ -661,7 +661,7 @@ namespace EQLogParser
           if (attentionIndex == (split.Length - 1) && split.Length > 3 && split[1] == "capture" && ParseNpcName(split, 3, out var npc))
           {
             var taunt = new TauntRecord { Player = ConfigUtil.PlayerName, Success = true, Npc = ToUpper(npc) };
-            EventsNewTaunt?.Invoke(taunt, new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
+            EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
           else if (attentionIndex == (split.Length - 1) && failedIndex == 2 && split.Length > 6 && split[1] == "have" && split[3] == "to")
           {
@@ -671,7 +671,7 @@ namespace EQLogParser
               Success = false,
               Npc = ToUpper(ParseSpellOrNpc(split, 5))
             };
-            EventsNewTaunt?.Invoke(taunt, new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
+            EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
         }
         else if (attentionIndex > -1 && attentionIndex == (split.Length - 1))
@@ -683,7 +683,7 @@ namespace EQLogParser
           if (split[i] == "has" && split[i + 1] == "captured" && ParseNpcName(split, 3 + i, out var npc))
           {
             var taunt = new TauntRecord { Player = name, Success = true, Npc = ToUpper(npc) };
-            EventsNewTaunt?.Invoke(taunt, new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
+            EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
         }
         else if (split.Length > 4)
@@ -695,7 +695,7 @@ namespace EQLogParser
           if (failedIndex == i && split[i + 1] == "to" && split[i + 2] == "taunt")
           {
             var taunt = new TauntRecord { Player = name, Success = false, Npc = ToUpper(ParseSpellOrNpc(split, 3 + i)) };
-            EventsNewTaunt?.Invoke(taunt, new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
+            EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
           else if (split.Length > 10 && split[^1] == "taunt." && split[^2] == "improved" &&
             split[^3] == "an" && split[^4] == "to" && split[^5] == "due")
@@ -709,7 +709,7 @@ namespace EQLogParser
                 var npc = string.Join(" ", split, 0, j);
                 var taunter = string.Join(" ", split, playerIndex, last - playerIndex);
                 var taunt = new TauntRecord { Player = taunter, Success = true, IsImproved = true, Npc = ToUpper(npc) };
-                EventsNewTaunt?.Invoke(taunt, new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
+                EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
               }
             }
           }
@@ -720,9 +720,10 @@ namespace EQLogParser
       {
         if (!checkLineType && !InIgnoreList(defender))
         {
-          if (resist != SpellResist.UNDEFINED && defender != attacker)
+          if (resist != SpellResist.Undefined && defender != attacker &&
+            (attacker == ConfigUtil.PlayerName || PlayerManager.Instance.GetPlayerFromPet(attacker) == ConfigUtil.PlayerName))
           {
-            RecordManager.Instance.UpdateNpcResistStats(defender, resist);
+            RecordManager.Instance.UpdateNpcSpellStats(defender, resist);
           }
 
           if (!double.IsNaN(lineData.BeginTime))
@@ -741,12 +742,12 @@ namespace EQLogParser
             CheckSlainQueue(lineData.BeginTime);
 
             var e = new DamageProcessedEvent { Record = record, BeginTime = lineData.BeginTime };
-            EventsDamageProcessed?.Invoke(record, e);
+            EventsDamageProcessed?.Invoke(e);
 
             if (record.Type == Labels.DD && SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) &&
             record.SubType.Contains(special)) is { } key && !string.IsNullOrEmpty(key))
             {
-              DataManager.Instance.AddSpecial(new SpecialSpell { Code = SpecialCodes[key], Player = record.Attacker, BeginTime = lineData.BeginTime });
+              RecordManager.Instance.Add(new SpecialRecord { Code = SpecialCodes[key], Player = record.Attacker }, lineData.BeginTime);
             }
           }
         }

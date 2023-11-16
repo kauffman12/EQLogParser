@@ -25,15 +25,15 @@ namespace EQLogParser
       ValidCombo.Clear();
     }
 
-    private void HandleNewTaunt(object sender, TauntEvent e)
+    private void HandleNewTaunt(TauntEvent e)
     {
       var fight = DataManager.Instance.GetFight(e.Record.Npc) ?? Create(e.Record.Npc, e.BeginTime);
       DataManager.AddAction(fight.TauntBlocks, e.Record, e.BeginTime);
     }
 
-    private void HandleDamageProcessed(object sender, DamageProcessedEvent processed)
+    private void HandleDamageProcessed(DamageProcessedEvent processed)
     {
-      if (!StatsUtil.DoubleEquals(LastFightProcessTime, processed.BeginTime))
+      if (!LastFightProcessTime.Equals(processed.BeginTime))
       {
         DataManager.Instance.CheckExpireFights(processed.BeginTime);
         ValidCombo.Clear();

@@ -16,32 +16,38 @@ namespace EQLogParser
     private static readonly Lazy<RecordManager> Lazy = new(() => new RecordManager());
     internal static RecordManager Instance => Lazy.Value; // instance
     // records
-    private const string DeathRecords = "DeathRecords";
-    private const string LootRecords = "LootRecords";
-    private const string LootRecordsToAssign = "LootRecordsToAssign";
-    private const string MezBreakRecords = "MezBreakRecords";
-    private const string RandomRecords = "RandomRecords";
-    private const string ResistRecords = "ResistRecords";
-    private const string ZoneRecords = "ZoneRecords";
+    public const string DEATH_RECORDS = "DeathRecords";
+    public const string HEAL_RECORDS = "HealRecords";
+    public const string LOOT_RECORDS = "LootRecords";
+    public const string LOOT_RECORDS_TO_ASSIGN = "LootRecordsToAssign";
+    public const string MEZ_BREAK_RECORDS = "MezBreakRecords";
+    public const string RANDOM_RECORDS = "RandomRecords";
+    public const string SPELL_RECORDS = "SpellRecords";
+    public const string RESIST_RECORDS = "ResistRecords";
+    public const string SPECIAL_RECORDS = "SpecialRecords";
+    public const string ZONE_RECORDS = "ZoneRecords";
     // stats
     private const string NpcResistStatsType = "NpcResistStats";
     private readonly string FilePath;
     private readonly object RecordLock = new();
     private readonly object StatsLock = new();
     private readonly Dictionary<string, List<RecordList>> RecordsActive = new();
-    private readonly Dictionary<string, NpcResistStats> NpcResistStatsActive = new();
+    private readonly Dictionary<string, NpcResistStats> NpcSpellStatsActive = new();
     private readonly Timer DatabaseUpdater;
     private LiteDatabase Db;
 
     private static readonly string[] TimedRecordTypes =
     {
-      DeathRecords,
-      LootRecords,
-      LootRecordsToAssign,
-      MezBreakRecords,
-      RandomRecords,
-      ResistRecords,
-      ZoneRecords
+      DEATH_RECORDS,
+      HEAL_RECORDS,
+      LOOT_RECORDS,
+      LOOT_RECORDS_TO_ASSIGN,
+      MEZ_BREAK_RECORDS,
+      RANDOM_RECORDS,
+      SPELL_RECORDS,
+      RESIST_RECORDS,
+      SPECIAL_RECORDS,
+      ZONE_RECORDS
     };
 
     private RecordManager()
@@ -67,34 +73,44 @@ namespace EQLogParser
       }
     }
 
-    internal void Add(DeathRecord record, double beginTime) => Add(DeathRecords, record, beginTime);
-    internal void Add(MezBreakRecord record, double beginTime) => Add(MezBreakRecords, record, beginTime);
-    internal void Add(RandomRecord record, double beginTime) => Add(RandomRecords, record, beginTime);
-    internal void Add(ZoneRecord record, double beginTime) => Add(ZoneRecords, record, beginTime);
-    internal IEnumerable<(double, DeathRecord)> GetAllDeaths() => GetAll(DeathRecords).Select(r => (r.Item1, (DeathRecord)r.Item2));
-    internal IEnumerable<(double, LootRecord)> GetAllLoot() => GetAll(LootRecords).Select(r => (r.Item1, (LootRecord)r.Item2));
-    internal IEnumerable<(double, MezBreakRecord)> GetAllMezBreaks() => GetAll(MezBreakRecords).Select(r => (r.Item1, (MezBreakRecord)r.Item2));
-    internal IEnumerable<(double, RandomRecord)> GetAllRandoms() => GetAll(RandomRecords).Select(r => (r.Item1, (RandomRecord)r.Item2));
-    internal IEnumerable<(double, ZoneRecord)> GetAllZoning() => GetAll(ZoneRecords).Select(r => (r.Item1, (ZoneRecord)r.Item2));
+    internal void Add(SpellCast spell, double beginTime) => Add(SPELL_RECORDS, spell, beginTime);
+    internal void Add(DeathRecord record, double beginTime) => Add(DEATH_RECORDS, record, beginTime);
+    internal void Add(HealRecord record, double beginTime) => Add(HEAL_RECORDS, record, beginTime);
+    internal void Add(MezBreakRecord record, double beginTime) => Add(MEZ_BREAK_RECORDS, record, beginTime);
+    internal void Add(RandomRecord record, double beginTime) => Add(RANDOM_RECORDS, record, beginTime);
+    internal void Add(ResistRecord record, double beginTime) => Add(RESIST_RECORDS, record, beginTime);
+    internal void Add(ReceivedSpell spell, double beginTime) => Add(SPELL_RECORDS, spell, beginTime);
+    internal void Add(SpecialRecord record, double beginTime) => Add(SPECIAL_RECORDS, record, beginTime);
+    internal void Add(ZoneRecord record, double beginTime) => Add(ZONE_RECORDS, record, beginTime);
+    internal IEnumerable<(double, DeathRecord)> GetAllDeaths() => GetAll(DEATH_RECORDS).Select(r => (r.Item1, (DeathRecord)r.Item2));
+    internal IEnumerable<(double, HealRecord)> GetAllHeals() => GetAll(HEAL_RECORDS).Select(r => (r.Item1, (HealRecord)r.Item2));
+    internal IEnumerable<(double, LootRecord)> GetAllLoot() => GetAll(LOOT_RECORDS).Select(r => (r.Item1, (LootRecord)r.Item2));
+    internal IEnumerable<(double, MezBreakRecord)> GetAllMezBreaks() => GetAll(MEZ_BREAK_RECORDS).Select(r => (r.Item1, (MezBreakRecord)r.Item2));
+    internal IEnumerable<(double, RandomRecord)> GetAllRandoms() => GetAll(RANDOM_RECORDS).Select(r => (r.Item1, (RandomRecord)r.Item2));
+    internal IEnumerable<(double, ResistRecord)> GetAllResists() => GetAll(RESIST_RECORDS).Select(r => (r.Item1, (ResistRecord)r.Item2));
+    internal IEnumerable<(double, SpecialRecord)> GetAllSpecials() => GetAll(SPECIAL_RECORDS).Select(r => (r.Item1, (SpecialRecord)r.Item2));
+    internal IEnumerable<(double, ZoneRecord)> GetAllZoning() => GetAll(ZONE_RECORDS).Select(r => (r.Item1, (ZoneRecord)r.Item2));
     internal IEnumerable<(double, DeathRecord)> GetDeathsDuring(double beginTime, double endTime) =>
-      GetDuring(DeathRecords, beginTime, endTime).Select(r => (r.Item1, (DeathRecord)r.Item2));
-    internal IEnumerable<(double, ResistRecord)> GetResistsDuring(double beginTime, double endTime) =>
-      GetDuring(ResistRecords, beginTime, endTime).Select(r => (r.Item1, (ResistRecord)r.Item2));
+      GetDuring(DEATH_RECORDS, beginTime, endTime).Select(r => (r.Item1, (DeathRecord)r.Item2));
+    internal IEnumerable<(double, HealRecord)> GetHealsDuring(double beginTime, double endTime) =>
+      GetDuring(HEAL_RECORDS, beginTime, endTime).Select(r => (r.Item1, (HealRecord)r.Item2));
+    internal IEnumerable<(double, IAction)> GetSpellsDuring(double beginTime, double endTime) =>
+      GetDuring(SPELL_RECORDS, beginTime, endTime).Select(r => (r.Item1, (IAction)r.Item2));
 
     internal void Add(LootRecord record, double beginTime)
     {
-      Add(LootRecords, record, beginTime);
+      Add(LOOT_RECORDS, record, beginTime);
       if (record.IsCurrency) return;
 
       // if quantity zero then loot needs to be assigned
       if (record.Quantity == 0)
       {
-        Add(LootRecordsToAssign, record, beginTime);
+        Add(LOOT_RECORDS_TO_ASSIGN, record, beginTime);
         return;
       }
 
       // loot assigned so remove previous instance
-      if (Db?.GetCollection<RecordList>(LootRecordsToAssign) is { } toAssign && toAssign.Count() > 0)
+      if (Db?.GetCollection<RecordList>(LOOT_RECORDS_TO_ASSIGN) is { } toAssign && toAssign.Count() > 0)
       {
         lock (RecordLock)
         {
@@ -104,7 +120,7 @@ namespace EQLogParser
             foreach (var found in group.Records.Cast<LootRecord>().Where(r => r.Player == record.Player && r.Item == record.Item).ToArray())
             {
               Remove(toAssign, group, found);
-              if (Db?.GetCollection<RecordList>(LootRecords) is { } looted &&
+              if (Db?.GetCollection<RecordList>(LOOT_RECORDS) is { } looted &&
                   looted.FindOne(r => r.BeginTime.Equals(group.BeginTime)) is { } orig)
               {
                 if (orig.Records.Cast<LootRecord>().FirstOrDefault(r => r.Player == record.Player && r.Item == record.Item) is { } found2)
@@ -118,26 +134,28 @@ namespace EQLogParser
       }
     }
 
-    internal void Add(ResistRecord record, double beginTime)
+    internal IEnumerable<NpcResistStats> GetAllNpcResistStats()
     {
-      Add(ResistRecords, record, beginTime);
-      if (DataManager.Instance.GetDetSpellByName(record.Spell) is { } spellData)
+      if (Db?.GetCollection<NpcResistStats>(NpcResistStatsType) is { } stats)
       {
-        UpdateNpcResistStats(record.Defender, spellData.Resist, true);
+        foreach (var stat in stats.FindAll())
+        {
+          yield return stat;
+        }
       }
     }
 
-    internal void UpdateNpcResistStats(string npc, SpellResist resist, bool resisted = false)
+    internal void UpdateNpcSpellStats(string npc, SpellResist resist, bool isResist = false)
     {
       if (!string.IsNullOrEmpty(npc))
       {
         npc = npc.ToLower();
         lock (StatsLock)
         {
-          if (!NpcResistStatsActive.TryGetValue(npc, out var npcStats))
+          if (!NpcSpellStatsActive.TryGetValue(npc, out var npcStats))
           {
-            npcStats = new NpcResistStats { Id = npc };
-            NpcResistStatsActive[npc] = npcStats;
+            npcStats = new NpcResistStats { Npc = npc };
+            NpcSpellStatsActive[npc] = npcStats;
           }
 
           if (!npcStats.ByResist.TryGetValue(resist, out var count))
@@ -146,7 +164,7 @@ namespace EQLogParser
             npcStats.ByResist[resist] = count;
           }
 
-          if (resisted)
+          if (isResist)
           {
             count.Resisted++;
           }
@@ -160,9 +178,19 @@ namespace EQLogParser
 
     internal void Clear()
     {
-      foreach (var type in TimedRecordTypes)
+      lock (RecordLock)
       {
-        Db.GetCollection<RecordList>(type)?.DeleteAll();
+        RecordsActive.Clear();
+        foreach (var type in TimedRecordTypes)
+        {
+          Db?.GetCollection<RecordList>(type)?.DeleteAll();
+        }
+      }
+
+      lock (StatsLock)
+      {
+        NpcSpellStatsActive.Clear();
+        Db?.GetCollection<NpcResistStats>(NpcResistStatsType)?.DeleteAll();
       }
     }
 
@@ -233,71 +261,81 @@ namespace EQLogParser
 
     private void UpdateDatabase(object state)
     {
+      Dictionary<string, NpcResistStats> copyNpcSpellStats = null;
       lock (StatsLock)
       {
-        if (NpcResistStatsActive.Count > 0 && Db?.GetCollection<NpcResistStats>(NpcResistStatsType) is { } stats)
+        if (NpcSpellStatsActive.Count > 0)
         {
-          foreach (var kv in NpcResistStatsActive)
-          {
-            if (stats.FindById(kv.Key) is not { } npcStats)
-            {
-              stats.Insert(kv.Value);
-            }
-            else
-            {
-              foreach (var resist in kv.Value.ByResist)
-              {
-                if (npcStats.ByResist.TryGetValue(resist.Key, out var count))
-                {
-                  count.Landed += resist.Value.Landed;
-                  count.Resisted += resist.Value.Resisted;
-                }
-                else
-                {
-                  npcStats.ByResist[resist.Key] = resist.Value;
-                }
-              }
-
-              stats.Update(npcStats);
-            }
-          }
-
-          NpcResistStatsActive.Clear();
+          copyNpcSpellStats = new Dictionary<string, NpcResistStats>(NpcSpellStatsActive);
+          NpcSpellStatsActive.Clear();
         }
       }
 
-      var updatedTypes = new List<string>();
+      if (copyNpcSpellStats != null && Db?.GetCollection<NpcResistStats>(NpcResistStatsType) is { } stats)
+      {
+        foreach (var kv in copyNpcSpellStats)
+        {
+          if (stats.FindOne(s => s.Npc == kv.Key) is not { } npcStats)
+          {
+            stats.Insert(kv.Value);
+          }
+          else
+          {
+            foreach (var resist in kv.Value.ByResist)
+            {
+              if (npcStats.ByResist.TryGetValue(resist.Key, out var count))
+              {
+                count.Landed += resist.Value.Landed;
+                count.Resisted += resist.Value.Resisted;
+              }
+              else
+              {
+                npcStats.ByResist[resist.Key] = resist.Value;
+              }
+            }
+
+            stats.Update(npcStats);
+          }
+        }
+      }
+
+      Dictionary<string, List<RecordList>> copyRecordsActive = null;
       lock (RecordLock)
       {
         if (RecordsActive.Count > 0)
         {
-          foreach (var kv in RecordsActive)
-          {
-            updatedTypes.Add(kv.Key);
-            if (Db?.GetCollection<RecordList>(kv.Key) is { } recordType)
-            {
-              foreach (ref var recordList in kv.Value.ToArray().AsSpan())
-              {
-                if (recordList.BeginTime is var time && recordType.FindOne(r => r.BeginTime.Equals(time)) is { } found)
-                {
-                  found.Records.AddRange(recordList.Records);
-                  recordType.Update(found);
-                }
-                else
-                {
-                  recordType.Insert(recordList);
-                }
-              }
-            }
-          }
-
+          copyRecordsActive = new Dictionary<string, List<RecordList>>(RecordsActive);
           RecordsActive.Clear();
         }
       }
 
-      foreach (var type in updatedTypes)
+      if (copyRecordsActive != null)
       {
-        RecordsUpdatedEvent?.Invoke(type);
+        var updatedTypes = new List<string>();
+        foreach (var kv in copyRecordsActive)
+        {
+          updatedTypes.Add(kv.Key);
+          if (Db?.GetCollection<RecordList>(kv.Key) is { } recordType)
+          {
+            foreach (ref var recordList in kv.Value.ToArray().AsSpan())
+            {
+              if (recordList.BeginTime is var time && recordType.FindOne(r => r.BeginTime.Equals(time)) is { } found)
+              {
+                found.Records.AddRange(recordList.Records);
+                recordType.Update(found);
+              }
+              else
+              {
+                recordType.Insert(recordList);
+              }
+            }
+          }
+        }
+
+        foreach (var type in updatedTypes)
+        {
+          RecordsUpdatedEvent?.Invoke(type);
+        }
       }
     }
 
