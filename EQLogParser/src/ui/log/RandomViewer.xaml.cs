@@ -23,7 +23,7 @@ namespace EQLogParser
       InitializeComponent();
 
       MainActions.EventsLogLoadingComplete += LogLoadingComplete;
-      DataManager.Instance.EventsNewRandomRecord += EventsNewRandomRecord;
+      RecordManager.Instance.RecordsUpdatedEvent += RecordsUpdated;
       DataGridUtil.UpdateTableMargin(dataGrid);
       MainActions.EventsThemeChanged += EventsThemeChanged;
 
@@ -59,9 +59,9 @@ namespace EQLogParser
       Load();
     }
 
-    private void EventsNewRandomRecord(object sender, RandomRecord e)
+    private void RecordsUpdated(string type)
     {
-      if (!ReloadTimer.IsEnabled)
+      if (type == RecordManager.RANDOM_RECORDS && !ReloadTimer.IsEnabled)
       {
         ReloadTimer.Start();
       }
@@ -76,23 +76,19 @@ namespace EQLogParser
     private void GetLatest()
     {
       var found = false;
-      var allRandoms = DataManager.Instance.GetAllRandoms();
       var sections = dataGrid.ItemsSource as List<dynamic>;
 
-      foreach (var block in allRandoms)
+      foreach (var (beginTime, record) in RecordManager.Instance.GetAllRandoms())
       {
-        foreach (var random in block.Actions.Cast<RandomRecord>())
+        if (LastHandled == null || found)
         {
-          if (LastHandled == null || found)
-          {
-            UpdateSection(block, random, sections);
-            LastHandled = random;
-            found = true;
-          }
-          else if (random == LastHandled)
-          {
-            found = true;
-          }
+          UpdateSection(beginTime, record, sections);
+          LastHandled = record;
+          found = true;
+        }
+        else if (record == LastHandled)
+        {
+          found = true;
         }
       }
     }
@@ -100,73 +96,69 @@ namespace EQLogParser
     private void Load()
     {
       var sections = new List<dynamic>();
-      var allRandoms = DataManager.Instance.GetAllRandoms();
-      foreach (var block in allRandoms)
+      foreach (var (beginTime, record) in RecordManager.Instance.GetAllRandoms())
       {
-        foreach (var random in block.Actions.Cast<RandomRecord>())
-        {
-          UpdateSection(block, random, sections);
-          LastHandled = random;
-        }
+        UpdateSection(beginTime, record, sections);
+        LastHandled = record;
       }
 
       UpdateTotals(sections);
       dataGrid.ItemsSource = sections;
     }
 
-    private dynamic CreateChild(double beginTime, RandomRecord random)
+    private dynamic CreateChild(double beginTime, RandomRecord record)
     {
       var child = new ExpandoObject() as dynamic;
-      child.Player = random.Player;
-      child.Rolled = random.Rolled;
-      child.To = random.To;
-      child.From = random.From;
+      child.Player = record.Player;
+      child.Rolled = record.Rolled;
+      child.To = record.To;
+      child.From = record.From;
       child.RollTime = beginTime;
       return child;
     }
 
-    private void UpdateSection(ActionGroup block, RandomRecord random, List<dynamic> sections)
+    private void UpdateSection(double beginTime, RandomRecord record, List<dynamic> sections)
     {
-      var type = random.From + " to " + random.To;
+      var type = $"{record.From} to {record.To}";
       var section = sections.LastOrDefault(section => section.Type == type);
-      if (section != null && (block.BeginTime - section.StartTime) <= CurrentTimeLimit)
+      if (section != null && (beginTime - section.StartTime) <= CurrentTimeLimit)
       {
         foreach (var child in section.Children)
         {
-          if (child.Player == random.Player)
+          if (child.Player == record.Player)
           {
             section.RolledTwice.Add(child.Player);
           }
         }
 
-        section.Children.Add(CreateChild(block.BeginTime, random));
+        section.Children.Add(CreateChild(beginTime, record));
 
-        if (section.Rolled < random.Rolled)
+        if (section.Rolled < record.Rolled)
         {
-          section.Rolled = random.Rolled;
+          section.Rolled = record.Rolled;
           section.Winners.Clear();
-          section.Winners.Add(random.Player);
-          section.RollTime = block.BeginTime;
+          section.Winners.Add(record.Player);
+          section.RollTime = beginTime;
         }
-        else if (section.Rolled == random.Rolled)
+        else if (section.Rolled == record.Rolled)
         {
-          section.Winners.Add(random.Player);
-          section.RollTime = block.BeginTime;
+          section.Winners.Add(record.Player);
+          section.RollTime = beginTime;
         }
       }
       else
       {
         section = new ExpandoObject();
-        section.From = random.From;
-        section.To = random.To;
+        section.From = record.From;
+        section.To = record.To;
         section.Type = type;
-        section.StartTime = block.BeginTime;
-        section.Rolled = random.Rolled;
-        section.RollTime = block.BeginTime;
+        section.StartTime = beginTime;
+        section.Rolled = record.Rolled;
+        section.RollTime = beginTime;
         section.Winners = new HashSet<string>();
-        section.Winners.Add(random.Player);
+        section.Winners.Add(record.Player);
         section.Children = new List<dynamic>();
-        section.Children.Add(CreateChild(block.BeginTime, random));
+        section.Children.Add(CreateChild(beginTime, record));
         section.RolledTwice = new HashSet<string>();
         sections.Add(section);
       }
@@ -239,18 +231,18 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
+    private bool DisposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!disposedValue)
+      if (!DisposedValue)
       {
         ReloadTimer?.Stop();
         MainActions.EventsThemeChanged -= EventsThemeChanged;
         MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
-        DataManager.Instance.EventsNewRandomRecord -= EventsNewRandomRecord;
+        RecordManager.Instance.RecordsUpdatedEvent -= RecordsUpdated;
         dataGrid.Dispose();
-        disposedValue = true;
+        DisposedValue = true;
       }
     }
 

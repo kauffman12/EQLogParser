@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace EQLogParser
@@ -51,35 +50,39 @@ namespace EQLogParser
           }
         });
 
-        var allSpells = new HashSet<TimedAction>();
-        var startTime = SpellCountBuilder.QuerySpellBlocks(RaidStats, allSpells);
+        var allSpells = new HashSet<IAction>();
+        var spellTimes = new Dictionary<IAction, double>();
+        var startTime = SpellCountBuilder.QuerySpells(RaidStats, allSpells, allSpells, spellTimes);
         var playerSpells = new Dictionary<string, List<string>>();
         var max = 0;
 
         var lastTime = double.NaN;
         var list = new List<IDictionary<string, object>>();
-        foreach (var action in allSpells.OrderBy(action => action.BeginTime).ThenBy(action => (action is ReceivedSpell) ? 1 : -1))
+        foreach (var action in allSpells)
         {
-          if (!double.IsNaN(lastTime) && !StatsUtil.DoubleEquals(action.BeginTime, lastTime))
+          if (spellTimes.TryGetValue(action, out var time))
           {
-            AddRow(list, playerSpells, max, lastTime, startTime);
-            playerSpells.Clear();
-            max = 0;
-          }
+            if (!double.IsNaN(lastTime) && !time.Equals(lastTime))
+            {
+              AddRow(list, playerSpells, max, lastTime, startTime);
+              playerSpells.Clear();
+              max = 0;
+            }
 
-          var size = 0;
-          if (action is SpellCast { Interrupted: false } cast && IsValid(cast, UniqueNames, cast.Caster, false, out _))
-          {
-            size = AddToList(playerSpells, cast.Caster, cast.Spell);
-          }
+            var size = 0;
+            if (action is SpellCast { Interrupted: false } cast && IsValid(cast, UniqueNames, cast.Caster, false, out _))
+            {
+              size = AddToList(playerSpells, cast.Caster, cast.Spell);
+            }
 
-          if (action is ReceivedSpell received && IsValid(received, UniqueNames, received.Receiver, true, out var replaced) && replaced != null)
-          {
-            size = AddToList(playerSpells, received.Receiver, "Received " + replaced.NameAbbrv);
-          }
+            if (action is ReceivedSpell received && IsValid(received, UniqueNames, received.Receiver, true, out var replaced) && replaced != null)
+            {
+              size = AddToList(playerSpells, received.Receiver, "Received " + replaced.NameAbbrv);
+            }
 
-          max = Math.Max(max, size);
-          lastTime = action.BeginTime;
+            max = Math.Max(max, size);
+            lastTime = time;
+          }
         }
 
         if (playerSpells.Count > 0 && max > 0)
@@ -118,7 +121,7 @@ namespace EQLogParser
 
       if (!spell.IsWearOff && !string.IsNullOrEmpty(player) && unique.ContainsKey(player))
       {
-        var spellData = spell.SpellData ?? null;
+        var spellData = spell.SpellData;
 
         if (spellData == null && spell.Ambiguity.Count > 0 && DataManager.ResolveSpellAmbiguity(spell, out replaced))
         {

@@ -3,16 +3,15 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
 
 namespace EQLogParser
 {
   /// <summary>
   /// Interaction logic for NpcStatsViewer.xaml
   /// </summary>
-  public partial class NpcStatsViewer : UserControl, IDisposable
+  public partial class NpcStatsViewer : IDisposable
   {
-    private const string NODATA = "No Spell Resist Data Found";
+    private const string Nodata = "No Spell Resist Data Found";
 
     public NpcStatsViewer()
     {
@@ -31,84 +30,90 @@ namespace EQLogParser
     private void Load()
     {
       var npcStatsRows = new Dictionary<string, NpcStatsRow>();
-      foreach (var kv in DataManager.Instance.GetNpcResistStats())
+      foreach (var stats in RecordManager.Instance.GetAllNpcResistStats())
       {
-        if (!PlayerManager.Instance.IsPetOrPlayerOrMerc(kv.Key) && !PlayerManager.Instance.IsPetOrPlayerOrMerc(TextUtils.ToUpper(kv.Key)))
+        var upperNpc = TextUtils.ToUpper(stats.Npc);
+        if (!PlayerManager.Instance.IsPetOrPlayerOrMerc(stats.Npc) && !PlayerManager.Instance.IsPetOrPlayerOrMerc(upperNpc))
         {
-          var row = new NpcStatsRow { Name = kv.Key };
-          foreach (var resists in kv.Value)
+          var count = 0u;
+          var reflectedCount = 0u;
+          var row = new NpcStatsRow { Name = upperNpc };
+          foreach (var resists in stats.ByResist)
           {
-            var rate = GetRate(resists.Value.Landed, resists.Value.Resisted);
-
-            switch (resists.Key)
+            if (resists.Key == SpellResist.Reflected)
             {
-              case SpellResist.AVERAGE:
-                row.Average = rate.Item1;
-                row.AverageText = rate.Item2;
-                row.AverageTotal = resists.Value.Landed + resists.Value.Resisted;
-                break;
-              case SpellResist.COLD:
-                row.Cold = rate.Item1;
-                row.ColdText = rate.Item2;
-                row.ColdTotal = resists.Value.Landed + resists.Value.Resisted;
-                break;
-              case SpellResist.CORRUPTION:
-                row.Corruption = rate.Item1;
-                row.CorruptionText = rate.Item2;
-                row.CorruptionTotal = resists.Value.Landed + resists.Value.Resisted;
-                break;
-              case SpellResist.DISEASE:
-                row.Disease = rate.Item1;
-                row.DiseaseText = rate.Item2;
-                row.DiseaseTotal = resists.Value.Landed + resists.Value.Resisted;
-                break;
-              case SpellResist.FIRE:
-                row.Fire = rate.Item1;
-                row.FireText = rate.Item2;
-                row.FireTotal = resists.Value.Landed + resists.Value.Resisted;
-                break;
-              case SpellResist.LOWEST:
-                row.Lowest = rate.Item1;
-                row.LowestText = rate.Item2;
-                row.LowestTotal = resists.Value.Landed + resists.Value.Resisted;
-                break;
-              case SpellResist.MAGIC:
-                row.Magic = rate.Item1;
-                row.MagicText = rate.Item2;
-                row.MagicTotal = resists.Value.Landed + resists.Value.Resisted;
-                break;
-              case SpellResist.PHYSICAL:
-                row.Physical = rate.Item1;
-                row.PhysicalText = rate.Item2;
-                row.PhysicalTotal = resists.Value.Landed + resists.Value.Resisted;
-                break;
-              case SpellResist.POISON:
-                row.Poison = rate.Item1;
-                row.PoisonText = rate.Item2;
-                row.PoisonTotal = resists.Value.Landed + resists.Value.Resisted;
-                break;
+              reflectedCount = resists.Value.Resisted;
+            }
+            else
+            {
+              count += resists.Value.Landed + resists.Value.Resisted;
+              var rate = GetRate(resists.Value.Landed, resists.Value.Resisted);
+              switch (resists.Key)
+              {
+                case SpellResist.Average:
+                  row.Average = rate.Item1;
+                  row.AverageText = rate.Item2;
+                  row.AverageTotal = resists.Value.Landed + resists.Value.Resisted;
+                  break;
+                case SpellResist.Cold:
+                  row.Cold = rate.Item1;
+                  row.ColdText = rate.Item2;
+                  row.ColdTotal = resists.Value.Landed + resists.Value.Resisted;
+                  break;
+                case SpellResist.Corruption:
+                  row.Corruption = rate.Item1;
+                  row.CorruptionText = rate.Item2;
+                  row.CorruptionTotal = resists.Value.Landed + resists.Value.Resisted;
+                  break;
+                case SpellResist.Disease:
+                  row.Disease = rate.Item1;
+                  row.DiseaseText = rate.Item2;
+                  row.DiseaseTotal = resists.Value.Landed + resists.Value.Resisted;
+                  break;
+                case SpellResist.Fire:
+                  row.Fire = rate.Item1;
+                  row.FireText = rate.Item2;
+                  row.FireTotal = resists.Value.Landed + resists.Value.Resisted;
+                  break;
+                case SpellResist.Lowest:
+                  row.Lowest = rate.Item1;
+                  row.LowestText = rate.Item2;
+                  row.LowestTotal = resists.Value.Landed + resists.Value.Resisted;
+                  break;
+                case SpellResist.Magic:
+                  row.Magic = rate.Item1;
+                  row.MagicText = rate.Item2;
+                  row.MagicTotal = resists.Value.Landed + resists.Value.Resisted;
+                  break;
+                case SpellResist.Physical:
+                  row.Physical = rate.Item1;
+                  row.PhysicalText = rate.Item2;
+                  row.PhysicalTotal = resists.Value.Landed + resists.Value.Resisted;
+                  break;
+                case SpellResist.Poison:
+                  row.Poison = rate.Item1;
+                  row.PoisonText = rate.Item2;
+                  row.PoisonTotal = resists.Value.Landed + resists.Value.Resisted;
+                  break;
+              }
             }
           }
 
-          npcStatsRows[kv.Key] = row;
-        }
-      }
+          if (reflectedCount > 0)
+          {
+            var reflectRate = GetRate(count, reflectedCount);
+            row.Reflected = reflectRate.Item1;
+            row.ReflectedText = reflectRate.Item2;
+            row.ReflectedTotal = count;
+          }
 
-      foreach (var kv in DataManager.Instance.GetNpcTotalSpellCounts())
-      {
-        if (!npcStatsRows.TryGetValue(kv.Key, out var updateRow))
-        {
-          updateRow = new NpcStatsRow { Name = kv.Key };
+          npcStatsRows[upperNpc] = row;
         }
-
-        var rate = GetRate(kv.Value.Landed, kv.Value.Reflected);
-        updateRow.Reflected = rate.Item1;
-        updateRow.ReflectedText = rate.Item2;
-        updateRow.ReflectedTotal = kv.Value.Landed + kv.Value.Reflected;
       }
 
       dataGrid.ItemsSource = npcStatsRows.Values.OrderBy(row => row.Name).ToList();
-      titleLabel.Content = npcStatsRows.Values.Count == 0 ? NODATA : "Spell Resists vs " + npcStatsRows.Count + " Unique NPCs";
+      titleLabel.Content = npcStatsRows.Values.Count == 0 ? Nodata : "Spell Resists vs " + npcStatsRows.Count + " Unique NPCs";
+      return;
 
       Tuple<double, string> GetRate(uint landed, uint notLanded)
       {
@@ -148,16 +153,16 @@ namespace EQLogParser
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
 
     #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
+    private bool DisposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!disposedValue)
+      if (!DisposedValue)
       {
         MainActions.EventsThemeChanged -= EventsThemeChanged;
         MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
         dataGrid.Dispose();
-        disposedValue = true;
+        DisposedValue = true;
       }
     }
 

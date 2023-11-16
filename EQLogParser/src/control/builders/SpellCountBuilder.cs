@@ -13,9 +13,9 @@ namespace EQLogParser
     internal static SpellCountData GetSpellCounts(List<string> playerList, PlayerStats raidStats)
     {
       var result = new SpellCountData();
-      var castsDuring = new HashSet<TimedAction>();
-      var receivedDuring = new HashSet<TimedAction>();
-      QuerySpellBlocks(raidStats, castsDuring, receivedDuring);
+      var castsDuring = new HashSet<IAction>();
+      var receivedDuring = new HashSet<IAction>();
+      QuerySpells(raidStats, castsDuring, receivedDuring);
 
       foreach (var action in castsDuring.Where(cast => playerList.Contains((cast as SpellCast)?.Caster)))
       {
@@ -38,11 +38,9 @@ namespace EQLogParser
       return result;
     }
 
-    public static double QuerySpellBlocks(PlayerStats raidStats, HashSet<TimedAction> castsDuring, HashSet<TimedAction> receivedDuring = null)
+    public static double QuerySpells(PlayerStats raidStats, HashSet<IAction> castsDuring,
+      HashSet<IAction> receivedDuring, Dictionary<IAction, double> times = null)
     {
-      // add spells to one hashset if only one is passed in
-      receivedDuring ??= castsDuring;
-
       var maxTime = double.NaN;
       var startTime = double.NaN;
       foreach (ref var segment in raidStats.Ranges.TimeSegments.ToArray().AsSpan())
@@ -53,54 +51,58 @@ namespace EQLogParser
         startTime = double.IsNaN(startTime) ? segment.BeginTime : Math.Min(startTime, segment.BeginTime);
         maxTime = double.IsNaN(maxTime) ? segment.BeginTime + raidStats.TotalSeconds : maxTime;
 
-        // damage section is a subset of this query
-        var blocks = DataManager.Instance.GetCastsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + HALF_OFFSET);
-        AddGroups(raidStats, blocks, maxTime, castsDuring, damageAfter, damageBefore);
+        foreach (var (beginTime, spell) in RecordManager.Instance.GetSpellsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + HALF_OFFSET))
+        {
+          if (times != null)
+          {
+            times[spell] = beginTime;
+          }
 
-        blocks = DataManager.Instance.GetReceivedSpellsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + HALF_OFFSET);
-        AddGroups(raidStats, blocks, maxTime, receivedDuring, damageAfter, damageBefore);
+          if (spell is ReceivedSpell)
+          {
+            AddSpell(raidStats, spell, beginTime, maxTime, receivedDuring, damageAfter, damageBefore);
+          }
+          else
+          {
+            AddSpell(raidStats, spell, beginTime, maxTime, castsDuring, damageAfter, damageBefore);
+          }
+        }
       }
 
       return startTime;
     }
 
-    private static void AddGroups(PlayerStats raidStats, List<ActionGroup> blocks, double maxTime,
-      ISet<TimedAction> actions, double damageAfter, double damageBefore)
+    private static void AddSpell(PlayerStats raidStats, IAction action, double beginTime, double maxTime,
+      ISet<IAction> actions, double damageAfter, double damageBefore)
     {
-      foreach (ref var block in blocks.ToArray().AsSpan())
+      if (!raidStats.MaxTime.Equals(raidStats.TotalSeconds) && !(beginTime <= maxTime))
       {
-        if (!StatsUtil.DoubleEquals(raidStats.MaxTime, raidStats.TotalSeconds) && !(block.BeginTime <= maxTime))
+        return;
+      }
+
+      if (action is SpellCast cast)
+      {
+        Add(beginTime, cast.SpellData, cast);
+      }
+      else if (action is ReceivedSpell { IsWearOff: false } received)
+      {
+        if (received.SpellData == null && received.Ambiguity.Count > 0 &&
+            DataManager.ResolveSpellAmbiguity(received, out var replaced))
         {
-          continue;
+          received.SpellData = replaced;
         }
 
-        foreach (ref var action in block.Actions.ToArray().AsSpan())
+        if (received.SpellData != null)
         {
-          if (action is SpellCast cast)
-          {
-            Add(block, cast.SpellData, cast);
-          }
-          else if (action is ReceivedSpell { IsWearOff: false } received)
-          {
-            if (received.SpellData == null && received.Ambiguity.Count > 0 &&
-                DataManager.ResolveSpellAmbiguity(received, out var replaced))
-            {
-              received.SpellData = replaced;
-            }
-
-            if (received.SpellData != null)
-            {
-              Add(block, received.SpellData, received);
-            }
-          }
+          Add(beginTime, received.SpellData, received);
         }
       }
 
       return;
 
-      void Add(TimedAction block, SpellData spellData, TimedAction action)
+      void Add(double beginTime, SpellData spellData, IAction action)
       {
-        if ((block.BeginTime >= damageAfter && block.BeginTime <= damageBefore) || spellData.Damaging < 1)
+        if ((beginTime >= damageAfter && beginTime <= damageBefore) || spellData.Damaging < 1)
         {
           actions.Add(action);
         }

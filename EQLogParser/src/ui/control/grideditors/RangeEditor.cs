@@ -62,7 +62,7 @@ namespace EQLogParser
       {
         var intTextBox = new IntegerTextBox { ApplyZeroColor = false, ShowSpinButton = true };
 
-        if (!StatsUtil.DoubleEquals(Min, Max))
+        if (!Min.Equals(Max))
         {
           intTextBox.MinValue = (long)Min;
           intTextBox.MaxValue = (long)Max;
@@ -76,7 +76,7 @@ namespace EQLogParser
       {
         var doubleTextBox = new DoubleTextBox { ApplyZeroColor = false, ShowSpinButton = true, ScrollInterval = 0.1 };
 
-        if (!StatsUtil.DoubleEquals(Min, Max))
+        if (!Min.Equals(Max))
         {
           doubleTextBox.MinValue = Min;
           doubleTextBox.MaxValue = Max;

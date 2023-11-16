@@ -210,7 +210,7 @@ namespace EQLogParser
         {
           Icon = awesome,
           Style = (Style)Application.Current.Resources["EQIconStyle"],
-          Visibility = StatsUtil.DoubleEquals(size, currentSize) ? Visibility.Visible : Visibility.Hidden
+          Visibility = size.Equals(currentSize) ? Visibility.Visible : Visibility.Hidden
         };
 
         var menuItem = new MenuItem { Header = size + "pt", Tag = size };

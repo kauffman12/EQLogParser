@@ -83,10 +83,11 @@ namespace EQLogParser
 
           if (RaidTotals.Ranges.TimeSegments.Count > 0)
           {
+            var allHeals = RecordManager.Instance.GetAllHeals().ToList();
             // calculate totals first since it can modify the ranges
             RaidTotals.TotalSeconds = RaidTotals.MaxTime = RaidTotals.Ranges.GetTotal();
 
-            RaidTotals.Ranges.TimeSegments.ForEach(segment =>
+            foreach (var segment in RaidTotals.Ranges.TimeSegments)
             {
               var updatedHeals = new List<ActionGroup>();
               var healedByHealerTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
@@ -99,42 +100,53 @@ namespace EQLogParser
               var previousSpellCounts = new Dictionary<double, Dictionary<string, HashSet<string>>>();
               var ignoreRecords = new Dictionary<string, byte>();
               var filtered = new List<ActionGroup>();
-              DataManager.Instance.GetHealsDuring(segment.BeginTime, segment.EndTime).ForEach(heal =>
+
+              var start = 1;
+              if (start > -1 && start < allHeals.Count)
               {
-                // copy
-                var newBlock = new ActionGroup { BeginTime = heal.BeginTime };
-                filtered.Add(newBlock);
-
-                if (currentSpellCounts.Count > 0)
+                start = allHeals.FindIndex(start, special => special.Item1 >= segment.BeginTime);
+                if (start > -1)
                 {
-                  previousSpellCounts[currentTime] = currentSpellCounts;
-                }
-
-                currentTime = heal.BeginTime;
-                currentSpellCounts = new Dictionary<string, HashSet<string>>();
-
-                foreach (var timeKey in previousSpellCounts.Keys.ToList())
-                {
-                  if (previousSpellCounts.ContainsKey(timeKey))
+                  for (var j = start; j < allHeals.Count; j++)
                   {
-                    if (!double.IsNaN(currentTime) && (currentTime - timeKey) > 7)
+                    if (allHeals[j].Item1 >= segment.BeginTime && allHeals[j].Item1 <= segment.EndTime)
                     {
-                      previousSpellCounts.Remove(timeKey);
+                      start = j;
+                      // copy
+                      var newBlock = new ActionGroup { BeginTime = allHeals[j].Item1 };
+                      filtered.Add(newBlock);
+
+                      if (currentSpellCounts.Count > 0)
+                      {
+                        previousSpellCounts[currentTime] = currentSpellCounts;
+                      }
+
+                      currentTime = allHeals[j].Item1;
+                      currentSpellCounts = new Dictionary<string, HashSet<string>>();
+
+                      foreach (var timeKey in previousSpellCounts.Keys.ToList())
+                      {
+                        if (previousSpellCounts.ContainsKey(timeKey))
+                        {
+                          if (!double.IsNaN(currentTime) && (currentTime - timeKey) > 7)
+                          {
+                            previousSpellCounts.Remove(timeKey);
+                          }
+                        }
+                      }
+
+                      if (PlayerManager.Instance.IsPetOrPlayerOrMerc(allHeals[j].Item2.Healed) ||
+                        PlayerManager.IsPossiblePlayerName(allHeals[j].Item2.Healed))
+                      {
+                        if (healingValidator.IsValid(allHeals[j].Item1, allHeals[j].Item2, currentSpellCounts, previousSpellCounts, ignoreRecords))
+                        {
+                          newBlock.Actions.Add(allHeals[j].Item2);
+                        }
+                      }
                     }
                   }
                 }
-
-                foreach (var record in heal.Actions.Cast<HealRecord>())
-                {
-                  if (PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Healed) || PlayerManager.IsPossiblePlayerName(record.Healed))
-                  {
-                    if (healingValidator.IsValid(heal, record, currentSpellCounts, previousSpellCounts, ignoreRecords))
-                    {
-                      newBlock.Actions.Add(record);
-                    }
-                  }
-                }
-              });
+              }
 
               filtered.ForEach(heal =>
               {
@@ -169,7 +181,7 @@ namespace EQLogParser
               {
                 HealingGroups.Add(updatedHeals);
               }
-            });
+            }
 
             ComputeHealingStats();
           }

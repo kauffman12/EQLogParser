@@ -24,7 +24,9 @@ namespace EQLogParser
           var record = HandleHealed(action, index, lineData.BeginTime);
           if (record != null)
           {
-            DataManager.Instance.AddHealRecord(record, lineData.BeginTime);
+            record.Healer = PlayerManager.Instance.ReplacePlayer(record.Healer, record.Healed);
+            record.Healed = PlayerManager.Instance.ReplacePlayer(record.Healed, record.Healer);
+            RecordManager.Instance.Add(record, lineData.BeginTime);
             return true;
           }
         }

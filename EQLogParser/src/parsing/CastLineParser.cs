@@ -136,18 +136,26 @@ namespace EQLogParser
               }
 
               var spellData = DataManager.Instance.GetSpellByName(spellName);
-              DataManager.Instance.AddSpellCast(new SpellCast
+              var cast = new SpellCast { Caster = player, Spell = spellName, SpellData = spellData };
+
+              if (spellData != null)
               {
-                Caster = player,
-                Spell = string.Intern(spellName),
-                SpellData = spellData,
-                BeginTime = currentTime
-              },
-              currentTime, specialKey);
+                RecordManager.Instance.Add(cast, currentTime);
+              }
+
+              if (specialKey != null && spellData != null)
+              {
+                DataManager.Instance.UpdateAdps(spellData);
+              }
+
+              if (DataManager.Instance.GetSpellClass(cast.Spell) is { } theClass)
+              {
+                PlayerManager.Instance.UpdatePlayerClassFromSpell(cast, theClass);
+              }
             }
             else
             {
-              DataManager.Instance.HandleSpellInterrupt(player, spellName, currentTime);
+              // DataManager.Instance.HandleSpellInterrupt(player, spellName, currentTime);
             }
 
             return true;
@@ -196,7 +204,7 @@ namespace EQLogParser
         {
           if (!string.IsNullOrEmpty(player))
           {
-            var newSpell = new ReceivedSpell { Receiver = player, BeginTime = beginTime, IsWearOff = true };
+            var newSpell = new ReceivedSpell { Receiver = player, IsWearOff = true };
             if (searchResult.SpellData.Count == 1)
             {
               newSpell.SpellData = searchResult.SpellData.First();
@@ -206,7 +214,7 @@ namespace EQLogParser
               newSpell.Ambiguity.AddRange(searchResult.SpellData);
             }
 
-            DataManager.Instance.AddReceivedSpell(newSpell, beginTime);
+            RecordManager.Instance.Add(newSpell, beginTime);
           }
           return true;
         }
@@ -235,7 +243,7 @@ namespace EQLogParser
 
       if (searchResult.SpellData.Count > 0 && !string.IsNullOrEmpty(player))
       {
-        var newSpell = new ReceivedSpell { Receiver = player, BeginTime = beginTime };
+        var newSpell = new ReceivedSpell { Receiver = player };
         if (searchResult.SpellData.Count == 1)
         {
           newSpell.SpellData = searchResult.SpellData.First();
@@ -245,7 +253,7 @@ namespace EQLogParser
           newSpell.Ambiguity.AddRange(searchResult.SpellData);
         }
 
-        DataManager.Instance.AddReceivedSpell(newSpell, beginTime);
+        RecordManager.Instance.Add(newSpell, beginTime);
         return true;
       }
 
@@ -253,7 +261,7 @@ namespace EQLogParser
       if (split[1] == "have" && split[2] == "entered")
       {
         var zone = string.Join(" ", split.ToArray(), 3, split.Length - 3).TrimEnd('.');
-        DataManager.Instance.AddMiscRecord(new ZoneRecord { Zone = zone }, beginTime);
+        RecordManager.Instance.Add(new ZoneRecord { Zone = zone }, beginTime);
         if (!zone.StartsWith("an area", StringComparison.OrdinalIgnoreCase))
         {
           DataManager.Instance.ZoneChanged();
@@ -269,7 +277,7 @@ namespace EQLogParser
       string found = null;
       if (codes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(spellName) && spellName.Contains(special)) is { } key && !string.IsNullOrEmpty(key))
       {
-        DataManager.Instance.AddSpecial(new SpecialSpell { Code = codes[key], Player = player, BeginTime = currentTime });
+        RecordManager.Instance.Add(new SpecialRecord { Code = codes[key], Player = player }, currentTime);
         found = key;
       }
       return found;

@@ -20,7 +20,6 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> PlayerSubTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> PlayerPets = new();
     private readonly ConcurrentDictionary<string, string> PetToPlayer = new();
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, int>> ResistCounts = new();
     private List<List<ActionGroup>> AllDamageGroups;
     private List<List<ActionGroup>> DamageGroups = new();
     private PlayerStats RaidTotals;
@@ -74,76 +73,76 @@ namespace EQLogParser
       }
 
       // copy values from dead fights
-      foreach (var keypair in data.DeadPlayerTotals)
+      foreach (var kv in data.DeadPlayerTotals)
       {
-        playerTotals[keypair.Key] = new OverlayPlayerTotal
+        playerTotals[kv.Key] = new OverlayPlayerTotal
         {
-          Damage = keypair.Value.Damage,
-          UpdateTime = keypair.Value.UpdateTime,
-          Name = keypair.Value.Name,
-          Range = new TimeRange(keypair.Value.Range.TimeSegments)
+          Damage = kv.Value.Damage,
+          UpdateTime = kv.Value.UpdateTime,
+          Name = kv.Value.Name,
+          Range = new TimeRange(kv.Value.Range.TimeSegments)
         };
       }
 
       var oldestTime = data.UpdateTime;
       Fight oldestFight = null;
 
-      foreach (var fightinfo in DataManager.Instance.GetOverlayFights())
+      foreach (var fightInfo in DataManager.Instance.GetOverlayFights())
       {
-        var fight = fightinfo.Value;
+        var fight = fightInfo.Value;
         fightCount++;
 
         if (!fight.Dead || mode > 0)
         {
           var theTotals = dps ? fight.PlayerDamageTotals : fight.PlayerTankTotals;
-          foreach (var keypair in theTotals)
+          foreach (var kv in theTotals)
           {
-            var player = dps ? UpdateOverlayHasPet(keypair.Key, keypair.Value.PetOwner, playerHasPet, playerTotals) : keypair.Key;
+            var player = dps ? UpdateOverlayHasPet(kv.Key, kv.Value.PetOwner, playerHasPet, playerTotals) : kv.Key;
 
             // save current state and remove dead fight at the end
             if (fight.Dead)
             {
-              data.DeadTotalDamage += keypair.Value.Damage;
-              data.TimeSegments.Add(new TimeSegment(keypair.Value.BeginTime, keypair.Value.UpdateTime));
+              data.DeadTotalDamage += kv.Value.Damage;
+              data.TimeSegments.Add(new TimeSegment(kv.Value.BeginTime, kv.Value.UpdateTime));
             }
 
             // always update so +Pets can be added before fight is dead
             if (dps)
             {
-              data.PetOwners[player] = keypair.Value.PetOwner;
+              data.PetOwners[player] = kv.Value.PetOwner;
             }
 
-            allDamage += keypair.Value.Damage;
-            allTime.Add(new TimeSegment(keypair.Value.BeginTime, keypair.Value.UpdateTime));
+            allDamage += kv.Value.Damage;
+            allTime.Add(new TimeSegment(kv.Value.BeginTime, kv.Value.UpdateTime));
 
             if (data.UpdateTime == 0)
             {
-              data.UpdateTime = keypair.Value.UpdateTime;
-              oldestTime = keypair.Value.UpdateTime;
+              data.UpdateTime = kv.Value.UpdateTime;
+              oldestTime = kv.Value.UpdateTime;
               oldestFight = fight;
             }
             else
             {
-              data.UpdateTime = Math.Max(data.UpdateTime, keypair.Value.UpdateTime);
-              if (oldestTime > keypair.Value.UpdateTime)
+              data.UpdateTime = Math.Max(data.UpdateTime, kv.Value.UpdateTime);
+              if (oldestTime > kv.Value.UpdateTime)
               {
-                oldestTime = keypair.Value.UpdateTime;
+                oldestTime = kv.Value.UpdateTime;
                 oldestFight = fight;
               }
             }
 
             if (fight.Dead)
             {
-              UpdateOverlayPlayerTotals(player, data.DeadPlayerTotals, keypair.Value);
+              UpdateOverlayPlayerTotals(player, data.DeadPlayerTotals, kv.Value);
             }
 
-            UpdateOverlayPlayerTotals(player, playerTotals, keypair.Value);
+            UpdateOverlayPlayerTotals(player, playerTotals, kv.Value);
           }
         }
 
         if (fight.Dead)
         {
-          deadFights.Add(fightinfo.Key);
+          deadFights.Add(fightInfo.Key);
           data.DeadFightCount++;
         }
       }
@@ -350,7 +349,7 @@ namespace EQLogParser
                 newBlock = new List<ActionGroup>();
               }
 
-              if (!StatsUtil.DoubleEquals(lastTime, block.BeginTime))
+              if (!lastTime.Equals(block.BeginTime))
               {
                 var copy = new ActionGroup();
                 copy.Actions.AddRange(block.Actions);
@@ -368,34 +367,6 @@ namespace EQLogParser
             });
 
             DamageGroups.Add(newBlock);
-
-            Parallel.ForEach(RaidTotals.Ranges.TimeSegments, segment =>
-            {
-              foreach (ref var block in DataManager.Instance.GetResistsDuring(segment.BeginTime, segment.EndTime).ToArray().AsSpan())
-              {
-                foreach (var action in block.Actions)
-                {
-                  if (action is ResistRecord record)
-                  {
-                    if (!ResistCounts.TryGetValue(record.Attacker, out var perPlayer))
-                    {
-                      perPlayer = new ConcurrentDictionary<string, int>();
-                      ResistCounts[record.Attacker] = perPlayer;
-                    }
-
-                    if (perPlayer.TryGetValue(record.Spell, out var currentCount))
-                    {
-                      perPlayer[record.Spell] = currentCount + 1;
-                    }
-                    else
-                    {
-                      perPlayer[record.Spell] = 1;
-                    }
-                  }
-                }
-              }
-            });
-
             ComputeDamageStats(options);
           }
           else if (Selected == null || Selected.Count == 0)
@@ -432,8 +403,8 @@ namespace EQLogParser
 
           try
           {
-            if ((options.MaxSeconds > -1 && options.MaxSeconds < RaidTotals.MaxTime && !StatsUtil.DoubleEquals(options.MaxSeconds, RaidTotals.TotalSeconds)) ||
-              (options.MinSeconds > 0 && options.MinSeconds <= RaidTotals.MaxTime && !StatsUtil.DoubleEquals(options.MinSeconds, RaidTotals.MinTime)))
+            if ((options.MaxSeconds > -1 && options.MaxSeconds < RaidTotals.MaxTime && !options.MaxSeconds.Equals((long)RaidTotals.TotalSeconds)) ||
+              (options.MinSeconds > 0 && options.MinSeconds <= RaidTotals.MaxTime && !options.MinSeconds.Equals((long)RaidTotals.MinTime)))
             {
               var removeFromEnd = RaidTotals.MaxTime - options.MaxSeconds;
               if (removeFromEnd > 0)
@@ -567,7 +538,7 @@ namespace EQLogParser
             });
 
             RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
-            StatsUtil.PopulateSpecials(RaidTotals);
+            StatsUtil.PopulateSpecials(RaidTotals, true);
             var expandedStats = new ConcurrentBag<PlayerStats>();
 
             Parallel.ForEach(individualStats.Values, stats =>
@@ -586,7 +557,7 @@ namespace EQLogParser
                     }
 
                     expandedStats.Add(child);
-                    ResistCounts.TryGetValue(child.Name, out var childResists);
+                    RaidTotals.ResistCounts.TryGetValue(child.Name, out var childResists);
                     StatsUtil.UpdateCalculations(child, RaidTotals, childResists);
 
                     if (stats.Total > 0)
@@ -609,7 +580,7 @@ namespace EQLogParser
                   StatsUtil.UpdateAllStatsTimeRanges(stats, PlayerTimeRanges, PlayerSubTimeRanges, startTime, stopTime);
                 }
 
-                ResistCounts.TryGetValue(stats.Name, out var resists);
+                RaidTotals.ResistCounts.TryGetValue(stats.Name, out var resists);
                 StatsUtil.UpdateCalculations(stats, RaidTotals, resists);
 
                 if (RaidTotals.Specials.TryGetValue(stats.OrigName, out var special2))
@@ -741,7 +712,6 @@ namespace EQLogParser
       RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_TOTALS);
       PlayerPets.Clear();
       PetToPlayer.Clear();
-      ResistCounts.Clear();
       PlayerTimeRanges.Clear();
       PlayerSubTimeRanges.Clear();
       Selected = null;

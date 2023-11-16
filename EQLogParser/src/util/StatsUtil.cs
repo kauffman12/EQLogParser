@@ -17,17 +17,14 @@ namespace EQLogParser
     internal const int SPECIAL_OFFSET = 15;
     internal const int DEATH_OFFSET = 15;
 
-    private static readonly ConcurrentDictionary<string, byte> RegularMeleeTypes = new(new Dictionary<string, byte> { { "Bites", 1 }, { "Claws", 1 }, { "Crushes", 1 }, { "Pierces", 1 }, { "Punches", 1 }, { "Slashes", 1 } });
-
-    internal static bool DoubleEquals(double a, double b)
+    private static readonly ConcurrentDictionary<string, byte> RegularMeleeTypes = new(new Dictionary<string, byte>
     {
-      return Math.Abs(a - b) < 0.01;
-    }
+      { "Bites", 1 }, { "Claws", 1 }, { "Crushes", 1 }, { "Pierces", 1 }, { "Punches", 1 }, { "Slashes", 1 }
+    });
 
     internal static PlayerStats CreatePlayerStats(Dictionary<string, PlayerStats> individualStats, string key, string origName = null)
     {
       PlayerStats stats;
-
       lock (individualStats)
       {
         if (!individualStats.ContainsKey(key))
@@ -65,7 +62,7 @@ namespace EQLogParser
 
       lock (individualStats)
       {
-        stats = individualStats.FirstOrDefault(stats => stats.Key == key);
+        stats = individualStats.FirstOrDefault(indStats => indStats.Key == key);
         if (stats == null)
         {
           stats = new PlayerSubStats { ClassName = "", Name = string.Intern(subType), Type = string.Intern(type), Key = key };
@@ -80,7 +77,7 @@ namespace EQLogParser
     {
       var key = subType;
 
-      if (type == Labels.DD || type == Labels.DOT)
+      if (type is Labels.DD or Labels.DOT)
       {
         key = type + "=" + key;
       }
@@ -552,58 +549,99 @@ namespace EQLogParser
       }
     }
 
-    internal static void PopulateSpecials(PlayerStats raidStats)
+    internal static void PopulateSpecials(PlayerStats raidStats, bool includeResists = false)
     {
+      raidStats.ResistCounts.Clear();
       raidStats.Specials.Clear();
       raidStats.Deaths.Clear();
 
-      var temp = new ConcurrentDictionary<object, bool>();
-      var allSpecials = DataManager.Instance.GetSpecials();
+      var resistStart = 0;
       var specialStart = 0;
+      var deathStart = 0;
+      var allResists = includeResists ? RecordManager.Instance.GetAllResists().ToList() : new List<(double, ResistRecord)>();
+      var allSpecials = RecordManager.Instance.GetAllSpecials().ToList();
+      var allDeaths = RecordManager.Instance.GetAllDeaths().ToList();
+      var temp = new HashSet<IAction>();
+      var actions = new List<IAction>();
 
-      foreach (ref var segment in raidStats.Ranges.TimeSegments.ToArray().AsSpan())
+      foreach (var segment in raidStats.Ranges.TimeSegments)
       {
+        actions.Clear();
         var offsetBegin = segment.BeginTime - SPECIAL_OFFSET;
-        var actions = new List<IAction>();
-
+        var offsetEnd = segment.EndTime;
         if (specialStart > -1 && specialStart < allSpecials.Count)
         {
-          specialStart = allSpecials.FindIndex(specialStart, special => special.BeginTime >= offsetBegin);
+          specialStart = allSpecials.FindIndex(specialStart, special => special.Item1 >= offsetBegin);
           if (specialStart > -1)
           {
             for (var j = specialStart; j < allSpecials.Count; j++)
             {
-              if (allSpecials[j].BeginTime >= offsetBegin && allSpecials[j].BeginTime <= segment.EndTime)
+              if (allSpecials[j].Item1 >= offsetBegin && allSpecials[j].Item1 <= segment.EndTime)
               {
                 specialStart = j;
-                actions.Add(allSpecials[j]);
+                actions.Add(allSpecials[j].Item2);
               }
             }
           }
         }
 
-        foreach (var block in DataManager.Instance.GetDeathsDuring(offsetBegin, segment.EndTime + DEATH_OFFSET))
+        offsetBegin = segment.BeginTime;
+        offsetEnd = segment.EndTime + DEATH_OFFSET;
+        if (deathStart > -1 && deathStart < allDeaths.Count)
         {
-          foreach (var death in block.Actions.Cast<DeathRecord>())
+          deathStart = allDeaths.FindIndex(deathStart, death => death.Item1 >= offsetBegin);
+          if (deathStart > -1)
           {
-            if (PlayerManager.Instance.IsVerifiedPlayer(death.Killed) || PlayerManager.Instance.IsMerc(death.Killed))
+            for (var j = deathStart; j < allDeaths.Count; j++)
             {
-              actions.Add(death);
-              raidStats.Deaths.Add(new DeathEvent
+              if (allDeaths[j].Item1 >= offsetBegin && allDeaths[j].Item1 <= offsetEnd)
               {
-                BeginTime = block.BeginTime,
-                Killed = death.Killed,
-                Killer = death.Killer,
-                Message = death.Message,
-                Previous = death.Previous
-              });
+                deathStart = j;
+                actions.Add(allDeaths[j].Item2);
+                raidStats.Deaths.Add(new DeathEvent
+                {
+                  BeginTime = allDeaths[j].Item1,
+                  Record = allDeaths[j].Item2
+                });
+              }
             }
           }
         }
 
-        foreach (ref var action in actions.ToArray().AsSpan())
+        offsetBegin = segment.BeginTime;
+        offsetEnd = segment.EndTime;
+        if (resistStart > -1 && resistStart < allResists.Count)
         {
-          if (!temp.ContainsKey(action))
+          resistStart = allResists.FindIndex(resistStart, resist => resist.Item1 >= offsetBegin);
+          if (resistStart > -1)
+          {
+            for (var j = resistStart; j < allResists.Count; j++)
+            {
+              if (allResists[j].Item1 >= offsetBegin && allResists[j].Item1 <= offsetEnd)
+              {
+                resistStart = j;
+                if (!raidStats.ResistCounts.TryGetValue(allResists[j].Item2.Attacker, out var perPlayer))
+                {
+                  perPlayer = new ConcurrentDictionary<string, int>();
+                  raidStats.ResistCounts[allResists[j].Item2.Attacker] = perPlayer;
+                }
+
+                if (perPlayer.TryGetValue(allResists[j].Item2.Spell, out var currentCount))
+                {
+                  perPlayer[allResists[j].Item2.Spell] = currentCount + 1;
+                }
+                else
+                {
+                  perPlayer[allResists[j].Item2.Spell] = 1;
+                }
+              }
+            }
+          }
+        }
+
+        foreach (var action in actions)
+        {
+          if (!temp.Contains(action))
           {
             string code = null;
             string player = null;
@@ -613,7 +651,7 @@ namespace EQLogParser
               player = death.Killed;
               code = "X";
             }
-            else if (action is SpecialSpell spell)
+            else if (action is SpecialRecord spell)
             {
               player = spell.Player;
               code = spell.Code;
@@ -631,7 +669,7 @@ namespace EQLogParser
               }
             }
 
-            temp.TryAdd(action, true);
+            temp.Add(action);
           }
         }
       }

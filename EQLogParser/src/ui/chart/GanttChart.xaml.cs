@@ -83,23 +83,17 @@ namespace EQLogParser
         }
 
         var deathMap = new Dictionary<string, HashSet<double>>();
-        foreach (var block in DataManager.Instance.GetDeathsDuring(StartTime, EndTime))
+        foreach (var (beginTime, record) in RecordManager.Instance.GetDeathsDuring(StartTime, EndTime))
         {
-          foreach (var action in block.Actions)
+          if (Selected.FindIndex(stats => stats.OrigName == record.Killed) > -1)
           {
-            if (action is DeathRecord death)
+            if (deathMap.TryGetValue(record.Killed, out var values))
             {
-              if (Selected.FindIndex(stats => stats.OrigName == death.Killed) > -1)
-              {
-                if (deathMap.TryGetValue(death.Killed, out var values))
-                {
-                  values.Add(block.BeginTime);
-                }
-                else
-                {
-                  deathMap[death.Killed] = new HashSet<double> { block.BeginTime };
-                }
-              }
+              values.Add(beginTime);
+            }
+            else
+            {
+              deathMap[record.Killed] = new HashSet<double> { beginTime };
             }
           }
         }
@@ -107,10 +101,6 @@ namespace EQLogParser
         for (var i = 0; i < Selected.Count; i++)
         {
           var player = Selected[i].OrigName;
-          var allSpells = new List<ActionGroup>();
-          allSpells.AddRange(DataManager.Instance.GetCastsDuring(StartTime, EndTime));
-          allSpells.AddRange(DataManager.Instance.GetReceivedSpellsDuring(StartTime, EndTime));
-
           if (deathMap.TryGetValue(Selected[i].OrigName, out var deathTimes))
           {
             var death = new SpellData { Adps = (byte)AnyAdps, Duration = 3, NameAbbrv = "Player Death", Name = "Player Death" };
@@ -121,51 +111,48 @@ namespace EQLogParser
           }
 
           var castSpells = new List<SpellData>();
-          foreach (var block in allSpells.OrderBy(block => block.BeginTime).ThenBy(block => (block.Actions.Count > 0 && block.Actions[0] is ReceivedSpell) ? 1 : -1))
+          foreach (var (beginTime, action) in RecordManager.Instance.GetSpellsDuring(StartTime, EndTime))
           {
-            foreach (var action in block.Actions)
+            if (action is SpellCast { Interrupted: false } cast && cast.Caster == player && cast.SpellData is { Target: (int)SpellTarget.SELF, Adps: > 0 }
+              && (cast.SpellData.MaxHits > 0 || cast.SpellData.Duration <= 1800) && ClassFilter(cast.SpellData))
             {
-              if (action is SpellCast { Interrupted: false } cast && cast.Caster == player && cast.SpellData is { Target: (int)SpellTarget.SELF, Adps: > 0 }
-                && (cast.SpellData.MaxHits > 0 || cast.SpellData.Duration <= 1800) && ClassFilter(cast.SpellData))
+              castSpells.Add(cast.SpellData);
+              UpdateSpellRange(cast.SpellData, beginTime, BlockBrushes[i], deathTimes);
+            }
+            else if (action is ReceivedSpell received && received.Receiver == player)
+            {
+              var spellData = received.SpellData;
+              if (spellData == null && received.Ambiguity.Count > 0)
               {
-                castSpells.Add(cast.SpellData);
-                UpdateSpellRange(cast.SpellData, block.BeginTime, BlockBrushes[i], deathTimes);
+                if (!received.IsWearOff)
+                {
+                  if (DataManager.ResolveSpellAmbiguity(received, out var replaced))
+                  {
+                    castSpells.Add(replaced);
+                    spellData = replaced;
+                  }
+                }
+                else
+                {
+                  foreach (var possible in received.Ambiguity)
+                  {
+                    if (castSpells.Find(spell => spell.WearOff == possible.WearOff || spell.LandsOnYou == possible.LandsOnYou
+                          || spell.LandsOnOther == possible.LandsOnOther) is { } found)
+                    {
+                      spellData = found;
+                    }
+                  }
+                }
               }
-              else if (action is ReceivedSpell received && received.Receiver == player)
+
+              if (spellData is { Adps: > 0 } && (spellData.MaxHits > 0 || spellData.Duration <= 1800) && ClassFilter(spellData))
               {
-                var spellData = received.SpellData;
-                if (spellData == null && received.Ambiguity.Count > 0)
+                if (string.IsNullOrEmpty(spellData.LandsOnOther))
                 {
-                  if (!received.IsWearOff)
-                  {
-                    if (DataManager.ResolveSpellAmbiguity(received, out var replaced))
-                    {
-                      castSpells.Add(replaced);
-                      spellData = replaced;
-                    }
-                  }
-                  else
-                  {
-                    foreach (var possible in received.Ambiguity)
-                    {
-                      if (castSpells.Find(spell => spell.WearOff == possible.WearOff || spell.LandsOnYou == possible.LandsOnYou
-                            || spell.LandsOnOther == possible.LandsOnOther) is { } found)
-                      {
-                        spellData = found;
-                      }
-                    }
-                  }
+                  SelfOnly[spellData.NameAbbrv] = 1;
                 }
 
-                if (spellData is { Adps: > 0 } && (spellData.MaxHits > 0 || spellData.Duration <= 1800) && ClassFilter(spellData))
-                {
-                  if (string.IsNullOrEmpty(spellData.LandsOnOther))
-                  {
-                    SelfOnly[spellData.NameAbbrv] = 1;
-                  }
-
-                  UpdateSpellRange(spellData, block.BeginTime, BlockBrushes[i], deathTimes, received.IsWearOff);
-                }
+                UpdateSpellRange(spellData, beginTime, BlockBrushes[i], deathTimes, received.IsWearOff);
               }
             }
           }
@@ -582,12 +569,12 @@ namespace EQLogParser
             scrollable.ComputedHorizontalScrollBarVisibility == Visibility.Visible ? ScrollBarVisibility.Visible : ScrollBarVisibility.Hidden;
         }
 
-        if (!StatsUtil.DoubleEquals(labelsScroller.VerticalOffset, e.VerticalOffset))
+        if (!labelsScroller.VerticalOffset.Equals(e.VerticalOffset))
         {
           labelsScroller.ScrollToVerticalOffset(e.VerticalOffset);
         }
 
-        if (!StatsUtil.DoubleEquals(headerScroller.HorizontalOffset, e.HorizontalOffset))
+        if (!headerScroller.HorizontalOffset.Equals(e.HorizontalOffset))
         {
           headerScroller.ScrollToHorizontalOffset(e.HorizontalOffset);
         }
@@ -614,7 +601,7 @@ namespace EQLogParser
 
     private void LabelsScrollViewChanged(object sender, ScrollChangedEventArgs e)
     {
-      if (!StatsUtil.DoubleEquals(contentScroller.VerticalOffset, e.VerticalOffset))
+      if (!contentScroller.VerticalOffset.Equals(e.VerticalOffset))
       {
         contentScroller.ScrollToVerticalOffset(e.VerticalOffset);
       }
