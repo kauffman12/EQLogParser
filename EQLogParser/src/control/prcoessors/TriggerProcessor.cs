@@ -171,13 +171,10 @@ namespace EQLogParser
         TriggerUtil.CheckQuickShare(chatType, lineData.Action, dateTime, CurrentCharacterId, CurrentProcessorName);
         GinaUtil.CheckGina(chatType, lineData.Action, dateTime, CurrentCharacterId, CurrentProcessorName);
       }
-
     }
 
     private void HandleTrigger(TriggerWrapper wrapper, LineData lineData, int loopCount = 0)
     {
-      Speak speak = null;
-
       // lock here because lowPri queue also calls this
       lock (wrapper)
       {
@@ -230,6 +227,7 @@ namespace EQLogParser
             }
           }
 
+          Speak speak = null;
           var tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.SoundToPlay, wrapper.ModifiedSpeak, out var isSound);
           if (!string.IsNullOrEmpty(tts))
           {
@@ -260,26 +258,33 @@ namespace EQLogParser
           }
 
           AddEntry(lineData, wrapper, "Trigger", time);
-        }
-        else
-        {
-          foreach (ref var timerData in wrapper.TimerList.ToArray().AsSpan())
+
+          if (speak != null)
           {
-            var endEarly = CheckEndEarly(timerData.EndEarlyRegex, timerData.EndEarlyRegexNOptions, timerData.EndEarlyPattern,
-              action, out var earlyMatches);
+            SpeechChannel.Writer.WriteAsync(speak);
+          }
+        }
 
-            // try 2nd
-            if (!endEarly)
+        foreach (ref var timerData in wrapper.TimerList.ToArray().AsSpan())
+        {
+          var endEarly = CheckEndEarly(timerData.EndEarlyRegex, timerData.EndEarlyRegexNOptions, timerData.EndEarlyPattern,
+            action, out var earlyMatches);
+
+          // try 2nd
+          if (!endEarly)
+          {
+            endEarly = CheckEndEarly(timerData.EndEarlyRegex2, timerData.EndEarlyRegex2NOptions, timerData.EndEarlyPattern2, action, out earlyMatches);
+          }
+
+          if (endEarly)
+          {
+            Speak speak = null;
+            var tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out var isSound);
+            tts = string.IsNullOrEmpty(tts) ? TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound) : tts;
+            var displayText = string.IsNullOrEmpty(wrapper.ModifiedEndEarlyDisplay) ? wrapper.ModifiedEndDisplay : wrapper.ModifiedEndEarlyDisplay;
+
+            if (!string.IsNullOrEmpty(tts))
             {
-              endEarly = CheckEndEarly(timerData.EndEarlyRegex2, timerData.EndEarlyRegex2NOptions, timerData.EndEarlyPattern2, action, out earlyMatches);
-            }
-
-            if (endEarly)
-            {
-              var tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out var isSound);
-              tts = string.IsNullOrEmpty(tts) ? TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound) : tts;
-              var displayText = string.IsNullOrEmpty(wrapper.ModifiedEndEarlyDisplay) ? wrapper.ModifiedEndDisplay : wrapper.ModifiedEndEarlyDisplay;
-
               speak = new Speak
               {
                 Wrapper = wrapper,
@@ -289,22 +294,23 @@ namespace EQLogParser
                 OriginalMatches = timerData.OriginalMatches,
                 Action = lineData.Action
               };
-
-              if (ProcessDisplayText(displayText, lineData.Action, earlyMatches, timerData.OriginalMatches) is { } updatedDisplayText)
-              {
-                AddTextEvent(updatedDisplayText, wrapper.TriggerData);
-              }
-
-              AddEntry(lineData, wrapper, "Timer End Early");
-              CleanupTimer(wrapper, timerData);
             }
+
+            if (ProcessDisplayText(displayText, lineData.Action, earlyMatches, timerData.OriginalMatches) is { } updatedDisplayText)
+            {
+              AddTextEvent(updatedDisplayText, wrapper.TriggerData);
+            }
+
+            AddEntry(lineData, wrapper, "Timer End Early");
+
+            if (speak != null)
+            {
+              SpeechChannel.Writer.WriteAsync(speak);
+            }
+
+            CleanupTimer(wrapper, timerData);
           }
         }
-      }
-
-      if (speak != null)
-      {
-        SpeechChannel.Writer.WriteAsync(speak);
       }
     }
 

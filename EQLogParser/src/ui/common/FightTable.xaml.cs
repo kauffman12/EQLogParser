@@ -4,7 +4,6 @@ using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -401,7 +400,7 @@ namespace EQLogParser
       if (dataGrid?.ItemsSource is ObservableCollection<Fight>)
       {
         CurrentShowBreaks = fightShowBreaks.IsChecked.Value;
-        ConfigUtil.SetSetting("NpcShowInactivityBreaks", CurrentShowBreaks.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("NpcShowInactivityBreaks", CurrentShowBreaks);
         dataGrid.View.RefreshFilter();
       }
     }
@@ -411,7 +410,7 @@ namespace EQLogParser
       if (dataGrid?.ItemsSource is ObservableCollection<Fight>)
       {
         dataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? Fights : NonTankingFights;
-        ConfigUtil.SetSetting("NpcShowTanking", fightShowTanking.IsChecked.Value.ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("NpcShowTanking", fightShowTanking.IsChecked.Value);
         dataGrid.View.RefreshFilter();
       }
     }
@@ -421,7 +420,7 @@ namespace EQLogParser
       if (dataGrid != null)
       {
         dataGrid.Columns[1].IsHidden = !dataGrid.Columns[1].IsHidden;
-        ConfigUtil.SetSetting("NpcShowHitPoints", (!dataGrid.Columns[1].IsHidden).ToString(CultureInfo.CurrentCulture));
+        ConfigUtil.SetSetting("NpcShowHitPoints", !dataGrid.Columns[1].IsHidden);
       }
     }
 

@@ -33,6 +33,10 @@ namespace EQLogParser
 
     private static readonly ConcurrentDictionary<string, string> ApplicationSettings = new();
 
+    internal static void SetSetting(string key, bool value) => SetSetting(key, value.ToString());
+    internal static void SetSetting(string key, double value) => SetSetting(key, value.ToString(CultureInfo.InvariantCulture));
+    internal static void SetSetting(string key, int value) => SetSetting(key, value.ToString(CultureInfo.InvariantCulture));
+
     internal static string GetArchiveDir()
     {
       Init();
@@ -67,7 +71,8 @@ namespace EQLogParser
 
     internal static double GetSettingAsDouble(string key, double def = 0.0)
     {
-      if (double.TryParse(GetSetting(key), out var result) == false)
+      // make sure to read and write doubles as the same culture
+      if (double.TryParse(GetSetting(key), NumberStyles.Any, CultureInfo.InvariantCulture, out var result) == false)
       {
         result = def;
       }

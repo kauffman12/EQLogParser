@@ -368,38 +368,38 @@ namespace EQLogParser
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
-      ConfigUtil.SetSetting("OverlayHeight", Height.ToString(CultureInfo.InvariantCulture));
-      ConfigUtil.SetSetting("OverlayWidth", Width.ToString(CultureInfo.InvariantCulture));
+      ConfigUtil.SetSetting("OverlayHeight", Height);
+      ConfigUtil.SetSetting("OverlayWidth", Width);
       SavedHeight = Height;
       SavedWidth = Width;
 
-      ConfigUtil.SetSetting("OverlayTop", Top.ToString(CultureInfo.InvariantCulture));
-      ConfigUtil.SetSetting("OverlayLeft", Left.ToString(CultureInfo.InvariantCulture));
+      ConfigUtil.SetSetting("OverlayTop", Top);
+      ConfigUtil.SetSetting("OverlayLeft", Left);
       SavedTop = Top;
       SavedLeft = Left;
 
       if (Application.Current.Resources["DamageOverlayFontSize"] is double fontSize)
       {
-        ConfigUtil.SetSetting("OverlayFontSize", fontSize.ToString(CultureInfo.InvariantCulture));
+        ConfigUtil.SetSetting("OverlayFontSize", fontSize);
         SavedFontSize = (int)fontSize;
       }
 
-      ConfigUtil.SetSetting("OverlayDamageMode", CurrentDamageMode.ToString());
+      ConfigUtil.SetSetting("OverlayDamageMode", CurrentDamageMode);
       SavedDamageMode = CurrentDamageMode;
 
       ConfigUtil.SetSetting("OverlaySelectedClass", CurrentSelectedClass);
       SavedSelectedClass = CurrentSelectedClass;
 
-      ConfigUtil.SetSetting("OverlayHideOtherPlayers", CurrentHideOthers.ToString());
+      ConfigUtil.SetSetting("OverlayHideOtherPlayers", CurrentHideOthers);
       SavedHideOthers = CurrentHideOthers;
 
-      ConfigUtil.SetSetting("OverlayEnableCritRate", CurrentShowCritRate.ToString());
+      ConfigUtil.SetSetting("OverlayEnableCritRate", CurrentShowCritRate);
       SavedShowCritRate = CurrentShowCritRate;
 
-      ConfigUtil.SetSetting("OverlayMiniBars", miniBars.IsChecked.ToString());
+      ConfigUtil.SetSetting("OverlayMiniBars", miniBars.IsChecked.Value);
       SavedMiniBars = miniBars.IsChecked == true;
 
-      ConfigUtil.SetSetting("OverlayMaxRows", (maxRowsList.SelectedIndex + 1).ToString());
+      ConfigUtil.SetSetting("OverlayMaxRows", maxRowsList.SelectedIndex + 1);
       SavedMaxRows = maxRowsList.SelectedIndex + 1;
 
       ConfigUtil.SetSetting("OverlayRankColor", progressBrush.Color.ToString());
@@ -887,7 +887,7 @@ namespace EQLogParser
       dpsButton.Foreground = ActiveBrush;
       tankButton.Foreground = InActiveBrush;
       CurrentShowDps = true;
-      ConfigUtil.SetSetting("OverlayShowingDps", CurrentShowDps.ToString());
+      ConfigUtil.SetSetting("OverlayShowingDps", CurrentShowDps);
       UpdateTimerTick(null, null);
     }
 
@@ -896,7 +896,7 @@ namespace EQLogParser
       dpsButton.Foreground = InActiveBrush;
       tankButton.Foreground = ActiveBrush;
       CurrentShowDps = false;
-      ConfigUtil.SetSetting("OverlayShowingDps", CurrentShowDps.ToString());
+      ConfigUtil.SetSetting("OverlayShowingDps", CurrentShowDps);
       UpdateTimerTick(null, null);
     }
 

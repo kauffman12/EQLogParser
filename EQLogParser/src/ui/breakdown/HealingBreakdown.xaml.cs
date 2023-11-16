@@ -61,7 +61,7 @@ namespace EQLogParser
         dataGrid.ItemsSource = null;
         dataGrid.IsEnabled = false;
         UIElementUtil.SetEnabled(controlPanel.Children, false);
-        ConfigUtil.SetSetting(Setting, CurrentShowSpellsChoice.ToString());
+        ConfigUtil.SetSetting(Setting, CurrentShowSpellsChoice);
         Display();
       }
     }

@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Speech.Synthesis;
@@ -275,7 +274,7 @@ namespace EQLogParser
       {
         if (Equals(sender, watchQuickShare))
         {
-          ConfigUtil.SetSetting("TriggersWatchForQuickShare", watchQuickShare.IsChecked?.ToString(CultureInfo.CurrentCulture));
+          ConfigUtil.SetSetting("TriggersWatchForQuickShare", watchQuickShare.IsChecked.Value);
         }
         else if (Equals(sender, voices))
         {
@@ -294,7 +293,7 @@ namespace EQLogParser
         }
         else if (Equals(sender, rateOption))
         {
-          ConfigUtil.SetSetting("TriggersVoiceRate", rateOption.SelectedIndex.ToString(CultureInfo.CurrentCulture));
+          ConfigUtil.SetSetting("TriggersVoiceRate", rateOption.SelectedIndex);
           TriggerManager.Instance.SetVoiceRate(rateOption.SelectedIndex);
 
           if (TestSynth != null)
