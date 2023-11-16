@@ -8,14 +8,13 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 
 namespace EQLogParser
 {
   /// <summary>
   /// Interaction logic for TriggersTester.xaml
   /// </summary>
-  public partial class TriggersTester : UserControl, IDisposable
+  public partial class TriggersTester : IDisposable
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private BlockingCollection<Tuple<string, double, bool>> Buffer;
@@ -195,14 +194,14 @@ namespace EQLogParser
                     if (current != DateTime.MinValue)
                     {
                       var currentTime = DateUtil.ToDouble(current);
-                      if (StatsUtil.DoubleEquals(currentTime, startTime))
+                      if (currentTime.Equals(startTime))
                       {
                         data[dataIndex].Add(line);
                       }
                       else
                       {
                         var diff = currentTime - startTime;
-                        if (diff == 1)
+                        if (diff.Equals(1))
                         {
                           dataIndex++;
                           data[dataIndex] = new List<string> { line };
@@ -302,18 +301,18 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
+    private bool DisposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!disposedValue)
+      if (!DisposedValue)
       {
         Buffer?.CompleteAdding();
         TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
         ((MainWindow)Application.Current.MainWindow)!.Closing -= TriggersTesterClosing;
         MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
         testTriggersBox?.Dispose();
-        disposedValue = true;
+        DisposedValue = true;
       }
     }
 

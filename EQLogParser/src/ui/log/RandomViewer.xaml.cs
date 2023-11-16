@@ -23,7 +23,7 @@ namespace EQLogParser
       InitializeComponent();
 
       MainActions.EventsLogLoadingComplete += LogLoadingComplete;
-      RecordManager.Instance.NewRandomRecordEvent += NewRandomRecordEvent;
+      RecordManager.Instance.RecordsUpdatedEvent += RecordsUpdated;
       DataGridUtil.UpdateTableMargin(dataGrid);
       MainActions.EventsThemeChanged += EventsThemeChanged;
 
@@ -59,9 +59,9 @@ namespace EQLogParser
       Load();
     }
 
-    private void NewRandomRecordEvent(bool _)
+    private void RecordsUpdated(string type)
     {
-      if (!ReloadTimer.IsEnabled)
+      if (type == RecordManager.RANDOM_RECORDS && !ReloadTimer.IsEnabled)
       {
         ReloadTimer.Start();
       }
@@ -240,7 +240,7 @@ namespace EQLogParser
         ReloadTimer?.Stop();
         MainActions.EventsThemeChanged -= EventsThemeChanged;
         MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
-        RecordManager.Instance.NewRandomRecordEvent -= NewRandomRecordEvent;
+        RecordManager.Instance.RecordsUpdatedEvent -= RecordsUpdated;
         dataGrid.Dispose();
         DisposedValue = true;
       }

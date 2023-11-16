@@ -13,7 +13,7 @@ namespace EQLogParser
       SwarmPetsEnabled = MainWindow.IsHealingSwarmPetsEnabled;
     }
 
-    public bool IsValid(ActionGroup heal, HealRecord record, Dictionary<string, HashSet<string>> currentSpellCounts,
+    public bool IsValid(double beginTime, HealRecord record, Dictionary<string, HashSet<string>> currentSpellCounts,
       Dictionary<double, Dictionary<string, HashSet<string>>> previousSpellCounts, Dictionary<string, byte> ignoreRecords)
     {
       if (!SwarmPetsEnabled)
@@ -72,7 +72,7 @@ namespace EQLogParser
 
             if (totals.Count > 6)
             {
-              ignoreRecords[heal.BeginTime + "|" + key] = 1;
+              ignoreRecords[beginTime + "|" + key] = 1;
               temp.ForEach(timeKey => ignoreRecords[timeKey + "|" + key] = 1);
             }
           }
