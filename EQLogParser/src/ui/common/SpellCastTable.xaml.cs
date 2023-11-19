@@ -70,12 +70,14 @@ namespace EQLogParser
             }
 
             var size = 0;
-            if (action is SpellCast { Interrupted: false } cast && IsValid(cast, UniqueNames, cast.Caster, false, out _))
+            if (action is SpellCast { Interrupted: false } cast && !string.IsNullOrEmpty(cast.Caster) && UniqueNames.ContainsKey(cast.Caster) &&
+              PassFilters(cast.SpellData, false))
             {
               size = AddToList(playerSpells, cast.Caster, cast.Spell);
             }
 
-            if (action is ReceivedSpell received && IsValid(received, UniqueNames, received.Receiver, true, out var replaced) && replaced != null)
+            if (action is ReceivedSpell received && !string.IsNullOrEmpty(received.Receiver) && UniqueNames.ContainsKey(received.Receiver) &&
+              IsValid(received, true, out var replaced) && replaced != null)
             {
               size = AddToList(playerSpells, received.Receiver, "Received " + replaced.NameAbbrv);
             }
@@ -114,12 +116,12 @@ namespace EQLogParser
       return dict[key].Count;
     }
 
-    private bool IsValid(ReceivedSpell spell, Dictionary<string, bool> unique, string player, bool received, out SpellData replaced)
+    private bool IsValid(ReceivedSpell spell, bool received, out SpellData replaced)
     {
       var valid = false;
       replaced = spell.SpellData;
 
-      if (!spell.IsWearOff && !string.IsNullOrEmpty(player) && unique.ContainsKey(player))
+      if (!spell.IsWearOff)
       {
         var spellData = spell.SpellData;
 

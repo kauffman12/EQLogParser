@@ -26,6 +26,8 @@ ROMAN = [ (400, 'CD'), (100, 'C'), (90, 'XC'), (50, 'L'), (40, 'XL'), (10, 'X'),
 
 ADPS_EXT_DUR = dict()
 DBSTRINGS = dict()
+UNIQUE_YOU = dict()
+UNIQUE_OTHER = dict()
 MAX_HITS = dict()
 
 # bard
@@ -459,6 +461,18 @@ if os.path.isfile(DBSpellsStrFile):
       landOnOther = data[4]
       wearOff = data[5]
       DBSTRINGS[id] = { 'landsOnYou': landOnYou, 'landsOnOther': landOnOther, 'wearOff': wearOff }
+
+      if landOnYou:
+        if landOnYou not in UNIQUE_YOU:
+          UNIQUE_YOU[landOnYou] = True
+        else:
+          UNIQUE_YOU[landOnYou] = False
+
+      if landOnOther:
+        if landOnOther not in UNIQUE_OTHER:
+          UNIQUE_OTHER[landOnOther] = True
+        else:
+          UNIQUE_OTHER[landOnOther] = False
     except ValueError:
       pass
 
@@ -660,11 +674,15 @@ if os.path.isfile(DBSpellsFile):
     info['spellTarget'] = spellTarget
     info['spellRange'] = spellRange
     info['songWindow'] = songWindow
+    info['landsOnYouAmbiguity'] = False
+    info['landsOnOtherAmbiguity'] = False
 
     if id in DBSTRINGS:
       info['landsOnYou'] = DBSTRINGS[id]['landsOnYou']
       info['landsOnOther'] = DBSTRINGS[id]['landsOnOther']
       info['wearOff'] = DBSTRINGS[id]['wearOff']
+      info['landsOnYouAmbiguity'] = (info['landsOnYou'] in UNIQUE_YOU and UNIQUE_YOU[info['landsOnYou']] == False)
+      info['landsOnOtherAmbiguity'] = (info['landsOnOther'] in UNIQUE_OTHER and UNIQUE_OTHER[info['landsOnOther']] == False)
 
     # Overdrive Punch the proc and main spell have the same name. Just ignore the non-damaging versions
     if name != 'Overdrive Punch' or beneficial == 1:
@@ -730,16 +748,16 @@ if os.path.isfile(DBSpellsFile):
 
   output = open('output.txt', 'w')
   for key in sorted(final):
-    data = '%s^%s^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%s^%s^%s' % (final[key]['intId'], final[key]['name'], final[key]['level'], final[key]['maxDuration'], final[key]['beneficial'], final[key]['maxHits'], final[key]['spellTarget'], final[key]['classMask'], final[key]['damaging'], final[key]['combatSkill'], final[key]['resist'], final[key]['songWindow'], final[key]['adps'], final[key]['mgb'], final[key]['rank'], final[key]['landsOnYou'], final[key]['landsOnOther'], final[key]['wearOff'])
+    data = '%s^%s^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%s^%s^%s' % (final[key]['intId'], final[key]['name'], final[key]['level'], final[key]['maxDuration'], final[key]['beneficial'], final[key]['maxHits'], final[key]['spellTarget'], final[key]['classMask'], final[key]['damaging'], final[key]['combatSkill'], final[key]['resist'], final[key]['songWindow'], final[key]['adps'], final[key]['mgb'], final[key]['rank'], final[key]['landsOnYouAmbiguity'], final[key]['landsOnOtherAmbiguity'], final[key]['landsOnYou'], final[key]['landsOnOther'], final[key]['wearOff'])
     output.write(data)
     output.write('\n')
-  output.write('900001^Glyph of Destruction I^254^20^1^0^6^65407^0^0^0^0^3^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.')
+  output.write('900001^Glyph of Destruction I^254^20^1^0^6^65407^0^0^0^0^3^0^1^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.')
   output.write('\n')
-  output.write('900002^Glyph of Destruction II^254^20^1^0^6^65407^0^0^0^0^3^0^2^^ is infused for destruction.^Your Glyph of Destruction fades away.')
+  output.write('900002^Glyph of Destruction II^254^20^1^0^6^65407^0^0^0^0^3^0^2^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.')
   output.write('\n')
-  output.write('900003^Glyph of Destruction III^254^20^1^0^6^65407^0^0^0^0^3^0^3^^ is infused for destruction.^Your Glyph of Destruction fades away.')
+  output.write('900003^Glyph of Destruction III^254^20^1^0^6^65407^0^0^0^0^3^0^3^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.')
   output.write('\n')
-  output.write('900004^Glyph of Destruction IV^254^20^1^0^6^65407^0^0^0^0^3^0^4^^ is infused for destruction.^Your Glyph of Destruction fades away.')
+  output.write('900004^Glyph of Destruction IV^254^20^1^0^6^65407^0^0^0^0^3^0^4^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.')
   output.write('\n')
-  output.write('900005^Glyph of Destruction V^254^20^1^0^6^65407^0^0^0^0^3^0^5^^ is infused for destruction.^Your Glyph of Destruction fades away.')
+  output.write('900005^Glyph of Destruction V^254^20^1^0^6^65407^0^0^0^0^3^0^5^^0^1^ is infused for destruction.^Your Glyph of Destruction fades away.')
   output.write('\n')

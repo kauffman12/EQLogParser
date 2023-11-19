@@ -2,11 +2,9 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using System.Windows.Data;
 
 namespace EQLogParser
 {
@@ -83,11 +81,6 @@ namespace EQLogParser
     internal uint MyDoTCritRateMod { get; private set; }
 
     private static readonly SpellAbbrvComparer AbbrvComparer = new();
-    private static readonly TimedActionComparer TAComparer = new();
-
-    private readonly List<ActionGroup> AllSpellCastBlocks = new();
-    private readonly ObservableCollection<QuickShareRecord> AllQuickShareRecords = new();
-
     private readonly List<string> AdpsKeys = new() { "#DoTCritRate", "#NukeCritRate" };
     private readonly Dictionary<string, Dictionary<string, uint>> AdpsActive = new();
     private readonly Dictionary<string, Dictionary<string, uint>> AdpsValues = new();
@@ -111,13 +104,9 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, string> SpellAbbrvCache = new();
     private readonly ConcurrentDictionary<string, string> RanksCache = new();
     private readonly ConcurrentDictionary<string, List<SpellData>> SpellsNameDb = new();
-    private readonly object CollectionLock = new();
-
-    private int LastSpellIndex = -1;
 
     private DataManager()
     {
-      BindingOperations.EnableCollectionSynchronization(AllQuickShareRecords, CollectionLock);
       var spellList = new List<SpellData>();
 
       // build ranks cache
@@ -170,7 +159,7 @@ namespace EQLogParser
             {
               SpellsAbbrvDb[spellData.NameAbbrv] = spellData;
             }
-            else if (string.Compare(SpellsAbbrvDb[spellData.NameAbbrv].Name, spellData.Name, true, CultureInfo.CurrentCulture) < 0)
+            else if (string.Compare(SpellsAbbrvDb[spellData.NameAbbrv].Name, spellData.Name, true, CultureInfo.InvariantCulture) < 0)
             {
               // try to keep the newest version
               SpellsAbbrvDb[spellData.NameAbbrv] = spellData;
@@ -296,40 +285,10 @@ namespace EQLogParser
       }
     }
 
-    internal ObservableCollection<QuickShareRecord> GetQuickShareRecords() => AllQuickShareRecords;
     internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && AllNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
     internal bool IsOldSpell(string name) => !string.IsNullOrEmpty(name) && OldSpellNamesDb.ContainsKey(name);
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
     internal bool IsLifetimeNpc(string name) => !string.IsNullOrEmpty(name) && LifetimeFights.ContainsKey(name);
-
-    public static void AddAction(List<ActionGroup> blockList, IAction action, double beginTime)
-    {
-      lock (blockList)
-      {
-        if (blockList.LastOrDefault() is { } last && last.BeginTime.Equals(beginTime))
-        {
-          last.Actions.Add(action);
-        }
-        else
-        {
-          var newSegment = new ActionGroup { BeginTime = beginTime };
-          newSegment.Actions.Add(action);
-          blockList.Add(newSegment);
-        }
-      }
-    }
-
-    internal void AddQuickShare(QuickShareRecord action)
-    {
-      lock (CollectionLock)
-      {
-        if (AllQuickShareRecords.Count == 0 || AllQuickShareRecords[0].Key != action.Key ||
-          !AllQuickShareRecords[0].BeginTime.Equals(action.BeginTime))
-        {
-          AllQuickShareRecords.Insert(0, action);
-        }
-      }
-    }
 
     internal string AbbreviateSpellName(string spell)
     {
@@ -468,30 +427,6 @@ namespace EQLogParser
         return value;
       }
       return null;
-    }
-
-    internal bool IsQuickShareMine(string key)
-    {
-      lock (CollectionLock)
-      {
-        return AllQuickShareRecords.FirstOrDefault(share => share.IsMine && share.Key == key) != null;
-      }
-    }
-
-    internal void HandleSpellInterrupt(string player, string spell, double beginTime)
-    {
-      lock (AllSpellCastBlocks)
-      {
-        for (var i = AllSpellCastBlocks.Count - 1; i >= 0 && beginTime - AllSpellCastBlocks[i].BeginTime <= 5; i--)
-        {
-          var index = AllSpellCastBlocks[i].Actions.FindLastIndex(action => action is SpellCast sc && sc.Spell == spell && sc.Caster == player);
-          if (index > -1 && AllSpellCastBlocks[i].Actions[index] is SpellCast cast)
-          {
-            cast.Interrupted = true;
-            break;
-          }
-        }
-      }
     }
 
     internal void UpdateAdps(SpellData spellData)
@@ -674,22 +609,23 @@ namespace EQLogParser
             ID = string.Intern(data[0]),
             Name = string.Intern(data[1]),
             NameAbbrv = string.Intern(AbbreviateSpellName(data[1])),
-            Level = byte.Parse(data[2], CultureInfo.CurrentCulture),
+            Level = byte.Parse(data[2], CultureInfo.InvariantCulture),
             Duration = (ushort)duration,
             IsBeneficial = beneficial != 0,
             Target = target,
-            MaxHits = ushort.Parse(data[5], CultureInfo.CurrentCulture),
+            MaxHits = ushort.Parse(data[5], CultureInfo.InvariantCulture),
             ClassMask = classMask,
-            Damaging = short.Parse(data[8], CultureInfo.CurrentCulture),
-            //CombatSkill = uint.Parse(data[9], CultureInfo.CurrentCulture),
-            Resist = (SpellResist)int.Parse(data[10], CultureInfo.CurrentCulture),
+            Damaging = short.Parse(data[8], CultureInfo.InvariantCulture),
+            //CombatSkill = uint.Parse(data[9], CultureInfo.InvariantCulture),
+            Resist = (SpellResist)int.Parse(data[10], CultureInfo.InvariantCulture),
             SongWindow = data[11] == "1",
-            Adps = byte.Parse(data[12], CultureInfo.CurrentCulture),
+            Adps = byte.Parse(data[12], CultureInfo.InvariantCulture),
             Mgb = data[13] == "1",
-            Rank = byte.Parse(data[14], CultureInfo.CurrentCulture),
-            LandsOnYou = string.Intern(data[15]),
-            LandsOnOther = string.Intern(data[16]),
-            WearOff = string.Intern(data[17])
+            Rank = byte.Parse(data[14], CultureInfo.InvariantCulture),
+            HasAmbiguity = data[15] == "1" || data[16] == "1",
+            LandsOnYou = string.Intern(data[17]),
+            LandsOnOther = string.Intern(data[18]),
+            WearOff = string.Intern(data[19])
           };
         }
       }
@@ -708,27 +644,16 @@ namespace EQLogParser
 
     private SpellData FindPreviousCast(string player, List<SpellData> output, bool isAdps = false)
     {
-      lock (AllSpellCastBlocks)
+      var filtered = output.Where(value => !isAdps || value.Adps > 0).ToArray();
+      foreach (var (beginTime, cast) in RecordManager.Instance.GetSpellsLast(8))
       {
-        if (LastSpellIndex > -1)
+        if (!cast.Interrupted)
         {
-          var outputSpan = output.ToArray().AsSpan();
-          var endTime = AllSpellCastBlocks[LastSpellIndex].BeginTime - 5;
-          for (var i = LastSpellIndex; i >= 0 && AllSpellCastBlocks[i].BeginTime >= endTime; i--)
+          foreach (var value in filtered)
           {
-            for (var j = AllSpellCastBlocks[i].Actions.Count - 1; j >= 0; j--)
+            if ((value.Target != (int)SpellTarget.SELF || cast.Caster == player) && value.Name == cast.Spell)
             {
-              if (AllSpellCastBlocks[i].Actions[j] is SpellCast { Interrupted: false } cast)
-              {
-                foreach (var value in outputSpan)
-                {
-                  if ((!isAdps || value.Adps > 0) && (value.Target != (int)SpellTarget.SELF || cast.Caster == player) &&
-                      value.Name == cast.Spell)
-                  {
-                    return value;
-                  }
-                }
-              }
+              return value;
             }
           }
         }
@@ -885,11 +810,6 @@ namespace EQLogParser
         OverlayFights.Clear();
       }
 
-      lock (CollectionLock)
-      {
-        AllQuickShareRecords.Clear();
-      }
-
       ClearActiveAdps();
       EventsClearedActiveData?.Invoke(this, true);
     }
@@ -945,30 +865,6 @@ namespace EQLogParser
             RemoveOverlayFight(fight.Id);
           }
         }
-      }
-    }
-
-    private static List<ActionGroup> SearchActions(List<ActionGroup> allActions, double beginTime, double endTime)
-    {
-      lock (allActions)
-      {
-        var startBlock = new ActionGroup { BeginTime = beginTime };
-        var endBlock = new ActionGroup { BeginTime = endTime + 1 };
-
-        var startIndex = allActions.BinarySearch(startBlock, TAComparer);
-        if (startIndex < 0)
-        {
-          startIndex = Math.Abs(startIndex) - 1;
-        }
-
-        var endIndex = allActions.BinarySearch(endBlock, TAComparer);
-        if (endIndex < 0)
-        {
-          endIndex = Math.Abs(endIndex) - 1;
-        }
-
-        var last = endIndex - startIndex;
-        return last > 0 ? allActions.GetRange(startIndex, last) : new List<ActionGroup>();
       }
     }
 
@@ -1043,11 +939,6 @@ namespace EQLogParser
     {
       public bool Equals(SpellData x, SpellData y) => x?.NameAbbrv == y?.NameAbbrv;
       public int GetHashCode(SpellData obj) => obj.NameAbbrv.GetHashCode();
-    }
-
-    private class TimedActionComparer : IComparer<TimedAction>
-    {
-      public int Compare(TimedAction x, TimedAction y) => (x != null && y != null) ? x.BeginTime.CompareTo(y.BeginTime) : 0;
     }
 
     internal class SpellTreeNode

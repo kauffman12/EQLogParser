@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace EQLogParser
 {
@@ -28,7 +29,7 @@ namespace EQLogParser
     private void HandleNewTaunt(TauntEvent e)
     {
       var fight = DataManager.Instance.GetFight(e.Record.Npc) ?? Create(e.Record.Npc, e.BeginTime);
-      DataManager.AddAction(fight.TauntBlocks, e.Record, e.BeginTime);
+      AddAction(fight.TauntBlocks, e.Record, e.BeginTime);
     }
 
     private void HandleDamageProcessed(DamageProcessedEvent processed)
@@ -73,7 +74,7 @@ namespace EQLogParser
 
         if (defender)
         {
-          DataManager.AddAction(fight.DamageBlocks, processed.Record, processed.BeginTime);
+          AddAction(fight.DamageBlocks, processed.Record, processed.BeginTime);
           AddPlayerTime(fight.DamageSegments, fight.DamageSubSegments, processed.Record, processed.Record.Attacker, processed.BeginTime);
           fight.BeginDamageTime = double.IsNaN(fight.BeginDamageTime) ? processed.BeginTime : fight.BeginDamageTime;
           fight.LastDamageTime = processed.BeginTime;
@@ -140,7 +141,7 @@ namespace EQLogParser
         }
         else
         {
-          DataManager.AddAction(fight.TankingBlocks, processed.Record, processed.BeginTime);
+          AddAction(fight.TankingBlocks, processed.Record, processed.BeginTime);
           AddPlayerTime(fight.TankSegments, fight.TankSubSegments, processed.Record, processed.Record.Defender, processed.BeginTime);
           fight.BeginTankingTime = double.IsNaN(fight.BeginTankingTime) ? processed.BeginTime : fight.BeginTankingTime;
           fight.LastTankingTime = processed.BeginTime;
@@ -188,6 +189,20 @@ namespace EQLogParser
         Id = CurrentNpcId++,
         CorrectMapKey = string.Intern(defender)
       };
+    }
+
+    private static void AddAction(List<ActionGroup> blockList, IAction action, double beginTime)
+    {
+      if (blockList.LastOrDefault() is { } last && last.BeginTime.Equals(beginTime))
+      {
+        last.Actions.Add(action);
+      }
+      else
+      {
+        var newSegment = new ActionGroup { BeginTime = beginTime };
+        newSegment.Actions.Add(action);
+        blockList.Add(newSegment);
+      }
     }
 
     private static void AddPlayerTime(Dictionary<string, TimeSegment> segments, Dictionary<string, Dictionary<string, TimeSegment>> subSegments,

@@ -610,9 +610,10 @@ namespace EQLogParser
     public List<SpellData> Ambiguity { get; } = new();
   }
 
-  internal class SpellCast : ReceivedSpell
+  internal class SpellCast : IAction
   {
     public string Spell { get; set; }
+    public SpellData SpellData { get; set; }
     public string Caster { get; set; }
     public bool Interrupted { get; set; } = false;
   }
@@ -630,6 +631,7 @@ namespace EQLogParser
     public byte Target { get; set; }
     public ushort ClassMask { get; set; }
     public byte Level { get; set; }
+    public bool HasAmbiguity { get; set; }
     public string LandsOnYou { get; set; }
     public string LandsOnOther { get; set; }
     public bool SongWindow { get; set; }
