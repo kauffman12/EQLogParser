@@ -1,11 +1,12 @@
-﻿using LiteDB;
-using log4net;
+﻿using log4net;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
+using System.Windows.Data;
 
 namespace EQLogParser
 {
@@ -27,14 +28,13 @@ namespace EQLogParser
     public const string SPECIAL_RECORDS = "SpecialRecords";
     public const string ZONE_RECORDS = "ZoneRecords";
     // stats
-    private const string NpcResistStatsType = "NpcResistStats";
-    private readonly string FilePath;
-    private readonly object RecordLock = new();
-    private readonly object StatsLock = new();
-    private readonly Dictionary<string, List<RecordList>> RecordsActive = new();
-    private readonly Dictionary<string, NpcResistStats> NpcSpellStatsActive = new();
-    private readonly Timer DatabaseUpdater;
-    private LiteDatabase Db;
+    private readonly ConcurrentDictionary<string, List<RecordList>> RecordDicts = new();
+    private readonly ConcurrentDictionary<string, bool> RecordNeedsEvent = new();
+    private readonly Dictionary<string, NpcResistStats> NpcSpellStatsDict = new();
+    private readonly List<RecordList> PlayerAmbiguityCastCache = new();
+    // observables
+    private readonly object CollectionLock = new();
+    internal readonly ObservableCollection<QuickShareRecord> AllQuickShareRecords = new();
 
     private static readonly string[] TimedRecordTypes =
     {
@@ -52,28 +52,17 @@ namespace EQLogParser
 
     private RecordManager()
     {
-      try
-      {
-        FilePath = Path.GetTempFileName();
-        Db = new LiteDatabase(FilePath);
+      BindingOperations.EnableCollectionSynchronization(AllQuickShareRecords, CollectionLock);
 
-        foreach (var type in TimedRecordTypes)
-        {
-          var records = Db.GetCollection<RecordList>(type);
-          records.EnsureIndex(x => x.BeginTime);
-        }
-
-        var stats = Db.GetCollection<NpcResistStats>(NpcResistStatsType);
-        stats.EnsureIndex(x => x.Id);
-        DatabaseUpdater = new Timer(UpdateDatabase, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
-      }
-      catch (Exception e)
+      // initialize dictionaries
+      foreach (var type in TimedRecordTypes)
       {
-        Log.Error(e);
+        RecordDicts[type] = new List<RecordList>();
       }
+
+      new Timer(SendEvents, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
     }
 
-    internal void Add(SpellCast spell, double beginTime) => Add(SPELL_RECORDS, spell, beginTime);
     internal void Add(DeathRecord record, double beginTime) => Add(DEATH_RECORDS, record, beginTime);
     internal void Add(HealRecord record, double beginTime) => Add(HEAL_RECORDS, record, beginTime);
     internal void Add(MezBreakRecord record, double beginTime) => Add(MEZ_BREAK_RECORDS, record, beginTime);
@@ -94,8 +83,8 @@ namespace EQLogParser
       GetDuring(DEATH_RECORDS, beginTime, endTime).Select(r => (r.Item1, (DeathRecord)r.Item2));
     internal IEnumerable<(double, HealRecord)> GetHealsDuring(double beginTime, double endTime) =>
       GetDuring(HEAL_RECORDS, beginTime, endTime).Select(r => (r.Item1, (HealRecord)r.Item2));
-    internal IEnumerable<(double, IAction)> GetSpellsDuring(double beginTime, double endTime) =>
-      GetDuring(SPELL_RECORDS, beginTime, endTime).Select(r => (r.Item1, (IAction)r.Item2));
+    internal IEnumerable<(double, IAction)> GetSpellsDuring(double beginTime, double endTime, bool reverse = false) =>
+      GetDuring(SPELL_RECORDS, beginTime, endTime, reverse).Select(r => (r.Item1, (IAction)r.Item2));
 
     internal void Add(LootRecord record, double beginTime)
     {
@@ -110,22 +99,24 @@ namespace EQLogParser
       }
 
       // loot assigned so remove previous instance
-      if (Db?.GetCollection<RecordList>(LOOT_RECORDS_TO_ASSIGN) is { } toAssign && toAssign.Count() > 0)
+      if (RecordDicts.TryGetValue(LOOT_RECORDS_TO_ASSIGN, out var toAssign) && toAssign.Count > 0)
       {
-        lock (RecordLock)
+        lock (toAssign)
         {
           // may need to remove more than one so search all
-          foreach (var group in toAssign.FindAll().ToArray().Reverse())
+          foreach (var group in toAssign.ToArray().Reverse())
           {
             foreach (var found in group.Records.Cast<LootRecord>().Where(r => r.Player == record.Player && r.Item == record.Item).ToArray())
             {
               Remove(toAssign, group, found);
-              if (Db?.GetCollection<RecordList>(LOOT_RECORDS) is { } looted &&
-                  looted.FindOne(r => r.BeginTime.Equals(group.BeginTime)) is { } orig)
+              if (RecordDicts.TryGetValue(LOOT_RECORDS, out var looted) && looted.FirstOrDefault(r => r.BeginTime.Equals(group.BeginTime)) is { } orig)
               {
-                if (orig.Records.Cast<LootRecord>().FirstOrDefault(r => r.Player == record.Player && r.Item == record.Item) is { } found2)
+                lock (looted)
                 {
-                  Remove(looted, orig, found2);
+                  if (orig.Records.Cast<LootRecord>().FirstOrDefault(r => r.Player == record.Player && r.Item == record.Item) is { } found2)
+                  {
+                    Remove(looted, orig, found2);
+                  }
                 }
               }
             }
@@ -134,14 +125,85 @@ namespace EQLogParser
       }
     }
 
+    internal void Add(SpellCast spell, double beginTime)
+    {
+      Add(SPELL_RECORDS, spell, beginTime);
+
+      if (spell.SpellData?.HasAmbiguity == true)
+      {
+        Add(PlayerAmbiguityCastCache, spell, beginTime);
+      }
+    }
+
+    internal void Add(QuickShareRecord action)
+    {
+      lock (CollectionLock)
+      {
+        if (AllQuickShareRecords.Count == 0 || AllQuickShareRecords[0].Key != action.Key ||
+          !AllQuickShareRecords[0].BeginTime.Equals(action.BeginTime))
+        {
+          AllQuickShareRecords.Insert(0, action);
+        }
+      }
+    }
+
+    internal void Clear()
+    {
+      foreach (var type in TimedRecordTypes)
+      {
+        RecordDicts[type].Clear();
+      }
+
+      lock (PlayerAmbiguityCastCache)
+      {
+        PlayerAmbiguityCastCache.Clear();
+      }
+
+      lock (CollectionLock)
+      {
+        AllQuickShareRecords.Clear();
+      }
+    }
+
     internal IEnumerable<NpcResistStats> GetAllNpcResistStats()
     {
-      if (Db?.GetCollection<NpcResistStats>(NpcResistStatsType) is { } stats)
+      NpcResistStats[] statsCopy;
+      lock (NpcSpellStatsDict)
       {
-        foreach (var stat in stats.FindAll())
+        statsCopy = NpcSpellStatsDict.Values.ToArray();
+      }
+
+      foreach (var stat in statsCopy)
+      {
+        yield return stat;
+      }
+    }
+
+    internal IEnumerable<(double, SpellCast)> GetSpellsLast(double duration)
+    {
+      lock (PlayerAmbiguityCastCache)
+      {
+        var end = PlayerAmbiguityCastCache.Count - 1;
+        if (end > -1)
         {
-          yield return stat;
+          var endTime = PlayerAmbiguityCastCache[end].BeginTime - duration;
+          for (var i = end; i >= 0 && PlayerAmbiguityCastCache[i].BeginTime >= endTime; i--)
+          {
+            var list = PlayerAmbiguityCastCache[i];
+            for (var j = list.Records.Count - 1; j >= 0; j--)
+            {
+              yield return (list.BeginTime, (SpellCast)list.Records[j]);
+            }
+          }
         }
+      }
+    }
+
+    internal bool IsQuickShareMine(string key)
+    {
+      lock (CollectionLock)
+      {
+        return AllQuickShareRecords.FirstOrDefault(share => share.IsMine && share.Key == key) != null;
       }
     }
 
@@ -149,15 +211,20 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(npc))
       {
+        NpcResistStats npcStats;
         npc = npc.ToLower();
-        lock (StatsLock)
+
+        lock (NpcSpellStatsDict)
         {
-          if (!NpcSpellStatsActive.TryGetValue(npc, out var npcStats))
+          if (!NpcSpellStatsDict.TryGetValue(npc, out npcStats))
           {
             npcStats = new NpcResistStats { Npc = npc };
-            NpcSpellStatsActive[npc] = npcStats;
+            NpcSpellStatsDict[npc] = npcStats;
           }
+        }
 
+        lock (npcStats)
+        {
           if (!npcStats.ByResist.TryGetValue(resist, out var count))
           {
             count = new ResistCount();
@@ -176,186 +243,189 @@ namespace EQLogParser
       }
     }
 
-    internal void Clear()
-    {
-      lock (RecordLock)
-      {
-        RecordsActive.Clear();
-        foreach (var type in TimedRecordTypes)
-        {
-          Db?.GetCollection<RecordList>(type)?.DeleteAll();
-        }
-      }
-
-      lock (StatsLock)
-      {
-        NpcSpellStatsActive.Clear();
-        Db?.GetCollection<NpcResistStats>(NpcResistStatsType)?.DeleteAll();
-      }
-    }
-
-    internal void Stop()
-    {
-      DatabaseUpdater.Dispose();
-      Db?.Dispose();
-      Db = null;
-
-      try
-      {
-        File.Delete(FilePath);
-      }
-      catch (Exception e)
-      {
-        Log.Debug("Could not delete.", e);
-      }
-    }
-
     private void Add(string type, IAction record, double beginTime)
     {
-      lock (RecordLock)
+      if (RecordDicts.TryGetValue(type, out var list))
       {
-        if (!RecordsActive.TryGetValue(type, out var list))
+        Add(list, record, beginTime);
+        RecordNeedsEvent[type] = true;
+      }
+    }
+
+    private void Add(List<RecordList> list, object record, double beginTime)
+    {
+      RecordList found;
+      lock (list)
+      {
+        if (list.Count == 0)
         {
-          list = new List<RecordList>();
-          RecordsActive[type] = list;
+          var newRecordList = new RecordList { BeginTime = beginTime, Records = new List<object> { record } };
+          list.Add(newRecordList);
+          return;
         }
 
-        if (list.Find(item => item.BeginTime.Equals(beginTime)) is { } found)
+        var end = list.Count - 1;
+        if (list[end].BeginTime.Equals(beginTime))
         {
-          found.Records.Add(record);
+          found = list[end];
         }
         else
         {
-          list.Add(new RecordList { BeginTime = beginTime, Records = new List<object> { record } });
-        }
-      }
-    }
-
-    private IEnumerable<Tuple<double, object>> GetAll(string type)
-    {
-      if (Db?.GetCollection<RecordList>(type) is { } groups)
-      {
-        foreach (var group in groups.FindAll())
-        {
-          foreach (var record in group.Records)
+          if (list[end].BeginTime < beginTime)
           {
-            yield return Tuple.Create(group.BeginTime, record);
+            var newRecordList = new RecordList { BeginTime = beginTime, Records = new List<object> { record } };
+            list.Add(newRecordList);
+            return;
           }
-        }
-      }
-    }
 
-    private IEnumerable<Tuple<double, object>> GetDuring(string type, double beginTime, double endTime)
-    {
-      if (Db?.GetCollection<RecordList>(type) is { } groups)
-      {
-        foreach (var group in groups.Query().Where(r => r.BeginTime >= beginTime && r.BeginTime <= endTime).ToArray())
-        {
-          foreach (var record in group.Records)
+          // this shouldn't be needed in the current implementation
+          if (BinarySearch(list, item => item.BeginTime.CompareTo(beginTime)) is var index)
           {
-            yield return Tuple.Create(group.BeginTime, record);
-          }
-        }
-      }
-    }
-
-    private void UpdateDatabase(object state)
-    {
-      Dictionary<string, NpcResistStats> copyNpcSpellStats = null;
-      lock (StatsLock)
-      {
-        if (NpcSpellStatsActive.Count > 0)
-        {
-          copyNpcSpellStats = new Dictionary<string, NpcResistStats>(NpcSpellStatsActive);
-          NpcSpellStatsActive.Clear();
-        }
-      }
-
-      if (copyNpcSpellStats != null && Db?.GetCollection<NpcResistStats>(NpcResistStatsType) is { } stats)
-      {
-        foreach (var kv in copyNpcSpellStats)
-        {
-          if (stats.FindOne(s => s.Npc == kv.Key) is not { } npcStats)
-          {
-            stats.Insert(kv.Value);
-          }
-          else
-          {
-            foreach (var resist in kv.Value.ByResist)
+            if (index > -1)
             {
-              if (npcStats.ByResist.TryGetValue(resist.Key, out var count))
-              {
-                count.Landed += resist.Value.Landed;
-                count.Resisted += resist.Value.Resisted;
-              }
-              else
-              {
-                npcStats.ByResist[resist.Key] = resist.Value;
-              }
+              found = list[index];
             }
-
-            stats.Update(npcStats);
-          }
-        }
-      }
-
-      Dictionary<string, List<RecordList>> copyRecordsActive = null;
-      lock (RecordLock)
-      {
-        if (RecordsActive.Count > 0)
-        {
-          copyRecordsActive = new Dictionary<string, List<RecordList>>(RecordsActive);
-          RecordsActive.Clear();
-        }
-      }
-
-      if (copyRecordsActive != null)
-      {
-        var updatedTypes = new List<string>();
-        foreach (var kv in copyRecordsActive)
-        {
-          updatedTypes.Add(kv.Key);
-          if (Db?.GetCollection<RecordList>(kv.Key) is { } recordType)
-          {
-            foreach (ref var recordList in kv.Value.ToArray().AsSpan())
+            else
             {
-              if (recordList.BeginTime is var time && recordType.FindOne(r => r.BeginTime.Equals(time)) is { } found)
-              {
-                found.Records.AddRange(recordList.Records);
-                recordType.Update(found);
-              }
-              else
-              {
-                recordType.Insert(recordList);
-              }
+              var newRecordList = new RecordList { BeginTime = beginTime, Records = new List<object> { record } };
+              list.Insert(~index, newRecordList);
+              return;
             }
           }
         }
+      }
 
-        foreach (var type in updatedTypes)
+      lock (found)
+      {
+        found.Records.Add(record);
+      }
+    }
+
+    private IEnumerable<(double, object)> GetAll(string type)
+    {
+      if (RecordDicts.TryGetValue(type, out var list))
+      {
+        RecordList[] listCopy;
+        lock (list)
         {
-          RecordsUpdatedEvent?.Invoke(type);
+          listCopy = list.ToArray();
+        }
+
+        foreach (var group in listCopy)
+        {
+          object[] recordsCopy;
+          lock (group.Records)
+          {
+            recordsCopy = group.Records.ToArray();
+          }
+
+          foreach (var record in recordsCopy)
+          {
+            yield return (group.BeginTime, record);
+          }
         }
       }
     }
 
-    private static void Remove(ILiteCollection<RecordList> list, RecordList group, object item)
+    private IEnumerable<(double, object)> GetDuring(string type, double beginTime, double endTime, bool reverse = false)
+    {
+      if (RecordDicts.TryGetValue(type, out var list))
+      {
+        List<RecordList> listCopy;
+        lock (list)
+        {
+          listCopy = list.ToList();
+        }
+
+        if (reverse)
+        {
+          var index = BinarySearch(listCopy, item => item.BeginTime.CompareTo(endTime));
+          index = index < 0 ? Math.Min(~index, listCopy.Count - 1) : index;
+          for (var i = index; i >= 0 && i < listCopy.Count && listCopy[i].BeginTime >= beginTime && listCopy[i].BeginTime <= endTime; i--)
+          {
+            foreach (var record in ProcessRecordList(listCopy[i]))
+            {
+              yield return record;
+            }
+          }
+        }
+        else
+        {
+          var index = BinarySearch(listCopy, item => item.BeginTime.CompareTo(beginTime));
+          index = index < 0 ? ~index : index;
+          for (var i = index; i < listCopy.Count && listCopy[i].BeginTime >= beginTime && listCopy[i].BeginTime <= endTime; i++)
+          {
+            foreach (var record in ProcessRecordList(listCopy[i]))
+            {
+              yield return record;
+            }
+          }
+        }
+      }
+    }
+
+    private IEnumerable<(double, object)> ProcessRecordList(RecordList recordList)
+    {
+      object[] recordsCopy;
+      lock (recordList)
+      {
+        recordsCopy = recordList.Records.ToArray();
+      }
+
+      foreach (var record in recordsCopy)
+      {
+        yield return (recordList.BeginTime, record);
+      }
+    }
+
+
+    private void SendEvents(object state)
+    {
+      var keys = RecordNeedsEvent.Keys.ToArray();
+      RecordNeedsEvent.Clear();
+      foreach (var key in keys)
+      {
+        RecordsUpdatedEvent?.Invoke(key);
+      }
+    }
+
+    private static void Remove(List<RecordList> list, RecordList group, object item)
     {
       group.Records.Remove(item);
       if (group.Records.Count == 0)
       {
-        list.Delete(group.Id);
+        list.Remove(group);
       }
-      else
+    }
+
+    private static int BinarySearch<T>(List<T> list, Func<T, int> comparer)
+    {
+      int low = 0, high = list.Count - 1;
+
+      while (low <= high)
       {
-        list.Update(group);
+        var mid = low + ((high - low) / 2);
+        var comparison = comparer(list[mid]);
+        if (comparison == 0)
+        {
+          return mid;
+        }
+
+        if (comparison < 0)
+        {
+          low = mid + 1;
+        }
+        else
+        {
+          high = mid - 1;
+        }
       }
+
+      return ~low;
     }
 
     private class RecordList
     {
-      // ReSharper disable once UnusedMember.Local
-      public ObjectId Id { get; set; }
       public double BeginTime { get; init; }
       public List<object> Records { get; init; }
     }

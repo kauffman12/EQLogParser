@@ -40,17 +40,17 @@ namespace EQLogParser
               BeginTime = dateTime,
               Key = fullKey,
               From = chatType.Sender,
-              To = (to == "You" && processorName != null && characterId != TriggerStateManager.DEFAULT_USER) ? processorName : to,
+              To = (to == "You" && processorName != null && characterId != TriggerStateManager.DEFAULT_USER) ? processorName : TextUtils.ToUpper(to),
               IsMine = chatType.SenderIsYou,
               Type = "GINA"
             };
 
-            DataManager.Instance.AddQuickShare(record);
+            RecordManager.Instance.Add(record);
 
             // don't handle immediately unless enabled
             if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.GROUP or ChatChannels.GUILD
                   or ChatChannels.RAID or ChatChannels.TELL) && ConfigUtil.IfSet("TriggersWatchForQuickShare") &&
-                !DataManager.Instance.IsQuickShareMine(fullKey))
+                !RecordManager.Instance.IsQuickShareMine(fullKey))
             {
               // ignore if we're still processing a bunch
               if (GinaCache.Count > 5)

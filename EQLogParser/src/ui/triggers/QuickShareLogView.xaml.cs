@@ -12,7 +12,7 @@ namespace EQLogParser
     public QuickShareLogView()
     {
       InitializeComponent();
-      dataGrid.ItemsSource = DataManager.Instance.GetQuickShareRecords();
+      dataGrid.ItemsSource = RecordManager.Instance.AllQuickShareRecords;
     }
 
     private void SendToEQClick(object sender, RoutedEventArgs e)

@@ -1253,7 +1253,6 @@ namespace EQLogParser
       ChatManager.Instance.Stop();
       TriggerManager.Instance.Stop();
       TriggerStateManager.Instance.Stop();
-      RecordManager.Instance.Stop();
       Application.Current.Shutdown();
     }
 

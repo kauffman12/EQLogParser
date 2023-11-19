@@ -101,22 +101,22 @@ namespace EQLogParser
         }
       }
 
-      foreach (ref var player in uniquePlayers.Keys.OrderBy(player => player).ToArray().AsSpan())
+      foreach (var player in uniquePlayers.Keys.OrderBy(player => player).ToArray())
       {
         players.Add(player);
       }
 
-      foreach (ref var item in uniqueItems.Keys.OrderBy(item => item).ToArray().AsSpan())
+      foreach (var item in uniqueItems.Keys.OrderBy(item => item).ToArray())
       {
         itemNames.Add(item);
       }
 
-      foreach (ref var npc in uniqueNpcs.Keys.OrderBy(npc => npc).ToArray().AsSpan())
+      foreach (var npc in uniqueNpcs.Keys.OrderBy(npc => npc).ToArray())
       {
         npcs.Add(npc);
       }
 
-      foreach (ref var row in totalRecords.OrderByDescending(row => row.Quantity).ToArray().AsSpan())
+      foreach (var row in totalRecords.OrderByDescending(row => row.Quantity).ToArray())
       {
         TotalRecords.Add(row);
       }

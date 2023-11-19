@@ -136,26 +136,33 @@ namespace EQLogParser
               }
 
               var spellData = DataManager.Instance.GetSpellByName(spellName);
-              var cast = new SpellCast { Caster = player, Spell = spellName, SpellData = spellData };
 
               if (spellData != null)
               {
+                var cast = new SpellCast { Caster = player, Spell = spellName, SpellData = spellData };
                 RecordManager.Instance.Add(cast, currentTime);
+
+                if (DataManager.Instance.GetSpellClass(cast.Spell) is { } theClass)
+                {
+                  PlayerManager.Instance.UpdatePlayerClassFromSpell(cast, theClass);
+                }
               }
 
               if (specialKey != null && spellData != null)
               {
                 DataManager.Instance.UpdateAdps(spellData);
               }
-
-              if (DataManager.Instance.GetSpellClass(cast.Spell) is { } theClass)
-              {
-                PlayerManager.Instance.UpdatePlayerClassFromSpell(cast, theClass);
-              }
             }
             else
             {
-              // DataManager.Instance.HandleSpellInterrupt(player, spellName, currentTime);
+              foreach (var (beginTime, action) in RecordManager.Instance.GetSpellsDuring(currentTime - 10, currentTime, true))
+              {
+                if (action is SpellCast sc && sc.Spell == spellName && sc.Caster == player)
+                {
+                  sc.Interrupted = true;
+                  break;
+                }
+              }
             }
 
             return true;

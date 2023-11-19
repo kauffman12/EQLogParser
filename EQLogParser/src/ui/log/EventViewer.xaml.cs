@@ -233,16 +233,16 @@ namespace EQLogParser
     private void EventsLogLoadingComplete(string _) => Load();
 
     #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
+    private bool DisposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!disposedValue)
+      if (!DisposedValue)
       {
         MainActions.EventsThemeChanged -= EventsThemeChanged;
         MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
         dataGrid.Dispose();
-        disposedValue = true;
+        DisposedValue = true;
       }
     }
 
