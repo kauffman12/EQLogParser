@@ -11,7 +11,7 @@ namespace EQLogParser
 
       if (item is LootRow row)
       {
-        if (row.IsCurrency)
+        if (row.Record.IsCurrency)
         {
           template = Application.Current.Resources["CurrencyTemplate"] as DataTemplate;
         }

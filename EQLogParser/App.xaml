@@ -149,7 +149,7 @@
       <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_MoneyBillWave" Foreground="#73b15d" />
     </DataTemplate>
     <DataTemplate x:Key="QuantityTemplate">
-      <TextBlock Text="{Binding Quantity}" HorizontalAlignment="Center" VerticalAlignment="Center"></TextBlock>
+      <TextBlock Text="{Binding Record.Quantity}" HorizontalAlignment="Center" VerticalAlignment="Center"></TextBlock>
     </DataTemplate>
     
     <DataTemplate x:Key="TemplateToolTip">

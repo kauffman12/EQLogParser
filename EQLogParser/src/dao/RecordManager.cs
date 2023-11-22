@@ -1,10 +1,8 @@
-﻿using log4net;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Windows.Data;
 
@@ -13,7 +11,6 @@ namespace EQLogParser
   internal class RecordManager
   {
     internal event Action<string> RecordsUpdatedEvent;
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<RecordManager> Lazy = new(() => new RecordManager());
     internal static RecordManager Instance => Lazy.Value; // instance
     // records
@@ -35,6 +32,7 @@ namespace EQLogParser
     // observables
     private readonly object CollectionLock = new();
     internal readonly ObservableCollection<QuickShareRecord> AllQuickShareRecords = new();
+    private readonly Timer EventTimer;
 
     private static readonly string[] TimedRecordTypes =
     {
@@ -60,7 +58,7 @@ namespace EQLogParser
         RecordDicts[type] = new List<RecordList>();
       }
 
-      new Timer(SendEvents, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+      EventTimer = new Timer(SendEvents, null, TimeSpan.FromMilliseconds(1500), TimeSpan.FromMilliseconds(1500));
     }
 
     internal void Add(DeathRecord record, double beginTime) => Add(DEATH_RECORDS, record, beginTime);
@@ -85,6 +83,7 @@ namespace EQLogParser
       GetDuring(HEAL_RECORDS, beginTime, endTime).Select(r => (r.Item1, (HealRecord)r.Item2));
     internal IEnumerable<(double, IAction)> GetSpellsDuring(double beginTime, double endTime, bool reverse = false) =>
       GetDuring(SPELL_RECORDS, beginTime, endTime, reverse).Select(r => (r.Item1, (IAction)r.Item2));
+    internal void Stop() => EventTimer?.Dispose();
 
     internal void Add(LootRecord record, double beginTime)
     {
@@ -104,12 +103,14 @@ namespace EQLogParser
         lock (toAssign)
         {
           // may need to remove more than one so search all
-          foreach (var group in toAssign.ToArray().Reverse())
+          var toAssignCopy = toAssign.ToArray();
+          for (var i = toAssignCopy.Length - 1; i >= 0; i--)
           {
-            foreach (var found in group.Records.Cast<LootRecord>().Where(r => r.Player == record.Player && r.Item == record.Item).ToArray())
+            var recordsCopy = toAssignCopy[i].Records.ToArray();
+            foreach (var found in recordsCopy.Cast<LootRecord>().Where(r => r.Player == record.Player && r.Item == record.Item))
             {
-              Remove(toAssign, group, found);
-              if (RecordDicts.TryGetValue(LOOT_RECORDS, out var looted) && looted.FirstOrDefault(r => r.BeginTime.Equals(group.BeginTime)) is { } orig)
+              Remove(toAssign, toAssignCopy[i], found);
+              if (RecordDicts.TryGetValue(LOOT_RECORDS, out var looted) && looted.FirstOrDefault(r => r.BeginTime.Equals(toAssignCopy[i].BeginTime)) is { } orig)
               {
                 lock (looted)
                 {

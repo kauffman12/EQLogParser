@@ -92,7 +92,7 @@ namespace EQLogParser
     internal void SetTestProcessor(BlockingCollection<Tuple<string, double, bool>> collection)
     {
       TestProcessor?.Dispose();
-      var name = TriggerStateManager.DEFAULT_USER;
+      var name = TriggerStateManager.DefaultUser;
       TestProcessor = new TriggerProcessor(name, $"Trigger Tester ({name})", ConfigUtil.PlayerName, AddTextEvent, AddTimerEvent);
       TestProcessor.LinkTo(collection);
       UIUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
@@ -156,7 +156,7 @@ namespace EQLogParser
           if (config.IsAdvanced)
           {
             // Only clear out everything if switched from basic
-            if (GetProcessors().FirstOrDefault(p => p.CurrentCharacterId == TriggerStateManager.DEFAULT_USER) != null)
+            if (GetProcessors().FirstOrDefault(p => p.CurrentCharacterId == TriggerStateManager.DefaultUser) != null)
             {
               LogReaders.ForEach(reader => reader.Dispose());
               LogReaders.Clear();
@@ -215,8 +215,8 @@ namespace EQLogParser
             {
               if (MainWindow.CurrentLogFile is { } currentFile)
               {
-                LogReaders.Add(new LogReader(new TriggerProcessor(TriggerStateManager.DEFAULT_USER,
-                  TriggerStateManager.DEFAULT_USER, ConfigUtil.PlayerName, AddTextEvent, AddTimerEvent), currentFile));
+                LogReaders.Add(new LogReader(new TriggerProcessor(TriggerStateManager.DefaultUser,
+                  TriggerStateManager.DefaultUser, ConfigUtil.PlayerName, AddTextEvent, AddTimerEvent), currentFile));
                 ((MainWindow)Application.Current?.MainWindow)?.ShowTriggersEnabled(true);
 
                 // only 1 running file in basic mode

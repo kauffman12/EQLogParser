@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 
@@ -12,7 +11,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for RandomViewer.xaml
   /// </summary>
-  public partial class RandomViewer : UserControl, IDisposable
+  public partial class RandomViewer : IDisposable
   {
     private readonly DispatcherTimer ReloadTimer;
     private double CurrentTimeLimit = 300;
@@ -27,53 +26,12 @@ namespace EQLogParser
       DataGridUtil.UpdateTableMargin(dataGrid);
       MainActions.EventsThemeChanged += EventsThemeChanged;
 
-      ReloadTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 2000) };
-      ReloadTimer.Tick += (_, _) =>
-      {
-        GetLatest();
-        ReloadTimer.Stop();
-
-        var sections = dataGrid.ItemsSource as List<dynamic>;
-        UpdateTotals(sections);
-
-        var expanded = new Dictionary<object, bool>();
-        foreach (var node in dataGrid.View.Nodes)
-        {
-          if (node.IsExpanded)
-          {
-            expanded[node.Item] = true;
-          }
-        }
-
-        dataGrid.View.Refresh();
-
-        foreach (var node in dataGrid.View.Nodes)
-        {
-          if (!node.IsExpanded && expanded.ContainsKey(node.Item))
-          {
-            dataGrid.ExpandNode(node);
-          }
-        }
-      };
-
+      ReloadTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
+      ReloadTimer.Tick += ReloadTimerTick;
       Load();
     }
 
-    private void RecordsUpdated(string type)
-    {
-      if (type == RecordManager.RANDOM_RECORDS && !ReloadTimer.IsEnabled)
-      {
-        ReloadTimer.Start();
-      }
-    }
-
-    internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
-    private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
-    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
-    private void LogLoadingComplete(string _) => Load();
-    private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
-
-    private void GetLatest()
+    private void ReloadTimerTick(object sender, EventArgs e)
     {
       var found = false;
       var sections = dataGrid.ItemsSource as List<dynamic>;
@@ -91,7 +49,44 @@ namespace EQLogParser
           found = true;
         }
       }
+
+      UpdateTotals(sections);
+
+      var expanded = new Dictionary<object, bool>();
+      foreach (var node in dataGrid.View.Nodes)
+      {
+        if (node.IsExpanded)
+        {
+          expanded[node.Item] = true;
+        }
+      }
+
+      dataGrid.View.Refresh();
+
+      foreach (var node in dataGrid.View.Nodes)
+      {
+        if (!node.IsExpanded && expanded.ContainsKey(node.Item))
+        {
+          dataGrid.ExpandNode(node);
+        }
+      }
+
+      ReloadTimer.Stop();
     }
+
+    private void RecordsUpdated(string type)
+    {
+      if (type == RecordManager.RANDOM_RECORDS && !ReloadTimer.IsEnabled)
+      {
+        ReloadTimer.Start();
+      }
+    }
+
+    internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
+    private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
+    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
+    private void LogLoadingComplete(string _) => Load();
+    private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
 
     private void Load()
     {
