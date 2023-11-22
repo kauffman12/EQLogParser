@@ -1250,6 +1250,7 @@ namespace EQLogParser
       (triggerTestWindow?.Content as TriggersTester)?.Dispose();
       (quickShareLogWindow?.Content as QuickShareLogView)?.Dispose();
       PlayerManager.Instance?.Save();
+      RecordManager.Instance.Stop();
       ChatManager.Instance.Stop();
       TriggerManager.Instance.Stop();
       TriggerStateManager.Instance.Stop();

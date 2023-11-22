@@ -233,9 +233,9 @@ namespace EQLogParser
       }
       else
       {
-        if (CurrentCharacterId != TriggerStateManager.DEFAULT_USER)
+        if (CurrentCharacterId != TriggerStateManager.DefaultUser)
         {
-          CurrentCharacterId = TriggerStateManager.DEFAULT_USER;
+          CurrentCharacterId = TriggerStateManager.DefaultUser;
           thePropertyGrid.SelectedObject = null;
           theTreeView.EnableAndRefreshTriggers(true, CurrentCharacterId);
         }

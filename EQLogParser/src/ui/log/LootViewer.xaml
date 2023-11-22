@@ -37,7 +37,6 @@
       <ComboBox Margin="0,0,0,2" x:Name="itemsList" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,0,2" x:Name="npcsList" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,8,2" x:Name="optionsList" SelectionChanged="OptionsChanged" />
-      <Button Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Refresh</Button>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
@@ -62,14 +61,14 @@
         <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Path=Time, Converter={StaticResource dateTimeConverter}}" 
                                    TextAlignment="Center" HeaderText="Time"/>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Player}" HeaderText="Player" />
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Item}" HeaderText="Item" />
-        <syncfusion:GridTemplateColumn HeaderText="Quantity" MappingName="Quantity">
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Record.Player}" HeaderText="Player" />
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Record.Item}" HeaderText="Item" />
+        <syncfusion:GridTemplateColumn DisplayBinding="{Binding Path=Record.Quantity}" HeaderText="Quantity">
           <syncfusion:GridTemplateColumn.CellTemplateSelector>
             <local:LootQuantityTemplateSelector />
           </syncfusion:GridTemplateColumn.CellTemplateSelector>
         </syncfusion:GridTemplateColumn>
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Npc}" HeaderText="NPC" MinimumWidth="225"/>
+        <syncfusion:GridTextColumn DisplayBinding="{Binding Path=Record.Npc}" HeaderText="NPC" MinimumWidth="225"/>
       </syncfusion:SfDataGrid.Columns>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>

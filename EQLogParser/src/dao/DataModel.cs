@@ -22,6 +22,7 @@ namespace EQLogParser
       CreateMap<TriggerNode, TriggerNode>();
       CreateMap<ExportTriggerNode, TriggerNode>();
       CreateMap<LegacyOverlay, Overlay>();
+      CreateMap<LootRecord, LootRecord>();
     }
   }
 
@@ -415,6 +416,18 @@ namespace EQLogParser
     public string Player { get; set; }
     public string Npc { get; set; }
     public bool IsCurrency { get; set; }
+
+    public override bool Equals(object obj)
+    {
+      var other = obj as LootRecord;
+      return other != null && Item == other.Item && Quantity == other.Quantity && Player == other.Player &&
+        Npc == other.Npc && IsCurrency == other.IsCurrency;
+    }
+
+    public override int GetHashCode()
+    {
+      return HashCode.Combine(Item, Quantity, Player, Npc, IsCurrency);
+    }
   }
 
   internal class SpecialRecord : IAction
@@ -470,8 +483,9 @@ namespace EQLogParser
     public string[] Split { get; set; }
   }
 
-  internal class LootRow : LootRecord
+  internal class LootRow
   {
+    public LootRecord Record { get; set; }
     public double Time { get; set; }
   }
 

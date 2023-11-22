@@ -40,7 +40,7 @@ namespace EQLogParser
               BeginTime = dateTime,
               Key = fullKey,
               From = chatType.Sender,
-              To = (to == "You" && processorName != null && characterId != TriggerStateManager.DEFAULT_USER) ? processorName : TextUtils.ToUpper(to),
+              To = (to == "You" && processorName != null && characterId != TriggerStateManager.DefaultUser) ? processorName : TextUtils.ToUpper(to),
               IsMine = chatType.SenderIsYou,
               Type = "GINA"
             };

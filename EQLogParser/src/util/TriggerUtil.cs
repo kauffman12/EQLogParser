@@ -23,12 +23,12 @@ namespace EQLogParser
 {
   internal static class TriggerUtil
   {
-    public const string SHARE_TRIGGER = "EQLPT";
+    public const string ShareTrigger = "EQLPT";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new();
     private static readonly ConcurrentDictionary<string, CharacterData> QuickShareCache = new();
-    private const string ExtTrigger = "tgf";
-    private const string ExtOverlay = "ogf";
+    private const string EXT_TRIGGER = "tgf";
+    private const string EXT_OVERLAY = "ogf";
     internal static double GetTimerBarHeight(double fontSize) => fontSize + 2;
     internal static void ImportTriggers(TriggerNode parent) => Import(parent);
     internal static void ImportOverlays(TriggerNode triggerNode) => Import(triggerNode, false);
@@ -539,10 +539,10 @@ namespace EQLogParser
         {
           if (exportList.Count > 0)
           {
-            var isTriggers = exportList[0].Name == TriggerStateManager.TRIGGERS;
+            var isTriggers = exportList[0].Name == TriggerStateManager.Triggers;
             var result = JsonSerializer.Serialize(exportList);
             var saveFileDialog = new SaveFileDialog();
-            var filter = isTriggers ? $"Triggers File (*.{ExtTrigger}.gz)|*.{ExtTrigger}.gz" : $"Overlays File (*.{ExtOverlay}.gz)|*.{ExtOverlay}.gz";
+            var filter = isTriggers ? $"Triggers File (*.{EXT_TRIGGER}.gz)|*.{EXT_TRIGGER}.gz" : $"Overlays File (*.{EXT_OVERLAY}.gz)|*.{EXT_OVERLAY}.gz";
             saveFileDialog.Filter = filter;
 
             if (saveFileDialog.ShowDialog() == true)
@@ -571,7 +571,7 @@ namespace EQLogParser
     internal static void CheckQuickShare(ChatType chatType, string action, double dateTime, string characterId, string processorName)
     {
       // if Quick Share data is recent then try to handle it
-      if (chatType.Sender != null && action.IndexOf($"{{{SHARE_TRIGGER}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
+      if (chatType.Sender != null && action.IndexOf($"{{{ShareTrigger}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
           action.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 10))
       {
         var start = index + 7;
@@ -579,7 +579,7 @@ namespace EQLogParser
         if (action.Length > (start + finish))
         {
           var quickShareKey = action.Substring(start, finish);
-          var fullKey = $"{{{SHARE_TRIGGER}:{quickShareKey}}}";
+          var fullKey = $"{{{ShareTrigger}:{quickShareKey}}}";
           if (!string.IsNullOrEmpty(quickShareKey))
           {
             var to = chatType.Channel == ChatChannels.TELL ? "You" : chatType.Channel;
@@ -588,9 +588,9 @@ namespace EQLogParser
               BeginTime = dateTime,
               Key = fullKey,
               From = chatType.Sender,
-              To = (to == "You" && processorName != null && characterId != TriggerStateManager.DEFAULT_USER) ? processorName : TextUtils.ToUpper(to),
+              To = (to == "You" && processorName != null && characterId != TriggerStateManager.DefaultUser) ? processorName : TextUtils.ToUpper(to),
               IsMine = chatType.SenderIsYou,
-              Type = SHARE_TRIGGER
+              Type = ShareTrigger
             };
 
             RecordManager.Instance.Add(record);
@@ -628,7 +628,7 @@ namespace EQLogParser
     internal static void ImportQuickShare(string shareKey, string from)
     {
       // if Quick Share data is recent then try to handle it
-      if (shareKey.IndexOf($"{{{SHARE_TRIGGER}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
+      if (shareKey.IndexOf($"{{{ShareTrigger}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
           shareKey.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 10))
       {
         var start = index + 7;
@@ -683,7 +683,7 @@ namespace EQLogParser
           {
             if (await response.Content.ReadAsStringAsync() is var shareLink && shareLink != "")
             {
-              var withKey = $"{{{SHARE_TRIGGER}:{shareLink}}}";
+              var withKey = $"{{{ShareTrigger}:{shareLink}}}";
 
               var record = new QuickShareRecord
               {
@@ -692,7 +692,7 @@ namespace EQLogParser
                 From = "You",
                 IsMine = true,
                 To = "Created Share Key",
-                Type = SHARE_TRIGGER
+                Type = ShareTrigger
               };
 
               RecordManager.Instance.Add(record);
@@ -864,8 +864,8 @@ namespace EQLogParser
     {
       try
       {
-        var defExt = triggers ? $".{ExtTrigger}.gz" : $".{ExtOverlay}.gz";
-        var filter = triggers ? $"All Supported Files|*.{ExtTrigger}.gz;*.gtp" : $"All Supported Files|*.{ExtOverlay}.gz";
+        var defExt = triggers ? $".{EXT_TRIGGER}.gz" : $".{EXT_OVERLAY}.gz";
+        var filter = triggers ? $"All Supported Files|*.{EXT_TRIGGER}.gz;*.gtp" : $"All Supported Files|*.{EXT_OVERLAY}.gz";
 
         // WPF doesn't have its own file chooser so use Win32 Version
         var dialog = new OpenFileDialog
@@ -881,7 +881,7 @@ namespace EQLogParser
           var fileInfo = new FileInfo(dialog.FileName);
           if (fileInfo.Exists && fileInfo.Length < 100000000)
           {
-            if (dialog.FileName.EndsWith($"{ExtTrigger}.gz") || dialog.FileName.EndsWith($"{ExtOverlay}.gz"))
+            if (dialog.FileName.EndsWith($"{EXT_TRIGGER}.gz") || dialog.FileName.EndsWith($"{EXT_OVERLAY}.gz"))
             {
               var decompressionStream = new GZipStream(fileInfo.OpenRead(), CompressionMode.Decompress);
               var reader = new StreamReader(decompressionStream);

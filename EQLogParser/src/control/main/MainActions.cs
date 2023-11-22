@@ -32,8 +32,8 @@ namespace EQLogParser
     internal static event Action<List<Fight>> EventsFightSelectionChanged;
     internal static readonly HttpClient THE_HTTP_CLIENT = new();
 
-    private const string PetsListTitle = "Verified Pets ({0})";
-    private const string PlayerListTitle = "Verified Players ({0})";
+    private const string PETS_LIST_TITLE = "Verified Pets ({0})";
+    private const string PLAYER_LIST_TITLE = "Verified Players ({0})";
     private static readonly ObservableCollection<dynamic> VerifiedPlayersView = new();
     private static readonly ObservableCollection<dynamic> VerifiedPetsView = new();
     private static readonly ObservableCollection<PetMapping> PetPlayersView = new();
@@ -361,8 +361,8 @@ namespace EQLogParser
       var entry = new ExpandoObject() as dynamic;
       entry.Name = Labels.UNASSIGNED;
       VerifiedPlayersView.Add(entry);
-      DockingManager.SetHeader(petsWindow, string.Format(PetsListTitle, VerifiedPetsView.Count));
-      DockingManager.SetHeader(playersWindow, string.Format(PlayerListTitle, VerifiedPlayersView.Count));
+      DockingManager.SetHeader(petsWindow, string.Format(PETS_LIST_TITLE, VerifiedPetsView.Count));
+      DockingManager.SetHeader(playersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
     }
 
     internal static Dictionary<string, ContentControl> GetOpenWindows(DockingManager dockSite, DocumentTabControl chartTab)
@@ -452,7 +452,7 @@ namespace EQLogParser
         {
           var entry = InsertNameIntoSortedList(name, VerifiedPlayersView);
           entry.PlayerClass = PlayerManager.Instance.GetPlayerClass(name);
-          DockingManager.SetHeader(playersWindow, string.Format(PlayerListTitle, VerifiedPlayersView.Count));
+          DockingManager.SetHeader(playersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
         });
       };
 
@@ -478,7 +478,7 @@ namespace EQLogParser
           if (found != null)
           {
             VerifiedPlayersView.Remove(found);
-            DockingManager.SetHeader(playersWindow, string.Format(PlayerListTitle, VerifiedPlayersView.Count));
+            DockingManager.SetHeader(playersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
 
             var existing = PetPlayersView.FirstOrDefault(item => item.Owner.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (existing != null)
@@ -500,7 +500,7 @@ namespace EQLogParser
       PlayerManager.Instance.EventsNewVerifiedPet += (_, name) => main.Dispatcher.InvokeAsync(() =>
       {
         InsertNameIntoSortedList(name, VerifiedPetsView);
-        DockingManager.SetHeader(petsWindow, string.Format(PetsListTitle, VerifiedPetsView.Count));
+        DockingManager.SetHeader(petsWindow, string.Format(PETS_LIST_TITLE, VerifiedPetsView.Count));
       });
 
       PlayerManager.Instance.EventsRemoveVerifiedPet += (_, name) =>
@@ -511,7 +511,7 @@ namespace EQLogParser
           if (found != null)
           {
             VerifiedPetsView.Remove(found);
-            DockingManager.SetHeader(petsWindow, string.Format(PetsListTitle, VerifiedPetsView.Count));
+            DockingManager.SetHeader(petsWindow, string.Format(PETS_LIST_TITLE, VerifiedPetsView.Count));
 
             var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (existing != null)
