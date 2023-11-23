@@ -49,11 +49,13 @@ namespace EQLogParser
 
         if (needUpgrade)
         {
+          // upgrade from old json trigger format
           Upgrade();
         }
 
-        var config = Db.GetCollection<TriggerConfig>(CONFIG_COL);
-        config.EnsureIndex(x => x.Id);
+        var configs = Db.GetCollection<TriggerConfig>(CONFIG_COL);
+        configs.EnsureIndex(x => x.Id);
+        UpgradeConfig(configs);
 
         var tree = Db.GetCollection<TriggerNode>(TREE_COL);
 
@@ -111,7 +113,7 @@ namespace EQLogParser
       Db = null;
     }
 
-    internal void AddCharacter(string name, string filePath)
+    internal void AddCharacter(string name, string filePath, string voice, int voiceRate)
     {
       if (GetConfig() is { } config)
       {
@@ -119,6 +121,8 @@ namespace EQLogParser
         {
           Name = name,
           FilePath = filePath,
+          Voice = voice,
+          VoiceRate = voiceRate,
           Id = Guid.NewGuid().ToString()
         };
 
@@ -173,7 +177,7 @@ namespace EQLogParser
       }
     }
 
-    internal void UpdateCharacter(string id, string name, string filePath)
+    internal void UpdateCharacter(string id, string name, string filePath, string voice, int voiceRate)
     {
       if (GetConfig() is { } config)
       {
@@ -181,6 +185,8 @@ namespace EQLogParser
         {
           existing.Name = name;
           existing.FilePath = filePath;
+          existing.Voice = voice;
+          existing.VoiceRate = voiceRate;
           UpdateConfig(config);
         }
       }
@@ -827,6 +833,40 @@ namespace EQLogParser
     }
 
     // remove eventually
+    private void UpgradeConfig(ILiteCollection<TriggerConfig> configs)
+    {
+      lock (ConfigLock)
+      {
+        if (configs.FindAll().FirstOrDefault() is { } config)
+        {
+          var needUpdate = false;
+          var rate = ConfigUtil.GetSettingAsInteger("TriggersVoiceRate");
+          var voice = ConfigUtil.GetSetting("TriggersSelectedVoice");
+          if (string.IsNullOrEmpty(config.Voice))
+          {
+            config.VoiceRate = (rate == int.MaxValue) ? 0 : rate;
+            config.Voice = voice;
+            needUpdate = true;
+          }
+
+          foreach (var character in config.Characters)
+          {
+            if (string.IsNullOrEmpty(character.Voice))
+            {
+              character.VoiceRate = (rate == int.MaxValue) ? 0 : rate;
+              character.Voice = voice;
+              needUpdate = true;
+            }
+          }
+
+          if (needUpdate)
+          {
+            configs.Update(config);
+          }
+        }
+      }
+    }
+
     private void Upgrade()
     {
       var overlayIds = new Dictionary<string, string>();

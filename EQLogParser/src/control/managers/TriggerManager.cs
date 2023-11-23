@@ -59,8 +59,6 @@ namespace EQLogParser
     internal void CloseOverlay(string id) => CloseOverlay(id, TextWindows, TimerWindows);
     internal void CloseOverlays() => CloseOverlays(TextWindows, TimerWindows);
     internal void Select(string id) => EventsSelectTrigger?.Invoke(id);
-    internal void SetVoice(string voice) => GetProcessors().ForEach(p => p.SetVoice(voice));
-    internal void SetVoiceRate(int rate) => GetProcessors().ForEach(p => p.SetVoiceRate(rate));
 
     internal void TriggersUpdated()
     {
@@ -89,11 +87,12 @@ namespace EQLogParser
       TimerOverlayTimer?.Stop();
     }
 
-    internal void SetTestProcessor(BlockingCollection<Tuple<string, double, bool>> collection)
+    internal void SetTestProcessor(TriggerConfig config, BlockingCollection<Tuple<string, double, bool>> collection)
     {
       TestProcessor?.Dispose();
       var name = TriggerStateManager.DefaultUser;
-      TestProcessor = new TriggerProcessor(name, $"Trigger Tester ({name})", ConfigUtil.PlayerName, AddTextEvent, AddTimerEvent);
+      TestProcessor = new TriggerProcessor(name, $"Trigger Tester ({name})", ConfigUtil.PlayerName, config.Voice,
+        config.VoiceRate, AddTextEvent, AddTimerEvent);
       TestProcessor.LinkTo(collection);
       UIUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
     }
@@ -104,7 +103,8 @@ namespace EQLogParser
       string server = null;
       var playerName = character.Name;
       FileUtil.ParseFileName(character.FilePath, ref playerName, ref server);
-      TestProcessor = new TriggerProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, AddTextEvent, AddTimerEvent);
+      TestProcessor = new TriggerProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, character.Voice,
+        character.VoiceRate, AddTextEvent, AddTimerEvent);
       TestProcessor.LinkTo(collection);
       UIUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
     }
@@ -170,17 +170,18 @@ namespace EQLogParser
               // remove readers if the character no longer exists
               if (reader.GetProcessor() is TriggerProcessor processor)
               {
-                // use processor name as well incase it's a rename
+                // use processor name as well in-case it's a rename
                 var found = config.Characters.FirstOrDefault(character =>
                   character.Id == processor.CurrentCharacterId && character.Name == processor.CurrentProcessorName);
-                if (found == null || !found.IsEnabled)
+                if (found is not { IsEnabled: true })
                 {
                   reader.Dispose();
                   toRemove.Add(reader);
                 }
                 else
                 {
-
+                  processor.SetVoice(found.Voice);
+                  processor.SetVoiceRate(found.VoiceRate);
                   alreadyRunning.Add(found.Id);
                 }
               }
@@ -197,8 +198,8 @@ namespace EQLogParser
                 string server = null;
                 var playerName = character.Name;
                 FileUtil.ParseFileName(character.FilePath, ref playerName, ref server);
-                LogReaders.Add(new LogReader(new TriggerProcessor(character.Id, character.Name, playerName, AddTextEvent, AddTimerEvent),
-                  character.FilePath));
+                LogReaders.Add(new LogReader(new TriggerProcessor(character.Id, character.Name, playerName, character.Voice,
+                  character.VoiceRate, AddTextEvent, AddTimerEvent), character.FilePath));
                 RunningFiles[character.FilePath] = true;
               }
             }
@@ -215,8 +216,8 @@ namespace EQLogParser
             {
               if (MainWindow.CurrentLogFile is { } currentFile)
               {
-                LogReaders.Add(new LogReader(new TriggerProcessor(TriggerStateManager.DefaultUser,
-                  TriggerStateManager.DefaultUser, ConfigUtil.PlayerName, AddTextEvent, AddTimerEvent), currentFile));
+                LogReaders.Add(new LogReader(new TriggerProcessor(TriggerStateManager.DefaultUser, TriggerStateManager.DefaultUser,
+                  ConfigUtil.PlayerName, config.Voice, config.VoiceRate, AddTextEvent, AddTimerEvent), currentFile));
                 ((MainWindow)Application.Current?.MainWindow)?.ShowTriggersEnabled(true);
 
                 // only 1 running file in basic mode
@@ -311,11 +312,11 @@ namespace EQLogParser
       var removeList = new List<string>();
       var data = GetProcessors().SelectMany(processor => processor.GetActiveTimers()).ToList();
 
-      foreach (var keypair in windows)
+      foreach (var kv in windows)
       {
         var done = false;
         var shortTick = false;
-        if (keypair.Value is { } windowData)
+        if (kv.Value is { } windowData)
         {
           if (windowData.TheWindow is TextOverlayWindow textWindow)
           {
@@ -346,7 +347,7 @@ namespace EQLogParser
               }
               else if (nowTicks > windowData.RemoveTicks)
               {
-                removeList.Add(keypair.Key);
+                removeList.Add(kv.Key);
               }
             }
             else

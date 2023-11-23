@@ -44,8 +44,8 @@ namespace EQLogParser
     private LinkedList<TriggerWrapper> ActiveTriggers;
     private bool Running = true;
 
-    internal TriggerProcessor(string id, string name, string playerName, Action<string, Trigger> addTextEvent,
-      Action<Trigger, List<TimerData>> addTimerEvent)
+    internal TriggerProcessor(string id, string name, string playerName, string voice, int voiceRate,
+      Action<string, Trigger> addTextEvent, Action<Trigger, List<TimerData>> addTimerEvent)
     {
       CurrentCharacterId = id;
       CurrentProcessorName = name;
@@ -57,8 +57,8 @@ namespace EQLogParser
 
       ActiveTriggers = GetActiveTriggers();
       Synth = TriggerUtil.GetSpeechSynthesizer();
-      SetVoice(TriggerUtil.GetSelectedVoice());
-      SetVoiceRate(TriggerUtil.GetVoiceRate());
+      SetVoice(voice);
+      SetVoiceRate(voiceRate);
       SoundPlayer = new SoundPlayer();
     }
 
@@ -99,7 +99,7 @@ namespace EQLogParser
     {
       lock (VoiceLock)
       {
-        if (Synth != null && !string.IsNullOrEmpty(voice) && voice.Length > 0 && Synth.Voice.Name != voice)
+        if (Synth != null && !string.IsNullOrEmpty(voice) && Synth.Voice.Name != voice)
         {
           Synth.SelectVoice(voice);
         }

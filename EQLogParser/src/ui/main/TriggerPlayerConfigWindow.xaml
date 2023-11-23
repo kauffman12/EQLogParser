@@ -12,6 +12,7 @@
         TitleBarForeground="{DynamicResource PrimaryDarken}"
         TitleTextAlignment="Left"
         Topmost="True"
+        Closing="TriggerPlayerConfigWindowOnClosing"
         UseLayoutRounding="True"
         WindowStartupLocation="CenterOwner"
         SizeToContent="WidthAndHeight"
@@ -48,6 +49,33 @@
             </Grid.ColumnDefinitions>
             <Button Grid.Column="0" Content="Select Log" FontSize="{DynamicResource EQContentSize}" HorizontalAlignment="Left" Width="94" Padding="10,4,12,4" Click="ChooseFileClicked"/>
             <TextBox Grid.Column="1" Name="txtFilePath" FontStyle="Italic" Text="Select Log File" TextChanged="TextChanged" FontSize="{DynamicResource EQContentSize}" IsReadOnly="True" Width="300"/>
+          </Grid>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="110" />
+              <ColumnDefinition Width="70*" />
+            </Grid.ColumnDefinitions>
+            <Label Grid.Column="0" Content="Voice:" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" />
+            <ComboBox Grid.Column="1" x:Name="voices" SelectedIndex="0" Width="300" SelectionChanged="OptionsChanged"/>
+          </Grid>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="110" />
+              <ColumnDefinition Width="70*" />
+            </Grid.ColumnDefinitions>
+            <Label Grid.Column="0" Content="Voice Rate:" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" />
+            <ComboBox Grid.Column="1" x:Name="rateOption" SelectedIndex="0" Width="300" SelectionChanged="OptionsChanged">
+              <ComboBoxItem>Default Voice Rate</ComboBoxItem>
+              <ComboBoxItem>Increased Rate 1</ComboBoxItem>
+              <ComboBoxItem>Increased Rate 2</ComboBoxItem>
+              <ComboBoxItem>Increased Rate 3</ComboBoxItem>
+              <ComboBoxItem>Increased Rate 4</ComboBoxItem>
+              <ComboBoxItem>Increased Rate 5</ComboBoxItem>
+            </ComboBox>
           </Grid>
         </StackPanel>
       </StackPanel>

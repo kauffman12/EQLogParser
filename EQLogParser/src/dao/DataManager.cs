@@ -645,7 +645,7 @@ namespace EQLogParser
     private SpellData FindPreviousCast(string player, List<SpellData> output, bool isAdps = false)
     {
       var filtered = output.Where(value => !isAdps || value.Adps > 0).ToArray();
-      foreach (var (beginTime, cast) in RecordManager.Instance.GetSpellsLast(8))
+      foreach (var (_, cast) in RecordManager.Instance.GetSpellsLast(8))
       {
         if (!cast.Interrupted)
         {

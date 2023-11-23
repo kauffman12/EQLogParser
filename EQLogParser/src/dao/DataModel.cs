@@ -226,6 +226,8 @@ namespace EQLogParser
     public string Name { get; set; }
     public string FilePath { get; set; }
     public bool IsEnabled { get; set; }
+    public string Voice { get; set; }
+    public int VoiceRate { get; set; }
   }
 
   internal class TriggerConfig
@@ -234,6 +236,8 @@ namespace EQLogParser
     public bool IsAdvanced { get; set; }
     public List<TriggerCharacter> Characters { get; set; } = new();
     public bool IsEnabled { get; set; }
+    public string Voice { get; set; }
+    public int VoiceRate { get; set; }
   }
 
   internal class ExportTriggerNode : TriggerNode
@@ -560,7 +564,7 @@ namespace EQLogParser
       }
     }
 
-    public const string BREAKTIME = "Break Time";
+    public const string Breaktime = "Break Time";
     public bool Dead { get; set; } = false;
     public double BeginDamageTime { get; set; } = double.NaN;
     public double BeginTankingTime { get; set; } = double.NaN;

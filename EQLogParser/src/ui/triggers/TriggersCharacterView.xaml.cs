@@ -33,6 +33,12 @@ namespace EQLogParser
         {
           dataGrid.ItemsSource = updatedSource;
         }
+        else
+        {
+          var selected = dataGrid.SelectedIndex;
+          dataGrid.View.Refresh();
+          dataGrid.SelectedIndex = selected;
+        }
       }
     }
 
