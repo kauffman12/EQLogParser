@@ -4,6 +4,8 @@ using Syncfusion.Licensing;
 using System;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Interop;
+using System.Windows.Media;
 
 namespace EQLogParser
 {
@@ -12,7 +14,7 @@ namespace EQLogParser
   /// </summary>
   public partial class App : Application
   {
-    internal IMapper AutoMap;
+    internal static IMapper AutoMap;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     public App()
@@ -26,6 +28,8 @@ namespace EQLogParser
       AppDomain.CurrentDomain.UnhandledException += DomainUnhandledException;
       AutoMap = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
       Log.Info($"Using DotNet {Environment.Version}");
+      RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
+      Log.Info("RenderMode: " + RenderOptions.ProcessRenderMode);
     }
 
     private void DomainUnhandledException(object sender, UnhandledExceptionEventArgs e)

@@ -104,31 +104,25 @@ namespace EQLogParser
         CurrentFontSize = ConfigUtil.GetSettingAsDouble("ApplicationFontSize", 12);
         CurrentTheme = ConfigUtil.GetSetting("CurrentTheme", "MaterialDark");
 
-        RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
-        Log.Info("RenderMode: " + RenderOptions.ProcessRenderMode);
-
         if (UIElementUtil.GetSystemFontFamilies().FirstOrDefault(font => font.Source == CurrentFontFamily) == null)
         {
           Log.Info(CurrentFontFamily + " Not Found, Trying Default");
           CurrentFontFamily = "Segoe UI";
         }
 
-        MainActions.LoadTheme(this, CurrentTheme);
         Application.Current.Resources["EQChatFontSize"] = 16.0; // changed when chat archive loads
         Application.Current.Resources["EQChatFontFamily"] = new FontFamily("Segoe UI");
         Application.Current.Resources["EQLogFontSize"] = 16.0; // changed when chat archive loads
         Application.Current.Resources["EQLogFontFamily"] = new FontFamily("Segoe UI");
+        MainActions.LoadTheme(this, CurrentTheme);
 
         InitializeComponent();
 
         // add tabs to the right
         ((DocumentContainer)dockSite.DocContainer).AddTabDocumentAtLast = true;
 
-        var version = Application.ResourceAssembly.GetName().Version!.ToString();
-        version = version[..^2];
-
         // update titles
-        versionText.Text = "v" + version;
+        versionText.Text = "v" + Application.ResourceAssembly.GetName().Version!.ToString()[..^2];
 
         MainActions.InitPetOwners(this, petMappingGrid, ownerList, petMappingWindow);
         MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, classList, verifiedPlayersWindow, petMappingWindow);
@@ -264,26 +258,29 @@ namespace EQLogParser
         TriggerManager.Instance.Start();
 
         // not used anymore. time to cleanup
-        ConfigUtil.RemoveSetting("AudioTriggersWatchForGINA");
-        ConfigUtil.RemoveSetting("TriggersWatchForGINA");
-        ConfigUtil.RemoveSetting("AudioTriggersEnabled");
-        ConfigUtil.RemoveSetting("OverlayRankColor1");
-        ConfigUtil.RemoveSetting("OverlayRankColor2");
-        ConfigUtil.RemoveSetting("OverlayRankColor3");
-        ConfigUtil.RemoveSetting("OverlayRankColor4");
-        ConfigUtil.RemoveSetting("OverlayRankColor5");
-        ConfigUtil.RemoveSetting("OverlayRankColor6");
-        ConfigUtil.RemoveSetting("OverlayRankColor7");
-        ConfigUtil.RemoveSetting("OverlayRankColor8");
-        ConfigUtil.RemoveSetting("OverlayRankColor9");
-        ConfigUtil.RemoveSetting("OverlayRankColor10");
-        ConfigUtil.RemoveSetting("OverlayShowCritRate");
-        ConfigUtil.RemoveSetting("EnableHardwareAcceleration");
-        ConfigUtil.RemoveSetting("TriggersVoiceRate");
-        ConfigUtil.RemoveSetting("TriggersSelectedVoice");
+        Dispatcher.Invoke(() =>
+        {
+          ConfigUtil.RemoveSetting("AudioTriggersWatchForGINA");
+          ConfigUtil.RemoveSetting("TriggersWatchForGINA");
+          ConfigUtil.RemoveSetting("AudioTriggersEnabled");
+          ConfigUtil.RemoveSetting("OverlayRankColor1");
+          ConfigUtil.RemoveSetting("OverlayRankColor2");
+          ConfigUtil.RemoveSetting("OverlayRankColor3");
+          ConfigUtil.RemoveSetting("OverlayRankColor4");
+          ConfigUtil.RemoveSetting("OverlayRankColor5");
+          ConfigUtil.RemoveSetting("OverlayRankColor6");
+          ConfigUtil.RemoveSetting("OverlayRankColor7");
+          ConfigUtil.RemoveSetting("OverlayRankColor8");
+          ConfigUtil.RemoveSetting("OverlayRankColor9");
+          ConfigUtil.RemoveSetting("OverlayRankColor10");
+          ConfigUtil.RemoveSetting("OverlayShowCritRate");
+          ConfigUtil.RemoveSetting("EnableHardwareAcceleration");
+          ConfigUtil.RemoveSetting("TriggersVoiceRate");
+          ConfigUtil.RemoveSetting("TriggersSelectedVoice");
+        }, DispatcherPriority.Background);
 
         // cleanup downloads
-        Dispatcher.InvokeAsync(MainActions.Cleanup);
+        Dispatcher.InvokeAsync(MainActions.Cleanup, DispatcherPriority.Background);
       }
       catch (Exception e)
       {
