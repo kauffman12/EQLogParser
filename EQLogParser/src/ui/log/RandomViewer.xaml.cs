@@ -50,7 +50,7 @@ namespace EQLogParser
         }
       }
 
-      UpdateTotals(sections);
+      var remaining = UpdateTotals(sections);
 
       var expanded = new Dictionary<object, bool>();
       foreach (var node in dataGrid.View.Nodes)
@@ -71,7 +71,17 @@ namespace EQLogParser
         }
       }
 
-      ReloadTimer.Stop();
+      if (remaining)
+      {
+        if (!ReloadTimer.IsEnabled)
+        {
+          ReloadTimer.Start();
+        }
+      }
+      else
+      {
+        ReloadTimer.Stop();
+      }
     }
 
     private void RecordsUpdated(string type)
@@ -97,7 +107,11 @@ namespace EQLogParser
         LastHandled = record;
       }
 
-      UpdateTotals(sections);
+      if (UpdateTotals(sections))
+      {
+        ReloadTimer.Start();
+      }
+
       dataGrid.ItemsSource = sections;
     }
 
@@ -159,8 +173,9 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateTotals(List<dynamic> sections)
+    private bool UpdateTotals(List<dynamic> sections)
     {
+      var remaining = false;
       foreach (var section in sections)
       {
         section.Player = "Highest Roll: " + string.Join(" + ", section.Winners).Trim();
@@ -174,11 +189,7 @@ namespace EQLogParser
         if (duration < CurrentTimeLimit)
         {
           section.Duration = "Remaining: " + DateUtil.FormatSimpleMS((long)(CurrentTimeLimit - duration) * TimeSpan.TicksPerSecond);
-
-          if (!ReloadTimer.IsEnabled)
-          {
-            ReloadTimer.Start();
-          }
+          remaining = true;
         }
         else
         {
@@ -196,6 +207,8 @@ namespace EQLogParser
       {
         titleLabel.Content = "No Randoms Found";
       }
+
+      return remaining;
     }
 
     private void OptionsChanged(object sender, EventArgs e)
