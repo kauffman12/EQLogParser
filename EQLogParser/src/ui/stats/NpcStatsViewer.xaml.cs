@@ -11,7 +11,7 @@ namespace EQLogParser
   /// </summary>
   public partial class NpcStatsViewer : IDisposable
   {
-    private const string Nodata = "No Spell Resist Data Found";
+    private const string NODATA = "No Spell Resist Data Found";
 
     public NpcStatsViewer()
     {
@@ -112,7 +112,7 @@ namespace EQLogParser
       }
 
       dataGrid.ItemsSource = npcStatsRows.Values.OrderBy(row => row.Name).ToList();
-      titleLabel.Content = npcStatsRows.Values.Count == 0 ? Nodata : "Spell Resists vs " + npcStatsRows.Count + " Unique NPCs";
+      titleLabel.Content = npcStatsRows.Values.Count == 0 ? NODATA : "Spell Resists vs " + npcStatsRows.Count + " Unique NPCs";
       return;
 
       Tuple<double, string> GetRate(uint landed, uint notLanded)
@@ -171,7 +171,6 @@ namespace EQLogParser
     {
       // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
       Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
       GC.SuppressFinalize(this);
     }
     #endregion

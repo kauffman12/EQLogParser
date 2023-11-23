@@ -18,6 +18,7 @@ namespace EQLogParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private BlockingCollection<Tuple<string, double, bool>> Buffer;
+    private TriggerConfig TheConfig;
 
     public TriggersTester()
     {
@@ -42,6 +43,8 @@ namespace EQLogParser
 
     private void UpdateCharacterList(TriggerConfig config)
     {
+      TheConfig = config;
+
       if (characterList != null)
       {
         if (!config.IsAdvanced)
@@ -66,6 +69,11 @@ namespace EQLogParser
           if (updatedSource != null)
           {
             characterList.ItemsSource = updatedSource;
+          }
+          else
+          {
+            // workaround to get selected item to refresh
+            characterList.SelectedIndex = -1;
           }
 
           if (characterList.Items.Count > 0)
@@ -107,8 +115,11 @@ namespace EQLogParser
             if (characterList.Visibility != Visibility.Visible)
             {
               Buffer?.CompleteAdding();
-              Buffer = new(new ConcurrentQueue<Tuple<string, double, bool>>());
-              TriggerManager.Instance.SetTestProcessor(Buffer);
+              if (TheConfig != null)
+              {
+                Buffer = new(new ConcurrentQueue<Tuple<string, double, bool>>());
+                TriggerManager.Instance.SetTestProcessor(TheConfig, Buffer);
+              }
             }
             else
             {

@@ -26,8 +26,8 @@
         </InlineUIContainer>
       </TextBlock>
       <CheckBox x:Name="watchQuickShare" IsChecked="False" Margin="0,0,8,2" Checked="OptionsChanged" Unchecked="OptionsChanged">Watch for Quick Shares</CheckBox>
-      <ComboBox x:Name="voices" SelectedIndex="0" Margin="0,0,0,2" SelectionChanged="OptionsChanged" />
-      <ComboBox x:Name="rateOption" SelectedIndex="0" Margin="0,0,8,2" SelectionChanged="OptionsChanged">
+      <ComboBox x:Name="voices" SelectedIndex="0" Margin="0,0,8,2" SelectionChanged="OptionsChanged" />
+      <ComboBox x:Name="rateOption" SelectedIndex="0" Margin="0,0,0,2" SelectionChanged="OptionsChanged">
         <ComboBoxItem>Default Voice Rate</ComboBoxItem>
         <ComboBoxItem>Increased Rate 1</ComboBoxItem>
         <ComboBoxItem>Increased Rate 2</ComboBoxItem>

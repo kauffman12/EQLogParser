@@ -260,6 +260,9 @@ namespace EQLogParser
           ConfigUtil.SetSetting("OverlayEnableCritRate", "3");
         }
 
+        // Init Trigger Manager
+        TriggerManager.Instance.Start();
+
         // not used anymore. time to cleanup
         ConfigUtil.RemoveSetting("AudioTriggersWatchForGINA");
         ConfigUtil.RemoveSetting("TriggersWatchForGINA");
@@ -276,9 +279,8 @@ namespace EQLogParser
         ConfigUtil.RemoveSetting("OverlayRankColor10");
         ConfigUtil.RemoveSetting("OverlayShowCritRate");
         ConfigUtil.RemoveSetting("EnableHardwareAcceleration");
-
-        // Init Trigger Manager
-        TriggerManager.Instance.Start();
+        ConfigUtil.RemoveSetting("TriggersVoiceRate");
+        ConfigUtil.RemoveSetting("TriggersSelectedVoice");
 
         // cleanup downloads
         Dispatcher.InvokeAsync(MainActions.Cleanup);

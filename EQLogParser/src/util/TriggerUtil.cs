@@ -33,7 +33,7 @@ namespace EQLogParser
     internal static void ImportTriggers(TriggerNode parent) => Import(parent);
     internal static void ImportOverlays(TriggerNode triggerNode) => Import(triggerNode, false);
 
-    internal static string GetSelectedVoice()
+    internal static string GetSelectedVoice2()
     {
       string defaultVoice = null;
       try
@@ -62,12 +62,6 @@ namespace EQLogParser
         Log.Error(ex);
       }
       return result;
-    }
-
-    internal static int GetVoiceRate()
-    {
-      var rate = ConfigUtil.GetSettingAsInteger("TriggersVoiceRate");
-      return rate == int.MaxValue ? 0 : rate;
     }
 
     internal static bool TestRegexProperty(bool useRegex, string pattern, PatternEditor editor)

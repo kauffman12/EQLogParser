@@ -41,23 +41,24 @@ namespace EQLogParser
       characterView.SetConfig(config);
       UpdateConfig(config);
 
-      if ((TestSynth = TriggerUtil.GetSpeechSynthesizer()) != null)
-      {
-        voices.ItemsSource = TestSynth.GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList();
-      }
-
       if (ConfigUtil.IfSet("TriggersWatchForQuickShare"))
       {
         watchQuickShare.IsChecked = true;
       }
 
-      var selectedVoice = TriggerUtil.GetSelectedVoice();
+      if ((TestSynth = TriggerUtil.GetSpeechSynthesizer()) != null)
+      {
+        voices.ItemsSource = TestSynth.GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList();
+      }
+
+      var selectedVoice = TheConfig.Voice;
       if (voices.ItemsSource is List<string> populated && populated.IndexOf(selectedVoice) is var found and > -1)
       {
         voices.SelectedIndex = found;
       }
 
-      rateOption.SelectedIndex = TriggerUtil.GetVoiceRate();
+      rateOption.SelectedIndex = TheConfig.VoiceRate;
+
       var fileList = new ObservableCollection<string>();
       Watcher = TriggerUtil.CreateSoundsWatcher(fileList);
       TopEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Top");
@@ -209,6 +210,8 @@ namespace EQLogParser
 
       if (TheConfig.IsAdvanced)
       {
+        voices.Visibility = Visibility.Collapsed;
+        rateOption.Visibility = Visibility.Collapsed;
         CharacterSelectedCharacterEvent(characterView.GetSelectedCharacter());
 
         if (TheConfig.Characters.Count(user => user.IsEnabled) is var count and > 0)
@@ -233,6 +236,8 @@ namespace EQLogParser
       }
       else
       {
+        voices.Visibility = Visibility.Visible;
+        rateOption.Visibility = Visibility.Visible;
         if (CurrentCharacterId != TriggerStateManager.DefaultUser)
         {
           CurrentCharacterId = TriggerStateManager.DefaultUser;
@@ -274,18 +279,18 @@ namespace EQLogParser
       {
         if (Equals(sender, watchQuickShare))
         {
-          ConfigUtil.SetSetting("TriggersWatchForQuickShare", watchQuickShare.IsChecked.Value);
+          ConfigUtil.SetSetting("TriggersWatchForQuickShare", watchQuickShare.IsChecked == true);
         }
         else if (Equals(sender, voices))
         {
           if (voices.SelectedValue is string voiceName)
           {
-            ConfigUtil.SetSetting("TriggersSelectedVoice", voiceName);
-            TriggerManager.Instance.SetVoice(voiceName);
+            TheConfig.Voice = voiceName;
+            TriggerStateManager.Instance.UpdateConfig(TheConfig);
 
             if (TestSynth != null)
             {
-              TestSynth.Rate = TriggerUtil.GetVoiceRate();
+              TestSynth.Rate = rateOption.SelectedIndex;
               TestSynth.SelectVoice(voiceName);
               TestSynth.SpeakAsync(voiceName);
             }
@@ -294,15 +299,16 @@ namespace EQLogParser
         else if (Equals(sender, rateOption))
         {
           ConfigUtil.SetSetting("TriggersVoiceRate", rateOption.SelectedIndex);
-          TriggerManager.Instance.SetVoiceRate(rateOption.SelectedIndex);
+          TriggerStateManager.Instance.UpdateConfig(TheConfig);
 
           if (TestSynth != null)
           {
             TestSynth.Rate = rateOption.SelectedIndex;
-            if (TriggerUtil.GetSelectedVoice() is { } voice && !string.IsNullOrEmpty(voice))
+            if (voices.SelectedItem is string voice && !string.IsNullOrEmpty(voice))
             {
               TestSynth.SelectVoice(voice);
             }
+
             var rateText = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex;
             TestSynth.SpeakAsync(rateText);
           }
@@ -642,7 +648,6 @@ namespace EQLogParser
     {
       // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
       Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
       GC.SuppressFinalize(this);
     }
     #endregion

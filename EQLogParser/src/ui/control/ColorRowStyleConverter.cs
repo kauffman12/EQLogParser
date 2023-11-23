@@ -10,7 +10,7 @@ namespace EQLogParser
   {
     object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-      if (value is Fight { BeginTimeString: Fight.BREAKTIME })
+      if (value is Fight { BeginTimeString: Fight.Breaktime })
       {
         return Application.Current.Resources["EQWarnBackgroundBrush"] as SolidColorBrush;
       }

@@ -73,7 +73,7 @@ namespace EQLogParser
       {
         if (fightSearchBox.Text.Length > 0)
         {
-          SearchForNPC();
+          SearchForNpc();
         }
 
         SearchTextTimer.Stop();
@@ -97,7 +97,7 @@ namespace EQLogParser
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
-      DataManager.Instance.EventsClearedActiveData += Instance_EventsCleardActiveData;
+      DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
       DataManager.Instance.EventsRemovedFight += EventsRemovedFight;
       DataManager.Instance.EventsNewFight += EventsNewFight;
       DataManager.Instance.EventsUpdateFight += EventsUpdateFight;
@@ -330,7 +330,7 @@ namespace EQLogParser
         LastTime = fight.BeginTime,
         BeginTime = lastTime,
         IsInactivity = true,
-        BeginTimeString = Fight.BREAKTIME,
+        BeginTimeString = Fight.Breaktime,
         Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds),
         TooltipText = "No Data During This Time",
         SortId = CurrentSortId++
@@ -399,7 +399,7 @@ namespace EQLogParser
     {
       if (dataGrid?.ItemsSource is ObservableCollection<Fight>)
       {
-        CurrentShowBreaks = fightShowBreaks.IsChecked.Value;
+        CurrentShowBreaks = fightShowBreaks.IsChecked == true;
         ConfigUtil.SetSetting("NpcShowInactivityBreaks", CurrentShowBreaks);
         dataGrid.View.RefreshFilter();
       }
@@ -409,8 +409,8 @@ namespace EQLogParser
     {
       if (dataGrid?.ItemsSource is ObservableCollection<Fight>)
       {
-        dataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? Fights : NonTankingFights;
-        ConfigUtil.SetSetting("NpcShowTanking", fightShowTanking.IsChecked.Value);
+        dataGrid.ItemsSource = (fightShowTanking.IsChecked == true) ? Fights : NonTankingFights;
+        ConfigUtil.SetSetting("NpcShowTanking", fightShowTanking.IsChecked == true);
         dataGrid.View.RefreshFilter();
       }
     }
@@ -458,7 +458,7 @@ namespace EQLogParser
         }
         else if (e.Key == Key.Enter)
         {
-          SearchForNPC(e.KeyboardDevice.IsKeyDown(Key.RightShift) || e.KeyboardDevice.IsKeyDown(Key.LeftShift));
+          SearchForNpc(e.KeyboardDevice.IsKeyDown(Key.RightShift) || e.KeyboardDevice.IsKeyDown(Key.LeftShift));
         }
       }
     }
@@ -481,7 +481,7 @@ namespace EQLogParser
       return new List<Fight>();
     }
 
-    private void SearchForNPC(bool backwards = false)
+    private void SearchForNpc(bool backwards = false)
     {
       if (CurrentSearchEntry != null)
       {
@@ -560,7 +560,7 @@ namespace EQLogParser
       }
     }
 
-    private void Instance_EventsCleardActiveData(object sender, bool cleared)
+    private void EventsClearedActiveData(object sender, bool cleared)
     {
       NonTankingFights.Clear();
       NonTankingFightsToProcess.Clear();
