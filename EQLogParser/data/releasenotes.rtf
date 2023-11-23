@@ -1,6 +1,19 @@
 {\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Segoe UI;}{\f1\fnil\fcharset2 Symbol;}}
 {\*\generator Riched20 10.0.22621}\viewkind4\uc1 
-\pard\ul\f0\fs20\lang1033 Updated in Version 2.1.52\ulnone\par
+\pard\ul\f0\fs20\lang1033 Updated in Version 2.1.53\ulnone\par
+\par
+
+\pard 
+{\pntext\f0 1.\tab}{\*\pn\pnlvlbody\pnf0\pnindent0\pnstart1\pndec{\pntxta.}}
+\fi-360\li720 Added Voice and Voice Rate options to the Trigger Manager advanced settings for configuring per character.\par
+{\pntext\f0 2.\tab}Updated Looted Items view to auto refresh and fixed a bug where assigned loot were not always changed to show when they are looted. More UIs will be changed to not require a Refresh button in later versions.\par
+{\pntext\f0 3.\tab}Updated Random Rolls view to start the time left countdown when re-opening the window or loading for the first time. Previously, it only worked if the window happened to be open when the rolls are seen.\par
+{\pntext\f0 4.\tab}Fixed issue when doing large Fight combines where counts could be off by a few.\par
+{\pntext\f0 5.\tab}Fixed issue where the Spell Cast Order wouldn't always show the correct order for things that happen during the same second. It should always be the same order as seen in the log file now.\par
+{\pntext\f0 6.\tab}Re-worked how records are stored and queried to fix performance problems when doing large combines. Which also allowed for slightly better checking of interrupted spells without slowing things down. As long as the interrupt happens within 9 seconds of the cast message it should be counted. Should also prevent some errors that could happen when combining data during active raids.\par
+
+\pard\ul\par
+Updates in Version 2.1.52\ulnone\par
 \par
 
 \pard 
@@ -9,6 +22,7 @@
 {\pntext\f0 2.\tab}Fix for handling triggers where the same pattern is used for more than one pattern. Previously, the initial pattern was checked first and if found it would not check for end early patterns of other triggers.\par
 {\pntext\f0 3.\tab}Fix for read/writing settings using different locale options.\par
 {\pntext\f0 4.\tab}Updated beta spells.\par
+{\pntext\f0 5.\tab}Removed hardware acceleration option.\par
 
 \pard\ul\par
 Updates in Version 2.1.51\ulnone\par
