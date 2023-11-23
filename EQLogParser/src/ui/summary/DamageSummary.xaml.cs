@@ -70,6 +70,12 @@ namespace EQLogParser
           SelectionTimer.Stop();
         }
       };
+
+      if (DamageStatsManager.Instance.GetGroupCount() > 0)
+      {
+        // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
+        Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(new GenerateStatsOptions()));
+      }
     }
 
     internal override void ShowBreakdown(List<PlayerStats> selected)

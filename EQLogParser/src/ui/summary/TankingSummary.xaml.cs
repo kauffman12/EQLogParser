@@ -40,7 +40,6 @@ namespace EQLogParser
       }
 
       DamageType = damageTypes.SelectedIndex;
-
       var list = PlayerManager.Instance.GetClassList();
       list.Insert(0, Resource.ANY_CLASS);
       classesList.ItemsSource = list;
@@ -57,6 +56,13 @@ namespace EQLogParser
       HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
       dataGrid.GridCopyContent += DataGridCopyContent;
+
+      if (TankingStatsManager.Instance.GetGroupCount() > 0)
+      {
+        // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
+        var tankingOptions = new GenerateStatsOptions { DamageType = DamageType };
+        Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
+      }
     }
 
     internal override void ShowBreakdown(List<PlayerStats> selected)

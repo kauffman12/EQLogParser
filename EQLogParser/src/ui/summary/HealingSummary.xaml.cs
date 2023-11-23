@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -34,6 +35,12 @@ namespace EQLogParser
       HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
       dataGrid.GridCopyContent += DataGridCopyContent;
+
+      if (HealingStatsManager.Instance.GetGroupCount() > 0)
+      {
+        // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
+        Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats());
+      }
     }
 
     internal override void ShowBreakdown(List<PlayerStats> selected)

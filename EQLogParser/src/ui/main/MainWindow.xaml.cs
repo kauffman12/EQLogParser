@@ -796,12 +796,14 @@ namespace EQLogParser
       if (SyncFusionUtil.OpenChart(opened, dockSite, tankingChartIcon.Tag as string, TANKING_CHOICES, "Tanking Chart", ChartTab, false))
       {
         List<PlayerStats> selected = null;
+        var tankingOptions = new GenerateStatsOptions();
         if (opened.TryGetValue((tankingSummaryIcon.Tag as string)!, out var window) && window.Content is TankingSummary summary)
         {
           selected = summary.GetSelectedStats();
+          tankingOptions.DamageType = summary.DamageType;
         }
 
-        TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "UPDATE", selected);
+        TankingStatsManager.Instance.FireChartEvent(tankingOptions, "UPDATE", selected);
       }
     }
 
@@ -811,11 +813,6 @@ namespace EQLogParser
       if (SyncFusionUtil.OpenWindow(dockSite, opened, out var control, typeof(DamageSummary), damageSummaryIcon.Tag as string, "DPS Summary"))
       {
         ((DamageSummary)control.Content).EventsSelectionChange += DamageSummary_SelectionChanged;
-        if (DamageStatsManager.Instance.GetGroupCount() > 0)
-        {
-          // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(new GenerateStatsOptions()));
-        }
       }
     }
 
@@ -825,11 +822,6 @@ namespace EQLogParser
       if (SyncFusionUtil.OpenWindow(dockSite, opened, out var control, typeof(HealingSummary), healingSummaryIcon.Tag as string, "Healing Summary"))
       {
         ((HealingSummary)control.Content).EventsSelectionChange += HealingSummary_SelectionChanged;
-        if (HealingStatsManager.Instance.GetGroupCount() > 0)
-        {
-          // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats());
-        }
       }
     }
 
@@ -839,12 +831,6 @@ namespace EQLogParser
       if (SyncFusionUtil.OpenWindow(dockSite, opened, out var control, typeof(TankingSummary), tankingSummaryIcon.Tag as string, "Tanking Summary"))
       {
         ((TankingSummary)control.Content).EventsSelectionChange += TankingSummary_SelectionChanged;
-        if (TankingStatsManager.Instance.GetGroupCount() > 0)
-        {
-          // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var tankingOptions = new GenerateStatsOptions { DamageType = ((TankingSummary)control.Content).DamageType };
-          Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
-        }
       }
     }
 
@@ -897,11 +883,11 @@ namespace EQLogParser
     {
       if (sender is MenuItem item)
       {
-        var lastMins = -1;
+        var lastMin = -1;
         string fileName = null;
         if (!string.IsNullOrEmpty(item.Tag as string))
         {
-          lastMins = Convert.ToInt32(item.Tag.ToString(), CultureInfo.CurrentCulture) * 60;
+          lastMin = Convert.ToInt32(item.Tag.ToString(), CultureInfo.CurrentCulture) * 60;
         }
 
         if (item.Parent == recent1File && RecentFiles.Count > 0)
@@ -935,7 +921,7 @@ namespace EQLogParser
           return;
         }
 
-        OpenLogFile(fileName, lastMins);
+        OpenLogFile(fileName, lastMin);
       }
     }
 
