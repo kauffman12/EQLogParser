@@ -412,18 +412,18 @@ namespace EQLogParser
               var split2 = split[1].Split(',');
               if (split2.Length > 2)
               {
-                double.TryParse(split2[0], out parsed);
+                double.TryParse(split2[0], NumberStyles.Any, CultureInfo.InvariantCulture, out parsed);
                 className = split2[1];
                 reason = split2[2];
               }
               else if (split2.Length == 2)
               {
-                double.TryParse(split2[0], out parsed);
+                double.TryParse(split2[0], NumberStyles.Any, CultureInfo.InvariantCulture, out parsed);
                 className = split2[1];
               }
               else
               {
-                double.TryParse(split[1], out parsed);
+                double.TryParse(split[1], NumberStyles.Any, CultureInfo.InvariantCulture, out parsed);
               }
             }
             else

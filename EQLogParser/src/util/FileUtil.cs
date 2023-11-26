@@ -55,7 +55,7 @@ namespace EQLogParser
 
     internal static void SetStartingPosition(FileStream f, double time, long left = 0, long right = 0, long good = 0, int count = 0)
     {
-      if (count <= 5)
+      if (count <= 8)
       {
         if (f.Position == 0)
         {

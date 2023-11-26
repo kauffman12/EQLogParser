@@ -17,7 +17,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for ChatViewer.xaml
   /// </summary>
-  public partial class ChatViewer : IDisposable
+  public partial class ChatViewer : IDocumentContent
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly List<double> FontSizeList = new() { 10, 12, 14, 16, 18, 20, 22, 24 };
@@ -35,7 +35,7 @@ namespace EQLogParser
     private string LastFromFilter;
     private double LastStartDate;
     private double LastEndDate;
-    private readonly bool Ready;
+    private bool Ready;
 
     public ChatViewer()
     {
@@ -55,10 +55,10 @@ namespace EQLogParser
       }
 
       fontSize.ItemsSource = FontSizeList;
-      var size = ConfigUtil.GetSetting("ChatFontSize");
-      if (size != null && double.TryParse(size, out var dsize))
+      var size = ConfigUtil.GetSettingAsDouble("ChatFontSize");
+      if (size > 0)
       {
-        fontSize.SelectedItem = dsize;
+        fontSize.SelectedItem = size;
       }
       else
       {
@@ -73,17 +73,12 @@ namespace EQLogParser
         ChangeSearch();
       };
 
-      LoadPlayers();
-      Ready = true;
-      ChatManager.Instance.EventsUpdatePlayer += ChatManagerEventsUpdatePlayer;
-      ChatManager.Instance.EventsNewChannels += ChatManagerEventsNewChannels;
       MainActions.EventsThemeChanged += EventsThemeChanged;
-      ChangeSearch();
     }
 
     private void EventsThemeChanged(string _) => UpdateCurrentTextColor();
     private void RefreshClick(object sender, RoutedEventArgs e) => ChangeSearch(true);
-    private void ChatManagerEventsUpdatePlayer(object sender, string player) => LoadPlayers(player);
+    private void ChatManagerEventsUpdatePlayer(string player) => LoadPlayers(player);
     private void ToFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(toFilter, Resource.CHAT_TO_FILTER);
     private void FromFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(fromFilter, Resource.CHAT_FROM_FILTER);
     private void TextFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(textFilter, Resource.CHAT_TEXT_FILTER);
@@ -99,12 +94,12 @@ namespace EQLogParser
 
     private void UpdateCurrentTextColor()
     {
-      var defaultColor = (Color)Application.Current.Resources["ContentForeground.Color"];
+      var defaultColor = (Color)Application.Current.Resources["ContentForeground.Color"]!;
       try
       {
         var colorSetting = "ChatFontFgColor" + MainWindow.CurrentTheme;
         var fgColor = ConfigUtil.GetSetting(colorSetting, defaultColor.ToString());
-        colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor);
+        colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor)!;
       }
       catch (FormatException)
       {
@@ -112,7 +107,7 @@ namespace EQLogParser
       }
     }
 
-    private void ChatManagerEventsNewChannels(object sender, List<string> e)
+    private void ChatManagerEventsNewChannels(List<string> e)
     {
       _ = Dispatcher.InvokeAsync(() =>
         {
@@ -164,29 +159,35 @@ namespace EQLogParser
 
     private void LoadPlayers(string updatedPlayer = null)
     {
-      if (updatedPlayer == null || !players.Items.Contains(updatedPlayer))
+      Dispatcher.InvokeAsync(() =>
       {
-        var playerList = ChatManager.Instance.GetArchivedPlayers();
-        if (playerList.Count > 0)
+        var orig = players.ItemsSource as List<string>;
+        if (updatedPlayer == null || orig?.Contains(updatedPlayer) == false)
         {
-          players.Items.Clear();
-          players.ItemsSource = playerList;
-
-          var player = ConfigUtil.GetSetting("ChatSelectedPlayer");
-          if (string.IsNullOrEmpty(player))
+          var playerList = ChatManager.Instance.GetArchivedPlayers();
+          if (playerList.Count > 0)
           {
-            if (!string.IsNullOrEmpty(ConfigUtil.PlayerName) && !string.IsNullOrEmpty(ConfigUtil.ServerName))
+            players.ItemsSource = playerList;
+            var player = ConfigUtil.GetSetting("ChatSelectedPlayer");
+            if (string.IsNullOrEmpty(player))
             {
-              player = ConfigUtil.PlayerName + "." + ConfigUtil.ServerName;
+              if (!string.IsNullOrEmpty(ConfigUtil.PlayerName) && !string.IsNullOrEmpty(ConfigUtil.ServerName))
+              {
+                player = ConfigUtil.PlayerName + "." + ConfigUtil.ServerName;
+              }
+            }
+
+            if (playerList.IndexOf(player) is var index and > -1)
+            {
+              players.SelectedIndex = index;
             }
           }
-
-          if (playerList.IndexOf(player) is var index and > -1)
+          else
           {
-            players.SelectedIndex = index;
+            players.ItemsSource = new List<string> { "No Chat Data" };
           }
         }
-      }
+      });
     }
 
     private List<string> GetSelectedChannels(out bool changed)
@@ -227,7 +228,7 @@ namespace EQLogParser
           var startDateValue = GetStartDate();
           var endDateValue = GetEndDate();
           if (force || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from ||
-            LastStartDate != startDateValue || LastEndDate != endDateValue)
+            !LastStartDate.Equals(startDateValue) || !LastEndDate.Equals(endDateValue))
           {
             CurrentChatFilter = new ChatFilter(name, channelList, startDateValue, endDateValue, to, from, text);
             CurrentIterator?.Close();
@@ -319,18 +320,22 @@ namespace EQLogParser
 
     private void ChannelPreviewMouseDown(object sender, EventArgs e)
     {
-      var item = sender as ComboBoxItem;
-      if (item.Content is ComboBoxItemDetails details)
+      if (sender is ComboBoxItem { Content: ComboBoxItemDetails details })
       {
         if (details.Text == "Select All" && !details.IsChecked)
         {
           details.IsChecked = true;
-          var unselect = channels.Items[1] as ComboBoxItemDetails;
-          unselect.IsChecked = false;
+          if (channels.Items.Count > 1 && channels.Items[1] is ComboBoxItemDetails unselect)
+          {
+            unselect.IsChecked = false;
+          }
 
           for (var i = 2; i < channels.Items.Count; i++)
           {
-            (channels.Items[i] as ComboBoxItemDetails).IsChecked = true;
+            if (channels.Items[i] is ComboBoxItemDetails item)
+            {
+              item.IsChecked = true;
+            }
           }
 
           channels.Items.Refresh();
@@ -343,12 +348,17 @@ namespace EQLogParser
         else if (details.Text == "Unselect All" && !details.IsChecked)
         {
           details.IsChecked = true;
-          var select = channels.Items[0] as ComboBoxItemDetails;
-          select.IsChecked = false;
+          if (channels.Items.Count > 0 && channels.Items[0] is ComboBoxItemDetails select)
+          {
+            select.IsChecked = false;
+          }
 
           for (var i = 2; i < channels.Items.Count; i++)
           {
-            (channels.Items[i] as ComboBoxItemDetails).IsChecked = false;
+            if (channels.Items[i] is ComboBoxItemDetails item)
+            {
+              item.IsChecked = false;
+            }
           }
 
           channels.Items.Refresh();
@@ -360,8 +370,7 @@ namespace EQLogParser
         }
         else if (details.IsChecked)
         {
-          var select = channels.Items[0] as ComboBoxItemDetails;
-          if (select.IsChecked)
+          if (channels.Items.Count > 0 && channels.Items[0] is ComboBoxItemDetails select && select.IsChecked)
           {
             select.IsChecked = false;
             details.IsChecked = false;
@@ -370,8 +379,7 @@ namespace EQLogParser
         }
         else if (!details.IsChecked)
         {
-          var unselect = channels.Items[1] as ComboBoxItemDetails;
-          if (unselect.IsChecked)
+          if (channels.Items.Count > 1 && channels.Items[1] is ComboBoxItemDetails unselect && unselect.IsChecked)
           {
             unselect.IsChecked = false;
             details.IsChecked = true;
@@ -388,8 +396,7 @@ namespace EQLogParser
         var count = 0;
         for (var i = 2; i < channels.Items.Count; i++)
         {
-          var checkedItem = channels.Items[i] as ComboBoxItemDetails;
-          if (checkedItem.IsChecked)
+          if (channels.Items[i] is ComboBoxItemDetails checkedItem && checkedItem.IsChecked)
           {
             count++;
           }
@@ -427,9 +434,11 @@ namespace EQLogParser
     {
       if (fontFamily?.SelectedItem != null && chatBox != null)
       {
-        var family = fontFamily.SelectedItem as FontFamily;
-        Application.Current.Resources["EQChatFontFamily"] = family;
-        ConfigUtil.SetSetting("ChatFontFamily", family.ToString());
+        if (fontFamily.SelectedItem is FontFamily family)
+        {
+          Application.Current.Resources["EQChatFontFamily"] = family;
+          ConfigUtil.SetSetting("ChatFontFamily", family.ToString());
+        }
       }
     }
 
@@ -454,7 +463,7 @@ namespace EQLogParser
 
     private void FilterGotFocus(TextBox filter, string text)
     {
-      if (filter?.Text == text)
+      if (filter != null && filter.Text == text)
       {
         filter.Text = "";
         filter.FontStyle = FontStyles.Normal;
@@ -505,31 +514,23 @@ namespace EQLogParser
       }
     }
 
-    #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
+    private void ChatViewerLoaded(object sender, RoutedEventArgs e)
     {
-      if (!disposedValue)
+      if (VisualParent != null && !Ready)
       {
-        MainActions.EventsThemeChanged -= EventsThemeChanged;
-        ChatManager.Instance.EventsUpdatePlayer -= ChatManagerEventsUpdatePlayer;
-        ChatManager.Instance.EventsNewChannels -= ChatManagerEventsNewChannels;
-
-        chatBox?.Dispose();
-        FilterTimer?.Stop();
-        disposedValue = true;
+        ChatManager.Instance.EventsUpdatePlayer += ChatManagerEventsUpdatePlayer;
+        ChatManager.Instance.EventsNewChannels += ChatManagerEventsNewChannels;
+        LoadPlayers();
+        ChangeSearch();
+        Ready = true;
       }
     }
 
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
+    public void HideContent()
     {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
+      ChatManager.Instance.EventsUpdatePlayer -= ChatManagerEventsUpdatePlayer;
+      ChatManager.Instance.EventsNewChannels -= ChatManagerEventsNewChannels;
+      Ready = false;
     }
-    #endregion
   }
 }

@@ -560,7 +560,7 @@ namespace EQLogParser
       }
     }
 
-    private void EventsClearedActiveData(object sender, bool cleared)
+    private void EventsClearedActiveData(bool cleared)
     {
       NonTankingFights.Clear();
       NonTankingFightsToProcess.Clear();

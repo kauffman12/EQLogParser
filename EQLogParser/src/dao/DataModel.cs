@@ -32,6 +32,11 @@ namespace EQLogParser
       bool rankPlayers, bool showSpecial, bool showTime, string customTitle);
   }
 
+  internal interface IDocumentContent
+  {
+    public void HideContent();
+  }
+
   internal class AlertEntry
   {
     public double EventTime { get; set; }
@@ -363,6 +368,7 @@ namespace EQLogParser
     public CombinedStats CombinedStats { get; set; }
     public List<List<ActionGroup>> Groups { get; } = new();
     public int UniqueGroupCount { get; set; }
+    public ISummaryBuilder Source { get; set; }
   }
 
   internal class QuickShareRecord : TimedAction

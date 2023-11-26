@@ -11,82 +11,77 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for RandomViewer.xaml
   /// </summary>
-  public partial class RandomViewer : IDisposable
+  public partial class RandomViewer : IDocumentContent
   {
     private readonly DispatcherTimer ReloadTimer;
     private double CurrentTimeLimit = 300;
     private RandomRecord LastHandled;
+    private bool Ready;
 
     public RandomViewer()
     {
       InitializeComponent();
-
-      MainActions.EventsLogLoadingComplete += LogLoadingComplete;
-      RecordManager.Instance.RecordsUpdatedEvent += RecordsUpdated;
       DataGridUtil.UpdateTableMargin(dataGrid);
       MainActions.EventsThemeChanged += EventsThemeChanged;
-
       ReloadTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
       ReloadTimer.Tick += ReloadTimerTick;
-      Load();
     }
 
     private void ReloadTimerTick(object sender, EventArgs e)
     {
-      var found = false;
-      var sections = dataGrid.ItemsSource as List<dynamic>;
-
-      foreach (var (beginTime, record) in RecordManager.Instance.GetAllRandoms())
+      if (dataGrid.ItemsSource is List<dynamic> sections)
       {
-        if (LastHandled == null || found)
+        var found = false;
+        foreach (var (beginTime, record) in RecordManager.Instance.GetAllRandoms())
         {
-          UpdateSection(beginTime, record, sections);
-          LastHandled = record;
-          found = true;
+          if (LastHandled == null || found)
+          {
+            UpdateSection(beginTime, record, sections);
+            LastHandled = record;
+            found = true;
+          }
+          else if (record == LastHandled)
+          {
+            found = true;
+          }
         }
-        else if (record == LastHandled)
+
+        var remaining = UpdateTotals(sections);
+        var expanded = new Dictionary<object, bool>();
+        foreach (var node in dataGrid.View.Nodes)
         {
-          found = true;
+          if (node.IsExpanded)
+          {
+            expanded[node.Item] = true;
+          }
         }
-      }
 
-      var remaining = UpdateTotals(sections);
-
-      var expanded = new Dictionary<object, bool>();
-      foreach (var node in dataGrid.View.Nodes)
-      {
-        if (node.IsExpanded)
+        dataGrid.View.Refresh();
+        foreach (var node in dataGrid.View.Nodes)
         {
-          expanded[node.Item] = true;
+          if (!node.IsExpanded && expanded.ContainsKey(node.Item))
+          {
+            dataGrid.ExpandNode(node);
+          }
         }
-      }
 
-      dataGrid.View.Refresh();
-
-      foreach (var node in dataGrid.View.Nodes)
-      {
-        if (!node.IsExpanded && expanded.ContainsKey(node.Item))
+        if (remaining)
         {
-          dataGrid.ExpandNode(node);
+          if (!ReloadTimer.IsEnabled)
+          {
+            ReloadTimer.Start();
+          }
         }
-      }
-
-      if (remaining)
-      {
-        if (!ReloadTimer.IsEnabled)
+        else
         {
-          ReloadTimer.Start();
+          ReloadTimer.Stop();
         }
-      }
-      else
-      {
-        ReloadTimer.Stop();
       }
     }
 
     private void RecordsUpdated(string type)
     {
-      if (type == RecordManager.RANDOM_RECORDS && !ReloadTimer.IsEnabled)
+      if (type == RecordManager.RandomRecords && !ReloadTimer.IsEnabled)
       {
         ReloadTimer.Start();
       }
@@ -213,7 +208,7 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, EventArgs e)
     {
-      if (dataGrid?.View != null)
+      if (Ready)
       {
         switch (randomDurations.SelectedIndex)
         {
@@ -238,29 +233,24 @@ namespace EQLogParser
       }
     }
 
-    #region IDisposable Support
-    private bool DisposedValue; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
+    private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (!DisposedValue)
+      if (VisualParent != null && !Ready)
       {
-        ReloadTimer?.Stop();
-        MainActions.EventsThemeChanged -= EventsThemeChanged;
-        MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
-        RecordManager.Instance.RecordsUpdatedEvent -= RecordsUpdated;
-        dataGrid.Dispose();
-        DisposedValue = true;
+        MainActions.EventsLogLoadingComplete += LogLoadingComplete;
+        RecordManager.Instance.RecordsUpdatedEvent += RecordsUpdated;
+        Load();
+        Ready = true;
       }
     }
 
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
+    public void HideContent()
     {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      GC.SuppressFinalize(this);
+      ReloadTimer?.Stop();
+      MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
+      RecordManager.Instance.RecordsUpdatedEvent -= RecordsUpdated;
+      dataGrid.ItemsSource = null;
+      Ready = false;
     }
-    #endregion
   }
 }

@@ -10,22 +10,14 @@ namespace EQLogParser
 {
   class HealingStatsManager : ISummaryBuilder
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     internal static HealingStatsManager Instance = new();
-
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
-    internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
-
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealedByHealerTimeRanges =
-      new();
-
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealedBySpellTimeRanges =
-      new();
-
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealerHealedTimeRanges =
-      new();
-
+    internal event Action<StatsGenerationEvent> EventsGenerationStatus;
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealedByHealerTimeRanges = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealedBySpellTimeRanges = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealerHealedTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> HealerSpellTimeRanges = new();
 
     private readonly List<List<ActionGroup>> HealingGroups = new();
@@ -36,7 +28,7 @@ namespace EQLogParser
 
     internal HealingStatsManager()
     {
-      DataManager.Instance.EventsClearedActiveData += (_, _) =>
+      DataManager.Instance.EventsClearedActiveData += (_) =>
       {
         lock (HealingGroups)
         {
@@ -310,14 +302,13 @@ namespace EQLogParser
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.HEAL_PARSE, State = "STARTED" });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.HEAL_PARSE, State = "STARTED", Source = this });
     }
 
     private void FireNoDataEvent(string state)
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.HEAL_PARSE, State = state });
-
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.HEAL_PARSE, State = state, Source = this });
       FireChartEvent("CLEAR");
     }
 
@@ -393,11 +384,12 @@ namespace EQLogParser
               Type = Labels.HEAL_PARSE,
               State = "COMPLETED",
               CombinedStats = combined,
-              Limited = IsLimited
+              Limited = IsLimited,
+              Source = this
             };
 
             genEvent.Groups.AddRange(HealingGroups);
-            EventsGenerationStatus?.Invoke(this, genEvent);
+            EventsGenerationStatus?.Invoke(genEvent);
             FireChartEvent("UPDATE");
           }
           catch (Exception ex)

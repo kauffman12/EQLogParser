@@ -136,7 +136,7 @@ namespace EQLogParser
             }
 
             var allLines = testTriggersBox.Lines.ToList().Where(line => !string.IsNullOrEmpty(line.Text)
-              && line.Text.Length > MainWindow.ACTION_INDEX).Select(line => line.Text).ToList();
+              && line.Text.Length > MainWindow.ActionIndex).Select(line => line.Text).ToList();
             if (allLines.Count > 0)
             {
               RunTest(allLines);
@@ -162,7 +162,7 @@ namespace EQLogParser
         realTime.IsEnabled = false;
         allLines.ForEach(line =>
         {
-          if (line.Length > MainWindow.ACTION_INDEX)
+          if (line.Length > MainWindow.ActionIndex)
           {
             var dateTime = DateUtil.ParseStandardDate(line);
             if (dateTime != DateTime.MinValue)

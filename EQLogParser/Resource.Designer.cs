@@ -394,6 +394,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Reset Window State.
+        /// </summary>
+        internal static string RESET_WINDOW_STATE {
+            get {
+                return ResourceManager.GetString("RESET_WINDOW_STATE", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Restart Required.
         /// </summary>
         internal static string RESTART_NEEDED {

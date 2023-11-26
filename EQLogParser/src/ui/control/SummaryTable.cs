@@ -13,11 +13,9 @@ namespace EQLogParser
 {
   public class SummaryTable : UserControl
   {
-    internal const string DEFAULT_TABLE_LABEL = "No NPCs Selected";
-    internal const string NODATA_TABLE_LABEL = Labels.NO_DATA;
+    internal const string DefaultTableLabel = "No NPCs Selected";
+    internal const string NodataTableLabel = Labels.NO_DATA;
     internal readonly List<PlayerStats> NoResultsList = new();
-
-    internal event EventHandler<PlayerStatsSelectionChangedEventArgs> EventsSelectionChange;
 
     internal dynamic TheDataGrid;
     internal ComboBox TheColumnsCombo;
@@ -31,7 +29,7 @@ namespace EQLogParser
       TheColumnsCombo = columnsCombo;
       TheDataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Total", SortDirection = ListSortDirection.Descending });
       TheTitle = title;
-      TheTitle.Content = DEFAULT_TABLE_LABEL;
+      TheTitle.Content = DefaultTableLabel;
 
       // default these columns to descending
       var desc = new[] { "PercentOfRaid", "Total", "Extra", "Potential", "DPS", "SDPS", "TotalSeconds", "Hits", "Max",
@@ -60,6 +58,7 @@ namespace EQLogParser
     internal virtual void ShowBreakdown(List<PlayerStats> selected) => new object(); // need to override this method
     internal virtual void ShowBreakdown2(List<PlayerStats> selected) => new object(); // need to override this method
     internal virtual void UpdateDataGridMenuItems() => new object(); // need to override this method
+    internal virtual void FireSelectionChangedEvent(List<PlayerStats> stats) => new object(); // need to override this method
     internal string GetTargetTitle() => CurrentStats?.TargetTitle ?? GetTitle();
     internal string GetTitle() => TheTitle.Content as string;
     internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
@@ -92,7 +91,7 @@ namespace EQLogParser
 
     internal void Clear()
     {
-      TheTitle.Content = DEFAULT_TABLE_LABEL;
+      TheTitle.Content = DefaultTableLabel;
       TheDataGrid.ItemsSource = null;
     }
 
@@ -182,17 +181,6 @@ namespace EQLogParser
       UpdateDataGridMenuItems();
     }
 
-    internal void FireSelectionChangedEvent(List<PlayerStats> selected)
-    {
-      Dispatcher.InvokeAsync(() =>
-      {
-        var selectionChanged = new PlayerStatsSelectionChangedEventArgs();
-        selectionChanged.Selected.AddRange(selected);
-        selectionChanged.CurrentStats = CurrentStats;
-        EventsSelectionChange(this, selectionChanged);
-      });
-    }
-
     internal void ShowSpellCasts(List<PlayerStats> selected)
     {
       if (selected?.Count > 0)
@@ -201,7 +189,7 @@ namespace EQLogParser
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var spellTable, typeof(SpellCastTable),
           "spellCastsWindow", "Spell Cast Timeline"))
         {
-          (spellTable.Content as SpellCastTable).Init(selected, CurrentStats);
+          (spellTable.Content as SpellCastTable)?.Init(selected, CurrentStats);
         }
       }
     }
@@ -214,7 +202,7 @@ namespace EQLogParser
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var spellTable, typeof(SpellCountTable),
           "spellCountsWindow", "Spell Counts"))
         {
-          (spellTable.Content as SpellCountTable).Init(selected, CurrentStats);
+          (spellTable.Content as SpellCountTable)?.Init(selected, CurrentStats);
         }
       }
     }

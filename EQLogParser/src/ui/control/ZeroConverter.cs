@@ -10,7 +10,7 @@ namespace EQLogParser
     {
       if (value?.GetType() == typeof(uint) || value?.GetType() == typeof(double) || value?.GetType() == typeof(float))
       {
-        return System.Convert.ToDouble(value, CultureInfo.CurrentCulture) > 0 ? value.ToString() : "-";
+        return System.Convert.ToDouble(value, CultureInfo.InvariantCulture) > 0 ? value.ToString() : "-";
       }
       return string.Empty;
     }
@@ -19,7 +19,7 @@ namespace EQLogParser
     {
       if (value is string s)
       {
-        if (!double.TryParse(s, out var decValue))
+        if (!double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var decValue))
         {
           decValue = 0;
         }

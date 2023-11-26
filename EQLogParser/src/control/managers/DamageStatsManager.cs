@@ -12,7 +12,7 @@ namespace EQLogParser
   {
     internal static DamageStatsManager Instance = new();
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
-    internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
+    internal event Action<StatsGenerationEvent> EventsGenerationStatus;
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly Dictionary<int, byte> DamageGroupIds = new();
@@ -270,7 +270,7 @@ namespace EQLogParser
 
     internal DamageStatsManager()
     {
-      DataManager.Instance.EventsClearedActiveData += (_, _) =>
+      DataManager.Instance.EventsClearedActiveData += (_) =>
       {
         lock (DamageGroupIds)
         {
@@ -624,12 +624,13 @@ namespace EQLogParser
               Type = Labels.DAMAGE_PARSE,
               State = "COMPLETED",
               CombinedStats = combined,
-              Limited = damageValidator.IsDamageLimited()
+              Limited = damageValidator.IsDamageLimited(),
+              Source = this
             };
 
             genEvent.Groups.AddRange(DamageGroups);
             genEvent.UniqueGroupCount = DamageGroupIds.Count;
-            EventsGenerationStatus?.Invoke(this, genEvent);
+            EventsGenerationStatus?.Invoke(genEvent);
 
             FireChartEvent(options, "UPDATE");
           }
@@ -672,13 +673,13 @@ namespace EQLogParser
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.DAMAGE_PARSE, State = "STARTED" });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.DAMAGE_PARSE, State = "STARTED", Source = this });
     }
 
     private void FireNoDataEvent(GenerateStatsOptions options, string state)
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.DAMAGE_PARSE, State = state });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.DAMAGE_PARSE, State = state, Source = this });
       FireChartEvent(options, "CLEAR");
     }
 

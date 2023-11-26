@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.IO.Compression;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -85,38 +84,26 @@ namespace EQLogParser
         if (minBack == 0)
         {
           fs.Seek(0, SeekOrigin.End);
-          CurrentPos = fs.Position;
         }
 
-        StreamReader reader;
-        if (fileName.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
+        var minDate = DateTime.MinValue;
+        double beginTime = 0;
+
+        if (minBack > 0)
         {
-          var gzipStream = new GZipStream(fs, CompressionMode.Decompress);
-          reader = new StreamReader(gzipStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: bufferSize);
-
-          if (minBack > 0)
-          {
-            SearchCompressed(reader, minBack);
-            CurrentPos = fs.Position;
-          }
-        }
-        else
-        {
-          if (minBack > 0)
-          {
-            Search(fs, minBack);
-            CurrentPos = fs.Position;
-          }
-
-          reader = new StreamReader(fs, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: bufferSize);
+          minDate = DateTime.Now.AddMinutes(-minBack);
+          beginTime = DateUtil.ToDouble(minDate);
         }
 
+        var reader = FileUtil.GetStreamReader(fs, beginTime);
+        SearchLinear(reader, minDate, out var firstLine);
+
+        CurrentPos = fs.Position;
         await using (fs)
         using (reader)
         {
           string line;
           string previous = null;
-          var dateTime = DateTime.MinValue;
           double doubleValue = 0;
           var bytesRead = fs.Position;
 
@@ -125,7 +112,7 @@ namespace EQLogParser
           {
             if (cancelToken.IsCancellationRequested) break;
 
-            // update progress during intitial load
+            // update progress during initial load
             bytesRead += Encoding.UTF8.GetByteCount(line) + 2;
             if (bytesRead >= NextUpdateThreshold)
             {
@@ -137,7 +124,13 @@ namespace EQLogParser
               CurrentPos = fs.Position;
             }
 
-            HandleLine(line);
+            if (firstLine != null)
+            {
+              HandleLine(firstLine, ref previous, ref doubleValue, cancelToken);
+              firstLine = null;
+            }
+
+            HandleLine(line, ref previous, ref doubleValue, cancelToken);
           }
 
           // continue reading for new updates
@@ -145,7 +138,7 @@ namespace EQLogParser
           {
             while ((line = await reader.ReadLineAsync()) != null)
             {
-              HandleLine(line, true);
+              HandleLine(line, ref previous, ref doubleValue, cancelToken, true);
             }
 
             if (cancelToken.IsCancellationRequested) break;
@@ -163,22 +156,6 @@ namespace EQLogParser
               }
             }
           }
-
-          void HandleLine(string theLine, bool monitor = false)
-          {
-            if (theLine.Length > 28)
-            {
-              if (previous == null || !theLine.AsSpan(1, 24).SequenceEqual(previous.AsSpan(1, 24)))
-              {
-                dateTime = DateUtil.ParseStandardDate(theLine);
-                doubleValue = DateUtil.ToDouble(dateTime);
-              }
-
-              if (cancelToken.IsCancellationRequested) return;
-              Lines.Add(Tuple.Create(theLine, doubleValue, monitor), cancelToken);
-              previous = theLine;
-            }
-          }
         }
       }
       catch (IOException e)
@@ -187,65 +164,44 @@ namespace EQLogParser
       }
     }
 
-    private static void Search(Stream fs, int? minBack)
+    private void HandleLine(string theLine, ref string previous, ref double doubleValue, CancellationToken cancelToken, bool monitor = false)
     {
-      long min = 0;
-      var max = fs.Length;
-      long? closestGreaterPosition = null;
-      if (minBack != null)
+      if (theLine.Length > 28)
       {
-        var minimumDate = DateTime.Now.AddMinutes(-minBack.Value);
-
-        while (min < max)
+        if (previous == null || !theLine.AsSpan(1, 24).SequenceEqual(previous.AsSpan(1, 24)))
         {
-          var mid = (min + max) / 2;
-          fs.Seek(mid, SeekOrigin.Begin);
-
-          using var tempReader = new StreamReader(fs, Encoding.UTF8, true, 1024, leaveOpen: true);
-          if (mid != 0)
+          var dateTime = DateUtil.ParseStandardDate(theLine);
+          if (dateTime == DateTime.MinValue)
           {
-            // Discard partial line, if not at the start
-            tempReader.ReadLine();
+            return;
           }
 
-          var positionBeforeReadLine = fs.Position;
-          var line = tempReader.ReadLine();
-          if (line == null) break;
-
-          var dateTime = DateUtil.ParseStandardDate(line);
-          if (dateTime >= minimumDate)
-          {
-            closestGreaterPosition = positionBeforeReadLine;
-            max = mid;
-          }
-          else
-          {
-            min = fs.Position;
-          }
+          doubleValue = DateUtil.ToDouble(dateTime);
         }
-      }
 
-      if (closestGreaterPosition.HasValue)
-      {
-        fs.Seek(closestGreaterPosition.Value, SeekOrigin.Begin);
-      }
-      else
-      {
-        fs.Seek(0, SeekOrigin.End);
+        if (cancelToken.IsCancellationRequested) return;
+        Lines.Add(Tuple.Create(theLine, doubleValue, monitor), cancelToken);
+        previous = theLine;
       }
     }
 
-    private static void SearchCompressed(StreamReader reader, int? minBack)
+    private static void SearchLinear(StreamReader reader, DateTime minDate, out string firstLine)
     {
-      if (minBack != null)
-      {
-        var minimumDate = DateTime.Now.AddMinutes(-minBack.Value);
+      firstLine = null;
 
+      if (minDate != DateTime.MinValue)
+      {
         while (reader.ReadLine() is { } line)
         {
           var dateTime = DateUtil.ParseStandardDate(line);
-          if (dateTime >= minimumDate)
+          if (dateTime == DateTime.MinValue)
           {
+            continue;
+          }
+
+          if (dateTime >= minDate)
+          {
+            firstLine = line;
             break;
           }
         }

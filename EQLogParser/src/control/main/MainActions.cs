@@ -30,6 +30,10 @@ namespace EQLogParser
     internal static event Action<string> EventsLogLoadingComplete;
     internal static event Action<string> EventsThemeChanged;
     internal static event Action<List<Fight>> EventsFightSelectionChanged;
+    internal static event Action<string> EventsChartOpened;
+    internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsDamageSelectionChanged;
+    internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsHealingSelectionChanged;
+    internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsTankingSelectionChanged;
     internal static readonly HttpClient THE_HTTP_CLIENT = new();
 
     private const string PETS_LIST_TITLE = "Verified Pets ({0})";
@@ -41,9 +45,31 @@ namespace EQLogParser
     private static readonly SortableNameComparer TheSortableNameComparer = new();
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
+    internal static void FireChartOpened(string name) => EventsChartOpened?.Invoke(name);
+    internal static void FireDamageSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsDamageSelectionChanged?.Invoke(args);
+    internal static void FireTankingSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsTankingSelectionChanged?.Invoke(args);
+    internal static void FireHealingSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsHealingSelectionChanged?.Invoke(args);
     internal static void FireLoadingEvent(string log) => EventsLogLoadingComplete?.Invoke(log);
     internal static void FireThemeChanged(string theme) => EventsThemeChanged?.Invoke(theme);
     internal static void FireFightSelectionChanged(List<Fight> fights) => EventsFightSelectionChanged?.Invoke(fights);
+
+    internal static void AddDocumentWindows(DockingManager dockSite)
+    {
+      SyncFusionUtil.AddDocument(dockSite, typeof(HealingSummary), "healingSummaryWindow", "Healing Summary");
+      SyncFusionUtil.AddDocument(dockSite, typeof(TankingSummary), "tankingSummaryWindow", "Tanking Summary");
+      SyncFusionUtil.AddDocument(dockSite, typeof(DamageChart), "damageChartWindow", "DPS Chart");
+      SyncFusionUtil.AddDocument(dockSite, typeof(HealingChart), "healingChartWindow", "Healing Chart");
+      SyncFusionUtil.AddDocument(dockSite, typeof(TankingChart), "tankingChartWindow", "Tanking Chart");
+      SyncFusionUtil.AddDocument(dockSite, typeof(ChatViewer), "chatWindow", "Chat Archive");
+      SyncFusionUtil.AddDocument(dockSite, typeof(EventViewer), "specialEventsWindow", "Misc Events");
+      SyncFusionUtil.AddDocument(dockSite, typeof(RandomViewer), "randomsWindow", "Random Rolls");
+      SyncFusionUtil.AddDocument(dockSite, typeof(LootViewer), "lootWindow", "Looted Items");
+      SyncFusionUtil.AddDocument(dockSite, typeof(TriggersView), "triggersWindow", "Trigger Manager");
+      SyncFusionUtil.AddDocument(dockSite, typeof(NpcStatsViewer), "spellResistsWindow", "Spell Resists");
+      SyncFusionUtil.AddDocument(dockSite, typeof(SpellDamageStatsViewer), "spellDamageStatsWindow", "Spell Damage");
+      SyncFusionUtil.AddDocument(dockSite, typeof(TauntStatsViewer), "tauntStatsWindow", "Taunt Usage");
+      SyncFusionUtil.AddDocument(dockSite, typeof(DamageSummary), "damageSummaryWindow", "DPS Summary", true);
+    }
 
     internal static List<Fight> GetFights()
     {
@@ -83,10 +109,10 @@ namespace EQLogParser
               && (v1 > version.Major || (v1 == version.Major && v2 > version.Minor) ||
                   (v1 == version.Major && v2 == version.Minor && v3 > version.Build)))
           {
-            UIUtil.InvokeAsync(async () =>
+            async void Action()
             {
-              var msg = new MessageWindow($"Version {matches.Groups[1].Value} is Available. Download and Install?",
-                Resource.CHECK_VERSION, MessageWindow.IconType.Question, "Yes");
+              var msg = new MessageWindow($"Version {matches.Groups[1].Value} is Available. Download and Install?", Resource.CHECK_VERSION,
+                MessageWindow.IconType.Question, "Yes");
               msg.ShowDialog();
 
               if (msg.IsYes1Clicked)
@@ -130,7 +156,9 @@ namespace EQLogParser
                   Log.Error("Error Installing Updates", ex2);
                 }
               }
-            });
+            }
+
+            UIUtil.InvokeAsync(Action);
           }
         }
         catch (Exception ex)
@@ -365,31 +393,6 @@ namespace EQLogParser
       DockingManager.SetHeader(playersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
     }
 
-    internal static Dictionary<string, ContentControl> GetOpenWindows(DockingManager dockSite, DocumentTabControl chartTab)
-    {
-      var opened = new Dictionary<string, ContentControl>();
-      foreach (var child in dockSite.Children)
-      {
-        if (child is ContentControl control)
-        {
-          opened[control.Name] = control;
-        }
-      }
-
-      if (chartTab is { Container: not null })
-      {
-        foreach (var child in chartTab.Container.Items)
-        {
-          if (child is ContentControl control)
-          {
-            opened[control.Name] = control;
-          }
-        }
-      }
-
-      return opened;
-    }
-
     internal static dynamic InsertNameIntoSortedList(string name, ObservableCollection<object> collection)
     {
       var entry = new ExpandoObject() as dynamic;
@@ -559,12 +562,12 @@ namespace EQLogParser
                 while (!s.EndOfStream)
                 {
                   var line = s.ReadLine();
-                  if (string.IsNullOrEmpty(line) || line.Length <= MainWindow.ACTION_INDEX)
+                  if (string.IsNullOrEmpty(line) || line.Length <= MainWindow.ActionIndex)
                   {
                     continue;
                   }
 
-                  var action = line[MainWindow.ACTION_INDEX..];
+                  var action = line[MainWindow.ActionIndex..];
                   if (ChatLineParser.ParseChatType(action) != null)
                   {
                     continue;

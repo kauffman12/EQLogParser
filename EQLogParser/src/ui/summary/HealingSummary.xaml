@@ -7,6 +7,7 @@
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns:local="clr-namespace:EQLogParser"
              mc:Ignorable="d"
+             Loaded="ContentLoaded"
              d:DesignHeight="450" d:DesignWidth="1200">
   <Grid>
     <Grid.Resources>

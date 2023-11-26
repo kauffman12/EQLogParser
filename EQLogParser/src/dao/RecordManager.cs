@@ -14,16 +14,16 @@ namespace EQLogParser
     private static readonly Lazy<RecordManager> Lazy = new(() => new RecordManager());
     internal static RecordManager Instance => Lazy.Value; // instance
     // records
-    public const string DEATH_RECORDS = "DeathRecords";
-    public const string HEAL_RECORDS = "HealRecords";
-    public const string LOOT_RECORDS = "LootRecords";
-    public const string LOOT_RECORDS_TO_ASSIGN = "LootRecordsToAssign";
-    public const string MEZ_BREAK_RECORDS = "MezBreakRecords";
-    public const string RANDOM_RECORDS = "RandomRecords";
-    public const string SPELL_RECORDS = "SpellRecords";
-    public const string RESIST_RECORDS = "ResistRecords";
-    public const string SPECIAL_RECORDS = "SpecialRecords";
-    public const string ZONE_RECORDS = "ZoneRecords";
+    public const string DeathRecords = "DeathRecords";
+    public const string HealRecords = "HealRecords";
+    public const string LootRecords = "LootRecords";
+    public const string LootRecordsToAssign = "LootRecordsToAssign";
+    public const string MezBreakRecords = "MezBreakRecords";
+    public const string RandomRecords = "RandomRecords";
+    public const string SpellRecords = "SpellRecords";
+    public const string ResistRecords = "ResistRecords";
+    public const string SpecialRecords = "SpecialRecords";
+    public const string ZoneRecords = "ZoneRecords";
     // stats
     private readonly ConcurrentDictionary<string, List<RecordList>> RecordDicts = new();
     private readonly ConcurrentDictionary<string, bool> RecordNeedsEvent = new();
@@ -36,16 +36,16 @@ namespace EQLogParser
 
     private static readonly string[] TimedRecordTypes =
     {
-      DEATH_RECORDS,
-      HEAL_RECORDS,
-      LOOT_RECORDS,
-      LOOT_RECORDS_TO_ASSIGN,
-      MEZ_BREAK_RECORDS,
-      RANDOM_RECORDS,
-      SPELL_RECORDS,
-      RESIST_RECORDS,
-      SPECIAL_RECORDS,
-      ZONE_RECORDS
+      DeathRecords,
+      HealRecords,
+      LootRecords,
+      LootRecordsToAssign,
+      MezBreakRecords,
+      RandomRecords,
+      SpellRecords,
+      ResistRecords,
+      SpecialRecords,
+      ZoneRecords
     };
 
     private RecordManager()
@@ -61,44 +61,44 @@ namespace EQLogParser
       EventTimer = new Timer(SendEvents, null, TimeSpan.FromMilliseconds(1500), TimeSpan.FromMilliseconds(1500));
     }
 
-    internal void Add(DeathRecord record, double beginTime) => Add(DEATH_RECORDS, record, beginTime);
-    internal void Add(HealRecord record, double beginTime) => Add(HEAL_RECORDS, record, beginTime);
-    internal void Add(MezBreakRecord record, double beginTime) => Add(MEZ_BREAK_RECORDS, record, beginTime);
-    internal void Add(RandomRecord record, double beginTime) => Add(RANDOM_RECORDS, record, beginTime);
-    internal void Add(ResistRecord record, double beginTime) => Add(RESIST_RECORDS, record, beginTime);
-    internal void Add(ReceivedSpell spell, double beginTime) => Add(SPELL_RECORDS, spell, beginTime);
-    internal void Add(SpecialRecord record, double beginTime) => Add(SPECIAL_RECORDS, record, beginTime);
-    internal void Add(ZoneRecord record, double beginTime) => Add(ZONE_RECORDS, record, beginTime);
-    internal IEnumerable<(double, DeathRecord)> GetAllDeaths() => GetAll(DEATH_RECORDS).Select(r => (r.Item1, (DeathRecord)r.Item2));
-    internal IEnumerable<(double, HealRecord)> GetAllHeals() => GetAll(HEAL_RECORDS).Select(r => (r.Item1, (HealRecord)r.Item2));
-    internal IEnumerable<(double, LootRecord)> GetAllLoot() => GetAll(LOOT_RECORDS).Select(r => (r.Item1, (LootRecord)r.Item2));
-    internal IEnumerable<(double, MezBreakRecord)> GetAllMezBreaks() => GetAll(MEZ_BREAK_RECORDS).Select(r => (r.Item1, (MezBreakRecord)r.Item2));
-    internal IEnumerable<(double, RandomRecord)> GetAllRandoms() => GetAll(RANDOM_RECORDS).Select(r => (r.Item1, (RandomRecord)r.Item2));
-    internal IEnumerable<(double, ResistRecord)> GetAllResists() => GetAll(RESIST_RECORDS).Select(r => (r.Item1, (ResistRecord)r.Item2));
-    internal IEnumerable<(double, SpecialRecord)> GetAllSpecials() => GetAll(SPECIAL_RECORDS).Select(r => (r.Item1, (SpecialRecord)r.Item2));
-    internal IEnumerable<(double, ZoneRecord)> GetAllZoning() => GetAll(ZONE_RECORDS).Select(r => (r.Item1, (ZoneRecord)r.Item2));
+    internal void Add(DeathRecord record, double beginTime) => Add(DeathRecords, record, beginTime);
+    internal void Add(HealRecord record, double beginTime) => Add(HealRecords, record, beginTime);
+    internal void Add(MezBreakRecord record, double beginTime) => Add(MezBreakRecords, record, beginTime);
+    internal void Add(RandomRecord record, double beginTime) => Add(RandomRecords, record, beginTime);
+    internal void Add(ResistRecord record, double beginTime) => Add(ResistRecords, record, beginTime);
+    internal void Add(ReceivedSpell spell, double beginTime) => Add(SpellRecords, spell, beginTime);
+    internal void Add(SpecialRecord record, double beginTime) => Add(SpecialRecords, record, beginTime);
+    internal void Add(ZoneRecord record, double beginTime) => Add(ZoneRecords, record, beginTime);
+    internal IEnumerable<(double, DeathRecord)> GetAllDeaths() => GetAll(DeathRecords).Select(r => (r.Item1, (DeathRecord)r.Item2));
+    internal IEnumerable<(double, HealRecord)> GetAllHeals() => GetAll(HealRecords).Select(r => (r.Item1, (HealRecord)r.Item2));
+    internal IEnumerable<(double, LootRecord)> GetAllLoot() => GetAll(LootRecords).Select(r => (r.Item1, (LootRecord)r.Item2));
+    internal IEnumerable<(double, MezBreakRecord)> GetAllMezBreaks() => GetAll(MezBreakRecords).Select(r => (r.Item1, (MezBreakRecord)r.Item2));
+    internal IEnumerable<(double, RandomRecord)> GetAllRandoms() => GetAll(RandomRecords).Select(r => (r.Item1, (RandomRecord)r.Item2));
+    internal IEnumerable<(double, ResistRecord)> GetAllResists() => GetAll(ResistRecords).Select(r => (r.Item1, (ResistRecord)r.Item2));
+    internal IEnumerable<(double, SpecialRecord)> GetAllSpecials() => GetAll(SpecialRecords).Select(r => (r.Item1, (SpecialRecord)r.Item2));
+    internal IEnumerable<(double, ZoneRecord)> GetAllZoning() => GetAll(ZoneRecords).Select(r => (r.Item1, (ZoneRecord)r.Item2));
     internal IEnumerable<(double, DeathRecord)> GetDeathsDuring(double beginTime, double endTime) =>
-      GetDuring(DEATH_RECORDS, beginTime, endTime).Select(r => (r.Item1, (DeathRecord)r.Item2));
+      GetDuring(DeathRecords, beginTime, endTime).Select(r => (r.Item1, (DeathRecord)r.Item2));
     internal IEnumerable<(double, HealRecord)> GetHealsDuring(double beginTime, double endTime) =>
-      GetDuring(HEAL_RECORDS, beginTime, endTime).Select(r => (r.Item1, (HealRecord)r.Item2));
+      GetDuring(HealRecords, beginTime, endTime).Select(r => (r.Item1, (HealRecord)r.Item2));
     internal IEnumerable<(double, IAction)> GetSpellsDuring(double beginTime, double endTime, bool reverse = false) =>
-      GetDuring(SPELL_RECORDS, beginTime, endTime, reverse).Select(r => (r.Item1, (IAction)r.Item2));
+      GetDuring(SpellRecords, beginTime, endTime, reverse).Select(r => (r.Item1, (IAction)r.Item2));
     internal void Stop() => EventTimer?.Dispose();
 
     internal void Add(LootRecord record, double beginTime)
     {
-      Add(LOOT_RECORDS, record, beginTime);
+      Add(LootRecords, record, beginTime);
       if (record.IsCurrency) return;
 
       // if quantity zero then loot needs to be assigned
       if (record.Quantity == 0)
       {
-        Add(LOOT_RECORDS_TO_ASSIGN, record, beginTime);
+        Add(LootRecordsToAssign, record, beginTime);
         return;
       }
 
       // loot assigned so remove previous instance
-      if (RecordDicts.TryGetValue(LOOT_RECORDS_TO_ASSIGN, out var toAssign) && toAssign.Count > 0)
+      if (RecordDicts.TryGetValue(LootRecordsToAssign, out var toAssign) && toAssign.Count > 0)
       {
         lock (toAssign)
         {
@@ -110,7 +110,7 @@ namespace EQLogParser
             foreach (var found in recordsCopy.Cast<LootRecord>().Where(r => r.Player == record.Player && r.Item == record.Item))
             {
               Remove(toAssign, toAssignCopy[i], found);
-              if (RecordDicts.TryGetValue(LOOT_RECORDS, out var looted) && looted.FirstOrDefault(r => r.BeginTime.Equals(toAssignCopy[i].BeginTime)) is { } orig)
+              if (RecordDicts.TryGetValue(LootRecords, out var looted) && looted.FirstOrDefault(r => r.BeginTime.Equals(toAssignCopy[i].BeginTime)) is { } orig)
               {
                 lock (looted)
                 {
@@ -128,11 +128,14 @@ namespace EQLogParser
 
     internal void Add(SpellCast spell, double beginTime)
     {
-      Add(SPELL_RECORDS, spell, beginTime);
+      Add(SpellRecords, spell, beginTime);
 
       if (spell.SpellData?.HasAmbiguity == true)
       {
-        Add(PlayerAmbiguityCastCache, spell, beginTime);
+        lock (PlayerAmbiguityCastCache)
+        {
+          Add(PlayerAmbiguityCastCache, spell, beginTime);
+        }
       }
     }
 
@@ -163,6 +166,11 @@ namespace EQLogParser
       lock (CollectionLock)
       {
         AllQuickShareRecords.Clear();
+      }
+
+      lock (NpcSpellStatsDict)
+      {
+        NpcSpellStatsDict.Clear();
       }
     }
 

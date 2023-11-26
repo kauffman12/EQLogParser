@@ -14,7 +14,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for LootViewer.xaml
   /// </summary>
-  public partial class LootViewer : IDisposable
+  public partial class LootViewer : IDocumentContent
   {
     private const string ALL_NPCS = "All NPCs";
     private const string ALL_PLAYERS = "All Players";
@@ -31,6 +31,7 @@ namespace EQLogParser
     private string CurrentSelectedItem = ALL_ITEMS;
     private string CurrentSelectedPlayer = ALL_PLAYERS;
     private string CurrentSelectedNpc = ALL_NPCS;
+    private bool Ready;
 
     public LootViewer()
     {
@@ -49,14 +50,13 @@ namespace EQLogParser
 
       ReloadTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
       ReloadTimer.Tick += ReloadTimerTick;
-      Load();
     }
 
     private void ReloadTimerTick(object sender, EventArgs e) => Load();
 
     private void RecordsUpdatedEvent(string type)
     {
-      if (type == RecordManager.LOOT_RECORDS && !ReloadTimer.IsEnabled)
+      if (type == RecordManager.LootRecords && !ReloadTimer.IsEnabled)
       {
         ReloadTimer.Start();
       }
@@ -221,7 +221,7 @@ namespace EQLogParser
 
     private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
     {
-      if (dataGrid.View != null)
+      if (dataGrid.ItemsSource != null)
       {
         dataGrid.View.Filter = item =>
         {
@@ -294,28 +294,20 @@ namespace EQLogParser
       return string.Join(", ", values);
     }
 
-    #region IDisposable Support
-    private bool DisposedValue; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
+    private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (!DisposedValue)
+      if (VisualParent != null && !Ready)
       {
-        ReloadTimer.Tick -= ReloadTimerTick;
-        MainActions.EventsThemeChanged -= EventsThemeChanged;
-        RecordManager.Instance.RecordsUpdatedEvent -= RecordsUpdatedEvent;
-        dataGrid.Dispose();
-        DisposedValue = true;
+        RecordManager.Instance.RecordsUpdatedEvent += RecordsUpdatedEvent;
+        Load();
+        Ready = true;
       }
     }
 
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
+    public void HideContent()
     {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      GC.SuppressFinalize(this);
+      RecordManager.Instance.RecordsUpdatedEvent -= RecordsUpdatedEvent;
+      Ready = false;
     }
-    #endregion
   }
 }

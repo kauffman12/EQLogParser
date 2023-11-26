@@ -12,8 +12,6 @@ namespace EQLogParser
   {
     private static readonly ChatType EndResult = new();
 
-    private readonly string Home;
-
     private string CurrentArchive;
     private readonly ChatFilter CurrentChatFilter;
     private StringReader CurrentReader;
@@ -27,13 +25,13 @@ namespace EQLogParser
 
     internal ChatIterator(string playerAndServer, ChatFilter ChatFilter)
     {
-      Home = ConfigUtil.GetArchiveDir() + playerAndServer;
+      var home = ConfigUtil.GetArchiveDir() + playerAndServer;
       CurrentChatFilter = ChatFilter;
       DateUtil = new DateUtil();
 
-      if (Directory.Exists(Home))
+      if (Directory.Exists(home))
       {
-        var years = Directory.GetDirectories(Home);
+        var years = Directory.GetDirectories(home);
         if (years.Length > 0)
         {
           Directories = years.ToList().OrderByDescending(year => year).ToList();
@@ -94,8 +92,8 @@ namespace EQLogParser
         result = EndResult;
         while (result == EndResult && CurrentReader.ReadLine() is { } nextLine)
         {
-          var timeString = nextLine[..(MainWindow.ACTION_INDEX - 1)];
-          var action = nextLine[MainWindow.ACTION_INDEX..];
+          var timeString = nextLine[..(MainWindow.ActionIndex - 1)];
+          var action = nextLine[MainWindow.ActionIndex..];
           var chatType = ChatLineParser.ParseChatType(action);
           if (chatType != null)
           {
@@ -191,7 +189,7 @@ namespace EQLogParser
               Entries = archive.Entries.Where(entry =>
               {
                 var found = false;
-                if (entry.Name != ChatManager.INDEX)
+                if (entry.Name != ChatManager.Index)
                 {
                   var dayString = monthString + "-" + entry.Name;
                   if (DateTime.TryParseExact(dayString, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var day) && CurrentChatFilter.DuringDay(day))

@@ -9,22 +9,20 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for NpcStatsViewer.xaml
   /// </summary>
-  public partial class NpcStatsViewer : IDisposable
+  public partial class NpcStatsViewer : IDocumentContent
   {
     private const string NODATA = "No Spell Resist Data Found";
+    private bool Ready;
 
     public NpcStatsViewer()
     {
       InitializeComponent();
-      MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
       // default these columns to descending
       var desc = new[] { "Lowest", "Cold", "Corruption", "Disease", "Magic", "Fire", "Physical", "Poison", "Average", "Reflected" };
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-
       DataGridUtil.UpdateTableMargin(dataGrid);
       MainActions.EventsThemeChanged += EventsThemeChanged;
-      Load();
     }
 
     private void Load()
@@ -152,28 +150,22 @@ namespace EQLogParser
     private void EventsLogLoadingComplete(string _) => Load();
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
 
-    #region IDisposable Support
-    private bool DisposedValue; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
+    private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (!DisposedValue)
+      if (VisualParent != null && !Ready)
       {
-        MainActions.EventsThemeChanged -= EventsThemeChanged;
-        MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
-        dataGrid.Dispose();
-        DisposedValue = true;
+        MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
+        Load();
+        Ready = true;
       }
     }
 
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
+    public void HideContent()
     {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      GC.SuppressFinalize(this);
+      MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
+      dataGrid.ItemsSource = null;
+      Ready = false;
     }
-    #endregion
   }
 
   public class NpcStatsRow
