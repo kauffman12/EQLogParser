@@ -16,7 +16,7 @@ namespace EQLogParser
     internal static TankingStatsManager Instance = new();
 
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
-    internal event EventHandler<StatsGenerationEvent> EventsGenerationStatus;
+    internal event Action<StatsGenerationEvent> EventsGenerationStatus;
     private readonly Dictionary<int, byte> TankingGroupIds = new();
     private readonly ConcurrentDictionary<string, TimeRange> PlayerTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> PlayerSubTimeRanges = new();
@@ -35,7 +35,7 @@ namespace EQLogParser
     {
       lock (TankingGroupIds)
       {
-        DataManager.Instance.EventsClearedActiveData += (_, _) =>
+        DataManager.Instance.EventsClearedActiveData += (_) =>
         {
           Reset();
         };
@@ -162,13 +162,13 @@ namespace EQLogParser
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.TANK_PARSE, State = "STARTED" });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.TANK_PARSE, State = "STARTED", Source = this });
     }
 
     private void FireNoDataEvent(GenerateStatsOptions options, string state)
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(this, new StatsGenerationEvent { Type = Labels.TANK_PARSE, State = state });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.TANK_PARSE, State = state, Source = this });
       FireChartEvent(options, "CLEAR");
     }
 
@@ -250,12 +250,13 @@ namespace EQLogParser
             {
               Type = Labels.TANK_PARSE,
               State = "COMPLETED",
-              CombinedStats = combined
+              CombinedStats = combined,
+              Source = this
             };
 
             genEvent.Groups.AddRange(TankingGroups);
             genEvent.UniqueGroupCount = TankingGroupIds.Count;
-            EventsGenerationStatus?.Invoke(this, genEvent);
+            EventsGenerationStatus?.Invoke(genEvent);
             FireChartEvent(options, "UPDATE");
           }
           catch (Exception ex)

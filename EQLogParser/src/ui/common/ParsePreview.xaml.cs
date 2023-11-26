@@ -121,14 +121,14 @@ namespace EQLogParser
 
     private void CopyToEQButtonClick(object sender = null, RoutedEventArgs e = null) => CopyToEQClick(parseList.SelectedItem?.ToString());
 
-    private void EventsGenerationStatus(object sender, StatsGenerationEvent e)
+    private void EventsGenerationStatus(StatsGenerationEvent e)
     {
       switch (e.State)
       {
         case "COMPLETED":
         case "NONPC":
         case "NODATA":
-          AddParse(e.Type, sender as ISummaryBuilder, e.CombinedStats);
+          AddParse(e.Type, e.Source, e.CombinedStats);
           break;
       }
     }

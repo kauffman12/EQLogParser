@@ -20,11 +20,11 @@ namespace EQLogParser
   /// </summary>
   public partial class EQLogViewer : IDisposable
   {
-    private const int Context = 30000;
-    private const int MaxRows = 250000;
-    private const string Damageavoided = "Damage Avoided";
-    private const string Nocat = "Uncategorized";
-    private const string Otherchat = "Other Chat";
+    private const int CONTEXT = 30000;
+    private const int MAX_ROWS = 250000;
+    private const string DAMAGEAVOIDED = "Damage Avoided";
+    private const string NOCAT = "Uncategorized";
+    private const string OTHERCHAT = "Other Chat";
     private static readonly List<double> FontSizeList = new() { 10, 12, 14, 16, 18, 20, 22, 24 };
     private static readonly List<string> Times = new()
     {
@@ -57,10 +57,10 @@ namespace EQLogParser
       }
 
       fontSize.ItemsSource = FontSizeList;
-      var size = ConfigUtil.GetSetting("EQLogViewerFontSize");
-      if (size != null && double.TryParse(size, out var dsize))
+      var size = ConfigUtil.GetSettingAsDouble("EQLogViewerFontSize");
+      if (size > 0)
       {
-        fontSize.SelectedItem = dsize;
+        fontSize.SelectedItem = size;
       }
       else
       {
@@ -68,14 +68,13 @@ namespace EQLogParser
       }
 
       UpdateCurrentTextColor();
-
       logSearch.Text = Resource.LOG_SEARCH_TEXT;
       logSearch2.Text = Resource.LOG_SEARCH_TEXT;
       logFilter.Text = Resource.LOG_FILTER_TEXT;
 
       var list = new List<ComboBoxItemDetails>
       {
-        new() { IsChecked = true, Text = Damageavoided, Value = Damageavoided },
+        new() { IsChecked = true, Text = DAMAGEAVOIDED, Value = DAMAGEAVOIDED },
         new() { IsChecked = true, Text = Labels.DS, Value = Labels.DS },
         new() { IsChecked = true, Text = Labels.DD, Value = Labels.DD },
         new() { IsChecked = true, Text = Labels.DOT, Value = Labels.DOT },
@@ -83,12 +82,12 @@ namespace EQLogParser
         new() { IsChecked = true, Text = "Group", Value = ChatChannels.GROUP },
         new() { IsChecked = true, Text = "Guild", Value = ChatChannels.GUILD },
         new() { IsChecked = true, Text = Labels.MELEE, Value = Labels.MELEE },
-        new() { IsChecked = true, Text = Otherchat, Value = Otherchat },
+        new() { IsChecked = true, Text = OTHERCHAT, Value = OTHERCHAT },
         new() { IsChecked = true, Text = Labels.OTHER_DMG, Value = Labels.OTHER_DMG },
         new() { IsChecked = true, Text = Labels.PROC, Value = Labels.PROC },
         new() { IsChecked = true, Text = "Raid", Value = ChatChannels.RAID },
         new() { IsChecked = true, Text = "Say", Value = ChatChannels.SAY },
-        new() { IsChecked = true, Text = Nocat, Value = Nocat }
+        new() { IsChecked = true, Text = NOCAT, Value = NOCAT }
       };
 
       LineTypeCount = list.Count;
@@ -155,7 +154,7 @@ namespace EQLogParser
             if (types.Count < LineTypeCount)
             {
               ChatType chatType = null;
-              var action = line[MainWindow.ACTION_INDEX..];
+              var action = line[MainWindow.ActionIndex..];
               var damageRecord = DamageLineParser.ParseLine(action);
 
               if (damageRecord != null)
@@ -177,7 +176,7 @@ namespace EQLogParser
                   case Labels.MISS:
                   case Labels.PARRY:
                   case Labels.INVULNERABLE:
-                    ignore = !types.ContainsKey(Damageavoided);
+                    ignore = !types.ContainsKey(DAMAGEAVOIDED);
                     break;
                 }
 
@@ -202,7 +201,7 @@ namespace EQLogParser
                       ignore = !types.ContainsKey(chatType.Channel);
                       break;
                     default:
-                      ignore = !types.ContainsKey(Otherchat);
+                      ignore = !types.ContainsKey(OTHERCHAT);
                       break;
                   }
 
@@ -213,7 +212,7 @@ namespace EQLogParser
                 }
               }
 
-              if (damageRecord == null && chatType == null && !types.ContainsKey(Nocat))
+              if (damageRecord == null && chatType == null && !types.ContainsKey(NOCAT))
               {
                 continue;
               }
@@ -246,7 +245,7 @@ namespace EQLogParser
       Task.Delay(50).ContinueWith(_ =>
       {
         using var f = File.OpenRead(CurrentFile);
-        f.Seek(Math.Max(0, pos - Context), SeekOrigin.Begin);
+        f.Seek(Math.Max(0, pos - CONTEXT), SeekOrigin.Begin);
         var s = FileUtil.GetStreamReader(f);
         var list = new List<string>();
 
@@ -267,7 +266,7 @@ namespace EQLogParser
               foundLines.Add(list.Count);
             }
 
-            if (f.Position >= (pos + Context))
+            if (f.Position >= (pos + CONTEXT))
             {
               break;
             }
@@ -450,7 +449,7 @@ namespace EQLogParser
               }
             }
 
-            UnFiltered = list.Take(MaxRows).ToList();
+            UnFiltered = list.Take(MAX_ROWS).ToList();
             var allData = string.Join(Environment.NewLine, UnFiltered);
             // adding extra new line to be away from scrollbar
 
@@ -509,7 +508,7 @@ namespace EQLogParser
       if (statusCount != null)
       {
         statusCount.Text = count + " Lines";
-        if (count == MaxRows)
+        if (count == MAX_ROWS)
         {
           statusCount.Text += " (Maximum Reached)";
         }
@@ -716,17 +715,17 @@ namespace EQLogParser
     private void OptionsChange(object sender, EventArgs e) => UpdateUi();
 
     #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
+    private bool DisposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!disposedValue)
+      if (!DisposedValue)
       {
         MainActions.EventsThemeChanged -= EventsThemeChanged;
         logBox.Dispose();
         contextBox.Dispose();
         tabControl.Dispose();
-        disposedValue = true;
+        DisposedValue = true;
       }
     }
 

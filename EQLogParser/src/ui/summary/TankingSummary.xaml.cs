@@ -1,5 +1,4 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,13 +12,15 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for TankingSummary.xaml
   /// </summary>
-  public partial class TankingSummary : SummaryTable, IDisposable
+  public partial class TankingSummary : SummaryTable, IDocumentContent
   {
+    // Made property since it's used outside this class
+    public int DamageType { get; set; }
+
     private string CurrentClass;
     private bool CurrentPetValue;
     private int CurrentGroupCount;
-    // Made property since it's used outside this class
-    public int DamageType { get; set; }
+    private bool Ready;
 
     public TankingSummary()
     {
@@ -52,17 +53,7 @@ namespace EQLogParser
 
       // call after everything else is initialized
       InitSummaryTable(title, dataGrid, selectedColumns);
-      TankingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
-      HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
-      DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
       dataGrid.GridCopyContent += DataGridCopyContent;
-
-      if (TankingStatsManager.Instance.GetGroupCount() > 0)
-      {
-        // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-        var tankingOptions = new GenerateStatsOptions { DamageType = DamageType };
-        Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
-      }
     }
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
@@ -73,7 +64,7 @@ namespace EQLogParser
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var breakdown, typeof(TankingBreakdown),
           "tankingBreakdownWindow", "Tanking Breakdown"))
         {
-          (breakdown.Content as TankingBreakdown).Init(CurrentStats, selected);
+          (breakdown.Content as TankingBreakdown)?.Init(CurrentStats, selected);
         }
       }
     }
@@ -89,7 +80,7 @@ namespace EQLogParser
           // healing stats on the tank is stored in MoreStats property
           // it's like another player stat based around healing
           var selectedHealing = selected.Where(stats => stats.MoreStats != null).Select(stats => stats.MoreStats).ToList();
-          (breakdown.Content as HealBreakdown).Init(CurrentStats, selectedHealing, true);
+          (breakdown.Content as HealBreakdown)?.Init(CurrentStats, selectedHealing, true);
         }
       }
     }
@@ -137,8 +128,8 @@ namespace EQLogParser
       });
     }
 
-    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEqClick(Labels.TANK_PARSE);
-    private void CopyReceivedHealingToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEqClick(Labels.RECEIVED_HEAL_PARSE);
+    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.TANK_PARSE);
+    private void CopyReceivedHealingToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.RECEIVED_HEAL_PARSE);
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -193,7 +184,7 @@ namespace EQLogParser
         var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(HitLogViewer), "tankingLogWindow", "Tanking Log"))
         {
-          (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups, true);
+          (log.Content as HitLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups, true);
         }
       }
     }
@@ -205,7 +196,7 @@ namespace EQLogParser
         var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
         {
-          (log.Content as DeathLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
+          (log.Content as DeathLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
         }
       }
     }
@@ -217,7 +208,7 @@ namespace EQLogParser
         var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var hitFreq, typeof(HitFreqChart), "tankHitFreqChart", "Tanking Hit Frequency"))
         {
-          (hitFreq.Content as HitFreqChart).Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
+          (hitFreq.Content as HitFreqChart)?.Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
         }
       }
     }
@@ -234,14 +225,16 @@ namespace EQLogParser
       }
     }
 
-    private void EventsClearedActiveData(object sender, bool cleared)
+    private void EventsClearedActiveData(bool cleared) => ClearData();
+
+    private void ClearData()
     {
       CurrentStats = null;
       dataGrid.ItemsSource = NoResultsList;
-      title.Content = DEFAULT_TABLE_LABEL;
+      title.Content = DefaultTableLabel;
     }
 
-    private void EventsGenerationStatus(object sender, StatsGenerationEvent e)
+    private void EventsGenerationStatus(StatsGenerationEvent e)
     {
       Dispatcher.InvokeAsync(() =>
       {
@@ -279,7 +272,7 @@ namespace EQLogParser
               var isHealingLimited = false;
               if (CurrentStats == null)
               {
-                title.Content = NODATA_TABLE_LABEL;
+                title.Content = NodataTableLabel;
               }
               else
               {
@@ -299,7 +292,7 @@ namespace EQLogParser
             case "NONPC":
             case "NODATA":
               CurrentStats = null;
-              title.Content = e.State == "NONPC" ? DEFAULT_TABLE_LABEL : NODATA_TABLE_LABEL;
+              title.Content = e.State == "NONPC" ? DefaultTableLabel : NodataTableLabel;
               CreatePetOwnerMenu();
               UpdateDataGridMenuItems();
               break;
@@ -351,7 +344,7 @@ namespace EQLogParser
       if (dataGrid is { ItemsSource: not null })
       {
         var needRequery = DamageType != damageTypes.SelectedIndex;
-        CurrentPetValue = showPets.IsChecked.Value;
+        CurrentPetValue = showPets.IsChecked == true;
         DamageType = damageTypes.SelectedIndex;
         ConfigUtil.SetSetting("TankingSummaryShowPets", CurrentPetValue);
         ConfigUtil.SetSetting("TankingSummaryDamageType", DamageType);
@@ -367,33 +360,54 @@ namespace EQLogParser
       }
     }
 
-    #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
+    private void EventsChartOpened(string name)
     {
-      if (!disposedValue)
+      if (name == "Tanking")
       {
-        SummaryCleanup();
-        TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "UPDATE");
-        TankingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
-        HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
-        DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
-        dataGrid.GridCopyContent -= DataGridCopyContent;
-        CurrentStats = null;
-        dataGrid.Dispose();
-        disposedValue = true;
+        var tankingOptions = new GenerateStatsOptions { DamageType = DamageType };
+        var selected = GetSelectedStats();
+        TankingStatsManager.Instance.FireChartEvent(tankingOptions, "UPDATE", selected);
       }
     }
 
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
+    internal override void FireSelectionChangedEvent(List<PlayerStats> selected)
     {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
+      Dispatcher.InvokeAsync(() =>
+      {
+        var selectionChanged = new PlayerStatsSelectionChangedEventArgs();
+        selectionChanged.Selected.AddRange(selected);
+        selectionChanged.CurrentStats = CurrentStats;
+        MainActions.FireTankingSelectionChanged(selectionChanged);
+      });
     }
-    #endregion
+
+    private void ContentLoaded(object sender, RoutedEventArgs e)
+    {
+      if (VisualParent == null && !Ready)
+      {
+        TankingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
+        HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
+        DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+        MainActions.EventsChartOpened += EventsChartOpened;
+        if (TankingStatsManager.Instance.GetGroupCount() > 0)
+        {
+          // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
+          var tankingOptions = new GenerateStatsOptions { DamageType = DamageType };
+          Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
+        }
+        Ready = true;
+      }
+    }
+
+    public void HideContent()
+    {
+      TankingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+      HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+      DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      MainActions.EventsChartOpened -= EventsChartOpened;
+      ClearData();
+      TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "UPDATE");
+      Ready = false;
+    }
   }
 }

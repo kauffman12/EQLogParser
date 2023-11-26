@@ -9,45 +9,94 @@ namespace EQLogParser
 {
   static class SyncFusionUtil
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
+    internal static void AddDocument(DockingManager dockSite, Type type, string name, string title, bool show = false)
+    {
+      var control = new ContentControl { Name = name };
+      DockingManager.SetHeader(control, title);
+      DockingManager.SetState(control, DockState.Document);
+      DockingManager.SetSideInDockedMode(control, DockSide.Tabbed);
+      DockingManager.SetCanDock(control, false);
+      var instance = Activator.CreateInstance(type);
+      control.Content = instance;
+      dockSite.Children.Add(control);
+
+      if (!show)
+      {
+        DockingManager.SetState(control, DockState.Hidden);
+      }
+    }
+
+    internal static Dictionary<string, ContentControl> GetOpenWindows(DockingManager dockSite)
+    {
+      var opened = new Dictionary<string, ContentControl>();
+      foreach (var child in dockSite.Children)
+      {
+        if (child is ContentControl control)
+        {
+          opened[control.Name] = control;
+        }
+      }
+
+      return opened;
+    }
+
+    internal static void ToggleWindow(DockingManager dockSite, string name)
+    {
+      var opened = GetOpenWindows(dockSite);
+      if (opened.TryGetValue(name, out var control))
+      {
+        if (DockingManager.GetState(control) == DockState.Hidden)
+        {
+          dockSite.ActivateWindow(name);
+        }
+        else
+        {
+          if (control.Content is IDocumentContent doc)
+          {
+            doc.HideContent();
+          }
+
+          DockingManager.SetState(control, DockState.Hidden);
+        }
+      }
+    }
 
     internal static void CloseWindow(DockingManager dockSite, ContentControl window)
     {
-      if (window != null)
+      // don't really remove the window unless it is disposable
+      if (window?.Content is IDisposable disposable)
       {
-        var state = (DockingManager.GetState(window) == DockState.Hidden) ? DockState.Dock : DockState.Hidden;
         // delay so windows can be cleaned up before we manually try to do it
         try
         {
-          if (state == DockState.Hidden && (window.Tag as string) != "Hide")
+          try
           {
-            try
+            if (dockSite.Children.Contains(window))
             {
-              if (dockSite.Children.Contains(window))
-              {
-                dockSite.Children.Remove(window);
-              }
-              else if (dockSite.DocContainer != null && dockSite.DocContainer.Items.Contains(window))
-              {
-                dockSite.DocContainer.Items.Remove(window);
-              }
+              dockSite.Children.Remove(window);
             }
-            catch (Exception ex)
+            else if (dockSite.DocContainer != null && dockSite.DocContainer.Items.Contains(window))
             {
-              Log.Debug(ex);
+              dockSite.DocContainer.Items.Remove(window);
             }
+          }
+          catch (Exception ex)
+          {
+            Log.Debug(ex);
+          }
 
-            (window.Content as IDisposable)?.Dispose();
-          }
-          else
-          {
-            DockingManager.SetState(window, state);
-          }
+          disposable.Dispose();
         }
         catch (Exception e)
         {
           Log.Debug(e);
         }
+      }
+      else if (window?.Content is IDocumentContent doc)
+      {
+        doc.HideContent();
       }
     }
 
@@ -72,45 +121,6 @@ namespace EQLogParser
         dockSite.BeginInit();
         dockSite.Children.Add(window);
         dockSite.EndInit();
-        nowOpen = true;
-      }
-
-      return nowOpen;
-    }
-
-    internal static bool OpenChart(Dictionary<string, ContentControl> opened, DockingManager dockSite, string key, List<string> choices,
-      string title, DocumentTabControl tabControl, bool includePets)
-    {
-      var nowOpen = false;
-
-      if (opened != null && opened.TryGetValue(key, out var control))
-      {
-        CloseWindow(dockSite, control);
-      }
-      else
-      {
-        var chart = new LineChart(choices, includePets);
-        var window = new ContentControl { Name = key };
-        DockingManager.SetHeader(window, title);
-        DockingManager.SetState(window, DockState.Document);
-        DockingManager.SetCanDock(window, false);
-        window.Content = chart;
-
-        if (dockSite.DocContainer.Items.Count == 0)
-        {
-          dockSite.BeginInit();
-          dockSite.Children.Add(window);
-          dockSite.EndInit();
-        }
-        else if (tabControl == null || tabControl.Items.Count == 0)
-        {
-          dockSite.CreateHorizontalTabGroup(window);
-        }
-        else
-        {
-          tabControl.Container.AddElementToTabGroup(tabControl, window);
-        }
-
         nowOpen = true;
       }
 

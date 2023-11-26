@@ -12,7 +12,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for EventViewer.xaml
   /// </summary>
-  public partial class EventViewer : UserControl, IDisposable
+  public partial class EventViewer : IDocumentContent
   {
     private const string ZONE_EVENT = "Entered Area";
     private const string KILLSHOT_EVENT = "Kill Shot";
@@ -28,11 +28,11 @@ namespace EQLogParser
     private bool CurrentShowPlayerSlain = true;
     private int CurrentFilterModifier;
     private string CurrentFilterText = Resource.EVENT_FILTER_TEXT;
+    private bool Ready;
 
     public EventViewer()
     {
       InitializeComponent();
-      MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
 
       var list = new List<ComboBoxItemDetails>
       {
@@ -59,8 +59,6 @@ namespace EQLogParser
           UpdateTitleAndRefresh();
         }
       };
-
-      Load();
     }
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
@@ -117,37 +115,40 @@ namespace EQLogParser
 
     private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
     {
-      dataGrid.View.Filter = obj =>
+      if (dataGrid.ItemsSource != null)
       {
-        var result = false;
-        if (obj is EventRow row)
+        dataGrid.View.Filter = obj =>
         {
-          result = (CurrentShowMezBreaks && row.Event == MEZBREAK_EVENT) || (CurrentShowEnterZone && row.Event == ZONE_EVENT) || (CurrentShowKillShots &&
-            row.Event == KILLSHOT_EVENT) || (CurrentShowPlayerKilling && row.Event == PLAYERKILL_EVENT) || (CurrentShowPlayerSlain && row.Event == PLAYERSLAIN_EVENT);
-
-          if (result && !string.IsNullOrEmpty(CurrentFilterText) && CurrentFilterText != Resource.EVENT_FILTER_TEXT)
+          var result = false;
+          if (obj is EventRow row)
           {
-            if (CurrentFilterModifier == 0)
+            result = (CurrentShowMezBreaks && row.Event == MEZBREAK_EVENT) || (CurrentShowEnterZone && row.Event == ZONE_EVENT) || (CurrentShowKillShots &&
+              row.Event == KILLSHOT_EVENT) || (CurrentShowPlayerKilling && row.Event == PLAYERKILL_EVENT) || (CurrentShowPlayerSlain && row.Event == PLAYERSLAIN_EVENT);
+
+            if (result && !string.IsNullOrEmpty(CurrentFilterText) && CurrentFilterText != Resource.EVENT_FILTER_TEXT)
             {
-              result = row.Actor?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) > -1 ||
-                       row.Target?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) > -1;
-            }
-            else if (CurrentFilterModifier == 1)
-            {
-              result = row.Actor?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == -1 &&
-                       row.Target?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == -1;
-            }
-            else if (CurrentFilterModifier == 2)
-            {
-              result = row.Actor?.Equals(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == true ||
-                       row.Target?.Equals(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == true;
+              if (CurrentFilterModifier == 0)
+              {
+                result = row.Actor?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) > -1 ||
+                         row.Target?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) > -1;
+              }
+              else if (CurrentFilterModifier == 1)
+              {
+                result = row.Actor?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == -1 &&
+                         row.Target?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == -1;
+              }
+              else if (CurrentFilterModifier == 2)
+              {
+                result = row.Actor?.Equals(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == true ||
+                         row.Target?.Equals(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == true;
+              }
             }
           }
-        }
-        return result;
-      };
+          return result;
+        };
 
-      UpdateTitleAndRefresh();
+        UpdateTitleAndRefresh();
+      }
     }
 
     private void FilterOptionChange(object sender, EventArgs e)
@@ -232,29 +233,22 @@ namespace EQLogParser
 
     private void EventsLogLoadingComplete(string _) => Load();
 
-    #region IDisposable Support
-    private bool DisposedValue; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
+    private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (!DisposedValue)
+      if (VisualParent != null && !Ready)
       {
-        MainActions.EventsThemeChanged -= EventsThemeChanged;
-        MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
-        dataGrid.Dispose();
-        DisposedValue = true;
+        MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
+        Load();
+        Ready = true;
       }
     }
 
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
+    public void HideContent()
     {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
+      MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
+      dataGrid.ItemsSource = null;
+      Ready = false;
     }
-    #endregion
   }
 
   internal class EventRow

@@ -71,8 +71,8 @@ namespace EQLogParser
     internal event EventHandler<Fight> EventsNewFight;
     internal event EventHandler<Fight> EventsNewNonTankingFight;
     internal event EventHandler<Fight> EventsUpdateFight;
-    internal event EventHandler<bool> EventsClearedActiveData;
     internal event EventHandler<Fight> EventsNewOverlayFight;
+    internal event Action<bool> EventsClearedActiveData;
 
     internal const int MAX_TIMEOUT = 60;
     internal const int FIGHT_IMEOUT = 30;
@@ -811,7 +811,7 @@ namespace EQLogParser
       }
 
       ClearActiveAdps();
-      EventsClearedActiveData?.Invoke(this, true);
+      EventsClearedActiveData?.Invoke(true);
     }
 
     internal void ClearActiveAdps()

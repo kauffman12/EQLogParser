@@ -6,14 +6,13 @@ using System.Dynamic;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
 
 namespace EQLogParser
 {
   /// <summary>
   /// Interaction logic for SpellDamageStatsViewer.xaml
   /// </summary>
-  public partial class SpellDamageStatsViewer : UserControl, IDisposable
+  public partial class SpellDamageStatsViewer : IDocumentContent
   {
     private readonly ObservableCollection<string> Players = new();
     private readonly ObservableCollection<string> Spells = new();
@@ -22,6 +21,7 @@ namespace EQLogParser
     private string CurrentPlayer;
     private string CurrentSpell;
     private string CurrentType;
+    private bool Ready;
 
     public SpellDamageStatsViewer()
     {
@@ -35,9 +35,6 @@ namespace EQLogParser
       Types.Add(Labels.PROC);
       typeList.SelectedIndex = 0;
 
-      MainActions.EventsLogLoadingComplete += LogLoadingComplete;
-      MainActions.EventsFightSelectionChanged += SelectionChange;
-
       // default these columns to descending
       var desc = new[] { "Avg", "Max", "Total", "Hits" };
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
@@ -45,7 +42,6 @@ namespace EQLogParser
 
       DataGridUtil.UpdateTableMargin(dataGrid);
       MainActions.EventsThemeChanged += EventsThemeChanged;
-      Load();
     }
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
@@ -218,7 +214,7 @@ namespace EQLogParser
         CurrentPlayer = playerList.SelectedIndex > 0 ? playerList.SelectedItem as string : null;
         CurrentShowPlayers = showPlayers.IsChecked == true;
 
-        if (sender == fightOption)
+        if (ReferenceEquals(sender, fightOption))
         {
           Load();
         }
@@ -229,29 +225,23 @@ namespace EQLogParser
       }
     }
 
-    #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
+    private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (!disposedValue)
+      if (VisualParent != null && !Ready)
       {
-        MainActions.EventsThemeChanged -= EventsThemeChanged;
-        MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
-        MainActions.EventsFightSelectionChanged -= SelectionChange;
-        dataGrid.Dispose();
-        disposedValue = true;
+        MainActions.EventsFightSelectionChanged += SelectionChange;
+        MainActions.EventsLogLoadingComplete += LogLoadingComplete;
+        Load();
+        Ready = true;
       }
     }
 
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
+    public void HideContent()
     {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
+      MainActions.EventsFightSelectionChanged -= SelectionChange;
+      MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
+      dataGrid.ItemsSource = null;
+      Ready = false;
     }
-    #endregion
   }
 }

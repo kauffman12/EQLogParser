@@ -8,6 +8,7 @@
              xmlns:local="clr-namespace:EQLogParser"
              xmlns:numberformat="clr-namespace:System.Globalization;assembly=mscorlib"
              mc:Ignorable="d"
+             Loaded="ContentLoaded"
              d:DesignHeight="450" d:DesignWidth="1200">
   <Grid>
     <Grid.Resources>

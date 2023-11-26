@@ -15,14 +15,14 @@ namespace EQLogParser
     private const int TIMEOUT = 2000;
     private const string CHANNELS_FILE = "channels.txt";
     private const string SELECTED_CHANNELS_FILE = "channels-selected.txt";
-    internal const string INDEX = "index";
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    internal const string Index = "index";
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<ChatManager> Lazy = new(() => new ChatManager());
     private static readonly object LockObject = new();
-    private static readonly ReverseTimedActionComparer RTAComparer = new();
+    private static readonly ReverseTimedActionComparer RtaComparer = new();
     internal static ChatManager Instance => Lazy.Value;
-    internal event EventHandler<string> EventsUpdatePlayer;
-    internal event EventHandler<List<string>> EventsNewChannels;
+    internal event Action<string> EventsUpdatePlayer;
+    internal event Action<List<string>> EventsNewChannels;
     private readonly Dictionary<string, byte> ChannelCache = new();
     private readonly Dictionary<string, byte> PlayerCache = new();
     private DateUtil DateUtil;
@@ -117,7 +117,7 @@ namespace EQLogParser
         }
       }
 
-      if (string.Compare(player, CurrentPlayer, true) == 0)
+      if (String.Compare(player, CurrentPlayer, StringComparison.OrdinalIgnoreCase) == 0)
       {
         try
         {
@@ -308,7 +308,7 @@ namespace EQLogParser
           if (t != null)
           {
             var chatType = t;
-            if (lastTime == chatType.BeginTime)
+            if (!double.IsNaN(lastTime) && lastTime.Equals(chatType.BeginTime))
             {
               increment += 0.001;
             }
@@ -344,7 +344,7 @@ namespace EQLogParser
               var current = ChannelCache.Keys.ToList();
               ConfigUtil.SaveList(PlayerDir + @"\" + CHANNELS_FILE, current);
               ChannelCacheUpdated = false;
-              EventsNewChannels?.Invoke(this, current);
+              EventsNewChannels?.Invoke(current);
             }
 
             if (PlayerCacheUpdated)
@@ -354,7 +354,7 @@ namespace EQLogParser
               PlayerCacheUpdated = false;
             }
 
-            EventsUpdatePlayer?.Invoke(this, CurrentPlayer);
+            EventsUpdatePlayer?.Invoke(CurrentPlayer);
             Running = false;
           }
         }
@@ -404,7 +404,7 @@ namespace EQLogParser
           temp.ForEach(line =>
           {
             var beginTime = DateUtil.ParseDate(line);
-            if (lastTime.Equals(beginTime))
+            if (!double.IsNaN(lastTime) && lastTime.Equals(beginTime))
             {
               increment += 0.001;
             }
@@ -422,7 +422,7 @@ namespace EQLogParser
 
       if (CurrentList != null)
       {
-        var index = CurrentList.BinarySearch(chatLine, RTAComparer);
+        var index = CurrentList.BinarySearch(chatLine, RtaComparer);
 
         if (index < 0)
         {
@@ -449,7 +449,7 @@ namespace EQLogParser
       {
         try
         {
-          var indexEntry = CurrentArchive.GetEntry(INDEX);
+          var indexEntry = CurrentArchive.GetEntry(Index);
           if (indexEntry != null)
           {
             using var reader = new StreamReader(indexEntry.Open());
@@ -503,7 +503,7 @@ namespace EQLogParser
 
       if (indexList.Count > 0)
       {
-        var indexEntry = GetEntry(INDEX);
+        var indexEntry = GetEntry(Index);
         using var writer = new StreamWriter(indexEntry.Open());
         indexList.ForEach(item => writer.WriteLine(item));
         writer.Close();

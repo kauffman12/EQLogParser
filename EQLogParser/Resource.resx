@@ -228,6 +228,9 @@
   <data name="RECEIVED_SHARE" xml:space="preserve">
     <value>Received Quick Share</value>
   </data>
+  <data name="RESET_WINDOW_STATE" xml:space="preserve">
+    <value>Reset Window State</value>
+  </data>
   <data name="RESTART_NEEDED" xml:space="preserve">
     <value>Restart Required</value>
   </data>

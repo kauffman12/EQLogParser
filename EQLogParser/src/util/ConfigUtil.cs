@@ -15,8 +15,9 @@ namespace EQLogParser
     public static string PlayerName;
     public static string ServerName;
     public static string LogsDir;
+    public static string ConfigDir;
 
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     private const string APP_DATA = @"%AppData%\EQLogParser";
     private const string PETMAP_FILE = "petmapping.txt";
@@ -24,15 +25,13 @@ namespace EQLogParser
     private const string PLAYERS_FILE = "players.txt";
 
     private static string ArchiveDir;
-    private static string ConfigDir;
     private static string ServerConfigDir;
     private static string SettingsFile;
-    private static string TriggersDBFile;
-    private static bool initDone;
+    private static string TriggersDbFile;
+    private static bool InitDone;
     private static bool SettingsUpdated;
 
     private static readonly ConcurrentDictionary<string, string> ApplicationSettings = new();
-
     internal static void SetSetting(string key, bool value) => SetSetting(key, value.ToString());
     internal static void SetSetting(string key, double value) => SetSetting(key, value.ToString(CultureInfo.InvariantCulture));
     internal static void SetSetting(string key, int value) => SetSetting(key, value.ToString(CultureInfo.InvariantCulture));
@@ -188,20 +187,20 @@ namespace EQLogParser
     internal static string GetTriggersDBFile()
     {
       Init();
-      return TriggersDBFile;
+      return TriggersDbFile;
     }
 
     private static void Init()
     {
-      if (!initDone)
+      if (!InitDone)
       {
-        initDone = true;
+        InitDone = true;
         ArchiveDir = Environment.ExpandEnvironmentVariables(APP_DATA + @"\archive\");
         ConfigDir = Environment.ExpandEnvironmentVariables(APP_DATA + @"\config\");
         LogsDir = Environment.ExpandEnvironmentVariables(APP_DATA + @"\logs\");
         ServerConfigDir = ConfigDir + PETMAP_PATH;
         SettingsFile = ConfigDir + @"\settings.txt";
-        TriggersDBFile = ConfigDir + @"triggers.db";
+        TriggersDbFile = ConfigDir + @"triggers.db";
 
         // create config dir if it doesn't exist
         Directory.CreateDirectory(ConfigDir);

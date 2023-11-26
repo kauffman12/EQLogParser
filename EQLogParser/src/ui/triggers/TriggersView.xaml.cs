@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Speech.Synthesis;
@@ -16,7 +17,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for TriggersView.xaml
   /// </summary>
-  public partial class TriggersView : IDisposable
+  public partial class TriggersView : IDocumentContent
   {
     private readonly Dictionary<string, Window> PreviewWindows = new();
     private TriggerConfig TheConfig;
@@ -29,9 +30,9 @@ namespace EQLogParser
     private readonly RangeEditor HeightEditor;
     private readonly RangeEditor WidthEditor;
     private readonly SpeechSynthesizer TestSynth;
-    private string CurrentCharacterId;
     private readonly GridLength CharacterViewWidth;
-    private readonly bool Ready;
+    private string CurrentCharacterId;
+    private bool Ready;
 
     public TriggersView()
     {
@@ -106,15 +107,9 @@ namespace EQLogParser
         return editor.Editor;
       }
 
-      theTreeView.Init(CurrentCharacterId, IsCancelSelection, !config.IsAdvanced);
-      theTreeView.TreeSelectionChangedEvent += TreeSelectionChangedEvent;
-      theTreeView.ClosePreviewOverlaysEvent += ClosePreviewOverlaysEvent;
-      TriggerStateManager.Instance.DeleteEvent += TriggerOverlayDeleteEvent;
-      TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
-      TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+      // don't disconnect this one so tree stays in-sync when receiving quick shares
       TriggerStateManager.Instance.TriggerImportEvent += TriggerImportEvent;
-      characterView.SelectedCharacterEvent += CharacterSelectedCharacterEvent;
-      Ready = true;
+      theTreeView.Init(CurrentCharacterId, IsCancelSelection, !config.IsAdvanced);
     }
 
     private void TriggerImportEvent(bool _)
@@ -130,7 +125,7 @@ namespace EQLogParser
       var cancel = false;
       if (saveButton.IsEnabled)
       {
-        if (model is TriggerPropertyModel || model is TextOverlayPropertyModel || model is TimerOverlayPropertyModel)
+        if (model is TriggerPropertyModel or TextOverlayPropertyModel or TimerOverlayPropertyModel)
         {
           if (model.Node?.Name is string name)
           {
@@ -432,8 +427,8 @@ namespace EQLogParser
           textChange = textOverlay.FontFamily != original.FontFamily;
           Application.Current.Resources["TextOverlayFontFamily-" + textOverlay.Node.Id] = new FontFamily(textOverlay.FontFamily);
         }
-        else if (args.Property.Name == fontSizeItem.PropertyName && textOverlay.FontSize.Split("pt") is { Length: 2 } split
-                                                                 && double.TryParse(split[0], out var newFontSize))
+        else if (args.Property.Name == fontSizeItem.PropertyName && textOverlay.FontSize.Split("pt") is { Length: 2 } split &&
+          double.TryParse(split[0], NumberStyles.Any, CultureInfo.InvariantCulture, out var newFontSize))
         {
           textChange = textOverlay.FontSize != original.FontSize;
           Application.Current.Resources["TextOverlayFontSize-" + textOverlay.Node.Id] = newFontSize;
@@ -480,8 +475,8 @@ namespace EQLogParser
           timerChange = timerOverlay.FontBrush.Color.ToHexString() != original.FontColor;
           Application.Current.Resources["TimerBarFontColor-" + timerOverlay.Node.Id] = timerOverlay.FontBrush;
         }
-        else if (args.Property.Name == fontSizeItem.PropertyName && timerOverlay.FontSize.Split("pt") is { Length: 2 } split
-                                                                 && double.TryParse(split[0], out var newFontSize))
+        else if (args.Property.Name == fontSizeItem.PropertyName && timerOverlay.FontSize.Split("pt") is { Length: 2 } split &&
+          double.TryParse(split[0], NumberStyles.Any, CultureInfo.InvariantCulture, out var newFontSize))
         {
           timerChange = timerOverlay.FontSize != original.FontSize;
           Application.Current.Resources["TimerBarFontSize-" + timerOverlay.Node.Id] = newFontSize;
@@ -622,34 +617,31 @@ namespace EQLogParser
       }
     }
 
-    #region IDisposable Support
-    private bool DisposedValue; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
+    private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (!DisposedValue)
+      if (VisualParent != null && !Ready)
       {
-        DisposedValue = true;
-        PreviewWindows.Values.ToList().ForEach(window => window.Close());
-        PreviewWindows.Clear();
-        TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
-        TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
-        TriggerStateManager.Instance.DeleteEvent -= TriggerOverlayDeleteEvent;
-        theTreeView.TreeSelectionChangedEvent -= TreeSelectionChangedEvent;
-        TestSynth?.Dispose();
-        Watcher?.Dispose();
-        thePropertyGrid?.Dispose();
-        theTreeView.Dispose();
+        TriggerStateManager.Instance.DeleteEvent += TriggerOverlayDeleteEvent;
+        TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
+        TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+        characterView.SelectedCharacterEvent += CharacterSelectedCharacterEvent;
+        theTreeView.TreeSelectionChangedEvent += TreeSelectionChangedEvent;
+        theTreeView.ClosePreviewOverlaysEvent += ClosePreviewOverlaysEvent;
+        Ready = true;
       }
     }
 
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
+    public void HideContent()
     {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      GC.SuppressFinalize(this);
+      PreviewWindows.Values.ToList().ForEach(window => window.Close());
+      PreviewWindows.Clear();
+      TriggerStateManager.Instance.DeleteEvent -= TriggerOverlayDeleteEvent;
+      TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
+      TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
+      characterView.SelectedCharacterEvent -= CharacterSelectedCharacterEvent;
+      theTreeView.TreeSelectionChangedEvent -= TreeSelectionChangedEvent;
+      theTreeView.ClosePreviewOverlaysEvent -= ClosePreviewOverlaysEvent;
+      Ready = false;
     }
-    #endregion
   }
 }

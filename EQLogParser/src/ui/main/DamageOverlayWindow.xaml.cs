@@ -16,7 +16,7 @@ namespace EQLogParser
   /// </summary>
   public partial class DamageOverlayWindow
   {
-    private const double DamageModeZeroTimeout = TimeSpan.TicksPerSecond * 7; // with 3 second slain queue delay
+    private const double DAMAGE_MODE_ZERO_TIMEOUT = TimeSpan.TicksPerSecond * 7; // with 3 second slain queue delay
     private static readonly object StatsLock = new();
     private static readonly SolidColorBrush ActiveBrush = new(Color.FromRgb(254, 156, 30));
     private static readonly SolidColorBrush InActiveBrush = new(Colors.White);
@@ -60,18 +60,20 @@ namespace EQLogParser
       }
 
       // dimensions
-      var width = ConfigUtil.GetSetting("OverlayWidth");
-      var height = ConfigUtil.GetSetting("OverlayHeight");
-      var top = ConfigUtil.GetSetting("OverlayTop");
-      var left = ConfigUtil.GetSetting("OverlayLeft");
+      var width = ConfigUtil.GetSettingAsDouble("OverlayWidth", double.MaxValue);
+      var height = ConfigUtil.GetSettingAsDouble("OverlayHeight", double.MaxValue);
+      var top = ConfigUtil.GetSettingAsDouble("OverlayTop", double.MaxValue);
+      var left = ConfigUtil.GetSettingAsDouble("OverlayLeft", double.MaxValue);
       SetWindowSizes(height, width, top, left);
 
       // fonts
       var fontSizeString = ConfigUtil.GetSetting("OverlayFontSize");
-      if (fontSizeString == null || !int.TryParse(fontSizeString, out SavedFontSize) || (SavedFontSize != 10 && SavedFontSize != 12 && SavedFontSize != 14 && SavedFontSize != 16))
+      if (fontSizeString == null || !int.TryParse(fontSizeString, out SavedFontSize) || (SavedFontSize != 10 &&
+        SavedFontSize != 12 && SavedFontSize != 14 && SavedFontSize != 16))
       {
         SavedFontSize = 12;
       }
+
       UpdateFontSize(SavedFontSize);
 
       // color
@@ -174,7 +176,7 @@ namespace EQLogParser
 
         if (update == null)
         {
-          if (Stats != null && (CurrentDamageMode != 0 || (DateTime.Now.Ticks - Stats.LastUpdateTicks) >= DamageModeZeroTimeout))
+          if (Stats != null && (CurrentDamageMode != 0 || (DateTime.Now.Ticks - Stats.LastUpdateTicks) >= DAMAGE_MODE_ZERO_TIMEOUT))
           {
             damageOverlayStats = Stats = null;
           }
@@ -396,7 +398,7 @@ namespace EQLogParser
       ConfigUtil.SetSetting("OverlayEnableCritRate", CurrentShowCritRate);
       SavedShowCritRate = CurrentShowCritRate;
 
-      ConfigUtil.SetSetting("OverlayMiniBars", miniBars.IsChecked.Value);
+      ConfigUtil.SetSetting("OverlayMiniBars", miniBars.IsChecked == true);
       SavedMiniBars = miniBars.IsChecked == true;
 
       ConfigUtil.SetSetting("OverlayMaxRows", maxRowsList.SelectedIndex + 1);
@@ -462,34 +464,26 @@ namespace EQLogParser
       SavedLeft = Left;
     }
 
-    private void SetWindowSizes(string height, string width, string top, string left)
+    private void SetWindowSizes(double height, double width, double top, double left)
     {
-      if (width != null && double.TryParse(width, out var dvalue) && !double.IsNaN(dvalue))
+      if (width < double.MaxValue)
       {
-        Width = dvalue;
+        Width = width;
       }
 
-      if (height != null && double.TryParse(height, out dvalue) && !double.IsNaN(dvalue))
+      if (height < double.MaxValue)
       {
-        Height = dvalue;
+        Height = height;
       }
 
-      if (top != null && double.TryParse(top, out dvalue) && !double.IsNaN(dvalue))
+      if (top < double.MaxValue && top < SystemParameters.VirtualScreenHeight)
       {
-        Top = dvalue;
+        Top = top;
       }
 
-      if (left != null && double.TryParse(left, out dvalue) && !double.IsNaN(dvalue))
+      if (left < double.MaxValue && left >= SystemParameters.VirtualScreenLeft && left < SystemParameters.VirtualScreenWidth)
       {
-        var test = dvalue;
-        if (test >= SystemParameters.VirtualScreenLeft && test < SystemParameters.VirtualScreenWidth)
-        {
-          Left = test;
-        }
-        else
-        {
-          Left = dvalue;
-        }
+        Left = left;
       }
     }
 

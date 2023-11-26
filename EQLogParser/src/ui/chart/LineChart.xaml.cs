@@ -13,10 +13,9 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for LineChart.xaml
   /// </summary>
-  public partial class LineChart : IDisposable
+  public partial class LineChart
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-
     private readonly Dictionary<string, List<DataPoint>> PlayerPetValues = new();
     private readonly Dictionary<string, List<DataPoint>> PlayerValues = new();
     private readonly Dictionary<string, List<DataPoint>> PetValues = new();
@@ -29,7 +28,7 @@ namespace EQLogParser
     private string CurrentPetOrPlayerOption;
     private List<PlayerStats> LastSelected;
 
-    public LineChart(List<string> choices, bool includePets = false)
+    public LineChart(IEnumerable<string> choices, bool includePets = false)
     {
       InitializeComponent();
 
@@ -38,8 +37,6 @@ namespace EQLogParser
       CurrentChoice = choicesList.SelectedValue as string;
       dateLabel.FontSize = MainWindow.CurrentFontSize - 1;
       numLabel.FontSize = MainWindow.CurrentFontSize;
-
-      DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
       MainActions.EventsThemeChanged += EventsThemeChanged;
 
       if (includePets)
@@ -55,8 +52,6 @@ namespace EQLogParser
       CurrentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
       Reset();
     }
-
-    private void EventsClearedActiveData(object sender, bool cleared) => Clear();
 
     internal void Clear()
     {
@@ -595,7 +590,7 @@ namespace EQLogParser
 
       if (playerValues.Count > 0 && playerValues.Last() is { } test)
       {
-        if (test.CurrentTime == newEntry.CurrentTime)
+        if (test.CurrentTime.Equals(newEntry.CurrentTime))
         {
           playerValues[^1] = newEntry;
         }
@@ -609,29 +604,5 @@ namespace EQLogParser
         playerValues.Add(newEntry);
       }
     }
-
-    #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
-    {
-      if (!disposedValue)
-      {
-        MainActions.EventsThemeChanged -= EventsThemeChanged;
-        DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
-        sfLineChart.Dispose();
-        disposedValue = true;
-      }
-    }
-
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
-    {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
-    }
-    #endregion
   }
 }

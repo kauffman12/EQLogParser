@@ -1,5 +1,4 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,9 +12,10 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for HealSummary.xaml
   /// </summary>
-  public partial class HealingSummary : SummaryTable, IDisposable
+  public partial class HealingSummary : SummaryTable, IDocumentContent
   {
     private string CurrentClass;
+    private bool Ready;
 
     public HealingSummary()
     {
@@ -32,15 +32,7 @@ namespace EQLogParser
 
       // call after everything else is initialized
       InitSummaryTable(title, dataGrid, selectedColumns);
-      HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
-      DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
       dataGrid.GridCopyContent += DataGridCopyContent;
-
-      if (HealingStatsManager.Instance.GetGroupCount() > 0)
-      {
-        // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-        Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats());
-      }
     }
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
@@ -51,7 +43,7 @@ namespace EQLogParser
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var breakdown, typeof(HealBreakdown),
           "healingBreakdownWindow", "Healing Breakdown"))
         {
-          (breakdown.Content as HealBreakdown).Init(CurrentStats, selected);
+          (breakdown.Content as HealBreakdown)?.Init(CurrentStats, selected);
         }
       }
     }
@@ -77,7 +69,7 @@ namespace EQLogParser
 
           EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats.UniqueClasses);
           EnableClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
-          EnableClassMenuItems(menuItemShowSpellCounts, dataGrid, CurrentStats.UniqueClasses);
+          EnableClassMenuItems(menuItemShowSpellCounts, dataGrid, CurrentStats?.UniqueClasses);
         }
         else
         {
@@ -88,8 +80,8 @@ namespace EQLogParser
       });
     }
 
-    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEqClick(Labels.HEAL_PARSE);
-    private void CopyTopHealsToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEqClick(Labels.TOP_HEAL_PARSE);
+    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.HEAL_PARSE);
+    private void CopyTopHealsToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.TOP_HEAL_PARSE);
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -121,7 +113,7 @@ namespace EQLogParser
         var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(HitLogViewer), "healingLogWindow", "Healing Log"))
         {
-          (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
+          (log.Content as HitLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
         }
       }
     }
@@ -133,7 +125,7 @@ namespace EQLogParser
         var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
         {
-          (log.Content as DeathLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
+          (log.Content as DeathLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
         }
       }
     }
@@ -150,14 +142,16 @@ namespace EQLogParser
       }
     }
 
-    private void EventsClearedActiveData(object sender, bool cleared)
+    private void EventsClearedActiveData(bool cleared) => ClearData();
+
+    private void ClearData()
     {
       CurrentStats = null;
       dataGrid.ItemsSource = NoResultsList;
-      title.Content = DEFAULT_TABLE_LABEL;
+      title.Content = DefaultTableLabel;
     }
 
-    private void EventsGenerationStatus(object sender, StatsGenerationEvent e)
+    private void EventsGenerationStatus(StatsGenerationEvent e)
     {
       Dispatcher.InvokeAsync(() =>
       {
@@ -173,7 +167,7 @@ namespace EQLogParser
 
             if (CurrentStats == null)
             {
-              title.Content = NODATA_TABLE_LABEL;
+              title.Content = NodataTableLabel;
             }
             else
             {
@@ -191,7 +185,7 @@ namespace EQLogParser
           case "NONPC":
           case "NODATA":
             CurrentStats = null;
-            title.Content = e.State == "NONPC" ? DEFAULT_TABLE_LABEL : NODATA_TABLE_LABEL;
+            title.Content = e.State == "NONPC" ? DefaultTableLabel : NodataTableLabel;
             UpdateDataGridMenuItems();
             break;
         }
@@ -226,32 +220,50 @@ namespace EQLogParser
       }
     }
 
-    #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
+    private void EventsChartOpened(string name)
     {
-      if (!disposedValue)
+      if (name == "Healing")
       {
-        SummaryCleanup();
-        HealingStatsManager.Instance.FireChartEvent("UPDATE");
-        HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
-        DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
-        dataGrid.GridCopyContent -= DataGridCopyContent;
-        CurrentStats = null;
-        dataGrid.Dispose();
-        disposedValue = true;
+        var selected = GetSelectedStats();
+        HealingStatsManager.Instance.FireChartEvent("UPDATE", selected);
       }
     }
 
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
+    internal override void FireSelectionChangedEvent(List<PlayerStats> selected)
     {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
+      Dispatcher.InvokeAsync(() =>
+      {
+        var selectionChanged = new PlayerStatsSelectionChangedEventArgs();
+        selectionChanged.Selected.AddRange(selected);
+        selectionChanged.CurrentStats = CurrentStats;
+        MainActions.FireHealingSelectionChanged(selectionChanged);
+      });
     }
-    #endregion
+
+    private void ContentLoaded(object sender, RoutedEventArgs e)
+    {
+      if (VisualParent != null && !Ready)
+      {
+        HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
+        DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+        MainActions.EventsChartOpened += EventsChartOpened;
+        if (HealingStatsManager.Instance.GetGroupCount() > 0)
+        {
+          // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
+          Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats());
+        }
+        Ready = true;
+      }
+    }
+
+    public void HideContent()
+    {
+      HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+      DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      MainActions.EventsChartOpened -= EventsChartOpened;
+      ClearData();
+      HealingStatsManager.Instance.FireChartEvent("UPDATE");
+      Ready = false;
+    }
   }
 }

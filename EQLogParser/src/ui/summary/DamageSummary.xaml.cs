@@ -17,12 +17,13 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for DamageSummary.xaml
   /// </summary>
-  public partial class DamageSummary : SummaryTable, IDisposable
+  public partial class DamageSummary : SummaryTable, IDocumentContent
   {
     private string CurrentClass;
     private int CurrentGroupCount;
     private int CurrentPetOrPlayerOption;
     private readonly DispatcherTimer SelectionTimer;
+    private bool Ready;
 
     public DamageSummary()
     {
@@ -42,8 +43,6 @@ namespace EQLogParser
 
       // call after everything else is initialized
       InitSummaryTable(title, dataGrid, selectedColumns);
-      DamageStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
-      DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
       dataGrid.CopyContent += DataGridCopyContent;
 
       SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
@@ -70,12 +69,6 @@ namespace EQLogParser
           SelectionTimer.Stop();
         }
       };
-
-      if (DamageStatsManager.Instance.GetGroupCount() > 0)
-      {
-        // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-        Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(new GenerateStatsOptions()));
-      }
     }
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
@@ -86,7 +79,7 @@ namespace EQLogParser
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var breakdown, typeof(DamageBreakdown),
           "damageBreakdownWindow", "DPS Breakdown"))
         {
-          (breakdown.Content as DamageBreakdown).Init(CurrentStats, selected);
+          (breakdown.Content as DamageBreakdown)?.Init(CurrentStats, selected);
         }
       }
     }
@@ -131,7 +124,7 @@ namespace EQLogParser
       });
     }
 
-    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow).CopyToEqClick(Labels.DAMAGE_PARSE);
+    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.DAMAGE_PARSE);
     internal override bool IsPetsCombined() => CurrentPetOrPlayerOption == 0;
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
@@ -235,7 +228,7 @@ namespace EQLogParser
         var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(HitLogViewer), "damageLogWindow", "DPS Log"))
         {
-          (log.Content as HitLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
+          (log.Content as HitLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
         }
       }
     }
@@ -247,7 +240,7 @@ namespace EQLogParser
         var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
         {
-          (log.Content as DeathLogViewer).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
+          (log.Content as DeathLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
         }
       }
     }
@@ -259,7 +252,7 @@ namespace EQLogParser
         var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var hitFreq, typeof(HitFreqChart), "damageFreqChart", "Damage Hit Frequency"))
         {
-          (hitFreq.Content as HitFreqChart).Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
+          (hitFreq.Content as HitFreqChart)?.Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
         }
       }
     }
@@ -276,14 +269,16 @@ namespace EQLogParser
       }
     }
 
-    private void EventsClearedActiveData(object sender, bool cleared)
+    private void EventsClearedActiveData(bool cleared) => ClearData();
+
+    private void ClearData()
     {
       CurrentStats = null;
       dataGrid.ItemsSource = NoResultsList;
-      title.Content = DEFAULT_TABLE_LABEL;
+      title.Content = DefaultTableLabel;
     }
 
-    private void EventsGenerationStatus(object sender, StatsGenerationEvent e)
+    private void EventsGenerationStatus(StatsGenerationEvent e)
     {
       Dispatcher.InvokeAsync(() =>
       {
@@ -300,7 +295,7 @@ namespace EQLogParser
 
             if (CurrentStats == null)
             {
-              title.Content = NODATA_TABLE_LABEL;
+              title.Content = NodataTableLabel;
               maxTimeChooser.MaxValue = 0;
               minTimeChooser.MaxValue = 0;
             }
@@ -331,7 +326,7 @@ namespace EQLogParser
             CurrentStats = null;
             maxTimeChooser.MaxValue = 0;
             minTimeChooser.MaxValue = 0;
-            title.Content = e.State == "NONPC" ? DEFAULT_TABLE_LABEL : NODATA_TABLE_LABEL;
+            title.Content = e.State == "NONPC" ? DefaultTableLabel : NodataTableLabel;
             CreatePetOwnerMenu();
             UpdateDataGridMenuItems();
             break;
@@ -419,32 +414,50 @@ namespace EQLogParser
       }
     }
 
-    #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
+    private void EventsChartOpened(string name)
     {
-      if (!disposedValue)
+      if (name == "Damage")
       {
-        SummaryCleanup();
-        DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { MaxSeconds = long.MinValue }, "UPDATE");
-        DamageStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
-        DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
-        dataGrid.CopyContent -= DataGridCopyContent;
-        CurrentStats = null;
-        dataGrid.Dispose();
-        disposedValue = true;
+        var selected = GetSelectedStats();
+        DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "UPDATE", selected);
       }
     }
 
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
+    internal override void FireSelectionChangedEvent(List<PlayerStats> selected)
     {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
+      Dispatcher.InvokeAsync(() =>
+      {
+        var selectionChanged = new PlayerStatsSelectionChangedEventArgs();
+        selectionChanged.Selected.AddRange(selected);
+        selectionChanged.CurrentStats = CurrentStats;
+        MainActions.FireDamageSelectionChanged(selectionChanged);
+      });
     }
-    #endregion
+
+    private void ContentLoaded(object sender, RoutedEventArgs e)
+    {
+      if (VisualParent != null && !Ready)
+      {
+        DamageStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
+        DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+        MainActions.EventsChartOpened += EventsChartOpened;
+        if (DamageStatsManager.Instance.GetGroupCount() > 0)
+        {
+          // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
+          Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(new GenerateStatsOptions()));
+        }
+        Ready = true;
+      }
+    }
+
+    public void HideContent()
+    {
+      DamageStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+      DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      MainActions.EventsChartOpened -= EventsChartOpened;
+      ClearData();
+      DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { MaxSeconds = long.MinValue }, "UPDATE");
+      Ready = false;
+    }
   }
 }

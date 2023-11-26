@@ -5,7 +5,6 @@ using System.ComponentModel;
 using System.Dynamic;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace EQLogParser
@@ -13,24 +12,20 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for TauntStatsViewer.xaml
   /// </summary>
-  public partial class TauntStatsViewer : UserControl, IDisposable
+  public partial class TauntStatsViewer : IDocumentContent
   {
+    private bool Ready;
+
     public TauntStatsViewer()
     {
       InitializeComponent();
-
-      MainActions.EventsLogLoadingComplete += LogLoadingComplete;
-      MainActions.EventsFightSelectionChanged += SelectionChange;
       dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Taunt", SortDirection = ListSortDirection.Descending });
-
       // default these columns to descending
       var desc = new[] { "Taunt", "Failed", "Improved", "SuccessRate" };
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-
       DataGridUtil.UpdateTableMargin(dataGrid);
       MainActions.EventsThemeChanged += EventsThemeChanged;
-      Load();
     }
 
     internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
@@ -43,7 +38,7 @@ namespace EQLogParser
 
     private void SelectionChange(List<Fight> _)
     {
-      if (fightOption?.SelectedIndex != 0)
+      if (Ready)
       {
         Load();
       }
@@ -51,7 +46,7 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, EventArgs e)
     {
-      if (dataGrid?.View != null)
+      if (Ready)
       {
         Load();
       }
@@ -103,14 +98,13 @@ namespace EQLogParser
       row.Failed += record.IsImproved ? 0 : record.Success ? 0 : 1;
       row.Improved += record.IsImproved ? 1 : 0;
 
-      var count = row.Failed + row.Taunt;
-      if (count > 0)
+      if ((row.Failed + row.Taunt) is var count && count > 0)
       {
         row.SuccessRate = (double)Math.Round((float)row.Taunt / count * 100, 2);
       }
     }
 
-    private ExpandoObject CreateRow(TauntRecord record, string name, bool parent)
+    private static ExpandoObject CreateRow(TauntRecord record, string name, bool parent)
     {
       dynamic row = new ExpandoObject();
       row.Name = name;
@@ -127,29 +121,23 @@ namespace EQLogParser
       return row;
     }
 
-    #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
+    private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (!disposedValue)
+      if (VisualParent != null && !Ready)
       {
-        MainActions.EventsThemeChanged -= EventsThemeChanged;
-        MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
-        MainActions.EventsFightSelectionChanged -= SelectionChange;
-        dataGrid.Dispose();
-        disposedValue = true;
+        MainActions.EventsLogLoadingComplete += LogLoadingComplete;
+        MainActions.EventsFightSelectionChanged += SelectionChange;
+        Load();
+        Ready = true;
       }
     }
 
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
+    public void HideContent()
     {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
+      MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
+      MainActions.EventsFightSelectionChanged -= SelectionChange;
+      dataGrid.ItemsSource = null;
+      Ready = false;
     }
-    #endregion
   }
 }
