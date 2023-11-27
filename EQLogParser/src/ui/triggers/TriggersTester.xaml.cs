@@ -14,24 +14,16 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for TriggersTester.xaml
   /// </summary>
-  public partial class TriggersTester : IDisposable
+  public partial class TriggersTester : IDocumentContent
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private BlockingCollection<Tuple<string, double, bool>> Buffer;
     private TriggerConfig TheConfig;
+    private bool Ready;
 
     public TriggersTester()
     {
       InitializeComponent();
-      TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
-      ((MainWindow)Application.Current.MainWindow)!.Closing += TriggersTesterClosing;
-      MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
-      theBasicLabel.Content = $"Current Player {{C}} " + (string.IsNullOrEmpty(ConfigUtil.PlayerName) ? "is not set" : "set to " + ConfigUtil.PlayerName);
-
-      if (TriggerStateManager.Instance.GetConfig() is { } config)
-      {
-        UpdateCharacterList(config);
-      }
     }
 
     private void EventsLogLoadingComplete(string obj)
@@ -311,30 +303,30 @@ namespace EQLogParser
       }
     }
 
-    #region IDisposable Support
-    private bool DisposedValue; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
+    private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (!DisposedValue)
+      if (VisualParent != null && !Ready)
       {
-        Buffer?.CompleteAdding();
-        TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
-        ((MainWindow)Application.Current.MainWindow)!.Closing -= TriggersTesterClosing;
-        MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
-        testTriggersBox?.Dispose();
-        DisposedValue = true;
+        if (TriggerStateManager.Instance.IsActive())
+        {
+          TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+          ((MainWindow)Application.Current.MainWindow)!.Closing += TriggersTesterClosing;
+          MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
+          theBasicLabel.Content = $"Current Player {{C}} " + (string.IsNullOrEmpty(ConfigUtil.PlayerName) ? "is not set" : "set to " + ConfigUtil.PlayerName);
+
+          if (TriggerStateManager.Instance.GetConfig() is { } config)
+          {
+            UpdateCharacterList(config);
+          }
+        }
+
+        Ready = true;
       }
     }
 
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
+    public void HideContent()
     {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
+      // nothing to do
     }
-    #endregion
   }
 }

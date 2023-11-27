@@ -37,6 +37,13 @@ namespace EQLogParser
     public TriggersView()
     {
       InitializeComponent();
+
+      if (!TriggerStateManager.Instance.IsActive())
+      {
+        IsEnabled = false;
+        return;
+      }
+
       CharacterViewWidth = mainGrid.ColumnDefinitions[0].Width;
       var config = TriggerStateManager.Instance.GetConfig();
       characterView.SetConfig(config);

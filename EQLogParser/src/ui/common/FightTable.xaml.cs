@@ -341,14 +341,18 @@ namespace EQLogParser
 
     private void NewRowsAdded(ObservableCollection<Fight> list)
     {
-      if (dataGrid.ItemsSource == list)
+      if (dataGrid != null)
       {
-        NeedRefresh = false;
-      }
+        if (dataGrid.ItemsSource == list)
+        {
+          NeedRefresh = false;
+        }
 
-      if (DockingManager.GetState(Parent as ContentControl) != DockState.Hidden && !dataGrid.IsMouseOver && dataGrid.View.Records.Count > 1)
-      {
-        Dispatcher.InvokeAsync(() => dataGrid.ScrollInView(new RowColumnIndex(dataGrid.View.Records.Count, 0)));
+        if (Parent is ContentControl control && DockingManager.GetState(control) != DockState.Hidden &&
+          !dataGrid.IsMouseOver && dataGrid.View?.Records?.Count > 1)
+        {
+          Dispatcher.InvokeAsync(() => dataGrid.ScrollInView(new RowColumnIndex(dataGrid.View.Records.Count, 0)));
+        }
       }
     }
 

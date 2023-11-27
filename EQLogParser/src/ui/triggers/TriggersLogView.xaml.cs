@@ -11,7 +11,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for TriggersLogView.xaml
   /// </summary>
-  public partial class TriggersLogView : IDisposable
+  public partial class TriggersLogView : IDocumentContent
   {
     private List<Tuple<string, ObservableCollection<AlertEntry>>> AlertLogs;
 
@@ -86,28 +86,9 @@ namespace EQLogParser
       }
     }
 
-    #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
+    public void HideContent()
     {
-      if (!disposedValue)
-      {
-        TriggerManager.Instance.EventsProcessorsUpdated -= EventsProcessorsUpdated;
-        AlertLogs?.Clear();
-        dataGrid.Dispose();
-        disposedValue = true;
-      }
+      // do nothing
     }
-
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
-    {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
-    }
-    #endregion
   }
 }

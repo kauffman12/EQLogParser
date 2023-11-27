@@ -1,5 +1,4 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
-using System;
 using System.Windows;
 
 namespace EQLogParser
@@ -7,7 +6,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for QuickShareLogView.xaml
   /// </summary>
-  public partial class QuickShareLogView : IDisposable
+  public partial class QuickShareLogView : IDocumentContent
   {
     public QuickShareLogView()
     {
@@ -15,7 +14,7 @@ namespace EQLogParser
       dataGrid.ItemsSource = RecordManager.Instance.AllQuickShareRecords;
     }
 
-    private void SendToEQClick(object sender, RoutedEventArgs e)
+    private void SendToEqClick(object sender, RoutedEventArgs e)
     {
       if (dataGrid?.SelectedItem is QuickShareRecord record)
       {
@@ -48,26 +47,9 @@ namespace EQLogParser
       download.IsEnabled = dataGrid is { SelectedItem: QuickShareRecord };
     }
 
-    #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
+    public void HideContent()
     {
-      if (!disposedValue)
-      {
-        dataGrid.Dispose();
-        disposedValue = true;
-      }
+      // nothing to do
     }
-
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
-    {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
-    }
-    #endregion
   }
 }

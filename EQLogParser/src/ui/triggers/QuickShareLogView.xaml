@@ -59,7 +59,7 @@
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Download" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem IsEnabled="False" x:Name="sendToEQ" Header="Send Share Key to EQ" Click="SendToEQClick">
+          <MenuItem IsEnabled="False" x:Name="sendToEQ" Header="Send Share Key to EQ" Click="SendToEqClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
