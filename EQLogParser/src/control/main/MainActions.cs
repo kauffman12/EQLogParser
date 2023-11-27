@@ -55,6 +55,9 @@ namespace EQLogParser
 
     internal static void AddDocumentWindows(DockingManager dockSite)
     {
+      SyncFusionUtil.AddDocument(dockSite, typeof(TriggersTester), "triggerTestWindow", "Trigger Tester");
+      SyncFusionUtil.AddDocument(dockSite, typeof(TriggersLogView), "triggerLogWindow", "Trigger Log");
+      SyncFusionUtil.AddDocument(dockSite, typeof(QuickShareLogView), "quickShareLogWindow", "Quick Share Log");
       SyncFusionUtil.AddDocument(dockSite, typeof(HealingSummary), "healingSummaryWindow", "Healing Summary");
       SyncFusionUtil.AddDocument(dockSite, typeof(TankingSummary), "tankingSummaryWindow", "Tanking Summary");
       SyncFusionUtil.AddDocument(dockSite, typeof(DamageChart), "damageChartWindow", "DPS Chart");

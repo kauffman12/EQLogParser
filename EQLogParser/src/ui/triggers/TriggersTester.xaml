@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              mc:Ignorable="d"
+             Loaded="ContentLoaded"
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.RowDefinitions>
