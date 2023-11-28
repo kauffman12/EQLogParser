@@ -74,6 +74,7 @@ namespace EQLogParser
 
         var top = ConfigUtil.GetSettingAsDouble("WindowTop", double.NaN);
         var left = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN);
+
         if ((!double.IsNaN(top) && top < 0) || (!double.IsNaN(left) && left < 0))
         {
           top = 0;
@@ -255,9 +256,18 @@ namespace EQLogParser
         DockingManager.SetState(petMappingWindow, DockState.AutoHidden);
         MainActions.AddDocumentWindows(dockSite);
 
+        // make sure file exists
         if (File.Exists(ConfigUtil.ConfigDir + "/dockSite.xml"))
         {
-          dockSite.LoadDockState(new BinaryFormatter(), StorageFormat.Xml, ConfigUtil.ConfigDir + "/dockSite.xml");
+          try
+          {
+            dockSite.LoadDockState(new BinaryFormatter(), StorageFormat.Xml, ConfigUtil.ConfigDir + "/dockSite.xml");
+          }
+          catch (Exception ex)
+          {
+            Log.Debug("Error reading docSite.xml", ex);
+            dockSite.ResetState();
+          }
         }
 
         // not used anymore. time to cleanup
