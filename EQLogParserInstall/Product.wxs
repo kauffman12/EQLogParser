@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.1.55" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.1.56" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -134,7 +134,6 @@
     <DirectoryRef Id="DesktopFolder">
       <Component Win64="yes" Id="ApplicationShortcutDesktop" Guid="969EAC06-8AFD-48A9-814C-ADBE6F7C073E">
         <Shortcut Id="ApplicationDesktopShortcut" Name="EQ Log Parser" Icon="icon.ico" Description="Everquest Log Parser" Target="[INSTALLFOLDER]\EQLogParser.exe" WorkingDirectory="INSTALLFOLDER" />
-        <RemoveFolder Id="CleanUpDesktopShortCut" Directory="DesktopFolder" On="uninstall" />
         <RegistryValue Root="HKCU" Key="Software\Kizant\EQLogParser" Name="installed" Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </DirectoryRef>
