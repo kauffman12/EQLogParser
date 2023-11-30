@@ -332,7 +332,7 @@ namespace EQLogParser
       }
     }
 
-    private string GetDisplayName(TimerData timerData)
+    private static string GetDisplayName(TimerData timerData)
     {
       if (timerData.RepeatedCount > -1)
       {
