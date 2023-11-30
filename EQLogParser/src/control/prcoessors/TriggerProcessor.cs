@@ -404,7 +404,7 @@ namespace EQLogParser
       newTimerData.OriginalMatches = matches;
       newTimerData.ActiveColor = trigger.ActiveColor;
       newTimerData.FontColor = trigger.FontColor;
-      newTimerData.Key = wrapper.Name + "-" + trigger.Pattern;
+      newTimerData.Key = wrapper.Id + "-" + displayName;
       newTimerData.CancelSource = new CancellationTokenSource();
       newTimerData.TimesToLoopCount = loopCount;
 
