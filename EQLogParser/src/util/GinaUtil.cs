@@ -344,7 +344,7 @@ namespace EQLogParser
                   trigger.Priority = interrupt ? 1 : 3;
                 }
 
-                if (GetText(triggerNode, "TimerType") is { } timerType)
+                if (GetText(triggerNode, "TimerType") is { } timerType && timerType != "NoTimer")
                 {
                   goodTrigger = true;
 

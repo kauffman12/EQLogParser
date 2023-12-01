@@ -22,7 +22,7 @@ namespace EQLogParser
     public readonly ObservableCollection<AlertEntry> AlertLog = new();
     public readonly string CurrentCharacterId;
     public readonly string CurrentProcessorName;
-    private const long SixHours = 6 * 60 * 60 * 1000;
+    private const long SIX_HOURS = 6 * 60 * 60 * 1000;
     private readonly string CurrentPlayer;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly object CollectionLock = new();
@@ -42,7 +42,8 @@ namespace EQLogParser
     });
     private TriggerWrapper PreviousSpoken;
     private LinkedList<TriggerWrapper> ActiveTriggers;
-    private bool Running = true;
+    private List<LexiconItem> Lexicon;
+    private bool Ready = true;
 
     internal TriggerProcessor(string id, string name, string playerName, string voice, int voiceRate,
       Action<string, Trigger> addTextEvent, Action<Trigger, List<TimerData>> addTimerEvent)
@@ -60,6 +61,16 @@ namespace EQLogParser
       SetVoice(voice);
       SetVoiceRate(voiceRate);
       SoundPlayer = new SoundPlayer();
+      Lexicon = TriggerStateManager.Instance.GetLexicon().ToList();
+      TriggerStateManager.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
+    }
+
+    private void LexiconUpdateEvent(List<LexiconItem> update)
+    {
+      lock (VoiceLock)
+      {
+        Lexicon = update;
+      }
     }
 
     public void LinkTo(BlockingCollection<Tuple<string, double, bool>> collection)
@@ -75,6 +86,7 @@ namespace EQLogParser
 
       Task.Run(async () =>
       {
+        // ReSharper disable once InconsistentlySynchronizedField
         await foreach (var data in SpeechChannel.Reader.ReadAllAsync())
         {
           HandleSpeech(data);
@@ -204,7 +216,7 @@ namespace EQLogParser
           var updatedTime = new TimeSpan(beginTicks).TotalMilliseconds;
 
           // no need to constantly updated the DB. 6 hour check
-          if (updatedTime - wrapper.TriggerData.LastTriggered > SixHours)
+          if (updatedTime - wrapper.TriggerData.LastTriggered > SIX_HOURS)
           {
             TriggerStateManager.Instance.UpdateLastTriggered(wrapper.Id, updatedTime);
           }
@@ -483,7 +495,7 @@ namespace EQLogParser
             CleanupTimer(wrapper, data2);
 
             // repeating
-            if (wrapper.TriggerData.TimerType == 4 && Running)
+            if (wrapper.TriggerData.TimerType == 4 && Ready)
             {
               if (wrapper.TriggerData.TimesToLoop > data2.TimesToLoopCount)
               {
@@ -553,9 +565,20 @@ namespace EQLogParser
           tts = ProcessMatchesText(tts, speak.Matches);
           tts = ModLine(tts, speak.Action);
 
-          lock (VoiceLock)
+          if (!string.IsNullOrEmpty(tts))
           {
-            Synth?.SpeakAsync(tts);
+            lock (VoiceLock)
+            {
+              foreach (var item in Lexicon.ToArray())
+              {
+                if (item != null && !string.IsNullOrEmpty(item.Replace) && !string.IsNullOrEmpty(item.With))
+                {
+                  tts = tts.Replace(item.Replace, item.With, StringComparison.OrdinalIgnoreCase);
+                }
+              }
+
+              Synth?.SpeakAsync(tts);
+            }
           }
         }
       }
@@ -821,7 +844,6 @@ namespace EQLogParser
       lock (CollectionLock)
       {
         AlertLog.Insert(0, log);
-
         if (AlertLog.Count > 1000)
         {
           AlertLog.RemoveAt(AlertLog.Count - 1);
@@ -856,7 +878,8 @@ namespace EQLogParser
 
     public void Dispose()
     {
-      Running = false;
+      Ready = false;
+      TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
       LowPriChannel?.Writer.Complete();
       SpeechChannel?.Writer.Complete();
       SoundPlayer?.Dispose();

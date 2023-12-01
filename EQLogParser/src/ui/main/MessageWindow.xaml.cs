@@ -1,5 +1,7 @@
 ﻿using FontAwesome5;
 using Syncfusion.Windows.Shared;
+using System;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 
@@ -109,6 +111,27 @@ namespace EQLogParser
       {
         Clipboard.SetText(CopyData);
       }
+    }
+
+    private const int GWL_EXSTYLE = -20;
+    private const int WS_EX_NOACTIVATE = 0x08000000;
+
+    [DllImport("user32.dll")]
+    public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll")]
+    public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+    private void SetWindowNoActivate()
+    {
+      var helper = new System.Windows.Interop.WindowInteropHelper(this);
+      var exStyle = GetWindowLong(helper.Handle, GWL_EXSTYLE);
+      SetWindowLong(helper.Handle, GWL_EXSTYLE, exStyle | WS_EX_NOACTIVATE);
+    }
+
+    private void MessageWindowLoaded(object sender, RoutedEventArgs e)
+    {
+      SetWindowNoActivate();
     }
   }
 }

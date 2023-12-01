@@ -49,6 +49,12 @@ namespace EQLogParser
     public long Priority { get; set; }
   }
 
+  internal class LexiconItem
+  {
+    public string Replace { get; set; }
+    public string With { get; set; }
+  }
+
   internal class ResistCount
   {
     public uint Landed { get; set; }

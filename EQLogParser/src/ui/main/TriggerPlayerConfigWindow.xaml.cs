@@ -14,7 +14,7 @@ namespace EQLogParser
   /// </summary>
   public partial class TriggerPlayerConfigWindow
   {
-    private const string EnterName = "Enter Character Name";
+    private const string ENTER_NAME = "Enter Character Name";
     private readonly TriggerCharacter TheCharacter;
     private readonly SpeechSynthesizer TestSynth;
     private readonly bool Ready;
@@ -50,7 +50,7 @@ namespace EQLogParser
       }
       else
       {
-        characterName.Text = EnterName;
+        characterName.Text = ENTER_NAME;
       }
 
       Ready = true;
@@ -81,7 +81,7 @@ namespace EQLogParser
       if (string.IsNullOrEmpty(characterName.Text))
       {
         characterName.FontStyle = FontStyles.Italic;
-        characterName.Text = EnterName;
+        characterName.Text = ENTER_NAME;
       }
     }
 
@@ -104,7 +104,7 @@ namespace EQLogParser
       if (saveButton != null)
       {
         saveButton.IsEnabled = characterName?.FontStyle != FontStyles.Italic && txtFilePath?.FontStyle != FontStyles.Italic &&
-                               characterName?.Text.Length > 0 && txtFilePath?.Text.Length > 0;
+          characterName?.Text.Length > 0 && txtFilePath?.Text.Length > 0;
       }
     }
 

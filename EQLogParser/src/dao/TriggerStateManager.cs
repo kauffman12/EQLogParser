@@ -18,6 +18,7 @@ namespace EQLogParser
     internal event Action<TriggerNode> TriggerUpdateEvent;
     internal event Action<TriggerConfig> TriggerConfigUpdateEvent;
     internal event Action<bool> TriggerImportEvent;
+    internal event Action<List<LexiconItem>> LexiconUpdateEvent;
     internal const string DefaultUser = "Default";
     internal const string Overlays = "Overlays";
     internal const string Triggers = "Triggers";
@@ -28,6 +29,7 @@ namespace EQLogParser
     private const string CONFIG_COL = "Config";
     private const string STATES_COL = "States";
     private const string TREE_COL = "Tree";
+    private const string LEXICON_COL = "Lexicon";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<TriggerStateManager> Lazy = new(() => new TriggerStateManager());
     internal static TriggerStateManager Instance => Lazy.Value; // instance
@@ -37,7 +39,7 @@ namespace EQLogParser
 
     private TriggerStateManager()
     {
-      var path = ConfigUtil.GetTriggersDBFile();
+      var path = ConfigUtil.GetTriggersDbFile();
       var needUpgrade = !File.Exists(path);
 
       try
@@ -106,11 +108,17 @@ namespace EQLogParser
     internal void ImportOverlays(TriggerNode parent, IEnumerable<ExportTriggerNode> imported) => Import(parent, imported, Overlays);
     internal bool IsActive() => Db != null;
     internal void SetAllExpanded(bool expanded) => Db?.Execute($"UPDATE {TREE_COL} SET IsExpanded = {expanded}");
+    internal IEnumerable<LexiconItem> GetLexicon() => Db?.GetCollection<LexiconItem>(LEXICON_COL)?.FindAll();
+    internal void Stop() => Db?.Dispose();
 
-    internal void Stop()
+    internal void SaveLexicon(List<LexiconItem> list)
     {
-      Db?.Dispose();
-      Db = null;
+      if (Db?.GetCollection<LexiconItem>(LEXICON_COL) is { } lexicon)
+      {
+        lexicon.DeleteAll();
+        lexicon.InsertBulk(list);
+        LexiconUpdateEvent?.Invoke(list);
+      }
     }
 
     internal void AddCharacter(string name, string filePath, string voice, int voiceRate)

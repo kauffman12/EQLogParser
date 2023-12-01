@@ -21,11 +21,9 @@ namespace EQLogParser
 
     private const string APP_DATA = @"%AppData%\EQLogParser";
     private const string PETMAP_FILE = "petmapping.txt";
-    private const string PETMAP_PATH = @"\{0}";
     private const string PLAYERS_FILE = "players.txt";
 
     private static string ArchiveDir;
-    private static string ServerConfigDir;
     private static string SettingsFile;
     private static string TriggersDbFile;
     private static bool InitDone;
@@ -138,9 +136,8 @@ namespace EQLogParser
     internal static ConcurrentDictionary<string, string> ReadPetMapping()
     {
       Init();
-
       var petMapping = new ConcurrentDictionary<string, string>();
-      var fileName = string.Format(CultureInfo.CurrentCulture, ServerConfigDir, ServerName) + @"\" + PETMAP_FILE;
+      var fileName = ConfigDir + @"\" + ServerName + @"\" + PETMAP_FILE;
       LoadProperties(petMapping, ReadList(fileName));
       return petMapping;
     }
@@ -148,16 +145,14 @@ namespace EQLogParser
     internal static List<string> ReadPlayers()
     {
       Init();
-
-      var fileName = string.Format(CultureInfo.CurrentCulture, ServerConfigDir, ServerName) + @"\" + PLAYERS_FILE;
+      var fileName = ConfigDir + @"\" + ServerName + @"\" + PLAYERS_FILE;
       return ReadList(fileName);
     }
 
     internal static void SavePlayers(List<string> list)
     {
       Init();
-
-      var playerDir = string.Format(CultureInfo.CurrentCulture, ServerConfigDir, ServerName);
+      var playerDir = ConfigDir + @"\" + ServerName;
       Directory.CreateDirectory(playerDir);
       SaveList(playerDir + @"\" + PLAYERS_FILE, list);
     }
@@ -165,8 +160,7 @@ namespace EQLogParser
     internal static void SavePetMapping(IEnumerable<KeyValuePair<string, string>> enumeration)
     {
       Init();
-
-      var petDir = string.Format(CultureInfo.CurrentCulture, ServerConfigDir, ServerName);
+      var petDir = ConfigDir + @"\" + ServerName;
       Directory.CreateDirectory(petDir);
       SaveProperties(petDir + @"\" + PETMAP_FILE, enumeration);
     }
@@ -184,7 +178,7 @@ namespace EQLogParser
       }
     }
 
-    internal static string GetTriggersDBFile()
+    internal static string GetTriggersDbFile()
     {
       Init();
       return TriggersDbFile;
@@ -198,7 +192,6 @@ namespace EQLogParser
         ArchiveDir = Environment.ExpandEnvironmentVariables(APP_DATA + @"\archive\");
         ConfigDir = Environment.ExpandEnvironmentVariables(APP_DATA + @"\config\");
         LogsDir = Environment.ExpandEnvironmentVariables(APP_DATA + @"\logs\");
-        ServerConfigDir = ConfigDir + PETMAP_PATH;
         SettingsFile = ConfigDir + @"\settings.txt";
         TriggersDbFile = ConfigDir + @"triggers.db";
 
