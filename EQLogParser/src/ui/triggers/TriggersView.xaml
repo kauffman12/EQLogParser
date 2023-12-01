@@ -28,7 +28,7 @@
       </TextBlock>
       <CheckBox x:Name="watchQuickShare" IsChecked="False" Margin="0,0,8,2" Checked="OptionsChanged" Unchecked="OptionsChanged">Watch for Quick Shares</CheckBox>
       <ComboBox x:Name="voices" SelectedIndex="0" Margin="0,0,8,2" SelectionChanged="OptionsChanged" />
-      <ComboBox x:Name="rateOption" SelectedIndex="0" Margin="0,0,0,2" SelectionChanged="OptionsChanged">
+      <ComboBox x:Name="rateOption" SelectedIndex="0" Margin="0,0,8,2" SelectionChanged="OptionsChanged">
         <ComboBoxItem>Default Voice Rate</ComboBoxItem>
         <ComboBoxItem>Increased Rate 1</ComboBoxItem>
         <ComboBoxItem>Increased Rate 2</ComboBoxItem>
@@ -36,6 +36,7 @@
         <ComboBoxItem>Increased Rate 4</ComboBoxItem>
         <ComboBoxItem>Increased Rate 5</ComboBoxItem>
       </ComboBox>
+      <Button x:Name="dictButton" Margin="0,0,8,1" Padding="8,0,8,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}" Click="DictionaryClick">Phonetic Dictionary</Button>
     </StackPanel>
     <Grid x:Name="mainGrid" Grid.Row="1">
       <Grid.ColumnDefinitions>

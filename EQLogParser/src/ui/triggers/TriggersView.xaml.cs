@@ -650,5 +650,11 @@ namespace EQLogParser
       theTreeView.ClosePreviewOverlaysEvent -= ClosePreviewOverlaysEvent;
       Ready = false;
     }
+
+    private void DictionaryClick(object sender, RoutedEventArgs e)
+    {
+      var window = new TriggerDictionaryWindow();
+      window.ShowDialog();
+    }
   }
 }

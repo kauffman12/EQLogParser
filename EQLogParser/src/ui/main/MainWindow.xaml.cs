@@ -64,6 +64,23 @@ namespace EQLogParser
     {
       try
       {
+        // load theme and fonts
+        CurrentFontFamily = ConfigUtil.GetSetting("ApplicationFontFamily", "Segoe UI");
+        CurrentFontSize = ConfigUtil.GetSettingAsDouble("ApplicationFontSize", 12);
+        CurrentTheme = ConfigUtil.GetSetting("CurrentTheme", "MaterialDark");
+
+        if (UIElementUtil.GetSystemFontFamilies().FirstOrDefault(font => font.Source == CurrentFontFamily) == null)
+        {
+          Log.Info(CurrentFontFamily + " Not Found, Trying Default");
+          CurrentFontFamily = "Segoe UI";
+        }
+
+        Application.Current.Resources["EQChatFontSize"] = 16.0; // changed when chat archive loads
+        Application.Current.Resources["EQChatFontFamily"] = new FontFamily("Segoe UI");
+        Application.Current.Resources["EQLogFontSize"] = 16.0; // changed when chat archive loads
+        Application.Current.Resources["EQLogFontFamily"] = new FontFamily("Segoe UI");
+        MainActions.LoadTheme(this, CurrentTheme);
+
         // DPI and sizing
         var dpi = UIElementUtil.GetDpi();
         var resolution = Screen.PrimaryScreen.Bounds;
@@ -92,23 +109,6 @@ namespace EQLogParser
           "Maximized" => WindowState.Maximized,
           _ => WindowState.Normal
         };
-
-        // load theme and fonts
-        CurrentFontFamily = ConfigUtil.GetSetting("ApplicationFontFamily", "Segoe UI");
-        CurrentFontSize = ConfigUtil.GetSettingAsDouble("ApplicationFontSize", 12);
-        CurrentTheme = ConfigUtil.GetSetting("CurrentTheme", "MaterialDark");
-
-        if (UIElementUtil.GetSystemFontFamilies().FirstOrDefault(font => font.Source == CurrentFontFamily) == null)
-        {
-          Log.Info(CurrentFontFamily + " Not Found, Trying Default");
-          CurrentFontFamily = "Segoe UI";
-        }
-
-        Application.Current.Resources["EQChatFontSize"] = 16.0; // changed when chat archive loads
-        Application.Current.Resources["EQChatFontFamily"] = new FontFamily("Segoe UI");
-        Application.Current.Resources["EQLogFontSize"] = 16.0; // changed when chat archive loads
-        Application.Current.Resources["EQLogFontFamily"] = new FontFamily("Segoe UI");
-        MainActions.LoadTheme(this, CurrentTheme);
 
         InitializeComponent();
 
@@ -1074,16 +1074,20 @@ namespace EQLogParser
       }
     }
 
-    private void WindowClosing(object sender, EventArgs e)
+    private void MainWindowSizeChanged(object sender, SizeChangedEventArgs e)
     {
-      ConfigUtil.SetSetting("WindowState", WindowState.ToString());
-      if (WindowState != WindowState.Maximized)
+      if (WindowState == WindowState.Normal)
       {
         ConfigUtil.SetSetting("WindowLeft", Left);
         ConfigUtil.SetSetting("WindowTop", Top);
         ConfigUtil.SetSetting("WindowHeight", Height);
         ConfigUtil.SetSetting("WindowWidth", Width);
       }
+    }
+
+    private void WindowClosing(object sender, EventArgs e)
+    {
+      ConfigUtil.SetSetting("WindowState", WindowState.ToString());
 
       if (!ResetWindowState)
       {
