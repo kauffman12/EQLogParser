@@ -300,7 +300,7 @@ namespace EQLogParser
         }
         else if (Equals(sender, rateOption))
         {
-          ConfigUtil.SetSetting("TriggersVoiceRate", rateOption.SelectedIndex);
+          TheConfig.VoiceRate = rateOption.SelectedIndex;
           TriggerStateManager.Instance.UpdateConfig(TheConfig);
 
           if (TestSynth != null)
