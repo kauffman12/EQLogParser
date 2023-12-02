@@ -196,9 +196,9 @@ namespace EQLogParser
       if (dataGrid is { View: not null })
       {
         ShowSummaryView = optionsList.SelectedIndex != 0;
-        CurrentSelectedPlayer = playersList.SelectedItem as string;
-        CurrentSelectedItem = itemsList.SelectedItem as string;
-        CurrentSelectedNpc = npcsList.SelectedItem as string;
+        CurrentSelectedPlayer = playersList.SelectedItem as string ?? CurrentSelectedPlayer;
+        CurrentSelectedItem = itemsList.SelectedItem as string ?? CurrentSelectedItem;
+        CurrentSelectedNpc = npcsList.SelectedItem as string ?? CurrentSelectedNpc;
 
         if (ShowSummaryView && dataGrid.ItemsSource != TotalRecords)
         {
