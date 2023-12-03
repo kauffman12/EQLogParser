@@ -16,17 +16,17 @@ namespace EQLogParser
   public partial class LineChart
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private readonly Dictionary<string, List<DataPoint>> PlayerPetValues = new();
-    private readonly Dictionary<string, List<DataPoint>> PlayerValues = new();
-    private readonly Dictionary<string, List<DataPoint>> PetValues = new();
-    private readonly Dictionary<string, List<DataPoint>> RaidValues = new();
-    private readonly Dictionary<string, Dictionary<string, byte>> HasPets = new();
+    private readonly Dictionary<string, List<DataPoint>> _playerPetValues = new();
+    private readonly Dictionary<string, List<DataPoint>> _playerValues = new();
+    private readonly Dictionary<string, List<DataPoint>> _petValues = new();
+    private readonly Dictionary<string, List<DataPoint>> _raidValues = new();
+    private readonly Dictionary<string, Dictionary<string, byte>> _hasPets = new();
     private static readonly Dictionary<string, bool> MissTypes = new()
     { { Labels.ABSORB, true }, { Labels.BLOCK, true } , { Labels.DODGE, true }, { Labels.PARRY, true }, { Labels.INVULNERABLE, true }, { Labels.MISS, true } };
 
-    private string CurrentChoice;
-    private string CurrentPetOrPlayerOption;
-    private List<PlayerStats> LastSelected;
+    private string _currentChoice;
+    private string _currentPetOrPlayerOption;
+    private List<PlayerStats> _lastSelected;
 
     public LineChart(IEnumerable<string> choices, bool includePets = false)
     {
@@ -34,7 +34,7 @@ namespace EQLogParser
 
       choicesList.ItemsSource = choices;
       choicesList.SelectedIndex = 0;
-      CurrentChoice = choicesList.SelectedValue as string;
+      _currentChoice = choicesList.SelectedValue as string;
       dateLabel.FontSize = MainWindow.CurrentFontSize - 1;
       numLabel.FontSize = MainWindow.CurrentFontSize;
       MainActions.EventsThemeChanged += EventsThemeChanged;
@@ -49,17 +49,17 @@ namespace EQLogParser
       }
 
       petOrPlayerList.SelectedIndex = 0;
-      CurrentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
+      _currentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
       Reset();
     }
 
     internal void Clear()
     {
-      PlayerPetValues.Clear();
-      PlayerValues.Clear();
-      PetValues.Clear();
-      RaidValues.Clear();
-      HasPets.Clear();
+      _playerPetValues.Clear();
+      _playerValues.Clear();
+      _petValues.Clear();
+      _raidValues.Clear();
+      _hasPets.Clear();
       Reset();
     }
 
@@ -128,7 +128,7 @@ namespace EQLogParser
           raidData[raidName] = raidAggregate;
         }
 
-        Aggregate(RaidValues, needRaidAccounting, dataPoint, raidAggregate, lastTimes, timeRanges, diffs);
+        Aggregate(_raidValues, needRaidAccounting, dataPoint, raidAggregate, lastTimes, timeRanges, diffs);
 
         if (!totalPlayerData.TryGetValue(totalName, out var totalAggregate))
         {
@@ -136,7 +136,7 @@ namespace EQLogParser
           totalPlayerData[totalName] = totalAggregate;
         }
 
-        Aggregate(PlayerPetValues, needTotalAccounting, dataPoint, totalAggregate, lastTimes, timeRanges, diffs);
+        Aggregate(_playerPetValues, needTotalAccounting, dataPoint, totalAggregate, lastTimes, timeRanges, diffs);
 
         if (dataPoint.PlayerName == null)
         {
@@ -146,23 +146,23 @@ namespace EQLogParser
             playerData[dataPoint.Name] = aggregate;
           }
 
-          Aggregate(PlayerValues, needPlayerAccounting, dataPoint, aggregate, lastTimes, timeRanges, diffs);
+          Aggregate(_playerValues, needPlayerAccounting, dataPoint, aggregate, lastTimes, timeRanges, diffs);
         }
         else if (dataPoint.PlayerName != null)
         {
-          if (!HasPets.ContainsKey(totalName))
+          if (!_hasPets.ContainsKey(totalName))
           {
-            HasPets[totalName] = new Dictionary<string, byte>();
+            _hasPets[totalName] = new Dictionary<string, byte>();
           }
 
-          HasPets[totalName][dataPoint.Name] = 1;
+          _hasPets[totalName][dataPoint.Name] = 1;
           if (!petData.TryGetValue(dataPoint.Name, out var petAggregate))
           {
             petAggregate = new DataPoint { Name = dataPoint.Name, PlayerName = playerName };
             petData[dataPoint.Name] = petAggregate;
           }
 
-          Aggregate(PetValues, needPetAccounting, dataPoint, petAggregate, lastTimes, timeRanges, diffs);
+          Aggregate(_petValues, needPetAccounting, dataPoint, petAggregate, lastTimes, timeRanges, diffs);
         }
 
         lastTimes[dataPoint.Name] = dataPoint.CurrentTime;
@@ -170,15 +170,15 @@ namespace EQLogParser
         lastTimes[totalName] = dataPoint.CurrentTime;
       }
 
-      UpdateRemaining(RaidValues, needRaidAccounting, lastTimes, timeRanges);
-      UpdateRemaining(PlayerPetValues, needTotalAccounting, lastTimes, timeRanges);
-      UpdateRemaining(PlayerValues, needPlayerAccounting, lastTimes, timeRanges);
-      UpdateRemaining(PetValues, needPetAccounting, lastTimes, timeRanges);
+      UpdateRemaining(_raidValues, needRaidAccounting, lastTimes, timeRanges);
+      UpdateRemaining(_playerPetValues, needTotalAccounting, lastTimes, timeRanges);
+      UpdateRemaining(_playerValues, needPlayerAccounting, lastTimes, timeRanges);
+      UpdateRemaining(_petValues, needPetAccounting, lastTimes, timeRanges);
 
-      PopulateRolling(RaidValues);
-      PopulateRolling(PlayerPetValues);
-      PopulateRolling(PlayerValues);
-      PopulateRolling(PetValues);
+      PopulateRolling(_raidValues);
+      PopulateRolling(_playerPetValues);
+      PopulateRolling(_playerValues);
+      PopulateRolling(_petValues);
 
       Plot(selected);
     }
@@ -215,29 +215,29 @@ namespace EQLogParser
 
     private void Plot(List<PlayerStats> selected = null)
     {
-      LastSelected = selected;
+      _lastSelected = selected;
 
       Dictionary<string, List<DataPoint>> workingData;
 
       var selectedLabel = "Selected Player(s)";
       var nonSelectedLabel = " Player(s)";
-      switch (CurrentPetOrPlayerOption)
+      switch (_currentPetOrPlayerOption)
       {
         case Labels.PET_PLAYER_OPTION:
-          workingData = PlayerPetValues;
+          workingData = _playerPetValues;
           selectedLabel = "Selected Player +Pets(s)";
           nonSelectedLabel = " Player +Pets(s)";
           break;
         case Labels.PLAYER_OPTION:
-          workingData = PlayerValues;
+          workingData = _playerValues;
           break;
         case Labels.PET_OPTION:
-          workingData = PetValues;
+          workingData = _petValues;
           selectedLabel = "Selected Pet(s)";
           nonSelectedLabel = " Pet(s)";
           break;
         case Labels.RAID_OPTION:
-          workingData = RaidValues;
+          workingData = _raidValues;
           break;
         default:
           workingData = new Dictionary<string, List<DataPoint>>();
@@ -246,7 +246,7 @@ namespace EQLogParser
 
       string label;
       List<List<DataPoint>> sortedValues;
-      if (CurrentPetOrPlayerOption == Labels.RAID_OPTION)
+      if (_currentPetOrPlayerOption == Labels.RAID_OPTION)
       {
         sortedValues = workingData.Values.ToList();
         label = sortedValues.Count > 0 ? "Raid" : Labels.NO_DATA;
@@ -263,16 +263,16 @@ namespace EQLogParser
         {
           var pass = false;
           var first = values.First();
-          if (CurrentPetOrPlayerOption == Labels.PET_PLAYER_OPTION)
+          if (_currentPetOrPlayerOption == Labels.PET_PLAYER_OPTION)
           {
-            pass = names.Contains(first.PlayerName) || (HasPets.ContainsKey(first.Name) &&
-            names.FirstOrDefault(name => HasPets[first.Name].ContainsKey(name)) != null);
+            pass = names.Contains(first.PlayerName) || (_hasPets.ContainsKey(first.Name) &&
+            names.FirstOrDefault(name => _hasPets[first.Name].ContainsKey(name)) != null);
           }
-          else if (CurrentPetOrPlayerOption == Labels.PLAYER_OPTION)
+          else if (_currentPetOrPlayerOption == Labels.PLAYER_OPTION)
           {
             pass = names.Contains(first.Name);
           }
-          else if (CurrentPetOrPlayerOption == Labels.PET_OPTION)
+          else if (_currentPetOrPlayerOption == Labels.PET_OPTION)
           {
             pass = names.Contains(first.Name) || names.Contains(first.PlayerName);
           }
@@ -284,7 +284,7 @@ namespace EQLogParser
 
       if (label != Labels.NO_DATA)
       {
-        label += " " + CurrentChoice;
+        label += " " + _currentChoice;
       }
 
       Reset();
@@ -297,7 +297,7 @@ namespace EQLogParser
       var collection = new ChartSeriesCollection();
 
       var yPath = "Avg";
-      switch (CurrentChoice)
+      switch (_currentChoice)
       {
         case "Aggregate DPS":
         case "Aggregate HPS":
@@ -348,7 +348,7 @@ namespace EQLogParser
       foreach (ref var value in sortedValues.ToArray().AsSpan())
       {
         var name = value.First().Name;
-        name = ((CurrentPetOrPlayerOption == Labels.PET_PLAYER_OPTION) && !HasPets.ContainsKey(name)) ? name.Split(' ')[0] : name;
+        name = ((_currentPetOrPlayerOption == Labels.PET_PLAYER_OPTION) && !_hasPets.ContainsKey(name)) ? name.Split(' ')[0] : name;
         var series = new FastLineSeries
         {
           Label = name,
@@ -368,11 +368,11 @@ namespace EQLogParser
 
     private void PlotSelected(List<PlayerStats> selected)
     {
-      if (RaidValues.Count > 0)
+      if (_raidValues.Count > 0)
       {
         // handling case where chart can be updated twice
         // when toggling bane and selection is lost
-        if (!(selected.Count == 0 && LastSelected == null))
+        if (!(selected.Count == 0 && _lastSelected == null))
         {
           Plot(selected);
         }
@@ -391,11 +391,11 @@ namespace EQLogParser
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (PlayerPetValues.Count > 0)
+      if (_playerPetValues.Count > 0)
       {
-        CurrentChoice = choicesList.SelectedValue as string;
-        CurrentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
-        Plot(LastSelected);
+        _currentChoice = choicesList.SelectedValue as string;
+        _currentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
+        Plot(_lastSelected);
       }
     }
 
@@ -415,7 +415,7 @@ namespace EQLogParser
               foreach (ref var chartData in dataPoints.ToArray().AsSpan())
               {
                 double chartValue = 0;
-                switch (CurrentChoice)
+                switch (_currentChoice)
                 {
                   case "Aggregate DPS":
                   case "Aggregate HPS":
@@ -489,7 +489,7 @@ namespace EQLogParser
       }
 
       var diff = diffs[aggregate.Name];
-      if (diff > DataManager.FIGHT_IMEOUT)
+      if (diff > DataManager.FightTimeout)
       {
         timeRanges[aggregate.Name].Add(new TimeSegment(dataPoint.CurrentTime, dataPoint.CurrentTime));
         Insert(aggregate, theValues, timeRanges);

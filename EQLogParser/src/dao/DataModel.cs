@@ -407,7 +407,7 @@ namespace EQLogParser
     public uint OverTotal { get; set; }
     public string Type { get; set; }
     public string SubType { get; set; }
-    public int ModifiersMask { get; set; }
+    public short ModifiersMask { get; set; }
   }
 
   internal class HealRecord : HitRecord
@@ -423,6 +423,21 @@ namespace EQLogParser
     public string Defender { get; set; }
     public string DefenderOwner { get; set; }
     public bool AttackerIsSpell { get; set; }
+
+    public override bool Equals(object obj)
+    {
+      var other = obj as DamageRecord;
+      return other != null && Attacker == other.Attacker && AttackerOwner == other.AttackerOwner && Defender == other.Defender &&
+        DefenderOwner == other.DefenderOwner && AttackerIsSpell == other.AttackerIsSpell && Total == other.Total &&
+        OverTotal == other.OverTotal && Type == other.Type && SubType == other.SubType && ModifiersMask == other.ModifiersMask;
+    }
+
+    public override int GetHashCode()
+    {
+      var hash1 = HashCode.Combine(Attacker, AttackerOwner, Defender, DefenderOwner, AttackerIsSpell, Total);
+      var hash2 = HashCode.Combine(OverTotal, Type, SubType, ModifiersMask);
+      return HashCode.Combine(hash1, hash2);
+    }
   }
 
   internal class LootRecord : IAction
@@ -565,13 +580,13 @@ namespace EQLogParser
       PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
-    private bool SearchResult;
+    private bool _searchResult;
     public bool IsSearchResult
     {
-      get => SearchResult;
+      get => _searchResult;
       set
       {
-        SearchResult = value;
+        _searchResult = value;
         OnPropertyChanged();
       }
     }

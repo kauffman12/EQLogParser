@@ -733,7 +733,7 @@ namespace EQLogParser
             {
               if (!double.IsNaN(LastCrit.LineData.BeginTime) && (lineData.BeginTime - LastCrit.LineData.BeginTime) <= 1)
               {
-                record.ModifiersMask = (record.ModifiersMask == -1) ? LineModifiersParser.CRIT : record.ModifiersMask | LineModifiersParser.CRIT;
+                record.ModifiersMask = (short)((record.ModifiersMask == LineModifiersParser.NONE) ? LineModifiersParser.CRIT : record.ModifiersMask | LineModifiersParser.CRIT);
               }
 
               LastCrit = null;
@@ -837,7 +837,7 @@ namespace EQLogParser
       if (damage != uint.MaxValue && !string.IsNullOrEmpty(type) && !string.IsNullOrEmpty(subType))
       {
         var currentTime = lineData.BeginTime;
-        var modifiersMask = -1;
+        short modifiersMask = -1;
         if (split.Length > stop + 1)
         {
           // improve this later so maybe the string doesn't have to be re-joined

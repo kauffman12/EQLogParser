@@ -152,7 +152,7 @@ namespace EQLogParser
         data.FightName = oldestFight.Name;
       }
 
-      var timeout = mode == 0 ? DataManager.FIGHT_IMEOUT : mode;
+      var timeout = mode == 0 ? DataManager.FightTimeout : mode;
       var totalSeconds = allTime.GetTotal();
       var diff = (DateTime.Now - DateTime.MinValue.AddSeconds(data.UpdateTime)).TotalSeconds;
       // added >= 0 check because this broke while testing when clocks moved an hour back in the fall
@@ -166,7 +166,7 @@ namespace EQLogParser
         foreach (var total in playerTotals.Values.OrderByDescending(total => total.Damage))
         {
           var time = total.Range.GetTotal();
-          if (time > 0 && (DateTime.Now - DateTime.MinValue.AddSeconds(total.UpdateTime)).TotalSeconds <= DataManager.MAX_TIMEOUT)
+          if (time > 0 && (DateTime.Now - DateTime.MinValue.AddSeconds(total.UpdateTime)).TotalSeconds <= DataManager.MaxTimeout)
           {
             var playerStats = new PlayerStats
             {

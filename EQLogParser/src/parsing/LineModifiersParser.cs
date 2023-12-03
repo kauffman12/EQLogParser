@@ -5,32 +5,33 @@ namespace EQLogParser
 {
   static class LineModifiersParser
   {
-    private static readonly Dictionary<string, byte> ALL_MODIFIERS = new()
+    private static readonly Dictionary<string, byte> AllModifiers = new()
     {
       { "Assassinate", 1 }, { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Double Bow Shot", 1 }, { "Finishing Blow", 1 },
       { "Flurry", 1 }, { "Headshot", 1 }, { "Lucky", 1 }, { "Rampage", 1 }, { "Riposte", 1 }, { "Slay Undead", 1 }, { "Strikethrough", 1 },
       { "Twincast", 1 }, { "Wild Rampage", 1 },
     };
 
-    private static readonly Dictionary<string, byte> CRIT_MODIFIERS = new()
+    private static readonly Dictionary<string, byte> CritModifiers = new()
     {
       { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Finishing Blow", 1}
     };
 
-    public const int CRIT = 2;
-    private const int TWINCAST = 1;
-    private const int LUCKY = 4;
-    private const int RAMPAGE = 8;
-    private const int STRIKETHROUGH = 16;
-    private const int RIPOSTE = 32;
-    private const int ASSASSINATE = 64;
-    private const int HEADSHOT = 128;
-    private const int SLAY = 256;
-    private const int DOUBLEBOW = 512;
-    private const int FLURRY = 1024;
-    private const int FINISHING = 2048;
+    public const short NONE = -1;
+    public const short CRIT = 2;
+    private const short TWINCAST = 1;
+    private const short LUCKY = 4;
+    private const short RAMPAGE = 8;
+    private const short STRIKETHROUGH = 16;
+    private const short RIPOSTE = 32;
+    private const short ASSASSINATE = 64;
+    private const short HEADSHOT = 128;
+    private const short SLAY = 256;
+    private const short DOUBLEBOW = 512;
+    private const short FLURRY = 1024;
+    private const short FINISHING = 2048;
 
-    private static readonly ConcurrentDictionary<string, int> MaskCache = new();
+    private static readonly ConcurrentDictionary<string, short> MaskCache = new();
 
     internal static bool IsAssassinate(int mask) => mask > -1 && (mask & ASSASSINATE) != 0;
     internal static bool IsCrit(int mask) => mask > -1 && (mask & CRIT) != 0;
@@ -217,9 +218,9 @@ namespace EQLogParser
       }
     }
 
-    internal static int Parse(string player, string modifiers, double currentTime)
+    internal static short Parse(string player, string modifiers, double currentTime)
     {
-      var result = -1;
+      short result = -1;
 
       if (!string.IsNullOrEmpty(modifiers))
       {
@@ -254,17 +255,17 @@ namespace EQLogParser
       return result;
     }
 
-    private static int BuildVector(string player, string modifiers, double currentTime)
+    private static short BuildVector(string player, string modifiers, double currentTime)
     {
-      var result = 0;
+      short result = 0;
 
       var temp = "";
       foreach (var modifier in modifiers.Split(' '))
       {
         temp += modifier;
-        if (ALL_MODIFIERS.ContainsKey(temp))
+        if (AllModifiers.ContainsKey(temp))
         {
-          if (CRIT_MODIFIERS.ContainsKey(temp))
+          if (CritModifiers.ContainsKey(temp))
           {
             result |= CRIT;
           }
