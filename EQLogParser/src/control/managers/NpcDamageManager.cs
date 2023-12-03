@@ -7,9 +7,10 @@ namespace EQLogParser
   class NpcDamageManager
   {
     internal double LastFightProcessTime = double.NaN;
-    private int CurrentNpcId = 1;
+    private int _currentNpcId = 1;
     private static readonly Dictionary<string, bool> RecentSpellCache = new();
-    private static readonly Dictionary<string, bool> ValidCombo = new();
+    private readonly Dictionary<string, bool> _validCombo = new();
+    private readonly ObjectCache<DamageRecord> _damageCache = new();
     private const int RecentSpellTime = 300;
 
     public NpcDamageManager()
@@ -21,9 +22,10 @@ namespace EQLogParser
     internal void Reset()
     {
       LastFightProcessTime = double.NaN;
-      CurrentNpcId = 1;
       RecentSpellCache.Clear();
-      ValidCombo.Clear();
+      _currentNpcId = 1;
+      _damageCache.Clear();
+      _validCombo.Clear();
     }
 
     private void HandleNewTaunt(TauntEvent e)
@@ -34,99 +36,102 @@ namespace EQLogParser
 
     private void HandleDamageProcessed(DamageProcessedEvent processed)
     {
-      if (!LastFightProcessTime.Equals(processed.BeginTime))
-      {
-        DataManager.Instance.CheckExpireFights(processed.BeginTime);
-        ValidCombo.Clear();
+      var beginTime = processed.BeginTime;
+      var record = _damageCache.Add(processed.Record);
 
-        if (processed.BeginTime - LastFightProcessTime > RecentSpellTime)
+      if (!LastFightProcessTime.Equals(beginTime))
+      {
+        DataManager.Instance.CheckExpireFights(beginTime);
+        _validCombo.Clear();
+
+        if (beginTime - LastFightProcessTime > RecentSpellTime)
         {
           RecentSpellCache.Clear();
         }
       }
 
       // cache recent player spells to help determine who the caster was
-      var isAttackerPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(processed.Record.Attacker) || processed.Record.Attacker == Labels.RS;
-      if (isAttackerPlayer && (processed.Record.Type == Labels.DD || processed.Record.Type == Labels.DOT || processed.Record.Type == Labels.PROC))
+      var isAttackerPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Attacker) || record.Attacker == Labels.RS;
+      if (isAttackerPlayer && record.Type is Labels.DD or Labels.DOT or Labels.PROC)
       {
-        RecentSpellCache[processed.Record.SubType] = true;
+        RecentSpellCache[record.SubType] = true;
       }
 
-      var comboKey = processed.Record.Attacker + "=" + processed.Record.Defender;
-      if (ValidCombo.TryGetValue(comboKey, out var defender) || IsValidAttack(processed.Record, isAttackerPlayer, out defender))
+      var comboKey = record.Attacker + "=" + record.Defender;
+      if (_validCombo.TryGetValue(comboKey, out var defender) || IsValidAttack(record, isAttackerPlayer, out defender))
       {
-        ValidCombo[comboKey] = defender;
+        _validCombo[comboKey] = defender;
         var isNonTankingFight = false;
 
         // fix for unknown spells having a good name to work from
-        if (processed.Record.AttackerIsSpell && defender)
+        if (record.AttackerIsSpell && defender)
         {
           // check if it's really a player being hit
-          defender = !PlayerManager.Instance.IsPetOrPlayerOrMerc(processed.Record.Defender);
+          defender = !PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Defender);
 
           if (defender)
           {
-            processed.Record.Attacker = Labels.UNK;
+            record.Attacker = Labels.UNK;
           }
         }
 
-        var fight = Get(processed.Record, processed.BeginTime, defender);
+        var fight = Get(record, beginTime, defender);
 
         if (defender)
         {
-          AddAction(fight.DamageBlocks, processed.Record, processed.BeginTime);
-          AddPlayerTime(fight.DamageSegments, fight.DamageSubSegments, processed.Record, processed.Record.Attacker, processed.BeginTime);
-          fight.BeginDamageTime = double.IsNaN(fight.BeginDamageTime) ? processed.BeginTime : fight.BeginDamageTime;
-          fight.LastDamageTime = processed.BeginTime;
+          AddAction(fight.DamageBlocks, record, beginTime);
+          AddPlayerTime(fight.DamageSegments, fight.DamageSubSegments, record, record.Attacker, beginTime);
+          fight.BeginDamageTime = double.IsNaN(fight.BeginDamageTime) ? beginTime : fight.BeginDamageTime;
+          fight.LastDamageTime = beginTime;
 
-          if (StatsUtil.IsHitType(processed.Record.Type))
+          if (StatsUtil.IsHitType(record.Type))
           {
             fight.DamageHits++;
-            fight.DamageTotal += processed.Record.Total;
+            fight.DamageTotal += record.Total;
             isNonTankingFight = fight.DamageHits == 1;
 
-            var attacker = processed.Record.AttackerOwner ?? processed.Record.Attacker;
+            var attacker = record.AttackerOwner ?? record.Attacker;
             var validator = new DamageValidator();
             if (fight.PlayerDamageTotals.TryGetValue(attacker, out var total))
             {
-              total.Damage += validator.IsValid(processed.Record) ? processed.Record.Total : 0;
-              total.PetOwner ??= processed.Record.AttackerOwner;
-              total.UpdateTime = processed.BeginTime;
+              total.Damage += validator.IsValid(record) ? record.Total : 0;
+              total.PetOwner ??= record.AttackerOwner;
+              total.UpdateTime = beginTime;
             }
             else
             {
               fight.PlayerDamageTotals[attacker] = new FightTotalDamage
               {
-                Damage = validator.IsValid(processed.Record) ? processed.Record.Total : 0,
-                PetOwner = processed.Record.AttackerOwner,
-                UpdateTime = processed.BeginTime,
-                BeginTime = processed.BeginTime
+                Damage = validator.IsValid(record) ? record.Total : 0,
+                PetOwner = record.AttackerOwner,
+                UpdateTime = beginTime,
+                BeginTime = beginTime
               };
             }
 
             SpellDamageStats stats = null;
-            var spellKey = processed.Record.Attacker + "++" + processed.Record.SubType;
-            if (processed.Record.Type == Labels.DD)
+            var spellKey = record.Attacker + "++" + record.SubType;
+            if (record.Type == Labels.DD)
             {
               if (!fight.DDDamage.TryGetValue(spellKey, out stats))
               {
-                stats = new SpellDamageStats { Caster = processed.Record.Attacker, Spell = processed.Record.SubType };
+                stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
                 fight.DDDamage[spellKey] = stats;
               }
             }
-            else if (processed.Record.Type == Labels.DOT)
+            else if (record.Type == Labels.DOT)
             {
               if (!fight.DoTDamage.TryGetValue(spellKey, out stats))
               {
-                stats = new SpellDamageStats { Caster = processed.Record.Attacker, Spell = processed.Record.SubType };
+                stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
                 fight.DoTDamage[spellKey] = stats;
               }
             }
-            else if (processed.Record.Type == Labels.PROC)
+            else if (record.Type == Labels.PROC)
             {
               if (!fight.ProcDamage.TryGetValue(spellKey, out stats))
               {
-                stats = new SpellDamageStats { Caster = processed.Record.Attacker, Spell = processed.Record.SubType };
+                stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
                 fight.ProcDamage[spellKey] = stats;
               }
             }
@@ -134,39 +139,39 @@ namespace EQLogParser
             if (stats != null)
             {
               stats.Count += 1;
-              stats.Max = Math.Max(processed.Record.Total, stats.Max);
-              stats.Total += processed.Record.Total;
+              stats.Max = Math.Max(record.Total, stats.Max);
+              stats.Total += record.Total;
             }
           }
         }
         else
         {
-          AddAction(fight.TankingBlocks, processed.Record, processed.BeginTime);
-          AddPlayerTime(fight.TankSegments, fight.TankSubSegments, processed.Record, processed.Record.Defender, processed.BeginTime);
-          fight.BeginTankingTime = double.IsNaN(fight.BeginTankingTime) ? processed.BeginTime : fight.BeginTankingTime;
-          fight.LastTankingTime = processed.BeginTime;
+          AddAction(fight.TankingBlocks, record, beginTime);
+          AddPlayerTime(fight.TankSegments, fight.TankSubSegments, record, record.Defender, beginTime);
+          fight.BeginTankingTime = double.IsNaN(fight.BeginTankingTime) ? beginTime : fight.BeginTankingTime;
+          fight.LastTankingTime = beginTime;
 
           fight.TankHits++;
-          fight.TankTotal += processed.Record.Total;
+          fight.TankTotal += record.Total;
 
-          if (fight.PlayerTankTotals.TryGetValue(processed.Record.Defender, out var total))
+          if (fight.PlayerTankTotals.TryGetValue(record.Defender, out var total))
           {
-            total.Damage += processed.Record.Total;
-            total.UpdateTime = processed.BeginTime;
+            total.Damage += record.Total;
+            total.UpdateTime = beginTime;
           }
           else
           {
-            fight.PlayerTankTotals[processed.Record.Defender] = new FightTotalDamage
+            fight.PlayerTankTotals[record.Defender] = new FightTotalDamage
             {
-              Damage = processed.Record.Total,
-              UpdateTime = processed.BeginTime,
-              BeginTime = processed.BeginTime
+              Damage = record.Total,
+              UpdateTime = beginTime,
+              BeginTime = beginTime
             };
           }
         }
 
-        fight.LastTime = processed.BeginTime;
-        LastFightProcessTime = processed.BeginTime;
+        fight.LastTime = beginTime;
+        LastFightProcessTime = beginTime;
         DataManager.Instance.UpdateIfNewFightMap(fight.CorrectMapKey, fight, isNonTankingFight);
       }
     }
@@ -186,12 +191,12 @@ namespace EQLogParser
         BeginTimeString = string.Intern(timeString),
         BeginTime = currentTime,
         LastTime = currentTime,
-        Id = CurrentNpcId++,
+        Id = _currentNpcId++,
         CorrectMapKey = string.Intern(defender)
       };
     }
 
-    private static void AddAction(List<ActionGroup> blockList, IAction action, double beginTime)
+    private static void AddAction(ICollection<ActionGroup> blockList, IAction action, double beginTime)
     {
       if (blockList.LastOrDefault() is { } last && last.BeginTime.Equals(beginTime))
       {

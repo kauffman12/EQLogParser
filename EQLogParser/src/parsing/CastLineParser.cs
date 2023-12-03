@@ -139,7 +139,7 @@ namespace EQLogParser
 
               if (spellData != null)
               {
-                var cast = new SpellCast { Caster = player, Spell = spellName, SpellData = spellData };
+                var cast = new SpellCast { Caster = string.Intern(player), Spell = string.Intern(spellName), SpellData = spellData };
                 RecordManager.Instance.Add(cast, currentTime);
 
                 if (DataManager.Instance.GetSpellClass(cast.Spell) is { } theClass)
@@ -211,7 +211,7 @@ namespace EQLogParser
         {
           if (!string.IsNullOrEmpty(player))
           {
-            var newSpell = new ReceivedSpell { Receiver = player, IsWearOff = true };
+            var newSpell = new ReceivedSpell { Receiver = string.Intern(player), IsWearOff = true };
             if (searchResult.SpellData.Count == 1)
             {
               newSpell.SpellData = searchResult.SpellData.First();
@@ -250,7 +250,7 @@ namespace EQLogParser
 
       if (searchResult.SpellData.Count > 0 && !string.IsNullOrEmpty(player))
       {
-        var newSpell = new ReceivedSpell { Receiver = player };
+        var newSpell = new ReceivedSpell { Receiver = string.Intern(player) };
         if (searchResult.SpellData.Count == 1)
         {
           newSpell.SpellData = searchResult.SpellData.First();

@@ -25,14 +25,14 @@ namespace EQLogParser
     public const string SpecialRecords = "SpecialRecords";
     public const string ZoneRecords = "ZoneRecords";
     // stats
-    private readonly ConcurrentDictionary<string, List<RecordList>> RecordDicts = new();
-    private readonly ConcurrentDictionary<string, bool> RecordNeedsEvent = new();
-    private readonly Dictionary<string, NpcResistStats> NpcSpellStatsDict = new();
-    private readonly List<RecordList> PlayerAmbiguityCastCache = new();
+    private readonly ConcurrentDictionary<string, List<RecordList>> _recordDictionaries = new();
+    private readonly ConcurrentDictionary<string, bool> _recordNeedsEvent = new();
+    private readonly Dictionary<string, NpcResistStats> _npcSpellStatsDict = new();
+    private readonly List<RecordList> _playerAmbiguityCastCache = new();
     // observables
-    private readonly object CollectionLock = new();
+    private readonly object _collectionLock = new();
     internal readonly ObservableCollection<QuickShareRecord> AllQuickShareRecords = new();
-    private readonly Timer EventTimer;
+    private readonly Timer _eventTimer;
 
     private static readonly string[] TimedRecordTypes =
     {
@@ -50,15 +50,15 @@ namespace EQLogParser
 
     private RecordManager()
     {
-      BindingOperations.EnableCollectionSynchronization(AllQuickShareRecords, CollectionLock);
+      BindingOperations.EnableCollectionSynchronization(AllQuickShareRecords, _collectionLock);
 
       // initialize dictionaries
       foreach (var type in TimedRecordTypes)
       {
-        RecordDicts[type] = new List<RecordList>();
+        _recordDictionaries[type] = new List<RecordList>();
       }
 
-      EventTimer = new Timer(SendEvents, null, TimeSpan.FromMilliseconds(1500), TimeSpan.FromMilliseconds(1500));
+      _eventTimer = new Timer(SendEvents, null, TimeSpan.FromMilliseconds(1500), TimeSpan.FromMilliseconds(1500));
     }
 
     internal void Add(DeathRecord record, double beginTime) => Add(DeathRecords, record, beginTime);
@@ -83,7 +83,7 @@ namespace EQLogParser
       GetDuring(HealRecords, beginTime, endTime).Select(r => (r.Item1, (HealRecord)r.Item2));
     internal IEnumerable<(double, IAction)> GetSpellsDuring(double beginTime, double endTime, bool reverse = false) =>
       GetDuring(SpellRecords, beginTime, endTime, reverse).Select(r => (r.Item1, (IAction)r.Item2));
-    internal void Stop() => EventTimer?.Dispose();
+    internal void Stop() => _eventTimer?.Dispose();
 
     internal void Add(LootRecord record, double beginTime)
     {
@@ -98,7 +98,7 @@ namespace EQLogParser
       }
 
       // loot assigned so remove previous instance
-      if (RecordDicts.TryGetValue(LootRecordsToAssign, out var toAssign) && toAssign.Count > 0)
+      if (_recordDictionaries.TryGetValue(LootRecordsToAssign, out var toAssign) && toAssign.Count > 0)
       {
         lock (toAssign)
         {
@@ -110,7 +110,7 @@ namespace EQLogParser
             foreach (var found in recordsCopy.Cast<LootRecord>().Where(r => r.Player == record.Player && r.Item == record.Item))
             {
               Remove(toAssign, toAssignCopy[i], found);
-              if (RecordDicts.TryGetValue(LootRecords, out var looted) && looted.FirstOrDefault(r => r.BeginTime.Equals(toAssignCopy[i].BeginTime)) is { } orig)
+              if (_recordDictionaries.TryGetValue(LootRecords, out var looted) && looted.FirstOrDefault(r => r.BeginTime.Equals(toAssignCopy[i].BeginTime)) is { } orig)
               {
                 lock (looted)
                 {
@@ -130,18 +130,20 @@ namespace EQLogParser
     {
       Add(SpellRecords, spell, beginTime);
 
-      if (spell.SpellData?.HasAmbiguity == true)
+      if (spell.SpellData?.HasAmbiguity != true)
       {
-        lock (PlayerAmbiguityCastCache)
-        {
-          Add(PlayerAmbiguityCastCache, spell, beginTime);
-        }
+        return;
+      }
+
+      lock (_playerAmbiguityCastCache)
+      {
+        Add(_playerAmbiguityCastCache, spell, beginTime);
       }
     }
 
     internal void Add(QuickShareRecord action)
     {
-      lock (CollectionLock)
+      lock (_collectionLock)
       {
         if (AllQuickShareRecords.Count == 0 || AllQuickShareRecords[0].Key != action.Key ||
           !AllQuickShareRecords[0].BeginTime.Equals(action.BeginTime))
@@ -155,31 +157,31 @@ namespace EQLogParser
     {
       foreach (var type in TimedRecordTypes)
       {
-        RecordDicts[type].Clear();
+        _recordDictionaries[type].Clear();
       }
 
-      lock (PlayerAmbiguityCastCache)
+      lock (_playerAmbiguityCastCache)
       {
-        PlayerAmbiguityCastCache.Clear();
+        _playerAmbiguityCastCache.Clear();
       }
 
-      lock (CollectionLock)
+      lock (_collectionLock)
       {
         AllQuickShareRecords.Clear();
       }
 
-      lock (NpcSpellStatsDict)
+      lock (_npcSpellStatsDict)
       {
-        NpcSpellStatsDict.Clear();
+        _npcSpellStatsDict.Clear();
       }
     }
 
     internal IEnumerable<NpcResistStats> GetAllNpcResistStats()
     {
       NpcResistStats[] statsCopy;
-      lock (NpcSpellStatsDict)
+      lock (_npcSpellStatsDict)
       {
-        statsCopy = NpcSpellStatsDict.Values.ToArray();
+        statsCopy = _npcSpellStatsDict.Values.ToArray();
       }
 
       foreach (var stat in statsCopy)
@@ -190,19 +192,22 @@ namespace EQLogParser
 
     internal IEnumerable<(double, SpellCast)> GetSpellsLast(double duration)
     {
-      lock (PlayerAmbiguityCastCache)
+      lock (_playerAmbiguityCastCache)
       {
-        var end = PlayerAmbiguityCastCache.Count - 1;
-        if (end > -1)
+        var end = _playerAmbiguityCastCache.Count - 1;
+
+        if (end <= -1)
         {
-          var endTime = PlayerAmbiguityCastCache[end].BeginTime - duration;
-          for (var i = end; i >= 0 && PlayerAmbiguityCastCache[i].BeginTime >= endTime; i--)
+          yield break;
+        }
+
+        var endTime = _playerAmbiguityCastCache[end].BeginTime - duration;
+        for (var i = end; i >= 0 && _playerAmbiguityCastCache[i].BeginTime >= endTime; i--)
+        {
+          var list = _playerAmbiguityCastCache[i];
+          for (var j = list.Records.Count - 1; j >= 0; j--)
           {
-            var list = PlayerAmbiguityCastCache[i];
-            for (var j = list.Records.Count - 1; j >= 0; j--)
-            {
-              yield return (list.BeginTime, (SpellCast)list.Records[j]);
-            }
+            yield return (list.BeginTime, (SpellCast)list.Records[j]);
           }
         }
       }
@@ -210,7 +215,7 @@ namespace EQLogParser
 
     internal bool IsQuickShareMine(string key)
     {
-      lock (CollectionLock)
+      lock (_collectionLock)
       {
         return AllQuickShareRecords.FirstOrDefault(share => share.IsMine && share.Key == key) != null;
       }
@@ -223,12 +228,12 @@ namespace EQLogParser
         NpcResistStats npcStats;
         npc = npc.ToLower();
 
-        lock (NpcSpellStatsDict)
+        lock (_npcSpellStatsDict)
         {
-          if (!NpcSpellStatsDict.TryGetValue(npc, out npcStats))
+          if (!_npcSpellStatsDict.TryGetValue(npc, out npcStats))
           {
             npcStats = new NpcResistStats { Npc = npc };
-            NpcSpellStatsDict[npc] = npcStats;
+            _npcSpellStatsDict[npc] = npcStats;
           }
         }
 
@@ -254,14 +259,16 @@ namespace EQLogParser
 
     private void Add(string type, IAction record, double beginTime)
     {
-      if (RecordDicts.TryGetValue(type, out var list))
+      if (!_recordDictionaries.TryGetValue(type, out var list))
       {
-        Add(list, record, beginTime);
-        RecordNeedsEvent[type] = true;
+        return;
       }
+
+      Add(list, record, beginTime);
+      _recordNeedsEvent[type] = true;
     }
 
-    private void Add(List<RecordList> list, object record, double beginTime)
+    private static void Add(List<RecordList> list, object record, double beginTime)
     {
       RecordList found;
       lock (list)
@@ -312,7 +319,7 @@ namespace EQLogParser
 
     private IEnumerable<(double, object)> GetAll(string type)
     {
-      if (RecordDicts.TryGetValue(type, out var list))
+      if (_recordDictionaries.TryGetValue(type, out var list))
       {
         RecordList[] listCopy;
         lock (list)
@@ -338,7 +345,7 @@ namespace EQLogParser
 
     private IEnumerable<(double, object)> GetDuring(string type, double beginTime, double endTime, bool reverse = false)
     {
-      if (RecordDicts.TryGetValue(type, out var list))
+      if (_recordDictionaries.TryGetValue(type, out var list))
       {
         List<RecordList> listCopy;
         lock (list)
@@ -390,15 +397,15 @@ namespace EQLogParser
 
     private void SendEvents(object state)
     {
-      var keys = RecordNeedsEvent.Keys.ToArray();
-      RecordNeedsEvent.Clear();
+      var keys = _recordNeedsEvent.Keys.ToArray();
+      _recordNeedsEvent.Clear();
       foreach (var key in keys)
       {
         RecordsUpdatedEvent?.Invoke(key);
       }
     }
 
-    private static void Remove(List<RecordList> list, RecordList group, object item)
+    private static void Remove(ICollection<RecordList> list, RecordList group, object item)
     {
       group.Records.Remove(item);
       if (group.Records.Count == 0)
@@ -407,7 +414,7 @@ namespace EQLogParser
       }
     }
 
-    private static int BinarySearch<T>(List<T> list, Func<T, int> comparer)
+    private static int BinarySearch<T>(IReadOnlyList<T> list, Func<T, int> comparer)
     {
       int low = 0, high = list.Count - 1;
 
@@ -415,18 +422,17 @@ namespace EQLogParser
       {
         var mid = low + ((high - low) / 2);
         var comparison = comparer(list[mid]);
-        if (comparison == 0)
-        {
-          return mid;
-        }
 
-        if (comparison < 0)
+        switch (comparison)
         {
-          low = mid + 1;
-        }
-        else
-        {
-          high = mid - 1;
+          case 0:
+            return mid;
+          case < 0:
+            low = mid + 1;
+            break;
+          default:
+            high = mid - 1;
+            break;
         }
       }
 
