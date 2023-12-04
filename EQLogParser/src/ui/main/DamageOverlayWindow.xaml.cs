@@ -16,7 +16,7 @@ namespace EQLogParser
   /// </summary>
   public partial class DamageOverlayWindow
   {
-    private const double DAMAGE_MODE_ZERO_TIMEOUT = TimeSpan.TicksPerSecond * 7; // with 3 second slain queue delay
+    private const double DamageModeZeroTimeout = TimeSpan.TicksPerSecond * 7; // with 3 second slain queue delay
     private static readonly object StatsLock = new();
     private static readonly SolidColorBrush ActiveBrush = new(Color.FromRgb(254, 156, 30));
     private static readonly SolidColorBrush InActiveBrush = new(Colors.White);
@@ -176,7 +176,7 @@ namespace EQLogParser
 
         if (update == null)
         {
-          if (Stats != null && (CurrentDamageMode != 0 || (DateTime.Now.Ticks - Stats.LastUpdateTicks) >= DAMAGE_MODE_ZERO_TIMEOUT))
+          if (Stats != null && (CurrentDamageMode != 0 || (DateTime.Now.Ticks - Stats.LastUpdateTicks) >= DamageModeZeroTimeout))
           {
             damageOverlayStats = Stats = null;
           }
@@ -953,9 +953,9 @@ namespace EQLogParser
       if (!Preview)
       {
         var source = (HwndSource)PresentationSource.FromVisual(this);
-        // set to layered and topmost by xaml
         if (source != null)
         {
+          // set to layered and topmost by xaml
           var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
           exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
           NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);

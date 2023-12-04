@@ -16,10 +16,10 @@ namespace EQLogParser
     internal static TriggerManager Instance => Lazy.Value; // instance
     public readonly Dictionary<string, bool> RunningFiles = new();
     private static readonly Lazy<TriggerManager> Lazy = new(() => new TriggerManager());
-    private readonly DispatcherTimer ConfigUpdateTimer;
-    private readonly DispatcherTimer TriggerUpdateTimer;
-    private readonly DispatcherTimer TextOverlayTimer;
-    private readonly DispatcherTimer TimerOverlayTimer;
+    private readonly DispatcherTimer _configUpdateTimer;
+    private readonly DispatcherTimer _triggerUpdateTimer;
+    private readonly DispatcherTimer _textOverlayTimer;
+    private readonly DispatcherTimer _timerOverlayTimer;
     private readonly Dictionary<string, OverlayWindowData> TextWindows = new();
     private readonly Dictionary<string, OverlayWindowData> TimerWindows = new();
     private readonly List<LogReader> LogReaders = new();
@@ -45,15 +45,15 @@ namespace EQLogParser
       }
 
       TriggerUtil.LoadOverlayStyles();
-      ConfigUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
-      TriggerUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
-      TextOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 450) };
-      TimerOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 50) };
+      _configUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
+      _triggerUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
+      _textOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 450) };
+      _timerOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 50) };
       TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
-      ConfigUpdateTimer.Tick += ConfigDoUpdate;
-      TriggerUpdateTimer.Tick += TriggersDoUpdate;
-      TextOverlayTimer.Tick += TextTick;
-      TimerOverlayTimer.Tick += TimerTick;
+      _configUpdateTimer.Tick += ConfigDoUpdate;
+      _triggerUpdateTimer.Tick += TriggersDoUpdate;
+      _textOverlayTimer.Tick += TextTick;
+      _timerOverlayTimer.Tick += TimerTick;
     }
 
     internal void CloseOverlay(string id) => CloseOverlay(id, TextWindows, TimerWindows);
@@ -62,8 +62,8 @@ namespace EQLogParser
 
     internal void TriggersUpdated()
     {
-      TriggerUpdateTimer.Stop();
-      TriggerUpdateTimer.Start();
+      _triggerUpdateTimer.Stop();
+      _triggerUpdateTimer.Start();
     }
 
     internal void Start()
@@ -83,8 +83,8 @@ namespace EQLogParser
         LogReaders?.Clear();
       }
 
-      TextOverlayTimer?.Stop();
-      TimerOverlayTimer?.Stop();
+      _textOverlayTimer?.Stop();
+      _timerOverlayTimer?.Stop();
     }
 
     internal void SetTestProcessor(TriggerConfig config, BlockingCollection<Tuple<string, double, bool>> collection)
@@ -125,7 +125,7 @@ namespace EQLogParser
       return list;
     }
 
-    private void TextTick(object sender, EventArgs e) => WindowTick(TextWindows, TextOverlayTimer);
+    private void TextTick(object sender, EventArgs e) => WindowTick(TextWindows, _textOverlayTimer);
 
     private void TriggerManagerEventsLogLoadingComplete(string _)
     {
@@ -138,16 +138,16 @@ namespace EQLogParser
 
     private void TriggerConfigUpdateEvent(TriggerConfig _)
     {
-      ConfigUpdateTimer?.Stop();
-      ConfigUpdateTimer?.Start();
+      _configUpdateTimer?.Stop();
+      _configUpdateTimer?.Start();
     }
 
     private void ConfigDoUpdate(object sender, EventArgs e)
     {
-      ConfigUpdateTimer.Stop();
+      _configUpdateTimer.Stop();
       UIUtil.InvokeAsync(CloseOverlays);
-      TextOverlayTimer?.Stop();
-      TimerOverlayTimer?.Stop();
+      _textOverlayTimer?.Stop();
+      _timerOverlayTimer?.Stop();
 
       if (TriggerStateManager.Instance.GetConfig() is { } config)
       {
@@ -239,7 +239,7 @@ namespace EQLogParser
 
     private void TriggersDoUpdate(object sender, EventArgs e)
     {
-      TriggerUpdateTimer.Stop();
+      _triggerUpdateTimer.Stop();
       CloseOverlays();
       GetProcessors().ForEach(p => p.UpdateActiveTriggers());
     }
@@ -299,7 +299,7 @@ namespace EQLogParser
     private void TimerTick(object sender, EventArgs e)
     {
       TimerIncrement++;
-      WindowTick(TimerWindows, TimerOverlayTimer, TimerIncrement);
+      WindowTick(TimerWindows, _timerOverlayTimer, TimerIncrement);
 
       if (TimerIncrement == 10)
       {
@@ -410,9 +410,9 @@ namespace EQLogParser
           textOverlayFound = true;
         }
 
-        if (textOverlayFound && !TextOverlayTimer.IsEnabled)
+        if (textOverlayFound && !_textOverlayTimer.IsEnabled)
         {
-          TextOverlayTimer.Start();
+          _textOverlayTimer.Start();
         }
       }, DispatcherPriority.Render);
 
@@ -458,9 +458,9 @@ namespace EQLogParser
           timerOverlayFound = true;
         }
 
-        if (timerOverlayFound && !TimerOverlayTimer.IsEnabled)
+        if (timerOverlayFound && !_timerOverlayTimer.IsEnabled)
         {
-          TimerOverlayTimer.Start();
+          _timerOverlayTimer.Start();
         }
       }, DispatcherPriority.Render);
 
