@@ -229,7 +229,7 @@ namespace EQLogParser
               if (i > 9 && stop == (i + 1) && split[i + 1] == "damage." && pointsOfIndex == (i - 2) && forIndex == (i - 4))
               {
                 dsIndex = i - 5;
-                found = true; // short circut
+                found = true; // short circuit
               }
               break;
             case "point":
