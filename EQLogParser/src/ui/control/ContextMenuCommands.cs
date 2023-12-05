@@ -6,16 +6,16 @@ namespace EQLogParser
 {
   public static class ContextMenuCommands
   {
-    private static BaseCommand TheCopyCommand;
-    private static BaseCommand TheSelectAllCommand;
-    private static BaseCommand TheUnselectAllCommand;
+    private static BaseCommand _theCopyCommand;
+    private static BaseCommand _theSelectAllCommand;
+    private static BaseCommand _theUnselectAllCommand;
 
     public static BaseCommand Copy
     {
       get
       {
-        TheCopyCommand ??= new BaseCommand(OnCopyClicked);
-        return TheCopyCommand;
+        _theCopyCommand ??= new BaseCommand(OnCopyClicked);
+        return _theCopyCommand;
       }
     }
 
@@ -35,8 +35,8 @@ namespace EQLogParser
     {
       get
       {
-        TheSelectAllCommand ??= new BaseCommand(OnSelectAllClicked, CanSelectAll);
-        return TheSelectAllCommand;
+        _theSelectAllCommand ??= new BaseCommand(OnSelectAllClicked, CanSelectAll);
+        return _theSelectAllCommand;
       }
     }
 
@@ -74,8 +74,8 @@ namespace EQLogParser
     {
       get
       {
-        TheUnselectAllCommand ??= new BaseCommand(OnUnselectAllClicked, CanUnselectAll);
-        return TheUnselectAllCommand;
+        _theUnselectAllCommand ??= new BaseCommand(OnUnselectAllClicked, CanUnselectAll);
+        return _theUnselectAllCommand;
       }
     }
 

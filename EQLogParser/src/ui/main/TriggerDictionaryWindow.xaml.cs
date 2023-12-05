@@ -14,24 +14,24 @@ namespace EQLogParser
   /// </summary>
   public partial class TriggerDictionaryWindow
   {
-    private readonly SpeechSynthesizer TestSynth;
-    private readonly ObservableCollection<LexiconItem> Items = new();
-    private LexiconItem Previous;
+    private readonly SpeechSynthesizer _testSynth;
+    private readonly ObservableCollection<LexiconItem> _items = new();
+    private LexiconItem _previous;
 
     public TriggerDictionaryWindow()
     {
       MainActions.SetTheme(this, MainWindow.CurrentTheme);
       InitializeComponent();
       Owner = Application.Current.MainWindow;
-      TestSynth = TriggerUtil.GetSpeechSynthesizer();
+      _testSynth = TriggerUtil.GetSpeechSynthesizer();
 
       foreach (var item in TriggerStateManager.Instance.GetLexicon())
       {
-        Items.Add(item);
+        _items.Add(item);
       }
 
-      dataGrid.ItemsSource = Items;
-      Items.CollectionChanged += ItemsChanged;
+      dataGrid.ItemsSource = _items;
+      _items.CollectionChanged += ItemsChanged;
     }
 
     private void ItemsChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -54,17 +54,17 @@ namespace EQLogParser
     private void SaveClicked(object sender, RoutedEventArgs e)
     {
       CleanupTable();
-      TriggerStateManager.Instance.SaveLexicon(Items.ToList());
+      TriggerStateManager.Instance.SaveLexicon(_items.ToList());
       saveButton.IsEnabled = false;
     }
 
     private void CleanupTable()
     {
-      for (var i = Items.Count - 1; i >= 0; i--)
+      for (var i = _items.Count - 1; i >= 0; i--)
       {
-        if (string.IsNullOrEmpty(Items[i].Replace) && string.IsNullOrEmpty(Items[i].With))
+        if (string.IsNullOrEmpty(_items[i].Replace) && string.IsNullOrEmpty(_items[i].With))
         {
-          Items.RemoveAt(i);
+          _items.RemoveAt(i);
         }
       }
     }
@@ -73,13 +73,13 @@ namespace EQLogParser
     {
       if (dataGrid.SelectedItem is LexiconItem item)
       {
-        TestSynth.SpeakAsync(item.With ?? "");
+        _testSynth.SpeakAsync(item.With ?? "");
       }
     }
 
     private void TriggerDictionaryWindowOnClosing(object sender, CancelEventArgs e)
     {
-      TestSynth?.Dispose();
+      _testSynth?.Dispose();
       dataGrid?.Dispose();
     }
 
@@ -89,10 +89,10 @@ namespace EQLogParser
       {
         if (item.Replace != null && !Regex.IsMatch(item.Replace, @"^\w+$"))
         {
-          item.Replace = Previous.Replace;
+          item.Replace = _previous.Replace;
         }
 
-        if (Previous != null && (Previous.Replace != item.Replace || Previous.With != item.With))
+        if (_previous != null && (_previous.Replace != item.Replace || _previous.With != item.With))
         {
           saveButton.IsEnabled = true;
         }
@@ -109,7 +109,7 @@ namespace EQLogParser
     {
       if (e.OriginalSender is SfDataGrid { CurrentItem: LexiconItem item })
       {
-        Previous = new LexiconItem { Replace = item.Replace, With = item.With };
+        _previous = new LexiconItem { Replace = item.Replace, With = item.With };
       }
     }
 

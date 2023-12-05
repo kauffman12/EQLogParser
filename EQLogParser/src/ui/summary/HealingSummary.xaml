@@ -68,8 +68,8 @@
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
-            <MenuItem IsEnabled="False" x:Name="copyHealParseToEQClick" Header="Selected" Click="CopyToEQClick" />
-            <MenuItem IsEnabled="False" x:Name="copyTopHealsParseToEQClick" Header="Top Heals" Click="CopyTopHealsToEQClick" />
+            <MenuItem IsEnabled="False" x:Name="copyHealParseToEQClick" Header="Selected" Click="CopyToEqClick" />
+            <MenuItem IsEnabled="False" x:Name="copyTopHealsParseToEQClick" Header="Top Heals" Click="CopyTopHealsToEqClick" />
           </MenuItem>
           <Separator />
           <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
@@ -146,9 +146,9 @@
         <syncfusion:GridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Healing" />
         <syncfusion:GridNumericColumn MaximumWidth="100" MappingName="Extra" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderOverHealTemplateToolTip}" TextAlignment="Right" HeaderText="Over Healed" />
         <syncfusion:GridNumericColumn MaximumWidth="100" MappingName="Potential" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource PotentialHealTemplateToolTip}" TextAlignment="Right" HeaderText="Potential Heals" />
-        <syncfusion:GridNumericColumn MappingName="DPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderHPSTemplateToolTip}" TextAlignment="Right" HeaderText="HPS" />
-        <syncfusion:GridNumericColumn MappingName="SDPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSHPSTemplateToolTip}" TextAlignment="Right" HeaderText="SHPS" />
-        <syncfusion:GridNumericColumn MappingName="PDPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderPHPSTemplateToolTip}" TextAlignment="Right" HeaderText="PHPS" />
+        <syncfusion:GridNumericColumn MappingName="Dps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderHPSTemplateToolTip}" TextAlignment="Right" HeaderText="HPS" />
+        <syncfusion:GridNumericColumn MappingName="Sdps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSHPSTemplateToolTip}" TextAlignment="Right" HeaderText="SHPS" />
+        <syncfusion:GridNumericColumn MappingName="Pdps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderPHPSTemplateToolTip}" TextAlignment="Right" HeaderText="PHPS" />
         <syncfusion:GridNumericColumn MaximumWidth="65" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
         <syncfusion:GridNumericColumn MaximumWidth="70" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Heals" />
         <syncfusion:GridNumericColumn MaximumWidth="90" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Heal" />

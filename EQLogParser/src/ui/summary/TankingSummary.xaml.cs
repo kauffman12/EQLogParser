@@ -12,22 +12,22 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for TankingSummary.xaml
   /// </summary>
-  public partial class TankingSummary : SummaryTable, IDocumentContent
+  public partial class TankingSummary : IDocumentContent
   {
     // Made property since it's used outside this class
     public int DamageType { get; set; }
 
-    private string CurrentClass;
-    private bool CurrentPetValue;
-    private int CurrentGroupCount;
-    private bool Ready;
+    private string _currentClass;
+    private bool _currentPetValue;
+    private int _currentGroupCount;
+    private bool _ready;
 
     public TankingSummary()
     {
       InitializeComponent();
 
       // if pets are shown
-      showPets.IsChecked = CurrentPetValue = ConfigUtil.IfSet("TankingSummaryShowPets", null, true);
+      showPets.IsChecked = _currentPetValue = ConfigUtil.IfSet("TankingSummaryShowPets", null, true);
 
       // default damage types to display
       var damageType = ConfigUtil.GetSetting("TankingSummaryDamageType");
@@ -58,11 +58,10 @@ namespace EQLogParser
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
     {
-      if (selected?.Count > 0)
+      if (selected?.Count > 0 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var breakdown, typeof(TankingBreakdown),
-          "tankingBreakdownWindow", "Tanking Breakdown"))
+              "tankingBreakdownWindow", "Tanking Breakdown"))
         {
           (breakdown.Content as TankingBreakdown)?.Init(CurrentStats, selected);
         }
@@ -71,9 +70,8 @@ namespace EQLogParser
 
     internal override void ShowBreakdown2(List<PlayerStats> selected)
     {
-      if (selected?.Count > 0)
+      if (selected?.Count > 0 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var breakdown, typeof(HealBreakdown),
           "receivedHealingWindow", "Received Healing Breakdown"))
         {
@@ -99,13 +97,13 @@ namespace EQLogParser
           copyTankingParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
           copyReceivedHealingParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) &&
             (dataGrid.SelectedItem as PlayerStats)?.MoreStats != null;
-          menuItemShowDefensiveTimeline.IsEnabled = (dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2) && CurrentGroupCount == 1;
+          menuItemShowDefensiveTimeline.IsEnabled = (dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2) && _currentGroupCount == 1;
 
           menuItemShowDeathLog.IsEnabled = false;
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
-            menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.UNK && playerStats.OrigName != Labels.RS &&
+            menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.Unk && playerStats.OrigName != Labels.Rs &&
             !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
             selectedName = playerStats.OrigName;
             menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X");
@@ -128,15 +126,15 @@ namespace EQLogParser
       });
     }
 
-    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.TANK_PARSE);
-    private void CopyReceivedHealingToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.RECEIVED_HEAL_PARSE);
+    private void CopyToEqClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.TankParse);
+    private void CopyReceivedHealingToEqClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.ReceivedHealParse);
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       var update = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
-      var needUpdate = CurrentClass != update;
-      CurrentClass = update;
+      var needUpdate = _currentClass != update;
+      _currentClass = update;
 
       if (needUpdate)
       {
@@ -173,15 +171,14 @@ namespace EQLogParser
       if (MainWindow.IsMapSendToEqEnabled && Keyboard.Modifiers == ModifierKeys.Control && Keyboard.IsKeyDown(Key.C))
       {
         e.Handled = true;
-        CopyToEQClick(sender, null);
+        CopyToEqClick(sender, null);
       }
     }
 
     private void DataGridTankingLogClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems?.Count > 0)
+      if (dataGrid.SelectedItems?.Count > 0 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(HitLogViewer), "tankingLogWindow", "Tanking Log"))
         {
           (log.Content as HitLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups, true);
@@ -191,9 +188,8 @@ namespace EQLogParser
 
     private void DataGridDeathLogClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems?.Count > 0)
+      if (dataGrid.SelectedItems?.Count > 0 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
         {
           (log.Content as DeathLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
@@ -203,9 +199,8 @@ namespace EQLogParser
 
     private void DataGridHitFreqClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems.Count == 1)
+      if (dataGrid.SelectedItems.Count == 1 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var hitFreq, typeof(HitFreqChart), "tankHitFreqChart", "Tanking Hit Frequency"))
         {
           (hitFreq.Content as HitFreqChart)?.Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
@@ -215,9 +210,8 @@ namespace EQLogParser
 
     private void DataGridDefensiveTimelineClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems.Count > 0)
+      if (dataGrid.SelectedItems.Count > 0 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var timeline, typeof(GanttChart), "defensiveTimeline", "Defensive Timeline"))
         {
           ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 0);
@@ -238,7 +232,7 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        if (e.Type == Labels.HEAL_PARSE && e.State == "COMPLETED")
+        if (e.Type == Labels.HealParse && e.State == "COMPLETED")
         {
           if (CurrentStats != null)
           {
@@ -256,7 +250,7 @@ namespace EQLogParser
             }
           }
         }
-        else if (e.Type == Labels.TANK_PARSE)
+        else if (e.Type == Labels.TankParse)
         {
           switch (e.State)
           {
@@ -267,7 +261,7 @@ namespace EQLogParser
             case "COMPLETED":
               CurrentStats = e.CombinedStats;
               CurrentGroups = e.Groups;
-              CurrentGroupCount = e.UniqueGroupCount;
+              _currentGroupCount = e.UniqueGroupCount;
 
               var isHealingLimited = false;
               if (CurrentStats == null)
@@ -322,12 +316,12 @@ namespace EQLogParser
           }
 
           var isPet = PlayerManager.Instance.IsVerifiedPet(name);
-          if (isPet && CurrentPetValue == false)
+          if (isPet && _currentPetValue == false)
           {
             return false;
           }
 
-          return string.IsNullOrEmpty(CurrentClass) || (!string.IsNullOrEmpty(name) && CurrentClass == className);
+          return string.IsNullOrEmpty(_currentClass) || (!string.IsNullOrEmpty(name) && _currentClass == className);
         };
 
         if (dataGrid.SelectedItems.Count > 0)
@@ -344,9 +338,9 @@ namespace EQLogParser
       if (dataGrid is { ItemsSource: not null })
       {
         var needRequery = DamageType != damageTypes.SelectedIndex;
-        CurrentPetValue = showPets.IsChecked == true;
+        _currentPetValue = showPets.IsChecked == true;
         DamageType = damageTypes.SelectedIndex;
-        ConfigUtil.SetSetting("TankingSummaryShowPets", CurrentPetValue);
+        ConfigUtil.SetSetting("TankingSummaryShowPets", _currentPetValue);
         ConfigUtil.SetSetting("TankingSummaryDamageType", DamageType);
 
         dataGrid.SelectedItems.Clear();
@@ -383,7 +377,7 @@ namespace EQLogParser
 
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (VisualParent == null && !Ready)
+      if (VisualParent != null && !_ready)
       {
         TankingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
         HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
@@ -395,7 +389,7 @@ namespace EQLogParser
           var tankingOptions = new GenerateStatsOptions { DamageType = DamageType };
           Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
         }
-        Ready = true;
+        _ready = true;
       }
     }
 
@@ -407,7 +401,7 @@ namespace EQLogParser
       MainActions.EventsChartOpened -= EventsChartOpened;
       ClearData();
       TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "UPDATE");
-      Ready = false;
+      _ready = false;
     }
   }
 }

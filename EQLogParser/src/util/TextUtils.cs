@@ -12,20 +12,20 @@ namespace EQLogParser
 {
   static class TextUtils
   {
-    private const string BB_CELL_HEADER = "  [td]{0}    [/td]";
-    private const string BB_CELL_BODY = "[td][right]{0}   [/right][/td]";
-    private const string BB_CELL_FIRST = "[td]{0}[/td]";
-    private const string BB_ROW_START = "[tr]";
-    private const string BB_ROW_END = "[/tr]\r\n";
-    private const string BB_TABLE_START = "[table]\r\n";
-    private const string BB_TABLE_END = "[/table]\r\n";
-    private const string BB_TITLE = "[b]{0}[/b]\r\n";
-    private const string CSV_STRING_CELL = "\"{0}\"\t";
-    private const string CSV_NUMBER_CELL = "{0}\t";
+    private const string BbCellHeader = "  [td]{0}    [/td]";
+    private const string BbCellBody = "[td][right]{0}   [/right][/td]";
+    private const string BbCellFirst = "[td]{0}[/td]";
+    private const string BbRowStart = "[tr]";
+    private const string BbRowEnd = "[/tr]\r\n";
+    private const string BbTableStart = "[table]\r\n";
+    private const string BbTableEnd = "[/table]\r\n";
+    private const string BbTitle = "[b]{0}[/b]\r\n";
+    private const string CsvStringCell = "\"{0}\"\t";
+    private const string CsvNumberCell = "{0}\t";
 
-    private const string BB_GAMPARSE_SPELL_COUNT = "   --- {0} - {1}";
+    private const string BbGamparseSpellCount = "   --- {0} - {1}";
 
-    private static readonly Dictionary<int, string> ROMAN = new()
+    private static readonly Dictionary<int, string> Roman = new()
     {
       { 400, "CD" }, { 100, "C" }, { 90, "XC" }, { 50, "L" }, { 40, "XL" }, { 10, "X" }, { 9, "IX" }, { 5, "V" }, { 4, "IV" }, { 1, "I" }
     };
@@ -44,7 +44,7 @@ namespace EQLogParser
       }
 
       // header
-      header.ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, CSV_STRING_CELL, item));
+      header.ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, CsvStringCell, item));
       sb.AppendLine();
 
       // data
@@ -52,7 +52,7 @@ namespace EQLogParser
       {
         row.ToList().ForEach(item =>
         {
-          sb.AppendFormat(CultureInfo.CurrentCulture, item is string ? CSV_STRING_CELL : CSV_NUMBER_CELL, item);
+          sb.AppendFormat(CultureInfo.CurrentCulture, item is string ? CsvStringCell : CsvNumberCell, item);
         });
 
         sb.AppendLine();
@@ -61,39 +61,39 @@ namespace EQLogParser
       return sb.ToString();
     }
 
-    internal static string BuildBBCodeTable(List<string> header, List<List<object>> data, string title = null)
+    internal static string BuildBbCodeTable(List<string> header, List<List<object>> data, string title = null)
     {
       var sb = new StringBuilder();
 
       if (title != null)
       {
-        sb.AppendFormat(CultureInfo.CurrentCulture, BB_TITLE, title);
+        sb.AppendFormat(CultureInfo.CurrentCulture, BbTitle, title);
       }
 
       // start table
-      sb.Append(BB_TABLE_START);
+      sb.Append(BbTableStart);
 
       // header
-      sb.Append(BB_ROW_START);
-      header.ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, BB_CELL_HEADER, item));
-      sb.Append(BB_ROW_END);
+      sb.Append(BbRowStart);
+      header.ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, BbCellHeader, item));
+      sb.Append(BbRowEnd);
 
       // data
       data.ForEach(row =>
       {
-        sb.Append(BB_ROW_START);
+        sb.Append(BbRowStart);
         var first = row.FirstOrDefault();
         if (first != null)
         {
-          sb.AppendFormat(CultureInfo.CurrentCulture, BB_CELL_FIRST, first);
+          sb.AppendFormat(CultureInfo.CurrentCulture, BbCellFirst, first);
         }
 
-        row.Skip(1).ToList().ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, BB_CELL_BODY, item));
-        sb.Append(BB_ROW_END);
+        row.Skip(1).ToList().ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, BbCellBody, item));
+        sb.Append(BbRowEnd);
       });
 
       // end table
-      sb.Append(BB_TABLE_END);
+      sb.Append(BbTableEnd);
       return sb.ToString();
     }
 
@@ -103,7 +103,7 @@ namespace EQLogParser
 
       if (title != null)
       {
-        sb.AppendFormat(CultureInfo.CurrentCulture, BB_TITLE, title);
+        sb.AppendFormat(CultureInfo.CurrentCulture, BbTitle, title);
         sb.AppendLine();
       }
 
@@ -117,13 +117,13 @@ namespace EQLogParser
       foreach (var pair in sorted)
       {
         var updatedHeader = header[pair.Value].Replace("=", "-");
-        sb.AppendFormat(CultureInfo.CurrentCulture, BB_TITLE, updatedHeader);
+        sb.AppendFormat(CultureInfo.CurrentCulture, BbTitle, updatedHeader);
 
         data.OrderBy(row => row[0]).ToList().ForEach(row =>
         {
           if (row[pair.Value] != null && row[pair.Value].ToString().Length > 0 && row[pair.Value].ToString() != "0")
           {
-            sb.AppendFormat(CultureInfo.CurrentCulture, BB_GAMPARSE_SPELL_COUNT, row[0], row[pair.Value]);
+            sb.AppendFormat(CultureInfo.CurrentCulture, BbGamparseSpellCount, row[0], row[pair.Value]);
             sb.AppendLine();
           }
         });
@@ -132,7 +132,7 @@ namespace EQLogParser
       return sb.ToString();
     }
 
-    internal static void SaveHTML(string selectedFileName, Dictionary<string, SummaryTable> tables)
+    internal static void SaveHtml(string selectedFileName, Dictionary<string, SummaryTable> tables)
     {
       var headerTemplate = Template.Parse(File.ReadAllText(@"data\html\header.html"));
       var tableKeys = tables.Keys.OrderBy(key => key);
@@ -214,7 +214,7 @@ namespace EQLogParser
     {
       var roman = new StringBuilder();
 
-      foreach (var item in ROMAN)
+      foreach (var item in Roman)
       {
         while (value >= item.Key)
         {

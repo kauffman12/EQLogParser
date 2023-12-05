@@ -17,8 +17,8 @@ namespace EQLogParser
     private static readonly Regex CheckEyeRegex = new(@"^Eye of (\w+)");
     private static readonly Dictionary<string, string> SpellTypeCache = new();
     private static readonly List<string> SlainQueue = new();
-    private static double SlainTime = double.NaN;
-    private static string PreviousAction;
+    private static double _slainTime = double.NaN;
+    private static string _previousAction;
 
     private static readonly Dictionary<string, string> HitMap = new()
     {
@@ -52,7 +52,7 @@ namespace EQLogParser
       { "Mana Burn", "M" }, { "Harm Touch", "H" }, { "Life Burn", "L" }
     };
 
-    private static OldCritData LastCrit;
+    private static OldCritData _lastCrit;
 
     static DamageLineParser() => HitMap.Keys.ToList().ForEach(key => HitMap[HitMap[key]] = HitMap[key]); // add two way mapping
 
@@ -61,11 +61,11 @@ namespace EQLogParser
       lock (SlainQueue)
       {
         // handle Slain queue
-        if (!double.IsNaN(SlainTime) && (currentTime > SlainTime))
+        if (!double.IsNaN(_slainTime) && (currentTime > _slainTime))
         {
           SlainQueue.ForEach(slain => DataManager.Instance.RemoveActiveFight(slain));
           SlainQueue.Clear();
-          SlainTime = double.NaN;
+          _slainTime = double.NaN;
         }
       }
     }
@@ -97,7 +97,7 @@ namespace EQLogParser
           }
         }
 
-        PreviousAction = lineData.Action;
+        _previousAction = lineData.Action;
       }
       catch (Exception e)
       {
@@ -291,13 +291,13 @@ namespace EQLogParser
             case "hit!":
               if (stop == i && split.Length > 4 && split[i - 1] == "critical" && split[i - 3] == "scores")
               {
-                LastCrit = new OldCritData { Attacker = split[0], LineData = lineData };
+                _lastCrit = new OldCritData { Attacker = split[0], LineData = lineData };
               }
               break;
             case "Crippling":
               if (stop == (i + 1) && split.Length > 4 && split[i + 1].StartsWith("Blow!") && split[i - 2] == "lands")
               {
-                LastCrit = new OldCritData { Attacker = split[0], LineData = lineData };
+                _lastCrit = new OldCritData { Attacker = split[0], LineData = lineData };
               }
               break;
             default:
@@ -346,9 +346,9 @@ namespace EQLogParser
           {
             defender = string.Join(" ", split, 0, isIndex);
             var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
-            attacker = UpdateAttacker(attacker, Labels.DS);
+            attacker = UpdateAttacker(attacker, Labels.Ds);
             defender = UpdateDefender(defender);
-            record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.DS, Labels.DS);
+            record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Ds, Labels.Ds);
           }
         }
       }
@@ -357,9 +357,9 @@ namespace EQLogParser
       {
         defender = string.Join(" ", split, 0, isIndex);
         var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
-        attacker = Labels.RS;
+        attacker = Labels.Rs;
         defender = UpdateDefender(defender);
-        record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.DS, Labels.DS);
+        record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Ds, Labels.Ds);
       }
       // [Tue Mar 26 22:43:47 2019] a wave sentinel has taken an extra 6250000 points of non-melee damage from Kazint's Greater Fetter spell.
       // [Tue Feb 05 18:48:53 2019] A whorling wildfire has taken an extra 100000000 points of non-melee damage from your Divergent Lightning Rk. III spell.
@@ -398,7 +398,7 @@ namespace EQLogParser
           resist = spellData?.Resist ?? SpellResist.Undefined;
           attacker = UpdateAttacker(attacker, spell);
           defender = UpdateDefender(defender);
-          record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.BANE, spell);
+          record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Bane, spell);
         }
       }
       // [Sun Apr 18 21:26:15 2021] Astralx crushes Sontalak for 126225 points of damage. (Strikethrough Critical)
@@ -415,7 +415,7 @@ namespace EQLogParser
         var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
         attacker = UpdateAttacker(attacker, subType);
         defender = UpdateDefender(defender);
-        record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.MELEE, subType);
+        record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Melee, subType);
       }
       // [Sun Apr 18 20:24:56 2021] Sonozen hit Jortreva the Crusader for 38948 points of fire damage by Burst of Flames. (Lucky Critical Twincast)
       else if (byDamage > 3 && pointsOfIndex == (byDamage - 3) && byIndex == (byDamage + 1) && forIndex > -1 &&
@@ -427,7 +427,7 @@ namespace EQLogParser
           spell = spell[..^1];
           attacker = string.Join(" ", split, 0, hitType);
           defender = string.Join(" ", split, hitType + 1, forIndex - hitType - 1);
-          var type = GetTypeFromSpell(spell, Labels.DD);
+          var type = GetTypeFromSpell(spell, Labels.Dd);
           var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
           SpellResistMap.TryGetValue(split[byDamage - 1], out resist);
 
@@ -475,7 +475,7 @@ namespace EQLogParser
         {
           attacker = split[yourIndex];
           spell = string.Join(" ", split, yourIndex + 1, stop - yourIndex);
-          spell = (!string.IsNullOrEmpty(spell) && spell[^1] == '.') ? spell[..^1] : Labels.DOT;
+          spell = (!string.IsNullOrEmpty(spell) && spell[^1] == '.') ? spell[..^1] : Labels.Dot;
         }
         else if (isYou)
         {
@@ -495,11 +495,11 @@ namespace EQLogParser
           {
             // check that we can't find a spell where the player name is
             (attacker, spell) = (spell, attacker);
-            type = Labels.DOT;
+            type = Labels.Dot;
           }
           else
           {
-            type = spell == attacker ? Labels.OTHER_DMG : GetTypeFromSpell(spell, Labels.DOT);
+            type = spell == attacker ? Labels.OtherDmg : GetTypeFromSpell(spell, Labels.Dot);
           }
 
           defender = string.Join(" ", split, 0, takenIndex);
@@ -521,7 +521,7 @@ namespace EQLogParser
           spell = spell[..^1];
         }
 
-        var label = Labels.OTHER_DMG;
+        var label = Labels.OtherDmg;
         if (DataManager.Instance.GetDamagingSpellByName(spell) is { } spellData)
         {
           resist = spellData.Resist;
@@ -530,7 +530,7 @@ namespace EQLogParser
           // a player having died
           if (spellData.Level < 255)
           {
-            label = Labels.DOT;
+            label = Labels.Dot;
           }
         }
 
@@ -545,18 +545,18 @@ namespace EQLogParser
         attacker = string.Join(" ", split, 0, hitType);
         defender = string.Join(" ", split, hitType + hitTypeMod + 1, forIndex - hitType - hitTypeMod - 1);
         var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
-        attacker = UpdateAttacker(attacker, Labels.DD);
+        attacker = UpdateAttacker(attacker, Labels.Dd);
         defender = UpdateDefender(defender);
-        record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.DD, Labels.DD);
+        record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, Labels.Dd);
       }
       // [Mon Oct 23 22:18:46 2022] Demonstrated Depletion was hit by non-melee for 6734 points of damage.
       else if (hitType > -1 && forIndex > -1 && forIndex < pointsOfIndex && nonMeleeIndex < pointsOfIndex &&
                byIndex == (nonMeleeIndex - 1) && isIndex > -1 && isIndex < hitType)
       {
         defender = string.Join(" ", split, 0, isIndex);
-        attacker = Labels.UNK;
+        attacker = Labels.Unk;
         var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
-        record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.DD, Labels.DD);
+        record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, Labels.Dd);
       }
       // [Fri Mar 04 21:28:19 2022] A failed reclaimer tries to punch YOU, but YOUR magical skin absorbs the blow!
       // [Mon Aug 05 02:05:12 2019] An enchanted Syldon stalker tries to crush YOU, but YOU parry!
@@ -583,25 +583,25 @@ namespace EQLogParser
         switch (missType)
         {
           case 0:
-            label = Labels.BLOCK;
+            label = Labels.Block;
             break;
           case 1:
-            label = Labels.DODGE;
+            label = Labels.Dodge;
             break;
           case 2:
-            label = Labels.MISS;
+            label = Labels.Miss;
             break;
           case 3:
-            label = Labels.PARRY;
+            label = Labels.Parry;
             break;
           case 4:
-            label = Labels.INVULNERABLE;
+            label = Labels.Invulnerable;
             break;
           case 5:
-            label = Labels.RIPOSTE;
+            label = Labels.Riposte;
             break;
           case 6:
-            label = Labels.ABSORB;
+            label = Labels.Absorb;
             break;
         }
 
@@ -729,14 +729,14 @@ namespace EQLogParser
           if (!double.IsNaN(lineData.BeginTime))
           {
             // handle old style crits for eqemu
-            if (LastCrit != null && LastCrit.Attacker == record.Attacker && LastCrit.LineData.LineNumber == (lineData.LineNumber - 1))
+            if (_lastCrit != null && _lastCrit.Attacker == record.Attacker && _lastCrit.LineData.LineNumber == (lineData.LineNumber - 1))
             {
-              if (!double.IsNaN(LastCrit.LineData.BeginTime) && (lineData.BeginTime - LastCrit.LineData.BeginTime) <= 1)
+              if (!double.IsNaN(_lastCrit.LineData.BeginTime) && (lineData.BeginTime - _lastCrit.LineData.BeginTime) <= 1)
               {
-                record.ModifiersMask = (short)((record.ModifiersMask == LineModifiersParser.NONE) ? LineModifiersParser.CRIT : record.ModifiersMask | LineModifiersParser.CRIT);
+                record.ModifiersMask = (short)((record.ModifiersMask == LineModifiersParser.None) ? LineModifiersParser.Crit : record.ModifiersMask | LineModifiersParser.Crit);
               }
 
-              LastCrit = null;
+              _lastCrit = null;
             }
 
             CheckSlainQueue(lineData.BeginTime);
@@ -744,7 +744,7 @@ namespace EQLogParser
             var e = new DamageProcessedEvent { Record = record, BeginTime = lineData.BeginTime };
             EventsDamageProcessed?.Invoke(e);
 
-            if (record.Type == Labels.DD && SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) &&
+            if (record.Type == Labels.Dd && SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) &&
             record.SubType.Contains(special)) is { } key && !string.IsNullOrEmpty(key))
             {
               RecordManager.Instance.Add(new SpecialRecord { Code = SpecialCodes[key], Player = record.Attacker }, lineData.BeginTime);
@@ -812,16 +812,16 @@ namespace EQLogParser
             if (!SlainQueue.Contains(slain) && DataManager.Instance.GetFight(slain) != null)
             {
               SlainQueue.Add(slain);
-              SlainTime = currentTime;
+              _slainTime = currentTime;
             }
           }
 
           killer = ToUpper(killer);
 
           var death = new DeathRecord { Killed = string.Intern(slain), Killer = string.Intern(killer), Message = string.Intern(lineData.Action) };
-          if (PreviousAction != null)
+          if (_previousAction != null)
           {
-            death.Previous = PreviousAction;
+            death.Previous = _previousAction;
           }
 
           RecordManager.Instance.Add(death, currentTime);
@@ -948,11 +948,11 @@ namespace EQLogParser
           {
             if (data.Damaging == 2)
             {
-              result = Labels.BANE;
+              result = Labels.Bane;
             }
             else if (data.Proc == 1)
             {
-              result = Labels.PROC;
+              result = Labels.Proc;
             }
           }
           SpellTypeCache[key] = result;

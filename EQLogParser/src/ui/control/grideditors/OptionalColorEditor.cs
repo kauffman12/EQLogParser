@@ -12,9 +12,9 @@ namespace EQLogParser
 {
   internal class OptionalColorEditor : BaseTypeEditor
   {
-    private TextBox TheTextBox;
-    private CheckBox TheCheckBox;
-    private ColorPicker TheColorPicker;
+    private TextBox _theTextBox;
+    private CheckBox _theCheckBox;
+    private ColorPicker _theColorPicker;
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
     {
@@ -26,7 +26,7 @@ namespace EQLogParser
         ValidatesOnDataErrors = true
       };
 
-      BindingOperations.SetBinding(TheColorPicker, ColorPicker.BrushProperty, binding);
+      BindingOperations.SetBinding(_theColorPicker, ColorPicker.BrushProperty, binding);
     }
 
     public override object Create(PropertyInfo propertyInfo) => Create();
@@ -38,7 +38,7 @@ namespace EQLogParser
       grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
       grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
 
-      TheTextBox = new TextBox
+      _theTextBox = new TextBox
       {
         HorizontalAlignment = HorizontalAlignment.Stretch,
         HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
@@ -51,34 +51,34 @@ namespace EQLogParser
         FontStyle = FontStyles.Italic
       };
 
-      TheTextBox.SetValue(Grid.ColumnProperty, 0);
+      _theTextBox.SetValue(Grid.ColumnProperty, 0);
 
-      TheCheckBox = new CheckBox { Content = "Use Custom" };
-      TheCheckBox.SetValue(Grid.ColumnProperty, 1);
-      TheCheckBox.Checked += TheCheckBoxChecked;
-      TheCheckBox.Unchecked += TheCheckBoxChecked;
+      _theCheckBox = new CheckBox { Content = "Use Custom" };
+      _theCheckBox.SetValue(Grid.ColumnProperty, 1);
+      _theCheckBox.Checked += TheCheckBoxChecked;
+      _theCheckBox.Unchecked += TheCheckBoxChecked;
 
-      TheColorPicker = new ColorPicker
+      _theColorPicker = new ColorPicker
       {
         EnableSolidToGradientSwitch = false,
         BorderThickness = new Thickness(0, 0, 0, 0),
         Visibility = Visibility.Collapsed
       };
 
-      TheColorPicker.SetValue(Grid.ColumnProperty, 0);
-      TheColorPicker.SelectedBrushChanged += TheColorPickerBrushChanged;
+      _theColorPicker.SetValue(Grid.ColumnProperty, 0);
+      _theColorPicker.SelectedBrushChanged += TheColorPickerBrushChanged;
 
-      grid.Children.Add(TheColorPicker);
-      grid.Children.Add(TheTextBox);
-      grid.Children.Add(TheCheckBox);
+      grid.Children.Add(_theColorPicker);
+      grid.Children.Add(_theTextBox);
+      grid.Children.Add(_theCheckBox);
       return grid;
     }
 
     private void TheColorPickerBrushChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-      if (TheCheckBox != null)
+      if (_theCheckBox != null)
       {
-        TheCheckBox.IsChecked = e.NewValue != null;
+        _theCheckBox.IsChecked = e.NewValue != null;
       }
     }
 
@@ -86,15 +86,15 @@ namespace EQLogParser
     {
       if (sender is CheckBox checkBox)
       {
-        TheTextBox.Visibility = checkBox.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
-        TheColorPicker.Visibility = checkBox.IsChecked == true ? Visibility.Visible : Visibility.Hidden;
+        _theTextBox.Visibility = checkBox.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
+        _theColorPicker.Visibility = checkBox.IsChecked == true ? Visibility.Visible : Visibility.Hidden;
         if (checkBox.IsChecked == false)
         {
-          TheColorPicker.Brush = null;
+          _theColorPicker.Brush = null;
         }
         else
         {
-          TheColorPicker.Brush ??= new SolidColorBrush { Color = Colors.White };
+          _theColorPicker.Brush ??= new SolidColorBrush { Color = Colors.White };
         }
       }
     }
@@ -106,26 +106,26 @@ namespace EQLogParser
 
     public override void Detach(PropertyViewItem property)
     {
-      if (TheTextBox != null)
+      if (_theTextBox != null)
       {
-        BindingOperations.ClearAllBindings(TheTextBox);
-        TheTextBox = null;
+        BindingOperations.ClearAllBindings(_theTextBox);
+        _theTextBox = null;
       }
 
-      if (TheCheckBox != null)
+      if (_theCheckBox != null)
       {
-        TheCheckBox.Checked -= TheCheckBoxChecked;
-        TheCheckBox.Unchecked -= TheCheckBoxChecked;
-        BindingOperations.ClearAllBindings(TheCheckBox);
-        TheCheckBox = null;
+        _theCheckBox.Checked -= TheCheckBoxChecked;
+        _theCheckBox.Unchecked -= TheCheckBoxChecked;
+        BindingOperations.ClearAllBindings(_theCheckBox);
+        _theCheckBox = null;
       }
 
-      if (TheColorPicker != null)
+      if (_theColorPicker != null)
       {
-        TheColorPicker.SelectedBrushChanged -= TheColorPickerBrushChanged;
-        BindingOperations.ClearAllBindings(TheColorPicker);
-        TheColorPicker?.Dispose();
-        TheColorPicker = null;
+        _theColorPicker.SelectedBrushChanged -= TheColorPickerBrushChanged;
+        BindingOperations.ClearAllBindings(_theColorPicker);
+        _theColorPicker?.Dispose();
+        _theColorPicker = null;
       }
     }
   }

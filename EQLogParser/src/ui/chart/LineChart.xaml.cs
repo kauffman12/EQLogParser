@@ -22,7 +22,7 @@ namespace EQLogParser
     private readonly Dictionary<string, List<DataPoint>> _raidValues = new();
     private readonly Dictionary<string, Dictionary<string, byte>> _hasPets = new();
     private static readonly Dictionary<string, bool> MissTypes = new()
-    { { Labels.ABSORB, true }, { Labels.BLOCK, true } , { Labels.DODGE, true }, { Labels.PARRY, true }, { Labels.INVULNERABLE, true }, { Labels.MISS, true } };
+    { { Labels.Absorb, true }, { Labels.Block, true } , { Labels.Dodge, true }, { Labels.Parry, true }, { Labels.Invulnerable, true }, { Labels.Miss, true } };
 
     private string _currentChoice;
     private string _currentPetOrPlayerOption;
@@ -41,11 +41,11 @@ namespace EQLogParser
 
       if (includePets)
       {
-        petOrPlayerList.ItemsSource = new List<string> { Labels.PET_PLAYER_OPTION, Labels.PLAYER_OPTION, Labels.PET_OPTION, Labels.RAID_OPTION };
+        petOrPlayerList.ItemsSource = new List<string> { Labels.PetPlayerOption, Labels.PlayerOption, Labels.PetOption, Labels.RaidOption };
       }
       else
       {
-        petOrPlayerList.ItemsSource = new List<string> { Labels.PLAYER_OPTION, Labels.RAID_OPTION };
+        petOrPlayerList.ItemsSource = new List<string> { Labels.PlayerOption, Labels.RaidOption };
       }
 
       petOrPlayerList.SelectedIndex = 0;
@@ -223,20 +223,20 @@ namespace EQLogParser
       var nonSelectedLabel = " Player(s)";
       switch (_currentPetOrPlayerOption)
       {
-        case Labels.PET_PLAYER_OPTION:
+        case Labels.PetPlayerOption:
           workingData = _playerPetValues;
           selectedLabel = "Selected Player +Pets(s)";
           nonSelectedLabel = " Player +Pets(s)";
           break;
-        case Labels.PLAYER_OPTION:
+        case Labels.PlayerOption:
           workingData = _playerValues;
           break;
-        case Labels.PET_OPTION:
+        case Labels.PetOption:
           workingData = _petValues;
           selectedLabel = "Selected Pet(s)";
           nonSelectedLabel = " Pet(s)";
           break;
-        case Labels.RAID_OPTION:
+        case Labels.RaidOption:
           workingData = _raidValues;
           break;
         default:
@@ -246,15 +246,15 @@ namespace EQLogParser
 
       string label;
       List<List<DataPoint>> sortedValues;
-      if (_currentPetOrPlayerOption == Labels.RAID_OPTION)
+      if (_currentPetOrPlayerOption == Labels.RaidOption)
       {
         sortedValues = workingData.Values.ToList();
-        label = sortedValues.Count > 0 ? "Raid" : Labels.NO_DATA;
+        label = sortedValues.Count > 0 ? "Raid" : Labels.NoData;
       }
       else if (selected == null || selected.Count == 0)
       {
         sortedValues = workingData.Values.OrderByDescending(values => values.Last().Total).Take(5).ToList();
-        label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + nonSelectedLabel : Labels.NO_DATA;
+        label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + nonSelectedLabel : Labels.NoData;
       }
       else
       {
@@ -263,26 +263,26 @@ namespace EQLogParser
         {
           var pass = false;
           var first = values.First();
-          if (_currentPetOrPlayerOption == Labels.PET_PLAYER_OPTION)
+          if (_currentPetOrPlayerOption == Labels.PetPlayerOption)
           {
             pass = names.Contains(first.PlayerName) || (_hasPets.ContainsKey(first.Name) &&
             names.FirstOrDefault(name => _hasPets[first.Name].ContainsKey(name)) != null);
           }
-          else if (_currentPetOrPlayerOption == Labels.PLAYER_OPTION)
+          else if (_currentPetOrPlayerOption == Labels.PlayerOption)
           {
             pass = names.Contains(first.Name);
           }
-          else if (_currentPetOrPlayerOption == Labels.PET_OPTION)
+          else if (_currentPetOrPlayerOption == Labels.PetOption)
           {
             pass = names.Contains(first.Name) || names.Contains(first.PlayerName);
           }
           return pass;
         }).Take(10).ToList();
 
-        label = sortedValues.Count > 0 ? selectedLabel : Labels.NO_DATA;
+        label = sortedValues.Count > 0 ? selectedLabel : Labels.NoData;
       }
 
-      if (label != Labels.NO_DATA)
+      if (label != Labels.NoData)
       {
         label += " " + _currentChoice;
       }
@@ -348,7 +348,7 @@ namespace EQLogParser
       foreach (ref var value in sortedValues.ToArray().AsSpan())
       {
         var name = value.First().Name;
-        name = ((_currentPetOrPlayerOption == Labels.PET_PLAYER_OPTION) && !_hasPets.ContainsKey(name)) ? name.Split(' ')[0] : name;
+        name = ((_currentPetOrPlayerOption == Labels.PetPlayerOption) && !_hasPets.ContainsKey(name)) ? name.Split(' ')[0] : name;
         var series = new FastLineSeries
         {
           Label = name,
@@ -364,7 +364,7 @@ namespace EQLogParser
       return collection;
     }
 
-    private void CreateImageClick(object sender, RoutedEventArgs e) => UIElementUtil.CreateImage(Dispatcher, sfLineChart, titleLabel);
+    private void CreateImageClick(object sender, RoutedEventArgs e) => UiElementUtil.CreateImage(Dispatcher, sfLineChart, titleLabel);
 
     private void PlotSelected(List<PlayerStats> selected)
     {
@@ -386,7 +386,7 @@ namespace EQLogParser
     private void Reset()
     {
       sfLineChart.Series.Clear();
-      titleLabel.Content = Labels.NO_DATA;
+      titleLabel.Content = Labels.NoData;
     }
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)

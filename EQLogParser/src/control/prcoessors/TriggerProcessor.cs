@@ -22,54 +22,54 @@ namespace EQLogParser
     public readonly ObservableCollection<AlertEntry> AlertLog = new();
     public readonly string CurrentCharacterId;
     public readonly string CurrentProcessorName;
-    private const long SIX_HOURS = 6 * 60 * 60 * 1000;
-    private readonly string CurrentPlayer;
+    private const long SixHours = 6 * 60 * 60 * 1000;
+    private readonly string _currentPlayer;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private readonly object CollectionLock = new();
-    private readonly object ActiveTriggerLock = new();
-    private readonly object VoiceLock = new();
-    private readonly List<TimerData> ActiveTimers = new();
-    private readonly Dictionary<string, Dictionary<string, RepeatedData>> RepeatedTextTimes = new();
-    private readonly Dictionary<string, Dictionary<string, RepeatedData>> RepeatedTimerTimes = new();
-    private readonly Action<string, Trigger> AddTextEvent;
-    private readonly Action<Trigger, List<TimerData>> AddTimerEvent;
-    private readonly SpeechSynthesizer Synth;
-    private readonly SoundPlayer SoundPlayer;
-    private readonly Channel<Tuple<TriggerWrapper, LineData>> LowPriChannel = Channel.CreateUnbounded<Tuple<TriggerWrapper, LineData>>();
-    private readonly Channel<Speak> SpeechChannel = Channel.CreateBounded<Speak>(new BoundedChannelOptions(10)
+    private readonly object _collectionLock = new();
+    private readonly object _activeTriggerLock = new();
+    private readonly object _voiceLock = new();
+    private readonly List<TimerData> _activeTimers = new();
+    private readonly Dictionary<string, Dictionary<string, RepeatedData>> _repeatedTextTimes = new();
+    private readonly Dictionary<string, Dictionary<string, RepeatedData>> _repeatedTimerTimes = new();
+    private readonly Action<string, Trigger> _addTextEvent;
+    private readonly Action<Trigger, List<TimerData>> _addTimerEvent;
+    private readonly SpeechSynthesizer _synth;
+    private readonly SoundPlayer _soundPlayer;
+    private readonly Channel<Tuple<TriggerWrapper, LineData>> _lowPriChannel = Channel.CreateUnbounded<Tuple<TriggerWrapper, LineData>>();
+    private readonly Channel<Speak> _speechChannel = Channel.CreateBounded<Speak>(new BoundedChannelOptions(10)
     {
       FullMode = BoundedChannelFullMode.DropOldest
     });
-    private TriggerWrapper PreviousSpoken;
-    private LinkedList<TriggerWrapper> ActiveTriggers;
-    private List<LexiconItem> Lexicon;
-    private bool Ready = true;
+    private TriggerWrapper _previousSpoken;
+    private LinkedList<TriggerWrapper> _activeTriggers;
+    private List<LexiconItem> _lexicon;
+    private bool _ready = true;
 
     internal TriggerProcessor(string id, string name, string playerName, string voice, int voiceRate,
       Action<string, Trigger> addTextEvent, Action<Trigger, List<TimerData>> addTimerEvent)
     {
       CurrentCharacterId = id;
       CurrentProcessorName = name;
-      CurrentPlayer = playerName;
+      _currentPlayer = playerName;
 
-      AddTextEvent = addTextEvent;
-      AddTimerEvent = addTimerEvent;
-      BindingOperations.EnableCollectionSynchronization(AlertLog, CollectionLock);
+      _addTextEvent = addTextEvent;
+      _addTimerEvent = addTimerEvent;
+      BindingOperations.EnableCollectionSynchronization(AlertLog, _collectionLock);
 
-      ActiveTriggers = GetActiveTriggers();
-      Synth = TriggerUtil.GetSpeechSynthesizer();
+      _activeTriggers = GetActiveTriggers();
+      _synth = TriggerUtil.GetSpeechSynthesizer();
       SetVoice(voice);
       SetVoiceRate(voiceRate);
-      SoundPlayer = new SoundPlayer();
-      Lexicon = TriggerStateManager.Instance.GetLexicon().ToList();
+      _soundPlayer = new SoundPlayer();
+      _lexicon = TriggerStateManager.Instance.GetLexicon().ToList();
       TriggerStateManager.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
     }
 
     private void LexiconUpdateEvent(List<LexiconItem> update)
     {
-      lock (VoiceLock)
+      lock (_voiceLock)
       {
-        Lexicon = update;
+        _lexicon = update;
       }
     }
 
@@ -78,7 +78,7 @@ namespace EQLogParser
       // setup processors before reading from the log
       Task.Run(async () =>
       {
-        await foreach (var data in LowPriChannel.Reader.ReadAllAsync())
+        await foreach (var data in _lowPriChannel.Reader.ReadAllAsync())
         {
           HandleTrigger(data.Item1, data.Item2);
         }
@@ -87,7 +87,7 @@ namespace EQLogParser
       Task.Run(async () =>
       {
         // ReSharper disable once InconsistentlySynchronizedField
-        await foreach (var data in SpeechChannel.Reader.ReadAllAsync())
+        await foreach (var data in _speechChannel.Reader.ReadAllAsync())
         {
           HandleSpeech(data);
         }
@@ -104,37 +104,37 @@ namespace EQLogParser
 
     internal List<TimerData> GetActiveTimers()
     {
-      lock (ActiveTimers) return ActiveTimers.ToList();
+      lock (_activeTimers) return _activeTimers.ToList();
     }
 
     internal void SetVoice(string voice)
     {
-      lock (VoiceLock)
+      lock (_voiceLock)
       {
-        if (Synth != null && !string.IsNullOrEmpty(voice) && Synth.Voice.Name != voice)
+        if (_synth != null && !string.IsNullOrEmpty(voice) && _synth.Voice.Name != voice)
         {
-          Synth.SelectVoice(voice);
+          _synth.SelectVoice(voice);
         }
       }
     }
 
     internal void SetVoiceRate(int rate)
     {
-      lock (VoiceLock)
+      lock (_voiceLock)
       {
-        if (Synth != null)
+        if (_synth != null)
         {
-          Synth.Rate = rate;
+          _synth.Rate = rate;
         }
       }
     }
 
     internal void UpdateActiveTriggers()
     {
-      lock (ActiveTriggerLock)
+      lock (_activeTriggerLock)
       {
-        ActiveTriggers.ToList().ForEach(CleanupWrapper);
-        ActiveTriggers = GetActiveTriggers();
+        _activeTriggers.ToList().ForEach(CleanupWrapper);
+        _activeTriggers = GetActiveTriggers();
       }
     }
 
@@ -143,16 +143,16 @@ namespace EQLogParser
     private static string ModCounter(string text) => !string.IsNullOrEmpty(text) ?
       text.Replace("{counter}", "{repeated}", StringComparison.OrdinalIgnoreCase) : text;
     private string ModPlayer(string text) => !string.IsNullOrEmpty(text) ?
-      text.Replace("{c}", CurrentPlayer ?? string.Empty, StringComparison.OrdinalIgnoreCase) : text;
+      text.Replace("{c}", _currentPlayer ?? string.Empty, StringComparison.OrdinalIgnoreCase) : text;
 
     private void DoProcess(string line, double dateTime)
     {
       var lineData = new LineData { Action = line[27..], BeginTime = dateTime };
       LinkedListNode<TriggerWrapper> node;
 
-      lock (ActiveTriggerLock)
+      lock (_activeTriggerLock)
       {
-        node = ActiveTriggers.First;
+        node = _activeTriggers.First;
       }
 
       while (node != null)
@@ -170,7 +170,7 @@ namespace EQLogParser
           }
           else
           {
-            LowPriChannel?.Writer.WriteAsync(Tuple.Create(wrapper, lineData));
+            _lowPriChannel?.Writer.WriteAsync(Tuple.Create(wrapper, lineData));
           }
         }
       }
@@ -216,7 +216,7 @@ namespace EQLogParser
           var updatedTime = new TimeSpan(beginTicks).TotalMilliseconds;
 
           // no need to constantly updated the DB. 6 hour check
-          if (updatedTime - wrapper.TriggerData.LastTriggered > SIX_HOURS)
+          if (updatedTime - wrapper.TriggerData.LastTriggered > SixHours)
           {
             TriggerStateManager.Instance.UpdateLastTriggered(wrapper.Id, updatedTime);
           }
@@ -230,7 +230,7 @@ namespace EQLogParser
             displayName = ModLine(displayName, lineData.Action);
             if (wrapper.HasRepeatedTimer)
             {
-              UpdateRepeatedTimes(RepeatedTimerTimes, wrapper, displayName, beginTicks);
+              UpdateRepeatedTimes(_repeatedTimerTimes, wrapper, displayName, beginTicks);
             }
 
             if (wrapper.TriggerData.TimerType > 0 && wrapper.TriggerData.DurationSeconds > 0)
@@ -257,23 +257,23 @@ namespace EQLogParser
           {
             if (wrapper.HasRepeatedText)
             {
-              var currentCount = UpdateRepeatedTimes(RepeatedTextTimes, wrapper, updatedDisplayText, beginTicks);
+              var currentCount = UpdateRepeatedTimes(_repeatedTextTimes, wrapper, updatedDisplayText, beginTicks);
               updatedDisplayText = updatedDisplayText.Replace("{repeated}", currentCount.ToString(), StringComparison.OrdinalIgnoreCase);
             }
 
-            AddTextEvent(updatedDisplayText, wrapper.TriggerData);
+            _addTextEvent(updatedDisplayText, wrapper.TriggerData);
           }
 
           if (ProcessDisplayText(wrapper.ModifiedShare, lineData.Action, matches, null) is { } updatedShareText)
           {
-            UIUtil.InvokeAsync(() => Clipboard.SetText(updatedShareText));
+            UiUtil.InvokeAsync(() => Clipboard.SetText(updatedShareText));
           }
 
           AddEntry(lineData, wrapper, "Trigger", time);
 
           if (speak != null)
           {
-            SpeechChannel.Writer.WriteAsync(speak);
+            _speechChannel.Writer.WriteAsync(speak);
           }
         }
 
@@ -310,14 +310,14 @@ namespace EQLogParser
 
             if (ProcessDisplayText(displayText, lineData.Action, earlyMatches, timerData.OriginalMatches) is { } updatedDisplayText)
             {
-              AddTextEvent(updatedDisplayText, wrapper.TriggerData);
+              _addTextEvent(updatedDisplayText, wrapper.TriggerData);
             }
 
             AddEntry(lineData, wrapper, "Timer End Early");
 
             if (speak != null)
             {
-              SpeechChannel.Writer.WriteAsync(speak);
+              _speechChannel.Writer.WriteAsync(speak);
             }
 
             CleanupTimer(wrapper, timerData);
@@ -378,7 +378,7 @@ namespace EQLogParser
             if (proceed)
             {
               var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out var isSound);
-              SpeechChannel?.Writer.WriteAsync(new Speak
+              _speechChannel?.Writer.WriteAsync(new Speak
               {
                 Wrapper = wrapper,
                 TtsOrSound = speak,
@@ -389,7 +389,7 @@ namespace EQLogParser
 
               if (ProcessDisplayText(wrapper.ModifiedWarningDisplay, lineData.Action, matches, null) is { } updatedDisplayText)
               {
-                AddTextEvent(updatedDisplayText, trigger);
+                _addTextEvent(updatedDisplayText, trigger);
               }
 
               AddEntry(lineData, wrapper, "Timer Warning");
@@ -402,7 +402,7 @@ namespace EQLogParser
 
       if (wrapper.HasRepeatedTimer)
       {
-        newTimerData.RepeatedCount = GetRepeatedCount(RepeatedTimerTimes, wrapper, displayName);
+        newTimerData.RepeatedCount = GetRepeatedCount(_repeatedTimerTimes, wrapper, displayName);
       }
 
       newTimerData.EndTicks = beginTicks + (long)(TimeSpan.TicksPerMillisecond * wrapper.ModifiedDurationSeconds * 1000);
@@ -476,7 +476,7 @@ namespace EQLogParser
           {
             var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.EndSoundToPlay, wrapper.ModifiedEndSpeak, out var isSound);
 
-            SpeechChannel?.Writer.WriteAsync(new Speak
+            _speechChannel?.Writer.WriteAsync(new Speak
             {
               Wrapper = wrapper,
               TtsOrSound = speak,
@@ -488,14 +488,14 @@ namespace EQLogParser
 
             if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, data2.OriginalMatches) is { } updatedDisplayText)
             {
-              AddTextEvent(updatedDisplayText, trigger);
+              _addTextEvent(updatedDisplayText, trigger);
             }
 
             AddEntry(lineData, wrapper, "Timer End");
             CleanupTimer(wrapper, data2);
 
             // repeating
-            if (wrapper.TriggerData.TimerType == 4 && Ready)
+            if (wrapper.TriggerData.TimerType == 4 && _ready)
             {
               if (wrapper.TriggerData.TimesToLoop > data2.TimesToLoopCount)
               {
@@ -506,14 +506,14 @@ namespace EQLogParser
         }
       }, newTimerData.CancelSource.Token);
 
-      lock (ActiveTimers)
+      lock (_activeTimers)
       {
-        ActiveTimers.Add(newTimerData);
+        _activeTimers.Add(newTimerData);
       }
 
       if (needEvent)
       {
-        AddTimerEvent(trigger, GetActiveTimers());
+        _addTimerEvent(trigger, GetActiveTimers());
       }
     }
 
@@ -521,36 +521,36 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(speak.TtsOrSound))
       {
-        var cancel = speak.Wrapper.TriggerData.Priority < PreviousSpoken?.TriggerData?.Priority;
+        var cancel = speak.Wrapper.TriggerData.Priority < _previousSpoken?.TriggerData?.Priority;
 
-        lock (VoiceLock)
+        lock (_voiceLock)
         {
-          if (cancel && Synth.State == SynthesizerState.Speaking)
+          if (cancel && _synth.State == SynthesizerState.Speaking)
           {
-            Synth.SpeakAsyncCancelAll();
+            _synth.SpeakAsyncCancelAll();
           }
         }
 
         if (speak.IsSound)
         {
-          if (SoundPlayer != null)
+          if (_soundPlayer != null)
           {
             try
             {
               if (cancel)
               {
-                SoundPlayer.Stop();
+                _soundPlayer.Stop();
               }
 
               var theFile = @"data\sounds\" + speak.TtsOrSound;
-              if (SoundPlayer.SoundLocation != theFile && File.Exists(theFile))
+              if (_soundPlayer.SoundLocation != theFile && File.Exists(theFile))
               {
-                SoundPlayer.SoundLocation = theFile;
+                _soundPlayer.SoundLocation = theFile;
               }
 
-              if (!string.IsNullOrEmpty(SoundPlayer.SoundLocation))
+              if (!string.IsNullOrEmpty(_soundPlayer.SoundLocation))
               {
-                SoundPlayer.Play();
+                _soundPlayer.Play();
               }
             }
             catch (Exception e)
@@ -567,9 +567,9 @@ namespace EQLogParser
 
           if (!string.IsNullOrEmpty(tts))
           {
-            lock (VoiceLock)
+            lock (_voiceLock)
             {
-              foreach (var item in Lexicon.ToArray())
+              foreach (var item in _lexicon.ToArray())
               {
                 if (item != null && !string.IsNullOrEmpty(item.Replace) && !string.IsNullOrEmpty(item.With))
                 {
@@ -577,13 +577,13 @@ namespace EQLogParser
                 }
               }
 
-              Synth?.SpeakAsync(tts);
+              _synth?.SpeakAsync(tts);
             }
           }
         }
       }
 
-      PreviousSpoken = speak.Wrapper;
+      _previousSpoken = speak.Wrapper;
     }
 
     private LinkedList<TriggerWrapper> GetActiveTriggers()
@@ -841,7 +841,7 @@ namespace EQLogParser
         Priority = wrapper.TriggerData.Priority
       };
 
-      lock (CollectionLock)
+      lock (_collectionLock)
       {
         AlertLog.Insert(0, log);
         if (AlertLog.Count > 1000)
@@ -861,9 +861,9 @@ namespace EQLogParser
       timerData.WarningSource = null;
       wrapper.TimerList.Remove(timerData);
 
-      lock (ActiveTimers)
+      lock (_activeTimers)
       {
-        ActiveTimers.Remove(timerData);
+        _activeTimers.Remove(timerData);
       }
     }
 
@@ -878,20 +878,20 @@ namespace EQLogParser
 
     public void Dispose()
     {
-      Ready = false;
+      _ready = false;
       TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
-      LowPriChannel?.Writer.Complete();
-      SpeechChannel?.Writer.Complete();
-      SoundPlayer?.Dispose();
+      _lowPriChannel?.Writer.Complete();
+      _speechChannel?.Writer.Complete();
+      _soundPlayer?.Dispose();
 
-      lock (VoiceLock)
+      lock (_voiceLock)
       {
-        Synth?.Dispose();
+        _synth?.Dispose();
       }
 
-      lock (ActiveTriggerLock)
+      lock (_activeTriggerLock)
       {
-        ActiveTriggers.ToList().ForEach(CleanupWrapper);
+        _activeTriggers.ToList().ForEach(CleanupWrapper);
       }
     }
 

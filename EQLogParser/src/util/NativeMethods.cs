@@ -13,22 +13,22 @@ namespace EQLogParser
     internal enum ExtendedWindowStyles
     {
       // ...
-      WS_EX_TOOLWINDOW = 0x00000080,
-      WS_EX_TRANSPARENT = 0x00000020,
-      WS_EX_TOPMOST = 0x00000008,
+      WsExToolwindow = 0x00000080,
+      WsExTransparent = 0x00000020,
+      WsExTopmost = 0x00000008,
       // ...
     }
 
     internal enum GetWindowLongFields
     {
       // ...
-      GWL_EXSTYLE = -20,
+      GwlExstyle = -20,
       // ...
     }
 
-    const int SWP_NOSIZE = 0x0001;
-    const int SWP_NOMOVE = 0x0002;
-    const int SWP_NOACTIVATE = 0x0010;
+    const int SwpNosize = 0x0001;
+    const int SwpNomove = 0x0002;
+    const int SwpNoactivate = 0x0010;
 
     [SuppressMessage("Microsoft.Portability", "CA1901:PInvokeDeclarationsShouldBePortable", MessageId = "return")]
     [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
@@ -81,7 +81,7 @@ namespace EQLogParser
 
     internal static void SetWindowTopMost(IntPtr hWnd)
     {
-      SetWindowPos(hWnd, new IntPtr(-1), 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
+      SetWindowPos(hWnd, new IntPtr(-1), 0, 0, 0, 0, SwpNosize | SwpNomove | SwpNoactivate);
     }
 
     [SuppressMessage("Microsoft.Interoperability", "CA1400:PInvokeEntryPointsShouldExist")]
@@ -92,7 +92,7 @@ namespace EQLogParser
     private static extern Int32 IntSetWindowLong(IntPtr hWnd, int nIndex, Int32 dwNewLong);
 
     [DllImport("user32.dll")]
-    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
 
     private static int IntPtrToInt32(IntPtr intPtr)
     {

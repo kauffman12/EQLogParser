@@ -24,18 +24,18 @@ namespace EQLogParser
     internal const string Triggers = "Triggers";
     internal readonly ConcurrentDictionary<string, bool> RecentlyMerged = new();
 
-    private const string LEGACY_OVERLAY_FILE = "triggerOverlays.json";
-    private const string LEGACY_TRIGGERS_FILE = "triggers.json";
-    private const string CONFIG_COL = "Config";
-    private const string STATES_COL = "States";
-    private const string TREE_COL = "Tree";
-    private const string LEXICON_COL = "Lexicon";
+    private const string LegacyOverlayFile = "triggerOverlays.json";
+    private const string LegacyTriggersFile = "triggers.json";
+    private const string ConfigCol = "Config";
+    private const string StatesCol = "States";
+    private const string TreeCol = "Tree";
+    private const string LexiconCol = "Lexicon";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<TriggerStateManager> Lazy = new(() => new TriggerStateManager());
     internal static TriggerStateManager Instance => Lazy.Value; // instance
-    private readonly object LockObject = new();
-    private readonly object ConfigLock = new();
-    private LiteDatabase Db;
+    private readonly object _lockObject = new();
+    private readonly object _configLock = new();
+    private LiteDatabase _db;
 
     private TriggerStateManager()
     {
@@ -44,7 +44,7 @@ namespace EQLogParser
 
       try
       {
-        Db = new LiteDatabase(path)
+        _db = new LiteDatabase(path)
         {
           CheckpointSize = 10
         };
@@ -55,11 +55,11 @@ namespace EQLogParser
           Upgrade();
         }
 
-        var configs = Db.GetCollection<TriggerConfig>(CONFIG_COL);
+        var configs = _db.GetCollection<TriggerConfig>(ConfigCol);
         configs.EnsureIndex(x => x.Id);
         UpgradeConfig(configs);
 
-        var tree = Db.GetCollection<TriggerNode>(TREE_COL);
+        var tree = _db.GetCollection<TriggerNode>(TreeCol);
 
         // create overlay node if it doesn't exist
         if (tree.FindOne(n => n.Parent == null && n.Name == Overlays) == null)
@@ -77,7 +77,7 @@ namespace EQLogParser
         tree.EnsureIndex(x => x.Parent);
         tree.EnsureIndex(x => x.Name);
 
-        var states = Db.GetCollection<TriggerState>(STATES_COL);
+        var states = _db.GetCollection<TriggerState>(StatesCol);
         states.EnsureIndex(x => x.Id);
       }
       catch (Exception ex)
@@ -93,9 +93,9 @@ namespace EQLogParser
       }
     }
 
-    internal void AssignOverlay(string id, IEnumerable<TriggerNode> nodes) => AssignOverlay(Db?.GetCollection<TriggerNode>(TREE_COL), id, nodes);
-    internal void AssignPriority(int pri, IEnumerable<TriggerNode> nodes) => AssignPriority(Db?.GetCollection<TriggerNode>(TREE_COL), pri, nodes);
-    internal void UnassignOverlay(string id, IEnumerable<TriggerNode> nodes) => UnassignOverlay(Db?.GetCollection<TriggerNode>(TREE_COL), id, nodes);
+    internal void AssignOverlay(string id, IEnumerable<TriggerNode> nodes) => AssignOverlay(_db?.GetCollection<TriggerNode>(TreeCol), id, nodes);
+    internal void AssignPriority(int pri, IEnumerable<TriggerNode> nodes) => AssignPriority(_db?.GetCollection<TriggerNode>(TreeCol), pri, nodes);
+    internal void UnassignOverlay(string id, IEnumerable<TriggerNode> nodes) => UnassignOverlay(_db?.GetCollection<TriggerNode>(TreeCol), id, nodes);
     internal TriggerTreeViewNode CreateFolder(string parentId, string name) => CreateNode(parentId, name);
     internal TriggerTreeViewNode CreateTrigger(string parentId, string name) => CreateNode(parentId, name, Triggers);
     internal TriggerTreeViewNode CreateOverlay(string parentId, string name, bool isTextOverlay) => CreateNode(parentId, name, Overlays, isTextOverlay);
@@ -103,17 +103,17 @@ namespace EQLogParser
     internal TriggerTreeViewNode GetOverlayTreeView() => GetTreeView(Overlays);
     internal TriggerNode GetDefaultTextOverlay() => GetDefaultOverlay(true);
     internal TriggerNode GetDefaultTimerOverlay() => GetDefaultOverlay(false);
-    internal TriggerNode GetOverlayById(string id) => Db?.GetCollection<TriggerNode>(TREE_COL).FindOne(n => n.Id == id && n.OverlayData != null);
+    internal TriggerNode GetOverlayById(string id) => _db?.GetCollection<TriggerNode>(TreeCol).FindOne(n => n.Id == id && n.OverlayData != null);
     internal void ImportTriggers(TriggerNode parent, IEnumerable<ExportTriggerNode> imported) => Import(parent, imported, Triggers);
     internal void ImportOverlays(TriggerNode parent, IEnumerable<ExportTriggerNode> imported) => Import(parent, imported, Overlays);
-    internal bool IsActive() => Db != null;
-    internal void SetAllExpanded(bool expanded) => Db?.Execute($"UPDATE {TREE_COL} SET IsExpanded = {expanded}");
-    internal IEnumerable<LexiconItem> GetLexicon() => Db?.GetCollection<LexiconItem>(LEXICON_COL)?.FindAll();
-    internal void Stop() => Db?.Dispose();
+    internal bool IsActive() => _db != null;
+    internal void SetAllExpanded(bool expanded) => _db?.Execute($"UPDATE {TreeCol} SET IsExpanded = {expanded}");
+    internal IEnumerable<LexiconItem> GetLexicon() => _db?.GetCollection<LexiconItem>(LexiconCol)?.FindAll();
+    internal void Stop() => _db?.Dispose();
 
     internal void SaveLexicon(List<LexiconItem> list)
     {
-      if (Db?.GetCollection<LexiconItem>(LEXICON_COL) is { } lexicon)
+      if (_db?.GetCollection<LexiconItem>(LexiconCol) is { } lexicon)
       {
         lexicon.DeleteAll();
         lexicon.InsertBulk(list);
@@ -142,7 +142,7 @@ namespace EQLogParser
 
     internal void CopyState(TriggerTreeViewNode treeView, string from, string to)
     {
-      if (treeView?.SerializedData is { } node && Db?.GetCollection<TriggerState>(STATES_COL) is { } states)
+      if (treeView?.SerializedData is { } node && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
       {
         var fromState = states.FindOne(s => s.Id == from);
         var toState = states.FindOne(s => s.Id == to);
@@ -165,7 +165,7 @@ namespace EQLogParser
 
           if (GetPlayerState(id) is { } state)
           {
-            Db?.GetCollection<TriggerState>(STATES_COL)?.Delete(state.Id);
+            _db?.GetCollection<TriggerState>(StatesCol)?.Delete(state.Id);
           }
         }
       }
@@ -202,7 +202,7 @@ namespace EQLogParser
 
     internal void UpdateLastTriggered(string id, double updatedTime)
     {
-      if (id is not null && Db?.GetCollection<TriggerNode>(TREE_COL) is { } tree)
+      if (id is not null && _db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
       {
         if (tree.FindOne(n => n.Id == id && n.TriggerData != null) is { } found)
         {
@@ -214,9 +214,9 @@ namespace EQLogParser
 
     internal TriggerConfig GetConfig()
     {
-      if (Db?.GetCollection<TriggerConfig>(CONFIG_COL) is { } configs)
+      if (_db?.GetCollection<TriggerConfig>(ConfigCol) is { } configs)
       {
-        lock (ConfigLock)
+        lock (_configLock)
         {
           if (configs.Count() == 0)
           {
@@ -232,13 +232,13 @@ namespace EQLogParser
 
     internal void UpdateConfig(TriggerConfig config)
     {
-      Db?.GetCollection<TriggerConfig>(CONFIG_COL).Update(config);
+      _db?.GetCollection<TriggerConfig>(ConfigCol).Update(config);
       TriggerConfigUpdateEvent?.Invoke(config);
     }
 
     internal TriggerNode GetDefaultOverlay(bool isTextOverlay)
     {
-      if (Db?.GetCollection<TriggerNode>(TREE_COL) is { } tree)
+      if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
       {
         return tree.Query().Where(n => n.OverlayData != null && n.OverlayData.IsDefault && n.OverlayData.IsTextOverlay == isTextOverlay).FirstOrDefault();
       }
@@ -249,7 +249,7 @@ namespace EQLogParser
     {
       if (dst?.Id is { } parentId && App.AutoMap.Map(src, new TriggerNode()) is { } copied)
       {
-        if (Db?.GetCollection<TriggerNode>(TREE_COL) is { } tree)
+        if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
         {
           copied.Id = Guid.NewGuid().ToString();
           copied.Name = (tree.FindOne(n => n.Parent == parentId && n.Name == src.Name) != null) ? $"Copied {src.Name}" : src.Name;
@@ -276,7 +276,7 @@ namespace EQLogParser
       var active = new List<OtData>();
       if (GetPlayerState(playerId) is { } state)
       {
-        var tree = Db.GetCollection<TriggerNode>(TREE_COL);
+        var tree = _db.GetCollection<TriggerNode>(TreeCol);
         foreach (var node in tree.FindAll().Where(n => n.TriggerData != null))
         {
           if (node.Id is { } id && state.Enabled.TryGetValue(id, out var value) && value == true)
@@ -293,9 +293,9 @@ namespace EQLogParser
     {
       if (node?.Id is null) return;
 
-      if (Db?.GetCollection<TriggerNode>(TREE_COL) is { } tree)
+      if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
       {
-        lock (LockObject)
+        lock (_lockObject)
         {
           if (updateIndex)
           {
@@ -315,7 +315,7 @@ namespace EQLogParser
 
     internal IEnumerable<OtData> GetAllOverlays()
     {
-      return Db?.GetCollection<TriggerNode>(TREE_COL).FindAll().Where(n => n.OverlayData != null)
+      return _db?.GetCollection<TriggerNode>(TreeCol).FindAll().Where(n => n.OverlayData != null)
         .Select(n => new OtData { Name = n.Name, Id = n.Id, OverlayData = n.OverlayData })
         ?? Enumerable.Empty<OtData>();
     }
@@ -324,7 +324,7 @@ namespace EQLogParser
     {
       if (viewNode?.SerializedData is { Id: not null } node)
       {
-        Db?.Execute($"UPDATE {TREE_COL} SET IsExpanded = {viewNode.IsExpanded} WHERE _id = '{node.Id}'");
+        _db?.Execute($"UPDATE {TreeCol} SET IsExpanded = {viewNode.IsExpanded} WHERE _id = '{node.Id}'");
       }
     }
 
@@ -333,13 +333,13 @@ namespace EQLogParser
       var removed = new HashSet<string>();
       var removedOverlays = new HashSet<string>();
 
-      if (Db?.GetCollection<TriggerNode>(TREE_COL) is { } tree)
+      if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
       {
-        lock (LockObject)
+        lock (_lockObject)
         {
           Delete(tree, tree.FindOne(n => n.Id == id), removed, removedOverlays);
 
-          if (Db?.GetCollection<TriggerState>(STATES_COL) is { } states)
+          if (_db?.GetCollection<TriggerState>(StatesCol) is { } states)
           {
             foreach (var state in states.FindAll())
             {
@@ -386,7 +386,7 @@ namespace EQLogParser
 
     internal bool IsAnyEnabled(string triggerId)
     {
-      if (triggerId != null && Db?.GetCollection<TriggerState>(STATES_COL) is { } states)
+      if (triggerId != null && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
       {
         foreach (var state in states.FindAll())
         {
@@ -402,7 +402,7 @@ namespace EQLogParser
     internal void SetState(string playerId, TriggerTreeViewNode viewNode)
     {
       if (viewNode?.SerializedData is not null && !viewNode.IsOverlay() &&
-        Db?.GetCollection<TriggerState>(STATES_COL) is { } states)
+        _db?.GetCollection<TriggerState>(StatesCol) is { } states)
       {
         if (states.FindOne(s => s.Id == playerId) is { } state)
         {
@@ -415,7 +415,7 @@ namespace EQLogParser
     // from GINA or Quick Share with custom Folder name
     internal void ImportTriggers(string name, IEnumerable<ExportTriggerNode> imported, HashSet<string> characterIds)
     {
-      if (Db?.GetCollection<TriggerNode>(TREE_COL) is { } tree)
+      if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
       {
         var root = tree.FindOne(n => n.Parent == null && n.Name == Triggers);
         var parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name).SerializedData;
@@ -495,7 +495,7 @@ namespace EQLogParser
       if (node?.Id == null) return;
 
       toState.Enabled[node.Id] = fromState.Enabled[node.Id];
-      if (Db?.GetCollection<TriggerNode>(TREE_COL) is { } tree)
+      if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
       {
         foreach (var child in tree.Query().Where(n => n.Parent == node.Id).ToEnumerable())
         {
@@ -507,9 +507,9 @@ namespace EQLogParser
     private TriggerTreeViewNode CreateNode(string parentId, string name, string type = null, bool isTextOverlay = false)
     {
       TriggerTreeViewNode viewNode = null;
-      if (Db?.GetCollection<TriggerNode>(TREE_COL) is { } tree)
+      if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
       {
-        lock (LockObject)
+        lock (_lockObject)
         {
           var newNode = new TriggerNode
           {
@@ -575,13 +575,13 @@ namespace EQLogParser
 
     private void Import(TriggerNode parent, IEnumerable<ExportTriggerNode> imported, string type, HashSet<string> characterIds = null)
     {
-      if (parent?.Id is not { } parentId || imported == null || Db?.GetCollection<TriggerNode>(TREE_COL) is not { } tree) return;
+      if (parent?.Id is not { } parentId || imported == null || _db?.GetCollection<TriggerNode>(TreeCol) is not { } tree) return;
 
-      lock (LockObject)
+      lock (_lockObject)
       {
         // get character state if needed (here so we can search once)
         List<TriggerState> characterStates = null;
-        if (characterIds?.Count > 0 && Db?.GetCollection<TriggerState>(STATES_COL) is { } states)
+        if (characterIds?.Count > 0 && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
         {
           characterStates = states.Query().Where(s => characterIds.Contains(s.Id)).ToList();
         }
@@ -656,7 +656,7 @@ namespace EQLogParser
         if (enableId != null)
         {
           RecentlyMerged[enableId] = true;
-          if (characterStates != null && Db?.GetCollection<TriggerState>(STATES_COL) is { } states)
+          if (characterStates != null && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
           {
             foreach (var state in characterStates)
             {
@@ -693,7 +693,7 @@ namespace EQLogParser
     private TriggerTreeViewNode GetTreeView(string name, string playerId = null)
     {
       TriggerTreeViewNode root = null;
-      if (Db?.GetCollection<TriggerNode>(TREE_COL) is { } tree)
+      if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
       {
         TriggerState state = null;
         if (name == Triggers)
@@ -714,7 +714,7 @@ namespace EQLogParser
 
           if (needUpdate)
           {
-            Db?.GetCollection<TriggerState>(STATES_COL).Update(state);
+            _db?.GetCollection<TriggerState>(StatesCol).Update(state);
           }
         }
       }
@@ -725,7 +725,7 @@ namespace EQLogParser
     private TriggerState GetPlayerState(string playerId)
     {
       TriggerState state = null;
-      if (playerId != null && Db?.GetCollection<TriggerState>(STATES_COL) is { } states)
+      if (playerId != null && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
       {
         state = states.FindOne(s => s.Id == playerId);
 
@@ -843,7 +843,7 @@ namespace EQLogParser
     // remove eventually
     private void UpgradeConfig(ILiteCollection<TriggerConfig> configs)
     {
-      lock (ConfigLock)
+      lock (_configLock)
       {
         if (configs.FindAll().FirstOrDefault() is { } config)
         {
@@ -880,8 +880,8 @@ namespace EQLogParser
       var overlayIds = new Dictionary<string, string>();
       var defaultEnabled = new Dictionary<string, bool?>();
 
-      ReadJson(LEGACY_OVERLAY_FILE, Overlays);
-      ReadJson(LEGACY_TRIGGERS_FILE, Triggers);
+      ReadJson(LegacyOverlayFile, Overlays);
+      ReadJson(LegacyTriggersFile, Triggers);
 
       void ReadJson(string file, string title)
       {
@@ -904,17 +904,17 @@ namespace EQLogParser
 
       if (defaultEnabled.Count > 0)
       {
-        var states = Db?.GetCollection<TriggerState>(STATES_COL);
+        var states = _db?.GetCollection<TriggerState>(StatesCol);
         states?.Insert(new TriggerState { Id = DefaultUser, Enabled = defaultEnabled });
       }
 
       if (ConfigUtil.IfSetOrElse("TriggersEnabled"))
       {
         var config = new TriggerConfig { IsEnabled = true, Id = Guid.NewGuid().ToString() };
-        Db?.GetCollection<TriggerConfig>(CONFIG_COL).Insert(config);
+        _db?.GetCollection<TriggerConfig>(ConfigCol).Insert(config);
       }
 
-      Db?.Checkpoint();
+      _db?.Checkpoint();
     }
 
     private void UpgradeTree(LegacyTriggerNode old, Dictionary<string, string> overlayIds,
@@ -961,7 +961,7 @@ namespace EQLogParser
         }
       }
 
-      Db?.GetCollection<TriggerNode>(TREE_COL).Insert(newNode);
+      _db?.GetCollection<TriggerNode>(TreeCol).Insert(newNode);
 
       if (old.Nodes != null)
       {

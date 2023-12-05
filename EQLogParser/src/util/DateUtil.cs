@@ -10,19 +10,19 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     // counting this thing is really slow
-    private string LastDateTimeString;
-    private double LastDateTime;
-    private double Increment;
+    private string _lastDateTimeString;
+    private double _lastDateTime;
+    private double _increment;
 
     internal static double ToDouble(DateTime dateTime) => dateTime.Ticks / TimeSpan.FromSeconds(1).Ticks;
     internal static DateTime FromDouble(double value) => new((long)value * TimeSpan.FromSeconds(1).Ticks);
     internal static string GetCurrentDate(string format) => DateTime.Now.ToString(format, CultureInfo.InvariantCulture);
     internal static string FormatSimpleDate(double seconds) => new DateTime().AddSeconds(seconds).ToString("MMM dd HH:mm:ss", CultureInfo.InvariantCulture);
-    internal static string FormatSimpleHMS(double seconds) => new DateTime().AddSeconds(seconds).ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+    internal static string FormatSimpleHms(double seconds) => new DateTime().AddSeconds(seconds).ToString("HH:mm:ss", CultureInfo.InvariantCulture);
     internal static double StandardDateToDouble(string source) => ToDouble(ParseStandardDate(source));
     internal static DateTime ParseStandardDate(string source) => CustomDateTimeParser("MMM dd HH:mm:ss yyyy", source, 5);
 
-    internal static string FormatSimpleMS(long ticks)
+    internal static string FormatSimpleMs(long ticks)
     {
       return new DateTime(ticks < 0 ? 0 : ticks).ToString("mm:ss", CultureInfo.InvariantCulture);
     }
@@ -267,26 +267,26 @@ namespace EQLogParser
     {
       var result = double.NaN;
 
-      if (LastDateTimeString == timeString)
+      if (_lastDateTimeString == timeString)
       {
-        Increment += 0.001;
-        precise = LastDateTime + Increment;
-        return LastDateTime;
+        _increment += 0.001;
+        precise = _lastDateTime + _increment;
+        return _lastDateTime;
       }
 
-      Increment = 0.0;
+      _increment = 0.0;
       var dateTime = ParseStandardDate(timeString);
 
       if (dateTime == DateTime.MinValue)
       {
-        LastDateTime = double.NaN;
+        _lastDateTime = double.NaN;
       }
       else
       {
-        result = LastDateTime = ToDouble(dateTime);
+        result = _lastDateTime = ToDouble(dateTime);
       }
 
-      LastDateTimeString = timeString;
+      _lastDateTimeString = timeString;
       precise = result;
 
       if (double.IsNaN(result))

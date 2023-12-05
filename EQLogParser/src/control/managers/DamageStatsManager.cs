@@ -15,16 +15,16 @@ namespace EQLogParser
     internal event Action<StatsGenerationEvent> EventsGenerationStatus;
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private readonly Dictionary<int, byte> DamageGroupIds = new();
-    private readonly ConcurrentDictionary<string, TimeRange> PlayerTimeRanges = new();
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> PlayerSubTimeRanges = new();
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> PlayerPets = new();
-    private readonly ConcurrentDictionary<string, string> PetToPlayer = new();
-    private List<List<ActionGroup>> AllDamageGroups;
-    private List<List<ActionGroup>> DamageGroups = new();
-    private PlayerStats RaidTotals;
-    private List<Fight> Selected;
-    private string Title;
+    private readonly Dictionary<int, byte> _damageGroupIds = new();
+    private readonly ConcurrentDictionary<string, TimeRange> _playerTimeRanges = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _playerSubTimeRanges = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _playerPets = new();
+    private readonly ConcurrentDictionary<string, string> _petToPlayer = new();
+    private List<List<ActionGroup>> _allDamageGroups;
+    private List<List<ActionGroup>> _damageGroups = new();
+    private PlayerStats _raidTotals;
+    private List<Fight> _selected;
+    private string _title;
 
     private static readonly OverlayData OverlayDamageData = new();
     private static readonly OverlayData OverlayTankData = new();
@@ -172,7 +172,7 @@ namespace EQLogParser
             {
               Name = playerHasPet.ContainsKey(total.Name) ? total.Name + " +Pets" : total.Name,
               Total = total.Damage,
-              DPS = (long)Math.Round(total.Damage / time, 2),
+              Dps = (long)Math.Round(total.Damage / time, 2),
               TotalSeconds = time,
               Rank = (ushort)rank++,
               ClassName = PlayerManager.Instance.GetPlayerClass(total.Name),
@@ -204,13 +204,13 @@ namespace EQLogParser
 
         combined = new CombinedStats();
         combined.StatsList.AddRange(list);
-        combined.RaidStats = new PlayerStats { Total = allDamage, DPS = totalDps, TotalSeconds = totalSeconds };
+        combined.RaidStats = new PlayerStats { Total = allDamage, Dps = totalDps, TotalSeconds = totalSeconds };
         combined.TargetTitle = (fightCount > 1 ? "C(" + fightCount + "): " : "") + data.FightName;
 
         // these are here to support copy/paste of the parse
-        combined.TimeTitle = string.Format(StatsUtil.TIME_FORMAT, combined.RaidStats.TotalSeconds);
-        combined.TotalTitle = string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(combined.RaidStats.Total),
-          dps ? " Damage " : " Tanking ", StatsUtil.FormatTotals(combined.RaidStats.DPS));
+        combined.TimeTitle = string.Format(StatsUtil.TimeFormat, combined.RaidStats.TotalSeconds);
+        combined.TotalTitle = string.Format(StatsUtil.TotalFormat, StatsUtil.FormatTotals(combined.RaidStats.Total),
+          dps ? " Damage " : " Tanking ", StatsUtil.FormatTotals(combined.RaidStats.Dps));
       }
 
       return combined;
@@ -251,7 +251,7 @@ namespace EQLogParser
 
         player = petOwner;
       }
-      else if (PlayerManager.Instance.GetPlayerFromPet(player) is { } owner && owner != Labels.UNASSIGNED)
+      else if (PlayerManager.Instance.GetPlayerFromPet(player) is { } owner && owner != Labels.Unassigned)
       {
         playerHasPet[owner] = true;
 
@@ -272,7 +272,7 @@ namespace EQLogParser
     {
       DataManager.Instance.EventsClearedActiveData += (_) =>
       {
-        lock (DamageGroupIds)
+        lock (_damageGroupIds)
         {
           Reset();
         }
@@ -281,17 +281,17 @@ namespace EQLogParser
 
     internal int GetGroupCount()
     {
-      lock (DamageGroupIds)
+      lock (_damageGroupIds)
       {
-        return DamageGroups.Count;
+        return _damageGroups.Count;
       }
     }
 
     internal void RebuildTotalStats(GenerateStatsOptions options)
     {
-      lock (DamageGroupIds)
+      lock (_damageGroupIds)
       {
-        if (DamageGroups.Count > 0)
+        if (_damageGroups.Count > 0)
         {
           FireNewStatsEvent();
           ComputeDamageStats(options);
@@ -301,49 +301,49 @@ namespace EQLogParser
 
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
-      lock (DamageGroupIds)
+      lock (_damageGroupIds)
       {
         try
         {
           FireNewStatsEvent();
           Reset();
 
-          Selected = options.Npcs.OrderBy(sel => sel.Id).ToList();
-          Title = options.Npcs?.FirstOrDefault()?.Name;
+          _selected = options.Npcs.OrderBy(sel => sel.Id).ToList();
+          _title = options.Npcs?.FirstOrDefault()?.Name;
           var damageBlocks = new List<ActionGroup>();
 
-          Selected.ForEach(fight =>
+          _selected.ForEach(fight =>
           {
             damageBlocks.AddRange(fight.DamageBlocks);
 
             if (fight.GroupId > -1)
             {
-              DamageGroupIds[fight.GroupId] = 1;
+              _damageGroupIds[fight.GroupId] = 1;
             }
 
-            RaidTotals.Ranges.Add(new TimeSegment(fight.BeginDamageTime, fight.LastDamageTime));
-            StatsUtil.UpdateRaidTimeRanges(fight.DamageSegments, fight.DamageSubSegments, PlayerTimeRanges, PlayerSubTimeRanges);
+            _raidTotals.Ranges.Add(new TimeSegment(fight.BeginDamageTime, fight.LastDamageTime));
+            StatsUtil.UpdateRaidTimeRanges(fight.DamageSegments, fight.DamageSubSegments, _playerTimeRanges, _playerSubTimeRanges);
           });
 
           damageBlocks.Sort((a, b) => a.BeginTime.CompareTo(b.BeginTime));
 
           if (damageBlocks.Count > 0)
           {
-            RaidTotals.TotalSeconds = RaidTotals.Ranges.GetTotal();
-            RaidTotals.MaxTime = RaidTotals.TotalSeconds;
+            _raidTotals.TotalSeconds = _raidTotals.Ranges.GetTotal();
+            _raidTotals.MaxTime = _raidTotals.TotalSeconds;
 
             var rangeIndex = 0;
             double lastTime = 0;
             var newBlock = new List<ActionGroup>();
             damageBlocks.ForEach(block =>
             {
-              if (RaidTotals.Ranges.TimeSegments.Count > rangeIndex && block.BeginTime > RaidTotals.Ranges.TimeSegments[rangeIndex].EndTime)
+              if (_raidTotals.Ranges.TimeSegments.Count > rangeIndex && block.BeginTime > _raidTotals.Ranges.TimeSegments[rangeIndex].EndTime)
               {
                 rangeIndex++;
 
                 if (newBlock.Count > 0)
                 {
-                  DamageGroups.Add(newBlock);
+                  _damageGroups.Add(newBlock);
                 }
 
                 newBlock = new List<ActionGroup>();
@@ -366,10 +366,10 @@ namespace EQLogParser
               lastTime = block.BeginTime;
             });
 
-            DamageGroups.Add(newBlock);
+            _damageGroups.Add(newBlock);
             ComputeDamageStats(options);
           }
-          else if (Selected == null || Selected.Count == 0)
+          else if (_selected == null || _selected.Count == 0)
           {
             FireNoDataEvent(options, "NONPC");
           }
@@ -387,9 +387,9 @@ namespace EQLogParser
 
     private void ComputeDamageStats(GenerateStatsOptions options)
     {
-      lock (DamageGroupIds)
+      lock (_damageGroupIds)
       {
-        if (RaidTotals != null)
+        if (_raidTotals != null)
         {
           var childrenStats = new ConcurrentDictionary<string, Dictionary<string, PlayerStats>>();
           var topLevelStats = new ConcurrentDictionary<string, PlayerStats>();
@@ -397,19 +397,19 @@ namespace EQLogParser
           var individualStats = new Dictionary<string, PlayerStats>();
 
           // always start over
-          RaidTotals.Total = 0;
+          _raidTotals.Total = 0;
           var startTime = double.NaN;
           var stopTime = double.NaN;
 
           try
           {
-            if ((options.MaxSeconds > -1 && options.MaxSeconds < RaidTotals.MaxTime && !options.MaxSeconds.Equals((long)RaidTotals.TotalSeconds)) ||
-              (options.MinSeconds > 0 && options.MinSeconds <= RaidTotals.MaxTime && !options.MinSeconds.Equals((long)RaidTotals.MinTime)))
+            if ((options.MaxSeconds > -1 && options.MaxSeconds < _raidTotals.MaxTime && !options.MaxSeconds.Equals((long)_raidTotals.TotalSeconds)) ||
+              (options.MinSeconds > 0 && options.MinSeconds <= _raidTotals.MaxTime && !options.MinSeconds.Equals((long)_raidTotals.MinTime)))
             {
-              var removeFromEnd = RaidTotals.MaxTime - options.MaxSeconds;
+              var removeFromEnd = _raidTotals.MaxTime - options.MaxSeconds;
               if (removeFromEnd > 0)
               {
-                var reverse = RaidTotals.Ranges.TimeSegments.ToList();
+                var reverse = _raidTotals.Ranges.TimeSegments.ToList();
                 reverse.Reverse();
                 foreach (var range in reverse)
                 {
@@ -426,7 +426,7 @@ namespace EQLogParser
               var removeFromStart = (double)options.MinSeconds;
               if (removeFromStart > 0)
               {
-                foreach (var range in RaidTotals.Ranges.TimeSegments)
+                foreach (var range in _raidTotals.Ranges.TimeSegments)
                 {
                   if (range.Total >= removeFromStart)
                   {
@@ -439,7 +439,7 @@ namespace EQLogParser
               }
 
               var filteredGroups = new List<List<ActionGroup>>();
-              AllDamageGroups.ForEach(group =>
+              _allDamageGroups.ForEach(group =>
               {
                 var filteredBlocks = new List<ActionGroup>();
                 group.ForEach(block =>
@@ -456,19 +456,19 @@ namespace EQLogParser
                 }
               });
 
-              DamageGroups = filteredGroups;
-              RaidTotals.TotalSeconds = options.MaxSeconds - options.MinSeconds;
-              RaidTotals.MinTime = options.MinSeconds;
+              _damageGroups = filteredGroups;
+              _raidTotals.TotalSeconds = options.MaxSeconds - options.MinSeconds;
+              _raidTotals.MinTime = options.MinSeconds;
             }
             else
             {
-              DamageGroups = AllDamageGroups;
-              RaidTotals.MinTime = 0;
-              RaidTotals.TotalSeconds = RaidTotals.MaxTime;
+              _damageGroups = _allDamageGroups;
+              _raidTotals.MinTime = 0;
+              _raidTotals.TotalSeconds = _raidTotals.MaxTime;
             }
 
             var prevPlayerTimes = new Dictionary<string, double>();
-            DamageGroups.ForEach(group =>
+            _damageGroups.ForEach(group =>
             {
               group.ForEach(block =>
               {
@@ -479,7 +479,7 @@ namespace EQLogParser
                     var isValid = damageValidator.IsValid(record);
                     var stats = StatsUtil.CreatePlayerStats(individualStats, record.Attacker);
 
-                    if (record.Type == Labels.BANE && !isValid)
+                    if (record.Type == Labels.Bane && !isValid)
                     {
                       stats.BaneHits++;
 
@@ -493,11 +493,11 @@ namespace EQLogParser
                       var isAttackerPet = PlayerManager.Instance.IsVerifiedPet(record.Attacker);
                       var isNewFrame = CheckNewFrame(prevPlayerTimes, stats.Name, block.BeginTime);
 
-                      RaidTotals.Total += record.Total;
+                      _raidTotals.Total += record.Total;
                       StatsUtil.UpdateStats(stats, record, isNewFrame, isAttackerPet);
 
-                      if ((!PetToPlayer.TryGetValue(record.Attacker, out var player) && !PlayerPets.ContainsKey(record.Attacker))
-                      || player == Labels.UNASSIGNED)
+                      if ((!_petToPlayer.TryGetValue(record.Attacker, out var player) && !_playerPets.ContainsKey(record.Attacker))
+                      || player == Labels.Unassigned)
                       {
                         topLevelStats[record.Attacker] = stats;
                         stats.IsTopLevel = true;
@@ -537,8 +537,8 @@ namespace EQLogParser
               });
             });
 
-            RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
-            StatsUtil.PopulateSpecials(RaidTotals, true);
+            _raidTotals.Dps = (long)Math.Round(_raidTotals.Total / _raidTotals.TotalSeconds, 2);
+            StatsUtil.PopulateSpecials(_raidTotals, true);
             var expandedStats = new ConcurrentBag<PlayerStats>();
 
             Parallel.ForEach(individualStats.Values, stats =>
@@ -550,22 +550,22 @@ namespace EQLogParser
                   var timeRange = new TimeRange();
                   foreach (var child in children.Values)
                   {
-                    if (PlayerTimeRanges.TryGetValue(child.Name, out var range))
+                    if (_playerTimeRanges.TryGetValue(child.Name, out var range))
                     {
-                      StatsUtil.UpdateAllStatsTimeRanges(child, PlayerTimeRanges, PlayerSubTimeRanges, startTime, stopTime);
+                      StatsUtil.UpdateAllStatsTimeRanges(child, _playerTimeRanges, _playerSubTimeRanges, startTime, stopTime);
                       timeRange.Add(range.TimeSegments);
                     }
 
                     expandedStats.Add(child);
-                    RaidTotals.ResistCounts.TryGetValue(child.Name, out var childResists);
-                    StatsUtil.UpdateCalculations(child, RaidTotals, childResists);
+                    _raidTotals.ResistCounts.TryGetValue(child.Name, out var childResists);
+                    StatsUtil.UpdateCalculations(child, _raidTotals, childResists);
 
                     if (stats.Total > 0)
                     {
                       child.Percent = (float)Math.Round(Convert.ToDouble(child.Total) / stats.Total * 100, 2);
                     }
 
-                    if (RaidTotals.Specials.TryGetValue(child.Name, out var special1))
+                    if (_raidTotals.Specials.TryGetValue(child.Name, out var special1))
                     {
                       child.Special = special1;
                     }
@@ -577,13 +577,13 @@ namespace EQLogParser
                 else
                 {
                   expandedStats.Add(stats);
-                  StatsUtil.UpdateAllStatsTimeRanges(stats, PlayerTimeRanges, PlayerSubTimeRanges, startTime, stopTime);
+                  StatsUtil.UpdateAllStatsTimeRanges(stats, _playerTimeRanges, _playerSubTimeRanges, startTime, stopTime);
                 }
 
-                RaidTotals.ResistCounts.TryGetValue(stats.Name, out var resists);
-                StatsUtil.UpdateCalculations(stats, RaidTotals, resists);
+                _raidTotals.ResistCounts.TryGetValue(stats.Name, out var resists);
+                StatsUtil.UpdateCalculations(stats, _raidTotals, resists);
 
-                if (RaidTotals.Specials.TryGetValue(stats.OrigName, out var special2))
+                if (_raidTotals.Specials.TryGetValue(stats.OrigName, out var special2))
                 {
                   stats.Special = special2;
                 }
@@ -592,10 +592,10 @@ namespace EQLogParser
 
             var combined = new CombinedStats
             {
-              RaidStats = RaidTotals,
-              TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title,
-              TimeTitle = string.Format(StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds),
-              TotalTitle = string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Damage ", StatsUtil.FormatTotals(RaidTotals.DPS))
+              RaidStats = _raidTotals,
+              TargetTitle = (_selected.Count > 1 ? "Combined (" + _selected.Count + "): " : "") + _title,
+              TimeTitle = string.Format(StatsUtil.TimeFormat, _raidTotals.TotalSeconds),
+              TotalTitle = string.Format(StatsUtil.TotalFormat, StatsUtil.FormatTotals(_raidTotals.Total), " Damage ", StatsUtil.FormatTotals(_raidTotals.Dps))
             };
 
             combined.StatsList.AddRange(topLevelStats.Values.AsParallel().OrderByDescending(item => item.Total));
@@ -621,15 +621,15 @@ namespace EQLogParser
             // generating new stats
             var genEvent = new StatsGenerationEvent
             {
-              Type = Labels.DAMAGE_PARSE,
+              Type = Labels.DamageParse,
               State = "COMPLETED",
               CombinedStats = combined,
               Limited = damageValidator.IsDamageLimited(),
               Source = this
             };
 
-            genEvent.Groups.AddRange(DamageGroups);
-            genEvent.UniqueGroupCount = DamageGroupIds.Count;
+            genEvent.Groups.AddRange(_damageGroups);
+            genEvent.UniqueGroupCount = _damageGroupIds.Count;
             EventsGenerationStatus?.Invoke(genEvent);
 
             FireChartEvent(options, "UPDATE");
@@ -673,65 +673,65 @@ namespace EQLogParser
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.DAMAGE_PARSE, State = "STARTED", Source = this });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.DamageParse, State = "STARTED", Source = this });
     }
 
     private void FireNoDataEvent(GenerateStatsOptions options, string state)
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.DAMAGE_PARSE, State = state, Source = this });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.DamageParse, State = state, Source = this });
       FireChartEvent(options, "CLEAR");
     }
 
     internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null)
     {
-      lock (DamageGroupIds)
+      lock (_damageGroupIds)
       {
         // reset groups
-        if (options.MaxSeconds == long.MinValue && AllDamageGroups != null)
+        if (options.MaxSeconds == long.MinValue && _allDamageGroups != null)
         {
-          DamageGroups = AllDamageGroups;
+          _damageGroups = _allDamageGroups;
         }
 
         // send update
-        var de = new DataPointEvent { Action = action, Iterator = new DamageGroupCollection(DamageGroups) };
+        var de = new DataPointEvent { Action = action, Iterator = new DamageGroupCollection(_damageGroups) };
 
         if (selected != null)
         {
           de.Selected.AddRange(selected);
         }
 
-        EventsUpdateDataPoint?.Invoke(DamageGroups, de);
+        EventsUpdateDataPoint?.Invoke(_damageGroups, de);
       }
     }
 
     private void Reset()
     {
-      AllDamageGroups = DamageGroups;
-      DamageGroups.Clear();
-      DamageGroupIds.Clear();
-      RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_TOTALS);
-      PlayerPets.Clear();
-      PetToPlayer.Clear();
-      PlayerTimeRanges.Clear();
-      PlayerSubTimeRanges.Clear();
-      Selected = null;
-      Title = "";
+      _allDamageGroups = _damageGroups;
+      _damageGroups.Clear();
+      _damageGroupIds.Clear();
+      _raidTotals = StatsUtil.CreatePlayerStats(Labels.RaidTotals);
+      _playerPets.Clear();
+      _petToPlayer.Clear();
+      _playerTimeRanges.Clear();
+      _playerSubTimeRanges.Clear();
+      _selected = null;
+      _title = "";
     }
 
     private void UpdatePetMapping(DamageRecord damage)
     {
       var pname = PlayerManager.Instance.GetPlayerFromPet(damage.Attacker);
-      if ((!string.IsNullOrEmpty(pname) && pname != Labels.UNASSIGNED) || !string.IsNullOrEmpty(pname = damage.AttackerOwner))
+      if ((!string.IsNullOrEmpty(pname) && pname != Labels.Unassigned) || !string.IsNullOrEmpty(pname = damage.AttackerOwner))
       {
-        if (!PlayerPets.TryGetValue(pname, out var mapping))
+        if (!_playerPets.TryGetValue(pname, out var mapping))
         {
           mapping = new ConcurrentDictionary<string, byte>();
-          PlayerPets[pname] = mapping;
+          _playerPets[pname] = mapping;
         }
 
         mapping[damage.Attacker] = 1;
-        PetToPlayer[damage.Attacker] = pname;
+        _petToPlayer[damage.Attacker] = pname;
       }
     }
 
@@ -743,17 +743,17 @@ namespace EQLogParser
       var title = "";
       var details = "";
 
-      if (currentStats != null && type == Labels.DAMAGE_PARSE)
+      if (currentStats != null && type == Labels.DamageParse)
       {
         if (selected?.Count > 0)
         {
           foreach (var stats in selected.OrderByDescending(item => item.Total))
           {
             var name = showPetLabel ? stats.Name : stats.Name.Replace(" +Pets", "");
-            var playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, name) : string.Format(StatsUtil.PLAYER_FORMAT, name);
-            var damageFormat = showDps ? string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(stats.Total), "", StatsUtil.FormatTotals(stats.DPS)) :
-              string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
-            var timeFormat = string.Format(StatsUtil.TIME_FORMAT, stats.TotalSeconds);
+            var playerFormat = rankPlayers ? string.Format(StatsUtil.PlayerRankFormat, stats.Rank, name) : string.Format(StatsUtil.PlayerFormat, name);
+            var damageFormat = showDps ? string.Format(StatsUtil.TotalFormat, StatsUtil.FormatTotals(stats.Total), "", StatsUtil.FormatTotals(stats.Dps)) :
+              string.Format(StatsUtil.TotalOnlyFormat, StatsUtil.FormatTotals(stats.Total));
+            var timeFormat = string.Format(StatsUtil.TimeFormat, stats.TotalSeconds);
 
             var dps = playerFormat + damageFormat;
 
@@ -764,7 +764,7 @@ namespace EQLogParser
 
             if (showSpecial && !string.IsNullOrEmpty(stats.Special))
             {
-              dps = string.Format(StatsUtil.SPECIAL_FORMAT, dps, stats.Special);
+              dps = string.Format(StatsUtil.SpecialFormat, dps, stats.Special);
             }
 
             list.Add(dps);

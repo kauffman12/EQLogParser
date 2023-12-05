@@ -51,14 +51,14 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     // progress window
-    private static DateTime StartLoadTime;
-    private DamageOverlayWindow DamageOverlay;
-    private readonly DispatcherTimer ComputeStatsTimer;
-    private readonly NpcDamageManager NpcDamageManager = new();
-    private LogReader EqLogReader;
-    private readonly List<bool> LogWindows = new();
-    private readonly List<string> RecentFiles = new();
-    private bool ResetWindowState = false;
+    private static DateTime _startLoadTime;
+    private DamageOverlayWindow _damageOverlay;
+    private readonly DispatcherTimer _computeStatsTimer;
+    private readonly NpcDamageManager _npcDamageManager = new();
+    private LogReader _eqLogReader;
+    private readonly List<bool> _logWindows = new();
+    private readonly List<string> _recentFiles = new();
+    private bool _resetWindowState = false;
 
     public MainWindow()
     {
@@ -69,7 +69,7 @@ namespace EQLogParser
         CurrentFontSize = ConfigUtil.GetSettingAsDouble("ApplicationFontSize", 12);
         CurrentTheme = ConfigUtil.GetSetting("CurrentTheme", "MaterialDark");
 
-        if (UIElementUtil.GetSystemFontFamilies().FirstOrDefault(font => font.Source == CurrentFontFamily) == null)
+        if (UiElementUtil.GetSystemFontFamilies().FirstOrDefault(font => font.Source == CurrentFontFamily) == null)
         {
           Log.Info(CurrentFontFamily + " Not Found, Trying Default");
           CurrentFontFamily = "Segoe UI";
@@ -82,7 +82,7 @@ namespace EQLogParser
         MainActions.LoadTheme(this, CurrentTheme);
 
         // DPI and sizing
-        var dpi = UIElementUtil.GetDpi();
+        var dpi = UiElementUtil.GetDpi();
         var resolution = Screen.PrimaryScreen.Bounds;
         var defaultHeight = resolution.Height * 0.75 / dpi;
         var defaultWidth = resolution.Width * 0.85 / dpi;
@@ -191,7 +191,7 @@ namespace EQLogParser
           var files = recentFiles.Split(',');
           if (files.Length > 0)
           {
-            RecentFiles.AddRange(files);
+            _recentFiles.AddRange(files);
             UpdateRecentFiles();
           }
         }
@@ -222,11 +222,11 @@ namespace EQLogParser
           enableAutoMonitorIcon.Visibility = Visibility.Hidden;
         }
 
-        ComputeStatsTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 500) };
-        ComputeStatsTimer.Tick += (_, _) =>
+        _computeStatsTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 500) };
+        _computeStatsTimer.Tick += (_, _) =>
         {
           ComputeStats();
-          ComputeStatsTimer.Stop();
+          _computeStatsTimer.Stop();
         };
 
         if (ConfigUtil.IfSet("Debug"))
@@ -329,14 +329,14 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        if (DamageOverlay == null)
+        if (_damageOverlay == null)
         {
           OpenDamageOverlayIfEnabled(false, false);
         }
       });
     }
 
-    internal void CopyToEqClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEQClick(type);
+    internal void CopyToEqClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEqClick(type);
     internal FightTable GetFightTable() => npcWindow?.Content as FightTable;
     private void RestoreTableColumnsClick(object sender, RoutedEventArgs e) => DataGridUtil.RestoreAllTableColumns();
     private void AboutClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/#readme");
@@ -347,12 +347,12 @@ namespace EQLogParser
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
-      (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.DAMAGE_PARSE, DamageStatsManager.Instance, combined, selected, true);
+      (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.DamageParse, DamageStatsManager.Instance, combined, selected, true);
     }
 
     internal void AddAndCopyTankParse(CombinedStats combined, List<PlayerStats> selected)
     {
-      (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.TANK_PARSE, TankingStatsManager.Instance, combined, selected, true);
+      (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.TankParse, TankingStatsManager.Instance, combined, selected, true);
     }
 
     internal void DisableTriggers()
@@ -373,29 +373,29 @@ namespace EQLogParser
 
     internal void CloseDamageOverlay()
     {
-      DamageOverlay?.Close();
-      DamageOverlay = null;
+      _damageOverlay?.Close();
+      _damageOverlay = null;
     }
 
     internal void OpenDamageOverlayIfEnabled(bool reset, bool configure)
     {
       if (configure)
       {
-        DamageOverlay = new DamageOverlayWindow(true);
-        DamageOverlay.Show();
+        _damageOverlay = new DamageOverlayWindow(true);
+        _damageOverlay.Show();
       }
       // delay opening overlay so group IDs get populated
       else if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
       {
         if (DataManager.Instance.HasOverlayFights())
         {
-          if (DamageOverlay != null)
+          if (_damageOverlay != null)
           {
-            DamageOverlay?.Close();
+            _damageOverlay?.Close();
           }
 
-          DamageOverlay = new DamageOverlayWindow(false, reset);
-          DamageOverlay.Show();
+          _damageOverlay = new DamageOverlayWindow(false, reset);
+          _damageOverlay.Show();
         }
       }
     }
@@ -439,10 +439,10 @@ namespace EQLogParser
 
     internal void CheckComputeStats()
     {
-      if (ComputeStatsTimer != null)
+      if (_computeStatsTimer != null)
       {
-        ComputeStatsTimer.Stop();
-        ComputeStatsTimer.Start();
+        _computeStatsTimer.Stop();
+        _computeStatsTimer.Start();
       }
     }
 
@@ -470,7 +470,7 @@ namespace EQLogParser
 
     private void MenuItemClearOpenRecentClick(object sender, RoutedEventArgs e)
     {
-      RecentFiles.Clear();
+      _recentFiles.Clear();
       ConfigUtil.SetSetting("RecentFiles", "");
       UpdateRecentFiles();
     }
@@ -526,7 +526,7 @@ namespace EQLogParser
     private void ResetWindowStateClick(object sender, RoutedEventArgs e)
     {
       dockSite.DeleteDockState(ConfigUtil.ConfigDir + "/dockSite.xml");
-      ResetWindowState = true;
+      _resetWindowState = true;
       new MessageWindow("Window State will be reset after application restart.", Resource.RESET_WINDOW_STATE).ShowDialog();
     }
 
@@ -678,19 +678,19 @@ namespace EQLogParser
     {
       if (ReferenceEquals(e.Source, eqLogMenuItem))
       {
-        var found = LogWindows.FindIndex(used => !used);
+        var found = _logWindows.FindIndex(used => !used);
         if (found == -1)
         {
-          LogWindows.Add(true);
-          found = LogWindows.Count;
+          _logWindows.Add(true);
+          found = _logWindows.Count;
         }
         else
         {
-          LogWindows[found] = true;
+          _logWindows[found] = true;
           found += 1;
         }
 
-        SyncFusionUtil.OpenWindow(dockSite, null, out _, typeof(EQLogViewer), "eqLogWindow", "Log Search " + found);
+        SyncFusionUtil.OpenWindow(dockSite, null, out _, typeof(EqLogViewer), "eqLogWindow", "Log Search " + found);
       }
       else if (sender as MenuItem is { Icon: ImageAwesome { Tag: string name } })
       {
@@ -702,7 +702,7 @@ namespace EQLogParser
     {
       DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "SELECT", data.Selected);
       var preview = playerParseTextWindow.Content as ParsePreview;
-      preview?.UpdateParse(Labels.DAMAGE_PARSE, data.Selected);
+      preview?.UpdateParse(Labels.DamageParse, data.Selected);
     }
 
     private void HealingSummary_SelectionChanged(PlayerStatsSelectionChangedEventArgs data)
@@ -710,7 +710,7 @@ namespace EQLogParser
       HealingStatsManager.Instance.FireChartEvent("SELECT", data.Selected);
       var addTopParse = data.Selected?.Count == 1 && data.Selected[0].SubStats?.Count > 0;
       var preview = playerParseTextWindow.Content as ParsePreview;
-      preview?.UpdateParse(data, HealingStatsManager.Instance, addTopParse, Labels.HEAL_PARSE, Labels.TOP_HEAL_PARSE);
+      preview?.UpdateParse(data, HealingStatsManager.Instance, addTopParse, Labels.HealParse, Labels.TopHealParse);
     }
 
     private void TankingSummary_SelectionChanged(PlayerStatsSelectionChangedEventArgs data)
@@ -718,7 +718,7 @@ namespace EQLogParser
       TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "SELECT", data.Selected);
       var addReceiveParse = data.Selected?.Count == 1 && data.Selected[0].MoreStats != null;
       var preview = playerParseTextWindow.Content as ParsePreview;
-      preview?.UpdateParse(data, TankingStatsManager.Instance, addReceiveParse, Labels.TANK_PARSE, Labels.RECEIVED_HEAL_PARSE);
+      preview?.UpdateParse(data, TankingStatsManager.Instance, addReceiveParse, Labels.TankParse, Labels.ReceivedHealParse);
     }
 
     private void MenuItemFontFamilyClicked(object sender, RoutedEventArgs e)
@@ -754,29 +754,29 @@ namespace EQLogParser
           lastMin = Convert.ToInt32(item.Tag.ToString(), CultureInfo.CurrentCulture) * 60;
         }
 
-        if (item.Parent == recent1File && RecentFiles.Count > 0)
+        if (item.Parent == recent1File && _recentFiles.Count > 0)
         {
-          fileName = RecentFiles[0];
+          fileName = _recentFiles[0];
         }
-        else if (item.Parent == recent2File && RecentFiles.Count > 1)
+        else if (item.Parent == recent2File && _recentFiles.Count > 1)
         {
-          fileName = RecentFiles[1];
+          fileName = _recentFiles[1];
         }
-        else if (item.Parent == recent3File && RecentFiles.Count > 2)
+        else if (item.Parent == recent3File && _recentFiles.Count > 2)
         {
-          fileName = RecentFiles[2];
+          fileName = _recentFiles[2];
         }
-        else if (item.Parent == recent4File && RecentFiles.Count > 3)
+        else if (item.Parent == recent4File && _recentFiles.Count > 3)
         {
-          fileName = RecentFiles[3];
+          fileName = _recentFiles[3];
         }
-        else if (item.Parent == recent5File && RecentFiles.Count > 4)
+        else if (item.Parent == recent5File && _recentFiles.Count > 4)
         {
-          fileName = RecentFiles[4];
+          fileName = _recentFiles[4];
         }
-        else if (item.Parent == recent6File && RecentFiles.Count > 5)
+        else if (item.Parent == recent6File && _recentFiles.Count > 5)
         {
-          fileName = RecentFiles[5];
+          fileName = _recentFiles[5];
         }
 
         if (!string.IsNullOrEmpty(fileName) && !File.Exists(fileName))
@@ -793,10 +793,10 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        if (EqLogReader != null)
+        if (_eqLogReader != null)
         {
-          var seconds = Math.Round((DateTime.Now - StartLoadTime).TotalSeconds);
-          var filePercent = Math.Round(EqLogReader.Progress);
+          var seconds = Math.Round((DateTime.Now - _startLoadTime).TotalSeconds);
+          var filePercent = Math.Round(_eqLogReader.Progress);
           statusText.Text = filePercent < 100.0 ? $"Reading Log.. {filePercent}% in {seconds} seconds" : $"Additional Processing... {seconds} seconds";
           statusText.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;
 
@@ -879,9 +879,9 @@ namespace EQLogParser
               DockingManager.SetState(npcWindow, DockState.Dock);
             }
 
-            EqLogReader?.Dispose();
+            _eqLogReader?.Dispose();
             fileText.Text = $"-- {theFile}";
-            StartLoadTime = DateTime.Now;
+            _startLoadTime = DateTime.Now;
 
             var name = "You";
             var server = "Unknown";
@@ -911,13 +911,13 @@ namespace EQLogParser
               PlayerManager.Instance.Init();
             }
 
-            if (RecentFiles.Contains(theFile))
+            if (_recentFiles.Contains(theFile))
             {
-              RecentFiles.Remove(theFile);
+              _recentFiles.Remove(theFile);
             }
 
-            RecentFiles.Insert(0, theFile);
-            ConfigUtil.SetSetting("RecentFiles", string.Join(",", RecentFiles));
+            _recentFiles.Insert(0, theFile);
+            ConfigUtil.SetSetting("RecentFiles", string.Join(",", _recentFiles));
             UpdateRecentFiles();
 
             DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
@@ -925,8 +925,8 @@ namespace EQLogParser
             DataManager.Instance.Clear();
             RecordManager.Instance.Clear();
             CurrentLogFile = theFile;
-            NpcDamageManager.Reset();
-            EqLogReader = new LogReader(new LogProcessor(theFile), theFile, lastMins);
+            _npcDamageManager.Reset();
+            _eqLogReader = new LogReader(new LogProcessor(theFile), theFile, lastMins);
             UpdateLoadingProgress();
           });
         }
@@ -954,10 +954,10 @@ namespace EQLogParser
 
       void SetRecentVisible(MenuItem menuItem, int count)
       {
-        if (RecentFiles.Count > count)
+        if (_recentFiles.Count > count)
         {
           var m = 75;
-          var theFile = RecentFiles[count].Length > m ? "... " + RecentFiles[count][(RecentFiles[count].Length - m)..] : RecentFiles[count];
+          var theFile = _recentFiles[count].Length > m ? "... " + _recentFiles[count][(_recentFiles[count].Length - m)..] : _recentFiles[count];
           var escapedFile = theFile.Replace("_", "__");
           menuItem.Header = count + 1 + ": " + escapedFile;
           menuItem.Visibility = Visibility.Visible;
@@ -1089,13 +1089,13 @@ namespace EQLogParser
     {
       ConfigUtil.SetSetting("WindowState", WindowState.ToString());
 
-      if (!ResetWindowState)
+      if (!_resetWindowState)
       {
         dockSite.SaveDockState(new BinaryFormatter(), StorageFormat.Xml, ConfigUtil.ConfigDir + "/dockSite.xml");
       }
 
       ConfigUtil.Save();
-      EqLogReader?.Dispose();
+      _eqLogReader?.Dispose();
       petMappingGrid?.Dispose();
       verifiedPetsGrid?.Dispose();
       verifiedPlayersGrid?.Dispose();
@@ -1110,7 +1110,7 @@ namespace EQLogParser
     // This is where closing summary tables and line charts will get disposed
     private void CloseTab(ContentControl window)
     {
-      if (window.Content is EQLogViewer)
+      if (window.Content is EqLogViewer)
       {
         if (DockingManager.GetHeader(window) is string title)
         {
@@ -1118,9 +1118,9 @@ namespace EQLogParser
           if (last > -1)
           {
             var value = title.Substring(last, title.Length - last);
-            if (int.TryParse(value, out var result) && result > 0 && LogWindows.Count >= result)
+            if (int.TryParse(value, out var result) && result > 0 && _logWindows.Count >= result)
             {
-              LogWindows[result - 1] = false;
+              _logWindows[result - 1] = false;
             }
           }
         }

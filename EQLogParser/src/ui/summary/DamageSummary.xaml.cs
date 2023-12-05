@@ -17,13 +17,13 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for DamageSummary.xaml
   /// </summary>
-  public partial class DamageSummary : SummaryTable, IDocumentContent
+  public partial class DamageSummary : IDocumentContent
   {
-    private string CurrentClass;
-    private int CurrentGroupCount;
-    private int CurrentPetOrPlayerOption;
-    private readonly DispatcherTimer SelectionTimer;
-    private bool Ready;
+    private string _currentClass;
+    private int _currentGroupCount;
+    private int _currentPetOrPlayerOption;
+    private readonly DispatcherTimer _selectionTimer;
+    private bool _ready;
 
     public DamageSummary()
     {
@@ -34,7 +34,7 @@ namespace EQLogParser
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
 
-      petOrPlayerList.ItemsSource = new List<string> { Labels.PET_PLAYER_OPTION, Labels.PLAYER_OPTION, Labels.PET_OPTION, Labels.ALL_OPTION };
+      petOrPlayerList.ItemsSource = new List<string> { Labels.PetPlayerOption, Labels.PlayerOption, Labels.PetOption, Labels.AllOption };
       petOrPlayerList.SelectedIndex = 0;
 
       CreateClassMenuItems(menuItemShowSpellCounts, DataGridShowSpellCountsClick, DataGridSpellCountsByClassClick);
@@ -45,8 +45,8 @@ namespace EQLogParser
       InitSummaryTable(title, dataGrid, selectedColumns);
       dataGrid.CopyContent += DataGridCopyContent;
 
-      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
-      SelectionTimer.Tick += (_, _) =>
+      _selectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
+      _selectionTimer.Tick += (_, _) =>
       {
         if (prog.Icon == EFontAwesomeIcon.Solid_HourglassStart)
         {
@@ -66,16 +66,15 @@ namespace EQLogParser
             Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
           }
 
-          SelectionTimer.Stop();
+          _selectionTimer.Stop();
         }
       };
     }
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
     {
-      if (selected?.Count > 0)
+      if (selected?.Count > 0 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var breakdown, typeof(DamageBreakdown),
           "damageBreakdownWindow", "DPS Breakdown"))
         {
@@ -94,7 +93,7 @@ namespace EQLogParser
         {
           menuItemShowSpellCasts.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
           menuItemShowDamageLog.IsEnabled = menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
-          menuItemShowAdpsTimeline.IsEnabled = (dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2) && CurrentGroupCount == 1;
+          menuItemShowAdpsTimeline.IsEnabled = (dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2) && _currentGroupCount == 1;
           copyDamageParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
 
           // default before making check
@@ -103,7 +102,7 @@ namespace EQLogParser
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
-            menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.UNK && playerStats.OrigName != Labels.RS &&
+            menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.Unk && playerStats.OrigName != Labels.Rs &&
             !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
             selectedName = playerStats.OrigName;
             menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X");
@@ -124,15 +123,15 @@ namespace EQLogParser
       });
     }
 
-    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.DAMAGE_PARSE);
-    internal override bool IsPetsCombined() => CurrentPetOrPlayerOption == 0;
+    private void CopyToEqClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.DamageParse);
+    internal override bool IsPetsCombined() => _currentPetOrPlayerOption == 0;
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       var update = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
-      var needUpdate = CurrentClass != update;
-      CurrentClass = update;
+      var needUpdate = _currentClass != update;
+      _currentClass = update;
 
       if (needUpdate)
       {
@@ -166,8 +165,8 @@ namespace EQLogParser
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      var needUpdate = CurrentPetOrPlayerOption != petOrPlayerList.SelectedIndex;
-      CurrentPetOrPlayerOption = petOrPlayerList.SelectedIndex;
+      var needUpdate = _currentPetOrPlayerOption != petOrPlayerList.SelectedIndex;
+      _currentPetOrPlayerOption = petOrPlayerList.SelectedIndex;
 
       if (needUpdate)
       {
@@ -180,7 +179,7 @@ namespace EQLogParser
       if (CurrentStats != null)
       {
         var beforeList = dataGrid.ItemsSource;
-        switch (CurrentPetOrPlayerOption)
+        switch (_currentPetOrPlayerOption)
         {
           case 0:
             dataGrid.ItemsSource = UpdateRank(CurrentStats.StatsList);
@@ -217,15 +216,14 @@ namespace EQLogParser
       if (MainWindow.IsMapSendToEqEnabled && Keyboard.Modifiers == ModifierKeys.Control && Keyboard.IsKeyDown(Key.C))
       {
         e.Handled = true;
-        CopyToEQClick(sender, null);
+        CopyToEqClick(sender, null);
       }
     }
 
     private void DataGridDamageLogClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems?.Count > 0)
+      if (dataGrid.SelectedItems?.Count > 0 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(HitLogViewer), "damageLogWindow", "DPS Log"))
         {
           (log.Content as HitLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
@@ -235,9 +233,8 @@ namespace EQLogParser
 
     private void DataGridDeathLogClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems?.Count > 0)
+      if (dataGrid.SelectedItems?.Count > 0 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
         {
           (log.Content as DeathLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
@@ -247,9 +244,8 @@ namespace EQLogParser
 
     private void DataGridHitFreqClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems.Count == 1)
+      if (dataGrid.SelectedItems.Count == 1 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var hitFreq, typeof(HitFreqChart), "damageFreqChart", "Damage Hit Frequency"))
         {
           (hitFreq.Content as HitFreqChart)?.Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
@@ -259,9 +255,8 @@ namespace EQLogParser
 
     private void DataGridAdpsTimelineClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems.Count > 0)
+      if (dataGrid.SelectedItems.Count > 0 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var timeline, typeof(GanttChart), "adpsTimeline", "ADPS Timeline"))
         {
           ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 1);
@@ -291,7 +286,7 @@ namespace EQLogParser
           case "COMPLETED":
             CurrentStats = e.CombinedStats;
             CurrentGroups = e.Groups;
-            CurrentGroupCount = e.UniqueGroupCount;
+            _currentGroupCount = e.UniqueGroupCount;
 
             if (CurrentStats == null)
             {
@@ -333,7 +328,7 @@ namespace EQLogParser
         }
 
         // always stop
-        SelectionTimer.Stop();
+        _selectionTimer.Stop();
         prog.Visibility = Visibility.Hidden;
       });
     }
@@ -358,17 +353,17 @@ namespace EQLogParser
           }
 
           bool result;
-          if (CurrentPetOrPlayerOption == 1)
+          if (_currentPetOrPlayerOption == 1)
           {
-            result = !PlayerManager.Instance.IsVerifiedPet(name) && (string.IsNullOrEmpty(CurrentClass) || CurrentClass == className);
+            result = !PlayerManager.Instance.IsVerifiedPet(name) && (string.IsNullOrEmpty(_currentClass) || _currentClass == className);
           }
-          else if (CurrentPetOrPlayerOption == 2)
+          else if (_currentPetOrPlayerOption == 2)
           {
             result = PlayerManager.Instance.IsVerifiedPet(name);
           }
           else
           {
-            result = string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;
+            result = string.IsNullOrEmpty(_currentClass) || _currentClass == className;
           }
 
           return result;
@@ -387,8 +382,8 @@ namespace EQLogParser
     {
       if (dataGrid.ItemsSource != null)
       {
-        SelectionTimer.Stop();
-        SelectionTimer.Start();
+        _selectionTimer.Stop();
+        _selectionTimer.Start();
 
         prog.Icon = EFontAwesomeIcon.Solid_HourglassStart;
         prog.Visibility = Visibility.Visible;
@@ -436,7 +431,7 @@ namespace EQLogParser
 
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (VisualParent != null && !Ready)
+      if (VisualParent != null && !_ready)
       {
         DamageStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
         DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
@@ -446,7 +441,7 @@ namespace EQLogParser
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
           Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(new GenerateStatsOptions()));
         }
-        Ready = true;
+        _ready = true;
       }
     }
 
@@ -457,7 +452,7 @@ namespace EQLogParser
       MainActions.EventsChartOpened -= EventsChartOpened;
       ClearData();
       DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { MaxSeconds = long.MinValue }, "UPDATE");
-      Ready = false;
+      _ready = false;
     }
   }
 }

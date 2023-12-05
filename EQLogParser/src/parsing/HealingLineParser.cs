@@ -73,7 +73,7 @@ namespace EQLogParser
       var healer = "";
       var healed = "";
       string spell = null;
-      var type = Labels.HEAL;
+      var type = Labels.Heal;
       var heal = uint.MaxValue;
       uint overHeal = 0;
 
@@ -95,7 +95,7 @@ namespace EQLogParser
 
           if (part.Length > optional + 17 && part.IndexOf("over time", optional + 8, 9, StringComparison.Ordinal) > -1)
           {
-            type = Labels.HOT;
+            type = Labels.Hot;
           }
         }
         else if (previous - 5 >= 0 && test.IndexOf("have been", previous - 4, StringComparison.Ordinal) > -1)
@@ -104,7 +104,7 @@ namespace EQLogParser
 
           if (part.Length > optional + 17 && part.IndexOf("over time", optional + 8, 9, StringComparison.Ordinal) > -1)
           {
-            type = Labels.HOT;
+            type = Labels.Hot;
           }
         }
         else
@@ -134,7 +134,7 @@ namespace EQLogParser
           {
             if (forIndex - 9 >= 0 && part.IndexOf("over time", forIndex - 9, StringComparison.Ordinal) > -1)
             {
-              type = Labels.HOT;
+              type = Labels.Hot;
               healed = part.Substring(afterHealed, forIndex - afterHealed - 10);
             }
             else
@@ -147,11 +147,11 @@ namespace EQLogParser
         }
         else
         {
-          if (type == Labels.HEAL)
+          if (type == Labels.Heal)
           {
             amountIndex = optional + 12;
           }
-          else if (type == Labels.HOT)
+          else if (type == Labels.Hot)
           {
             amountIndex = optional + 22;
           }
@@ -218,7 +218,7 @@ namespace EQLogParser
           }
           else if (string.IsNullOrEmpty(healer) && !string.IsNullOrEmpty(spell) && spell.StartsWith("Theft of Essence", StringComparison.OrdinalIgnoreCase))
           {
-            healer = Labels.UNK;
+            healer = Labels.Unk;
           }
 
           if (!string.IsNullOrEmpty(healer) && heal != uint.MaxValue && healer.Length <= 64)
@@ -231,7 +231,7 @@ namespace EQLogParser
               Healed = string.Intern(healed),
               Type = string.Intern(type),
               ModifiersMask = -1,
-              SubType = string.IsNullOrEmpty(spell) ? Labels.SELF_HEAL : string.Intern(spell)
+              SubType = string.IsNullOrEmpty(spell) ? Labels.SelfHeal : string.Intern(spell)
             };
 
             if (part[^1] == ')')

@@ -12,29 +12,29 @@ namespace EQLogParser
   {
     private static readonly ChatType EndResult = new();
 
-    private string CurrentArchive;
-    private readonly ChatFilter CurrentChatFilter;
-    private StringReader CurrentReader;
-    private readonly List<string> Directories;
-    private List<string> Months;
-    private List<string> Entries;
-    private int CurrentDirectory = -1;
-    private int CurrentMonth = -1;
-    private int CurrentEntry = -1;
-    private readonly DateUtil DateUtil;
+    private string _currentArchive;
+    private readonly ChatFilter _currentChatFilter;
+    private StringReader _currentReader;
+    private readonly List<string> _directories;
+    private List<string> _months;
+    private List<string> _entries;
+    private int _currentDirectory = -1;
+    private int _currentMonth = -1;
+    private int _currentEntry = -1;
+    private readonly DateUtil _dateUtil;
 
-    internal ChatIterator(string playerAndServer, ChatFilter ChatFilter)
+    internal ChatIterator(string playerAndServer, ChatFilter chatFilter)
     {
       var home = ConfigUtil.GetArchiveDir() + playerAndServer;
-      CurrentChatFilter = ChatFilter;
-      DateUtil = new DateUtil();
+      _currentChatFilter = chatFilter;
+      _dateUtil = new DateUtil();
 
       if (Directory.Exists(home))
       {
         var years = Directory.GetDirectories(home);
         if (years.Length > 0)
         {
-          Directories = years.ToList().OrderByDescending(year => year).ToList();
+          _directories = years.ToList().OrderByDescending(year => year).ToList();
           GetNextYear();
         }
       }
@@ -42,9 +42,9 @@ namespace EQLogParser
 
     internal void Close()
     {
-      CurrentReader?.Close();
-      CurrentReader = null;
-      CurrentArchive = null;
+      _currentReader?.Close();
+      _currentReader = null;
+      _currentArchive = null;
     }
 
     public IEnumerator<ChatType> GetEnumerator()
@@ -64,11 +64,11 @@ namespace EQLogParser
     {
       ChatType result = null;
 
-      if (CurrentArchive == null && Months != null && CurrentMonth < Months.Count)
+      if (_currentArchive == null && _months != null && _currentMonth < _months.Count)
       {
-        CurrentArchive = GetArchive();
+        _currentArchive = GetArchive();
       }
-      else if (CurrentArchive == null && Months != null && CurrentMonth >= Months.Count)
+      else if (_currentArchive == null && _months != null && _currentMonth >= _months.Count)
       {
         if (GetNextYear())
         {
@@ -76,21 +76,21 @@ namespace EQLogParser
         }
       }
 
-      if (CurrentArchive != null && CurrentReader == null)
+      if (_currentArchive != null && _currentReader == null)
       {
-        CurrentReader = GetNextReader();
-        if (CurrentReader == null)
+        _currentReader = GetNextReader();
+        if (_currentReader == null)
         {
-          CurrentMonth++;
-          CurrentArchive = null;
+          _currentMonth++;
+          _currentArchive = null;
           return GetNextChat();
         }
       }
 
-      if (CurrentReader != null)
+      if (_currentReader != null)
       {
         result = EndResult;
-        while (result == EndResult && CurrentReader.ReadLine() is { } nextLine)
+        while (result == EndResult && _currentReader.ReadLine() is { } nextLine)
         {
           var timeString = nextLine[..(MainWindow.ActionIndex - 1)];
           var action = nextLine[MainWindow.ActionIndex..];
@@ -100,9 +100,9 @@ namespace EQLogParser
             // fix  % chars
             // workaround to set full line text
             chatType.Text = nextLine.Replace("PCT;", "%");
-            chatType.BeginTime = DateUtil.ParsePreciseDate(timeString);
+            chatType.BeginTime = _dateUtil.ParsePreciseDate(timeString);
 
-            if (CurrentChatFilter.PassFilter(chatType))
+            if (_currentChatFilter.PassFilter(chatType))
             {
               result = chatType;
             }
@@ -111,8 +111,8 @@ namespace EQLogParser
 
         if (result == EndResult)
         {
-          CurrentReader.Close();
-          CurrentReader = null;
+          _currentReader.Close();
+          _currentReader = null;
           return GetNextChat();
         }
       }
@@ -124,19 +124,19 @@ namespace EQLogParser
     {
       var success = false;
 
-      CurrentDirectory++;
-      CurrentMonth = -1;
+      _currentDirectory++;
+      _currentMonth = -1;
 
-      if (CurrentDirectory < Directories.Count && Directory.Exists(Directories[CurrentDirectory]))
+      if (_currentDirectory < _directories.Count && Directory.Exists(_directories[_currentDirectory]))
       {
-        var dir = Path.GetFileName(Directories[CurrentDirectory]);
-        if (DateTime.TryParseExact(dir, "yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed) && CurrentChatFilter.DuringYear(parsed))
+        var dir = Path.GetFileName(_directories[_currentDirectory]);
+        if (DateTime.TryParseExact(dir, "yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed) && _currentChatFilter.DuringYear(parsed))
         {
-          var months = Directory.GetFiles(Directories[CurrentDirectory]);
+          var months = Directory.GetFiles(_directories[_currentDirectory]);
           if (months.Length > 0)
           {
-            Months = months.ToList().OrderByDescending(month => month).ToList();
-            CurrentMonth = 0;
+            _months = months.ToList().OrderByDescending(month => month).ToList();
+            _currentMonth = 0;
             success = true;
           }
         }
@@ -154,13 +154,13 @@ namespace EQLogParser
     {
       StringReader result = null;
 
-      CurrentEntry++;
-      if (CurrentEntry < Entries.Count)
+      _currentEntry++;
+      if (_currentEntry < _entries.Count)
       {
-        var archive = ChatManager.OpenArchive(Months[CurrentMonth], ZipArchiveMode.Read);
+        var archive = ChatManager.OpenArchive(_months[_currentMonth], ZipArchiveMode.Read);
         if (archive != null)
         {
-          var reader = new StreamReader(archive.GetEntry(Entries[CurrentEntry]).Open());
+          var reader = new StreamReader(archive.GetEntry(_entries[_currentEntry]).Open());
           result = new StringReader(reader.ReadToEnd());
           reader.Close();
           archive.Dispose();
@@ -174,25 +174,25 @@ namespace EQLogParser
     {
       string result = null;
 
-      if (CurrentDirectory > -1 && CurrentDirectory < Directories.Count && CurrentMonth > -1 && Months != null && CurrentMonth < Months.Count)
+      if (_currentDirectory > -1 && _currentDirectory < _directories.Count && _currentMonth > -1 && _months != null && _currentMonth < _months.Count)
       {
-        var dir = Path.GetFileName(Directories[CurrentDirectory]);
-        var fileName = Path.GetFileName(Months[CurrentMonth]);
+        var dir = Path.GetFileName(_directories[_currentDirectory]);
+        var fileName = Path.GetFileName(_months[_currentMonth]);
         if (dir != null && fileName != null)
         {
           var monthString = dir + "-" + fileName.Substring(5, 2);
-          if (DateTime.TryParseExact(monthString, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed) && CurrentChatFilter.DuringMonth(parsed))
+          if (DateTime.TryParseExact(monthString, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed) && _currentChatFilter.DuringMonth(parsed))
           {
-            var archive = ChatManager.OpenArchive(Months[CurrentMonth], ZipArchiveMode.Read);
+            var archive = ChatManager.OpenArchive(_months[_currentMonth], ZipArchiveMode.Read);
             if (archive != null)
             {
-              Entries = archive.Entries.Where(entry =>
+              _entries = archive.Entries.Where(entry =>
               {
                 var found = false;
                 if (entry.Name != ChatManager.Index)
                 {
                   var dayString = monthString + "-" + entry.Name;
-                  if (DateTime.TryParseExact(dayString, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var day) && CurrentChatFilter.DuringDay(day))
+                  if (DateTime.TryParseExact(dayString, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var day) && _currentChatFilter.DuringDay(day))
                   {
                     found = true;
                   }
@@ -201,8 +201,8 @@ namespace EQLogParser
                 return found;
               }).OrderByDescending(entry => entry.Name).Select(entry => entry.Name).ToList();
 
-              CurrentEntry = -1;
-              result = Months[CurrentMonth];
+              _currentEntry = -1;
+              result = _months[_currentMonth];
               archive.Dispose();
             }
           }
@@ -210,7 +210,7 @@ namespace EQLogParser
 
         if (result == null)
         {
-          CurrentMonth++;
+          _currentMonth++;
           return GetArchive();
         }
       }

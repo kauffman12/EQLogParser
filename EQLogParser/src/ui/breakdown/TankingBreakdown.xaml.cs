@@ -12,7 +12,7 @@ namespace EQLogParser
     {
       InitializeComponent();
       dataGrid.IsEnabled = false;
-      UIElementUtil.SetEnabled(controlPanel.Children, false);
+      UiElementUtil.SetEnabled(controlPanel.Children, false);
       InitBreakdownTable(titleLabel, dataGrid, selectedColumns);
     }
 
@@ -25,7 +25,7 @@ namespace EQLogParser
           titleLabel.Content = currentStats?.ShortTitle;
           dataGrid.ItemsSource = selectedStats;
           dataGrid.IsEnabled = true;
-          UIElementUtil.SetEnabled(controlPanel.Children, true);
+          UiElementUtil.SetEnabled(controlPanel.Children, true);
         });
       });
     }

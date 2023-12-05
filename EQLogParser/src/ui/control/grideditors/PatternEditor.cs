@@ -11,14 +11,14 @@ namespace EQLogParser
 {
   internal class PatternEditor : BaseTypeEditor
   {
-    private TextBox TheTextBox;
-    private CheckBox TheCheckBox;
+    private TextBox _theTextBox;
+    private CheckBox _theCheckBox;
 
     public void SetForeground(string foreground)
     {
       // this only works if there's one reference to this editor...
       // TODO figure out better way
-      TheTextBox?.SetResourceReference(Control.ForegroundProperty, foreground);
+      _theTextBox?.SetResourceReference(Control.ForegroundProperty, foreground);
     }
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
@@ -32,7 +32,7 @@ namespace EQLogParser
         UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
       };
 
-      BindingOperations.SetBinding(TheTextBox, TextBox.TextProperty, binding);
+      BindingOperations.SetBinding(_theTextBox, TextBox.TextProperty, binding);
 
       string bindName = null;
       switch (info.Name)
@@ -58,7 +58,7 @@ namespace EQLogParser
           ValidatesOnDataErrors = true
         };
 
-        BindingOperations.SetBinding(TheCheckBox, ToggleButton.IsCheckedProperty, binding);
+        BindingOperations.SetBinding(_theCheckBox, ToggleButton.IsCheckedProperty, binding);
       }
     }
 
@@ -71,7 +71,7 @@ namespace EQLogParser
       grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
       grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
 
-      TheTextBox = new TextBox
+      _theTextBox = new TextBox
       {
         HorizontalAlignment = HorizontalAlignment.Stretch,
         HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
@@ -81,13 +81,13 @@ namespace EQLogParser
         BorderThickness = new Thickness(0, 0, 0, 0)
       };
 
-      TheTextBox.SetValue(Grid.ColumnProperty, 0);
-      TheCheckBox = new CheckBox { Content = "Use Regex" };
-      TheCheckBox.SetValue(Grid.ColumnProperty, 1);
-      TheCheckBox.Checked += TheCheckBoxChecked;
-      TheCheckBox.Unchecked += TheCheckBoxChecked;
-      grid.Children.Add(TheTextBox);
-      grid.Children.Add(TheCheckBox);
+      _theTextBox.SetValue(Grid.ColumnProperty, 0);
+      _theCheckBox = new CheckBox { Content = "Use Regex" };
+      _theCheckBox.SetValue(Grid.ColumnProperty, 1);
+      _theCheckBox.Checked += TheCheckBoxChecked;
+      _theCheckBox.Unchecked += TheCheckBoxChecked;
+      grid.Children.Add(_theTextBox);
+      grid.Children.Add(_theCheckBox);
       return grid;
     }
 
@@ -98,9 +98,9 @@ namespace EQLogParser
         // used for init check
         if (checkBox.DataContext != null)
         {
-          var previous = TheTextBox.Text;
-          TheTextBox.Text += " ";
-          TheTextBox.Text = previous;
+          var previous = _theTextBox.Text;
+          _theTextBox.Text += " ";
+          _theTextBox.Text = previous;
         }
       }
     }
@@ -112,18 +112,18 @@ namespace EQLogParser
 
     public override void Detach(PropertyViewItem property)
     {
-      if (TheTextBox != null)
+      if (_theTextBox != null)
       {
-        BindingOperations.ClearAllBindings(TheTextBox);
-        TheTextBox = null;
+        BindingOperations.ClearAllBindings(_theTextBox);
+        _theTextBox = null;
       }
 
-      if (TheCheckBox != null)
+      if (_theCheckBox != null)
       {
-        TheCheckBox.Checked -= TheCheckBoxChecked;
-        TheCheckBox.Unchecked -= TheCheckBoxChecked;
-        BindingOperations.ClearAllBindings(TheCheckBox);
-        TheCheckBox = null;
+        _theCheckBox.Checked -= TheCheckBoxChecked;
+        _theCheckBox.Unchecked -= TheCheckBoxChecked;
+        BindingOperations.ClearAllBindings(_theCheckBox);
+        _theCheckBox = null;
       }
     }
   }

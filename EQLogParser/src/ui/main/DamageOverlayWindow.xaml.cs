@@ -20,27 +20,27 @@ namespace EQLogParser
     private static readonly object StatsLock = new();
     private static readonly SolidColorBrush ActiveBrush = new(Color.FromRgb(254, 156, 30));
     private static readonly SolidColorBrush InActiveBrush = new(Colors.White);
-    private static DamageOverlayStats Stats;
+    private static DamageOverlayStats _stats;
 
-    private readonly DispatcherTimer UpdateTimer;
-    private readonly bool Preview;
-    private double SavedHeight;
-    private double SavedWidth;
-    private double SavedTop = double.NaN;
-    private double SavedLeft;
-    private int SavedFontSize;
-    private int SavedMaxRows;
-    private string CurrentSelectedClass;
-    private string SavedSelectedClass;
-    private int CurrentDamageMode;
-    private int SavedDamageMode;
-    private bool CurrentHideOthers;
-    private bool SavedHideOthers;
-    private int CurrentShowCritRate;
-    private int SavedShowCritRate;
-    private bool SavedMiniBars;
-    private string SavedProgressColor;
-    private bool CurrentShowDps;
+    private readonly DispatcherTimer _updateTimer;
+    private readonly bool _preview;
+    private double _savedHeight;
+    private double _savedWidth;
+    private double _savedTop = double.NaN;
+    private double _savedLeft;
+    private int _savedFontSize;
+    private int _savedMaxRows;
+    private string _currentSelectedClass;
+    private string _savedSelectedClass;
+    private int _currentDamageMode;
+    private int _savedDamageMode;
+    private bool _currentHideOthers;
+    private bool _savedHideOthers;
+    private int _currentShowCritRate;
+    private int _savedShowCritRate;
+    private bool _savedMiniBars;
+    private string _savedProgressColor;
+    private bool _currentShowDps;
 
     internal DamageOverlayWindow(bool preview = false, bool reset = false)
     {
@@ -49,13 +49,13 @@ namespace EQLogParser
       MainActions.SetTheme(this, MainWindow.CurrentTheme);
       dpsButton.Foreground = ActiveBrush;
       tankButton.Foreground = InActiveBrush;
-      Preview = preview;
+      _preview = preview;
 
       if (reset)
       {
         lock (StatsLock)
         {
-          Stats = null;
+          _stats = null;
         }
       }
 
@@ -68,39 +68,39 @@ namespace EQLogParser
 
       // fonts
       var fontSizeString = ConfigUtil.GetSetting("OverlayFontSize");
-      if (fontSizeString == null || !int.TryParse(fontSizeString, out SavedFontSize) || (SavedFontSize != 10 &&
-        SavedFontSize != 12 && SavedFontSize != 14 && SavedFontSize != 16))
+      if (fontSizeString == null || !int.TryParse(fontSizeString, out _savedFontSize) || (_savedFontSize != 10 &&
+        _savedFontSize != 12 && _savedFontSize != 14 && _savedFontSize != 16))
       {
-        SavedFontSize = 12;
+        _savedFontSize = 12;
       }
 
-      UpdateFontSize(SavedFontSize);
+      UpdateFontSize(_savedFontSize);
 
       // color
-      SavedProgressColor = ConfigUtil.GetSetting("OverlayRankColor");
-      if (SavedProgressColor == null || ColorConverter.ConvertFromString(SavedProgressColor) == null)
+      _savedProgressColor = ConfigUtil.GetSetting("OverlayRankColor");
+      if (_savedProgressColor == null || ColorConverter.ConvertFromString(_savedProgressColor) == null)
       {
-        SavedProgressColor = "#FF1D397E";
+        _savedProgressColor = "#FF1D397E";
       }
 
-      UpdateProgressBrush(SavedProgressColor);
+      UpdateProgressBrush(_savedProgressColor);
 
       // Max Rows
       var maxRowsString = ConfigUtil.GetSetting("OverlayMaxRows");
-      if (maxRowsString == null || !int.TryParse(maxRowsString, out SavedMaxRows) || SavedMaxRows < 1 || SavedMaxRows > 10)
+      if (maxRowsString == null || !int.TryParse(maxRowsString, out _savedMaxRows) || _savedMaxRows < 1 || _savedMaxRows > 10)
       {
-        SavedMaxRows = 5;
+        _savedMaxRows = 5;
       }
 
-      UpdateMaxRows(SavedMaxRows);
+      UpdateMaxRows(_savedMaxRows);
 
       // damage mode
-      SavedDamageMode = ConfigUtil.GetSettingAsInteger("OverlayDamageMode");
-      if (SavedDamageMode != 0 && SavedDamageMode != 30 && SavedDamageMode != 40 && SavedDamageMode != 50 && SavedDamageMode != 60)
+      _savedDamageMode = ConfigUtil.GetSettingAsInteger("OverlayDamageMode");
+      if (_savedDamageMode != 0 && _savedDamageMode != 30 && _savedDamageMode != 40 && _savedDamageMode != 50 && _savedDamageMode != 60)
       {
-        SavedDamageMode = 0;
+        _savedDamageMode = 0;
       }
-      UpdateDamageMode(SavedDamageMode);
+      UpdateDamageMode(_savedDamageMode);
 
       var list = PlayerManager.Instance.GetClassList();
       list.Insert(0, Resource.ANY_CLASS);
@@ -114,30 +114,30 @@ namespace EQLogParser
       }
 
       UpdateSelectedClass(selectedClass);
-      SavedSelectedClass = CurrentSelectedClass;
+      _savedSelectedClass = _currentSelectedClass;
 
       // Hide other player names on overlay
-      SavedHideOthers = ConfigUtil.IfSet("OverlayHideOtherPlayers");
-      UpdateHideOthers(SavedHideOthers);
+      _savedHideOthers = ConfigUtil.IfSet("OverlayHideOtherPlayers");
+      UpdateHideOthers(_savedHideOthers);
 
       // Hide/Show crit rate
-      SavedShowCritRate = ConfigUtil.GetSettingAsInteger("OverlayEnableCritRate");
-      UpdateShowCritRate(SavedShowCritRate);
+      _savedShowCritRate = ConfigUtil.GetSettingAsInteger("OverlayEnableCritRate");
+      UpdateShowCritRate(_savedShowCritRate);
 
       // Mini bars
-      SavedMiniBars = ConfigUtil.IfSet("OverlayMiniBars");
-      UpdateMiniBars(SavedMiniBars);
+      _savedMiniBars = ConfigUtil.IfSet("OverlayMiniBars");
+      UpdateMiniBars(_savedMiniBars);
 
-      CurrentShowDps = ConfigUtil.IfSet("OverlayShowingDps");
-      dpsButton.Foreground = CurrentShowDps ? ActiveBrush : InActiveBrush;
-      tankButton.Foreground = !CurrentShowDps ? ActiveBrush : InActiveBrush;
+      _currentShowDps = ConfigUtil.IfSet("OverlayShowingDps");
+      dpsButton.Foreground = _currentShowDps ? ActiveBrush : InActiveBrush;
+      tankButton.Foreground = !_currentShowDps ? ActiveBrush : InActiveBrush;
 
-      UpdateTimer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
-      UpdateTimer.Tick += UpdateTimerTick;
+      _updateTimer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
+      _updateTimer.Tick += UpdateTimerTick;
 
       if (preview)
       {
-        UpdateTimer.Stop();
+        _updateTimer.Stop();
         ResizeMode = ResizeMode.CanResizeWithGrip;
         buttonsPanel.Visibility = Visibility.Visible;
         SetResourceReference(BorderBrushProperty, "PreviewBackgroundBrush");
@@ -153,7 +153,7 @@ namespace EQLogParser
         BorderBrush = null;
         Background = null;
         border.SetResourceReference(Border.BackgroundProperty, "DamageOverlayBackgroundBrush");
-        UpdateTimer.Start();
+        _updateTimer.Start();
       }
     }
 
@@ -171,20 +171,20 @@ namespace EQLogParser
       DamageOverlayStats damageOverlayStats;
       lock (StatsLock)
       {
-        damageOverlayStats = Stats;
-        var update = DamageStatsManager.ComputeOverlayStats(Stats == null, CurrentDamageMode, maxRows, CurrentSelectedClass);
+        damageOverlayStats = _stats;
+        var update = DamageStatsManager.ComputeOverlayStats(_stats == null, _currentDamageMode, maxRows, _currentSelectedClass);
 
         if (update == null)
         {
-          if (Stats != null && (CurrentDamageMode != 0 || (DateTime.Now.Ticks - Stats.LastUpdateTicks) >= DamageModeZeroTimeout))
+          if (_stats != null && (_currentDamageMode != 0 || (DateTime.Now.Ticks - _stats.LastUpdateTicks) >= DamageModeZeroTimeout))
           {
-            damageOverlayStats = Stats = null;
+            damageOverlayStats = _stats = null;
           }
         }
         else
         {
           update.LastUpdateTicks = DateTime.Now.Ticks;
-          damageOverlayStats = Stats = update;
+          damageOverlayStats = _stats = update;
         }
       }
 
@@ -200,7 +200,7 @@ namespace EQLogParser
           LoadStats(tankContent.Children, damageOverlayStats.TankStats);
         }
 
-        if (CurrentShowDps)
+        if (_currentShowDps)
         {
           if (tankContent.Visibility != Visibility.Collapsed)
           {
@@ -272,7 +272,7 @@ namespace EQLogParser
 
           string name;
           string origName;
-          if (CurrentHideOthers && !isMe)
+          if (_currentHideOthers && !isMe)
           {
             name = $"{stat.Rank}. Hidden Player";
             origName = "";
@@ -283,15 +283,15 @@ namespace EQLogParser
             origName = stat.OrigName;
           }
 
-          if (CurrentShowCritRate > 0)
+          if (_currentShowCritRate > 0)
           {
             var critMods = new List<string>();
-            if (CurrentShowCritRate is 1 or 3 && isMe && DataManager.Instance.MyDoTCritRateMod is var doTCritRate and > 0)
+            if (_currentShowCritRate is 1 or 3 && isMe && DataManager.Instance.MyDoTCritRateMod is var doTCritRate and > 0)
             {
               critMods.Add($"DoT +{doTCritRate}");
             }
 
-            if (CurrentShowCritRate is 2 or 3 && isMe && DataManager.Instance.MyNukeCritRateMod is var nukeCritRate and > 0)
+            if (_currentShowCritRate is 2 or 3 && isMe && DataManager.Instance.MyNukeCritRateMod is var nukeCritRate and > 0)
             {
               critMods.Add($"Nuke +{nukeCritRate}");
             }
@@ -303,7 +303,7 @@ namespace EQLogParser
           }
 
           damageBar?.Update(origName, name, StatsUtil.FormatTotals(stat.Total),
-          StatsUtil.FormatTotals(stat.DPS, 1), stat.TotalSeconds.ToString(CultureInfo.InvariantCulture), barPercent);
+          StatsUtil.FormatTotals(stat.Dps, 1), stat.TotalSeconds.ToString(CultureInfo.InvariantCulture), barPercent);
 
           if (damageBar?.Visibility == Visibility.Collapsed)
           {
@@ -322,7 +322,7 @@ namespace EQLogParser
 
       var titleBar = children[^1] as DamageBar;
       titleBar?.Update("", localStats.TargetTitle, StatsUtil.FormatTotals(localStats.RaidStats.Total),
-        StatsUtil.FormatTotals(localStats.RaidStats.DPS, 1), localStats.RaidStats.TotalSeconds.ToString(CultureInfo.InvariantCulture), 0);
+        StatsUtil.FormatTotals(localStats.RaidStats.Dps, 1), localStats.RaidStats.TotalSeconds.ToString(CultureInfo.InvariantCulture), 0);
 
       if (titleBar?.Visibility == Visibility.Collapsed)
       {
@@ -372,40 +372,40 @@ namespace EQLogParser
     {
       ConfigUtil.SetSetting("OverlayHeight", Height);
       ConfigUtil.SetSetting("OverlayWidth", Width);
-      SavedHeight = Height;
-      SavedWidth = Width;
+      _savedHeight = Height;
+      _savedWidth = Width;
 
       ConfigUtil.SetSetting("OverlayTop", Top);
       ConfigUtil.SetSetting("OverlayLeft", Left);
-      SavedTop = Top;
-      SavedLeft = Left;
+      _savedTop = Top;
+      _savedLeft = Left;
 
       if (Application.Current.Resources["DamageOverlayFontSize"] is double fontSize)
       {
         ConfigUtil.SetSetting("OverlayFontSize", fontSize);
-        SavedFontSize = (int)fontSize;
+        _savedFontSize = (int)fontSize;
       }
 
-      ConfigUtil.SetSetting("OverlayDamageMode", CurrentDamageMode);
-      SavedDamageMode = CurrentDamageMode;
+      ConfigUtil.SetSetting("OverlayDamageMode", _currentDamageMode);
+      _savedDamageMode = _currentDamageMode;
 
-      ConfigUtil.SetSetting("OverlaySelectedClass", CurrentSelectedClass);
-      SavedSelectedClass = CurrentSelectedClass;
+      ConfigUtil.SetSetting("OverlaySelectedClass", _currentSelectedClass);
+      _savedSelectedClass = _currentSelectedClass;
 
-      ConfigUtil.SetSetting("OverlayHideOtherPlayers", CurrentHideOthers);
-      SavedHideOthers = CurrentHideOthers;
+      ConfigUtil.SetSetting("OverlayHideOtherPlayers", _currentHideOthers);
+      _savedHideOthers = _currentHideOthers;
 
-      ConfigUtil.SetSetting("OverlayEnableCritRate", CurrentShowCritRate);
-      SavedShowCritRate = CurrentShowCritRate;
+      ConfigUtil.SetSetting("OverlayEnableCritRate", _currentShowCritRate);
+      _savedShowCritRate = _currentShowCritRate;
 
       ConfigUtil.SetSetting("OverlayMiniBars", miniBars.IsChecked == true);
-      SavedMiniBars = miniBars.IsChecked == true;
+      _savedMiniBars = miniBars.IsChecked == true;
 
       ConfigUtil.SetSetting("OverlayMaxRows", maxRowsList.SelectedIndex + 1);
-      SavedMaxRows = maxRowsList.SelectedIndex + 1;
+      _savedMaxRows = maxRowsList.SelectedIndex + 1;
 
       ConfigUtil.SetSetting("OverlayRankColor", progressBrush.Color.ToString());
-      SavedProgressColor = progressBrush.Color.ToString();
+      _savedProgressColor = progressBrush.Color.ToString();
 
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
@@ -414,31 +414,31 @@ namespace EQLogParser
 
     private void CancelClick(object sender, RoutedEventArgs e)
     {
-      Height = SavedHeight;
-      Width = SavedWidth;
-      Top = SavedTop;
-      Left = SavedLeft;
+      Height = _savedHeight;
+      Width = _savedWidth;
+      Top = _savedTop;
+      Left = _savedLeft;
 
-      if ((maxRowsList.SelectedIndex + 1) != SavedMaxRows)
+      if ((maxRowsList.SelectedIndex + 1) != _savedMaxRows)
       {
-        UpdateMaxRows(SavedMaxRows);
+        UpdateMaxRows(_savedMaxRows);
       }
 
-      CurrentShowCritRate = SavedShowCritRate;
-      UpdateShowCritRate(CurrentShowCritRate);
+      _currentShowCritRate = _savedShowCritRate;
+      UpdateShowCritRate(_currentShowCritRate);
 
-      CurrentHideOthers = SavedHideOthers;
-      UpdateHideOthers(CurrentHideOthers);
+      _currentHideOthers = _savedHideOthers;
+      UpdateHideOthers(_currentHideOthers);
 
-      CurrentDamageMode = SavedDamageMode;
-      UpdateDamageMode(CurrentDamageMode);
+      _currentDamageMode = _savedDamageMode;
+      UpdateDamageMode(_currentDamageMode);
 
-      CurrentSelectedClass = SavedSelectedClass;
-      UpdateSelectedClass(CurrentSelectedClass);
+      _currentSelectedClass = _savedSelectedClass;
+      UpdateSelectedClass(_currentSelectedClass);
 
-      UpdateFontSize(SavedFontSize);
-      UpdateMiniBars(SavedMiniBars);
-      UpdateProgressBrush(SavedProgressColor);
+      UpdateFontSize(_savedFontSize);
+      UpdateMiniBars(_savedMiniBars);
+      UpdateProgressBrush(_savedProgressColor);
 
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
@@ -449,7 +449,7 @@ namespace EQLogParser
     {
       DragMove();
 
-      if (Preview)
+      if (_preview)
       {
         DataChanged();
       }
@@ -458,10 +458,10 @@ namespace EQLogParser
     private void WindowLoaded(object sender, RoutedEventArgs e)
     {
       // delay to avoid WindowSize event from saving new values
-      SavedHeight = Height;
-      SavedWidth = Width;
-      SavedTop = Top;
-      SavedLeft = Left;
+      _savedHeight = Height;
+      _savedWidth = Width;
+      _savedTop = Top;
+      _savedLeft = Left;
     }
 
     private void SetWindowSizes(double height, double width, double top, double left)
@@ -498,7 +498,7 @@ namespace EQLogParser
 
     private void UpdateSelectedClass(string selectedClass)
     {
-      CurrentSelectedClass = selectedClass;
+      _currentSelectedClass = selectedClass;
       if (classList.SelectedItem?.ToString() != selectedClass)
       {
         classList.SelectedItem = selectedClass;
@@ -583,9 +583,9 @@ namespace EQLogParser
 
     private void UpdateHideOthers(bool hideOthers)
     {
-      CurrentHideOthers = hideOthers;
+      _currentHideOthers = hideOthers;
 
-      var selectedIndex = CurrentHideOthers ? 1 : 0;
+      var selectedIndex = _currentHideOthers ? 1 : 0;
       if (showNames.SelectedIndex != selectedIndex)
       {
         showNames.SelectedIndex = selectedIndex;
@@ -603,7 +603,7 @@ namespace EQLogParser
 
     private void UpdateShowCritRate(int show)
     {
-      CurrentShowCritRate = show;
+      _currentShowCritRate = show;
 
       var selectedIndex = show;
       if (showCritRate.SelectedIndex != selectedIndex)
@@ -624,7 +624,7 @@ namespace EQLogParser
 
     private void UpdateDamageMode(int damageMode)
     {
-      CurrentDamageMode = damageMode;
+      _currentDamageMode = damageMode;
       if (damageModeList.SelectedItem == null || (damageModeList.SelectedItem is ComboBoxItem selected && !selected.Tag.Equals(damageMode.ToString())))
       {
         foreach (var item in damageModeList.Items)
@@ -691,9 +691,9 @@ namespace EQLogParser
 
       UpdateMiniBars(miniBars.IsChecked == true);
 
-      if (Preview)
+      if (_preview)
       {
-        LoadTestData(Preview);
+        LoadTestData(_preview);
       }
     }
 
@@ -847,7 +847,7 @@ namespace EQLogParser
     {
       lock (StatsLock)
       {
-        UpdateTimer.Stop();
+        _updateTimer.Stop();
       }
 
       Hide();
@@ -859,18 +859,18 @@ namespace EQLogParser
     {
       lock (StatsLock)
       {
-        if (CurrentShowDps)
+        if (_currentShowDps)
         {
-          if (Stats.DamageStats != null)
+          if (_stats.DamageStats != null)
           {
-            (Application.Current.MainWindow as MainWindow)?.AddAndCopyDamageParse(Stats.DamageStats, Stats.DamageStats.StatsList);
+            (Application.Current.MainWindow as MainWindow)?.AddAndCopyDamageParse(_stats.DamageStats, _stats.DamageStats.StatsList);
           }
         }
         else
         {
-          if (Stats.TankStats != null)
+          if (_stats.TankStats != null)
           {
-            (Application.Current.MainWindow as MainWindow)?.AddAndCopyTankParse(Stats.TankStats, Stats.TankStats.StatsList);
+            (Application.Current.MainWindow as MainWindow)?.AddAndCopyTankParse(_stats.TankStats, _stats.TankStats.StatsList);
           }
         }
       }
@@ -880,8 +880,8 @@ namespace EQLogParser
     {
       dpsButton.Foreground = ActiveBrush;
       tankButton.Foreground = InActiveBrush;
-      CurrentShowDps = true;
-      ConfigUtil.SetSetting("OverlayShowingDps", CurrentShowDps);
+      _currentShowDps = true;
+      ConfigUtil.SetSetting("OverlayShowingDps", _currentShowDps);
       UpdateTimerTick(null, null);
     }
 
@@ -889,8 +889,8 @@ namespace EQLogParser
     {
       dpsButton.Foreground = InActiveBrush;
       tankButton.Foreground = ActiveBrush;
-      CurrentShowDps = false;
-      ConfigUtil.SetSetting("OverlayShowingDps", CurrentShowDps);
+      _currentShowDps = false;
+      ConfigUtil.SetSetting("OverlayShowingDps", _currentShowDps);
       UpdateTimerTick(null, null);
     }
 
@@ -898,16 +898,16 @@ namespace EQLogParser
     {
       lock (StatsLock)
       {
-        Stats = null;
+        _stats = null;
         DataManager.Instance.ResetOverlayFights();
       }
     }
 
     private void WindowSizeChanged(object sender, SizeChangedEventArgs e)
     {
-      if (Preview)
+      if (_preview)
       {
-        if (!double.IsNaN(SavedTop))
+        if (!double.IsNaN(_savedTop))
         {
           DataChanged();
         }
@@ -916,7 +916,7 @@ namespace EQLogParser
 
     private void WindowClosing(object sender, CancelEventArgs e)
     {
-      UpdateTimer?.Stop();
+      _updateTimer?.Stop();
       damageContent.Children.Clear();
       tankContent.Children.Clear();
     }
@@ -950,15 +950,15 @@ namespace EQLogParser
     {
       base.OnSourceInitialized(e);
 
-      if (!Preview)
+      if (!_preview)
       {
         var source = (HwndSource)PresentationSource.FromVisual(this);
         if (source != null)
         {
           // set to layered and topmost by xaml
-          var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
-          exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
-          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
+          var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
+          exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow | (int)NativeMethods.ExtendedWindowStyles.WsExTransparent;
+          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, (IntPtr)exStyle);
         }
       }
     }

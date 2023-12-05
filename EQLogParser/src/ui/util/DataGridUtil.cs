@@ -20,10 +20,10 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  static class DataGridUtil
+  internal static class DataGridUtil
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-    private static int StartRow;
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+    private static int _startRow;
 
     internal static Style CreateHighlightForegroundStyle(string name, IValueConverter converter = null)
     {
@@ -40,44 +40,48 @@ namespace EQLogParser
       {
         if (sender is SfDataGrid grid)
         {
-          var sortcolumn = grid.View.SortDescriptions.FirstOrDefault(x => x.PropertyName == e.AddedItems[0].ColumnName);
-          grid.View.SortDescriptions.Remove(sortcolumn);
+          var sortColumn = grid.View.SortDescriptions.FirstOrDefault(x => x.PropertyName == e.AddedItems[0].ColumnName);
+          grid.View.SortDescriptions.Remove(sortColumn);
 
           SortDescription sortDescription;
           if (descending != null && descending.Contains(e.AddedItems[0].ColumnName))
           {
-            sortDescription = new SortDescription(sortcolumn.PropertyName, ListSortDirection.Descending);
+            sortDescription = new SortDescription(sortColumn.PropertyName, ListSortDirection.Descending);
           }
           else
           {
-            sortDescription = new SortDescription(sortcolumn.PropertyName, ListSortDirection.Ascending);
+            sortDescription = new SortDescription(sortColumn.PropertyName, ListSortDirection.Ascending);
           }
 
           grid.View.SortDescriptions.Add(sortDescription);
         }
         else if (sender is SfTreeGrid treeGrid)
         {
-          var sortcolumn = treeGrid.View.SortDescriptions.FirstOrDefault(x => x.ColumnName == e.AddedItems[0].ColumnName);
-          treeGrid.View.SortDescriptions.Remove(sortcolumn);
+          var sortColumns = treeGrid.View.SortDescriptions.FirstOrDefault(x => x.ColumnName == e.AddedItems[0].ColumnName);
 
-          SortColumnDescription sortDescription;
-          if (descending != null && descending.Contains(e.AddedItems[0].ColumnName))
+          if (sortColumns != null)
           {
-            sortDescription = new SortColumnDescription { ColumnName = sortcolumn.ColumnName, SortDirection = ListSortDirection.Descending };
-          }
-          else
-          {
-            sortDescription = new SortColumnDescription { ColumnName = sortcolumn.ColumnName, SortDirection = ListSortDirection.Ascending };
-          }
+            treeGrid.View.SortDescriptions.Remove(sortColumns);
 
-          treeGrid.View.SortDescriptions.Add(sortDescription);
+            SortColumnDescription sortDescription;
+            if (descending != null && descending.Contains(e.AddedItems[0].ColumnName))
+            {
+              sortDescription = new SortColumnDescription { ColumnName = sortColumns.ColumnName, SortDirection = ListSortDirection.Descending };
+            }
+            else
+            {
+              sortDescription = new SortColumnDescription { ColumnName = sortColumns.ColumnName, SortDirection = ListSortDirection.Ascending };
+            }
+
+            treeGrid.View.SortDescriptions.Add(sortDescription);
+          }
         }
       }
     }
 
     internal static void SortColumnsChanging(object sender, GridSortColumnsChangingEventArgs e, IReadOnlyCollection<string> descending)
     {
-      // Initially, we can change the SortDirection of particular column based on columnchanged action. 
+      // Initially, we can change the SortDirection of particular column based on column changed action. 
       if (e.Action == NotifyCollectionChangedAction.Add)
       {
         if (descending != null && descending.Contains(e.AddedItems[0].ColumnName))
@@ -110,7 +114,7 @@ namespace EQLogParser
       }
     }
 
-    internal static Tuple<List<string>, List<List<object>>> BuildExportData(SfGridBase gridBase)
+    internal static (List<string>, List<List<object>>) BuildExportData(SfGridBase gridBase)
     {
       var headers = new List<string>();
       var headerKeys = new List<string>();
@@ -147,26 +151,29 @@ namespace EQLogParser
         records = treeGrid.View.Nodes.Select(node => node.Item).ToList();
       }
 
-      // Rank data is in the row header column not a regular column
-      if (records.Count > 0 && records[0] is PlayerStats)
+      if (records != null)
       {
-        headers.Insert(0, "Rank");
-        headerKeys.Insert(0, "Rank");
-      }
-
-      foreach (ref var record in records.ToArray().AsSpan())
-      {
-        var row = new List<object>();
-        foreach (var key in headerKeys)
+        // Rank data is in the row header column not a regular column
+        if (records.Count > 0 && records[0] is PlayerStats)
         {
-          // regular object with properties
-          row.Add(props.GetFormattedValue(record, key) ?? "");
+          headers.Insert(0, "Rank");
+          headerKeys.Insert(0, "Rank");
         }
 
-        data.Add(row);
+        foreach (ref var record in records.ToArray().AsSpan())
+        {
+          var row = new List<object>();
+          foreach (var key in headerKeys)
+          {
+            // regular object with properties
+            row.Add(props.GetFormattedValue(record, key) ?? "");
+          }
+
+          data.Add(row);
+        }
       }
 
-      return new Tuple<List<string>, List<List<object>>>(headers, data);
+      return (headers, data);
     }
 
     internal static void CreateImage(SfGridBase gridBase, Label titleLabel, bool allData = false)
@@ -176,7 +183,6 @@ namespace EQLogParser
         gridBase.Dispatcher.InvokeAsync(() =>
         {
           MessageWindow dialog = null;
-          var parent = gridBase.Parent as Panel;
           var tableHeight = GetTableHeight(gridBase, allData);
           var tableWidth = GetTableWidth(gridBase, allData);
           var needHeightChange = tableHeight > gridBase.ActualHeight;
@@ -185,23 +191,27 @@ namespace EQLogParser
           gridBase.SelectedItems.Clear();
           gridBase.IsHitTestVisible = false;
 
+          var parent = gridBase.Parent as Panel;
           if (needHeightChange || needWidthChange)
           {
             dialog = new MessageWindow("Please Wait while Image is Processed.", Resource.COPY_LARGE_IMAGE);
             dialog.Show();
 
-            gridBase.Dispatcher.InvokeAsync(() =>
+            if (parent != null)
             {
-              if (needHeightChange)
+              gridBase.Dispatcher.InvokeAsync(() =>
               {
-                parent.Height = tableHeight + 200; // be safe and make sure it has extra room to work with
-              }
+                if (needHeightChange)
+                {
+                  parent.Height = tableHeight + 200; // be safe and make sure it has extra room to work with
+                }
 
-              if (needWidthChange)
-              {
-                parent.Width = tableWidth + 200;
-              }
-            }, DispatcherPriority.Background);
+                if (needWidthChange)
+                {
+                  parent.Width = tableWidth + 200;
+                }
+              }, DispatcherPriority.Background);
+            }
           }
 
           gridBase.Dispatcher.InvokeAsync(() =>
@@ -212,14 +222,14 @@ namespace EQLogParser
               gridBase.Measure(gridBase.RenderSize);
 
               // if table needed resize then recalculate values
-              if (!double.IsNaN(parent.Height) || !double.IsNaN(parent.Width))
+              if (parent != null && (!double.IsNaN(parent.Height) || !double.IsNaN(parent.Width)))
               {
                 tableHeight = GetTableHeight(gridBase, allData);
                 tableWidth = GetTableWidth(gridBase, allData);
               }
 
               var titleHeight = titleLabel.ActualHeight;
-              var dpiScale = UIElementUtil.GetDpi();
+              var dpiScale = UiElementUtil.GetDpi();
 
               // create title image
               var rtb = new RenderTargetBitmap((int)tableWidth, (int)titleHeight, dpiScale, dpiScale, PixelFormats.Default);
@@ -247,14 +257,17 @@ namespace EQLogParser
               rtb.Render(dv);
               Clipboard.SetImage(BitmapFrame.Create(rtb));
 
-              if (!double.IsNaN(parent.Height))
+              if (parent != null)
               {
-                parent.Height = double.NaN;
-              }
+                if (!double.IsNaN(parent.Height))
+                {
+                  parent.Height = double.NaN;
+                }
 
-              if (!double.IsNaN(parent.Width))
-              {
-                parent.Width = double.NaN;
+                if (!double.IsNaN(parent.Width))
+                {
+                  parent.Width = double.NaN;
+                }
               }
             }
             catch (Exception ex)
@@ -317,7 +330,7 @@ namespace EQLogParser
       dynamic elem = e.OriginalSource;
       if (sender is SfTreeGrid treeGrid && elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is var row and > -1)
       {
-        StartRow = row;
+        _startRow = row;
         // Left click happened, current item is selected, now listen for mouse movement and release of left button
         treeGrid.PreviewMouseLeftButtonUp += PreviewMouseLeftButtonUp;
         treeGrid.PreviewMouseMove += MouseMove;
@@ -444,22 +457,22 @@ namespace EQLogParser
           {
             if (!treeGrid.SelectionController.SelectedRows.Contains(row))
             {
-              treeGrid.SelectRows(StartRow, row);
+              treeGrid.SelectRows(_startRow, row);
             }
             else
             {
               treeGrid.SelectionController.ClearSelections(false);
               var direction = 0;
-              if (StartRow < row)
+              if (_startRow < row)
               {
                 direction = -1;
               }
-              else if (StartRow > row)
+              else if (_startRow > row)
               {
                 direction = 1;
               }
 
-              treeGrid.SelectRows(StartRow, row + direction);
+              treeGrid.SelectRows(_startRow, row + direction);
             }
 
             treeGrid.CurrentItem = stats;
@@ -531,7 +544,7 @@ namespace EQLogParser
             name = "% Lucky";
           }
 
-          for (var i = 0; i < columns.Count; i++)
+          for (var i = 0; columns != null && i < columns.Count; i++)
           {
             // handle old version that saved column display names
             // Eventually (remove the HeaderText check)
@@ -547,7 +560,7 @@ namespace EQLogParser
       }
 
       // check for new columns that didn't exist when preferences were saved
-      for (var i = 0; i < columns.Count; i++)
+      for (var i = 0; columns != null && i < columns.Count; i++)
       {
         if (!found.ContainsKey(columns[i].MappingName))
         {
@@ -579,19 +592,19 @@ namespace EQLogParser
       }
 
       columnCombo.ItemsSource = list;
-      UIElementUtil.SetComboBoxTitle(columnCombo, selectedCount, Resource.COLUMNS_SELECTED);
+      UiElementUtil.SetComboBoxTitle(columnCombo, selectedCount, Resource.COLUMNS_SELECTED);
     }
 
-    private static dynamic SetColumns(ComboBox columnCombo, SfDataGrid dataGrid, dynamic updated)
+    private static dynamic SetColumns(FrameworkElement columnCombo, SfDataGrid dataGrid, dynamic updated)
     {
       dataGrid.Columns = updated;
 
       // save column order if it changes
       dataGrid.QueryColumnDragging += (sender, e) =>
       {
-        if (e.Reason == QueryColumnDraggingReason.Dropped && sender is SfDataGrid dataGrid)
+        if (e.Reason == QueryColumnDraggingReason.Dropped && sender is SfDataGrid grid)
         {
-          var columns = dataGrid.Columns.ToList().Select(column => column.MappingName).ToList();
+          var columns = grid.Columns.ToList().Select(column => column.MappingName).ToList();
           ConfigUtil.SetSetting(columnCombo.Tag + "DisplayIndex", string.Join(",", columns));
         }
       };
@@ -599,7 +612,7 @@ namespace EQLogParser
       return dataGrid.Columns;
     }
 
-    private static dynamic SetColumns(ComboBox columnCombo, SfTreeGrid treeGrid, dynamic updated)
+    private static dynamic SetColumns(FrameworkElement columnCombo, SfTreeGrid treeGrid, dynamic updated)
     {
       SetTreeExpander(treeGrid, updated);
       treeGrid.Columns = updated;
@@ -607,10 +620,10 @@ namespace EQLogParser
       // save column order if it changes
       treeGrid.ColumnDragging += (sender, e) =>
       {
-        if (e.Reason == QueryColumnDraggingReason.Dropped && sender is SfTreeGrid treeGrid)
+        if (e.Reason == QueryColumnDraggingReason.Dropped && sender is SfTreeGrid grid)
         {
-          SetTreeExpander(treeGrid, treeGrid.Columns);
-          var columns = treeGrid.Columns.ToList().Select(column => column.MappingName).ToList();
+          SetTreeExpander(grid, grid.Columns);
+          var columns = grid.Columns.ToList().Select(column => column.MappingName).ToList();
           ConfigUtil.SetSetting(columnCombo.Tag + "DisplayIndex", string.Join(",", columns));
         }
       };
@@ -618,7 +631,7 @@ namespace EQLogParser
       return treeGrid.Columns;
     }
 
-    private static bool IsColumnVisible(HashSet<string> visible, dynamic columns, int i)
+    private static bool IsColumnVisible(IReadOnlySet<string> visible, dynamic columns, int i)
     {
       var show = true;
       if (visible != null)
@@ -655,7 +668,7 @@ namespace EQLogParser
           }
         }
 
-        UIElementUtil.SetComboBoxTitle(columnCombo, visible.Count, Resource.COLUMNS_SELECTED);
+        UiElementUtil.SetComboBoxTitle(columnCombo, visible.Count, Resource.COLUMNS_SELECTED);
 
         if (gridBase is SfDataGrid grid)
         {

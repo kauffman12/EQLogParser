@@ -17,16 +17,16 @@ namespace EQLogParser
   internal class TextSoundEditor : BaseTypeEditor
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-    private SoundPlayer SoundPlayer;
-    private readonly ObservableCollection<string> FileList;
-    private ComboBox TheOptionsCombo;
-    private ComboBox TheSoundCombo;
-    private TextBox TheFakeTextBox;
-    private TextBox TheRealTextBox;
+    private SoundPlayer _soundPlayer;
+    private readonly ObservableCollection<string> _fileList;
+    private ComboBox _theOptionsCombo;
+    private ComboBox _theSoundCombo;
+    private TextBox _theFakeTextBox;
+    private TextBox _theRealTextBox;
 
     public TextSoundEditor(ObservableCollection<string> fileList)
     {
-      FileList = fileList;
+      _fileList = fileList;
     }
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
@@ -40,8 +40,8 @@ namespace EQLogParser
         UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
       };
 
-      TheRealTextBox.DataContext = property.DataContext;
-      BindingOperations.SetBinding(TheRealTextBox, TextBox.TextProperty, binding);
+      _theRealTextBox.DataContext = property.DataContext;
+      BindingOperations.SetBinding(_theRealTextBox, TextBox.TextProperty, binding);
     }
 
     public override object Create(PropertyInfo propertyInfo) => Create();
@@ -54,12 +54,12 @@ namespace EQLogParser
       grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
       grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
 
-      TheOptionsCombo = new ComboBox();
-      TheOptionsCombo.SetValue(Grid.ColumnProperty, 1);
-      TheOptionsCombo.ItemsSource = new List<string> { "Text to Speak", "Play Sound" };
-      TheOptionsCombo.SelectedIndex = 0;
+      _theOptionsCombo = new ComboBox();
+      _theOptionsCombo.SetValue(Grid.ColumnProperty, 1);
+      _theOptionsCombo.ItemsSource = new List<string> { "Text to Speak", "Play Sound" };
+      _theOptionsCombo.SelectedIndex = 0;
 
-      TheFakeTextBox = new TextBox
+      _theFakeTextBox = new TextBox
       {
         HorizontalAlignment = HorizontalAlignment.Stretch,
         HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
@@ -69,23 +69,23 @@ namespace EQLogParser
         BorderThickness = new Thickness(0, 0, 0, 0)
       };
 
-      TheFakeTextBox.SetValue(Grid.ColumnProperty, 0);
-      TheSoundCombo = new ComboBox { Name = "SoundCombo", Visibility = Visibility.Collapsed, Tag = true };
-      TheSoundCombo.SetValue(Grid.ColumnProperty, 0);
-      TheSoundCombo.SelectedIndex = -1;
-      TheRealTextBox = new TextBox { Name = "Real", Visibility = Visibility.Collapsed };
-      TheRealTextBox.TextChanged += RealTextBoxTextChanged;
-      TheSoundCombo.ItemsSource = FileList;
+      _theFakeTextBox.SetValue(Grid.ColumnProperty, 0);
+      _theSoundCombo = new ComboBox { Name = "SoundCombo", Visibility = Visibility.Collapsed, Tag = true };
+      _theSoundCombo.SetValue(Grid.ColumnProperty, 0);
+      _theSoundCombo.SelectedIndex = -1;
+      _theRealTextBox = new TextBox { Name = "Real", Visibility = Visibility.Collapsed };
+      _theRealTextBox.TextChanged += RealTextBoxTextChanged;
+      _theSoundCombo.ItemsSource = _fileList;
 
-      grid.Children.Add(TheRealTextBox);
-      grid.Children.Add(TheOptionsCombo);
-      grid.Children.Add(TheFakeTextBox);
-      grid.Children.Add(TheSoundCombo);
+      grid.Children.Add(_theRealTextBox);
+      grid.Children.Add(_theOptionsCombo);
+      grid.Children.Add(_theFakeTextBox);
+      grid.Children.Add(_theSoundCombo);
 
-      TheFakeTextBox.TextChanged += TextBoxTextChanged;
-      TheSoundCombo.SelectionChanged += SoundComboSelectionChanged;
-      TheOptionsCombo.SelectionChanged += TypeComboBoxSelectionChanged;
-      SoundPlayer ??= new SoundPlayer();
+      _theFakeTextBox.TextChanged += TextBoxTextChanged;
+      _theSoundCombo.SelectionChanged += SoundComboSelectionChanged;
+      _theOptionsCombo.SelectionChanged += TypeComboBoxSelectionChanged;
+      _soundPlayer ??= new SoundPlayer();
 
       return grid;
     }
@@ -105,24 +105,24 @@ namespace EQLogParser
           }
         }
 
-        TheOptionsCombo.SelectedIndex = hideText ? 1 : 0;
-        TheFakeTextBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;
-        TheSoundCombo.Visibility = hideText ? Visibility.Visible : Visibility.Collapsed;
+        _theOptionsCombo.SelectedIndex = hideText ? 1 : 0;
+        _theFakeTextBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;
+        _theSoundCombo.Visibility = hideText ? Visibility.Visible : Visibility.Collapsed;
 
         if (hideText)
         {
-          if (TheSoundCombo?.SelectedValue?.ToString() != soundFile)
+          if (_theSoundCombo?.SelectedValue?.ToString() != soundFile)
           {
-            TheSoundCombo.Tag = true;
-            TheSoundCombo.SelectedValue = soundFile;
+            _theSoundCombo.Tag = true;
+            _theSoundCombo.SelectedValue = soundFile;
           }
         }
 
         if (!hideText)
         {
-          if (TheFakeTextBox.Text != textBox.Text)
+          if (_theFakeTextBox.Text != textBox.Text)
           {
-            TheFakeTextBox.Text = textBox.Text;
+            _theFakeTextBox.Text = textBox.Text;
           }
         }
       }
@@ -133,27 +133,27 @@ namespace EQLogParser
       if (sender is ComboBox { SelectedIndex: > -1 } combo)
       {
         var hideText = combo.SelectedIndex != 0;
-        TheFakeTextBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;
-        TheSoundCombo.Visibility = hideText ? Visibility.Visible : Visibility.Collapsed;
+        _theFakeTextBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;
+        _theSoundCombo.Visibility = hideText ? Visibility.Visible : Visibility.Collapsed;
 
         if (!hideText)
         {
-          var previous = TheFakeTextBox.Text;
-          TheFakeTextBox.Text = previous + " ";
-          TheFakeTextBox.Text = previous;
+          var previous = _theFakeTextBox.Text;
+          _theFakeTextBox.Text = previous + " ";
+          _theFakeTextBox.Text = previous;
         }
         else
         {
-          var isSound = TriggerUtil.MatchSoundFile(TheRealTextBox.Text, out var decoded, out var _);
-          if (!isSound || !TheSoundCombo.Items.Contains(decoded) || (TheSoundCombo.SelectedValue is string selectedValue &&
-            !string.IsNullOrEmpty(selectedValue) && selectedValue != TheRealTextBox.Text))
+          var isSound = TriggerUtil.MatchSoundFile(_theRealTextBox.Text, out var decoded, out var _);
+          if (!isSound || !_theSoundCombo.Items.Contains(decoded) || (_theSoundCombo.SelectedValue is string selectedValue &&
+            !string.IsNullOrEmpty(selectedValue) && selectedValue != _theRealTextBox.Text))
           {
-            TheSoundCombo.Tag = null;
+            _theSoundCombo.Tag = null;
           }
 
-          var previous = (TheSoundCombo.SelectedIndex == -1) ? 0 : TheSoundCombo.SelectedIndex;
-          TheSoundCombo.SelectedIndex = -1;
-          TheSoundCombo.SelectedIndex = previous;
+          var previous = (_theSoundCombo.SelectedIndex == -1) ? 0 : _theSoundCombo.SelectedIndex;
+          _theSoundCombo.SelectedIndex = -1;
+          _theSoundCombo.SelectedIndex = previous;
         }
       }
     }
@@ -165,12 +165,12 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(selected))
         {
           // change from real text box being modified
-          if (combo.Tag == null && SoundPlayer != null && File.Exists(@"data/sounds/" + selected))
+          if (combo.Tag == null && _soundPlayer != null && File.Exists(@"data/sounds/" + selected))
           {
             try
             {
-              SoundPlayer.SoundLocation = @"data/sounds/" + selected;
-              SoundPlayer.Play();
+              _soundPlayer.SoundLocation = @"data/sounds/" + selected;
+              _soundPlayer.Play();
             }
             catch (Exception ex)
             {
@@ -178,9 +178,9 @@ namespace EQLogParser
             }
 
             var codedName = "<<" + selected + ">>";
-            if (TheRealTextBox.Text != codedName)
+            if (_theRealTextBox.Text != codedName)
             {
-              TheRealTextBox.Text = codedName;
+              _theRealTextBox.Text = codedName;
             }
           }
 
@@ -193,7 +193,7 @@ namespace EQLogParser
     {
       if (sender is TextBox textBox)
       {
-        TheRealTextBox.Text = textBox.Text;
+        _theRealTextBox.Text = textBox.Text;
       }
     }
 
@@ -204,36 +204,36 @@ namespace EQLogParser
 
     public override void Detach(PropertyViewItem property)
     {
-      if (TheOptionsCombo != null)
+      if (_theOptionsCombo != null)
       {
-        TheOptionsCombo.SelectionChanged -= TypeComboBoxSelectionChanged;
-        BindingOperations.ClearAllBindings(TheOptionsCombo);
-        TheOptionsCombo = null;
+        _theOptionsCombo.SelectionChanged -= TypeComboBoxSelectionChanged;
+        BindingOperations.ClearAllBindings(_theOptionsCombo);
+        _theOptionsCombo = null;
       }
 
-      if (TheSoundCombo != null)
+      if (_theSoundCombo != null)
       {
-        TheSoundCombo.SelectionChanged -= SoundComboSelectionChanged;
-        BindingOperations.ClearAllBindings(TheSoundCombo);
-        TheSoundCombo = null;
+        _theSoundCombo.SelectionChanged -= SoundComboSelectionChanged;
+        BindingOperations.ClearAllBindings(_theSoundCombo);
+        _theSoundCombo = null;
       }
 
-      if (TheRealTextBox != null)
+      if (_theRealTextBox != null)
       {
-        TheRealTextBox.TextChanged -= RealTextBoxTextChanged;
-        BindingOperations.ClearAllBindings(TheRealTextBox);
-        TheRealTextBox = null;
+        _theRealTextBox.TextChanged -= RealTextBoxTextChanged;
+        BindingOperations.ClearAllBindings(_theRealTextBox);
+        _theRealTextBox = null;
       }
 
-      if (TheFakeTextBox != null)
+      if (_theFakeTextBox != null)
       {
-        TheFakeTextBox.TextChanged -= TextBoxTextChanged;
-        BindingOperations.ClearAllBindings(TheFakeTextBox);
-        TheFakeTextBox = null;
+        _theFakeTextBox.TextChanged -= TextBoxTextChanged;
+        BindingOperations.ClearAllBindings(_theFakeTextBox);
+        _theFakeTextBox = null;
       }
 
-      SoundPlayer?.Dispose();
-      SoundPlayer = null;
+      _soundPlayer?.Dispose();
+      _soundPlayer = null;
     }
   }
 }

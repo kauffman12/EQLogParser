@@ -13,7 +13,7 @@ namespace EQLogParser
 {
   internal class CheckComboBoxEditor : BaseTypeEditor
   {
-    private ComboBox TheComboBox;
+    private ComboBox _theComboBox;
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
     {
@@ -25,7 +25,7 @@ namespace EQLogParser
         ValidatesOnDataErrors = true
       };
 
-      BindingOperations.SetBinding(TheComboBox, ItemsControl.ItemsSourceProperty, binding);
+      BindingOperations.SetBinding(_theComboBox, ItemsControl.ItemsSourceProperty, binding);
     }
 
     public override object Create(PropertyInfo propertyInfo) => Create();
@@ -41,7 +41,7 @@ namespace EQLogParser
       comboBox.DropDownClosed += TheComboBoxDropDownClosed;
       comboBox.DataContextChanged += TheComboBoxDataContextChanged;
 
-      TheComboBox = comboBox;
+      _theComboBox = comboBox;
       return comboBox;
     }
 
@@ -65,7 +65,7 @@ namespace EQLogParser
           if (comboBox.DataContext is PropertyItem propertyItem)
           {
             var label = propertyItem.Name == "SelectedTextOverlays" ? "Text Overlays" : "Timer Overlays";
-            UIElementUtil.SetComboBoxTitle(comboBox, count, label);
+            UiElementUtil.SetComboBoxTitle(comboBox, count, label);
           }
         }
 
@@ -93,12 +93,12 @@ namespace EQLogParser
 
     public override void Detach(PropertyViewItem property)
     {
-      if (TheComboBox != null)
+      if (_theComboBox != null)
       {
-        TheComboBox.DropDownClosed -= TheComboBoxDropDownClosed;
-        TheComboBox.DataContextChanged -= TheComboBoxDataContextChanged;
-        BindingOperations.ClearAllBindings(TheComboBox);
-        TheComboBox = null;
+        _theComboBox.DropDownClosed -= TheComboBoxDropDownClosed;
+        _theComboBox.DataContextChanged -= TheComboBoxDataContextChanged;
+        BindingOperations.ClearAllBindings(_theComboBox);
+        _theComboBox = null;
       }
     }
   }

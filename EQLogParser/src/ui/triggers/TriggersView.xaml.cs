@@ -19,20 +19,20 @@ namespace EQLogParser
   /// </summary>
   public partial class TriggersView : IDocumentContent
   {
-    private readonly Dictionary<string, Window> PreviewWindows = new();
-    private TriggerConfig TheConfig;
-    private readonly FileSystemWatcher Watcher;
-    private readonly PatternEditor PatternEditor;
-    private readonly PatternEditor EndEarlyPatternEditor;
-    private readonly PatternEditor EndEarlyPattern2Editor;
-    private readonly RangeEditor TopEditor;
-    private readonly RangeEditor LeftEditor;
-    private readonly RangeEditor HeightEditor;
-    private readonly RangeEditor WidthEditor;
-    private readonly SpeechSynthesizer TestSynth;
-    private readonly GridLength CharacterViewWidth;
-    private string CurrentCharacterId;
-    private bool Ready;
+    private readonly Dictionary<string, Window> _previewWindows = new();
+    private TriggerConfig _theConfig;
+    private readonly FileSystemWatcher _watcher;
+    private readonly PatternEditor _patternEditor;
+    private readonly PatternEditor _endEarlyPatternEditor;
+    private readonly PatternEditor _endEarlyPattern2Editor;
+    private readonly RangeEditor _topEditor;
+    private readonly RangeEditor _leftEditor;
+    private readonly RangeEditor _heightEditor;
+    private readonly RangeEditor _widthEditor;
+    private readonly SpeechSynthesizer _testSynth;
+    private readonly GridLength _characterViewWidth;
+    private string _currentCharacterId;
+    private bool _ready;
 
     public TriggersView()
     {
@@ -44,7 +44,7 @@ namespace EQLogParser
         return;
       }
 
-      CharacterViewWidth = mainGrid.ColumnDefinitions[0].Width;
+      _characterViewWidth = mainGrid.ColumnDefinitions[0].Width;
       var config = TriggerStateManager.Instance.GetConfig();
       characterView.SetConfig(config);
       UpdateConfig(config);
@@ -54,28 +54,28 @@ namespace EQLogParser
         watchQuickShare.IsChecked = true;
       }
 
-      if ((TestSynth = TriggerUtil.GetSpeechSynthesizer()) != null)
+      if ((_testSynth = TriggerUtil.GetSpeechSynthesizer()) != null)
       {
-        voices.ItemsSource = TestSynth.GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList();
+        voices.ItemsSource = _testSynth.GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList();
       }
 
-      var selectedVoice = TheConfig.Voice;
+      var selectedVoice = _theConfig.Voice;
       if (voices.ItemsSource is List<string> populated && populated.IndexOf(selectedVoice) is var found and > -1)
       {
         voices.SelectedIndex = found;
       }
 
-      rateOption.SelectedIndex = TheConfig.VoiceRate;
+      rateOption.SelectedIndex = _theConfig.VoiceRate;
 
       var fileList = new ObservableCollection<string>();
-      Watcher = TriggerUtil.CreateSoundsWatcher(fileList);
-      TopEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Top");
-      HeightEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Height");
-      LeftEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Left");
-      WidthEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Width");
-      PatternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "Pattern");
-      EndEarlyPatternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "EndEarlyPattern");
-      EndEarlyPattern2Editor = (PatternEditor)AddEditorInstance(new PatternEditor(), "EndEarlyPattern2");
+      _watcher = TriggerUtil.CreateSoundsWatcher(fileList);
+      _topEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Top");
+      _heightEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Height");
+      _leftEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Left");
+      _widthEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Width");
+      _patternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "Pattern");
+      _endEarlyPatternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "EndEarlyPattern");
+      _endEarlyPattern2Editor = (PatternEditor)AddEditorInstance(new PatternEditor(), "EndEarlyPattern2");
       AddEditor<CheckComboBoxEditor>("SelectedTextOverlays", "SelectedTimerOverlays");
       AddEditor<ColorEditor>("OverlayBrush", "FontBrush", "ActiveBrush", "IdleBrush", "ResetBrush", "BackgroundBrush");
       AddEditor<DurationEditor>("ResetDurationTimeSpan", "IdleTimeoutTimeSpan");
@@ -116,7 +116,7 @@ namespace EQLogParser
 
       // don't disconnect this one so tree stays in-sync when receiving quick shares
       TriggerStateManager.Instance.TriggerImportEvent += TriggerImportEvent;
-      theTreeView.Init(CurrentCharacterId, IsCancelSelection, !config.IsAdvanced);
+      theTreeView.Init(_currentCharacterId, IsCancelSelection, !config.IsAdvanced);
     }
 
     private void TriggerImportEvent(bool _)
@@ -155,10 +155,10 @@ namespace EQLogParser
 
     private void BasicChecked(object sender, RoutedEventArgs e)
     {
-      if (Ready && sender is CheckBox checkBox)
+      if (_ready && sender is CheckBox checkBox)
       {
-        TheConfig.IsEnabled = checkBox.IsChecked == true;
-        TriggerStateManager.Instance.UpdateConfig(TheConfig);
+        _theConfig.IsEnabled = checkBox.IsChecked == true;
+        TriggerStateManager.Instance.UpdateConfig(_theConfig);
       }
     }
 
@@ -166,20 +166,20 @@ namespace EQLogParser
     {
       if (character == null)
       {
-        if (CurrentCharacterId != null)
+        if (_currentCharacterId != null)
         {
-          CurrentCharacterId = null;
+          _currentCharacterId = null;
           thePropertyGrid.SelectedObject = null;
-          theTreeView.EnableAndRefreshTriggers(false, CurrentCharacterId);
+          theTreeView.EnableAndRefreshTriggers(false, _currentCharacterId);
         }
       }
       else
       {
-        if (CurrentCharacterId != character.Id)
+        if (_currentCharacterId != character.Id)
         {
-          CurrentCharacterId = character.Id;
+          _currentCharacterId = character.Id;
           thePropertyGrid.SelectedObject = null;
-          theTreeView.EnableAndRefreshTriggers(true, CurrentCharacterId);
+          theTreeView.EnableAndRefreshTriggers(true, _currentCharacterId);
         }
       }
     }
@@ -190,33 +190,33 @@ namespace EQLogParser
       {
         if (advancedText.Text == "Switch to Advanced Settings")
         {
-          TheConfig.IsAdvanced = true;
+          _theConfig.IsAdvanced = true;
           basicCheckBox.Visibility = Visibility.Collapsed;
         }
         else
         {
-          TheConfig.IsAdvanced = false;
+          _theConfig.IsAdvanced = false;
           basicCheckBox.Visibility = Visibility.Visible;
         }
 
-        TriggerStateManager.Instance.UpdateConfig(TheConfig);
+        TriggerStateManager.Instance.UpdateConfig(_theConfig);
       }
     }
 
     private void UpdateConfig(TriggerConfig config)
     {
-      TheConfig = config; // use latest
-      theTreeView.SetConfig(TheConfig);
-      basicCheckBox.Visibility = !TheConfig.IsAdvanced ? Visibility.Visible : Visibility.Collapsed;
-      basicCheckBox.IsChecked = TheConfig.IsEnabled;
+      _theConfig = config; // use latest
+      theTreeView.SetConfig(_theConfig);
+      basicCheckBox.Visibility = !_theConfig.IsAdvanced ? Visibility.Visible : Visibility.Collapsed;
+      basicCheckBox.IsChecked = _theConfig.IsEnabled;
 
-      if (TheConfig.IsAdvanced)
+      if (_theConfig.IsAdvanced)
       {
         voices.Visibility = Visibility.Collapsed;
         rateOption.Visibility = Visibility.Collapsed;
         CharacterSelectedCharacterEvent(characterView.GetSelectedCharacter());
 
-        if (TheConfig.Characters.Count(user => user.IsEnabled) is var count and > 0)
+        if (_theConfig.Characters.Count(user => user.IsEnabled) is var count and > 0)
         {
           titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
           var updatedTitle = $"Triggers Active for {count} Character";
@@ -233,21 +233,21 @@ namespace EQLogParser
         }
 
         advancedText.Text = "Switch to Basic Settings";
-        mainGrid.ColumnDefinitions[0].Width = CharacterViewWidth;
+        mainGrid.ColumnDefinitions[0].Width = _characterViewWidth;
         mainGrid.ColumnDefinitions[1].Width = new GridLength(2);
       }
       else
       {
         voices.Visibility = Visibility.Visible;
         rateOption.Visibility = Visibility.Visible;
-        if (CurrentCharacterId != TriggerStateManager.DefaultUser)
+        if (_currentCharacterId != TriggerStateManager.DefaultUser)
         {
-          CurrentCharacterId = TriggerStateManager.DefaultUser;
+          _currentCharacterId = TriggerStateManager.DefaultUser;
           thePropertyGrid.SelectedObject = null;
-          theTreeView.EnableAndRefreshTriggers(true, CurrentCharacterId);
+          theTreeView.EnableAndRefreshTriggers(true, _currentCharacterId);
         }
 
-        if (TheConfig.IsEnabled)
+        if (_theConfig.IsEnabled)
         {
           titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
           titleLabel.Content = "Triggers Active";
@@ -271,13 +271,13 @@ namespace EQLogParser
 
     private void ClosePreviewOverlaysEvent(bool _)
     {
-      PreviewWindows.Values.ToList().ForEach(window => window.Close());
-      PreviewWindows.Clear();
+      _previewWindows.Values.ToList().ForEach(window => window.Close());
+      _previewWindows.Clear();
     }
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
     {
-      if (Ready)
+      if (_ready)
       {
         if (Equals(sender, watchQuickShare))
         {
@@ -287,32 +287,32 @@ namespace EQLogParser
         {
           if (voices.SelectedValue is string voiceName)
           {
-            TheConfig.Voice = voiceName;
-            TriggerStateManager.Instance.UpdateConfig(TheConfig);
+            _theConfig.Voice = voiceName;
+            TriggerStateManager.Instance.UpdateConfig(_theConfig);
 
-            if (TestSynth != null)
+            if (_testSynth != null)
             {
-              TestSynth.Rate = rateOption.SelectedIndex;
-              TestSynth.SelectVoice(voiceName);
-              TestSynth.SpeakAsync(voiceName);
+              _testSynth.Rate = rateOption.SelectedIndex;
+              _testSynth.SelectVoice(voiceName);
+              _testSynth.SpeakAsync(voiceName);
             }
           }
         }
         else if (Equals(sender, rateOption))
         {
-          TheConfig.VoiceRate = rateOption.SelectedIndex;
-          TriggerStateManager.Instance.UpdateConfig(TheConfig);
+          _theConfig.VoiceRate = rateOption.SelectedIndex;
+          TriggerStateManager.Instance.UpdateConfig(_theConfig);
 
-          if (TestSynth != null)
+          if (_testSynth != null)
           {
-            TestSynth.Rate = rateOption.SelectedIndex;
+            _testSynth.Rate = rateOption.SelectedIndex;
             if (voices.SelectedItem is string voice && !string.IsNullOrEmpty(voice))
             {
-              TestSynth.SelectVoice(voice);
+              _testSynth.SelectVoice(voice);
             }
 
             var rateText = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex;
-            TestSynth.SpeakAsync(rateText);
+            _testSynth.SpeakAsync(rateText);
           }
         }
       }
@@ -320,7 +320,7 @@ namespace EQLogParser
 
     private void TriggerOverlayDeleteEvent(string id)
     {
-      if (PreviewWindows.Remove(id, out var window))
+      if (_previewWindows.Remove(id, out var window))
       {
         window?.Close();
       }
@@ -356,9 +356,9 @@ namespace EQLogParser
       if (args.Property.SelectedObject is TriggerPropertyModel trigger)
       {
         var triggerChange = true;
-        var isValid = TriggerUtil.TestRegexProperty(trigger.UseRegex, trigger.Pattern, PatternEditor);
-        isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex, trigger.EndEarlyPattern, EndEarlyPatternEditor);
-        isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex2, trigger.EndEarlyPattern2, EndEarlyPattern2Editor);
+        var isValid = TriggerUtil.TestRegexProperty(trigger.UseRegex, trigger.Pattern, _patternEditor);
+        isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex, trigger.EndEarlyPattern, _endEarlyPatternEditor);
+        isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex2, trigger.EndEarlyPattern2, _endEarlyPattern2Editor);
         isValid = isValid && !string.IsNullOrEmpty(trigger.Pattern);
 
         if (args.Property.Name == patternItem.PropertyName)
@@ -508,16 +508,16 @@ namespace EQLogParser
       dynamic model = thePropertyGrid?.SelectedObject;
       if ((model is TimerOverlayPropertyModel || model is TextOverlayPropertyModel) && model.Node?.Id is string id)
       {
-        if (!PreviewWindows.TryGetValue(id, out var window))
+        if (!_previewWindows.TryGetValue(id, out var window))
         {
-          PreviewWindows[id] = (model is TimerOverlayPropertyModel) ? new TimerOverlayWindow(model.Node, PreviewWindows)
-            : new TextOverlayWindow(model.Node, PreviewWindows);
-          PreviewWindows[id].Show();
+          _previewWindows[id] = (model is TimerOverlayPropertyModel) ? new TimerOverlayWindow(model.Node, _previewWindows)
+            : new TextOverlayWindow(model.Node, _previewWindows);
+          _previewWindows[id].Show();
         }
         else
         {
           window.Close();
-          PreviewWindows.Remove(id, out _);
+          _previewWindows.Remove(id, out _);
         }
       }
     }
@@ -581,10 +581,10 @@ namespace EQLogParser
       if (node?.OverlayData is { } overlay)
       {
         var wasEnabled = saveButton.IsEnabled;
-        TopEditor.Update(overlay.Top);
-        LeftEditor.Update(overlay.Left);
-        WidthEditor.Update(overlay.Width);
-        HeightEditor.Update(overlay.Height);
+        _topEditor.Update(overlay.Top);
+        _leftEditor.Update(overlay.Left);
+        _widthEditor.Update(overlay.Width);
+        _heightEditor.Update(overlay.Height);
 
         if (!wasEnabled)
         {
@@ -626,7 +626,7 @@ namespace EQLogParser
 
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (VisualParent != null && !Ready)
+      if (VisualParent != null && !_ready)
       {
         TriggerStateManager.Instance.DeleteEvent += TriggerOverlayDeleteEvent;
         TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
@@ -634,21 +634,21 @@ namespace EQLogParser
         characterView.SelectedCharacterEvent += CharacterSelectedCharacterEvent;
         theTreeView.TreeSelectionChangedEvent += TreeSelectionChangedEvent;
         theTreeView.ClosePreviewOverlaysEvent += ClosePreviewOverlaysEvent;
-        Ready = true;
+        _ready = true;
       }
     }
 
     public void HideContent()
     {
-      PreviewWindows.Values.ToList().ForEach(window => window.Close());
-      PreviewWindows.Clear();
+      _previewWindows.Values.ToList().ForEach(window => window.Close());
+      _previewWindows.Clear();
       TriggerStateManager.Instance.DeleteEvent -= TriggerOverlayDeleteEvent;
       TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
       TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
       characterView.SelectedCharacterEvent -= CharacterSelectedCharacterEvent;
       theTreeView.TreeSelectionChangedEvent -= TreeSelectionChangedEvent;
       theTreeView.ClosePreviewOverlaysEvent -= ClosePreviewOverlaysEvent;
-      Ready = false;
+      _ready = false;
     }
 
     private void DictionaryClick(object sender, RoutedEventArgs e)

@@ -10,14 +10,14 @@ namespace EQLogParser
 {
   internal enum SpellClass
   {
-    WAR = 1, CLR = 2, PAL = 4, RNG = 8, SHD = 16, DRU = 32, MNK = 64, BRD = 128, ROG = 256,
-    SHM = 512, NEC = 1024, WIZ = 2048, MAG = 4096, ENC = 8192, BST = 16384, BER = 32768
+    War = 1, Clr = 2, Pal = 4, Rng = 8, Shd = 16, Dru = 32, Mnk = 64, Brd = 128, Rog = 256,
+    Shm = 512, Nec = 1024, Wiz = 2048, Mag = 4096, Enc = 8192, Bst = 16384, Ber = 32768
   }
 
   internal enum SpellTarget
   {
-    LOS = 1, CASTERAE = 2, CASTERGROUP = 3, CASTERPB = 4, SINGLETARGET = 5, SELF = 6, TARGETAE = 8, PET = 14,
-    CASTERPBPLAYERS = 36, PET2 = 38, NEARBYPLAYERSAE = 40, TARGETGROUP = 41, DIRECTIONAE = 42, TARGETRINGAE = 45
+    Los = 1, Casterae = 2, Castergroup = 3, Casterpb = 4, Singletarget = 5, Self = 6, Targetae = 8, Pet = 14,
+    Casterpbplayers = 36, Pet2 = 38, Nearbyplayersae = 40, Targetgroup = 41, Directionae = 42, Targetringae = 45
   }
 
   internal enum SpellResist
@@ -27,39 +27,39 @@ namespace EQLogParser
 
   internal static class Labels
   {
-    public const string ABSORB = "Absorb";
-    public const string DD = "Direct Damage";
-    public const string DOT = "DoT Tick";
-    public const string DS = "Damage Shield";
-    public const string RS = "Reverse DS";
-    public const string BANE = "Bane Damage";
-    public const string OTHER_DMG = "Other Damage";
-    public const string PROC = "Proc";
-    public const string HOT = "HoT Tick";
-    public const string HEAL = "Direct Heal";
-    public const string MELEE = "Melee";
-    public const string SELF_HEAL = "Melee Heal";
-    public const string NO_DATA = "No Data Available";
-    public const string PET_PLAYER_OPTION = "Players +Pets";
-    public const string PLAYER_OPTION = "Players";
-    public const string PET_OPTION = "Pets";
-    public const string RAID_OPTION = "Raid";
-    public const string RAID_TOTALS = "Totals";
-    public const string RIPOSTE = "Riposte";
-    public const string ALL_OPTION = "Uncategorized";
-    public const string UNASSIGNED = "Unknown Pet Owner";
-    public const string UNK = "Unknown";
-    public const string UNK_SPELL = "Unknown Spell";
-    public const string RECEIVED_HEAL_PARSE = "Received Healing";
-    public const string HEAL_PARSE = "Healing";
-    public const string TANK_PARSE = "Tanking";
-    public const string TOP_HEAL_PARSE = "Top Heals";
-    public const string DAMAGE_PARSE = "Damage";
-    public const string MISS = "Miss";
-    public const string DODGE = "Dodge";
-    public const string PARRY = "Parry";
-    public const string BLOCK = "Block";
-    public const string INVULNERABLE = "Invulnerable";
+    public const string Absorb = "Absorb";
+    public const string Dd = "Direct Damage";
+    public const string Dot = "DoT Tick";
+    public const string Ds = "Damage Shield";
+    public const string Rs = "Reverse DS";
+    public const string Bane = "Bane Damage";
+    public const string OtherDmg = "Other Damage";
+    public const string Proc = "Proc";
+    public const string Hot = "HoT Tick";
+    public const string Heal = "Direct Heal";
+    public const string Melee = "Melee";
+    public const string SelfHeal = "Melee Heal";
+    public const string NoData = "No Data Available";
+    public const string PetPlayerOption = "Players +Pets";
+    public const string PlayerOption = "Players";
+    public const string PetOption = "Pets";
+    public const string RaidOption = "Raid";
+    public const string RaidTotals = "Totals";
+    public const string Riposte = "Riposte";
+    public const string AllOption = "Uncategorized";
+    public const string Unassigned = "Unknown Pet Owner";
+    public const string Unk = "Unknown";
+    public const string UnkSpell = "Unknown Spell";
+    public const string ReceivedHealParse = "Received Healing";
+    public const string HealParse = "Healing";
+    public const string TankParse = "Tanking";
+    public const string TopHealParse = "Top Heals";
+    public const string DamageParse = "Damage";
+    public const string Miss = "Miss";
+    public const string Dodge = "Dodge";
+    public const string Parry = "Parry";
+    public const string Block = "Block";
+    public const string Invulnerable = "Invulnerable";
   }
 
   class DataManager
@@ -195,7 +195,7 @@ namespace EQLogParser
       {
         // exact match meaning class-only spell that are of certain target types
         var tgt = (SpellTarget)spell.Target;
-        if (spell.Level <= 254 && spell.Proc == 0 && (tgt == SpellTarget.SELF || tgt == SpellTarget.SINGLETARGET || tgt == SpellTarget.LOS || spell.Rank > 1) &&
+        if (spell.Level <= 254 && spell.Proc == 0 && (tgt == SpellTarget.Self || tgt == SpellTarget.Singletarget || tgt == SpellTarget.Los || spell.Rank > 1) &&
           classEnums.Contains((SpellClass)spell.ClassMask))
         {
           // Obviously illusions are bad to look for
@@ -345,7 +345,7 @@ namespace EQLogParser
 
     internal SpellData GetSpellByAbbrv(string abbrv)
     {
-      if (!string.IsNullOrEmpty(abbrv) && abbrv != Labels.UNASSIGNED && _spellsAbbrvDb.TryGetValue(abbrv, out var value))
+      if (!string.IsNullOrEmpty(abbrv) && abbrv != Labels.Unassigned && _spellsAbbrvDb.TryGetValue(abbrv, out var value))
       {
         return value;
       }
@@ -366,7 +366,7 @@ namespace EQLogParser
     internal SpellData GetDetSpellByName(string name)
     {
       SpellData spellData = null;
-      if (!string.IsNullOrEmpty(name) && name != Labels.UNK_SPELL && _spellsNameDb.TryGetValue(name, out var spellList))
+      if (!string.IsNullOrEmpty(name) && name != Labels.UnkSpell && _spellsNameDb.TryGetValue(name, out var spellList))
       {
         spellData = spellList.Find(item => !item.IsBeneficial);
       }
@@ -377,7 +377,7 @@ namespace EQLogParser
     internal SpellData GetDamagingSpellByName(string name)
     {
       SpellData spellData = null;
-      if (!string.IsNullOrEmpty(name) && name != Labels.UNK_SPELL && _spellsNameDb.TryGetValue(name, out var spellList))
+      if (!string.IsNullOrEmpty(name) && name != Labels.UnkSpell && _spellsNameDb.TryGetValue(name, out var spellList))
       {
         spellData = spellList.Find(item => item.Damaging > 0);
       }
@@ -388,7 +388,7 @@ namespace EQLogParser
     internal SpellData GetHealingSpellByName(string name)
     {
       SpellData spellData = null;
-      if (!string.IsNullOrEmpty(name) && name != Labels.UNK_SPELL && _spellsNameDb.TryGetValue(name, out var spellList))
+      if (!string.IsNullOrEmpty(name) && name != Labels.UnkSpell && _spellsNameDb.TryGetValue(name, out var spellList))
       {
         spellData = spellList.Find(item => item.Damaging < 0);
       }
@@ -400,7 +400,7 @@ namespace EQLogParser
     {
       SpellData spellData = null;
 
-      if (!string.IsNullOrEmpty(name) && name != Labels.UNK_SPELL && _spellsNameDb.TryGetValue(name, out var spellList))
+      if (!string.IsNullOrEmpty(name) && name != Labels.UnkSpell && _spellsNameDb.TryGetValue(name, out var spellList))
       {
         if (spellList.Count <= 10)
         {
@@ -607,7 +607,7 @@ namespace EQLogParser
 
           spellData = new SpellData
           {
-            ID = string.Intern(data[0]),
+            Id = string.Intern(data[0]),
             Name = string.Intern(data[1]),
             NameAbbrv = string.Intern(AbbreviateSpellName(data[1])),
             Level = byte.Parse(data[2], CultureInfo.InvariantCulture),
@@ -652,7 +652,7 @@ namespace EQLogParser
         {
           foreach (var value in filtered)
           {
-            if ((value.Target != (int)SpellTarget.SELF || cast.Caster == player) && value.Name == cast.Spell)
+            if ((value.Target != (int)SpellTarget.Self || cast.Caster == player) && value.Name == cast.Spell)
             {
               return value;
             }
@@ -829,7 +829,7 @@ namespace EQLogParser
       if (spell.Ambiguity.Count < 30)
       {
         var spellClass = (int)PlayerManager.Instance.GetPlayerClassEnum(spell.Receiver);
-        var subset = spell.Ambiguity.FindAll(test => test.Target == (int)SpellTarget.SELF && spellClass != 0 && (test.ClassMask & spellClass) == spellClass);
+        var subset = spell.Ambiguity.FindAll(test => test.Target == (int)SpellTarget.Self && spellClass != 0 && (test.ClassMask & spellClass) == spellClass);
         var distinct = subset.Distinct(AbbrvComparer).ToList();
         replaced = distinct.Count == 1 ? distinct.First() : spell.Ambiguity.First();
       }
@@ -921,7 +921,7 @@ namespace EQLogParser
     static int DurationCompare(SpellData a, SpellData b)
     {
       var result = b.Duration.CompareTo(a.Duration);
-      if (result == 0 && int.TryParse(a.ID, out var aInt) && int.TryParse(b.ID, out var bInt))
+      if (result == 0 && int.TryParse(a.Id, out var aInt) && int.TryParse(b.Id, out var bInt))
       {
         // Check if the durations are equal
         if (aInt != bInt)

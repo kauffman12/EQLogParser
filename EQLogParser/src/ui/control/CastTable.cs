@@ -16,35 +16,35 @@ namespace EQLogParser
     protected bool CurrentShowReceivedSpells = true;
     protected bool CurrentShowSelfOnly;
     protected bool CurrentShowProcs;
-    private const string BENEFICIAL_SPELLS_TYPE = "Beneficial Spells";
-    private const string CAST_SPELLS_TYPE = "Cast Spells";
-    private const string DET_SPELLS_TYPE = "Detrimental Spells";
-    private const string PROC_SPELLS_TYPE = "Hide Procs";
-    private const string RECEIVED_SPELLS_TYPE = "Received Spells";
-    private const string SELF_SPELLS_TYPE = "Hide Spells Only You See";
-    private SfDataGrid TheDataGrid;
-    private Label TheTitleLabel;
+    private const string BeneficialSpellsType = "Beneficial Spells";
+    private const string CastSpellsType = "Cast Spells";
+    private const string DetSpellsType = "Detrimental Spells";
+    private const string ProcSpellsType = "Hide Procs";
+    private const string ReceivedSpellsType = "Received Spells";
+    private const string SelfSpellsType = "Hide Spells Only You See";
+    private SfDataGrid _theDataGrid;
+    private Label _theTitleLabel;
 
     internal void InitCastTable(SfDataGrid dataGrid, Label titleLabel, ComboBox selectedOptions, ComboBox selectedSpellRestrictions)
     {
-      TheDataGrid = dataGrid;
-      TheTitleLabel = titleLabel;
+      _theDataGrid = dataGrid;
+      _theTitleLabel = titleLabel;
 
       var list = new List<ComboBoxItemDetails>
       {
-        new() { IsChecked = true, Text = BENEFICIAL_SPELLS_TYPE },
-        new() { IsChecked = true, Text = CAST_SPELLS_TYPE },
-        new() { IsChecked = true, Text = DET_SPELLS_TYPE },
-        new() { IsChecked = true, Text = RECEIVED_SPELLS_TYPE }
+        new() { IsChecked = true, Text = BeneficialSpellsType },
+        new() { IsChecked = true, Text = CastSpellsType },
+        new() { IsChecked = true, Text = DetSpellsType },
+        new() { IsChecked = true, Text = ReceivedSpellsType }
       };
 
       selectedOptions.ItemsSource = list;
-      UIElementUtil.SetComboBoxTitle(selectedOptions, list.Sum(item => item.IsChecked ? 1 : 0), Resource.SPELL_TYPES_SELECTED);
+      UiElementUtil.SetComboBoxTitle(selectedOptions, list.Sum(item => item.IsChecked ? 1 : 0), Resource.SPELL_TYPES_SELECTED);
 
       list = new List<ComboBoxItemDetails>
       {
-        new(isChecked: true, text: SELF_SPELLS_TYPE),
-        new() { IsChecked = true, Text = PROC_SPELLS_TYPE }
+        new(isChecked: true, text: SelfSpellsType),
+        new() { IsChecked = true, Text = ProcSpellsType }
       };
 
       selectedSpellRestrictions.ItemsSource = list;
@@ -52,8 +52,8 @@ namespace EQLogParser
       MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
-    protected void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitleLabel.Content.ToString());
-    protected void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(TheDataGrid, TheTitleLabel);
+    protected void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(_theDataGrid, _theTitleLabel.Content.ToString());
+    protected void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(_theDataGrid, _theTitleLabel);
 
     protected bool UpdateSelectedCastTypes(ComboBox selected)
     {
@@ -70,7 +70,7 @@ namespace EQLogParser
 
         switch (item.Text)
         {
-          case BENEFICIAL_SPELLS_TYPE:
+          case BeneficialSpellsType:
             if (CurrentShowBeneficialSpells != item.IsChecked)
             {
               changed = true;
@@ -78,7 +78,7 @@ namespace EQLogParser
 
             CurrentShowBeneficialSpells = item.IsChecked;
             break;
-          case CAST_SPELLS_TYPE:
+          case CastSpellsType:
             if (CurrentShowCastSpells != item.IsChecked)
             {
               changed = true;
@@ -86,7 +86,7 @@ namespace EQLogParser
 
             CurrentShowCastSpells = item.IsChecked;
             break;
-          case DET_SPELLS_TYPE:
+          case DetSpellsType:
             if (CurrentShowDetSpells != item.IsChecked)
             {
               changed = true;
@@ -94,7 +94,7 @@ namespace EQLogParser
 
             CurrentShowDetSpells = item.IsChecked;
             break;
-          case RECEIVED_SPELLS_TYPE:
+          case ReceivedSpellsType:
             if (CurrentShowReceivedSpells != item.IsChecked)
             {
               changed = true;
@@ -105,7 +105,7 @@ namespace EQLogParser
         }
       }
 
-      UIElementUtil.SetComboBoxTitle(selected, count, Resource.SPELL_TYPES_SELECTED);
+      UiElementUtil.SetComboBoxTitle(selected, count, Resource.SPELL_TYPES_SELECTED);
       return changed;
     }
 
@@ -116,7 +116,7 @@ namespace EQLogParser
       {
         switch (item.Text)
         {
-          case PROC_SPELLS_TYPE:
+          case ProcSpellsType:
             if (CurrentShowProcs != !item.IsChecked)
             {
               changed = true;
@@ -124,7 +124,7 @@ namespace EQLogParser
 
             CurrentShowProcs = !item.IsChecked;
             break;
-          case SELF_SPELLS_TYPE:
+          case SelfSpellsType:
             if (CurrentShowSelfOnly != !item.IsChecked)
             {
               changed = true;
@@ -217,10 +217,10 @@ namespace EQLogParser
 
     private void EventsThemeChanged(string _)
     {
-      if (TheDataGrid?.View != null)
+      if (_theDataGrid?.View != null)
       {
         // toggle styles to get them to re-render
-        foreach (var column in TheDataGrid.Columns)
+        foreach (var column in _theDataGrid.Columns)
         {
           if (column.CellStyle != null)
           {
@@ -233,15 +233,15 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
+    private bool _disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!disposedValue)
+      if (!_disposedValue)
       {
         MainActions.EventsThemeChanged -= EventsThemeChanged;
-        TheDataGrid?.Dispose();
-        disposedValue = true;
+        _theDataGrid?.Dispose();
+        _disposedValue = true;
       }
     }
 

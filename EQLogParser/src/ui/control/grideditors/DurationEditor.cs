@@ -11,17 +11,17 @@ namespace EQLogParser
 {
   internal class DurationEditor : BaseTypeEditor
   {
-    private TimeSpanEdit TheTimeSpan;
-    private readonly int Min;
+    private TimeSpanEdit _theTimeSpan;
+    private readonly int _min;
 
     public DurationEditor()
     {
-      Min = 0;
+      _min = 0;
     }
 
     public DurationEditor(int min)
     {
-      Min = min;
+      _min = min;
     }
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
@@ -34,7 +34,7 @@ namespace EQLogParser
         ValidatesOnDataErrors = true
       };
 
-      BindingOperations.SetBinding(TheTimeSpan, TimeSpanEdit.ValueProperty, binding);
+      BindingOperations.SetBinding(_theTimeSpan, TimeSpanEdit.ValueProperty, binding);
     }
 
     public override object Create(PropertyInfo propertyInfo) => Create();
@@ -45,13 +45,13 @@ namespace EQLogParser
       var timeSpan = new TimeSpanEdit
       {
         IncrementOnScrolling = false,
-        MinValue = new TimeSpan(0, 0, Min),
+        MinValue = new TimeSpan(0, 0, _min),
         MaxValue = new TimeSpan(23, 59, 59),
         Format = "hh : mm : ss",
         Margin = new Thickness(0, 2, 0, 2)
       };
 
-      TheTimeSpan = timeSpan;
+      _theTimeSpan = timeSpan;
       timeSpan.GotFocus += TimeSpanGotFocus;
       timeSpan.LostFocus += TimeSpanLostFocus;
       timeSpan.PreviewMouseWheel += TimeSpanPreviewMouseWheel;
@@ -67,15 +67,15 @@ namespace EQLogParser
           var inc = e.Delta > 0 ? 1 : -1;
           if (selected >= 10)
           {
-            TheTimeSpan.Value = new TimeSpan(t.Hours, t.Minutes, t.Seconds + inc);
+            _theTimeSpan.Value = new TimeSpan(t.Hours, t.Minutes, t.Seconds + inc);
           }
           else if (selected >= 5)
           {
-            TheTimeSpan.Value = new TimeSpan(t.Hours, t.Minutes + inc, t.Seconds);
+            _theTimeSpan.Value = new TimeSpan(t.Hours, t.Minutes + inc, t.Seconds);
           }
           else if (selected >= 0)
           {
-            TheTimeSpan.Value = new TimeSpan(t.Hours + inc, t.Minutes, t.Seconds);
+            _theTimeSpan.Value = new TimeSpan(t.Hours + inc, t.Minutes, t.Seconds);
           }
           e.Handled = true;
         }
@@ -102,9 +102,9 @@ namespace EQLogParser
     {
       if (key == Key.Tab)
       {
-        if (TheTimeSpan.SelectionStart is >= 0 and <= 2)
+        if (_theTimeSpan.SelectionStart is >= 0 and <= 2)
         {
-          TheTimeSpan.SelectionStart = 3;
+          _theTimeSpan.SelectionStart = 3;
         }
       }
       return false;
@@ -112,14 +112,14 @@ namespace EQLogParser
 
     public override void Detach(PropertyViewItem property)
     {
-      if (TheTimeSpan != null)
+      if (_theTimeSpan != null)
       {
-        TheTimeSpan.GotFocus -= TimeSpanGotFocus;
-        TheTimeSpan.LostFocus -= TimeSpanLostFocus;
-        TheTimeSpan.PreviewMouseWheel -= TimeSpanPreviewMouseWheel;
-        BindingOperations.ClearAllBindings(TheTimeSpan);
-        TheTimeSpan?.Dispose();
-        TheTimeSpan = null;
+        _theTimeSpan.GotFocus -= TimeSpanGotFocus;
+        _theTimeSpan.LostFocus -= TimeSpanLostFocus;
+        _theTimeSpan.PreviewMouseWheel -= TimeSpanPreviewMouseWheel;
+        BindingOperations.ClearAllBindings(_theTimeSpan);
+        _theTimeSpan?.Dispose();
+        _theTimeSpan = null;
       }
     }
   }

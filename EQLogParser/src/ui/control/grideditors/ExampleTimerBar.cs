@@ -8,13 +8,13 @@ namespace EQLogParser
 {
   internal class ExampleTimerBar : ITypeEditor
   {
-    private TimerBar TheTimerBar;
+    private TimerBar _theTimerBar;
 
     public void Attach(PropertyViewItem property, PropertyItem info)
     {
       var overlayId = info.Value as string;
-      TheTimerBar.Init(overlayId);
-      TheTimerBar.Update("Example Timer Bar #1", "00:30", 60.0, new TimerData());
+      _theTimerBar.Init(overlayId);
+      _theTimerBar.Update("Example Timer Bar #1", "00:30", 60.0, new TimerData());
     }
 
     public object Create(PropertyInfo propertyInfo) => Create();
@@ -23,13 +23,13 @@ namespace EQLogParser
     private object Create()
     {
       var timerBar = new TimerBar { Margin = new Thickness(5) };
-      TheTimerBar = timerBar;
+      _theTimerBar = timerBar;
       return timerBar;
     }
 
     public void Detach(PropertyViewItem property)
     {
-      TheTimerBar = null;
+      _theTimerBar = null;
     }
 
     public bool ShouldPropertyGridTryToHandleKeyDown(Key key)

@@ -18,26 +18,26 @@ namespace EQLogParser
   public partial class HitFreqChart : UserControl, IDisposable
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-    private const string CRIT_HITTYPE = "Critical";
-    private const string NON_CRIT_HITTYPE = "Non-Critical";
-    private Dictionary<string, List<HitFreqChartData>> PlayerData;
-    private readonly List<string> MinFreqs = new()
+    private const string CritHittype = "Critical";
+    private const string NonCritHittype = "Non-Critical";
+    private Dictionary<string, List<HitFreqChartData>> _playerData;
+    private readonly List<string> _minFreqs = new()
     { "Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5" };
-    private int PageSize = 9;
-    private readonly List<ColumnData> Columns = new();
+    private int _pageSize = 9;
+    private readonly List<ColumnData> _columns = new();
 
     public HitFreqChart()
     {
       InitializeComponent();
-      minFreqList.ItemsSource = MinFreqs;
+      minFreqList.ItemsSource = _minFreqs;
       minFreqList.SelectedIndex = 0;
       MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
     internal void Update(PlayerStats playerStats, CombinedStats combined)
     {
-      PlayerData = GetHitFreqValues(playerStats, combined);
-      var players = PlayerData.Keys.ToList();
+      _playerData = GetHitFreqValues(playerStats, combined);
+      var players = _playerData.Keys.ToList();
       playerList.ItemsSource = players;
       playerList.SelectedIndex = 0; // triggers event
     }
@@ -49,7 +49,7 @@ namespace EQLogParser
         var header = new List<string> { "Hit Value", "Frequency", "Difference" };
 
         var data = new List<List<object>>();
-        foreach (var column in Columns.ToList())
+        foreach (var column in _columns.ToList())
         {
           data.Add(new List<object> { column.XLongValue, column.Y, column.Diff });
         }
@@ -62,7 +62,7 @@ namespace EQLogParser
       }
     }
 
-    private void CreateImageClick(object sender, RoutedEventArgs e) => UIElementUtil.CreateImage(Dispatcher, sfChart);
+    private void CreateImageClick(object sender, RoutedEventArgs e) => UiElementUtil.CreateImage(Dispatcher, sfChart);
 
     private void EventsThemeChanged(string _)
     {
@@ -88,12 +88,12 @@ namespace EQLogParser
         if (playerList.SelectedItem is string player && hitTypeList.SelectedItem is string type &&
         critTypeList.SelectedItem is string critType && player.Length > 0 && type.Length > 0 && critType.Length > 0)
         {
-          var data = PlayerData[player];
+          var data = _playerData[player];
           var minFreq = minFreqList.SelectedIndex > -1 ? minFreqList.SelectedIndex : 0;
           var first = data.Find(d => d.HitType == type);
-          Columns.Clear();
+          _columns.Clear();
 
-          if (critType == CRIT_HITTYPE)
+          if (critType == CritHittype)
           {
             for (var i = 0; i < first.CritYValues.Count; i++)
             {
@@ -101,7 +101,7 @@ namespace EQLogParser
               {
                 var diff = (i > 0) ? (first.CritXValues[i] - first.CritXValues[i - 1]) : 0;
                 var diffString = (diff == 0) ? "" : "+" + diff;
-                Columns.Add(new ColumnData
+                _columns.Add(new ColumnData
                 {
                   Diff = diff,
                   Y = first.CritYValues[i],
@@ -119,7 +119,7 @@ namespace EQLogParser
               {
                 var diff = (i > 0) ? (first.NonCritXValues[i] - first.NonCritXValues[i - 1]) : 0;
                 var diffString = (diff == 0) ? "" : "+" + diff;
-                Columns.Add(new ColumnData
+                _columns.Add(new ColumnData
                 {
                   Diff = diff,
                   Y = first.NonCritYValues[i],
@@ -147,13 +147,13 @@ namespace EQLogParser
 
     private void DisplayPage()
     {
-      if (Columns.Count > 0)
+      if (_columns.Count > 0)
       {
         var page = (int)pageSlider.Value;
         var onePage = new List<ColumnData>();
-        for (var i = page; i < page + PageSize && i < Columns.Count; i++)
+        for (var i = page; i < page + _pageSize && i < _columns.Count; i++)
         {
-          onePage.Add(Columns[i]);
+          onePage.Add(_columns[i]);
         }
 
         var collection = new ChartSeriesCollection();
@@ -180,11 +180,11 @@ namespace EQLogParser
 
     private void UpdatePageSize()
     {
-      if (Columns.Count > 0)
+      if (_columns.Count > 0)
       {
-        PageSize = (int)Math.Round(sfChart.ActualWidth / 60);
+        _pageSize = (int)Math.Round(sfChart.ActualWidth / 60);
         pageSlider.Minimum = 0;
-        var max = Columns.Count <= PageSize ? 0 : Columns.Count - PageSize;
+        var max = _columns.Count <= _pageSize ? 0 : _columns.Count - _pageSize;
         // happens after resize
         if (pageSlider.Value > max)
         {
@@ -205,7 +205,7 @@ namespace EQLogParser
     {
       if (critTypeList.SelectedItem is string selectedCritType)
       {
-        UpdateSelectedHitTypes(selectedCritType == NON_CRIT_HITTYPE);
+        UpdateSelectedHitTypes(selectedCritType == NonCritHittype);
         UserSelectionChanged();
       }
     }
@@ -214,24 +214,24 @@ namespace EQLogParser
     {
       if (playerList?.SelectedItem is string player)
       {
-        if (PlayerData.TryGetValue(player, out var data))
+        if (_playerData.TryGetValue(player, out var data))
         {
           var canUseCrit = false;
           var playerCritTypes = new List<string>();
           if (data.Any(d => d.CritYValues.Count > 0))
           {
-            playerCritTypes.Add(CRIT_HITTYPE);
+            playerCritTypes.Add(CritHittype);
             canUseCrit = true;
           }
 
           if (data.Any(d => d.NonCritYValues.Count > 0))
           {
-            playerCritTypes.Add(NON_CRIT_HITTYPE);
+            playerCritTypes.Add(NonCritHittype);
           }
 
           critTypeList.ItemsSource = playerCritTypes;
           critTypeList.SelectedIndex = playerCritTypes.Count == 1 ? 0 : canUseCrit ? 1 : 0;
-          UpdateSelectedHitTypes((critTypeList?.SelectedItem as string) == NON_CRIT_HITTYPE);
+          UpdateSelectedHitTypes((critTypeList?.SelectedItem as string) == NonCritHittype);
           UserSelectionChanged();
         }
       }
@@ -240,7 +240,7 @@ namespace EQLogParser
     private void UpdateSelectedHitTypes(bool useNonCrit)
     {
       var player = playerList?.SelectedItem as string;
-      if (!string.IsNullOrEmpty(player) && PlayerData.TryGetValue(player, out var data))
+      if (!string.IsNullOrEmpty(player) && _playerData.TryGetValue(player, out var data))
       {
         List<string> hitTypes;
 
@@ -331,15 +331,15 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
+    private bool _disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!disposedValue)
+      if (!_disposedValue)
       {
         MainActions.EventsThemeChanged -= EventsThemeChanged;
         sfChart?.Dispose();
-        disposedValue = true;
+        _disposedValue = true;
       }
     }
 

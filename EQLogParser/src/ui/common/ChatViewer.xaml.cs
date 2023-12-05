@@ -22,20 +22,20 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly List<double> FontSizeList = new() { 10, 12, 14, 16, 18, 20, 22, 24 };
 
-    private const int PAGE_SIZE = 200;
-    private List<string> PlayerAutoCompleteList;
-    private readonly DispatcherTimer FilterTimer;
-    private ChatFilter CurrentChatFilter;
-    private ChatIterator CurrentIterator;
-    private IInputElement LastFocused;
-    private string LastChannelSelection;
-    private string LastPlayerSelection;
-    private string LastTextFilter;
-    private string LastToFilter;
-    private string LastFromFilter;
-    private double LastStartDate;
-    private double LastEndDate;
-    private bool Ready;
+    private const int PageSize = 200;
+    private List<string> _playerAutoCompleteList;
+    private readonly DispatcherTimer _filterTimer;
+    private ChatFilter _currentChatFilter;
+    private ChatIterator _currentIterator;
+    private IInputElement _lastFocused;
+    private string _lastChannelSelection;
+    private string _lastPlayerSelection;
+    private string _lastTextFilter;
+    private string _lastToFilter;
+    private string _lastFromFilter;
+    private double _lastStartDate;
+    private double _lastEndDate;
+    private bool _ready;
 
     public ChatViewer()
     {
@@ -46,7 +46,7 @@ namespace EQLogParser
       toFilter.Text = Resource.CHAT_TO_FILTER;
       fromFilter.Text = Resource.CHAT_FROM_FILTER;
 
-      var allFonts = UIElementUtil.GetSystemFontFamilies();
+      var allFonts = UiElementUtil.GetSystemFontFamilies();
       fontFamily.ItemsSource = allFonts;
       var family = ConfigUtil.GetSetting("ChatFontFamily") ?? chatBox.FontFamily?.Source;
       if (allFonts.FirstOrDefault(item => item.Source == family) is { } found)
@@ -66,10 +66,10 @@ namespace EQLogParser
       }
 
       UpdateCurrentTextColor();
-      FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
-      FilterTimer.Tick += (_, _) =>
+      _filterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
+      _filterTimer.Tick += (_, _) =>
       {
-        FilterTimer.Stop();
+        _filterTimer.Stop();
         ChangeSearch();
       };
 
@@ -120,7 +120,7 @@ namespace EQLogParser
 
     private void DisplayPage(int count)
     {
-      var chatList = CurrentIterator.Take(count).Select(chat => chat.Text).ToList();
+      var chatList = _currentIterator.Take(count).Select(chat => chat.Text).ToList();
       chatList.Reverse();
 
       if (chatList.Count > 0)
@@ -154,7 +154,7 @@ namespace EQLogParser
       });
 
       channels.ItemsSource = items;
-      UIElementUtil.SetComboBoxTitle(channels, count, Resource.CHANNELS_SELECTED, true);
+      UiElementUtil.SetComboBoxTitle(channels, count, Resource.CHANNELS_SELECTED, true);
     }
 
     private void LoadPlayers(string updatedPlayer = null)
@@ -206,9 +206,9 @@ namespace EQLogParser
       }
 
       var updated = builder.ToString();
-      if (LastChannelSelection != updated)
+      if (_lastChannelSelection != updated)
       {
-        LastChannelSelection = updated;
+        _lastChannelSelection = updated;
         changed = true;
       }
 
@@ -227,18 +227,18 @@ namespace EQLogParser
           var from = (fromFilter.Text.Length != 0 && fromFilter.Text != Resource.CHAT_FROM_FILTER) ? fromFilter.Text : null;
           var startDateValue = GetStartDate();
           var endDateValue = GetEndDate();
-          if (force || changed || LastPlayerSelection != name || LastTextFilter != text || LastToFilter != to || LastFromFilter != from ||
-            !LastStartDate.Equals(startDateValue) || !LastEndDate.Equals(endDateValue))
+          if (force || changed || _lastPlayerSelection != name || _lastTextFilter != text || _lastToFilter != to || _lastFromFilter != from ||
+            !_lastStartDate.Equals(startDateValue) || !_lastEndDate.Equals(endDateValue))
           {
-            CurrentChatFilter = new ChatFilter(name, channelList, startDateValue, endDateValue, to, from, text);
-            CurrentIterator?.Close();
-            CurrentIterator = new ChatIterator(name, CurrentChatFilter);
-            LastPlayerSelection = name;
-            LastTextFilter = text;
-            LastToFilter = to;
-            LastFromFilter = from;
-            LastStartDate = startDateValue;
-            LastEndDate = endDateValue;
+            _currentChatFilter = new ChatFilter(name, channelList, startDateValue, endDateValue, to, from, text);
+            _currentIterator?.Close();
+            _currentIterator = new ChatIterator(name, _currentChatFilter);
+            _lastPlayerSelection = name;
+            _lastTextFilter = text;
+            _lastToFilter = to;
+            _lastFromFilter = from;
+            _lastStartDate = startDateValue;
+            _lastEndDate = endDateValue;
 
             if (changed)
             {
@@ -246,8 +246,8 @@ namespace EQLogParser
             }
 
             chatBox.Text = "";
-            LastFocused = Keyboard.FocusedElement;
-            DisplayPage(PAGE_SIZE);
+            _lastFocused = Keyboard.FocusedElement;
+            DisplayPage(PageSize);
           }
         }
       }
@@ -263,12 +263,12 @@ namespace EQLogParser
       {
         if (e.VerticalChange < 0 && e.VerticalOffset < 800)
         {
-          if (Ready)
+          if (_ready)
           {
-            DisplayPage(PAGE_SIZE);
+            DisplayPage(PageSize);
           }
         }
-        else if (e.VerticalChange == 0 && chatBox?.Text != null && chatBox.Lines.Count > PAGE_SIZE && e.VerticalOffset < 800)
+        else if (e.VerticalChange == 0 && chatBox?.Text != null && chatBox.Lines.Count > PageSize && e.VerticalOffset < 800)
         {
           viewer.ScrollToVerticalOffset(4500);
         }
@@ -277,12 +277,12 @@ namespace EQLogParser
 
     private void ChatTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-      if (chatBox is { Text: not null, Lines.Count: <= PAGE_SIZE })
+      if (chatBox is { Text: not null, Lines.Count: <= PageSize })
       {
         Task.Delay(250).ContinueWith(_ => Dispatcher.InvokeAsync(() =>
         {
           chatBox.GoToLine(chatBox.Lines.Count);
-          LastFocused?.Focus();
+          _lastFocused?.Focus();
         }));
       }
     }
@@ -402,10 +402,10 @@ namespace EQLogParser
           }
         }
 
-        UIElementUtil.SetComboBoxTitle(channels, count, Resource.CHANNELS_SELECTED, true);
+        UiElementUtil.SetComboBoxTitle(channels, count, Resource.CHANNELS_SELECTED, true);
       }
 
-      if (Ready)
+      if (_ready)
       {
         ChangeSearch();
       }
@@ -457,7 +457,7 @@ namespace EQLogParser
       }
       else if (filter is SfTextBoxExt filterExt)
       {
-        filterExt.AutoCompleteSource = PlayerAutoCompleteList;
+        filterExt.AutoCompleteSource = _playerAutoCompleteList;
       }
     }
 
@@ -486,8 +486,8 @@ namespace EQLogParser
 
     private void FilterTextChanged(object sender, TextChangedEventArgs e)
     {
-      FilterTimer?.Stop();
-      FilterTimer?.Start();
+      _filterTimer?.Stop();
+      _filterTimer?.Start();
     }
 
     // fix for edit control crashing if empty
@@ -504,10 +504,10 @@ namespace EQLogParser
       if (players.SelectedItem is string { Length: > 0 } name && !name.StartsWith("No ", StringComparison.Ordinal))
       {
         LoadChannels(players.SelectedItem as string);
-        PlayerAutoCompleteList = ChatManager.Instance.GetPlayers(name);
+        _playerAutoCompleteList = ChatManager.Instance.GetPlayers(name);
         ConfigUtil.SetSetting("ChatSelectedPlayer", name);
 
-        if (Ready)
+        if (_ready)
         {
           ChangeSearch();
         }
@@ -516,13 +516,13 @@ namespace EQLogParser
 
     private void ChatViewerLoaded(object sender, RoutedEventArgs e)
     {
-      if (VisualParent != null && !Ready)
+      if (VisualParent != null && !_ready)
       {
         ChatManager.Instance.EventsUpdatePlayer += ChatManagerEventsUpdatePlayer;
         ChatManager.Instance.EventsNewChannels += ChatManagerEventsNewChannels;
         LoadPlayers();
         ChangeSearch();
-        Ready = true;
+        _ready = true;
       }
     }
 
@@ -530,7 +530,7 @@ namespace EQLogParser
     {
       ChatManager.Instance.EventsUpdatePlayer -= ChatManagerEventsUpdatePlayer;
       ChatManager.Instance.EventsNewChannels -= ChatManagerEventsNewChannels;
-      Ready = false;
+      _ready = false;
     }
   }
 }

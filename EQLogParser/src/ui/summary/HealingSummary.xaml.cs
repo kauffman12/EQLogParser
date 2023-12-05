@@ -12,10 +12,10 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for HealSummary.xaml
   /// </summary>
-  public partial class HealingSummary : SummaryTable, IDocumentContent
+  public partial class HealingSummary : IDocumentContent
   {
-    private string CurrentClass;
-    private bool Ready;
+    private string _currentClass;
+    private bool _ready;
 
     public HealingSummary()
     {
@@ -37,9 +37,8 @@ namespace EQLogParser
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
     {
-      if (selected?.Count > 0)
+      if (selected?.Count > 0 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var breakdown, typeof(HealBreakdown),
           "healingBreakdownWindow", "Healing Breakdown"))
         {
@@ -80,15 +79,15 @@ namespace EQLogParser
       });
     }
 
-    private void CopyToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.HEAL_PARSE);
-    private void CopyTopHealsToEQClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.TOP_HEAL_PARSE);
+    private void CopyToEqClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.HealParse);
+    private void CopyTopHealsToEqClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.TopHealParse);
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       var update = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
-      var needUpdate = CurrentClass != update;
-      CurrentClass = update;
+      var needUpdate = _currentClass != update;
+      _currentClass = update;
 
       if (needUpdate)
       {
@@ -102,15 +101,14 @@ namespace EQLogParser
       if (MainWindow.IsMapSendToEqEnabled && Keyboard.Modifiers == ModifierKeys.Control && Keyboard.IsKeyDown(Key.C))
       {
         e.Handled = true;
-        CopyToEQClick(sender, null);
+        CopyToEqClick(sender, null);
       }
     }
 
     private void DataGridHealingLogClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems?.Count > 0)
+      if (dataGrid.SelectedItems?.Count > 0 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(HitLogViewer), "healingLogWindow", "Healing Log"))
         {
           (log.Content as HitLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
@@ -120,9 +118,8 @@ namespace EQLogParser
 
     private void DataGridDeathLogClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems?.Count > 0)
+      if (dataGrid.SelectedItems?.Count > 0 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
         {
           (log.Content as DeathLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
@@ -132,9 +129,8 @@ namespace EQLogParser
 
     private void DataGridHealingTimelineClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems.Count > 0)
+      if (dataGrid.SelectedItems.Count > 0 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var timeline, typeof(GanttChart), "healingTimeline", "Healing Timeline"))
         {
           ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 2);
@@ -208,7 +204,7 @@ namespace EQLogParser
             className = PlayerManager.Instance.GetPlayerClass(name);
           }
 
-          return string.IsNullOrEmpty(CurrentClass) || CurrentClass == className;
+          return string.IsNullOrEmpty(_currentClass) || _currentClass == className;
         };
 
         if (dataGrid.SelectedItems.Count > 0)
@@ -242,7 +238,7 @@ namespace EQLogParser
 
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (VisualParent != null && !Ready)
+      if (VisualParent != null && !_ready)
       {
         HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
         DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
@@ -252,7 +248,7 @@ namespace EQLogParser
           // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
           Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats());
         }
-        Ready = true;
+        _ready = true;
       }
     }
 
@@ -263,7 +259,7 @@ namespace EQLogParser
       MainActions.EventsChartOpened -= EventsChartOpened;
       ClearData();
       HealingStatsManager.Instance.FireChartEvent("UPDATE");
-      Ready = false;
+      _ready = false;
     }
   }
 }

@@ -14,7 +14,7 @@ namespace EQLogParser
   /// </summary>
   public partial class TauntStatsViewer : IDocumentContent
   {
-    private bool Ready;
+    private bool _ready;
 
     public TauntStatsViewer()
     {
@@ -38,7 +38,7 @@ namespace EQLogParser
 
     private void SelectionChange(List<Fight> _)
     {
-      if (Ready)
+      if (_ready)
       {
         Load();
       }
@@ -46,7 +46,7 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, EventArgs e)
     {
-      if (Ready)
+      if (_ready)
       {
         Load();
       }
@@ -123,12 +123,12 @@ namespace EQLogParser
 
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (VisualParent != null && !Ready)
+      if (VisualParent != null && !_ready)
       {
         MainActions.EventsLogLoadingComplete += LogLoadingComplete;
         MainActions.EventsFightSelectionChanged += SelectionChange;
         Load();
-        Ready = true;
+        _ready = true;
       }
     }
 
@@ -137,7 +137,7 @@ namespace EQLogParser
       MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
       MainActions.EventsFightSelectionChanged -= SelectionChange;
       dataGrid.ItemsSource = null;
-      Ready = false;
+      _ready = false;
     }
   }
 }

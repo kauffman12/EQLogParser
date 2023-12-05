@@ -51,8 +51,8 @@ namespace EQLogParser
       }
 
       // cache recent player spells to help determine who the caster was
-      var isAttackerPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Attacker) || record.Attacker == Labels.RS;
-      if (isAttackerPlayer && record.Type is Labels.DD or Labels.DOT or Labels.PROC)
+      var isAttackerPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Attacker) || record.Attacker == Labels.Rs;
+      if (isAttackerPlayer && record.Type is Labels.Dd or Labels.Dot or Labels.Proc)
       {
         RecentSpellCache[record.SubType] = true;
       }
@@ -71,7 +71,7 @@ namespace EQLogParser
 
           if (defender)
           {
-            record.Attacker = Labels.UNK;
+            record.Attacker = Labels.Unk;
           }
         }
 
@@ -111,15 +111,15 @@ namespace EQLogParser
 
             SpellDamageStats stats = null;
             var spellKey = record.Attacker + "++" + record.SubType;
-            if (record.Type == Labels.DD)
+            if (record.Type == Labels.Dd)
             {
-              if (!fight.DDDamage.TryGetValue(spellKey, out stats))
+              if (!fight.DdDamage.TryGetValue(spellKey, out stats))
               {
                 stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
-                fight.DDDamage[spellKey] = stats;
+                fight.DdDamage[spellKey] = stats;
               }
             }
-            else if (record.Type == Labels.DOT)
+            else if (record.Type == Labels.Dot)
             {
               if (!fight.DoTDamage.TryGetValue(spellKey, out stats))
               {
@@ -127,7 +127,7 @@ namespace EQLogParser
                 fight.DoTDamage[spellKey] = stats;
               }
             }
-            else if (record.Type == Labels.PROC)
+            else if (record.Type == Labels.Proc)
             {
               if (!fight.ProcDamage.TryGetValue(spellKey, out stats))
               {

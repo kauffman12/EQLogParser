@@ -12,15 +12,15 @@ namespace EQLogParser
   public abstract class BreakdownTable : UserControl, IDisposable
   {
     private protected DataGridTextColumn CurrentColumn = null;
-    private SfTreeGrid TheDataGrid;
-    private ComboBox TheColumnsCombo;
+    private SfTreeGrid _theDataGrid;
+    private ComboBox _theColumnsCombo;
     internal Label TheTitle;
 
     internal void InitBreakdownTable(Label title, SfTreeGrid dataGrid, ComboBox columnsCombo)
     {
-      TheDataGrid = dataGrid;
-      TheColumnsCombo = columnsCombo;
-      TheDataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Total", SortDirection = ListSortDirection.Descending });
+      _theDataGrid = dataGrid;
+      _theColumnsCombo = columnsCombo;
+      _theDataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Total", SortDirection = ListSortDirection.Descending });
       TheTitle = title;
 
       // default these columns to descending
@@ -30,37 +30,37 @@ namespace EQLogParser
         "TotalFinishing", "TotalHead", "TotalRiposte", "TotalSlay", "AvgNonTwincast", "AvgNonTwincastCrit", "AvgNonTwincastLucky",
         "TwincastHits", "Resists", "DoubleBowRate", "FlurryRate", "ResistRate", "MeleeAttempts", "MeleeUndefended"};
 
-      TheDataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
-      TheDataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-      DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
-      DataGridUtil.UpdateTableMargin(TheDataGrid);
+      _theDataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
+      _theDataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+      DataGridUtil.LoadColumns(_theColumnsCombo, _theDataGrid);
+      DataGridUtil.UpdateTableMargin(_theDataGrid);
       MainActions.EventsThemeChanged += EventsThemeChanged;
 
       // workaround to avoid drag/drop failing when grid has no data
-      TheDataGrid.ItemsSource = new List<PlayerStats>();
+      _theDataGrid.ItemsSource = new List<PlayerStats>();
     }
 
-    internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
-    internal void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(TheDataGrid, TheTitle);
-    internal void CreateLargeImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(TheDataGrid, TheTitle, true);
+    internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(_theDataGrid, TheTitle.Content.ToString());
+    internal void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(_theDataGrid, TheTitle);
+    internal void CreateLargeImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(_theDataGrid, TheTitle, true);
     internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
-    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(TheColumnsCombo, TheDataGrid);
+    internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(_theColumnsCombo, _theDataGrid);
 
     private void EventsThemeChanged(string _)
     {
-      DataGridUtil.RefreshTableColumns(TheDataGrid);
+      DataGridUtil.RefreshTableColumns(_theDataGrid);
     }
 
     #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
+    private bool _disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!disposedValue)
+      if (!_disposedValue)
       {
         MainActions.EventsThemeChanged -= EventsThemeChanged;
-        TheDataGrid.Dispose();
-        disposedValue = true;
+        _theDataGrid.Dispose();
+        _disposedValue = true;
       }
     }
 

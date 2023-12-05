@@ -21,13 +21,13 @@ namespace EQLogParser
     private const string LabelNewTimerOverlay = "New Timer Overlay";
     private const string LabelNewTrigger = "New Trigger";
     private const string LabelNewFolder = "New Folder";
-    private TriggerTreeViewNode TriggerCopiedNode;
-    private TriggerTreeViewNode OverlayCopiedNode;
-    private bool TriggerCutNode;
-    private bool OverlayCutNode;
-    private string CurrentCharacterId;
-    private Func<bool> IsCancelSelection;
-    private TriggerConfig TheConfig;
+    private TriggerTreeViewNode _triggerCopiedNode;
+    private TriggerTreeViewNode _overlayCopiedNode;
+    private bool _triggerCutNode;
+    private bool _overlayCutNode;
+    private string _currentCharacterId;
+    private Func<bool> _isCancelSelection;
+    private TriggerConfig _theConfig;
 
     public TriggersTreeView()
     {
@@ -39,18 +39,18 @@ namespace EQLogParser
 
     internal void RefreshOverlays() => RefreshOverlayNode();
     internal void RefreshTriggers() => RefreshTriggerNode();
-    internal void SetConfig(TriggerConfig config) => TheConfig = config;
+    internal void SetConfig(TriggerConfig config) => _theConfig = config;
 
     internal void Init(string characterId, Func<bool> isCanceled, bool enable)
     {
-      IsCancelSelection = isCanceled;
+      _isCancelSelection = isCanceled;
       overlayTreeView.Nodes.Add(TriggerStateManager.Instance.GetOverlayTreeView());
       EnableAndRefreshTriggers(enable, characterId);
     }
 
     internal void EnableAndRefreshTriggers(bool enable, string characterId)
     {
-      CurrentCharacterId = characterId;
+      _currentCharacterId = characterId;
       triggerTreeView.IsEnabled = enable;
 
       if (enable && noCharacterSelected.Visibility == Visibility.Visible)
@@ -137,14 +137,14 @@ namespace EQLogParser
 
     private void SelectionChanging(object sender, ItemSelectionChangingEventArgs e)
     {
-      e.Cancel = IsCancelSelection();
+      e.Cancel = _isCancelSelection();
     }
 
     private void NodeChecked(object sender, NodeCheckedEventArgs e)
     {
       if (e.Node is TriggerTreeViewNode viewNode)
       {
-        TriggerStateManager.Instance.SetState(CurrentCharacterId, viewNode);
+        TriggerStateManager.Instance.SetState(_currentCharacterId, viewNode);
         TriggerManager.Instance.TriggersUpdated();
       }
     }
@@ -161,8 +161,8 @@ namespace EQLogParser
     {
       if (GetTreeViewFromMenu(sender) is { } treeView)
       {
-        TriggerCutNode = false;
-        TriggerCopiedNode = null;
+        _triggerCutNode = false;
+        _triggerCopiedNode = null;
         Delete(treeView.SelectedItems?.Cast<TriggerTreeViewNode>().ToList());
       }
     }
@@ -187,7 +187,7 @@ namespace EQLogParser
     private void RefreshTriggerNode()
     {
       triggerTreeView?.Nodes?.Clear();
-      triggerTreeView?.Nodes?.Add(TriggerStateManager.Instance.GetTriggerTreeView(CurrentCharacterId));
+      triggerTreeView?.Nodes?.Add(TriggerStateManager.Instance.GetTriggerTreeView(_currentCharacterId));
     }
 
     private void RefreshOverlayNode()
@@ -201,7 +201,7 @@ namespace EQLogParser
 
     private void SelectNode(SfTreeView treeView, string id)
     {
-      if (id != null && IsCancelSelection != null && !IsCancelSelection())
+      if (id != null && _isCancelSelection != null && !_isCancelSelection())
       {
         if (treeView?.Nodes.Count > 0 && treeView.Nodes[0] is TriggerTreeViewNode node)
         {
@@ -275,16 +275,16 @@ namespace EQLogParser
       {
         if (triggerTreeView.SelectedItem is TriggerTreeViewNode node)
         {
-          TriggerCopiedNode = node;
-          TriggerCutNode = false;
+          _triggerCopiedNode = node;
+          _triggerCutNode = false;
         }
       }
       else if (treeView == overlayTreeView)
       {
         if (overlayTreeView.SelectedItem is TriggerTreeViewNode node)
         {
-          OverlayCopiedNode = node;
-          OverlayCutNode = false;
+          _overlayCopiedNode = node;
+          _overlayCutNode = false;
         }
       }
     }
@@ -296,16 +296,16 @@ namespace EQLogParser
       {
         if (triggerTreeView.SelectedItem is TriggerTreeViewNode node)
         {
-          TriggerCopiedNode = node;
-          TriggerCutNode = true;
+          _triggerCopiedNode = node;
+          _triggerCutNode = true;
         }
       }
       else if (treeView == overlayTreeView)
       {
         if (overlayTreeView.SelectedItem is TriggerTreeViewNode node)
         {
-          OverlayCopiedNode = node;
-          OverlayCutNode = true;
+          _overlayCopiedNode = node;
+          _overlayCutNode = true;
         }
       }
     }
@@ -315,13 +315,13 @@ namespace EQLogParser
       var treeView = GetTreeViewFromMenu(sender);
       if (treeView == triggerTreeView)
       {
-        HandlePaste(triggerTreeView, TriggerCopiedNode, TriggerCutNode);
-        TriggerCopiedNode = null;
+        HandlePaste(triggerTreeView, _triggerCopiedNode, _triggerCutNode);
+        _triggerCopiedNode = null;
       }
       else if (treeView == overlayTreeView)
       {
-        HandlePaste(overlayTreeView, OverlayCopiedNode, OverlayCutNode);
-        OverlayCopiedNode = null;
+        HandlePaste(overlayTreeView, _overlayCopiedNode, _overlayCutNode);
+        _overlayCopiedNode = null;
       }
 
       void HandlePaste(SfTreeView tree, TriggerTreeViewNode copiedNode, bool isCutNode)
@@ -435,16 +435,18 @@ namespace EQLogParser
 
     private void ItemEndEdit(object sender, TreeViewItemEndEditEventArgs e)
     {
-      if (!e.Cancel && e.Node is TriggerTreeViewNode node)
+      if (!e.Cancel && e.Node is TriggerTreeViewNode node && sender is SfTreeView treeView)
       {
         var previous = node.Content as string;
         // delay because node still shows old value
         Dispatcher.InvokeAsync(() =>
         {
           var content = node.Content as string;
-          if (string.IsNullOrEmpty(content) || content.Trim().Length == 0)
+          if (string.IsNullOrEmpty(content) || content.Trim().Length == 0 || content.Equals(previous))
           {
             node.Content = previous;
+            treeView.SelectedItems?.Clear();
+            treeView.SelectedItem = node;
           }
           else
           {
@@ -474,7 +476,7 @@ namespace EQLogParser
         newTriggerMenuItem.IsEnabled = node.IsDir() && count == 1;
         copyTriggerItem.IsEnabled = !node.IsDir() && count == 1;
         cutTriggerItem.IsEnabled = node.ParentNode != null && (copyTriggerItem.IsEnabled || (node.IsDir() && count == 1));
-        pasteTriggerItem.IsEnabled = node.IsDir() && count == 1 && TriggerCopiedNode != null;
+        pasteTriggerItem.IsEnabled = node.IsDir() && count == 1 && _triggerCopiedNode != null;
       }
       else
       {
@@ -490,16 +492,16 @@ namespace EQLogParser
       clearRecentlyMergedMenuItem.IsEnabled = !TriggerStateManager.Instance.RecentlyMerged.IsEmpty;
       importTriggerMenuItem.Header = node != null && importTriggerMenuItem.IsEnabled ? $"Import to ({node.Content})" : "Import";
 
-      UIElementUtil.ClearMenuEvents(copySettingsMenuItem.Items, CopySettingsClick);
+      UiElementUtil.ClearMenuEvents(copySettingsMenuItem.Items, CopySettingsClick);
       copySettingsMenuItem.Items.Clear();
 
-      if (TheConfig?.IsAdvanced == true)
+      if (_theConfig?.IsAdvanced == true)
       {
         copySettingsMenuItem.Visibility = Visibility.Visible;
-        if (TheConfig.Characters.Count > 1 && triggerTreeView.SelectedItems?.Count == 1)
+        if (_theConfig.Characters.Count > 1 && triggerTreeView.SelectedItems?.Count == 1)
         {
           copySettingsMenuItem.IsEnabled = true;
-          foreach (var character in TheConfig.Characters.Where(c => c.Id != CurrentCharacterId))
+          foreach (var character in _theConfig.Characters.Where(c => c.Id != _currentCharacterId))
           {
             var menuItem = new MenuItem { Header = character.Name, Tag = character.Id };
             menuItem.Click += CopySettingsClick;
@@ -517,7 +519,7 @@ namespace EQLogParser
         copySettingsMenuItem.Visibility = Visibility.Collapsed;
       }
 
-      UIElementUtil.ClearMenuEvents(setPriorityMenuItem.Items, SetPriorityClick);
+      UiElementUtil.ClearMenuEvents(setPriorityMenuItem.Items, SetPriorityClick);
       setPriorityMenuItem.Items.Clear();
 
       for (var i = 1; i <= 5; i++)
@@ -542,10 +544,10 @@ namespace EQLogParser
 
       if (setTriggerMenuItem.Visibility == Visibility.Visible)
       {
-        UIElementUtil.ClearMenuEvents(addTextOverlaysMenuItem.Items, AssignOverlayClick);
-        UIElementUtil.ClearMenuEvents(addTimerOverlaysMenuItem.Items, AssignOverlayClick);
-        UIElementUtil.ClearMenuEvents(removeTextOverlaysMenuItem.Items, UnassignOverlayClick);
-        UIElementUtil.ClearMenuEvents(removeTimerOverlaysMenuItem.Items, UnassignOverlayClick);
+        UiElementUtil.ClearMenuEvents(addTextOverlaysMenuItem.Items, AssignOverlayClick);
+        UiElementUtil.ClearMenuEvents(addTimerOverlaysMenuItem.Items, AssignOverlayClick);
+        UiElementUtil.ClearMenuEvents(removeTextOverlaysMenuItem.Items, UnassignOverlayClick);
+        UiElementUtil.ClearMenuEvents(removeTimerOverlaysMenuItem.Items, UnassignOverlayClick);
         addTextOverlaysMenuItem.Items.Clear();
         addTimerOverlaysMenuItem.Items.Clear();
         removeTextOverlaysMenuItem.Items.Clear();
@@ -589,7 +591,7 @@ namespace EQLogParser
         importOverlayMenuItem.IsEnabled = node.IsDir() && count == 1;
         newOverlayMenuItem.IsEnabled = node.IsDir() && count == 1;
         copyOverlayItem.IsEnabled = !node.IsDir() && count == 1;
-        pasteOverlayItem.IsEnabled = node.IsDir() && count == 1 && OverlayCopiedNode != null;
+        pasteOverlayItem.IsEnabled = node.IsDir() && count == 1 && _overlayCopiedNode != null;
       }
       else
       {
@@ -607,7 +609,7 @@ namespace EQLogParser
     {
       if (sender is MenuItem { Tag: string id })
       {
-        TriggerStateManager.Instance.CopyState((TriggerTreeViewNode)triggerTreeView.SelectedItem, CurrentCharacterId, id);
+        TriggerStateManager.Instance.CopyState((TriggerTreeViewNode)triggerTreeView.SelectedItem, _currentCharacterId, id);
       }
     }
 
@@ -768,13 +770,13 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool DisposedValue; // To detect redundant calls
+    private bool _disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!DisposedValue)
+      if (!_disposedValue)
       {
-        DisposedValue = true;
+        _disposedValue = true;
         TriggerManager.Instance.EventsSelectTrigger -= EventsSelectTrigger;
         triggerTreeView?.DragDropController.Dispose();
         triggerTreeView?.Dispose();
@@ -791,6 +793,5 @@ namespace EQLogParser
       GC.SuppressFinalize(this);
     }
     #endregion
-
   }
 }

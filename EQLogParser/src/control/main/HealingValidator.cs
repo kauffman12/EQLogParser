@@ -4,19 +4,19 @@ namespace EQLogParser
 {
   internal class HealingValidator
   {
-    private readonly bool AOEEnabled;
-    private readonly bool SwarmPetsEnabled;
+    private readonly bool _aoeEnabled;
+    private readonly bool _swarmPetsEnabled;
 
     public HealingValidator()
     {
-      AOEEnabled = MainWindow.IsAoEHealingEnabled;
-      SwarmPetsEnabled = MainWindow.IsHealingSwarmPetsEnabled;
+      _aoeEnabled = MainWindow.IsAoEHealingEnabled;
+      _swarmPetsEnabled = MainWindow.IsHealingSwarmPetsEnabled;
     }
 
     public bool IsValid(double beginTime, HealRecord record, Dictionary<string, HashSet<string>> currentSpellCounts,
       Dictionary<double, Dictionary<string, HashSet<string>>> previousSpellCounts, Dictionary<string, byte> ignoreRecords)
     {
-      if (!SwarmPetsEnabled)
+      if (!_swarmPetsEnabled)
       {
         if (record?.Healed?.EndsWith("`s pet") == true || record?.Healed?.EndsWith("`s ward") == true)
         {
@@ -25,19 +25,19 @@ namespace EQLogParser
       }
 
       // if AOEHealing is disabled then filter out AEs
-      if (!AOEEnabled)
+      if (!_aoeEnabled)
       {
         SpellData spellData;
         if (record.SubType != null && (spellData = DataManager.Instance.GetHealingSpellByName(record.SubType)) != null)
         {
-          if (spellData.Target == (byte)SpellTarget.TARGETAE || spellData.Target == (byte)SpellTarget.NEARBYPLAYERSAE ||
-              spellData.Target == (byte)SpellTarget.TARGETRINGAE || spellData.Target == (byte)SpellTarget.CASTERPBPLAYERS)
+          if (spellData.Target == (byte)SpellTarget.Targetae || spellData.Target == (byte)SpellTarget.Nearbyplayersae ||
+              spellData.Target == (byte)SpellTarget.Targetringae || spellData.Target == (byte)SpellTarget.Casterpbplayers)
           {
             // just skip these entirely if AOEs are turned off
             return false;
           }
 
-          if ((spellData.Target == (byte)SpellTarget.CASTERGROUP || spellData.Target == (byte)SpellTarget.TARGETGROUP) && spellData.Mgb)
+          if ((spellData.Target == (byte)SpellTarget.Castergroup || spellData.Target == (byte)SpellTarget.Targetgroup) && spellData.Mgb)
           {
             // need to count group AEs and if more than 6 are seen we need to ignore those
             // casts since they're from MGB and count as an AE
@@ -84,7 +84,7 @@ namespace EQLogParser
 
     public bool IsHealingLimited()
     {
-      return !AOEEnabled || !SwarmPetsEnabled;
+      return !_aoeEnabled || !_swarmPetsEnabled;
     }
   }
 }

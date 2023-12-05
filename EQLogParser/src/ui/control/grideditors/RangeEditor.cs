@@ -10,24 +10,24 @@ namespace EQLogParser
 {
   public class RangeEditor : BaseTypeEditor
   {
-    private IntegerTextBox TheIntTextBox;
-    private DoubleTextBox TheDoubleTextBox;
-    private readonly double Min;
-    private readonly double Max;
-    private readonly Type Type;
+    private IntegerTextBox _theIntTextBox;
+    private DoubleTextBox _theDoubleTextBox;
+    private readonly double _min;
+    private readonly double _max;
+    private readonly Type _type;
 
     public RangeEditor(Type type, double min, double max)
     {
-      Type = type;
-      Min = min;
-      Max = max;
+      _type = type;
+      _min = min;
+      _max = max;
     }
 
     public void Update(long value)
     {
-      if (TheIntTextBox != null && TheIntTextBox.Value != value)
+      if (_theIntTextBox != null && _theIntTextBox.Value != value)
       {
-        TheIntTextBox.Value = value;
+        _theIntTextBox.Value = value;
       }
     }
 
@@ -42,13 +42,13 @@ namespace EQLogParser
         UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
       };
 
-      if (Type == typeof(long))
+      if (_type == typeof(long))
       {
-        BindingOperations.SetBinding(TheIntTextBox, IntegerTextBox.ValueProperty, binding);
+        BindingOperations.SetBinding(_theIntTextBox, IntegerTextBox.ValueProperty, binding);
       }
       else
       {
-        BindingOperations.SetBinding(TheDoubleTextBox, DoubleTextBox.ValueProperty, binding);
+        BindingOperations.SetBinding(_theDoubleTextBox, DoubleTextBox.ValueProperty, binding);
       }
     }
 
@@ -58,32 +58,32 @@ namespace EQLogParser
     public object Create()
     {
       object result;
-      if (Type == typeof(long))
+      if (_type == typeof(long))
       {
         var intTextBox = new IntegerTextBox { ApplyZeroColor = false, ShowSpinButton = true };
 
-        if (!Min.Equals(Max))
+        if (!_min.Equals(_max))
         {
-          intTextBox.MinValue = (long)Min;
-          intTextBox.MaxValue = (long)Max;
+          intTextBox.MinValue = (long)_min;
+          intTextBox.MaxValue = (long)_max;
         }
 
         intTextBox.SetResourceReference(EditorBase.PositiveForegroundProperty, "ContentForeground");
-        TheIntTextBox = intTextBox;
+        _theIntTextBox = intTextBox;
         result = intTextBox;
       }
       else
       {
         var doubleTextBox = new DoubleTextBox { ApplyZeroColor = false, ShowSpinButton = true, ScrollInterval = 0.1 };
 
-        if (!Min.Equals(Max))
+        if (!_min.Equals(_max))
         {
-          doubleTextBox.MinValue = Min;
-          doubleTextBox.MaxValue = Max;
+          doubleTextBox.MinValue = _min;
+          doubleTextBox.MaxValue = _max;
         }
 
         doubleTextBox.SetResourceReference(EditorBase.PositiveForegroundProperty, "ContentForeground");
-        TheDoubleTextBox = doubleTextBox;
+        _theDoubleTextBox = doubleTextBox;
         result = doubleTextBox;
       }
 
@@ -97,18 +97,18 @@ namespace EQLogParser
 
     public override void Detach(PropertyViewItem property)
     {
-      if (TheIntTextBox != null)
+      if (_theIntTextBox != null)
       {
-        BindingOperations.ClearAllBindings(TheIntTextBox);
-        TheIntTextBox?.Dispose();
-        TheIntTextBox = null;
+        BindingOperations.ClearAllBindings(_theIntTextBox);
+        _theIntTextBox?.Dispose();
+        _theIntTextBox = null;
       }
 
-      if (TheDoubleTextBox != null)
+      if (_theDoubleTextBox != null)
       {
-        BindingOperations.ClearAllBindings(TheDoubleTextBox);
-        TheDoubleTextBox?.Dispose();
-        TheDoubleTextBox = null;
+        BindingOperations.ClearAllBindings(_theDoubleTextBox);
+        _theDoubleTextBox?.Dispose();
+        _theDoubleTextBox = null;
       }
     }
   }

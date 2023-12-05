@@ -19,28 +19,28 @@ namespace EQLogParser
   public partial class FightTable
   {
     // time before creating new group
-    public const int GROUP_TIMEOUT = 120;
+    public const int GroupTimeout = 120;
 
     // NPC Search
-    private static int CurrentFightSearchIndex;
-    private static int CurrentFightSearchDirection = 1;
-    private static Fight CurrentSearchEntry;
-    private static bool NeedSelectionChange;
+    private static int _currentFightSearchIndex;
+    private static int _currentFightSearchDirection = 1;
+    private static Fight _currentSearchEntry;
+    private static bool _needSelectionChange;
 
-    private readonly ObservableCollection<Fight> Fights = new();
-    private readonly ObservableCollection<Fight> NonTankingFights = new();
-    private bool CurrentShowBreaks;
-    private int CurrentGroup = 1;
-    private int CurrentNonTankingGroup = 1;
-    private uint CurrentSortId = 1;
-    private bool NeedRefresh;
-    private bool IsEveryOther;
+    private readonly ObservableCollection<Fight> _fights = new();
+    private readonly ObservableCollection<Fight> _nonTankingFights = new();
+    private bool _currentShowBreaks;
+    private int _currentGroup = 1;
+    private int _currentNonTankingGroup = 1;
+    private uint _currentSortId = 1;
+    private bool _needRefresh;
+    private bool _isEveryOther;
 
-    private readonly List<Fight> FightsToProcess = new();
-    private readonly List<Fight> NonTankingFightsToProcess = new();
-    private readonly DispatcherTimer SelectionTimer;
-    private readonly DispatcherTimer SearchTextTimer;
-    private readonly DispatcherTimer UpdateTimer;
+    private readonly List<Fight> _fightsToProcess = new();
+    private readonly List<Fight> _nonTankingFightsToProcess = new();
+    private readonly DispatcherTimer _selectionTimer;
+    private readonly DispatcherTimer _searchTextTimer;
+    private readonly DispatcherTimer _updateTimer;
 
     public FightTable()
     {
@@ -53,8 +53,8 @@ namespace EQLogParser
       menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled =
         menuItemSetPet.IsEnabled = menuItemSetPlayer.IsEnabled = menuItemRefresh.IsEnabled = false;
 
-      SelectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
-      SelectionTimer.Tick += (_, _) =>
+      _selectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
+      _selectionTimer.Tick += (_, _) =>
       {
         if (!rightClickMenu.IsOpen)
         {
@@ -62,35 +62,35 @@ namespace EQLogParser
         }
         else
         {
-          NeedSelectionChange = true;
+          _needSelectionChange = true;
         }
 
-        SelectionTimer.Stop();
+        _selectionTimer.Stop();
       };
 
-      SearchTextTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
-      SearchTextTimer.Tick += (_, _) =>
+      _searchTextTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
+      _searchTextTimer.Tick += (_, _) =>
       {
         if (fightSearchBox.Text.Length > 0)
         {
           SearchForNpc();
         }
 
-        SearchTextTimer.Stop();
+        _searchTextTimer.Stop();
       };
 
-      UpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
-      UpdateTimer.Tick += (_, _) => DoProcessFights();
-      UpdateTimer.Start();
+      _updateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
+      _updateTimer.Tick += (_, _) => DoProcessFights();
+      _updateTimer.Start();
 
       // read show hp setting
       fightShowHitPoints.IsChecked = ConfigUtil.IfSet("NpcShowHitPoints");
       dataGrid.Columns[1].IsHidden = !fightShowHitPoints.IsChecked.Value;
 
       // read show breaks and spells setting
-      fightShowBreaks.IsChecked = CurrentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", null, true);
+      fightShowBreaks.IsChecked = _currentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", null, true);
       fightShowTanking.IsChecked = ConfigUtil.IfSet("NpcShowTanking", null, true);
-      dataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? Fights : NonTankingFights;
+      dataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? _fights : _nonTankingFights;
 
       // default these columns to descending
       var desc = new[] { "SortId" };
@@ -125,7 +125,7 @@ namespace EQLogParser
       return new List<Fight>();
     }
 
-    private void EventsUpdateFight(object sender, Fight fight) => NeedRefresh = true;
+    private void EventsUpdateFight(object sender, Fight fight) => _needRefresh = true;
     private void EventsRemovedFight(object sender, string name) => RemoveFight(name);
     private void EventsNewFight(object sender, Fight fight) => ProcessFight(fight);
     private void EventsNewNonTankingFight(object sender, Fight fight) => ProcessNonTankingFight(fight);
@@ -142,7 +142,7 @@ namespace EQLogParser
 
     private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
     {
-      dataGrid.View.Filter = item => !(CurrentShowBreaks == false && ((Fight)item).IsInactivity);
+      dataGrid.View.Filter = item => !(_currentShowBreaks == false && ((Fight)item).IsInactivity);
     }
 
     private static void RemoveFight(ObservableCollection<Fight> fights, string name)
@@ -158,10 +158,10 @@ namespace EQLogParser
 
     private void RightClickClosed(object sender, RoutedEventArgs e)
     {
-      if (NeedSelectionChange)
+      if (_needSelectionChange)
       {
         MainActions.FireFightSelectionChanged(dataGrid.SelectedItems?.Cast<Fight>().ToList());
-        NeedSelectionChange = false;
+        _needSelectionChange = false;
       }
     }
 
@@ -178,8 +178,8 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        RemoveFight(Fights, name);
-        RemoveFight(NonTankingFights, name);
+        RemoveFight(_fights, name);
+        RemoveFight(_nonTankingFights, name);
       }, DispatcherPriority.DataBind);
     }
 
@@ -191,7 +191,7 @@ namespace EQLogParser
         Task.Delay(120).ContinueWith(_ =>
         {
           PlayerManager.Instance.AddVerifiedPet(name);
-          PlayerManager.Instance.AddPetToPlayer(name, Labels.UNASSIGNED);
+          PlayerManager.Instance.AddPetToPlayer(name, Labels.Unassigned);
         }, TaskScheduler.Default);
       }
     }
@@ -207,40 +207,40 @@ namespace EQLogParser
 
     private void ProcessFight(Fight fight)
     {
-      lock (FightsToProcess)
+      lock (_fightsToProcess)
       {
-        FightsToProcess.Add(fight);
+        _fightsToProcess.Add(fight);
       }
     }
 
     private void ProcessNonTankingFight(Fight fight)
     {
-      lock (FightsToProcess)
+      lock (_fightsToProcess)
       {
-        NonTankingFightsToProcess.Add(fight);
+        _nonTankingFightsToProcess.Add(fight);
       }
     }
 
     private void DoProcessFights()
     {
-      IsEveryOther = !IsEveryOther;
+      _isEveryOther = !_isEveryOther;
 
       List<Fight> processList = null;
       List<Fight> processNonTankingList = null;
-      lock (FightsToProcess)
+      lock (_fightsToProcess)
       {
-        if (FightsToProcess.Count > 0)
+        if (_fightsToProcess.Count > 0)
         {
           processList = new List<Fight>();
-          processList.AddRange(FightsToProcess);
-          FightsToProcess.Clear();
+          processList.AddRange(_fightsToProcess);
+          _fightsToProcess.Clear();
         }
 
-        if (NonTankingFightsToProcess.Count > 0)
+        if (_nonTankingFightsToProcess.Count > 0)
         {
           processNonTankingList = new List<Fight>();
-          processNonTankingList.AddRange(NonTankingFightsToProcess);
-          NonTankingFightsToProcess.Clear();
+          processNonTankingList.AddRange(_nonTankingFightsToProcess);
+          _nonTankingFightsToProcess.Clear();
         }
       }
 
@@ -249,7 +249,7 @@ namespace EQLogParser
         var lastWithTankingTime = double.NaN;
 
         var searchAttempts = 0;
-        foreach (var fight in Fights.Reverse())
+        foreach (var fight in _fights.Reverse())
         {
           if (searchAttempts++ == 30 || fight.IsInactivity)
           {
@@ -261,18 +261,18 @@ namespace EQLogParser
 
         processList.ForEach(fight =>
         {
-          if (!double.IsNaN(lastWithTankingTime) && fight.BeginTime - lastWithTankingTime >= GROUP_TIMEOUT)
+          if (!double.IsNaN(lastWithTankingTime) && fight.BeginTime - lastWithTankingTime >= GroupTimeout)
           {
-            CurrentGroup++;
-            AddDivider(fight, Fights, lastWithTankingTime);
+            _currentGroup++;
+            AddDivider(fight, _fights, lastWithTankingTime);
           }
 
-          fight.GroupId = CurrentGroup;
-          AddFight(fight, Fights);
+          fight.GroupId = _currentGroup;
+          AddFight(fight, _fights);
           lastWithTankingTime = double.IsNaN(lastWithTankingTime) ? fight.LastTime : Math.Max(lastWithTankingTime, fight.LastTime);
         });
 
-        NewRowsAdded(Fights);
+        NewRowsAdded(_fights);
       }
 
       if (processNonTankingList != null)
@@ -280,7 +280,7 @@ namespace EQLogParser
         var lastNonTankingTime = double.NaN;
 
         var searchAttempts = 0;
-        foreach (var fight in NonTankingFights.Reverse())
+        foreach (var fight in _nonTankingFights.Reverse())
         {
           if (searchAttempts++ == 30 || fight.IsInactivity)
           {
@@ -292,31 +292,31 @@ namespace EQLogParser
 
         processNonTankingList.ForEach(fight =>
         {
-          if (!double.IsNaN(lastNonTankingTime) && fight.DamageHits > 0 && fight.BeginTime - lastNonTankingTime >= GROUP_TIMEOUT)
+          if (!double.IsNaN(lastNonTankingTime) && fight.DamageHits > 0 && fight.BeginTime - lastNonTankingTime >= GroupTimeout)
           {
-            CurrentNonTankingGroup++;
-            AddDivider(fight, NonTankingFights, lastNonTankingTime);
+            _currentNonTankingGroup++;
+            AddDivider(fight, _nonTankingFights, lastNonTankingTime);
           }
 
-          fight.NonTankingGroupId = CurrentNonTankingGroup;
-          AddFight(fight, NonTankingFights);
+          fight.NonTankingGroupId = _currentNonTankingGroup;
+          AddFight(fight, _nonTankingFights);
           lastNonTankingTime = double.IsNaN(lastNonTankingTime) ? fight.LastDamageTime : Math.Max(lastNonTankingTime, fight.LastDamageTime);
         });
 
-        NewRowsAdded(NonTankingFights);
+        NewRowsAdded(_nonTankingFights);
       }
 
-      if (NeedRefresh && ((processList == null && dataGrid.ItemsSource == Fights) || (processNonTankingList == null && dataGrid.ItemsSource == NonTankingFights)) &&
+      if (_needRefresh && ((processList == null && dataGrid.ItemsSource == _fights) || (processNonTankingList == null && dataGrid.ItemsSource == _nonTankingFights)) &&
         (Keyboard.GetKeyStates(Key.LeftShift) & KeyStates.Down) == 0 && (Keyboard.GetKeyStates(Key.LeftCtrl) & KeyStates.Down) == 0)
       {
         dataGrid.View.RefreshFilter();
-        NeedRefresh = false;
+        _needRefresh = false;
       }
     }
 
     private void AddFight(Fight fight, ObservableCollection<Fight> list)
     {
-      fight.SortId = CurrentSortId++;
+      fight.SortId = _currentSortId++;
       var ttl = fight.LastTime - fight.BeginTime + 1;
       fight.TooltipText = $"#Hits To Players: {fight.TankHits}, #Hits From Players: {fight.DamageHits}, Time Alive: {ttl}s";
       list.Add(fight);
@@ -333,7 +333,7 @@ namespace EQLogParser
         BeginTimeString = Fight.Breaktime,
         Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds),
         TooltipText = "No Data During This Time",
-        SortId = CurrentSortId++
+        SortId = _currentSortId++
       };
 
       list.Add(divider);
@@ -345,7 +345,7 @@ namespace EQLogParser
       {
         if (dataGrid.ItemsSource == list)
         {
-          NeedRefresh = false;
+          _needRefresh = false;
         }
 
         if (Parent is ContentControl control && DockingManager.GetState(control) != DockState.Hidden &&
@@ -358,10 +358,10 @@ namespace EQLogParser
 
     internal void DataGridSelectionChanged()
     {
-      NeedSelectionChange = false;
+      _needSelectionChange = false;
       // adds a delay where a drag-select doesn't keep sending events
-      SelectionTimer.Stop();
-      SelectionTimer.Start();
+      _selectionTimer.Stop();
+      _selectionTimer.Start();
 
       var items = dataGrid.View.Records;
       menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled = items.Count > 0;
@@ -380,7 +380,7 @@ namespace EQLogParser
 
     private void SelectGroupClick(object sender, RoutedEventArgs e)
     {
-      NeedSelectionChange = false;
+      _needSelectionChange = false;
       foreach (var fight in GetFightGroup())
       {
         if (!dataGrid.SelectedItems.Contains(fight))
@@ -392,7 +392,7 @@ namespace EQLogParser
 
     private void UnselectGroupClick(object sender, RoutedEventArgs e)
     {
-      NeedSelectionChange = false;
+      _needSelectionChange = false;
       foreach (var fight in GetFightGroup())
       {
         dataGrid.SelectedItems.Remove(fight);
@@ -403,8 +403,8 @@ namespace EQLogParser
     {
       if (dataGrid?.ItemsSource is ObservableCollection<Fight>)
       {
-        CurrentShowBreaks = fightShowBreaks.IsChecked == true;
-        ConfigUtil.SetSetting("NpcShowInactivityBreaks", CurrentShowBreaks);
+        _currentShowBreaks = fightShowBreaks.IsChecked == true;
+        ConfigUtil.SetSetting("NpcShowInactivityBreaks", _currentShowBreaks);
         dataGrid.View.RefreshFilter();
       }
     }
@@ -413,7 +413,7 @@ namespace EQLogParser
     {
       if (dataGrid?.ItemsSource is ObservableCollection<Fight>)
       {
-        dataGrid.ItemsSource = (fightShowTanking.IsChecked == true) ? Fights : NonTankingFights;
+        dataGrid.ItemsSource = (fightShowTanking.IsChecked == true) ? _fights : _nonTankingFights;
         ConfigUtil.SetSetting("NpcShowTanking", fightShowTanking.IsChecked == true);
         dataGrid.View.RefreshFilter();
       }
@@ -454,9 +454,9 @@ namespace EQLogParser
         {
           fightSearchBox.Text = Resource.NPC_SEARCH_TEXT;
           fightSearchBox.FontStyle = FontStyles.Italic;
-          if (CurrentSearchEntry != null)
+          if (_currentSearchEntry != null)
           {
-            CurrentSearchEntry.IsSearchResult = false;
+            _currentSearchEntry.IsSearchResult = false;
           }
           dataGrid.Focus();
         }
@@ -471,14 +471,14 @@ namespace EQLogParser
     {
       if (dataGrid.CurrentItem is Fight { IsInactivity: false } npc)
       {
-        if (dataGrid.ItemsSource == Fights)
+        if (dataGrid.ItemsSource == _fights)
         {
-          return Fights.Where(fight => fight.GroupId == npc.GroupId);
+          return _fights.Where(fight => fight.GroupId == npc.GroupId);
         }
 
-        if (dataGrid.ItemsSource == NonTankingFights)
+        if (dataGrid.ItemsSource == _nonTankingFights)
         {
-          return NonTankingFights.Where(fight => fight.NonTankingGroupId == npc.NonTankingGroupId);
+          return _nonTankingFights.Where(fight => fight.NonTankingGroupId == npc.NonTankingGroupId);
         }
       }
 
@@ -487,9 +487,9 @@ namespace EQLogParser
 
     private void SearchForNpc(bool backwards = false)
     {
-      if (CurrentSearchEntry != null)
+      if (_currentSearchEntry != null)
       {
-        CurrentSearchEntry.IsSearchResult = false;
+        _currentSearchEntry.IsSearchResult = false;
       }
 
       var records = dataGrid.View.Records;
@@ -500,47 +500,47 @@ namespace EQLogParser
         if (backwards)
         {
           direction = -1;
-          if (CurrentFightSearchDirection != direction)
+          if (_currentFightSearchDirection != direction)
           {
-            CurrentFightSearchIndex -= 2;
+            _currentFightSearchIndex -= 2;
           }
 
-          if (CurrentFightSearchIndex < 0)
+          if (_currentFightSearchIndex < 0)
           {
-            CurrentFightSearchIndex = records.Count - 1;
+            _currentFightSearchIndex = records.Count - 1;
           }
 
           // 1 check/loop from start to finish or add a 2nd to continue from the middle to element - 1
-          checksNeeded = CurrentFightSearchIndex == (records.Count - 1) ? 1 : 2;
+          checksNeeded = _currentFightSearchIndex == (records.Count - 1) ? 1 : 2;
         }
         else
         {
           direction = 1;
-          if (CurrentFightSearchDirection != direction)
+          if (_currentFightSearchDirection != direction)
           {
-            CurrentFightSearchIndex += 2;
+            _currentFightSearchIndex += 2;
           }
 
-          if (CurrentFightSearchIndex >= records.Count)
+          if (_currentFightSearchIndex >= records.Count)
           {
-            CurrentFightSearchIndex = 0;
+            _currentFightSearchIndex = 0;
           }
 
           // 1 check/loop from start to finish or add a 2nd to continue from the middle to element - 1
-          checksNeeded = CurrentFightSearchIndex == 0 ? 1 : 2;
+          checksNeeded = _currentFightSearchIndex == 0 ? 1 : 2;
         }
 
-        CurrentFightSearchDirection = direction;
+        _currentFightSearchDirection = direction;
 
         while (checksNeeded-- > 0)
         {
-          for (var i = CurrentFightSearchIndex; i < records.Count && i >= 0; i += 1 * direction)
+          for (var i = _currentFightSearchIndex; i < records.Count && i >= 0; i += 1 * direction)
           {
             if (records.GetItemAt(i) is Fight { Name: not null } npc && npc.Name.IndexOf(fightSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
             {
               npc.IsSearchResult = true;
-              CurrentSearchEntry = npc;
-              CurrentFightSearchIndex = i + (1 * direction);
+              _currentSearchEntry = npc;
+              _currentFightSearchIndex = i + (1 * direction);
               Dispatcher.InvokeAsync(() => dataGrid.ScrollInView(new RowColumnIndex(dataGrid.ResolveToRowIndex(i), 0)));
               return;
             }
@@ -548,7 +548,7 @@ namespace EQLogParser
 
           if (checksNeeded == 1)
           {
-            CurrentFightSearchIndex = (direction == 1) ? CurrentFightSearchIndex = 0 : CurrentFightSearchIndex = records.Count - 1;
+            _currentFightSearchIndex = (direction == 1) ? _currentFightSearchIndex = 0 : _currentFightSearchIndex = records.Count - 1;
           }
         }
       }
@@ -556,23 +556,23 @@ namespace EQLogParser
 
     private void FightSearchBoxTextChanged(object sender, TextChangedEventArgs e)
     {
-      SearchTextTimer?.Stop();
+      _searchTextTimer?.Stop();
 
       if (e.Changes.FirstOrDefault(change => change.AddedLength > 0) != null)
       {
-        SearchTextTimer?.Start();
+        _searchTextTimer?.Start();
       }
     }
 
     private void EventsClearedActiveData(bool cleared)
     {
-      NonTankingFights.Clear();
-      NonTankingFightsToProcess.Clear();
-      Fights.Clear();
-      FightsToProcess.Clear();
-      CurrentGroup = 1;
-      CurrentNonTankingGroup = 1;
-      CurrentSearchEntry = null;
+      _nonTankingFights.Clear();
+      _nonTankingFightsToProcess.Clear();
+      _fights.Clear();
+      _fightsToProcess.Clear();
+      _currentGroup = 1;
+      _currentNonTankingGroup = 1;
+      _currentSearchEntry = null;
     }
   }
 }

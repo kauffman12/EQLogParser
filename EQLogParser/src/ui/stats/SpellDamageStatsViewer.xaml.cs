@@ -14,25 +14,25 @@ namespace EQLogParser
   /// </summary>
   public partial class SpellDamageStatsViewer : IDocumentContent
   {
-    private readonly ObservableCollection<string> Players = new();
-    private readonly ObservableCollection<string> Spells = new();
-    private readonly ObservableCollection<string> Types = new();
-    private bool CurrentShowPlayers = true;
-    private string CurrentPlayer;
-    private string CurrentSpell;
-    private string CurrentType;
-    private bool Ready;
+    private readonly ObservableCollection<string> _players = new();
+    private readonly ObservableCollection<string> _spells = new();
+    private readonly ObservableCollection<string> _types = new();
+    private bool _currentShowPlayers = true;
+    private string _currentPlayer;
+    private string _currentSpell;
+    private string _currentType;
+    private bool _ready;
 
     public SpellDamageStatsViewer()
     {
       InitializeComponent();
-      typeList.ItemsSource = Types;
-      spellList.ItemsSource = Spells;
-      playerList.ItemsSource = Players;
-      Types.Add("All Types");
-      Types.Add(Labels.DD);
-      Types.Add(Labels.DOT);
-      Types.Add(Labels.PROC);
+      typeList.ItemsSource = _types;
+      spellList.ItemsSource = _spells;
+      playerList.ItemsSource = _players;
+      _types.Add("All Types");
+      _types.Add(Labels.Dd);
+      _types.Add(Labels.Dot);
+      _types.Add(Labels.Proc);
       typeList.SelectedIndex = 0;
 
       // default these columns to descending
@@ -64,12 +64,12 @@ namespace EQLogParser
       var selectedPlayer = playerList.SelectedItem as string;
       var isPlayerOnly = showPlayers.IsChecked == true;
 
-      Spells.Clear();
-      Spells.Add("All Spells");
-      Players.Clear();
-      Players.Add("All Casters");
+      _spells.Clear();
+      _spells.Add("All Spells");
+      _players.Clear();
+      _players.Add("All Casters");
 
-      var playerDDTotals = new Dictionary<string, SpellDamageStats>();
+      var playerDdTotals = new Dictionary<string, SpellDamageStats>();
       var playerDoTTotals = new Dictionary<string, SpellDamageStats>();
       var playerProcTotals = new Dictionary<string, SpellDamageStats>();
       var uniqueSpells = new Dictionary<string, byte>();
@@ -78,14 +78,14 @@ namespace EQLogParser
 
       foreach (var fight in fights)
       {
-        foreach (var kv in fight.DDDamage)
+        foreach (var kv in fight.DdDamage)
         {
           if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(kv.Value.Caster) || PlayerManager.Instance.IsMerc(kv.Value.Caster))
           {
-            if (!playerDDTotals.TryGetValue(kv.Key, out var ddStats))
+            if (!playerDdTotals.TryGetValue(kv.Key, out var ddStats))
             {
               ddStats = new SpellDamageStats { Caster = kv.Value.Caster, Spell = kv.Value.Spell };
-              playerDDTotals[kv.Key] = ddStats;
+              playerDdTotals[kv.Key] = ddStats;
               uniqueSpells[kv.Value.Spell] = 1;
               uniquePlayers[kv.Value.Caster] = 1;
             }
@@ -136,31 +136,31 @@ namespace EQLogParser
       var list = new List<IDictionary<string, object>>();
       foreach (ref var stats in playerDoTTotals.Values.ToArray().AsSpan())
       {
-        AddRow(list, stats, Labels.DOT);
+        AddRow(list, stats, Labels.Dot);
       }
 
-      foreach (ref var stats in playerDDTotals.Values.ToArray().AsSpan())
+      foreach (ref var stats in playerDdTotals.Values.ToArray().AsSpan())
       {
-        AddRow(list, stats, Labels.DD);
+        AddRow(list, stats, Labels.Dd);
       }
 
       foreach (ref var stats in playerProcTotals.Values.ToArray().AsSpan())
       {
-        AddRow(list, stats, Labels.PROC);
+        AddRow(list, stats, Labels.Proc);
       }
 
       foreach (var key in uniqueSpells.Keys.OrderBy(k => k, StringComparer.Create(new CultureInfo("en-US"), true)))
       {
-        Spells.Add(key);
+        _spells.Add(key);
       }
 
       foreach (var key in uniquePlayers.Keys.OrderBy(k => k, StringComparer.Create(new CultureInfo("en-US"), true)))
       {
-        Players.Add(key);
+        _players.Add(key);
       }
 
-      spellList.SelectedIndex = Spells.IndexOf(selectedSpell) is var s and > -1 ? s : 0;
-      playerList.SelectedIndex = Players.IndexOf(selectedPlayer) is var p and > -1 ? p : 0;
+      spellList.SelectedIndex = _spells.IndexOf(selectedSpell) is var s and > -1 ? s : 0;
+      playerList.SelectedIndex = _players.IndexOf(selectedPlayer) is var p and > -1 ? p : 0;
       dataGrid.ItemsSource = list;
     }
 
@@ -186,10 +186,10 @@ namespace EQLogParser
           var pass = false;
           if (item is IDictionary<string, object> dict)
           {
-            pass = !CurrentShowPlayers || PlayerManager.Instance.IsVerifiedPlayer(dict["Caster"] as string) ||
+            pass = !_currentShowPlayers || PlayerManager.Instance.IsVerifiedPlayer(dict["Caster"] as string) ||
               PlayerManager.Instance.IsMerc(dict["Caster"] as string);
-            pass = pass && (CurrentType == null || CurrentType.Equals(dict["Type"])) && (CurrentSpell == null ||
-              CurrentSpell.Equals(dict["Spell"])) && (CurrentPlayer == null || CurrentPlayer.Equals(dict["Caster"]));
+            pass = pass && (_currentType == null || _currentType.Equals(dict["Type"])) && (_currentSpell == null ||
+              _currentSpell.Equals(dict["Spell"])) && (_currentPlayer == null || _currentPlayer.Equals(dict["Caster"]));
           }
           return pass;
         };
@@ -209,10 +209,10 @@ namespace EQLogParser
     {
       if (dataGrid is { View: not null })
       {
-        CurrentType = typeList.SelectedIndex > 0 ? typeList.SelectedItem as string : null;
-        CurrentSpell = spellList.SelectedIndex > 0 ? spellList.SelectedItem as string : null;
-        CurrentPlayer = playerList.SelectedIndex > 0 ? playerList.SelectedItem as string : null;
-        CurrentShowPlayers = showPlayers.IsChecked == true;
+        _currentType = typeList.SelectedIndex > 0 ? typeList.SelectedItem as string : null;
+        _currentSpell = spellList.SelectedIndex > 0 ? spellList.SelectedItem as string : null;
+        _currentPlayer = playerList.SelectedIndex > 0 ? playerList.SelectedItem as string : null;
+        _currentShowPlayers = showPlayers.IsChecked == true;
 
         if (ReferenceEquals(sender, fightOption))
         {
@@ -227,12 +227,12 @@ namespace EQLogParser
 
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (VisualParent != null && !Ready)
+      if (VisualParent != null && !_ready)
       {
         MainActions.EventsFightSelectionChanged += SelectionChange;
         MainActions.EventsLogLoadingComplete += LogLoadingComplete;
         Load();
-        Ready = true;
+        _ready = true;
       }
     }
 
@@ -241,7 +241,7 @@ namespace EQLogParser
       MainActions.EventsFightSelectionChanged -= SelectionChange;
       MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
       dataGrid.ItemsSource = null;
-      Ready = false;
+      _ready = false;
     }
   }
 }

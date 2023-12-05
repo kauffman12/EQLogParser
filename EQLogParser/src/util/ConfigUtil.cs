@@ -19,15 +19,15 @@ namespace EQLogParser
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
-    private const string APP_DATA = @"%AppData%\EQLogParser";
-    private const string PETMAP_FILE = "petmapping.txt";
-    private const string PLAYERS_FILE = "players.txt";
+    private const string AppData = @"%AppData%\EQLogParser";
+    private const string PetmapFile = "petmapping.txt";
+    private const string PlayersFile = "players.txt";
 
-    private static string ArchiveDir;
-    private static string SettingsFile;
-    private static string TriggersDbFile;
-    private static bool InitDone;
-    private static bool SettingsUpdated;
+    private static string _archiveDir;
+    private static string _settingsFile;
+    private static string _triggersDbFile;
+    private static bool _initDone;
+    private static bool _settingsUpdated;
 
     private static readonly ConcurrentDictionary<string, string> ApplicationSettings = new();
     internal static void SetSetting(string key, bool value) => SetSetting(key, value.ToString());
@@ -37,7 +37,7 @@ namespace EQLogParser
     internal static string GetArchiveDir()
     {
       Init();
-      return ArchiveDir;
+      return _archiveDir;
     }
 
     internal static bool IfSet(string setting, PostConfigCallback callback = null, bool callByDefault = false)
@@ -99,7 +99,7 @@ namespace EQLogParser
       {
         if (ApplicationSettings.TryRemove(key, out var _))
         {
-          SettingsUpdated = true;
+          _settingsUpdated = true;
         }
       }
     }
@@ -112,7 +112,7 @@ namespace EQLogParser
       {
         if (ApplicationSettings.TryRemove(key, out _))
         {
-          SettingsUpdated = true;
+          _settingsUpdated = true;
         }
       }
       else
@@ -122,13 +122,13 @@ namespace EQLogParser
           if (existing != value)
           {
             ApplicationSettings[key] = value;
-            SettingsUpdated = true;
+            _settingsUpdated = true;
           }
         }
         else
         {
           ApplicationSettings[key] = value;
-          SettingsUpdated = true;
+          _settingsUpdated = true;
         }
       }
     }
@@ -137,7 +137,7 @@ namespace EQLogParser
     {
       Init();
       var petMapping = new ConcurrentDictionary<string, string>();
-      var fileName = ConfigDir + @"\" + ServerName + @"\" + PETMAP_FILE;
+      var fileName = ConfigDir + @"\" + ServerName + @"\" + PetmapFile;
       LoadProperties(petMapping, ReadList(fileName));
       return petMapping;
     }
@@ -145,7 +145,7 @@ namespace EQLogParser
     internal static List<string> ReadPlayers()
     {
       Init();
-      var fileName = ConfigDir + @"\" + ServerName + @"\" + PLAYERS_FILE;
+      var fileName = ConfigDir + @"\" + ServerName + @"\" + PlayersFile;
       return ReadList(fileName);
     }
 
@@ -154,7 +154,7 @@ namespace EQLogParser
       Init();
       var playerDir = ConfigDir + @"\" + ServerName;
       Directory.CreateDirectory(playerDir);
-      SaveList(playerDir + @"\" + PLAYERS_FILE, list);
+      SaveList(playerDir + @"\" + PlayersFile, list);
     }
 
     internal static void SavePetMapping(IEnumerable<KeyValuePair<string, string>> enumeration)
@@ -162,45 +162,45 @@ namespace EQLogParser
       Init();
       var petDir = ConfigDir + @"\" + ServerName;
       Directory.CreateDirectory(petDir);
-      SaveProperties(petDir + @"\" + PETMAP_FILE, enumeration);
+      SaveProperties(petDir + @"\" + PetmapFile, enumeration);
     }
 
     internal static void Save()
     {
       Init();
 
-      if (SettingsUpdated)
+      if (_settingsUpdated)
       {
         ApplicationSettings.TryRemove("IncludeAEHealing", out _); // not used anymore
         ApplicationSettings.TryRemove("HealingColumns", out _); // not used anymore
         ApplicationSettings.TryRemove("TankingColumns", out _); // not used anymore
-        SaveProperties(SettingsFile, ApplicationSettings);
+        SaveProperties(_settingsFile, ApplicationSettings);
       }
     }
 
     internal static string GetTriggersDbFile()
     {
       Init();
-      return TriggersDbFile;
+      return _triggersDbFile;
     }
 
     private static void Init()
     {
-      if (!InitDone)
+      if (!_initDone)
       {
-        InitDone = true;
-        ArchiveDir = Environment.ExpandEnvironmentVariables(APP_DATA + @"\archive\");
-        ConfigDir = Environment.ExpandEnvironmentVariables(APP_DATA + @"\config\");
-        LogsDir = Environment.ExpandEnvironmentVariables(APP_DATA + @"\logs\");
-        SettingsFile = ConfigDir + @"\settings.txt";
-        TriggersDbFile = ConfigDir + @"triggers.db";
+        _initDone = true;
+        _archiveDir = Environment.ExpandEnvironmentVariables(AppData + @"\archive\");
+        ConfigDir = Environment.ExpandEnvironmentVariables(AppData + @"\config\");
+        LogsDir = Environment.ExpandEnvironmentVariables(AppData + @"\logs\");
+        _settingsFile = ConfigDir + @"\settings.txt";
+        _triggersDbFile = ConfigDir + @"triggers.db";
 
         // create config dir if it doesn't exist
         Directory.CreateDirectory(ConfigDir);
         // create logs dir if it doesn't exist
         Directory.CreateDirectory(LogsDir);
 
-        LoadProperties(ApplicationSettings, ReadList(SettingsFile));
+        LoadProperties(ApplicationSettings, ReadList(_settingsFile));
       }
     }
 

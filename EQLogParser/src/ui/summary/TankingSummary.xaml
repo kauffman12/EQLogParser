@@ -74,8 +74,8 @@
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
-            <MenuItem IsEnabled="False" x:Name="copyTankingParseToEQClick" Header="Selected" Click="CopyToEQClick" />
-            <MenuItem IsEnabled="False" x:Name="copyReceivedHealingParseToEQClick" Header="Received Healing" Click="CopyReceivedHealingToEQClick" />
+            <MenuItem IsEnabled="False" x:Name="copyTankingParseToEQClick" Header="Selected" Click="CopyToEqClick" />
+            <MenuItem IsEnabled="False" x:Name="copyReceivedHealingParseToEQClick" Header="Received Healing" Click="CopyReceivedHealingToEqClick" />
           </MenuItem>
           <Separator />
           <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
@@ -170,8 +170,8 @@
         <syncfusion:GridTextColumn MaximumWidth="70" MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
         <syncfusion:GridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Damaged" />
         <syncfusion:GridNumericColumn MappingName="Extra" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Healed" />
-        <syncfusion:GridNumericColumn MappingName="DPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
-        <syncfusion:GridNumericColumn MappingName="SDPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
+        <syncfusion:GridNumericColumn MappingName="Dps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
+        <syncfusion:GridNumericColumn MappingName="Sdps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
         <syncfusion:GridNumericColumn MaximumWidth="65" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
         <syncfusion:GridNumericColumn MaximumWidth="70" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
         <syncfusion:GridNumericColumn MaximumWidth="90" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />

@@ -11,39 +11,39 @@ namespace EQLogParser
 {
   internal class LogReader : IDisposable
   {
-    private readonly BlockingCollection<Tuple<string, double, bool>> Lines = new(new ConcurrentQueue<Tuple<string, double, bool>>(), 100000);
+    private readonly BlockingCollection<Tuple<string, double, bool>> _lines = new(new ConcurrentQueue<Tuple<string, double, bool>>(), 100000);
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private readonly FileSystemWatcher FileWatcher;
-    private readonly string FileName;
-    private int MinBack;
-    private CancellationTokenSource Cts;
-    private readonly ManualResetEvent NewDataAvailable = new(false);
-    private readonly ILogProcessor LogProcessor;
-    private Task ReadFileTask;
-    private long InitSize;
-    private long CurrentPos;
-    private long NextUpdateThreshold;
+    private readonly FileSystemWatcher _fileWatcher;
+    private readonly string _fileName;
+    private int _minBack;
+    private CancellationTokenSource _cts;
+    private readonly ManualResetEvent _newDataAvailable = new(false);
+    private readonly ILogProcessor _logProcessor;
+    private Task _readFileTask;
+    private long _initSize;
+    private long _currentPos;
+    private long _nextUpdateThreshold;
 
     public LogReader(ILogProcessor logProcessor, string fileName, int minBack = 0)
     {
-      LogProcessor = logProcessor;
-      FileName = fileName;
-      MinBack = minBack;
+      _logProcessor = logProcessor;
+      _fileName = fileName;
+      _minBack = minBack;
 
       if (Path.GetDirectoryName(fileName) is { } directory)
       {
-        logProcessor.LinkTo(Lines);
+        logProcessor.LinkTo(_lines);
 
-        FileWatcher = new FileSystemWatcher(directory, Path.GetFileName(fileName))
+        _fileWatcher = new FileSystemWatcher(directory, Path.GetFileName(fileName))
         {
           NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite
         };
 
-        FileWatcher.Created += OnFileCreated;
-        FileWatcher.Deleted += OnFileMoved;
-        FileWatcher.Renamed += OnFileMoved;
-        FileWatcher.Changed += OnFileChanged;
-        FileWatcher.EnableRaisingEvents = true;
+        _fileWatcher.Created += OnFileCreated;
+        _fileWatcher.Deleted += OnFileMoved;
+        _fileWatcher.Renamed += OnFileMoved;
+        _fileWatcher.Changed += OnFileChanged;
+        _fileWatcher.EnableRaisingEvents = true;
         StartReadingFile();
       }
       else
@@ -52,23 +52,23 @@ namespace EQLogParser
       }
     }
 
-    public double Progress => CurrentPos / (double)InitSize * 100;
-    public IDisposable GetProcessor() => LogProcessor;
+    public double Progress => _currentPos / (double)_initSize * 100;
+    public IDisposable GetProcessor() => _logProcessor;
 
     private void OnFileCreated(object sender, FileSystemEventArgs e) => StartReadingFile();
-    private void OnFileChanged(object sender, FileSystemEventArgs e) => NewDataAvailable.Set();
+    private void OnFileChanged(object sender, FileSystemEventArgs e) => _newDataAvailable.Set();
 
     private void OnFileMoved(object sender, FileSystemEventArgs e)
     {
-      Cts?.Cancel();
-      ReadFileTask?.Wait();
-      MinBack = 0;
+      _cts?.Cancel();
+      _readFileTask?.Wait();
+      _minBack = 0;
     }
 
     private void StartReadingFile()
     {
-      Cts = new CancellationTokenSource();
-      ReadFileTask = Task.Run(() => ReadFile(FileName, MinBack, Cts.Token), Cts.Token);
+      _cts = new CancellationTokenSource();
+      _readFileTask = Task.Run(() => ReadFile(_fileName, _minBack, _cts.Token), _cts.Token);
     }
 
     private async Task ReadFile(string fileName, int minBack, CancellationToken cancelToken)
@@ -78,8 +78,8 @@ namespace EQLogParser
       try
       {
         var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, bufferSize);
-        InitSize = fs.Length;
-        NextUpdateThreshold = InitSize / 50;
+        _initSize = fs.Length;
+        _nextUpdateThreshold = _initSize / 50;
 
         if (minBack == 0)
         {
@@ -98,7 +98,7 @@ namespace EQLogParser
         var reader = FileUtil.GetStreamReader(fs, beginTime);
         SearchLinear(reader, minDate, out var firstLine);
 
-        CurrentPos = fs.Position;
+        _currentPos = fs.Position;
         await using (fs)
         using (reader)
         {
@@ -114,14 +114,14 @@ namespace EQLogParser
 
             // update progress during initial load
             bytesRead += Encoding.UTF8.GetByteCount(line) + 2;
-            if (bytesRead >= NextUpdateThreshold)
+            if (bytesRead >= _nextUpdateThreshold)
             {
-              CurrentPos = fs.Position;
-              NextUpdateThreshold += InitSize / 50; // 2% of InitSize
+              _currentPos = fs.Position;
+              _nextUpdateThreshold += _initSize / 50; // 2% of InitSize
             }
-            else if ((InitSize - bytesRead) < 10000)
+            else if ((_initSize - bytesRead) < 10000)
             {
-              CurrentPos = fs.Position;
+              _currentPos = fs.Position;
             }
 
             if (firstLine != null)
@@ -142,13 +142,13 @@ namespace EQLogParser
             }
 
             if (cancelToken.IsCancellationRequested) break;
-            WaitHandle.WaitAny(new[] { NewDataAvailable, cancelToken.WaitHandle });
+            WaitHandle.WaitAny(new[] { _newDataAvailable, cancelToken.WaitHandle });
 
             if (!cancelToken.IsCancellationRequested)
             {
               try
               {
-                NewDataAvailable.Reset();
+                _newDataAvailable.Reset();
               }
               catch (Exception)
               {
@@ -180,7 +180,7 @@ namespace EQLogParser
         }
 
         if (cancelToken.IsCancellationRequested) return;
-        Lines.Add(Tuple.Create(theLine, doubleValue, monitor), cancelToken);
+        _lines.Add(Tuple.Create(theLine, doubleValue, monitor), cancelToken);
         previous = theLine;
       }
     }
@@ -209,20 +209,20 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool DisposedValue; // To detect redundant calls
+    private bool _disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!DisposedValue)
+      if (!_disposedValue)
       {
-        FileWatcher?.Dispose();
-        Lines.CompleteAdding();
-        Cts?.Cancel();
-        Cts?.Dispose();
-        LogProcessor?.Dispose();
-        DisposedValue = true;
-        NewDataAvailable.Close();
-        NewDataAvailable.Dispose();
+        _fileWatcher?.Dispose();
+        _lines.CompleteAdding();
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _logProcessor?.Dispose();
+        _disposedValue = true;
+        _newDataAvailable.Close();
+        _newDataAvailable.Dispose();
       }
     }
 
