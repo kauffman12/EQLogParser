@@ -28,8 +28,8 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new();
     private static readonly ConcurrentDictionary<string, CharacterData> QuickShareCache = new();
-    private const string EXT_TRIGGER = "tgf";
-    private const string EXT_OVERLAY = "ogf";
+    private const string ExtTrigger = "tgf";
+    private const string ExtOverlay = "ogf";
     internal static double GetTimerBarHeight(double fontSize) => fontSize + 2;
     internal static void ImportTriggers(TriggerNode parent) => Import(parent);
     internal static void ImportOverlays(TriggerNode triggerNode) => Import(triggerNode, false);
@@ -495,7 +495,7 @@ namespace EQLogParser
     {
       var current = Directory.GetFiles("data/sounds", "*.wav").Select(Path.GetFileName).OrderBy(file => file).ToList();
 
-      UIUtil.InvokeNow(() =>
+      UiUtil.InvokeNow(() =>
       {
         try
         {
@@ -537,7 +537,7 @@ namespace EQLogParser
             var isTriggers = exportList[0].Name == TriggerStateManager.Triggers;
             var result = JsonSerializer.Serialize(exportList);
             var saveFileDialog = new SaveFileDialog();
-            var filter = isTriggers ? $"Triggers File (*.{EXT_TRIGGER}.gz)|*.{EXT_TRIGGER}.gz" : $"Overlays File (*.{EXT_OVERLAY}.gz)|*.{EXT_OVERLAY}.gz";
+            var filter = isTriggers ? $"Triggers File (*.{ExtTrigger}.gz)|*.{ExtTrigger}.gz" : $"Overlays File (*.{ExtOverlay}.gz)|*.{ExtOverlay}.gz";
             saveFileDialog.Filter = filter;
 
             if (saveFileDialog.ShowDialog() == true)
@@ -577,7 +577,7 @@ namespace EQLogParser
           var fullKey = $"{{{ShareTrigger}:{quickShareKey}}}";
           if (!string.IsNullOrEmpty(quickShareKey))
           {
-            var to = chatType.Channel == ChatChannels.TELL ? "You" : chatType.Channel;
+            var to = chatType.Channel == ChatChannels.Tell ? "You" : chatType.Channel;
             var record = new QuickShareRecord
             {
               BeginTime = dateTime,
@@ -591,8 +591,8 @@ namespace EQLogParser
             RecordManager.Instance.Add(record);
 
             // don't handle immediately unless enabled
-            if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.GROUP or ChatChannels.GUILD
-                  or ChatChannels.RAID or ChatChannels.TELL) && ConfigUtil.IfSet("TriggersWatchForQuickShare")
+            if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild
+                  or ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare")
                 && !RecordManager.Instance.IsQuickShareMine(fullKey))
             {
               // ignore if we're still processing a bunch
@@ -673,7 +673,7 @@ namespace EQLogParser
           request.Headers.Add("EQLogParser", "true");
           request.Content = multiPart;
 
-          var response = await MainActions.THE_HTTP_CLIENT.SendAsync(request);
+          var response = await MainActions.TheHttpClient.SendAsync(request);
           if (response.IsSuccessStatusCode)
           {
             if (await response.Content.ReadAsStringAsync() is var shareLink && shareLink != "")
@@ -722,7 +722,7 @@ namespace EQLogParser
         try
         {
           var url = $"http://share.kizant.net:8080/download/{quickShareKey}";
-          var response = MainActions.THE_HTTP_CLIENT.GetAsync(url).Result;
+          var response = MainActions.TheHttpClient.GetAsync(url).Result;
           if (response.IsSuccessStatusCode)
           {
             await using var decompressionStream = new GZipStream(await response.Content.ReadAsStreamAsync(), CompressionMode.Decompress);
@@ -740,7 +740,7 @@ namespace EQLogParser
               return;
             }
 
-            UIUtil.InvokeAsync(() =>
+            UiUtil.InvokeAsync(() =>
             {
               new MessageWindow($"Unable to Import. Key Expired.", Resource.RECEIVED_SHARE).ShowDialog();
             });
@@ -750,7 +750,7 @@ namespace EQLogParser
         {
           if (ex.Message.Contains("An attempt was made to access a socket in a way forbidden by its access permissions"))
           {
-            UIUtil.InvokeAsync(() =>
+            UiUtil.InvokeAsync(() =>
             {
               new MessageWindow("Unable to Import. Blocked by Firewall?", Resource.SHARE_ERROR).ShowDialog();
               Log.Error("Error Downloading Quick Share", ex);
@@ -766,7 +766,7 @@ namespace EQLogParser
               return;
             }
 
-            UIUtil.InvokeAsync(() =>
+            UiUtil.InvokeAsync(() =>
             {
               new MessageWindow("Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
             });
@@ -785,7 +785,7 @@ namespace EQLogParser
         var player = quickShareData.Sender;
         var characterIds = quickShareData.CharacterIds;
 
-        UIUtil.InvokeAsync(() =>
+        UiUtil.InvokeAsync(() =>
         {
           var nodes = JsonSerializer.Deserialize<List<ExportTriggerNode>>(data, new JsonSerializerOptions { IncludeFields = true });
           if (nodes.Count > 0 && nodes[0].Nodes.Count == 0)
@@ -859,8 +859,8 @@ namespace EQLogParser
     {
       try
       {
-        var defExt = triggers ? $".{EXT_TRIGGER}.gz" : $".{EXT_OVERLAY}.gz";
-        var filter = triggers ? $"All Supported Files|*.{EXT_TRIGGER}.gz;*.gtp" : $"All Supported Files|*.{EXT_OVERLAY}.gz";
+        var defExt = triggers ? $".{ExtTrigger}.gz" : $".{ExtOverlay}.gz";
+        var filter = triggers ? $"All Supported Files|*.{ExtTrigger}.gz;*.gtp" : $"All Supported Files|*.{ExtOverlay}.gz";
 
         // WPF doesn't have its own file chooser so use Win32 Version
         var dialog = new OpenFileDialog
@@ -876,7 +876,7 @@ namespace EQLogParser
           var fileInfo = new FileInfo(dialog.FileName);
           if (fileInfo.Exists && fileInfo.Length < 100000000)
           {
-            if (dialog.FileName.EndsWith($"{EXT_TRIGGER}.gz") || dialog.FileName.EndsWith($"{EXT_OVERLAY}.gz"))
+            if (dialog.FileName.EndsWith($"{ExtTrigger}.gz") || dialog.FileName.EndsWith($"{ExtOverlay}.gz"))
             {
               var decompressionStream = new GZipStream(fileInfo.OpenRead(), CompressionMode.Decompress);
               var reader = new StreamReader(decompressionStream);

@@ -6,12 +6,12 @@ namespace EQLogParser
 {
   class LogProcessor : ILogProcessor
   {
-    private long LineCount;
-    private readonly string FileName;
+    private long _lineCount;
+    private readonly string _fileName;
 
     internal LogProcessor(string fileName)
     {
-      FileName = fileName ?? string.Empty;
+      _fileName = fileName ?? string.Empty;
       // Setup the pre-processor block
       ChatManager.Instance.Init();
     }
@@ -29,7 +29,7 @@ namespace EQLogParser
 
     private void DoPreProcess(string line, double dateTime, bool monitor)
     {
-      var lineData = new LineData { Action = line[27..], BeginTime = dateTime, LineNumber = LineCount };
+      var lineData = new LineData { Action = line[27..], BeginTime = dateTime, LineNumber = _lineCount };
 
       // avoid having other things parse chat by accident
       if (ChatLineParser.ParseChatType(lineData.Action) is { } chatType)
@@ -38,7 +38,7 @@ namespace EQLogParser
         chatType.Text = line; // workaround for now?
         ChatManager.Instance.Add(chatType);
 
-        if (!monitor || !TriggerManager.Instance.RunningFiles.ContainsKey(FileName))
+        if (!monitor || !TriggerManager.Instance.RunningFiles.ContainsKey(_fileName))
         {
           TriggerUtil.CheckQuickShare(chatType, lineData.Action, dateTime, null, null);
           GinaUtil.CheckGina(chatType, lineData.Action, dateTime, null, null);
@@ -79,7 +79,7 @@ namespace EQLogParser
             }
           }
 
-          LineCount++;
+          _lineCount++;
         }
 
         if (doubleLine != null)

@@ -34,7 +34,7 @@ namespace EQLogParser
           var fullKey = $"{{GINA:{ginaKey}}}";
           if (!string.IsNullOrEmpty(ginaKey))
           {
-            var to = chatType.Channel == ChatChannels.TELL ? "You" : chatType.Channel;
+            var to = chatType.Channel == ChatChannels.Tell ? "You" : chatType.Channel;
             var record = new QuickShareRecord
             {
               BeginTime = dateTime,
@@ -48,8 +48,8 @@ namespace EQLogParser
             RecordManager.Instance.Add(record);
 
             // don't handle immediately unless enabled
-            if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.GROUP or ChatChannels.GUILD
-                  or ChatChannels.RAID or ChatChannels.TELL) && ConfigUtil.IfSet("TriggersWatchForQuickShare") &&
+            if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild
+                  or ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") &&
                 !RecordManager.Instance.IsQuickShareMine(fullKey))
             {
               // ignore if we're still processing a bunch
@@ -108,7 +108,7 @@ namespace EQLogParser
         var player = quickShareData.Sender;
         var characterIds = quickShareData.CharacterIds;
 
-        UIUtil.InvokeAsync(() =>
+        UiUtil.InvokeAsync(() =>
         {
           if (nodes.Count > 0 && nodes[0].Nodes.Count == 0)
           {
@@ -191,7 +191,7 @@ namespace EQLogParser
           message.Headers.Add("SOAPAction", "http://tempuri.org/IPackageService/DownloadPackageChunk");
           message.Headers.Add("Accept-Encoding", "gzip, deflate");
 
-          var response = MainActions.THE_HTTP_CLIENT.Send(message);
+          var response = MainActions.TheHttpClient.Send(message);
           if (response.IsSuccessStatusCode)
           {
             using var data = response.Content.ReadAsStream();
@@ -213,7 +213,7 @@ namespace EQLogParser
             }
             else
             {
-              UIUtil.InvokeAsync(() =>
+              UiUtil.InvokeAsync(() =>
                 new MessageWindow("Unable to Import. No supported data found.", Resource.RECEIVED_GINA).ShowDialog());
 
               // no chunk data in response. too old?
@@ -222,7 +222,7 @@ namespace EQLogParser
           }
           else
           {
-            UIUtil.InvokeAsync(() =>
+            UiUtil.InvokeAsync(() =>
               new MessageWindow("Unable to Import. Probably Expired.", Resource.RECEIVED_GINA).ShowDialog());
 
             Log.Error("Error Downloading GINA Triggers. Received Status Code = " + response.StatusCode);
@@ -233,7 +233,7 @@ namespace EQLogParser
         {
           if (ex.Message.Contains("An attempt was made to access a socket in a way forbidden by its access permissions"))
           {
-            UIUtil.InvokeAsync(() =>
+            UiUtil.InvokeAsync(() =>
             {
               new MessageWindow("Error Downloading GINA Triggers. Blocked by Firewall?", Resource.RECEIVED_GINA).ShowDialog();
               Log.Error("Error Downloading GINA Triggers", ex);
@@ -242,7 +242,7 @@ namespace EQLogParser
           }
           else
           {
-            UIUtil.InvokeAsync(() =>
+            UiUtil.InvokeAsync(() =>
             {
               new MessageWindow("Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
             });

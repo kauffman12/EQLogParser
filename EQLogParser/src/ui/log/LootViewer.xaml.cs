@@ -16,27 +16,27 @@ namespace EQLogParser
   /// </summary>
   public partial class LootViewer : IDocumentContent
   {
-    private const string ALL_NPCS = "All NPCs";
-    private const string ALL_PLAYERS = "All Players";
-    private const string ALL_ITEMS = "All Loot";
-    private const string ONLY_ASSIGNED = "Only Assigned";
-    private const string ONLY_CURRENCY = "Only Currency";
-    private const string ONLY_ITEMS = "Only Items";
+    private const string AllNpcs = "All NPCs";
+    private const string AllPlayers = "All Players";
+    private const string AllItems = "All Loot";
+    private const string OnlyAssigned = "Only Assigned";
+    private const string OnlyCurrency = "Only Currency";
+    private const string OnlyItems = "Only Items";
 
-    private readonly DispatcherTimer ReloadTimer;
-    private readonly List<string> Options = new() { "Individual View", "Summary View" };
-    private readonly ObservableCollection<LootRow> IndividualRecords = new();
-    private readonly ObservableCollection<LootRow> TotalRecords = new();
-    private bool ShowSummaryView;
-    private string CurrentSelectedItem = ALL_ITEMS;
-    private string CurrentSelectedPlayer = ALL_PLAYERS;
-    private string CurrentSelectedNpc = ALL_NPCS;
-    private bool Ready;
+    private readonly DispatcherTimer _reloadTimer;
+    private readonly List<string> _options = new() { "Individual View", "Summary View" };
+    private readonly ObservableCollection<LootRow> _individualRecords = new();
+    private readonly ObservableCollection<LootRow> _totalRecords = new();
+    private bool _showSummaryView;
+    private string _currentSelectedItem = AllItems;
+    private string _currentSelectedPlayer = AllPlayers;
+    private string _currentSelectedNpc = AllNpcs;
+    private bool _ready;
 
     public LootViewer()
     {
       InitializeComponent();
-      optionsList.ItemsSource = Options;
+      optionsList.ItemsSource = _options;
       optionsList.SelectedIndex = 0;
 
       // default these columns to descending
@@ -46,19 +46,19 @@ namespace EQLogParser
       RecordManager.Instance.RecordsUpdatedEvent += RecordsUpdatedEvent;
       DataGridUtil.UpdateTableMargin(dataGrid);
       MainActions.EventsThemeChanged += EventsThemeChanged;
-      dataGrid.ItemsSource = IndividualRecords;
+      dataGrid.ItemsSource = _individualRecords;
 
-      ReloadTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
-      ReloadTimer.Tick += ReloadTimerTick;
+      _reloadTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
+      _reloadTimer.Tick += ReloadTimerTick;
     }
 
     private void ReloadTimerTick(object sender, EventArgs e) => Load();
 
     private void RecordsUpdatedEvent(string type)
     {
-      if (type == RecordManager.LootRecords && !ReloadTimer.IsEnabled)
+      if (type == RecordManager.LootRecords && !_reloadTimer.IsEnabled)
       {
-        ReloadTimer.Start();
+        _reloadTimer.Start();
       }
     }
 
@@ -75,36 +75,36 @@ namespace EQLogParser
 
       var players = new List<string>
       {
-        ALL_PLAYERS
+        AllPlayers
       };
 
       var itemNames = new List<string>
       {
-        ALL_ITEMS,
-        ONLY_ASSIGNED,
-        ONLY_CURRENCY,
-        ONLY_ITEMS
+        AllItems,
+        OnlyAssigned,
+        OnlyCurrency,
+        OnlyItems
       };
 
       var npcs = new List<string>
       {
-       ALL_NPCS
+       AllNpcs
       };
 
       var i = 0;
       foreach (var (beginTime, looted) in RecordManager.Instance.GetAllLoot().Reverse())
       {
         var row = new LootRow { Time = beginTime, Record = looted };
-        if (IndividualRecords.Count > i)
+        if (_individualRecords.Count > i)
         {
-          if (!IndividualRecords[i].Time.Equals(row.Time) || !IndividualRecords[i].Record.Equals(row.Record))
+          if (!_individualRecords[i].Time.Equals(row.Time) || !_individualRecords[i].Record.Equals(row.Record))
           {
-            IndividualRecords[i] = row;
+            _individualRecords[i] = row;
           }
         }
         else
         {
-          IndividualRecords.Add(row);
+          _individualRecords.Add(row);
         }
 
         UpdateTotals(totalRecords, looted);
@@ -124,9 +124,9 @@ namespace EQLogParser
         i++;
       }
 
-      for (var j = IndividualRecords.Count - 1; j >= i; j--)
+      for (var j = _individualRecords.Count - 1; j >= i; j--)
       {
-        IndividualRecords.RemoveAt(j);
+        _individualRecords.RemoveAt(j);
       }
 
       foreach (var player in uniquePlayers.Keys.OrderBy(player => player))
@@ -147,33 +147,33 @@ namespace EQLogParser
       i = 0;
       foreach (var row in totalRecords.OrderByDescending(row => row.Record.Quantity))
       {
-        if (TotalRecords.Count > i)
+        if (_totalRecords.Count > i)
         {
-          if (!TotalRecords[i].Time.Equals(row.Time) || !TotalRecords[i].Record.Equals(row.Record))
+          if (!_totalRecords[i].Time.Equals(row.Time) || !_totalRecords[i].Record.Equals(row.Record))
           {
-            TotalRecords[i] = row;
+            _totalRecords[i] = row;
           }
         }
         else
         {
-          TotalRecords.Add(row);
+          _totalRecords.Add(row);
         }
 
         i++;
       }
 
-      for (var j = TotalRecords.Count - 1; j >= i; j--)
+      for (var j = _totalRecords.Count - 1; j >= i; j--)
       {
-        TotalRecords.RemoveAt(j);
+        _totalRecords.RemoveAt(j);
       }
 
-      UpdateItems(itemsList, itemNames, CurrentSelectedItem);
-      UpdateItems(playersList, players, CurrentSelectedPlayer);
-      UpdateItems(npcsList, npcs, CurrentSelectedNpc);
+      UpdateItems(itemsList, itemNames, _currentSelectedItem);
+      UpdateItems(playersList, players, _currentSelectedPlayer);
+      UpdateItems(npcsList, npcs, _currentSelectedNpc);
       dataGrid?.View?.Refresh();
       dataGrid?.GridColumnSizer.ResetAutoCalculationforAllColumns();
       UpdateTitle();
-      ReloadTimer.Stop();
+      _reloadTimer.Stop();
     }
 
     private void UpdateItems(ComboBox combo, List<string> items, string selected)
@@ -195,19 +195,19 @@ namespace EQLogParser
     {
       if (dataGrid is { View: not null })
       {
-        ShowSummaryView = optionsList.SelectedIndex != 0;
-        CurrentSelectedPlayer = playersList.SelectedItem as string ?? CurrentSelectedPlayer;
-        CurrentSelectedItem = itemsList.SelectedItem as string ?? CurrentSelectedItem;
-        CurrentSelectedNpc = npcsList.SelectedItem as string ?? CurrentSelectedNpc;
+        _showSummaryView = optionsList.SelectedIndex != 0;
+        _currentSelectedPlayer = playersList.SelectedItem as string ?? _currentSelectedPlayer;
+        _currentSelectedItem = itemsList.SelectedItem as string ?? _currentSelectedItem;
+        _currentSelectedNpc = npcsList.SelectedItem as string ?? _currentSelectedNpc;
 
-        if (ShowSummaryView && dataGrid.ItemsSource != TotalRecords)
+        if (_showSummaryView && dataGrid.ItemsSource != _totalRecords)
         {
-          dataGrid.ItemsSource = TotalRecords;
+          dataGrid.ItemsSource = _totalRecords;
           dataGrid.Columns[0].IsHidden = dataGrid.Columns[4].IsHidden = true;
         }
-        else if (!ShowSummaryView && dataGrid.ItemsSource != IndividualRecords)
+        else if (!_showSummaryView && dataGrid.ItemsSource != _individualRecords)
         {
-          dataGrid.ItemsSource = IndividualRecords;
+          dataGrid.ItemsSource = _individualRecords;
           dataGrid.Columns[0].IsHidden = dataGrid.Columns[4].IsHidden = false;
         }
         else
@@ -230,11 +230,11 @@ namespace EQLogParser
             return false;
           }
 
-          var found = (CurrentSelectedItem == ALL_ITEMS || (row.Record.IsCurrency && CurrentSelectedItem == ONLY_CURRENCY) ||
-            (!row.Record.IsCurrency && CurrentSelectedItem == ONLY_ITEMS) ||
-            (CurrentSelectedItem == ONLY_ASSIGNED && !row.Record.IsCurrency && row.Record.Quantity == 0) || CurrentSelectedItem == row.Record.Item) &&
-            (CurrentSelectedPlayer == ALL_PLAYERS || row.Record.Player == CurrentSelectedPlayer);
-          return found && (CurrentSelectedNpc == ALL_NPCS || row.Record.Npc == CurrentSelectedNpc);
+          var found = (_currentSelectedItem == AllItems || (row.Record.IsCurrency && _currentSelectedItem == OnlyCurrency) ||
+            (!row.Record.IsCurrency && _currentSelectedItem == OnlyItems) ||
+            (_currentSelectedItem == OnlyAssigned && !row.Record.IsCurrency && row.Record.Quantity == 0) || _currentSelectedItem == row.Record.Item) &&
+            (_currentSelectedPlayer == AllPlayers || row.Record.Player == _currentSelectedPlayer);
+          return found && (_currentSelectedNpc == AllNpcs || row.Record.Npc == _currentSelectedNpc);
         };
 
         dataGrid.View.RefreshFilter();
@@ -296,18 +296,18 @@ namespace EQLogParser
 
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (VisualParent != null && !Ready)
+      if (VisualParent != null && !_ready)
       {
         RecordManager.Instance.RecordsUpdatedEvent += RecordsUpdatedEvent;
         Load();
-        Ready = true;
+        _ready = true;
       }
     }
 
     public void HideContent()
     {
       RecordManager.Instance.RecordsUpdatedEvent -= RecordsUpdatedEvent;
-      Ready = false;
+      _ready = false;
     }
   }
 }

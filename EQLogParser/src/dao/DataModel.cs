@@ -28,7 +28,7 @@ namespace EQLogParser
 
   internal interface ISummaryBuilder
   {
-    StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showPetLabel, bool showDPS, bool showTotals,
+    StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showPetLabel, bool showDps, bool showTotals,
       bool rankPlayers, bool showSpecial, bool showTime, string customTitle);
   }
 
@@ -620,7 +620,7 @@ namespace EQLogParser
     public List<ActionGroup> TankingBlocks { get; } = new();
     public List<ActionGroup> TauntBlocks { get; } = new();
     public Dictionary<string, SpellDamageStats> DoTDamage { get; } = new();
-    public Dictionary<string, SpellDamageStats> DDDamage { get; } = new();
+    public Dictionary<string, SpellDamageStats> DdDamage { get; } = new();
     public Dictionary<string, SpellDamageStats> ProcDamage { get; } = new();
   }
 
@@ -665,7 +665,7 @@ namespace EQLogParser
 
   internal class SpellData
   {
-    public string ID { get; set; }
+    public string Id { get; set; }
     public string Name { get; set; }
     public string NameAbbrv { get; set; }
     public ushort Duration { get; set; }
@@ -740,9 +740,9 @@ namespace EQLogParser
     public string Name { get; set; }
     public string Type { get; set; }
     public double TotalSeconds { get; set; }
-    public long DPS { get; set; }
-    public long SDPS { get; set; }
-    public long PDPS { get; set; }
+    public long Dps { get; set; }
+    public long Sdps { get; set; }
+    public long Pdps { get; set; }
     public long Extra { get; set; }
     public long Potential { get; set; }
     public int Resists { get; set; }

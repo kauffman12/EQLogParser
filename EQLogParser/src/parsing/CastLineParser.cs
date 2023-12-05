@@ -229,7 +229,7 @@ namespace EQLogParser
         searchResult = DataManager.Instance.GetLandsOnOther(split, out player);
         if (searchResult.SpellData.Count == 1 && !string.IsNullOrEmpty(player))
         {
-          if (searchResult.SpellData[0].Target == (int)SpellTarget.PET && !PlayerManager.Instance.IsVerifiedPet(player) &&
+          if (searchResult.SpellData[0].Target == (int)SpellTarget.Pet && !PlayerManager.Instance.IsVerifiedPet(player) &&
           PlayerManager.IsPossiblePlayerName(player) && !PlayerManager.Instance.IsVerifiedPlayer(player))
           {
             foreach (var spell in PetSpells.Keys)
@@ -240,7 +240,7 @@ namespace EQLogParser
               }
             }
           }
-          else if (searchResult.SpellData[0].Target == (int)SpellTarget.PET2 && !PlayerManager.Instance.IsVerifiedPet(player) &&
+          else if (searchResult.SpellData[0].Target == (int)SpellTarget.Pet2 && !PlayerManager.Instance.IsVerifiedPet(player) &&
             PlayerManager.IsPossiblePlayerName(player) && !PlayerManager.Instance.IsVerifiedPlayer(player))
           {
             PlayerManager.Instance.AddVerifiedPet(player);

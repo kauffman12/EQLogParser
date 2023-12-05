@@ -12,7 +12,7 @@ namespace EQLogParser
 {
   class PlayerManager
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     internal event EventHandler<PetMapping> EventsNewPetMapping;
     internal event EventHandler<string> EventsNewTakenPetOrPlayerAction;
@@ -24,65 +24,65 @@ namespace EQLogParser
 
     internal static PlayerManager Instance = new();
 
-    internal static readonly BitmapImage BER_ICON = new(new Uri(@"pack://application:,,,/icons/Ber.png"));
-    internal static readonly BitmapImage BRD_ICON = new(new Uri(@"pack://application:,,,/icons/Brd.png"));
-    internal static readonly BitmapImage BST_ICON = new(new Uri(@"pack://application:,,,/icons/Bst.png"));
-    internal static readonly BitmapImage CLR_ICON = new(new Uri(@"pack://application:,,,/icons/Clr.png"));
-    internal static readonly BitmapImage DRU_ICON = new(new Uri(@"pack://application:,,,/icons/Dru.png"));
-    internal static readonly BitmapImage ENC_ICON = new(new Uri(@"pack://application:,,,/icons/Enc.png"));
-    internal static readonly BitmapImage MAG_ICON = new(new Uri(@"pack://application:,,,/icons/Mag.png"));
-    internal static readonly BitmapImage MNK_ICON = new(new Uri(@"pack://application:,,,/icons/Mnk.png"));
-    internal static readonly BitmapImage NEC_ICON = new(new Uri(@"pack://application:,,,/icons/Nec.png"));
-    internal static readonly BitmapImage PAL_ICON = new(new Uri(@"pack://application:,,,/icons/Pal.png"));
-    internal static readonly BitmapImage RNG_ICON = new(new Uri(@"pack://application:,,,/icons/Rng.png"));
-    internal static readonly BitmapImage ROG_ICON = new(new Uri(@"pack://application:,,,/icons/Rog.png"));
-    internal static readonly BitmapImage SHD_ICON = new(new Uri(@"pack://application:,,,/icons/Shd.png"));
-    internal static readonly BitmapImage UNK_ICON = new(new Uri(@"pack://application:,,,/icons/Unk.png"));
-    internal static readonly BitmapImage SHM_ICON = new(new Uri(@"pack://application:,,,/icons/Shm.png"));
-    internal static readonly BitmapImage WAR_ICON = new(new Uri(@"pack://application:,,,/icons/War.png"));
-    internal static readonly BitmapImage WIZ_ICON = new(new Uri(@"pack://application:,,,/icons/Wiz.png"));
+    internal static readonly BitmapImage BerIcon = new(new Uri(@"pack://application:,,,/icons/Ber.png"));
+    internal static readonly BitmapImage BrdIcon = new(new Uri(@"pack://application:,,,/icons/Brd.png"));
+    internal static readonly BitmapImage BstIcon = new(new Uri(@"pack://application:,,,/icons/Bst.png"));
+    internal static readonly BitmapImage ClrIcon = new(new Uri(@"pack://application:,,,/icons/Clr.png"));
+    internal static readonly BitmapImage DruIcon = new(new Uri(@"pack://application:,,,/icons/Dru.png"));
+    internal static readonly BitmapImage EncIcon = new(new Uri(@"pack://application:,,,/icons/Enc.png"));
+    internal static readonly BitmapImage MagIcon = new(new Uri(@"pack://application:,,,/icons/Mag.png"));
+    internal static readonly BitmapImage MnkIcon = new(new Uri(@"pack://application:,,,/icons/Mnk.png"));
+    internal static readonly BitmapImage NecIcon = new(new Uri(@"pack://application:,,,/icons/Nec.png"));
+    internal static readonly BitmapImage PalIcon = new(new Uri(@"pack://application:,,,/icons/Pal.png"));
+    internal static readonly BitmapImage RngIcon = new(new Uri(@"pack://application:,,,/icons/Rng.png"));
+    internal static readonly BitmapImage RogIcon = new(new Uri(@"pack://application:,,,/icons/Rog.png"));
+    internal static readonly BitmapImage ShdIcon = new(new Uri(@"pack://application:,,,/icons/Shd.png"));
+    internal static readonly BitmapImage UnkIcon = new(new Uri(@"pack://application:,,,/icons/Unk.png"));
+    internal static readonly BitmapImage ShmIcon = new(new Uri(@"pack://application:,,,/icons/Shm.png"));
+    internal static readonly BitmapImage WarIcon = new(new Uri(@"pack://application:,,,/icons/War.png"));
+    internal static readonly BitmapImage WizIcon = new(new Uri(@"pack://application:,,,/icons/Wiz.png"));
 
     // static data
-    private readonly ConcurrentDictionary<SpellClass, string> ClassNames = new();
-    private readonly ConcurrentDictionary<string, SpellClass> ClassesByName = new();
-    private readonly ConcurrentDictionary<string, byte> GameGeneratedPets = new();
-    private readonly ConcurrentDictionary<string, byte> SecondPerson = new();
-    private readonly ConcurrentDictionary<string, byte> ThirdPerson = new();
-    private readonly ConcurrentDictionary<string, string> PetToPlayer = new();
-    private readonly ConcurrentDictionary<string, SpellClassCounter> PlayerToClass = new();
-    private readonly ConcurrentDictionary<string, byte> TakenPetOrPlayerAction = new();
-    private readonly ConcurrentDictionary<string, byte> VerifiedPets = new();
-    private readonly ConcurrentDictionary<string, double> VerifiedPlayers = new();
-    private readonly ConcurrentDictionary<string, byte> Mercs = new();
-    private readonly List<string> SortedClassList = new();
-    private readonly List<string> SortedClassListWithNull = new();
+    private readonly ConcurrentDictionary<SpellClass, string> _classNames = new();
+    private readonly ConcurrentDictionary<string, SpellClass> _classesByName = new();
+    private readonly ConcurrentDictionary<string, byte> _gameGeneratedPets = new();
+    private readonly ConcurrentDictionary<string, byte> _secondPerson = new();
+    private readonly ConcurrentDictionary<string, byte> _thirdPerson = new();
+    private readonly ConcurrentDictionary<string, string> _petToPlayer = new();
+    private readonly ConcurrentDictionary<string, SpellClassCounter> _playerToClass = new();
+    private readonly ConcurrentDictionary<string, byte> _takenPetOrPlayerAction = new();
+    private readonly ConcurrentDictionary<string, byte> _verifiedPets = new();
+    private readonly ConcurrentDictionary<string, double> _verifiedPlayers = new();
+    private readonly ConcurrentDictionary<string, byte> _mercs = new();
+    private readonly List<string> _sortedClassList = new();
+    private readonly List<string> _sortedClassListWithNull = new();
     private static readonly object LockObject = new();
-    private bool PetMappingUpdated;
-    private bool PlayersUpdated;
+    private bool _petMappingUpdated;
+    private bool _playersUpdated;
 
     private PlayerManager()
     {
-      AddMultiCase(new[] { "you", "your", "yourself" }, SecondPerson);
-      AddMultiCase(new[] { "himself", "herself", "itself" }, ThirdPerson);
+      AddMultiCase(new[] { "you", "your", "yourself" }, _secondPerson);
+      AddMultiCase(new[] { "himself", "herself", "itself" }, _thirdPerson);
 
       // populate ClassNames from SpellClass enum and resource table
       foreach (var item in Enum.GetValues(typeof(SpellClass)))
       {
-        var name = Resource.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), item) ?? string.Empty, CultureInfo.CurrentCulture);
+        var name = Resource.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), item)?.ToUpper() ?? string.Empty, CultureInfo.InvariantCulture);
         if (name != null)
         {
-          ClassNames[(SpellClass)item] = name;
-          ClassesByName[name] = (SpellClass)item;
+          _classNames[(SpellClass)item] = name;
+          _classesByName[name] = (SpellClass)item;
         }
       }
 
-      SortedClassList.AddRange(ClassNames.Values);
-      SortedClassList.Sort();
-      SortedClassListWithNull.AddRange(SortedClassList);
-      SortedClassListWithNull.Insert(0, "");
+      _sortedClassList.AddRange(_classNames.Values);
+      _sortedClassList.Sort();
+      _sortedClassListWithNull.AddRange(_sortedClassList);
+      _sortedClassListWithNull.Insert(0, "");
 
       // Populate generated pets
-      ConfigUtil.ReadList(@"data\petnames.txt").ForEach(line => GameGeneratedPets[line.TrimEnd()] = 1);
+      ConfigUtil.ReadList(@"data\petnames.txt").ForEach(line => _gameGeneratedPets[line.TrimEnd()] = 1);
 
       var saveTimer = new DispatcherTimer();
       saveTimer.Tick += SaveTimer_Tick;
@@ -91,16 +91,16 @@ namespace EQLogParser
     }
 
     private void SaveTimer_Tick(object sender, EventArgs e) => Save();
-    internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.UNASSIGNED || SecondPerson.ContainsKey(name)
-      || ThirdPerson.ContainsKey(name) || VerifiedPlayers.ContainsKey(name));
-    internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name) || TakenPetOrPlayerAction.ContainsKey(name));
+    internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.Unassigned || _secondPerson.ContainsKey(name)
+      || _thirdPerson.ContainsKey(name) || _verifiedPlayers.ContainsKey(name));
+    internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name) || _takenPetOrPlayerAction.ContainsKey(name));
     internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || DataManager.Instance.IsPlayerSpell(name);
-    internal List<string> GetClassList(bool withNull = false) => withNull ? SortedClassListWithNull.ToList() : SortedClassList.ToList();
-    internal bool IsMerc(string name) => Mercs.TryGetValue(TextUtils.ToUpper(name), out _);
+    internal List<string> GetClassList(bool withNull = false) => withNull ? _sortedClassListWithNull.ToList() : _sortedClassList.ToList();
+    internal bool IsMerc(string name) => _mercs.TryGetValue(TextUtils.ToUpper(name), out _);
 
     internal void AddPetOrPlayerAction(string name)
     {
-      if (!IsVerifiedPlayer(name) && !IsVerifiedPet(name) && TakenPetOrPlayerAction.TryAdd(name, 1))
+      if (!IsVerifiedPlayer(name) && !IsVerifiedPet(name) && _takenPetOrPlayerAction.TryAdd(name, 1))
       {
         EventsNewTakenPetOrPlayerAction?.Invoke(this, name);
       }
@@ -112,13 +112,13 @@ namespace EQLogParser
       {
         lock (LockObject)
         {
-          if (!PetToPlayer.TryGetValue(pet, out var value) || value != player)
+          if (!_petToPlayer.TryGetValue(pet, out var value) || value != player)
           {
             if (!IsVerifiedPlayer(pet))
             {
-              PetToPlayer[pet] = player;
+              _petToPlayer[pet] = player;
               EventsNewPetMapping?.Invoke(this, new PetMapping { Pet = pet, Owner = player });
-              PetMappingUpdated = !initialLoad;
+              _petMappingUpdated = !initialLoad;
             }
           }
         }
@@ -130,7 +130,7 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(name))
       {
         name = string.Intern(name);
-        Mercs[TextUtils.ToUpper(name)] = 1;
+        _mercs[TextUtils.ToUpper(name)] = 1;
       }
     }
 
@@ -140,25 +140,25 @@ namespace EQLogParser
       {
         lock (LockObject)
         {
-          if (!VerifiedPets.ContainsKey(name))
+          if (!_verifiedPets.ContainsKey(name))
           {
             name = string.Intern(name);
-            if (VerifiedPlayers.TryRemove(name, out _))
+            if (_verifiedPlayers.TryRemove(name, out _))
             {
-              PlayersUpdated = true;
+              _playersUpdated = true;
             }
 
-            if (IsPossiblePlayerName(name) && !PetToPlayer.ContainsKey(name))
+            if (IsPossiblePlayerName(name) && !_petToPlayer.ContainsKey(name))
             {
-              AddPetToPlayer(name, Labels.UNASSIGNED);
+              AddPetToPlayer(name, Labels.Unassigned);
             }
 
-            TakenPetOrPlayerAction.TryRemove(name, out _);
+            _takenPetOrPlayerAction.TryRemove(name, out _);
 
-            if (VerifiedPets.TryAdd(name, 1))
+            if (_verifiedPets.TryAdd(name, 1))
             {
               EventsNewVerifiedPet?.Invoke(this, name);
-              PlayersUpdated = true;
+              _playersUpdated = true;
             }
           }
         }
@@ -172,21 +172,21 @@ namespace EQLogParser
         lock (LockObject)
         {
           name = string.Intern(name);
-          if (VerifiedPlayers.TryGetValue(name, out var lastTime))
+          if (_verifiedPlayers.TryGetValue(name, out var lastTime))
           {
             if (playerTime > lastTime)
             {
-              VerifiedPlayers[name] = playerTime;
+              _verifiedPlayers[name] = playerTime;
             }
           }
           else
           {
-            VerifiedPlayers[name] = playerTime;
+            _verifiedPlayers[name] = playerTime;
             EventsNewVerifiedPlayer?.Invoke(this, name);
           }
 
-          TakenPetOrPlayerAction.TryRemove(name, out _);
-          if (VerifiedPets.TryRemove(name, out _))
+          _takenPetOrPlayerAction.TryRemove(name, out _);
+          if (_verifiedPets.TryRemove(name, out _))
           {
             TryRemovePetMapping(name);
             EventsRemoveVerifiedPet?.Invoke(this, name);
@@ -199,9 +199,9 @@ namespace EQLogParser
     {
       var className = "";
 
-      if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out var counter))
+      if (!string.IsNullOrEmpty(name) && _playerToClass.TryGetValue(name, out var counter))
       {
-        if (ClassNames.TryGetValue(counter.CurrentClass, out var found))
+        if (_classNames.TryGetValue(counter.CurrentClass, out var found))
         {
           className = found;
         }
@@ -212,57 +212,57 @@ namespace EQLogParser
 
     internal BitmapImage GetPlayerIcon(string name)
     {
-      var icon = UNK_ICON;
+      var icon = UnkIcon;
 
       switch (GetPlayerClassEnum(name))
       {
-        case SpellClass.BER:
-          icon = BER_ICON;
+        case SpellClass.Ber:
+          icon = BerIcon;
           break;
-        case SpellClass.BRD:
-          icon = BRD_ICON;
+        case SpellClass.Brd:
+          icon = BrdIcon;
           break;
-        case SpellClass.BST:
-          icon = BST_ICON;
+        case SpellClass.Bst:
+          icon = BstIcon;
           break;
-        case SpellClass.CLR:
-          icon = CLR_ICON;
+        case SpellClass.Clr:
+          icon = ClrIcon;
           break;
-        case SpellClass.DRU:
-          icon = DRU_ICON;
+        case SpellClass.Dru:
+          icon = DruIcon;
           break;
-        case SpellClass.ENC:
-          icon = ENC_ICON;
+        case SpellClass.Enc:
+          icon = EncIcon;
           break;
-        case SpellClass.MAG:
-          icon = MAG_ICON;
+        case SpellClass.Mag:
+          icon = MagIcon;
           break;
-        case SpellClass.MNK:
-          icon = MNK_ICON;
+        case SpellClass.Mnk:
+          icon = MnkIcon;
           break;
-        case SpellClass.NEC:
-          icon = NEC_ICON;
+        case SpellClass.Nec:
+          icon = NecIcon;
           break;
-        case SpellClass.PAL:
-          icon = PAL_ICON;
+        case SpellClass.Pal:
+          icon = PalIcon;
           break;
-        case SpellClass.RNG:
-          icon = RNG_ICON;
+        case SpellClass.Rng:
+          icon = RngIcon;
           break;
-        case SpellClass.ROG:
-          icon = ROG_ICON;
+        case SpellClass.Rog:
+          icon = RogIcon;
           break;
-        case SpellClass.SHD:
-          icon = SHD_ICON;
+        case SpellClass.Shd:
+          icon = ShdIcon;
           break;
-        case SpellClass.SHM:
-          icon = SHM_ICON;
+        case SpellClass.Shm:
+          icon = ShmIcon;
           break;
-        case SpellClass.WAR:
-          icon = WAR_ICON;
+        case SpellClass.War:
+          icon = WarIcon;
           break;
-        case SpellClass.WIZ:
-          icon = WIZ_ICON;
+        case SpellClass.Wiz:
+          icon = WizIcon;
           break;
       }
 
@@ -273,7 +273,7 @@ namespace EQLogParser
     {
       SpellClass spellClass = 0;
 
-      if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out var counter))
+      if (!string.IsNullOrEmpty(name) && _playerToClass.TryGetValue(name, out var counter))
       {
         spellClass = counter.CurrentClass;
       }
@@ -285,7 +285,7 @@ namespace EQLogParser
     {
       var result = "";
 
-      if (!string.IsNullOrEmpty(name) && PlayerToClass.TryGetValue(name, out var counter))
+      if (!string.IsNullOrEmpty(name) && _playerToClass.TryGetValue(name, out var counter))
       {
         result = counter.Reason;
       }
@@ -299,7 +299,7 @@ namespace EQLogParser
 
       if (!string.IsNullOrEmpty(pet))
       {
-        PetToPlayer.TryGetValue(pet, out player);
+        _petToPlayer.TryGetValue(pet, out player);
       }
 
       return player;
@@ -312,12 +312,12 @@ namespace EQLogParser
 
       if (!string.IsNullOrEmpty(name))
       {
-        found = VerifiedPets.ContainsKey(name);
-        isGameGenerated = !found && GameGeneratedPets.ContainsKey(name);
+        found = _verifiedPets.ContainsKey(name);
+        isGameGenerated = !found && _gameGeneratedPets.ContainsKey(name);
 
-        if (isGameGenerated && !PetToPlayer.ContainsKey(name))
+        if (isGameGenerated && !_petToPlayer.ContainsKey(name))
         {
-          AddPetToPlayer(name, Labels.UNASSIGNED);
+          AddPetToPlayer(name, Labels.Unassigned);
         }
       }
 
@@ -330,7 +330,7 @@ namespace EQLogParser
       {
         lock (LockObject)
         {
-          if (VerifiedPets.TryRemove(name, out _))
+          if (_verifiedPets.TryRemove(name, out _))
           {
             TryRemovePetMapping(name);
           }
@@ -346,11 +346,11 @@ namespace EQLogParser
       {
         lock (LockObject)
         {
-          if (VerifiedPlayers.TryRemove(name, out _))
+          if (_verifiedPlayers.TryRemove(name, out _))
           {
             string found = null;
 
-            foreach (var keypair in PetToPlayer)
+            foreach (var keypair in _petToPlayer)
             {
               if (keypair.Value.Equals(name, StringComparison.OrdinalIgnoreCase))
               {
@@ -360,7 +360,7 @@ namespace EQLogParser
               TryRemovePetMapping(found);
             }
 
-            PlayersUpdated = true;
+            _playersUpdated = true;
           }
 
           EventsRemoveVerifiedPlayer?.Invoke(this, name);
@@ -372,11 +372,11 @@ namespace EQLogParser
     {
       var result = name;
 
-      if (ThirdPerson.ContainsKey(name))
+      if (_thirdPerson.ContainsKey(name))
       {
         result = alternative;
       }
-      else if (SecondPerson.ContainsKey(name))
+      else if (_secondPerson.ContainsKey(name))
       {
         result = ConfigUtil.PlayerName;
       }
@@ -388,12 +388,12 @@ namespace EQLogParser
     {
       lock (LockObject)
       {
-        PetToPlayer.Clear();
-        PlayerToClass.Clear();
-        TakenPetOrPlayerAction.Clear();
-        VerifiedPets.Clear();
-        VerifiedPlayers.Clear();
-        Mercs.Clear();
+        _petToPlayer.Clear();
+        _playerToClass.Clear();
+        _takenPetOrPlayerAction.Clear();
+        _verifiedPets.Clear();
+        _verifiedPlayers.Clear();
+        _mercs.Clear();
 
         AddVerifiedPlayer(ConfigUtil.PlayerName, DateUtil.ToDouble(DateTime.Now));
 
@@ -443,7 +443,7 @@ namespace EQLogParser
         var mapping = ConfigUtil.ReadPetMapping();
         foreach (var key in mapping.Keys)
         {
-          if (!VerifiedPlayers.ContainsKey(mapping[key]))
+          if (!_verifiedPlayers.ContainsKey(mapping[key]))
           {
             AddVerifiedPlayer(mapping[key], 0d);
           }
@@ -452,39 +452,39 @@ namespace EQLogParser
           AddPetToPlayer(key, mapping[key], true);
         }
 
-        PetMappingUpdated = false;
+        _petMappingUpdated = false;
       }
     }
 
     internal void Save()
     {
-      if (PetMappingUpdated)
+      if (_petMappingUpdated)
       {
-        lock (PetToPlayer)
+        lock (_petToPlayer)
         {
-          var filtered = PetToPlayer.Where(keypair => !GameGeneratedPets.ContainsKey(keypair.Key) && IsPossiblePlayerName(keypair.Key) &&
-            keypair.Value != Labels.UNASSIGNED);
+          var filtered = _petToPlayer.Where(keypair => !_gameGeneratedPets.ContainsKey(keypair.Key) && IsPossiblePlayerName(keypair.Key) &&
+            keypair.Value != Labels.Unassigned);
           ConfigUtil.SavePetMapping(filtered);
         }
 
-        PetMappingUpdated = false;
+        _petMappingUpdated = false;
       }
 
-      if (PlayersUpdated)
+      if (_playersUpdated)
       {
-        lock (VerifiedPlayers)
+        lock (_verifiedPlayers)
         {
           var list = new List<string>();
           var now = DateTime.Now;
-          foreach (var keypair in VerifiedPlayers)
+          foreach (var keypair in _verifiedPlayers)
           {
             if (!string.IsNullOrEmpty(keypair.Key) && IsPossiblePlayerName(keypair.Key))
             {
               if (keypair.Value != 0 && (now - DateUtil.FromDouble(keypair.Value)).TotalDays < 300)
               {
                 var output = keypair.Key + "=" + Math.Round(keypair.Value);
-                if (PlayerToClass.TryGetValue(keypair.Key, out var value) && value.CurrentMax == long.MaxValue &&
-                  ClassNames.TryGetValue(value.CurrentClass, out var className))
+                if (_playerToClass.TryGetValue(keypair.Key, out var value) && value.CurrentMax == long.MaxValue &&
+                  _classNames.TryGetValue(value.CurrentClass, out var className))
                 {
                   output += "," + className;
                   output += "," + value.Reason;
@@ -498,30 +498,30 @@ namespace EQLogParser
           ConfigUtil.SavePlayers(list);
         }
 
-        PlayersUpdated = false;
+        _playersUpdated = false;
       }
     }
 
     internal void SetPlayerClass(string player, string className, string reason)
     {
-      if (ClassesByName.TryGetValue(className, out var value))
+      if (_classesByName.TryGetValue(className, out var value))
       {
         SetPlayerClass(player, value, reason);
       }
       else
       {
-        PlayerToClass.TryRemove(player, out _);
+        _playerToClass.TryRemove(player, out _);
       }
     }
 
     internal void SetPlayerClass(string player, SpellClass theClass, string reason)
     {
-      if (!PlayerToClass.TryGetValue(player, out var counter))
+      if (!_playerToClass.TryGetValue(player, out var counter))
       {
-        lock (PlayerToClass)
+        lock (_playerToClass)
         {
           counter = new SpellClassCounter { ClassCounts = new Dictionary<SpellClass, long>() };
-          PlayerToClass.TryAdd(player, counter);
+          _playerToClass.TryAdd(player, counter);
         }
       }
 
@@ -535,9 +535,9 @@ namespace EQLogParser
             counter.Reason = reason;
             counter.ClassCounts[theClass] = long.MaxValue;
             counter.CurrentMax = long.MaxValue;
-            EventsUpdatePlayerClass?.Invoke(player, ClassNames[theClass]);
+            EventsUpdatePlayerClass?.Invoke(player, _classNames[theClass]);
             Log.Debug("Assigning " + player + " as " + theClass + ". " + reason);
-            PlayersUpdated = true;
+            _playersUpdated = true;
           }
         }
       }
@@ -545,12 +545,12 @@ namespace EQLogParser
 
     internal void UpdatePlayerClassFromSpell(SpellCast cast, SpellClass theClass)
     {
-      if (!PlayerToClass.TryGetValue(cast.Caster, out var counter))
+      if (!_playerToClass.TryGetValue(cast.Caster, out var counter))
       {
-        lock (PlayerToClass)
+        lock (_playerToClass)
         {
           counter = new SpellClassCounter { ClassCounts = new Dictionary<SpellClass, long>() };
-          PlayerToClass.TryAdd(cast.Caster, counter);
+          _playerToClass.TryAdd(cast.Caster, counter);
         }
       }
 
@@ -580,9 +580,9 @@ namespace EQLogParser
               {
                 counter.CurrentClass = theClass;
                 counter.Reason = "Class chosen based on " + cast.Spell + ".";
-                EventsUpdatePlayerClass?.Invoke(cast.Caster, ClassNames[theClass]);
+                EventsUpdatePlayerClass?.Invoke(cast.Caster, _classNames[theClass]);
                 Log.Debug("Assigning " + cast.Caster + " as " + theClass + " from " + cast.Spell);
-                PlayersUpdated = true;
+                _playersUpdated = true;
               }
             }
           }
@@ -596,9 +596,9 @@ namespace EQLogParser
       {
         lock (LockObject)
         {
-          if (PetToPlayer.TryRemove(name, out _))
+          if (_petToPlayer.TryRemove(name, out _))
           {
-            PetMappingUpdated = true;
+            _petMappingUpdated = true;
           }
         }
       }

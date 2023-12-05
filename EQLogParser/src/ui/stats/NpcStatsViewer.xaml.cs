@@ -11,8 +11,8 @@ namespace EQLogParser
   /// </summary>
   public partial class NpcStatsViewer : IDocumentContent
   {
-    private const string NODATA = "No Spell Resist Data Found";
-    private bool Ready;
+    private const string Nodata = "No Spell Resist Data Found";
+    private bool _ready;
 
     public NpcStatsViewer()
     {
@@ -110,7 +110,7 @@ namespace EQLogParser
       }
 
       dataGrid.ItemsSource = npcStatsRows.Values.OrderBy(row => row.Name).ToList();
-      titleLabel.Content = npcStatsRows.Values.Count == 0 ? NODATA : "Spell Resists vs " + npcStatsRows.Count + " Unique NPCs";
+      titleLabel.Content = npcStatsRows.Values.Count == 0 ? Nodata : "Spell Resists vs " + npcStatsRows.Count + " Unique NPCs";
       return;
 
       Tuple<double, string> GetRate(uint landed, uint notLanded)
@@ -152,11 +152,11 @@ namespace EQLogParser
 
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (VisualParent != null && !Ready)
+      if (VisualParent != null && !_ready)
       {
         MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
         Load();
-        Ready = true;
+        _ready = true;
       }
     }
 
@@ -164,7 +164,7 @@ namespace EQLogParser
     {
       MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
       dataGrid.ItemsSource = null;
-      Ready = false;
+      _ready = false;
     }
   }
 

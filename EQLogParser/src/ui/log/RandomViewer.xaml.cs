@@ -13,18 +13,18 @@ namespace EQLogParser
   /// </summary>
   public partial class RandomViewer : IDocumentContent
   {
-    private readonly DispatcherTimer ReloadTimer;
-    private double CurrentTimeLimit = 300;
-    private RandomRecord LastHandled;
-    private bool Ready;
+    private readonly DispatcherTimer _reloadTimer;
+    private double _currentTimeLimit = 300;
+    private RandomRecord _lastHandled;
+    private bool _ready;
 
     public RandomViewer()
     {
       InitializeComponent();
       DataGridUtil.UpdateTableMargin(dataGrid);
       MainActions.EventsThemeChanged += EventsThemeChanged;
-      ReloadTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
-      ReloadTimer.Tick += ReloadTimerTick;
+      _reloadTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
+      _reloadTimer.Tick += ReloadTimerTick;
     }
 
     private void ReloadTimerTick(object sender, EventArgs e)
@@ -34,13 +34,13 @@ namespace EQLogParser
         var found = false;
         foreach (var (beginTime, record) in RecordManager.Instance.GetAllRandoms())
         {
-          if (LastHandled == null || found)
+          if (_lastHandled == null || found)
           {
             UpdateSection(beginTime, record, sections);
-            LastHandled = record;
+            _lastHandled = record;
             found = true;
           }
-          else if (record == LastHandled)
+          else if (record == _lastHandled)
           {
             found = true;
           }
@@ -67,23 +67,23 @@ namespace EQLogParser
 
         if (remaining)
         {
-          if (!ReloadTimer.IsEnabled)
+          if (!_reloadTimer.IsEnabled)
           {
-            ReloadTimer.Start();
+            _reloadTimer.Start();
           }
         }
         else
         {
-          ReloadTimer.Stop();
+          _reloadTimer.Stop();
         }
       }
     }
 
     private void RecordsUpdated(string type)
     {
-      if (type == RecordManager.RandomRecords && !ReloadTimer.IsEnabled)
+      if (type == RecordManager.RandomRecords && !_reloadTimer.IsEnabled)
       {
-        ReloadTimer.Start();
+        _reloadTimer.Start();
       }
     }
 
@@ -99,12 +99,12 @@ namespace EQLogParser
       foreach (var (beginTime, record) in RecordManager.Instance.GetAllRandoms())
       {
         UpdateSection(beginTime, record, sections);
-        LastHandled = record;
+        _lastHandled = record;
       }
 
       if (UpdateTotals(sections))
       {
-        ReloadTimer.Start();
+        _reloadTimer.Start();
       }
 
       dataGrid.ItemsSource = sections;
@@ -125,7 +125,7 @@ namespace EQLogParser
     {
       var type = $"{record.From} to {record.To}";
       var section = sections.LastOrDefault(section => section.Type == type);
-      if (section != null && (beginTime - section.StartTime) <= CurrentTimeLimit)
+      if (section != null && (beginTime - section.StartTime) <= _currentTimeLimit)
       {
         foreach (var child in section.Children)
         {
@@ -181,9 +181,9 @@ namespace EQLogParser
         }
 
         var duration = DateUtil.ToDouble(DateTime.Now) - section.StartTime;
-        if (duration < CurrentTimeLimit)
+        if (duration < _currentTimeLimit)
         {
-          section.Duration = "Remaining: " + DateUtil.FormatSimpleMS((long)(CurrentTimeLimit - duration) * TimeSpan.TicksPerSecond);
+          section.Duration = "Remaining: " + DateUtil.FormatSimpleMs((long)(_currentTimeLimit - duration) * TimeSpan.TicksPerSecond);
           remaining = true;
         }
         else
@@ -208,24 +208,24 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, EventArgs e)
     {
-      if (Ready)
+      if (_ready)
       {
         switch (randomDurations.SelectedIndex)
         {
           case 0:
-            CurrentTimeLimit = 600;
+            _currentTimeLimit = 600;
             break;
           case 1:
-            CurrentTimeLimit = 300;
+            _currentTimeLimit = 300;
             break;
           case 2:
-            CurrentTimeLimit = 240;
+            _currentTimeLimit = 240;
             break;
           case 3:
-            CurrentTimeLimit = 180;
+            _currentTimeLimit = 180;
             break;
           case 4:
-            CurrentTimeLimit = 120;
+            _currentTimeLimit = 120;
             break;
         }
 
@@ -235,22 +235,22 @@ namespace EQLogParser
 
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (VisualParent != null && !Ready)
+      if (VisualParent != null && !_ready)
       {
         MainActions.EventsLogLoadingComplete += LogLoadingComplete;
         RecordManager.Instance.RecordsUpdatedEvent += RecordsUpdated;
         Load();
-        Ready = true;
+        _ready = true;
       }
     }
 
     public void HideContent()
     {
-      ReloadTimer?.Stop();
+      _reloadTimer?.Stop();
       MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
       RecordManager.Instance.RecordsUpdatedEvent -= RecordsUpdated;
       dataGrid.ItemsSource = null;
-      Ready = false;
+      _ready = false;
     }
   }
 }

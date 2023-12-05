@@ -4,20 +4,20 @@ namespace EQLogParser
 {
   public static class ChatChannels
   {
-    public const string AUCTION = "auction";
-    public const string SAY = "say";
-    public const string GUILD = "guild";
-    public const string FELLOWSHIP = "fellowship";
-    public const string TELL = "tell";
-    public const string SHOUT = "shout";
-    public const string GROUP = "group";
-    public const string RAID = "raid";
-    public const string OOC = "ooc";
+    public const string Auction = "auction";
+    public const string Say = "say";
+    public const string Guild = "guild";
+    public const string Fellowship = "fellowship";
+    public const string Tell = "tell";
+    public const string Shout = "shout";
+    public const string Group = "group";
+    public const string Raid = "raid";
+    public const string Ooc = "ooc";
   }
 
   public class ChatType
   {
-    public const string YOU = "You";
+    public const string You = "You";
 
     public ChatType()
     {
@@ -28,7 +28,7 @@ namespace EQLogParser
       Channel = channel;
       Sender = sender;
       TextStart = start;
-      SenderIsYou = sender == YOU;
+      SenderIsYou = sender == You;
       Receiver = receiver;
     }
 
@@ -69,13 +69,13 @@ namespace EQLogParser
         if (MatchAnyPlayer(span, out var receiver) is var end2 and > -1)
         {
           // "Test -> Test: hello"
-          return new ChatType(ChatChannels.TELL, sender, 27 + end + end2 + " -> ".Length, receiver);
+          return new ChatType(ChatChannels.Tell, sender, 27 + end + end2 + " -> ".Length, receiver);
         }
       }
       else if (StartsWith(span, " auctions, ") is var start and > -1)
       {
         // Test auctions, 'hello'
-        return new ChatType(ChatChannels.AUCTION, sender, 27 + end + " auctions, ".Length + start);
+        return new ChatType(ChatChannels.Auction, sender, 27 + end + " auctions, ".Length + start);
       }
       else if (span.StartsWith(" says"))
       {
@@ -83,20 +83,20 @@ namespace EQLogParser
         if (StartsWith(span, ", ") is var start2 and > -1)
         {
           // Test says, 'hello'
-          return new ChatType(ChatChannels.SAY, sender, 27 + end + " says, ".Length + start2);
+          return new ChatType(ChatChannels.Say, sender, 27 + end + " says, ".Length + start2);
         }
 
         if (StartsWith(span, " out of character, ") is var start3 and > -1)
         {
           // Test says out of character, 'hello'
-          return new ChatType(ChatChannels.OOC, sender, 27 + end + " says out of character, ".Length + start3);
+          return new ChatType(ChatChannels.Ooc, sender, 27 + end + " says out of character, ".Length + start3);
         }
 
         // EMU support
         if (span.StartsWith(" 'My leader is"))
         {
           // Test says 'My leader is Test'
-          return new ChatType(ChatChannels.SAY, sender, 27 + end + " says '".Length);
+          return new ChatType(ChatChannels.Say, sender, 27 + end + " says '".Length);
         }
       }
       else if (span.StartsWith(" tells "))
@@ -108,31 +108,31 @@ namespace EQLogParser
           if (StartsWith(span, "fellowship, ") is var start4 and > -1)
           {
             // Test tells the fellowship, 'hello'
-            return new ChatType(ChatChannels.FELLOWSHIP, sender, 27 + end + " tells the fellowship, ".Length + start4);
+            return new ChatType(ChatChannels.Fellowship, sender, 27 + end + " tells the fellowship, ".Length + start4);
           }
 
           if (StartsWith(span, "group, ") is var start5 and > -1)
           {
             // Test tells the group, 'hello'
-            return new ChatType(ChatChannels.GROUP, sender, 27 + end + " tells the group, ".Length + start5);
+            return new ChatType(ChatChannels.Group, sender, 27 + end + " tells the group, ".Length + start5);
           }
 
           if (StartsWith(span, "guild, ") is var start6 and > -1)
           {
             // Test tells the guild, 'hello'
-            return new ChatType(ChatChannels.GUILD, sender, 27 + end + " tells the guild, ".Length + start6);
+            return new ChatType(ChatChannels.Guild, sender, 27 + end + " tells the guild, ".Length + start6);
           }
 
           if (StartsWith(span, "raid, ") is var start7 and > -1)
           {
             // Test tells the raid, 'hello'
-            return new ChatType(ChatChannels.RAID, sender, 27 + end + " tells the raid, ".Length + start7);
+            return new ChatType(ChatChannels.Raid, sender, 27 + end + " tells the raid, ".Length + start7);
           }
         }
         else if (StartsWith(span, "you, ") is var start8 and > -1)
         {
           // Test tells you, 'hello'
-          return new ChatType(ChatChannels.TELL, sender, 27 + end + " tells you, ".Length + start8, ChatType.YOU);
+          return new ChatType(ChatChannels.Tell, sender, 27 + end + " tells you, ".Length + start8, ChatType.You);
         }
         else if (MatchTellChannel(span, out var channel) is var start9 and > -1)
         {
@@ -143,12 +143,12 @@ namespace EQLogParser
       else if (StartsWith(span, " told you, ") is var start10 and > -1)
       {
         // Test.test told you, 'hello'
-        return new ChatType(ChatChannels.TELL, sender, 27 + end + " told you, ".Length + start10);
+        return new ChatType(ChatChannels.Tell, sender, 27 + end + " told you, ".Length + start10);
       }
       else if (StartsWith(span, " shouts, ") is var start11 and > -1)
       {
         // Test shouts, 'hello'
-        return new ChatType(ChatChannels.SHOUT, sender, 27 + end + " shouts, ".Length + start11);
+        return new ChatType(ChatChannels.Shout, sender, 27 + end + " shouts, ".Length + start11);
       }
 
       return null;
@@ -160,7 +160,7 @@ namespace EQLogParser
       if (StartsWith(span, "auction, ") is var start and > -1)
       {
         // You auction, 'hello'
-        return new ChatType(ChatChannels.AUCTION, ChatType.YOU, 27 + "You auction, ".Length + start);
+        return new ChatType(ChatChannels.Auction, ChatType.You, 27 + "You auction, ".Length + start);
       }
 
       if (span.StartsWith("say"))
@@ -169,7 +169,7 @@ namespace EQLogParser
         if (StartsWith(span, ", ") is var start2 and > -1)
         {
           // You say, 'hello'
-          return new ChatType(ChatChannels.SAY, ChatType.YOU, 27 + "You say, ".Length + start2);
+          return new ChatType(ChatChannels.Say, ChatType.You, 27 + "You say, ".Length + start2);
         }
 
         if (span.StartsWith(" to your "))
@@ -178,25 +178,25 @@ namespace EQLogParser
           if (StartsWith(span, "fellowship, ") is var start4 and > -1)
           {
             // You say to your fellowship, 'hello'
-            return new ChatType(ChatChannels.FELLOWSHIP, ChatType.YOU, 27 + "You say to your fellowship, ".Length + start4);
+            return new ChatType(ChatChannels.Fellowship, ChatType.You, 27 + "You say to your fellowship, ".Length + start4);
           }
 
           if (StartsWith(span, "guild, ") is var start3 and > -1)
           {
             // You say to your guild, 'hello'
-            return new ChatType(ChatChannels.GUILD, ChatType.YOU, 27 + "You say to your guild, ".Length + start3);
+            return new ChatType(ChatChannels.Guild, ChatType.You, 27 + "You say to your guild, ".Length + start3);
           }
         }
         else if (StartsWith(span, " out of character, ") is var start5 and > -1)
         {
           // You say out of character, 'hello'
-          return new ChatType(ChatChannels.OOC, ChatType.YOU, 27 + "You say out of character, ".Length + start5);
+          return new ChatType(ChatChannels.Ooc, ChatType.You, 27 + "You say out of character, ".Length + start5);
         }
       }
       else if (StartsWith(span, "shout, ") is var start6 and > -1)
       {
         // You shout, 'hello'
-        return new ChatType(ChatChannels.SHOUT, ChatType.YOU, 27 + "You shout, ".Length + start6);
+        return new ChatType(ChatChannels.Shout, ChatType.You, 27 + "You shout, ".Length + start6);
       }
       else if (span.StartsWith("tell "))
       {
@@ -204,7 +204,7 @@ namespace EQLogParser
         if (MatchTellChannel(span, out var channel) is var start7 and > -1)
         {
           // You tell test.test:34, 'hello'
-          return new ChatType(channel, ChatType.YOU, 27 + "You tell ".Length + start7);
+          return new ChatType(channel, ChatType.You, 27 + "You tell ".Length + start7);
         }
 
         if (span.StartsWith("your "))
@@ -213,13 +213,13 @@ namespace EQLogParser
           if (StartsWith(span, "party, ") is var start8 and > -1)
           {
             // You tell your party, 'hello'
-            return new ChatType(ChatChannels.GROUP, ChatType.YOU, 27 + "You tell your party, ".Length + start8);
+            return new ChatType(ChatChannels.Group, ChatType.You, 27 + "You tell your party, ".Length + start8);
           }
 
           if (StartsWith(span, "raid, ") is var start9 and > -1)
           {
             // You tell your raid, 'hello'
-            return new ChatType(ChatChannels.RAID, ChatType.YOU, 27 + "You tell your raid, ".Length + start9);
+            return new ChatType(ChatChannels.Raid, ChatType.You, 27 + "You tell your raid, ".Length + start9);
           }
         }
       }
@@ -229,7 +229,7 @@ namespace EQLogParser
         if (MatchTellPlayer(span, out var receiver) is var start9 and > -1)
         {
           // You told test.test, 'hello'
-          return new ChatType(ChatChannels.TELL, ChatType.YOU, 27 + "You told ".Length + start9, receiver);
+          return new ChatType(ChatChannels.Tell, ChatType.You, 27 + "You told ".Length + start9, receiver);
         }
       }
 

@@ -10,7 +10,7 @@ namespace EQLogParser
 {
   internal class ColorEditor : BaseTypeEditor
   {
-    private ColorPicker TheColorPicker;
+    private ColorPicker _theColorPicker;
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
     {
@@ -22,7 +22,7 @@ namespace EQLogParser
         ValidatesOnDataErrors = true
       };
 
-      BindingOperations.SetBinding(TheColorPicker, ColorPicker.BrushProperty, binding);
+      BindingOperations.SetBinding(_theColorPicker, ColorPicker.BrushProperty, binding);
     }
 
     public override object Create(PropertyInfo propertyInfo) => Create();
@@ -31,7 +31,7 @@ namespace EQLogParser
     private object Create()
     {
       var colorPicker = new ColorPicker { EnableSolidToGradientSwitch = false, BorderThickness = new Thickness(0, 0, 0, 0) };
-      TheColorPicker = colorPicker;
+      _theColorPicker = colorPicker;
       return colorPicker;
     }
 
@@ -42,11 +42,11 @@ namespace EQLogParser
 
     public override void Detach(PropertyViewItem property)
     {
-      if (TheColorPicker != null)
+      if (_theColorPicker != null)
       {
-        BindingOperations.ClearAllBindings(TheColorPicker);
-        TheColorPicker.Dispose();
-        TheColorPicker = null;
+        BindingOperations.ClearAllBindings(_theColorPicker);
+        _theColorPicker.Dispose();
+        _theColorPicker = null;
       }
     }
   }

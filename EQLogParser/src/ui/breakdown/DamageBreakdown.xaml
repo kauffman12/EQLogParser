@@ -95,8 +95,8 @@
         <syncfusion:TreeGridNumericColumn NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="TotalHead" TextAlignment="Right" HeaderText="Headshot" />
         <syncfusion:TreeGridNumericColumn NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="TotalRiposte" TextAlignment="Right" HeaderText="Riposte" />
         <syncfusion:TreeGridNumericColumn NumberDecimalDigits="0" NumberGroupSizes="3" MappingName="TotalSlay" TextAlignment="Right" HeaderText="Slay Undead" />
-        <syncfusion:TreeGridNumericColumn MappingName="DPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
-        <syncfusion:TreeGridNumericColumn MappingName="SDPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
+        <syncfusion:TreeGridNumericColumn MappingName="Dps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
+        <syncfusion:TreeGridNumericColumn MappingName="Sdps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
         <syncfusion:TreeGridNumericColumn MaximumWidth="65"  MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
         <syncfusion:TreeGridNumericColumn MaximumWidth="70" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
         <syncfusion:TreeGridNumericColumn MappingName="Min" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Min Hit" />

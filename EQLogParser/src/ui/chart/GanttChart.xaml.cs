@@ -113,7 +113,7 @@ namespace EQLogParser
           var castSpells = new List<SpellData>();
           foreach (var (beginTime, action) in RecordManager.Instance.GetSpellsDuring(_startTime, _endTime))
           {
-            if (action is SpellCast { Interrupted: false } cast && cast.Caster == player && cast.SpellData is { Target: (int)SpellTarget.SELF, Adps: > 0 }
+            if (action is SpellCast { Interrupted: false } cast && cast.Caster == player && cast.SpellData is { Target: (int)SpellTarget.Self, Adps: > 0 }
               && (cast.SpellData.MaxHits > 0 || cast.SpellData.Duration <= 1800) && ClassFilter(cast.SpellData))
             {
               castSpells.Add(cast.SpellData);
@@ -163,7 +163,7 @@ namespace EQLogParser
       hideSelfOnly.IsEnabled = _spellRanges.Count > 0 && _selected?.Find(stats => stats.OrigName == ConfigUtil.PlayerName) != null;
 
       AddHeaderLabel(0, string.Format(CultureInfo.CurrentCulture, "Buffs (T-{0})", DataManager.BuffsOffset), 20);
-      AddHeaderLabel(DataManager.BuffsOffset, DateUtil.FormatSimpleHMS(_startTime + DataManager.BuffsOffset), 10);
+      AddHeaderLabel(DataManager.BuffsOffset, DateUtil.FormatSimpleHms(_startTime + DataManager.BuffsOffset), 10);
 
       var minutes = 1;
       for (var more = (int)(DataManager.BuffsOffset + 60); more < _length; more += 60)
@@ -354,7 +354,7 @@ namespace EQLogParser
           contentLabels.Measure(contentLabels.RenderSize);
           content.Measure(content.RenderSize);
 
-          var dpiScale = UIElementUtil.GetDpi();
+          var dpiScale = UiElementUtil.GetDpi();
           var titleHeight = titlePane.ActualHeight;
 
           // create title image
@@ -711,14 +711,14 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool DisposedValue; // To detect redundant calls
+    private bool _disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!DisposedValue)
+      if (!_disposedValue)
       {
         MainActions.EventsThemeChanged -= EventsThemeChanged;
-        DisposedValue = true;
+        _disposedValue = true;
       }
     }
 

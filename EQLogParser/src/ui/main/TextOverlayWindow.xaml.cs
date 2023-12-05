@@ -15,46 +15,46 @@ namespace EQLogParser
   /// </summary>
   public partial class TextOverlayWindow : Window
   {
-    private readonly LinkedList<TextData> TextDataList = new();
-    private int MaxNodes = -1;
-    private TriggerNode Node;
-    private readonly bool Preview;
-    private long SavedHeight;
-    private long SavedWidth;
-    private long SavedTop = long.MaxValue;
-    private long SavedLeft = long.MaxValue;
-    private Dictionary<string, Window> PreviewWindows;
+    private readonly LinkedList<TextData> _textDataList = new();
+    private int _maxNodes = -1;
+    private TriggerNode _node;
+    private readonly bool _preview;
+    private long _savedHeight;
+    private long _savedWidth;
+    private long _savedTop = long.MaxValue;
+    private long _savedLeft = long.MaxValue;
+    private Dictionary<string, Window> _previewWindows;
 
     internal TextOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
     {
       InitializeComponent();
-      Node = node;
-      Preview = previews != null;
-      PreviewWindows = previews;
-      title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + Node.Id);
+      _node = node;
+      _preview = previews != null;
+      _previewWindows = previews;
+      title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + _node.Id);
 
-      Height = Node.OverlayData.Height;
-      Width = Node.OverlayData.Width;
-      Top = Node.OverlayData.Top;
-      Left = Node.OverlayData.Left;
+      Height = _node.OverlayData.Height;
+      Width = _node.OverlayData.Width;
+      Top = _node.OverlayData.Top;
+      Left = _node.OverlayData.Left;
 
       // start off with one node
       content.Children.Add(CreateBlock());
 
-      if (Preview)
+      if (_preview)
       {
         MainActions.SetTheme(this, MainWindow.CurrentTheme);
         ResizeMode = ResizeMode.CanResizeWithGrip;
         SetResourceReference(BorderBrushProperty, "PreviewBackgroundBrush");
-        SetResourceReference(BackgroundProperty, "OverlayBrushColor-" + Node.Id);
+        SetResourceReference(BackgroundProperty, "OverlayBrushColor-" + _node.Id);
         title.Visibility = Visibility.Visible;
         buttonsPanel.Visibility = Visibility.Visible;
 
         // test data
-        TextDataList.AddFirst(new TextData
+        _textDataList.AddFirst(new TextData
         {
           Text = "test message",
-          EndTicks = DateTime.Now.Ticks + (Node.OverlayData.FadeDelay * TimeSpan.TicksPerSecond)
+          EndTicks = DateTime.Now.Ticks + (_node.OverlayData.FadeDelay * TimeSpan.TicksPerSecond)
         });
 
         content.Children.Add(CreateBlock());
@@ -63,35 +63,35 @@ namespace EQLogParser
       }
       else
       {
-        border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + Node.Id);
+        border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + _node.Id);
       }
     }
 
     internal void AddTriggerText(string text, double beginTicks, SolidColorBrush brush)
     {
-      if (MaxNodes == -1 && content.Children.Count > 0 && content.Children[0] is TextBlock { ActualHeight: > 0 } textBlock)
+      if (_maxNodes == -1 && content.Children.Count > 0 && content.Children[0] is TextBlock { ActualHeight: > 0 } textBlock)
       {
-        MaxNodes = (int)(Height / textBlock.ActualHeight) + 1;
+        _maxNodes = (int)(Height / textBlock.ActualHeight) + 1;
       }
 
-      lock (TextDataList)
+      lock (_textDataList)
       {
-        TextDataList.AddFirst(new TextData
+        _textDataList.AddFirst(new TextData
         {
           Text = text,
-          EndTicks = beginTicks + (Node.OverlayData.FadeDelay * TimeSpan.TicksPerSecond),
+          EndTicks = beginTicks + (_node.OverlayData.FadeDelay * TimeSpan.TicksPerSecond),
           Brush = brush
         });
 
-        if (TextDataList.Count > MaxNodes)
+        if (_textDataList.Count > _maxNodes)
         {
-          TextDataList.RemoveLast();
+          _textDataList.RemoveLast();
         }
       }
 
-      lock (TextDataList)
+      lock (_textDataList)
       {
-        if (content.Children.Count < MaxNodes && content.Children.Count < TextDataList.Count)
+        if (content.Children.Count < _maxNodes && content.Children.Count < _textDataList.Count)
         {
           content.Children.Add(CreateBlock());
         }
@@ -103,26 +103,26 @@ namespace EQLogParser
       bool done;
       var currentTicks = DateTime.Now.Ticks;
 
-      if (!Node.OverlayData.Width.Equals((long)Width))
+      if (!_node.OverlayData.Width.Equals((long)Width))
       {
-        Width = Node.OverlayData.Width;
+        Width = _node.OverlayData.Width;
       }
-      else if (!Node.OverlayData.Height.Equals((long)Height))
+      else if (!_node.OverlayData.Height.Equals((long)Height))
       {
-        Height = Node.OverlayData.Height;
+        Height = _node.OverlayData.Height;
       }
-      else if (!Node.OverlayData.Top.Equals((long)Top))
+      else if (!_node.OverlayData.Top.Equals((long)Top))
       {
-        Top = Node.OverlayData.Top;
+        Top = _node.OverlayData.Top;
       }
-      else if (!Node.OverlayData.Left.Equals((long)Left))
+      else if (!_node.OverlayData.Left.Equals((long)Left))
       {
-        Left = Node.OverlayData.Left;
+        Left = _node.OverlayData.Left;
       }
 
-      lock (TextDataList)
+      lock (_textDataList)
       {
-        var node = TextDataList.First;
+        var node = _textDataList.First;
         var lastIndex = content.Children.Count - 1;
 
         while (node != null)
@@ -139,7 +139,7 @@ namespace EQLogParser
               }
               else
               {
-                block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + Node.Id);
+                block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + _node.Id);
               }
 
               if (block.Visibility != Visibility.Visible)
@@ -149,21 +149,21 @@ namespace EQLogParser
             }
             else
             {
-              TextDataList.Remove(node);
+              _textDataList.Remove(node);
               block.Visibility = Visibility.Collapsed;
               block.Text = "";
             }
           }
           else
           {
-            TextDataList.Remove(node);
+            _textDataList.Remove(node);
           }
 
           node = nextNode;
           lastIndex--;
         }
 
-        done = TextDataList.Count == 0;
+        done = _textDataList.Count == 0;
       }
 
       if (!done)
@@ -197,8 +197,8 @@ namespace EQLogParser
         Effect = new DropShadowEffect { ShadowDepth = 2, Direction = 330, Color = Colors.Black, Opacity = 0.7, BlurRadius = 0 }
       };
 
-      block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + Node.Id);
-      block.SetResourceReference(TextBlock.FontFamilyProperty, "TextOverlayFontFamily-" + Node.Id);
+      block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + _node.Id);
+      block.SetResourceReference(TextBlock.FontFamilyProperty, "TextOverlayFontFamily-" + _node.Id);
       return block;
     }
 
@@ -221,31 +221,31 @@ namespace EQLogParser
 
     private void WindowLoaded(object sender, RoutedEventArgs e)
     {
-      SavedHeight = (long)Height;
-      SavedWidth = (long)Width;
-      SavedTop = (long)Top;
-      SavedLeft = (long)Left;
+      _savedHeight = (long)Height;
+      _savedWidth = (long)Width;
+      _savedTop = (long)Top;
+      _savedLeft = (long)Left;
     }
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
-      Node.OverlayData.Height = SavedHeight = (long)Height;
-      Node.OverlayData.Width = SavedWidth = (long)Width;
-      Node.OverlayData.Top = SavedTop = (long)Top;
-      Node.OverlayData.Left = SavedLeft = (long)Left;
+      _node.OverlayData.Height = _savedHeight = (long)Height;
+      _node.OverlayData.Width = _savedWidth = (long)Width;
+      _node.OverlayData.Top = _savedTop = (long)Top;
+      _node.OverlayData.Left = _savedLeft = (long)Left;
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
-      TriggerStateManager.Instance.Update(Node);
-      TriggerManager.Instance.CloseOverlay(Node.Id);
+      TriggerStateManager.Instance.Update(_node);
+      TriggerManager.Instance.CloseOverlay(_node.Id);
     }
 
     private void CancelClick(object sender, RoutedEventArgs e)
     {
-      Height = SavedHeight;
-      Width = SavedWidth;
-      Top = SavedTop;
-      Left = SavedLeft;
+      Height = _savedHeight;
+      Width = _savedWidth;
+      Top = _savedTop;
+      Left = _savedLeft;
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
@@ -253,17 +253,17 @@ namespace EQLogParser
 
     private void TriggerUpdateEvent(TriggerNode node)
     {
-      if (Node != null && Node.Id == node.Id)
+      if (_node != null && _node.Id == node.Id)
       {
-        if (Node != node)
+        if (_node != node)
         {
-          Node = node;
+          _node = node;
         }
 
-        Height = Node.OverlayData.Height;
-        Width = Node.OverlayData.Width;
-        Top = Node.OverlayData.Top;
-        Left = Node.OverlayData.Left;
+        Height = _node.OverlayData.Height;
+        Width = _node.OverlayData.Width;
+        Top = _node.OverlayData.Top;
+        Left = _node.OverlayData.Left;
         saveButton.IsEnabled = false;
         cancelButton.IsEnabled = false;
         closeButton.IsEnabled = true;
@@ -272,7 +272,7 @@ namespace EQLogParser
 
     private void WindowSizeChanged(object sender, SizeChangedEventArgs e)
     {
-      if (SavedTop != long.MaxValue)
+      if (_savedTop != long.MaxValue)
       {
         if (!saveButton.IsEnabled)
         {
@@ -291,23 +291,23 @@ namespace EQLogParser
     private void WindowClosing(object sender, CancelEventArgs e)
     {
       TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
-      PreviewWindows?.Remove(Node.Id);
-      PreviewWindows = null;
+      _previewWindows?.Remove(_node.Id);
+      _previewWindows = null;
     }
 
     protected override void OnSourceInitialized(EventArgs e)
     {
       base.OnSourceInitialized(e);
 
-      if (!Preview)
+      if (!_preview)
       {
         var source = (HwndSource)PresentationSource.FromVisual(this);
         if (source != null)
         {
           // set to layered and topmost by xaml
-          var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
-          exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
-          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
+          var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
+          exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow | (int)NativeMethods.ExtendedWindowStyles.WsExTransparent;
+          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, (IntPtr)exStyle);
         }
       }
     }

@@ -16,11 +16,11 @@ namespace EQLogParser
     public bool IsYes1Clicked;
     public bool MergeOption;
     public enum IconType { Question, Save, Warn, Info }
-    private readonly string CopyData;
+    private readonly string _copyData;
 
     public MessageWindow(string text, string caption, string copyData) : this(text, caption, IconType.Info)
     {
-      CopyData = copyData;
+      _copyData = copyData;
       copyLink.Visibility = Visibility.Visible;
       Clipboard.SetText(copyData);
     }
@@ -107,14 +107,14 @@ namespace EQLogParser
 
     private void CopyLinkPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-      if (CopyData != null)
+      if (_copyData != null)
       {
-        Clipboard.SetText(CopyData);
+        Clipboard.SetText(_copyData);
       }
     }
 
-    private const int GWL_EXSTYLE = -20;
-    private const int WS_EX_NOACTIVATE = 0x08000000;
+    private const int GwlExstyle = -20;
+    private const int WsExNoactivate = 0x08000000;
 
     [DllImport("user32.dll")]
     public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
@@ -125,8 +125,8 @@ namespace EQLogParser
     private void SetWindowNoActivate()
     {
       var helper = new System.Windows.Interop.WindowInteropHelper(this);
-      var exStyle = GetWindowLong(helper.Handle, GWL_EXSTYLE);
-      SetWindowLong(helper.Handle, GWL_EXSTYLE, exStyle | WS_EX_NOACTIVATE);
+      var exStyle = GetWindowLong(helper.Handle, GwlExstyle);
+      SetWindowLong(helper.Handle, GwlExstyle, exStyle | WsExNoactivate);
     }
 
     private void MessageWindowLoaded(object sender, RoutedEventArgs e)

@@ -17,9 +17,9 @@ namespace EQLogParser
   public partial class TriggersTester : IDocumentContent
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private BlockingCollection<Tuple<string, double, bool>> Buffer;
-    private TriggerConfig TheConfig;
-    private bool Ready;
+    private BlockingCollection<Tuple<string, double, bool>> _buffer;
+    private TriggerConfig _theConfig;
+    private bool _ready;
 
     public TriggersTester()
     {
@@ -35,7 +35,7 @@ namespace EQLogParser
 
     private void UpdateCharacterList(TriggerConfig config)
     {
-      TheConfig = config;
+      _theConfig = config;
 
       if (characterList != null)
       {
@@ -106,20 +106,20 @@ namespace EQLogParser
           {
             if (characterList.Visibility != Visibility.Visible)
             {
-              Buffer?.CompleteAdding();
-              if (TheConfig != null)
+              _buffer?.CompleteAdding();
+              if (_theConfig != null)
               {
-                Buffer = new(new ConcurrentQueue<Tuple<string, double, bool>>());
-                TriggerManager.Instance.SetTestProcessor(TheConfig, Buffer);
+                _buffer = new(new ConcurrentQueue<Tuple<string, double, bool>>());
+                TriggerManager.Instance.SetTestProcessor(_theConfig, _buffer);
               }
             }
             else
             {
               if (characterList.SelectedItem is TriggerCharacter character)
               {
-                Buffer?.CompleteAdding();
-                Buffer = new(new ConcurrentQueue<Tuple<string, double, bool>>());
-                TriggerManager.Instance.SetTestProcessor(character, Buffer);
+                _buffer?.CompleteAdding();
+                _buffer = new(new ConcurrentQueue<Tuple<string, double, bool>>());
+                TriggerManager.Instance.SetTestProcessor(character, _buffer);
               }
               else
               {
@@ -160,7 +160,7 @@ namespace EQLogParser
             if (dateTime != DateTime.MinValue)
             {
               var beginTime = DateUtil.ToDouble(dateTime);
-              Buffer.Add(Tuple.Create(line, beginTime, true));
+              _buffer.Add(Tuple.Create(line, beginTime, true));
             }
           }
         });
@@ -243,7 +243,7 @@ namespace EQLogParser
                       if (content.ToString() == "Stopping Test")
                       {
                         stop = true;
-                        Buffer?.CompleteAdding();
+                        _buffer?.CompleteAdding();
                         TriggerManager.Instance.StopTestProcessor();
                       }
                     });
@@ -264,7 +264,7 @@ namespace EQLogParser
                         var start = DateTime.Now;
                         foreach (var line in list)
                         {
-                          Buffer.Add(Tuple.Create(line, nowTime, true));
+                          _buffer.Add(Tuple.Create(line, nowTime, true));
                         }
 
                         var took = (DateTime.Now - start).Ticks;
@@ -305,7 +305,7 @@ namespace EQLogParser
 
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (VisualParent != null && !Ready)
+      if (VisualParent != null && !_ready)
       {
         if (TriggerStateManager.Instance.IsActive())
         {
@@ -320,7 +320,7 @@ namespace EQLogParser
           }
         }
 
-        Ready = true;
+        _ready = true;
       }
     }
 

@@ -17,23 +17,23 @@ namespace EQLogParser
 
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
     internal event Action<StatsGenerationEvent> EventsGenerationStatus;
-    private readonly Dictionary<int, byte> TankingGroupIds = new();
-    private readonly ConcurrentDictionary<string, TimeRange> PlayerTimeRanges = new();
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> PlayerSubTimeRanges = new();
-    private readonly List<List<ActionGroup>> TankingGroups = new();
-    private PlayerStats RaidTotals;
-    private List<Fight> Selected;
-    private string Title;
+    private readonly Dictionary<int, byte> _tankingGroupIds = new();
+    private readonly ConcurrentDictionary<string, TimeRange> _playerTimeRanges = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _playerSubTimeRanges = new();
+    private readonly List<List<ActionGroup>> _tankingGroups = new();
+    private PlayerStats _raidTotals;
+    private List<Fight> _selected;
+    private string _title;
 
     internal static bool IsMelee(DamageRecord record)
     {
-      return record.Type == Labels.MELEE || record.Type == Labels.MISS || record.Type == Labels.PARRY || record.Type == Labels.DODGE ||
-        record.Type == Labels.BLOCK || record.Type == Labels.INVULNERABLE || record.Type == Labels.RIPOSTE;
+      return record.Type == Labels.Melee || record.Type == Labels.Miss || record.Type == Labels.Parry || record.Type == Labels.Dodge ||
+        record.Type == Labels.Block || record.Type == Labels.Invulnerable || record.Type == Labels.Riposte;
     }
 
     internal TankingStatsManager()
     {
-      lock (TankingGroupIds)
+      lock (_tankingGroupIds)
       {
         DataManager.Instance.EventsClearedActiveData += (_) =>
         {
@@ -44,17 +44,17 @@ namespace EQLogParser
 
     internal int GetGroupCount()
     {
-      lock (TankingGroupIds)
+      lock (_tankingGroupIds)
       {
-        return TankingGroups.Count;
+        return _tankingGroups.Count;
       }
     }
 
     internal void RebuildTotalStats(GenerateStatsOptions options)
     {
-      lock (TankingGroupIds)
+      lock (_tankingGroupIds)
       {
-        if (TankingGroups.Count > 0)
+        if (_tankingGroups.Count > 0)
         {
           FireNewStatsEvent();
           ComputeTankingStats(options);
@@ -64,48 +64,48 @@ namespace EQLogParser
 
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
-      lock (TankingGroupIds)
+      lock (_tankingGroupIds)
       {
         try
         {
           FireNewStatsEvent();
           Reset();
 
-          Selected = options.Npcs.OrderBy(sel => sel.Id).ToList();
-          Title = options.Npcs?.FirstOrDefault()?.Name;
+          _selected = options.Npcs.OrderBy(sel => sel.Id).ToList();
+          _title = options.Npcs?.FirstOrDefault()?.Name;
           var damageBlocks = new List<ActionGroup>();
 
-          Selected.ForEach(fight =>
+          _selected.ForEach(fight =>
           {
             damageBlocks.AddRange(fight.TankingBlocks);
 
             if (fight.GroupId > -1)
             {
-              TankingGroupIds[fight.GroupId] = 1;
+              _tankingGroupIds[fight.GroupId] = 1;
             }
 
-            RaidTotals.Ranges.Add(new TimeSegment(fight.BeginTankingTime, fight.LastTankingTime));
-            StatsUtil.UpdateRaidTimeRanges(fight.TankSegments, fight.TankSubSegments, PlayerTimeRanges, PlayerSubTimeRanges);
+            _raidTotals.Ranges.Add(new TimeSegment(fight.BeginTankingTime, fight.LastTankingTime));
+            StatsUtil.UpdateRaidTimeRanges(fight.TankSegments, fight.TankSubSegments, _playerTimeRanges, _playerSubTimeRanges);
           });
 
           damageBlocks.Sort((a, b) => a.BeginTime.CompareTo(b.BeginTime));
 
           if (damageBlocks.Count > 0)
           {
-            RaidTotals.TotalSeconds = RaidTotals.MaxTime = RaidTotals.Ranges.GetTotal();
+            _raidTotals.TotalSeconds = _raidTotals.MaxTime = _raidTotals.Ranges.GetTotal();
 
             var rangeIndex = 0;
             double lastTime = 0;
             var newBlock = new List<ActionGroup>();
             damageBlocks.ForEach(block =>
             {
-              if (RaidTotals.Ranges.TimeSegments.Count > rangeIndex && block.BeginTime > RaidTotals.Ranges.TimeSegments[rangeIndex].EndTime)
+              if (_raidTotals.Ranges.TimeSegments.Count > rangeIndex && block.BeginTime > _raidTotals.Ranges.TimeSegments[rangeIndex].EndTime)
               {
                 rangeIndex++;
 
                 if (newBlock.Count > 0)
                 {
-                  TankingGroups.Add(newBlock);
+                  _tankingGroups.Add(newBlock);
                 }
 
                 newBlock = new List<ActionGroup>();
@@ -124,10 +124,10 @@ namespace EQLogParser
               }
             });
 
-            TankingGroups.Add(newBlock);
+            _tankingGroups.Add(newBlock);
             ComputeTankingStats(options);
           }
-          else if (Selected == null || Selected.Count == 0)
+          else if (_selected == null || _selected.Count == 0)
           {
             FireNoDataEvent(options, "NONPC");
           }
@@ -145,47 +145,47 @@ namespace EQLogParser
 
     internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null)
     {
-      lock (TankingGroupIds)
+      lock (_tankingGroupIds)
       {
         // send update
-        var de = new DataPointEvent { Action = action, Iterator = new TankGroupCollection(TankingGroups, options.DamageType) };
+        var de = new DataPointEvent { Action = action, Iterator = new TankGroupCollection(_tankingGroups, options.DamageType) };
 
         if (selected != null)
         {
           de.Selected.AddRange(selected);
         }
 
-        EventsUpdateDataPoint?.Invoke(TankingGroups, de);
+        EventsUpdateDataPoint?.Invoke(_tankingGroups, de);
       }
     }
 
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.TANK_PARSE, State = "STARTED", Source = this });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.TankParse, State = "STARTED", Source = this });
     }
 
     private void FireNoDataEvent(GenerateStatsOptions options, string state)
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.TANK_PARSE, State = state, Source = this });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.TankParse, State = state, Source = this });
       FireChartEvent(options, "CLEAR");
     }
 
     private void ComputeTankingStats(GenerateStatsOptions options)
     {
-      lock (TankingGroupIds)
+      lock (_tankingGroupIds)
       {
         var individualStats = new Dictionary<string, PlayerStats>();
 
-        if (RaidTotals != null)
+        if (_raidTotals != null)
         {
           // always start over
-          RaidTotals.Total = 0;
+          _raidTotals.Total = 0;
 
           try
           {
-            TankingGroups.ForEach(group =>
+            _tankingGroups.ForEach(group =>
             {
               group.ForEach(block =>
               {
@@ -195,7 +195,7 @@ namespace EQLogParser
                   {
                     if (options.DamageType == 0 || (options.DamageType == 1 && IsMelee(record)) || (options.DamageType == 2 && !IsMelee(record)))
                     {
-                      RaidTotals.Total += record.Total;
+                      _raidTotals.Total += record.Total;
                       var stats = StatsUtil.CreatePlayerStats(individualStats, record.Defender);
                       StatsUtil.UpdateStats(stats, record);
                       var subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
@@ -215,13 +215,13 @@ namespace EQLogParser
               });
             });
 
-            RaidTotals.DPS = (long)Math.Round(RaidTotals.Total / RaidTotals.TotalSeconds, 2);
-            StatsUtil.PopulateSpecials(RaidTotals);
+            _raidTotals.Dps = (long)Math.Round(_raidTotals.Total / _raidTotals.TotalSeconds, 2);
+            StatsUtil.PopulateSpecials(_raidTotals);
             Parallel.ForEach(individualStats.Values, stats =>
             {
-              StatsUtil.UpdateAllStatsTimeRanges(stats, PlayerTimeRanges, PlayerSubTimeRanges);
-              StatsUtil.UpdateCalculations(stats, RaidTotals);
-              if (RaidTotals.Specials.TryGetValue(stats.OrigName, out var special2))
+              StatsUtil.UpdateAllStatsTimeRanges(stats, _playerTimeRanges, _playerSubTimeRanges);
+              StatsUtil.UpdateCalculations(stats, _raidTotals);
+              if (_raidTotals.Specials.TryGetValue(stats.OrigName, out var special2))
               {
                 stats.Special = special2;
               }
@@ -229,10 +229,10 @@ namespace EQLogParser
 
             var combined = new CombinedStats
             {
-              RaidStats = RaidTotals,
-              TargetTitle = (Selected.Count > 1 ? "Combined (" + Selected.Count + "): " : "") + Title,
-              TimeTitle = string.Format(StatsUtil.TIME_FORMAT, RaidTotals.TotalSeconds),
-              TotalTitle = string.Format(StatsUtil.TOTAL_FORMAT, StatsUtil.FormatTotals(RaidTotals.Total), " Tanked ", StatsUtil.FormatTotals(RaidTotals.DPS))
+              RaidStats = _raidTotals,
+              TargetTitle = (_selected.Count > 1 ? "Combined (" + _selected.Count + "): " : "") + _title,
+              TimeTitle = string.Format(StatsUtil.TimeFormat, _raidTotals.TotalSeconds),
+              TotalTitle = string.Format(StatsUtil.TotalFormat, StatsUtil.FormatTotals(_raidTotals.Total), " Tanked ", StatsUtil.FormatTotals(_raidTotals.Dps))
             };
 
             combined.StatsList.AddRange(individualStats.Values.AsParallel().OrderByDescending(item => item.Total));
@@ -248,14 +248,14 @@ namespace EQLogParser
             // generating new stats
             var genEvent = new StatsGenerationEvent
             {
-              Type = Labels.TANK_PARSE,
+              Type = Labels.TankParse,
               State = "COMPLETED",
               CombinedStats = combined,
               Source = this
             };
 
-            genEvent.Groups.AddRange(TankingGroups);
-            genEvent.UniqueGroupCount = TankingGroupIds.Count;
+            genEvent.Groups.AddRange(_tankingGroups);
+            genEvent.UniqueGroupCount = _tankingGroupIds.Count;
             EventsGenerationStatus?.Invoke(genEvent);
             FireChartEvent(options, "UPDATE");
           }
@@ -277,16 +277,16 @@ namespace EQLogParser
 
     private void Reset()
     {
-      PlayerTimeRanges.Clear();
-      PlayerSubTimeRanges.Clear();
-      TankingGroups.Clear();
-      TankingGroupIds.Clear();
-      RaidTotals = StatsUtil.CreatePlayerStats(Labels.RAID_TOTALS);
-      Selected = null;
-      Title = "";
+      _playerTimeRanges.Clear();
+      _playerSubTimeRanges.Clear();
+      _tankingGroups.Clear();
+      _tankingGroupIds.Clear();
+      _raidTotals = StatsUtil.CreatePlayerStats(Labels.RaidTotals);
+      _selected = null;
+      _title = "";
     }
 
-    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool _, bool showDPS, bool showTotals,
+    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool _, bool showDps, bool showTotals,
       bool rankPlayers, bool __, bool showTime, string customTitle)
     {
       var list = new List<string>();
@@ -296,24 +296,24 @@ namespace EQLogParser
 
       if (currentStats != null)
       {
-        if (type == Labels.TANK_PARSE)
+        if (type == Labels.TankParse)
         {
           if (selected?.Count > 0)
           {
             foreach (var stats in selected.OrderByDescending(item => item.Total))
             {
-              var playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, stats.Rank, stats.Name) : string.Format(StatsUtil.PLAYER_FORMAT, stats.Name);
-              var damageFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
+              var playerFormat = rankPlayers ? string.Format(StatsUtil.PlayerRankFormat, stats.Rank, stats.Name) : string.Format(StatsUtil.PlayerFormat, stats.Name);
+              var damageFormat = string.Format(StatsUtil.TotalOnlyFormat, StatsUtil.FormatTotals(stats.Total));
               list.Add(playerFormat + damageFormat);
             }
           }
 
           details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
           var timeTitle = showTime ? (" " + currentStats.TimeTitle) : "";
-          var totals = showDPS ? currentStats.TotalTitle : currentStats.TotalTitle.Split(new[] { " @" }, 2, StringSplitOptions.RemoveEmptyEntries)[0];
+          var totals = showDps ? currentStats.TotalTitle : currentStats.TotalTitle.Split(new[] { " @" }, 2, StringSplitOptions.RemoveEmptyEntries)[0];
           title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, showTotals ? totals : "");
         }
-        else if (type == Labels.RECEIVED_HEAL_PARSE)
+        else if (type == Labels.ReceivedHealParse)
         {
           if (selected?.Count == 1 && selected[0].MoreStats != null)
           {
@@ -321,8 +321,8 @@ namespace EQLogParser
             long totals = 0;
             foreach (var stats in selected[0].MoreStats.SubStats2.OrderByDescending(stats => stats.Total).Take(10))
             {
-              var playerFormat = rankPlayers ? string.Format(StatsUtil.PLAYER_RANK_FORMAT, rank++, stats.Name) : string.Format(StatsUtil.PLAYER_FORMAT, stats.Name);
-              var damageFormat = string.Format(StatsUtil.TOTAL_ONLY_FORMAT, StatsUtil.FormatTotals(stats.Total));
+              var playerFormat = rankPlayers ? string.Format(StatsUtil.PlayerRankFormat, rank++, stats.Name) : string.Format(StatsUtil.PlayerFormat, stats.Name);
+              var damageFormat = string.Format(StatsUtil.TotalOnlyFormat, StatsUtil.FormatTotals(stats.Total));
               list.Add(playerFormat + damageFormat);
               totals += stats.Total;
             }

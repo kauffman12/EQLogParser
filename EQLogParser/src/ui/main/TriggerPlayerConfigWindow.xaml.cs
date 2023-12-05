@@ -14,10 +14,10 @@ namespace EQLogParser
   /// </summary>
   public partial class TriggerPlayerConfigWindow
   {
-    private const string ENTER_NAME = "Enter Character Name";
-    private readonly TriggerCharacter TheCharacter;
-    private readonly SpeechSynthesizer TestSynth;
-    private readonly bool Ready;
+    private const string EnterName = "Enter Character Name";
+    private readonly TriggerCharacter _theCharacter;
+    private readonly SpeechSynthesizer _testSynth;
+    private readonly bool _ready;
 
     internal TriggerPlayerConfigWindow(TriggerCharacter character = null)
     {
@@ -26,34 +26,34 @@ namespace EQLogParser
 
       Owner = Application.Current.MainWindow;
 
-      if ((TestSynth = TriggerUtil.GetSpeechSynthesizer()) != null)
+      if ((_testSynth = TriggerUtil.GetSpeechSynthesizer()) != null)
       {
-        voices.ItemsSource = TestSynth.GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList();
+        voices.ItemsSource = _testSynth.GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList();
       }
 
-      TheCharacter = character;
-      if (TheCharacter != null)
+      _theCharacter = character;
+      if (_theCharacter != null)
       {
-        characterName.Text = TheCharacter.Name;
+        characterName.Text = _theCharacter.Name;
         characterName.FontStyle = FontStyles.Normal;
-        txtFilePath.Text = TheCharacter.FilePath;
+        txtFilePath.Text = _theCharacter.FilePath;
         txtFilePath.FontStyle = FontStyles.Normal;
         Title = "Modify Character Settings";
 
-        var selectedVoice = TheCharacter.Voice;
+        var selectedVoice = _theCharacter.Voice;
         if (voices.ItemsSource is List<string> populated && populated.IndexOf(selectedVoice) is var found and > -1)
         {
           voices.SelectedIndex = found;
         }
 
-        rateOption.SelectedIndex = TheCharacter.VoiceRate;
+        rateOption.SelectedIndex = _theCharacter.VoiceRate;
       }
       else
       {
-        characterName.Text = ENTER_NAME;
+        characterName.Text = EnterName;
       }
 
-      Ready = true;
+      _ready = true;
     }
 
     private void CancelClicked(object sender, RoutedEventArgs e) => Close();
@@ -81,19 +81,19 @@ namespace EQLogParser
       if (string.IsNullOrEmpty(characterName.Text))
       {
         characterName.FontStyle = FontStyles.Italic;
-        characterName.Text = ENTER_NAME;
+        characterName.Text = EnterName;
       }
     }
 
     private void SaveClicked(object sender, RoutedEventArgs e)
     {
-      if (TheCharacter == null)
+      if (_theCharacter == null)
       {
         TriggerStateManager.Instance.AddCharacter(characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(), rateOption.SelectedIndex);
       }
       else
       {
-        TriggerStateManager.Instance.UpdateCharacter(TheCharacter.Id, characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(), rateOption.SelectedIndex);
+        TriggerStateManager.Instance.UpdateCharacter(_theCharacter.Id, characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(), rateOption.SelectedIndex);
       }
 
       Close();
@@ -112,32 +112,32 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
     {
-      if (Ready)
+      if (_ready)
       {
         if (Equals(sender, voices))
         {
           if (voices.SelectedValue is string voiceName)
           {
-            if (TestSynth != null)
+            if (_testSynth != null)
             {
-              TestSynth.Rate = rateOption.SelectedIndex;
-              TestSynth.SelectVoice(voiceName);
-              TestSynth.SpeakAsync(voiceName);
+              _testSynth.Rate = rateOption.SelectedIndex;
+              _testSynth.SelectVoice(voiceName);
+              _testSynth.SpeakAsync(voiceName);
             }
           }
         }
         else if (Equals(sender, rateOption))
         {
-          if (TestSynth != null)
+          if (_testSynth != null)
           {
-            TestSynth.Rate = rateOption.SelectedIndex;
+            _testSynth.Rate = rateOption.SelectedIndex;
             if (voices.SelectedItem is string voice && !string.IsNullOrEmpty(voice))
             {
-              TestSynth.SelectVoice(voice);
+              _testSynth.SelectVoice(voice);
             }
 
             var rateText = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex;
-            TestSynth.SpeakAsync(rateText);
+            _testSynth.SpeakAsync(rateText);
           }
         }
 
@@ -163,7 +163,7 @@ namespace EQLogParser
 
     private void TriggerPlayerConfigWindowOnClosing(object sender, CancelEventArgs e)
     {
-      TestSynth?.Dispose();
+      _testSynth?.Dispose();
     }
   }
 }

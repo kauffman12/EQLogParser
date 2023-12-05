@@ -17,40 +17,40 @@ namespace EQLogParser
       { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Finishing Blow", 1}
     };
 
-    public const short NONE = -1;
-    public const short CRIT = 2;
-    private const short TWINCAST = 1;
-    private const short LUCKY = 4;
-    private const short RAMPAGE = 8;
-    private const short STRIKETHROUGH = 16;
-    private const short RIPOSTE = 32;
-    private const short ASSASSINATE = 64;
-    private const short HEADSHOT = 128;
-    private const short SLAY = 256;
-    private const short DOUBLEBOW = 512;
-    private const short FLURRY = 1024;
-    private const short FINISHING = 2048;
+    public const short None = -1;
+    public const short Crit = 2;
+    private const short Twincast = 1;
+    private const short Lucky = 4;
+    private const short Rampage = 8;
+    private const short Strikethrough = 16;
+    private const short Riposte = 32;
+    private const short Assassinate = 64;
+    private const short Headshot = 128;
+    private const short Slay = 256;
+    private const short Doublebow = 512;
+    private const short Flurry = 1024;
+    private const short Finishing = 2048;
 
     private static readonly ConcurrentDictionary<string, short> MaskCache = new();
 
-    internal static bool IsAssassinate(int mask) => mask > -1 && (mask & ASSASSINATE) != 0;
-    internal static bool IsCrit(int mask) => mask > -1 && (mask & CRIT) != 0;
-    internal static bool IsDoubleBowShot(int mask) => mask > -1 && (mask & DOUBLEBOW) != 0;
-    internal static bool IsFinishingBlow(int mask) => mask > -1 && (mask & FINISHING) != 0;
-    internal static bool IsFlurry(int mask) => mask > -1 && (mask & FLURRY) != 0;
-    internal static bool IsHeadshot(int mask) => mask > -1 && (mask & HEADSHOT) != 0;
-    internal static bool IsLucky(int mask) => mask > -1 && (mask & LUCKY) != 0;
-    internal static bool IsTwincast(int mask) => mask > -1 && (mask & TWINCAST) != 0;
-    internal static bool IsSlayUndead(int mask) => mask > -1 && (mask & SLAY) != 0;
-    internal static bool IsRampage(int mask) => mask > -1 && (mask & RAMPAGE) != 0;
-    internal static bool IsRiposte(int mask) => mask > -1 && (mask & RIPOSTE) != 0 && (mask & STRIKETHROUGH) == 0;
-    internal static bool IsStrikethrough(int mask) => mask > -1 && (mask & STRIKETHROUGH) != 0;
+    internal static bool IsAssassinate(int mask) => mask > -1 && (mask & Assassinate) != 0;
+    internal static bool IsCrit(int mask) => mask > -1 && (mask & Crit) != 0;
+    internal static bool IsDoubleBowShot(int mask) => mask > -1 && (mask & Doublebow) != 0;
+    internal static bool IsFinishingBlow(int mask) => mask > -1 && (mask & Finishing) != 0;
+    internal static bool IsFlurry(int mask) => mask > -1 && (mask & Flurry) != 0;
+    internal static bool IsHeadshot(int mask) => mask > -1 && (mask & Headshot) != 0;
+    internal static bool IsLucky(int mask) => mask > -1 && (mask & Lucky) != 0;
+    internal static bool IsTwincast(int mask) => mask > -1 && (mask & Twincast) != 0;
+    internal static bool IsSlayUndead(int mask) => mask > -1 && (mask & Slay) != 0;
+    internal static bool IsRampage(int mask) => mask > -1 && (mask & Rampage) != 0;
+    internal static bool IsRiposte(int mask) => mask > -1 && (mask & Riposte) != 0 && (mask & Strikethrough) == 0;
+    internal static bool IsStrikethrough(int mask) => mask > -1 && (mask & Strikethrough) != 0;
 
     internal static void UpdateStats(HitRecord record, Attempt playerStats, Attempt theHit = null)
     {
-      if (record.ModifiersMask > -1 && record.Type != Labels.MISS)
+      if (record.ModifiersMask > -1 && record.Type != Labels.Miss)
       {
-        if ((record.ModifiersMask & ASSASSINATE) != 0)
+        if ((record.ModifiersMask & Assassinate) != 0)
         {
           playerStats.AssHits++;
           playerStats.TotalAss += record.Total;
@@ -61,7 +61,7 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & DOUBLEBOW) != 0)
+        if ((record.ModifiersMask & Doublebow) != 0)
         {
           playerStats.DoubleBowHits++;
 
@@ -71,7 +71,7 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & FLURRY) != 0)
+        if ((record.ModifiersMask & Flurry) != 0)
         {
           playerStats.FlurryHits++;
 
@@ -81,7 +81,7 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & HEADSHOT) != 0)
+        if ((record.ModifiersMask & Headshot) != 0)
         {
           playerStats.HeadHits++;
           playerStats.TotalHead += record.Total;
@@ -92,7 +92,7 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & FINISHING) != 0)
+        if ((record.ModifiersMask & Finishing) != 0)
         {
           playerStats.FinishingHits++;
           playerStats.TotalFinishing += record.Total;
@@ -103,7 +103,7 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & TWINCAST) != 0)
+        if ((record.ModifiersMask & Twincast) != 0)
         {
           playerStats.TwincastHits++;
 
@@ -117,7 +117,7 @@ namespace EQLogParser
           playerStats.TotalNonTwincast += record.Total;
         }
 
-        if ((record.ModifiersMask & RAMPAGE) != 0)
+        if ((record.ModifiersMask & Rampage) != 0)
         {
           playerStats.RampageHits++;
 
@@ -149,7 +149,7 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & SLAY) != 0)
+        if ((record.ModifiersMask & Slay) != 0)
         {
           playerStats.SlayHits++;
           playerStats.TotalSlay += record.Total;
@@ -160,7 +160,7 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & CRIT) != 0)
+        if ((record.ModifiersMask & Crit) != 0)
         {
           playerStats.CritHits++;
 
@@ -169,7 +169,7 @@ namespace EQLogParser
             theHit.CritHits++;
           }
 
-          if ((record.ModifiersMask & LUCKY) == 0)
+          if ((record.ModifiersMask & Lucky) == 0)
           {
             playerStats.TotalCrit += record.Total;
 
@@ -178,7 +178,7 @@ namespace EQLogParser
               theHit.TotalCrit += record.Total;
             }
 
-            if ((record.ModifiersMask & TWINCAST) == 0)
+            if ((record.ModifiersMask & Twincast) == 0)
             {
               playerStats.NonTwincastCritHits++;
               playerStats.TotalNonTwincastCrit += record.Total;
@@ -192,7 +192,7 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & LUCKY) != 0)
+        if ((record.ModifiersMask & Lucky) != 0)
         {
           playerStats.LuckyHits++;
           playerStats.TotalLucky += record.Total;
@@ -203,7 +203,7 @@ namespace EQLogParser
             theHit.TotalLucky += record.Total;
           }
 
-          if ((record.ModifiersMask & TWINCAST) == 0)
+          if ((record.ModifiersMask & Twincast) == 0)
           {
             playerStats.NonTwincastLuckyHits++;
             playerStats.TotalNonTwincastLucky += record.Total;
@@ -233,22 +233,22 @@ namespace EQLogParser
         if (IsAssassinate(result))
         {
           PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-          PlayerManager.Instance.SetPlayerClass(player, SpellClass.ROG, "Class chosen from use of Assassinate.");
+          PlayerManager.Instance.SetPlayerClass(player, SpellClass.Rog, "Class chosen from use of Assassinate.");
         }
         else if (IsDoubleBowShot(result))
         {
           PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-          PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG, "Class chosen from use of Double Bow Shot.");
+          PlayerManager.Instance.SetPlayerClass(player, SpellClass.Rng, "Class chosen from use of Double Bow Shot.");
         }
         else if (IsHeadshot(result))
         {
           PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-          PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG, "Class chosen from use of Headshot.");
+          PlayerManager.Instance.SetPlayerClass(player, SpellClass.Rng, "Class chosen from use of Headshot.");
         }
         else if (IsSlayUndead(result))
         {
           PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-          PlayerManager.Instance.SetPlayerClass(player, SpellClass.PAL, "Class closen from use of Slay Undead.");
+          PlayerManager.Instance.SetPlayerClass(player, SpellClass.Pal, "Class closen from use of Slay Undead.");
         }
       }
 
@@ -267,52 +267,52 @@ namespace EQLogParser
         {
           if (CritModifiers.ContainsKey(temp))
           {
-            result |= CRIT;
+            result |= Crit;
           }
 
           switch (temp)
           {
             case "Lucky":
-              result |= LUCKY;
+              result |= Lucky;
               break;
             case "Assassinate":
-              result |= ASSASSINATE;
+              result |= Assassinate;
               PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-              PlayerManager.Instance.SetPlayerClass(player, SpellClass.ROG, "Class chosen from use of Assassinate.");
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.Rog, "Class chosen from use of Assassinate.");
               break;
             case "Double Bow Shot":
-              result |= DOUBLEBOW;
+              result |= Doublebow;
               PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-              PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG, "Class chosen from use of Double Bow Shot.");
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.Rng, "Class chosen from use of Double Bow Shot.");
               break;
             case "Finishing Blow":
-              result |= FINISHING;
+              result |= Finishing;
               break;
             case "Flurry":
-              result |= FLURRY;
+              result |= Flurry;
               break;
             case "Headshot":
-              result |= HEADSHOT;
+              result |= Headshot;
               PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-              PlayerManager.Instance.SetPlayerClass(player, SpellClass.RNG, "Class chosen from use of Headshot.");
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.Rng, "Class chosen from use of Headshot.");
               break;
             case "Twincast":
-              result |= TWINCAST;
+              result |= Twincast;
               break;
             case "Rampage":
             case "Wild Rampage":
-              result |= RAMPAGE;
+              result |= Rampage;
               break;
             case "Riposte":
-              result |= RIPOSTE;
+              result |= Riposte;
               break;
             case "Strikethrough":
-              result |= STRIKETHROUGH;
+              result |= Strikethrough;
               break;
             case "Slay Undead":
-              result |= SLAY;
+              result |= Slay;
               PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-              PlayerManager.Instance.SetPlayerClass(player, SpellClass.PAL, "Class closen from use of Slay Undead.");
+              PlayerManager.Instance.SetPlayerClass(player, SpellClass.Pal, "Class closen from use of Slay Undead.");
               break;
             case "Locked":
               // do nothing for now

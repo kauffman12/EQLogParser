@@ -6,9 +6,9 @@ namespace EQLogParser
 {
   internal static class SpellCountBuilder
   {
-    public const double BUFF_OFFSET = 30d;
-    public const double HALF_OFFSET = BUFF_OFFSET / 2;
-    public const double DMG_OFFSET = 5d;
+    public const double BuffOffset = 30d;
+    public const double HalfOffset = BuffOffset / 2;
+    public const double DmgOffset = 5d;
 
     internal static SpellCountData GetSpellCounts(List<string> playerList, PlayerStats raidStats)
     {
@@ -45,13 +45,13 @@ namespace EQLogParser
       var startTime = double.NaN;
       foreach (ref var segment in raidStats.Ranges.TimeSegments.ToArray().AsSpan())
       {
-        var damageAfter = segment.BeginTime - DMG_OFFSET;
+        var damageAfter = segment.BeginTime - DmgOffset;
         var damageBefore = segment.EndTime;
 
         startTime = double.IsNaN(startTime) ? segment.BeginTime : Math.Min(startTime, segment.BeginTime);
         maxTime = double.IsNaN(maxTime) ? segment.BeginTime + raidStats.TotalSeconds : maxTime;
 
-        foreach (var (beginTime, spell) in RecordManager.Instance.GetSpellsDuring(segment.BeginTime - BUFF_OFFSET, segment.EndTime + HALF_OFFSET))
+        foreach (var (beginTime, spell) in RecordManager.Instance.GetSpellsDuring(segment.BeginTime - BuffOffset, segment.EndTime + HalfOffset))
         {
           if (times != null)
           {
@@ -118,12 +118,12 @@ namespace EQLogParser
         playerCounts[thePlayer] = new Dictionary<string, uint>();
       }
 
-      if (!playerCounts[thePlayer].ContainsKey(theSpell.ID))
+      if (!playerCounts[thePlayer].ContainsKey(theSpell.Id))
       {
-        playerCounts[thePlayer][theSpell.ID] = 0;
+        playerCounts[thePlayer][theSpell.Id] = 0;
       }
 
-      playerCounts[thePlayer][theSpell.ID] += interrupted ? 0u : 1;
+      playerCounts[thePlayer][theSpell.Id] += interrupted ? 0u : 1;
 
       if (interruptedCounts != null)
       {
@@ -140,16 +140,16 @@ namespace EQLogParser
         interruptedCounts[thePlayer][theSpell.NameAbbrv] += interrupted ? 1u : 0;
       }
 
-      if (!maxSpellCounts.ContainsKey(theSpell.ID))
+      if (!maxSpellCounts.ContainsKey(theSpell.Id))
       {
-        maxSpellCounts[theSpell.ID] = playerCounts[thePlayer][theSpell.ID];
+        maxSpellCounts[theSpell.Id] = playerCounts[thePlayer][theSpell.Id];
       }
-      else if (playerCounts[thePlayer][theSpell.ID] > maxSpellCounts[theSpell.ID])
+      else if (playerCounts[thePlayer][theSpell.Id] > maxSpellCounts[theSpell.Id])
       {
-        maxSpellCounts[theSpell.ID] = playerCounts[thePlayer][theSpell.ID];
+        maxSpellCounts[theSpell.Id] = playerCounts[thePlayer][theSpell.Id];
       }
 
-      spellMap[theSpell.ID] = theSpell;
+      spellMap[theSpell.Id] = theSpell;
     }
   }
 }

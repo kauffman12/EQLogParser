@@ -19,36 +19,36 @@ namespace EQLogParser
   /// </summary>
   public partial class HitLogViewer : UserControl, IDisposable
   {
-    private readonly Columns CheckBoxColumns = new();
-    private readonly Columns TextColumns = new();
-    private readonly List<string> ColumnIds = new() { "Hits", "Critical", "Lucky", "Twincast", "Rampage", "Riposte", "Strikethrough" };
+    private readonly Columns _checkBoxColumns = new();
+    private readonly Columns _textColumns = new();
+    private readonly List<string> _columnIds = new() { "Hits", "Critical", "Lucky", "Twincast", "Rampage", "Riposte", "Strikethrough" };
 
-    private string ActedOption = Labels.UNK;
-    private List<List<ActionGroup>> CurrentGroups;
-    private bool Defending;
-    private PlayerStats PlayerStats;
-    private string CurrentActedFilter;
-    private string CurrentActionFilter;
-    private string CurrentTypeFilter;
-    private bool CurrentShowPetsFilter = true;
-    private bool CurrentGroupActionsFilter = true;
-    private string Title;
+    private string _actedOption = Labels.Unk;
+    private List<List<ActionGroup>> _currentGroups;
+    private bool _defending;
+    private PlayerStats _playerStats;
+    private string _currentActedFilter;
+    private string _currentActionFilter;
+    private string _currentTypeFilter;
+    private bool _currentShowPetsFilter = true;
+    private bool _currentGroupActionsFilter = true;
+    private string _title;
 
     public HitLogViewer()
     {
       InitializeComponent();
       dataGrid.IsEnabled = false;
-      UIElementUtil.SetEnabled(controlPanel.Children, false);
+      UiElementUtil.SetEnabled(controlPanel.Children, false);
 
       for (var i = 0; i <= 5; i++)
       {
-        CheckBoxColumns.Add(dataGrid.Columns[i]);
-        TextColumns.Add(dataGrid.Columns[i]);
+        _checkBoxColumns.Add(dataGrid.Columns[i]);
+        _textColumns.Add(dataGrid.Columns[i]);
       }
 
-      ColumnIds.ForEach(name =>
+      _columnIds.ForEach(name =>
       {
-        CheckBoxColumns.Add(new GridCheckBoxColumn
+        _checkBoxColumns.Add(new GridCheckBoxColumn
         {
           MappingName = name,
           SortMode = DataReflectionMode.Value,
@@ -56,9 +56,9 @@ namespace EQLogParser
         });
       });
 
-      ColumnIds.ForEach(name =>
+      _columnIds.ForEach(name =>
       {
-        TextColumns.Add(new GridTextColumn
+        _textColumns.Add(new GridTextColumn
         {
           MappingName = name,
           SortMode = DataReflectionMode.Value,
@@ -69,14 +69,14 @@ namespace EQLogParser
 
       for (var i = 6; i < dataGrid.Columns.Count; i++)
       {
-        CheckBoxColumns.Add(dataGrid.Columns[i]);
-        TextColumns.Add(dataGrid.Columns[i]);
+        _checkBoxColumns.Add(dataGrid.Columns[i]);
+        _textColumns.Add(dataGrid.Columns[i]);
       }
 
-      dataGrid.Columns = TextColumns;
+      dataGrid.Columns = _textColumns;
 
       // default these columns to descending
-      var desc = ColumnIds.ToList();
+      var desc = _columnIds.ToList();
       desc.Add("Total");
       desc.Add("OverTotal");
 
@@ -87,10 +87,10 @@ namespace EQLogParser
 
     internal void Init(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionGroup>> groups, bool defending = false)
     {
-      CurrentGroups = groups;
-      Defending = defending;
-      PlayerStats = playerStats;
-      Title = currentStats?.ShortTitle;
+      _currentGroups = groups;
+      _defending = defending;
+      _playerStats = playerStats;
+      _title = currentStats?.ShortTitle;
 
       IAction firstAction = null;
       foreach (var group in groups)
@@ -109,40 +109,40 @@ namespace EQLogParser
       {
         // hide columns dependnig on type of data
         // TextColumns contains the same instance of columns 0 to 5 and 13 to end
-        ActedOption = "All Defenders";
-        TextColumns[4].HeaderText = "Damage";
-        TextColumns[5].IsHidden = true;
-        TextColumns[10].IsHidden = CheckBoxColumns[10].IsHidden = true;
-        TextColumns[11].IsHidden = CheckBoxColumns[11].IsHidden = true;
-        TextColumns[12].IsHidden = CheckBoxColumns[12].IsHidden = true;
-        TextColumns[13].HeaderText = "Attacker";
-        TextColumns[14].HeaderText = "Attacker Class";
-        TextColumns[15].HeaderText = "Defender";
+        _actedOption = "All Defenders";
+        _textColumns[4].HeaderText = "Damage";
+        _textColumns[5].IsHidden = true;
+        _textColumns[10].IsHidden = _checkBoxColumns[10].IsHidden = true;
+        _textColumns[11].IsHidden = _checkBoxColumns[11].IsHidden = true;
+        _textColumns[12].IsHidden = _checkBoxColumns[12].IsHidden = true;
+        _textColumns[13].HeaderText = "Attacker";
+        _textColumns[14].HeaderText = "Attacker Class";
+        _textColumns[15].HeaderText = "Defender";
         showPets.Visibility = Visibility.Visible;
       }
       else if (firstAction is DamageRecord)
       {
-        ActedOption = "All Attackers";
-        TextColumns[4].HeaderText = "Damage";
-        TextColumns[5].IsHidden = true;
-        TextColumns[7].IsHidden = CheckBoxColumns[7].IsHidden = true;
-        TextColumns[8].IsHidden = CheckBoxColumns[8].IsHidden = true;
-        TextColumns[9].IsHidden = CheckBoxColumns[9].IsHidden = true;
-        TextColumns[13].HeaderText = "Defender";
-        TextColumns[14].HeaderText = "Defender Class";
-        TextColumns[15].HeaderText = "Attacker";
+        _actedOption = "All Attackers";
+        _textColumns[4].HeaderText = "Damage";
+        _textColumns[5].IsHidden = true;
+        _textColumns[7].IsHidden = _checkBoxColumns[7].IsHidden = true;
+        _textColumns[8].IsHidden = _checkBoxColumns[8].IsHidden = true;
+        _textColumns[9].IsHidden = _checkBoxColumns[9].IsHidden = true;
+        _textColumns[13].HeaderText = "Defender";
+        _textColumns[14].HeaderText = "Defender Class";
+        _textColumns[15].HeaderText = "Attacker";
         showPets.Visibility = Visibility.Collapsed;
       }
       else if (firstAction is HealRecord)
       {
-        ActedOption = "All Healed Players";
-        TextColumns[4].HeaderText = "Heal";
-        TextColumns[10].IsHidden = CheckBoxColumns[10].IsHidden = true;
-        TextColumns[11].IsHidden = CheckBoxColumns[11].IsHidden = true;
-        TextColumns[12].IsHidden = CheckBoxColumns[12].IsHidden = true;
-        TextColumns[13].HeaderText = "Healer";
-        TextColumns[14].HeaderText = "Healer Class";
-        TextColumns[15].HeaderText = "Healed";
+        _actedOption = "All Healed Players";
+        _textColumns[4].HeaderText = "Heal";
+        _textColumns[10].IsHidden = _checkBoxColumns[10].IsHidden = true;
+        _textColumns[11].IsHidden = _checkBoxColumns[11].IsHidden = true;
+        _textColumns[12].IsHidden = _checkBoxColumns[12].IsHidden = true;
+        _textColumns[13].HeaderText = "Healer";
+        _textColumns[14].HeaderText = "Healer Class";
+        _textColumns[15].HeaderText = "Healed";
         showPets.Visibility = Visibility.Collapsed;
       }
 
@@ -152,7 +152,7 @@ namespace EQLogParser
 
     private void Display()
     {
-      TextColumns[6].IsHidden = CheckBoxColumns[6].IsHidden = !CurrentGroupActionsFilter;
+      _textColumns[6].IsHidden = _checkBoxColumns[6].IsHidden = !_currentGroupActionsFilter;
 
       Task.Delay(100).ContinueWith(_ =>
       {
@@ -161,9 +161,9 @@ namespace EQLogParser
         var uniqueTypes = new ConcurrentDictionary<string, bool>();
         var list = new List<HitLogRow>();
 
-        if (CurrentGroups != null)
+        if (_currentGroups != null)
         {
-          foreach (ref var group in CurrentGroups.ToArray().AsSpan())
+          foreach (ref var group in _currentGroups.ToArray().AsSpan())
           {
             Parallel.ForEach(group, block =>
             {
@@ -172,7 +172,7 @@ namespace EQLogParser
               foreach (ref var action in block.Actions.ToArray().AsSpan())
               {
                 precise += 0.000001;
-                if (CreateRow(rowCache, PlayerStats, action, block.BeginTime + precise, Defending) is { } row && !CurrentGroupActionsFilter)
+                if (CreateRow(rowCache, _playerStats, action, block.BeginTime + precise, _defending) is { } row && !_currentGroupActionsFilter)
                 {
                   lock (list)
                   {
@@ -183,7 +183,7 @@ namespace EQLogParser
                 }
               }
 
-              if (CurrentGroupActionsFilter)
+              if (_currentGroupActionsFilter)
               {
                 foreach (ref var row in rowCache.Values.ToArray().AsSpan())
                 {
@@ -216,7 +216,7 @@ namespace EQLogParser
         }
 
         var actions = new List<string> { "All Actions" };
-        var acted = new List<string> { ActedOption };
+        var acted = new List<string> { _actedOption };
         var types = new List<string> { "All Types" };
         actions.AddRange(uniqueActions.Keys.OrderBy(x => x));
         acted.AddRange(uniqueDefenders.Keys.OrderBy(x => x));
@@ -226,22 +226,22 @@ namespace EQLogParser
         {
           actedList.ItemsSource = acted;
 
-          if (CurrentActedFilter == null)
+          if (_currentActedFilter == null)
           {
             actedList.SelectedIndex = 0;
           }
-          else if (acted.IndexOf(CurrentActedFilter) is var actedIndex and > -1)
+          else if (acted.IndexOf(_currentActedFilter) is var actedIndex and > -1)
           {
             actedList.SelectedIndex = actedIndex;
           }
           else
           {
-            CurrentActedFilter = null;
+            _currentActedFilter = null;
             actedList.SelectedIndex = 0;
           }
 
           dataGrid.SortColumnDescriptions.Clear();
-          if (CurrentGroupActionsFilter)
+          if (_currentGroupActionsFilter)
           {
             dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Time", SortDirection = ListSortDirection.Ascending });
             dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Total", SortDirection = ListSortDirection.Descending });
@@ -257,8 +257,8 @@ namespace EQLogParser
           typeList.SelectedIndex = 0;
           dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(list);
           dataGrid.IsEnabled = true;
-          titleLabel.Content = Title;
-          UIElementUtil.SetEnabled(controlPanel.Children, true);
+          titleLabel.Content = _title;
+          UiElementUtil.SetEnabled(controlPanel.Children, true);
         });
       });
     }
@@ -293,10 +293,10 @@ namespace EQLogParser
         dataGrid.View.Filter = item =>
         {
           var record = (HitLogRow)item;
-          return (string.IsNullOrEmpty(CurrentTypeFilter) || CurrentTypeFilter == record.Type) &&
-                 (string.IsNullOrEmpty(CurrentActionFilter) || CurrentActionFilter == record.SubType) &&
-                 (string.IsNullOrEmpty(CurrentActedFilter) || CurrentActedFilter == record.Acted) &&
-                 (CurrentShowPetsFilter || !record.IsPet);
+          return (string.IsNullOrEmpty(_currentTypeFilter) || _currentTypeFilter == record.Type) &&
+                 (string.IsNullOrEmpty(_currentActionFilter) || _currentActionFilter == record.SubType) &&
+                 (string.IsNullOrEmpty(_currentActedFilter) || _currentActedFilter == record.Acted) &&
+                 (_currentShowPetsFilter || !record.IsPet);
         };
 
         dataGrid.SelectedItems.Clear();
@@ -364,9 +364,9 @@ namespace EQLogParser
         row.SubType = hit.SubType;
         row.Time = currentTime;
 
-        if (CurrentGroupActionsFilter)
+        if (_currentGroupActionsFilter)
         {
-          var rowKey = GetRowKey(row, CurrentActedFilter != null);
+          var rowKey = GetRowKey(row, _currentActedFilter != null);
           if (rowCache.TryGetValue(rowKey, out var previous))
           {
             if (row.Acted != previous.Acted && previous.Acted != "Multiple")
@@ -382,7 +382,7 @@ namespace EQLogParser
           }
         }
 
-        row.IsGroupingEnabled = CurrentGroupActionsFilter;
+        row.IsGroupingEnabled = _currentGroupActionsFilter;
         row.Total += hit.Total;
         row.OverTotal += hit.OverTotal;
         row.Critical += (uint)(LineModifiersParser.IsCrit(hit.ModifiersMask) ? 1 : 0);
@@ -406,13 +406,13 @@ namespace EQLogParser
     {
       if (dataGrid is { View: not null })
       {
-        CurrentActedFilter = actedList.SelectedIndex == 0 ? null : actedList.SelectedItem as string;
-        CurrentActionFilter = actionList.SelectedIndex == 0 ? null : actionList.SelectedItem as string;
-        CurrentTypeFilter = typeList.SelectedIndex == 0 ? null : typeList.SelectedItem as string;
-        CurrentShowPetsFilter = showPets.IsChecked.Value;
+        _currentActedFilter = actedList.SelectedIndex == 0 ? null : actedList.SelectedItem as string;
+        _currentActionFilter = actionList.SelectedIndex == 0 ? null : actionList.SelectedItem as string;
+        _currentTypeFilter = typeList.SelectedIndex == 0 ? null : typeList.SelectedItem as string;
+        _currentShowPetsFilter = showPets.IsChecked.Value;
 
-        var refresh = CurrentGroupActionsFilter == groupHits.IsChecked.Value;
-        CurrentGroupActionsFilter = groupHits.IsChecked.Value;
+        var refresh = _currentGroupActionsFilter == groupHits.IsChecked.Value;
+        _currentGroupActionsFilter = groupHits.IsChecked.Value;
 
         if (refresh)
         {
@@ -426,13 +426,13 @@ namespace EQLogParser
             titleLabel.Content = "Loading...";
             dataGrid.ItemsSource = null;
             dataGrid.IsEnabled = false;
-            UIElementUtil.SetEnabled(controlPanel.Children, false); if (CurrentGroupActionsFilter && dataGrid.Columns != TextColumns)
+            UiElementUtil.SetEnabled(controlPanel.Children, false); if (_currentGroupActionsFilter && dataGrid.Columns != _textColumns)
             {
-              dataGrid.Columns = TextColumns;
+              dataGrid.Columns = _textColumns;
             }
-            else if (!CurrentGroupActionsFilter && dataGrid.Columns != CheckBoxColumns)
+            else if (!_currentGroupActionsFilter && dataGrid.Columns != _checkBoxColumns)
             {
-              dataGrid.Columns = CheckBoxColumns;
+              dataGrid.Columns = _checkBoxColumns;
             }
 
             Display();
@@ -442,15 +442,15 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
+    private bool _disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!disposedValue)
+      if (!_disposedValue)
       {
         MainActions.EventsThemeChanged -= EventsThemeChanged;
         dataGrid?.Dispose();
-        disposedValue = true;
+        _disposedValue = true;
       }
     }
 

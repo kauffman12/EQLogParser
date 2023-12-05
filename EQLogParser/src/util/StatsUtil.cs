@@ -8,14 +8,14 @@ namespace EQLogParser
 {
   internal static class StatsUtil
   {
-    internal const string TIME_FORMAT = "in {0}s";
-    internal const string TOTAL_FORMAT = "{0}{1}@{2}";
-    internal const string TOTAL_ONLY_FORMAT = "{0}";
-    internal const string PLAYER_FORMAT = "{0} = ";
-    internal const string PLAYER_RANK_FORMAT = "{0}. {1} = ";
-    internal const string SPECIAL_FORMAT = "{0} {{{1}}}";
-    internal const int SPECIAL_OFFSET = 15;
-    internal const int DEATH_OFFSET = 15;
+    internal const string TimeFormat = "in {0}s";
+    internal const string TotalFormat = "{0}{1}@{2}";
+    internal const string TotalOnlyFormat = "{0}";
+    internal const string PlayerFormat = "{0} = ";
+    internal const string PlayerRankFormat = "{0}. {1} = ";
+    internal const string SpecialFormat = "{0} {{{1}}}";
+    internal const int SpecialOffset = 15;
+    internal const int DeathOffset = 15;
 
     private static readonly ConcurrentDictionary<string, byte> RegularMeleeTypes = new(new Dictionary<string, byte>
     {
@@ -77,7 +77,7 @@ namespace EQLogParser
     {
       var key = subType;
 
-      if (type is Labels.DD or Labels.DOT)
+      if (type is Labels.Dd or Labels.Dot)
       {
         key = type + "=" + key;
       }
@@ -258,52 +258,52 @@ namespace EQLogParser
       switch (record.Type)
       {
         // absorb isn't counted as a hit so don't parse whether it was a strikethrough, etc
-        case Labels.ABSORB:
+        case Labels.Absorb:
           stats.Absorbs++;
           stats.MeleeAttempts++;
           parseModifiers = false;
           break;
-        case Labels.BANE:
+        case Labels.Bane:
           stats.BaneHits++;
           stats.Hits += 1;
           break;
-        case Labels.BLOCK:
+        case Labels.Block:
           stats.Blocks++;
           stats.MeleeAttempts++;
           break;
-        case Labels.DODGE:
+        case Labels.Dodge:
           stats.Dodges++;
           stats.MeleeAttempts++;
           break;
-        case Labels.MISS:
+        case Labels.Miss:
           stats.Misses++;
           stats.MeleeAttempts++;
           break;
-        case Labels.PARRY:
+        case Labels.Parry:
           stats.Parries++;
           stats.MeleeAttempts++;
           break;
-        case Labels.RIPOSTE:  // defensive riposte
+        case Labels.Riposte:  // defensive riposte
           stats.RiposteHits++;
           stats.MeleeAttempts++;
           break;
-        case Labels.INVULNERABLE:
+        case Labels.Invulnerable:
           stats.Invulnerable++;
           stats.MeleeAttempts++;
           break;
-        case Labels.PROC:
-        case Labels.DOT:
-        case Labels.DD:
+        case Labels.Proc:
+        case Labels.Dot:
+        case Labels.Dd:
           stats.SpellHits++;
           stats.Hits++;
           break;
-        case Labels.HOT:
-        case Labels.HEAL:
+        case Labels.Hot:
+        case Labels.Heal:
           stats.SpellHits++;
           stats.Hits += 1;
           break;
-        case Labels.DS:
-        case Labels.RS:
+        case Labels.Ds:
+        case Labels.Rs:
           stats.Hits += 1;
           break;
         default:
@@ -316,7 +316,7 @@ namespace EQLogParser
       if (newMeleeHit)
       {
         // regular hit from a player OR Hits from a pet can do things like Flurry
-        if (record.Type == Labels.MELEE)
+        if (record.Type == Labels.Melee)
         {
           if (RegularMeleeTypes.ContainsKey(record.SubType) || (record.SubType == "Hits" && isPet))
           {
@@ -416,9 +416,9 @@ namespace EQLogParser
       if (stats.Hits > 0)
       {
         stats.Potential = stats.Total + stats.Extra;
-        stats.DPS = (long)Math.Round(stats.Total / stats.TotalSeconds, 2);
-        stats.SDPS = (long)Math.Round(stats.Total / raidStats.TotalSeconds, 2);
-        stats.PDPS = (long)Math.Round(stats.Potential / stats.TotalSeconds, 2);
+        stats.Dps = (long)Math.Round(stats.Total / stats.TotalSeconds, 2);
+        stats.Sdps = (long)Math.Round(stats.Total / raidStats.TotalSeconds, 2);
+        stats.Pdps = (long)Math.Round(stats.Potential / stats.TotalSeconds, 2);
         stats.Avg = (long)Math.Round(Convert.ToDecimal(stats.Total) / stats.Hits, 2);
 
         if ((stats.CritHits - stats.LuckyHits) is var nonLucky and > 0)
@@ -481,7 +481,7 @@ namespace EQLogParser
 
         if (stats.SpellHits > 0)
         {
-          var tcMulti = stats.Type == Labels.DD ? 2 : 1;
+          var tcMulti = stats.Type == Labels.Dd ? 2 : 1;
           stats.TwincastRate = (float)Math.Round((float)stats.TwincastHits / stats.SpellHits * tcMulti * 100, 2);
           stats.TwincastRate = (float)(stats.TwincastRate > 100.0 ? 100.0 : stats.TwincastRate);
           stats.ResistRate = (float)Math.Round((float)stats.Resists / (stats.SpellHits + stats.Resists) * 100, 2);
@@ -490,11 +490,11 @@ namespace EQLogParser
         if (subStats is { Total: > 0 })
         {
           stats.Percent = (float)Math.Round((float)stats.Total / subStats.Total * 100, 2);
-          stats.SDPS = (long)Math.Round(stats.Total / subStats.TotalSeconds, 2);
+          stats.Sdps = (long)Math.Round(stats.Total / subStats.TotalSeconds, 2);
         }
         else if (subStats == null)
         {
-          stats.SDPS = (long)Math.Round(stats.Total / raidStats.TotalSeconds, 2);
+          stats.Sdps = (long)Math.Round(stats.Total / raidStats.TotalSeconds, 2);
         }
       }
     }
@@ -567,7 +567,7 @@ namespace EQLogParser
       foreach (var segment in raidStats.Ranges.TimeSegments)
       {
         actions.Clear();
-        var offsetBegin = segment.BeginTime - SPECIAL_OFFSET;
+        var offsetBegin = segment.BeginTime - SpecialOffset;
         var offsetEnd = segment.EndTime;
         if (specialStart > -1 && specialStart < allSpecials.Count)
         {
@@ -586,7 +586,7 @@ namespace EQLogParser
         }
 
         offsetBegin = segment.BeginTime;
-        offsetEnd = segment.EndTime + DEATH_OFFSET;
+        offsetEnd = segment.EndTime + DeathOffset;
         if (deathStart > -1 && deathStart < allDeaths.Count)
         {
           deathStart = allDeaths.FindIndex(deathStart, death => death.Item1 >= offsetBegin);
@@ -717,12 +717,12 @@ namespace EQLogParser
       {
         switch (type)
         {
-          case Labels.ABSORB:
-          case Labels.DODGE:
-          case Labels.INVULNERABLE:
-          case Labels.MISS:
-          case Labels.PARRY:
-          case Labels.RIPOSTE:
+          case Labels.Absorb:
+          case Labels.Dodge:
+          case Labels.Invulnerable:
+          case Labels.Miss:
+          case Labels.Parry:
+          case Labels.Riposte:
             isHitType = false;
             break;
         }

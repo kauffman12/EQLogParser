@@ -13,7 +13,7 @@ namespace EQLogParser
 {
   internal class TriggerListsEditor : BaseTypeEditor
   {
-    private ComboBox TheComboBox;
+    private ComboBox _theComboBox;
 
     private static readonly Dictionary<string, List<string>> Options = new()
     {
@@ -24,7 +24,7 @@ namespace EQLogParser
       { "SortBy", new List<string> { "Trigger Time", "Remaining Time", "Timer Name" } },
       { "TimerMode", new List<string> { "Standard", "Cooldown" } },
       { "TimerType", new List<string> { "No Timer", "Countdown", "Fast Countdown", "Progress", "Looping" } },
-      { "FontFamily", UIElementUtil.GetSystemFontFamilies().Select(font => font.Source).ToList() },
+      { "FontFamily", UiElementUtil.GetSystemFontFamilies().Select(font => font.Source).ToList() },
     };
 
     private static readonly Dictionary<string, DependencyProperty> Props = new()
@@ -48,8 +48,8 @@ namespace EQLogParser
         ValidatesOnDataErrors = true
       };
 
-      TheComboBox.IsEnabled = info.CanWrite;
-      BindingOperations.SetBinding(TheComboBox, Props[info.Name], binding);
+      _theComboBox.IsEnabled = info.CanWrite;
+      BindingOperations.SetBinding(_theComboBox, Props[info.Name], binding);
     }
 
     // Create a custom editor for a normal property
@@ -68,7 +68,7 @@ namespace EQLogParser
       }
 
       comboBox.SelectedIndex = 0;
-      TheComboBox = comboBox;
+      _theComboBox = comboBox;
       return comboBox;
     }
 
@@ -79,10 +79,10 @@ namespace EQLogParser
 
     public override void Detach(PropertyViewItem property)
     {
-      if (TheComboBox != null)
+      if (_theComboBox != null)
       {
-        BindingOperations.ClearAllBindings(TheComboBox);
-        TheComboBox = null;
+        BindingOperations.ClearAllBindings(_theComboBox);
+        _theComboBox = null;
       }
     }
   }

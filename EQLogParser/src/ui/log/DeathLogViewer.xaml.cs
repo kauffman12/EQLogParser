@@ -11,8 +11,8 @@ namespace EQLogParser
   /// </summary>
   public partial class DeathLogViewer : IDisposable
   {
-    private PlayerStats CurrentPlayer;
-    private readonly List<DeathEvent> Deaths = new();
+    private PlayerStats _currentPlayer;
+    private readonly List<DeathEvent> _deaths = new();
 
     public DeathLogViewer()
     {
@@ -27,13 +27,13 @@ namespace EQLogParser
       foreach (var death in combined.RaidStats.Deaths.Where(death => death.Record.Killed == playerStats.OrigName))
       {
         list.Add("Death #" + i++);
-        Deaths.Add(death);
+        _deaths.Add(death);
       }
 
       titleLabel.Content = combined.ShortTitle;
       deathList.ItemsSource = list;
       deathList.SelectedIndex = 0;
-      CurrentPlayer = playerStats;
+      _currentPlayer = playerStats;
 
       DataGridUtil.UpdateTableMargin(dataGrid);
       Display();
@@ -45,7 +45,7 @@ namespace EQLogParser
 
     private void Display()
     {
-      var death = Deaths[deathList.SelectedIndex];
+      var death = _deaths[deathList.SelectedIndex];
       var end = death.BeginTime;
       var start = end - 20;
       var allFights = (Application.Current.MainWindow as MainWindow)?.GetFightTable()?.GetFights();
@@ -68,9 +68,9 @@ namespace EQLogParser
               {
                 block.Actions.Cast<DamageRecord>().ToList().ForEach(damage =>
                 {
-                  if (damage.Defender == CurrentPlayer.OrigName && damage.Total > 0)
+                  if (damage.Defender == _currentPlayer.OrigName && damage.Total > 0)
                   {
-                    var value = damage.Attacker + " attacks " + CurrentPlayer.OrigName + " for " + damage.Total + " (" + damage.SubType + ")";
+                    var value = damage.Attacker + " attacks " + _currentPlayer.OrigName + " for " + damage.Total + " (" + damage.SubType + ")";
                     if (damages.TryGetValue(block.BeginTime, out var values))
                     {
                       values.Add(value);
@@ -91,9 +91,9 @@ namespace EQLogParser
 
       foreach (var (beginTime, record) in allHeals)
       {
-        if (record.Healed == CurrentPlayer.OrigName && record.Total > 0)
+        if (record.Healed == _currentPlayer.OrigName && record.Total > 0)
         {
-          var value = record.Healer + " heals " + CurrentPlayer.OrigName + " for " + record.Total + " (" + record.SubType + ")";
+          var value = record.Healer + " heals " + _currentPlayer.OrigName + " for " + record.Total + " (" + record.SubType + ")";
           if (heals.TryGetValue(beginTime, out var values))
           {
             values.Add(value);
@@ -111,7 +111,7 @@ namespace EQLogParser
       {
         if (action is ReceivedSpell received)
         {
-          if (!received.IsWearOff && received.Receiver == CurrentPlayer.OrigName && received.SpellData != null)
+          if (!received.IsWearOff && received.Receiver == _currentPlayer.OrigName && received.SpellData != null)
           {
             var message = string.IsNullOrEmpty(received.SpellData.LandsOnYou) ? received.SpellData.LandsOnOther : received.SpellData.LandsOnYou;
             if (!string.IsNullOrEmpty(message) && received.Ambiguity.Count <= 1)
@@ -208,7 +208,7 @@ namespace EQLogParser
             break;
           }
 
-          if (CurrentPlayer.OrigName == value)
+          if (_currentPlayer.OrigName == value)
           {
             found = true;
           }
@@ -244,22 +244,22 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, EventArgs e)
     {
-      if (CurrentPlayer != null)
+      if (_currentPlayer != null)
       {
         Display();
       }
     }
 
     #region IDisposable Support
-    private bool disposedValue; // To detect redundant calls
+    private bool _disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!disposedValue)
+      if (!_disposedValue)
       {
         MainActions.EventsThemeChanged -= EventsThemeChanged;
         dataGrid?.Dispose();
-        disposedValue = true;
+        _disposedValue = true;
       }
     }
 

@@ -13,7 +13,7 @@ namespace EQLogParser
   /// </summary>
   public partial class TriggersLogView : IDocumentContent
   {
-    private List<Tuple<string, ObservableCollection<AlertEntry>>> AlertLogs;
+    private List<Tuple<string, ObservableCollection<AlertEntry>>> _alertLogs;
 
     public TriggersLogView()
     {
@@ -23,17 +23,17 @@ namespace EQLogParser
 
     private void EventsProcessorsUpdated(bool _)
     {
-      AlertLogs = TriggerManager.Instance.GetAlertLogs().ToList();
-      if (AlertLogs != null)
+      _alertLogs = TriggerManager.Instance.GetAlertLogs().ToList();
+      if (_alertLogs != null)
       {
         var selected = logList?.SelectedItem as string;
-        var list = AlertLogs.Select(log => log.Item1).ToList();
+        var list = _alertLogs.Select(log => log.Item1).ToList();
         if (logList != null)
         {
           logList.ItemsSource = list;
           logList.SelectedIndex = -1;
 
-          if (AlertLogs?.Count > 0)
+          if (_alertLogs?.Count > 0)
           {
             if (selected != null && list.IndexOf(selected) is var found and > -1)
             {
@@ -58,7 +58,7 @@ namespace EQLogParser
       {
         if (combo.SelectedIndex >= 0)
         {
-          dataGrid.ItemsSource = AlertLogs[combo.SelectedIndex].Item2;
+          dataGrid.ItemsSource = _alertLogs[combo.SelectedIndex].Item2;
         }
         else
         {

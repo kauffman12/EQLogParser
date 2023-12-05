@@ -15,16 +15,16 @@ namespace EQLogParser
   /// </summary>
   public partial class ParsePreview
   {
-    private readonly ObservableCollection<string> AvailableParses = new();
-    private readonly ConcurrentDictionary<string, ParseData> Parses = new();
-    private readonly bool initialized;
-    private readonly DispatcherTimer TitleTimer;
+    private readonly ObservableCollection<string> _availableParses = new();
+    private readonly ConcurrentDictionary<string, ParseData> _parses = new();
+    private readonly bool _initialized;
+    private readonly DispatcherTimer _titleTimer;
 
     public ParsePreview()
     {
       InitializeComponent();
 
-      parseList.ItemsSource = AvailableParses;
+      parseList.ItemsSource = _availableParses;
       parseList.SelectedIndex = -1;
 
       playerParseTextDoPetLabel.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowPetLabel", true);
@@ -39,10 +39,10 @@ namespace EQLogParser
       HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
       TankingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
 
-      TitleTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
-      TitleTimer.Tick += (_, _) =>
+      _titleTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
+      _titleTimer.Tick += (_, _) =>
       {
-        TitleTimer.Stop();
+        _titleTimer.Stop();
 
         if (parseList.SelectedIndex > -1)
         {
@@ -53,12 +53,12 @@ namespace EQLogParser
       customParseTitle.Text = Resource.CUSTOM_PARSE_TITLE;
       customParseTitle.FontStyle = FontStyles.Italic;
       parseList.Focus();
-      initialized = true;
+      _initialized = true;
     }
 
-    internal void CopyToEQClick(string type)
+    internal void CopyToEqClick(string type)
     {
-      if (parseList.SelectedItem?.ToString() != type && AvailableParses.Contains(type))
+      if (parseList.SelectedItem?.ToString() != type && _availableParses.Contains(type))
       {
         parseList.SelectedItem = type;
       }
@@ -68,16 +68,16 @@ namespace EQLogParser
 
     internal void AddParse(string type, ISummaryBuilder builder, CombinedStats combined, List<PlayerStats> selected = null, bool copy = false)
     {
-      Parses[type] = new ParseData { Builder = builder, CombinedStats = combined };
+      _parses[type] = new ParseData { Builder = builder, CombinedStats = combined };
 
       if (selected != null)
       {
-        Parses[type].Selected.AddRange(selected);
+        _parses[type].Selected.AddRange(selected);
       }
 
-      if (!AvailableParses.Contains(type))
+      if (!_availableParses.Contains(type))
       {
-        Dispatcher.InvokeAsync(() => AvailableParses.Add(type));
+        Dispatcher.InvokeAsync(() => _availableParses.Add(type));
       }
 
       TriggerParseUpdate(type, copy);
@@ -107,19 +107,19 @@ namespace EQLogParser
 
     internal void UpdateParse(string type, List<PlayerStats> selected)
     {
-      if (Parses.ContainsKey(type))
+      if (_parses.ContainsKey(type))
       {
-        Parses[type].Selected.Clear();
+        _parses[type].Selected.Clear();
         if (selected != null)
         {
-          Parses[type].Selected.AddRange(selected);
+          _parses[type].Selected.AddRange(selected);
         }
 
         TriggerParseUpdate(type);
       }
     }
 
-    private void CopyToEQButtonClick(object sender = null, RoutedEventArgs e = null) => CopyToEQClick(parseList.SelectedItem?.ToString());
+    private void CopyToEqButtonClick(object sender = null, RoutedEventArgs e = null) => CopyToEqClick(parseList.SelectedItem?.ToString());
 
     private void EventsGenerationStatus(StatsGenerationEvent e)
     {
@@ -135,11 +135,11 @@ namespace EQLogParser
 
     private void SetParseTextByType(string type)
     {
-      if (Parses.ContainsKey(type))
+      if (_parses.ContainsKey(type))
       {
-        var combined = Parses[type].CombinedStats;
+        var combined = _parses[type].CombinedStats;
         var customTitle = customParseTitle.FontStyle == FontStyles.Italic ? null : customParseTitle.Text;
-        var summary = Parses[type].Builder?.BuildSummary(type, combined, Parses[type].Selected, playerParseTextDoPetLabel.IsChecked.Value,
+        var summary = _parses[type].Builder?.BuildSummary(type, combined, _parses[type].Selected, playerParseTextDoPetLabel.IsChecked.Value,
           playerParseTextDoDPS.IsChecked.Value, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value, playerParseTextDoSpecials.IsChecked.Value,
           playerParseTextDoTime.IsChecked.Value, customTitle);
         playerParseTextBox.Text = summary.Title + summary.RankedPlayers;
@@ -162,7 +162,7 @@ namespace EQLogParser
 
         if (copy)
         {
-          CopyToEQButtonClick();
+          CopyToEqButtonClick();
         }
       });
     }
@@ -186,7 +186,7 @@ namespace EQLogParser
       }
       else if (playerParseTextBox.Text.Length > 0 && playerParseTextBox.Text != Resource.SHARE_DPS_SELECTED)
       {
-        if (parseList.SelectedItem is string selected && Parses.TryGetValue(selected, out var data))
+        if (parseList.SelectedItem is string selected && _parses.TryGetValue(selected, out var data))
         {
           var count = data.Selected?.Count > 0 ? data.Selected?.Count : 0;
           var players = count == 1 ? "Player" : "Players";
@@ -208,7 +208,7 @@ namespace EQLogParser
       }
 
       // dont call these until after init/load
-      if (initialized)
+      if (_initialized)
       {
         ConfigUtil.SetSetting("PlayerParseShowPetLabel", playerParseTextDoPetLabel.IsChecked.Value);
         ConfigUtil.SetSetting("PlayerParseShowDPS", playerParseTextDoDPS.IsChecked.Value);
@@ -265,8 +265,8 @@ namespace EQLogParser
 
     private void CustomTitleTextChanged(object sender, TextChangedEventArgs e)
     {
-      TitleTimer.Stop();
-      TitleTimer.Start();
+      _titleTimer.Stop();
+      _titleTimer.Start();
     }
   }
 }

@@ -13,7 +13,7 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  static class UIElementUtil
+  static class UiElementUtil
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private static readonly string[] CommonFontFamilies =

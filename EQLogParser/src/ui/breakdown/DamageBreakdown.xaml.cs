@@ -12,26 +12,26 @@ namespace EQLogParser
   /// </summary>
   public partial class DamageBreakdown
   {
-    private PlayerStats RaidStats;
-    private string Title;
-    private bool CurrentShowPets = true;
-    private readonly Dictionary<string, PlayerSubStats> GroupedDd = new();
-    private readonly Dictionary<string, PlayerSubStats> GroupedDoT = new();
-    private readonly Dictionary<string, PlayerSubStats> GroupedProcs = new();
-    private readonly Dictionary<string, List<PlayerSubStats>> OtherDamage = new();
+    private PlayerStats _raidStats;
+    private string _title;
+    private bool _currentShowPets = true;
+    private readonly Dictionary<string, PlayerSubStats> _groupedDd = new();
+    private readonly Dictionary<string, PlayerSubStats> _groupedDoT = new();
+    private readonly Dictionary<string, PlayerSubStats> _groupedProcs = new();
+    private readonly Dictionary<string, List<PlayerSubStats>> _otherDamage = new();
 
     public DamageBreakdown()
     {
       InitializeComponent();
       dataGrid.IsEnabled = false;
-      UIElementUtil.SetEnabled(controlPanel.Children, false);
+      UiElementUtil.SetEnabled(controlPanel.Children, false);
       InitBreakdownTable(titleLabel, dataGrid, selectedColumns);
     }
 
     internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats)
     {
-      Title = currentStats?.ShortTitle;
-      RaidStats = currentStats.RaidStats;
+      _title = currentStats?.ShortTitle;
+      _raidStats = currentStats.RaidStats;
       var childStats = currentStats.Children;
       var list = new List<PlayerStats>();
       var pets = showPets.IsEnabled;
@@ -67,11 +67,11 @@ namespace EQLogParser
 
         Dispatcher.InvokeAsync(() =>
         {
-          titleLabel.Content = Title;
+          titleLabel.Content = _title;
           showPets.IsEnabled = pets;
           dataGrid.ItemsSource = list;
           dataGrid.IsEnabled = true;
-          UIElementUtil.SetEnabled(controlPanel.Children, true);
+          UiElementUtil.SetEnabled(controlPanel.Children, true);
         });
       });
     }
@@ -79,9 +79,9 @@ namespace EQLogParser
     private void BuildGroups(PlayerStats playerStats, List<PlayerSubStats> all)
     {
       var list = new List<PlayerSubStats>();
-      var dots = new SubStatsBreakdown { Name = Labels.DOT, Type = Labels.DOT };
-      var dds = new SubStatsBreakdown { Name = Labels.DD, Type = Labels.DD };
-      var procs = new SubStatsBreakdown { Name = Labels.PROC, Type = Labels.PROC };
+      var dots = new SubStatsBreakdown { Name = Labels.Dot, Type = Labels.Dot };
+      var dds = new SubStatsBreakdown { Name = Labels.Dd, Type = Labels.Dd };
+      var procs = new SubStatsBreakdown { Name = Labels.Proc, Type = Labels.Proc };
 
       all.ForEach(sub =>
       {
@@ -89,16 +89,16 @@ namespace EQLogParser
 
         switch (sub.Type)
         {
-          case Labels.DOT:
+          case Labels.Dot:
             stats = dots;
             dots.Children.Add(sub);
             break;
-          case Labels.DD:
-          case Labels.BANE:
+          case Labels.Dd:
+          case Labels.Bane:
             stats = dds;
             dds.Children.Add(sub);
             break;
-          case Labels.PROC:
+          case Labels.Proc:
             stats = procs;
             procs.Children.Add(sub);
             break;
@@ -112,13 +112,13 @@ namespace EQLogParser
 
       foreach (var stats in new PlayerSubStats[] { dots, dds, procs })
       {
-        StatsUtil.CalculateRates(stats, RaidStats, playerStats);
+        StatsUtil.CalculateRates(stats, _raidStats, playerStats);
       }
 
-      GroupedDd[playerStats.Name] = dds;
-      GroupedDoT[playerStats.Name] = dots;
-      GroupedProcs[playerStats.Name] = procs;
-      OtherDamage[playerStats.Name] = list;
+      _groupedDd[playerStats.Name] = dds;
+      _groupedDoT[playerStats.Name] = dots;
+      _groupedProcs[playerStats.Name] = procs;
+      _otherDamage[playerStats.Name] = list;
     }
 
     private List<PlayerSubStats> GetSubStats(PlayerStats playerStats)
@@ -126,9 +126,9 @@ namespace EQLogParser
       var name = playerStats.Name;
       var list = new List<PlayerSubStats>();
 
-      OtherDamage[name].ForEach(stats => list.Add(stats));
+      _otherDamage[name].ForEach(stats => list.Add(stats));
 
-      if (GroupedDd.TryGetValue(name, out var dds))
+      if (_groupedDd.TryGetValue(name, out var dds))
       {
         if (dds.Total > 0)
         {
@@ -136,7 +136,7 @@ namespace EQLogParser
         }
       }
 
-      if (GroupedDoT.TryGetValue(name, out var dots))
+      if (_groupedDoT.TryGetValue(name, out var dots))
       {
         if (dots.Total > 0)
         {
@@ -144,7 +144,7 @@ namespace EQLogParser
         }
       }
 
-      if (GroupedProcs.TryGetValue(name, out var proc))
+      if (_groupedProcs.TryGetValue(name, out var proc))
       {
         if (proc.Total > 0)
         {
@@ -164,7 +164,7 @@ namespace EQLogParser
           var result = true;
           if (value is PlayerStats stats)
           {
-            result = CurrentShowPets || (PlayerManager.IsPossiblePlayerName(stats.Name) && !PlayerManager.Instance.IsVerifiedPet(stats.Name));
+            result = _currentShowPets || (PlayerManager.IsPossiblePlayerName(stats.Name) && !PlayerManager.Instance.IsVerifiedPet(stats.Name));
           }
           return result;
         };
@@ -178,7 +178,7 @@ namespace EQLogParser
       // check if call is during initialization
       if (dataGrid?.View != null)
       {
-        CurrentShowPets = showPets.IsChecked.Value;
+        _currentShowPets = showPets.IsChecked.Value;
         dataGrid.View.RefreshFilter();
       }
     }

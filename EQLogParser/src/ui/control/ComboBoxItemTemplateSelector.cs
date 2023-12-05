@@ -8,15 +8,15 @@ namespace EQLogParser
 {
   public class ComboBoxItemTemplateSelector : DataTemplateSelector
   {
-    private readonly DataTemplate SelectedItemTemplate;
-    private readonly DataTemplate DropDownItemTemplate;
+    private readonly DataTemplate _selectedItemTemplate;
+    private readonly DataTemplate _dropDownItemTemplate;
 
     public ComboBoxItemTemplateSelector()
     {
       var textBoxFactory = new FrameworkElementFactory(typeof(TextBox));
       textBoxFactory.SetBinding(TextBox.TextProperty, new Binding("SelectedText"));
       textBoxFactory.SetValue(Control.BorderThicknessProperty, new Thickness(0));
-      SelectedItemTemplate = new DataTemplate(typeof(ComboBoxItemDetails)) { VisualTree = textBoxFactory };
+      _selectedItemTemplate = new DataTemplate(typeof(ComboBoxItemDetails)) { VisualTree = textBoxFactory };
 
       var stackPanelFactory = new FrameworkElementFactory(typeof(StackPanel));
       var checkBoxFactory = new FrameworkElementFactory(typeof(CheckBox));
@@ -28,12 +28,12 @@ namespace EQLogParser
       textBlockFactory.SetValue(UIElement.IsHitTestVisibleProperty, false);
       stackPanelFactory.AppendChild(checkBoxFactory);
       stackPanelFactory.AppendChild(textBlockFactory);
-      DropDownItemTemplate = new DataTemplate(typeof(ComboBoxItemDetails)) { VisualTree = stackPanelFactory };
+      _dropDownItemTemplate = new DataTemplate(typeof(ComboBoxItemDetails)) { VisualTree = stackPanelFactory };
     }
 
     public override DataTemplate SelectTemplate(object item, DependencyObject container)
     {
-      return GetVisualParent<ComboBoxItem>(container) == null ? SelectedItemTemplate : DropDownItemTemplate;
+      return GetVisualParent<ComboBoxItem>(container) == null ? _selectedItemTemplate : _dropDownItemTemplate;
     }
 
     private static T GetVisualParent<T>(DependencyObject child) where T : Visual

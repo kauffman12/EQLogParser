@@ -5,7 +5,7 @@ namespace EQLogParser
 {
   internal class DamageGroupCollection : RecordGroupCollection
   {
-    private readonly DamageValidator DamageValidator = new();
+    private readonly DamageValidator _damageValidator = new();
 
     internal DamageGroupCollection(List<List<ActionGroup>> recordGroups) : base(recordGroups)
     {
@@ -14,7 +14,7 @@ namespace EQLogParser
     protected override bool IsValid(RecordWrapper wrapper)
     {
       var record = wrapper?.Record as DamageRecord;
-      return DamageValidator.IsValid(record);
+      return _damageValidator.IsValid(record);
     }
 
     protected override DataPoint Create(RecordWrapper wrapper)
@@ -78,10 +78,10 @@ namespace EQLogParser
 
   internal class TankGroupCollection : RecordGroupCollection
   {
-    readonly int DamageType;
+    readonly int _damageType;
     internal TankGroupCollection(List<List<ActionGroup>> recordGroups, int damageType) : base(recordGroups)
     {
-      DamageType = damageType;
+      _damageType = damageType;
     }
 
     protected override bool IsValid(RecordWrapper wrapper)
@@ -89,7 +89,7 @@ namespace EQLogParser
       var valid = false;
       if (wrapper.Record is DamageRecord damage)
       {
-        valid = DamageType == 0 || (DamageType == 1 && TankingStatsManager.IsMelee(damage)) || (DamageType == 2 && !TankingStatsManager.IsMelee(damage));
+        valid = _damageType == 0 || (_damageType == 1 && TankingStatsManager.IsMelee(damage)) || (_damageType == 2 && !TankingStatsManager.IsMelee(damage));
       }
       return valid;
     }
@@ -117,17 +117,17 @@ namespace EQLogParser
   internal abstract class RecordGroupCollection : IEnumerable<DataPoint>
   {
     private static readonly RecordWrapper StopWrapper = new();
-    private readonly List<List<ActionGroup>> RecordGroups;
-    private int CurrentGroup;
-    private int CurrentBlock;
-    private int CurrentRecord;
+    private readonly List<List<ActionGroup>> _recordGroups;
+    private int _currentGroup;
+    private int _currentBlock;
+    private int _currentRecord;
 
     internal RecordGroupCollection(List<List<ActionGroup>> recordGroups)
     {
-      RecordGroups = recordGroups;
-      CurrentGroup = 0;
-      CurrentBlock = 0;
-      CurrentRecord = 0;
+      _recordGroups = recordGroups;
+      _currentGroup = 0;
+      _currentBlock = 0;
+      _currentRecord = 0;
     }
 
     public IEnumerator<DataPoint> GetEnumerator()
@@ -162,31 +162,31 @@ namespace EQLogParser
     {
       var wrapper = StopWrapper;
 
-      if (RecordGroups.Count > CurrentGroup)
+      if (_recordGroups.Count > _currentGroup)
       {
-        var blocks = RecordGroups[CurrentGroup];
+        var blocks = _recordGroups[_currentGroup];
 
-        if (blocks.Count > CurrentBlock)
+        if (blocks.Count > _currentBlock)
         {
-          var block = blocks[CurrentBlock];
+          var block = blocks[_currentBlock];
 
-          if (block.Actions.Count > CurrentRecord)
+          if (block.Actions.Count > _currentRecord)
           {
-            wrapper = new RecordWrapper { Record = block.Actions[CurrentRecord], BeginTime = block.BeginTime };
-            CurrentRecord++;
+            wrapper = new RecordWrapper { Record = block.Actions[_currentRecord], BeginTime = block.BeginTime };
+            _currentRecord++;
           }
           else
           {
-            CurrentRecord = 0;
-            CurrentBlock++;
+            _currentRecord = 0;
+            _currentBlock++;
             wrapper = null;
           }
         }
         else
         {
-          CurrentBlock = 0;
-          CurrentRecord = 0;
-          CurrentGroup++;
+          _currentBlock = 0;
+          _currentRecord = 0;
+          _currentGroup++;
           wrapper = null;
         }
       }

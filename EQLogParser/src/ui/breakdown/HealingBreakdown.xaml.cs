@@ -9,30 +9,30 @@ namespace EQLogParser
   /// </summary>
   public partial class HealBreakdown
   {
-    private bool CurrentShowSpellsChoice = true;
-    private List<PlayerStats> PlayerStats;
-    private string Title;
-    private string Setting;
+    private bool _currentShowSpellsChoice = true;
+    private List<PlayerStats> _playerStats;
+    private string _title;
+    private string _setting;
 
-    private readonly List<string> ChoicesList = new() { "Breakdown By Spell", "Breakdown By Healed" };
-    private readonly List<string> ReceivedChoicesList = new() { "Breakdown By Spell", "Breakdown By Healer" };
+    private readonly List<string> _choicesList = new() { "Breakdown By Spell", "Breakdown By Healed" };
+    private readonly List<string> _receivedChoicesList = new() { "Breakdown By Spell", "Breakdown By Healer" };
 
     public HealBreakdown()
     {
       InitializeComponent();
       dataGrid.IsEnabled = false;
-      UIElementUtil.SetEnabled(controlPanel.Children, false);
+      UiElementUtil.SetEnabled(controlPanel.Children, false);
       InitBreakdownTable(titleLabel, dataGrid, selectedColumns);
     }
 
     internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats, bool received = false)
     {
-      Title = currentStats?.ShortTitle;
-      PlayerStats = selectedStats;
-      Setting = (received ? "Received" : "") + "HealingBreakdownShowSpells";
-      CurrentShowSpellsChoice = ConfigUtil.IfSet(Setting);
-      choicesList.ItemsSource = received ? ReceivedChoicesList : ChoicesList;
-      choicesList.SelectedIndex = CurrentShowSpellsChoice ? 0 : 1;
+      _title = currentStats?.ShortTitle;
+      _playerStats = selectedStats;
+      _setting = (received ? "Received" : "") + "HealingBreakdownShowSpells";
+      _currentShowSpellsChoice = ConfigUtil.IfSet(_setting);
+      choicesList.ItemsSource = received ? _receivedChoicesList : _choicesList;
+      choicesList.SelectedIndex = _currentShowSpellsChoice ? 0 : 1;
       Display();
     }
 
@@ -42,26 +42,26 @@ namespace EQLogParser
       {
         Dispatcher.InvokeAsync(() =>
         {
-          dataGrid.ChildPropertyName = CurrentShowSpellsChoice ? "SubStats" : "SubStats2";
-          titleLabel.Content = Title;
+          dataGrid.ChildPropertyName = _currentShowSpellsChoice ? "SubStats" : "SubStats2";
+          titleLabel.Content = _title;
           dataGrid.IsEnabled = true;
-          UIElementUtil.SetEnabled(controlPanel.Children, true);
+          UiElementUtil.SetEnabled(controlPanel.Children, true);
           dataGrid.ItemsSource = null;
-          dataGrid.ItemsSource = PlayerStats;
+          dataGrid.ItemsSource = _playerStats;
         });
       });
     }
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (PlayerStats != null)
+      if (_playerStats != null)
       {
-        CurrentShowSpellsChoice = choicesList.SelectedIndex == 0;
+        _currentShowSpellsChoice = choicesList.SelectedIndex == 0;
         titleLabel.Content = "Loading...";
         dataGrid.ItemsSource = null;
         dataGrid.IsEnabled = false;
-        UIElementUtil.SetEnabled(controlPanel.Children, false);
-        ConfigUtil.SetSetting(Setting, CurrentShowSpellsChoice);
+        UiElementUtil.SetEnabled(controlPanel.Children, false);
+        ConfigUtil.SetSetting(_setting, _currentShowSpellsChoice);
         Display();
       }
     }

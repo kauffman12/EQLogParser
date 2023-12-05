@@ -34,10 +34,10 @@ namespace EQLogParser
     internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsDamageSelectionChanged;
     internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsHealingSelectionChanged;
     internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsTankingSelectionChanged;
-    internal static readonly HttpClient THE_HTTP_CLIENT = new();
+    internal static readonly HttpClient TheHttpClient = new();
 
-    private const string PETS_LIST_TITLE = "Verified Pets ({0})";
-    private const string PLAYER_LIST_TITLE = "Verified Players ({0})";
+    private const string PetsListTitle = "Verified Pets ({0})";
+    private const string PlayerListTitle = "Verified Players ({0})";
     private static readonly ObservableCollection<dynamic> VerifiedPlayersView = new();
     private static readonly ObservableCollection<dynamic> VerifiedPetsView = new();
     private static readonly ObservableCollection<PetMapping> PetPlayersView = new();
@@ -77,7 +77,7 @@ namespace EQLogParser
     internal static List<Fight> GetFights()
     {
       List<Fight> result = null;
-      UIUtil.InvokeNow(() =>
+      UiUtil.InvokeNow(() =>
       {
         result = (Application.Current.MainWindow as MainWindow)?.GetFightTable()?.GetFights();
       });
@@ -88,7 +88,7 @@ namespace EQLogParser
     internal static List<Fight> GetSelectedFights()
     {
       List<Fight> result = null;
-      UIUtil.InvokeNow(() =>
+      UiUtil.InvokeNow(() =>
       {
         result = (Application.Current.MainWindow as MainWindow)?.GetFightTable()?.GetSelectedFights();
       });
@@ -103,7 +103,7 @@ namespace EQLogParser
       {
         try
         {
-          var request = THE_HTTP_CLIENT.GetStringAsync("https://github.com/kauffman12/EQLogParser/blob/master/README.md");
+          var request = TheHttpClient.GetStringAsync("https://github.com/kauffman12/EQLogParser/blob/master/README.md");
           request.Wait();
 
           var matches = new Regex(@"EQLogParser-((\d)\.(\d)\.(\d?\d?\d))\.(msi|exe)").Match(request.Result);
@@ -124,7 +124,7 @@ namespace EQLogParser
 
                 try
                 {
-                  await using var download = await THE_HTTP_CLIENT.GetStreamAsync(url);
+                  await using var download = await TheHttpClient.GetStreamAsync(url);
                   var path = Environment.ExpandEnvironmentVariables("%userprofile%\\Downloads");
                   if (!Directory.Exists(path))
                   {
@@ -149,7 +149,7 @@ namespace EQLogParser
                     var process = Process.Start("msiexec", "/i \"" + fullPath + "\"");
                     if (process is { HasExited: false })
                     {
-                      await Task.Delay(1000).ContinueWith(_ => { UIUtil.InvokeAsync(() => Application.Current.MainWindow?.Close()); });
+                      await Task.Delay(1000).ContinueWith(_ => { UiUtil.InvokeAsync(() => Application.Current.MainWindow?.Close()); });
                     }
                   }
                 }
@@ -161,13 +161,13 @@ namespace EQLogParser
               }
             }
 
-            UIUtil.InvokeAsync(Action);
+            UiUtil.InvokeAsync(Action);
           }
         }
         catch (Exception ex)
         {
           Log.Error("Error Checking for Updates", ex);
-          UIUtil.InvokeAsync(() => errorText.Text = "Update Check Failed. Firewall?");
+          UiUtil.InvokeAsync(() => errorText.Text = "Update Check Failed. Firewall?");
         }
       });
     }
@@ -203,7 +203,7 @@ namespace EQLogParser
 
     internal static void CreateFontFamiliesMenuItems(MenuItem parent, RoutedEventHandler callback, string currentFamily)
     {
-      foreach (var family in UIElementUtil.GetCommonFontFamilyNames())
+      foreach (var family in UiElementUtil.GetCommonFontFamilyNames())
       {
         parent.Items.Add(CreateMenuItem(family, callback, EFontAwesomeIcon.Solid_Check));
       }
@@ -390,10 +390,10 @@ namespace EQLogParser
       VerifiedPlayersView.Clear();
 
       var entry = new ExpandoObject() as dynamic;
-      entry.Name = Labels.UNASSIGNED;
+      entry.Name = Labels.Unassigned;
       VerifiedPlayersView.Add(entry);
-      DockingManager.SetHeader(petsWindow, string.Format(PETS_LIST_TITLE, VerifiedPetsView.Count));
-      DockingManager.SetHeader(playersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
+      DockingManager.SetHeader(petsWindow, string.Format(PetsListTitle, VerifiedPetsView.Count));
+      DockingManager.SetHeader(playersWindow, string.Format(PlayerListTitle, VerifiedPlayersView.Count));
     }
 
     internal static dynamic InsertNameIntoSortedList(string name, ObservableCollection<object> collection)
@@ -422,7 +422,7 @@ namespace EQLogParser
       ownerList.ItemsSource = VerifiedPlayersView;
       PlayerManager.Instance.EventsNewPetMapping += (_, mapping) =>
       {
-        UIUtil.InvokeAsync(() =>
+        UiUtil.InvokeAsync(() =>
         {
           var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(mapping.Pet, StringComparison.OrdinalIgnoreCase));
           if (existing != null)
@@ -454,17 +454,17 @@ namespace EQLogParser
       classList.ItemsSource = PlayerManager.Instance.GetClassList(true);
       PlayerManager.Instance.EventsNewVerifiedPlayer += (_, name) =>
       {
-        UIUtil.InvokeAsync(() =>
+        UiUtil.InvokeAsync(() =>
         {
           var entry = InsertNameIntoSortedList(name, VerifiedPlayersView);
           entry.PlayerClass = PlayerManager.Instance.GetPlayerClass(name);
-          DockingManager.SetHeader(playersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
+          DockingManager.SetHeader(playersWindow, string.Format(PlayerListTitle, VerifiedPlayersView.Count));
         });
       };
 
       PlayerManager.Instance.EventsUpdatePlayerClass += (name, playerClass) =>
       {
-        UIUtil.InvokeAsync(() =>
+        UiUtil.InvokeAsync(() =>
         {
           var entry = new ExpandoObject() as dynamic;
           entry.Name = name;
@@ -478,13 +478,13 @@ namespace EQLogParser
 
       PlayerManager.Instance.EventsRemoveVerifiedPlayer += (_, name) =>
       {
-        UIUtil.InvokeAsync(() =>
+        UiUtil.InvokeAsync(() =>
         {
           var found = VerifiedPlayersView.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
           if (found != null)
           {
             VerifiedPlayersView.Remove(found);
-            DockingManager.SetHeader(playersWindow, string.Format(PLAYER_LIST_TITLE, VerifiedPlayersView.Count));
+            DockingManager.SetHeader(playersWindow, string.Format(PlayerListTitle, VerifiedPlayersView.Count));
 
             var existing = PetPlayersView.FirstOrDefault(item => item.Owner.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (existing != null)
@@ -506,18 +506,18 @@ namespace EQLogParser
       PlayerManager.Instance.EventsNewVerifiedPet += (_, name) => main.Dispatcher.InvokeAsync(() =>
       {
         InsertNameIntoSortedList(name, VerifiedPetsView);
-        DockingManager.SetHeader(petsWindow, string.Format(PETS_LIST_TITLE, VerifiedPetsView.Count));
+        DockingManager.SetHeader(petsWindow, string.Format(PetsListTitle, VerifiedPetsView.Count));
       });
 
       PlayerManager.Instance.EventsRemoveVerifiedPet += (_, name) =>
       {
-        UIUtil.InvokeAsync(() =>
+        UiUtil.InvokeAsync(() =>
         {
           var found = VerifiedPetsView.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
           if (found != null)
           {
             VerifiedPetsView.Remove(found);
-            DockingManager.SetHeader(petsWindow, string.Format(PETS_LIST_TITLE, VerifiedPetsView.Count));
+            DockingManager.SetHeader(petsWindow, string.Format(PetsListTitle, VerifiedPetsView.Count));
 
             var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (existing != null)
@@ -590,7 +590,7 @@ namespace EQLogParser
               }
             }
 
-            UIUtil.InvokeNow(() => dialog.Close());
+            UiUtil.InvokeNow(() => dialog.Close());
           }
           catch (IOException ex)
           {
@@ -611,7 +611,7 @@ namespace EQLogParser
           }
           finally
           {
-            UIUtil.InvokeAsync(() =>
+            UiUtil.InvokeAsync(() =>
             {
               dialog.Close();
 
@@ -650,7 +650,7 @@ namespace EQLogParser
 
         if (saveFileDialog.ShowDialog() == true)
         {
-          TextUtils.SaveHTML(saveFileDialog.FileName, tables);
+          TextUtils.SaveHtml(saveFileDialog.FileName, tables);
         }
       }
       catch (IOException ex)

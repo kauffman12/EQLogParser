@@ -14,21 +14,21 @@ namespace EQLogParser
   /// </summary>
   public partial class EventViewer : IDocumentContent
   {
-    private const string ZONE_EVENT = "Entered Area";
-    private const string KILLSHOT_EVENT = "Kill Shot";
-    private const string PLAYERSLAIN_EVENT = "Player Slain";
-    private const string PLAYERKILL_EVENT = "Player Killing";
-    private const string MEZBREAK_EVENT = "Mez Break";
+    private const string ZoneEvent = "Entered Area";
+    private const string KillshotEvent = "Kill Shot";
+    private const string PlayerslainEvent = "Player Slain";
+    private const string PlayerkillEvent = "Player Killing";
+    private const string MezbreakEvent = "Mez Break";
 
-    private readonly DispatcherTimer FilterTimer;
-    private bool CurrentShowMezBreaks = true;
-    private bool CurrentShowEnterZone = true;
-    private bool CurrentShowKillShots = true;
-    private bool CurrentShowPlayerKilling = true;
-    private bool CurrentShowPlayerSlain = true;
-    private int CurrentFilterModifier;
-    private string CurrentFilterText = Resource.EVENT_FILTER_TEXT;
-    private bool Ready;
+    private readonly DispatcherTimer _filterTimer;
+    private bool _currentShowMezBreaks = true;
+    private bool _currentShowEnterZone = true;
+    private bool _currentShowKillShots = true;
+    private bool _currentShowPlayerKilling = true;
+    private bool _currentShowPlayerSlain = true;
+    private int _currentFilterModifier;
+    private string _currentFilterText = Resource.EVENT_FILTER_TEXT;
+    private bool _ready;
 
     public EventViewer()
     {
@@ -36,26 +36,26 @@ namespace EQLogParser
 
       var list = new List<ComboBoxItemDetails>
       {
-        new() { IsChecked = true, Text = ZONE_EVENT },
-        new() { IsChecked = true, Text = KILLSHOT_EVENT },
-        new() { IsChecked = true, Text = MEZBREAK_EVENT },
-        new() { IsChecked = true, Text = PLAYERKILL_EVENT },
-        new() { IsChecked = true, Text = PLAYERSLAIN_EVENT }
+        new() { IsChecked = true, Text = ZoneEvent },
+        new() { IsChecked = true, Text = KillshotEvent },
+        new() { IsChecked = true, Text = MezbreakEvent },
+        new() { IsChecked = true, Text = PlayerkillEvent },
+        new() { IsChecked = true, Text = PlayerslainEvent }
       };
 
       selectedOptions.ItemsSource = list;
-      UIElementUtil.SetComboBoxTitle(selectedOptions, list.Count, Resource.EVENT_TYPES_SELECTED);
+      UiElementUtil.SetComboBoxTitle(selectedOptions, list.Count, Resource.EVENT_TYPES_SELECTED);
       DataGridUtil.UpdateTableMargin(dataGrid);
       MainActions.EventsThemeChanged += EventsThemeChanged;
 
       eventFilter.Text = Resource.EVENT_FILTER_TEXT;
-      FilterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
-      FilterTimer.Tick += (_, _) =>
+      _filterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
+      _filterTimer.Tick += (_, _) =>
       {
-        FilterTimer.Stop();
-        if (CurrentFilterText != eventFilter.Text)
+        _filterTimer.Stop();
+        if (_currentFilterText != eventFilter.Text)
         {
-          CurrentFilterText = eventFilter.Text;
+          _currentFilterText = eventFilter.Text;
           UpdateTitleAndRefresh();
         }
       };
@@ -78,14 +78,14 @@ namespace EQLogParser
           var isActorPlayer = PlayerManager.Instance.IsPetOrPlayerOrSpell(record.Killer);
           var isTargetPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Killed);
 
-          var text = KILLSHOT_EVENT;
+          var text = KillshotEvent;
           if (isTargetPlayer && isActorPlayer)
           {
-            text = PLAYERKILL_EVENT;
+            text = PlayerkillEvent;
           }
           else if (isTargetPlayer || (isActorNpc && !isTargetNpc && PlayerManager.IsPossiblePlayerName(record.Killed)))
           {
-            text = PLAYERSLAIN_EVENT;
+            text = PlayerslainEvent;
           }
 
           rows.Add(new EventRow { Time = beginTime, Actor = record.Killer, Target = record.Killed, Event = text });
@@ -94,12 +94,12 @@ namespace EQLogParser
 
       foreach (var (beginTime, record) in RecordManager.Instance.GetAllMezBreaks())
       {
-        rows.Add(new EventRow { Time = beginTime, Actor = record.Breaker, Target = record.Awakened, Event = MEZBREAK_EVENT });
+        rows.Add(new EventRow { Time = beginTime, Actor = record.Breaker, Target = record.Awakened, Event = MezbreakEvent });
       }
 
       foreach (var (beginTime, record) in RecordManager.Instance.GetAllZoning())
       {
-        rows.Add(new EventRow { Time = beginTime, Actor = ConfigUtil.PlayerName, Event = ZONE_EVENT, Target = record.Zone });
+        rows.Add(new EventRow { Time = beginTime, Actor = ConfigUtil.PlayerName, Event = ZoneEvent, Target = record.Zone });
       }
 
       dataGrid.ItemsSource = rows;
@@ -122,25 +122,25 @@ namespace EQLogParser
           var result = false;
           if (obj is EventRow row)
           {
-            result = (CurrentShowMezBreaks && row.Event == MEZBREAK_EVENT) || (CurrentShowEnterZone && row.Event == ZONE_EVENT) || (CurrentShowKillShots &&
-              row.Event == KILLSHOT_EVENT) || (CurrentShowPlayerKilling && row.Event == PLAYERKILL_EVENT) || (CurrentShowPlayerSlain && row.Event == PLAYERSLAIN_EVENT);
+            result = (_currentShowMezBreaks && row.Event == MezbreakEvent) || (_currentShowEnterZone && row.Event == ZoneEvent) || (_currentShowKillShots &&
+              row.Event == KillshotEvent) || (_currentShowPlayerKilling && row.Event == PlayerkillEvent) || (_currentShowPlayerSlain && row.Event == PlayerslainEvent);
 
-            if (result && !string.IsNullOrEmpty(CurrentFilterText) && CurrentFilterText != Resource.EVENT_FILTER_TEXT)
+            if (result && !string.IsNullOrEmpty(_currentFilterText) && _currentFilterText != Resource.EVENT_FILTER_TEXT)
             {
-              if (CurrentFilterModifier == 0)
+              if (_currentFilterModifier == 0)
               {
-                result = row.Actor?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) > -1 ||
-                         row.Target?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) > -1;
+                result = row.Actor?.IndexOf(_currentFilterText, StringComparison.OrdinalIgnoreCase) > -1 ||
+                         row.Target?.IndexOf(_currentFilterText, StringComparison.OrdinalIgnoreCase) > -1;
               }
-              else if (CurrentFilterModifier == 1)
+              else if (_currentFilterModifier == 1)
               {
-                result = row.Actor?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == -1 &&
-                         row.Target?.IndexOf(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == -1;
+                result = row.Actor?.IndexOf(_currentFilterText, StringComparison.OrdinalIgnoreCase) == -1 &&
+                         row.Target?.IndexOf(_currentFilterText, StringComparison.OrdinalIgnoreCase) == -1;
               }
-              else if (CurrentFilterModifier == 2)
+              else if (_currentFilterModifier == 2)
               {
-                result = row.Actor?.Equals(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == true ||
-                         row.Target?.Equals(CurrentFilterText, StringComparison.OrdinalIgnoreCase) == true;
+                result = row.Actor?.Equals(_currentFilterText, StringComparison.OrdinalIgnoreCase) == true ||
+                         row.Target?.Equals(_currentFilterText, StringComparison.OrdinalIgnoreCase) == true;
               }
             }
           }
@@ -153,9 +153,9 @@ namespace EQLogParser
 
     private void FilterOptionChange(object sender, EventArgs e)
     {
-      if (eventFilterModifier?.SelectedIndex > -1 && eventFilterModifier.SelectedIndex != CurrentFilterModifier)
+      if (eventFilterModifier?.SelectedIndex > -1 && eventFilterModifier.SelectedIndex != _currentFilterModifier)
       {
-        CurrentFilterModifier = eventFilterModifier.SelectedIndex;
+        _currentFilterModifier = eventFilterModifier.SelectedIndex;
         UpdateTitleAndRefresh();
       }
     }
@@ -169,30 +169,30 @@ namespace EQLogParser
         {
           switch (item.Text)
           {
-            case ZONE_EVENT:
-              CurrentShowEnterZone = item.IsChecked;
+            case ZoneEvent:
+              _currentShowEnterZone = item.IsChecked;
               count += item.IsChecked ? 1 : 0;
               break;
-            case MEZBREAK_EVENT:
-              CurrentShowMezBreaks = item.IsChecked;
+            case MezbreakEvent:
+              _currentShowMezBreaks = item.IsChecked;
               count += item.IsChecked ? 1 : 0;
               break;
-            case PLAYERKILL_EVENT:
-              CurrentShowPlayerKilling = item.IsChecked;
+            case PlayerkillEvent:
+              _currentShowPlayerKilling = item.IsChecked;
               count += item.IsChecked ? 1 : 0;
               break;
-            case PLAYERSLAIN_EVENT:
-              CurrentShowPlayerSlain = item.IsChecked;
+            case PlayerslainEvent:
+              _currentShowPlayerSlain = item.IsChecked;
               count += item.IsChecked ? 1 : 0;
               break;
-            case KILLSHOT_EVENT:
-              CurrentShowKillShots = item.IsChecked;
+            case KillshotEvent:
+              _currentShowKillShots = item.IsChecked;
               count += item.IsChecked ? 1 : 0;
               break;
           }
         }
 
-        UIElementUtil.SetComboBoxTitle(selectedOptions, count, Resource.EVENT_TYPES_SELECTED);
+        UiElementUtil.SetComboBoxTitle(selectedOptions, count, Resource.EVENT_TYPES_SELECTED);
         UpdateTitleAndRefresh();
       }
     }
@@ -227,19 +227,19 @@ namespace EQLogParser
 
     private void FilterTextChanged(object sender, TextChangedEventArgs e)
     {
-      FilterTimer?.Stop();
-      FilterTimer?.Start();
+      _filterTimer?.Stop();
+      _filterTimer?.Start();
     }
 
     private void EventsLogLoadingComplete(string _) => Load();
 
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {
-      if (VisualParent != null && !Ready)
+      if (VisualParent != null && !_ready)
       {
         MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
         Load();
-        Ready = true;
+        _ready = true;
       }
     }
 
@@ -247,7 +247,7 @@ namespace EQLogParser
     {
       MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
       dataGrid.ItemsSource = null;
-      Ready = false;
+      _ready = false;
     }
   }
 

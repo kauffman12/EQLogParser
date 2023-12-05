@@ -19,7 +19,7 @@ namespace EQLogParser
       "# Twincasts"
     };
 
-    private bool Ready;
+    private bool _ready;
 
     public HealingChart() : base(HealingChoices, false)
     {
@@ -30,18 +30,18 @@ namespace EQLogParser
 
     private void ContentLoaded(object sender, System.Windows.RoutedEventArgs e)
     {
-      if (VisualParent != null && !Ready)
+      if (VisualParent != null && !_ready)
       {
         DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         MainActions.FireChartOpened("Healing");
-        Ready = true;
+        _ready = true;
       }
     }
 
     public void HideContent()
     {
       DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
-      Ready = false;
+      _ready = false;
     }
   }
 }

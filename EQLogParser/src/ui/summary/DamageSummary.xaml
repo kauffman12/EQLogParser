@@ -85,7 +85,7 @@
       </syncfusion:SfTreeGrid.Resources>
       <syncfusion:SfTreeGrid.ContextMenu>
         <ContextMenu x:Name="rightClickMenu">
-          <MenuItem IsEnabled="False" x:Name="copyDamageParseToEQClick" Header="Send Parse to EQ" Click="CopyToEQClick">
+          <MenuItem IsEnabled="False" x:Name="copyDamageParseToEQClick" Header="Send Parse to EQ" Click="CopyToEqClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="copyDamageParseIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
@@ -177,8 +177,8 @@
         <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" MinimumWidth="135"/>
         <syncfusion:TreeGridTextColumn MaximumWidth="70" MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
         <syncfusion:TreeGridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Damage" />
-        <syncfusion:TreeGridNumericColumn MappingName="DPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
-        <syncfusion:TreeGridNumericColumn MappingName="SDPS" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
+        <syncfusion:TreeGridNumericColumn MappingName="Dps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
+        <syncfusion:TreeGridNumericColumn MappingName="Sdps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
         <syncfusion:TreeGridNumericColumn MaximumWidth="65" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
         <syncfusion:TreeGridNumericColumn MaximumWidth="70" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
         <syncfusion:TreeGridNumericColumn MaximumWidth="95" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />

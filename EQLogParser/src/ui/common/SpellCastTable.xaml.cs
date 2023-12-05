@@ -11,23 +11,23 @@ namespace EQLogParser
   /// </summary>
   public partial class SpellCastTable
   {
-    private readonly Dictionary<string, bool> UniqueNames = new();
-    private PlayerStats RaidStats;
-    private string Title;
+    private readonly Dictionary<string, bool> _uniqueNames = new();
+    private PlayerStats _raidStats;
+    private string _title;
 
     public SpellCastTable()
     {
       InitializeComponent();
       dataGrid.IsEnabled = false;
-      UIElementUtil.SetEnabled(controlPanel.Children, false);
+      UiElementUtil.SetEnabled(controlPanel.Children, false);
       InitCastTable(dataGrid, titleLabel, selectedCastTypes, selectedSpellRestrictions);
     }
 
     internal void Init(List<PlayerStats> selectedStats, CombinedStats currentStats)
     {
-      Title = currentStats?.ShortTitle ?? "";
-      selectedStats?.ForEach(stats => UniqueNames[stats.OrigName] = true);
-      RaidStats = currentStats?.RaidStats;
+      _title = currentStats?.ShortTitle ?? "";
+      selectedStats?.ForEach(stats => _uniqueNames[stats.OrigName] = true);
+      _raidStats = currentStats?.RaidStats;
       Display();
     }
 
@@ -37,7 +37,7 @@ namespace EQLogParser
       {
         Dispatcher.InvokeAsync(() =>
         {
-          foreach (var name in UniqueNames.Keys)
+          foreach (var name in _uniqueNames.Keys)
           {
             var column = new GridTextColumn
             {
@@ -52,7 +52,7 @@ namespace EQLogParser
 
         var allSpells = new HashSet<IAction>();
         var spellTimes = new Dictionary<IAction, double>();
-        var startTime = SpellCountBuilder.QuerySpells(RaidStats, allSpells, allSpells, spellTimes);
+        var startTime = SpellCountBuilder.QuerySpells(_raidStats, allSpells, allSpells, spellTimes);
         var playerSpells = new Dictionary<string, List<string>>();
         var max = 0;
 
@@ -70,13 +70,13 @@ namespace EQLogParser
             }
 
             var size = 0;
-            if (action is SpellCast { Interrupted: false } cast && !string.IsNullOrEmpty(cast.Caster) && UniqueNames.ContainsKey(cast.Caster) &&
+            if (action is SpellCast { Interrupted: false } cast && !string.IsNullOrEmpty(cast.Caster) && _uniqueNames.ContainsKey(cast.Caster) &&
               PassFilters(cast.SpellData, false))
             {
               size = AddToList(playerSpells, cast.Caster, cast.Spell);
             }
 
-            if (action is ReceivedSpell received && !string.IsNullOrEmpty(received.Receiver) && UniqueNames.ContainsKey(received.Receiver) &&
+            if (action is ReceivedSpell received && !string.IsNullOrEmpty(received.Receiver) && _uniqueNames.ContainsKey(received.Receiver) &&
               IsValid(received, true, out var replaced) && replaced != null)
             {
               size = AddToList(playerSpells, received.Receiver, "Received " + replaced.NameAbbrv);
@@ -94,10 +94,10 @@ namespace EQLogParser
 
         Dispatcher.InvokeAsync(() =>
         {
-          titleLabel.Content = Title;
+          titleLabel.Content = _title;
           dataGrid.ItemsSource = list;
           dataGrid.IsEnabled = true;
-          UIElementUtil.SetEnabled(controlPanel.Children, true);
+          UiElementUtil.SetEnabled(controlPanel.Children, true);
         });
       });
     }
@@ -147,7 +147,7 @@ namespace EQLogParser
         row.Add("Time", beginTime);
         row.Add("Seconds", (int)(beginTime - startTime));
 
-        foreach (var player in UniqueNames.Keys)
+        foreach (var player in _uniqueNames.Keys)
         {
           if (playerSpells.ContainsKey(player) && playerSpells[player].Count > i)
           {
@@ -171,7 +171,7 @@ namespace EQLogParser
         {
           titleLabel.Content = "Loading...";
           dataGrid.IsEnabled = true;
-          UIElementUtil.SetEnabled(controlPanel.Children, true);
+          UiElementUtil.SetEnabled(controlPanel.Children, true);
           dataGrid.ItemsSource = null;
 
           for (var i = dataGrid.Columns.Count - 1; i > 1; i--)

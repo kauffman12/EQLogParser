@@ -20,11 +20,11 @@ namespace EQLogParser
     private readonly DispatcherTimer _triggerUpdateTimer;
     private readonly DispatcherTimer _textOverlayTimer;
     private readonly DispatcherTimer _timerOverlayTimer;
-    private readonly Dictionary<string, OverlayWindowData> TextWindows = new();
-    private readonly Dictionary<string, OverlayWindowData> TimerWindows = new();
-    private readonly List<LogReader> LogReaders = new();
-    private TriggerProcessor TestProcessor;
-    private int TimerIncrement;
+    private readonly Dictionary<string, OverlayWindowData> _textWindows = new();
+    private readonly Dictionary<string, OverlayWindowData> _timerWindows = new();
+    private readonly List<LogReader> _logReaders = new();
+    private TriggerProcessor _testProcessor;
+    private int _timerIncrement;
 
     public TriggerManager()
     {
@@ -33,7 +33,7 @@ namespace EQLogParser
         // delay so window owner can be set correctly
         Task.Delay(1000).ContinueWith(_ =>
         {
-          UIUtil.InvokeAsync(() =>
+          UiUtil.InvokeAsync(() =>
           {
             new MessageWindow("Trigger Database not available. In use by another EQLogParser?\r\nTrigger Management disabled until restart.",
               Resource.Warning).Show();
@@ -56,8 +56,8 @@ namespace EQLogParser
       _timerOverlayTimer.Tick += TimerTick;
     }
 
-    internal void CloseOverlay(string id) => CloseOverlay(id, TextWindows, TimerWindows);
-    internal void CloseOverlays() => CloseOverlays(TextWindows, TimerWindows);
+    internal void CloseOverlay(string id) => CloseOverlay(id, _textWindows, _timerWindows);
+    internal void CloseOverlays() => CloseOverlays(_textWindows, _timerWindows);
     internal void Select(string id) => EventsSelectTrigger?.Invoke(id);
 
     internal void TriggersUpdated()
@@ -77,10 +77,10 @@ namespace EQLogParser
     {
       MainActions.EventsLogLoadingComplete -= TriggerManagerEventsLogLoadingComplete;
 
-      lock (LogReaders)
+      lock (_logReaders)
       {
-        LogReaders?.ForEach(reader => reader.Dispose());
-        LogReaders?.Clear();
+        _logReaders?.ForEach(reader => reader.Dispose());
+        _logReaders?.Clear();
       }
 
       _textOverlayTimer?.Stop();
@@ -89,30 +89,30 @@ namespace EQLogParser
 
     internal void SetTestProcessor(TriggerConfig config, BlockingCollection<Tuple<string, double, bool>> collection)
     {
-      TestProcessor?.Dispose();
+      _testProcessor?.Dispose();
       var name = TriggerStateManager.DefaultUser;
-      TestProcessor = new TriggerProcessor(name, $"Trigger Tester ({name})", ConfigUtil.PlayerName, config.Voice,
+      _testProcessor = new TriggerProcessor(name, $"Trigger Tester ({name})", ConfigUtil.PlayerName, config.Voice,
         config.VoiceRate, AddTextEvent, AddTimerEvent);
-      TestProcessor.LinkTo(collection);
-      UIUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
+      _testProcessor.LinkTo(collection);
+      UiUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
     }
 
     internal void SetTestProcessor(TriggerCharacter character, BlockingCollection<Tuple<string, double, bool>> collection)
     {
-      TestProcessor?.Dispose();
+      _testProcessor?.Dispose();
       string server = null;
       var playerName = character.Name;
       FileUtil.ParseFileName(character.FilePath, ref playerName, ref server);
-      TestProcessor = new TriggerProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, character.Voice,
+      _testProcessor = new TriggerProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, character.Voice,
         character.VoiceRate, AddTextEvent, AddTimerEvent);
-      TestProcessor.LinkTo(collection);
-      UIUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
+      _testProcessor.LinkTo(collection);
+      UiUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
     }
 
     internal void StopTestProcessor()
     {
-      TestProcessor?.Dispose();
-      TestProcessor = null;
+      _testProcessor?.Dispose();
+      _testProcessor = null;
     }
 
     internal List<Tuple<string, ObservableCollection<AlertEntry>>> GetAlertLogs()
@@ -125,7 +125,7 @@ namespace EQLogParser
       return list;
     }
 
-    private void TextTick(object sender, EventArgs e) => WindowTick(TextWindows, _textOverlayTimer);
+    private void TextTick(object sender, EventArgs e) => WindowTick(_textWindows, _textOverlayTimer);
 
     private void TriggerManagerEventsLogLoadingComplete(string _)
     {
@@ -145,27 +145,27 @@ namespace EQLogParser
     private void ConfigDoUpdate(object sender, EventArgs e)
     {
       _configUpdateTimer.Stop();
-      UIUtil.InvokeAsync(CloseOverlays);
+      UiUtil.InvokeAsync(CloseOverlays);
       _textOverlayTimer?.Stop();
       _timerOverlayTimer?.Stop();
 
       if (TriggerStateManager.Instance.GetConfig() is { } config)
       {
-        lock (LogReaders)
+        lock (_logReaders)
         {
           if (config.IsAdvanced)
           {
             // Only clear out everything if switched from basic
             if (GetProcessors().FirstOrDefault(p => p.CurrentCharacterId == TriggerStateManager.DefaultUser) != null)
             {
-              LogReaders.ForEach(reader => reader.Dispose());
-              LogReaders.Clear();
+              _logReaders.ForEach(reader => reader.Dispose());
+              _logReaders.Clear();
             }
 
             // remove stales readers first
             var toRemove = new List<LogReader>();
             var alreadyRunning = new List<string>();
-            foreach (var reader in LogReaders)
+            foreach (var reader in _logReaders)
             {
               // remove readers if the character no longer exists
               if (reader.GetProcessor() is TriggerProcessor processor)
@@ -188,7 +188,7 @@ namespace EQLogParser
             }
 
             RunningFiles.Clear();
-            toRemove.ForEach(remove => LogReaders.Remove(remove));
+            toRemove.ForEach(remove => _logReaders.Remove(remove));
 
             // add characters that aren't enabled yet
             foreach (var character in config.Characters)
@@ -198,25 +198,25 @@ namespace EQLogParser
                 string server = null;
                 var playerName = character.Name;
                 FileUtil.ParseFileName(character.FilePath, ref playerName, ref server);
-                LogReaders.Add(new LogReader(new TriggerProcessor(character.Id, character.Name, playerName, character.Voice,
+                _logReaders.Add(new LogReader(new TriggerProcessor(character.Id, character.Name, playerName, character.Voice,
                   character.VoiceRate, AddTextEvent, AddTimerEvent), character.FilePath));
                 RunningFiles[character.FilePath] = true;
               }
             }
 
-            (Application.Current?.MainWindow as MainWindow)?.ShowTriggersEnabled(LogReaders.Count > 0);
+            (Application.Current?.MainWindow as MainWindow)?.ShowTriggersEnabled(_logReaders.Count > 0);
           }
           else
           {
             // Basic always clear out everything
-            LogReaders.ForEach(reader => reader.Dispose());
-            LogReaders.Clear();
+            _logReaders.ForEach(reader => reader.Dispose());
+            _logReaders.Clear();
 
             if (config.IsEnabled)
             {
               if (MainWindow.CurrentLogFile is { } currentFile)
               {
-                LogReaders.Add(new LogReader(new TriggerProcessor(TriggerStateManager.DefaultUser, TriggerStateManager.DefaultUser,
+                _logReaders.Add(new LogReader(new TriggerProcessor(TriggerStateManager.DefaultUser, TriggerStateManager.DefaultUser,
                   ConfigUtil.PlayerName, config.Voice, config.VoiceRate, AddTextEvent, AddTimerEvent), currentFile));
                 ((MainWindow)Application.Current?.MainWindow)?.ShowTriggersEnabled(true);
 
@@ -248,7 +248,7 @@ namespace EQLogParser
     {
       if (id != null)
       {
-        UIUtil.InvokeAsync(() =>
+        UiUtil.InvokeAsync(() =>
         {
           foreach (var windows in windowList)
           {
@@ -261,7 +261,7 @@ namespace EQLogParser
 
     private static void CloseOverlays(params Dictionary<string, OverlayWindowData>[] windowList)
     {
-      UIUtil.InvokeAsync(() =>
+      UiUtil.InvokeAsync(() =>
       {
         foreach (var windows in windowList)
         {
@@ -278,9 +278,9 @@ namespace EQLogParser
     private List<TriggerProcessor> GetProcessors()
     {
       var list = new List<TriggerProcessor>();
-      lock (LogReaders)
+      lock (_logReaders)
       {
-        foreach (var reader in LogReaders)
+        foreach (var reader in _logReaders)
         {
           if (reader.GetProcessor() is TriggerProcessor processor)
           {
@@ -288,9 +288,9 @@ namespace EQLogParser
           }
         }
 
-        if (TestProcessor != null)
+        if (_testProcessor != null)
         {
-          list.Add(TestProcessor);
+          list.Add(_testProcessor);
         }
       }
       return list;
@@ -298,12 +298,12 @@ namespace EQLogParser
 
     private void TimerTick(object sender, EventArgs e)
     {
-      TimerIncrement++;
-      WindowTick(TimerWindows, _timerOverlayTimer, TimerIncrement);
+      _timerIncrement++;
+      WindowTick(_timerWindows, _timerOverlayTimer, _timerIncrement);
 
-      if (TimerIncrement == 10)
+      if (_timerIncrement == 10)
       {
-        TimerIncrement = 0;
+        _timerIncrement = 0;
       }
     }
 
@@ -375,13 +375,13 @@ namespace EQLogParser
     private void AddTextEvent(string text, Trigger trigger)
     {
       var beginTicks = DateTime.Now.Ticks;
-      UIUtil.InvokeAsync(() =>
+      UiUtil.InvokeAsync(() =>
       {
         var textOverlayFound = false;
 
         foreach (var overlayId in trigger.SelectedOverlays)
         {
-          if (!TextWindows.TryGetValue(overlayId, out var windowData))
+          if (!_textWindows.TryGetValue(overlayId, out var windowData))
           {
             if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { OverlayData.IsTextOverlay: true } node)
             {
@@ -399,7 +399,7 @@ namespace EQLogParser
 
         if (!textOverlayFound && TriggerStateManager.Instance.GetDefaultTextOverlay() is { } node2)
         {
-          if (!TextWindows.TryGetValue(node2.Id, out var windowData))
+          if (!_textWindows.TryGetValue(node2.Id, out var windowData))
           {
             windowData = GetWindowData(node2);
           }
@@ -419,7 +419,7 @@ namespace EQLogParser
       OverlayWindowData GetWindowData(TriggerNode node)
       {
         var windowData = new OverlayWindowData { TheWindow = new TextOverlayWindow(node) };
-        TextWindows[node.Id] = windowData;
+        _textWindows[node.Id] = windowData;
         windowData.TheWindow.Show();
         return windowData;
       }
@@ -427,12 +427,12 @@ namespace EQLogParser
 
     private void AddTimerEvent(Trigger trigger, List<TimerData> data)
     {
-      UIUtil.InvokeAsync(() =>
+      UiUtil.InvokeAsync(() =>
       {
         var timerOverlayFound = false;
         trigger.SelectedOverlays?.ForEach(overlayId =>
         {
-          if (!TimerWindows.TryGetValue(overlayId, out var windowData))
+          if (!_timerWindows.TryGetValue(overlayId, out var windowData))
           {
             if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { OverlayData.IsTimerOverlay: true } node)
             {
@@ -449,7 +449,7 @@ namespace EQLogParser
 
         if (!timerOverlayFound && TriggerStateManager.Instance.GetDefaultTimerOverlay() is { } node2)
         {
-          if (!TimerWindows.TryGetValue(node2.Id, out _))
+          if (!_timerWindows.TryGetValue(node2.Id, out _))
           {
             GetWindowData(node2, data);
           }
@@ -467,7 +467,7 @@ namespace EQLogParser
       OverlayWindowData GetWindowData(TriggerNode node, List<TimerData> timerData)
       {
         var windowData = new OverlayWindowData { TheWindow = new TimerOverlayWindow(node) };
-        TimerWindows[node.Id] = windowData;
+        _timerWindows[node.Id] = windowData;
         windowData.TheWindow.Show();
         ((TimerOverlayWindow)windowData.TheWindow).Tick(timerData);
         return windowData;

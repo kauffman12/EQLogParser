@@ -14,7 +14,7 @@ namespace EQLogParser
   public class SummaryTable : UserControl
   {
     internal const string DefaultTableLabel = "No NPCs Selected";
-    internal const string NodataTableLabel = Labels.NO_DATA;
+    internal const string NodataTableLabel = Labels.NoData;
     internal readonly List<PlayerStats> NoResultsList = new();
 
     internal dynamic TheDataGrid;
@@ -99,9 +99,11 @@ namespace EQLogParser
     {
       foreach (var item in menu.Items)
       {
-        var menuItem = item as MenuItem;
-        menuItem.IsEnabled = (menuItem.Header as string) == "Selected" ? gridBase.SelectedItems.Count > 0 : uniqueClasses != null &&
-          uniqueClasses.ContainsKey(menuItem.Header as string);
+        if (item is MenuItem { Header: string headerValue } menuItem)
+        {
+          menuItem.IsEnabled = headerValue == "Selected" ? gridBase.SelectedItems.Count > 0 : uniqueClasses != null &&
+            uniqueClasses.ContainsKey(headerValue);
+        }
       }
     }
 
@@ -113,7 +115,7 @@ namespace EQLogParser
       {
         foreach (var column in treeGrid.Columns)
         {
-          var binding = (column.ValueBinding as Binding).Path.Path;
+          var binding = ((Binding)column.ValueBinding).Path.Path;
           var title = column.HeaderText;
           headers.Add(new[] { binding, title });
         }
@@ -122,7 +124,7 @@ namespace EQLogParser
       {
         foreach (var column in dataGrid.Columns)
         {
-          var binding = (column.ValueBinding as Binding).Path.Path;
+          var binding = ((Binding)column.ValueBinding).Path.Path;
           var title = column.HeaderText;
           headers.Add(new[] { binding, title });
         }
@@ -183,9 +185,8 @@ namespace EQLogParser
 
     internal void ShowSpellCasts(List<PlayerStats> selected)
     {
-      if (selected?.Count > 0)
+      if (selected?.Count > 0 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var spellTable, typeof(SpellCastTable),
           "spellCastsWindow", "Spell Cast Timeline"))
         {
@@ -196,9 +197,8 @@ namespace EQLogParser
 
     internal void ShowSpellCounts(List<PlayerStats> selected)
     {
-      if (selected?.Count > 0)
+      if (selected?.Count > 0 && Application.Current.MainWindow is MainWindow main)
       {
-        var main = Application.Current.MainWindow as MainWindow;
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var spellTable, typeof(SpellCountTable),
           "spellCountsWindow", "Spell Counts"))
         {
@@ -210,11 +210,6 @@ namespace EQLogParser
     private void EventsThemeChanged(string _)
     {
       DataGridUtil.RefreshTableColumns(TheDataGrid);
-    }
-
-    protected void SummaryCleanup()
-    {
-      MainActions.EventsThemeChanged -= EventsThemeChanged;
     }
   }
 }

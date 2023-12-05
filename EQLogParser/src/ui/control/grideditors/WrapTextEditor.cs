@@ -10,14 +10,14 @@ namespace EQLogParser
 {
   internal class WrapTextEditor : TextBoxEditor
   {
-    private TextBox TheTextBox;
+    private TextBox _theTextBox;
 
     public override object Create(PropertyInfo propertyInfo)
     {
       var textBox = base.Create(propertyInfo) as TextBox;
       textBox.TextWrapping = TextWrapping.Wrap;
       textBox.Padding = new Thickness(0, 2, 0, 2);
-      TheTextBox = textBox;
+      _theTextBox = textBox;
       return textBox;
     }
 
@@ -26,7 +26,7 @@ namespace EQLogParser
       var textBox = base.Create(descriptor) as TextBox;
       textBox.TextWrapping = TextWrapping.Wrap;
       textBox.Padding = new Thickness(2);
-      TheTextBox = textBox;
+      _theTextBox = textBox;
       return textBox;
     }
 
@@ -37,10 +37,10 @@ namespace EQLogParser
 
     public override void Detach(PropertyViewItem property)
     {
-      if (TheTextBox != null)
+      if (_theTextBox != null)
       {
-        BindingOperations.ClearAllBindings(TheTextBox);
-        TheTextBox = null;
+        BindingOperations.ClearAllBindings(_theTextBox);
+        _theTextBox = null;
       }
     }
   }

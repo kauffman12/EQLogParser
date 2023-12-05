@@ -3,52 +3,52 @@ namespace EQLogParser
 {
   class DamageValidator
   {
-    private readonly bool AssassinateEnabled;
-    private readonly bool BaneEnabled;
-    private readonly bool DSEnabled;
-    private readonly bool FinishingBlowEnabled;
-    private readonly bool HeadshotEnabled;
-    private readonly bool SlayUndeadEnabled;
+    private readonly bool _assassinateEnabled;
+    private readonly bool _baneEnabled;
+    private readonly bool _dsEnabled;
+    private readonly bool _finishingBlowEnabled;
+    private readonly bool _headshotEnabled;
+    private readonly bool _slayUndeadEnabled;
 
     public DamageValidator()
     {
       // save this up front so we work with a constant state for their values
-      AssassinateEnabled = MainWindow.IsAssassinateDamageEnabled;
-      BaneEnabled = MainWindow.IsBaneDamageEnabled;
-      DSEnabled = MainWindow.IsDamageShieldDamageEnabled;
-      FinishingBlowEnabled = MainWindow.IsFinishingBlowDamageEnabled;
-      HeadshotEnabled = MainWindow.IsHeadshotDamageEnabled;
-      SlayUndeadEnabled = MainWindow.IsSlayUndeadDamageEnabled;
+      _assassinateEnabled = MainWindow.IsAssassinateDamageEnabled;
+      _baneEnabled = MainWindow.IsBaneDamageEnabled;
+      _dsEnabled = MainWindow.IsDamageShieldDamageEnabled;
+      _finishingBlowEnabled = MainWindow.IsFinishingBlowDamageEnabled;
+      _headshotEnabled = MainWindow.IsHeadshotDamageEnabled;
+      _slayUndeadEnabled = MainWindow.IsSlayUndeadDamageEnabled;
     }
 
     public bool IsValid(DamageRecord record)
     {
-      if (LineModifiersParser.IsAssassinate(record.ModifiersMask) && !AssassinateEnabled)
+      if (LineModifiersParser.IsAssassinate(record.ModifiersMask) && !_assassinateEnabled)
       {
         return false;
       }
 
-      if (record.Type == Labels.BANE && !BaneEnabled)
+      if (record.Type == Labels.Bane && !_baneEnabled)
       {
         return false;
       }
 
-      if (record.Type == Labels.DS && !DSEnabled)
+      if (record.Type == Labels.Ds && !_dsEnabled)
       {
         return false;
       }
 
-      if (LineModifiersParser.IsFinishingBlow(record.ModifiersMask) && !FinishingBlowEnabled)
+      if (LineModifiersParser.IsFinishingBlow(record.ModifiersMask) && !_finishingBlowEnabled)
       {
         return false;
       }
 
-      if (LineModifiersParser.IsHeadshot(record.ModifiersMask) && !HeadshotEnabled)
+      if (LineModifiersParser.IsHeadshot(record.ModifiersMask) && !_headshotEnabled)
       {
         return false;
       }
 
-      if (LineModifiersParser.IsSlayUndead(record.ModifiersMask) && !SlayUndeadEnabled)
+      if (LineModifiersParser.IsSlayUndead(record.ModifiersMask) && !_slayUndeadEnabled)
       {
         return false;
       }
@@ -58,7 +58,7 @@ namespace EQLogParser
 
     public bool IsDamageLimited()
     {
-      return !AssassinateEnabled || !BaneEnabled || !FinishingBlowEnabled || !HeadshotEnabled || !SlayUndeadEnabled;
+      return !_assassinateEnabled || !_baneEnabled || !_finishingBlowEnabled || !_headshotEnabled || !_slayUndeadEnabled;
     }
   }
 }

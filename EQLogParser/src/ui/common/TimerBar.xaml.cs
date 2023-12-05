@@ -17,9 +17,9 @@ namespace EQLogParser
       Reset
     };
 
-    private string OverlayId;
-    private State TheState = State.None;
-    private TimerData LastTimerData;
+    private string _overlayId;
+    private State _theState = State.None;
+    private TimerData _lastTimerData;
 
     public TimerBar()
     {
@@ -28,18 +28,18 @@ namespace EQLogParser
 
     internal void Init(string overlayId)
     {
-      OverlayId = overlayId;
-      progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarActiveColor-" + OverlayId);
-      progress.SetResourceReference(ProgressBarBase.TrackColorProperty, "TimerBarTrackColor-" + OverlayId);
-      progress.SetResourceReference(HeightProperty, "TimerBarHeight-" + OverlayId);
-      time.SetResourceReference(TextBlock.FontSizeProperty, "TimerBarFontSize-" + OverlayId);
-      title.SetResourceReference(TextBlock.FontSizeProperty, "TimerBarFontSize-" + OverlayId);
+      _overlayId = overlayId;
+      progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarActiveColor-" + _overlayId);
+      progress.SetResourceReference(ProgressBarBase.TrackColorProperty, "TimerBarTrackColor-" + _overlayId);
+      progress.SetResourceReference(HeightProperty, "TimerBarHeight-" + _overlayId);
+      time.SetResourceReference(TextBlock.FontSizeProperty, "TimerBarFontSize-" + _overlayId);
+      title.SetResourceReference(TextBlock.FontSizeProperty, "TimerBarFontSize-" + _overlayId);
     }
 
     internal void Update(string displayName, string timeText, double remaining, TimerData timerData)
     {
       // only reset colors if the timer has been assigned to something else
-      if (LastTimerData != timerData)
+      if (_lastTimerData != timerData)
       {
         if (timerData?.FontColor != null)
         {
@@ -49,11 +49,11 @@ namespace EQLogParser
         }
         else
         {
-          time.SetResourceReference(TextBlock.ForegroundProperty, "TimerBarFontColor-" + OverlayId);
-          title.SetResourceReference(TextBlock.ForegroundProperty, "TimerBarFontColor-" + OverlayId);
+          time.SetResourceReference(TextBlock.ForegroundProperty, "TimerBarFontColor-" + _overlayId);
+          title.SetResourceReference(TextBlock.ForegroundProperty, "TimerBarFontColor-" + _overlayId);
         }
 
-        LastTimerData = timerData;
+        _lastTimerData = timerData;
       }
 
       title.Text = displayName;
@@ -69,37 +69,37 @@ namespace EQLogParser
         if (TriggerUtil.GetBrush(timerData.ActiveColor) is var color && progress.ProgressColor != color)
         {
           progress.ProgressColor = color;
-          TheState = State.None;
+          _theState = State.None;
         }
       }
-      else if (TheState != State.Active)
+      else if (_theState != State.Active)
       {
-        progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarActiveColor-" + OverlayId);
-        TheState = State.Active;
+        progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarActiveColor-" + _overlayId);
+        _theState = State.Active;
       }
     }
 
     internal void SetReset()
     {
-      if (TheState != State.Reset)
+      if (_theState != State.Reset)
       {
-        progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarResetColor-" + OverlayId);
-        TheState = State.Reset;
+        progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarResetColor-" + _overlayId);
+        _theState = State.Reset;
       }
     }
 
     internal void SetIdle()
     {
-      if (TheState != State.Idle)
+      if (_theState != State.Idle)
       {
-        progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarIdleColor-" + OverlayId);
-        TheState = State.Idle;
+        progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarIdleColor-" + _overlayId);
+        _theState = State.Idle;
       }
     }
 
     private void UnloadWindow(object sender, RoutedEventArgs e)
     {
-      LastTimerData = null;
+      _lastTimerData = null;
     }
   }
 }

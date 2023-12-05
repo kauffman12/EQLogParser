@@ -14,35 +14,35 @@ namespace EQLogParser
   /// </summary>
   public partial class TimerOverlayWindow
   {
-    private TriggerNode Node;
-    private readonly bool Preview;
-    private long SavedHeight;
-    private long SavedWidth;
-    private long SavedTop = long.MaxValue;
-    private long SavedLeft = long.MaxValue;
-    private readonly Dictionary<string, TimerData> CooldownTimerData = new();
-    private readonly Dictionary<string, ShortDurationData> ShortDurationBars = new();
-    private Dictionary<string, Window> PreviewWindows;
+    private TriggerNode _node;
+    private readonly bool _preview;
+    private long _savedHeight;
+    private long _savedWidth;
+    private long _savedTop = long.MaxValue;
+    private long _savedLeft = long.MaxValue;
+    private readonly Dictionary<string, TimerData> _cooldownTimerData = new();
+    private readonly Dictionary<string, ShortDurationData> _shortDurationBars = new();
+    private Dictionary<string, Window> _previewWindows;
 
     internal TimerOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
     {
       InitializeComponent();
-      Node = node;
-      Preview = previews != null;
-      PreviewWindows = previews;
-      title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + Node.Id);
+      _node = node;
+      _preview = previews != null;
+      _previewWindows = previews;
+      title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + _node.Id);
 
-      Height = Node.OverlayData.Height;
-      Width = Node.OverlayData.Width;
-      Top = Node.OverlayData.Top;
-      Left = Node.OverlayData.Left;
+      Height = _node.OverlayData.Height;
+      Width = _node.OverlayData.Width;
+      Top = _node.OverlayData.Top;
+      Left = _node.OverlayData.Left;
 
-      if (Preview)
+      if (_preview)
       {
         MainActions.SetTheme(this, MainWindow.CurrentTheme);
         ResizeMode = ResizeMode.CanResizeWithGrip;
         SetResourceReference(BorderBrushProperty, "PreviewBackgroundBrush");
-        SetResourceReference(BackgroundProperty, "OverlayBrushColor-" + Node.Id);
+        SetResourceReference(BackgroundProperty, "OverlayBrushColor-" + _node.Id);
         title.Visibility = Visibility.Visible;
         buttonsPanel.Visibility = Visibility.Visible;
         CreatePreviewTimer("Example Trigger Name", "03:00", 90.0);
@@ -52,7 +52,7 @@ namespace EQLogParser
       }
       else
       {
-        border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + Node.Id);
+        border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + _node.Id);
       }
     }
 
@@ -61,7 +61,7 @@ namespace EQLogParser
     internal void CreatePreviewTimer(string displayName, string timeText, double progress)
     {
       var timerBar = new TimerBar();
-      timerBar.Init(Node.Id);
+      timerBar.Init(_node.Id);
       timerBar.Update(displayName, timeText, progress, new TimerData());
       content.Children.Add(timerBar);
     }
@@ -73,7 +73,7 @@ namespace EQLogParser
         var currentTicks = DateTime.Now.Ticks;
         foreach (var timerData in timerList.Where(timerData => timerData.TimerType == 2 && ShouldProcess(timerData)))
         {
-          if (ShortDurationBars.TryGetValue(timerData.Key, out var value))
+          if (_shortDurationBars.TryGetValue(timerData.Key, out var value))
           {
             var remainingTicks = timerData.EndTicks - currentTicks;
             UpdateTimerBar(remainingTicks, value.TheTimerBar, timerData, value.MaxDuration, true);
@@ -92,45 +92,45 @@ namespace EQLogParser
       var currentTicks = DateTime.Now.Ticks;
       var maxDurationTicks = double.NaN;
 
-      if (!Node.OverlayData.Width.Equals((long)Width))
+      if (!_node.OverlayData.Width.Equals((long)Width))
       {
-        Width = Node.OverlayData.Width;
+        Width = _node.OverlayData.Width;
       }
-      else if (!Node.OverlayData.Height.Equals((long)Height))
+      else if (!_node.OverlayData.Height.Equals((long)Height))
       {
-        Height = Node.OverlayData.Height;
+        Height = _node.OverlayData.Height;
       }
-      else if (!Node.OverlayData.Top.Equals((long)Top))
+      else if (!_node.OverlayData.Top.Equals((long)Top))
       {
-        Top = Node.OverlayData.Top;
+        Top = _node.OverlayData.Top;
       }
-      else if (!Node.OverlayData.Left.Equals((long)Left))
+      else if (!_node.OverlayData.Left.Equals((long)Left))
       {
-        Left = Node.OverlayData.Left;
+        Left = _node.OverlayData.Left;
       }
 
       TimerData[] orderedList = null;
       if (timerList.Count > 0)
       {
-        if (Node.OverlayData.SortBy == 0)
+        if (_node.OverlayData.SortBy == 0)
         {
           // create order
           orderedList = timerList.Where(ShouldProcess).ToArray();
         }
-        else if (Node.OverlayData.SortBy == 1)
+        else if (_node.OverlayData.SortBy == 1)
         {
           // remaining order
           orderedList = timerList.Where(ShouldProcess)
             .OrderBy(timerData => timerData.EndTicks - currentTicks).ToArray();
         }
-        else if (Node.OverlayData.SortBy == 2)
+        else if (_node.OverlayData.SortBy == 2)
         {
           // alpha
           orderedList = timerList.Where(ShouldProcess)
             .OrderBy(timerData => timerData.DisplayName).ToArray();
         }
 
-        if (Node.OverlayData.UseStandardTime && orderedList.Length > 0)
+        if (_node.OverlayData.UseStandardTime && orderedList.Length > 0)
         {
           maxDurationTicks = orderedList.Select(timerData => timerData.DurationTicks).Max();
         }
@@ -147,10 +147,10 @@ namespace EQLogParser
           var remainingTicks = timerData.EndTicks - currentTicks;
           remainingTicks = Math.Max(remainingTicks, 0);
 
-          if (Node.OverlayData.TimerMode == 1 && timerData.ResetTicks > 0)
+          if (_node.OverlayData.TimerMode == 1 && timerData.ResetTicks > 0)
           {
             handledKeys[timerData.Key] = true;
-            CooldownTimerData[timerData.Key] = timerData;
+            _cooldownTimerData[timerData.Key] = timerData;
           }
 
           TimerBar timerBar;
@@ -161,7 +161,7 @@ namespace EQLogParser
           else
           {
             timerBar = new TimerBar();
-            timerBar.Init(Node.Id);
+            timerBar.Init(_node.Id);
             content.Children.Add(timerBar);
             childCount++;
           }
@@ -174,9 +174,9 @@ namespace EQLogParser
       var oldestIdleTicks = double.NaN;
       var idleList = new List<dynamic>();
       var resetList = new List<dynamic>();
-      if (Node.OverlayData.TimerMode == 1)
+      if (_node.OverlayData.TimerMode == 1)
       {
-        foreach (var timerData in CooldownTimerData.Values)
+        foreach (var timerData in _cooldownTimerData.Values)
         {
           if (!handledKeys.ContainsKey(timerData.Key))
           {
@@ -208,7 +208,7 @@ namespace EQLogParser
           if (count >= childCount)
           {
             timerBar = new TimerBar();
-            timerBar.Init(Node.Id);
+            timerBar.Init(_node.Id);
             content.Children.Add(timerBar);
             childCount++;
           }
@@ -227,7 +227,7 @@ namespace EQLogParser
           if (count >= childCount)
           {
             timerBar = new TimerBar();
-            timerBar.Init(Node.Id);
+            timerBar.Init(_node.Id);
             content.Children.Add(timerBar);
             childCount++;
           }
@@ -242,13 +242,13 @@ namespace EQLogParser
       }
 
       var complete = false;
-      if (Node.OverlayData.TimerMode == 0)
+      if (_node.OverlayData.TimerMode == 0)
       {
         complete = count == 0;
       }
-      else if (Node.OverlayData.IdleTimeoutSeconds > 0)
+      else if (_node.OverlayData.IdleTimeoutSeconds > 0)
       {
-        complete = (count == idleList.Count) && (oldestIdleTicks > (Node.OverlayData.IdleTimeoutSeconds * TimeSpan.TicksPerSecond));
+        complete = (count == idleList.Count) && (oldestIdleTicks > (_node.OverlayData.IdleTimeoutSeconds * TimeSpan.TicksPerSecond));
       }
 
       while (count < childCount)
@@ -273,8 +273,8 @@ namespace EQLogParser
       var timeText = timerData.TimerType switch
       {
         2 => DateUtil.FormatSimpleMillis((long)remainingTicks),
-        3 => DateUtil.FormatSimpleMS((long)(endTicks - remainingTicks)),
-        _ => DateUtil.FormatSimpleMS((long)remainingTicks)
+        3 => DateUtil.FormatSimpleMs((long)(endTicks - remainingTicks)),
+        _ => DateUtil.FormatSimpleMs((long)remainingTicks)
       };
 
       timerBar.SetActive(timerData);
@@ -284,10 +284,10 @@ namespace EQLogParser
       {
         if (timerData.TimerType == 2)
         {
-          if (!ShortDurationBars.TryGetValue(timerData.Key, out var value))
+          if (!_shortDurationBars.TryGetValue(timerData.Key, out var value))
           {
             value = new ShortDurationData();
-            ShortDurationBars[timerData.Key] = value;
+            _shortDurationBars[timerData.Key] = value;
           }
 
           value.TheTimerBar = timerBar;
@@ -301,7 +301,7 @@ namespace EQLogParser
 
         if (timerData.TimerType == 2)
         {
-          ShortDurationBars.Remove(timerData.Key);
+          _shortDurationBars.Remove(timerData.Key);
         }
       }
       else if (timerBar.Visibility != Visibility.Visible)
@@ -315,13 +315,13 @@ namespace EQLogParser
       if (remainingTicks > 0)
       {
         var progress = 100.0 - (remainingTicks / timerData.ResetDurationTicks * 100.0);
-        var timeText = DateUtil.FormatSimpleMS((long)remainingTicks);
+        var timeText = DateUtil.FormatSimpleMs((long)remainingTicks);
         timerBar.SetReset();
         timerBar.Update(GetDisplayName(timerData), timeText, progress, timerData);
       }
       else
       {
-        var timeText = DateUtil.FormatSimpleMS(timerData.DurationTicks);
+        var timeText = DateUtil.FormatSimpleMs(timerData.DurationTicks);
         timerBar.SetIdle();
         timerBar.Update(GetDisplayName(timerData), timeText, 100.0, timerData);
       }
@@ -344,23 +344,23 @@ namespace EQLogParser
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
-      Node.OverlayData.Height = SavedHeight = (long)Height;
-      Node.OverlayData.Width = SavedWidth = (long)Width;
-      Node.OverlayData.Top = SavedTop = (long)Top;
-      Node.OverlayData.Left = SavedLeft = (long)Left;
+      _node.OverlayData.Height = _savedHeight = (long)Height;
+      _node.OverlayData.Width = _savedWidth = (long)Width;
+      _node.OverlayData.Top = _savedTop = (long)Top;
+      _node.OverlayData.Left = _savedLeft = (long)Left;
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
-      TriggerStateManager.Instance.Update(Node);
-      TriggerManager.Instance.CloseOverlay(Node.Id);
+      TriggerStateManager.Instance.Update(_node);
+      TriggerManager.Instance.CloseOverlay(_node.Id);
     }
 
     private void CancelClick(object sender, RoutedEventArgs e)
     {
-      Height = SavedHeight;
-      Width = SavedWidth;
-      Top = SavedTop;
-      Left = SavedLeft;
+      Height = _savedHeight;
+      Width = _savedWidth;
+      Top = _savedTop;
+      Left = _savedLeft;
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
@@ -368,17 +368,17 @@ namespace EQLogParser
 
     private void TriggerUpdateEvent(TriggerNode node)
     {
-      if (Node != null && Node.Id == node.Id)
+      if (_node != null && _node.Id == node.Id)
       {
-        if (Node != node)
+        if (_node != node)
         {
-          Node = node;
+          _node = node;
         }
 
-        Height = Node.OverlayData.Height;
-        Width = Node.OverlayData.Width;
-        Top = Node.OverlayData.Top;
-        Left = Node.OverlayData.Left;
+        Height = _node.OverlayData.Height;
+        Width = _node.OverlayData.Width;
+        Top = _node.OverlayData.Top;
+        Left = _node.OverlayData.Left;
 
         saveButton.IsEnabled = false;
         cancelButton.IsEnabled = false;
@@ -405,25 +405,25 @@ namespace EQLogParser
 
     private bool ShouldProcess(TimerData timerData)
     {
-      if (timerData.SelectedOverlays.Count == 0 && Node?.OverlayData.IsDefault == true)
+      if (timerData.SelectedOverlays.Count == 0 && _node?.OverlayData.IsDefault == true)
       {
         return true;
       }
 
-      return timerData.SelectedOverlays.Contains(Node?.Id);
+      return timerData.SelectedOverlays.Contains(_node?.Id);
     }
 
     private void WindowLoaded(object sender, RoutedEventArgs e)
     {
-      SavedHeight = (long)Height;
-      SavedWidth = (long)Width;
-      SavedTop = (long)Top;
-      SavedLeft = (long)Left;
+      _savedHeight = (long)Height;
+      _savedWidth = (long)Width;
+      _savedTop = (long)Top;
+      _savedLeft = (long)Left;
     }
 
     private void WindowSizeChanged(object sender, SizeChangedEventArgs e)
     {
-      if (SavedTop != long.MaxValue)
+      if (_savedTop != long.MaxValue)
       {
         if (!saveButton.IsEnabled)
         {
@@ -443,25 +443,25 @@ namespace EQLogParser
     {
       TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
       content.Children.Clear();
-      CooldownTimerData.Clear();
-      ShortDurationBars.Clear();
-      PreviewWindows?.Remove(Node.Id);
-      PreviewWindows = null;
+      _cooldownTimerData.Clear();
+      _shortDurationBars.Clear();
+      _previewWindows?.Remove(_node.Id);
+      _previewWindows = null;
     }
 
     protected override void OnSourceInitialized(EventArgs e)
     {
       base.OnSourceInitialized(e);
 
-      if (!Preview)
+      if (!_preview)
       {
         var source = (HwndSource)PresentationSource.FromVisual(this);
         if (source != null)
         {
           // set to layered and topmost by xaml
-          var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE);
-          exStyle |= (int)NativeMethods.ExtendedWindowStyles.WS_EX_TOOLWINDOW | (int)NativeMethods.ExtendedWindowStyles.WS_EX_TRANSPARENT;
-          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GWL_EXSTYLE, (IntPtr)exStyle);
+          var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
+          exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow | (int)NativeMethods.ExtendedWindowStyles.WsExTransparent;
+          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, (IntPtr)exStyle);
         }
       }
     }

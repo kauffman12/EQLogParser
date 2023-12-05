@@ -103,14 +103,14 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool DisposedValue; // To detect redundant calls
+    private bool _disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!DisposedValue)
+      if (!_disposedValue)
       {
         TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
-        DisposedValue = true;
+        _disposedValue = true;
         dataGrid?.Dispose();
       }
     }

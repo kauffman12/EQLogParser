@@ -13,7 +13,7 @@ namespace EQLogParser
     }
   }
 
-  internal static class UIUtil
+  internal static class UiUtil
   {
     internal static void InvokeNow(Action action, DispatcherPriority priority = DispatcherPriority.Normal)
     {
