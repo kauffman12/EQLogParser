@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.1.59" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.1.60" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -22,6 +22,9 @@
       <ComponentRef Id="ApplicationShortcut" />
       <ComponentRef Id="ApplicationShortcutDesktop" />
       <ComponentRef Id="Logs" />
+      <ComponentRef Id="CommonConfig" />
+      <ComponentRef Id="CommonLogs" />
+      <ComponentRef Id="EQLogManagerService" />
 		</Feature>
   
     <UI Id="WixUI_Advanced">
@@ -99,23 +102,41 @@
             <Directory Id="HTMLDATAFOLDER" Name="html" />
             <Directory Id="SOUNDSDATAFOLDER" Name="sounds" />
           </Directory>
-          <Directory Id="RTOLDER" Name="runtimes">
+          <Directory Id="RTFOLDER" Name="runtimes">
             <Directory Id="RTWINFOLDER" Name="win">
               <Directory Id="RTWINLIBFOLDER" Name="lib">
                 <Directory Id="RTWINLIBNETFOLDER" Name="net6.0" />
               </Directory>
             </Directory>
           </Directory>
+          <Directory Id="LMFOLDER" Name="logManager" />
         </Directory>
       </Directory>
       <Directory Id="AppDataFolder">
         <Directory Id="MyAppData" Name="EQLogParser">
           <Directory Id="LogsFolder" Name="logs">
             <Component Win64="yes" Id="Logs" Guid="D3E18092-1C19-4923-ACB0-2ED354653167">
+              <CreateFolder />
               <RegistryValue Root="HKCU" Key="Software\Kizant\EQLogParser" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
               <RemoveFile Id="RemoveLogs" Name="*.*" On="uninstall" />
               <RemoveFolder Id="RemoveLogsFolder" Directory="LogsFolder" On="uninstall"/>
               <RemoveFolder Id="RemoveMyAppData" Directory="MyAppData" On="uninstall"/>
+            </Component>
+          </Directory>
+        </Directory>
+      </Directory>
+      <Directory Id="CommonAppDataFolder">
+        <Directory Id="MyCommonAppData" Name="EQLogParser">
+          <Directory Id="CommonConfigFolder" Name="config">
+            <Component Win64="yes" Id="CommonConfig" Guid="E048DB31-1353-4711-9BF0-4C660F97009F">
+              <CreateFolder />
+            </Component>
+          </Directory>
+          <Directory Id="CommonLogsFolder" Name="logs">
+            <Component Win64="yes" Id="CommonLogs" Guid="168B2C6E-03CA-4C74-88FC-A9C2E0E57307">
+              <CreateFolder />
+              <RemoveFile Id="RemoveCommonLogs" Name="*.*" On="uninstall" />
+              <RemoveFolder Id="RemoveCommonLogsFolder" Directory="CommonLogsFolder" On="uninstall"/>
             </Component>
           </Directory>
         </Directory>
@@ -137,7 +158,21 @@
         <RegistryValue Root="HKCU" Key="Software\Kizant\EQLogParser" Name="installed" Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </DirectoryRef>
-	</Fragment>
+    <DirectoryRef Id="LMFOLDER">
+      <Component Id="EQLogManagerService" Guid="BEBEC32D-70B9-4E8C-A9C2-9E436A5ECD64">
+        <File Id="EQLogManagerEXE" Source="$(var.EQLogManager.TargetDir)EQLogManager.exe" KeyPath="yes"/>
+        <File Id="Log4NetDLL" Source="$(var.EQLogManager.TargetDir)log4net.dll"/>
+        <ServiceInstall Id="ServiceInstaller"
+                        Type="ownProcess"
+                        Name="EQLogManager"
+                        DisplayName="EQLogManager Service"
+                        Description="Archives log files for EQLogParser"
+                        Start="auto"
+                        ErrorControl="normal"/>
+        <ServiceControl Id="StartService" Start="install" Stop="both" Remove="uninstall" Name="EQLogManager" Wait="yes"/>
+      </Component>
+    </DirectoryRef>
+  </Fragment>
 	<Fragment>
 	  <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
 	    <Component Win64="yes" Id="EQLogParser.exe" Guid="77922c99-ebcd-4ef7-ae22-f2c31a9bb63f">
@@ -146,9 +181,6 @@
       <Component Win64="yes" Id="EQLogParser.dll" Guid="A694871D-64ED-472D-9843-E01086C6F72A">
         <File Id="EQLogParser.dll" Name="EQLogParser.dll" Source="$(var.EQLogParser.TargetDir)EQLogParser.dll" />
       </Component>      
-	    <Component Win64="yes" Id="EQLogParser.dll.config" Guid="275FC19D-266E-4ADE-A836-AD99E1C40DF7">
-	      <File Id="EQLogParser.dll.config" Name="EQLogParser.dll.config" Source="$(var.EQLogParser.TargetDir)EQLogParser.dll.config" />
-	    </Component>
       <Component Win64="yes" Id="EQLogParser.runtimeconfig.json" Guid="1E4DF525-40F2-43E2-9481-AA5D8E84E07A">
         <File Id="EQLogParser.runtimeconfig.json" Name="EQLogParser.runtimeconfig.json" Source="$(var.EQLogParser.TargetDir)EQLogParser.runtimeconfig.json" />
       </Component>
