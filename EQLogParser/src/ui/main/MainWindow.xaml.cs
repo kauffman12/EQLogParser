@@ -1,8 +1,6 @@
 ﻿using FontAwesome5;
 using log4net;
 using log4net.Appender;
-using log4net.Core;
-using log4net.Repository.Hierarchy;
 using Microsoft.Win32;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Shared;
@@ -19,7 +17,6 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -58,7 +55,7 @@ namespace EQLogParser
     private LogReader _eqLogReader;
     private readonly List<bool> _logWindows = new();
     private readonly List<string> _recentFiles = new();
-    private bool _resetWindowState = false;
+    private bool _resetWindowState;
 
     public MainWindow()
     {
@@ -82,10 +79,8 @@ namespace EQLogParser
         MainActions.LoadTheme(this, CurrentTheme);
 
         // DPI and sizing
-        var dpi = UiElementUtil.GetDpi();
-        var resolution = Screen.PrimaryScreen.Bounds;
-        var defaultHeight = resolution.Height * 0.75 / dpi;
-        var defaultWidth = resolution.Width * 0.85 / dpi;
+        var defaultHeight = SystemParameters.PrimaryScreenHeight * 0.75;
+        var defaultWidth = SystemParameters.PrimaryScreenWidth * 0.85;
         Height = ConfigUtil.GetSettingAsDouble("WindowHeight", defaultHeight);
         Width = ConfigUtil.GetSettingAsDouble("WindowWidth", defaultWidth);
 
@@ -228,12 +223,6 @@ namespace EQLogParser
           ComputeStats();
           _computeStatsTimer.Stop();
         };
-
-        if (ConfigUtil.IfSet("Debug"))
-        {
-          ((Hierarchy)LogManager.GetRepository()).Root.Level = Level.Debug;
-          ((Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
-        }
 
         SystemEvents.PowerModeChanged += SystemEventsPowerModeChanged;
 
@@ -532,8 +521,7 @@ namespace EQLogParser
 
     private void ViewErrorLogClick(object sender, RoutedEventArgs e)
     {
-      var appender = Log.Logger.Repository.GetAppenders().FirstOrDefault(test => "file".Equals(test.Name, StringComparison.OrdinalIgnoreCase));
-      if (appender != null)
+      if (Log.Logger.Repository.GetAppenders().FirstOrDefault() is { } appender)
       {
         MainActions.OpenFileWithDefault("\"" + ((FileAppender)appender).File + "\"");
       }

@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
     <Platforms>AnyCPU;x64</Platforms>
+    <LangVersion>9</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,7 +1,13 @@
 using AutoMapper;
 using log4net;
+using log4net.Appender;
+using log4net.Config;
+using log4net.Core;
+using log4net.Layout;
+using log4net.Repository.Hierarchy;
 using Syncfusion.Licensing;
 using System;
+using System.IO;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Interop;
@@ -25,6 +31,40 @@ namespace EQLogParser
     protected override void OnStartup(StartupEventArgs e)
     {
       base.OnStartup(e);
+
+      var appDataRoamingPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+      var logsFolderPath = Path.Combine(appDataRoamingPath, "EQLogParser", "logs");
+
+      // Create a new file appender and set its properties
+      var fileAppender = new RollingFileAppender
+      {
+        Name = "FileAppender",
+        File = Path.Combine(logsFolderPath, "EQLogParser.log"),
+        AppendToFile = true,
+        LockingModel = new FileAppender.MinimalLock(),
+        Layout = new PatternLayout("%date [%thread] %level %logger - %message%newline"),
+        MaxSizeRollBackups = 5,
+        MaximumFileSize = "5MB",
+        StaticLogFileName = true
+      };
+
+      // Activate the options on the file appender
+      fileAppender.ActivateOptions();
+
+      // Set the repository configuration
+      BasicConfigurator.Configure(LogManager.GetRepository(), fileAppender);
+
+      if (ConfigUtil.IfSet("Debug"))
+      {
+        ((Hierarchy)LogManager.GetRepository()).Root.Level = Level.Debug;
+      }
+      else
+      {
+        ((Hierarchy)LogManager.GetRepository()).Root.Level = Level.Info;
+      }
+
+      ((Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
+
       AppDomain.CurrentDomain.UnhandledException += DomainUnhandledException;
       AutoMap = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
       Log.Info($"Using DotNet {Environment.Version}");
