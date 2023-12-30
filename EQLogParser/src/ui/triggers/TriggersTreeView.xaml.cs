@@ -80,11 +80,13 @@ namespace EQLogParser
       RefreshTriggers();
     }
 
-    private void SetupDragNDrop(SfTreeView treeView)
+    private static void SetupDragNDrop(SfTreeView treeView)
     {
-      treeView.DragDropController = new TreeViewDragDropController();
-      treeView.DragDropController.CanAutoExpand = true;
-      treeView.DragDropController.AutoExpandDelay = new TimeSpan(0, 0, 1);
+      treeView.DragDropController = new TreeViewDragDropController
+      {
+        CanAutoExpand = true,
+        AutoExpandDelay = new TimeSpan(0, 0, 1)
+      };
     }
 
     private void CloseOverlaysClick(object sender, RoutedEventArgs e)
