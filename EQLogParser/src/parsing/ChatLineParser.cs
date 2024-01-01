@@ -264,6 +264,20 @@ namespace EQLogParser
           continue;
         }
 
+        if (span[i] == '`' && span.Length > i + 2 && span[i + 1] == 's' && span[i + 2] == ' ')
+        {
+          for (var j = i + 3; j < span.Length; j++)
+          {
+            if (span[j] == ' ')
+            {
+              i = j;
+              break;
+            }
+
+            i++;
+          }
+        }
+
         if (span[i] == ' ' || span[i] == ':')
         {
           receiver = dotIndex == -1 ? span[..i].ToString() : span[dotIndex..i].ToString();

@@ -24,7 +24,9 @@
       <ComponentRef Id="Logs" />
       <ComponentRef Id="CommonConfig" />
       <ComponentRef Id="CommonLogs" />
+      <!--
       <ComponentRef Id="EQLogManagerService" />
+      -->
 		</Feature>
   
     <UI Id="WixUI_Advanced">
@@ -158,6 +160,7 @@
         <RegistryValue Root="HKCU" Key="Software\Kizant\EQLogParser" Name="installed" Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </DirectoryRef>
+    <!--
     <DirectoryRef Id="LMFOLDER">
       <Component Id="EQLogManagerService" Guid="BEBEC32D-70B9-4E8C-A9C2-9E436A5ECD64">
         <File Id="EQLogManagerEXE" Source="$(var.EQLogManager.TargetDir)EQLogManager.exe" KeyPath="yes"/>
@@ -172,6 +175,7 @@
         <ServiceControl Id="StartService" Start="install" Stop="both" Remove="uninstall" Name="EQLogManager" Wait="yes"/>
       </Component>
     </DirectoryRef>
+    -->
   </Fragment>
 	<Fragment>
 	  <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">

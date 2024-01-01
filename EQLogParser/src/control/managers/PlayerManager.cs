@@ -462,8 +462,9 @@ namespace EQLogParser
       {
         lock (_petToPlayer)
         {
-          var filtered = _petToPlayer.Where(keypair => !_gameGeneratedPets.ContainsKey(keypair.Key) && IsPossiblePlayerName(keypair.Key) &&
-            keypair.Value != Labels.Unassigned);
+          // no generated or unassigned pets but allow for warders
+          var filtered = _petToPlayer.Where(kv => !_gameGeneratedPets.ContainsKey(kv.Key) && kv.Value != Labels.Unassigned &&
+            (IsPossiblePlayerName(kv.Key) || kv.Key.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase)));
           ConfigUtil.SavePetMapping(filtered);
         }
 
@@ -476,14 +477,14 @@ namespace EQLogParser
         {
           var list = new List<string>();
           var now = DateTime.Now;
-          foreach (var keypair in _verifiedPlayers)
+          foreach (var kv in _verifiedPlayers)
           {
-            if (!string.IsNullOrEmpty(keypair.Key) && IsPossiblePlayerName(keypair.Key))
+            if (!string.IsNullOrEmpty(kv.Key) && IsPossiblePlayerName(kv.Key))
             {
-              if (keypair.Value != 0 && (now - DateUtil.FromDouble(keypair.Value)).TotalDays < 300)
+              if (kv.Value != 0 && (now - DateUtil.FromDouble(kv.Value)).TotalDays < 300)
               {
-                var output = keypair.Key + "=" + Math.Round(keypair.Value);
-                if (_playerToClass.TryGetValue(keypair.Key, out var value) && value.CurrentMax == long.MaxValue &&
+                var output = kv.Key + "=" + Math.Round(kv.Value);
+                if (_playerToClass.TryGetValue(kv.Key, out var value) && value.CurrentMax == long.MaxValue &&
                   _classNames.TryGetValue(value.CurrentClass, out var className))
                 {
                   output += "," + className;
@@ -651,9 +652,9 @@ namespace EQLogParser
 
     internal static bool IsPossiblePlayerName(string part, int stop = -1) => FindPossiblePlayerName(part, out var _, 0, stop) > -1;
 
-    private static void AddMultiCase(string[] values, ConcurrentDictionary<string, byte> dict)
+    private static void AddMultiCase(IReadOnlyCollection<string> values, ConcurrentDictionary<string, byte> dict)
     {
-      if (values.Length > 0)
+      if (values.Count > 0)
       {
         foreach (var value in values)
         {

@@ -1,13 +1,15 @@
 ﻿using Syncfusion.UI.Xaml.ProgressBar;
+using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Animation;
 
 namespace EQLogParser
 {
   /// <summary>
   /// Interaction logic for TimerBar.xaml
   /// </summary>
-  public partial class TimerBar : UserControl
+  public partial class TimerBar
   {
     private enum State
     {
@@ -17,13 +19,37 @@ namespace EQLogParser
       Reset
     };
 
+    private readonly DoubleAnimation _animation;
+    private readonly Storyboard _storyboard;
     private string _overlayId;
     private State _theState = State.None;
     private TimerData _lastTimerData;
+    private bool _isAnimationRunning;
+    private string _lastDisplayName;
 
     public TimerBar()
     {
       InitializeComponent();
+
+      // setup animation for smoother update
+      _animation = new DoubleAnimation
+      {
+        // 500ms between ticks. see TriggerManager:WindowTick
+        // use something slightly less to avoid pausing
+        Duration = TimeSpan.FromMilliseconds(480),
+        EasingFunction = null
+      };
+
+      _storyboard = new Storyboard();
+      _storyboard.Children.Add(_animation);
+
+      _storyboard.Completed += (_, _) =>
+      {
+        _isAnimationRunning = false;
+      };
+
+      Storyboard.SetTarget(_animation, progress);
+      Storyboard.SetTargetProperty(_animation, new PropertyPath(ProgressBarBase.ProgressProperty));
     }
 
     internal void Init(string overlayId)
@@ -56,10 +82,38 @@ namespace EQLogParser
         _lastTimerData = timerData;
       }
 
+      // no need to animate short duration timers
+      if (timerData != null && timerData.TimerType != 2)
+      {
+        // 3 is an increasing timer.
+        var targetProgress = timerData.TimerType == 3 ? 100 - remaining : remaining;
+        progress.Progress = targetProgress;
+
+        // only animate if it's the same timer bar as previous
+        if ((_lastDisplayName == null || _lastDisplayName == displayName) && !_isAnimationRunning)
+        {
+          // animate during update cycle
+          _animation.From = progress.Progress;
+          _animation.To = targetProgress;
+
+          // start
+          _storyboard.Begin(this, true);
+          _isAnimationRunning = true;
+        }
+        else
+        {
+          _storyboard.Stop(this);
+        }
+      }
+      else
+      {
+        // 3 is an increasing timer.
+        progress.Progress = timerData?.TimerType == 3 ? 100 - remaining : remaining;
+      }
+
       title.Text = displayName;
       time.Text = timeText;
-      // 3 is an increasing timer. obviously.
-      progress.Progress = timerData?.TimerType == 3 ? 100 - remaining : remaining;
+      _lastDisplayName = displayName;
     }
 
     internal void SetActive(TimerData timerData)
