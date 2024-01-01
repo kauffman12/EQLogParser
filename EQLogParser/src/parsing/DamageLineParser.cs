@@ -911,6 +911,7 @@ namespace EQLogParser
             if (!verifiedPet && PlayerManager.Instance.IsVerifiedPlayer(owner))
             {
               PlayerManager.Instance.AddVerifiedPet(name);
+              PlayerManager.Instance.AddPetToPlayer(name, owner);
             }
           }
         }

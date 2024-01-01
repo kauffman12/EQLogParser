@@ -43,6 +43,7 @@ namespace EQLogParser
     private TriggerWrapper _previousSpoken;
     private LinkedList<TriggerWrapper> _activeTriggers;
     private List<LexiconItem> _lexicon;
+    private bool _isTesting;
     private bool _ready = true;
 
     internal TriggerProcessor(string id, string name, string playerName, string voice, int voiceRate,
@@ -63,6 +64,11 @@ namespace EQLogParser
       _soundPlayer = new SoundPlayer();
       _lexicon = TriggerStateManager.Instance.GetLexicon().ToList();
       TriggerStateManager.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
+    }
+
+    internal void SetTesting(bool testing)
+    {
+      _isTesting = testing;
     }
 
     private void LexiconUpdateEvent(List<LexiconItem> update)
@@ -147,6 +153,12 @@ namespace EQLogParser
 
     private void DoProcess(string line, double dateTime)
     {
+      // ignore anything older than 120 seconds in case a log file is replaced/reloaded but allow for bad lag
+      if (!_isTesting && DateUtil.ToDouble(DateTime.Now) - dateTime > 120)
+      {
+        return;
+      }
+
       var lineData = new LineData { Action = line[27..], BeginTime = dateTime };
       LinkedListNode<TriggerWrapper> node;
 

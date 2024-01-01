@@ -93,6 +93,7 @@ namespace EQLogParser
       var name = TriggerStateManager.DefaultUser;
       _testProcessor = new TriggerProcessor(name, $"Trigger Tester ({name})", ConfigUtil.PlayerName, config.Voice,
         config.VoiceRate, AddTextEvent, AddTimerEvent);
+      _testProcessor.SetTesting(true);
       _testProcessor.LinkTo(collection);
       UiUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
     }
@@ -105,6 +106,7 @@ namespace EQLogParser
       FileUtil.ParseFileName(character.FilePath, ref playerName, ref server);
       _testProcessor = new TriggerProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, character.Voice,
         character.VoiceRate, AddTextEvent, AddTimerEvent);
+      _testProcessor.SetTesting(true);
       _testProcessor.LinkTo(collection);
       UiUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
     }
