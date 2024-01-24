@@ -57,6 +57,7 @@ namespace EQLogParser
 
     public static ChatType CheckOtherCriteria(ReadOnlySpan<char> span)
     {
+      var origSpan = span;
       if (MatchAnyPlayer(span, out var sender) is var end && end == -1)
       {
         return null;
@@ -90,13 +91,6 @@ namespace EQLogParser
         {
           // Test says out of character, 'hello'
           return new ChatType(ChatChannels.Ooc, sender, 27 + end + " says out of character, ".Length + start3);
-        }
-
-        // EMU support
-        if (span.StartsWith(" 'My leader is"))
-        {
-          // Test says 'My leader is Test'
-          return new ChatType(ChatChannels.Say, sender, 27 + end + " says '".Length);
         }
       }
       else if (span.StartsWith(" tells "))
@@ -149,6 +143,26 @@ namespace EQLogParser
       {
         // Test shouts, 'hello'
         return new ChatType(ChatChannels.Shout, sender, 27 + end + " shouts, ".Length + start11);
+      }
+
+      // check for non standard pets saying pet leader
+      for (var i = origSpan.Length - 1; i >= 0; i--)
+      {
+        if (origSpan[i] == ' ')
+        {
+          // [Wed Jan 17 23:35:13 2024] Useless says, 'My leader is Incogitable.'
+          // EMU Support Test says 'My leader is Test'
+          var start = origSpan[..i];
+          if (start.EndsWith(" 'My leader is") && start.Length > " 'My leader is".Length + 1)
+          {
+            start = start[..^(" 'My leader is".Length + 1)];
+            if (start.EndsWith(" says") && start.LastIndexOf(' ') is var last and > -1)
+            {
+              sender = start[..last].ToString();
+              return new ChatType(ChatChannels.Say, sender, 27 + start.Length + 3);
+            }
+          }
+        }
       }
 
       return null;
@@ -262,20 +276,6 @@ namespace EQLogParser
 
           dotIndex = i + 1;
           continue;
-        }
-
-        if (span[i] == '`' && span.Length > i + 2 && span[i + 1] == 's' && span[i + 2] == ' ')
-        {
-          for (var j = i + 3; j < span.Length; j++)
-          {
-            if (span[j] == ' ')
-            {
-              i = j;
-              break;
-            }
-
-            i++;
-          }
         }
 
         if (span[i] == ' ' || span[i] == ':')

@@ -30,6 +30,7 @@ namespace EQLogParser
     private const string StatesCol = "States";
     private const string TreeCol = "Tree";
     private const string LexiconCol = "Lexicon";
+    private const string VersionCol = "Version";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<TriggerStateManager> Lazy = new(() => new TriggerStateManager());
     internal static TriggerStateManager Instance => Lazy.Value; // instance
@@ -79,6 +80,56 @@ namespace EQLogParser
 
         var states = _db.GetCollection<TriggerState>(StatesCol);
         states.EnsureIndex(x => x.Id);
+
+        // add version if not defined
+        var versions = _db.GetCollection<Version>(VersionCol);
+        if (versions.FindAll().FirstOrDefault() == null)
+        {
+          versions.Insert(new Version(1, 0, 0));
+
+          // add default overlays if none exist
+          if (tree.Find(n => n.OverlayData != null && n.Parent != null).FirstOrDefault() == null)
+          {
+            if (tree.FindOne(n => n.Parent == null && n.Name == Overlays) is { } parentNode)
+            {
+              var position = TriggerUtil.CalculateDefaultTextOverlayPosition();
+
+              var textNode = new TriggerNode
+              {
+                Name = "Default Text Overlay",
+                Id = Guid.NewGuid().ToString(),
+                Parent = parentNode.Id,
+                OverlayData = new Overlay
+                {
+                  IsDefault = true,
+                  IsTextOverlay = true,
+                  Left = (long)position.X,
+                  Top = (long)position.Y,
+                  Height = 150,
+                  Width = 450,
+                  FontSize = "16pt",
+                  FontColor = "#FFE9C405"
+                }
+              };
+
+              tree.Insert(textNode);
+
+              var timerNode = new TriggerNode
+              {
+                Name = "Default Timer Overlay",
+                Id = Guid.NewGuid().ToString(),
+                Parent = parentNode.Id,
+                OverlayData = new Overlay
+                {
+                  IsDefault = true,
+                  IsTimerOverlay = true
+                }
+              };
+
+              tree.Insert(timerNode);
+            }
+          }
+        }
       }
       catch (Exception ex)
       {
@@ -917,7 +968,7 @@ namespace EQLogParser
       _db?.Checkpoint();
     }
 
-    private void UpgradeTree(LegacyTriggerNode old, Dictionary<string, string> overlayIds,
+    private void UpgradeTree(LegacyTriggerNode old, IDictionary<string, string> overlayIds,
       IDictionary<string, bool?> defaultEnabled, string parent = null, int index = -1)
     {
       var newNode = new TriggerNode

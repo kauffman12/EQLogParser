@@ -65,8 +65,9 @@ namespace EQLogParser
 
     internal static void CloseWindow(DockingManager dockSite, ContentControl window)
     {
-      // don't really remove the window unless it is disposable
-      if (window?.Content is IDisposable disposable)
+      // don't really remove the window unless it is disposable and not just a simple Grid like in MainWindow.xaml
+      // right-click windows fall in this case
+      if (window?.Content is IDisposable disposable and UserControl)
       {
         // delay so windows can be cleaned up before we manually try to do it
         try

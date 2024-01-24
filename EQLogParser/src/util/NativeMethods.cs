@@ -9,6 +9,24 @@ namespace EQLogParser
   {
     #region Window styles
 
+    internal static IntPtr ProblemHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+      if (msg == 0x000D) // WM_GETTEXT
+      {
+        Marshal.SetLastSystemError(122);
+      }
+      return IntPtr.Zero;
+    }
+
+    internal static IntPtr BandAidHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+      if (msg == 0x000D) // WM_GETTEXT
+      {
+        Marshal.SetLastSystemError(0);
+      }
+      return IntPtr.Zero;
+    }
+
     [Flags]
     internal enum ExtendedWindowStyles
     {

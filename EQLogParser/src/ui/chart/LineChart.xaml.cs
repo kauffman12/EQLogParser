@@ -16,14 +16,21 @@ namespace EQLogParser
   public partial class LineChart
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+    private static readonly Dictionary<string, bool> MissTypes = new()
+    {
+      { Labels.Absorb, true },
+      { Labels.Block, true } ,
+      { Labels.Dodge, true },
+      { Labels.Parry, true },
+      { Labels.Invulnerable, true },
+      { Labels.Miss, true }
+    };
+
     private readonly Dictionary<string, List<DataPoint>> _playerPetValues = new();
     private readonly Dictionary<string, List<DataPoint>> _playerValues = new();
     private readonly Dictionary<string, List<DataPoint>> _petValues = new();
     private readonly Dictionary<string, List<DataPoint>> _raidValues = new();
     private readonly Dictionary<string, Dictionary<string, byte>> _hasPets = new();
-    private static readonly Dictionary<string, bool> MissTypes = new()
-    { { Labels.Absorb, true }, { Labels.Block, true } , { Labels.Dodge, true }, { Labels.Parry, true }, { Labels.Invulnerable, true }, { Labels.Miss, true } };
-
     private string _currentChoice;
     private string _currentPetOrPlayerOption;
     private List<PlayerStats> _lastSelected;
@@ -183,7 +190,7 @@ namespace EQLogParser
       Plot(selected);
     }
 
-    private void PopulateRolling(Dictionary<string, List<DataPoint>> data)
+    private static void PopulateRolling(Dictionary<string, List<DataPoint>> data)
     {
       foreach (ref var points in data.Values.ToArray().AsSpan())
       {

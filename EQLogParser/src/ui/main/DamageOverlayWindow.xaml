@@ -11,7 +11,7 @@
         Icon="EQLogParser.ico"
         ResizeMode="NoResize"
         TextOptions.TextFormattingMode="Display"
-        Title=""
+        Title="Damage Meter"
         Margin="0"
         Padding="0"
         BorderBrush="#00000000"

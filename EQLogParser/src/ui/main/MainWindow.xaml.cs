@@ -12,7 +12,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading.Tasks;
 using System.Windows;
@@ -1130,26 +1129,11 @@ namespace EQLogParser
     {
       base.OnSourceInitialized(e);
       var source = (HwndSource)PresentationSource.FromVisual(this)!;
-      source.AddHook(BandAidHook); // Make sure this is hooked first. That ensures it runs last
-      source.AddHook(ProblemHook);
-    }
-
-    IntPtr ProblemHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-    {
-      if (msg == 0x000D) // WM_GETTEXT
+      if (source != null)
       {
-        Marshal.SetLastSystemError(122);
+        source.AddHook(NativeMethods.BandAidHook); // Make sure this is hooked first. That ensures it runs last
+        source.AddHook(NativeMethods.ProblemHook);
       }
-      return IntPtr.Zero;
-    }
-
-    IntPtr BandAidHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-    {
-      if (msg == 0x000D) // WM_GETTEXT
-      {
-        Marshal.SetLastSystemError(0);
-      }
-      return IntPtr.Zero;
     }
   }
 }

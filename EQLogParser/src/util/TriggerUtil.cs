@@ -34,20 +34,19 @@ namespace EQLogParser
     internal static void ImportTriggers(TriggerNode parent) => Import(parent);
     internal static void ImportOverlays(TriggerNode triggerNode) => Import(triggerNode, false);
 
-    internal static string GetSelectedVoice2()
-    {
-      string defaultVoice = null;
-      try
-      {
-        defaultVoice = new SpeechSynthesizer().GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList().FirstOrDefault();
-      }
-      catch (Exception e)
-      {
-        Log.Debug(e);
-      }
+    private static readonly Size OriginalResolution = new(1920, 1080); // Hard-coded original screen resolution
+    private const double OriginalTop = 550; // Hard-coded original top position
+    private const double OriginalLeft = 650; // Hard-coded original left position
 
-      defaultVoice = string.IsNullOrEmpty(defaultVoice) ? "" : defaultVoice;
-      return ConfigUtil.GetSetting("TriggersSelectedVoice", defaultVoice);
+    internal static Point CalculateDefaultTextOverlayPosition()
+    {
+      // Fetch the current screen's resolution
+      var newResolution = new Size(SystemParameters.PrimaryScreenWidth, SystemParameters.PrimaryScreenHeight);
+      var relativeTop = OriginalTop / OriginalResolution.Height;
+      var relativeLeft = OriginalLeft / OriginalResolution.Width;
+      var newTop = relativeTop * newResolution.Height;
+      var newLeft = relativeLeft * newResolution.Width;
+      return new Point(newLeft, newTop);
     }
 
     internal static SpeechSynthesizer GetSpeechSynthesizer()
