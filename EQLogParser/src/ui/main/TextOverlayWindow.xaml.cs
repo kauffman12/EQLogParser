@@ -53,7 +53,7 @@ namespace EQLogParser
         // test data
         _textDataList.AddFirst(new TextData
         {
-          Text = "test message",
+          Text = "test overlay message",
           EndTicks = DateTime.Now.Ticks + (_node.OverlayData.FadeDelay * TimeSpan.TicksPerSecond)
         });
 
@@ -295,14 +295,17 @@ namespace EQLogParser
       _previewWindows = null;
     }
 
+    // Possible workaround for data area passed to system call is too small
     protected override void OnSourceInitialized(EventArgs e)
     {
       base.OnSourceInitialized(e);
-
-      if (!_preview)
+      var source = (HwndSource)PresentationSource.FromVisual(this)!;
+      if (source != null)
       {
-        var source = (HwndSource)PresentationSource.FromVisual(this);
-        if (source != null)
+        source.AddHook(NativeMethods.BandAidHook); // Make sure this is hooked first. That ensures it runs last
+        source.AddHook(NativeMethods.ProblemHook);
+
+        if (!_preview)
         {
           // set to layered and topmost by xaml
           var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);

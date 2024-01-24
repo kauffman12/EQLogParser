@@ -10,7 +10,7 @@
         Icon="EQLogParser.ico"
         ResizeMode="NoResize"
         TextOptions.TextFormattingMode="Display"
-        Title=""
+        Title="Timer Overlay"
         Margin="0"
         Padding="0"
         BorderBrush="#00000000"
