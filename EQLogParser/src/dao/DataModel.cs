@@ -77,7 +77,7 @@ namespace EQLogParser
     public long ResetTicks { get; set; }
     public long ResetDurationTicks { get; set; }
     public long DurationTicks { get; set; }
-    public List<string> SelectedOverlays { get; set; }
+    public List<string> TimerOverlayIds { get; set; }
     public int TriggerAgainOption { get; set; }
     public int TimerType { get; set; }
     public string Key { get; set; }

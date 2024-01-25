@@ -291,7 +291,14 @@ namespace EQLogParser
     {
       if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
       {
-        return tree.Query().Where(n => n.OverlayData != null && n.OverlayData.IsDefault && n.OverlayData.IsTextOverlay == isTextOverlay).FirstOrDefault();
+        if (isTextOverlay)
+        {
+          return tree.Query().Where(n => n.OverlayData != null && n.OverlayData.IsDefault && n.OverlayData.IsTextOverlay).FirstOrDefault();
+        }
+        else
+        {
+          return tree.Query().Where(n => n.OverlayData != null && n.OverlayData.IsDefault && n.OverlayData.IsTimerOverlay).FirstOrDefault();
+        }
       }
       return null;
     }

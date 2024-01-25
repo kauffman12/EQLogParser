@@ -405,12 +405,12 @@ namespace EQLogParser
 
     private bool ShouldProcess(TimerData timerData)
     {
-      if (timerData.SelectedOverlays.Count == 0 && _node?.OverlayData.IsDefault == true)
+      if ((timerData.TimerOverlayIds == null || timerData.TimerOverlayIds.Count == 0) && _node?.OverlayData.IsDefault == true)
       {
         return true;
       }
 
-      return timerData.SelectedOverlays.Contains(_node?.Id);
+      return timerData.TimerOverlayIds != null && timerData.TimerOverlayIds.Contains(_node?.Id);
     }
 
     private void WindowLoaded(object sender, RoutedEventArgs e)

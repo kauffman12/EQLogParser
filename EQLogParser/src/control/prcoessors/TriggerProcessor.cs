@@ -422,7 +422,7 @@ namespace EQLogParser
       newTimerData.ResetTicks = trigger.ResetDurationSeconds > 0 ?
         beginTicks + (long)(TimeSpan.TicksPerSecond * trigger.ResetDurationSeconds) : 0;
       newTimerData.ResetDurationTicks = newTimerData.ResetTicks - beginTicks;
-      newTimerData.SelectedOverlays = trigger.SelectedOverlays.ToList();
+      newTimerData.TimerOverlayIds = wrapper.TimerOverlayIds;
       newTimerData.TriggerAgainOption = trigger.TriggerAgainOption;
       newTimerData.TimerType = trigger.TimerType;
       newTimerData.OriginalMatches = matches;
@@ -602,6 +602,7 @@ namespace EQLogParser
     {
       var activeTriggers = new LinkedList<TriggerWrapper>();
       var enabledTriggers = TriggerStateManager.Instance.GetEnabledTriggers(CurrentCharacterId);
+      var timerOverlayCache = new Dictionary<string, bool>();
       foreach (var enabled in enabledTriggers.OrderByDescending(enabled => enabled.Trigger.LastTriggered))
       {
         var trigger = enabled.Trigger;
@@ -630,6 +631,30 @@ namespace EQLogParser
             // replace GINA counted with repeated
             wrapper.ModifiedDisplay = ModCounter(wrapper.ModifiedDisplay);
             wrapper.ModifiedTimerName = ModCounter(wrapper.ModifiedTimerName);
+
+            // get overlays for timers
+            wrapper.TriggerData.SelectedOverlays?.ForEach(overlayId =>
+            {
+              if (timerOverlayCache.TryGetValue(overlayId, out var isTimer))
+              {
+                if (isTimer)
+                {
+                  wrapper.TimerOverlayIds.Add(overlayId);
+                }
+              }
+              else
+              {
+                if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { } overlay && overlay.OverlayData.IsTimerOverlay)
+                {
+                  wrapper.TimerOverlayIds.Add(overlayId);
+                  timerOverlayCache[overlayId] = true;
+                }
+                else
+                {
+                  timerOverlayCache[overlayId] = false;
+                }
+              }
+            });
 
             wrapper.ModifiedTimerName = string.IsNullOrEmpty(wrapper.ModifiedTimerName) ? "" : wrapper.ModifiedTimerName;
             wrapper.HasRepeatedText = wrapper.ModifiedDisplay?.Contains("{repeated}", StringComparison.OrdinalIgnoreCase) == true;
@@ -940,6 +965,7 @@ namespace EQLogParser
       public string ModifiedWarningDisplay { get; init; }
       public string ModifiedTimerName { get; set; }
       public double ModifiedDurationSeconds { get; set; }
+      public List<string> TimerOverlayIds { get; } = new();
       public Regex Regex { get; set; }
       public List<NumberOptions> RegexNOptions { get; set; }
       public Trigger TriggerData { get; init; }
