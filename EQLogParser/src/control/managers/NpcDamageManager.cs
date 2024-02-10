@@ -229,7 +229,12 @@ namespace EQLogParser
       isAttackerPlayer = isAttackerPlayer || isAttackerPlayerSpell;
       var isDefenderPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Defender);
       var isAttackerNpc = IsAttackerNpc(record, isAttackerPlayerSpell, isAttackerPlayer);
-      var isDefenderNpc = IsDefenderNpc(record, isAttackerPlayerSpell, isDefenderPlayer);
+      var isDefenderNpc = IsDefenderNpc(record, isAttackerPlayerSpell, isDefenderPlayer) || isAttackerPlayer;
+
+      if (isAttackerPlayer && isDefenderPlayer)
+      {
+        return false;
+      }
 
       if (isDefenderNpc)
       {
@@ -238,7 +243,8 @@ namespace EQLogParser
           npcDefender = true;
           return isAttackerPlayer || PlayerManager.IsPossiblePlayerName(record.Attacker);
         }
-        else if (DataManager.Instance.GetFight(record.Defender) != null && DataManager.Instance.GetFight(record.Attacker) == null)
+
+        if (DataManager.Instance.GetFight(record.Defender) != null && DataManager.Instance.GetFight(record.Attacker) == null)
         {
           npcDefender = true;
           return true;
@@ -250,14 +256,15 @@ namespace EQLogParser
         {
           return isDefenderPlayer || PlayerManager.IsPossiblePlayerName(record.Defender);
         }
-        else if (isDefenderPlayer != isAttackerPlayer)
+
+        if (isDefenderPlayer)
         {
-          npcDefender = !isDefenderPlayer;
+          npcDefender = false;
           return true;
         }
       }
 
-      return false;
+      return true;
     }
 
     private static bool IsSelfAttack(DamageRecord record)

@@ -333,6 +333,12 @@
           </MenuItem>
         </MenuItem>
         <MenuItem Header="_Tools" Margin="4,0,0,0">
+          <MenuItem x:Name="logManager" Header="_Log Management" IsEnabled="True" Click="OpenLogManager">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="logManagerIcon" Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Archive" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
           <MenuItem x:Name="deleteChat" Header="_Clear Chat Archive" IsEnabled="False">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="deleteChatIcon" Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Times" />

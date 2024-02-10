@@ -2,6 +2,7 @@
 using log4net;
 using log4net.Appender;
 using Microsoft.Win32;
+using Microsoft.WindowsAPICodePack.Dialogs;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Shared;
 using Syncfusion.Windows.Tools.Controls;
@@ -21,7 +22,6 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Application = System.Windows.Application;
-using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
 namespace EQLogParser
 {
@@ -332,6 +332,10 @@ namespace EQLogParser
     private void ReportProblemClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
     private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(@"data\releasenotes.rtf");
     private void TriggerVariablesHelpClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(@"data\triggerVariables.rtf");
+    private void OpenLogManager(object sender, RoutedEventArgs e) => new LogManagementWindow().ShowDialog();
+    private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
+    private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
+    private void WindowClose(object sender, EventArgs e) => Close();
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
@@ -599,37 +603,37 @@ namespace EQLogParser
     private void ToggleAssassinateDamageClick(object sender, RoutedEventArgs e)
     {
       IsAssassinateDamageEnabled = !IsAssassinateDamageEnabled;
-      UpdateDamageOption(enableAssassinateDamageIcon, IsAssassinateDamageEnabled, "IncludeAssassinateDamage");
+      MainActions.UpdateDamageOption(enableAssassinateDamageIcon, IsAssassinateDamageEnabled, "IncludeAssassinateDamage");
     }
 
     private void ToggleBaneDamageClick(object sender, RoutedEventArgs e)
     {
       IsBaneDamageEnabled = !IsBaneDamageEnabled;
-      UpdateDamageOption(enableBaneDamageIcon, IsBaneDamageEnabled, "IncludeBaneDamage");
+      MainActions.UpdateDamageOption(enableBaneDamageIcon, IsBaneDamageEnabled, "IncludeBaneDamage");
     }
 
     private void ToggleDamageShieldDamageClick(object sender, RoutedEventArgs e)
     {
       IsDamageShieldDamageEnabled = !IsDamageShieldDamageEnabled;
-      UpdateDamageOption(enableDamageShieldDamageIcon, IsDamageShieldDamageEnabled, "IncludeDamageShieldDamage");
+      MainActions.UpdateDamageOption(enableDamageShieldDamageIcon, IsDamageShieldDamageEnabled, "IncludeDamageShieldDamage");
     }
 
     private void ToggleFinishingBlowDamageClick(object sender, RoutedEventArgs e)
     {
       IsFinishingBlowDamageEnabled = !IsFinishingBlowDamageEnabled;
-      UpdateDamageOption(enableFinishingBlowDamageIcon, IsFinishingBlowDamageEnabled, "IncludeFinishingBlowDamage");
+      MainActions.UpdateDamageOption(enableFinishingBlowDamageIcon, IsFinishingBlowDamageEnabled, "IncludeFinishingBlowDamage");
     }
 
     private void ToggleHeadshotDamageClick(object sender, RoutedEventArgs e)
     {
       IsHeadshotDamageEnabled = !IsHeadshotDamageEnabled;
-      UpdateDamageOption(enableHeadshotDamageIcon, IsHeadshotDamageEnabled, "IncludeHeadshotDamage");
+      MainActions.UpdateDamageOption(enableHeadshotDamageIcon, IsHeadshotDamageEnabled, "IncludeHeadshotDamage");
     }
 
     private void ToggleSlayUndeadDamageClick(object sender, RoutedEventArgs e)
     {
       IsSlayUndeadDamageEnabled = !IsSlayUndeadDamageEnabled;
-      UpdateDamageOption(enableSlayUndeadDamageIcon, IsSlayUndeadDamageEnabled, "IncludeSlayUndeadDamage");
+      MainActions.UpdateDamageOption(enableSlayUndeadDamageIcon, IsSlayUndeadDamageEnabled, "IncludeSlayUndeadDamage");
     }
 
     private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e)
@@ -652,14 +656,6 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateDamageOption(ImageAwesome icon, bool enabled, string option)
-    {
-      ConfigUtil.SetSetting(option, enabled);
-      icon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
-      var options = new GenerateStatsOptions();
-      Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
-    }
-
     // Main Menu
     private void MenuItemWindowClick(object sender, RoutedEventArgs e)
     {
@@ -679,9 +675,9 @@ namespace EQLogParser
 
         SyncFusionUtil.OpenWindow(dockSite, null, out _, typeof(EqLogViewer), "eqLogWindow", "Log Search " + found);
       }
-      else if (sender as MenuItem is { Icon: ImageAwesome { Tag: string name } })
+      else if (sender as MenuItem is { Icon: ImageAwesome { Tag: string name2 } })
       {
-        SyncFusionUtil.ToggleWindow(dockSite, name);
+        SyncFusionUtil.ToggleWindow(dockSite, name2);
       }
     }
 
@@ -836,28 +832,32 @@ namespace EQLogParser
     {
       try
       {
-        string theFile;
-        var success = true;
+        string theFile = null;
         if (previousFile != null)
         {
           theFile = previousFile;
         }
         else
         {
-          // WPF doesn't have its own file chooser so use Win32 Version
-          var dialog = new OpenFileDialog
+          var initialPath = string.IsNullOrEmpty(CurrentLogFile) ? string.Empty : Path.GetDirectoryName(CurrentLogFile);
+
+          var dialog = new CommonOpenFileDialog
           {
-            // filter to txt files
-            DefaultExt = ".txt",
-            Filter = "eqlog_Player_server (.txt .txt.gz)|*.txt;*.txt.gz",
+            // Set to false because we're opening a file, not selecting a folder
+            IsFolderPicker = false,
+            // Set the initial directory
+            InitialDirectory = initialPath ?? "",
           };
 
-          // show dialog and read result
-          success = dialog.ShowDialog() == true;
-          theFile = dialog.FileName;
+          // Show dialog and read result
+          dialog.Filters.Add(new CommonFileDialogFilter("eqlog_Player_server", "*.txt;*.txt.gz"));
+          if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+          {
+            theFile = dialog.FileName; // Get the selected file name
+          }
         }
 
-        if (success)
+        if (!string.IsNullOrEmpty(theFile))
         {
           Dispatcher.InvokeAsync(() =>
           {
@@ -1119,10 +1119,6 @@ namespace EQLogParser
         SyncFusionUtil.CloseWindow(dockSite, window);
       }
     }
-
-    private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
-    private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
-    private void WindowClose(object sender, EventArgs e) => Close();
 
     // Possible workaround for data area passed to system call is too small
     protected override void OnSourceInitialized(EventArgs e)

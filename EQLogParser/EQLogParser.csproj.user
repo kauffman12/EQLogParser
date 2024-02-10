@@ -21,6 +21,9 @@
     <Compile Update="src\ui\common\DamageBar.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="src\ui\main\LogManagementWindow.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="src\ui\main\TriggerDictionaryWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -69,6 +72,9 @@
   </ItemGroup>
   <ItemGroup>
     <Page Update="src\ui\common\DamageBar.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="src\ui\main\LogManagementWindow.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\main\TriggerDictionaryWindow.xaml">

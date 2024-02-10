@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Speech.Synthesis;
 using System.Windows;
@@ -21,7 +20,6 @@ namespace EQLogParser
   {
     private readonly Dictionary<string, Window> _previewWindows = new();
     private TriggerConfig _theConfig;
-    private readonly FileSystemWatcher _watcher;
     private readonly PatternEditor _patternEditor;
     private readonly PatternEditor _endEarlyPatternEditor;
     private readonly PatternEditor _endEarlyPattern2Editor;
@@ -67,8 +65,10 @@ namespace EQLogParser
 
       rateOption.SelectedIndex = _theConfig.VoiceRate;
 
+      // watch file system for new sounds
       var fileList = new ObservableCollection<string>();
-      _watcher = TriggerUtil.CreateSoundsWatcher(fileList);
+      TriggerUtil.CreateSoundsWatcher(fileList);
+
       _topEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Top");
       _heightEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Height");
       _leftEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Left");
@@ -624,6 +624,12 @@ namespace EQLogParser
       }
     }
 
+    private void DictionaryClick(object sender, RoutedEventArgs e)
+    {
+      var window = new TriggerDictionaryWindow();
+      window.ShowDialog();
+    }
+
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {
       if (VisualParent != null && !_ready)
@@ -649,12 +655,6 @@ namespace EQLogParser
       theTreeView.TreeSelectionChangedEvent -= TreeSelectionChangedEvent;
       theTreeView.ClosePreviewOverlaysEvent -= ClosePreviewOverlaysEvent;
       _ready = false;
-    }
-
-    private void DictionaryClick(object sender, RoutedEventArgs e)
-    {
-      var window = new TriggerDictionaryWindow();
-      window.ShowDialog();
     }
   }
 }

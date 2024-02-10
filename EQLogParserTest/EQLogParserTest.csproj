@@ -21,7 +21,6 @@
     <PackageReference Include="coverlet.collector" Version="3.2.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\EQLogManager\EQLogManager.csproj" />
     <ProjectReference Include="..\EQLogParser\EQLogParser.csproj" />
   </ItemGroup>
 </Project>

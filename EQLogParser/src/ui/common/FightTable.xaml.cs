@@ -192,6 +192,7 @@ namespace EQLogParser
         {
           PlayerManager.Instance.AddVerifiedPet(name);
           PlayerManager.Instance.AddPetToPlayer(name, Labels.Unassigned);
+          RemoveFight(name); // force in case already in the pet list for some reason
         }, TaskScheduler.Default);
       }
     }
@@ -201,24 +202,20 @@ namespace EQLogParser
       if (dataGrid.SelectedItem is Fight { IsInactivity: false } npc)
       {
         var name = npc.Name;
-        Task.Delay(120).ContinueWith(_ => PlayerManager.Instance.AddVerifiedPlayer(name, DateUtil.ToDouble(DateTime.Now)), TaskScheduler.Default);
+        var dateTime = DateUtil.ToDouble(DateTime.Now);
+        Task.Delay(120).ContinueWith(_ => PlayerManager.Instance.AddVerifiedPlayer(name, dateTime), TaskScheduler.Default);
+        RemoveFight(name); // force in case already in the player list for some reason
       }
     }
 
     private void ProcessFight(Fight fight)
     {
-      lock (_fightsToProcess)
-      {
-        _fightsToProcess.Add(fight);
-      }
+      lock (_fightsToProcess) _fightsToProcess.Add(fight);
     }
 
     private void ProcessNonTankingFight(Fight fight)
     {
-      lock (_fightsToProcess)
-      {
-        _nonTankingFightsToProcess.Add(fight);
-      }
+      lock (_fightsToProcess) _nonTankingFightsToProcess.Add(fight);
     }
 
     private void DoProcessFights()

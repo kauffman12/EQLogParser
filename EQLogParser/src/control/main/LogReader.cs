@@ -14,7 +14,6 @@ namespace EQLogParser
     private readonly BlockingCollection<Tuple<string, double, bool>> _lines = new(new ConcurrentQueue<Tuple<string, double, bool>>(), 100000);
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly FileSystemWatcher _fileWatcher;
-    private readonly string _fileName;
     private int _minBack;
     private CancellationTokenSource _cts;
     private readonly ManualResetEvent _newDataAvailable = new(false);
@@ -27,7 +26,7 @@ namespace EQLogParser
     public LogReader(ILogProcessor logProcessor, string fileName, int minBack = 0)
     {
       _logProcessor = logProcessor;
-      _fileName = fileName;
+      FileName = fileName;
       _minBack = minBack;
 
       if (Path.GetDirectoryName(fileName) is { } directory)
@@ -44,6 +43,8 @@ namespace EQLogParser
         _fileWatcher.Renamed += OnFileMoved;
         _fileWatcher.Changed += OnFileChanged;
         _fileWatcher.EnableRaisingEvents = true;
+
+        FileUtil.ArchiveFile(this);
         StartReadingFile();
       }
       else
@@ -52,6 +53,7 @@ namespace EQLogParser
       }
     }
 
+    public string FileName { get; }
     public double Progress => _currentPos / (double)_initSize * 100;
     public IDisposable GetProcessor() => _logProcessor;
 
@@ -68,16 +70,17 @@ namespace EQLogParser
     private void StartReadingFile()
     {
       _cts = new CancellationTokenSource();
-      _readFileTask = Task.Run(() => ReadFile(_fileName, _minBack, _cts.Token), _cts.Token);
+      _readFileTask = Task.Run(() => ReadFile(FileName, _minBack, _cts.Token), _cts.Token);
     }
 
     private async Task ReadFile(string fileName, int minBack, CancellationToken cancelToken)
     {
-      var bufferSize = 147456;
+      const int bufferSize = 147456;
 
       try
       {
         var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, bufferSize);
+
         _initSize = fs.Length;
         _nextUpdateThreshold = _initSize / 50;
 
@@ -185,7 +188,7 @@ namespace EQLogParser
       }
     }
 
-    private static void SearchLinear(StreamReader reader, DateTime minDate, out string firstLine)
+    private static void SearchLinear(TextReader reader, DateTime minDate, out string firstLine)
     {
       firstLine = null;
 

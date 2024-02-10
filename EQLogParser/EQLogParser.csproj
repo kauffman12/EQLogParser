@@ -173,6 +173,7 @@
     <PackageReference Include="log4net">
       <Version>2.0.15</Version>
     </PackageReference>
+    <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Syncfusion.DocIO.Wpf" Version="23.2.5" />
     <PackageReference Include="Syncfusion.Edit.WPF" Version="23.2.5" />
