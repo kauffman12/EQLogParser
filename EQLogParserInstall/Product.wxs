@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.1.63" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.1.65" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -22,11 +22,6 @@
       <ComponentRef Id="ApplicationShortcut" />
       <ComponentRef Id="ApplicationShortcutDesktop" />
       <ComponentRef Id="Logs" />
-      <ComponentRef Id="CommonConfig" />
-      <ComponentRef Id="CommonLogs" />
-      <!--
-      <ComponentRef Id="EQLogManagerService" />
-      -->
 		</Feature>
   
     <UI Id="WixUI_Advanced">
@@ -127,22 +122,6 @@
           </Directory>
         </Directory>
       </Directory>
-      <Directory Id="CommonAppDataFolder">
-        <Directory Id="MyCommonAppData" Name="EQLogParser">
-          <Directory Id="CommonConfigFolder" Name="config">
-            <Component Win64="yes" Id="CommonConfig" Guid="E048DB31-1353-4711-9BF0-4C660F97009F">
-              <CreateFolder />
-            </Component>
-          </Directory>
-          <Directory Id="CommonLogsFolder" Name="logs">
-            <Component Win64="yes" Id="CommonLogs" Guid="168B2C6E-03CA-4C74-88FC-A9C2E0E57307">
-              <CreateFolder />
-              <RemoveFile Id="RemoveCommonLogs" Name="*.*" On="uninstall" />
-              <RemoveFolder Id="RemoveCommonLogsFolder" Directory="CommonLogsFolder" On="uninstall"/>
-            </Component>
-          </Directory>
-        </Directory>
-      </Directory>
       <Directory Id="ProgramMenuFolder">
         <Directory Id="ApplicationProgramsFolder" Name="EQLogParser" />
       </Directory>
@@ -160,22 +139,6 @@
         <RegistryValue Root="HKCU" Key="Software\Kizant\EQLogParser" Name="installed" Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </DirectoryRef>
-    <!--
-    <DirectoryRef Id="LMFOLDER">
-      <Component Id="EQLogManagerService" Guid="BEBEC32D-70B9-4E8C-A9C2-9E436A5ECD64">
-        <File Id="EQLogManagerEXE" Source="$(var.EQLogManager.TargetDir)EQLogManager.exe" KeyPath="yes"/>
-        <File Id="Log4NetDLL" Source="$(var.EQLogManager.TargetDir)log4net.dll"/>
-        <ServiceInstall Id="ServiceInstaller"
-                        Type="ownProcess"
-                        Name="EQLogManager"
-                        DisplayName="EQLogManager Service"
-                        Description="Archives log files for EQLogParser"
-                        Start="auto"
-                        ErrorControl="normal"/>
-        <ServiceControl Id="StartService" Start="install" Stop="both" Remove="uninstall" Name="EQLogManager" Wait="yes"/>
-      </Component>
-    </DirectoryRef>
-    -->
   </Fragment>
 	<Fragment>
 	  <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
@@ -208,6 +171,12 @@
 	    </Component>		  
       <Component Win64="yes" Id="DotLiquid.dll" Guid="C7818EAF-8DF1-4411-8821-FC66BFB42AB2">
         <File CompanionFile="EQLogParser.dll" Id="DotLiquid.dll" Name="DotLiquid.dll" Source="$(var.EQLogParser.TargetDir)DotLiquid.dll" />
+      </Component>
+      <Component Win64="yes" Id="Microsoft.WindowsAPICodePack.dll" Guid="29C45405-28EE-4613-B8F0-35AEB91BBF79">
+        <File CompanionFile="EQLogParser.dll" Id="Microsoft.WindowsAPICodePack.dll" Name="Microsoft.WindowsAPICodePack.dll" Source="$(var.EQLogParser.TargetDir)Microsoft.WindowsAPICodePack.dll" />
+      </Component>
+      <Component Win64="yes" Id="Microsoft.WindowsAPICodePack.Shell.dll" Guid="B4AB799A-E265-4915-B9C7-85348259AF13">
+        <File CompanionFile="EQLogParser.dll" Id="Microsoft.WindowsAPICodePack.Shell.dll" Name="Microsoft.WindowsAPICodePack.Shell.dll" Source="$(var.EQLogParser.TargetDir)Microsoft.WindowsAPICodePack.Shell.dll" />
       </Component>
       <Component Win64="yes" Id="Syncfusion.Compression.Base.dll" Guid="9CB53E4C-9D9E-431F-BC2B-3342D39E63A2">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Compression.Base.dll" Name="Syncfusion.Compression.Base.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Compression.Base.dll" />

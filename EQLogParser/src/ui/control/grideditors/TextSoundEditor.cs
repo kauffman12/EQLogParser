@@ -16,13 +16,15 @@ namespace EQLogParser
 {
   internal class TextSoundEditor : BaseTypeEditor
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private SoundPlayer _soundPlayer;
     private readonly ObservableCollection<string> _fileList;
     private ComboBox _theOptionsCombo;
     private ComboBox _theSoundCombo;
     private TextBox _theFakeTextBox;
     private TextBox _theRealTextBox;
+    private Button _testButton;
+    private Grid _grid;
 
     public TextSoundEditor(ObservableCollection<string> fileList)
     {
@@ -50,14 +52,25 @@ namespace EQLogParser
 
     private object Create()
     {
-      var grid = new Grid();
-      grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
-      grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+      _grid = new Grid();
+      _grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
+      _grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+      _grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(32) });
 
       _theOptionsCombo = new ComboBox();
       _theOptionsCombo.SetValue(Grid.ColumnProperty, 1);
       _theOptionsCombo.ItemsSource = new List<string> { "Text to Speak", "Play Sound" };
       _theOptionsCombo.SelectedIndex = 0;
+
+      _testButton = new Button
+      {
+        Padding = new Thickness(0, 2, 0, 2),
+        Content = "Test",
+        IsEnabled = false
+      };
+
+      _testButton.SetValue(Grid.ColumnProperty, 2);
+      _testButton.Click += TestButtonOnClick;
 
       _theFakeTextBox = new TextBox
       {
@@ -77,17 +90,29 @@ namespace EQLogParser
       _theRealTextBox.TextChanged += RealTextBoxTextChanged;
       _theSoundCombo.ItemsSource = _fileList;
 
-      grid.Children.Add(_theRealTextBox);
-      grid.Children.Add(_theOptionsCombo);
-      grid.Children.Add(_theFakeTextBox);
-      grid.Children.Add(_theSoundCombo);
+      _grid.Children.Add(_theRealTextBox);
+      _grid.Children.Add(_theOptionsCombo);
+      _grid.Children.Add(_theFakeTextBox);
+      _grid.Children.Add(_theSoundCombo);
+      _grid.Children.Add(_testButton);
 
       _theFakeTextBox.TextChanged += TextBoxTextChanged;
       _theSoundCombo.SelectionChanged += SoundComboSelectionChanged;
       _theOptionsCombo.SelectionChanged += TypeComboBoxSelectionChanged;
       _soundPlayer ??= new SoundPlayer();
 
-      return grid;
+      return _grid;
+    }
+
+    private void TestButtonOnClick(object sender, RoutedEventArgs e)
+    {
+      var synth = TriggerUtil.GetSpeechSynthesizer();
+      if (!string.IsNullOrEmpty(_theRealTextBox.Text))
+      {
+        synth.Speak(_theRealTextBox.Text);
+      }
+
+      synth.Dispose();
     }
 
     private void RealTextBoxTextChanged(object sender, TextChangedEventArgs e)
@@ -108,10 +133,11 @@ namespace EQLogParser
         _theOptionsCombo.SelectedIndex = hideText ? 1 : 0;
         _theFakeTextBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;
         _theSoundCombo.Visibility = hideText ? Visibility.Visible : Visibility.Collapsed;
+        _grid.ColumnDefinitions[2].Width = hideText ? new GridLength(0) : new GridLength(32);
 
         if (hideText)
         {
-          if (_theSoundCombo?.SelectedValue?.ToString() != soundFile)
+          if (_theSoundCombo != null && _theSoundCombo.SelectedValue?.ToString() != soundFile)
           {
             _theSoundCombo.Tag = true;
             _theSoundCombo.SelectedValue = soundFile;
@@ -124,6 +150,8 @@ namespace EQLogParser
           {
             _theFakeTextBox.Text = textBox.Text;
           }
+
+          _testButton.IsEnabled = !string.IsNullOrEmpty(textBox.Text);
         }
       }
     }
@@ -135,6 +163,7 @@ namespace EQLogParser
         var hideText = combo.SelectedIndex != 0;
         _theFakeTextBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;
         _theSoundCombo.Visibility = hideText ? Visibility.Visible : Visibility.Collapsed;
+        _grid.ColumnDefinitions[2].Width = hideText ? new GridLength(0) : new GridLength(32);
 
         if (!hideText)
         {
@@ -232,6 +261,14 @@ namespace EQLogParser
         _theFakeTextBox = null;
       }
 
+      if (_testButton != null)
+      {
+        _testButton.Click -= TestButtonOnClick;
+        BindingOperations.ClearAllBindings(_testButton);
+        _testButton = null;
+      }
+
+      _grid.Children.Clear();
       _soundPlayer?.Dispose();
       _soundPlayer = null;
     }
