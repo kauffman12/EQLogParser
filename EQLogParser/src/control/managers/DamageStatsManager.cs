@@ -42,7 +42,7 @@ namespace EQLogParser
     }
 
     private static CombinedStats ComputeOverlayDamageStats(OverlayData data, bool dps, bool reset, int mode,
-      int maxRows, string selectedClass, HashSet<long> deadFights)
+      int maxRows, string selectedClass, ISet<long> deadFights)
     {
       CombinedStats combined = null;
 
@@ -66,9 +66,9 @@ namespace EQLogParser
       if (dps)
       {
         // check incase pet mappings was updated while overlay is running
-        foreach (var keypair in data.PetOwners)
+        foreach (var kv in data.PetOwners)
         {
-          UpdateOverlayHasPet(keypair.Key, keypair.Value, playerHasPet, data.DeadPlayerTotals);
+          UpdateOverlayHasPet(kv.Key, kv.Value, playerHasPet, data.DeadPlayerTotals);
         }
       }
 

@@ -39,14 +39,6 @@
     </WixExtension>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\EQLogManager\EQLogManager.csproj">
-      <Name>EQLogManager</Name>
-      <Project>{b645dd39-247c-47b3-bafa-408f679a04aa}</Project>
-      <Private>True</Private>
-      <DoNotHarvest>True</DoNotHarvest>
-      <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
-      <RefTargetDir>INSTALLFOLDER</RefTargetDir>
-    </ProjectReference>
     <ProjectReference Include="..\EQLogParser\EQLogParser.csproj">
       <Name>EQLogParser</Name>
       <Project>{7573c49a-27f2-4053-8e6c-b7687dd9cbde}</Project>

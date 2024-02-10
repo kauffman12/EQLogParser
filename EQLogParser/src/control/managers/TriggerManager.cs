@@ -200,8 +200,9 @@ namespace EQLogParser
                 string server = null;
                 var playerName = character.Name;
                 FileUtil.ParseFileName(character.FilePath, ref playerName, ref server);
-                _logReaders.Add(new LogReader(new TriggerProcessor(character.Id, character.Name, playerName, character.Voice,
-                  character.VoiceRate, AddTextEvent, AddTimerEvent), character.FilePath));
+                var reader = new LogReader(new TriggerProcessor(character.Id, character.Name, playerName,
+                  character.Voice, character.VoiceRate, AddTextEvent, AddTimerEvent), character.FilePath);
+                _logReaders.Add(reader);
                 RunningFiles[character.FilePath] = true;
               }
             }

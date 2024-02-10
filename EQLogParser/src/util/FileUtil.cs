@@ -1,17 +1,170 @@
 ﻿using log4net;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace EQLogParser
 {
   static class FileUtil
   {
+    private const long M = 1000000;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Regex FileNameRegex = new(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline);
+    private static readonly object LockObject = new();
+    private static readonly HashSet<LogReader> ArchiveQueue = new();
+
+    private static readonly Dictionary<string, long> ArchiveFileSizes = new()
+    {
+      { "any size", 0 },
+      { "25m", 25 * M },
+      { "50m", 50 * M },
+      { "75m", 75 * M },
+      { "100m", 100 * M },
+      { "250m", 250 * M },
+      { "500m", 500 * M },
+      { "750m", 750 * M },
+      { "1g", 1000 * M },
+      { "1.5g", 1500 * M },
+      { "2g", 2000 * M }
+    };
+
+    private static readonly Dictionary<string, int> ArchiveFileAges = new()
+    {
+      { "any age", 0 },
+      { "1 week", 7 },
+      { "2 weeks", 14 },
+      { "3 weeks", 21 },
+      { "1 month", 28 }
+    };
+
+    internal static void ArchiveFile(LogReader logReader)
+    {
+      var file = Path.GetFileName(logReader.FileName);
+      if (string.IsNullOrEmpty(file) || !FileNameRegex.IsMatch(file) || !ConfigUtil.IfSet("LogManagementEnabled"))
+      {
+        return;
+      }
+
+      lock (LockObject)
+      {
+        ArchiveQueue.Add(logReader);
+
+        if (ArchiveQueue.Count == 1)
+        {
+          Task.Delay(5000).ContinueWith(_ => ArchiveProcess());
+        }
+      }
+    }
+
+    private static void ArchiveProcess()
+    {
+      lock (LockObject)
+      {
+        var notReady = ArchiveQueue.Where(reader => reader.Progress < 100.0).Select(reader => reader.FileName).ToArray();
+        foreach (var reader in ArchiveQueue.ToArray())
+        {
+          if (notReady.Contains(reader.FileName))
+          {
+            continue;
+          }
+
+          ArchiveQueue.Remove(reader);
+          var path = reader.FileName;
+
+          if (!File.Exists(path))
+          {
+            // was archived by another process?
+            continue;
+          }
+
+          var savedFileSize = ConfigUtil.GetSetting("LogManagementMinFileSize");
+          if (string.IsNullOrEmpty(savedFileSize))
+          {
+            continue;
+          }
+
+          savedFileSize = savedFileSize.ToLower();
+          if (!ArchiveFileSizes.ContainsKey(savedFileSize))
+          {
+            continue;
+          }
+
+          var savedFileAge = ConfigUtil.GetSetting("LogManagementMinFileAge");
+          if (string.IsNullOrEmpty(savedFileAge))
+          {
+            continue;
+          }
+
+          savedFileAge = savedFileAge.ToLower();
+          if (!ArchiveFileAges.ContainsKey(savedFileAge))
+          {
+            continue;
+          }
+
+          var archiveFolder = ConfigUtil.GetSetting("LogManagementArchiveFolder");
+          if (string.IsNullOrEmpty(archiveFolder) || Path.GetDirectoryName(archiveFolder) == null)
+          {
+            continue;
+          }
+
+          var fileInfo = new FileInfo(path);
+          if (fileInfo.CreationTime > DateTime.Now.Subtract(TimeSpan.FromDays(ArchiveFileAges[savedFileAge])))
+          {
+            continue;
+          }
+
+          if (fileInfo.Length < ArchiveFileSizes[savedFileSize])
+          {
+            continue;
+          }
+
+          try
+          {
+            var formatted = DateTime.Now.ToString("_yyyyMMddHHmm_ssfff") + ".txt";
+            var destination = archiveFolder + Path.DirectorySeparatorChar + fileInfo.Name.Replace(".txt", formatted);
+            File.Move(path, destination);
+            CompressFile(destination);
+            Log.Info($"Archived File: ${path}");
+          }
+          catch (Exception e)
+          {
+            Log.Error(e);
+          }
+        }
+
+        if (ArchiveQueue.Count > 0)
+        {
+          Task.Delay(5000).ContinueWith(_ => ArchiveProcess());
+        }
+      }
+    }
+
+    private static async void CompressFile(string filePath)
+    {
+      var compressedFilePath = $"{filePath}.gz";
+      var originalFileStream = File.OpenRead(filePath);
+      var compressedFileStream = File.Create(compressedFilePath);
+      var compressionStream = new GZipStream(compressedFileStream, CompressionMode.Compress);
+      await originalFileStream.CopyToAsync(compressionStream);
+      await compressionStream.DisposeAsync();
+      await compressedFileStream.DisposeAsync();
+      await originalFileStream.DisposeAsync();
+
+      try
+      {
+        File.Delete(filePath);
+      }
+      catch (Exception)
+      {
+        // ignore delete errors
+      }
+    }
 
     internal static void ParseFileName(string theFile, ref string name, ref string server)
     {

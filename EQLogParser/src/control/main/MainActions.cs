@@ -533,6 +533,14 @@ namespace EQLogParser
       };
     }
 
+    internal static void UpdateDamageOption(UIElement icon, bool enabled, string option)
+    {
+      ConfigUtil.SetSetting(option, enabled);
+      icon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
+      var options = new GenerateStatsOptions();
+      Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
+    }
+
     internal static void ExportFights(string currentFile, List<Fight> fights)
     {
       var saveFileDialog = new SaveFileDialog();

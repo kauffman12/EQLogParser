@@ -347,7 +347,7 @@ namespace EQLogParser
             defender = string.Join(" ", split, 0, isIndex);
             var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
             attacker = UpdateAttacker(attacker, Labels.Ds);
-            defender = UpdateDefender(defender);
+            defender = UpdateDefender(defender, attacker);
             record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Ds, Labels.Ds);
           }
         }
@@ -358,7 +358,7 @@ namespace EQLogParser
         defender = string.Join(" ", split, 0, isIndex);
         var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
         attacker = Labels.Rs;
-        defender = UpdateDefender(defender);
+        defender = UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Ds, Labels.Ds);
       }
       // [Tue Mar 26 22:43:47 2019] a wave sentinel has taken an extra 6250000 points of non-melee damage from Kazint's Greater Fetter spell.
@@ -397,7 +397,7 @@ namespace EQLogParser
           var spellData = DataManager.Instance.GetDamagingSpellByName(spell);
           resist = spellData?.Resist ?? SpellResist.Undefined;
           attacker = UpdateAttacker(attacker, spell);
-          defender = UpdateDefender(defender);
+          defender = UpdateDefender(defender, attacker);
           record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Bane, spell);
         }
       }
@@ -414,7 +414,7 @@ namespace EQLogParser
         subType = ToUpper(subType);
         var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
         attacker = UpdateAttacker(attacker, subType);
-        defender = UpdateDefender(defender);
+        defender = UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Melee, subType);
       }
       // [Sun Apr 18 20:24:56 2021] Sonozen hit Jortreva the Crusader for 38948 points of fire damage by Burst of Flames. (Lucky Critical Twincast)
@@ -438,7 +438,7 @@ namespace EQLogParser
           }
 
           attacker = UpdateAttacker(attacker, spell);
-          defender = UpdateDefender(defender);
+          defender = UpdateDefender(defender, attacker);
           record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, type, spell);
         }
       }
@@ -506,7 +506,7 @@ namespace EQLogParser
           var damage = StatsUtil.ParseUInt(split[fromDamage - 1]);
           resist = spellData?.Resist ?? SpellResist.Undefined;
           attacker = UpdateAttacker(attacker, spell);
-          defender = UpdateDefender(defender);
+          defender = UpdateDefender(defender, attacker);
           record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, type, spell);
         }
       }
@@ -535,7 +535,7 @@ namespace EQLogParser
         }
 
         attacker = UpdateAttacker("", spell);
-        defender = UpdateDefender(defender);
+        defender = UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, label, spell, true);
       }
       // Old (eqemu direct damage) [Sat Jan 15 21:08:54 2022] Jaun hit Pixtt Invi Mal for 150 points of non-melee damage.
@@ -546,7 +546,7 @@ namespace EQLogParser
         defender = string.Join(" ", split, hitType + hitTypeMod + 1, forIndex - hitType - hitTypeMod - 1);
         var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
         attacker = UpdateAttacker(attacker, Labels.Dd);
-        defender = UpdateDefender(defender);
+        defender = UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, Labels.Dd);
       }
       // [Mon Oct 23 22:18:46 2022] Demonstrated Depletion was hit by non-melee for 6734 points of damage.
@@ -615,7 +615,7 @@ namespace EQLogParser
             attacker = string.Join(" ", split, 0, tryIndex);
             subType = ToUpper(subType);
             attacker = UpdateAttacker(attacker, subType);
-            defender = UpdateDefender(defender);
+            defender = UpdateDefender(defender, attacker);
             record = CreateDamageRecord(lineData, split, stop, attacker, defender, 0, label, subType);
           }
         }
@@ -889,11 +889,11 @@ namespace EQLogParser
       return attacker;
     }
 
-    private static string UpdateDefender(string defender)
+    private static string UpdateDefender(string defender, string attacker)
     {
       // Needed to replace 'You' and 'you', etc
-      defender = PlayerManager.Instance.ReplacePlayer(defender, defender);
-      return ToUpper(defender);
+      var updated = PlayerManager.Instance.ReplacePlayer(defender, attacker);
+      return ToUpper(updated);
     }
 
     private static void CheckOwner(string name, out string owner)

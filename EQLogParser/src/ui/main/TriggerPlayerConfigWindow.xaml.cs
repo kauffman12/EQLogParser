@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Speech.Synthesis;
 using System.Windows;
@@ -147,11 +148,14 @@ namespace EQLogParser
 
     private void ChooseFileClicked(object sender, RoutedEventArgs e)
     {
+      var initialPath = string.IsNullOrEmpty(txtFilePath.Text) ? string.Empty : Path.GetDirectoryName(txtFilePath.Text);
+
       var openFileDialog = new OpenFileDialog
       {
         // filter to txt files
         DefaultExt = ".txt",
         Filter = "eqlog_Player_server (.txt)|*.txt",
+        InitialDirectory = initialPath ?? ""
       };
 
       if (openFileDialog.ShowDialog() == true)

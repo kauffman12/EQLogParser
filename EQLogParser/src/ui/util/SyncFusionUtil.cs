@@ -42,12 +42,12 @@ namespace EQLogParser
       return opened;
     }
 
-    internal static void ToggleWindow(DockingManager dockSite, string name)
+    internal static void ToggleWindow(DockingManager dockSite, string name, bool force = false)
     {
       var opened = GetOpenWindows(dockSite);
       if (opened.TryGetValue(name, out var control))
       {
-        if (DockingManager.GetState(control) == DockState.Hidden)
+        if (DockingManager.GetState(control) == DockState.Hidden || force)
         {
           dockSite.ActivateWindow(name);
         }
