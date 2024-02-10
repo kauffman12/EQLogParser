@@ -130,7 +130,7 @@ namespace EQLogParser
             var destination = archiveFolder + Path.DirectorySeparatorChar + fileInfo.Name.Replace(".txt", formatted);
             File.Move(path, destination);
             CompressFile(destination);
-            Log.Info($"Archived File: ${path}");
+            Log.Info($"Archived File: {path}");
           }
           catch (Exception e)
           {
