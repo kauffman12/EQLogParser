@@ -63,7 +63,7 @@
       </Border>
       <StackPanel x:Name="buttonsPanel" Visibility="Collapsed" Orientation="Vertical" HorizontalAlignment="Left" Margin="0,4,0,0">
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-          <ComboBox x:Name="showNames" SelectionChanged="ShowNamesChanged" FontStretch="Condensed" FontSize="11">
+          <ComboBox x:Name="showNames" SelectionChanged="ShowNamesChanged" ToolTip="Select Hide Others if you want to hide other Player names and classes." FontStretch="Condensed" FontSize="11">
             <ComboBoxItem>All Names</ComboBoxItem>
             <ComboBoxItem>Hide Others</ComboBoxItem>
           </ComboBox>
@@ -82,10 +82,10 @@
             <ComboBoxItem Tag="50">Reset 50s</ComboBoxItem>
             <ComboBoxItem Tag="60">Reset 60s</ComboBoxItem>
           </ComboBox>
-          <ComboBox x:Name="classList" SelectionChanged="SelectedClassChanged" FontStretch="Condensed" FontSize="11"></ComboBox>
+          <ComboBox x:Name="classList" SelectionChanged="SelectedClassChanged" FontStretch="Condensed" FontSize="11" ToolTip="Display all classes or the selected class."></ComboBox>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Height="30">
-          <ComboBox x:Name="maxRowsList" SelectionChanged="MaxRowsChanged" FontStretch="Condensed" FontSize="11">
+          <ComboBox x:Name="maxRowsList" SelectionChanged="MaxRowsChanged" ToolTip="Number of Plays to Display" FontStretch="Condensed" FontSize="11">
             <ComboBoxItem>1</ComboBoxItem>
             <ComboBoxItem>2</ComboBoxItem>
             <ComboBoxItem>3</ComboBoxItem>
@@ -97,14 +97,17 @@
             <ComboBoxItem>9</ComboBoxItem>
             <ComboBoxItem>10</ComboBoxItem>
           </ComboBox>
-          <ComboBox x:Name="fontList" SelectionChanged="FontSizeChanged" FontStretch="Condensed" FontSize="11">
+          <ComboBox x:Name="fontList" SelectionChanged="FontSizeChanged" ToolTip="Font Size" FontStretch="Condensed" FontSize="11">
             <ComboBoxItem Tag="10">10pt</ComboBoxItem>
             <ComboBoxItem Tag="12">12pt</ComboBoxItem>
             <ComboBoxItem Tag="14">14pt</ComboBoxItem>
             <ComboBoxItem Tag="16">16pt</ComboBoxItem>
           </ComboBox>
-          <CheckBox x:Name="miniBars" Content="Thin" Margin="2,5,2,0" ToolTip="Thin" Checked="MiniBarsChecked" Unchecked="MiniBarsChecked" FontSize="11"></CheckBox>
-          <syncfusion:ColorPicker x:Name="progressBrush" Margin="2,4,0,0" HeaderTemplate="{DynamicResource ColorPickerMinHeaderTemplate}" EnableSolidToGradientSwitch="False" IsGradientPropertyEnabled="False" BorderThickness="0" Background="Transparent" ColorChanged="SelectedProgressBrush"/>
+          <syncfusion:ColorPicker x:Name="progressBrush" Margin="2,4,0,0" ToolTip="Bar Color" HeaderTemplate="{DynamicResource ColorPickerMinHeaderTemplate}" EnableSolidToGradientSwitch="False" IsGradientPropertyEnabled="False" BorderThickness="0" Background="Transparent" ColorChanged="SelectedProgressBrush"/>
+          <CheckBox x:Name="miniBars" Content="Thin Bars" Margin="2,5,2,0" ToolTip="Thin Ranking Bars" Checked="MiniBarsChecked" Unchecked="MiniBarsChecked" FontSize="11"></CheckBox>
+          <CheckBox x:Name="streamer" Content="Streamer Mode" Margin="2,5,2,0" ToolTip="Allow DPS Meter to show up as its own Window to make it available in OBS." Checked="StreamerChecked" Unchecked="StreamerChecked" FontSize="11"></CheckBox>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Height="30">
           <Button x:Name="saveButton" Margin="0,5,0,0" VerticalAlignment="Top" Padding="0" FontSize="11" IsEnabled="False" Height="25" Width="40" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
           <Button x:Name="cancelButton" Margin="2,5,0,0" VerticalAlignment="Top" Padding="0" FontSize="11" IsEnabled="False" Width="40" Height="25" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
           <Button x:Name="closeButton" Margin="2,5,0,0" VerticalAlignment="Top" Padding="0" FontSize="11" IsEnabled="True" Width="40" Height="25" HorizontalAlignment="Left" Click="CloseClick">Close</Button>

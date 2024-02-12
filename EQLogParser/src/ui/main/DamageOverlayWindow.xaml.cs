@@ -39,8 +39,10 @@ namespace EQLogParser
     private int _currentShowCritRate;
     private int _savedShowCritRate;
     private bool _savedMiniBars;
+    private bool _savedStreamerMode;
     private string _savedProgressColor;
     private bool _currentShowDps;
+    private bool _ready;
 
     internal DamageOverlayWindow(bool preview = false, bool reset = false)
     {
@@ -128,12 +130,17 @@ namespace EQLogParser
       _savedMiniBars = ConfigUtil.IfSet("OverlayMiniBars");
       UpdateMiniBars(_savedMiniBars);
 
+      // Streamer Mode
+      _savedStreamerMode = ConfigUtil.IfSet("OverlayStreamerMode");
+      streamer.IsChecked = _savedStreamerMode;
+
       _currentShowDps = ConfigUtil.IfSet("OverlayShowingDps");
       dpsButton.Foreground = _currentShowDps ? ActiveBrush : InActiveBrush;
       tankButton.Foreground = !_currentShowDps ? ActiveBrush : InActiveBrush;
 
       _updateTimer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
       _updateTimer.Tick += UpdateTimerTick;
+      _ready = true;
 
       if (preview)
       {
@@ -145,6 +152,7 @@ namespace EQLogParser
         border.Background = null;
         LoadTestData(true);
         damageContent.Visibility = Visibility.Visible;
+        this.MinHeight = this.Height;
       }
       else
       {
@@ -365,7 +373,6 @@ namespace EQLogParser
     private void CloseClick(object sender, RoutedEventArgs e)
     {
       ((MainWindow)Application.Current.MainWindow)?.CloseDamageOverlay();
-      ((MainWindow)Application.Current.MainWindow)?.OpenDamageOverlayIfEnabled(false, false);
     }
 
     private void SaveClick(object sender, RoutedEventArgs e)
@@ -400,6 +407,9 @@ namespace EQLogParser
 
       ConfigUtil.SetSetting("OverlayMiniBars", miniBars.IsChecked == true);
       _savedMiniBars = miniBars.IsChecked == true;
+
+      ConfigUtil.SetSetting("OverlayStreamerMode", streamer.IsChecked == true);
+      _savedStreamerMode = streamer.IsChecked == true;
 
       ConfigUtil.SetSetting("OverlayMaxRows", maxRowsList.SelectedIndex + 1);
       _savedMaxRows = maxRowsList.SelectedIndex + 1;
@@ -438,6 +448,7 @@ namespace EQLogParser
 
       UpdateFontSize(_savedFontSize);
       UpdateMiniBars(_savedMiniBars);
+      streamer.IsChecked = _savedStreamerMode;
       UpdateProgressBrush(_savedProgressColor);
 
       saveButton.IsEnabled = false;
@@ -503,6 +514,11 @@ namespace EQLogParser
       {
         classList.SelectedItem = selectedClass;
       }
+    }
+
+    private void StreamerChecked(object sender, RoutedEventArgs e)
+    {
+      DataChanged();
     }
 
     private void MiniBarsChecked(object sender, RoutedEventArgs e)
@@ -748,6 +764,7 @@ namespace EQLogParser
         if (!needed.Equals(Height))
         {
           Height = needed;
+          this.MinHeight = this.Height;
         }
       }, DispatcherPriority.Background);
     }
@@ -930,7 +947,7 @@ namespace EQLogParser
     private void DataChanged()
     {
       // not initialized
-      if (saveButton != null)
+      if (saveButton != null && _ready)
       {
         if (!saveButton.IsEnabled)
         {
@@ -960,7 +977,11 @@ namespace EQLogParser
         {
           // set to layered and topmost by xaml
           var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
-          exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow | (int)NativeMethods.ExtendedWindowStyles.WsExTransparent;
+          exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExTransparent;
+          if (!_savedStreamerMode)
+          {
+            exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow;
+          }
           NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, (IntPtr)exStyle);
         }
       }

@@ -315,13 +315,17 @@ namespace EQLogParser
 
     private void EventsNewOverlayFight(object sender, Fight e)
     {
-      Dispatcher.InvokeAsync(() =>
+      // an other lazy optimization to avoid extra dispatches
+      if (_damageOverlay == null)
       {
-        if (_damageOverlay == null)
+        Dispatcher.InvokeAsync(() =>
         {
-          OpenDamageOverlayIfEnabled(false, false);
-        }
-      });
+          if (_damageOverlay == null)
+          {
+            OpenDamageOverlayIfEnabled(false, false);
+          }
+        });
+      }
     }
 
     internal void CopyToEqClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEqClick(type);
@@ -381,11 +385,7 @@ namespace EQLogParser
       {
         if (DataManager.Instance.HasOverlayFights())
         {
-          if (_damageOverlay != null)
-          {
-            _damageOverlay?.Close();
-          }
-
+          _damageOverlay?.Close();
           _damageOverlay = new DamageOverlayWindow(false, reset);
           _damageOverlay.Show();
         }
