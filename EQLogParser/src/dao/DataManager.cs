@@ -721,15 +721,13 @@ namespace EQLogParser
 
       if (fight.DamageHits > 0)
       {
-        bool needEvent;
-
         lock (_overlayFights)
         {
-          needEvent = _overlayFights.Count == 0;
           _overlayFights[fight.Id] = fight;
         }
 
-        if (needEvent)
+        // dont bother if not configured (lazy optimization)
+        if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
         {
           EventsNewOverlayFight?.Invoke(this, fight);
         }

@@ -19,7 +19,7 @@
         MaxWidth="1500"
         MaxHeight="1000"
         MinWidth="50"
-        MinHeight="50"
+        MinHeight="70"
         Height="400"
         MouseLeftButtonDown="OverlayMouseLeftDown"
         SizeChanged="WindowSizeChanged"

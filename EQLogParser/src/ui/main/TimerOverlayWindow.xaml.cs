@@ -46,8 +46,7 @@ namespace EQLogParser
         title.Visibility = Visibility.Visible;
         buttonsPanel.Visibility = Visibility.Visible;
         CreatePreviewTimer("Example Trigger Name", "03:00", 90.0);
-        CreatePreviewTimer("Example Trigger Name #2", "02:00", 60.0);
-        CreatePreviewTimer("Example Trigger Name #3", "01:00", 30.0);
+        CreatePreviewTimer("Example Trigger Name #2", "01:00", 30.0);
         TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
       }
       else
