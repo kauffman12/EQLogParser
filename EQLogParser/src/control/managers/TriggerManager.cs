@@ -343,7 +343,7 @@ namespace EQLogParser
           {
             if (done)
             {
-              var nowTicks = DateTime.Now.Ticks;
+              var nowTicks = DateTime.UtcNow.Ticks;
               if (windowData.RemoveTicks == -1)
               {
                 windowData.RemoveTicks = nowTicks + (TimeSpan.TicksPerMinute * 2);
@@ -377,7 +377,7 @@ namespace EQLogParser
 
     private void AddTextEvent(string text, Trigger trigger)
     {
-      var beginTicks = DateTime.Now.Ticks;
+      var beginTicks = DateTime.UtcNow.Ticks;
       UiUtil.InvokeAsync(() =>
       {
         var textOverlayFound = false;
@@ -473,6 +473,7 @@ namespace EQLogParser
           _timerOverlayTimer.Start();
         }
       }, DispatcherPriority.Render);
+      return;
 
       OverlayWindowData GetTimerWindowData(TriggerNode node, List<TimerData> timerData)
       {

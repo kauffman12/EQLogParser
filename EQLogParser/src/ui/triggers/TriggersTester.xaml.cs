@@ -264,7 +264,10 @@ namespace EQLogParser
                         var start = DateTime.Now;
                         foreach (var line in list)
                         {
-                          _buffer.Add(Tuple.Create(line, nowTime, true));
+                          if (!_buffer.TryAdd(Tuple.Create(line, nowTime, true)))
+                          {
+                            break;
+                          }
                         }
 
                         var took = (DateTime.Now - start).Ticks;

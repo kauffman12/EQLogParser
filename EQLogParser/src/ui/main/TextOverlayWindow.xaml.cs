@@ -54,7 +54,7 @@ namespace EQLogParser
         _textDataList.AddFirst(new TextData
         {
           Text = "test overlay message",
-          EndTicks = DateTime.Now.Ticks + (_node.OverlayData.FadeDelay * TimeSpan.TicksPerSecond)
+          EndTicks = DateTime.UtcNow.Ticks + (_node.OverlayData.FadeDelay * TimeSpan.TicksPerSecond)
         });
 
         content.Children.Add(CreateBlock());
@@ -101,7 +101,7 @@ namespace EQLogParser
     internal bool Tick()
     {
       bool done;
-      var currentTicks = DateTime.Now.Ticks;
+      var currentTicks = DateTime.UtcNow.Ticks;
 
       if (!_node.OverlayData.Width.Equals((long)Width))
       {

@@ -564,8 +564,21 @@ namespace EQLogParser
 
     internal static void CheckQuickShare(ChatType chatType, string action, double dateTime, string characterId, string processorName)
     {
+      if (chatType.Sender == null)
+      {
+        return;
+      }
+
+      // handle stop command
+      if (chatType.SenderIsYou && (chatType.TextStart - 27) is var s and > 0 && action?.Length > s
+          && action.AsSpan()[s..].StartsWith("{EQLP:STOP}"))
+      {
+        TriggerManager.Instance.TriggersUpdated();
+        return;
+      }
+
       // if Quick Share data is recent then try to handle it
-      if (chatType.Sender != null && action.IndexOf($"{{{ShareTrigger}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
+      if (action.IndexOf($"{{{ShareTrigger}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
           action.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 10))
       {
         var start = index + 7;

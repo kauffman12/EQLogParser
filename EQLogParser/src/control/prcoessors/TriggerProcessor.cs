@@ -35,16 +35,23 @@ namespace EQLogParser
     private readonly Action<Trigger, List<TimerData>> _addTimerEvent;
     private readonly SpeechSynthesizer _synth;
     private readonly SoundPlayer _soundPlayer;
-    private readonly Channel<Tuple<TriggerWrapper, LineData>> _lowPriChannel = Channel.CreateUnbounded<Tuple<TriggerWrapper, LineData>>();
-    private readonly Channel<Speak> _speechChannel = Channel.CreateBounded<Speak>(new BoundedChannelOptions(10)
-    {
-      FullMode = BoundedChannelFullMode.DropOldest
-    });
     private TriggerWrapper _previousSpoken;
     private LinkedList<TriggerWrapper> _activeTriggers;
     private List<LexiconItem> _lexicon;
     private bool _isTesting;
     private bool _ready = true;
+
+    private readonly Channel<Speak> _speechChannel =
+      Channel.CreateBounded<Speak>(new BoundedChannelOptions(20)
+      {
+        FullMode = BoundedChannelFullMode.DropOldest
+      });
+
+    private readonly Channel<LineData> _chatChannel =
+      Channel.CreateBounded<LineData>(new BoundedChannelOptions(100)
+      {
+        FullMode = BoundedChannelFullMode.DropOldest
+      });
 
     internal TriggerProcessor(string id, string name, string playerName, string voice, int voiceRate,
       Action<string, Trigger> addTextEvent, Action<Trigger, List<TimerData>> addTimerEvent)
@@ -66,11 +73,6 @@ namespace EQLogParser
       TriggerStateManager.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
     }
 
-    internal void SetTesting(bool testing)
-    {
-      _isTesting = testing;
-    }
-
     private void LexiconUpdateEvent(List<LexiconItem> update)
     {
       lock (_voiceLock)
@@ -81,21 +83,20 @@ namespace EQLogParser
 
     public void LinkTo(BlockingCollection<Tuple<string, double, bool>> collection)
     {
-      // setup processors before reading from the log
-      Task.Run(async () =>
-      {
-        await foreach (var data in _lowPriChannel.Reader.ReadAllAsync())
-        {
-          HandleTrigger(data.Item1, data.Item2);
-        }
-      });
-
       Task.Run(async () =>
       {
         // ReSharper disable once InconsistentlySynchronizedField
         await foreach (var data in _speechChannel.Reader.ReadAllAsync())
         {
           HandleSpeech(data);
+        }
+      });
+
+      Task.Run(async () =>
+      {
+        await foreach (var data in _chatChannel.Reader.ReadAllAsync())
+        {
+          HandleChat(data);
         }
       });
 
@@ -135,6 +136,11 @@ namespace EQLogParser
       }
     }
 
+    internal void SetTesting(bool testing)
+    {
+      _isTesting = testing;
+    }
+
     internal void UpdateActiveTriggers()
     {
       lock (_activeTriggerLock)
@@ -167,6 +173,7 @@ namespace EQLogParser
         node = _activeTriggers.First;
       }
 
+      var start = DateTime.UtcNow.Ticks;
       while (node != null)
       {
         // save since the nodes may get reordered
@@ -175,34 +182,21 @@ namespace EQLogParser
 
         lock (wrapper)
         {
-          // if within a month assume handle it right away (2592000000 millis is 30 days)
-          if ((new TimeSpan(DateTime.Now.Ticks).TotalMilliseconds - wrapper.TriggerData.LastTriggered) <= 2592000000)
+          if (!wrapper.IsDisabled)
           {
-            HandleTrigger(wrapper, lineData);
-          }
-          else
-          {
-            _lowPriChannel?.Writer.WriteAsync(Tuple.Create(wrapper, lineData));
+            HandleTrigger(wrapper, lineData, start);
           }
         }
       }
 
-      // look for quick shares after triggers have been processed
-      var chatType = ChatLineParser.ParseChatType(lineData.Action);
-      if (chatType != null && TriggerStateManager.Instance.IsActive())
-      {
-        // Look for Quick Share entries
-        TriggerUtil.CheckQuickShare(chatType, lineData.Action, dateTime, CurrentCharacterId, CurrentProcessorName);
-        GinaUtil.CheckGina(chatType, lineData.Action, dateTime, CurrentCharacterId, CurrentProcessorName);
-      }
+      _chatChannel?.Writer.WriteAsync(lineData);
     }
 
-    private void HandleTrigger(TriggerWrapper wrapper, LineData lineData, int loopCount = 0)
+    private void HandleTrigger(TriggerWrapper wrapper, LineData lineData, long startTicks, int loopCount = 0)
     {
       // lock here because lowPri queue also calls this
       lock (wrapper)
       {
-        var start = DateTime.Now.Ticks;
         var action = lineData.Action;
         MatchCollection matches = null;
         var found = false;
@@ -210,7 +204,17 @@ namespace EQLogParser
         var dynamicDuration = double.NaN;
         if (wrapper.Regex != null)
         {
-          matches = wrapper.Regex.Matches(action);
+          try
+          {
+            matches = wrapper.Regex.Matches(action);
+          }
+          catch (RegexMatchTimeoutException)
+          {
+            Log.Warn($"Disabling {wrapper.Name} with slow Regex: {wrapper.TriggerData?.Pattern}");
+            wrapper.IsDisabled = true;
+            return;
+          }
+
           found = matches.Count > 0 && TriggerUtil.CheckOptions(wrapper.RegexNOptions, matches, out dynamicDuration);
           if (!double.IsNaN(dynamicDuration) && wrapper.TriggerData.TimerType is 1 or 3) // countdown or progress
           {
@@ -224,8 +228,8 @@ namespace EQLogParser
 
         if (found)
         {
-          var beginTicks = DateTime.Now.Ticks;
-          var updatedTime = new TimeSpan(beginTicks).TotalMilliseconds;
+          var beginTicks = DateTime.UtcNow.Ticks;
+          var updatedTime = beginTicks / TimeSpan.TicksPerMillisecond;
 
           // no need to constantly updated the DB. 6 hour check
           if (updatedTime - wrapper.TriggerData.LastTriggered > SixHours)
@@ -234,7 +238,7 @@ namespace EQLogParser
           }
 
           wrapper.TriggerData.LastTriggered = updatedTime;
-          var time = (beginTicks - start) / 10;
+          var time = (beginTicks - startTicks) / 10;
           wrapper.TriggerData.WorstEvalTime = Math.Max(time, wrapper.TriggerData.WorstEvalTime);
 
           if (ProcessMatchesText(wrapper.ModifiedTimerName, matches) is { } displayName)
@@ -445,7 +449,7 @@ namespace EQLogParser
 
         if (trigger.EndUseRegex)
         {
-          newTimerData.EndEarlyRegex = new Regex(endEarlyPattern, RegexOptions.IgnoreCase);
+          newTimerData.EndEarlyRegex = new Regex(endEarlyPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
           newTimerData.EndEarlyRegexNOptions = numberOptions2;
         }
         else
@@ -461,7 +465,7 @@ namespace EQLogParser
 
         if (trigger.EndUseRegex2)
         {
-          newTimerData.EndEarlyRegex2 = new Regex(endEarlyPattern2, RegexOptions.IgnoreCase);
+          newTimerData.EndEarlyRegex2 = new Regex(endEarlyPattern2, RegexOptions.IgnoreCase | RegexOptions.Compiled);
           newTimerData.EndEarlyRegex2NOptions = numberOptions3;
         }
         else
@@ -511,7 +515,7 @@ namespace EQLogParser
             {
               if (wrapper.TriggerData.TimesToLoop > data2.TimesToLoopCount)
               {
-                HandleTrigger(wrapper, data2.RepeatingTimerLineData, data2.TimesToLoopCount + 1);
+                HandleTrigger(wrapper, data2.RepeatingTimerLineData, DateTime.UtcNow.Ticks, data2.TimesToLoopCount + 1);
               }
             }
           }
@@ -598,11 +602,24 @@ namespace EQLogParser
       _previousSpoken = speak.Wrapper;
     }
 
+    private void HandleChat(LineData lineData)
+    {
+      // look for quick shares after triggers have been processed
+      var chatType = ChatLineParser.ParseChatType(lineData.Action);
+      if (chatType != null && TriggerStateManager.Instance.IsActive())
+      {
+        // Look for Quick Share entries
+        TriggerUtil.CheckQuickShare(chatType, lineData.Action, lineData.BeginTime, CurrentCharacterId, CurrentProcessorName);
+        GinaUtil.CheckGina(chatType, lineData.Action, lineData.BeginTime, CurrentCharacterId, CurrentProcessorName);
+      }
+    }
+
     private LinkedList<TriggerWrapper> GetActiveTriggers()
     {
       var activeTriggers = new LinkedList<TriggerWrapper>();
       var enabledTriggers = TriggerStateManager.Instance.GetEnabledTriggers(CurrentCharacterId);
       var timerOverlayCache = new Dictionary<string, bool>();
+      long triggerCount = 0;
       foreach (var enabled in enabledTriggers.OrderByDescending(enabled => enabled.Trigger.LastTriggered))
       {
         var trigger = enabled.Trigger;
@@ -610,6 +627,7 @@ namespace EQLogParser
         {
           try
           {
+            triggerCount++;
             var wrapper = new TriggerWrapper
             {
               Id = enabled.Id,
@@ -670,7 +688,7 @@ namespace EQLogParser
 
             if (trigger.UseRegex)
             {
-              wrapper.Regex = new Regex(pattern, RegexOptions.IgnoreCase);
+              wrapper.Regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
               wrapper.RegexNOptions = numberOptions;
             }
             else
@@ -687,6 +705,10 @@ namespace EQLogParser
         }
       }
 
+      if (triggerCount > 300 && CurrentProcessorName?.Contains("Trigger Tester") == false)
+      {
+        Log.Warn($"Over {triggerCount} triggers active for one character. To improve performance consider turning off old triggers.");
+      }
       return activeTriggers;
     }
 
@@ -715,7 +737,7 @@ namespace EQLogParser
       return endEarly;
     }
 
-    private string ProcessDisplayText(string text, string line, MatchCollection matches, MatchCollection originalMatches)
+    private static string ProcessDisplayText(string text, string line, MatchCollection matches, MatchCollection originalMatches)
     {
       if (!string.IsNullOrEmpty(text))
       {
@@ -747,7 +769,7 @@ namespace EQLogParser
       return text;
     }
 
-    private static long GetRepeatedCount(Dictionary<string, Dictionary<string, RepeatedData>> times, TriggerWrapper wrapper, string displayValue)
+    private static long GetRepeatedCount(IReadOnlyDictionary<string, Dictionary<string, RepeatedData>> times, TriggerWrapper wrapper, string displayValue)
     {
       if (!string.IsNullOrEmpty(wrapper.Id) && times.TryGetValue(wrapper.Id, out var displayTimes))
       {
@@ -759,7 +781,7 @@ namespace EQLogParser
       return -1;
     }
 
-    private static long UpdateRepeatedTimes(Dictionary<string, Dictionary<string, RepeatedData>> times, TriggerWrapper wrapper,
+    private static long UpdateRepeatedTimes(IDictionary<string, Dictionary<string, RepeatedData>> times, TriggerWrapper wrapper,
       string displayValue, long beginTicks)
     {
       long currentCount = -1;
@@ -917,8 +939,8 @@ namespace EQLogParser
     {
       _ready = false;
       TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
-      _lowPriChannel?.Writer.Complete();
       _speechChannel?.Writer.Complete();
+      _chatChannel?.Writer.Complete();
       _soundPlayer?.Dispose();
 
       lock (_voiceLock)
@@ -971,6 +993,7 @@ namespace EQLogParser
       public Trigger TriggerData { get; init; }
       public bool HasRepeatedTimer { get; set; }
       public bool HasRepeatedText { get; set; }
+      public bool IsDisabled { get; set; }
     }
   }
 }
