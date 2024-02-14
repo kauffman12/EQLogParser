@@ -441,9 +441,9 @@ namespace EQLogParser
           stats.AvgNonTwincastLucky = (long)Math.Round(Convert.ToDecimal(stats.TotalNonTwincastLucky) / stats.NonTwincastLuckyHits, 2);
         }
 
-        if (stats.Total > 0)
+        if (stats.Potential > 0)
         {
-          stats.ExtraRate = (float)Math.Round((float)stats.Extra / stats.Total * 100, 2);
+          stats.ExtraRate = (float)Math.Round((float)stats.Extra / stats.Potential * 100, 2);
         }
 
         if ((stats.Hits - stats.TwincastHits) is var nonTwincast and > 0)

@@ -91,7 +91,14 @@ namespace EQLogParser
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
     private void LogLoadingComplete(string _) => Load();
-    private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
+    private void EventsThemeChanged(string _)
+    {
+      if (dataGrid?.View != null)
+      {
+        DataGridUtil.RefreshTableColumns(dataGrid);
+        dataGrid.View.Refresh();
+      }
+    }
 
     private void Load()
     {
@@ -110,7 +117,7 @@ namespace EQLogParser
       dataGrid.ItemsSource = sections;
     }
 
-    private dynamic CreateChild(double beginTime, RandomRecord record)
+    private dynamic CreateChild(double beginTime, RandomRecord record, HashSet<string> winnersRef)
     {
       var child = new ExpandoObject() as dynamic;
       child.Player = record.Player;
@@ -118,6 +125,7 @@ namespace EQLogParser
       child.To = record.To;
       child.From = record.From;
       child.RollTime = beginTime;
+      child.Winners = winnersRef;
       return child;
     }
 
@@ -135,7 +143,7 @@ namespace EQLogParser
           }
         }
 
-        section.Children.Add(CreateChild(beginTime, record));
+        section.Children.Add(CreateChild(beginTime, record, section.Winners));
 
         if (section.Rolled < record.Rolled)
         {
@@ -162,7 +170,7 @@ namespace EQLogParser
         section.Winners = new HashSet<string>();
         section.Winners.Add(record.Player);
         section.Children = new List<dynamic>();
-        section.Children.Add(CreateChild(beginTime, record));
+        section.Children.Add(CreateChild(beginTime, record, section.Winners));
         section.RolledTwice = new HashSet<string>();
         sections.Add(section);
       }
@@ -173,25 +181,27 @@ namespace EQLogParser
       var remaining = false;
       foreach (var section in sections)
       {
-        section.Player = "Highest Roll: " + string.Join(" + ", section.Winners).Trim();
-
-        if (section.RolledTwice.Count > 0)
-        {
-          section.Player += ", Rolled Multiple: " + string.Join(" + ", section.RolledTwice).Trim();
-        }
-
+        var playerText = "Highest Roll: " + string.Join(" + ", section.Winners).Trim();
         var duration = DateUtil.ToDouble(DateTime.Now) - section.StartTime;
         if (duration < _currentTimeLimit)
         {
+          playerText = playerText.Replace(ConfigUtil.PlayerName, "You Are Winning!");
           section.Duration = "Remaining: " + DateUtil.FormatSimpleMs((long)(_currentTimeLimit - duration) * TimeSpan.TicksPerSecond);
           remaining = true;
         }
         else
         {
+          playerText = playerText.Replace(ConfigUtil.PlayerName, "You Won!");
           section.Duration = "Time Limit Reached";
         }
 
+        if (section.RolledTwice.Count > 0)
+        {
+          playerText += ", Rolled Multiple: " + string.Join(" + ", section.RolledTwice).Trim();
+        }
+
         section.Count = section.Children.Count;
+        section.Player = playerText;
       }
 
       if (sections.Count > 0)

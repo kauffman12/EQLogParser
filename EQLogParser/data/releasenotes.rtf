@@ -1,6 +1,22 @@
 {\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Segoe UI;}{\f1\fnil\fcharset2 Symbol;}}
 {\*\generator Riched20 10.0.22621}\viewkind4\uc1 
-\pard\ul\f0\fs20\lang1033 Updated in Version 2.1.65\ulnone\par
+\pard\ul\f0\fs20\lang1033 Updated in Version 2.1.66\ulnone\par
+\par
+
+\pard 
+{\pntext\f0 1.\tab}{\*\pn\pnlvlbody\pnf0\pnindent0\pnstart1\pndec{\pntxta.}}
+\fi-360\li720 Changed Over % on the Healing Summary to be total over healed / total potential. This way the value is easier to understand. If you hit 0% then all your heals were needed. If you hit 100% then none of your heals did anything.\par
+{\pntext\f0 2.\tab}Added a Streamer Mode checkbox to the Damage Meter. If this is checked the meter will show up as a window when you alt-tab and it should also be visible/selectable in OBS.\par
+{\pntext\f0 3.\tab}Fixed close action on Damage Meter. It should no longer pop back up right away. Close should make the meter go away until more damage is seen no matter what your settings are.\par
+{\pntext\f0 4.\tab}Fixed another issue with Damage Meter where the Save button would be enabled when no changes were made. Also, adjusted sizing for Damage Meter components and moved the save/close buttons to always be on their own at the bottom. Note that the Damage Meter only uses as much vertical space as necessary so it's OK if you save your settings with a height bigger than you really need.\par
+{\pntext\f0 5.\tab}Update Random Rolls view to highlight the details cell for your roll if you're the winner. Also, updated the text for the header row to be clearer that you're winning when you have the highest roll.\par
+{\pntext\f0 6.\tab}Made some performance tweaks to Trigger processing and added a warning to the log file when over 300 triggers are active. To keep everything processing quickly I'd try to only enable triggers you're really using. Your class triggers plus current expansion, etc.\par
+{\pntext\f0 7.\tab}Added a way to stop audio, close overlays, and basically reload triggers from within EQ. Just send \{EQLP:STOP\} on a channel and it should pick it up. Don't type anything else on the line just that.\par
+{\pntext\f0 8.\tab}Updated to latest Syncfusion libraries.\par
+{\pntext\f0 9.\tab}Note. This may be the last version of EQLogParser that uses .Net 6.0. The plan is to update to 8.0 somtime next month and only update this version that uses 6.0 with minor fixes for a little while.\par
+
+\pard\par
+\ul Updated in Version 2.1.65\ulnone\par
 \par
 
 \pard 

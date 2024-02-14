@@ -47,6 +47,7 @@
                            ShowSortNumbers="True">
         <syncfusion:SfTreeGrid.Resources>
           <local:DateTimeConverter x:Key="DateTimeConverter" />
+          <local:RandomPlayerStyleConverter x:Key="RandomStyleConverter"></local:RandomPlayerStyleConverter>
         </syncfusion:SfTreeGrid.Resources>
         <syncfusion:SfTreeGrid.SortColumnDescriptions>
           <syncfusion:SortColumnDescription ColumnName="StartTime" SortDirection="Descending" />
@@ -62,7 +63,14 @@
           <syncfusion:TreeGridNumericColumn MappingName="Rolled" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Rolled" />
           <syncfusion:TreeGridTextColumn MappingName="RollTime" DisplayBinding="{Binding Path=RollTime, Converter={StaticResource DateTimeConverter}}" 
                                    TextAlignment="Center" HeaderText="Roll Time" />
-          <syncfusion:TreeGridTextColumn MappingName="Player" HeaderText="Details" MinimumWidth="300"/>
+          <syncfusion:TreeGridTextColumn MappingName="Player" HeaderText="Details" MinimumWidth="300">
+            <syncfusion:TreeGridTextColumn.CellStyle>
+              <Style TargetType="syncfusion:TreeGridCell">
+                <Setter Property="Background"  Value="{Binding Converter={StaticResource RandomStyleConverter}}"/>
+                <Setter Property="BorderThickness" Value="0.4"></Setter>
+              </Style>
+            </syncfusion:TreeGridTextColumn.CellStyle>
+          </syncfusion:TreeGridTextColumn>
         </syncfusion:SfTreeGrid.Columns>
         <syncfusion:SfTreeGrid.ContextMenu>
           <ContextMenu>

@@ -69,7 +69,7 @@ namespace EQLogParser
     {
       if (timerList.Count > 0)
       {
-        var currentTicks = DateTime.Now.Ticks;
+        var currentTicks = DateTime.UtcNow.Ticks;
         foreach (var timerData in timerList.Where(timerData => timerData.TimerType == 2 && ShouldProcess(timerData)))
         {
           if (_shortDurationBars.TryGetValue(timerData.Key, out var value))
@@ -88,7 +88,7 @@ namespace EQLogParser
 
     internal bool Tick(List<TimerData> timerList)
     {
-      var currentTicks = DateTime.Now.Ticks;
+      var currentTicks = DateTime.UtcNow.Ticks;
       var maxDurationTicks = double.NaN;
 
       if (!_node.OverlayData.Width.Equals((long)Width))
