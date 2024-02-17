@@ -14,7 +14,7 @@ namespace EQLogParser
         var test = (dynamic)value;
         try
         {
-          if (test.Player == ConfigUtil.PlayerName && test.Winners.Contains(ConfigUtil.PlayerName))
+          if (!string.IsNullOrEmpty(test.Highest) && test.Winners.Contains(ConfigUtil.PlayerName))
           {
             return Application.Current.Resources["EQSearchBackgroundBrush"];
           }

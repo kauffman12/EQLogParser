@@ -28,7 +28,7 @@ namespace EQLogParser
       Channel = channel;
       Sender = sender;
       TextStart = start;
-      SenderIsYou = sender == You;
+      SenderIsYou = (sender == You) || (sender == ConfigUtil.PlayerName);
       Receiver = receiver;
     }
 

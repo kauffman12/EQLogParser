@@ -57,6 +57,9 @@ namespace EQLogParser
         }
 
         dataGrid.View.Refresh();
+        var triggerUpdate = dataGrid.Columns[3].CellStyle;
+        dataGrid.Columns[3].CellStyle = null;
+        dataGrid.Columns[3].CellStyle = triggerUpdate;
         foreach (var node in dataGrid.View.Nodes)
         {
           if (!node.IsExpanded && expanded.ContainsKey(node.Item))
@@ -117,15 +120,16 @@ namespace EQLogParser
       dataGrid.ItemsSource = sections;
     }
 
-    private dynamic CreateChild(double beginTime, RandomRecord record, HashSet<string> winnersRef)
+    private static dynamic CreateChild(double beginTime, RandomRecord record, HashSet<string> winnersRef)
     {
       var child = new ExpandoObject() as dynamic;
-      child.Player = record.Player;
+      child.Details = record.Player;
       child.Rolled = record.Rolled;
       child.To = record.To;
       child.From = record.From;
       child.RollTime = beginTime;
       child.Winners = winnersRef;
+      child.Highest = "";
       return child;
     }
 
@@ -137,9 +141,9 @@ namespace EQLogParser
       {
         foreach (var child in section.Children)
         {
-          if (child.Player == record.Player)
+          if (child.Details == record.Player)
           {
-            section.RolledTwice.Add(child.Player);
+            section.RolledTwice.Add(child.Details);
           }
         }
 
@@ -181,27 +185,24 @@ namespace EQLogParser
       var remaining = false;
       foreach (var section in sections)
       {
-        var playerText = "Highest Roll: " + string.Join(" + ", section.Winners).Trim();
+        section.Highest = string.Join(" + ", section.Winners).Trim();
         var duration = DateUtil.ToDouble(DateTime.Now) - section.StartTime;
         if (duration < _currentTimeLimit)
         {
-          playerText = playerText.Replace(ConfigUtil.PlayerName, "You Are Winning!");
           section.Duration = "Remaining: " + DateUtil.FormatSimpleMs((long)(_currentTimeLimit - duration) * TimeSpan.TicksPerSecond);
           remaining = true;
         }
         else
         {
-          playerText = playerText.Replace(ConfigUtil.PlayerName, "You Won!");
           section.Duration = "Time Limit Reached";
         }
 
         if (section.RolledTwice.Count > 0)
         {
-          playerText += ", Rolled Multiple: " + string.Join(" + ", section.RolledTwice).Trim();
+          section.Details = "Rolled Multiple: " + string.Join(" + ", section.RolledTwice).Trim();
         }
 
         section.Count = section.Children.Count;
-        section.Player = playerText;
       }
 
       if (sections.Count > 0)
