@@ -20,6 +20,9 @@ namespace EQLogParser
       { "sliced", 1 }, { "stabbed", 1 }, { "surrounded", 1 }, { "struck", 1 }, { "stunned", 1 }, { "targeted", 1 }, { "withered", 1 }
     };
 
+    private static string _randomPlayer = null;
+    private static long _lastLine = -1;
+
     public static bool Process(LineData lineData)
     {
       var handled = false;
@@ -53,6 +56,7 @@ namespace EQLogParser
           var receiveIndex = -1;
           var isIndex = -1;
           var itemsIndex = -1;
+          var oldRandom = false;
 
           for (var i = 0; i < split.Length && !handled; i++)
           {
@@ -99,15 +103,37 @@ namespace EQLogParser
               switch (split[i])
               {
                 case "**A":
-                  if (i == 0 && split.Length == 25 && split[1] == "Magic" && split[2] == "Die" && split[4] == "rolled" &&
-                    split[12] == "number" && split[6].Length > 2 && split[16].Length > 1 && split[24].Length > 1)
+                  if (i == 0 && split[1] == "Magic" && split[2] == "Die" && split[4] == "rolled" && split[6].Length > 2)
                   {
                     var player = split[6][..^1];
-                    var to = split[16][..^1];
-                    var rolled = split[24][..^1];
-                    if (int.TryParse(split[14], out var fromNumber) && int.TryParse(to, out var toNumber) && int.TryParse(rolled, out var rolledNumber))
+                    if (split.Length == 25 && split[12] == "number" && split[16].Length > 1 && split[24].Length > 1)
                     {
-                      RecordManager.Instance.Add(new RandomRecord { Player = player, Rolled = rolledNumber, To = toNumber, From = fromNumber },
+                      var to = split[16][..^1];
+                      var rolled = split[24][..^1];
+                      if (int.TryParse(split[14], out var fromNumber) && int.TryParse(to, out var toNumber) && int.TryParse(rolled, out var rolledNumber))
+                      {
+                        RecordManager.Instance.Add(new RandomRecord { Player = player, Rolled = rolledNumber, To = toNumber, From = fromNumber },
+                          lineData.BeginTime);
+                        handled = true;
+                      }
+                    }
+                    else if (split.Length == 7)
+                    {
+                      oldRandom = true;
+                      _randomPlayer = player;
+                      _lastLine = lineData.LineNumber;
+                    }
+                  }
+                  break;
+                case "**It":
+                  if (!string.IsNullOrEmpty(_randomPlayer) && (_lastLine + 1) == lineData.LineNumber && split.Length == 18 && split[5] == "number" &&
+                      split[9].Length > 1 && split[17].Length > 1)
+                  {
+                    var to = split[9][..^1];
+                    var rolled = split[17][..^1];
+                    if (int.TryParse(split[7], out var fromNumber) && int.TryParse(to, out var toNumber) && int.TryParse(rolled, out var rolledNumber))
+                    {
+                      RecordManager.Instance.Add(new RandomRecord { Player = _randomPlayer, Rolled = rolledNumber, To = toNumber, From = fromNumber },
                         lineData.BeginTime);
                       handled = true;
                     }
@@ -281,6 +307,13 @@ namespace EQLogParser
                   }
                   break;
               }
+            }
+
+            if (!oldRandom)
+            {
+              // reset if first part of random wasn't just parsed
+              _randomPlayer = null;
+              _lastLine = -1;
             }
           }
 

@@ -58,19 +58,20 @@
                                    TextAlignment="Center" HeaderText="Start Time" />
           <syncfusion:TreeGridTextColumn MappingName="Duration" HeaderText="Duration" MinimumWidth="150"/>
           <syncfusion:TreeGridNumericColumn MappingName="Count" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Rolls" />
+          <syncfusion:TreeGridTextColumn MappingName="Highest" HeaderText="Highest Rolls" Width="250">
+            <syncfusion:TreeGridTextColumn.CellStyle>
+              <Style TargetType="syncfusion:TreeGridCell">
+                <Setter Property="Background"  Value="{Binding Converter={StaticResource RandomStyleConverter}}"/>
+                <Setter Property="BorderThickness" Value="0.24"></Setter>
+              </Style>
+            </syncfusion:TreeGridTextColumn.CellStyle>
+          </syncfusion:TreeGridTextColumn>
           <syncfusion:TreeGridNumericColumn MappingName="From" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="From" />
           <syncfusion:TreeGridNumericColumn MappingName="To" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="To" />
           <syncfusion:TreeGridNumericColumn MappingName="Rolled" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Rolled" />
           <syncfusion:TreeGridTextColumn MappingName="RollTime" DisplayBinding="{Binding Path=RollTime, Converter={StaticResource DateTimeConverter}}" 
-                                   TextAlignment="Center" HeaderText="Roll Time" />
-          <syncfusion:TreeGridTextColumn MappingName="Player" HeaderText="Details" MinimumWidth="300">
-            <syncfusion:TreeGridTextColumn.CellStyle>
-              <Style TargetType="syncfusion:TreeGridCell">
-                <Setter Property="Background"  Value="{Binding Converter={StaticResource RandomStyleConverter}}"/>
-                <Setter Property="BorderThickness" Value="0.4"></Setter>
-              </Style>
-            </syncfusion:TreeGridTextColumn.CellStyle>
-          </syncfusion:TreeGridTextColumn>
+                                   TextAlignment="Center" HeaderText="Roll Time" MinimumWidth="120" />
+          <syncfusion:TreeGridTextColumn MappingName="Details" HeaderText="Player Details" Width="250" />
         </syncfusion:SfTreeGrid.Columns>
         <syncfusion:SfTreeGrid.ContextMenu>
           <ContextMenu>
