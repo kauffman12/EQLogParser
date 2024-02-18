@@ -264,6 +264,12 @@ namespace EQLogParser
                   PlayerManager.Instance.AddVerifiedPlayer(player, chatType.BeginTime);
                   PlayerManager.Instance.AddPetToPlayer(chatType.Sender, player); // also adds verified pet
                 }
+                else
+                {
+                  var player = span.ToString();
+                  PlayerManager.Instance.AddVerifiedPlayer(player, chatType.BeginTime);
+                  PlayerManager.Instance.AddPetToPlayer(chatType.Sender, player); // also adds verified pet
+                }
               }
             }
           }

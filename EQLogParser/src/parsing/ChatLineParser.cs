@@ -153,13 +153,13 @@ namespace EQLogParser
           // [Wed Jan 17 23:35:13 2024] Useless says, 'My leader is Incogitable.'
           // EMU Support Test says 'My leader is Test'
           var start = origSpan[..i];
-          if (start.EndsWith(" 'My leader is") && start.Length > " 'My leader is".Length + 1)
+          if (start.EndsWith("'My leader is") && start.Length > "'My leader is".Length)
           {
-            start = start[..^(" 'My leader is".Length + 1)];
+            start = start[..^" 'My leader is".Length];
             if (start.EndsWith(" says") && start.LastIndexOf(' ') is var last and > -1)
             {
               sender = start[..last].ToString();
-              return new ChatType(ChatChannels.Say, sender, 27 + start.Length + 3);
+              return new ChatType(ChatChannels.Say, sender, 27 + start.Length + 2);
             }
           }
         }
