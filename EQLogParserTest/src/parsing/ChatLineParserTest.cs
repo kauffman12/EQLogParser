@@ -105,7 +105,7 @@ namespace EQLogParserTest
     public void TestOtherSayPetLeader()
     {
       // EMU pet leader
-      var chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test says 'My leader is");
+      var chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test says 'My leader is hello'");
       Assert.IsNotNull(chatType);
       Assert.AreEqual(chatType.Channel, ChatChannels.Say);
       Assert.AreEqual(chatType.Sender, "Test");

@@ -99,7 +99,7 @@ namespace EQLogParser
         }
 
         var reader = FileUtil.GetStreamReader(fs, beginTime);
-        SearchLinear(reader, minDate, out var firstLine);
+        SearchLinear(reader, minDate, cancelToken);
 
         _currentPos = fs.Position;
         await using (fs)
@@ -125,12 +125,6 @@ namespace EQLogParser
             else if ((_initSize - bytesRead) < 10000)
             {
               _currentPos = fs.Position;
-            }
-
-            if (firstLine != null)
-            {
-              HandleLine(firstLine, ref previous, ref doubleValue, cancelToken);
-              firstLine = null;
             }
 
             HandleLine(line, ref previous, ref doubleValue, cancelToken);
@@ -188,10 +182,8 @@ namespace EQLogParser
       }
     }
 
-    private static void SearchLinear(TextReader reader, DateTime minDate, out string firstLine)
+    private void SearchLinear(TextReader reader, DateTime minDate, CancellationToken cancelToken)
     {
-      firstLine = null;
-
       if (minDate != DateTime.MinValue)
       {
         while (reader.ReadLine() is { } line)
@@ -204,7 +196,12 @@ namespace EQLogParser
 
           if (dateTime >= minDate)
           {
-            firstLine = line;
+            if (!cancelToken.IsCancellationRequested)
+            {
+              string previous = null;
+              double doubleValue = 0;
+              HandleLine(line, ref previous, ref doubleValue, cancelToken);
+            }
             break;
           }
         }

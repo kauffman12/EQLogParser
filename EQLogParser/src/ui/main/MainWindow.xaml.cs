@@ -13,7 +13,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,6 +20,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using System.Xml;
 using Application = System.Windows.Application;
 
 namespace EQLogParser
@@ -249,7 +249,9 @@ namespace EQLogParser
         {
           try
           {
-            dockSite.LoadDockState(new BinaryFormatter(), StorageFormat.Xml, ConfigUtil.ConfigDir + "/dockSite.xml");
+            var reader = XmlReader.Create(ConfigUtil.ConfigDir + "/dockSite.xml");
+            dockSite.LoadDockState(reader);
+            reader.Close();
           }
           catch (Exception ex)
           {
@@ -1078,7 +1080,16 @@ namespace EQLogParser
 
       if (!_resetWindowState)
       {
-        dockSite.SaveDockState(new BinaryFormatter(), StorageFormat.Xml, ConfigUtil.ConfigDir + "/dockSite.xml");
+        try
+        {
+          var writer = XmlWriter.Create(ConfigUtil.ConfigDir + "/dockSite.xml");
+          dockSite.SaveDockState(writer);
+          writer.Close();
+        }
+        catch (Exception)
+        {
+          // ignore
+        }
       }
 
       ConfigUtil.Save();
