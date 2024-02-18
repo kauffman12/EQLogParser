@@ -102,7 +102,7 @@
           <Directory Id="RTFOLDER" Name="runtimes">
             <Directory Id="RTWINFOLDER" Name="win">
               <Directory Id="RTWINLIBFOLDER" Name="lib">
-                <Directory Id="RTWINLIBNETFOLDER" Name="net6.0" />
+                <Directory Id="RTWINLIBNETFOLDER" Name="net8.0" />
               </Directory>
             </Directory>
           </Directory>
@@ -310,7 +310,7 @@
     </ComponentGroup>
     <ComponentGroup Id="RuntimeComponents" Directory="RTWINLIBNETFOLDER">
       <Component Win64="yes" Id="System.Speech.dll" Guid="7BEDF909-C3DD-4B90-B172-56D880664C1A">
-        <File Id="System.Speech.dll" Name="System.Speech.dll" Source="$(var.EQLogParser.TargetDir)\runtimes\win\lib\net6.0\System.Speech.dll" />
+        <File Id="System.Speech.dll" Name="System.Speech.dll" Source="$(var.EQLogParser.TargetDir)\runtimes\win\lib\net8.0\System.Speech.dll" />
       </Component>  
     </ComponentGroup>
   </Fragment>

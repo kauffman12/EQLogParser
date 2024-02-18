@@ -1,9 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <PublishSingleFile>false</PublishSingleFile>
-    <PublishTrimmed>false</PublishTrimmed>
-    <SelfContained>false</SelfContained>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
     <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
     <OutputType>WinExe</OutputType>
     <IsWebBootstrapper>false</IsWebBootstrapper>
@@ -164,7 +163,7 @@
     <None Remove="..\Dependencies\Hardcodet.Wpf.TaskbarNotification.dll" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AutoMapper" Version="12.0.1" />
+    <PackageReference Include="AutoMapper" Version="13.0.1" />
     <PackageReference Include="DotLiquid" Version="2.2.692" />
     <PackageReference Include="FontAwesome5">
       <Version>2.1.6</Version>
@@ -191,7 +190,7 @@
     <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="24.2.4" />
     <PackageReference Include="Syncfusion.Tools.WPF" Version="24.2.4" />
     <PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="22.2.5" />
-    <PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.7" />
+    <PackageReference Include="Microsoft.Windows.Compatibility" Version="8.0.2" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
   </ItemGroup>
   <ItemGroup>
