@@ -194,7 +194,6 @@ namespace EQLogParser
 
     private void HandleTrigger(TriggerWrapper wrapper, LineData lineData, long startTicks, int loopCount = 0)
     {
-      // lock here because lowPri queue also calls this
       lock (wrapper)
       {
         var action = lineData.Action;
@@ -225,6 +224,7 @@ namespace EQLogParser
         {
           found = action.Contains(wrapper.ModifiedPattern, StringComparison.OrdinalIgnoreCase);
         }
+
 
         if (found)
         {
@@ -365,6 +365,9 @@ namespace EQLogParser
           }
         // Do nothing if any exist
         case 3 when wrapper.TimerList.Any():
+          {
+            return;
+          }
         // Do nothing only if a timer with this name is already running
         case 4 when wrapper.TimerList.FirstOrDefault(data => displayName.Equals(data?.DisplayName, StringComparison.OrdinalIgnoreCase))
           is not null:
