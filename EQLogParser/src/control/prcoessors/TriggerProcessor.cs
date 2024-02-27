@@ -984,6 +984,7 @@ namespace EQLogParser
       TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
       _speechChannel?.Writer.Complete();
       _chatChannel?.Writer.Complete();
+      _triggerTimeChannel?.Writer.Complete();
       _soundPlayer?.Dispose();
 
       lock (_voiceLock)
