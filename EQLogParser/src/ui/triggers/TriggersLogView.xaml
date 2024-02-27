@@ -54,7 +54,7 @@
         <syncfusion:GridTextColumn MappingName="EventTime" SortMode="Value" DisplayBinding="{Binding EventTime, Converter={StaticResource DateTimeConverter}}"
                                    TextAlignment="Center" HeaderText="Event Time" MinimumWidth="110" />
         <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" MinimumWidth="150"/>
-        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" MinimumWidth="75"/>
+        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" MinimumWidth="90"/>
         <syncfusion:GridTextColumn MappingName="Priority" HeaderText="Priority" />
         <syncfusion:GridTextColumn MappingName="Eval" HeaderText="Eval Time (μs)" />
         <syncfusion:GridTextColumn MappingName="LogTime" SortMode="Value" DisplayBinding="{Binding LogTime, Converter={StaticResource DateTimeConverter}}"

@@ -106,7 +106,7 @@ namespace EQLogParser
           {
             if (characterList.Visibility != Visibility.Visible)
             {
-              _buffer?.CompleteAdding();
+              _buffer?.Dispose();
               if (_theConfig != null)
               {
                 _buffer = new(new ConcurrentQueue<Tuple<string, double, bool>>());
@@ -117,7 +117,7 @@ namespace EQLogParser
             {
               if (characterList.SelectedItem is TriggerCharacter character)
               {
-                _buffer?.CompleteAdding();
+                _buffer?.Dispose();
                 _buffer = new(new ConcurrentQueue<Tuple<string, double, bool>>());
                 TriggerManager.Instance.SetTestProcessor(character, _buffer);
               }
@@ -160,10 +160,11 @@ namespace EQLogParser
             if (dateTime != DateTime.MinValue)
             {
               var beginTime = DateUtil.ToDouble(dateTime);
-              _buffer.Add(Tuple.Create(line, beginTime, true));
+              _buffer?.Add(Tuple.Create(line, beginTime, true));
             }
           }
         });
+        _buffer?.CompleteAdding();
         characterList.IsEnabled = true;
         realTime.IsEnabled = true;
       }
@@ -237,21 +238,20 @@ namespace EQLogParser
                   var stop = false;
                   foreach (var list in data)
                   {
+                    if (stop)
+                    {
+                      break;
+                    }
+
                     Dispatcher.InvokeAsync(() =>
                     {
                       var content = testButton.Content;
                       if (content.ToString() == "Stopping Test")
                       {
                         stop = true;
-                        _buffer?.CompleteAdding();
                         TriggerManager.Instance.StopTestProcessor();
                       }
                     });
-
-                    if (stop)
-                    {
-                      break;
-                    }
 
                     if (list != null)
                     {
@@ -264,9 +264,9 @@ namespace EQLogParser
                         var start = DateTime.Now;
                         foreach (var line in list)
                         {
-                          if (!_buffer.TryAdd(Tuple.Create(line, nowTime, true)))
+                          if (!stop)
                           {
-                            break;
+                            _buffer?.Add(Tuple.Create(line, nowTime, true));
                           }
                         }
 
@@ -281,6 +281,8 @@ namespace EQLogParser
                     var remaining = data.Length - count;
                     Dispatcher.InvokeAsync(() => testStatus.Text = "| Time Remaining: " + remaining + " seconds");
                   }
+
+                  _buffer?.CompleteAdding();
                 }
               }
             }

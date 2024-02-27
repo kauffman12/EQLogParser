@@ -215,14 +215,14 @@ namespace EQLogParser
     {
       if (!_disposedValue)
       {
-        _fileWatcher?.Dispose();
-        _lines.CompleteAdding();
         _cts?.Cancel();
         _cts?.Dispose();
+        _fileWatcher?.Dispose();
+        _lines.CompleteAdding();
         _logProcessor?.Dispose();
-        _disposedValue = true;
         _newDataAvailable.Close();
         _newDataAvailable.Dispose();
+        _disposedValue = true;
       }
     }
 
