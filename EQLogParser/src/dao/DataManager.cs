@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace EQLogParser
 {
@@ -404,7 +405,7 @@ namespace EQLogParser
       {
         if (spellList.Count <= 10)
         {
-          foreach (ref var spell in spellList.ToArray().AsSpan())
+          foreach (ref var spell in CollectionsMarshal.AsSpan(spellList))
           {
             if (spellData == null || (spellData.Level < spell.Level && spell.Level <= 250) || (spellData.Level > 250 && spell.Level <= 250))
             {
@@ -435,7 +436,7 @@ namespace EQLogParser
       var updated = false;
       lock (_adpsKeys)
       {
-        foreach (ref var key in _adpsKeys.ToArray().AsSpan())
+        foreach (ref var key in CollectionsMarshal.AsSpan(_adpsKeys))
         {
           if (_adpsValues[key].TryGetValue(spellData.NameAbbrv, out var value))
           {
@@ -493,7 +494,7 @@ namespace EQLogParser
             var updated = false;
             lock (_adpsKeys)
             {
-              foreach (ref var key in _adpsKeys.ToArray().AsSpan())
+              foreach (ref var key in CollectionsMarshal.AsSpan(_adpsKeys))
               {
                 if (_adpsValues[key].TryGetValue(spellData.NameAbbrv, out var value))
                 {
@@ -530,7 +531,7 @@ namespace EQLogParser
 
           lock (_adpsKeys)
           {
-            foreach (ref var key in _adpsKeys.ToArray().AsSpan())
+            foreach (ref var key in CollectionsMarshal.AsSpan(_adpsKeys))
             {
               if (_adpsValues[key].TryGetValue(spellData.NameAbbrv, out _))
               {

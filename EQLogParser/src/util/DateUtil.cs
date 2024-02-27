@@ -14,8 +14,9 @@ namespace EQLogParser
     private double _lastDateTime;
     private double _increment;
 
-    internal static double ToDouble(DateTime dateTime) => dateTime.Ticks / TimeSpan.FromSeconds(1).Ticks;
-    internal static DateTime FromDouble(double value) => new((long)value * TimeSpan.FromSeconds(1).Ticks);
+    // ReSharper disable once PossibleLossOfFraction
+    internal static double ToDouble(DateTime dateTime) => dateTime.Ticks / TimeSpan.TicksPerSecond;
+    internal static DateTime FromDouble(double value) => new((long)value * TimeSpan.TicksPerSecond);
     internal static string GetCurrentDate(string format) => DateTime.Now.ToString(format, CultureInfo.InvariantCulture);
     internal static string FormatSimpleDate(double seconds) => new DateTime().AddSeconds(seconds).ToString("MMM dd HH:mm:ss", CultureInfo.InvariantCulture);
     internal static string FormatSimpleHms(double seconds) => new DateTime().AddSeconds(seconds).ToString("HH:mm:ss", CultureInfo.InvariantCulture);

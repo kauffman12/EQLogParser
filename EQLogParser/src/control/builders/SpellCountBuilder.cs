@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace EQLogParser
 {
@@ -43,7 +44,7 @@ namespace EQLogParser
     {
       var maxTime = double.NaN;
       var startTime = double.NaN;
-      foreach (ref var segment in raidStats.Ranges.TimeSegments.ToArray().AsSpan())
+      foreach (ref var segment in CollectionsMarshal.AsSpan(raidStats.Ranges.TimeSegments))
       {
         var damageAfter = segment.BeginTime - DmgOffset;
         var damageBefore = segment.EndTime;
