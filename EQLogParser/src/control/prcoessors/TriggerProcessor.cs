@@ -11,7 +11,6 @@ using System.Runtime.InteropServices;
 using System.Speech.Synthesis;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
@@ -36,29 +35,18 @@ namespace EQLogParser
     private readonly Action<Trigger, List<TimerData>> _addTimerEvent;
     private readonly SpeechSynthesizer _synth;
     private readonly SoundPlayer _soundPlayer;
+    private readonly BlockingCollection<Speak> _speakCollection = new();
+    private readonly BlockingCollection<LineData> _chatCollection = new();
+    private readonly BlockingCollection<string> _triggerTimeCollection = new();
     private TriggerWrapper _previousSpoken;
     private List<TriggerWrapper> _activeTriggers;
     private List<LexiconItem> _lexicon;
+    private Task _speakTask;
+    private Task _chatTask;
+    private Task _triggerTimeTask;
+    private Task _processTask;
     private bool _isTesting;
     private bool _ready = true;
-
-    private readonly Channel<Speak> _speechChannel =
-      Channel.CreateBounded<Speak>(new BoundedChannelOptions(20)
-      {
-        FullMode = BoundedChannelFullMode.DropOldest
-      });
-
-    private readonly Channel<LineData> _chatChannel =
-      Channel.CreateBounded<LineData>(new BoundedChannelOptions(100)
-      {
-        FullMode = BoundedChannelFullMode.DropOldest
-      });
-
-    private readonly Channel<string> _triggerTimeChannel =
-      Channel.CreateBounded<string>(new BoundedChannelOptions(100)
-      {
-        FullMode = BoundedChannelFullMode.DropOldest
-      });
 
     internal TriggerProcessor(string id, string name, string playerName, string voice, int voiceRate,
       Action<string, Trigger> addTextEvent, Action<Trigger, List<TimerData>> addTimerEvent)
@@ -90,10 +78,10 @@ namespace EQLogParser
 
     public void LinkTo(BlockingCollection<Tuple<string, double, bool>> collection)
     {
-      Task.Run(async () =>
+      _speakTask = Task.Run(() =>
       {
         // ReSharper disable once InconsistentlySynchronizedField
-        await foreach (var data in _speechChannel.Reader.ReadAllAsync())
+        foreach (var data in _speakCollection.GetConsumingEnumerable())
         {
           try
           {
@@ -106,9 +94,9 @@ namespace EQLogParser
         }
       });
 
-      Task.Run(async () =>
+      _chatTask = Task.Run(() =>
       {
-        await foreach (var data in _chatChannel.Reader.ReadAllAsync())
+        foreach (var data in _chatCollection.GetConsumingEnumerable())
         {
           try
           {
@@ -121,9 +109,9 @@ namespace EQLogParser
         }
       });
 
-      Task.Run(async () =>
+      _triggerTimeTask = Task.Run(() =>
       {
-        await foreach (var data in _triggerTimeChannel.Reader.ReadAllAsync())
+        foreach (var data in _triggerTimeCollection.GetConsumingEnumerable())
         {
           try
           {
@@ -138,7 +126,7 @@ namespace EQLogParser
         }
       });
 
-      Task.Run(() =>
+      _processTask = Task.Run(() =>
       {
         foreach (var data in collection.GetConsumingEnumerable())
         {
@@ -223,7 +211,7 @@ namespace EQLogParser
         }
       }
 
-      _chatChannel?.Writer.WriteAsync(lineData);
+      _chatCollection.Add(lineData);
     }
 
     private void HandleTrigger(TriggerWrapper wrapper, LineData lineData, long startTicks, int loopCount = 0)
@@ -271,7 +259,7 @@ namespace EQLogParser
           // no need to constantly updated the DB. 6 hour check
           if (updatedTime - wrapper.TriggerData.LastTriggered > SixtyHours)
           {
-            _triggerTimeChannel?.Writer.WriteAsync(wrapper.Id);
+            _triggerTimeCollection.Add(wrapper.Id);
             wrapper.TriggerData.LastTriggered = updatedTime;
           }
 
@@ -324,7 +312,7 @@ namespace EQLogParser
 
           if (speak != null)
           {
-            _speechChannel.Writer.WriteAsync(speak);
+            _speakCollection.Add(speak);
           }
         }
 
@@ -368,7 +356,7 @@ namespace EQLogParser
 
             if (speak != null)
             {
-              _speechChannel.Writer.WriteAsync(speak);
+              _speakCollection.Add(speak);
             }
 
             CleanupTimer(wrapper, timerData);
@@ -432,7 +420,7 @@ namespace EQLogParser
             if (proceed)
             {
               var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out var isSound);
-              _speechChannel?.Writer.WriteAsync(new Speak
+              _speakCollection.Add(new Speak
               {
                 Wrapper = wrapper,
                 TtsOrSound = speak,
@@ -530,7 +518,7 @@ namespace EQLogParser
           {
             var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.EndSoundToPlay, wrapper.ModifiedEndSpeak, out var isSound);
 
-            _speechChannel?.Writer.WriteAsync(new Speak
+            _speakCollection.Add(new Speak
             {
               Wrapper = wrapper,
               TtsOrSound = speak,
@@ -982,9 +970,20 @@ namespace EQLogParser
     {
       _ready = false;
       TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
-      _speechChannel?.Writer.Complete();
-      _chatChannel?.Writer.Complete();
-      _triggerTimeChannel?.Writer.Complete();
+      _speakCollection.CompleteAdding();
+      _chatCollection.CompleteAdding();
+      _triggerTimeCollection.CompleteAdding();
+      _speakTask.Wait();
+      _chatTask.Wait();
+      _triggerTimeTask.Wait();
+      _processTask.Wait();
+      _speakTask.Dispose();
+      _chatTask.Dispose();
+      _triggerTimeTask.Dispose();
+      _processTask.Dispose();
+      _speakCollection.Dispose();
+      _chatCollection.Dispose();
+      _triggerTimeCollection.Dispose();
       _soundPlayer?.Dispose();
 
       lock (_voiceLock)
