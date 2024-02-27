@@ -62,10 +62,10 @@ namespace EQLogParser
       }
 
       // dimensions
-      var width = ConfigUtil.GetSettingAsDouble("OverlayWidth", double.MaxValue);
-      var height = ConfigUtil.GetSettingAsDouble("OverlayHeight", double.MaxValue);
-      var top = ConfigUtil.GetSettingAsDouble("OverlayTop", double.MaxValue);
-      var left = ConfigUtil.GetSettingAsDouble("OverlayLeft", double.MaxValue);
+      var width = ConfigUtil.GetSettingAsDouble("OverlayWidth", int.MaxValue);
+      var height = ConfigUtil.GetSettingAsDouble("OverlayHeight", int.MaxValue);
+      var top = ConfigUtil.GetSettingAsDouble("OverlayTop", int.MaxValue);
+      var left = ConfigUtil.GetSettingAsDouble("OverlayLeft", int.MaxValue);
       SetWindowSizes(height, width, top, left);
 
       // fonts
@@ -477,22 +477,22 @@ namespace EQLogParser
 
     private void SetWindowSizes(double height, double width, double top, double left)
     {
-      if (width < double.MaxValue)
+      if (width >= 0 && width <= SystemParameters.VirtualScreenWidth)
       {
         Width = width;
       }
 
-      if (height < double.MaxValue)
+      if (height >= 0 && height <= SystemParameters.VirtualScreenHeight)
       {
         Height = height;
       }
 
-      if (top < double.MaxValue && top < SystemParameters.VirtualScreenHeight)
+      if (top < int.MaxValue && top < SystemParameters.VirtualScreenHeight)
       {
         Top = top;
       }
 
-      if (left < double.MaxValue && left >= SystemParameters.VirtualScreenLeft && left < SystemParameters.VirtualScreenWidth)
+      if (left < int.MaxValue && left >= SystemParameters.VirtualScreenLeft && left < SystemParameters.VirtualScreenWidth)
       {
         Left = left;
       }

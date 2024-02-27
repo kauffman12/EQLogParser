@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace EQLogParser
 {
@@ -209,7 +210,7 @@ namespace EQLogParser
 
     private static void UpdateSubStat(List<PlayerSubStats> subStats, ConcurrentDictionary<string, TimeRange> subRanges, double minTime, double maxTime)
     {
-      foreach (ref var subStat in subStats.ToArray().AsSpan())
+      foreach (ref var subStat in CollectionsMarshal.AsSpan(subStats))
       {
         if (subRanges.TryGetValue(subStat.Key, out var subRange))
         {
@@ -536,13 +537,13 @@ namespace EQLogParser
       if (stats is PlayerStats playerStats)
       {
 
-        foreach (ref var subStat in playerStats.SubStats.ToArray().AsSpan())
+        foreach (ref var subStat in CollectionsMarshal.AsSpan(playerStats.SubStats))
         {
           UpdateCalculations(subStat, raidTotals, resistCounts, playerStats);
         }
 
         // optional stats
-        foreach (ref var subStat2 in playerStats.SubStats2.ToArray().AsSpan())
+        foreach (ref var subStat2 in CollectionsMarshal.AsSpan(playerStats.SubStats2))
         {
           UpdateCalculations(subStat2, raidTotals, resistCounts, playerStats);
         }
