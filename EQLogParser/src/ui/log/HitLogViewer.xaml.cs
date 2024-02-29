@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -163,13 +164,13 @@ namespace EQLogParser
 
         if (_currentGroups != null)
         {
-          foreach (ref var group in _currentGroups.ToArray().AsSpan())
+          foreach (ref var group in CollectionsMarshal.AsSpan(_currentGroups))
           {
-            Parallel.ForEach(group, block =>
+            foreach (ref var block in CollectionsMarshal.AsSpan(group))
             {
               var precise = 0.0;
               var rowCache = new Dictionary<string, HitLogRow>();
-              foreach (ref var action in block.Actions.ToArray().AsSpan())
+              foreach (ref var action in CollectionsMarshal.AsSpan(block.Actions))
               {
                 precise += 0.000001;
                 if (CreateRow(rowCache, _playerStats, action, block.BeginTime + precise, _defending) is { } row && !_currentGroupActionsFilter)
@@ -195,7 +196,7 @@ namespace EQLogParser
                   PopulateRow(row, uniqueActions, uniqueDefenders, uniqueTypes);
                 }
               }
-            });
+            }
           }
         }
 

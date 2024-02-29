@@ -161,7 +161,7 @@ namespace EQLogParser
 
       spellList.SelectedIndex = _spells.IndexOf(selectedSpell) is var s and > -1 ? s : 0;
       playerList.SelectedIndex = _players.IndexOf(selectedPlayer) is var p and > -1 ? p : 0;
-      dataGrid.ItemsSource = list;
+      dataGrid.ItemsSource = list.Count > 0 ? list : null;
     }
 
     private void AddRow(ICollection<IDictionary<string, object>> list, SpellDamageStats stats, string type)
