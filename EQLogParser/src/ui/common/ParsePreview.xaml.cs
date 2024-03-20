@@ -15,7 +15,7 @@ namespace EQLogParser
   /// </summary>
   public partial class ParsePreview
   {
-    private readonly ObservableCollection<string> _availableParses = new();
+    private readonly ObservableCollection<string> _availableParses = [];
     private readonly ConcurrentDictionary<string, ParseData> _parses = new();
     private readonly bool _initialized;
     private readonly DispatcherTimer _titleTimer;
@@ -139,10 +139,15 @@ namespace EQLogParser
       {
         var combined = _parses[type].CombinedStats;
         var customTitle = customParseTitle.FontStyle == FontStyles.Italic ? null : customParseTitle.Text;
-        var summary = _parses[type].Builder?.BuildSummary(type, combined, _parses[type].Selected, playerParseTextDoPetLabel.IsChecked.Value,
-          playerParseTextDoDPS.IsChecked.Value, playerParseTextDoTotals.IsChecked.Value, playerParseTextDoRank.IsChecked.Value, playerParseTextDoSpecials.IsChecked.Value,
-          playerParseTextDoTime.IsChecked.Value, customTitle);
-        playerParseTextBox.Text = summary.Title + summary.RankedPlayers;
+        var summary = _parses[type].Builder?.BuildSummary(type, combined, _parses[type].Selected, playerParseTextDoPetLabel.IsChecked == true,
+          playerParseTextDoDPS.IsChecked == true, playerParseTextDoTotals.IsChecked == true, playerParseTextDoRank.IsChecked == true,
+          playerParseTextDoSpecials.IsChecked == true, playerParseTextDoTime.IsChecked == true, customTitle);
+
+        if (summary != null)
+        {
+          playerParseTextBox.Text = summary.Title + summary.RankedPlayers;
+        }
+
         playerParseTextBox.SelectAll();
       }
     }
@@ -207,15 +212,15 @@ namespace EQLogParser
         SetParseTextByType(parseList.SelectedItem as string);
       }
 
-      // dont call these until after init/load
+      // don't call these until after init/load
       if (_initialized)
       {
-        ConfigUtil.SetSetting("PlayerParseShowPetLabel", playerParseTextDoPetLabel.IsChecked.Value);
-        ConfigUtil.SetSetting("PlayerParseShowDPS", playerParseTextDoDPS.IsChecked.Value);
-        ConfigUtil.SetSetting("PlayerParseShowRank", playerParseTextDoRank.IsChecked.Value);
-        ConfigUtil.SetSetting("PlayerParseShowTotals", playerParseTextDoTotals.IsChecked.Value);
-        ConfigUtil.SetSetting("PlayerParseShowSpecials", playerParseTextDoSpecials.IsChecked.Value);
-        ConfigUtil.SetSetting("PlayerParseShowTime", playerParseTextDoTime.IsChecked.Value);
+        ConfigUtil.SetSetting("PlayerParseShowPetLabel", playerParseTextDoPetLabel.IsChecked == true);
+        ConfigUtil.SetSetting("PlayerParseShowDPS", playerParseTextDoDPS.IsChecked == true);
+        ConfigUtil.SetSetting("PlayerParseShowRank", playerParseTextDoRank.IsChecked == true);
+        ConfigUtil.SetSetting("PlayerParseShowTotals", playerParseTextDoTotals.IsChecked == true);
+        ConfigUtil.SetSetting("PlayerParseShowSpecials", playerParseTextDoSpecials.IsChecked == true);
+        ConfigUtil.SetSetting("PlayerParseShowTime", playerParseTextDoTime.IsChecked == true);
       }
     }
 

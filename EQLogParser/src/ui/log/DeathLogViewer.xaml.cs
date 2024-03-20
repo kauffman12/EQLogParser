@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 
 namespace EQLogParser
@@ -12,7 +13,7 @@ namespace EQLogParser
   public partial class DeathLogViewer : IDisposable
   {
     private PlayerStats _currentPlayer;
-    private readonly List<DeathEvent> _deaths = new();
+    private readonly List<DeathEvent> _deaths = [];
 
     public DeathLogViewer()
     {
@@ -58,7 +59,7 @@ namespace EQLogParser
 
       if (allFights != null)
       {
-        foreach (var fight in allFights)
+        foreach (var fight in CollectionsMarshal.AsSpan(allFights))
         {
           if (fight.BeginTankingTime <= end && fight.LastTankingTime >= start)
           {
@@ -77,7 +78,7 @@ namespace EQLogParser
                     }
                     else
                     {
-                      damages[block.BeginTime] = new List<string> { value };
+                      damages[block.BeginTime] = [value];
                     }
 
                     times[block.BeginTime] = true;
@@ -100,7 +101,7 @@ namespace EQLogParser
           }
           else
           {
-            heals[beginTime] = new List<string> { value };
+            heals[beginTime] = [value];
           }
 
           times[beginTime] = true;
@@ -125,7 +126,7 @@ namespace EQLogParser
             }
             else
             {
-              spells[beginTime] = new List<string> { message };
+              spells[beginTime] = [message];
             }
 
             times[beginTime] = true;
@@ -152,7 +153,7 @@ namespace EQLogParser
 
         if (heals.TryGetValue(time, out var healList))
         {
-          var i = 0;
+          const int i = 0;
           healList.ForEach(heal =>
           {
             if (sub.Count > i)
@@ -173,7 +174,7 @@ namespace EQLogParser
 
         if (spells.TryGetValue(time, out var spellList))
         {
-          var i = 0;
+          const int i = 0;
           spellList.ForEach(spell =>
           {
             if (sub.Count > i)
@@ -224,7 +225,7 @@ namespace EQLogParser
       dataGrid.ItemsSource = list;
     }
 
-    private void AppendMessage(List<dynamic> list, string message, double end)
+    private static void AppendMessage(List<dynamic> list, string message, double end)
     {
       if (!string.IsNullOrEmpty(message))
       {

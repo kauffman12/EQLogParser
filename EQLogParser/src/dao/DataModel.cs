@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -275,7 +276,7 @@ namespace EQLogParser
     public bool IsRecentlyMerged { get; set; }
   }
 
-  internal interface IAction { }
+  internal interface IAction;
 
   internal class DataPoint
   {
@@ -416,6 +417,7 @@ namespace EQLogParser
     public string Healed { get; set; }
   }
 
+  [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
   internal class DamageRecord : HitRecord
   {
     public string Attacker { get; set; }
@@ -426,8 +428,7 @@ namespace EQLogParser
 
     public override bool Equals(object obj)
     {
-      var other = obj as DamageRecord;
-      return other != null && Attacker == other.Attacker && AttackerOwner == other.AttackerOwner && Defender == other.Defender &&
+      return obj is DamageRecord other && Attacker == other.Attacker && AttackerOwner == other.AttackerOwner && Defender == other.Defender &&
         DefenderOwner == other.DefenderOwner && AttackerIsSpell == other.AttackerIsSpell && Total == other.Total &&
         OverTotal == other.OverTotal && Type == other.Type && SubType == other.SubType && ModifiersMask == other.ModifiersMask;
     }
@@ -440,6 +441,7 @@ namespace EQLogParser
     }
   }
 
+  [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
   internal class LootRecord : IAction
   {
     public string Item { get; set; }
@@ -450,8 +452,7 @@ namespace EQLogParser
 
     public override bool Equals(object obj)
     {
-      var other = obj as LootRecord;
-      return other != null && Item == other.Item && Quantity == other.Quantity && Player == other.Player &&
+      return obj is LootRecord other && Item == other.Item && Quantity == other.Quantity && Player == other.Player &&
         Npc == other.Npc && IsCurrency == other.IsCurrency;
     }
 
@@ -522,7 +523,7 @@ namespace EQLogParser
 
   internal class ActionGroup : TimedAction
   {
-    public List<IAction> Actions { get; } = new();
+    public List<IAction> Actions { get; } = [];
   }
 
   internal class Attempt
@@ -568,8 +569,8 @@ namespace EQLogParser
     public long TotalNonTwincastLucky { get; set; }
     public long TotalRiposte { get; set; }
     public long TotalSlay { get; set; }
-    public Dictionary<long, int> CritFreqValues { get; } = new();
-    public Dictionary<long, int> NonCritFreqValues { get; } = new();
+    public Dictionary<long, int> CritFreqValues { get; } = [];
+    public Dictionary<long, int> NonCritFreqValues { get; } = [];
   }
 
   internal class Fight : FullTimedAction, INotifyPropertyChanged
@@ -612,16 +613,16 @@ namespace EQLogParser
     public string TooltipText { get; set; }
     public ConcurrentDictionary<string, FightTotalDamage> PlayerDamageTotals { get; } = new();
     public ConcurrentDictionary<string, FightTotalDamage> PlayerTankTotals { get; } = new();
-    public List<ActionGroup> DamageBlocks { get; } = new();
-    public Dictionary<string, TimeSegment> DamageSegments { get; } = new();
-    public Dictionary<string, Dictionary<string, TimeSegment>> DamageSubSegments { get; } = new();
-    public Dictionary<string, TimeSegment> TankSegments { get; } = new();
-    public Dictionary<string, Dictionary<string, TimeSegment>> TankSubSegments { get; } = new();
-    public List<ActionGroup> TankingBlocks { get; } = new();
-    public List<ActionGroup> TauntBlocks { get; } = new();
-    public Dictionary<string, SpellDamageStats> DoTDamage { get; } = new();
-    public Dictionary<string, SpellDamageStats> DdDamage { get; } = new();
-    public Dictionary<string, SpellDamageStats> ProcDamage { get; } = new();
+    public List<ActionGroup> DamageBlocks { get; } = [];
+    public Dictionary<string, TimeSegment> DamageSegments { get; } = [];
+    public Dictionary<string, Dictionary<string, TimeSegment>> DamageSubSegments { get; } = [];
+    public Dictionary<string, TimeSegment> TankSegments { get; } = [];
+    public Dictionary<string, Dictionary<string, TimeSegment>> TankSubSegments { get; } = [];
+    public List<ActionGroup> TankingBlocks { get; } = [];
+    public List<ActionGroup> TauntBlocks { get; } = [];
+    public Dictionary<string, SpellDamageStats> DoTDamage { get; } = [];
+    public Dictionary<string, SpellDamageStats> DdDamage { get; } = [];
+    public Dictionary<string, SpellDamageStats> ProcDamage { get; } = [];
   }
 
   internal class FightTotalDamage
@@ -652,7 +653,7 @@ namespace EQLogParser
     public string Receiver { get; set; }
     public SpellData SpellData { get; set; }
     public bool IsWearOff { get; set; }
-    public List<SpellData> Ambiguity { get; } = new();
+    public List<SpellData> Ambiguity { get; } = [];
   }
 
   internal class SpellCast : IAction
@@ -689,12 +690,13 @@ namespace EQLogParser
 
   internal class SpellCountData
   {
-    public Dictionary<string, Dictionary<string, uint>> PlayerCastCounts { get; set; } = new();
-    public Dictionary<string, Dictionary<string, uint>> PlayerInterruptedCounts { get; set; } = new();
-    public Dictionary<string, Dictionary<string, uint>> PlayerReceivedCounts { get; set; } = new();
-    public Dictionary<string, uint> MaxCastCounts { get; set; } = new();
-    public Dictionary<string, uint> MaxReceivedCounts { get; set; } = new();
-    public Dictionary<string, SpellData> UniqueSpells { get; set; } = new();
+    public Dictionary<string, Dictionary<string, uint>> PlayerCastCounts { get; set; } = [];
+    public Dictionary<string, Dictionary<string, uint>> PlayerInterruptedCounts { get; set; } = [];
+    public Dictionary<string, Dictionary<string, uint>> PlayerReceivedCounts { get; set; } = [];
+    public Dictionary<string, uint> MaxCastCounts { get; set; } = [];
+    public Dictionary<string, uint> MaxReceivedCounts { get; set; } = [];
+    public Dictionary<string, SpellData> UniqueSpells { get; set; } = [];
+    public Dictionary<string, bool> UniquePlayers { get; set; } = [];
   }
 
   internal class OverlayPlayerTotal
@@ -712,11 +714,11 @@ namespace EQLogParser
     public string TotalTitle { get; set; }
     public string FullTitle { get; set; }
     public string ShortTitle { get; set; }
-    public List<PlayerStats> StatsList { get; } = new();
-    public List<PlayerStats> ExpandedStatsList { get; } = new();
+    public List<PlayerStats> StatsList { get; } = [];
+    public List<PlayerStats> ExpandedStatsList { get; } = [];
     public PlayerStats RaidStats { get; set; }
-    public Dictionary<string, byte> UniqueClasses { get; } = new();
-    public Dictionary<string, List<PlayerStats>> Children { get; } = new();
+    public Dictionary<string, byte> UniqueClasses { get; } = [];
+    public Dictionary<string, List<PlayerStats>> Children { get; } = [];
   }
 
   internal class DamageOverlayStats
@@ -771,20 +773,21 @@ namespace EQLogParser
     public string ClassName { get; set; }
     public string Key { get; set; }
     public TimeRange Ranges { get; } = new();
+    public TimeRange AllRanges { get; set; } = new();
   }
 
   internal class SubStatsBreakdown : PlayerSubStats
   {
-    public List<PlayerSubStats> Children { get; set; } = new();
+    public List<PlayerSubStats> Children { get; set; } = [];
   }
 
   internal class PlayerStats : PlayerSubStats
   {
-    public List<DeathEvent> Deaths { get; } = new();
+    public List<DeathEvent> Deaths { get; } = [];
     public ConcurrentDictionary<string, string> Specials { get; } = new();
     public ConcurrentDictionary<string, ConcurrentDictionary<string, int>> ResistCounts { get; } = new();
-    public List<PlayerSubStats> SubStats { get; } = new();
-    public List<PlayerSubStats> SubStats2 { get; } = new();
+    public List<PlayerSubStats> SubStats { get; } = [];
+    public List<PlayerSubStats> SubStats2 { get; } = [];
     public PlayerStats MoreStats { get; set; }
     public bool IsTopLevel { get; set; } = true;
     public string OrigName { get; set; }

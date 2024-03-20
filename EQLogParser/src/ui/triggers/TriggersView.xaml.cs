@@ -536,11 +536,11 @@ namespace EQLogParser
           TriggerManager.Instance.TriggersUpdated();
         }
       }
-      else if (model is TextOverlayPropertyModel || model is TimerOverlayPropertyModel)
+      else if (model is TextOverlayPropertyModel or TimerOverlayPropertyModel)
       {
         TriggerManager.Instance.CloseOverlay(model.Node.Id);
 
-        // if this overlay is changing to default and it wasn't previously then need to refresh Overlay tree
+        // if this overlay is changing to default, and it isn't previously then need to refresh Overlay tree
         var old = model.Node.OverlayData as Overlay;
         var needRefresh = model.IsDefault && (old?.IsDefault != model.IsDefault);
 
@@ -567,7 +567,7 @@ namespace EQLogParser
         var timerType = model.Node.TriggerData.TimerType;
         EnableCategories(true, timerType, false, false, true, false, false);
       }
-      else if (model is TimerOverlayPropertyModel || model is TextOverlayPropertyModel)
+      else if (model is TimerOverlayPropertyModel or TextOverlayPropertyModel)
       {
         TriggerUtil.Copy(model, model.Node.OverlayData);
       }

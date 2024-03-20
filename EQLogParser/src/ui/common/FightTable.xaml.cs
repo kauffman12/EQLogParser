@@ -27,17 +27,18 @@ namespace EQLogParser
     private static Fight _currentSearchEntry;
     private static bool _needSelectionChange;
 
-    private readonly ObservableCollection<Fight> _fights = new();
-    private readonly ObservableCollection<Fight> _nonTankingFights = new();
+    private readonly ObservableCollection<Fight> _fights = [];
+    private readonly ObservableCollection<Fight> _nonTankingFights = [];
     private bool _currentShowBreaks;
     private int _currentGroup = 1;
     private int _currentNonTankingGroup = 1;
     private uint _currentSortId = 1;
     private bool _needRefresh;
     private bool _isEveryOther;
+    private TimeRange _allRanges;
 
-    private readonly List<Fight> _fightsToProcess = new();
-    private readonly List<Fight> _nonTankingFightsToProcess = new();
+    private readonly List<Fight> _fightsToProcess = [];
+    private readonly List<Fight> _nonTankingFightsToProcess = [];
     private readonly DispatcherTimer _selectionTimer;
     private readonly DispatcherTimer _searchTextTimer;
     private readonly DispatcherTimer _updateTimer;
@@ -58,7 +59,17 @@ namespace EQLogParser
       {
         if (!rightClickMenu.IsOpen)
         {
-          MainActions.FireFightSelectionChanged(dataGrid.SelectedItems?.Cast<Fight>().ToList());
+          _allRanges = new TimeRange();
+          var selected = dataGrid.SelectedItems?.Cast<Fight>().ToList();
+          if (selected != null)
+          {
+            foreach (var fight in selected)
+            {
+              _allRanges.Add(new TimeSegment(fight.BeginTime, fight.LastTime));
+            }
+          }
+
+          MainActions.FireFightSelectionChanged(selected);
         }
         else
         {
@@ -112,7 +123,7 @@ namespace EQLogParser
         return selected.Cast<Fight>().Where(item => !item.IsInactivity).ToList();
       }
 
-      return new List<Fight>();
+      return [];
     }
 
     internal List<Fight> GetFights()
@@ -122,7 +133,12 @@ namespace EQLogParser
         return fights.Where(item => !item.IsInactivity).ToList();
       }
 
-      return new List<Fight>();
+      return [];
+    }
+
+    internal TimeRange GetAllRanges()
+    {
+      return _allRanges;
     }
 
     private void EventsUpdateFight(object sender, Fight fight) => _needRefresh = true;
@@ -228,14 +244,14 @@ namespace EQLogParser
       {
         if (_fightsToProcess.Count > 0)
         {
-          processList = new List<Fight>();
+          processList = [];
           processList.AddRange(_fightsToProcess);
           _fightsToProcess.Clear();
         }
 
         if (_nonTankingFightsToProcess.Count > 0)
         {
-          processNonTankingList = new List<Fight>();
+          processNonTankingList = [];
           processNonTankingList.AddRange(_nonTankingFightsToProcess);
           _nonTankingFightsToProcess.Clear();
         }

@@ -4,8 +4,8 @@ namespace EQLogParser
 {
   internal class DamageChart : LineChart, IDocumentContent
   {
-    private static readonly List<string> DamageChoices = new()
-    {
+    private static readonly List<string> DamageChoices =
+    [
       "Aggregate DPS",
       "Aggregate Av Hit",
       "Aggregate Damage",
@@ -18,7 +18,7 @@ namespace EQLogParser
       "# Crits",
       "# Hits",
       "# Twincasts"
-    };
+    ];
 
     private bool _ready;
 

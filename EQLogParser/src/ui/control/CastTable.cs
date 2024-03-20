@@ -41,11 +41,11 @@ namespace EQLogParser
       selectedOptions.ItemsSource = list;
       UiElementUtil.SetComboBoxTitle(selectedOptions, list.Sum(item => item.IsChecked ? 1 : 0), Resource.SPELL_TYPES_SELECTED);
 
-      list = new List<ComboBoxItemDetails>
-      {
-        new(isChecked: true, text: SelfSpellsType),
-        new() { IsChecked = true, Text = ProcSpellsType }
-      };
+      list =
+      [
+        new ComboBoxItemDetails(isChecked: true, text: SelfSpellsType),
+        new ComboBoxItemDetails { IsChecked = true, Text = ProcSpellsType }
+      ];
 
       selectedSpellRestrictions.ItemsSource = list;
       UpdateRestrictionsTitle(selectedSpellRestrictions);
@@ -147,25 +147,25 @@ namespace EQLogParser
         return false;
       }
 
-      // if i dont want to see procs then dont show any procs
+      // if i don't want to see procs then don't show any procs
       if (!CurrentShowProcs && spellData.Proc != 0)
       {
         return false;
       }
 
-      // if i dont want to see self only received spells then never show them
+      // if i don't want to see self only received spells then never show them
       if (!CurrentShowSelfOnly && string.IsNullOrEmpty(spellData.LandsOnOther) && received)
       {
         return false;
       }
 
-      // if i want beneficial spells but dont want detrimental then make sure it's beneficial
+      // if i want beneficial spells but don't want detrimental then make sure it's beneficial
       if (CurrentShowBeneficialSpells && !CurrentShowDetSpells && !spellData.IsBeneficial)
       {
         return false;
       }
 
-      // if i want detrimental spells but dont want beneficial then make sure it's detrimental
+      // if i want detrimental spells but don't want beneficial then make sure it's detrimental
       if (CurrentShowDetSpells && !CurrentShowBeneficialSpells && spellData.IsBeneficial)
       {
         return false;
@@ -186,7 +186,7 @@ namespace EQLogParser
       return true;
     }
 
-    private void UpdateRestrictionsTitle(ComboBox selected)
+    private static void UpdateRestrictionsTitle(ComboBox selected)
     {
       if (selected.Items[0] is ComboBoxItemDetails onlyYou && selected.Items[1] is ComboBoxItemDetails procs)
       {

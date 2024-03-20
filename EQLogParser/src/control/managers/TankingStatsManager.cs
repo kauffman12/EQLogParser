@@ -5,30 +5,29 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  class TankingStatsManager : ISummaryBuilder
+  internal class TankingStatsManager : ISummaryBuilder
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     internal static TankingStatsManager Instance = new();
-
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
     internal event Action<StatsGenerationEvent> EventsGenerationStatus;
-    private readonly Dictionary<int, byte> _tankingGroupIds = new();
+    private readonly Dictionary<int, byte> _tankingGroupIds = [];
     private readonly ConcurrentDictionary<string, TimeRange> _playerTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _playerSubTimeRanges = new();
-    private readonly List<List<ActionGroup>> _tankingGroups = new();
+    private readonly List<List<ActionGroup>> _tankingGroups = [];
     private PlayerStats _raidTotals;
     private List<Fight> _selected;
     private string _title;
 
     internal static bool IsMelee(DamageRecord record)
     {
-      return record.Type == Labels.Melee || record.Type == Labels.Miss || record.Type == Labels.Parry || record.Type == Labels.Dodge ||
-        record.Type == Labels.Block || record.Type == Labels.Invulnerable || record.Type == Labels.Riposte;
+      return record.Type is Labels.Melee or Labels.Miss or Labels.Parry or Labels.Dodge or Labels.Block or Labels.Invulnerable or Labels.Riposte;
     }
 
     internal TankingStatsManager()
@@ -71,11 +70,11 @@ namespace EQLogParser
           FireNewStatsEvent();
           Reset();
 
-          _selected = options.Npcs.OrderBy(sel => sel.Id).ToList();
+          _selected = [.. options.Npcs.OrderBy(sel => sel.Id)];
           _title = options.Npcs?.FirstOrDefault()?.Name;
           var damageBlocks = new List<ActionGroup>();
 
-          _selected.ForEach(fight =>
+          foreach (var fight in CollectionsMarshal.AsSpan(_selected))
           {
             damageBlocks.AddRange(fight.TankingBlocks);
 
@@ -85,33 +84,33 @@ namespace EQLogParser
             }
 
             _raidTotals.Ranges.Add(new TimeSegment(fight.BeginTankingTime, fight.LastTankingTime));
+            _raidTotals.AllRanges.Add(MainActions.GetAllRanges().TimeSegments);
             StatsUtil.UpdateRaidTimeRanges(fight.TankSegments, fight.TankSubSegments, _playerTimeRanges, _playerSubTimeRanges);
-          });
+          }
 
           damageBlocks.Sort((a, b) => a.BeginTime.CompareTo(b.BeginTime));
 
-          if (damageBlocks.Count > 0)
+          if (damageBlocks.Count != 0)
           {
             _raidTotals.TotalSeconds = _raidTotals.MaxTime = _raidTotals.Ranges.GetTotal();
 
             var rangeIndex = 0;
             double lastTime = 0;
             var newBlock = new List<ActionGroup>();
-            damageBlocks.ForEach(block =>
+            foreach (var block in CollectionsMarshal.AsSpan(damageBlocks))
             {
               if (_raidTotals.Ranges.TimeSegments.Count > rangeIndex && block.BeginTime > _raidTotals.Ranges.TimeSegments[rangeIndex].EndTime)
               {
                 rangeIndex++;
-
                 if (newBlock.Count > 0)
                 {
                   _tankingGroups.Add(newBlock);
                 }
 
-                newBlock = new List<ActionGroup>();
+                newBlock = [];
               }
 
-              if (lastTime != block.BeginTime)
+              if (!lastTime.Equals(block.BeginTime))
               {
                 var copy = new ActionGroup();
                 copy.Actions.AddRange(block.Actions);
@@ -120,9 +119,11 @@ namespace EQLogParser
               }
               else
               {
-                newBlock.Last().Actions.AddRange(block.Actions);
+                newBlock.LastOrDefault()?.Actions.AddRange(block.Actions);
               }
-            });
+
+              lastTime = block.BeginTime;
+            }
 
             _tankingGroups.Add(newBlock);
             ComputeTankingStats(options);
@@ -185,11 +186,11 @@ namespace EQLogParser
 
           try
           {
-            _tankingGroups.ForEach(group =>
+            foreach (var group in CollectionsMarshal.AsSpan(_tankingGroups))
             {
-              group.ForEach(block =>
+              foreach (var block in CollectionsMarshal.AsSpan(group))
               {
-                block.Actions.ForEach(action =>
+                foreach (var action in block.Actions.ToArray())
                 {
                   if (action is DamageRecord record)
                   {
@@ -203,7 +204,7 @@ namespace EQLogParser
                       var critHits = subStats.CritHits;
                       StatsUtil.UpdateStats(subStats, record);
 
-                      // dont count misses/dodges or where no damage was done
+                      // don't count misses/dodges or where no damage was done
                       if (record.Total > 0)
                       {
                         var values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
@@ -211,9 +212,9 @@ namespace EQLogParser
                       }
                     }
                   }
-                });
-              });
-            });
+                }
+              }
+            }
 
             _raidTotals.Dps = (long)Math.Round(_raidTotals.Total / _raidTotals.TotalSeconds, 2);
             StatsUtil.PopulateSpecials(_raidTotals);
@@ -289,11 +290,9 @@ namespace EQLogParser
     public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool _, bool showDps, bool showTotals,
       bool rankPlayers, bool __, bool showTime, string customTitle)
     {
-      var list = new List<string>();
-
       var title = "";
       var details = "";
-
+      var list = new List<string>();
       if (currentStats != null)
       {
         if (type == Labels.TankParse)
@@ -310,7 +309,7 @@ namespace EQLogParser
 
           details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
           var timeTitle = showTime ? (" " + currentStats.TimeTitle) : "";
-          var totals = showDps ? currentStats.TotalTitle : currentStats.TotalTitle.Split(new[] { " @" }, 2, StringSplitOptions.RemoveEmptyEntries)[0];
+          var totals = showDps ? currentStats.TotalTitle : currentStats.TotalTitle.Split([" @"], 2, StringSplitOptions.RemoveEmptyEntries)[0];
           title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, showTotals ? totals : "");
         }
         else if (type == Labels.ReceivedHealParse)

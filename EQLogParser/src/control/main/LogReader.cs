@@ -43,7 +43,6 @@ namespace EQLogParser
         _fileWatcher.Renamed += OnFileMoved;
         _fileWatcher.Changed += OnFileChanged;
         _fileWatcher.EnableRaisingEvents = true;
-
         FileUtil.ArchiveFile(this);
         StartReadingFile();
       }
@@ -111,7 +110,7 @@ namespace EQLogParser
           var bytesRead = fs.Position;
 
           // date is now valid so read every line
-          while ((line = await reader.ReadLineAsync()) != null && !cancelToken.IsCancellationRequested)
+          while ((line = await reader.ReadLineAsync(cancelToken)) != null && !cancelToken.IsCancellationRequested)
           {
             if (cancelToken.IsCancellationRequested) break;
 
@@ -133,13 +132,13 @@ namespace EQLogParser
           // continue reading for new updates
           while (!cancelToken.IsCancellationRequested)
           {
-            while ((line = await reader.ReadLineAsync()) != null)
+            while ((line = await reader.ReadLineAsync(cancelToken)) != null)
             {
               HandleLine(line, ref previous, ref doubleValue, cancelToken, true);
             }
 
             if (cancelToken.IsCancellationRequested) break;
-            WaitHandle.WaitAny(new[] { _newDataAvailable, cancelToken.WaitHandle });
+            WaitHandle.WaitAny([_newDataAvailable, cancelToken.WaitHandle]);
 
             if (!cancelToken.IsCancellationRequested)
             {
@@ -182,7 +181,7 @@ namespace EQLogParser
       }
     }
 
-    private void SearchLinear(TextReader reader, DateTime minDate, CancellationToken cancelToken)
+    private void SearchLinear(StreamReader reader, DateTime minDate, CancellationToken cancelToken)
     {
       if (minDate != DateTime.MinValue)
       {

@@ -24,7 +24,7 @@ namespace EQLogParser
     {
       // if GINA data is recent then try to handle it
       if (chatType.Sender != null && action.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
-          action.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 10))
+          action.IndexOf('}') is var end && end > (index + 10))
       {
         var start = index + 6;
         var finish = end - start;
@@ -60,7 +60,7 @@ namespace EQLogParser
 
               lock (GinaCache)
               {
-                if (!GinaCache.ContainsKey(ginaKey))
+                if (!GinaCache.TryGetValue(ginaKey, out var value))
                 {
                   GinaCache[ginaKey] = new CharacterData { Sender = chatType.Sender };
                   GinaCache[ginaKey].CharacterIds.Add(characterId);
@@ -68,7 +68,7 @@ namespace EQLogParser
                 }
                 else
                 {
-                  GinaCache[ginaKey].CharacterIds.Add(characterId);
+                  value.CharacterIds.Add(characterId);
                 }
               }
             }
@@ -81,7 +81,7 @@ namespace EQLogParser
     {
       // if Quick Share data is recent then try to handle it
       if (shareKey.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
-          shareKey.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 10))
+          shareKey.IndexOf('}') is var end && end > (index + 10))
       {
         var start = index + 6;
         var finish = end - start;
@@ -167,7 +167,7 @@ namespace EQLogParser
     {
       GinaCache.TryRemove(ginaKey, out var _);
 
-      if (GinaCache.Count > 0)
+      if (!GinaCache.IsEmpty)
       {
         var nextKey = GinaCache.Keys.First();
         RunGinaTask(nextKey);
@@ -473,12 +473,12 @@ namespace EQLogParser
             ParseGinaTriggerGroups(moreGroups, data.Nodes);
 
             // GINA UI sorts by default
-            data.Nodes = data.Nodes.OrderBy(n => n.Name).ToList();
+            data.Nodes = [.. data.Nodes.OrderBy(n => n.Name)];
 
             if (triggers.Count > 0)
             {
               // GINA UI sorts by default
-              data.Nodes.AddRange(triggers.OrderBy(trigger => trigger.Name).ToList());
+              data.Nodes.AddRange([.. triggers.OrderBy(trigger => trigger.Name)]);
             }
           }
           else if (node.Name == "TriggerGroups")

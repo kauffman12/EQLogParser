@@ -129,7 +129,7 @@ namespace EQLogParser
             .OrderBy(timerData => timerData.DisplayName).ToArray();
         }
 
-        if (_node.OverlayData.UseStandardTime && orderedList.Length > 0)
+        if (orderedList != null && _node.OverlayData.UseStandardTime && orderedList.Length > 0)
         {
           maxDurationTicks = orderedList.Select(timerData => timerData.DurationTicks).Max();
         }
@@ -463,7 +463,7 @@ namespace EQLogParser
           // set to layered and topmost by xaml
           var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
           exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow | (int)NativeMethods.ExtendedWindowStyles.WsExTransparent;
-          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, (IntPtr)exStyle);
+          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, exStyle);
         }
       }
     }

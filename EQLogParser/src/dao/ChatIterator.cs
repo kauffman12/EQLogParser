@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace EQLogParser
 {
-  class ChatIterator : IEnumerable<ChatType>
+  internal class ChatIterator : IEnumerable<ChatType>
   {
     private static readonly ChatType EndResult = new();
 
@@ -34,7 +34,7 @@ namespace EQLogParser
         var years = Directory.GetDirectories(home);
         if (years.Length > 0)
         {
-          _directories = years.ToList().OrderByDescending(year => year).ToList();
+          _directories = [.. years.ToList().OrderByDescending(year => year)];
           GetNextYear();
         }
       }
@@ -160,9 +160,13 @@ namespace EQLogParser
         var archive = ChatManager.OpenArchive(_months[_currentMonth], ZipArchiveMode.Read);
         if (archive != null)
         {
-          var reader = new StreamReader(archive.GetEntry(_entries[_currentEntry]).Open());
-          result = new StringReader(reader.ReadToEnd());
-          reader.Close();
+          var entry = archive.GetEntry(_entries[_currentEntry]);
+          if (entry != null)
+          {
+            var reader = new StreamReader(entry.Open());
+            result = new StringReader(reader.ReadToEnd());
+            reader.Close();
+          }
           archive.Dispose();
         }
       }
@@ -180,7 +184,7 @@ namespace EQLogParser
         var fileName = Path.GetFileName(_months[_currentMonth]);
         if (dir != null && fileName != null)
         {
-          var monthString = dir + "-" + fileName.Substring(5, 2);
+          var monthString = string.Concat(dir, "-", fileName.AsSpan(5, 2));
           if (DateTime.TryParseExact(monthString, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed) && _currentChatFilter.DuringMonth(parsed))
           {
             var archive = ChatManager.OpenArchive(_months[_currentMonth], ZipArchiveMode.Read);

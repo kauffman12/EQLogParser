@@ -439,14 +439,13 @@ namespace EQLogParser
     {
       if (!e.Cancel && e.Node is TriggerTreeViewNode node && sender is SfTreeView treeView)
       {
-        var previous = node.Content as string;
         // delay because node still shows old value
         Dispatcher.InvokeAsync(() =>
         {
           var content = node.Content as string;
-          if (string.IsNullOrEmpty(content) || content.Trim().Length == 0 || content.Equals(previous))
+          if (string.IsNullOrEmpty(content) || content.Trim().Length == 0 || node.SerializedData.Name == content)
           {
-            node.Content = previous;
+            node.Content = node.SerializedData.Name;
             treeView.SelectedItems?.Clear();
             treeView.SelectedItem = node;
           }

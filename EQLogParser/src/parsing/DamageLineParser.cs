@@ -3,20 +3,20 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using static EQLogParser.TextUtils;
 
 namespace EQLogParser
 {
-  static class DamageLineParser
+  internal static partial class DamageLineParser
   {
     public static event Action<DamageProcessedEvent> EventsDamageProcessed;
     public static event Action<TauntEvent> EventsNewTaunt;
-
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly Regex CheckEyeRegex = new(@"^Eye of (\w+)");
-    private static readonly Dictionary<string, string> SpellTypeCache = new();
-    private static readonly List<string> SlainQueue = new();
+    private static readonly Regex CheckEyeRegex = EyeRegex();
+    private static readonly Dictionary<string, string> SpellTypeCache = [];
+    private static readonly List<string> SlainQueue = [];
     private static double _slainTime = double.NaN;
     private static string _previousAction;
 
@@ -34,10 +34,10 @@ namespace EQLogParser
       { "frenzy", "frenzies" }, { "frenzies", "frenzies" },
     };
 
-    private static readonly List<string> ChestTypes = new()
-    {
+    private static readonly List<string> ChestTypes =
+    [
       " chest", " cache", " satchel", " treasure box", " lost treasure"
-    };
+    ];
 
     private static readonly Dictionary<string, SpellResist> SpellResistMap = new()
     {
@@ -54,7 +54,10 @@ namespace EQLogParser
 
     private static OldCritData _lastCrit;
 
-    static DamageLineParser() => HitMap.Keys.ToList().ForEach(key => HitMap[HitMap[key]] = HitMap[key]); // add two way mapping
+    static DamageLineParser()
+    {
+      HitMap.Keys.ToList().ForEach(key => HitMap[HitMap[key]] = HitMap[key]); // add two-way mapping
+    }
 
     public static void CheckSlainQueue(double currentTime)
     {
@@ -63,7 +66,11 @@ namespace EQLogParser
         // handle Slain queue
         if (!double.IsNaN(_slainTime) && (currentTime > _slainTime))
         {
-          SlainQueue.ForEach(slain => DataManager.Instance.RemoveActiveFight(slain));
+          foreach (var slain in CollectionsMarshal.AsSpan(SlainQueue))
+          {
+            DataManager.Instance.RemoveActiveFight(slain);
+          }
+
           SlainQueue.Clear();
           _slainTime = double.NaN;
         }
@@ -204,7 +211,7 @@ namespace EQLogParser
                 fromDamage = i - 1;
                 if (pointsOfIndex > -1 && extraIndex > -1)
                 {
-                  found = true; // short circut
+                  found = true; // short circuit
                 }
                 else if (stop > (i + 1) && split[i + 1] == "your")
                 {
@@ -303,7 +310,7 @@ namespace EQLogParser
             default:
               if (slainIndex == -1 && i > 0 && tryIndex == -1 && HitMap.TryGetValue(split[i], out var testSubType))
               {
-                // stop after hit type is found with out exception where the hit type is found again on the next index
+                // stop after hit type is found without exception where the hit type is found again on the next index
                 // workaround for a Mephit named mep hit during beta
                 if (string.IsNullOrEmpty(subType) || (hitType == (i - 1)))
                 {
@@ -490,7 +497,7 @@ namespace EQLogParser
           var spellData = DataManager.Instance.GetDamagingSpellByName(spell);
 
           // Old (eqemu) if attacker is actually a spell then swap attacker and spell
-          // Spells dont change on eqemu servers so this should always be a spell even with old spell data
+          // Spells don't change on eqemu servers so this should always be a spell even with old spell data
           if (spellData == null && DataManager.Instance.IsOldSpell(attacker))
           {
             // check that we can't find a spell where the player name is
@@ -759,7 +766,7 @@ namespace EQLogParser
     private static int FindStop(string[] split)
     {
       var stop = split.Length - 1;
-      if (!string.IsNullOrEmpty(split[stop]) && split[stop][split[stop].Length - 1] == ')')
+      if (!string.IsNullOrEmpty(split[stop]) && split[stop][^1] == ')')
       {
         for (var i = stop; i >= 0 && stop > 2; i--)
         {
@@ -977,5 +984,8 @@ namespace EQLogParser
       internal string Attacker { get; init; }
       internal LineData LineData { get; init; }
     }
+
+    [GeneratedRegex(@"^Eye of (\w+)")]
+    private static partial Regex EyeRegex();
   }
 }

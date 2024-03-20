@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  class LogProcessor : ILogProcessor
+  internal class LogProcessor : ILogProcessor
   {
     private long _lineCount;
     private readonly string _fileName;
@@ -12,7 +12,7 @@ namespace EQLogParser
     internal LogProcessor(string fileName)
     {
       _fileName = fileName ?? string.Empty;
-      // Setup the pre-processor block
+      // setup the pre-processor block
       ChatManager.Instance.Init();
     }
 
@@ -50,7 +50,7 @@ namespace EQLogParser
         double extraDouble = 0;
 
         // only if it's not a chat line check if two lines are on the same line
-        if (lineData.Action.IndexOf("[", StringComparison.Ordinal) is var index and > -1 && lineData.Action.Length > (index + 28) &&
+        if (lineData.Action.IndexOf('[') is var index and > -1 && lineData.Action.Length > (index + 28) &&
             lineData.Action[index + 25] == ']' && char.IsDigit(lineData.Action[index + 24]))
         {
           var original = lineData.Action;
@@ -67,7 +67,6 @@ namespace EQLogParser
         {
           // may as split once if most things use it
           lineData.Split = lineData.Action.Split(' ');
-
           if (!DamageLineParser.Process(lineData))
           {
             if (!HealingLineParser.Process(lineData))

@@ -22,7 +22,7 @@ using SolidColorBrush = System.Windows.Media.SolidColorBrush;
 
 namespace EQLogParser
 {
-  internal static class TriggerUtil
+  internal static partial class TriggerUtil
   {
     public const string ShareTrigger = "EQLPT";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -124,10 +124,18 @@ namespace EQLogParser
           {
             toModel.TriggerActiveBrush = GetBrush(fromTrigger.ActiveColor);
           }
+          else
+          {
+            toModel.TriggerActiveBrush = null;
+          }
 
           if (!string.IsNullOrEmpty(fromTrigger.FontColor))
           {
             toModel.TriggerFontBrush = GetBrush(fromTrigger.FontColor);
+          }
+          else
+          {
+            toModel.TriggerFontBrush = null;
           }
 
           var (textItems, timerItems) = GetOverlayItems(toModel.SelectedOverlays);
@@ -344,7 +352,7 @@ namespace EQLogParser
       var success = false;
       if (!string.IsNullOrEmpty(text))
       {
-        var match = Regex.Match(text, @"<<(.*\.wav)>>$");
+        var match = WavFileRegex().Match(text);
         if (match.Success)
         {
           file = match.Groups[1].Value;
@@ -359,7 +367,7 @@ namespace EQLogParser
     {
       duration = double.NaN;
 
-      foreach (Match match in matches)
+      foreach (var match in matches.Cast<Match>())
       {
         if (!match.Success)
         {
@@ -564,13 +572,13 @@ namespace EQLogParser
 
     internal static void CheckQuickShare(ChatType chatType, string action, double dateTime, string characterId, string processorName)
     {
-      if (chatType.Sender == null)
+      if (chatType.Sender == null || action == null)
       {
         return;
       }
 
       // handle stop command
-      if (chatType.SenderIsYou && (chatType.TextStart - 27) is var s and > 0 && action?.Length > s
+      if (chatType.SenderIsYou && (chatType.TextStart - 27) is var s and > 0 && action.Length > s
           && action.AsSpan()[s..].StartsWith("{EQLP:STOP}"))
       {
         TriggerManager.Instance.TriggersUpdated();
@@ -579,7 +587,7 @@ namespace EQLogParser
 
       // if Quick Share data is recent then try to handle it
       if (action.IndexOf($"{{{ShareTrigger}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
-          action.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 10))
+          action.IndexOf('}') is var end && end > (index + 10))
       {
         var start = index + 7;
         var finish = end - start;
@@ -603,9 +611,8 @@ namespace EQLogParser
             RecordManager.Instance.Add(record);
 
             // don't handle immediately unless enabled
-            if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild
-                  or ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare")
-                && !RecordManager.Instance.IsQuickShareMine(fullKey))
+            if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild or
+                  ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") && !RecordManager.Instance.IsQuickShareMine(fullKey))
             {
               // ignore if we're still processing a bunch
               if (QuickShareCache.Count > 5)
@@ -615,7 +622,7 @@ namespace EQLogParser
 
               lock (QuickShareCache)
               {
-                if (!QuickShareCache.ContainsKey(quickShareKey))
+                if (!QuickShareCache.TryGetValue(quickShareKey, out var value))
                 {
                   QuickShareCache[quickShareKey] = new CharacterData { Sender = chatType.Sender };
                   QuickShareCache[quickShareKey].CharacterIds.Add(characterId);
@@ -623,7 +630,7 @@ namespace EQLogParser
                 }
                 else
                 {
-                  QuickShareCache[quickShareKey].CharacterIds.Add(characterId);
+                  value.CharacterIds.Add(characterId);
                 }
               }
             }
@@ -636,7 +643,7 @@ namespace EQLogParser
     {
       // if Quick Share data is recent then try to handle it
       if (shareKey.IndexOf($"{{{ShareTrigger}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
-          shareKey.IndexOf("}", StringComparison.Ordinal) is var end && end > (index + 10))
+          shareKey.IndexOf('}') is var end && end > (index + 10))
       {
         var start = index + 7;
         var finish = end - start;
@@ -755,6 +762,7 @@ namespace EQLogParser
             UiUtil.InvokeAsync(() =>
             {
               new MessageWindow($"Unable to Import. Key Expired.", Resource.RECEIVED_SHARE).ShowDialog();
+              NextQuickShareTask(quickShareKey);
             });
           }
         }
@@ -964,11 +972,14 @@ namespace EQLogParser
         }
       }
     }
+
+    [GeneratedRegex(@"<<(.*\.wav)>>$")]
+    private static partial Regex WavFileRegex();
   }
 
   internal class CharacterData
   {
     public string Sender { get; set; }
-    public HashSet<string> CharacterIds { get; set; } = new HashSet<string>();
+    public HashSet<string> CharacterIds { get; set; } = [];
   }
 }

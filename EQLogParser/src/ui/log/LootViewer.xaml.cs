@@ -24,9 +24,9 @@ namespace EQLogParser
     private const string OnlyItems = "Only Items";
 
     private readonly DispatcherTimer _reloadTimer;
-    private readonly List<string> _options = new() { "Individual View", "Summary View" };
-    private readonly ObservableCollection<LootRow> _individualRecords = new();
-    private readonly ObservableCollection<LootRow> _totalRecords = new();
+    private readonly List<string> _options = ["Individual View", "Summary View"];
+    private readonly ObservableCollection<LootRow> _individualRecords = [];
+    private readonly ObservableCollection<LootRow> _totalRecords = [];
     private bool _showSummaryView;
     private string _currentSelectedItem = AllItems;
     private string _currentSelectedPlayer = AllPlayers;
@@ -176,7 +176,7 @@ namespace EQLogParser
       _reloadTimer.Stop();
     }
 
-    private void UpdateItems(ComboBox combo, List<string> items, string selected)
+    private static void UpdateItems(ComboBox combo, List<string> items, string selected)
     {
       if (combo.ItemsSource is not List<string> current || !current.SequenceEqual(items))
       {

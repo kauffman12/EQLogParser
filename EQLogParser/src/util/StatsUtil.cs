@@ -147,12 +147,12 @@ namespace EQLogParser
     internal static void UpdateRaidTimeRanges(Dictionary<string, TimeSegment> segments, Dictionary<string, Dictionary<string, TimeSegment>> subSegments,
     ConcurrentDictionary<string, TimeRange> playerTimeRanges, ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges)
     {
-      foreach (ref var entry in segments.ToArray().AsSpan())
+      foreach (var entry in segments)
       {
         AddTimeEntry(playerTimeRanges, entry);
       }
 
-      foreach (ref var subEntry in subSegments.ToArray().AsSpan())
+      foreach (var subEntry in subSegments)
       {
         AddSubTimeEntry(playerSubTimeRanges, subEntry);
       }
@@ -167,7 +167,7 @@ namespace EQLogParser
         playerSubTimeRanges[subEntry.Key] = ranges;
       }
 
-      foreach (ref var typeEntry in subEntry.Value.ToArray().AsSpan())
+      foreach (var typeEntry in subEntry.Value)
       {
         AddTimeEntry(ranges, typeEntry);
       }
@@ -210,7 +210,7 @@ namespace EQLogParser
 
     private static void UpdateSubStat(List<PlayerSubStats> subStats, ConcurrentDictionary<string, TimeRange> subRanges, double minTime, double maxTime)
     {
-      foreach (ref var subStat in CollectionsMarshal.AsSpan(subStats))
+      foreach (var subStat in CollectionsMarshal.AsSpan(subStats))
       {
         if (subRanges.TryGetValue(subStat.Key, out var subRange))
         {
@@ -537,13 +537,13 @@ namespace EQLogParser
       if (stats is PlayerStats playerStats)
       {
 
-        foreach (ref var subStat in CollectionsMarshal.AsSpan(playerStats.SubStats))
+        foreach (var subStat in CollectionsMarshal.AsSpan(playerStats.SubStats))
         {
           UpdateCalculations(subStat, raidTotals, resistCounts, playerStats);
         }
 
         // optional stats
-        foreach (ref var subStat2 in CollectionsMarshal.AsSpan(playerStats.SubStats2))
+        foreach (var subStat2 in CollectionsMarshal.AsSpan(playerStats.SubStats2))
         {
           UpdateCalculations(subStat2, raidTotals, resistCounts, playerStats);
         }
@@ -565,11 +565,10 @@ namespace EQLogParser
       var temp = new HashSet<IAction>();
       var actions = new List<IAction>();
 
-      foreach (var segment in raidStats.Ranges.TimeSegments)
+      foreach (var segment in raidStats.AllRanges.TimeSegments)
       {
         actions.Clear();
         var offsetBegin = segment.BeginTime - SpecialOffset;
-        var offsetEnd = segment.EndTime;
         if (specialStart > -1 && specialStart < allSpecials.Count)
         {
           specialStart = allSpecials.FindIndex(specialStart, special => special.Item1 >= offsetBegin);
@@ -587,7 +586,7 @@ namespace EQLogParser
         }
 
         offsetBegin = segment.BeginTime;
-        offsetEnd = segment.EndTime + DeathOffset;
+        var offsetEnd = segment.EndTime + DeathOffset;
         if (deathStart > -1 && deathStart < allDeaths.Count)
         {
           deathStart = allDeaths.FindIndex(deathStart, death => death.Item1 >= offsetBegin);

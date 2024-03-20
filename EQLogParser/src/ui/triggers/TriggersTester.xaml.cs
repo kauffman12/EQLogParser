@@ -96,6 +96,14 @@ namespace EQLogParser
       }
     }
 
+    private void ClearTextClick(object sender, RoutedEventArgs e)
+    {
+      if (testButton.Content.ToString() == "Run Test" && !string.IsNullOrEmpty(testTriggersBox.Text))
+      {
+        testTriggersBox.Text = "";
+      }
+    }
+
     private void TestTriggersClick(object sender, RoutedEventArgs e)
     {
       if (testButton.Content.ToString() == "Run Test")
@@ -109,7 +117,7 @@ namespace EQLogParser
               _buffer?.Dispose();
               if (_theConfig != null)
               {
-                _buffer = new(new ConcurrentQueue<Tuple<string, double, bool>>());
+                _buffer = new BlockingCollection<Tuple<string, double, bool>>(new ConcurrentQueue<Tuple<string, double, bool>>());
                 TriggerManager.Instance.SetTestProcessor(_theConfig, _buffer);
               }
             }
@@ -118,7 +126,7 @@ namespace EQLogParser
               if (characterList.SelectedItem is TriggerCharacter character)
               {
                 _buffer?.Dispose();
-                _buffer = new(new ConcurrentQueue<Tuple<string, double, bool>>());
+                _buffer = new BlockingCollection<Tuple<string, double, bool>>(new ConcurrentQueue<Tuple<string, double, bool>>());
                 TriggerManager.Instance.SetTestProcessor(character, _buffer);
               }
               else
@@ -143,6 +151,7 @@ namespace EQLogParser
       else if (testButton.Content.ToString() == "Stop Test")
       {
         testButton.Content = "Stopping Test";
+        clearButton.IsEnabled = false;
       }
     }
 
@@ -152,6 +161,7 @@ namespace EQLogParser
       {
         characterList.IsEnabled = false;
         realTime.IsEnabled = false;
+        clearButton.IsEnabled = false;
         allLines.ForEach(line =>
         {
           if (line.Length > MainWindow.ActionIndex)
@@ -167,10 +177,12 @@ namespace EQLogParser
         _buffer?.CompleteAdding();
         characterList.IsEnabled = true;
         realTime.IsEnabled = true;
+        clearButton.IsEnabled = true;
       }
       else
       {
         testButton.Content = "Stop Test";
+        clearButton.IsEnabled = false;
         characterList.IsEnabled = false;
         realTime.IsEnabled = false;
 
@@ -191,7 +203,7 @@ namespace EQLogParser
                 {
                   var dataIndex = 0;
                   var data = new List<string>[range];
-                  data[dataIndex] = new List<string>();
+                  data[dataIndex] = [];
                   foreach (var line in allLines)
                   {
                     var current = DateUtil.ParseStandardDate(line);
@@ -208,7 +220,7 @@ namespace EQLogParser
                         if (diff.Equals(1))
                         {
                           dataIndex++;
-                          data[dataIndex] = new List<string> { line };
+                          data[dataIndex] = [line];
                           startTime++;
                         }
                         else if (diff > 1)
@@ -216,11 +228,11 @@ namespace EQLogParser
                           for (var i = 1; i < diff; i++)
                           {
                             dataIndex++;
-                            data[dataIndex] = new List<string>();
+                            data[dataIndex] = [];
                           }
 
                           dataIndex++;
-                          data[dataIndex] = new List<string> { line };
+                          data[dataIndex] = [line];
                           startTime += diff;
                         }
                       }
@@ -300,6 +312,7 @@ namespace EQLogParser
             {
               testStatus.Visibility = Visibility.Collapsed;
               testButton.Content = "Run Test";
+              clearButton.IsEnabled = true;
               characterList.IsEnabled = true;
               realTime.IsEnabled = true;
             });
@@ -333,5 +346,6 @@ namespace EQLogParser
     {
       // nothing to do
     }
+
   }
 }

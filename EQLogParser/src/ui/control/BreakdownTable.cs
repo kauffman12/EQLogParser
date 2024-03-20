@@ -24,7 +24,7 @@ namespace EQLogParser
       TheTitle = title;
 
       // default these columns to descending
-      var desc = new[] { "Percent", "Total", "Extra", "Potentia", "DPS", "SDPS", "TotalSeconds", "Hits", "Max", "Avg",
+      var desc = new[] { "Percent", "Total", "Extra", "Potential", "DPS", "SDPS", "TotalSeconds", "Hits", "Max", "Avg",
         "AvgCrit", "AvgLucky", "ExtraRate", "CritRate", "LuckRate", "TwincastRate", "MeleeAccRate", "MeleeHitRate", "Absorbs",
         "Blocks", "Dodges", "Invulnerable", "Misses", "Parries", "StrikethroughHits", "RiposteHits", "RampageRate", "TotalAss",
         "TotalFinishing", "TotalHead", "TotalRiposte", "TotalSlay", "AvgNonTwincast", "AvgNonTwincastCrit", "AvgNonTwincastLucky",

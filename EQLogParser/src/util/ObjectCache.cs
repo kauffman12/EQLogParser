@@ -1,10 +1,11 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace EQLogParser
 {
   public class ObjectCache<T>
   {
-    private readonly Dictionary<int, object> _cache = new();
+    private readonly Dictionary<int, object> _cache = [];
 
     public T Add(T obj)
     {
@@ -32,12 +33,9 @@ namespace EQLogParser
 
       // There's already a list of objects with this hash code.
       var list = (List<T>)value;
-      foreach (var item in list)
+      foreach (var item in list.Where(item => item.Equals(obj)))
       {
-        if (item.Equals(obj))
-        {
-          return item;  // Return the existing object if it's equal.
-        }
+        return item;  // Return the existing object if it's equal.
       }
 
       list.Add(obj);  // Add the new object to the list.

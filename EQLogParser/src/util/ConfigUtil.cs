@@ -9,7 +9,7 @@ using System.Security;
 
 namespace EQLogParser
 {
-  static class ConfigUtil
+  internal static class ConfigUtil
   {
     public delegate void PostConfigCallback();
     public static string PlayerName;

@@ -9,9 +9,11 @@ using Syncfusion.Licensing;
 using System;
 using System.IO;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -25,12 +27,16 @@ namespace EQLogParser
 
     public App()
     {
-      SyncfusionLicenseProvider.RegisterLicense("LICENSE HERE");
+      SyncfusionLicenseProvider.RegisterLicense("SEY KEY HERE");
     }
 
     protected override void OnStartup(StartupEventArgs e)
     {
       base.OnStartup(e);
+      // unhandled exceptions
+      DispatcherUnhandledException += AppDispatcherUnhandledException;
+      AppDomain.CurrentDomain.UnhandledException += DomainUnhandledException;
+      TaskScheduler.UnobservedTaskException += TaskSchedulerUnobservedTaskException;
 
       var appDataRoamingPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
       var logsFolderPath = Path.Combine(appDataRoamingPath, "EQLogParser", "logs");
@@ -65,17 +71,31 @@ namespace EQLogParser
 
       ((Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
 
-      AppDomain.CurrentDomain.UnhandledException += DomainUnhandledException;
       AutoMap = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
       Log.Info($"Using DotNet {Environment.Version}");
       RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
       Log.Info("RenderMode: " + RenderOptions.ProcessRenderMode);
     }
 
-    private void DomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    private static void TaskSchedulerUnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
+    {
+      Log.Error("TaskSchedulerUnobservedTaskException");
+      Log.Error(e.Exception?.Message, e.Exception);
+      e.SetObserved();
+    }
+
+    private static void DomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
       var exception = e.ExceptionObject as Exception;
+      Log.Error("DomainUnhandledException");
       Log.Error(exception?.Message, exception);
+    }
+
+    private static void AppDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+      Log.Error("AppDispatcherUnhandledException");
+      Log.Error(e.Exception?.Message, e.Exception);
+      e.Handled = true; // Prevents application from closing
     }
   }
 }

@@ -34,19 +34,13 @@ namespace EQLogParser
 
       BindingOperations.SetBinding(_theTextBox, TextBox.TextProperty, binding);
 
-      string bindName = null;
-      switch (info.Name)
+      var bindName = info.Name switch
       {
-        case "Pattern":
-          bindName = "UseRegex";
-          break;
-        case "EndEarlyPattern":
-          bindName = "EndUseRegex";
-          break;
-        case "EndEarlyPattern2":
-          bindName = "EndUseRegex2";
-          break;
-      }
+        "Pattern" => "UseRegex",
+        "EndEarlyPattern" => "EndUseRegex",
+        "EndEarlyPattern2" => "EndUseRegex2",
+        _ => null
+      };
 
       if (bindName != null)
       {
@@ -93,15 +87,12 @@ namespace EQLogParser
 
     private void TheCheckBoxChecked(object sender, RoutedEventArgs e)
     {
-      if (sender is CheckBox checkBox)
+      if (sender is CheckBox { DataContext: not null })
       {
         // used for init check
-        if (checkBox.DataContext != null)
-        {
-          var previous = _theTextBox.Text;
-          _theTextBox.Text += " ";
-          _theTextBox.Text = previous;
-        }
+        var previous = _theTextBox.Text;
+        _theTextBox.Text += " ";
+        _theTextBox.Text = previous;
       }
     }
 

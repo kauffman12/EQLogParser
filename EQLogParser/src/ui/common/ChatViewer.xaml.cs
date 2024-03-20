@@ -20,7 +20,7 @@ namespace EQLogParser
   public partial class ChatViewer : IDocumentContent
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly List<double> FontSizeList = new() { 10, 12, 14, 16, 18, 20, 22, 24 };
+    private static readonly List<double> FontSizeList = [10, 12, 14, 16, 18, 20, 22, 24];
 
     private const int PageSize = 200;
     private List<string> _playerAutoCompleteList;
@@ -89,8 +89,8 @@ namespace EQLogParser
     private void FromFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(fromFilter, Resource.CHAT_FROM_FILTER);
     private void TextFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(textFilter, Resource.CHAT_TEXT_FILTER);
     private void SelectedDatesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ChangeSearch();
-    private double GetEndDate() => (endDate.DateTime != null) ? endDate.DateTime.Value.Ticks / TimeSpan.FromSeconds(1).Ticks : 0;
-    private double GetStartDate() => (startDate.DateTime != null) ? startDate.DateTime.Value.Ticks / TimeSpan.FromSeconds(1).Ticks : 0;
+    private long GetEndDate() => (endDate.DateTime != null) ? endDate.DateTime.Value.Ticks / TimeSpan.TicksPerSecond : 0;
+    private long GetStartDate() => (startDate.DateTime != null) ? startDate.DateTime.Value.Ticks / TimeSpan.TicksPerSecond : 0;
 
     private void UpdateCurrentTextColor()
     {
@@ -164,7 +164,7 @@ namespace EQLogParser
         var orig = players.ItemsSource as List<string>;
         if (updatedPlayer == null || orig?.Contains(updatedPlayer) == false)
         {
-          var playerList = ChatManager.Instance.GetArchivedPlayers();
+          var playerList = ChatManager.GetArchivedPlayers();
           if (playerList.Count > 0)
           {
             players.ItemsSource = playerList;
@@ -432,13 +432,10 @@ namespace EQLogParser
 
     private void FontFamilyChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (fontFamily?.SelectedItem != null && chatBox != null)
+      if (fontFamily?.SelectedItem != null && chatBox != null && fontFamily.SelectedItem is FontFamily family)
       {
-        if (fontFamily.SelectedItem is FontFamily family)
-        {
-          Application.Current.Resources["EQChatFontFamily"] = family;
-          ConfigUtil.SetSetting("ChatFontFamily", family.ToString());
-        }
+        Application.Current.Resources["EQChatFontFamily"] = family;
+        ConfigUtil.SetSetting("ChatFontFamily", family.ToString());
       }
     }
 
@@ -461,7 +458,7 @@ namespace EQLogParser
       }
     }
 
-    private void FilterGotFocus(TextBox filter, string text)
+    private static void FilterGotFocus(TextBox filter, string text)
     {
       if (filter != null && filter.Text == text)
       {
@@ -504,7 +501,7 @@ namespace EQLogParser
       if (players.SelectedItem is string { Length: > 0 } name && !name.StartsWith("No ", StringComparison.Ordinal))
       {
         LoadChannels(players.SelectedItem as string);
-        _playerAutoCompleteList = ChatManager.Instance.GetPlayers(name);
+        _playerAutoCompleteList = ChatManager.GetPlayers(name);
         ConfigUtil.SetSetting("ChatSelectedPlayer", name);
 
         if (_ready)

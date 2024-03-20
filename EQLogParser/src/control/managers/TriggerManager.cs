@@ -14,15 +14,18 @@ namespace EQLogParser
     internal event Action<bool> EventsProcessorsUpdated;
     internal event Action<string> EventsSelectTrigger;
     internal static TriggerManager Instance => Lazy.Value; // instance
-    public readonly Dictionary<string, bool> RunningFiles = new();
+    public readonly Dictionary<string, bool> RunningFiles = [];
     private static readonly Lazy<TriggerManager> Lazy = new(() => new TriggerManager());
     private readonly DispatcherTimer _configUpdateTimer;
     private readonly DispatcherTimer _triggerUpdateTimer;
     private readonly DispatcherTimer _textOverlayTimer;
     private readonly DispatcherTimer _timerOverlayTimer;
-    private readonly Dictionary<string, OverlayWindowData> _textWindows = new();
-    private readonly Dictionary<string, OverlayWindowData> _timerWindows = new();
-    private readonly List<LogReader> _logReaders = new();
+    private readonly Dictionary<string, OverlayWindowData> _textWindows = [];
+    private readonly Dictionary<string, OverlayWindowData> _timerWindows = [];
+    private readonly List<LogReader> _logReaders = [];
+    private readonly TriggerNode _noDefaultOverlay = new();
+    private TriggerNode _defaultTextOverlay; // cache to avoid excess queries
+    private TriggerNode _defaultTimerOverlay; // cache to avoid excess queries
     private TriggerProcessor _testProcessor;
     private int _timerIncrement;
 
@@ -90,7 +93,7 @@ namespace EQLogParser
     internal void SetTestProcessor(TriggerConfig config, BlockingCollection<Tuple<string, double, bool>> collection)
     {
       _testProcessor?.Dispose();
-      var name = TriggerStateManager.DefaultUser;
+      const string name = TriggerStateManager.DefaultUser;
       _testProcessor = new TriggerProcessor(name, $"Trigger Tester ({name})", ConfigUtil.PlayerName, config.Voice,
         config.VoiceRate, AddTextEvent, AddTimerEvent);
       _testProcessor.SetTesting(true);
@@ -119,12 +122,7 @@ namespace EQLogParser
 
     internal List<Tuple<string, ObservableCollection<AlertEntry>>> GetAlertLogs()
     {
-      var list = new List<Tuple<string, ObservableCollection<AlertEntry>>>();
-      foreach (var p in GetProcessors())
-      {
-        list.Add(Tuple.Create(p.CurrentProcessorName, p.AlertLog));
-      }
-      return list;
+      return GetProcessors().Select(p => Tuple.Create(p.CurrentProcessorName, p.AlertLog)).ToList();
     }
 
     private void TextTick(object sender, EventArgs e) => WindowTick(_textWindows, _textOverlayTimer);
@@ -150,6 +148,8 @@ namespace EQLogParser
       UiUtil.InvokeAsync(CloseOverlays);
       _textOverlayTimer?.Stop();
       _timerOverlayTimer?.Stop();
+      _defaultTextOverlay = null;
+      _defaultTimerOverlay = null;
 
       if (TriggerStateManager.Instance.GetConfig() is { } config)
       {
@@ -247,7 +247,7 @@ namespace EQLogParser
       GetProcessors().ForEach(p => p.UpdateActiveTriggers());
     }
 
-    private static void CloseOverlay(string id, params Dictionary<string, OverlayWindowData>[] windowList)
+    private void CloseOverlay(string id, params Dictionary<string, OverlayWindowData>[] windowList)
     {
       if (id != null)
       {
@@ -258,11 +258,14 @@ namespace EQLogParser
             windows.Remove(id, out var windowData);
             windowData?.TheWindow.Close();
           }
+
+          _defaultTextOverlay = null;
+          _defaultTimerOverlay = null;
         });
       }
     }
 
-    private static void CloseOverlays(params Dictionary<string, OverlayWindowData>[] windowList)
+    private void CloseOverlays(params Dictionary<string, OverlayWindowData>[] windowList)
     {
       UiUtil.InvokeAsync(() =>
       {
@@ -275,6 +278,9 @@ namespace EQLogParser
 
           windows.Clear();
         }
+
+        _defaultTextOverlay = null;
+        _defaultTimerOverlay = null;
       });
     }
 
@@ -403,7 +409,7 @@ namespace EQLogParser
           }
         }
 
-        if (!textOverlayFound && TriggerStateManager.Instance.GetDefaultTextOverlay() is { } node2)
+        if (!textOverlayFound && GetDefaultTextOverlay() is { } node2)
         {
           if (!_textWindows.TryGetValue(node2.Id, out var windowData))
           {
@@ -421,6 +427,7 @@ namespace EQLogParser
           _textOverlayTimer.Start();
         }
       }, DispatcherPriority.Render);
+      return;
 
       OverlayWindowData GetTextWindowData(TriggerNode node)
       {
@@ -457,7 +464,7 @@ namespace EQLogParser
           }
         }
 
-        if (!timerOverlayFound && TriggerStateManager.Instance.GetDefaultTimerOverlay() is { } node2)
+        if (!timerOverlayFound && GetDefaultTimerOverlay() is { } node2)
         {
           if (!_timerWindows.TryGetValue(node2.Id, out _))
           {
@@ -483,6 +490,50 @@ namespace EQLogParser
         ((TimerOverlayWindow)windowData.TheWindow).Tick(timerData);
         return windowData;
       }
+    }
+
+    private TriggerNode GetDefaultTextOverlay()
+    {
+      if (_defaultTextOverlay == null)
+      {
+        if (TriggerStateManager.Instance.GetDefaultTextOverlay() is { } overlay)
+        {
+          _defaultTextOverlay = overlay;
+        }
+        else
+        {
+          _defaultTextOverlay = _noDefaultOverlay;
+        }
+      }
+
+      if (_defaultTextOverlay == _noDefaultOverlay)
+      {
+        return null;
+      }
+
+      return _defaultTextOverlay;
+    }
+
+    private TriggerNode GetDefaultTimerOverlay()
+    {
+      if (_defaultTimerOverlay == null)
+      {
+        if (TriggerStateManager.Instance.GetDefaultTimerOverlay() is { } overlay)
+        {
+          _defaultTimerOverlay = overlay;
+        }
+        else
+        {
+          _defaultTimerOverlay = _noDefaultOverlay;
+        }
+      }
+
+      if (_defaultTimerOverlay == _noDefaultOverlay)
+      {
+        return null;
+      }
+
+      return _defaultTimerOverlay;
     }
   }
 }

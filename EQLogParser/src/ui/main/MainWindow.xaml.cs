@@ -28,7 +28,7 @@ namespace EQLogParser
   public partial class MainWindow : ChromelessWindow
   {
     // global settings
-    internal static string CurrentLogFile = null;
+    internal static string CurrentLogFile;
     internal static bool IsAoEHealingEnabled = true;
     internal static bool IsHealingSwarmPetsEnabled = true;
     internal static bool IsAssassinateDamageEnabled = true;
@@ -52,8 +52,8 @@ namespace EQLogParser
     private readonly DispatcherTimer _computeStatsTimer;
     private readonly NpcDamageManager _npcDamageManager = new();
     private LogReader _eqLogReader;
-    private readonly List<bool> _logWindows = new();
-    private readonly List<string> _recentFiles = new();
+    private readonly List<bool> _logWindows = [];
+    private readonly List<string> _recentFiles = [];
     private bool _resetWindowState;
 
     public MainWindow()
@@ -82,7 +82,6 @@ namespace EQLogParser
         var defaultWidth = SystemParameters.PrimaryScreenWidth * 0.85;
         Height = ConfigUtil.GetSettingAsDouble("WindowHeight", defaultHeight);
         Width = ConfigUtil.GetSettingAsDouble("WindowWidth", defaultWidth);
-
         var top = ConfigUtil.GetSettingAsDouble("WindowTop", double.NaN);
         var left = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN);
 
@@ -94,7 +93,6 @@ namespace EQLogParser
 
         Top = top;
         Left = left;
-
         Log.Info($"Window Pos ({Top}, {Left})");
         Log.Info($"Window Size ({Width}, {Height})");
 
@@ -406,7 +404,7 @@ namespace EQLogParser
     private void UpdateDeleteChatMenu()
     {
       deleteChat.Items.Clear();
-      ChatManager.Instance.GetArchivedPlayers().ForEach(player =>
+      ChatManager.GetArchivedPlayers().ForEach(player =>
       {
         var item = new MenuItem { IsEnabled = true, Header = player };
         deleteChat.Items.Add(item);
@@ -459,6 +457,7 @@ namespace EQLogParser
       {
         tankingStatsOptions.DamageType = ((TankingSummary)control.Content).DamageType;
       }
+
       Task.Run(() => TankingStatsManager.Instance.BuildTotalStats(tankingStatsOptions));
     }
 
@@ -519,7 +518,15 @@ namespace EQLogParser
 
     private void ResetWindowStateClick(object sender, RoutedEventArgs e)
     {
-      dockSite.DeleteDockState(ConfigUtil.ConfigDir + "/dockSite.xml");
+      try
+      {
+        dockSite.DeleteDockState(ConfigUtil.ConfigDir + "/dockSite.xml");
+      }
+      catch (Exception)
+      {
+        // ignore
+      }
+
       _resetWindowState = true;
       new MessageWindow("Window State will be reset after application restart.", Resource.RESET_WINDOW_STATE).ShowDialog();
     }

@@ -2,7 +2,7 @@
 
 namespace EQLogParser
 {
-  class PreLineParser
+  internal class PreLineParser
   {
     private PreLineParser()
     {

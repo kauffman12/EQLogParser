@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace EQLogParser
 {
   public class TimeRange
   {
     private const int Offset = 6;
-    public List<TimeSegment> TimeSegments { get; } = new List<TimeSegment>();
+    public List<TimeSegment> TimeSegments { get; } = [];
 
     public double GetTotal()
     {
@@ -24,11 +25,24 @@ namespace EQLogParser
         }
       }
 
-      additional.ForEach(Add);
+      foreach (var segment in CollectionsMarshal.AsSpan(additional))
+      {
+        Add(segment);
+      }
+
       return TimeSegments.Sum(segment => segment.Total);
     }
 
-    public void Add(IReadOnlyCollection<TimeSegment> collection) => collection?.ToList().ForEach(Add);
+    public void Add(List<TimeSegment> collection)
+    {
+      if (collection != null)
+      {
+        foreach (var segment in CollectionsMarshal.AsSpan(collection))
+        {
+          Add(segment);
+        }
+      }
+    }
 
     public TimeRange() { }
 
@@ -55,7 +69,6 @@ namespace EQLogParser
           var leftIndex = -1;
           var rightIndex = -1;
           var handled = false;
-
           for (var i = 0; i < TimeSegments.Count; i++)
           {
             if (TimeSegments[i].Equals(segment))

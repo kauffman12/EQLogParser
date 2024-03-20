@@ -1,7 +1,7 @@
 ﻿using Syncfusion.UI.Xaml.TreeGrid;
-using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -15,10 +15,10 @@ namespace EQLogParser
     private PlayerStats _raidStats;
     private string _title;
     private bool _currentShowPets = true;
-    private readonly Dictionary<string, PlayerSubStats> _groupedDd = new();
-    private readonly Dictionary<string, PlayerSubStats> _groupedDoT = new();
-    private readonly Dictionary<string, PlayerSubStats> _groupedProcs = new();
-    private readonly Dictionary<string, List<PlayerSubStats>> _otherDamage = new();
+    private readonly Dictionary<string, PlayerSubStats> _groupedDd = [];
+    private readonly Dictionary<string, PlayerSubStats> _groupedDoT = [];
+    private readonly Dictionary<string, PlayerSubStats> _groupedProcs = [];
+    private readonly Dictionary<string, List<PlayerSubStats>> _otherDamage = [];
 
     public DamageBreakdown()
     {
@@ -30,7 +30,7 @@ namespace EQLogParser
 
     internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats)
     {
-      _title = currentStats?.ShortTitle;
+      _title = currentStats.ShortTitle;
       _raidStats = currentStats.RaidStats;
       var childStats = currentStats.Children;
       var list = new List<PlayerStats>();
@@ -38,7 +38,7 @@ namespace EQLogParser
 
       Task.Delay(100).ContinueWith(_ =>
       {
-        foreach (ref var stats in selectedStats.ToArray().AsSpan())
+        foreach (var stats in CollectionsMarshal.AsSpan(selectedStats))
         {
           if (!pets && !(PlayerManager.IsPossiblePlayerName(stats.Name) && !PlayerManager.Instance.IsVerifiedPet(stats.Name)))
           {
@@ -47,7 +47,7 @@ namespace EQLogParser
 
           if (childStats.TryGetValue(stats.Name, out var stat))
           {
-            foreach (ref var childStat in stat.ToArray().AsSpan())
+            foreach (var childStat in CollectionsMarshal.AsSpan(stat))
             {
               // Damage Summary is a Tree which can have child and parent selected so check that we haven't
               // already added the entry
@@ -83,7 +83,7 @@ namespace EQLogParser
       var dds = new SubStatsBreakdown { Name = Labels.Dd, Type = Labels.Dd };
       var procs = new SubStatsBreakdown { Name = Labels.Proc, Type = Labels.Proc };
 
-      all.ForEach(sub =>
+      foreach (var sub in CollectionsMarshal.AsSpan(all))
       {
         PlayerSubStats stats = null;
 
@@ -108,25 +108,22 @@ namespace EQLogParser
         }
 
         StatsUtil.MergeStats(stats, sub);
-      });
-
-      foreach (var stats in new PlayerSubStats[] { dots, dds, procs })
-      {
-        StatsUtil.CalculateRates(stats, _raidStats, playerStats);
       }
 
+      StatsUtil.CalculateRates(dots, _raidStats, playerStats);
+      StatsUtil.CalculateRates(dds, _raidStats, playerStats);
+      StatsUtil.CalculateRates(procs, _raidStats, playerStats);
       _groupedDd[playerStats.Name] = dds;
       _groupedDoT[playerStats.Name] = dots;
       _groupedProcs[playerStats.Name] = procs;
       _otherDamage[playerStats.Name] = list;
     }
 
-    private List<PlayerSubStats> GetSubStats(PlayerStats playerStats)
+    private IEnumerable<PlayerSubStats> GetSubStats(PlayerStats playerStats)
     {
       var name = playerStats.Name;
       var list = new List<PlayerSubStats>();
-
-      _otherDamage[name].ForEach(stats => list.Add(stats));
+      _otherDamage[name].ForEach(list.Add);
 
       if (_groupedDd.TryGetValue(name, out var dds))
       {
@@ -152,7 +149,7 @@ namespace EQLogParser
         }
       }
 
-      return list.OrderByDescending(stats => stats.Total).ToList();
+      return list.OrderByDescending(stats => stats.Total);
     }
 
     private void ItemsSourceChanged(object sender, TreeGridItemsSourceChangedEventArgs e)
@@ -178,7 +175,7 @@ namespace EQLogParser
       // check if call is during initialization
       if (dataGrid?.View != null)
       {
-        _currentShowPets = showPets.IsChecked.Value;
+        _currentShowPets = showPets.IsChecked == true;
         dataGrid.View.RefreshFilter();
       }
     }

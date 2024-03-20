@@ -4,24 +4,25 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  class DamageStatsManager : ISummaryBuilder
+  internal class DamageStatsManager : ISummaryBuilder
   {
     internal static DamageStatsManager Instance = new();
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
     internal event Action<StatsGenerationEvent> EventsGenerationStatus;
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private readonly Dictionary<int, byte> _damageGroupIds = new();
+    private readonly Dictionary<int, byte> _damageGroupIds = [];
     private readonly ConcurrentDictionary<string, TimeRange> _playerTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _playerSubTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _playerPets = new();
     private readonly ConcurrentDictionary<string, string> _petToPlayer = new();
     private List<List<ActionGroup>> _allDamageGroups;
-    private List<List<ActionGroup>> _damageGroups = new();
+    private List<List<ActionGroup>> _damageGroups = [];
     private PlayerStats _raidTotals;
     private List<Fight> _selected;
     private string _title;
@@ -42,7 +43,7 @@ namespace EQLogParser
     }
 
     private static CombinedStats ComputeOverlayDamageStats(OverlayData data, bool dps, bool reset, int mode,
-      int maxRows, string selectedClass, ISet<long> deadFights)
+      int maxRows, string selectedClass, HashSet<long> deadFights)
     {
       CombinedStats combined = null;
 
@@ -50,8 +51,8 @@ namespace EQLogParser
       {
         data.DeadTotalDamage = 0;
         data.UpdateTime = 0;
-        data.PetOwners = new Dictionary<string, string>();
-        data.DeadPlayerTotals = new Dictionary<string, OverlayPlayerTotal>();
+        data.PetOwners = [];
+        data.DeadPlayerTotals = [];
         data.TimeSegments = new TimeRange();
         data.FightName = null;
         data.DeadFightCount = 0;
@@ -65,7 +66,7 @@ namespace EQLogParser
 
       if (dps)
       {
-        // check incase pet mappings was updated while overlay is running
+        // check in case pet mappings was updated while overlay is running
         foreach (var kv in data.PetOwners)
         {
           UpdateOverlayHasPet(kv.Key, kv.Value, playerHasPet, data.DeadPlayerTotals);
@@ -87,9 +88,8 @@ namespace EQLogParser
       var oldestTime = data.UpdateTime;
       Fight oldestFight = null;
 
-      foreach (var fightInfo in DataManager.Instance.GetOverlayFights())
+      foreach (var (id, fight) in DataManager.Instance.GetOverlayFights())
       {
-        var fight = fightInfo.Value;
         fightCount++;
 
         if (!fight.Dead || mode > 0)
@@ -142,7 +142,7 @@ namespace EQLogParser
 
         if (fight.Dead)
         {
-          deadFights.Add(fightInfo.Key);
+          deadFights.Add(id);
           data.DeadFightCount++;
         }
       }
@@ -242,9 +242,8 @@ namespace EQLogParser
       {
         playerHasPet[petOwner] = true;
 
-        if (totals.TryGetValue(player, out var value))
+        if (totals.Remove(player, out var value))
         {
-          totals.Remove(player);
           totals[petOwner] = value;
           value.Name = petOwner;
         }
@@ -255,9 +254,8 @@ namespace EQLogParser
       {
         playerHasPet[owner] = true;
 
-        if (totals.TryGetValue(player, out var value))
+        if (totals.Remove(player, out var value))
         {
-          totals.Remove(player);
           totals[owner] = value;
           value.Name = owner;
         }
@@ -308,11 +306,11 @@ namespace EQLogParser
           FireNewStatsEvent();
           Reset();
 
-          _selected = options.Npcs.OrderBy(sel => sel.Id).ToList();
+          _selected = [.. options.Npcs.OrderBy(sel => sel.Id)];
           _title = options.Npcs?.FirstOrDefault()?.Name;
           var damageBlocks = new List<ActionGroup>();
 
-          _selected.ForEach(fight =>
+          foreach (var fight in CollectionsMarshal.AsSpan(_selected))
           {
             damageBlocks.AddRange(fight.DamageBlocks);
 
@@ -322,12 +320,13 @@ namespace EQLogParser
             }
 
             _raidTotals.Ranges.Add(new TimeSegment(fight.BeginDamageTime, fight.LastDamageTime));
+            _raidTotals.AllRanges.Add(MainActions.GetAllRanges().TimeSegments);
             StatsUtil.UpdateRaidTimeRanges(fight.DamageSegments, fight.DamageSubSegments, _playerTimeRanges, _playerSubTimeRanges);
-          });
+          }
 
           damageBlocks.Sort((a, b) => a.BeginTime.CompareTo(b.BeginTime));
 
-          if (damageBlocks.Count > 0)
+          if (damageBlocks.Count != 0)
           {
             _raidTotals.TotalSeconds = _raidTotals.Ranges.GetTotal();
             _raidTotals.MaxTime = _raidTotals.TotalSeconds;
@@ -335,18 +334,17 @@ namespace EQLogParser
             var rangeIndex = 0;
             double lastTime = 0;
             var newBlock = new List<ActionGroup>();
-            damageBlocks.ForEach(block =>
+            foreach (var block in CollectionsMarshal.AsSpan(damageBlocks))
             {
               if (_raidTotals.Ranges.TimeSegments.Count > rangeIndex && block.BeginTime > _raidTotals.Ranges.TimeSegments[rangeIndex].EndTime)
               {
                 rangeIndex++;
-
                 if (newBlock.Count > 0)
                 {
                   _damageGroups.Add(newBlock);
                 }
 
-                newBlock = new List<ActionGroup>();
+                newBlock = [];
               }
 
               if (!lastTime.Equals(block.BeginTime))
@@ -364,7 +362,7 @@ namespace EQLogParser
               // update pet mapping
               block.Actions.ForEach(action => UpdatePetMapping(action as DamageRecord));
               lastTime = block.BeginTime;
-            });
+            }
 
             _damageGroups.Add(newBlock);
             ComputeDamageStats(options);
@@ -468,11 +466,11 @@ namespace EQLogParser
             }
 
             var prevPlayerTimes = new Dictionary<string, double>();
-            _damageGroups.ForEach(group =>
+            foreach (var group in CollectionsMarshal.AsSpan(_damageGroups))
             {
-              group.ForEach(block =>
+              foreach (var block in CollectionsMarshal.AsSpan(group))
               {
-                block.Actions.ForEach(action =>
+                foreach (var action in block.Actions.ToArray())
                 {
                   if (action is DamageRecord record)
                   {
@@ -514,7 +512,7 @@ namespace EQLogParser
 
                         if (!childrenStats.TryGetValue(aggregateName, out _))
                         {
-                          childrenStats[aggregateName] = new Dictionary<string, PlayerStats>();
+                          childrenStats[aggregateName] = [];
                         }
 
                         childrenStats[aggregateName][stats.Name] = stats;
@@ -533,9 +531,9 @@ namespace EQLogParser
                       }
                     }
                   }
-                });
-              });
-            });
+                }
+              }
+            }
 
             _raidTotals.Dps = (long)Math.Round(_raidTotals.Total / _raidTotals.TotalSeconds, 2);
             StatsUtil.PopulateSpecials(_raidTotals, true);
@@ -613,7 +611,7 @@ namespace EQLogParser
 
                 if (childrenStats.TryGetValue(combined.StatsList[i].Name, out var children))
                 {
-                  combined.Children.Add(combined.StatsList[i].Name, children.Values.OrderByDescending(stats => stats.Total).ToList());
+                  combined.Children.Add(combined.StatsList[i].Name, [.. children.Values.OrderByDescending(stats => stats.Total)]);
                 }
               }
             }
@@ -643,7 +641,7 @@ namespace EQLogParser
 
       return;
 
-      void AddValue(Dictionary<long, int> dict, long key, int amount)
+      static void AddValue(Dictionary<long, int> dict, long key, int amount)
       {
         if (!dict.TryAdd(key, amount))
         {
@@ -721,28 +719,26 @@ namespace EQLogParser
 
     private void UpdatePetMapping(DamageRecord damage)
     {
-      var pname = PlayerManager.Instance.GetPlayerFromPet(damage.Attacker);
-      if ((!string.IsNullOrEmpty(pname) && pname != Labels.Unassigned) || !string.IsNullOrEmpty(pname = damage.AttackerOwner))
+      var petName = PlayerManager.Instance.GetPlayerFromPet(damage.Attacker);
+      if ((!string.IsNullOrEmpty(petName) && petName != Labels.Unassigned) || !string.IsNullOrEmpty(petName = damage.AttackerOwner))
       {
-        if (!_playerPets.TryGetValue(pname, out var mapping))
+        if (!_playerPets.TryGetValue(petName, out var mapping))
         {
           mapping = new ConcurrentDictionary<string, byte>();
-          _playerPets[pname] = mapping;
+          _playerPets[petName] = mapping;
         }
 
         mapping[damage.Attacker] = 1;
-        _petToPlayer[damage.Attacker] = pname;
+        _petToPlayer[damage.Attacker] = petName;
       }
     }
 
     public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected,
       bool showPetLabel, bool showDps, bool showTotals, bool rankPlayers, bool showSpecial, bool showTime, string customTitle)
     {
-      var list = new List<string>();
-
       var title = "";
       var details = "";
-
+      var list = new List<string>();
       if (currentStats != null && type == Labels.DamageParse)
       {
         if (selected?.Count > 0)
@@ -773,7 +769,7 @@ namespace EQLogParser
 
         details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
         var timeTitle = showTime ? currentStats.TimeTitle : "";
-        var totals = showDps ? currentStats.TotalTitle : currentStats.TotalTitle.Split(new[] { " @" }, 2, StringSplitOptions.RemoveEmptyEntries)[0];
+        var totals = showDps ? currentStats.TotalTitle : currentStats.TotalTitle.Split([" @"], 2, StringSplitOptions.RemoveEmptyEntries)[0];
         title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, showTotals ? totals : "");
       }
 

@@ -4,8 +4,8 @@ namespace EQLogParser
 {
   internal class HealingChart : LineChart
   {
-    private static readonly List<string> HealingChoices = new()
-    {
+    private static readonly List<string> HealingChoices =
+    [
       "Aggregate HPS",
       "Aggregate Av Heal",
       "Aggregate Healing",
@@ -17,7 +17,7 @@ namespace EQLogParser
       "# Crits",
       "# Heals",
       "# Twincasts"
-    };
+    ];
 
     private bool _ready;
 

@@ -7,7 +7,7 @@ using System.Windows.Controls;
 
 namespace EQLogParser
 {
-  static class SyncFusionUtil
+  internal static class SyncFusionUtil
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 

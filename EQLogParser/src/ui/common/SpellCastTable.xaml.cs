@@ -11,7 +11,7 @@ namespace EQLogParser
   /// </summary>
   public partial class SpellCastTable
   {
-    private readonly Dictionary<string, bool> _uniqueNames = new();
+    private readonly Dictionary<string, bool> _uniqueNames = [];
     private PlayerStats _raidStats;
     private string _title;
 
@@ -102,7 +102,7 @@ namespace EQLogParser
       });
     }
 
-    private int AddToList(Dictionary<string, List<string>> dict, string key, string value)
+    private static int AddToList(Dictionary<string, List<string>> dict, string key, string value)
     {
       if (dict.TryGetValue(key, out var list))
       {
@@ -110,7 +110,7 @@ namespace EQLogParser
       }
       else
       {
-        dict[key] = new List<string> { value };
+        dict[key] = [value];
       }
 
       return dict[key].Count;
@@ -149,9 +149,9 @@ namespace EQLogParser
 
         foreach (var player in _uniqueNames.Keys)
         {
-          if (playerSpells.ContainsKey(player) && playerSpells[player].Count > i)
+          if (playerSpells.TryGetValue(player, out var value) && value.Count > i)
           {
-            row.Add(player, playerSpells[player][i]);
+            row.Add(player, value[i]);
           }
           else
           {

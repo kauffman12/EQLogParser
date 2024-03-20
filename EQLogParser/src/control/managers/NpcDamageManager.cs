@@ -4,12 +4,12 @@ using System.Linq;
 
 namespace EQLogParser
 {
-  class NpcDamageManager
+  internal class NpcDamageManager
   {
     internal double LastFightProcessTime = double.NaN;
     private int _currentNpcId = 1;
-    private static readonly Dictionary<string, bool> RecentSpellCache = new();
-    private readonly Dictionary<string, bool> _validCombo = new();
+    private static readonly Dictionary<string, bool> RecentSpellCache = [];
+    private readonly Dictionary<string, bool> _validCombo = [];
     private readonly ObjectCache<DamageRecord> _damageCache = new();
     private const int RecentSpellTime = 300;
 
@@ -111,29 +111,38 @@ namespace EQLogParser
 
             SpellDamageStats stats = null;
             var spellKey = record.Attacker + "++" + record.SubType;
-            if (record.Type == Labels.Dd)
+            switch (record.Type)
             {
-              if (!fight.DdDamage.TryGetValue(spellKey, out stats))
-              {
-                stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
-                fight.DdDamage[spellKey] = stats;
-              }
-            }
-            else if (record.Type == Labels.Dot)
-            {
-              if (!fight.DoTDamage.TryGetValue(spellKey, out stats))
-              {
-                stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
-                fight.DoTDamage[spellKey] = stats;
-              }
-            }
-            else if (record.Type == Labels.Proc)
-            {
-              if (!fight.ProcDamage.TryGetValue(spellKey, out stats))
-              {
-                stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
-                fight.ProcDamage[spellKey] = stats;
-              }
+              case Labels.Dd:
+                {
+                  if (!fight.DdDamage.TryGetValue(spellKey, out stats))
+                  {
+                    stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
+                    fight.DdDamage[spellKey] = stats;
+                  }
+
+                  break;
+                }
+              case Labels.Dot:
+                {
+                  if (!fight.DoTDamage.TryGetValue(spellKey, out stats))
+                  {
+                    stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
+                    fight.DoTDamage[spellKey] = stats;
+                  }
+
+                  break;
+                }
+              case Labels.Proc:
+                {
+                  if (!fight.ProcDamage.TryGetValue(spellKey, out stats))
+                  {
+                    stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
+                    fight.ProcDamage[spellKey] = stats;
+                  }
+
+                  break;
+                }
             }
 
             if (stats != null)
@@ -150,7 +159,6 @@ namespace EQLogParser
           AddPlayerTime(fight.TankSegments, fight.TankSubSegments, record, record.Defender, beginTime);
           fight.BeginTankingTime = double.IsNaN(fight.BeginTankingTime) ? beginTime : fight.BeginTankingTime;
           fight.LastTankingTime = beginTime;
-
           fight.TankHits++;
           fight.TankTotal += record.Total;
 
@@ -196,7 +204,7 @@ namespace EQLogParser
       };
     }
 
-    private static void AddAction(ICollection<ActionGroup> blockList, IAction action, double beginTime)
+    private static void AddAction(List<ActionGroup> blockList, IAction action, double beginTime)
     {
       if (blockList.LastOrDefault() is { } last && last.BeginTime.Equals(beginTime))
       {

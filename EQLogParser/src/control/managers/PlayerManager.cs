@@ -23,7 +23,6 @@ namespace EQLogParser
     internal event EventHandler<string> EventsUpdatePlayerClass;
 
     internal static PlayerManager Instance = new();
-
     internal static readonly BitmapImage BerIcon = new(new Uri(@"pack://application:,,,/icons/Ber.png"));
     internal static readonly BitmapImage BrdIcon = new(new Uri(@"pack://application:,,,/icons/Brd.png"));
     internal static readonly BitmapImage BstIcon = new(new Uri(@"pack://application:,,,/icons/Bst.png"));
@@ -54,16 +53,16 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> _verifiedPets = new();
     private readonly ConcurrentDictionary<string, double> _verifiedPlayers = new();
     private readonly ConcurrentDictionary<string, byte> _mercs = new();
-    private readonly List<string> _sortedClassList = new();
-    private readonly List<string> _sortedClassListWithNull = new();
+    private readonly List<string> _sortedClassList = [];
+    private readonly List<string> _sortedClassListWithNull = [];
     private static readonly object LockObject = new();
     private bool _petMappingUpdated;
     private bool _playersUpdated;
 
     private PlayerManager()
     {
-      AddMultiCase(new[] { "you", "your", "yourself" }, _secondPerson);
-      AddMultiCase(new[] { "himself", "herself", "itself" }, _thirdPerson);
+      AddMultiCase(["you", "your", "yourself"], _secondPerson);
+      AddMultiCase(["himself", "herself", "itself"], _thirdPerson);
 
       // populate ClassNames from SpellClass enum and resource table
       foreach (var item in Enum.GetValues(typeof(SpellClass)))
@@ -95,7 +94,7 @@ namespace EQLogParser
       || _thirdPerson.ContainsKey(name) || _verifiedPlayers.ContainsKey(name));
     internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name) || _takenPetOrPlayerAction.ContainsKey(name));
     internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || DataManager.Instance.IsPlayerSpell(name);
-    internal List<string> GetClassList(bool withNull = false) => withNull ? _sortedClassListWithNull.ToList() : _sortedClassList.ToList();
+    internal List<string> GetClassList(bool withNull = false) => withNull ? [.. _sortedClassListWithNull] : [.. _sortedClassList];
     internal bool IsMerc(string name) => _mercs.TryGetValue(TextUtils.ToUpper(name), out _);
 
     internal void AddPetOrPlayerAction(string name)
@@ -212,59 +211,26 @@ namespace EQLogParser
 
     internal BitmapImage GetPlayerIcon(string name)
     {
-      var icon = UnkIcon;
-
-      switch (GetPlayerClassEnum(name))
+      var icon = GetPlayerClassEnum(name) switch
       {
-        case SpellClass.Ber:
-          icon = BerIcon;
-          break;
-        case SpellClass.Brd:
-          icon = BrdIcon;
-          break;
-        case SpellClass.Bst:
-          icon = BstIcon;
-          break;
-        case SpellClass.Clr:
-          icon = ClrIcon;
-          break;
-        case SpellClass.Dru:
-          icon = DruIcon;
-          break;
-        case SpellClass.Enc:
-          icon = EncIcon;
-          break;
-        case SpellClass.Mag:
-          icon = MagIcon;
-          break;
-        case SpellClass.Mnk:
-          icon = MnkIcon;
-          break;
-        case SpellClass.Nec:
-          icon = NecIcon;
-          break;
-        case SpellClass.Pal:
-          icon = PalIcon;
-          break;
-        case SpellClass.Rng:
-          icon = RngIcon;
-          break;
-        case SpellClass.Rog:
-          icon = RogIcon;
-          break;
-        case SpellClass.Shd:
-          icon = ShdIcon;
-          break;
-        case SpellClass.Shm:
-          icon = ShmIcon;
-          break;
-        case SpellClass.War:
-          icon = WarIcon;
-          break;
-        case SpellClass.Wiz:
-          icon = WizIcon;
-          break;
-      }
+        SpellClass.Ber => BerIcon,
+        SpellClass.Brd => BrdIcon,
+        SpellClass.Bst => BstIcon,
+        SpellClass.Clr => ClrIcon,
+        SpellClass.Dru => DruIcon,
+        SpellClass.Enc => EncIcon,
+        SpellClass.Mag => MagIcon,
+        SpellClass.Mnk => MnkIcon,
+        SpellClass.Nec => NecIcon,
+        SpellClass.Pal => PalIcon,
+        SpellClass.Rng => RngIcon,
+        SpellClass.Rog => RogIcon,
+        SpellClass.Shd => ShdIcon,
+        SpellClass.Shm => ShmIcon,
+        SpellClass.War => WarIcon,
+        SpellClass.Wiz => WizIcon,
+        _ => UnkIcon
+      };
 
       return icon;
     }
@@ -350,11 +316,11 @@ namespace EQLogParser
           {
             string found = null;
 
-            foreach (var keypair in _petToPlayer)
+            foreach (var kv in _petToPlayer)
             {
-              if (keypair.Value.Equals(name, StringComparison.OrdinalIgnoreCase))
+              if (kv.Value.Equals(name, StringComparison.OrdinalIgnoreCase))
               {
-                found = keypair.Key;
+                found = kv.Key;
               }
 
               TryRemovePetMapping(found);
@@ -521,7 +487,7 @@ namespace EQLogParser
       {
         lock (_playerToClass)
         {
-          counter = new SpellClassCounter { ClassCounts = new Dictionary<SpellClass, long>() };
+          counter = new SpellClassCounter { ClassCounts = [] };
           _playerToClass.TryAdd(player, counter);
         }
       }
@@ -550,7 +516,7 @@ namespace EQLogParser
       {
         lock (_playerToClass)
         {
-          counter = new SpellClassCounter { ClassCounts = new Dictionary<SpellClass, long>() };
+          counter = new SpellClassCounter { ClassCounts = [] };
           _playerToClass.TryAdd(cast.Caster, counter);
         }
       }
@@ -654,7 +620,7 @@ namespace EQLogParser
 
     private static void AddMultiCase(IReadOnlyCollection<string> values, ConcurrentDictionary<string, byte> dict)
     {
-      if (values.Count > 0)
+      if (values.Count != 0)
       {
         foreach (var value in values)
         {

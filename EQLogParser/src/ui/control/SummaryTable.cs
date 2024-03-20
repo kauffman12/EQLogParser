@@ -15,13 +15,14 @@ namespace EQLogParser
   {
     internal const string DefaultTableLabel = "No NPCs Selected";
     internal const string NodataTableLabel = Labels.NoData;
-    internal readonly List<PlayerStats> NoResultsList = new();
+    internal readonly List<PlayerStats> NoResultsList = [];
 
     internal dynamic TheDataGrid;
     internal ComboBox TheColumnsCombo;
     internal Label TheTitle;
     internal CombinedStats CurrentStats;
     internal List<List<ActionGroup>> CurrentGroups;
+    private static readonly string[] Item = ["Rank", "Rank"];
 
     internal void InitSummaryTable(Label title, SfGridBase gridBase, ComboBox columnsCombo)
     {
@@ -89,6 +90,15 @@ namespace EQLogParser
       });
     }
 
+    internal static void CreateSpellCountMenuItems(MenuItem parent, Action<object, RoutedEventArgs> selectedHandler, Action<object, RoutedEventArgs> classHandler)
+    {
+      CreateClassMenuItems(parent, selectedHandler, classHandler);
+      parent.Items.Add(new Separator());
+      var item = new MenuItem { IsEnabled = true, Header = "All Players" };
+      item.Click += new RoutedEventHandler(classHandler);
+      parent.Items.Add(item);
+    }
+
     internal void Clear()
     {
       TheTitle.Content = DefaultTableLabel;
@@ -101,15 +111,21 @@ namespace EQLogParser
       {
         if (item is MenuItem { Header: string headerValue } menuItem)
         {
-          menuItem.IsEnabled = headerValue == "Selected" ? gridBase.SelectedItems.Count > 0 : uniqueClasses != null &&
-            uniqueClasses.ContainsKey(headerValue);
+          if (headerValue == "Selected")
+          {
+            menuItem.IsEnabled = gridBase.SelectedItems.Count > 0;
+          }
+          else if (headerValue != "All Players")
+          {
+            menuItem.IsEnabled = uniqueClasses != null && uniqueClasses.ContainsKey(headerValue);
+          }
         }
       }
     }
 
     internal List<string[]> GetHeaders()
     {
-      var headers = new List<string[]> { new[] { "Rank", "Rank" } };
+      var headers = new List<string[]> { Item };
 
       if (TheDataGrid is SfTreeGrid treeGrid)
       {
@@ -117,7 +133,7 @@ namespace EQLogParser
         {
           var binding = ((Binding)column.ValueBinding).Path.Path;
           var title = column.HeaderText;
-          headers.Add(new[] { binding, title });
+          headers.Add([binding, title]);
         }
       }
       else if (TheDataGrid is SfDataGrid dataGrid)
@@ -126,7 +142,7 @@ namespace EQLogParser
         {
           var binding = ((Binding)column.ValueBinding).Path.Path;
           var title = column.HeaderText;
-          headers.Add(new[] { binding, title });
+          headers.Add([binding, title]);
         }
       }
 
@@ -145,7 +161,7 @@ namespace EQLogParser
         return dataGrid.SelectedItems.Cast<PlayerStats>().ToList();
       }
 
-      return new List<PlayerStats>();
+      return [];
     }
 
     internal List<PlayerStats> GetPlayerStats()
@@ -169,11 +185,16 @@ namespace EQLogParser
         return results;
       }
 
-      return new List<PlayerStats>();
+      return [];
     }
 
     internal List<PlayerStats> GetStatsByClass(string className)
     {
+      if (className == "All Players")
+      {
+        return null;
+      }
+
       return GetPlayerStats().Where(stats => stats.IsTopLevel && stats.ClassName == className).ToList();
     }
 
@@ -197,7 +218,7 @@ namespace EQLogParser
 
     internal void ShowSpellCounts(List<PlayerStats> selected)
     {
-      if (selected?.Count > 0 && Application.Current.MainWindow is MainWindow main)
+      if (Application.Current.MainWindow is MainWindow main)
       {
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var spellTable, typeof(SpellCountTable),
           "spellCountsWindow", "Spell Counts"))

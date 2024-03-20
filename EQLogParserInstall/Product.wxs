@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.1.70" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.2.1" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -11,7 +11,7 @@
 
     <Icon Id="icon.ico" SourceFile="$(var.EQLogParser.ProjectDir)\src\ui\main\EQLogParser.ico"/>
     <Property Id="ARPPRODUCTICON" Value="icon.ico" />
-    <Property Id="DOTNET6INSTALLED">0</Property>
+    <Property Id="DOTNET8INSTALLED">0</Property>
 
 		<Feature Id="ProductFeature" Title="EQLogParser" Level="1">
 			<ComponentGroupRef Id="ProductComponents" />
@@ -31,8 +31,8 @@
       <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
 
       <!-- Skip license dialog -->
-      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="CheckDotNetDlg" Order="1">DOTNET6INSTALLED="0"</Publish>
-      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="WhatsNewDlg" Order="1">DOTNET6INSTALLED="1"</Publish>
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="CheckDotNetDlg" Order="1">DOTNET8INSTALLED="0"</Publish>
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="WhatsNewDlg" Order="1">DOTNET8INSTALLED="1"</Publish>
       <Publish Dialog="SetupTypeDlg" Control="Back" Event="NewDialog" Value="CheckDotNetDlg">1</Publish>
       <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WhatsNewDlg" Order="3">1</Publish>
     </UI>
@@ -46,9 +46,9 @@
     </InstallUISequence>
     <UI>
       <Dialog Id="CheckDotNetDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="no">
-        <Control Id="Text1" Type="Text" X="40" Y="74" Width="280" Height="40" TabSkip="no" Text="Microsoft .Net 6.0 Desktop Runtime is now required. It may be downloaded from the link below. After it is installed, try EQLogParser again." />
+        <Control Id="Text1" Type="Text" X="40" Y="74" Width="280" Height="40" TabSkip="no" Text="Microsoft .Net 8.0 Desktop Runtime is now required. It may be downloaded from the link below. After it is installed, try EQLogParser again." />
         <Control Id="Link1" Type="Hyperlink" X="40" Y="116" Width="290" Height="40" Transparent="yes">
-          <Text><![CDATA[<a href="https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.21-windows-x64-installer">https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.21-windows-x64-installer</a>]]></Text>
+          <Text><![CDATA[<a href="https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.3-windows-x64-installer">https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.3-windows-x64-installer</a>]]></Text>
         </Control>     
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
           <Publish Event="NewDialog" Value="WelcomeDlg">1</Publish>
@@ -59,7 +59,7 @@
         </Control>
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
         <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
-          <Text>Please Install .Net 6.0 and Try Again</Text>
+          <Text>Please Install .Net 8.0 and Try Again</Text>
         </Control>
         <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
         <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
@@ -247,9 +247,11 @@
       <Component Win64="yes" Id="Syncfusion.Tools.WPF.dll" Guid="016ED49A-B740-4F65-82D9-81EC02957E10">
         <File CompanionFile="EQLogParser.dll" Id="Syncfusion.Tools.WPF.dll" Name="Syncfusion.Tools.WPF.dll" Source="$(var.EQLogParser.TargetDir)Syncfusion.Tools.WPF.dll" />
       </Component>
+      <!--
       <Component Win64="yes" Id="System.Configuration.ConfigurationManager.dll" Guid="82999838-AE52-40E7-8BD7-9B0D7DAC19B3">
         <File CompanionFile="EQLogParser.dll" Id="System.Configuration.ConfigurationManager.dll" Name="System.Configuration.ConfigurationManager.dll" Source="$(var.EQLogParser.TargetDir)System.Configuration.ConfigurationManager.dll" />
       </Component>
+      -->
     </ComponentGroup>
     <ComponentGroup Id="ProductDataComponents" Directory="DATAFOLDER">
       <Component Win64="yes" Id="petnames.txt" Guid="92C4F601-A319-424A-A014-B50EC47ADBA6">
@@ -311,7 +313,7 @@
     <ComponentGroup Id="RuntimeComponents" Directory="RTWINLIBNETFOLDER">
       <Component Win64="yes" Id="System.Speech.dll" Guid="7BEDF909-C3DD-4B90-B172-56D880664C1A">
         <File Id="System.Speech.dll" Name="System.Speech.dll" Source="$(var.EQLogParser.TargetDir)\runtimes\win\lib\net8.0\System.Speech.dll" />
-      </Component>  
+      </Component>
     </ComponentGroup>
   </Fragment>
 </Wix>

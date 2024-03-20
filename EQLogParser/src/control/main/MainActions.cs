@@ -25,7 +25,7 @@ using System.Windows.Media;
 
 namespace EQLogParser
 {
-  static class MainActions
+  static partial class MainActions
   {
     internal static event Action<string> EventsLogLoadingComplete;
     internal static event Action<string> EventsThemeChanged;
@@ -38,9 +38,9 @@ namespace EQLogParser
 
     private const string PetsListTitle = "Verified Pets ({0})";
     private const string PlayerListTitle = "Verified Players ({0})";
-    private static readonly ObservableCollection<dynamic> VerifiedPlayersView = new();
-    private static readonly ObservableCollection<dynamic> VerifiedPetsView = new();
-    private static readonly ObservableCollection<PetMapping> PetPlayersView = new();
+    private static readonly ObservableCollection<dynamic> VerifiedPlayersView = [];
+    private static readonly ObservableCollection<dynamic> VerifiedPetsView = [];
+    private static readonly ObservableCollection<PetMapping> PetPlayersView = [];
     private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new();
     private static readonly SortableNameComparer TheSortableNameComparer = new();
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -72,6 +72,17 @@ namespace EQLogParser
       SyncFusionUtil.AddDocument(dockSite, typeof(SpellDamageStatsViewer), "spellDamageStatsWindow", "Spell Damage");
       SyncFusionUtil.AddDocument(dockSite, typeof(TauntStatsViewer), "tauntStatsWindow", "Taunt Usage");
       SyncFusionUtil.AddDocument(dockSite, typeof(DamageSummary), "damageSummaryWindow", "DPS Summary", true);
+    }
+
+    internal static TimeRange GetAllRanges()
+    {
+      TimeRange result = null;
+      UiUtil.InvokeNow(() =>
+      {
+        result = (Application.Current.MainWindow as MainWindow)?.GetFightTable()?.GetAllRanges();
+      });
+
+      return result ?? new TimeRange();
     }
 
     internal static List<Fight> GetFights()
@@ -106,7 +117,7 @@ namespace EQLogParser
           var request = TheHttpClient.GetStringAsync("https://github.com/kauffman12/EQLogParser/blob/master/README.md");
           request.Wait();
 
-          var matches = new Regex(@"EQLogParser-((\d)\.(\d)\.(\d?\d?\d))\.(msi|exe)").Match(request.Result);
+          var matches = InstallerName().Match(request.Result);
           if (version != null && matches.Success && matches.Groups.Count == 6 && int.TryParse(matches.Groups[2].Value, out var v1) &&
               int.TryParse(matches.Groups[3].Value, out var v2) && int.TryParse(matches.Groups[4].Value, out var v3)
               && (v1 > version.Major || (v1 == version.Major && v2 > version.Minor) ||
@@ -379,8 +390,7 @@ namespace EQLogParser
       Application.Current.Resources["DamageOverlayBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#99000000")! };
       Application.Current.Resources["DamageOverlayDamageBrush"] = new SolidColorBrush { Color = Colors.White };
       Application.Current.Resources["DamageOverlayProgressBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF1D397E")! };
-
-      MainActions.FireThemeChanged(theme);
+      FireThemeChanged(theme);
     }
 
     // should already run on the UI thread
@@ -402,7 +412,7 @@ namespace EQLogParser
       var entry = new ExpandoObject() as dynamic;
       entry.Name = name;
 
-      int index = collection.ToList().BinarySearch(entry, TheSortableNameComparer);
+      var index = collection.ToList().BinarySearch(entry, TheSortableNameComparer);
       if (index < 0)
       {
         collection.Insert(~index, entry);
@@ -733,5 +743,8 @@ namespace EQLogParser
         return string.CompareOrdinal(((dynamic)x)?.Name, ((dynamic)y)?.Name);
       }
     }
+
+    [GeneratedRegex(@"EQLogParser-((\d)\.(\d)\.(\d?\d?\d))\.(msi|exe)")]
+    private static partial Regex InstallerName();
   }
 }
