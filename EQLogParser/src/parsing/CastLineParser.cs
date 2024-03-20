@@ -6,10 +6,10 @@ using System.Reflection;
 
 namespace EQLogParser
 {
-  static class CastLineParser
+  internal static class CastLineParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly char[] OldSpellChars = { '<', '>' };
+    private static readonly char[] OldSpellChars = ['<', '>'];
 
     private static readonly Dictionary<string, string> SpecialCastCodes = new()
     {
@@ -27,7 +27,7 @@ namespace EQLogParser
       try
       {
         var split = lineData.Split;
-        if (split.Length > 1 && !split[0].Contains(".") && !split.Last().EndsWith(")") && !CheckLandsOnMessages(split, lineData.BeginTime))
+        if (split.Length > 1 && !split[0].Contains('.') && !split.Last().EndsWith(')') && !CheckLandsOnMessages(split, lineData.BeginTime))
         {
           string player = null;
           string spellName = null;
@@ -54,38 +54,38 @@ namespace EQLogParser
             player = ConfigUtil.PlayerName;
             if (split[1] == "activate" && split.Length > 2)
             {
-              spellName = TextUtils.ParseSpellOrNpc(split.ToArray(), 2);
+              spellName = TextUtils.ParseSpellOrNpc([.. split], 2);
             }
             else if (split[1] == "begin" && split.Length > 3)
             {
               if (split[2] == "casting")
               {
-                spellName = TextUtils.ParseSpellOrNpc(split.ToArray(), 3);
+                spellName = TextUtils.ParseSpellOrNpc([.. split], 3);
                 isSpell = true;
               }
               else if (split[2] == "singing")
               {
-                spellName = TextUtils.ParseSpellOrNpc(split.ToArray(), 3);
+                spellName = TextUtils.ParseSpellOrNpc([.. split], 3);
               }
             }
           }
           else if (split[1] == "activates")
           {
             player = split[0];
-            spellName = TextUtils.ParseSpellOrNpc(split.ToArray(), 2);
+            spellName = TextUtils.ParseSpellOrNpc([.. split], 2);
           }
           else if (split.Length > 3 && Array.FindIndex(split, 1, split.Length - 1, s => s == "begins") is var bIndex and > -1 && (bIndex + 2) < split.Length)
           {
             if (split[bIndex + 1] == "casting")
             {
-              player = string.Join(" ", split.ToArray(), 0, bIndex);
-              spellName = TextUtils.ParseSpellOrNpc(split.ToArray(), bIndex + 2);
+              player = string.Join(" ", [.. split], 0, bIndex);
+              spellName = TextUtils.ParseSpellOrNpc([.. split], bIndex + 2);
               isSpell = true;
             }
             else if (split[bIndex + 1] == "singing")
             {
-              player = string.Join(" ", split.ToArray(), 0, bIndex);
-              spellName = TextUtils.ParseSpellOrNpc(split.ToArray(), bIndex + 2);
+              player = string.Join(" ", [.. split], 0, bIndex);
+              spellName = TextUtils.ParseSpellOrNpc([.. split], bIndex + 2);
             }
             else if (split.Length > 5 && split[2] == "to" && split[4] == "a")
             {
@@ -105,7 +105,7 @@ namespace EQLogParser
           else if (split.Length > 4 && split[^1] == "interrupted." && split[^2] == "is" && split[^3] == "spell")
           {
             isInterrupted = true;
-            spellName = string.Join(" ", split.ToArray(), 1, split.Length - 4);
+            spellName = string.Join(" ", [.. split], 1, split.Length - 4);
 
             if (split[0] == "Your")
             {
@@ -186,9 +186,9 @@ namespace EQLogParser
       // [Sun Aug 04 23:39:56 2019] You are generously healed. You healed Kizant for 35830 (500745) hit points by Staunch Recovery.
       for (var i = 0; i < split.Length; i++)
       {
-        if (split[i].EndsWith("."))
+        if (split[i].EndsWith('.'))
         {
-          // if its a spell
+          // if it's a spell
           var lastIndex = split.Length - 1;
           if (lastIndex != i && split[i].Equals("Rk."))
           {
@@ -267,7 +267,7 @@ namespace EQLogParser
       // ZONE EVENT - moved here to keep it in the same thread as lands on message parsing
       if (split[1] == "have" && split[2] == "entered")
       {
-        var zone = string.Join(" ", split.ToArray(), 3, split.Length - 3).TrimEnd('.');
+        var zone = string.Join(" ", [.. split], 3, split.Length - 3).TrimEnd('.');
         RecordManager.Instance.Add(new ZoneRecord { Zone = zone }, beginTime);
         if (!zone.StartsWith("an area", StringComparison.OrdinalIgnoreCase))
         {
@@ -292,7 +292,7 @@ namespace EQLogParser
 
     private static string ParseOldSpellName(string[] split, int spellIndex)
     {
-      return string.Join(" ", split.ToArray(), spellIndex, split.Length - spellIndex).Trim(OldSpellChars);
+      return string.Join(" ", [.. split], spellIndex, split.Length - spellIndex).Trim(OldSpellChars);
     }
   }
 }

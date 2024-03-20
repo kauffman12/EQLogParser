@@ -15,7 +15,7 @@ namespace EQLogParser
   /// </summary>
   public partial class TextOverlayWindow : Window
   {
-    private readonly LinkedList<TextData> _textDataList = new();
+    private readonly LinkedList<TextData> _textDataList = [];
     private int _maxNodes = -1;
     private TriggerNode _node;
     private readonly bool _preview;
@@ -310,7 +310,7 @@ namespace EQLogParser
           // set to layered and topmost by xaml
           var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
           exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow | (int)NativeMethods.ExtendedWindowStyles.WsExTransparent;
-          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, (IntPtr)exStyle);
+          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, exStyle);
         }
       }
     }

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
@@ -25,20 +26,21 @@ namespace EQLogParser
     private const string Damageavoided = "Damage Avoided";
     private const string Nocat = "Uncategorized";
     private const string Otherchat = "Other Chat";
-    private static readonly List<double> FontSizeList = new() { 10, 12, 14, 16, 18, 20, 22, 24 };
-    private static readonly List<string> Times = new()
-    {
-      "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Selected Fights", "Everything"
-    };
+    private static readonly List<double> FontSizeList = [10, 12, 14, 16, 18, 20, 22, 24];
+    private static readonly List<string> Times =
+    [
+      "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 2 Days", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Selected Fights",
+      "Everything"
+    ];
     private static bool _complete = true;
     private static bool _running;
     private readonly DispatcherTimer _filterTimer;
-    private List<string> _unFiltered = new();
-    private readonly Dictionary<long, long> _filteredLinePositionMap = new();
-    private readonly Dictionary<long, long> _linePositions = new();
+    private List<string> _unFiltered = [];
+    private readonly Dictionary<long, long> _filteredLinePositionMap = [];
+    private readonly Dictionary<long, long> _linePositions = [];
     private readonly int _lineTypeCount;
     private readonly bool _ready;
-    private string _currentFile = null;
+    private string _currentFile;
 
     public EqLogViewer()
     {
@@ -147,7 +149,7 @@ namespace EQLogParser
         {
           var filtered = new List<string>();
           var lineCount = -1;
-          foreach (ref var line in _unFiltered.ToArray().AsSpan())
+          foreach (var line in CollectionsMarshal.AsSpan(_unFiltered))
           {
             lineCount++;
 
@@ -295,7 +297,7 @@ namespace EQLogParser
 
     private void GoToLine(EditControl control, int line)
     {
-      // GoToLine just doesnt work until UI is fully rendered
+      // GoToLine just doesn't work until UI is fully rendered
       Task.Delay(250).ContinueWith(_ => Dispatcher.Invoke(() =>
       {
         try
@@ -346,15 +348,18 @@ namespace EQLogParser
                 start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24);
                 break;
               case 3:
-                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 7);
+                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 2);
                 break;
               case 4:
-                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 14);
+                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 7);
                 break;
               case 5:
-                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 30);
+                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 14);
                 break;
               case 6:
+                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 30);
+                break;
+              case 7:
                 var fights = MainActions.GetSelectedFights().OrderBy(sel => sel.Id).ToList();
                 if (fights.Count > 0)
                 {
@@ -363,7 +368,7 @@ namespace EQLogParser
                   fights.ForEach(fight => ranges.Add(new TimeSegment(fight.BeginTime - 15, fight.LastTime)));
                 }
                 break;
-              case 7:
+              case 8:
                 start = 0;
                 break;
             }

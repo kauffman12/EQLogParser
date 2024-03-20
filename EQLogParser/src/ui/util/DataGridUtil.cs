@@ -160,10 +160,10 @@ namespace EQLogParser
           headerKeys.Insert(0, "Rank");
         }
 
-        foreach (ref var record in records.ToArray().AsSpan())
+        foreach (var record in CollectionsMarshal.AsSpan(records))
         {
           var row = new List<object>();
-          foreach (var key in headerKeys)
+          foreach (var key in CollectionsMarshal.AsSpan(headerKeys))
           {
             // regular object with properties
             row.Add(props.GetFormattedValue(record, key) ?? "");
@@ -277,11 +277,7 @@ namespace EQLogParser
             finally
             {
               gridBase.IsHitTestVisible = true;
-
-              if (dialog != null)
-              {
-                dialog.Close();
-              }
+              dialog?.Close();
             }
           }, DispatcherPriority.Background);
         }, DispatcherPriority.Background);
@@ -509,7 +505,7 @@ namespace EQLogParser
 
       if (!string.IsNullOrEmpty(visibleSetting))
       {
-        visible = new HashSet<string>(visibleSetting.Split(','));
+        visible = [.. visibleSetting.Split(',')];
       }
 
       dynamic columns = null;
@@ -531,12 +527,12 @@ namespace EQLogParser
 
       if (displayOrder != null)
       {
-        foreach (var item in displayOrder.Split(',').ToList())
+        foreach (var item in displayOrder.Split(',').ToArray())
         {
           var name = item;
 
           // Eventually (remove this)
-          oldFormat = oldFormat || name.Contains(" ");
+          oldFormat = oldFormat || name.Contains(' ');
 
           // changed column names
           if (name == "% Luck")

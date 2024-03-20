@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace EQLogParser
 {
-  class HealingLineParser
+  internal class HealingLineParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
@@ -77,7 +77,7 @@ namespace EQLogParser
       var heal = uint.MaxValue;
       uint overHeal = 0;
 
-      var previous = test.Length >= 2 ? test.LastIndexOf(" ", test.Length - 2, StringComparison.Ordinal) : -1;
+      var previous = test.Length >= 2 ? test.LastIndexOf(' ', test.Length - 2) : -1;
       if (previous > -1)
       {
         if (test.IndexOf("are ", previous + 1, StringComparison.Ordinal) > -1)
@@ -139,7 +139,7 @@ namespace EQLogParser
             }
             else
             {
-              healed = part.Substring(afterHealed, forIndex - afterHealed);
+              healed = part[afterHealed..forIndex];
             }
 
             amountIndex = forIndex + 5;
@@ -159,10 +159,10 @@ namespace EQLogParser
 
         if (amountIndex > -1)
         {
-          var amountEnd = part.IndexOf(" ", amountIndex, StringComparison.Ordinal);
+          var amountEnd = part.IndexOf(' ', amountIndex);
           if (amountEnd > -1)
           {
-            var value = StatsUtil.ParseUInt(part.Substring(amountIndex, amountEnd - amountIndex));
+            var value = StatsUtil.ParseUInt(part[amountIndex..amountEnd]);
             if (value != uint.MaxValue)
             {
               heal = value;
@@ -171,10 +171,10 @@ namespace EQLogParser
             var overEnd = -1;
             if (part.Length > amountEnd + 1 && part[amountEnd + 1] == '(')
             {
-              overEnd = part.IndexOf(")", amountEnd + 2, StringComparison.Ordinal);
+              overEnd = part.IndexOf(')', amountEnd + 2);
               if (overEnd > -1)
               {
-                var value2 = StatsUtil.ParseUInt(part.Substring(amountEnd + 2, overEnd - amountEnd - 2));
+                var value2 = StatsUtil.ParseUInt(part.AsSpan(amountEnd + 2, overEnd - amountEnd - 2));
                 if (value2 != uint.MaxValue)
                 {
                   overHeal = value2;
@@ -186,7 +186,7 @@ namespace EQLogParser
             var byIndex = part.IndexOf(" by ", rest, StringComparison.Ordinal);
             if (byIndex > -1)
             {
-              var periodIndex = part.LastIndexOf(".", StringComparison.Ordinal);
+              var periodIndex = part.LastIndexOf('.');
               if (periodIndex > -1 && periodIndex - byIndex - 4 > 0)
               {
                 spell = part.Substring(byIndex + 4, periodIndex - byIndex - 4);

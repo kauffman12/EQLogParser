@@ -11,13 +11,13 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  static class FileUtil
+  internal static partial class FileUtil
   {
     private const long M = 1000000;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly Regex FileNameRegex = new(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline);
+    private static readonly Regex FileNameRegex = TheFileNameRegex();
     private static readonly object LockObject = new();
-    private static readonly HashSet<LogReader> ArchiveQueue = new();
+    private static readonly HashSet<LogReader> ArchiveQueue = [];
 
     private static readonly Dictionary<string, long> ArchiveFileSizes = new()
     {
@@ -252,5 +252,8 @@ namespace EQLogParser
         f.Seek(good, SeekOrigin.Begin);
       }
     }
+
+    [GeneratedRegex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline)]
+    private static partial Regex TheFileNameRegex();
   }
 }

@@ -48,7 +48,7 @@ namespace EQLogParser
     private void TheComboBoxDataContextChanged(object sender, DependencyPropertyChangedEventArgs e) => UpdateTitle(sender);
     private void TheComboBoxDropDownClosed(object sender, EventArgs e) => UpdateTitle(sender, true);
 
-    private void UpdateTitle(object sender, bool save = false)
+    private static void UpdateTitle(object sender, bool save = false)
     {
       var comboBox = sender as ComboBox;
       if (comboBox?.ItemsSource is ObservableCollection<ComboBoxItemDetails> details)

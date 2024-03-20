@@ -17,13 +17,20 @@ namespace EQLogParser
 
     private static readonly Dictionary<string, List<string>> Options = new()
     {
-      { "TriggerAgainOption", new  List<string> { "Start Additional Timer", "Restart Timer", "Restart Timer If Same Name", "Do Nothing", "Do Nothing If Same Name" } },
-      { "FontSize", new  List<string>
-      { "10pt", "11pt", "12pt", "13pt", "14pt", "15pt", "16pt", "17pt",
-          "18pt", "20pt", "22pt", "24pt", "26pt", "28pt", "30pt", "34pt", "38pt", "42pt", "46pt", "50pt" } },
-      { "SortBy", new List<string> { "Trigger Time", "Remaining Time", "Timer Name" } },
-      { "TimerMode", new List<string> { "Standard", "Cooldown" } },
-      { "TimerType", new List<string> { "No Timer", "Countdown", "Fast Countdown", "Progress", "Looping" } },
+      { "TriggerAgainOption",
+        [
+          "Start Additional Timer", "Restart Timer", "Restart Timer If Same Name", "Do Nothing",
+          "Do Nothing If Same Name"
+        ]
+      },
+      { "FontSize", [
+          "10pt", "11pt", "12pt", "13pt", "14pt", "15pt", "16pt", "17pt",
+          "18pt", "20pt", "22pt", "24pt", "26pt", "28pt", "30pt", "34pt", "38pt", "42pt", "46pt", "50pt"
+        ]
+      },
+      { "SortBy", ["Trigger Time", "Remaining Time", "Timer Name"] },
+      { "TimerMode", ["Standard", "Cooldown"] },
+      { "TimerType", ["No Timer", "Countdown", "Fast Countdown", "Progress", "Looping"] },
       { "FontFamily", UiElementUtil.GetSystemFontFamilies().Select(font => font.Source).ToList() },
     };
 
@@ -36,7 +43,6 @@ namespace EQLogParser
       { "TimerType", Selector.SelectedIndexProperty },
       { "FontFamily", Selector.SelectedValueProperty }
     };
-
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
     {

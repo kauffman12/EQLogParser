@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Dynamic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 
@@ -58,11 +59,11 @@ namespace EQLogParser
       var childTotals = new Dictionary<string, dynamic>();
       var fights = fightOption.SelectedIndex == 0 ? MainActions.GetFights() : MainActions.GetSelectedFights();
 
-      foreach (var fight in fights)
+      foreach (var fight in CollectionsMarshal.AsSpan(fights))
       {
-        foreach (var block in fight.TauntBlocks)
+        foreach (var block in CollectionsMarshal.AsSpan(fight.TauntBlocks))
         {
-          foreach (var record in block.Actions.Cast<TauntRecord>())
+          foreach (var record in block.Actions.ToArray().Cast<TauntRecord>())
           {
             var parentKey = record.Player;
             if (totals.TryGetValue(parentKey, out var value))

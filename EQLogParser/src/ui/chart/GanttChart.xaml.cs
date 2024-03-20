@@ -20,8 +20,7 @@ namespace EQLogParser
   public partial class GanttChart : IDisposable
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-
-    private static readonly List<string> BlockBrushes = new() { "EQMenuIconBrush", "EQWarnForegroundBrush" };
+    private static readonly List<string> BlockBrushes = ["EQMenuIconBrush", "EQWarnForegroundBrush"];
 
     private double _rowHeight;
     private const int LabelsWidth = 190;
@@ -31,17 +30,15 @@ namespace EQLogParser
     private const ushort HealingAdps = 8;
     private const ushort AnyAdps = CasterAdps + MeleeAdps + TankAdps + HealingAdps;
     private readonly string[] _types = { "Defensive Skills", "ADPS", "Healing Skills" };
-
-    private readonly Dictionary<string, SpellRange> _spellRanges = new();
-    private readonly List<TextBlock> _headers = new();
-    private readonly Dictionary<string, byte> _selfOnly = new();
-    private readonly Dictionary<string, byte> _ignore = new();
+    private readonly Dictionary<string, SpellRange> _spellRanges = [];
+    private readonly List<TextBlock> _headers = [];
+    private readonly Dictionary<string, byte> _selfOnly = [];
+    private readonly Dictionary<string, byte> _ignore = [];
     private double _startTime;
     private double _endTime;
     private double _length;
     private List<PlayerStats> _selected;
     private int _timelineType;
-
     private bool _currentHideSelfOnly = true;
     private bool _currentShowCasterAdps = true;
     private bool _currentShowMeleeAdps = true;
@@ -76,7 +73,7 @@ namespace EQLogParser
             break;
         }
 
-        if (_timelineType == 0 || _timelineType == 2)
+        if (_timelineType is 0 or 2)
         {
           showMeleeAdps.Visibility = Visibility.Hidden;
           showCasterAdps.Visibility = Visibility.Hidden;
@@ -93,7 +90,7 @@ namespace EQLogParser
             }
             else
             {
-              deathMap[record.Killed] = new HashSet<double> { beginTime };
+              deathMap[record.Killed] = [beginTime];
             }
           }
         }
@@ -257,34 +254,32 @@ namespace EQLogParser
         }
 
         var playerData = new List<List<object>>();
-        foreach (ref var label in labels.ToArray().AsSpan())
+        foreach (var label in CollectionsMarshal.AsSpan(labels))
         {
           if (player1.TryGetValue(label, out var rectangles1))
           {
-            foreach (ref var rectangle in rectangles1.ToArray().AsSpan())
+            foreach (var rectangle in CollectionsMarshal.AsSpan(rectangles1))
             {
               playerData.Add(
-                new List<object>
-                {
+                [
                   label,
                   _selected[0].OrigName,
                   _startTime + rectangle.Margin.Left,
                   _startTime + rectangle.Margin.Left + rectangle.ActualWidth
-                });
+                ]);
             }
           }
 
           if (player2.TryGetValue(label, out var rectangles2))
           {
-            foreach (ref var rectangle in rectangles2.ToArray().AsSpan())
+            foreach (var rectangle in CollectionsMarshal.AsSpan(rectangles2))
             {
               playerData.Add(
-                new List<object>
-                {
+                [
                   label,
                   _selected[1].OrigName, _startTime + rectangle.Margin.Left,
                   _startTime + rectangle.Margin.Left + rectangle.ActualWidth
-                });
+                ]);
             }
           }
         }
@@ -312,7 +307,7 @@ namespace EQLogParser
     private void CreateImage(object sender, RoutedEventArgs e) => CreateImage();
     private void CreateLargeImage(object sender, RoutedEventArgs e) => CreateImage(true);
 
-    private static void AddValue(IDictionary<string, List<Rectangle>> dict, string name, Rectangle value)
+    private static void AddValue(Dictionary<string, List<Rectangle>> dict, string name, Rectangle value)
     {
       if (dict.TryGetValue(name, out var list))
       {
@@ -320,7 +315,7 @@ namespace EQLogParser
       }
       else
       {
-        dict[name] = new List<Rectangle> { value };
+        dict[name] = [value];
       }
     }
 
@@ -331,7 +326,7 @@ namespace EQLogParser
 
       if (everything)
       {
-        foreach (var header in _headers)
+        foreach (var header in CollectionsMarshal.AsSpan(_headers))
         {
           if (header.Visibility == Visibility.Hidden)
           {
@@ -393,7 +388,6 @@ namespace EQLogParser
 
           var last = contentLabels.Children.Cast<FrameworkElement>().LastOrDefault();
           var contentHeight = (last == null) ? 0 : (int)last.ActualHeight;
-
           var height = (int)titleImage.Height + (int)headerImage.Height;
           if (everything)
           {
@@ -542,7 +536,7 @@ namespace EQLogParser
       contentHeader.Children.Add(textBlock);
     }
 
-    private void AddDivider(Grid target, double hPos, double left, string blockBrush = null)
+    private static void AddDivider(Grid target, double hPos, double left, string blockBrush = null)
     {
       var rectangle = new Rectangle
       {
@@ -734,7 +728,7 @@ namespace EQLogParser
 
     private class SpellRange
     {
-      public List<TimeRange> Ranges { get; } = new();
+      public List<TimeRange> Ranges { get; } = [];
       public ushort Adps { get; init; }
     }
 

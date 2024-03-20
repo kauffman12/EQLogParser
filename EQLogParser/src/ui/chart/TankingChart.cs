@@ -4,8 +4,8 @@ namespace EQLogParser
 {
   internal class TankingChart : LineChart, IDocumentContent
   {
-    private static readonly List<string> TankingChoices = new()
-    {
+    private static readonly List<string> TankingChoices =
+    [
       "Aggregate DPS",
       "Aggregate Av Hit",
       "Aggregate Damaged",
@@ -15,7 +15,7 @@ namespace EQLogParser
       "# Attempts",
       "# Hits",
       "# Twincasts"
-    };
+    ];
 
     private bool _ready;
 

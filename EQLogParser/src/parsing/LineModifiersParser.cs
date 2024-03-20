@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace EQLogParser
 {
-  static class LineModifiersParser
+  internal static class LineModifiersParser
   {
     private static readonly Dictionary<string, byte> AllModifiers = new()
     {
@@ -248,7 +248,7 @@ namespace EQLogParser
         else if (IsSlayUndead(result))
         {
           PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-          PlayerManager.Instance.SetPlayerClass(player, SpellClass.Pal, "Class closen from use of Slay Undead.");
+          PlayerManager.Instance.SetPlayerClass(player, SpellClass.Pal, "Class chosen from use of Slay Undead.");
         }
       }
 

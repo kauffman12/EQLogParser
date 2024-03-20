@@ -14,8 +14,8 @@ namespace EQLogParser
     private string _title;
     private string _setting;
 
-    private readonly List<string> _choicesList = new() { "Breakdown By Spell", "Breakdown By Healed" };
-    private readonly List<string> _receivedChoicesList = new() { "Breakdown By Spell", "Breakdown By Healer" };
+    private readonly List<string> _choicesList = ["Breakdown By Spell", "Breakdown By Healed"];
+    private readonly List<string> _receivedChoicesList = ["Breakdown By Spell", "Breakdown By Healer"];
 
     public HealBreakdown()
     {

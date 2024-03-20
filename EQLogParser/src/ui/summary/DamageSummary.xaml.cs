@@ -37,7 +37,7 @@ namespace EQLogParser
       petOrPlayerList.ItemsSource = new List<string> { Labels.PetPlayerOption, Labels.PlayerOption, Labels.PetOption, Labels.AllOption };
       petOrPlayerList.SelectedIndex = 0;
 
-      CreateClassMenuItems(menuItemShowSpellCounts, DataGridShowSpellCountsClick, DataGridSpellCountsByClassClick);
+      CreateSpellCountMenuItems(menuItemShowSpellCounts, DataGridShowSpellCountsClick, DataGridSpellCountsByClassClick);
       CreateClassMenuItems(menuItemShowSpellCasts, DataGridShowSpellCastsClick, DataGridSpellCastsByClassClick);
       CreateClassMenuItems(menuItemShowBreakdown, DataGridShowBreakdownClick, DataGridShowBreakdownByClassClick);
 
@@ -93,7 +93,7 @@ namespace EQLogParser
         {
           menuItemShowSpellCasts.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
           menuItemShowDamageLog.IsEnabled = menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
-          menuItemShowAdpsTimeline.IsEnabled = (dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2) && _currentGroupCount == 1;
+          menuItemShowAdpsTimeline.IsEnabled = dataGrid.SelectedItems.Count is 1 or 2 && _currentGroupCount == 1;
           copyDamageParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
 
           // default before making check
@@ -198,17 +198,6 @@ namespace EQLogParser
           dataGrid.View.RefreshFilter();
         }
       }
-    }
-
-    private List<PlayerStats> UpdateRank(List<PlayerStats> list)
-    {
-      var rank = 1;
-      foreach (ref var stats in list.OrderByDescending(stats => stats.Total).ToArray().AsSpan())
-      {
-        stats.Rank = (ushort)rank++;
-      }
-
-      return list;
     }
 
     private void DataGridCopyContent(object sender, GridCopyPasteEventArgs e)
@@ -416,6 +405,17 @@ namespace EQLogParser
         var selected = GetSelectedStats();
         DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "UPDATE", selected);
       }
+    }
+
+    private static List<PlayerStats> UpdateRank(List<PlayerStats> list)
+    {
+      var rank = 1;
+      foreach (var stats in list.OrderByDescending(stats => stats.Total))
+      {
+        stats.Rank = (ushort)rank++;
+      }
+
+      return list;
     }
 
     internal override void FireSelectionChangedEvent(List<PlayerStats> selected)

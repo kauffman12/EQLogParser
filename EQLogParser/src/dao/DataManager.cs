@@ -63,7 +63,7 @@ namespace EQLogParser
     public const string Invulnerable = "Invulnerable";
   }
 
-  class DataManager
+  internal class DataManager
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
@@ -82,21 +82,21 @@ namespace EQLogParser
     internal uint MyDoTCritRateMod { get; private set; }
 
     private static readonly SpellAbbrvComparer AbbrvComparer = new();
-    private readonly List<string> _adpsKeys = new() { "#DoTCritRate", "#NukeCritRate" };
-    private readonly Dictionary<string, Dictionary<string, uint>> _adpsActive = new();
-    private readonly Dictionary<string, Dictionary<string, uint>> _adpsValues = new();
-    private readonly Dictionary<string, HashSet<SpellData>> _adpsLandsOn = new();
-    private readonly Dictionary<string, HashSet<SpellData>> _adpsWearOff = new();
-    private readonly Dictionary<string, bool> _oldSpellNamesDb = new();
+    private readonly List<string> _adpsKeys = ["#DoTCritRate", "#NukeCritRate"];
+    private readonly Dictionary<string, Dictionary<string, uint>> _adpsActive = [];
+    private readonly Dictionary<string, Dictionary<string, uint>> _adpsValues = [];
+    private readonly Dictionary<string, HashSet<SpellData>> _adpsLandsOn = [];
+    private readonly Dictionary<string, HashSet<SpellData>> _adpsWearOff = [];
+    private readonly Dictionary<string, bool> _oldSpellNamesDb = [];
     private readonly SpellTreeNode _landsOnOtherTree = new();
     private readonly SpellTreeNode _landsOnYouTree = new();
     private readonly SpellTreeNode _wearOffTree = new();
 
     // definitely used in single thread
-    private readonly Dictionary<string, string> _titleToClass = new();
+    private readonly Dictionary<string, string> _titleToClass = [];
 
     // locking was causing a problem for OverlayFights? I don't know
-    private readonly Dictionary<long, Fight> _overlayFights = new();
+    private readonly ConcurrentDictionary<long, Fight> _overlayFights = new();
     private readonly ConcurrentDictionary<string, byte> _allNpcs = new();
     private readonly ConcurrentDictionary<string, SpellData> _spellsAbbrvDb = new();
     private readonly ConcurrentDictionary<string, SpellClass> _spellsToClass = new();
@@ -153,12 +153,11 @@ namespace EQLogParser
             }
             else
             {
-              _spellsNameDb[spellData.Name] = new List<SpellData> { spellData };
+              _spellsNameDb[spellData.Name] = [spellData];
             }
 
-            if (!_spellsAbbrvDb.ContainsKey(spellData.NameAbbrv))
+            if (_spellsAbbrvDb.TryAdd(spellData.NameAbbrv, spellData))
             {
-              _spellsAbbrvDb[spellData.NameAbbrv] = spellData;
             }
             else if (string.Compare(_spellsAbbrvDb[spellData.NameAbbrv].Name, spellData.Name, true, CultureInfo.InvariantCulture) < 0)
             {
@@ -169,17 +168,17 @@ namespace EQLogParser
             // restricted received spells to only ADPS related
             if (!string.IsNullOrEmpty(spellData.LandsOnOther) && (spellData.Adps > 0 || spellData.IsBeneficial))
             {
-              BuildSpellPath(spellData.LandsOnOther.Trim().Split(' ').ToList(), _landsOnOtherTree, spellData);
+              BuildSpellPath([.. spellData.LandsOnOther.Trim().Split(' ')], _landsOnOtherTree, spellData);
             }
 
             if (!string.IsNullOrEmpty(spellData.LandsOnYou) && (spellData.Adps > 0 || spellData.IsBeneficial))
             {
-              BuildSpellPath(spellData.LandsOnYou.Trim().Split(' ').ToList(), _landsOnYouTree, spellData);
+              BuildSpellPath([.. spellData.LandsOnYou.Trim().Split(' ')], _landsOnYouTree, spellData);
             }
 
             if (!string.IsNullOrEmpty(spellData.WearOff) && (spellData.Adps > 0 || spellData.IsBeneficial))
             {
-              BuildSpellPath(spellData.WearOff.Trim().Split(' ').ToList(), _wearOffTree, spellData);
+              BuildSpellPath([.. spellData.WearOff.Trim().Split(' ')], _wearOffTree, spellData);
             }
           }
         }
@@ -209,7 +208,7 @@ namespace EQLogParser
             // these need to be unique and keep track if a conflict is found
             if (_spellsToClass.ContainsKey(spell.Name))
             {
-              _spellsToClass.TryRemove(spell.Name, out var _);
+              _spellsToClass.TryRemove(spell.Name, out _);
               keepOut[spell.Name] = 1;
             }
             else if (!keepOut.ContainsKey(spell.Name))
@@ -224,8 +223,8 @@ namespace EQLogParser
       ConfigUtil.ReadList(@"data\npcs.txt").ForEach(line => _allNpcs[line.Trim()] = 1);
 
       // Load Adps
-      _adpsKeys.ForEach(adpsKey => _adpsActive[adpsKey] = new Dictionary<string, uint>());
-      _adpsKeys.ForEach(adpsKey => _adpsValues[adpsKey] = new Dictionary<string, uint>());
+      _adpsKeys.ForEach(adpsKey => _adpsActive[adpsKey] = []);
+      _adpsKeys.ForEach(adpsKey => _adpsValues[adpsKey] = []);
 
       string key = null;
       foreach (var line in ConfigUtil.ReadList(@"data\adpsMeter.txt"))
@@ -246,14 +245,14 @@ namespace EQLogParser
 
                     if (!_adpsWearOff.TryGetValue(spellData.WearOff, out _))
                     {
-                      _adpsWearOff[spellData.WearOff] = new HashSet<SpellData>();
+                      _adpsWearOff[spellData.WearOff] = [];
                     }
 
                     _adpsWearOff[spellData.WearOff].Add(spellData);
 
                     if (!_adpsLandsOn.TryGetValue(spellData.LandsOnYou, out _))
                     {
-                      _adpsLandsOn[spellData.LandsOnYou] = new HashSet<SpellData>();
+                      _adpsLandsOn[spellData.LandsOnYou] = [];
                     }
 
                     _adpsLandsOn[spellData.LandsOnYou].Add(spellData);
@@ -291,6 +290,10 @@ namespace EQLogParser
     internal bool IsOldSpell(string name) => !string.IsNullOrEmpty(name) && _oldSpellNamesDb.ContainsKey(name);
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
     internal bool IsLifetimeNpc(string name) => !string.IsNullOrEmpty(name) && _lifetimeFights.ContainsKey(name);
+    internal Dictionary<long, Fight> GetOverlayFights() => _overlayFights.ToDictionary(i => i.Key, i => i.Value);
+    internal void RemoveOverlayFight(long id) => _overlayFights.Remove(id, out _);
+    internal bool HasOverlayFights() => _overlayFights.Count > 0;
+    internal string GetClassFromTitle(string title) => _titleToClass.GetValueOrDefault(title);
 
     internal string AbbreviateSpellName(string spell)
     {
@@ -324,15 +327,18 @@ namespace EQLogParser
 
     internal void CheckExpireFights(double currentTime)
     {
-      foreach (ref var fight in _activeFights.Values.ToArray().AsSpan())
+      var removeActiveKeys = new List<string>();
+      foreach (var fight in _activeFights.Values)
       {
         var diff = currentTime - fight.LastTime;
         if (diff > MaxTimeout || (diff > FightTimeout && fight.DamageBlocks.Count > 0))
         {
-          RemoveActiveFight(fight.CorrectMapKey);
+          removeActiveKeys.Add(fight.CorrectMapKey);
           RemoveOverlayFight(fight.Id);
         }
       }
+
+      removeActiveKeys.ForEach(RemoveActiveFight);
     }
 
     internal SpellClass? GetSpellClass(string spell)
@@ -405,7 +411,7 @@ namespace EQLogParser
       {
         if (spellList.Count <= 10)
         {
-          foreach (ref var spell in CollectionsMarshal.AsSpan(spellList))
+          foreach (var spell in CollectionsMarshal.AsSpan(spellList))
           {
             if (spellData == null || (spellData.Level < spell.Level && spell.Level <= 250) || (spellData.Level > 250 && spell.Level <= 250))
             {
@@ -415,20 +421,11 @@ namespace EQLogParser
         }
         else
         {
-          spellData = spellList.Last();
+          spellData = spellList.LastOrDefault();
         }
       }
 
       return spellData;
-    }
-
-    internal string GetClassFromTitle(string title)
-    {
-      if (_titleToClass.TryGetValue(title, out var value))
-      {
-        return value;
-      }
-      return null;
     }
 
     internal void UpdateAdps(SpellData spellData)
@@ -436,7 +433,7 @@ namespace EQLogParser
       var updated = false;
       lock (_adpsKeys)
       {
-        foreach (ref var key in CollectionsMarshal.AsSpan(_adpsKeys))
+        foreach (var key in CollectionsMarshal.AsSpan(_adpsKeys))
         {
           if (_adpsValues[key].TryGetValue(spellData.NameAbbrv, out var value))
           {
@@ -460,7 +457,7 @@ namespace EQLogParser
 
       if (found.SpellData.Count > 0 && found.DataIndex > -1)
       {
-        player = string.Join(" ", split.ToArray(), 0, found.DataIndex + 1);
+        player = string.Join(" ", [.. split], 0, found.DataIndex + 1);
         if (player.EndsWith("'s"))
         {
           // if string is only 2 then it must be invalid
@@ -484,7 +481,7 @@ namespace EQLogParser
         // check Adps
         if (_adpsLandsOn.TryGetValue(found.SpellData[0].LandsOnYou, out var spellDataSet) && spellDataSet.Count > 0)
         {
-          var spellData = spellDataSet.Count == 1 ? spellDataSet.First() : FindPreviousCast(ConfigUtil.PlayerName, spellDataSet.ToList(), true);
+          var spellData = spellDataSet.Count == 1 ? spellDataSet.First() : FindPreviousCast(ConfigUtil.PlayerName, [.. spellDataSet], true);
 
           // this only handles latest versions of spells so an older one may have given us the landsOn string and then it wasn't found
           // for some spells this makes sense because of the level requirements and it wouldn't do anything but thats not true for all of them
@@ -494,7 +491,7 @@ namespace EQLogParser
             var updated = false;
             lock (_adpsKeys)
             {
-              foreach (ref var key in CollectionsMarshal.AsSpan(_adpsKeys))
+              foreach (var key in CollectionsMarshal.AsSpan(_adpsKeys))
               {
                 if (_adpsValues[key].TryGetValue(spellData.NameAbbrv, out var value))
                 {
@@ -531,7 +528,7 @@ namespace EQLogParser
 
           lock (_adpsKeys)
           {
-            foreach (ref var key in CollectionsMarshal.AsSpan(_adpsKeys))
+            foreach (var key in CollectionsMarshal.AsSpan(_adpsKeys))
             {
               if (_adpsValues[key].TryGetValue(spellData.NameAbbrv, out _))
               {
@@ -555,12 +552,11 @@ namespace EQLogParser
     internal void ZoneChanged()
     {
       var updated = false;
-
       lock (_adpsKeys)
       {
         foreach (var active in _adpsActive)
         {
-          active.Value.Keys.ToList().ForEach(landsOn =>
+          foreach (var landsOn in active.Value.Keys.ToArray())
           {
             if (_adpsLandsOn.TryGetValue(landsOn, out var value))
             {
@@ -572,7 +568,7 @@ namespace EQLogParser
                 updated = true;
               }
             }
-          });
+          }
         }
       }
 
@@ -667,7 +663,6 @@ namespace EQLogParser
     private static List<SpellData> FindByLandsOn(string player, List<SpellData> output)
     {
       List<SpellData> result = null;
-
       if (output.Count == 1)
       {
         result = output;
@@ -683,21 +678,19 @@ namespace EQLogParser
         }
         else
         {
-          result = new List<SpellData> { foundSpellData };
+          result = [foundSpellData];
         }
       }
 
       return result;
     }
 
-    internal bool RemoveActiveFight(string name)
+    internal void RemoveActiveFight(string name)
     {
-      var removed = _activeFights.TryRemove(name, out var fight);
-      if (removed)
+      if (_activeFights.TryRemove(name, out var fight))
       {
         fight.Dead = true;
       }
-      return removed;
     }
 
     internal void UpdateIfNewFightMap(string name, Fight fight, bool isNonTankingFight)
@@ -722,12 +715,9 @@ namespace EQLogParser
 
       if (fight.DamageHits > 0)
       {
-        lock (_overlayFights)
-        {
-          _overlayFights[fight.Id] = fight;
-        }
+        _overlayFights[fight.Id] = fight;
 
-        // dont bother if not configured (lazy optimization)
+        // don't bother if not configured (lazy optimization)
         if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
         {
           EventsNewOverlayFight?.Invoke(this, fight);
@@ -735,45 +725,9 @@ namespace EQLogParser
       }
     }
 
-    internal Dictionary<long, Fight> GetOverlayFights()
-    {
-      Dictionary<long, Fight> result;
-      lock (_overlayFights)
-      {
-        result = _overlayFights.ToDictionary(i => i.Key, i => i.Value);
-      }
-      return result;
-    }
-
-    internal void RemoveOverlayFight(long id)
-    {
-      lock (_overlayFights)
-      {
-        _overlayFights.Remove(id, out _);
-      }
-    }
-
-    internal bool HasOverlayFights()
-    {
-      bool result;
-      lock (_overlayFights)
-      {
-        result = _overlayFights.Count > 0;
-      }
-      return result;
-    }
-
     internal void ResetOverlayFights(bool active = false)
     {
-      Span<Fight> span;
-
-      lock (_overlayFights)
-      {
-        span = _overlayFights.Values.ToArray().AsSpan();
-      }
-
-      var groupId = (active && _activeFights.Count > 0) ? _activeFights.Values.First().GroupId : -1;
-
+      var groupId = (active && !_activeFights.IsEmpty) ? _activeFights.Values.First().GroupId : -1;
       // active is used after the log as been loaded. the overlay opening is displayed so that
       // FightTable has time to populate the GroupIds. if for some reason not enough time has
       // elapsed then the IDs will still be 0 so ignore
@@ -783,8 +737,7 @@ namespace EQLogParser
       }
 
       var removeList = new List<long>();
-
-      foreach (ref var fight in span)
+      foreach (var fight in _overlayFights.Values)
       {
         if (fight != null && (groupId == -1 || fight.GroupId != groupId))
         {
@@ -801,12 +754,7 @@ namespace EQLogParser
     {
       _activeFights.Clear();
       _lifetimeFights.Clear();
-
-      lock (_overlayFights)
-      {
-        _overlayFights.Clear();
-      }
-
+      _overlayFights.Clear();
       ClearActiveAdps();
       EventsClearedActiveData?.Invoke(true);
     }
@@ -848,20 +796,16 @@ namespace EQLogParser
           EventsRemovedFight?.Invoke(this, name);
         }
 
-        Span<Fight> overlayFights;
-
-        lock (_overlayFights)
-        {
-          overlayFights = _overlayFights.Values.ToArray().AsSpan();
-        }
-
-        foreach (ref var fight in overlayFights)
+        var removeOverlayFights = new List<long>();
+        foreach (var fight in _overlayFights.Values)
         {
           if (fight.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
           {
-            RemoveOverlayFight(fight.Id);
+            removeOverlayFights.Add(fight.Id);
           }
         }
+
+        removeOverlayFights.ForEach(RemoveOverlayFight);
       }
     }
 
@@ -917,7 +861,7 @@ namespace EQLogParser
       }
     }
 
-    static int DurationCompare(SpellData a, SpellData b)
+    private static int DurationCompare(SpellData a, SpellData b)
     {
       var result = b.Duration.CompareTo(a.Duration);
       if (result == 0 && int.TryParse(a.Id, out var aInt) && int.TryParse(b.Id, out var bInt))
@@ -940,8 +884,8 @@ namespace EQLogParser
 
     internal class SpellTreeNode
     {
-      public List<SpellData> SpellData { get; set; } = new();
-      public Dictionary<string, SpellTreeNode> Words { get; set; } = new();
+      public List<SpellData> SpellData { get; set; } = [];
+      public Dictionary<string, SpellTreeNode> Words { get; set; } = [];
     }
 
     internal class SpellTreeResult

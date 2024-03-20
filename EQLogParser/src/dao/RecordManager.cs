@@ -27,11 +27,11 @@ namespace EQLogParser
     // stats
     private readonly ConcurrentDictionary<string, List<RecordList>> _recordDictionaries = new();
     private readonly ConcurrentDictionary<string, bool> _recordNeedsEvent = new();
-    private readonly Dictionary<string, NpcResistStats> _npcSpellStatsDict = new();
-    private readonly List<RecordList> _playerAmbiguityCastCache = new();
+    private readonly Dictionary<string, NpcResistStats> _npcSpellStatsDict = [];
+    private readonly List<RecordList> _playerAmbiguityCastCache = [];
     // observables
     private readonly object _collectionLock = new();
-    internal readonly ObservableCollection<QuickShareRecord> AllQuickShareRecords = new();
+    internal readonly ObservableCollection<QuickShareRecord> AllQuickShareRecords = [];
     private readonly Timer _eventTimer;
 
     private static readonly string[] TimedRecordTypes =
@@ -55,7 +55,7 @@ namespace EQLogParser
       // initialize dictionaries
       foreach (var type in TimedRecordTypes)
       {
-        _recordDictionaries[type] = new List<RecordList>();
+        _recordDictionaries[type] = [];
       }
 
       _eventTimer = new Timer(SendEvents, null, TimeSpan.FromMilliseconds(1500), TimeSpan.FromMilliseconds(1500));
@@ -129,7 +129,6 @@ namespace EQLogParser
     internal void Add(SpellCast spell, double beginTime)
     {
       Add(SpellRecords, spell, beginTime);
-
       if (spell.SpellData?.HasAmbiguity != true)
       {
         return;
@@ -275,7 +274,7 @@ namespace EQLogParser
       {
         if (list.Count == 0)
         {
-          var newRecordList = new RecordList { BeginTime = beginTime, Records = new List<object> { record } };
+          var newRecordList = new RecordList { BeginTime = beginTime, Records = [record] };
           list.Add(newRecordList);
           return;
         }
@@ -289,7 +288,7 @@ namespace EQLogParser
         {
           if (list[end].BeginTime < beginTime)
           {
-            var newRecordList = new RecordList { BeginTime = beginTime, Records = new List<object> { record } };
+            var newRecordList = new RecordList { BeginTime = beginTime, Records = [record] };
             list.Add(newRecordList);
             return;
           }
@@ -303,7 +302,7 @@ namespace EQLogParser
             }
             else
             {
-              var newRecordList = new RecordList { BeginTime = beginTime, Records = new List<object> { record } };
+              var newRecordList = new RecordList { BeginTime = beginTime, Records = [record] };
               list.Insert(~index, newRecordList);
               return;
             }
@@ -324,7 +323,7 @@ namespace EQLogParser
         RecordList[] listCopy;
         lock (list)
         {
-          listCopy = list.ToArray();
+          listCopy = [.. list];
         }
 
         foreach (var group in listCopy)
@@ -332,7 +331,7 @@ namespace EQLogParser
           object[] recordsCopy;
           lock (group.Records)
           {
-            recordsCopy = group.Records.ToArray();
+            recordsCopy = [.. group.Records];
           }
 
           foreach (var record in recordsCopy)
@@ -350,7 +349,7 @@ namespace EQLogParser
         List<RecordList> listCopy;
         lock (list)
         {
-          listCopy = list.ToList();
+          listCopy = [.. list];
         }
 
         if (reverse)
@@ -380,12 +379,12 @@ namespace EQLogParser
       }
     }
 
-    private IEnumerable<(double, object)> ProcessRecordList(RecordList recordList)
+    private static IEnumerable<(double, object)> ProcessRecordList(RecordList recordList)
     {
       object[] recordsCopy;
       lock (recordList)
       {
-        recordsCopy = recordList.Records.ToArray();
+        recordsCopy = [.. recordList.Records];
       }
 
       foreach (var record in recordsCopy)

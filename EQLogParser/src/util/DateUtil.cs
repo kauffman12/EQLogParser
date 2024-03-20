@@ -25,12 +25,21 @@ namespace EQLogParser
 
     internal static string FormatSimpleMs(long ticks)
     {
-      return new DateTime(ticks < 0 ? 0 : ticks).ToString("mm:ss", CultureInfo.InvariantCulture);
+      if (ticks < 0) ticks = 0; // Ensure non-negative ticks.
+      var totalSeconds = ticks / TimeSpan.TicksPerSecond; // Convert ticks to seconds.
+      var hours = totalSeconds / 3600; // Find total hours.
+      var minutes = totalSeconds % 3600 / 60; // Find remaining minutes.
+      var seconds = totalSeconds % 60; // Find remaining seconds.
+      return (hours > 0) ? $"{hours:D2}:{minutes:D2}:{seconds:D2}" : $"{minutes:D2}:{seconds:D2}";
     }
 
     internal static string FormatSimpleMillis(long ticks)
     {
-      return new DateTime(ticks < 0 ? 0 : ticks).ToString("s.fff", CultureInfo.InvariantCulture);
+      if (ticks < 0) ticks = 0; // Ensure non-negative ticks.
+      var totalSeconds = ticks / TimeSpan.TicksPerSecond; // Convert ticks to seconds.
+      var seconds = totalSeconds % 60; // Find remaining seconds.
+      var milliseconds = ticks % TimeSpan.TicksPerSecond / TimeSpan.TicksPerMillisecond; // Find remaining milliseconds.
+      return $"{seconds:D2}.{milliseconds:D3}";
     }
 
     internal static string FormatGeneralTime(double seconds, bool showSeconds = false)
@@ -40,51 +49,35 @@ namespace EQLogParser
 
       if (diff.Days >= 1)
       {
-        switch (diff.Days)
+        result += diff.Days switch
         {
-          case 1:
-            result += diff.Days + " day";
-            break;
-          default:
-            result += diff.Days + " days";
-            break;
-        }
+          1 => diff.Days + " day",
+          _ => diff.Days + " days",
+        };
       }
       else if (diff.Hours >= 1)
       {
-        switch (diff.Hours)
+        result += diff.Hours switch
         {
-          case 1:
-            result += diff.Hours + " hour";
-            break;
-          default:
-            result += diff.Hours + " hours";
-            break;
-        }
+          1 => diff.Hours + " hour",
+          _ => diff.Hours + " hours",
+        };
       }
       else if (diff.Minutes >= 1)
       {
-        switch (diff.Minutes)
+        result += diff.Minutes switch
         {
-          case 1:
-            result += diff.Minutes + " minute";
-            break;
-          default:
-            result += diff.Minutes + " minutes";
-            break;
-        }
+          1 => diff.Minutes + " minute",
+          _ => diff.Minutes + " minutes",
+        };
       }
       else if (showSeconds && diff.Seconds >= 1)
       {
-        switch (diff.Seconds)
+        result += diff.Seconds switch
         {
-          case 1:
-            result += diff.Seconds + " second";
-            break;
-          default:
-            result += diff.Seconds + " seconds";
-            break;
-        }
+          1 => diff.Seconds + " second",
+          _ => diff.Seconds + " seconds"
+        };
       }
 
       return result;
@@ -101,7 +94,7 @@ namespace EQLogParser
 
       var split = source.Split(':');
 
-      if (split.Length == 0 || split.Length > 3)
+      if (split.Length is 0 or > 3)
       {
         return 0;
       }

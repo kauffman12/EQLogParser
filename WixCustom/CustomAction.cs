@@ -9,7 +9,9 @@ namespace WixCustom
 {
   public class CustomActions
   {
-    static readonly List<string> runtimes = new List<string>()
+    private static readonly Version MinVersion = new(8, 0, 0);
+
+    private static readonly List<string> Runtimes = new()
     {
       "Microsoft.WindowsDesktop.App"//.NET Desktop Runtime
     };
@@ -17,7 +19,6 @@ namespace WixCustom
     [CustomAction]
     public static ActionResult CheckDotNetVersion(Session session)
     {
-      var minVersion = new Version(6, 0, 0);
       var command = "/c \"" + session["ProgramFiles64Folder"] + "dotnet\\dotnet.exe\" --list-runtimes"; // /c is important here
       session.Log("Running = " + command);
 
@@ -47,17 +48,17 @@ namespace WixCustom
           //throw new Exception($"{p.ExitCode}:{p.StandardError.ReadToEnd()}");
           if (p.ExitCode != 0)
           {
-            session["DOTNET6INSTALLED"] = "0";
+            session["DOTNET8INSTALLED"] = "0";
             return ActionResult.Success;
           }
 
-          session["DOTNET6INSTALLED"] = (GetLatestVersionOfRuntime(runtimes[0], output) < minVersion) ? "0" : "1";
+          session["DOTNET8INSTALLED"] = (GetLatestVersionOfRuntime(Runtimes[0], output) < MinVersion) ? "0" : "1";
           return ActionResult.Success;
         }
       }
       catch (Exception)
       {
-        session["DOTNET6INSTALLED"] = "0";
+        session["DOTNET8INSTALLED"] = "0";
         return ActionResult.Success;
       }
     }
@@ -70,7 +71,7 @@ namespace WixCustom
         var pattern = new Regex(@"\d+(\.\d+)+");
         var m = pattern.Match(latestLine);
         var versionValue = m.Value;
-        if (Version.TryParse(versionValue, out var version))
+        if (Version.TryParse(versionValue, out var version) && version.Major == MinVersion.Major)
         {
           return version;
         }

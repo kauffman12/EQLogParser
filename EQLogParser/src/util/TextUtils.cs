@@ -10,7 +10,7 @@ using System.Text.RegularExpressions;
 
 namespace EQLogParser
 {
-  static class TextUtils
+  internal static class TextUtils
   {
     private const string BbCellHeader = "  [td]{0}    [/td]";
     private const string BbCellBody = "[td][right]{0}   [/right][/td]";
@@ -121,7 +121,7 @@ namespace EQLogParser
 
         data.OrderBy(row => row[0]).ToList().ForEach(row =>
         {
-          if (row[pair.Value] != null && row[pair.Value].ToString().Length > 0 && row[pair.Value].ToString() != "0")
+          if (row[pair.Value] != null && row[pair.Value].ToString()!.Length > 0 && row[pair.Value].ToString() != "0")
           {
             sb.AppendFormat(CultureInfo.CurrentCulture, BbGamparseSpellCount, row[0], row[pair.Value]);
             sb.AppendLine();
@@ -160,15 +160,15 @@ namespace EQLogParser
           var data = new List<object>();
           foreach (var column in headers.Skip(1))
           {
-            var value = stats.GetType().GetProperty(column[0]).GetValue(stats, null);
-            if (column[1].Contains("%"))
+            var value = stats.GetType().GetProperty(column[0])?.GetValue(stats, null);
+            if (column[1].Contains('%'))
             {
               if (value is double and 0)
               {
                 value = "-";
               }
             }
-            else if (!(value is string))
+            else if (value is not string)
             {
               value = $"{value:n0}";
             }

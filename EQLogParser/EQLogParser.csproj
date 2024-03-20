@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>true</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
+    <SelfContained>false</SelfContained>
     <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
     <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
     <OutputType>WinExe</OutputType>
@@ -170,7 +170,7 @@
     </PackageReference>
     <PackageReference Include="LiteDB" Version="5.0.17" />
     <PackageReference Include="log4net">
-      <Version>2.0.15</Version>
+      <Version>2.0.16</Version>
     </PackageReference>
     <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />

@@ -17,14 +17,13 @@ namespace EQLogParser
   /// </summary>
   public partial class HitFreqChart : UserControl, IDisposable
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private const string CritHittype = "Critical";
     private const string NonCritHittype = "Non-Critical";
     private Dictionary<string, List<HitFreqChartData>> _playerData;
-    private readonly List<string> _minFreqs = new()
-    { "Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5" };
+    private readonly List<string> _minFreqs = ["Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5"];
     private int _pageSize = 9;
-    private readonly List<ColumnData> _columns = new();
+    private readonly List<ColumnData> _columns = [];
 
     public HitFreqChart()
     {
@@ -49,9 +48,9 @@ namespace EQLogParser
         var header = new List<string> { "Hit Value", "Frequency", "Difference" };
 
         var data = new List<List<object>>();
-        foreach (var column in _columns.ToList())
+        foreach (var column in CollectionsMarshal.AsSpan(_columns))
         {
-          data.Add(new List<object> { column.XLongValue, column.Y, column.Diff });
+          data.Add([column.XLongValue, column.Y, column.Diff]);
         }
 
         Clipboard.SetDataObject(TextUtils.BuildCsv(header, data));
@@ -306,21 +305,21 @@ namespace EQLogParser
 
       void AddStats(PlayerStats stats)
       {
-        results[stats.Name] = new List<HitFreqChartData>();
-        foreach (ref var subStat in stats.SubStats.ToArray().AsSpan())
+        results[stats.Name] = [];
+        foreach (var subStat in CollectionsMarshal.AsSpan(stats.SubStats))
         {
           var chartData = new HitFreqChartData { HitType = subStat.Name };
 
           // add crits
           chartData.CritXValues.AddRange(subStat.CritFreqValues.Keys.OrderBy(key => key));
-          foreach (ref var damage in chartData.CritXValues.ToArray().AsSpan())
+          foreach (var damage in CollectionsMarshal.AsSpan(chartData.CritXValues))
           {
             chartData.CritYValues.Add(subStat.CritFreqValues[damage]);
           }
 
           // add non crits
           chartData.NonCritXValues.AddRange(subStat.NonCritFreqValues.Keys.OrderBy(key => key));
-          foreach (ref var damage in chartData.NonCritXValues.ToArray().AsSpan())
+          foreach (var damage in CollectionsMarshal.AsSpan(chartData.NonCritXValues))
           {
             chartData.NonCritYValues.Add(subStat.NonCritFreqValues[damage]);
           }
@@ -364,10 +363,10 @@ namespace EQLogParser
     private class HitFreqChartData
     {
       public string HitType { get; init; }
-      public List<int> CritYValues { get; } = new();
-      public List<long> CritXValues { get; } = new();
-      public List<int> NonCritYValues { get; } = new();
-      public List<long> NonCritXValues { get; } = new();
+      public List<int> CritYValues { get; } = [];
+      public List<long> CritXValues { get; } = [];
+      public List<int> NonCritYValues { get; } = [];
+      public List<long> NonCritXValues { get; } = [];
     }
 
     /*

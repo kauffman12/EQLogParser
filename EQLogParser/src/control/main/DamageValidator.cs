@@ -1,25 +1,16 @@
 ﻿
 namespace EQLogParser
 {
-  class DamageValidator
+  internal class DamageValidator
   {
-    private readonly bool _assassinateEnabled;
-    private readonly bool _baneEnabled;
-    private readonly bool _dsEnabled;
-    private readonly bool _finishingBlowEnabled;
-    private readonly bool _headshotEnabled;
-    private readonly bool _slayUndeadEnabled;
+    private readonly bool _assassinateEnabled = MainWindow.IsAssassinateDamageEnabled;
+    private readonly bool _baneEnabled = MainWindow.IsBaneDamageEnabled;
+    private readonly bool _dsEnabled = MainWindow.IsDamageShieldDamageEnabled;
+    private readonly bool _finishingBlowEnabled = MainWindow.IsFinishingBlowDamageEnabled;
+    private readonly bool _headshotEnabled = MainWindow.IsHeadshotDamageEnabled;
+    private readonly bool _slayUndeadEnabled = MainWindow.IsSlayUndeadDamageEnabled;
 
-    public DamageValidator()
-    {
-      // save this up front so we work with a constant state for their values
-      _assassinateEnabled = MainWindow.IsAssassinateDamageEnabled;
-      _baneEnabled = MainWindow.IsBaneDamageEnabled;
-      _dsEnabled = MainWindow.IsDamageShieldDamageEnabled;
-      _finishingBlowEnabled = MainWindow.IsFinishingBlowDamageEnabled;
-      _headshotEnabled = MainWindow.IsHeadshotDamageEnabled;
-      _slayUndeadEnabled = MainWindow.IsSlayUndeadDamageEnabled;
-    }
+    // save this up front. we work with a constant state for their values
 
     public bool IsValid(DamageRecord record)
     {

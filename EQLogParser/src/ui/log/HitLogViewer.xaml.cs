@@ -20,9 +20,9 @@ namespace EQLogParser
   /// </summary>
   public partial class HitLogViewer : UserControl, IDisposable
   {
-    private readonly Columns _checkBoxColumns = new();
-    private readonly Columns _textColumns = new();
-    private readonly List<string> _columnIds = new() { "Hits", "Critical", "Lucky", "Twincast", "Rampage", "Riposte", "Strikethrough" };
+    private readonly Columns _checkBoxColumns = [];
+    private readonly Columns _textColumns = [];
+    private readonly List<string> _columnIds = ["Hits", "Critical", "Lucky", "Twincast", "Rampage", "Riposte", "Strikethrough"];
 
     private string _actedOption = Labels.Unk;
     private List<List<ActionGroup>> _currentGroups;
@@ -94,9 +94,9 @@ namespace EQLogParser
       _title = currentStats?.ShortTitle;
 
       IAction firstAction = null;
-      foreach (var group in groups)
+      foreach (var group in CollectionsMarshal.AsSpan(groups))
       {
-        foreach (var list in group)
+        foreach (var list in CollectionsMarshal.AsSpan(group))
         {
           foreach (var action in list.Actions)
           {
@@ -164,13 +164,13 @@ namespace EQLogParser
 
         if (_currentGroups != null)
         {
-          foreach (ref var group in CollectionsMarshal.AsSpan(_currentGroups))
+          foreach (var group in CollectionsMarshal.AsSpan(_currentGroups))
           {
-            foreach (ref var block in CollectionsMarshal.AsSpan(group))
+            foreach (var block in CollectionsMarshal.AsSpan(group))
             {
               var precise = 0.0;
               var rowCache = new Dictionary<string, HitLogRow>();
-              foreach (ref var action in CollectionsMarshal.AsSpan(block.Actions))
+              foreach (var action in block.Actions.ToArray())
               {
                 precise += 0.000001;
                 if (CreateRow(rowCache, _playerStats, action, block.BeginTime + precise, _defending) is { } row && !_currentGroupActionsFilter)
@@ -186,7 +186,7 @@ namespace EQLogParser
 
               if (_currentGroupActionsFilter)
               {
-                foreach (ref var row in rowCache.Values.ToArray().AsSpan())
+                foreach (var row in rowCache.Values)
                 {
                   lock (list)
                   {
@@ -268,25 +268,6 @@ namespace EQLogParser
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
 
-    private void PopulateRow(HitLogRow row, ConcurrentDictionary<string, bool> uniqueActions, ConcurrentDictionary<string, bool> uniqueDefenders,
-      ConcurrentDictionary<string, bool> uniqueTypes)
-    {
-      if (row.SubType != null)
-      {
-        uniqueActions[row.SubType] = true;
-      }
-
-      if (row.Acted != null)
-      {
-        uniqueDefenders[row.Acted] = true;
-      }
-
-      if (row.Type != null)
-      {
-        uniqueTypes[row.Type] = true;
-      }
-    }
-
     private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
     {
       if (dataGrid.View != null)
@@ -305,7 +286,7 @@ namespace EQLogParser
       }
     }
 
-    private HitLogRow CreateRow(Dictionary<string, HitLogRow> rowCache, PlayerStats playerStats, IAction action,
+    private HitLogRow CreateRow(IDictionary<string, HitLogRow> rowCache, PlayerStats playerStats, IAction action,
       double currentTime, bool defending = false)
     {
       HitLogRow row = null;
@@ -410,10 +391,10 @@ namespace EQLogParser
         _currentActedFilter = actedList.SelectedIndex == 0 ? null : actedList.SelectedItem as string;
         _currentActionFilter = actionList.SelectedIndex == 0 ? null : actionList.SelectedItem as string;
         _currentTypeFilter = typeList.SelectedIndex == 0 ? null : typeList.SelectedItem as string;
-        _currentShowPetsFilter = showPets.IsChecked.Value;
+        _currentShowPetsFilter = showPets.IsChecked == true;
 
-        var refresh = _currentGroupActionsFilter == groupHits.IsChecked.Value;
-        _currentGroupActionsFilter = groupHits.IsChecked.Value;
+        var refresh = _currentGroupActionsFilter == groupHits.IsChecked == true;
+        _currentGroupActionsFilter = groupHits.IsChecked == true;
 
         if (refresh)
         {
@@ -427,7 +408,8 @@ namespace EQLogParser
             titleLabel.Content = "Loading...";
             dataGrid.ItemsSource = null;
             dataGrid.IsEnabled = false;
-            UiElementUtil.SetEnabled(controlPanel.Children, false); if (_currentGroupActionsFilter && dataGrid.Columns != _textColumns)
+            UiElementUtil.SetEnabled(controlPanel.Children, false);
+            if (_currentGroupActionsFilter && dataGrid.Columns != _textColumns)
             {
               dataGrid.Columns = _textColumns;
             }
@@ -439,6 +421,25 @@ namespace EQLogParser
             Display();
           }, DispatcherPriority.Background);
         }
+      }
+    }
+
+    private static void PopulateRow(HitLogRow row, ConcurrentDictionary<string, bool> uniqueActions, ConcurrentDictionary<string, bool> uniqueDefenders,
+      ConcurrentDictionary<string, bool> uniqueTypes)
+    {
+      if (row.SubType != null)
+      {
+        uniqueActions[row.SubType] = true;
+      }
+
+      if (row.Acted != null)
+      {
+        uniqueDefenders[row.Acted] = true;
+      }
+
+      if (row.Type != null)
+      {
+        uniqueTypes[row.Type] = true;
       }
     }
 

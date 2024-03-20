@@ -14,9 +14,9 @@ namespace EQLogParser
   /// </summary>
   public partial class SpellDamageStatsViewer : IDocumentContent
   {
-    private readonly ObservableCollection<string> _players = new();
-    private readonly ObservableCollection<string> _spells = new();
-    private readonly ObservableCollection<string> _types = new();
+    private readonly ObservableCollection<string> _players = [];
+    private readonly ObservableCollection<string> _spells = [];
+    private readonly ObservableCollection<string> _types = [];
     private bool _currentShowPlayers = true;
     private string _currentPlayer;
     private string _currentSpell;
@@ -134,17 +134,17 @@ namespace EQLogParser
       }
 
       var list = new List<IDictionary<string, object>>();
-      foreach (ref var stats in playerDoTTotals.Values.ToArray().AsSpan())
+      foreach (var stats in playerDoTTotals.Values)
       {
         AddRow(list, stats, Labels.Dot);
       }
 
-      foreach (ref var stats in playerDdTotals.Values.ToArray().AsSpan())
+      foreach (var stats in playerDdTotals.Values)
       {
         AddRow(list, stats, Labels.Dd);
       }
 
-      foreach (ref var stats in playerProcTotals.Values.ToArray().AsSpan())
+      foreach (var stats in playerProcTotals.Values)
       {
         AddRow(list, stats, Labels.Proc);
       }
@@ -162,19 +162,6 @@ namespace EQLogParser
       spellList.SelectedIndex = _spells.IndexOf(selectedSpell) is var s and > -1 ? s : 0;
       playerList.SelectedIndex = _players.IndexOf(selectedPlayer) is var p and > -1 ? p : 0;
       dataGrid.ItemsSource = list.Count > 0 ? list : null;
-    }
-
-    private void AddRow(ICollection<IDictionary<string, object>> list, SpellDamageStats stats, string type)
-    {
-      var row = new ExpandoObject() as IDictionary<string, object>;
-      row["Caster"] = stats.Caster;
-      row["Spell"] = stats.Spell;
-      row["Max"] = stats.Max;
-      row["Hits"] = stats.Count;
-      row["Avg"] = stats.Total / stats.Count;
-      row["Total"] = stats.Total;
-      row["Type"] = type;
-      list.Add(row);
     }
 
     private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
@@ -223,6 +210,19 @@ namespace EQLogParser
           UpdateTitle();
         }
       }
+    }
+
+    private static void AddRow(ICollection<IDictionary<string, object>> list, SpellDamageStats stats, string type)
+    {
+      var row = new ExpandoObject() as IDictionary<string, object>;
+      row["Caster"] = stats.Caster;
+      row["Spell"] = stats.Spell;
+      row["Max"] = stats.Max;
+      row["Hits"] = stats.Count;
+      row["Avg"] = stats.Total / stats.Count;
+      row["Total"] = stats.Total;
+      row["Type"] = type;
+      list.Add(row);
     }
 
     private void ContentLoaded(object sender, RoutedEventArgs e)

@@ -27,15 +27,15 @@ namespace EQLogParser
   /// </summary>
   public partial class SpellCountTable : CastTable
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     private List<string> _playerList;
     private SpellCountData _theSpellCounts;
     private double _time;
-    private readonly Dictionary<string, byte> _hiddenSpells = new();
-    private readonly List<string> _countTypes = new() { "Counts", "Percentages", "Counts/Minute" };
-    private readonly List<string> _minFreqs = new() { "Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5" };
-    private readonly HashSet<string> _sortDescs = new() { "totalColumn" };
+    private readonly Dictionary<string, byte> _hiddenSpells = [];
+    private readonly List<string> _countTypes = ["Counts", "Percentages", "Counts/Minute"];
+    private readonly List<string> _minFreqs = ["Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5"];
+    private readonly HashSet<string> _sortDescs = ["totalColumn"];
     private readonly TotalColumnComparer _totalColumnComparer = new();
     private int _currentCountType;
     private int _currentMinFreqCount;
@@ -64,10 +64,11 @@ namespace EQLogParser
       {
         _time = currentStats.RaidStats.TotalSeconds;
         var raidStats = currentStats.RaidStats;
-        if (selectedStats != null && raidStats != null)
+        if (raidStats != null)
         {
-          _playerList = selectedStats.Select(stats => stats.OrigName).Distinct().ToList();
-          _theSpellCounts = SpellCountBuilder.GetSpellCounts(_playerList, raidStats);
+          var selected = selectedStats?.Select(stats => stats.OrigName).Distinct().ToList();
+          _theSpellCounts = SpellCountBuilder.GetSpellCounts(selected, raidStats);
+          _playerList = [.. _theSpellCounts.UniquePlayers.Keys];
           Display();
         }
       }
@@ -94,10 +95,10 @@ namespace EQLogParser
         uint totalCasts = 0;
         _playerList.ForEach(player =>
         {
-          filteredPlayerMap[player] = new Dictionary<string, uint>();
+          filteredPlayerMap[player] = [];
           if (_theSpellCounts.PlayerCastCounts.ContainsKey(player))
           {
-            foreach (ref var id in _theSpellCounts.PlayerCastCounts[player].Keys.ToArray().AsSpan())
+            foreach (var id in _theSpellCounts.PlayerCastCounts[player].Keys)
             {
               if (PassFilters(_theSpellCounts.UniqueSpells[id], false))
               {
@@ -107,13 +108,13 @@ namespace EQLogParser
             }
           }
 
-          if (_theSpellCounts.PlayerReceivedCounts.ContainsKey(player))
+          if (_theSpellCounts.PlayerReceivedCounts.TryGetValue(player, out var value))
           {
-            foreach (ref var id in _theSpellCounts.PlayerReceivedCounts[player].Keys.ToArray().AsSpan())
+            foreach (var id in value.Keys)
             {
               if (PassFilters(_theSpellCounts.UniqueSpells[id], true))
               {
-                totalCasts = UpdateMaps(id, player, _theSpellCounts.PlayerReceivedCounts[player][id], _theSpellCounts.MaxReceivedCounts,
+                totalCasts = UpdateMaps(id, player, value[id], _theSpellCounts.MaxReceivedCounts,
                   totalCountMap, uniqueSpellsMap, filteredPlayerMap, true, totalCasts);
               }
             }
@@ -164,13 +165,13 @@ namespace EQLogParser
           var row = (list.Count > existingIndex) ? list[existingIndex] : new ExpandoObject();
           row["Spell"] = spell;
 
-          foreach (var name in playerNames)
+          foreach (var name in CollectionsMarshal.AsSpan(playerNames))
           {
-            if (filteredPlayerMap.ContainsKey(name))
+            if (filteredPlayerMap.TryGetValue(name, out var mapValue))
             {
-              if (filteredPlayerMap[name].ContainsKey(spell))
+              if (mapValue.TryGetValue(spell, out var spellValue))
               {
-                AddPlayerRow(name, spell, filteredPlayerMap[name][spell], totalCountMap[name], row);
+                AddPlayerRow(name, spell, spellValue, totalCountMap[name], row);
               }
               else
               {
@@ -205,17 +206,16 @@ namespace EQLogParser
     private void GridSizeChanged(object sender, SizeChangedEventArgs e) => UiElementUtil.CheckHideTitlePanel(titlePanel, controlPanel);
     private void OptionsChanged(object sender, SelectionChangedEventArgs e) => UpdateOptions(true);
 
-    private void AddPlayerRow(string player, string spell, double value, double playerTotal, IDictionary<string, object> row)
+    private void AddPlayerRow(string player, string spell, double theValue, double playerTotal, IDictionary<string, object> row)
     {
-      var countText = GetFormattedValue(value, playerTotal);
-      if (_theSpellCounts.PlayerInterruptedCounts.ContainsKey(player) &&
-        _theSpellCounts.PlayerInterruptedCounts[player].TryGetValue(spell, out var interrupts) && interrupts > 0)
+      var countText = GetFormattedValue(theValue, playerTotal);
+      if (_theSpellCounts.PlayerInterruptedCounts.TryGetValue(player, out var value) && value.TryGetValue(spell, out var interrupts) && interrupts > 0)
       {
-        countText = countText + " (" + _theSpellCounts.PlayerInterruptedCounts[player][spell] + ")";
+        countText = countText + " (" + value[spell] + ")";
       }
 
       row[player + "Text"] = countText;
-      row[player] = value;
+      row[player] = theValue;
     }
 
     private uint UpdateMaps(string id, string player, uint playerCount, Dictionary<string, uint> maxCounts, Dictionary<string, uint> totalCountMap,
@@ -238,11 +238,11 @@ namespace EQLogParser
 
       return totalCasts;
 
-      void AddValue(Dictionary<string, uint> dict, string name, uint amount)
+      static void AddValue(Dictionary<string, uint> dict, string theName, uint amount)
       {
-        if (!dict.TryAdd(name, amount))
+        if (!dict.TryAdd(theName, amount))
         {
-          dict[name] += amount;
+          dict[theName] += amount;
         }
       }
     }
@@ -364,7 +364,7 @@ namespace EQLogParser
 
         var result = JsonSerializer.Serialize(data);
         var saveFileDialog = new SaveFileDialog();
-        var filter = "Spell Count File (*.scf.gz)|*.scf.gz";
+        const string filter = "Spell Count File (*.scf.gz)|*.scf.gz";
         saveFileDialog.Filter = filter;
         if (saveFileDialog.ShowDialog() == true)
         {
@@ -443,7 +443,7 @@ namespace EQLogParser
       {
         if (sender is Border { DataContext: IDictionary<string, object> spr })
         {
-          _hiddenSpells[spr["Spell"] as string] = 1;
+          _hiddenSpells[spr["Spell"] as string ?? string.Empty] = 1;
           dataGrid.View.Remove(spr);
           UpdateCounts();
         }
@@ -487,19 +487,13 @@ namespace EQLogParser
 
     private string GetHeaderValue(string name, double amount, double total)
     {
-      var result = 0.0;
-      switch (_currentCountType)
+      var result = _currentCountType switch
       {
-        case 0:
-          result = amount;
-          break;
-        case 1:
-          result = total > 0 ? Math.Round(amount / total * 100, 2) : 0;
-          break;
-        case 2:
-          result = _time > 0 ? Math.Round(amount / _time * 60, 2) : 0;
-          break;
-      }
+        0 => amount,
+        1 => total > 0 ? Math.Round(amount / total * 100, 2) : 0,
+        2 => _time > 0 ? Math.Round(amount / _time * 60, 2) : 0,
+        _ => 0.0
+      };
 
       return $"{name} = {result}";
     }
@@ -522,7 +516,7 @@ namespace EQLogParser
 
   internal class SpellCountsSerialized
   {
-    public List<string> PlayerNames { get; set; } = new();
+    public List<string> PlayerNames { get; set; } = [];
     public SpellCountData TheSpellData { get; set; }
   }
 
@@ -545,7 +539,7 @@ namespace EQLogParser
         return -1;
       }
 
-      return String.Compare(x, y, StringComparison.Ordinal);
+      return string.Compare(x, y, StringComparison.Ordinal);
     }
   }
 }

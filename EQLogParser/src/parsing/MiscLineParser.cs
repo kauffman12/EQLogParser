@@ -6,12 +6,12 @@ using System.Reflection;
 
 namespace EQLogParser
 {
-  static class MiscLineParser
+  internal static class MiscLineParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly List<string> Currency = new() { "Platinum", "Gold", "Silver", "Copper" };
+    private static readonly List<string> Currency = ["Platinum", "Gold", "Silver", "Copper"];
     private static readonly Dictionary<char, uint> Rates = new() { { 'p', 1000 }, { 'g', 100 }, { 's', 10 }, { 'c', 1 } };
-    private static readonly char[] LootedFromTrim = { '-', '.' };
+    private static readonly char[] LootedFromTrim = ['-', '.'];
     private static readonly Dictionary<string, byte> StruckByTypes = new()
     {
       { "afflicted", 1 }, { "angered", 1 }, { "assaulted", 1 }, { "beset", 1 }, { "bound", 1 }, { "burned", 1 }, { "consumed", 1 }, { "cursed", 1 },
@@ -67,24 +67,24 @@ namespace EQLogParser
             // [Thu Jan 27 16:32:01 2022] [1 Warrior] Spasiba(Gnome)  ZONE: The Bazaar(bazaar)
             // [Thu Jan 27 16:32:01 2022] [120 Shadowblade (Rogue)] Bloodydagger(Iksar) < Realm of Insanity> ZONE: Realm of Insanity Village III, 200 Terminus Heights, Palatial Guild Hall
             // [Wed Jan 26 22:41:48 2022] [65 Overlord (Warrior)] Jenfo (Halfling)
-            else if (i == 0 && split[0].StartsWith("[", StringComparison.Ordinal) && split[0].Length > 1 && split.Length > 4)
+            else if (i == 0 && split[0].StartsWith('[') && split[0].Length > 1 && split.Length > 4)
             {
               var level = split[0][1..];
               if (int.TryParse(level, out _))
               {
                 string player = null;
                 string className = null;
-                if (split[1].EndsWith("]") && split[1].Length > 2)
+                if (split[1].EndsWith(']') && split[1].Length > 2)
                 {
                   className = DataManager.Instance.GetClassFromTitle(split[1][..^1]);
                   player = split[2];
                 }
-                else if (split[2].EndsWith("]") && split[2].Length > 2)
+                else if (split[2].EndsWith(']') && split[2].Length > 2)
                 {
                   className = DataManager.Instance.GetClassFromTitle(split[1] + " " + split[2][..^1]);
                   player = split[3];
                 }
-                else if (split[3].EndsWith("]") && split[3].Length > 2)
+                else if (split[3].EndsWith(']') && split[3].Length > 2)
                 {
                   className = DataManager.Instance.GetClassFromTitle(split[1] + " " + split[2] + " " + split[3][..^1]);
                   player = split[4];
@@ -149,7 +149,7 @@ namespace EQLogParser
                   lootedIndex = i;
                   break;
                 case "resisted":
-                  if (split.Length > i + 3 && split[i + 1].Length > 2 && split[^1].EndsWith("!", StringComparison.Ordinal))
+                  if (split.Length > i + 3 && split[i + 1].Length > 2 && split[^1].EndsWith('!'))
                   {
                     var npc = string.Join(" ", split, 0, i);
                     npc = TextUtils.ToUpper(npc);

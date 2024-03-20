@@ -355,7 +355,7 @@ namespace EQLogParser
             continue;
           }
 
-          // check that there is at least some data afterwards
+          // check that there is at least some data afterward
           if (digitsCount is 0 or 1 or 2 && span.Length > i + 2 && span.IndexOf("'") is var found and > -1)
           {
             var stop = colonIndex == -1 ? i : colonIndex;

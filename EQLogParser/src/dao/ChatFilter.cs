@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace EQLogParser
 {
-  class ChatFilter
+  internal class ChatFilter
   {
     private readonly string _player;
     private readonly string _keyword;
@@ -18,13 +18,13 @@ namespace EQLogParser
     {
       if (player.Length > 0)
       {
-        var index = player.IndexOf(".", StringComparison.Ordinal);
+        var index = player.IndexOf('.');
         _player = (index > -1) ? player[..index] : player;
       }
 
       if (channels != null)
       {
-        _validChannels = new Dictionary<string, byte>();
+        _validChannels = [];
         channels.ForEach(chan => _validChannels[chan] = 1);
       }
 
@@ -69,7 +69,8 @@ namespace EQLogParser
         var receiverIsFrom = receiver != null && _from != null && receiver.IndexOf(_from, StringComparison.OrdinalIgnoreCase) > -1;
         var senderIsTo = sender != null && _to != null && sender.IndexOf(_to, StringComparison.OrdinalIgnoreCase) > -1;
 
-        if (((_to == null || receiverIsTo) && (_from == null || senderIsFrom)) || (senderIsTo && receiverIsFrom) || (_to == _from && ((sender == _player && receiverIsTo) || (receiver == _player && senderIsFrom))))
+        if (((_to == null || receiverIsTo) && (_from == null || senderIsFrom)) || (senderIsTo && receiverIsFrom) ||
+            (_to == _from && ((sender == _player && receiverIsTo) || (receiver == _player && senderIsFrom))))
         {
           if (chatType.SenderIsYou || (!PlayerManager.Instance.IsVerifiedPet(chatType.Sender) && IsPossiblePlayerNameWithServer(chatType.Sender)))
           {

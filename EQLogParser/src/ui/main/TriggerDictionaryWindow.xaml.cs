@@ -2,7 +2,6 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Linq;
 using System.Speech.Synthesis;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -15,7 +14,7 @@ namespace EQLogParser
   public partial class TriggerDictionaryWindow
   {
     private readonly SpeechSynthesizer _testSynth;
-    private readonly ObservableCollection<LexiconItem> _items = new();
+    private readonly ObservableCollection<LexiconItem> _items = [];
     private LexiconItem _previous;
 
     public TriggerDictionaryWindow()
@@ -54,7 +53,7 @@ namespace EQLogParser
     private void SaveClicked(object sender, RoutedEventArgs e)
     {
       CleanupTable();
-      TriggerStateManager.Instance.SaveLexicon(_items.ToList());
+      TriggerStateManager.Instance.SaveLexicon([.. _items]);
       saveButton.IsEnabled = false;
     }
 
@@ -87,7 +86,7 @@ namespace EQLogParser
     {
       if (e.OriginalSender is SfDataGrid { CurrentItem: LexiconItem item })
       {
-        if (item.Replace != null && !Regex.IsMatch(item.Replace, @"^\w+$"))
+        if (item.Replace != null && !WordCheck().IsMatch(item.Replace))
         {
           item.Replace = _previous.Replace;
         }
@@ -132,5 +131,8 @@ namespace EQLogParser
         testButton.IsEnabled = false;
       }
     }
+
+    [GeneratedRegex(@"^\w+$")]
+    private static partial Regex WordCheck();
   }
 }

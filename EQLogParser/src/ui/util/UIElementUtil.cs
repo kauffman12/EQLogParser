@@ -13,9 +13,9 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  static class UiElementUtil
+  internal static class UiElementUtil
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly string[] CommonFontFamilies =
     {
       "Arial", "Calibri", "Cambria", "Cascadia Code", "Century Gothic", "Lucida Sans",
@@ -96,14 +96,7 @@ namespace EQLogParser
 
     internal static ReadOnlyCollection<string> GetCommonFontFamilyNames()
     {
-      var common = new List<string>();
-      foreach (var fontFamily in GetSystemFontFamilies())
-      {
-        if (CommonFontFamilies.Contains(fontFamily.Source))
-        {
-          common.Add(fontFamily.Source);
-        }
-      }
+      var common = (from fontFamily in GetSystemFontFamilies() where CommonFontFamilies.Contains(fontFamily.Source) select fontFamily.Source).ToList();
       return common.OrderBy(name => name).ToList().AsReadOnly();
     }
 
@@ -148,7 +141,7 @@ namespace EQLogParser
       }
       else
       {
-        if (!(columns.SelectedItem is ComboBoxItemDetails selected))
+        if (columns.SelectedItem is not ComboBoxItemDetails selected)
         {
           selected = hasSelectAll ? columns.Items[2] as ComboBoxItemDetails : columns.Items[0] as ComboBoxItemDetails;
         }
@@ -160,9 +153,13 @@ namespace EQLogParser
         {
           text = "No" + text[1..];
         }
-        selected.SelectedText = text;
-        columns.SelectedIndex = -1;
-        columns.SelectedItem = selected;
+
+        if (selected != null)
+        {
+          selected.SelectedText = text;
+          columns.SelectedIndex = -1;
+          columns.SelectedItem = selected;
+        }
       }
     }
 

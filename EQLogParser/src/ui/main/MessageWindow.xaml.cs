@@ -1,5 +1,4 @@
 ﻿using FontAwesome5;
-using Syncfusion.Windows.Shared;
 using System;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -10,7 +9,7 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for MessageWindow.xaml
   /// </summary>
-  public partial class MessageWindow : ChromelessWindow
+  public partial class MessageWindow
   {
     public bool IsYes2Clicked;
     public bool IsYes1Clicked;
