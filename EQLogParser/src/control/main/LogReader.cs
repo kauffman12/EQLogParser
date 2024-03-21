@@ -16,7 +16,6 @@ namespace EQLogParser
     private readonly FileSystemWatcher _fileWatcher;
     private int _minBack;
     private CancellationTokenSource _cts;
-    private readonly ManualResetEvent _newDataAvailable = new(false);
     private readonly ILogProcessor _logProcessor;
     private Task _readFileTask;
     private long _initSize;
@@ -35,13 +34,12 @@ namespace EQLogParser
 
         _fileWatcher = new FileSystemWatcher(directory, Path.GetFileName(fileName))
         {
-          NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite
+          NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.LastAccess
         };
 
         _fileWatcher.Created += OnFileCreated;
         _fileWatcher.Deleted += OnFileMoved;
         _fileWatcher.Renamed += OnFileMoved;
-        _fileWatcher.Changed += OnFileChanged;
         _fileWatcher.EnableRaisingEvents = true;
         FileUtil.ArchiveFile(this);
         StartReadingFile();
@@ -57,8 +55,6 @@ namespace EQLogParser
     public IDisposable GetProcessor() => _logProcessor;
 
     private void OnFileCreated(object sender, FileSystemEventArgs e) => StartReadingFile();
-    private void OnFileChanged(object sender, FileSystemEventArgs e) => _newDataAvailable.Set();
-
     private void OnFileMoved(object sender, FileSystemEventArgs e)
     {
       _cts?.Cancel();
@@ -78,7 +74,8 @@ namespace EQLogParser
 
       try
       {
-        var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, bufferSize);
+        var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete,
+          bufferSize);
 
         _initSize = fs.Length;
         _nextUpdateThreshold = _initSize / 50;
@@ -138,21 +135,13 @@ namespace EQLogParser
             }
 
             if (cancelToken.IsCancellationRequested) break;
-            WaitHandle.WaitAny([_newDataAvailable, cancelToken.WaitHandle]);
-
-            if (!cancelToken.IsCancellationRequested)
-            {
-              try
-              {
-                _newDataAvailable.Reset();
-              }
-              catch (Exception)
-              {
-                // ignore already disposed
-              }
-            }
+            await Task.Delay(200, cancelToken);
           }
         }
+      }
+      catch (TaskCanceledException)
+      {
+        // ignore
       }
       catch (IOException e)
       {
@@ -219,8 +208,6 @@ namespace EQLogParser
         _fileWatcher?.Dispose();
         _lines.CompleteAdding();
         _logProcessor?.Dispose();
-        _newDataAvailable.Close();
-        _newDataAvailable.Dispose();
         _disposedValue = true;
       }
     }
