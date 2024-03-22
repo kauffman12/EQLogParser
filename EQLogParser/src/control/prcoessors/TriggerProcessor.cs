@@ -236,7 +236,17 @@ namespace EQLogParser
         {
           try
           {
-            matches = wrapper.Regex.Matches(lineData.Action);
+            if (!string.IsNullOrEmpty(wrapper.StartText))
+            {
+              if (lineData.Action.StartsWith(wrapper.StartText, StringComparison.OrdinalIgnoreCase))
+              {
+                matches = wrapper.Regex.Matches(lineData.Action);
+              }
+            }
+            else
+            {
+              matches = wrapper.Regex.Matches(lineData.Action);
+            }
           }
           catch (RegexMatchTimeoutException)
           {
@@ -245,7 +255,7 @@ namespace EQLogParser
             return false;
           }
 
-          found = matches.Count > 0 && TriggerUtil.CheckOptions(wrapper.RegexNOptions, matches, out dynamicDuration);
+          found = matches?.Count > 0 && TriggerUtil.CheckOptions(wrapper.RegexNOptions, matches, out dynamicDuration);
           if (!double.IsNaN(dynamicDuration) && wrapper.TriggerData.TimerType is 1 or 3) // countdown or progress
           {
             wrapper.ModifiedDurationSeconds = dynamicDuration;
@@ -752,6 +762,16 @@ namespace EQLogParser
               // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
               wrapper.Regex.Match(""); // warm up the regex
               wrapper.RegexNOptions = numberOptions;
+
+              // save some start text to search for before trying the regex
+              if (!string.IsNullOrEmpty(pattern) && pattern.Length > 3)
+              {
+                var startText = TextUtils.GetSearchableTextFromStart(pattern, pattern[0] == '^' ? 1 : 0);
+                if (!string.IsNullOrEmpty(startText) && startText.Length > 3)
+                {
+                  wrapper.StartText = startText;
+                }
+              }
             }
             else
             {
@@ -767,7 +787,7 @@ namespace EQLogParser
         }
       }
 
-      if (triggerCount > 300 && CurrentProcessorName?.Contains("Trigger Tester") == false)
+      if (triggerCount > 400 && CurrentProcessorName?.Contains("Trigger Tester") == false)
       {
         Log.Warn($"Over {triggerCount} triggers active for one character. To improve performance consider turning off old triggers.");
       }
@@ -1071,14 +1091,7 @@ namespace EQLogParser
       public bool HasRepeatedTimer { get; set; }
       public bool HasRepeatedText { get; set; }
       public bool IsDisabled { get; set; }
-    }
-
-    private class LineCheckResult
-    {
-      public TriggerWrapper Wrapper { get; set; }
-      public bool IsMatch { get; set; }
-      public MatchCollection Matches { get; set; }
-      public LineData LineData { get; set; }
+      public string StartText { get; set; }
     }
 
     [GeneratedRegex(@"{(s\d?)}", RegexOptions.IgnoreCase, "en-US")]
