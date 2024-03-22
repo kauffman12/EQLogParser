@@ -226,6 +226,23 @@ namespace EQLogParser
       return roman.ToString();
     }
 
+    internal static string GetSearchableTextFromStart(string input, int startIndex)
+    {
+      var span = input.AsSpan(startIndex);
+      var validLength = 0;
+
+      foreach (var t in span)
+      {
+        if (!char.IsLetter(t) && !char.IsDigit(t) && t != ' ')
+        {
+          break;
+        }
+        validLength++;
+      }
+
+      return validLength > 0 ? span[..validLength].ToString() : string.Empty;
+    }
+
     [DebuggerHidden]
     internal static bool IsValidRegex(string pattern)
     {
