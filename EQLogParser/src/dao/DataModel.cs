@@ -342,7 +342,7 @@ namespace EQLogParser
 
   internal class PlayerStatsSelectionChangedEventArgs : EventArgs
   {
-    public List<PlayerStats> Selected { get; } = new();
+    public List<PlayerStats> Selected { get; } = [];
     public CombinedStats CurrentStats { get; set; }
   }
 
@@ -356,15 +356,16 @@ namespace EQLogParser
   {
     public string Action { get; set; }
     public RecordGroupCollection Iterator { get; set; }
-    public List<PlayerStats> Selected { get; } = new();
+    public List<PlayerStats> Selected { get; } = [];
   }
 
   internal class GenerateStatsOptions
   {
-    public List<Fight> Npcs { get; } = new();
+    public List<Fight> Npcs { get; } = [];
     public long MaxSeconds { get; set; } = -1;
     public long MinSeconds { get; set; } = -1;
     public int DamageType { get; set; }
+    public TimeRange AllRanges { get; set; }
   }
 
   internal class StatsGenerationEvent
@@ -373,7 +374,7 @@ namespace EQLogParser
     public string Type { get; set; }
     public string State { get; set; }
     public CombinedStats CombinedStats { get; set; }
-    public List<List<ActionGroup>> Groups { get; } = new();
+    public List<List<ActionGroup>> Groups { get; } = [];
     public int UniqueGroupCount { get; set; }
     public ISummaryBuilder Source { get; set; }
   }

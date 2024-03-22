@@ -84,7 +84,7 @@ namespace EQLogParser
             }
 
             _raidTotals.Ranges.Add(new TimeSegment(fight.BeginTankingTime, fight.LastTankingTime));
-            _raidTotals.AllRanges.Add(MainActions.GetAllRanges().TimeSegments);
+            _raidTotals.AllRanges.Add(options.AllRanges.TimeSegments);
             StatsUtil.UpdateRaidTimeRanges(fight.TankSegments, fight.TankSubSegments, _playerTimeRanges, _playerSubTimeRanges);
           }
 

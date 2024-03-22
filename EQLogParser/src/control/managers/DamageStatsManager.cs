@@ -320,7 +320,7 @@ namespace EQLogParser
             }
 
             _raidTotals.Ranges.Add(new TimeSegment(fight.BeginDamageTime, fight.LastDamageTime));
-            _raidTotals.AllRanges.Add(MainActions.GetAllRanges().TimeSegments);
+            _raidTotals.AllRanges.Add(options.AllRanges.TimeSegments);
             StatsUtil.UpdateRaidTimeRanges(fight.DamageSegments, fight.DamageSubSegments, _playerTimeRanges, _playerSubTimeRanges);
           }
 

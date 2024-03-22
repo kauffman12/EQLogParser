@@ -74,7 +74,7 @@ namespace EQLogParser
           var healingValidator = new HealingValidator();
           _isLimited = healingValidator.IsHealingLimited();
 
-          _raidTotals.Ranges.Add(MainActions.GetAllRanges().TimeSegments);
+          _raidTotals.Ranges.Add(options.AllRanges.TimeSegments);
           _raidTotals.AllRanges = _raidTotals.Ranges;
 
           if (_raidTotals.Ranges.TimeSegments.Count > 0)
