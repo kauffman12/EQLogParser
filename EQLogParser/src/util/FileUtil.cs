@@ -66,7 +66,7 @@ namespace EQLogParser
     {
       lock (LockObject)
       {
-        var notReady = ArchiveQueue.Where(reader => reader.Progress < 100.0).Select(reader => reader.FileName).ToArray();
+        var notReady = ArchiveQueue.Where(reader => reader.GetProgress() < 100.0).Select(reader => reader.FileName).ToArray();
         foreach (var reader in ArchiveQueue.ToArray())
         {
           if (notReady.Contains(reader.FileName))
