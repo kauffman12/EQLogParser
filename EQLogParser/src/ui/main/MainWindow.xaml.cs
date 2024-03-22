@@ -441,18 +441,22 @@ namespace EQLogParser
     private void ComputeStats()
     {
       var filtered = MainActions.GetSelectedFights().OrderBy(npc => npc.Id);
+      var allRanges = MainActions.GetAllRanges();
       var opened = SyncFusionUtil.GetOpenWindows(dockSite);
 
       var damageStatsOptions = new GenerateStatsOptions();
       damageStatsOptions.Npcs.AddRange(filtered);
+      damageStatsOptions.AllRanges = allRanges;
       Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(damageStatsOptions));
 
       var healingStatsOptions = new GenerateStatsOptions();
       healingStatsOptions.Npcs.AddRange(filtered);
+      healingStatsOptions.AllRanges = allRanges;
       Task.Run(() => HealingStatsManager.Instance.BuildTotalStats(healingStatsOptions));
 
       var tankingStatsOptions = new GenerateStatsOptions();
       tankingStatsOptions.Npcs.AddRange(filtered);
+      tankingStatsOptions.AllRanges = allRanges;
       if (opened.TryGetValue((tankingSummaryIcon.Tag as string)!, out var control) && control != null)
       {
         tankingStatsOptions.DamageType = ((TankingSummary)control.Content).DamageType;
