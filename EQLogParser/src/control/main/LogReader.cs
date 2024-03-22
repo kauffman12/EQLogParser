@@ -21,6 +21,7 @@ namespace EQLogParser
     private long _initSize;
     private long _currentPos;
     private long _nextUpdateThreshold;
+    private bool _ready;
 
     public LogReader(ILogProcessor logProcessor, string fileName, int minBack = 0)
     {
@@ -51,8 +52,22 @@ namespace EQLogParser
     }
 
     public string FileName { get; }
-    public double Progress => _currentPos / (double)_initSize * 100;
     public IDisposable GetProcessor() => _logProcessor;
+
+    public double GetProgress()
+    {
+      if (!_ready)
+      {
+        return 0.0;
+      }
+
+      if (_initSize == 0)
+      {
+        return 100.0;
+      }
+
+      return _currentPos / (double)_initSize * 100;
+    }
 
     private void OnFileCreated(object sender, FileSystemEventArgs e) => StartReadingFile();
     private void OnFileMoved(object sender, FileSystemEventArgs e)
@@ -97,6 +112,7 @@ namespace EQLogParser
         var reader = FileUtil.GetStreamReader(fs, beginTime);
         SearchLinear(reader, minDate, cancelToken);
 
+        _ready = true;
         _currentPos = fs.Position;
         await using (fs)
         using (reader)
