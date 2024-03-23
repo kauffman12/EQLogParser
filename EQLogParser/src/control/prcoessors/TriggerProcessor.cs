@@ -243,6 +243,13 @@ namespace EQLogParser
                 matches = wrapper.Regex.Matches(lineData.Action);
               }
             }
+            else if (!string.IsNullOrEmpty(wrapper.ContainsText))
+            {
+              if (lineData.Action.Contains(wrapper.ContainsText, StringComparison.OrdinalIgnoreCase))
+              {
+                matches = wrapper.Regex.Matches(lineData.Action);
+              }
+            }
             else
             {
               matches = wrapper.Regex.Matches(lineData.Action);
@@ -766,10 +773,21 @@ namespace EQLogParser
               // save some start text to search for before trying the regex
               if (!string.IsNullOrEmpty(pattern) && pattern.Length > 3)
               {
-                var startText = TextUtils.GetSearchableTextFromStart(pattern, pattern[0] == '^' ? 1 : 0);
-                if (!string.IsNullOrEmpty(startText) && startText.Length > 3)
+                if (pattern[0] == '^')
                 {
-                  wrapper.StartText = startText;
+                  var startText = TextUtils.GetSearchableTextFromStart(pattern, 1);
+                  if (!string.IsNullOrEmpty(startText))
+                  {
+                    wrapper.StartText = startText;
+                  }
+                }
+                else
+                {
+                  var containsText = TextUtils.GetSearchableTextFromStart(pattern, 0);
+                  if (!string.IsNullOrEmpty(containsText) && containsText.Length > 2)
+                  {
+                    wrapper.ContainsText = containsText;
+                  }
                 }
               }
             }
@@ -1091,6 +1109,7 @@ namespace EQLogParser
       public bool HasRepeatedTimer { get; set; }
       public bool HasRepeatedText { get; set; }
       public bool IsDisabled { get; set; }
+      public string ContainsText { get; set; }
       public string StartText { get; set; }
     }
 
