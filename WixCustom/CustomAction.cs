@@ -52,7 +52,7 @@ namespace WixCustom
             return ActionResult.Success;
           }
 
-          session["DOTNET8INSTALLED"] = (GetLatestVersionOfRuntime(Runtimes[0], output) < MinVersion) ? "0" : "1";
+          session["DOTNET8INSTALLED"] = FindMinVersionOfRuntime(Runtimes[0], output);
           return ActionResult.Success;
         }
       }
@@ -63,20 +63,24 @@ namespace WixCustom
       }
     }
 
-    private static Version GetLatestVersionOfRuntime(string runtime, string runtimesList)
+    private static string FindMinVersionOfRuntime(string runtime, string runtimesList)
     {
-      var latestLine = runtimesList.Split(new string[] { Environment.NewLine }, StringSplitOptions.None).ToList().Where(x => x.Contains(runtime)).OrderBy(x => x).LastOrDefault();
-      if (latestLine != null)
+      foreach (var line in runtimesList.Split(new[] { Environment.NewLine }, StringSplitOptions.None).ToList()
+                 .Where(x => x.Contains(runtime)))
       {
         var pattern = new Regex(@"\d+(\.\d+)+");
-        var m = pattern.Match(latestLine);
+        var m = pattern.Match(line);
         var versionValue = m.Value;
-        if (Version.TryParse(versionValue, out var version) && version.Major == MinVersion.Major)
+        if (Version.TryParse(versionValue, out var version))
         {
-          return version;
+          if (version.Major == MinVersion.Major)
+          {
+            return "1";
+          }
         }
       }
-      return null;
+
+      return "0";
     }
   }
 }
