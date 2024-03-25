@@ -15,7 +15,6 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     internal event EventHandler<PetMapping> EventsNewPetMapping;
-    internal event EventHandler<string> EventsNewTakenPetOrPlayerAction;
     internal event EventHandler<string> EventsNewVerifiedPet;
     internal event EventHandler<string> EventsNewVerifiedPlayer;
     internal event EventHandler<string> EventsRemoveVerifiedPet;
@@ -92,18 +91,10 @@ namespace EQLogParser
     private void SaveTimer_Tick(object sender, EventArgs e) => Save();
     internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.Unassigned || _secondPerson.ContainsKey(name)
       || _thirdPerson.ContainsKey(name) || _verifiedPlayers.ContainsKey(name));
-    internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name) || _takenPetOrPlayerAction.ContainsKey(name));
+    internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name));
     internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || DataManager.Instance.IsPlayerSpell(name);
     internal List<string> GetClassList(bool withNull = false) => withNull ? [.. _sortedClassListWithNull] : [.. _sortedClassList];
     internal bool IsMerc(string name) => _mercs.TryGetValue(TextUtils.ToUpper(name), out _);
-
-    internal void AddPetOrPlayerAction(string name)
-    {
-      if (!IsVerifiedPlayer(name) && !IsVerifiedPet(name) && _takenPetOrPlayerAction.TryAdd(name, 1))
-      {
-        EventsNewTakenPetOrPlayerAction?.Invoke(this, name);
-      }
-    }
 
     internal void AddPetToPlayer(string pet, string player, bool initialLoad = false)
     {

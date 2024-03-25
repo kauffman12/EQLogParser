@@ -268,7 +268,6 @@ namespace EQLogParser
         }
       }
 
-      PlayerManager.Instance.EventsNewTakenPetOrPlayerAction += (_, name) => RemoveFight(name);
       PlayerManager.Instance.EventsNewVerifiedPlayer += (_, name) => RemoveFight(name);
       PlayerManager.Instance.EventsNewVerifiedPet += (_, name) => RemoveFight(name);
       return;
