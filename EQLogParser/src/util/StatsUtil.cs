@@ -505,13 +505,6 @@ namespace EQLogParser
     {
       if (superStats != null)
       {
-        if (resistCounts != null)
-        {
-          if (true)
-          {
-
-          }
-        }
         if (resistCounts != null && resistCounts.TryGetValue(stats.Name, out var value))
         {
           stats.Resists = value;
