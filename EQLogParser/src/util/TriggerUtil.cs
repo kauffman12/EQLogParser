@@ -210,6 +210,9 @@ namespace EQLogParser
         toOverlay.TimerMode = fromOverlay.TimerMode;
         toOverlay.Top = fromOverlay.Top;
         toOverlay.UseStandardTime = fromOverlay.UseStandardTime;
+        toOverlay.ShowActive = fromOverlay.ShowActive;
+        toOverlay.ShowIdle = fromOverlay.ShowIdle;
+        toOverlay.ShowReset = fromOverlay.ShowReset;
         toOverlay.Width = fromOverlay.Width;
 
         if (toOverlay is TimerOverlayPropertyModel toModel)

@@ -255,7 +255,7 @@ namespace EQLogParser
     {
       if (_node != null && _node.Id == node.Id)
       {
-        if (_node != node)
+        if (!_node.Equals(node))
         {
           _node = node;
         }

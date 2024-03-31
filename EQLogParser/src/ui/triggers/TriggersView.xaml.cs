@@ -506,7 +506,7 @@ namespace EQLogParser
     private void ShowClick(object sender, RoutedEventArgs e)
     {
       dynamic model = thePropertyGrid?.SelectedObject;
-      if ((model is TimerOverlayPropertyModel || model is TextOverlayPropertyModel) && model.Node?.Id is string id)
+      if (model is TimerOverlayPropertyModel or TextOverlayPropertyModel && model.Node?.Id is string id)
       {
         if (!_previewWindows.TryGetValue(id, out var window))
         {

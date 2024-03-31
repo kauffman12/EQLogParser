@@ -404,7 +404,6 @@ namespace EQLogParser
               var brush = TriggerUtil.GetBrush(trigger.FontColor);
               (windowData.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
               textOverlayFound = true;
-              break;
             }
           }
         }
@@ -459,7 +458,6 @@ namespace EQLogParser
             if (windowData != null)
             {
               timerOverlayFound = true;
-              break;
             }
           }
         }

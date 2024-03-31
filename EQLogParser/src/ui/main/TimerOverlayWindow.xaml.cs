@@ -20,8 +20,8 @@ namespace EQLogParser
     private long _savedWidth;
     private long _savedTop = long.MaxValue;
     private long _savedLeft = long.MaxValue;
-    private readonly Dictionary<string, TimerData> _cooldownTimerData = new();
-    private readonly Dictionary<string, ShortDurationData> _shortDurationBars = new();
+    private readonly Dictionary<string, TimerData> _cooldownTimerData = [];
+    private readonly Dictionary<string, ShortDurationData> _shortDurationBars = [];
     private Dictionary<string, Window> _previewWindows;
 
     internal TimerOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
@@ -119,14 +119,12 @@ namespace EQLogParser
         else if (_node.OverlayData.SortBy == 1)
         {
           // remaining order
-          orderedList = timerList.Where(ShouldProcess)
-            .OrderBy(timerData => timerData.EndTicks - currentTicks).ToArray();
+          orderedList = [.. timerList.Where(ShouldProcess).OrderBy(timerData => timerData.EndTicks - currentTicks)];
         }
         else if (_node.OverlayData.SortBy == 2)
         {
           // alpha
-          orderedList = timerList.Where(ShouldProcess)
-            .OrderBy(timerData => timerData.DisplayName).ToArray();
+          orderedList = [.. timerList.Where(ShouldProcess).OrderBy(timerData => timerData.DisplayName)];
         }
 
         if (orderedList != null && _node.OverlayData.UseStandardTime && orderedList.Length > 0)
@@ -303,9 +301,9 @@ namespace EQLogParser
           _shortDurationBars.Remove(timerData.Key);
         }
       }
-      else if (timerBar.Visibility != Visibility.Visible)
+      else
       {
-        timerBar.Visibility = Visibility;
+        UpdateTimerBarVisibility(timerBar);
       }
     }
 
@@ -325,7 +323,21 @@ namespace EQLogParser
         timerBar.Update(GetDisplayName(timerData), timeText, 100.0, timerData);
       }
 
-      if (timerBar.Visibility != Visibility.Visible)
+      UpdateTimerBarVisibility(timerBar);
+    }
+
+    private void UpdateTimerBarVisibility(TimerBar timerBar)
+    {
+      if ((timerBar.GetState() == TimerBar.State.Active && _node.OverlayData.ShowActive == false) ||
+          (timerBar.GetState() == TimerBar.State.Idle && _node.OverlayData.ShowIdle == false) ||
+          (timerBar.GetState() == TimerBar.State.Reset && _node.OverlayData.ShowReset == false))
+      {
+        if (timerBar.Visibility != Visibility.Collapsed)
+        {
+          timerBar.Visibility = Visibility.Collapsed;
+        }
+      }
+      else if (timerBar.Visibility != Visibility.Visible)
       {
         timerBar.Visibility = Visibility;
       }
@@ -369,7 +381,7 @@ namespace EQLogParser
     {
       if (_node != null && _node.Id == node.Id)
       {
-        if (_node != node)
+        if (!_node.Equals(node))
         {
           _node = node;
         }
