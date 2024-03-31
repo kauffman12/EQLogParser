@@ -129,6 +129,9 @@
             <syncfusion:PropertyGridItem CategoryName="Cooldown Overlay" PropertyName="IdleTimeoutTimeSpan" DisplayName="Idle Timeout" Visibility="Collapsed" Description="If specified the Cooldown Timers will be removed once they have all been idle for the configured time." />
             <syncfusion:PropertyGridItem x:Name="resetBrushItem" CategoryName="Cooldown Overlay" PropertyName="ResetBrush" DisplayName="Reset Color" Visibility="Collapsed" Description="Color used for the Timer countdown bars representing the reset time left." />
             <syncfusion:PropertyGridItem x:Name="fadeDelayItem" CategoryName="Text Overlay" PropertyName="FadeDelay" DisplayName="Fade Delay (s)" Visibility="Collapsed" Description="Seconds before Text fades from screen."/>
+            <syncfusion:PropertyGridItem CategoryName="Cooldown Overlay" PropertyName="ShowActive" DisplayName="Show Active" Visibility="Collapsed" Description="Show Cooldown Timer when in Active state." />
+            <syncfusion:PropertyGridItem CategoryName="Cooldown Overlay" PropertyName="ShowIdle" DisplayName="Show Idle" Visibility="Collapsed" Description="Show Cooldown Timer when in Idle state." />
+            <syncfusion:PropertyGridItem CategoryName="Cooldown Overlay" PropertyName="ShowReset" DisplayName="Show Reset" Visibility="Collapsed" Description="Show Cooldown Timer when in Reset state." />
           </syncfusion:PropertyGrid.Items>
         </syncfusion:PropertyGrid>
         <Border Grid.Row="0" Padding="10,1,0,0" Background="{DynamicResource ContentBackgroundAlt}" BorderThickness="0">

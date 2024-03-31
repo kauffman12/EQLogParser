@@ -248,13 +248,16 @@ namespace EQLogParser
     {
       var pass = true;
 
-      try
+      if (!string.IsNullOrEmpty(pattern))
       {
-        new Regex(pattern);
-      }
-      catch (Exception)
-      {
-        pass = false;
+        try
+        {
+          new Regex(pattern);
+        }
+        catch (Exception)
+        {
+          pass = false;
+        }
       }
 
       return pass;

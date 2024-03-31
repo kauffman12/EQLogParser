@@ -121,6 +121,9 @@ namespace EQLogParser
     public bool IsTimerOverlay { get; set; }
     public bool IsTextOverlay { get; set; }
     public bool IsDefault { get; set; }
+    public bool ShowActive { get; set; } = true;
+    public bool ShowIdle { get; set; } = true;
+    public bool ShowReset { get; set; } = true;
     public int TimerMode { get; set; }
     public long Height { get; set; } = 400;
     public long Width { get; set; } = 300;

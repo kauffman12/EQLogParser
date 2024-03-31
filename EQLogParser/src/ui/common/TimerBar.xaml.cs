@@ -11,7 +11,7 @@ namespace EQLogParser
   /// </summary>
   public partial class TimerBar
   {
-    private enum State
+    public enum State
     {
       None,
       Active,
@@ -61,6 +61,8 @@ namespace EQLogParser
       time.SetResourceReference(TextBlock.FontSizeProperty, "TimerBarFontSize-" + _overlayId);
       title.SetResourceReference(TextBlock.FontSizeProperty, "TimerBarFontSize-" + _overlayId);
     }
+
+    internal State GetState() => _theState;
 
     internal void Update(string displayName, string timeText, double remaining, TimerData timerData)
     {
@@ -146,6 +148,7 @@ namespace EQLogParser
     {
       if (_theState != State.Idle)
       {
+        Visibility = Visibility.Visible;
         progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarIdleColor-" + _overlayId);
         _theState = State.Idle;
       }
