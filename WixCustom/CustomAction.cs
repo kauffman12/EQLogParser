@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using WixToolset.Dtf.WindowsInstaller;
-using File = System.IO.File;
 
 namespace WixCustom
 {
@@ -28,23 +27,36 @@ namespace WixCustom
         var shortcutName = "EQ Log Parser.lnk"; // Name of the shortcut
         var shortcutPath = Path.Combine(desktopPath, shortcutName);
 
-        if (!File.Exists(shortcutPath)) // Check if the shortcut already exists
-        {
-          // Path to the executable of your application
-          var appPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "EQLogParser", "EQLogParser.exe");
-          session.Log("Creating Shortcut: " + shortcutPath);
+        // Path to the executable of your application
+        var programFilesPath = Environment.GetEnvironmentVariable("ProgramW6432") ?? Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var appPath = Path.Combine(programFilesPath, "EQLogParser", "EQLogParser.exe");
 
-          var shell = new WshShell();
-          var shortcut = (IWshShortcut)shell.CreateShortcut(shortcutPath);
-          shortcut.Description = "Everquest Log Parser"; // Shortcut description
-          shortcut.TargetPath = appPath; // Path to the executable
-          shortcut.WorkingDirectory = Path.GetDirectoryName(appPath); // Set working directory
+        session.Log("Processing Shortcut: " + shortcutPath);
+
+        var shell = new WshShell();
+        var shortcut = (IWshShortcut)shell.CreateShortcut(shortcutPath); // Load or create the shortcut
+
+        // Determine if updates are necessary
+        var needsUpdate = shortcut.Description != "Everquest Log Parser"
+                          || shortcut.TargetPath != appPath
+                          || shortcut.WorkingDirectory != Path.GetDirectoryName(appPath)
+                          || shortcut.IconLocation != appPath + ",0";
+
+        // Update properties if necessary
+        if (needsUpdate)
+        {
+          shortcut.Description = "Everquest Log Parser";
+          shortcut.TargetPath = appPath;
+          shortcut.WorkingDirectory = Path.GetDirectoryName(appPath);
           shortcut.IconLocation = appPath + ",0";
-          shortcut.Save(); // Save the shortcut on the desktop
+
+          // Save the updated shortcut
+          shortcut.Save();
+          session.Log("Shortcut created or updated: " + shortcutPath);
         }
         else
         {
-          session.Log("Shortcut already exists. Do not create.");
+          session.Log("Shortcut already exists with the correct configuration: " + shortcutPath);
         }
       }
       catch (Exception ex)
@@ -54,35 +66,6 @@ namespace WixCustom
       }
       return ActionResult.Success;
     }
-
-    [CustomAction]
-    public static ActionResult RemoveShortcut(Session session)
-    {
-      try
-      {
-        var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory);
-        var shortcutName = "EQ Log Parser.lnk"; // Name of the shortcut
-        var shortcutPath = Path.Combine(desktopPath, shortcutName);
-
-        if (File.Exists(shortcutPath))
-        {
-          session.Log("Attempting to remove shortcut: " + shortcutPath);
-          File.Delete(shortcutPath);
-          session.Log("Shortcut removed successfully.");
-        }
-        else
-        {
-          session.Log("Shortcut does not exist, no action taken: " + shortcutPath);
-        }
-      }
-      catch (Exception ex)
-      {
-        session.Log("Error removing shortcut: " + ex.ToString());
-        return ActionResult.Failure;
-      }
-      return ActionResult.Success;
-    }
-
 
     [CustomAction]
     public static ActionResult CheckDotNetVersion(Session session)

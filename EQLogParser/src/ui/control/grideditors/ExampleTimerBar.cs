@@ -15,6 +15,7 @@ namespace EQLogParser
       var overlayId = info.Value as string;
       _theTimerBar.Init(overlayId);
       _theTimerBar.Update("Example Timer Bar #1", "00:30", 60.0, new TimerData());
+      _theTimerBar.Visibility = Visibility.Visible;
     }
 
     public object Create(PropertyInfo propertyInfo) => Create();

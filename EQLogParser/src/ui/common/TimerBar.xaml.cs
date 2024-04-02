@@ -148,7 +148,6 @@ namespace EQLogParser
     {
       if (_theState != State.Idle)
       {
-        Visibility = Visibility.Visible;
         progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarIdleColor-" + _overlayId);
         _theState = State.Idle;
       }
