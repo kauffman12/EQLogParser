@@ -62,6 +62,7 @@ namespace EQLogParser
       var timerBar = new TimerBar();
       timerBar.Init(_node.Id);
       timerBar.Update(displayName, timeText, progress, new TimerData());
+      timerBar.Visibility = Visibility.Visible;
       content.Children.Add(timerBar);
     }
 
@@ -328,9 +329,9 @@ namespace EQLogParser
 
     private void UpdateTimerBarVisibility(TimerBar timerBar)
     {
-      if ((timerBar.GetState() == TimerBar.State.Active && _node.OverlayData.ShowActive == false) ||
+      if (_node.OverlayData.TimerMode == 1 && ((timerBar.GetState() == TimerBar.State.Active && _node.OverlayData.ShowActive == false) ||
           (timerBar.GetState() == TimerBar.State.Idle && _node.OverlayData.ShowIdle == false) ||
-          (timerBar.GetState() == TimerBar.State.Reset && _node.OverlayData.ShowReset == false))
+          (timerBar.GetState() == TimerBar.State.Reset && _node.OverlayData.ShowReset == false)))
       {
         if (timerBar.Visibility != Visibility.Collapsed)
         {
@@ -339,7 +340,7 @@ namespace EQLogParser
       }
       else if (timerBar.Visibility != Visibility.Visible)
       {
-        timerBar.Visibility = Visibility;
+        timerBar.Visibility = Visibility.Visible;
       }
     }
 

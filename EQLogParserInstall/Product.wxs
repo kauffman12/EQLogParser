@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.2.8" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
+	<Product Id="*" Name="EQLogParser" Language="1033" Version="2.2.9" Manufacturer="Kizant" UpgradeCode="5c2c180d-d4f0-46f1-b771-bda6609e2688">
 		<Package Platform="x64" InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade AllowDowngrades="yes" />
@@ -41,13 +41,11 @@
     <Binary Id="CABinary" SourceFile="$(var.WixCustom.TargetDir)WixCustom.CA.dll" />
     <CustomAction Id="CheckDoTNetAction" BinaryKey="CABinary" DllEntry="CheckDotNetVersion" Execute="firstSequence" />
     <CustomAction Id="CreateShortcut" BinaryKey="CABinary" DllEntry="CreateShortcut" Execute="deferred" Impersonate="no" />
-    <CustomAction Id="RemoveShortcut" BinaryKey="CABinary" DllEntry="RemoveShortcut" Execute="deferred" Impersonate="no" />
     <InstallUISequence>
       <Custom Action="CheckDoTNetAction" Before="LaunchConditions" />
     </InstallUISequence>
     <InstallExecuteSequence>
-      <Custom Action="CreateShortcut" Before="InstallFinalize">NOT REMOVE="ALL"</Custom>
-      <Custom Action="RemoveShortcut" Before="RemoveFiles">REMOVE="ALL"</Custom>
+      <Custom Action="CreateShortcut" Before="InstallFinalize" />
     </InstallExecuteSequence>
     <UI>
       <Dialog Id="CheckDotNetDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="no">
