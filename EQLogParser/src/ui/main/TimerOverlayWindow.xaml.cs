@@ -329,9 +329,12 @@ namespace EQLogParser
 
     private void UpdateTimerBarVisibility(TimerBar timerBar)
     {
-      if (_node.OverlayData.TimerMode == 1 && ((timerBar.GetState() == TimerBar.State.Active && _node.OverlayData.ShowActive == false) ||
-          (timerBar.GetState() == TimerBar.State.Idle && _node.OverlayData.ShowIdle == false) ||
-          (timerBar.GetState() == TimerBar.State.Reset && _node.OverlayData.ShowReset == false)))
+      var state = timerBar.GetState();
+      if (_node.OverlayData.TimerMode == 1 &&
+          ((state is TimerBar.State.Active or TimerBar.State.None && _node.OverlayData.ShowActive == false) ||
+          (state == TimerBar.State.None && _node.OverlayData.ShowActive == false) ||
+          (state == TimerBar.State.Idle && _node.OverlayData.ShowIdle == false) ||
+          (state == TimerBar.State.Reset && _node.OverlayData.ShowReset == false)))
       {
         if (timerBar.Visibility != Visibility.Collapsed)
         {
