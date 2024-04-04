@@ -10,7 +10,7 @@ def parse_date_from_line(line):
         return None
 
 
-def simulate_real_time_processing(source_file, destination_file, destination_file2):
+def simulate_real_time_processing(source_file, destination_file):
     with open(source_file, "r") as src:
         all_lines = src.readlines()
 
@@ -60,7 +60,5 @@ def simulate_real_time_processing(source_file, destination_file, destination_fil
 
 
 simulate_real_time_processing(
-    "r:/eqlog_Kizant_xegony-selected.txt",
-    "r:/eqlog_Kizant_xegony.txt",
-    "r:/eqlog_Incogitable_xegony.txt",
+    "r:/eqlog_Kizant_xegony-selected2.txt", "r:/eqlog_Kizant_xegony.txt"
 )
