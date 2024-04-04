@@ -270,6 +270,9 @@
   <data name="TRIGGER_CHARACTER_DELETE" xml:space="preserve">
     <value>Delete Character Settings</value>
   </data>
+  <data name="TRIGGER_SEARCH_TEXT" xml:space="preserve">
+    <value>Trigger Name Search</value>
+  </data>
   <data name="UNASSIGN_OVERLAY" xml:space="preserve">
     <value>Unassign Overlay</value>
   </data>

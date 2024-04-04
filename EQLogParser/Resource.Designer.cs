@@ -520,6 +520,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Trigger Name Search.
+        /// </summary>
+        internal static string TRIGGER_SEARCH_TEXT {
+            get {
+                return ResourceManager.GetString("TRIGGER_SEARCH_TEXT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Unassign Overlay.
         /// </summary>
         internal static string UNASSIGN_OVERLAY {

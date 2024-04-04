@@ -27,6 +27,7 @@
         <Border Grid.Row="0" Padding="8,2,0,0" Background="{DynamicResource ContentBackgroundAlt}" BorderThickness="0">
           <DockPanel>
             <TextBlock Text="Manage Triggers" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
+            <TextBox x:Name="findTrigger" DockPanel.Dock="Right" HorizontalAlignment="Right" Margin="0,0,8,4" Height="{DynamicResource EQButtonHeight}" FontStyle="Italic" Width="140" LostFocus="FindLostFocus" GotFocus="FindGotFocus" PreviewKeyDown="FindKeyDown" TextChanged="FindTextChanged" />
           </DockPanel>
         </Border>
         <Grid Grid.Row="1">
