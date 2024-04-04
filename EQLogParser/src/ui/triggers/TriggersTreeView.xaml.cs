@@ -21,6 +21,7 @@ namespace EQLogParser
     private const string LabelNewTimerOverlay = "New Timer Overlay";
     private const string LabelNewTrigger = "New Trigger";
     private const string LabelNewFolder = "New Folder";
+    private readonly DispatcherTimer _findTimer;
     private TriggerTreeViewNode _triggerCopiedNode;
     private TriggerTreeViewNode _overlayCopiedNode;
     private bool _triggerCutNode;
@@ -28,6 +29,7 @@ namespace EQLogParser
     private string _currentCharacterId;
     private Func<bool> _isCancelSelection;
     private TriggerConfig _theConfig;
+    private IEnumerator<TriggerTreeViewNode> _findTriggerEnumerator;
 
     public TriggersTreeView()
     {
@@ -35,6 +37,20 @@ namespace EQLogParser
       SetupDragNDrop(triggerTreeView);
       SetupDragNDrop(overlayTreeView);
       TriggerManager.Instance.EventsSelectTrigger += EventsSelectTrigger;
+      findTrigger.Text = Resource.TRIGGER_SEARCH_TEXT;
+      _findTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
+      _findTimer.Tick += (_, _) =>
+      {
+        _findTimer.Stop();
+        if (findTrigger.FontStyle != FontStyles.Italic && findTrigger.Text != Resource.TRIGGER_SEARCH_TEXT && !string.IsNullOrEmpty(findTrigger.Text))
+        {
+          if (triggerTreeView?.Nodes.Count > 0 && triggerTreeView?.Nodes[0] is TriggerTreeViewNode node)
+          {
+            _findTriggerEnumerator = FindNodesByName(triggerTreeView, node, findTrigger.Text).GetEnumerator();
+            ExpandNextTrigger();
+          }
+        }
+      };
     }
 
     internal void RefreshOverlays() => RefreshOverlayNode();
@@ -78,6 +94,30 @@ namespace EQLogParser
     {
       TriggerStateManager.Instance.RecentlyMerged.Clear();
       RefreshTriggers();
+    }
+
+    private void ExpandNextTrigger()
+    {
+      if (_findTriggerEnumerator?.MoveNext() == true)
+      {
+        var node = _findTriggerEnumerator.Current;
+        if (node?.IsTrigger() == true)
+        {
+          triggerTreeView.ExpandNode(node.ParentNode);
+        }
+        else
+        {
+          triggerTreeView.ExpandNode(node);
+        }
+
+        triggerTreeView.SelectedItems?.Clear();
+        triggerTreeView.SelectedItem = node;
+        SelectionChanged(node);
+      }
+      else if (triggerTreeView?.Nodes.Count > 0 && triggerTreeView?.Nodes[0] is TriggerTreeViewNode node)
+      {
+        _findTriggerEnumerator = FindNodesByName(triggerTreeView, node, findTrigger.Text).GetEnumerator();
+      }
     }
 
     private static void SetupDragNDrop(SfTreeView treeView)
@@ -207,7 +247,7 @@ namespace EQLogParser
       {
         if (treeView?.Nodes.Count > 0 && treeView.Nodes[0] is TriggerTreeViewNode node)
         {
-          if (FindAndExpandNode(treeView, node, id) is { } found)
+          if (FindAndExpandNodeById(treeView, node, id) is { } found)
           {
             treeView.SelectedItems?.Clear();
             treeView.SelectedItem = found;
@@ -217,16 +257,16 @@ namespace EQLogParser
       }
     }
 
-    private TriggerTreeViewNode FindAndExpandNode(SfTreeView treeView, TriggerTreeViewNode node, string id)
+    private static TriggerTreeViewNode FindAndExpandNodeById(SfTreeView treeView, TriggerTreeViewNode node, string id)
     {
-      if (node.SerializedData?.Id == id || node.SerializedData?.Id == id)
+      if (node.SerializedData?.Id == id)
       {
         return node;
       }
 
       foreach (var child in node.ChildNodes.Cast<TriggerTreeViewNode>())
       {
-        if (FindAndExpandNode(treeView, child, id) is { } found)
+        if (FindAndExpandNodeById(treeView, child, id) is { } found)
         {
           treeView.ExpandNode(node);
           return found;
@@ -235,6 +275,26 @@ namespace EQLogParser
 
       return null;
     }
+
+    private static IEnumerable<TriggerTreeViewNode> FindNodesByName(SfTreeView treeView, TriggerTreeViewNode node, string name)
+    {
+      if (node.SerializedData?.Name?.Contains(name, StringComparison.OrdinalIgnoreCase) == true)
+      {
+        // Yield the current node if its name contains the search term
+        yield return node;
+      }
+
+      foreach (var child in node.ChildNodes.Cast<TriggerTreeViewNode>())
+      {
+        // Recursively search in child nodes and yield each found node
+        foreach (var found in FindNodesByName(treeView, child, name))
+        {
+          treeView.ExpandNode(node);
+          yield return found;
+        }
+      }
+    }
+
 
     private void CreateNodeClick(object sender, RoutedEventArgs e)
     {
@@ -794,5 +854,43 @@ namespace EQLogParser
       GC.SuppressFinalize(this);
     }
     #endregion
+
+    private void FindLostFocus(object sender, RoutedEventArgs e)
+    {
+      if (string.IsNullOrEmpty(findTrigger.Text))
+      {
+        findTrigger.Text = Resource.TRIGGER_SEARCH_TEXT;
+        findTrigger.FontStyle = FontStyles.Italic;
+      }
+    }
+
+    private void FindGotFocus(object sender, RoutedEventArgs e)
+    {
+      if (findTrigger.Text == Resource.TRIGGER_SEARCH_TEXT)
+      {
+        findTrigger.Text = "";
+        findTrigger.FontStyle = FontStyles.Normal;
+      }
+    }
+
+    private void FindKeyDown(object sender, KeyEventArgs e)
+    {
+      if (e.Key == Key.Escape)
+      {
+        findTrigger.Text = Resource.TRIGGER_SEARCH_TEXT;
+        findTrigger.FontStyle = FontStyles.Italic;
+        triggerTreeView.Focus();
+      }
+      else if (e.Key == Key.Enter)
+      {
+        ExpandNextTrigger();
+      }
+    }
+
+    private void FindTextChanged(object sender, TextChangedEventArgs e)
+    {
+      _findTimer?.Stop();
+      _findTimer?.Start();
+    }
   }
 }
