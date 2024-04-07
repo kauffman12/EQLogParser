@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" Name="EQLogParser" Language="1033" Version="2.2.11" Manufacturer="Kizant" UpgradeCode="2922d23e-40d1-4d1a-96a9-c205202c04fb">
+    <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate />
+    <Feature Id="ProductFeature" Title="EQLogParser" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+    </Feature>
+
+    <!-- Binary element for the executable to run -->
+    <Binary Id="ExeBinary" SourceFile="..\EQLogParserInstall\Output\EQLogParser-2.2.11.exe"/>
+    <!-- CustomAction to execute the binary -->
+    <CustomAction Id="RunExe" BinaryKey="ExeBinary" ExeCommand="" Execute="deferred" Return="asyncNoWait" Impersonate="no"/>
+
+    <InstallExecuteSequence>
+      <!-- Schedule the custom action to run at an appropriate point during installation -->
+      <Custom Action="RunExe" Before="InstallFinalize">NOT Installed</Custom>
+    </InstallExecuteSequence>
+  </Product>
+
+  <!-- Since we're not installing files to directories, this might be unnecessary -->
+  <Fragment>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLFOLDER" Name="EQLogParser"/>
+      </Directory>
+    </Directory>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <Component Id="DummyComponent" Guid="*">
+        <File Id="DummyFile" Source="installed.txt" KeyPath="yes"/>
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>
