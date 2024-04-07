@@ -94,51 +94,57 @@ procedure LabelLinkClick(Sender: TObject);
 var
   ErrorCode: Integer;
 begin
-  ShellExec('open', 'https://dotnet.microsoft.com/download/dotnet/8.0', '', '', SW_SHOW, ewNoWait, ErrorCode);
+  ShellExec('open', 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.3-windows-x64-installer', '', '', SW_SHOW, ewNoWait, ErrorCode);
 end;
 
 procedure ShowDotNetDownloadPage;
 var
   Form: TSetupForm;
-  InfoLabel, LabelLink: TLabel;
+  InfoLabel: TLabel;
+  LabelLink: TMemo;
   OkButton: TButton;
 begin
   // Create the form
   Form := CreateCustomForm;
-  Form.ClientWidth := 350;
-  Form.ClientHeight := 150; // Adjusted for extra text
-  Form.Caption := 'Additional Component Required';
+  Form.ClientWidth := 358;
+  Form.ClientHeight := 118; // Adjusted for extra text
+  Form.Font.Size := 10
+  Form.Caption := 'Additional Components Required';
   Form.Position := poScreenCenter;
 
   // Create an informational label
   InfoLabel := TLabel.Create(Form);
   InfoLabel.Parent := Form;
-  InfoLabel.Caption := 'This application requires .NET 8.0 to be installed.';
-  InfoLabel.Top := 20;
-  InfoLabel.Left := 25;
-  InfoLabel.Width := Form.ClientWidth - 50; // Adjust width to fit the form
+  InfoLabel.Caption := 'EQLogParser requires .NET 8.0 x64 Desktop Runtime. Found here:';
+  InfoLabel.Font.Size := 9;
+  InfoLabel.Top := 18;
+  InfoLabel.Left := 15;
   InfoLabel.AutoSize := True;
   InfoLabel.WordWrap := True; // Enable word wrapping
 
   // Create a clickable label for the link
-  LabelLink := TLabel.Create(Form);
+  LabelLink := TMemo.Create(Form);
   LabelLink.Parent := Form;
-  LabelLink.Caption := 'Download .NET 8.0 from the official site.';
+  LabelLink.Text := 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.3-windows-x64-installer';
   LabelLink.Font.Style := [fsUnderline];
   LabelLink.Font.Color := clBlue;
+  LabelLink.Font.Size := 8;
+  LabelLink.ReadOnly := True;
+  LabelLink.ScrollBars := ssNone;
   LabelLink.Cursor := crHand;
   LabelLink.OnClick := @LabelLinkClick;
   LabelLink.Top := InfoLabel.Top + InfoLabel.Height + 10; // Position below the informational text
-  LabelLink.Left := 25;
-  LabelLink.AutoSize := True;
+  LabelLink.Left := 15;
+  LabelLink.height := 40;
+  LabelLink.Width := 400;
 
   // Create an OK button
   OkButton := TButton.Create(Form);
   OkButton.Parent := Form;
-  OkButton.Caption := 'OK';
+  OkButton.Caption := 'Exit';
   OkButton.ModalResult := mrOk; // Sets the button to close the form when clicked
-  OkButton.Top := Form.ClientHeight - OkButton.Height - 20;
-  OkButton.Left := (Form.ClientWidth - OkButton.Width) div 2; // Center the button
+  OkButton.Top := 100;
+  OkButton.Left := 342; // Center the button
 
   // Show the form
   Form.ShowModal;
