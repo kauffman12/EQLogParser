@@ -23,7 +23,7 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={commonpf}\{#MyAppName}
-DisableDirPage=yes
+DisableDirPage=no
 DisableProgramGroupPage=yes
 InfoBeforeFile={#MyReleaseDir}\data\releasenotes.rtf
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
