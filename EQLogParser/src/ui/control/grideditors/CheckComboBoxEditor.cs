@@ -35,7 +35,9 @@ namespace EQLogParser
     {
       var comboBox = new ComboBox
       {
-        ItemTemplateSelector = new ComboBoxItemTemplateSelector()
+        ItemTemplateSelector = new ComboBoxItemTemplateSelector(),
+        Padding = new Thickness(0),
+        Margin = new Thickness(0)
       };
 
       comboBox.DropDownClosed += TheComboBoxDropDownClosed;
