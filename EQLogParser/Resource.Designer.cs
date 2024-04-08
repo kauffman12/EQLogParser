@@ -520,7 +520,7 @@ namespace EQLogParser {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Trigger Name Search.
+        ///   Looks up a localized string similar to Name/Pattern Search.
         /// </summary>
         internal static string TRIGGER_SEARCH_TEXT {
             get {
