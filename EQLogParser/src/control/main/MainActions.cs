@@ -166,7 +166,7 @@ namespace EQLogParser
                 }
                 catch (Exception ex2)
                 {
-                  new MessageWindow("Problem Install Updates. Check Error Log for Details.", Resource.CHECK_VERSION).ShowDialog();
+                  new MessageWindow("Problem Installing Updates. Check Error Log for Details.", Resource.CHECK_VERSION).ShowDialog();
                   Log.Error("Error Installing Updates", ex2);
                 }
               }

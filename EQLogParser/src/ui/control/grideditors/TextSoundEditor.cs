@@ -65,6 +65,7 @@ namespace EQLogParser
       _testButton = new Button
       {
         Padding = new Thickness(0, 2, 0, 2),
+        Margin = new Thickness(0, 1, 0, 1),
         Content = "Test",
         IsEnabled = false
       };

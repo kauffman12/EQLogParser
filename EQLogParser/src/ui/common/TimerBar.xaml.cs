@@ -50,6 +50,7 @@ namespace EQLogParser
 
       Storyboard.SetTarget(_animation, progress);
       Storyboard.SetTargetProperty(_animation, new PropertyPath(ProgressBarBase.ProgressProperty));
+      progress.SizeChanged += ProgressSizeChanged;
     }
 
     internal void Init(string overlayId)
@@ -82,6 +83,13 @@ namespace EQLogParser
         }
 
         _lastTimerData = timerData;
+      }
+
+      // set icon if needed
+      if (theIcon.Source != timerData?.TimerIcon)
+      {
+        theIcon.Source = timerData?.TimerIcon;
+        SetIconHeight();
       }
 
       // no need to animate short duration timers
@@ -153,9 +161,28 @@ namespace EQLogParser
       }
     }
 
+    private void ProgressSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+      if (theIcon.Source != null)
+      {
+        SetIconHeight();
+      }
+    }
+
+    private void SetIconHeight()
+    {
+      var newHeight = (progress.ActualHeight > 0) ? progress.ActualHeight - 1 : 0;
+      if (!newHeight.Equals(theIcon.ActualHeight))
+      {
+        theIcon.Height = newHeight;
+        theIcon.Width = double.NaN;
+      }
+    }
+
     private void UnloadWindow(object sender, RoutedEventArgs e)
     {
       _lastTimerData = null;
+      progress.SizeChanged -= ProgressSizeChanged;
     }
   }
 }

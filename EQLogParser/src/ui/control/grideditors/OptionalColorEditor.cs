@@ -59,6 +59,7 @@ namespace EQLogParser
       {
         Content = "Reset",
         Padding = new Thickness(0, 2, 0, 2),
+        Margin = new Thickness(0, 1, 0, 1)
       };
       _theButton.SetValue(Grid.ColumnProperty, 1);
       _theButton.Click += TheButton_Click;
@@ -71,6 +72,7 @@ namespace EQLogParser
       };
 
       _theColorPicker.SetValue(Grid.ColumnProperty, 0);
+      _theColorPicker.SelectedBrushChanged += TheColorPickerBrushChanged;
 
       grid.Children.Add(_theColorPicker);
       grid.Children.Add(_theTextBox);
@@ -78,19 +80,39 @@ namespace EQLogParser
       return grid;
     }
 
-    private void TheButton_Click(object sender, RoutedEventArgs e)
+    private void TheColorPickerBrushChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-      _theTextBox.Visibility = Visibility.Visible;
-      _theColorPicker.Visibility = Visibility.Collapsed;
-      _theColorPicker.Brush = null;
+      if (e.NewValue != null)
+      {
+        ShowColorPicker();
+      }
+      else
+      {
+        HideColorPicker();
+      }
     }
 
-    private void TheTextBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void TheButton_Click(object sender, RoutedEventArgs e) => HideColorPicker();
+    private void TheTextBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => ShowColorPicker();
+
+    private void HideColorPicker()
     {
-      _theColorPicker.Height = _theTextBox.ActualHeight;
-      _theTextBox.Visibility = Visibility.Collapsed;
-      _theColorPicker.Visibility = Visibility.Visible;
-      _theColorPicker.Brush ??= new SolidColorBrush { Color = Colors.White };
+      if (_theTextBox != null && _theColorPicker != null && _theTextBox.Visibility != Visibility.Visible)
+      {
+        _theTextBox.Visibility = Visibility.Visible;
+        _theColorPicker.Visibility = Visibility.Collapsed;
+        _theColorPicker.Brush = null;
+      }
+    }
+
+    private void ShowColorPicker()
+    {
+      if (_theTextBox != null && _theColorPicker != null && _theTextBox.Visibility != Visibility.Collapsed)
+      {
+        _theTextBox.Visibility = Visibility.Collapsed;
+        _theColorPicker.Visibility = Visibility.Visible;
+        _theColorPicker.Brush ??= new SolidColorBrush { Color = Colors.White };
+      }
     }
 
     public override bool ShouldPropertyGridTryToHandleKeyDown(Key key)
@@ -116,9 +138,12 @@ namespace EQLogParser
       if (_theColorPicker != null)
       {
         BindingOperations.ClearAllBindings(_theColorPicker);
+        _theColorPicker.SelectedBrushChanged -= TheColorPickerBrushChanged;
         _theColorPicker?.Dispose();
         _theColorPicker = null;
       }
+
+      ;
     }
   }
 }

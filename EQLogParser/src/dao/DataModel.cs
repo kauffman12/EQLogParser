@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace EQLogParser
 {
@@ -94,6 +95,7 @@ namespace EQLogParser
     public string FontColor { get; set; }
     public LineData RepeatingTimerLineData { get; set; }
     public int TimesToLoopCount { get; set; }
+    public BitmapImage TimerIcon { get; set; }
   }
 
   internal class NumberOptions
@@ -163,7 +165,8 @@ namespace EQLogParser
     public bool UseRegex { get; set; }
     public string ActiveColor { get; set; } = null;
     public string FontColor { get; set; } = null;
-    public List<string> SelectedOverlays { get; set; } = new();
+    public string IconSource { get; set; } = null;
+    public List<string> SelectedOverlays { get; set; } = [];
     public double ResetDurationSeconds { get; set; }
     public long WarningSeconds { get; set; }
     public string EndEarlyTextToDisplay { get; set; }
@@ -207,6 +210,7 @@ namespace EQLogParser
   {
     public SolidColorBrush TriggerActiveBrush { get; set; }
     public SolidColorBrush TriggerFontBrush { get; set; }
+    public BitmapImage TriggerIconSource { get; set; }
     public ObservableCollection<ComboBoxItemDetails> SelectedTextOverlays { get; set; }
     public ObservableCollection<ComboBoxItemDetails> SelectedTimerOverlays { get; set; }
     public TimeSpan DurationTimeSpan { get; set; }
