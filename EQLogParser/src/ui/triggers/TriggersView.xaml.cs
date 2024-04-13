@@ -18,7 +18,7 @@ namespace EQLogParser
   /// </summary>
   public partial class TriggersView : IDocumentContent
   {
-    private readonly Dictionary<string, Window> _previewWindows = new();
+    private readonly Dictionary<string, Window> _previewWindows = [];
     private TriggerConfig _theConfig;
     private readonly PatternEditor _patternEditor;
     private readonly PatternEditor _endEarlyPatternEditor;
@@ -81,6 +81,7 @@ namespace EQLogParser
       AddEditor<DurationEditor>("ResetDurationTimeSpan", "IdleTimeoutTimeSpan");
       AddEditor<ExampleTimerBar>("TimerBarPreview");
       AddEditor<OptionalColorEditor>("TriggerActiveBrush", "TriggerFontBrush");
+      AddEditor<OptionalIconEditor>("TriggerIconSource");
       AddEditor<TriggerListsEditor>("TriggerAgainOption", "FontSize", "FontFamily", "SortBy", "TimerMode", "TimerType");
       AddEditor<WrapTextEditor>("EndEarlyTextToDisplay", "EndTextToDisplay", "TextToDisplay", "TextToShare",
         "WarningTextToDisplay", "Comments", "OverlayComments");
@@ -332,8 +333,8 @@ namespace EQLogParser
     private void EnableCategories(bool trigger, int timerType, bool overlay, bool overlayTimer,
       bool overlayAssigned, bool overlayText, bool cooldownTimer)
     {
-      PropertyGridUtil.EnableCategories(thePropertyGrid, new dynamic[]
-      {
+      PropertyGridUtil.EnableCategories(thePropertyGrid,
+      [
         new { Name = patternItem.CategoryName, IsEnabled = trigger },
         new { Name = timerDurationItem.CategoryName, IsEnabled = timerType > 0 },
         new { Name = endEarlyPatternItem.CategoryName, IsEnabled = timerType > 0 && timerType != 2 },
@@ -343,7 +344,7 @@ namespace EQLogParser
         new { Name = idleBrushItem.CategoryName, IsEnabled = cooldownTimer },
         new { Name = assignedOverlaysItem.CategoryName, IsEnabled = overlayAssigned },
         new { Name = fadeDelayItem.CategoryName, IsEnabled = overlayText }
-      });
+      ]);
 
       resetDurationItem.Visibility = (timerType > 0 && timerType != 2 && timerType != 4) ? Visibility.Visible : Visibility.Collapsed;
       timerDurationItem.Visibility = (timerType > 0 && timerType != 2) ? Visibility.Visible : Visibility.Collapsed;
@@ -395,6 +396,20 @@ namespace EQLogParser
             triggerChange = (trigger.TriggerFontBrush == null && original.FontColor != null) ||
               (trigger.TriggerFontBrush != null && original.FontColor == null) ||
               (trigger.TriggerFontBrush?.Color.ToHexString() != original.FontColor);
+          }
+        }
+        else if (args.Property.Name == triggerIconSourceItem.PropertyName)
+        {
+          var original = trigger.Node.TriggerData;
+          if (trigger.TriggerIconSource == null && original.IconSource == null)
+          {
+            triggerChange = false;
+          }
+          else
+          {
+            triggerChange = (trigger.TriggerIconSource == null && original.IconSource != null) ||
+             (trigger.TriggerIconSource != null && original.IconSource == null) ||
+             (trigger.TriggerIconSource?.UriSource.OriginalString != original.IconSource);
           }
         }
         else if (args.Property.Name == "DurationTimeSpan" && timerDurationItem.Visibility == Visibility.Collapsed)

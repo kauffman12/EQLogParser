@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Media.Imaging;
 
 namespace EQLogParser
 {
@@ -503,6 +504,7 @@ namespace EQLogParser
       newTimerData.Key = wrapper.Id + "-" + displayName;
       newTimerData.CancelSource = new CancellationTokenSource();
       newTimerData.TimesToLoopCount = loopCount;
+      newTimerData.TimerIcon = wrapper.TimerIcon;
 
       // save line data if repeating timer
       if (wrapper.TriggerData.TimerType == 4)
@@ -720,7 +722,8 @@ namespace EQLogParser
               ModifiedEndDisplay = ModPlayer(trigger.EndTextToDisplay),
               ModifiedEndEarlyDisplay = ModPlayer(trigger.EndEarlyTextToDisplay),
               ModifiedTimerName = ModPlayer(string.IsNullOrEmpty(trigger.AltTimerName) ? enabled.Name : trigger.AltTimerName),
-              ModifiedDurationSeconds = trigger.DurationSeconds
+              ModifiedDurationSeconds = trigger.DurationSeconds,
+              TimerIcon = UiElementUtil.CreateBitmap(trigger.IconSource)
             };
 
             // replace GINA counted with repeated
@@ -1111,6 +1114,7 @@ namespace EQLogParser
       public bool IsDisabled { get; set; }
       public string ContainsText { get; set; }
       public string StartText { get; set; }
+      public BitmapImage TimerIcon { get; set; }
     }
 
     [GeneratedRegex(@"{(s\d?)}", RegexOptions.IgnoreCase, "en-US")]

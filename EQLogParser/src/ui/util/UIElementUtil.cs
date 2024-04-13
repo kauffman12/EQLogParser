@@ -22,6 +22,20 @@ namespace EQLogParser
       "Open Sans", "Segoe UI", "Tahoma", "Roboto", "Helvetica"
     };
 
+    internal static BitmapImage CreateBitmap(string path)
+    {
+      if (!string.IsNullOrEmpty(path))
+      {
+        var bitmap = new BitmapImage();
+        bitmap.BeginInit();
+        bitmap.UriSource = new Uri(path, UriKind.Absolute);
+        bitmap.EndInit();
+        return bitmap;
+      }
+
+      return null;
+    }
+
     internal static void CreateImage(Dispatcher dispatcher, FrameworkElement content, Label titleLabel = null)
     {
       Task.Delay(100).ContinueWith(_ => dispatcher.InvokeAsync(() =>
@@ -172,6 +186,31 @@ namespace EQLogParser
           elem.IsEnabled = isEnabled;
         }
       }
+    }
+
+    internal static double CalculateTextBoxHeight(FontFamily fontFamily, double fontSize, Thickness padding, Thickness borderThickness)
+    {
+      // Create the FormattedText object
+      var formattedText = new FormattedText(
+        "test",
+        System.Globalization.CultureInfo.CurrentCulture,
+        FlowDirection.LeftToRight,
+        new Typeface(fontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal),
+        fontSize,
+        Brushes.Black, // The brush doesn't affect size calculation
+        VisualTreeHelper.GetDpi(new Window()).PixelsPerDip // This ensures the text size is scaled correctly for the display DPI
+      );
+
+      // Account for FontWeight
+      formattedText.SetFontWeight(FontWeights.Normal);
+
+      // Calculate the height required for the text
+      var textHeight = formattedText.Height;
+
+      // Add padding and border thickness to the height
+      var totalHeight = textHeight + padding.Top + padding.Bottom + borderThickness.Top + borderThickness.Bottom;
+
+      return Math.Round(totalHeight);
     }
   }
 }

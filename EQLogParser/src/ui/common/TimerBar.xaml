@@ -16,12 +16,21 @@
       <RowDefinition Height="2*" />
       <RowDefinition Height="1" />
     </Grid.RowDefinitions>
-    <syncfusion:SfLinearProgressBar Grid.Row="1" x:Name="progress" ProgressColor="{x:Null}" Height="16" Margin="0,0,2,0" IndicatorCornerRadius="2" Progress="60">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="Auto" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+    <Image x:Name="theIcon" Grid.Row="1" Grid.Column="0" Margin="0,0,2,0" ClipToBounds="True" Height="0" VerticalAlignment="Center">
+      <Image.Effect>
+        <DropShadowEffect ShadowDepth="2" Direction="270" Color="Black" Opacity="0.3" BlurRadius="1"/>
+      </Image.Effect>
+    </Image>
+    <syncfusion:SfLinearProgressBar Grid.Row="1" Grid.Column="1" x:Name="progress" ProgressColor="{x:Null}" Height="16" Margin="0,0,2,0" IndicatorCornerRadius="2" Progress="60">
       <syncfusion:SfLinearProgressBar.Effect>
         <DropShadowEffect ShadowDepth="2" Direction="270" Color="Black" Opacity="0.3" BlurRadius="1"/>
       </syncfusion:SfLinearProgressBar.Effect>
     </syncfusion:SfLinearProgressBar>
-    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0">
+    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0">
       <TextBlock x:Name="time" Text="xx:xx" VerticalAlignment="Center" FontSize="14" FontFamily="Consolas" Foreground="White" Margin="3,0,0,0" >
         <TextBlock.Effect>
           <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.7" BlurRadius="0"/>
