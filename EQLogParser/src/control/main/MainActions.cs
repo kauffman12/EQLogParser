@@ -131,7 +131,7 @@ namespace EQLogParser
 
               if (msg.IsYes1Clicked)
               {
-                var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-install-" + matches.Groups[1].Value + "." + matches.Groups[5].Value;
+                var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-install-" + matches.Groups[1].Value + ".exe";
 
                 try
                 {
