@@ -161,21 +161,26 @@ namespace EQLogParser
       }
     }
 
-    private void ProgressSizeChanged(object sender, SizeChangedEventArgs e)
-    {
-      if (theIcon.Source != null)
-      {
-        SetIconHeight();
-      }
-    }
+    private void ProgressSizeChanged(object sender, SizeChangedEventArgs e) => SetIconHeight();
 
     private void SetIconHeight()
     {
-      var newHeight = (progress.ActualHeight > 0) ? progress.ActualHeight - 1 : 0;
-      if (!newHeight.Equals(theIcon.ActualHeight))
+      if (theIcon.Source == null)
       {
-        theIcon.Height = newHeight;
-        theIcon.Width = double.NaN;
+        if (theIcon.ActualHeight != 0 && theIcon.ActualWidth != 0)
+        {
+          theIcon.Height = 0;
+          theIcon.Width = 0;
+        }
+      }
+      else
+      {
+        var newHeight = (progress.ActualHeight > 0) ? progress.ActualHeight - 1 : 0;
+        if (!newHeight.Equals(theIcon.ActualHeight))
+        {
+          theIcon.Height = newHeight;
+          theIcon.Width = double.NaN;
+        }
       }
     }
 

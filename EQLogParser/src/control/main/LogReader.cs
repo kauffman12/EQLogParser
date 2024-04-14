@@ -29,7 +29,7 @@ namespace EQLogParser
       FileName = fileName;
       _minBack = minBack;
 
-      if (Path.GetDirectoryName(fileName) is { } directory)
+      if (Path.GetDirectoryName(fileName) is { } directory && Directory.Exists(directory))
       {
         logProcessor.LinkTo(_lines);
 

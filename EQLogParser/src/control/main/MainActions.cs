@@ -118,7 +118,7 @@ namespace EQLogParser
           request.Wait();
 
           var matches = InstallerName().Match(request.Result);
-          if (version != null && matches.Success && matches.Groups.Count == 6 && int.TryParse(matches.Groups[2].Value, out var v1) &&
+          if (version != null && matches.Success && matches.Groups.Count == 5 && int.TryParse(matches.Groups[2].Value, out var v1) &&
               int.TryParse(matches.Groups[3].Value, out var v2) && int.TryParse(matches.Groups[4].Value, out var v3)
               && (v1 > version.Major || (v1 == version.Major && v2 > version.Minor) ||
                   (v1 == version.Major && v2 == version.Minor && v3 > version.Build)))
@@ -131,7 +131,7 @@ namespace EQLogParser
 
               if (msg.IsYes1Clicked)
               {
-                var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-" + matches.Groups[1].Value + "." + matches.Groups[5].Value;
+                var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-install-" + matches.Groups[1].Value + "." + matches.Groups[5].Value;
 
                 try
                 {
@@ -149,7 +149,7 @@ namespace EQLogParser
                     Directory.CreateDirectory(path);
                   }
 
-                  var fullPath = $"{path}\\EQLogParser-{matches.Groups[1].Value}.msi";
+                  var fullPath = $"{path}\\EQLogParser-install-{matches.Groups[1].Value}.exe";
                   await using (var fs = new FileStream(fullPath, FileMode.Create))
                   {
                     await download.CopyToAsync(fs);
@@ -157,7 +157,7 @@ namespace EQLogParser
 
                   if (File.Exists(fullPath))
                   {
-                    var process = Process.Start("msiexec", "/i \"" + fullPath + "\"");
+                    var process = Process.Start(fullPath);
                     if (process is { HasExited: false })
                     {
                       await Task.Delay(1000).ContinueWith(_ => { UiUtil.InvokeAsync(() => Application.Current.MainWindow?.Close()); });
@@ -744,7 +744,7 @@ namespace EQLogParser
       }
     }
 
-    [GeneratedRegex(@"EQLogParser-((\d)\.(\d)\.(\d?\d?\d))\.(msi|exe)")]
+    [GeneratedRegex(@"EQLogParser-install-((\d)\.(\d)\.(\d?\d?\d))\.exe")]
     private static partial Regex InstallerName();
   }
 }

@@ -1048,17 +1048,17 @@ namespace EQLogParser
       _speakCollection.CompleteAdding();
       _chatCollection.CompleteAdding();
       _triggerTimeCollection.CompleteAdding();
-      _speakTask.Wait();
-      _chatTask.Wait();
-      _triggerTimeTask.Wait();
-      _processTask.Wait();
-      _speakTask.Dispose();
-      _chatTask.Dispose();
-      _triggerTimeTask.Dispose();
-      _processTask.Dispose();
-      _speakCollection.Dispose();
-      _chatCollection.Dispose();
-      _triggerTimeCollection.Dispose();
+      _speakTask?.Wait();
+      _chatTask?.Wait();
+      _triggerTimeTask?.Wait();
+      _processTask?.Wait();
+      _speakTask?.Dispose();
+      _chatTask?.Dispose();
+      _triggerTimeTask?.Dispose();
+      _processTask?.Dispose();
+      _speakCollection?.Dispose();
+      _chatCollection?.Dispose();
+      _triggerTimeCollection?.Dispose();
       _soundPlayer?.Dispose();
 
       lock (_voiceLock)
