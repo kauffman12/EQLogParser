@@ -33,6 +33,7 @@ SetupIconFile={#MySrcDir}\src\ui\main\EQLogParser.ico
 UninstallDisplayIcon={#MySrcDir}\src\ui\main\EQLogParser.ico
 Compression=lzma
 SolidCompression=yes
+SignTool=signtool
 WizardImageFile=background.bmp
 WizardSmallImageFile=graphic.bmp
 WizardStyle=modern
