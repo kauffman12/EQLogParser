@@ -162,7 +162,7 @@ begin
   // Prepare the PowerShell script content
   ScriptContent :=
     'Get-WmiObject -Class Win32_Product | ' +
-    'Where-Object {$_.Name -eq "EQLogParser"} | ' +
+    'Where-Object {$_.Name -match "EQLogParser"} | ' +
     'Select-Object -Property IdentifyingNumber | ' +
     'ForEach-Object { Write-Output $_.IdentifyingNumber }';
 
@@ -283,22 +283,33 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  PSFilePath, ProductCode: AnsiString;
+  PSFilePath, Output, ProductCode: AnsiString;
   ErrorCode: Integer;
+  Lines: TStringList;
+  i: Integer;  // Index for looping over the lines
 begin
   if CurStep = ssInstall then
   begin
-    // Create the PowerShell script that identifies the product code
     PSFilePath := CreatePowerShellScript();
 
-    // Execute the PowerShell script and get the ProductCode as output
-    if ExecutePowerShellScriptAndGetOutput(PSFilePath, ProductCode) then
+    // Execute the PowerShell script and load the output into 'Output'
+    if ExecutePowerShellScriptAndGetOutput(PSFilePath, Output) then
     begin
-      ProductCode := Trim(ProductCode);
-      if ProductCode <> '' then
-      begin
-        // Construct and execute the silent uninstall command using the obtained ProductCode
-        Exec('msiexec.exe', '/x' + ProductCode + ' /qn', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+      Lines := TStringList.Create;
+      try
+        Lines.Text := Output; // Converts the entire output into a list of lines
+        // Iterate through each line, assuming each line is a potential ProductCode
+        for i := 0 to Lines.Count - 1 do
+        begin
+          ProductCode := Trim(Lines[i]);  // Access each line using an index
+          if ProductCode <> '' then
+          begin
+            // Construct and execute the silent uninstall command for each ProductCode
+            Exec('msiexec.exe', '/x' + ProductCode + ' /qn', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+          end;
+        end;
+      finally
+        Lines.Free;
       end;
     end;
   end;

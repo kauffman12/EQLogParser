@@ -6,7 +6,7 @@
     <ProductVersion>3.10</ProductVersion>
     <ProjectGuid>65071f13-ea39-45f6-8a4d-7abd2349384d</ProjectGuid>
     <SchemaVersion>2.0</SchemaVersion>
-    <OutputName>EQLogParserMSI</OutputName>
+    <OutputName>EQLogParser-2.2.11</OutputName>
     <OutputType>Package</OutputType>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
