@@ -22,7 +22,8 @@ Syncfusion components used by this application require a license. If you apply f
 
 Additional Notes:</br>
 The installer for EQLogParser has been signed with a certificate. It's recommended that the following steps are done ONCE so that you're sure you have an official version. After your system trusts the certificate you'll notice the install prompt will be blue in color and no longer say Unknown Publisher. Then in the future if it returns to yellow/Unknown Publisher you'll know that the installer either wasn't from me or I had to change certificates. Which I will mention here if I have change them.
-The last version of the MSI installer is: EQLogParser-2.2.11.msi and it wraps the .exe installer. It's kept so that old auto-installs will find it and be able to upgrade to the exe version.
+
+The last version of the MSI installer: EQLogParser-2.2.11.msi wraps the .exe installer so auto update works for older parsers and will stay in the release directory for a while.
 
 1. right-click the msi file and choose properties
 2. under the digital signatures tab select the one signature and click details
