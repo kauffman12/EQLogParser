@@ -3,7 +3,7 @@
   <Product Id="*" Name="EQLogParser" Language="1033" Version="2.2.11" Manufacturer="Kizant" UpgradeCode="2922d23e-40d1-4d1a-96a9-c205202c04fb">
     <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
-    <MediaTemplate />
+    <MediaTemplate EmbedCab="yes" />
     <Feature Id="ProductFeature" Title="EQLogParser" Level="1">
       <ComponentGroupRef Id="ProductComponents" />
     </Feature>
