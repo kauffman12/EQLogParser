@@ -9,7 +9,7 @@
     </Feature>
 
     <!-- Binary element for the executable to run -->
-    <Binary Id="ExeBinary" SourceFile="..\EQLogParserInstall\Output\EQLogParser-2.2.11.exe"/>
+    <Binary Id="ExeBinary" SourceFile="..\EQLogParserInstall\Output\EQLogParser-install-2.2.11.exe"/>
     <!-- CustomAction to execute the binary -->
     <CustomAction Id="RunExe" BinaryKey="ExeBinary" ExeCommand="" Execute="deferred" Return="asyncNoWait" Impersonate="no"/>
 
