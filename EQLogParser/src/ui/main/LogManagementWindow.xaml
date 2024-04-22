@@ -31,12 +31,15 @@
     </Grid.RowDefinitions>
     <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3">
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="20,4,0,0">
-        <CheckBox x:Name="enableCheckBox" Margin="4,3,0,0" VerticalAlignment="Center" FontWeight="Normal" FocusVisualStyle="{x:Null}" Checked="EnableCheckBoxOnChecked" Unchecked="EnableCheckBoxOnUnchecked"/>
+        <CheckBox x:Name="enableCheckBox" Margin="-5,3,0,0" VerticalAlignment="Center" FontWeight="Normal" FocusVisualStyle="{x:Null}" Checked="EnableCheckBoxOnChecked" Unchecked="EnableCheckBoxOnUnchecked"/>
         <Label x:Name="titleLabel" Margin="8,4,8,0" VerticalContentAlignment="Center" Padding="0,0,0,2" Content="Enable Log Management" Style="{DynamicResource EQTitleStyle}" Foreground="{DynamicResource EQStopForegroundBrush}"/>
+      </StackPanel>
+      <StackPanel Orientation="Vertical" Margin="12,5,5,0">
+        <TextBlock Margin="0,0,0,0" TextWrapping="WrapWithOverflow" FontSize="{DynamicResource EQContentSize}" Width="270" FontStyle="Italic" Text="The archived logs will only be created when a file is first opened or when zoning."></TextBlock>
       </StackPanel>
     </StackPanel>
     <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.ColumnSpan="3">
-      <StackPanel Orientation="Vertical" Margin="15,-10,20,0">
+      <StackPanel Orientation="Vertical" Margin="15,-10,15,0">
         <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
           <Grid>
             <Grid.ColumnDefinitions>
@@ -44,7 +47,7 @@
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Button Grid.Column="0" Content="Select Archive Folder" FontSize="{DynamicResource EQContentSize}" HorizontalAlignment="Left" Width="145" Padding="10,4,12,4" Click="ChooseFolderClicked" ToolTip="Folder where Log File Archives are kept."/>
-            <TextBox Grid.Column="1" Name="txtFolderPath" FontStyle="Italic" Text="Select Archive Folder" FontSize="{DynamicResource EQContentSize}" IsReadOnly="True" Width="300"/>
+            <TextBox Grid.Column="1" Name="txtFolderPath" FontStyle="Italic" Margin="8,0,0,0" Text="Select Archive Folder" FontSize="{DynamicResource EQContentSize}" IsReadOnly="True" Width="320"/>
           </Grid>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
@@ -53,8 +56,8 @@
               <ColumnDefinition Width="160" />
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
-            <Label Grid.Column="0" Content="Archive If File Size > " HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only Archive Log File if it is larger than the selected size." />
-            <ComboBox Grid.Column="1" x:Name="fileSizes" SelectedIndex="0" Width="300" SelectionChanged="OptionsChanged">
+            <Label Grid.Column="0" Content="Archive If File Size  > " HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only Archive Log File if it is larger than the selected size." />
+            <ComboBox Grid.Column="1" x:Name="fileSizes" SelectedIndex="0" Margin="8,0,0,0" Width="320" SelectionChanged="OptionsChanged">
               <ComboBoxItem>Any Size</ComboBoxItem>
               <ComboBoxItem>25M</ComboBoxItem>
               <ComboBoxItem>50M</ComboBoxItem>
@@ -75,9 +78,11 @@
               <ColumnDefinition Width="160" />
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
-            <Label Grid.Column="0" Content="Archive If File Age >" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only Archive Log File if it was created prior to the selected time range."/>
-            <ComboBox Grid.Column="1" x:Name="fileAges" SelectedIndex="0" Width="300" SelectionChanged="OptionsChanged">
+            <Label Grid.Column="0" Content="Archive If File Age  >" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only Archive Log File if it was created prior to the selected time range."/>
+            <ComboBox Grid.Column="1" x:Name="fileAges" SelectedIndex="0" Margin="8,0,0,0" Width="320" SelectionChanged="OptionsChanged">
               <ComboBoxItem>Any Age</ComboBoxItem>
+              <ComboBoxItem>1 Day</ComboBoxItem>
+              <ComboBoxItem>3 Days</ComboBoxItem>
               <ComboBoxItem>1 Week</ComboBoxItem>
               <ComboBoxItem>2 Weeks</ComboBoxItem>
               <ComboBoxItem>3 Weeks</ComboBoxItem>
@@ -87,7 +92,7 @@
         </StackPanel>
       </StackPanel>
     </StackPanel>
-    <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Right" Margin="0,20,20,10">
+    <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Right" Margin="0,15,12,10">
       <Button x:Name="closeButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}" FontSize="{DynamicResource EQContentSize}" Click="CloseClicked" Margin="2,0,4,0" Width="80" Content="Ok" IsEnabled="True" />
     </StackPanel>
   </Grid>

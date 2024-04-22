@@ -95,7 +95,7 @@ namespace EQLogParser
       _testProcessor?.Dispose();
       const string name = TriggerStateManager.DefaultUser;
       _testProcessor = new TriggerProcessor(name, $"Trigger Tester ({name})", ConfigUtil.PlayerName, config.Voice,
-        config.VoiceRate, AddTextEvent, AddTimerEvent);
+        config.VoiceRate, null, null, AddTextEvent, AddTimerEvent);
       _testProcessor.SetTesting(true);
       _testProcessor.LinkTo(collection);
       UiUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
@@ -108,7 +108,7 @@ namespace EQLogParser
       var playerName = character.Name;
       FileUtil.ParseFileName(character.FilePath, ref playerName, ref server);
       _testProcessor = new TriggerProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, character.Voice,
-        character.VoiceRate, AddTextEvent, AddTimerEvent);
+        character.VoiceRate, character.ActiveColor, character.FontColor, AddTextEvent, AddTimerEvent);
       _testProcessor.SetTesting(true);
       _testProcessor.LinkTo(collection);
       UiUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
@@ -201,7 +201,7 @@ namespace EQLogParser
                 var playerName = character.Name;
                 FileUtil.ParseFileName(character.FilePath, ref playerName, ref server);
                 var reader = new LogReader(new TriggerProcessor(character.Id, character.Name, playerName,
-                  character.Voice, character.VoiceRate, AddTextEvent, AddTimerEvent), character.FilePath);
+                  character.Voice, character.VoiceRate, character.ActiveColor, character.FontColor, AddTextEvent, AddTimerEvent), character.FilePath);
                 _logReaders.Add(reader);
                 RunningFiles[character.FilePath] = true;
               }
@@ -220,7 +220,7 @@ namespace EQLogParser
               if (MainWindow.CurrentLogFile is { } currentFile)
               {
                 _logReaders.Add(new LogReader(new TriggerProcessor(TriggerStateManager.DefaultUser, TriggerStateManager.DefaultUser,
-                  ConfigUtil.PlayerName, config.Voice, config.VoiceRate, AddTextEvent, AddTimerEvent), currentFile));
+                  ConfigUtil.PlayerName, config.Voice, config.VoiceRate, null, null, AddTextEvent, AddTimerEvent), currentFile));
                 ((MainWindow)Application.Current?.MainWindow)?.ShowTriggersEnabled(true);
 
                 // only 1 running file in basic mode
@@ -381,9 +381,10 @@ namespace EQLogParser
       }
     }
 
-    private void AddTextEvent(string text, Trigger trigger)
+    private void AddTextEvent(string text, Trigger trigger, string fontColor)
     {
       var beginTicks = DateTime.UtcNow.Ticks;
+      fontColor ??= trigger.FontColor;
       UiUtil.InvokeAsync(() =>
       {
         var textOverlayFound = false;
@@ -401,7 +402,7 @@ namespace EQLogParser
 
             if (windowData != null)
             {
-              var brush = TriggerUtil.GetBrush(trigger.FontColor);
+              var brush = UiUtil.GetBrush(fontColor);
               (windowData.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
               textOverlayFound = true;
             }
@@ -416,7 +417,7 @@ namespace EQLogParser
           }
 
           // using default
-          var brush = TriggerUtil.GetBrush(trigger.FontColor);
+          var brush = UiUtil.GetBrush(fontColor);
           (windowData?.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
           textOverlayFound = true;
         }

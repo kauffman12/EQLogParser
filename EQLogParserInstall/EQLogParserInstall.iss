@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "EQLogParser"
-#define MyAppVersion "2.2.11"
+#define MyAppVersion "2.2.12"
 #define MyAppPublisher "Kizant"
 #define MyAppURL "https://github.com/kauffman12/EQLogParser"
 #define MyAppExeName "EQLogParser.exe"
@@ -230,54 +230,25 @@ end;
 
 function IsDotNet8Installed: Boolean;
 var
-  TempFile: string;
-  OutputLines: TStringList;
-  I: Integer;
-  ExitCode: Integer;
+  FindResult: TFindRec;
+  Path: string;
 begin
-  // Assume .NET 8 is not installed
   Result := False;
-
-  // Generate a path for the temp file where the output will be stored
-  TempFile := ExpandConstant('{tmp}\dotnet_runtimes.txt');
-
-  // Initialize ExitCode
-  ExitCode := 0;
-
-  // Create the batch file dynamically
-  CreateBatchFile;
-
-  // Execute the batch file that checks for .NET version
-  if Exec(ExpandConstant('{tmp}\CheckDotNetVersion.cmd'), '', '', SW_HIDE, ewWaitUntilTerminated, ExitCode) then
+  // Construct the path to the .NET shared directory for x64 installations
+  Path := ExpandConstant('{pf64}\dotnet\shared\Microsoft.WindowsDesktop.App\');
+  // Check if the directory exists and iterate
+  if FindFirst(Path + '*', FindResult) then
   begin
-    // Check if the command was successful based on ExitCode
-    if ExitCode = 0 then
-    begin
-      // Check if the output file was created
-      if FileExists(TempFile) then
+    repeat
+      // Check if the found item is a directory and starts with '8'
+      if (FindResult.Attributes and FILE_ATTRIBUTE_DIRECTORY <> 0) and
+         (Pos('8', FindResult.Name) = 1) then
       begin
-        OutputLines := TStringList.Create;
-        try
-          // Load the output from the temp file
-          OutputLines.LoadFromFile(TempFile);
-          
-          // Search each line for the presence of .NET 8
-          for I := 0 to OutputLines.Count - 1 do
-          begin
-            if Pos('Microsoft.WindowsDesktop.App 8.', OutputLines[I]) > 0 then
-            begin
-              // If found, set Result to True and exit
-              Result := True;
-              Break;
-            end;
-          end;
-        finally
-          OutputLines.Free;
-          // Clean up by deleting the temp file
-          DeleteFile(TempFile);
-        end;
+        Result := True;
+        Break;  // Found a directory, no need to continue
       end;
-    end;
+    until not FindNext(FindResult);
+    FindClose(FindResult);
   end;
 end;
 

@@ -247,13 +247,15 @@ namespace EQLogParser
     public bool IsEnabled { get; set; }
     public string Voice { get; set; }
     public int VoiceRate { get; set; }
+    public string ActiveColor { get; set; } = null;
+    public string FontColor { get; set; } = null;
   }
 
   internal class TriggerConfig
   {
     public string Id { get; set; }
     public bool IsAdvanced { get; set; }
-    public List<TriggerCharacter> Characters { get; set; } = new();
+    public List<TriggerCharacter> Characters { get; set; } = [];
     public bool IsEnabled { get; set; }
     public string Voice { get; set; }
     public int VoiceRate { get; set; }

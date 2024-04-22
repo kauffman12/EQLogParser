@@ -70,6 +70,7 @@ namespace EQLogParser
     }
 
     private void OnFileCreated(object sender, FileSystemEventArgs e) => StartReadingFile();
+
     private void OnFileMoved(object sender, FileSystemEventArgs e)
     {
       _cts?.Cancel();
@@ -169,7 +170,8 @@ namespace EQLogParser
     {
       if (theLine.Length > 28)
       {
-        if (previous == null || !theLine.AsSpan(1, 24).SequenceEqual(previous.AsSpan(1, 24)))
+        var lineSpan = theLine.AsSpan();
+        if (previous == null || !lineSpan.Slice(1, 24).SequenceEqual(previous.AsSpan(1, 24)))
         {
           var dateTime = DateUtil.ParseStandardDate(theLine);
           if (dateTime == DateTime.MinValue)
@@ -181,6 +183,13 @@ namespace EQLogParser
         }
 
         if (cancelToken.IsCancellationRequested) return;
+
+        // if zoning during monitor try to archive
+        if (monitor && lineSpan[27..].StartsWith("LOADING, PLEASE WAIT..."))
+        {
+          FileUtil.ArchiveFile(this);
+        }
+
         _lines.Add(Tuple.Create(theLine, doubleValue, monitor), cancelToken);
         previous = theLine;
       }

@@ -377,12 +377,18 @@ namespace EQLogParser
         if (gridBase is SfDataGrid { ItemsSource: not null } dataGrid)
         {
           dataGrid.GridColumnSizer?.ResetAutoCalculationforAllColumns();
-          dataGrid.GridColumnSizer?.Refresh();
+          if (dataGrid.View != null)
+          {
+            dataGrid.GridColumnSizer?.Refresh();
+          }
         }
         else if (gridBase is SfTreeGrid { ItemsSource: not null } treeGrid)
         {
           treeGrid.TreeGridColumnSizer?.ResetAutoCalculationforAllColumns();
-          treeGrid.TreeGridColumnSizer?.Refresh();
+          if (treeGrid.View != null)
+          {
+            treeGrid.TreeGridColumnSizer?.Refresh();
+          }
         }
       }
       catch (Exception ex)
