@@ -33,7 +33,7 @@ namespace EQLogParser
 
     internal void Display()
     {
-      Task.Delay(100).ContinueWith(task =>
+      Task.Delay(100).ContinueWith(_ =>
       {
         Dispatcher.InvokeAsync(() =>
         {
