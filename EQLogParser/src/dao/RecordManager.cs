@@ -35,7 +35,7 @@ namespace EQLogParser
     private readonly Timer _eventTimer;
 
     private static readonly string[] TimedRecordTypes =
-    {
+    [
       DeathRecords,
       HealRecords,
       LootRecords,
@@ -46,7 +46,7 @@ namespace EQLogParser
       ResistRecords,
       SpecialRecords,
       ZoneRecords
-    };
+    ];
 
     private RecordManager()
     {

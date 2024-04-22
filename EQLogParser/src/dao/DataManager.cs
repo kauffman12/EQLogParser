@@ -673,7 +673,7 @@ namespace EQLogParser
         {
           // one more thing, if all the abbreviations look the same then we know the spell
           // even if the version is wrong. grab the newest
-          result = (output.Distinct(AbbrvComparer).Count() == 1) ? new List<SpellData> { output.First() } : output;
+          result = (output.Distinct(AbbrvComparer).Count() == 1) ? [output.First()] : output;
         }
         else
         {
