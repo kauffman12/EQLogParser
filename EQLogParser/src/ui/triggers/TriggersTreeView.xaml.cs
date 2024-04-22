@@ -101,15 +101,7 @@ namespace EQLogParser
       if (_findTriggerEnumerator?.MoveNext() == true)
       {
         var node = _findTriggerEnumerator.Current;
-        if (node?.IsTrigger() == true)
-        {
-          triggerTreeView.ExpandNode(node.ParentNode);
-        }
-        else
-        {
-          triggerTreeView.ExpandNode(node);
-        }
-
+        triggerTreeView.ExpandNode(node?.IsTrigger() == true ? node.ParentNode : node);
         triggerTreeView.SelectedItems?.Clear();
         triggerTreeView.SelectedItem = node;
         SelectionChanged(node);
@@ -404,7 +396,7 @@ namespace EQLogParser
           {
             if (isCutNode)
             {
-              Delete(new List<TriggerTreeViewNode> { copiedNode });
+              Delete([copiedNode]);
             }
 
             TriggerStateManager.Instance.Copy(copiedNode.SerializedData, node.SerializedData);

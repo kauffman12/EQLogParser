@@ -17,10 +17,10 @@ namespace EQLogParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly string[] CommonFontFamilies =
-    {
+    [
       "Arial", "Calibri", "Cambria", "Cascadia Code", "Century Gothic", "Lucida Sans",
       "Open Sans", "Segoe UI", "Tahoma", "Roboto", "Helvetica"
-    };
+    ];
 
     internal static BitmapImage CreateBitmap(string path)
     {
@@ -68,7 +68,7 @@ namespace EQLogParser
           if (titleLabel != null)
           {
             var titleBrush = new VisualBrush(titleLabel);
-            ctx.DrawRectangle(titleBrush, null, new Rect(new Point(4, titlePadding / 2), new Size(titleWidth, titleHeight)));
+            ctx.DrawRectangle(titleBrush, null, new Rect(new Point(4, titlePadding / 2.0), new Size(titleWidth, titleHeight)));
           }
 
           var chartBrush = new VisualBrush(content);
@@ -125,15 +125,7 @@ namespace EQLogParser
     {
       var settingsLoc = optionsPanel.PointToScreen(new Point(0, 0));
       var titleLoc = titlePanel.PointToScreen(new Point(0, 0));
-
-      if ((titleLoc.X + titlePanel.ActualWidth) > (settingsLoc.X + 10))
-      {
-        titlePanel.Visibility = Visibility.Hidden;
-      }
-      else
-      {
-        titlePanel.Visibility = Visibility.Visible;
-      }
+      titlePanel.Visibility = (titleLoc.X + titlePanel.ActualWidth) > (settingsLoc.X + 10) ? Visibility.Hidden : Visibility.Visible;
     }
 
     internal static void ClearMenuEvents(ItemCollection collection, RoutedEventHandler func)
