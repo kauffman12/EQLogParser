@@ -263,7 +263,7 @@ namespace EQLogParser
 
   internal class ExportTriggerNode : TriggerNode
   {
-    public List<ExportTriggerNode> Nodes { get; set; } = new();
+    public List<ExportTriggerNode> Nodes { get; set; } = [];
   }
 
   internal class LegacyTriggerNode
@@ -271,7 +271,7 @@ namespace EQLogParser
     public bool? IsEnabled { get; set; } = false;
     public bool IsExpanded { get; set; } = false;
     public string Name { get; set; }
-    public List<LegacyTriggerNode> Nodes { get; set; } = new();
+    public List<LegacyTriggerNode> Nodes { get; set; } = [];
     public Trigger TriggerData { get; set; }
     public LegacyOverlay OverlayData { get; set; }
   }
@@ -336,7 +336,7 @@ namespace EQLogParser
   {
     public CombinedStats CombinedStats { get; set; }
     public ISummaryBuilder Builder { get; set; }
-    public List<PlayerStats> Selected { get; } = new();
+    public List<PlayerStats> Selected { get; } = [];
   }
 
   internal class TimedAction : IAction

@@ -29,7 +29,7 @@ namespace EQLogParser
     private const ushort TankAdps = 4;
     private const ushort HealingAdps = 8;
     private const ushort AnyAdps = CasterAdps + MeleeAdps + TankAdps + HealingAdps;
-    private readonly string[] _types = { "Defensive Skills", "ADPS", "Healing Skills" };
+    private readonly string[] _types = ["Defensive Skills", "ADPS", "Healing Skills"];
     private readonly Dictionary<string, SpellRange> _spellRanges = [];
     private readonly List<TextBlock> _headers = [];
     private readonly Dictionary<string, byte> _selfOnly = [];

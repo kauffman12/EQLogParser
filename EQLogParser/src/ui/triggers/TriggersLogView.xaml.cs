@@ -56,14 +56,7 @@ namespace EQLogParser
     {
       if (sender is ComboBox combo && dataGrid != null)
       {
-        if (combo.SelectedIndex >= 0)
-        {
-          dataGrid.ItemsSource = _alertLogs[combo.SelectedIndex].Item2;
-        }
-        else
-        {
-          dataGrid.ItemsSource = null;
-        }
+        dataGrid.ItemsSource = combo.SelectedIndex >= 0 ? _alertLogs[combo.SelectedIndex].Item2 : null;
       }
     }
 

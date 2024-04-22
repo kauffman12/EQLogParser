@@ -507,7 +507,7 @@ namespace EQLogParser
         else if (args.Property.Name == timerModeItem.PropertyName)
         {
           PropertyGridUtil.EnableCategories(thePropertyGrid,
-            new dynamic[] { new { Name = idleBrushItem.CategoryName, IsEnabled = (int)args.Property.Value == 1 } });
+            [new { Name = idleBrushItem.CategoryName, IsEnabled = (int)args.Property.Value == 1 }]);
         }
 
         if (timerChange)
