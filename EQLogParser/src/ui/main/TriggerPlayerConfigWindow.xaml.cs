@@ -48,6 +48,20 @@ namespace EQLogParser
         }
 
         rateOption.SelectedIndex = _theCharacter.VoiceRate;
+
+        if (_theCharacter.ActiveColor != null && UiUtil.GetBrush(_theCharacter.ActiveColor) is { } activeColor)
+        {
+          activeColorPicker.Color = activeColor.Color;
+          activeColorPicker.Visibility = Visibility.Visible;
+          activeSelectText.Visibility = Visibility.Collapsed;
+        }
+
+        if (_theCharacter.FontColor != null && UiUtil.GetBrush(_theCharacter.FontColor) is { } fontColor)
+        {
+          fontColorPicker.Color = fontColor.Color;
+          fontColorPicker.Visibility = Visibility.Visible;
+          fontSelectText.Visibility = Visibility.Collapsed;
+        }
       }
       else
       {
@@ -58,6 +72,7 @@ namespace EQLogParser
     }
 
     private void CancelClicked(object sender, RoutedEventArgs e) => Close();
+    private void TextChanged(object sender, TextChangedEventArgs e) => EnableSave();
 
     private void NamePreviewKeyDown(object sender, KeyEventArgs e)
     {
@@ -88,13 +103,18 @@ namespace EQLogParser
 
     private void SaveClicked(object sender, RoutedEventArgs e)
     {
+      var activeColor = activeColorPicker.Visibility == Visibility.Visible ? activeColorPicker?.Color.ToHexString() : null;
+      var fontColor = fontColorPicker.Visibility == Visibility.Visible ? fontColorPicker?.Color.ToHexString() : null;
+
       if (_theCharacter == null)
       {
-        TriggerStateManager.Instance.AddCharacter(characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(), rateOption.SelectedIndex);
+        TriggerStateManager.Instance.AddCharacter(characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(),
+          rateOption.SelectedIndex, activeColor, fontColor);
       }
       else
       {
-        TriggerStateManager.Instance.UpdateCharacter(_theCharacter.Id, characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(), rateOption.SelectedIndex);
+        TriggerStateManager.Instance.UpdateCharacter(_theCharacter.Id, characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(),
+          rateOption.SelectedIndex, activeColor, fontColor);
       }
 
       Close();
@@ -108,8 +128,6 @@ namespace EQLogParser
           characterName?.Text.Length > 0 && txtFilePath?.Text.Length > 0;
       }
     }
-
-    private void TextChanged(object sender, TextChangedEventArgs e) => EnableSave();
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
     {
@@ -168,6 +186,42 @@ namespace EQLogParser
     private void TriggerPlayerConfigWindowOnClosing(object sender, CancelEventArgs e)
     {
       _testSynth?.Dispose();
+    }
+
+    private void ResetActiveColorClick(object sender, RoutedEventArgs e)
+    {
+      activeColorPicker.Visibility = Visibility.Collapsed;
+      activeSelectText.Visibility = Visibility.Visible;
+      EnableSave();
+    }
+
+    private void SelectActiveColorClick(object sender, MouseButtonEventArgs e)
+    {
+      activeColorPicker.Visibility = Visibility.Visible;
+      activeSelectText.Visibility = Visibility.Collapsed;
+      EnableSave();
+    }
+
+    private void ResetFontColorClick(object sender, RoutedEventArgs e)
+    {
+      fontColorPicker.Visibility = Visibility.Collapsed;
+      fontSelectText.Visibility = Visibility.Visible;
+      EnableSave();
+    }
+
+    private void SelectFontColorClick(object sender, MouseButtonEventArgs e)
+    {
+      fontColorPicker.Visibility = Visibility.Visible;
+      fontSelectText.Visibility = Visibility.Collapsed;
+      EnableSave();
+    }
+
+    private void SelectedColorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+      if (_ready)
+      {
+        EnableSave();
+      }
     }
   }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -15,6 +16,19 @@ namespace EQLogParser
 
   internal static class UiUtil
   {
+    private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new();
+
+    internal static SolidColorBrush GetBrush(string color)
+    {
+      SolidColorBrush brush = null;
+      if (!string.IsNullOrEmpty(color) && !BrushCache.TryGetValue(color, out brush))
+      {
+        brush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(color)! };
+        BrushCache[color] = brush;
+      }
+      return brush;
+    }
+
     internal static void InvokeNow(Action action, DispatcherPriority priority = DispatcherPriority.Normal)
     {
       if (Application.Current?.Dispatcher is { } dispatcher)

@@ -18,7 +18,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using Path = System.IO.Path;
-using SolidColorBrush = System.Windows.Media.SolidColorBrush;
 
 namespace EQLogParser
 {
@@ -26,7 +25,6 @@ namespace EQLogParser
   {
     public const string ShareTrigger = "EQLPT";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new();
     private static readonly ConcurrentDictionary<string, CharacterData> QuickShareCache = new();
     private const string ExtTrigger = "tgf";
     private const string ExtOverlay = "ogf";
@@ -71,17 +69,6 @@ namespace EQLogParser
       return isValid;
     }
 
-    internal static SolidColorBrush GetBrush(string color)
-    {
-      SolidColorBrush brush = null;
-      if (!string.IsNullOrEmpty(color) && !BrushCache.TryGetValue(color, out brush))
-      {
-        brush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(color)! };
-        BrushCache[color] = brush;
-      }
-      return brush;
-    }
-
     internal static void Copy(object to, object from)
     {
       if (to is Trigger toTrigger && from is Trigger fromTrigger)
@@ -120,8 +107,8 @@ namespace EQLogParser
 
         if (toTrigger is TriggerPropertyModel toModel)
         {
-          toModel.TriggerActiveBrush = GetBrush(fromTrigger.ActiveColor);
-          toModel.TriggerFontBrush = GetBrush(fromTrigger.FontColor);
+          toModel.TriggerActiveBrush = UiUtil.GetBrush(fromTrigger.ActiveColor);
+          toModel.TriggerFontBrush = UiUtil.GetBrush(fromTrigger.FontColor);
           toModel.TriggerIconSource = UiElementUtil.CreateBitmap(fromTrigger.IconSource);
 
           var (textItems, timerItems) = GetOverlayItems(toModel.SelectedOverlays);
@@ -282,7 +269,7 @@ namespace EQLogParser
       var colorValue = (string)fromOverlay.GetType().GetProperty(colorProperty)?.GetValue(fromOverlay);
       if (!string.IsNullOrEmpty(colorValue))
       {
-        var brush = GetBrush(colorValue);
+        var brush = UiUtil.GetBrush(colorValue);
         toModel.GetType().GetProperty(brushProperty)?.SetValue(toModel, brush);
         Application.Current.Resources[$"{prefixx}-{toModel.Node.Id}"] = brush;
       }

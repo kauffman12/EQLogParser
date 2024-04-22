@@ -37,6 +37,8 @@ namespace EQLogParser
     private static readonly Dictionary<string, int> ArchiveFileAges = new()
     {
       { "any age", 0 },
+      { "1 day", 1 },
+      { "3 days", 3 },
       { "1 week", 7 },
       { "2 weeks", 14 },
       { "3 weeks", 21 },
@@ -54,10 +56,9 @@ namespace EQLogParser
       lock (LockObject)
       {
         ArchiveQueue.Add(logReader);
-
         if (ArchiveQueue.Count == 1)
         {
-          Task.Delay(5000).ContinueWith(_ => ArchiveProcess());
+          Task.Delay(2500).ContinueWith(_ => ArchiveProcess());
         }
       }
     }
