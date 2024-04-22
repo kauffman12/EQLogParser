@@ -72,7 +72,7 @@ namespace EQLogParser
       {
         if (timerData?.FontColor != null)
         {
-          var brush = TriggerUtil.GetBrush(timerData.FontColor);
+          var brush = UiUtil.GetBrush(timerData.FontColor);
           time.Foreground = brush;
           title.Foreground = brush;
         }
@@ -130,7 +130,7 @@ namespace EQLogParser
     {
       if (timerData?.ActiveColor != null)
       {
-        if (TriggerUtil.GetBrush(timerData.ActiveColor) is var color && progress.ProgressColor != color)
+        if (UiUtil.GetBrush(timerData.ActiveColor) is var color && progress.ProgressColor != color)
         {
           progress.ProgressColor = color;
           _theState = State.None;

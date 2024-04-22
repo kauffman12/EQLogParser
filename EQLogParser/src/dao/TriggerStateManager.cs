@@ -172,7 +172,7 @@ namespace EQLogParser
       }
     }
 
-    internal void AddCharacter(string name, string filePath, string voice, int voiceRate)
+    internal void AddCharacter(string name, string filePath, string voice, int voiceRate, string activeColor, string fontColor)
     {
       if (GetConfig() is { } config)
       {
@@ -182,6 +182,8 @@ namespace EQLogParser
           FilePath = filePath,
           Voice = voice,
           VoiceRate = voiceRate,
+          ActiveColor = activeColor,
+          FontColor = fontColor,
           Id = Guid.NewGuid().ToString()
         };
 
@@ -230,7 +232,7 @@ namespace EQLogParser
       }
     }
 
-    internal void UpdateCharacter(string id, string name, string filePath, string voice, int voiceRate)
+    internal void UpdateCharacter(string id, string name, string filePath, string voice, int voiceRate, string activeColor, string fontColor)
     {
       if (GetConfig() is { } config && config.Characters.FirstOrDefault(character => character.Id == id) is { } existing)
       {
@@ -238,6 +240,8 @@ namespace EQLogParser
         existing.FilePath = filePath;
         existing.Voice = voice;
         existing.VoiceRate = voiceRate;
+        existing.ActiveColor = activeColor;
+        existing.FontColor = fontColor;
         UpdateConfig(config);
       }
     }

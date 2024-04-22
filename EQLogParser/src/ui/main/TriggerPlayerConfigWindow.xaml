@@ -17,8 +17,8 @@
   WindowStartupLocation="CenterOwner"
   SizeToContent="WidthAndHeight"
   MinHeight="135"
-  Title="Add New Character" 
-  Height="180" Width="375">
+  Title="Add New Character"
+  Height=" 180" Width="375">
   <Grid>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="1*" />
@@ -34,7 +34,7 @@
         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
           <Grid>
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="110" />
+              <ColumnDefinition Width="155" />
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Name:" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" />
@@ -44,7 +44,7 @@
         <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
           <Grid>
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="110" />
+              <ColumnDefinition Width="155" />
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Button Grid.Column="0" Content="Select Log" FontSize="{DynamicResource EQContentSize}" HorizontalAlignment="Left" Width="94" Padding="10,4,12,4" Click="ChooseFileClicked"/>
@@ -54,7 +54,7 @@
         <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
           <Grid>
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="110" />
+              <ColumnDefinition Width="155" />
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Voice:" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" />
@@ -64,7 +64,7 @@
         <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
           <Grid>
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="110" />
+              <ColumnDefinition Width="155" />
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Voice Rate:" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" />
@@ -78,9 +78,37 @@
             </ComboBox>
           </Grid>
         </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="150" />
+              <ColumnDefinition Width="70*" />
+            </Grid.ColumnDefinitions>
+            <Label Grid.Column="0" Content="Overlay Active Color:" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" />
+            <StackPanel Orientation="Horizontal" Grid.Column="1">
+              <TextBox x:Name="activeSelectText" IsReadOnly="True" PreviewMouseLeftButtonDown="SelectActiveColorClick" Text="Click to Select Color" FontStyle="Italic" Cursor="Hand" FontSize="{DynamicResource EQContentSize}" Width="305" BorderThickness="0" Padding="4,4,0,4" Margin="0"></TextBox>
+              <syncfusion:ColorPicker x:Name="activeColorPicker" SelectedBrushChanged="SelectedColorChanged" Visibility="Collapsed" Width="305" BorderThickness="0" Padding="4,0,0,4" Margin="0" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False" />
+              <Button Margin="5,3,0,1" Padding="5,0,5,0" Click="ResetActiveColorClick">Reset</Button>
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="150" />
+              <ColumnDefinition Width="70*" />
+            </Grid.ColumnDefinitions>
+            <Label Grid.Column="0" Content="Overlay Font Color:" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+              <TextBox x:Name="fontSelectText" IsReadOnly="True" PreviewMouseLeftButtonDown="SelectFontColorClick" Text="Click to Select Color" FontStyle="Italic" Cursor="Hand" FontSize="{DynamicResource EQContentSize}" Width="305" BorderThickness="0" Padding="4,4,0,4" Margin="0"></TextBox>
+              <syncfusion:ColorPicker x:Name="fontColorPicker" SelectedBrushChanged="SelectedColorChanged" Visibility="Collapsed" Width="305" BorderThickness="0" Padding="4,0,0,4" Margin="0" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False" />
+              <Button Margin="5,3,0,1" Padding="5,0,5,0" Click="ResetFontColorClick">Reset</Button>
+            </StackPanel>
+          </Grid>
+        </StackPanel>
       </StackPanel>
     </StackPanel>
-    <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Right" Margin="0,20,20,10">
+    <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Right" Margin="0,15,15,15">
       <Button x:Name="saveButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}" FontSize="{DynamicResource EQContentSize}" Click="SaveClicked" Margin="2,0,4,0" Width="80" Content="Save" IsEnabled="False" />
       <Button x:Name="cancelButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}" FontSize="{DynamicResource EQContentSize}" Click="CancelClicked" Margin="2,0,4,0" Width="80" Content="Cancel" />
     </StackPanel>
