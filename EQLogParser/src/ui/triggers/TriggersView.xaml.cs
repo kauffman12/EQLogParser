@@ -163,9 +163,9 @@ namespace EQLogParser
       }
     }
 
-    private void CharacterSelectedCharacterEvent(TriggerCharacter character)
+    private void CharacterSelectedCharacterEvent(List<TriggerCharacter> characters)
     {
-      if (character == null)
+      if (characters == null)
       {
         if (_currentCharacterId != null)
         {
@@ -176,11 +176,11 @@ namespace EQLogParser
       }
       else
       {
-        if (_currentCharacterId != character.Id)
+        if (characters.Count > 0)
         {
-          _currentCharacterId = character.Id;
+          _currentCharacterId = characters[0].Id;
           thePropertyGrid.SelectedObject = null;
-          theTreeView.EnableAndRefreshTriggers(true, _currentCharacterId);
+          theTreeView.EnableAndRefreshTriggers(true, _currentCharacterId, characters);
         }
       }
     }
@@ -215,7 +215,10 @@ namespace EQLogParser
       {
         voices.Visibility = Visibility.Collapsed;
         rateOption.Visibility = Visibility.Collapsed;
-        CharacterSelectedCharacterEvent(characterView.GetSelectedCharacter());
+
+        var selected = characterView.GetSelectedCharacter();
+        List<TriggerCharacter> characters = selected == null ? null : [selected];
+        CharacterSelectedCharacterEvent(characters);
 
         if (_theConfig.Characters.Count(user => user.IsEnabled) is var count and > 0)
         {
