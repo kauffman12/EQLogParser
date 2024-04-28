@@ -24,8 +24,10 @@ namespace EQLogParser
         ]
       },
       { "FontSize", [
-          "10pt", "11pt", "12pt", "13pt", "14pt", "15pt", "16pt", "17pt",
-          "18pt", "20pt", "22pt", "24pt", "26pt", "28pt", "30pt", "34pt", "38pt", "42pt", "46pt", "50pt"
+          "10pt", "11pt", "12pt", "13pt", "14pt", "15pt", "16pt", "17pt",  "18pt", "20pt",
+          "22pt", "24pt", "26pt", "28pt", "30pt", "34pt", "38pt", "42pt", "46pt", "50pt",
+          "58pt", "66pt", "74pt", "82pt", "90pt", "98pt", "106pt", "114pt", "122pt", "130pt",
+          "138pt", "146pt", "154pt", "162pt", "170pt", "178pt", "186pt", "194pt", "202pt"
         ]
       },
       { "SortBy", ["Trigger Time", "Remaining Time", "Timer Name"] },

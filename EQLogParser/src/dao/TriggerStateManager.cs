@@ -147,8 +147,6 @@ namespace EQLogParser
     internal void AssignOverlay(string id, IEnumerable<TriggerNode> nodes) => AssignOverlay(_db?.GetCollection<TriggerNode>(TreeCol), id, nodes);
     internal void AssignPriority(int pri, IEnumerable<TriggerNode> nodes) => AssignPriority(_db?.GetCollection<TriggerNode>(TreeCol), pri, nodes);
     internal void UnassignOverlay(string id, IEnumerable<TriggerNode> nodes) => UnassignOverlay(_db?.GetCollection<TriggerNode>(TreeCol), id, nodes);
-    internal TriggerTreeViewNode CreateFolder(string parentId, string name) => CreateNode(parentId, name);
-    internal TriggerTreeViewNode CreateTrigger(string parentId, string name) => CreateNode(parentId, name, Triggers);
     internal TriggerTreeViewNode CreateOverlay(string parentId, string name, bool isTextOverlay) => CreateNode(parentId, name, Overlays, isTextOverlay);
     internal TriggerTreeViewNode GetTriggerTreeView(string playerId) => GetTreeView(Triggers, playerId);
     internal TriggerTreeViewNode GetOverlayTreeView() => GetTreeView(Overlays);
@@ -191,6 +189,20 @@ namespace EQLogParser
         config.Characters.Sort((x, y) => string.Compare(x.Name, y.Name, StringComparison.Ordinal));
         UpdateConfig(config);
       }
+    }
+
+    internal TriggerTreeViewNode CreateFolder(string parentId, string name)
+    {
+      var node = CreateNode(parentId, name);
+      SetStateFromParent(parentId, node);
+      return node;
+    }
+
+    internal TriggerTreeViewNode CreateTrigger(string parentId, string name)
+    {
+      var node = CreateNode(parentId, name, Triggers);
+      SetStateFromParent(parentId, node);
+      return node;
     }
 
     internal void CopyState(TriggerTreeViewNode treeView, string from, string to)
@@ -449,15 +461,18 @@ namespace EQLogParser
       return false;
     }
 
-    internal void SetState(string playerId, TriggerTreeViewNode viewNode)
+    internal void SetState(List<string> playerIds, TriggerTreeViewNode viewNode)
     {
       if (viewNode?.SerializedData is not null && !viewNode.IsOverlay() &&
         _db?.GetCollection<TriggerState>(StatesCol) is { } states)
       {
-        if (states.FindOne(s => s.Id == playerId) is { } state)
+        foreach (var playerId in playerIds)
         {
-          UpdateChildState(state, viewNode);
-          states.Update(state);
+          if (states.FindOne(s => s.Id == playerId) is { } state)
+          {
+            UpdateChildState(state, viewNode);
+            states.Update(state);
+          }
         }
       }
     }
@@ -726,6 +741,23 @@ namespace EQLogParser
         node.Index = index;
         node.IsExpanded = false;
         tree.Insert(node);
+      }
+    }
+
+    private void SetStateFromParent(string parentId, TriggerTreeViewNode node)
+    {
+      if (_db?.GetCollection<TriggerState>(StatesCol) is { } states)
+      {
+        foreach (var state in states.FindAll())
+        {
+          // if parent is enabled for the player then also enable the new trigger
+          if (state.Enabled.TryGetValue(parentId, out var value) && value == true)
+          {
+            state.Enabled[node.SerializedData.Id] = true;
+            node.IsChecked = true;
+            states.Update(state);
+          }
+        }
       }
     }
 
