@@ -1,6 +1,7 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -12,7 +13,7 @@ namespace EQLogParser
   /// </summary>
   public partial class TriggersCharacterView : IDisposable
   {
-    internal event Action<TriggerCharacter> SelectedCharacterEvent;
+    internal event Action<List<TriggerCharacter>> SelectedCharacterEvent;
 
     // public to be referenced from xaml?
     public TriggersCharacterView()
@@ -73,11 +74,11 @@ namespace EQLogParser
 
     private void CharacterSelectionChanged(object sender, GridSelectionChangedEventArgs e)
     {
-      if (dataGrid?.SelectedItem is TriggerCharacter character)
+      if (dataGrid?.SelectedItems?.Cast<TriggerCharacter>().ToList() is List<TriggerCharacter> { Count: > 0 } characters)
       {
-        modifyCharacter.IsEnabled = true;
-        deleteCharacter.IsEnabled = true;
-        SelectedCharacterEvent?.Invoke(character);
+        modifyCharacter.IsEnabled = characters.Count == 1;
+        deleteCharacter.IsEnabled = characters.Count == 1;
+        SelectedCharacterEvent?.Invoke(characters);
       }
       else
       {

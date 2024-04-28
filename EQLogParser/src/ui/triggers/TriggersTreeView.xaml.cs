@@ -29,6 +29,7 @@ namespace EQLogParser
     private string _currentCharacterId;
     private Func<bool> _isCancelSelection;
     private TriggerConfig _theConfig;
+    private List<TriggerCharacter> _selectedCharacters;
     private IEnumerator<TriggerTreeViewNode> _findTriggerEnumerator;
 
     public TriggersTreeView()
@@ -64,8 +65,10 @@ namespace EQLogParser
       EnableAndRefreshTriggers(enable, characterId);
     }
 
-    internal void EnableAndRefreshTriggers(bool enable, string characterId)
+    internal void EnableAndRefreshTriggers(bool enable, string characterId, List<TriggerCharacter> characters = null)
     {
+      var needRefresh = _currentCharacterId != characterId;
+      _selectedCharacters = characters;
       _currentCharacterId = characterId;
       triggerTreeView.IsEnabled = enable;
 
@@ -80,7 +83,10 @@ namespace EQLogParser
         triggerTreeView.Visibility = Visibility.Collapsed;
       }
 
-      RefreshTriggerNode();
+      if (needRefresh)
+      {
+        RefreshTriggerNode();
+      }
     }
 
     private void CreateTextOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(true);
@@ -178,7 +184,8 @@ namespace EQLogParser
     {
       if (e.Node is TriggerTreeViewNode viewNode)
       {
-        TriggerStateManager.Instance.SetState(_currentCharacterId, viewNode);
+        var ids = _selectedCharacters?.Select(x => x.Id).ToList() ?? [_currentCharacterId];
+        TriggerStateManager.Instance.SetState(ids, viewNode);
         TriggerManager.Instance.TriggersUpdated();
       }
     }
