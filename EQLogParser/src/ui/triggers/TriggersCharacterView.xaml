@@ -38,7 +38,7 @@
                                ShowRowHeader="False"
                                GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                                SelectionUnit="Row"
-                               SelectionMode="Single">
+                               SelectionMode="Extended">
         <syncfusion:SfDataGrid.Columns>
           <syncfusion:GridTemplateColumn MappingName="Configured Players">
             <syncfusion:GridTemplateColumn.CellTemplate>
