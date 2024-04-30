@@ -31,6 +31,7 @@ namespace EQLogParser
     private TriggerConfig _theConfig;
     private List<TriggerCharacter> _selectedCharacters;
     private IEnumerator<TriggerTreeViewNode> _findTriggerEnumerator;
+    private bool _shiftDown = false;
 
     public TriggersTreeView()
     {
@@ -300,7 +301,7 @@ namespace EQLogParser
     {
       if (GetTreeViewFromMenu(sender) is { SelectedItem: TriggerTreeViewNode { SerializedData.Id: { } id } parent })
       {
-        var newNode = TriggerStateManager.Instance.CreateFolder(id, LabelNewFolder);
+        var newNode = TriggerStateManager.Instance.CreateFolder(id, LabelNewFolder, _currentCharacterId);
         parent.ChildNodes.Add(newNode);
       }
     }
@@ -322,7 +323,7 @@ namespace EQLogParser
     {
       if (triggerTreeView.SelectedItem is TriggerTreeViewNode parent)
       {
-        if (TriggerStateManager.Instance.CreateTrigger(parent.SerializedData.Id, LabelNewTrigger) is { } newNode)
+        if (TriggerStateManager.Instance.CreateTrigger(parent.SerializedData.Id, LabelNewTrigger, _currentCharacterId) is { } newNode)
         {
           parent.ChildNodes.Add(newNode);
           SelectNode(triggerTreeView, newNode.SerializedData.Id);
@@ -472,6 +473,8 @@ namespace EQLogParser
           e.Handled = true;
         }
       }
+
+      _shiftDown = Keyboard.IsKeyDown(Key.LeftShift);
     }
 
     private void ItemDropped(object sender, TreeViewItemDroppedEventArgs e)
@@ -489,6 +492,13 @@ namespace EQLogParser
               node.SerializedData.Parent = target.SerializedData.Id;
               node.SerializedData.Index = i;
               TriggerStateManager.Instance.Update(node.SerializedData);
+
+              if (_shiftDown)
+              {
+                TriggerStateManager.Instance.SetStateFromParent(node.SerializedData.Parent, _currentCharacterId, node);
+              }
+
+              RefreshTriggerNode();
             }
           }
         }
