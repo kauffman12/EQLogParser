@@ -191,18 +191,39 @@ namespace EQLogParser
       }
     }
 
-    internal TriggerTreeViewNode CreateFolder(string parentId, string name)
+    internal TriggerTreeViewNode CreateFolder(string parentId, string name, string playerId)
     {
       var node = CreateNode(parentId, name);
-      SetStateFromParent(parentId, node);
+      SetStateFromParent(parentId, playerId, node);
       return node;
     }
 
-    internal TriggerTreeViewNode CreateTrigger(string parentId, string name)
+    internal TriggerTreeViewNode CreateTrigger(string parentId, string name, string playerId)
     {
       var node = CreateNode(parentId, name, Triggers);
-      SetStateFromParent(parentId, node);
+      SetStateFromParent(parentId, playerId, node);
       return node;
+    }
+
+    internal void SetStateFromParent(string parentId, string playerId, TriggerTreeViewNode node)
+    {
+      if (_db?.GetCollection<TriggerState>(StatesCol) is { } states)
+      {
+        foreach (var state in states.FindAll())
+        {
+          // if parent is enabled for the player then also enable the new trigger
+          if (state.Enabled.TryGetValue(parentId, out var currentState))
+          {
+            if (playerId == state.Id)
+            {
+              node.IsChecked = currentState == true;
+            }
+
+            UpdateChildState(state, node, currentState == true);
+            states.Update(state);
+          }
+        }
+      }
     }
 
     internal void CopyState(TriggerTreeViewNode treeView, string from, string to)
@@ -470,7 +491,7 @@ namespace EQLogParser
         {
           if (states.FindOne(s => s.Id == playerId) is { } state)
           {
-            UpdateChildState(state, viewNode);
+            UpdateChildState(state, viewNode, viewNode.IsChecked);
             states.Update(state);
           }
         }
@@ -744,31 +765,14 @@ namespace EQLogParser
       }
     }
 
-    private void SetStateFromParent(string parentId, TriggerTreeViewNode node)
-    {
-      if (_db?.GetCollection<TriggerState>(StatesCol) is { } states)
-      {
-        foreach (var state in states.FindAll())
-        {
-          // if parent is enabled for the player then also enable the new trigger
-          if (state.Enabled.TryGetValue(parentId, out var value) && value == true)
-          {
-            state.Enabled[node.SerializedData.Id] = true;
-            node.IsChecked = true;
-            states.Update(state);
-          }
-        }
-      }
-    }
-
-    private static void UpdateChildState(TriggerState state, TriggerTreeViewNode node)
+    private static void UpdateChildState(TriggerState state, TriggerTreeViewNode node, bool? isEnabled)
     {
       if (node?.SerializedData?.Id is not { } id) return;
 
-      state.Enabled[id] = node.IsChecked;
+      state.Enabled[id] = isEnabled;
       foreach (var child in node.ChildNodes)
       {
-        UpdateChildState(state, child as TriggerTreeViewNode);
+        UpdateChildState(state, child as TriggerTreeViewNode, isEnabled);
       }
     }
 
