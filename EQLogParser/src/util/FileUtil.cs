@@ -84,7 +84,8 @@ namespace EQLogParser
             continue;
           }
 
-          var savedFileSize = ConfigUtil.GetSetting("LogManagementMinFileSize");
+          // can remove defaults in the future. fixing issue where config was enabled but settings were never chosen/saved
+          var savedFileSize = ConfigUtil.GetSetting("LogManagementMinFileSize", "500M");
           if (string.IsNullOrEmpty(savedFileSize))
           {
             continue;
@@ -96,7 +97,7 @@ namespace EQLogParser
             continue;
           }
 
-          var savedFileAge = ConfigUtil.GetSetting("LogManagementMinFileAge");
+          var savedFileAge = ConfigUtil.GetSetting("LogManagementMinFileAge", "1 Week");
           if (string.IsNullOrEmpty(savedFileAge))
           {
             continue;
