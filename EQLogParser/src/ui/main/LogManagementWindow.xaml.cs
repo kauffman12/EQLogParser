@@ -67,14 +67,19 @@ namespace EQLogParser
     {
       if (_ready)
       {
-        if (Equals(sender, fileSizes) && fileSizes.SelectedItem is ComboBoxItem item)
-        {
-          ConfigUtil.SetSetting("LogManagementMinFileSize", item.Content.ToString());
-        }
-        else if (Equals(sender, fileAges) && fileAges.SelectedItem is ComboBoxItem item2)
-        {
-          ConfigUtil.SetSetting("LogManagementMinFileAge", item2.Content.ToString());
-        }
+        UpdateSettings();
+      }
+    }
+
+    private void UpdateSettings()
+    {
+      if (fileSizes.SelectedItem is ComboBoxItem item)
+      {
+        ConfigUtil.SetSetting("LogManagementMinFileSize", item.Content.ToString());
+      }
+      else if (fileAges.SelectedItem is ComboBoxItem item2)
+      {
+        ConfigUtil.SetSetting("LogManagementMinFileAge", item2.Content.ToString());
       }
     }
 
@@ -100,6 +105,7 @@ namespace EQLogParser
       titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
       titleLabel.Content = "Log Management Active";
       ConfigUtil.SetSetting("LogManagementEnabled", true);
+      UpdateSettings();
     }
 
     private void EnableCheckBoxOnUnchecked(object sender, RoutedEventArgs e)
