@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,10 +16,9 @@ namespace EQLogParser
   /// </summary>
   public partial class TextOverlayWindow : Window
   {
-    private readonly LinkedList<TextData> _textDataList = [];
-    private int _maxNodes = -1;
     private TriggerNode _node;
     private readonly bool _preview;
+    private List<TextBlock> _blockCache;
     private long _savedHeight;
     private long _savedWidth;
     private long _savedTop = long.MaxValue;
@@ -38,8 +38,8 @@ namespace EQLogParser
       Top = _node.OverlayData.Top;
       Left = _node.OverlayData.Left;
 
-      // start off with one node
-      content.Children.Add(CreateBlock());
+      // cache of text blocks
+      CreateBlockCache();
 
       if (_preview)
       {
@@ -51,161 +51,133 @@ namespace EQLogParser
         buttonsPanel.Visibility = Visibility.Visible;
 
         // test data
-        _textDataList.AddFirst(new TextData
-        {
-          Text = "test overlay message",
-          EndTicks = DateTime.UtcNow.Ticks + (_node.OverlayData.FadeDelay * TimeSpan.TicksPerSecond)
-        });
+        AddTriggerText("test overlay message", DateTime.UtcNow.Ticks, null);
 
-        content.Children.Add(CreateBlock());
         TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
-        Tick();
+        Dispatcher.InvokeAsync(Tick);
       }
       else
       {
-        border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + _node.Id);
+        content.SetResourceReference(Panel.BackgroundProperty, "OverlayBrushColor-" + _node.Id);
       }
     }
 
     internal void AddTriggerText(string text, double beginTicks, SolidColorBrush brush)
     {
-      if (_maxNodes == -1 && content.Children.Count > 0 && content.Children[0] is TextBlock { ActualHeight: > 0 } textBlock)
+      TextBlock block;
+      if (content.Children.Count > 0 && content.Children.Count == _blockCache.Count)
       {
-        _maxNodes = (int)(Height / textBlock.ActualHeight) + 1;
+        block = (TextBlock)content.Children[0];
+        content.Children.RemoveAt(0);
+      }
+      else
+      {
+        block = _blockCache.FirstOrDefault(b => b.Visibility == Visibility.Collapsed);
       }
 
-      lock (_textDataList)
+      if (block != null)
       {
-        _textDataList.AddFirst(new TextData
-        {
-          Text = text,
-          EndTicks = beginTicks + (_node.OverlayData.FadeDelay * TimeSpan.TicksPerSecond),
-          Brush = brush
-        });
+        block.Tag = beginTicks + (_node.OverlayData.FadeDelay * TimeSpan.TicksPerSecond);
+        block.Text = text;
 
-        if (_textDataList.Count > _maxNodes)
+        if (brush != null)
         {
-          _textDataList.RemoveLast();
+          block.Foreground = brush;
         }
-      }
+        else
+        {
+          block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + _node.Id);
+        }
 
-      lock (_textDataList)
-      {
-        if (content.Children.Count < _maxNodes && content.Children.Count < _textDataList.Count)
-        {
-          content.Children.Add(CreateBlock());
-        }
+        block.Visibility = Visibility.Visible;
+        content.Children.Add(block);
       }
     }
 
     internal bool Tick()
     {
-      bool done;
       var currentTicks = DateTime.UtcNow.Ticks;
+      content.Visibility = Visibility.Collapsed;
 
       if (!_node.OverlayData.Width.Equals((long)Width))
       {
         Width = _node.OverlayData.Width;
       }
-      else if (!_node.OverlayData.Height.Equals((long)Height))
+
+      if (!_node.OverlayData.Height.Equals((long)Height))
       {
         Height = _node.OverlayData.Height;
       }
-      else if (!_node.OverlayData.Top.Equals((long)Top))
+
+      if (!_node.OverlayData.Top.Equals((long)Top))
       {
         Top = _node.OverlayData.Top;
       }
-      else if (!_node.OverlayData.Left.Equals((long)Left))
+
+      if (!_node.OverlayData.Left.Equals((long)Left))
       {
         Left = _node.OverlayData.Left;
       }
 
-      lock (_textDataList)
+      for (var last = content.Children.Count - 1; last >= 0; last--)
       {
-        var node = _textDataList.First;
-        var lastIndex = content.Children.Count - 1;
-
-        while (node != null)
+        if (content.Children[last] is TextBlock { Tag: double end } block)
         {
-          var nextNode = node.Next;
-          if (lastIndex >= 0 && content.Children[lastIndex] is TextBlock block)
+          if (end < currentTicks)
           {
-            if (node.Value.EndTicks >= currentTicks)
-            {
-              block.Text = node.Value.Text;
-              if (node.Value.Brush != null)
-              {
-                block.Foreground = node.Value.Brush;
-              }
-              else
-              {
-                block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + _node.Id);
-              }
-
-              if (block.Visibility != Visibility.Visible)
-              {
-                block.Visibility = Visibility.Visible;
-              }
-            }
-            else
-            {
-              _textDataList.Remove(node);
-              block.Visibility = Visibility.Collapsed;
-              block.Text = "";
-            }
+            content.Children.RemoveAt(last);
+            block.Visibility = Visibility.Collapsed;
           }
-          else
+          else if (content.Visibility != Visibility.Visible)
           {
-            _textDataList.Remove(node);
+            content.Visibility = Visibility.Visible;
           }
-
-          node = nextNode;
-          lastIndex--;
         }
-
-        done = _textDataList.Count == 0;
-      }
-
-      if (!done)
-      {
-        if (border.Visibility != Visibility.Visible)
-        {
-          border.Visibility = Visibility.Visible;
-        }
-      }
-      else
-      {
-        border.Visibility = Visibility.Hidden;
       }
 
       // return true if done
-      return done;
+      return content.Children.Count == 0;
+    }
+
+    private void CreateBlockCache()
+    {
+      // figure out how big a block will be
+      var testBlock = new TextBlock
+      {
+        Text = "test"
+      };
+
+      testBlock.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + _node.Id);
+      testBlock.SetResourceReference(TextBlock.FontFamilyProperty, "TextOverlayFontFamily-" + _node.Id);
+      var blockSize = UiElementUtil.CalculateTextBoxHeight(testBlock.FontFamily, testBlock.FontSize, testBlock.Padding, new Thickness());
+
+      // create cache of blocks needed to cover Overlay height
+      var max = (Height / blockSize) + 1;
+      _blockCache = Enumerable.Range(0, (int)max).Select(b =>
+      {
+        var block = new TextBlock
+        {
+          TextAlignment = TextAlignment.Center,
+          Padding = new Thickness(6, 0, 6, 2),
+          Margin = new Thickness(0),
+          FontWeight = FontWeights.Bold,
+          TextWrapping = TextWrapping.Wrap,
+          Visibility = Visibility.Collapsed,
+          Effect = new DropShadowEffect
+          { ShadowDepth = 2, Direction = 330, Color = Colors.Black, Opacity = 0.7, BlurRadius = 0 },
+        };
+
+        block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + _node.Id);
+        block.SetResourceReference(TextBlock.FontFamilyProperty, "TextOverlayFontFamily-" + _node.Id);
+        return block;
+      }).ToList();
     }
 
     private void CloseClick(object sender, RoutedEventArgs e) => Close();
 
-    private TextBlock CreateBlock()
-    {
-      var block = new TextBlock
-      {
-        TextAlignment = TextAlignment.Center,
-        Padding = new Thickness(6, 0, 6, 2),
-        Margin = new Thickness(0),
-        FontWeight = FontWeights.Bold,
-        TextWrapping = TextWrapping.Wrap,
-        Visibility = Visibility.Hidden,
-        Effect = new DropShadowEffect { ShadowDepth = 2, Direction = 330, Color = Colors.Black, Opacity = 0.7, BlurRadius = 0 }
-      };
-
-      block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + _node.Id);
-      block.SetResourceReference(TextBlock.FontFamilyProperty, "TextOverlayFontFamily-" + _node.Id);
-      return block;
-    }
-
     private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)
     {
       DragMove();
-
       if (!saveButton.IsEnabled)
       {
         saveButton.IsEnabled = true;
@@ -313,13 +285,6 @@ namespace EQLogParser
           NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, exStyle);
         }
       }
-    }
-
-    private class TextData
-    {
-      public string Text { get; init; }
-      public double EndTicks { get; init; }
-      public SolidColorBrush Brush { get; init; }
     }
   }
 }

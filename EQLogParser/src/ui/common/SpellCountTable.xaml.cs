@@ -202,7 +202,6 @@ namespace EQLogParser
       });
     }
 
-    private void CreateLargeImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel, true);
     private void GridSizeChanged(object sender, SizeChangedEventArgs e) => UiElementUtil.CheckHideTitlePanel(titlePanel, controlPanel);
     private void OptionsChanged(object sender, SelectionChangedEventArgs e) => UpdateOptions(true);
 
@@ -379,25 +378,6 @@ namespace EQLogParser
       catch (Exception ex)
       {
         new MessageWindow("Problem Exporting Spell Counts Data. Check Error Log for details.", Resource.EXPORT_ERROR).ShowDialog();
-        Log.Error(ex);
-      }
-    }
-
-    private void CopyBbCodeClick(object sender, RoutedEventArgs e)
-    {
-      try
-      {
-        var export = DataGridUtil.BuildExportData(dataGrid);
-        var result = TextUtils.BuildBbCodeTable(export.Item1, export.Item2, titleLabel.Content as string);
-        Clipboard.SetDataObject(result);
-      }
-      catch (ArgumentNullException ane)
-      {
-        Clipboard.SetDataObject("EQLogParser Error: Failed to create BBCode\r\n");
-        Log.Error(ane);
-      }
-      catch (ExternalException ex)
-      {
         Log.Error(ex);
       }
     }

@@ -126,12 +126,20 @@ namespace EQLogParser
             continue;
           }
 
+          var compress = ConfigUtil.GetSetting("LogManagementCompressArchive", "Yes");
+
           try
           {
             var formatted = DateTime.Now.ToString("_yyyyMMddHHmm_ssfff") + ".txt";
             var destination = archiveFolder + Path.DirectorySeparatorChar + fileInfo.Name.Replace(".txt", formatted);
             File.Move(path, destination);
-            CompressFile(destination);
+
+            // compress if specified
+            if ("Yes".Equals(compress, StringComparison.OrdinalIgnoreCase))
+            {
+              CompressFile(destination);
+            }
+
             Log.Info($"Archived File: {path}");
           }
           catch (Exception e)
