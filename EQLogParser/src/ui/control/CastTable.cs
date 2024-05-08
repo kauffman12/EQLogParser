@@ -1,7 +1,10 @@
-﻿using Syncfusion.UI.Xaml.Grid;
+﻿using log4net;
+using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -24,6 +27,8 @@ namespace EQLogParser
     private const string SelfSpellsType = "Hide Spells Only You See";
     private SfDataGrid _theDataGrid;
     private Label _theTitleLabel;
+
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     internal void InitCastTable(SfDataGrid dataGrid, Label titleLabel, ComboBox selectedOptions, ComboBox selectedSpellRestrictions)
     {
@@ -54,6 +59,26 @@ namespace EQLogParser
 
     protected void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(_theDataGrid, _theTitleLabel.Content.ToString());
     protected void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(_theDataGrid, _theTitleLabel);
+    protected void CreateLargeImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(_theDataGrid, _theTitleLabel, true);
+
+    protected void CopyBbCodeClick(object sender, RoutedEventArgs e)
+    {
+      try
+      {
+        var export = DataGridUtil.BuildExportData(_theDataGrid);
+        var result = TextUtils.BuildBbCodeTable(export.Item1, export.Item2, _theTitleLabel.Content as string);
+        Clipboard.SetDataObject(result);
+      }
+      catch (ArgumentNullException ane)
+      {
+        Clipboard.SetDataObject("EQLogParser Error: Failed to create BBCode\r\n");
+        Log.Error(ane);
+      }
+      catch (ExternalException ex)
+      {
+        Log.Error(ex);
+      }
+    }
 
     protected bool UpdateSelectedCastTypes(ComboBox selected)
     {

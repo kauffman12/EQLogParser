@@ -20,6 +20,8 @@ namespace EQLogParser
 
       Owner = Application.Current.MainWindow;
       enableCheckBox.IsChecked = ConfigUtil.IfSet("LogManagementEnabled");
+      txtFolderPath.IsEnabled =
+        fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = enableCheckBox.IsChecked == true;
 
       // read archive folder
       var savedFolder = ConfigUtil.GetSetting("LogManagementArchiveFolder");
@@ -28,36 +30,10 @@ namespace EQLogParser
         txtFolderPath.Text = savedFolder;
       }
 
-      // read save file min size
-      var fileSizeIndex = 6;
-      var savedFileSize = ConfigUtil.GetSetting("LogManagementMinFileSize", "500M");
-      for (var i = 0; i < fileSizes.Items.Count; i++)
-      {
-        if (fileSizes.Items[i] is ComboBoxItem item &&
-            savedFileSize.Equals(item.Content.ToString(), StringComparison.OrdinalIgnoreCase))
-        {
-          fileSizeIndex = i;
-          break;
-        }
-      }
-
-      fileSizes.SelectedIndex = fileSizeIndex;
-
-      // read save file min date
-      var fileAgeIndex = 1;
-      var savedFileAge = ConfigUtil.GetSetting("LogManagementMinFileAge", "1 Week");
-      for (var i = 0; i < fileAges.Items.Count; i++)
-      {
-        if (fileAges.Items[i] is ComboBoxItem item &&
-            savedFileAge.Equals(item.Content.ToString(), StringComparison.CurrentCulture))
-        {
-          fileAgeIndex = i;
-          break;
-        }
-      }
-
-      fileAges.SelectedIndex = fileAgeIndex;
-
+      // read saved settings
+      UpdateComboBox(fileSizes, "LogManagementMinFileSize", "500M");
+      UpdateComboBox(fileAges, "LogManagementMinFileAge", "1 Week");
+      UpdateComboBox(compress, "LogManagementCompressArchive", "Yes");
       _ready = true;
     }
 
@@ -73,14 +49,40 @@ namespace EQLogParser
 
     private void UpdateSettings()
     {
-      if (fileSizes.SelectedItem is ComboBoxItem item)
+      if (_ready)
       {
-        ConfigUtil.SetSetting("LogManagementMinFileSize", item.Content.ToString());
+        if (fileSizes.SelectedItem is ComboBoxItem item)
+        {
+          ConfigUtil.SetSetting("LogManagementMinFileSize", item.Content.ToString());
+        }
+
+        if (fileAges.SelectedItem is ComboBoxItem item2)
+        {
+          ConfigUtil.SetSetting("LogManagementMinFileAge", item2.Content.ToString());
+        }
+
+        if (compress.SelectedItem is ComboBoxItem item3)
+        {
+          ConfigUtil.SetSetting("LogManagementCompressArchive", item3.Content.ToString());
+        }
       }
-      else if (fileAges.SelectedItem is ComboBoxItem item2)
+    }
+
+    private void UpdateComboBox(ComboBox combo, string setting, string defaultValue)
+    {
+      // read compress settings
+      var index = 0;
+      var saved = ConfigUtil.GetSetting(setting, defaultValue);
+      for (var i = 0; i < combo.Items.Count; i++)
       {
-        ConfigUtil.SetSetting("LogManagementMinFileAge", item2.Content.ToString());
+        if (combo.Items[i] is ComboBoxItem item && saved.Equals(item.Content.ToString(), StringComparison.CurrentCulture))
+        {
+          index = i;
+          break;
+        }
       }
+
+      combo.SelectedIndex = index;
     }
 
     private void ChooseFolderClicked(object sender, RoutedEventArgs e)
@@ -101,7 +103,7 @@ namespace EQLogParser
 
     private void EnableCheckBoxOnChecked(object sender, RoutedEventArgs e)
     {
-      txtFolderPath.IsEnabled = fileSizes.IsEnabled = fileAges.IsEnabled = true;
+      txtFolderPath.IsEnabled = fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = true;
       titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
       titleLabel.Content = "Log Management Active";
       ConfigUtil.SetSetting("LogManagementEnabled", true);
@@ -110,7 +112,7 @@ namespace EQLogParser
 
     private void EnableCheckBoxOnUnchecked(object sender, RoutedEventArgs e)
     {
-      txtFolderPath.IsEnabled = fileSizes.IsEnabled = fileAges.IsEnabled = false;
+      txtFolderPath.IsEnabled = fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = false;
       titleLabel.SetResourceReference(ForegroundProperty, "EQStopForegroundBrush");
       titleLabel.Content = "Enable Log Management";
       ConfigUtil.SetSetting("LogManagementEnabled", false);

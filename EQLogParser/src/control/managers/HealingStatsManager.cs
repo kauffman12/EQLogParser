@@ -24,6 +24,7 @@ namespace EQLogParser
     private readonly List<List<ActionGroup>> _healingGroups = [];
     private PlayerStats _raidTotals;
     private List<Fight> _selected;
+    private TimeRange _allRanges;
     private string _title;
     private bool _isLimited;
     internal static readonly string[] Separator = [" @"];
@@ -55,6 +56,7 @@ namespace EQLogParser
         {
           var newOptions = new GenerateStatsOptions();
           newOptions.Npcs.AddRange(_selected);
+          newOptions.AllRanges = _allRanges;
           BuildTotalStats(newOptions);
         }
       }
@@ -70,11 +72,12 @@ namespace EQLogParser
           Reset();
 
           _selected = [.. options.Npcs.OrderBy(sel => sel.Id)];
+          _allRanges = options.AllRanges;
           _title = options.Npcs?.FirstOrDefault()?.Name;
           var healingValidator = new HealingValidator();
           _isLimited = healingValidator.IsHealingLimited();
 
-          _raidTotals.Ranges.Add(options.AllRanges.TimeSegments);
+          _raidTotals.Ranges.Add(_allRanges.TimeSegments);
           _raidTotals.AllRanges = _raidTotals.Ranges;
 
           if (_raidTotals.Ranges.TimeSegments.Count > 0)

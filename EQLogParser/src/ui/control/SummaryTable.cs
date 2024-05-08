@@ -209,7 +209,7 @@ namespace EQLogParser
       if (selected?.Count > 0 && Application.Current.MainWindow is MainWindow main)
       {
         if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var spellTable, typeof(SpellCastTable),
-          "spellCastsWindow", "Spell Cast Timeline"))
+          "spellCastsWindow", "Spell Cast Order"))
         {
           (spellTable.Content as SpellCastTable)?.Init(selected, CurrentStats);
         }

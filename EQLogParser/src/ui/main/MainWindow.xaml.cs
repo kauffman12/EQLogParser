@@ -461,7 +461,6 @@ namespace EQLogParser
       {
         tankingStatsOptions.DamageType = ((TankingSummary)control.Content).DamageType;
       }
-
       Task.Run(() => TankingStatsManager.Instance.BuildTotalStats(tankingStatsOptions));
     }
 

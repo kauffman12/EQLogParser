@@ -90,6 +90,19 @@
             </ComboBox>
           </Grid>
         </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="160" />
+              <ColumnDefinition Width="70*" />
+            </Grid.ColumnDefinitions>
+            <Label Grid.Column="0" Content="Compress Archive" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only Archive Log File if it was created prior to the selected time range."/>
+            <ComboBox Grid.Column="1" x:Name="compress" SelectedIndex="0" Margin="8,0,0,0" Width="320" SelectionChanged="OptionsChanged">
+              <ComboBoxItem>Yes</ComboBoxItem>
+              <ComboBoxItem>No</ComboBoxItem>
+            </ComboBox>
+          </Grid>
+        </StackPanel>
       </StackPanel>
     </StackPanel>
     <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Right" Margin="0,15,12,10">

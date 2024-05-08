@@ -57,6 +57,11 @@
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
             </MenuItem.Icon>
+            <MenuItem IsEnabled="True" Header="BBCode Gamparse" Click="CopyGamparseClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Code" />
+              </MenuItem.Icon>
+            </MenuItem>
             <MenuItem IsEnabled="True" Header="BBCode Table" Click="CopyBbCodeClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Table" />
@@ -67,11 +72,6 @@
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Table" />
               </MenuItem.Icon>
             </MenuItem>            
-            <MenuItem IsEnabled="True" Header="Gamparse BBCode" Click="CopyGamparseClick">
-              <MenuItem.Icon>
-                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Code" />
-              </MenuItem.Icon>
-            </MenuItem>
             <MenuItem IsEnabled="True" Header="Image" Click="CreateImageClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Image" />
