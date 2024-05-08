@@ -30,7 +30,7 @@
         Width="300"
         WindowStyle="None"
         ShowInTaskbar="False">
-  <Grid>
+  <Grid x:Name="theGrid">
     <Grid.RowDefinitions>
       <RowDefinition Height="200*"></RowDefinition>
     </Grid.RowDefinitions>
@@ -38,12 +38,8 @@
       <TextBlock x:Name="title" Visibility="Collapsed" Margin="0,0,0,0" Text="Overlay Title"
       Foreground="#33FFFFFF" Background="#33000000" TextWrapping="WrapWithOverflow" Padding="3,5,3,20" />
     </Viewbox>
-    <StackPanel Grid.Row="0" Orientation="Vertical" VerticalAlignment="Bottom" HorizontalAlignment="Stretch">
-      <Border x:Name="border" CornerRadius="5" Visibility="Hidden">
-        <StackPanel x:Name="content" Orientation="Vertical"/>
-      </Border>
-    </StackPanel>
-    <StackPanel Grid.Row="0" Orientation="Vertical" VerticalAlignment="Center" HorizontalAlignment="Stretch">
+    <StackPanel Grid.Row="0" x:Name="content" Orientation="Vertical" VerticalAlignment="Bottom" HorizontalAlignment="Stretch"/>
+    <StackPanel Grid.Row="0" Margin="0,0,0,0" Orientation="Vertical" VerticalAlignment="Center" HorizontalAlignment="Stretch">
       <StackPanel x:Name="buttonsPanel" Visibility="Collapsed" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,4" Opacity="0.9">
         <Button x:Name="saveButton" Margin="2,6,0,0" VerticalAlignment="Top" IsEnabled="False" Width="48" MinWidth="48" Height="24" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
         <Button x:Name="cancelButton" Margin="2,6,0,0" VerticalAlignment="Top" IsEnabled="False" Width="48" MinWidth="48" Height="24" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
