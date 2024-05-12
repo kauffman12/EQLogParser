@@ -263,7 +263,7 @@ namespace EQLogParser
       }
     }
 
-    [GeneratedRegex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt", RegexOptions.Singleline)]
+    [GeneratedRegex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+)(?!.*_\d{5}\.txt$).*\.txt$", RegexOptions.Singleline)]
     private static partial Regex TheFileNameRegex();
   }
 }
