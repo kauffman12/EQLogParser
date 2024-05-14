@@ -63,9 +63,12 @@ namespace EQLogParser
           var selected = dataGrid.SelectedItems?.Cast<Fight>().ToList();
           if (selected != null)
           {
-            foreach (var fight in selected)
+            foreach (var fight in selected.OrderBy(sel => sel.Id))
             {
-              _allRanges.Add(new TimeSegment(fight.BeginTime, fight.LastTime));
+              if (!fight.IsInactivity)
+              {
+                _allRanges.Add(new TimeSegment(fight.BeginTime, fight.LastTime));
+              }
             }
           }
 
