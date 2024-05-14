@@ -55,6 +55,7 @@ namespace EQLogParser
     private readonly List<bool> _logWindows = [];
     private readonly List<string> _recentFiles = [];
     private bool _resetWindowState;
+    private bool _isLoading;
 
     public MainWindow()
     {
@@ -217,8 +218,11 @@ namespace EQLogParser
         _computeStatsTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 500) };
         _computeStatsTimer.Tick += (_, _) =>
         {
-          ComputeStats();
-          _computeStatsTimer.Stop();
+          if (!_isLoading)
+          {
+            ComputeStats();
+            _computeStatsTimer.Stop();
+          }
         };
 
         SystemEvents.PowerModeChanged += SystemEventsPowerModeChanged;
@@ -790,6 +794,7 @@ namespace EQLogParser
       {
         if (_eqLogReader != null)
         {
+          _isLoading = true;
           var seconds = Math.Round((DateTime.Now - _startLoadTime).TotalSeconds);
           var filePercent = Math.Round(_eqLogReader.GetProgress());
           statusText.Text = filePercent < 100.0 ? $"Reading Log.. {filePercent}% in {seconds} seconds" : $"Additional Processing... {seconds} seconds";
@@ -806,6 +811,7 @@ namespace EQLogParser
             Task.Delay(1000).ContinueWith(_ => Dispatcher.InvokeAsync(() =>
             {
               MainActions.FireLoadingEvent(CurrentLogFile);
+              _isLoading = false;
               Dispatcher.InvokeAsync(() =>
               {
                 DataManager.Instance.ResetOverlayFights(true);
