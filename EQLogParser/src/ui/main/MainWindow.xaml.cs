@@ -50,6 +50,7 @@ namespace EQLogParser
     private static DateTime _startLoadTime;
     private DamageOverlayWindow _damageOverlay;
     private readonly DispatcherTimer _computeStatsTimer;
+    private readonly DispatcherTimer _saveTimer;
     private readonly NpcDamageManager _npcDamageManager = new();
     private LogReader _eqLogReader;
     private readonly List<bool> _logWindows = [];
@@ -215,7 +216,11 @@ namespace EQLogParser
           enableAutoMonitorIcon.Visibility = Visibility.Hidden;
         }
 
-        _computeStatsTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 500) };
+        _computeStatsTimer = new DispatcherTimer(DispatcherPriority.Render)
+        {
+          Interval = new TimeSpan(0, 0, 0, 0, 500)
+        };
+
         _computeStatsTimer.Tick += (_, _) =>
         {
           if (!_isLoading)
@@ -224,6 +229,20 @@ namespace EQLogParser
             _computeStatsTimer.Stop();
           }
         };
+
+        _saveTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+          Interval = new TimeSpan(0, 0, 0, 30)
+        };
+
+        _saveTimer.Tick += (_, _) =>
+        {
+          if (!_isLoading)
+          {
+            ConfigUtil.Save();
+          }
+        };
+        _saveTimer.Start();
 
         SystemEvents.PowerModeChanged += SystemEventsPowerModeChanged;
 
@@ -262,31 +281,6 @@ namespace EQLogParser
           }
         }
 
-        // not used anymore. time to cleanup
-        Dispatcher.Invoke(() =>
-        {
-          ConfigUtil.RemoveSetting("AudioTriggersWatchForGINA");
-          ConfigUtil.RemoveSetting("TriggersWatchForGINA");
-          ConfigUtil.RemoveSetting("AudioTriggersEnabled");
-          ConfigUtil.RemoveSetting("OverlayRankColor1");
-          ConfigUtil.RemoveSetting("OverlayRankColor2");
-          ConfigUtil.RemoveSetting("OverlayRankColor3");
-          ConfigUtil.RemoveSetting("OverlayRankColor4");
-          ConfigUtil.RemoveSetting("OverlayRankColor5");
-          ConfigUtil.RemoveSetting("OverlayRankColor6");
-          ConfigUtil.RemoveSetting("OverlayRankColor7");
-          ConfigUtil.RemoveSetting("OverlayRankColor8");
-          ConfigUtil.RemoveSetting("OverlayRankColor9");
-          ConfigUtil.RemoveSetting("OverlayRankColor10");
-          ConfigUtil.RemoveSetting("OverlayShowCritRate");
-          ConfigUtil.RemoveSetting("EnableHardwareAcceleration");
-          ConfigUtil.RemoveSetting("TriggersVoiceRate");
-          ConfigUtil.RemoveSetting("TriggersSelectedVoice");
-          ConfigUtil.RemoveSetting("ShowDamageSummaryAtStartup");
-          ConfigUtil.RemoveSetting("ShowHealingSummaryAtStartup");
-          ConfigUtil.RemoveSetting("ShowTankingSummaryAtStartup");
-        }, DispatcherPriority.Background);
-
         // cleanup downloads
         Dispatcher.InvokeAsync(MainActions.Cleanup, DispatcherPriority.Background);
       }
@@ -303,6 +297,7 @@ namespace EQLogParser
       {
         case PowerModes.Suspend:
           Log.Warn("Suspending");
+          ConfigUtil.Save();
           TriggerManager.Instance.Stop();
           DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
           CloseDamageOverlay();
@@ -319,7 +314,7 @@ namespace EQLogParser
 
     private void EventsNewOverlayFight(object sender, Fight e)
     {
-      // an other lazy optimization to avoid extra dispatches
+      // another lazy optimization to avoid extra dispatches
       if (_damageOverlay == null)
       {
         Dispatcher.InvokeAsync(() =>
