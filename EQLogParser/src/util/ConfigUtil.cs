@@ -22,14 +22,13 @@ namespace EQLogParser
     private const string AppData = @"%AppData%\EQLogParser";
     private const string PetmapFile = "petmapping.txt";
     private const string PlayersFile = "players.txt";
-
     private static string _archiveDir;
     private static string _settingsFile;
     private static string _triggersDbFile;
     private static bool _initDone;
     private static bool _settingsUpdated;
-
     private static readonly ConcurrentDictionary<string, string> ApplicationSettings = new();
+
     internal static void SetSetting(string key, bool value) => SetSetting(key, value.ToString());
     internal static void SetSetting(string key, double value) => SetSetting(key, value.ToString(CultureInfo.InvariantCulture));
     internal static void SetSetting(string key, int value) => SetSetting(key, value.ToString(CultureInfo.InvariantCulture));
@@ -174,7 +173,28 @@ namespace EQLogParser
         ApplicationSettings.TryRemove("IncludeAEHealing", out _); // not used anymore
         ApplicationSettings.TryRemove("HealingColumns", out _); // not used anymore
         ApplicationSettings.TryRemove("TankingColumns", out _); // not used anymore
+        ApplicationSettings.TryRemove("AudioTriggersWatchForGINA", out _); // not used anymore);
+        ApplicationSettings.TryRemove("TriggersWatchForGINA", out _); // not used anymore);
+        ApplicationSettings.TryRemove("AudioTriggersEnabled", out _); // not used anymore);
+        ApplicationSettings.TryRemove("OverlayRankColor1", out _); // not used anymore);
+        ApplicationSettings.TryRemove("OverlayRankColor2", out _); // not used anymore);
+        ApplicationSettings.TryRemove("OverlayRankColor3", out _); // not used anymore);
+        ApplicationSettings.TryRemove("OverlayRankColor4", out _); // not used anymore);
+        ApplicationSettings.TryRemove("OverlayRankColor5", out _); // not used anymore);
+        ApplicationSettings.TryRemove("OverlayRankColor6", out _); // not used anymore);
+        ApplicationSettings.TryRemove("OverlayRankColor7", out _); // not used anymore);
+        ApplicationSettings.TryRemove("OverlayRankColor8", out _); // not used anymore);
+        ApplicationSettings.TryRemove("OverlayRankColor9", out _); // not used anymore);
+        ApplicationSettings.TryRemove("OverlayRankColor10", out _); // not used anymore);
+        ApplicationSettings.TryRemove("OverlayShowCritRate", out _); // not used anymore);
+        ApplicationSettings.TryRemove("EnableHardwareAcceleration", out _); // not used anymore);
+        ApplicationSettings.TryRemove("TriggersVoiceRate", out _); // not used anymore);
+        ApplicationSettings.TryRemove("TriggersSelectedVoice", out _); // not used anymore);
+        ApplicationSettings.TryRemove("ShowDamageSummaryAtStartup", out _); // not used anymore);
+        ApplicationSettings.TryRemove("ShowHealingSummaryAtStartup", out _); // not used anymore);
+        ApplicationSettings.TryRemove("ShowTankingSummaryAtStartup", out _); // not used anymore);
         SaveProperties(_settingsFile, ApplicationSettings);
+        _settingsUpdated = false;
       }
     }
 
@@ -199,7 +219,6 @@ namespace EQLogParser
         Directory.CreateDirectory(ConfigDir);
         // create logs dir if it doesn't exist
         Directory.CreateDirectory(LogsDir);
-
         LoadProperties(ApplicationSettings, ReadList(_settingsFile));
       }
     }
