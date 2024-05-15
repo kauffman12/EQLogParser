@@ -50,8 +50,11 @@ namespace EQLogParser
         LockingModel = new FileAppender.MinimalLock(),
         Layout = new PatternLayout("%date [%thread] %level %logger - %message%newline"),
         MaxSizeRollBackups = 5,
-        MaximumFileSize = "5MB",
-        StaticLogFileName = true
+        MaximumFileSize = "2MB",
+        StaticLogFileName = true,
+        RollingStyle = RollingFileAppender.RollingMode.Size,
+        PreserveLogFileNameExtension = true,
+        CountDirection = -1
       };
 
       // Activate the options on the file appender
