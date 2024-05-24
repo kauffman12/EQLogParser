@@ -17,22 +17,24 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for App.xaml
-  /// </summary>
-  public partial class App : Application
+  public partial class App
   {
     internal static IMapper AutoMap;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     public App()
     {
-      SyncfusionLicenseProvider.RegisterLicense("SEY KEY HERE");
+      SyncfusionLicenseProvider.RegisterLicense("LICENSE");
     }
 
     protected override void OnStartup(StartupEventArgs e)
     {
       base.OnStartup(e);
+
+      // Load splashscreen
+      var splash = new SplashWindow();
+      splash.Show();
+
       // unhandled exceptions
       DispatcherUnhandledException += AppDispatcherUnhandledException;
       AppDomain.CurrentDomain.UnhandledException += DomainUnhandledException;
@@ -63,6 +65,9 @@ namespace EQLogParser
       // Set the repository configuration
       BasicConfigurator.Configure(LogManager.GetRepository(), fileAppender);
 
+      // Read app settings
+      ConfigUtil.Init();
+
       if (ConfigUtil.IfSet("Debug"))
       {
         ((Hierarchy)LogManager.GetRepository()).Root.Level = Level.Debug;
@@ -73,11 +78,14 @@ namespace EQLogParser
       }
 
       ((Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
-
       AutoMap = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
       Log.Info($"Using DotNet {Environment.Version}");
       RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
       Log.Info("RenderMode: " + RenderOptions.ProcessRenderMode);
+
+      var main = new MainWindow();
+      // give time for themes to load
+      Task.Delay(500).ContinueWith(_ => Dispatcher.Invoke(() => main.Show(), DispatcherPriority.Render));
     }
 
     private static void TaskSchedulerUnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)

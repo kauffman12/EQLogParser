@@ -101,17 +101,13 @@ namespace EQLogParser
       }
     }
 
-    internal static bool OpenWindow(DockingManager dockSite, Dictionary<string, ContentControl> opened, out ContentControl window,
-      Type type = null, string key = "", string title = "")
+    internal static bool OpenWindow(out ContentControl window, Type type = null, string key = "", string title = "")
     {
       var nowOpen = false;
       window = null;
 
-      if (opened != null && opened.TryGetValue(key, out var control))
-      {
-        CloseWindow(dockSite, control);
-      }
-      else if (type != null)
+      var dockSite = MainActions.GetDockSite();
+      if (type != null)
       {
         var instance = Activator.CreateInstance(type);
         window = new ContentControl { Name = key };

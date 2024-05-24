@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "EQLogParser"
-#define MyAppVersion "2.2.19"
+#define MyAppVersion "2.2.20"
 #define MyAppPublisher "Kizant"
 #define MyAppURL "https://github.com/kauffman12/EQLogParser"
 #define MyAppExeName "EQLogParser.exe"
@@ -91,12 +91,40 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Code]
+// Delete old logs
+procedure DeleteLogFiles;
+var
+  LogDir: string;
+  FindRec: TFindRec;
+begin
+  // Specify the directory containing the log files
+  LogDir := ExpandConstant('{userappdata}\EQLogParser\logs');
+
+  // Find and delete all .log files
+  if FindFirst(LogDir + '\*.log', FindRec) then
+  begin
+    repeat
+      DeleteFile(LogDir + '\' + FindRec.Name);
+    until not FindNext(FindRec);
+    FindClose(FindRec);
+  end;
+
+  // Find and delete all .log.XXXX-XX-XX files
+  if FindFirst(LogDir + '\*.log.*', FindRec) then
+  begin
+    repeat
+      DeleteFile(LogDir + '\' + FindRec.Name);
+    until not FindNext(FindRec);
+    FindClose(FindRec);
+  end;
+end;
+
 // Event handler for the label click
 procedure LabelLinkClick(Sender: TObject);
 var
   ErrorCode: Integer;
 begin
-  ShellExec('open', 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.4-windows-x64-installer', '', '', SW_SHOW, ewNoWait, ErrorCode);
+  ShellExec('open', 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.5-windows-x64-installer', '', '', SW_SHOW, ewNoWait, ErrorCode);
 end;
 
 procedure ShowDotNetDownloadPage;
@@ -127,7 +155,7 @@ begin
   // Create a clickable label for the link
   LabelLink := TMemo.Create(Form);
   LabelLink.Parent := Form;
-  LabelLink.Text := 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.4-windows-x64-installer';
+  LabelLink.Text := 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.5-windows-x64-installer';
   LabelLink.Font.Style := [fsUnderline];
   LabelLink.Font.Color := clBlue;
   LabelLink.Font.Size := 8;
@@ -284,6 +312,11 @@ begin
         Lines.Free;
       end;
     end;
+  end;
+  // Run the log file deletion at the end of the installation
+  if CurStep = ssPostInstall then
+  begin
+    DeleteLogFiles;
   end;
 end;
 

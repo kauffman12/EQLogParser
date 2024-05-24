@@ -70,13 +70,13 @@ namespace EQLogParser
         if (collection[0] is FastColumnBitmapSeries series)
         {
           // this object doesn't have setResource
-          series.AdornmentsInfo.FontSize = MainWindow.CurrentFontSize + 4;
+          series.AdornmentsInfo.FontSize = MainActions.CurrentFontSize + 4;
           series.AdornmentsInfo.Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush;
         }
 
         // not sure why dynamic resource wasnt working in xaml
-        catLabel.FontSize = MainWindow.CurrentFontSize;
-        numLabel.FontSize = MainWindow.CurrentFontSize;
+        catLabel.FontSize = MainActions.CurrentFontSize;
+        numLabel.FontSize = MainActions.CurrentFontSize;
       }
     }
 
@@ -163,13 +163,13 @@ namespace EQLogParser
           ShowLabel = true,
           ShowMarker = false,
           LabelPosition = AdornmentsLabelPosition.Outer,
-          FontSize = MainWindow.CurrentFontSize + 4,
+          FontSize = MainActions.CurrentFontSize + 4,
           Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush,
           Background = new SolidColorBrush(Colors.Transparent)
         };
 
-        catLabel.FontSize = MainWindow.CurrentFontSize;
-        numLabel.FontSize = MainWindow.CurrentFontSize;
+        catLabel.FontSize = MainActions.CurrentFontSize;
+        numLabel.FontSize = MainActions.CurrentFontSize;
         series.AdornmentsInfo = adornment;
         ChartSeriesBase.SetSpacing(series, 0.5);
         collection.Add(series);

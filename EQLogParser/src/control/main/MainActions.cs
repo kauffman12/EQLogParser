@@ -22,10 +22,14 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
+using Color = System.Windows.Media.Color;
+using ColorConverter = System.Windows.Media.ColorConverter;
+using FontFamily = System.Windows.Media.FontFamily;
 
 namespace EQLogParser
 {
-  static partial class MainActions
+  internal static partial class MainActions
   {
     internal static event Action<string> EventsLogLoadingComplete;
     internal static event Action<string> EventsThemeChanged;
@@ -35,15 +39,20 @@ namespace EQLogParser
     internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsHealingSelectionChanged;
     internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsTankingSelectionChanged;
     internal static readonly HttpClient TheHttpClient = new();
+    internal static string CurrentTheme;
+    internal static string CurrentFontFamily;
+    internal static double CurrentFontSize;
 
     private const string PetsListTitle = "Verified Pets ({0})";
     private const string PlayerListTitle = "Verified Players ({0})";
+    private const string PetOwnersTitle = "Pet Owners ({0})";
     private static readonly ObservableCollection<dynamic> VerifiedPlayersView = [];
     private static readonly ObservableCollection<dynamic> VerifiedPetsView = [];
     private static readonly ObservableCollection<PetMapping> PetPlayersView = [];
     private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new();
     private static readonly SortableNameComparer TheSortableNameComparer = new();
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+    private static MainWindow _mainWindow;
 
     internal static void FireChartOpened(string name) => EventsChartOpened?.Invoke(name);
     internal static void FireDamageSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsDamageSelectionChanged?.Invoke(args);
@@ -52,6 +61,29 @@ namespace EQLogParser
     internal static void FireLoadingEvent(string log) => EventsLogLoadingComplete?.Invoke(log);
     internal static void FireThemeChanged(string theme) => EventsThemeChanged?.Invoke(theme);
     internal static void FireFightSelectionChanged(List<Fight> fights) => EventsFightSelectionChanged?.Invoke(fights);
+    internal static DockingManager GetDockSite() => _mainWindow.dockSite;
+    internal static Window GetOwner() => _mainWindow;
+
+    internal static void SetMainWindow(MainWindow main)
+    {
+      _mainWindow = main;
+
+      // load theme and fonts
+      CurrentFontFamily = ConfigUtil.GetSetting("ApplicationFontFamily", "Segoe UI");
+      CurrentFontSize = ConfigUtil.GetSettingAsDouble("ApplicationFontSize", 12);
+      CurrentTheme = ConfigUtil.GetSetting("CurrentTheme", "MaterialDark");
+
+      if (UiElementUtil.GetSystemFontFamilies().FirstOrDefault(font => font.Source == CurrentFontFamily) == null)
+      {
+        Log.Info(CurrentFontFamily + " Not Found, Trying Default");
+        CurrentFontFamily = "Segoe UI";
+      }
+
+      Application.Current.Resources["EQChatFontSize"] = 16.0; // changed when chat archive loads
+      Application.Current.Resources["EQChatFontFamily"] = new FontFamily("Segoe UI");
+      Application.Current.Resources["EQLogFontSize"] = 16.0; // changed when chat archive loads
+      Application.Current.Resources["EQLogFontFamily"] = new FontFamily("Segoe UI");
+    }
 
     internal static void AddDocumentWindows(DockingManager dockSite)
     {
@@ -74,12 +106,49 @@ namespace EQLogParser
       SyncFusionUtil.AddDocument(dockSite, typeof(DamageSummary), "damageSummaryWindow", "DPS Summary", true);
     }
 
+    internal static void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
+    {
+      UiUtil.InvokeNow(() => _mainWindow?.AddAndCopyDamageParse(combined, selected));
+    }
+
+    internal static void AddAndCopyTankParse(CombinedStats combined, List<PlayerStats> selected)
+    {
+      UiUtil.InvokeNow(() => _mainWindow?.AddAndCopyTankParse(combined, selected));
+    }
+
+    internal static void CopyToEqClick(string label)
+    {
+      UiUtil.InvokeNow(() => _mainWindow?.CopyToEqClick(label));
+    }
+
+    internal static void DisableTriggers()
+    {
+      UiUtil.InvokeNow(() => _mainWindow?.DisableTriggers());
+    }
+
+    internal static void ShowTriggersEnabled(bool show)
+    {
+      UiUtil.InvokeNow(() => _mainWindow?.ShowTriggersEnabled(show));
+    }
+
+    internal static void CloseDamageOverlay(bool reopen)
+    {
+      UiUtil.InvokeNow(() =>
+      {
+        _mainWindow?.CloseDamageOverlay();
+        if (reopen)
+        {
+          _mainWindow?.OpenDamageOverlayIfEnabled(false, true);
+        }
+      });
+    }
+
     internal static TimeRange GetAllRanges()
     {
       TimeRange result = null;
       UiUtil.InvokeNow(() =>
       {
-        result = (Application.Current.MainWindow as MainWindow)?.GetFightTable()?.GetAllRanges();
+        result = _mainWindow?.GetFightTable()?.GetAllRanges();
       });
 
       return result ?? new TimeRange();
@@ -90,7 +159,7 @@ namespace EQLogParser
       List<Fight> result = null;
       UiUtil.InvokeNow(() =>
       {
-        result = (Application.Current.MainWindow as MainWindow)?.GetFightTable()?.GetFights();
+        result = _mainWindow?.GetFightTable()?.GetFights();
       });
 
       return result;
@@ -101,7 +170,7 @@ namespace EQLogParser
       List<Fight> result = null;
       UiUtil.InvokeNow(() =>
       {
-        result = (Application.Current.MainWindow as MainWindow)?.GetFightTable()?.GetSelectedFights();
+        result = _mainWindow?.GetFightTable()?.GetSelectedFights();
       });
 
       return result;
@@ -110,7 +179,7 @@ namespace EQLogParser
     internal static void CheckVersion(TextBlock errorText)
     {
       var version = Application.ResourceAssembly.GetName().Version;
-      Task.Delay(2000).ContinueWith(_ =>
+      Task.Delay(3000).ContinueWith(_ =>
       {
         try
         {
@@ -160,7 +229,7 @@ namespace EQLogParser
                     var process = Process.Start(fullPath);
                     if (process is { HasExited: false })
                     {
-                      await Task.Delay(1000).ContinueWith(_ => { UiUtil.InvokeAsync(() => Application.Current.MainWindow?.Close()); });
+                      await Task.Delay(1000).ContinueWith(_ => { UiUtil.InvokeAsync(() => _mainWindow?.Close()); });
                     }
                   }
                 }
@@ -212,7 +281,7 @@ namespace EQLogParser
       }
     }
 
-    internal static void CreateFontFamiliesMenuItems(MenuItem parent, RoutedEventHandler callback, string currentFamily)
+    internal static void CreateFontFamiliesMenuItems(MenuItem parent, RoutedEventHandler callback)
     {
       foreach (var family in UiElementUtil.GetCommonFontFamilyNames())
       {
@@ -221,13 +290,13 @@ namespace EQLogParser
 
       return;
 
-      MenuItem CreateMenuItem(string name, RoutedEventHandler handler, EFontAwesomeIcon awesome)
+      static MenuItem CreateMenuItem(string name, RoutedEventHandler handler, EFontAwesomeIcon awesome)
       {
         var imageAwesome = new ImageAwesome
         {
           Icon = awesome,
           Style = (Style)Application.Current.Resources["EQIconStyle"],
-          Visibility = (name == currentFamily) ? Visibility.Visible : Visibility.Hidden
+          Visibility = (name == CurrentFontFamily) ? Visibility.Visible : Visibility.Hidden
         };
 
         var menuItem = new MenuItem { Header = name };
@@ -237,7 +306,7 @@ namespace EQLogParser
       }
     }
 
-    internal static void CreateFontSizesMenuItems(MenuItem parent, RoutedEventHandler callback, double currentSize)
+    internal static void CreateFontSizesMenuItems(MenuItem parent, RoutedEventHandler callback)
     {
       parent.Items.Add(CreateMenuItem(10, callback, EFontAwesomeIcon.Solid_Check));
       parent.Items.Add(CreateMenuItem(11, callback, EFontAwesomeIcon.Solid_Check));
@@ -246,13 +315,13 @@ namespace EQLogParser
       parent.Items.Add(CreateMenuItem(14, callback, EFontAwesomeIcon.Solid_Check));
       return;
 
-      MenuItem CreateMenuItem(double size, RoutedEventHandler handler, EFontAwesomeIcon awesome)
+      static MenuItem CreateMenuItem(double size, RoutedEventHandler handler, EFontAwesomeIcon awesome)
       {
         var imageAwesome = new ImageAwesome
         {
           Icon = awesome,
           Style = (Style)Application.Current.Resources["EQIconStyle"],
-          Visibility = size.Equals(currentSize) ? Visibility.Visible : Visibility.Hidden
+          Visibility = size.Equals(CurrentFontSize) ? Visibility.Visible : Visibility.Hidden
         };
 
         var menuItem = new MenuItem { Header = size + "pt", Tag = size };
@@ -296,11 +365,11 @@ namespace EQLogParser
       }
     }
 
-    internal static void SetTheme(Window window, string theme)
+    internal static void SetCurrentTheme(Window window)
     {
       if (window != null)
       {
-        switch (theme)
+        switch (CurrentTheme)
         {
           case "MaterialLight":
             SfSkinManager.SetTheme(window, new Theme("MaterialLight"));
@@ -312,27 +381,37 @@ namespace EQLogParser
       }
     }
 
-    internal static void LoadTheme(MainWindow main, string theme)
+    internal static void UpdateTheme(string theme)
     {
-      Application.Current.Resources["EQTitleSize"] = MainWindow.CurrentFontSize + 2;
-      Application.Current.Resources["EQContentSize"] = MainWindow.CurrentFontSize;
-      Application.Current.Resources["EQDescriptionSize"] = MainWindow.CurrentFontSize - 1;
-      Application.Current.Resources["EQButtonHeight"] = MainWindow.CurrentFontSize + 12 + (MainWindow.CurrentFontSize % 2 == 0 ? 1 : 0);
-      Application.Current.Resources["EQTableHeaderRowHeight"] = MainWindow.CurrentFontSize + 14;
-      Application.Current.Resources["EQTableRowHeight"] = MainWindow.CurrentFontSize + 12;
+      if (CurrentTheme != theme)
+      {
+        CurrentTheme = theme;
+        LoadTheme(_mainWindow);
+        ConfigUtil.SetSetting("CurrentTheme", theme);
+      }
+    }
 
-      if (theme == "MaterialLight")
+    internal static void LoadTheme(MainWindow main)
+    {
+      Application.Current.Resources["EQTitleSize"] = CurrentFontSize + 2;
+      Application.Current.Resources["EQContentSize"] = CurrentFontSize;
+      Application.Current.Resources["EQDescriptionSize"] = CurrentFontSize - 1;
+      Application.Current.Resources["EQButtonHeight"] = CurrentFontSize + 12 + (CurrentFontSize % 2 == 0 ? 1 : 0);
+      Application.Current.Resources["EQTableHeaderRowHeight"] = CurrentFontSize + 14;
+      Application.Current.Resources["EQTableRowHeight"] = CurrentFontSize + 12;
+
+      if (CurrentTheme == "MaterialLight")
       {
         var themeSettings = new MaterialLightThemeSettings
         {
           PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF343434")! },
-          FontFamily = new FontFamily(MainWindow.CurrentFontFamily),
-          BodyAltFontSize = MainWindow.CurrentFontSize - 2,
-          BodyFontSize = MainWindow.CurrentFontSize,
-          HeaderFontSize = MainWindow.CurrentFontSize + 4,
-          SubHeaderFontSize = MainWindow.CurrentFontSize + 2,
-          SubTitleFontSize = MainWindow.CurrentFontSize,
-          TitleFontSize = MainWindow.CurrentFontSize + 2
+          FontFamily = new FontFamily(CurrentFontFamily),
+          BodyAltFontSize = CurrentFontSize - 2,
+          BodyFontSize = CurrentFontSize,
+          HeaderFontSize = CurrentFontSize + 4,
+          SubHeaderFontSize = CurrentFontSize + 2,
+          SubTitleFontSize = CurrentFontSize,
+          TitleFontSize = CurrentFontSize + 2
         };
         SfSkinManager.RegisterThemeSettings("MaterialLight", themeSettings);
         Application.Current.Resources["EQGoodForegroundBrush"] = new SolidColorBrush { Color = Colors.DarkGreen };
@@ -358,13 +437,13 @@ namespace EQLogParser
         var themeSettings = new MaterialDarkCustomThemeSettings
         {
           PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFE1E1E1")! },
-          FontFamily = new FontFamily(MainWindow.CurrentFontFamily),
-          BodyAltFontSize = MainWindow.CurrentFontSize - 2,
-          BodyFontSize = MainWindow.CurrentFontSize,
-          HeaderFontSize = MainWindow.CurrentFontSize + 4,
-          SubHeaderFontSize = MainWindow.CurrentFontSize + 2,
-          SubTitleFontSize = MainWindow.CurrentFontSize,
-          TitleFontSize = MainWindow.CurrentFontSize + 2
+          FontFamily = new FontFamily(CurrentFontFamily),
+          BodyAltFontSize = CurrentFontSize - 2,
+          BodyFontSize = CurrentFontSize,
+          HeaderFontSize = CurrentFontSize + 4,
+          SubHeaderFontSize = CurrentFontSize + 2,
+          SubTitleFontSize = CurrentFontSize,
+          TitleFontSize = CurrentFontSize + 2
         };
         SfSkinManager.RegisterThemeSettings("MaterialDarkCustom", themeSettings);
 
@@ -391,11 +470,11 @@ namespace EQLogParser
       Application.Current.Resources["DamageOverlayBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#99000000")! };
       Application.Current.Resources["DamageOverlayDamageBrush"] = new SolidColorBrush { Color = Colors.White };
       Application.Current.Resources["DamageOverlayProgressBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF1D397E")! };
-      FireThemeChanged(theme);
+      FireThemeChanged(CurrentTheme);
     }
 
     // should already run on the UI thread
-    internal static void Clear(ContentControl petsWindow, ContentControl playersWindow)
+    internal static void Clear(ContentControl petsWindow, ContentControl playersWindow, ContentControl petMappingWindow)
     {
       PetPlayersView.Clear();
       VerifiedPetsView.Clear();
@@ -406,6 +485,7 @@ namespace EQLogParser
       VerifiedPlayersView.Add(entry);
       DockingManager.SetHeader(petsWindow, string.Format(PetsListTitle, VerifiedPetsView.Count));
       DockingManager.SetHeader(playersWindow, string.Format(PlayerListTitle, VerifiedPlayersView.Count));
+      DockingManager.SetHeader(petMappingWindow, string.Format(PetOwnersTitle, PetPlayersView.Count));
     }
 
     internal static dynamic InsertNameIntoSortedList(string name, ObservableCollection<object> collection)
@@ -434,6 +514,12 @@ namespace EQLogParser
       ownerList.ItemsSource = VerifiedPlayersView;
       PlayerManager.Instance.EventsNewPetMapping += (_, mapping) =>
       {
+        // ignore swarm pets
+        if (mapping.Pet?.EndsWith("`s pet") == true)
+        {
+          return;
+        }
+
         UiUtil.InvokeAsync(() =>
         {
           var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(mapping.Pet, StringComparison.OrdinalIgnoreCase));
@@ -450,8 +536,8 @@ namespace EQLogParser
             InsertPetMappingIntoSortedList(mapping, PetPlayersView);
           }
 
-          DockingManager.SetHeader(petMappingWindow, "Pet Owners (" + PetPlayersView.Count + ")");
-        });
+          DockingManager.SetHeader(petMappingWindow, string.Format(PetOwnersTitle, PetPlayersView.Count));
+        }, DispatcherPriority.Input);
 
         main.CheckComputeStats();
       };
@@ -471,7 +557,7 @@ namespace EQLogParser
           var entry = InsertNameIntoSortedList(name, VerifiedPlayersView);
           entry.PlayerClass = PlayerManager.Instance.GetPlayerClass(name);
           DockingManager.SetHeader(playersWindow, string.Format(PlayerListTitle, VerifiedPlayersView.Count));
-        });
+        }, DispatcherPriority.Input);
       };
 
       PlayerManager.Instance.EventsUpdatePlayerClass += (name, playerClass) =>
@@ -485,7 +571,7 @@ namespace EQLogParser
           {
             VerifiedPlayersView[index].PlayerClass = playerClass;
           }
-        });
+        }, DispatcherPriority.Input);
       };
 
       PlayerManager.Instance.EventsRemoveVerifiedPlayer += (_, name) =>
@@ -502,12 +588,12 @@ namespace EQLogParser
             if (existing != null)
             {
               PetPlayersView.Remove(existing);
-              DockingManager.SetHeader(petMappingWindow, "Pet Owners (" + PetPlayersView.Count + ")");
+              DockingManager.SetHeader(petMappingWindow, string.Format(PetOwnersTitle, PetPlayersView.Count));
             }
 
             main.CheckComputeStats();
           }
-        });
+        }, DispatcherPriority.Input);
       };
     }
 
@@ -517,8 +603,11 @@ namespace EQLogParser
       petsGrid.ItemsSource = VerifiedPetsView;
       PlayerManager.Instance.EventsNewVerifiedPet += (_, name) => main.Dispatcher.InvokeAsync(() =>
       {
-        InsertNameIntoSortedList(name, VerifiedPetsView);
-        DockingManager.SetHeader(petsWindow, string.Format(PetsListTitle, VerifiedPetsView.Count));
+        UiUtil.InvokeAsync(() =>
+        {
+          InsertNameIntoSortedList(name, VerifiedPetsView);
+          DockingManager.SetHeader(petsWindow, string.Format(PetsListTitle, VerifiedPetsView.Count));
+        }, DispatcherPriority.Input);
       });
 
       PlayerManager.Instance.EventsRemoveVerifiedPet += (_, name) =>
@@ -535,12 +624,12 @@ namespace EQLogParser
             if (existing != null)
             {
               PetPlayersView.Remove(existing);
-              DockingManager.SetHeader(petMappingWindow, "Pet Owners (" + PetPlayersView.Count + ")");
+              DockingManager.SetHeader(petMappingWindow, string.Format(PetOwnersTitle, PetPlayersView.Count));
             }
 
             main.CheckComputeStats();
           }
-        });
+        }, DispatcherPriority.Input);
       };
     }
 

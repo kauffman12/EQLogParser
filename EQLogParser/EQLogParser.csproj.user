@@ -25,6 +25,9 @@
     <Compile Update="src\ui\main\LogManagementWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="src\ui\main\SplashWindow.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="src\ui\main\TriggerDictionaryWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -76,6 +79,9 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\main\LogManagementWindow.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="src\ui\main\SplashWindow.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\main\TriggerDictionaryWindow.xaml">

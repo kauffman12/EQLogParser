@@ -1,0 +1,22 @@
+﻿<Window x:Class="EQLogParser.SplashWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Topmost="True"
+        WindowStyle="None"
+        Style="{x:Null}"
+        BorderBrush="{x:Null}"
+        BorderThickness="0"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Title="SplashWindow" Height="210" Width="384"
+        Closing="SplashWindowOnClosing">
+    <Grid Margin="0">
+      <Image Source="../../../icons/loading.png" Margin="0"/>
+    <StackPanel x:Name="data" Margin="0,60,0,0" Height="40" Orientation="Vertical" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+      <TextBlock FontSize="10" HorizontalAlignment="Center">Starting</TextBlock>
+    </StackPanel>
+  </Grid>
+</Window>

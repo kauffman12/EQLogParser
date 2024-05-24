@@ -18,11 +18,12 @@
         ShowTitle="False"
         UseNativeChrome="True"
         TextOptions.TextFormattingMode="Display"
+        Loaded="MainWindowOnLoaded"
         WindowStartupLocation="Manual"
         StateChanged="WindowStateChanged">
   <syncfusion:ChromelessWindow.LeftHeaderItemsSource>
     <listCollection:ArrayList>
-      <Menu Margin="0" Padding="0" VerticalAlignment="Bottom">
+      <Menu x:Name="theMenu" Margin="0" Padding="0" VerticalAlignment="Bottom">
         <MenuItem Header="_File">
           <MenuItem x:Name="fileOpenMenu" Header="Open and Monitor _Log File" ToolTip="Open Log File, Archive Chat and Start Monitoring">
             <MenuItem.Icon>
@@ -395,7 +396,7 @@
           </MenuItem>
         </MenuItem>
       </Menu>
-      <TextBlock Margin="100,0,0,0" Visibility="Hidden" Text="" IsHitTestVisible="False" />
+      <TextBlock x:Name="initialText" Margin="100,0,0,0" Visibility="Hidden" Text="" VerticalAlignment="Center" IsHitTestVisible="False" Foreground="{DynamicResource EQGoodForegroundBrush}"/>
       <TextBlock x:Name="statusTriggersText" Margin="0,0,0,0" Visibility="Collapsed" VerticalAlignment="Center" IsHitTestVisible="False"  Text="Triggers Active " Foreground="{DynamicResource EQGoodForegroundBrush}"/>
       <TextBlock x:Name="statusText" Margin="0,0,4,0" VerticalAlignment="Center" IsHitTestVisible="False" />
       <TextBlock x:Name="fileText" Margin="1,0,4,0" VerticalAlignment="Center" IsHitTestVisible="False" Foreground="{DynamicResource ContentForegroundAlt}"/>

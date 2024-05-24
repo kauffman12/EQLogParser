@@ -4,7 +4,6 @@ using log4net.Appender;
 using Microsoft.Win32;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using Syncfusion.UI.Xaml.Grid;
-using Syncfusion.Windows.Shared;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
@@ -25,7 +24,7 @@ using Application = System.Windows.Application;
 
 namespace EQLogParser
 {
-  public partial class MainWindow : ChromelessWindow
+  public partial class MainWindow
   {
     // global settings
     internal static string CurrentLogFile;
@@ -40,17 +39,14 @@ namespace EQLogParser
     internal static bool IsHideOnMinimizeEnabled;
     internal static bool IsMapSendToEqEnabled;
     internal const int ActionIndex = 27;
-    internal static string CurrentTheme;
-    internal static string CurrentFontFamily;
-    internal static double CurrentFontSize;
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-
-    // progress window
-    private static DateTime _startLoadTime;
+    private readonly double _defaultHeight = SystemParameters.PrimaryScreenHeight * 0.75;
+    private readonly double _defaultWidth = SystemParameters.PrimaryScreenWidth * 0.85;
+    private DateTime _startLoadTime;
     private DamageOverlayWindow _damageOverlay;
-    private readonly DispatcherTimer _computeStatsTimer;
-    private readonly DispatcherTimer _saveTimer;
+    private DispatcherTimer _computeStatsTimer;
+    private DispatcherTimer _saveTimer;
     private readonly NpcDamageManager _npcDamageManager = new();
     private LogReader _eqLogReader;
     private readonly List<bool> _logWindows = [];
@@ -60,62 +56,165 @@ namespace EQLogParser
 
     public MainWindow()
     {
+      // DPI and sizing
+      Height = ConfigUtil.GetSettingAsDouble("WindowHeight", _defaultHeight);
+      Width = ConfigUtil.GetSettingAsDouble("WindowWidth", _defaultWidth);
+      var top = ConfigUtil.GetSettingAsDouble("WindowTop", double.NaN);
+      var left = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN);
+
+      if ((!double.IsNaN(top) && top < 0) || (!double.IsNaN(left) && left < 0))
+      {
+        top = 0;
+        left = 0;
+      }
+
+      Top = top;
+      Left = left;
+
+      Log.Info($"Window Pos ({Top}, {Left})");
+      Log.Info($"Window Size ({Width}, {Height})");
+
+      WindowState = ConfigUtil.GetSetting("WindowState", "Normal") switch
+      {
+        "Maximized" => WindowState.Maximized,
+        _ => WindowState.Normal
+      };
+
+
+      InitializeComponent();
+
+      // set main / themes
+      MainActions.SetMainWindow(this);
+
+      // update titles
+      versionText.Text = "v" + Application.ResourceAssembly.GetName().Version!.ToString()[..^2];
+
+      // AoE healing
+      IsAoEHealingEnabled = ConfigUtil.IfSetOrElse("IncludeAoEHealing", IsAoEHealingEnabled);
+      enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      // Healing Swarm Pets
+      IsHealingSwarmPetsEnabled = ConfigUtil.IfSetOrElse("IncludeHealingSwarmPets", IsHealingSwarmPetsEnabled);
+      enableHealingSwarmPetsIcon.Visibility = IsHealingSwarmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      // Assassinate Damage
+      IsAssassinateDamageEnabled = ConfigUtil.IfSetOrElse("IncludeAssassinateDamage", IsAssassinateDamageEnabled);
+      enableAssassinateDamageIcon.Visibility = IsAssassinateDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      // Bane Damage
+      IsBaneDamageEnabled = ConfigUtil.IfSetOrElse("IncludeBaneDamage", IsBaneDamageEnabled);
+      enableBaneDamageIcon.Visibility = IsBaneDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      // Damage Shield Damage
+      IsDamageShieldDamageEnabled = ConfigUtil.IfSetOrElse("IncludeDamageShieldDamage", IsDamageShieldDamageEnabled);
+      enableDamageShieldDamageIcon.Visibility = IsDamageShieldDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      // Finishing Blow Damage
+      IsFinishingBlowDamageEnabled = ConfigUtil.IfSetOrElse("IncludeFinishingBlowDamage", IsFinishingBlowDamageEnabled);
+      enableFinishingBlowDamageIcon.Visibility = IsFinishingBlowDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      // Headshot Damage
+      IsHeadshotDamageEnabled = ConfigUtil.IfSetOrElse("IncludeHeadshotDamage", IsHeadshotDamageEnabled);
+      enableHeadshotDamageIcon.Visibility = IsHeadshotDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      // Slay Undead Damage
+      IsSlayUndeadDamageEnabled = ConfigUtil.IfSetOrElse("IncludeSlayUndeadDamage", IsSlayUndeadDamageEnabled);
+      enableSlayUndeadDamageIcon.Visibility = IsSlayUndeadDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      // Hide window when minimized
+      IsHideOnMinimizeEnabled = ConfigUtil.IfSet("HideWindowOnMinimize");
+      enableHideOnMinimizeIcon.Visibility = IsHideOnMinimizeEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      // Allow Ctrl+C for SendToEQ
+      IsMapSendToEqEnabled = ConfigUtil.IfSet("MapSendToEQAsCtrlC");
+      enableMapSendToEQIcon.Visibility = IsMapSendToEqEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      // Damage Overlay
+      enableDamageOverlayIcon.Visibility = ConfigUtil.IfSet("IsDamageOverlayEnabled") ? Visibility.Visible : Visibility.Hidden;
+      enableDamageOverlay.Header = ConfigUtil.IfSet("IsDamageOverlayEnabled") ? "Disable _Meter" : "Enable _Meter";
+
+      // Auto Monitor
+      enableAutoMonitorIcon.Visibility = ConfigUtil.IfSet("AutoMonitor") ? Visibility.Visible : Visibility.Hidden;
+
+      // Check for Updates
+      checkUpdatesIcon.Visibility = ConfigUtil.IfSet("CheckUpdatesAtStartup") ? Visibility.Visible : Visibility.Hidden;
+
+      // upgrade
+      if (ConfigUtil.IfSet("TriggersWatchForGINA"))
+      {
+        ConfigUtil.SetSetting("TriggersWatchForQuickShare", true);
+      }
+
+      // upgrade
+      if (ConfigUtil.IfSet("OverlayShowCritRate"))
+      {
+        ConfigUtil.SetSetting("OverlayEnableCritRate", "3");
+      }
+
+      // Load recent files
+      if (ConfigUtil.GetSetting("RecentFiles") is { } recentFiles && !string.IsNullOrEmpty(recentFiles))
+      {
+        var files = recentFiles.Split(',');
+        if (files.Length > 0)
+        {
+          _recentFiles.AddRange(files);
+          UpdateRecentFiles();
+        }
+      }
+
+      // create menu items for reading log files
+      MainActions.CreateOpenLogMenuItems(fileOpenMenu, MenuItemSelectLogFileClick);
+
+      // create font families menu items
+      MainActions.CreateFontFamiliesMenuItems(appFontFamilies, MenuItemFontFamilyClicked);
+
+      // create font sizes menu items
+      MainActions.CreateFontSizesMenuItems(appFontSizes, MenuItemFontSizeClicked);
+
+      // add tabs to the right
+      ((DocumentContainer)dockSite.DocContainer).AddTabDocumentAtLast = true;
+
+      // load document state
+      DockingManager.SetState(petMappingWindow, DockState.AutoHidden);
+
+      // update theme
+      MainActions.LoadTheme(this);
+      ConfigUtil.UpdateStatus("Themes Loaded");
+
+      // create menu items for deleting chat
+      Dispatcher.InvokeAsync(UpdateDeleteChatMenu, DispatcherPriority.Input);
+
+      // general events
+      SystemEvents.PowerModeChanged += SystemEventsPowerModeChanged;
+
+      MainActions.AddDocumentWindows(dockSite);
+    }
+
+    private void MainWindowOnLoaded(object sender, RoutedEventArgs args)
+    {
       try
       {
-        // load theme and fonts
-        CurrentFontFamily = ConfigUtil.GetSetting("ApplicationFontFamily", "Segoe UI");
-        CurrentFontSize = ConfigUtil.GetSettingAsDouble("ApplicationFontSize", 12);
-        CurrentTheme = ConfigUtil.GetSetting("CurrentTheme", "MaterialDark");
-
-        if (UiElementUtil.GetSystemFontFamilies().FirstOrDefault(font => font.Source == CurrentFontFamily) == null)
+        // make sure file exists
+        if (File.Exists(ConfigUtil.ConfigDir + "/dockSite.xml"))
         {
-          Log.Info(CurrentFontFamily + " Not Found, Trying Default");
-          CurrentFontFamily = "Segoe UI";
+          try
+          {
+            var reader = XmlReader.Create(ConfigUtil.ConfigDir + "/dockSite.xml");
+            dockSite.LoadDockState(reader);
+            ConfigUtil.UpdateStatus("Layout Restored");
+            reader.Close();
+          }
+          catch (Exception ex)
+          {
+            Log.Debug("Error reading docSite.xml", ex);
+            dockSite.ResetState();
+          }
         }
 
-        Application.Current.Resources["EQChatFontSize"] = 16.0; // changed when chat archive loads
-        Application.Current.Resources["EQChatFontFamily"] = new FontFamily("Segoe UI");
-        Application.Current.Resources["EQLogFontSize"] = 16.0; // changed when chat archive loads
-        Application.Current.Resources["EQLogFontFamily"] = new FontFamily("Segoe UI");
-        MainActions.LoadTheme(this, CurrentTheme);
-
-        // DPI and sizing
-        var defaultHeight = SystemParameters.PrimaryScreenHeight * 0.75;
-        var defaultWidth = SystemParameters.PrimaryScreenWidth * 0.85;
-        Height = ConfigUtil.GetSettingAsDouble("WindowHeight", defaultHeight);
-        Width = ConfigUtil.GetSettingAsDouble("WindowWidth", defaultWidth);
-        var top = ConfigUtil.GetSettingAsDouble("WindowTop", double.NaN);
-        var left = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN);
-
-        if ((!double.IsNaN(top) && top < 0) || (!double.IsNaN(left) && left < 0))
-        {
-          top = 0;
-          left = 0;
-        }
-
-        Top = top;
-        Left = left;
-        Log.Info($"Window Pos ({Top}, {Left})");
-        Log.Info($"Window Size ({Width}, {Height})");
-
-        WindowState = ConfigUtil.GetSetting("WindowState", "Normal") switch
-        {
-          "Maximized" => WindowState.Maximized,
-          _ => WindowState.Normal
-        };
-
-        InitializeComponent();
-
-        // add tabs to the right
-        ((DocumentContainer)dockSite.DocContainer).AddTabDocumentAtLast = true;
-
-        // update titles
-        versionText.Text = "v" + Application.ResourceAssembly.GetName().Version!.ToString()[..^2];
-
+        // compute stats gets triggered when pet owners is updated during startup
         MainActions.InitPetOwners(this, petMappingGrid, ownerList, petMappingWindow);
         MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, classList, verifiedPlayersWindow, petMappingWindow);
         MainActions.InitVerifiedPets(this, verifiedPetsGrid, verifiedPetsWindow, petMappingWindow);
-
         MainActions.EventsFightSelectionChanged += (_) => ComputeStats();
         DamageStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(damageChartIcon.Tag as string, data));
         HealingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(healingChartIcon.Tag as string, data));
@@ -123,98 +222,6 @@ namespace EQLogParser
         MainActions.EventsDamageSelectionChanged += DamageSummary_SelectionChanged;
         MainActions.EventsHealingSelectionChanged += HealingSummary_SelectionChanged;
         MainActions.EventsTankingSelectionChanged += TankingSummary_SelectionChanged;
-
-        UpdateDeleteChatMenu();
-
-        // AoE healing
-        IsAoEHealingEnabled = ConfigUtil.IfSetOrElse("IncludeAoEHealing", IsAoEHealingEnabled);
-        enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
-
-        // Healing Swarm Pets
-        IsHealingSwarmPetsEnabled = ConfigUtil.IfSetOrElse("IncludeHealingSwarmPets", IsHealingSwarmPetsEnabled);
-        enableHealingSwarmPetsIcon.Visibility = IsHealingSwarmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
-
-        // Assassinate Damage
-        IsAssassinateDamageEnabled = ConfigUtil.IfSetOrElse("IncludeAssassinateDamage", IsAssassinateDamageEnabled);
-        enableAssassinateDamageIcon.Visibility = IsAssassinateDamageEnabled ? Visibility.Visible : Visibility.Hidden;
-
-        // Bane Damage
-        IsBaneDamageEnabled = ConfigUtil.IfSetOrElse("IncludeBaneDamage", IsBaneDamageEnabled);
-        enableBaneDamageIcon.Visibility = IsBaneDamageEnabled ? Visibility.Visible : Visibility.Hidden;
-
-        // Damage Shield Damage
-        IsDamageShieldDamageEnabled = ConfigUtil.IfSetOrElse("IncludeDamageShieldDamage", IsDamageShieldDamageEnabled);
-        enableDamageShieldDamageIcon.Visibility = IsDamageShieldDamageEnabled ? Visibility.Visible : Visibility.Hidden;
-
-        // Finishing Blow Damage
-        IsFinishingBlowDamageEnabled = ConfigUtil.IfSetOrElse("IncludeFinishingBlowDamage", IsFinishingBlowDamageEnabled);
-        enableFinishingBlowDamageIcon.Visibility = IsFinishingBlowDamageEnabled ? Visibility.Visible : Visibility.Hidden;
-
-        // Headshot Damage
-        IsHeadshotDamageEnabled = ConfigUtil.IfSetOrElse("IncludeHeadshotDamage", IsHeadshotDamageEnabled);
-        enableHeadshotDamageIcon.Visibility = IsHeadshotDamageEnabled ? Visibility.Visible : Visibility.Hidden;
-
-        // Slay Undead Damage
-        IsSlayUndeadDamageEnabled = ConfigUtil.IfSetOrElse("IncludeSlayUndeadDamage", IsSlayUndeadDamageEnabled);
-        enableSlayUndeadDamageIcon.Visibility = IsSlayUndeadDamageEnabled ? Visibility.Visible : Visibility.Hidden;
-
-        // Hide window when minimized
-        IsHideOnMinimizeEnabled = ConfigUtil.IfSet("HideWindowOnMinimize");
-        enableHideOnMinimizeIcon.Visibility = IsHideOnMinimizeEnabled ? Visibility.Visible : Visibility.Hidden;
-
-        // Allow Ctrl+C for SendToEQ
-        IsMapSendToEqEnabled = ConfigUtil.IfSet("MapSendToEQAsCtrlC");
-        enableMapSendToEQIcon.Visibility = IsMapSendToEqEnabled ? Visibility.Visible : Visibility.Hidden;
-
-        // Damage Overlay
-        enableDamageOverlayIcon.Visibility = ConfigUtil.IfSet("IsDamageOverlayEnabled") ? Visibility.Visible : Visibility.Hidden;
-        enableDamageOverlay.Header = ConfigUtil.IfSet("IsDamageOverlayEnabled") ? "Disable _Meter" : "Enable _Meter";
-
-        // create menu items for reading log files
-        MainActions.CreateOpenLogMenuItems(fileOpenMenu, MenuItemSelectLogFileClick);
-
-        // create font families menu items
-        MainActions.CreateFontFamiliesMenuItems(appFontFamilies, MenuItemFontFamilyClicked, CurrentFontFamily);
-
-        // crate f ont sizes menu items
-        MainActions.CreateFontSizesMenuItems(appFontSizes, MenuItemFontSizeClicked, CurrentFontSize);
-
-        // Load recent files
-        if (ConfigUtil.GetSetting("RecentFiles") is { } recentFiles && !string.IsNullOrEmpty(recentFiles))
-        {
-          var files = recentFiles.Split(',');
-          if (files.Length > 0)
-          {
-            _recentFiles.AddRange(files);
-            UpdateRecentFiles();
-          }
-        }
-
-        Log.Info("Initialized Components");
-        if (ConfigUtil.IfSet("CheckUpdatesAtStartup"))
-        {
-          // check version
-          checkUpdatesIcon.Visibility = Visibility.Visible;
-          MainActions.CheckVersion(errorText);
-        }
-        else
-        {
-          checkUpdatesIcon.Visibility = Visibility.Hidden;
-        }
-
-        if (ConfigUtil.IfSet("AutoMonitor"))
-        {
-          enableAutoMonitorIcon.Visibility = Visibility.Visible;
-          var previousFile = ConfigUtil.GetSetting("LastOpenedFile");
-          if (File.Exists(previousFile))
-          {
-            OpenLogFile(previousFile, 0);
-          }
-        }
-        else
-        {
-          enableAutoMonitorIcon.Visibility = Visibility.Hidden;
-        }
 
         _computeStatsTimer = new DispatcherTimer(DispatcherPriority.Render)
         {
@@ -242,52 +249,80 @@ namespace EQLogParser
             ConfigUtil.Save();
           }
         };
-        _saveTimer.Start();
-
-        SystemEvents.PowerModeChanged += SystemEventsPowerModeChanged;
-
-        // data old stuff
-        if (ConfigUtil.IfSet("TriggersWatchForGINA"))
-        {
-          ConfigUtil.SetSetting("TriggersWatchForQuickShare", true);
-        }
-
-        // upgrade
-        if (ConfigUtil.IfSet("OverlayShowCritRate"))
-        {
-          ConfigUtil.SetSetting("OverlayEnableCritRate", "3");
-        }
 
         // Init Trigger Manager
         TriggerManager.Instance.Start();
-
-        // load document state
-        DockingManager.SetState(petMappingWindow, DockState.AutoHidden);
-        MainActions.AddDocumentWindows(dockSite);
-
-        // make sure file exists
-        if (File.Exists(ConfigUtil.ConfigDir + "/dockSite.xml"))
-        {
-          try
-          {
-            var reader = XmlReader.Create(ConfigUtil.ConfigDir + "/dockSite.xml");
-            dockSite.LoadDockState(reader);
-            reader.Close();
-          }
-          catch (Exception ex)
-          {
-            Log.Debug("Error reading docSite.xml", ex);
-            dockSite.ResetState();
-          }
-        }
+        ConfigUtil.UpdateStatus("Trigger Manager Started");
 
         // cleanup downloads
-        Dispatcher.InvokeAsync(MainActions.Cleanup, DispatcherPriority.Background);
+        Task.Delay(250).ContinueWith(_ => MainActions.Cleanup());
+
+        // start save timer
+        _saveTimer.Start();
+
+        // send done a little after the last block
+        Task.Delay(1000).ContinueWith(_ => ConfigUtil.UpdateStatus("Done"));
+
+        // last delay splash screen and auto monitor
+        Task.Delay(500).ContinueWith(_ =>
+        {
+          // check need monitor
+          var previousFile = ConfigUtil.GetSetting("LastOpenedFile");
+          if (enableAutoMonitorIcon.Visibility == Visibility.Visible && File.Exists(previousFile))
+          {
+            ConfigUtil.UpdateStatus("Monitoring Last Log");
+            // OpenLogFile with update status
+            OpenLogFile(previousFile, 0);
+          }
+
+          // Actually start the check.
+          if (checkUpdatesIcon.Visibility == Visibility.Visible)
+          {
+            // CheckVersion is delayed by 3 seconds
+            MainActions.CheckVersion(errorText);
+          }
+
+          Dispatcher.InvokeAsync(CheckWindowPosition, DispatcherPriority.Background);
+        });
       }
       catch (Exception e)
       {
+        // make sure splash screen goes away
+        ConfigUtil.UpdateStatus("Done");
         Log.Error(e);
-        throw;
+      }
+    }
+
+    private void CheckWindowPosition()
+    {
+      var isOffScreen = true;
+      var windowRect = new Rect(Left, Top, Width, Height);
+
+      foreach (var screen in System.Windows.Forms.Screen.AllScreens)
+      {
+        var screenRect = new Rect(
+          screen.WorkingArea.Left,
+          screen.WorkingArea.Top,
+          screen.WorkingArea.Width,
+          screen.WorkingArea.Height
+        );
+
+        if (screenRect.IntersectsWith(windowRect))
+        {
+          isOffScreen = false;
+          break;
+        }
+      }
+
+      if (isOffScreen)
+      {
+        // Move the window to the center of the primary screen
+        Width = _defaultWidth;
+        Height = _defaultHeight;
+        Left = 0;
+        Top = 0;
+        Log.Info($"Window is Offscreen. Changing Window Pos ({Top}, {Left})");
+        Log.Info($"Window is Offscreen. Changing Window Size ({Width}, {Height})");
       }
     }
 
@@ -339,6 +374,8 @@ namespace EQLogParser
     private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
     private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
     private void WindowClose(object sender, EventArgs e) => Close();
+    private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e) => MainActions.UpdateTheme("MaterialDark");
+    private void ToggleMaterialLightClick(object sender, RoutedEventArgs e) => MainActions.UpdateTheme("MaterialLight");
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
@@ -352,6 +389,16 @@ namespace EQLogParser
 
     internal void DisableTriggers()
     {
+      // delay so window owner can be set correctly
+      Task.Delay(1500).ContinueWith(_ =>
+      {
+        Dispatcher.InvokeAsync(() =>
+        {
+          new MessageWindow("Trigger Database not available. In use by another EQLogParser?\r\nTrigger Management disabled until restart.",
+            Resource.Warning).Show();
+        });
+      });
+
       Dispatcher.InvokeAsync(() =>
       {
         triggersMenuItem.IsEnabled = false;
@@ -439,28 +486,32 @@ namespace EQLogParser
 
     private void ComputeStats()
     {
-      var filtered = MainActions.GetSelectedFights().OrderBy(npc => npc.Id);
-      var allRanges = MainActions.GetAllRanges();
-      var opened = SyncFusionUtil.GetOpenWindows(dockSite);
-
-      var damageStatsOptions = new GenerateStatsOptions();
-      damageStatsOptions.Npcs.AddRange(filtered);
-      damageStatsOptions.AllRanges = allRanges;
-      Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(damageStatsOptions));
-
-      var healingStatsOptions = new GenerateStatsOptions();
-      healingStatsOptions.Npcs.AddRange(filtered);
-      healingStatsOptions.AllRanges = allRanges;
-      Task.Run(() => HealingStatsManager.Instance.BuildTotalStats(healingStatsOptions));
-
-      var tankingStatsOptions = new GenerateStatsOptions();
-      tankingStatsOptions.Npcs.AddRange(filtered);
-      tankingStatsOptions.AllRanges = allRanges;
-      if (opened.TryGetValue((tankingSummaryIcon.Tag as string)!, out var control) && control != null)
+      var fights = MainActions.GetSelectedFights();
+      if (fights != null)
       {
-        tankingStatsOptions.DamageType = ((TankingSummary)control.Content).DamageType;
+        var filtered = fights.OrderBy(npc => npc.Id);
+        var allRanges = MainActions.GetAllRanges();
+        var opened = SyncFusionUtil.GetOpenWindows(dockSite);
+
+        var damageStatsOptions = new GenerateStatsOptions();
+        damageStatsOptions.Npcs.AddRange(filtered);
+        damageStatsOptions.AllRanges = allRanges;
+        Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(damageStatsOptions));
+
+        var healingStatsOptions = new GenerateStatsOptions();
+        healingStatsOptions.Npcs.AddRange(filtered);
+        healingStatsOptions.AllRanges = allRanges;
+        Task.Run(() => HealingStatsManager.Instance.BuildTotalStats(healingStatsOptions));
+
+        var tankingStatsOptions = new GenerateStatsOptions();
+        tankingStatsOptions.Npcs.AddRange(filtered);
+        tankingStatsOptions.AllRanges = allRanges;
+        if (opened.TryGetValue((tankingSummaryIcon.Tag as string)!, out var control) && control != null)
+        {
+          tankingStatsOptions.DamageType = ((TankingSummary)control.Content).DamageType;
+        }
+        Task.Run(() => TankingStatsManager.Instance.BuildTotalStats(tankingStatsOptions));
       }
-      Task.Run(() => TankingStatsManager.Instance.BuildTotalStats(tankingStatsOptions));
     }
 
     private void MenuItemClearOpenRecentClick(object sender, RoutedEventArgs e)
@@ -647,26 +698,6 @@ namespace EQLogParser
       MainActions.UpdateDamageOption(enableSlayUndeadDamageIcon, IsSlayUndeadDamageEnabled, "IncludeSlayUndeadDamage");
     }
 
-    private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e)
-    {
-      if (CurrentTheme != "MaterialDark")
-      {
-        CurrentTheme = "MaterialDark";
-        MainActions.LoadTheme(this, CurrentTheme);
-        ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
-      }
-    }
-
-    private void ToggleMaterialLightClick(object sender, RoutedEventArgs e)
-    {
-      if (CurrentTheme != "MaterialLight")
-      {
-        CurrentTheme = "MaterialLight";
-        MainActions.LoadTheme(this, CurrentTheme);
-        ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
-      }
-    }
-
     // Main Menu
     private void MenuItemWindowClick(object sender, RoutedEventArgs e)
     {
@@ -684,7 +715,7 @@ namespace EQLogParser
           found += 1;
         }
 
-        SyncFusionUtil.OpenWindow(dockSite, null, out _, typeof(EqLogViewer), "eqLogWindow", "Log Search " + found);
+        SyncFusionUtil.OpenWindow(out _, typeof(EqLogViewer), "eqLogWindow", "Log Search " + found);
       }
       else if (sender as MenuItem is { Icon: ImageAwesome { Tag: string name2 } })
       {
@@ -720,9 +751,9 @@ namespace EQLogParser
       if (sender is MenuItem menuItem)
       {
         MainActions.UpdateCheckedMenuItem(menuItem, (menuItem.Parent as MenuItem)?.Items);
-        CurrentFontFamily = menuItem.Header as string;
-        ConfigUtil.SetSetting("ApplicationFontFamily", CurrentFontFamily);
-        MainActions.LoadTheme(this, CurrentTheme);
+        MainActions.CurrentFontFamily = menuItem.Header as string;
+        ConfigUtil.SetSetting("ApplicationFontFamily", MainActions.CurrentFontFamily);
+        MainActions.LoadTheme(this);
       }
     }
 
@@ -731,9 +762,9 @@ namespace EQLogParser
       if (sender is MenuItem menuItem)
       {
         MainActions.UpdateCheckedMenuItem(menuItem, (menuItem.Parent as MenuItem)?.Items);
-        CurrentFontSize = (double)menuItem.Tag;
-        ConfigUtil.SetSetting("ApplicationFontSize", CurrentFontSize);
-        MainActions.LoadTheme(this, CurrentTheme);
+        MainActions.CurrentFontSize = (double)menuItem.Tag;
+        ConfigUtil.SetSetting("ApplicationFontSize", MainActions.CurrentFontSize);
+        MainActions.LoadTheme(this);
       }
     }
 
@@ -872,7 +903,17 @@ namespace EQLogParser
 
         if (!string.IsNullOrEmpty(theFile))
         {
-          Dispatcher.InvokeAsync(() =>
+          var name = "You";
+          var server = "Unknown";
+          if (theFile.Length > 0)
+          {
+            Log.Info("Selected Log File: " + theFile);
+            FileUtil.ParseFileName(theFile, ref name, ref server);
+          }
+
+          var changed = ConfigUtil.ServerName != server;
+
+          Dispatcher.Invoke(() =>
           {
             if (DockingManager.GetState(npcWindow) == DockState.Hidden)
             {
@@ -883,18 +924,9 @@ namespace EQLogParser
             fileText.Text = $"-- {theFile}";
             _startLoadTime = DateTime.Now;
 
-            var name = "You";
-            var server = "Unknown";
-            if (theFile.Length > 0)
-            {
-              Log.Info("Selected Log File: " + theFile);
-              FileUtil.ParseFileName(theFile, ref name, ref server);
-            }
-
-            var changed = ConfigUtil.ServerName != server;
             if (changed)
             {
-              MainActions.Clear(verifiedPetsWindow, verifiedPlayersWindow);
+              MainActions.Clear(verifiedPetsWindow, verifiedPlayersWindow, petMappingWindow);
 
               // save before switching
               if (!string.IsNullOrEmpty(ConfigUtil.ServerName))
@@ -927,13 +959,14 @@ namespace EQLogParser
             CurrentLogFile = theFile;
             _npcDamageManager.Reset();
             _eqLogReader = new LogReader(new LogProcessor(theFile), theFile, lastMins);
+            _eqLogReader.StartAsync();
             UpdateLoadingProgress();
-          });
+          }, DispatcherPriority.Render);
         }
       }
       catch (Exception e)
       {
-        if (!(e is InvalidCastException || e is ArgumentException || e is FormatException))
+        if (e is not (InvalidCastException or ArgumentException or FormatException))
         {
           throw;
         }
@@ -1002,11 +1035,11 @@ namespace EQLogParser
         }
         else if (icon == themeDarkIcon)
         {
-          icon.Visibility = CurrentTheme == "MaterialDark" ? Visibility.Visible : Visibility.Hidden;
+          icon.Visibility = MainActions.CurrentTheme == "MaterialDark" ? Visibility.Visible : Visibility.Hidden;
         }
         else if (icon == themeLightIcon)
         {
-          icon.Visibility = CurrentTheme == "MaterialLight" ? Visibility.Visible : Visibility.Hidden;
+          icon.Visibility = MainActions.CurrentTheme == "MaterialLight" ? Visibility.Visible : Visibility.Hidden;
         }
       }
     }

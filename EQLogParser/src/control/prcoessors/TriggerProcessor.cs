@@ -23,6 +23,7 @@ namespace EQLogParser
     public readonly ObservableCollection<AlertEntry> AlertLog = [];
     public readonly string CurrentCharacterId;
     public readonly string CurrentProcessorName;
+    public long ActivityLastTicks;
     private const long SixtyHours = 10 * 6 * 60 * 60 * 1000;
     private readonly string _currentPlayer;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -39,6 +40,8 @@ namespace EQLogParser
     private readonly BlockingCollection<Speak> _speakCollection = [];
     private readonly BlockingCollection<LineData> _chatCollection = [];
     private readonly BlockingCollection<string> _triggerTimeCollection = [];
+    private readonly string _activeColor;
+    private readonly string _fontColor;
     private TriggerWrapper _previousSpoken;
     private List<TriggerWrapper> _activeTriggers;
     private List<LexiconItem> _lexicon;
@@ -46,10 +49,9 @@ namespace EQLogParser
     private Task _chatTask;
     private Task _triggerTimeTask;
     private Task _processTask;
-    private string _activeColor;
-    private string _fontColor;
     private bool _isTesting;
-    private bool _ready = true;
+    private bool _ready;
+    private bool _isDisposed;
 
     internal TriggerProcessor(string id, string name, string playerName, string voice, int voiceRate,
       string activeColor, string fontColor, Action<string, Trigger, string> addTextEvent, Action<Trigger, List<TimerData>> addTimerEvent)
@@ -71,14 +73,6 @@ namespace EQLogParser
       _soundPlayer = new SoundPlayer();
       _lexicon = TriggerStateManager.Instance.GetLexicon().ToList();
       TriggerStateManager.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
-    }
-
-    private void LexiconUpdateEvent(List<LexiconItem> update)
-    {
-      lock (_voiceLock)
-      {
-        _lexicon = update;
-      }
     }
 
     public void LinkTo(BlockingCollection<Tuple<string, double, bool>> collection)
@@ -183,7 +177,10 @@ namespace EQLogParser
     {
       lock (_activeTriggerLock)
       {
+        _ready = false;
         _activeTriggers.ToList().ForEach(CleanupWrapper);
+        _synth?.SpeakAsyncCancelAll();
+        _soundPlayer?.Stop();
         GetActiveTriggers();
       }
     }
@@ -195,6 +192,14 @@ namespace EQLogParser
     private string ModPlayer(string text) => !string.IsNullOrEmpty(text) ?
       text.Replace("{c}", _currentPlayer ?? string.Empty, StringComparison.OrdinalIgnoreCase) : text;
 
+    private void LexiconUpdateEvent(List<LexiconItem> update)
+    {
+      lock (_voiceLock)
+      {
+        _lexicon = update;
+      }
+    }
+
     private void DoProcess(string line, double dateTime)
     {
       // ignore anything older than 120 seconds in case a log file is replaced/reloaded but allow for bad lag
@@ -203,7 +208,7 @@ namespace EQLogParser
         return;
       }
 
-      var start = DateTime.UtcNow.Ticks;
+      ActivityLastTicks = DateTime.UtcNow.Ticks;
       var lineData = new LineData { Action = line[27..], BeginTime = dateTime };
       lock (_activeTriggerLock)
       {
@@ -211,7 +216,7 @@ namespace EQLogParser
         {
           if (CheckLine(wrapper, lineData, out var matches))
           {
-            HandleTrigger(wrapper, lineData, start, matches);
+            HandleTrigger(wrapper, lineData, ActivityLastTicks, matches);
           }
 
           CheckTimers(wrapper, lineData);
@@ -494,6 +499,7 @@ namespace EQLogParser
         newTimerData.RepeatedCount = GetRepeatedCount(_repeatedTimerTimes, wrapper, displayName);
       }
 
+      newTimerData.BeginTicks = beginTicks;
       newTimerData.EndTicks = beginTicks + (long)(TimeSpan.TicksPerMillisecond * wrapper.ModifiedDurationSeconds * 1000);
       newTimerData.DurationTicks = newTimerData.EndTicks - beginTicks;
       newTimerData.ResetTicks = trigger.ResetDurationSeconds > 0 ?
@@ -615,6 +621,8 @@ namespace EQLogParser
 
     private void HandleSpeech(Speak speak)
     {
+      lock (_activeTriggerLock) if (!_ready) return;
+
       if (!string.IsNullOrEmpty(speak.TtsOrSound))
       {
         var cancel = speak.Wrapper.TriggerData.Priority < _previousSpoken?.TriggerData?.Priority;
@@ -810,6 +818,8 @@ namespace EQLogParser
             Log.Debug("Bad Trigger?", ex);
           }
         }
+
+        _ready = true;
       }
 
       if (triggerCount > 400 && CurrentProcessorName?.Contains("Trigger Tester") == false)
@@ -1047,32 +1057,36 @@ namespace EQLogParser
 
     public void Dispose()
     {
-      _ready = false;
-      TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
-      _speakCollection.CompleteAdding();
-      _chatCollection.CompleteAdding();
-      _triggerTimeCollection.CompleteAdding();
-      _speakTask?.Wait();
-      _chatTask?.Wait();
-      _triggerTimeTask?.Wait();
-      _processTask?.Wait();
-      _speakTask?.Dispose();
-      _chatTask?.Dispose();
-      _triggerTimeTask?.Dispose();
-      _processTask?.Dispose();
-      _speakCollection?.Dispose();
-      _chatCollection?.Dispose();
-      _triggerTimeCollection?.Dispose();
-      _soundPlayer?.Dispose();
-
-      lock (_voiceLock)
+      if (!_isDisposed)
       {
-        _synth?.Dispose();
-      }
+        _isDisposed = true;
+        _ready = false;
+        TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
+        _speakCollection.CompleteAdding();
+        _chatCollection.CompleteAdding();
+        _triggerTimeCollection.CompleteAdding();
+        _speakTask?.Wait();
+        _chatTask?.Wait();
+        _triggerTimeTask?.Wait();
+        _processTask?.Wait();
+        _speakTask?.Dispose();
+        _chatTask?.Dispose();
+        _triggerTimeTask?.Dispose();
+        _processTask?.Dispose();
+        _speakCollection?.Dispose();
+        _chatCollection?.Dispose();
+        _triggerTimeCollection?.Dispose();
+        _soundPlayer?.Dispose();
 
-      lock (_activeTriggerLock)
-      {
-        _activeTriggers.ToList().ForEach(CleanupWrapper);
+        lock (_voiceLock)
+        {
+          _synth?.Dispose();
+        }
+
+        lock (_activeTriggerLock)
+        {
+          _activeTriggers.ToList().ForEach(CleanupWrapper);
+        }
       }
     }
 

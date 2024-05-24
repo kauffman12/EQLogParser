@@ -75,6 +75,7 @@ namespace EQLogParser
     public CancellationTokenSource CancelSource { get; set; }
     public CancellationTokenSource WarningSource { get; set; }
     public string DisplayName { get; set; }
+    public long BeginTicks { get; set; }
     public long EndTicks { get; set; }
     public long ResetTicks { get; set; }
     public long ResetDurationTicks { get; set; }
@@ -224,17 +225,19 @@ namespace EQLogParser
 
   internal class TriggerState
   {
+    [BsonId]
     public string Id { get; set; }
     public Dictionary<string, bool?> Enabled { get; set; } = new();
   }
 
   internal class TriggerNode
   {
+    [BsonId]
+    public string Id { get; set; }
     public bool IsExpanded { get; set; }
     public string Name { get; set; }
     public Trigger TriggerData { get; set; }
     public Overlay OverlayData { get; set; }
-    public string Id { get; set; }
     public int Index { get; set; }
     public string Parent { get; set; }
   }
@@ -249,10 +252,12 @@ namespace EQLogParser
     public int VoiceRate { get; set; }
     public string ActiveColor { get; set; } = null;
     public string FontColor { get; set; } = null;
+    [BsonIgnore] public bool? IsWaiting { get; set; } = true;
   }
 
   internal class TriggerConfig
   {
+    [BsonId]
     public string Id { get; set; }
     public bool IsAdvanced { get; set; }
     public List<TriggerCharacter> Characters { get; set; } = [];

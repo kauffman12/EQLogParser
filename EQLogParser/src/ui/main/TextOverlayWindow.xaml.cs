@@ -43,7 +43,7 @@ namespace EQLogParser
 
       if (_preview)
       {
-        MainActions.SetTheme(this, MainWindow.CurrentTheme);
+        MainActions.SetCurrentTheme(this);
         ResizeMode = ResizeMode.CanResizeWithGrip;
         SetResourceReference(BorderBrushProperty, "PreviewBackgroundBrush");
         SetResourceReference(BackgroundProperty, "OverlayBrushColor-" + _node.Id);

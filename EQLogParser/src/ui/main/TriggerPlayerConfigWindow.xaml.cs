@@ -22,10 +22,10 @@ namespace EQLogParser
 
     internal TriggerPlayerConfigWindow(TriggerCharacter character = null)
     {
-      MainActions.SetTheme(this, MainWindow.CurrentTheme);
+      MainActions.SetCurrentTheme(this);
       InitializeComponent();
 
-      Owner = Application.Current.MainWindow;
+      Owner = MainActions.GetOwner();
 
       if ((_testSynth = TriggerUtil.GetSpeechSynthesizer()) != null)
       {

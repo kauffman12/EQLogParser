@@ -97,7 +97,7 @@ namespace EQLogParser
       var defaultColor = (Color)Application.Current.Resources["ContentForeground.Color"]!;
       try
       {
-        var colorSetting = "ChatFontFgColor" + MainWindow.CurrentTheme;
+        var colorSetting = "ChatFontFgColor" + MainActions.CurrentTheme;
         var fgColor = ConfigUtil.GetSetting(colorSetting, defaultColor.ToString());
         colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor)!;
       }
@@ -416,7 +416,7 @@ namespace EQLogParser
       if (chatBox != null)
       {
         chatBox.Foreground = new SolidColorBrush(colorPicker.Color);
-        var colorSetting = "ChatFontFgColor" + MainWindow.CurrentTheme;
+        var colorSetting = "ChatFontFgColor" + MainActions.CurrentTheme;
         ConfigUtil.SetSetting(colorSetting, colorPicker.Color.ToString());
       }
     }

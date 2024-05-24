@@ -24,6 +24,7 @@ namespace EQLogParser
 
     private readonly DispatcherTimer _updateTimer;
     private readonly bool _preview;
+    private readonly bool _ready;
     private double _savedHeight;
     private double _savedWidth;
     private double _savedTop = double.NaN;
@@ -42,13 +43,12 @@ namespace EQLogParser
     private bool _savedStreamerMode;
     private string _savedProgressColor;
     private bool _currentShowDps;
-    private bool _ready;
 
     internal DamageOverlayWindow(bool preview = false, bool reset = false)
     {
       InitializeComponent();
 
-      MainActions.SetTheme(this, MainWindow.CurrentTheme);
+      MainActions.SetCurrentTheme(this);
       dpsButton.Foreground = ActiveBrush;
       tankButton.Foreground = InActiveBrush;
       _preview = preview;
@@ -258,7 +258,7 @@ namespace EQLogParser
 
         if (!DataManager.Instance.HasOverlayFights())
         {
-          ((MainWindow)Application.Current.MainWindow)?.CloseDamageOverlay();
+          MainActions.CloseDamageOverlay(false);
         }
       }
     }
@@ -370,10 +370,7 @@ namespace EQLogParser
       }
     }
 
-    private void CloseClick(object sender, RoutedEventArgs e)
-    {
-      ((MainWindow)Application.Current.MainWindow)?.CloseDamageOverlay();
-    }
+    private void CloseClick(object sender, RoutedEventArgs e) => MainActions.CloseDamageOverlay(false);
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
@@ -868,8 +865,7 @@ namespace EQLogParser
       }
 
       Hide();
-      ((MainWindow)Application.Current.MainWindow)?.CloseDamageOverlay();
-      ((MainWindow)Application.Current.MainWindow)?.OpenDamageOverlayIfEnabled(false, true);
+      MainActions.CloseDamageOverlay(true);
     }
 
     private void CopyClick(object sender, RoutedEventArgs e)
@@ -880,14 +876,14 @@ namespace EQLogParser
         {
           if (_stats.DamageStats != null)
           {
-            (Application.Current.MainWindow as MainWindow)?.AddAndCopyDamageParse(_stats.DamageStats, _stats.DamageStats.StatsList);
+            MainActions.AddAndCopyDamageParse(_stats.DamageStats, _stats.DamageStats.StatsList);
           }
         }
         else
         {
           if (_stats.TankStats != null)
           {
-            (Application.Current.MainWindow as MainWindow)?.AddAndCopyTankParse(_stats.TankStats, _stats.TankStats.StatsList);
+            MainActions.AddAndCopyTankParse(_stats.TankStats, _stats.TankStats.StatsList);
           }
         }
       }
@@ -982,7 +978,7 @@ namespace EQLogParser
           {
             exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow;
           }
-          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, (IntPtr)exStyle);
+          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, exStyle);
         }
       }
     }

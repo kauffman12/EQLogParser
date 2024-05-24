@@ -206,25 +206,17 @@ namespace EQLogParser
 
     internal void ShowSpellCasts(List<PlayerStats> selected)
     {
-      if (selected?.Count > 0 && Application.Current.MainWindow is MainWindow main)
+      if (SyncFusionUtil.OpenWindow(out var spellTable, typeof(SpellCastTable), "spellCastsWindow", "Spell Cast Order"))
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var spellTable, typeof(SpellCastTable),
-          "spellCastsWindow", "Spell Cast Order"))
-        {
-          (spellTable.Content as SpellCastTable)?.Init(selected, CurrentStats);
-        }
+        (spellTable.Content as SpellCastTable)?.Init(selected, CurrentStats);
       }
     }
 
     internal void ShowSpellCounts(List<PlayerStats> selected)
     {
-      if (Application.Current.MainWindow is MainWindow main)
+      if (SyncFusionUtil.OpenWindow(out var spellTable, typeof(SpellCountTable), "spellCountsWindow", "Spell Counts"))
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var spellTable, typeof(SpellCountTable),
-          "spellCountsWindow", "Spell Counts"))
-        {
-          (spellTable.Content as SpellCountTable)?.Init(selected, CurrentStats);
-        }
+        (spellTable.Content as SpellCountTable)?.Init(selected, CurrentStats);
       }
     }
 

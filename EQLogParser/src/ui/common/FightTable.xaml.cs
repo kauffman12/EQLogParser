@@ -102,8 +102,8 @@ namespace EQLogParser
       dataGrid.Columns[1].IsHidden = !fightShowHitPoints.IsChecked.Value;
 
       // read show breaks and spells setting
-      fightShowBreaks.IsChecked = _currentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", null, true);
-      fightShowTanking.IsChecked = ConfigUtil.IfSet("NpcShowTanking", null, true);
+      fightShowBreaks.IsChecked = _currentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", true);
+      fightShowTanking.IsChecked = ConfigUtil.IfSet("NpcShowTanking", true);
       dataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? _fights : _nonTankingFights;
 
       // default these columns to descending

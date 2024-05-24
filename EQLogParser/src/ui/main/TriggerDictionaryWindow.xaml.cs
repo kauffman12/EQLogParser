@@ -19,9 +19,9 @@ namespace EQLogParser
 
     public TriggerDictionaryWindow()
     {
-      MainActions.SetTheme(this, MainWindow.CurrentTheme);
+      MainActions.SetCurrentTheme(this);
       InitializeComponent();
-      Owner = Application.Current.MainWindow;
+      Owner = MainActions.GetOwner();
       _testSynth = TriggerUtil.GetSpeechSynthesizer();
 
       foreach (var item in TriggerStateManager.Instance.GetLexicon())
