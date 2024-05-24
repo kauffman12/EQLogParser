@@ -64,6 +64,49 @@
                       </TextBlock.Style>
                     </TextBlock>
                   </StackPanel>
+                  <syncfusion:SfBusyIndicator Width="50" ViewboxHeight="15" Height="{DynamicResource EQTableRowHeight}" AnimationType="Message" HorizontalAlignment="Right" Margin="0,0,15,0" IsBusy="{Binding IsEnabled, Mode=TwoWay}">
+                    <syncfusion:SfBusyIndicator.Style>
+                      <Style TargetType="syncfusion:SfBusyIndicator">
+                        <Style.Triggers>
+                          <DataTrigger Binding="{Binding IsWaiting}" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource EQStopForegroundBrush}"/>
+                            <Setter Property="AnimationSpeed" Value="25"/>
+                          </DataTrigger>
+                          <DataTrigger Binding="{Binding IsWaiting}" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource EQGoodForegroundBrush}"/>
+                            <Setter Property="AnimationSpeed" Value="100"/>
+                          </DataTrigger>
+                          <DataTrigger Binding="{Binding IsWaiting}" Value="{x:Null}">
+                            <Setter Property="Foreground" Value="{DynamicResource EQWarnForegroundBrush}"/>
+                            <Setter Property="AnimationSpeed" Value="50"/>
+                          </DataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </syncfusion:SfBusyIndicator.Style>
+                  </syncfusion:SfBusyIndicator>
+                  <Label Foreground="Transparent" Background="Transparent" HorizontalAlignment="Right" Width="50" Margin="0,0,24,0">
+                    <Label.Style>
+                      <Style TargetType="Label">
+                        <Style.Triggers>
+                          <DataTrigger Binding="{Binding IsWaiting}" Value="True">
+                            <Setter Property="ToolTip" Value="Attempting to open log file."/>
+                          </DataTrigger>
+                          <DataTrigger Binding="{Binding IsWaiting}" Value="False">
+                            <Setter Property="ToolTip" Value="Log file active."/>
+                          </DataTrigger>
+                          <DataTrigger Binding="{Binding IsWaiting}" Value="{x:Null}">
+                            <Setter Property="ToolTip" Value="File open. Waiting for data."/>
+                          </DataTrigger>
+                          <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                          </DataTrigger>
+                          <DataTrigger Binding="{Binding IsEnabled}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                          </DataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </Label.Style>
+                  </Label>
                 </Grid>
               </DataTemplate>
             </syncfusion:GridTemplateColumn.CellTemplate>

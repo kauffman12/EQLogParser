@@ -3,9 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Threading;
-using Application = System.Windows.Application;
 
 namespace EQLogParser
 {
@@ -33,17 +31,7 @@ namespace EQLogParser
     {
       if (!TriggerStateManager.Instance.IsActive())
       {
-        // delay so window owner can be set correctly
-        Task.Delay(1000).ContinueWith(_ =>
-        {
-          UiUtil.InvokeAsync(() =>
-          {
-            new MessageWindow("Trigger Database not available. In use by another EQLogParser?\r\nTrigger Management disabled until restart.",
-              Resource.Warning).Show();
-          });
-        });
-
-        (Application.Current?.MainWindow as MainWindow)?.DisableTriggers();
+        MainActions.DisableTriggers();
         return;
       }
 
@@ -88,6 +76,14 @@ namespace EQLogParser
 
       _textOverlayTimer?.Stop();
       _timerOverlayTimer?.Stop();
+    }
+
+    internal List<LogReader> GetLogReaders()
+    {
+      lock (_logReaders)
+      {
+        return _logReaders.ToList();
+      }
     }
 
     internal void SetTestProcessor(TriggerConfig config, BlockingCollection<Tuple<string, double, bool>> collection)
@@ -175,7 +171,8 @@ namespace EQLogParser
                 // use processor name as well in-case it's a rename
                 var found = config.Characters.FirstOrDefault(character =>
                   character.Id == processor.CurrentCharacterId && character.Name == processor.CurrentProcessorName);
-                if (found is not { IsEnabled: true })
+                // if file path changed or no longer enabled remove it
+                if (found is not { IsEnabled: true } || reader.FileName != found.FilePath)
                 {
                   reader.Dispose();
                   toRemove.Add(reader);
@@ -203,11 +200,12 @@ namespace EQLogParser
                 var reader = new LogReader(new TriggerProcessor(character.Id, character.Name, playerName,
                   character.Voice, character.VoiceRate, character.ActiveColor, character.FontColor, AddTextEvent, AddTimerEvent), character.FilePath);
                 _logReaders.Add(reader);
+                reader.StartAsync();
                 RunningFiles[character.FilePath] = true;
               }
             }
 
-            (Application.Current?.MainWindow as MainWindow)?.ShowTriggersEnabled(_logReaders.Count > 0);
+            MainActions.ShowTriggersEnabled(_logReaders.Count > 0);
           }
           else
           {
@@ -219,9 +217,12 @@ namespace EQLogParser
             {
               if (MainWindow.CurrentLogFile is { } currentFile)
               {
-                _logReaders.Add(new LogReader(new TriggerProcessor(TriggerStateManager.DefaultUser, TriggerStateManager.DefaultUser,
-                  ConfigUtil.PlayerName, config.Voice, config.VoiceRate, null, null, AddTextEvent, AddTimerEvent), currentFile));
-                ((MainWindow)Application.Current?.MainWindow)?.ShowTriggersEnabled(true);
+                var reader = new LogReader(new TriggerProcessor(TriggerStateManager.DefaultUser, TriggerStateManager.DefaultUser,
+                    ConfigUtil.PlayerName, config.Voice, config.VoiceRate, null, null, AddTextEvent, AddTimerEvent),
+                  currentFile);
+                _logReaders.Add(reader);
+                reader.StartAsync();
+                MainActions.ShowTriggersEnabled(true);
 
                 // only 1 running file in basic mode
                 RunningFiles.Clear();
@@ -230,7 +231,7 @@ namespace EQLogParser
             }
             else
             {
-              ((MainWindow)Application.Current?.MainWindow)?.ShowTriggersEnabled(false);
+              MainActions.ShowTriggersEnabled(false);
               RunningFiles.Clear();
             }
           }

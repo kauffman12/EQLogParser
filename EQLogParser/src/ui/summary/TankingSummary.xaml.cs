@@ -27,7 +27,7 @@ namespace EQLogParser
       InitializeComponent();
 
       // if pets are shown
-      showPets.IsChecked = _currentPetValue = ConfigUtil.IfSet("TankingSummaryShowPets", null, true);
+      showPets.IsChecked = _currentPetValue = ConfigUtil.IfSet("TankingSummaryShowPets", true);
 
       // default damage types to display
       var damageType = ConfigUtil.GetSetting("TankingSummaryDamageType");
@@ -58,10 +58,9 @@ namespace EQLogParser
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
     {
-      if (selected?.Count > 0 && Application.Current.MainWindow is MainWindow main)
+      if (selected?.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var breakdown, typeof(TankingBreakdown),
-              "tankingBreakdownWindow", "Tanking Breakdown"))
+        if (SyncFusionUtil.OpenWindow(out var breakdown, typeof(TankingBreakdown), "tankingBreakdownWindow", "Tanking Breakdown"))
         {
           (breakdown.Content as TankingBreakdown)?.Init(CurrentStats, selected);
         }
@@ -70,10 +69,9 @@ namespace EQLogParser
 
     internal override void ShowBreakdown2(List<PlayerStats> selected)
     {
-      if (selected?.Count > 0 && Application.Current.MainWindow is MainWindow main)
+      if (selected?.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var breakdown, typeof(HealBreakdown),
-          "receivedHealingWindow", "Received Healing Breakdown"))
+        if (SyncFusionUtil.OpenWindow(out var breakdown, typeof(HealBreakdown), "receivedHealingWindow", "Received Healing Breakdown"))
         {
           // healing stats on the tank is stored in MoreStats property
           // it's like another player stat based around healing
@@ -126,8 +124,8 @@ namespace EQLogParser
       });
     }
 
-    private void CopyToEqClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.TankParse);
-    private void CopyReceivedHealingToEqClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.ReceivedHealParse);
+    private void CopyToEqClick(object sender, RoutedEventArgs e) => MainActions.CopyToEqClick(Labels.TankParse);
+    private void CopyReceivedHealingToEqClick(object sender, RoutedEventArgs e) => MainActions.CopyToEqClick(Labels.ReceivedHealParse);
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -177,9 +175,9 @@ namespace EQLogParser
 
     private void DataGridTankingLogClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems?.Count > 0 && Application.Current.MainWindow is MainWindow main)
+      if (dataGrid.SelectedItems?.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(HitLogViewer), "tankingLogWindow", "Tanking Log"))
+        if (SyncFusionUtil.OpenWindow(out var log, typeof(HitLogViewer), "tankingLogWindow", "Tanking Log"))
         {
           (log.Content as HitLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups, true);
         }
@@ -188,9 +186,9 @@ namespace EQLogParser
 
     private void DataGridDeathLogClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems?.Count > 0 && Application.Current.MainWindow is MainWindow main)
+      if (dataGrid.SelectedItems?.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
+        if (SyncFusionUtil.OpenWindow(out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
         {
           (log.Content as DeathLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
         }
@@ -199,9 +197,9 @@ namespace EQLogParser
 
     private void DataGridHitFreqClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems.Count == 1 && Application.Current.MainWindow is MainWindow main)
+      if (dataGrid.SelectedItems.Count == 1)
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var hitFreq, typeof(HitFreqChart), "tankHitFreqChart", "Tanking Hit Frequency"))
+        if (SyncFusionUtil.OpenWindow(out var hitFreq, typeof(HitFreqChart), "tankHitFreqChart", "Tanking Hit Frequency"))
         {
           (hitFreq.Content as HitFreqChart)?.Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
         }
@@ -210,9 +208,9 @@ namespace EQLogParser
 
     private void DataGridDefensiveTimelineClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems.Count > 0 && Application.Current.MainWindow is MainWindow main)
+      if (dataGrid.SelectedItems.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var timeline, typeof(GanttChart), "defensiveTimeline", "Defensive Timeline"))
+        if (SyncFusionUtil.OpenWindow(out var timeline, typeof(GanttChart), "defensiveTimeline", "Defensive Timeline"))
         {
           ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 0);
         }

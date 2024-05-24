@@ -6,8 +6,9 @@ namespace EQLogParser
 {
   internal class LogProcessor : ILogProcessor
   {
-    private long _lineCount;
     private readonly string _fileName;
+    private long _lineCount;
+    private bool _disposed;
 
     internal LogProcessor(string fileName)
     {
@@ -22,7 +23,10 @@ namespace EQLogParser
       {
         foreach (var data in collection.GetConsumingEnumerable())
         {
-          DoPreProcess(data.Item1, data.Item2, data.Item3);
+          if (!_disposed)
+          {
+            DoPreProcess(data.Item1, data.Item2, data.Item3);
+          }
         }
       });
     }
@@ -90,7 +94,7 @@ namespace EQLogParser
 
     public void Dispose()
     {
-
+      _disposed = true;
     }
   }
 }

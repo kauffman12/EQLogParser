@@ -37,10 +37,9 @@ namespace EQLogParser
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
     {
-      if (selected?.Count > 0 && Application.Current.MainWindow is MainWindow main)
+      if (selected?.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var breakdown, typeof(HealBreakdown),
-          "healingBreakdownWindow", "Healing Breakdown"))
+        if (SyncFusionUtil.OpenWindow(out var breakdown, typeof(HealBreakdown), "healingBreakdownWindow", "Healing Breakdown"))
         {
           (breakdown.Content as HealBreakdown)?.Init(CurrentStats, selected);
         }
@@ -79,8 +78,8 @@ namespace EQLogParser
       });
     }
 
-    private void CopyToEqClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.HealParse);
-    private void CopyTopHealsToEqClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.TopHealParse);
+    private void CopyToEqClick(object sender, RoutedEventArgs e) => MainActions.CopyToEqClick(Labels.HealParse);
+    private void CopyTopHealsToEqClick(object sender, RoutedEventArgs e) => MainActions.CopyToEqClick(Labels.TopHealParse);
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -107,9 +106,9 @@ namespace EQLogParser
 
     private void DataGridHealingLogClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems?.Count > 0 && Application.Current.MainWindow is MainWindow main)
+      if (dataGrid.SelectedItems?.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(HitLogViewer), "healingLogWindow", "Healing Log"))
+        if (SyncFusionUtil.OpenWindow(out var log, typeof(HitLogViewer), "healingLogWindow", "Healing Log"))
         {
           (log.Content as HitLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
         }
@@ -118,9 +117,9 @@ namespace EQLogParser
 
     private void DataGridDeathLogClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems?.Count > 0 && Application.Current.MainWindow is MainWindow main)
+      if (dataGrid.SelectedItems?.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
+        if (SyncFusionUtil.OpenWindow(out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
         {
           (log.Content as DeathLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
         }
@@ -129,9 +128,9 @@ namespace EQLogParser
 
     private void DataGridHealingTimelineClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems.Count > 0 && Application.Current.MainWindow is MainWindow main)
+      if (dataGrid.SelectedItems.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var timeline, typeof(GanttChart), "healingTimeline", "Healing Timeline"))
+        if (SyncFusionUtil.OpenWindow(out var timeline, typeof(GanttChart), "healingTimeline", "Healing Timeline"))
         {
           ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 2);
         }

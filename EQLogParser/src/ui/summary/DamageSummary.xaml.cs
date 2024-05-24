@@ -73,9 +73,9 @@ namespace EQLogParser
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
     {
-      if (selected?.Count > 0 && Application.Current.MainWindow is MainWindow main)
+      if (selected?.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var breakdown, typeof(DamageBreakdown),
+        if (SyncFusionUtil.OpenWindow(out var breakdown, typeof(DamageBreakdown),
           "damageBreakdownWindow", "DPS Breakdown"))
         {
           (breakdown.Content as DamageBreakdown)?.Init(CurrentStats, selected);
@@ -123,7 +123,7 @@ namespace EQLogParser
       });
     }
 
-    private void CopyToEqClick(object sender, RoutedEventArgs e) => (Application.Current.MainWindow as MainWindow)?.CopyToEqClick(Labels.DamageParse);
+    private void CopyToEqClick(object sender, RoutedEventArgs e) => MainActions.CopyToEqClick(Labels.DamageParse);
     internal override bool IsPetsCombined() => _currentPetOrPlayerOption == 0;
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
@@ -211,9 +211,9 @@ namespace EQLogParser
 
     private void DataGridDamageLogClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems?.Count > 0 && Application.Current.MainWindow is MainWindow main)
+      if (dataGrid.SelectedItems?.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(HitLogViewer), "damageLogWindow", "DPS Log"))
+        if (SyncFusionUtil.OpenWindow(out var log, typeof(HitLogViewer), "damageLogWindow", "DPS Log"))
         {
           (log.Content as HitLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
         }
@@ -222,9 +222,9 @@ namespace EQLogParser
 
     private void DataGridDeathLogClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems?.Count > 0 && Application.Current.MainWindow is MainWindow main)
+      if (dataGrid.SelectedItems?.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
+        if (SyncFusionUtil.OpenWindow(out var log, typeof(DeathLogViewer), "deathLogWindow", "Death Log"))
         {
           (log.Content as DeathLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First());
         }
@@ -233,9 +233,9 @@ namespace EQLogParser
 
     private void DataGridHitFreqClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems.Count == 1 && Application.Current.MainWindow is MainWindow main)
+      if (dataGrid.SelectedItems.Count == 1)
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var hitFreq, typeof(HitFreqChart), "damageFreqChart", "Damage Hit Frequency"))
+        if (SyncFusionUtil.OpenWindow(out var hitFreq, typeof(HitFreqChart), "damageFreqChart", "Damage Hit Frequency"))
         {
           (hitFreq.Content as HitFreqChart)?.Update(dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentStats);
         }
@@ -244,9 +244,9 @@ namespace EQLogParser
 
     private void DataGridAdpsTimelineClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItems.Count > 0 && Application.Current.MainWindow is MainWindow main)
+      if (dataGrid.SelectedItems.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(main.dockSite, null, out var timeline, typeof(GanttChart), "adpsTimeline", "ADPS Timeline"))
+        if (SyncFusionUtil.OpenWindow(out var timeline, typeof(GanttChart), "adpsTimeline", "ADPS Timeline"))
         {
           ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 1);
         }
