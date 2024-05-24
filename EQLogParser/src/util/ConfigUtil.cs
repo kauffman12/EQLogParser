@@ -11,42 +11,54 @@ namespace EQLogParser
 {
   internal static class ConfigUtil
   {
-    public delegate void PostConfigCallback();
     public static string PlayerName;
     public static string ServerName;
     public static string LogsDir;
     public static string ConfigDir;
+    internal static event Action<string> EventsLoadingText;
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-
+    private static readonly ConcurrentDictionary<string, string> ApplicationSettings = new();
     private const string AppData = @"%AppData%\EQLogParser";
-    private const string PetmapFile = "petmapping.txt";
+    private const string PetMappingFile = "petmapping.txt";
     private const string PlayersFile = "players.txt";
     private static string _archiveDir;
     private static string _settingsFile;
     private static string _triggersDbFile;
-    private static bool _initDone;
     private static bool _settingsUpdated;
-    private static readonly ConcurrentDictionary<string, string> ApplicationSettings = new();
 
+    internal static string GetArchiveDir() => _archiveDir;
+    internal static string GetTriggersDbFile() => _triggersDbFile;
     internal static void SetSetting(string key, bool value) => SetSetting(key, value.ToString());
     internal static void SetSetting(string key, double value) => SetSetting(key, value.ToString(CultureInfo.InvariantCulture));
     internal static void SetSetting(string key, int value) => SetSetting(key, value.ToString(CultureInfo.InvariantCulture));
 
-    internal static string GetArchiveDir()
+    internal static void Init()
     {
-      Init();
-      return _archiveDir;
+      _archiveDir = Environment.ExpandEnvironmentVariables(AppData + @"\archive\");
+      ConfigDir = Environment.ExpandEnvironmentVariables(AppData + @"\config\");
+      LogsDir = Environment.ExpandEnvironmentVariables(AppData + @"\logs\");
+      _settingsFile = ConfigDir + @"\settings.txt";
+      _triggersDbFile = ConfigDir + @"triggers.db";
+
+      // create config dir if it doesn't exist
+      Directory.CreateDirectory(ConfigDir);
+      // create logs dir if it doesn't exist
+      Directory.CreateDirectory(LogsDir);
+
+      UpdateStatus("Reading Settings");
+      LoadProperties(ApplicationSettings, ReadList(_settingsFile));
     }
 
-    internal static bool IfSet(string setting, PostConfigCallback callback = null, bool callByDefault = false)
+    internal static void UpdateStatus(string text) => EventsLoadingText?.Invoke(text);
+
+    internal static bool IfSet(string setting, bool callByDefault = false)
     {
       var result = false;
       var value = GetSetting(setting);
       if ((value == null && callByDefault) || (value != null && bool.TryParse(value, out var bValue) && bValue))
       {
         result = true;
-        callback?.Invoke();
       }
       return result;
     }
@@ -86,14 +98,12 @@ namespace EQLogParser
 
     internal static string GetSetting(string key, string def = null)
     {
-      Init();
       ApplicationSettings.TryGetValue(key, out var setting);
       return setting ?? def;
     }
 
     internal static void RemoveSetting(string key)
     {
-      Init();
       if (!string.IsNullOrEmpty(key))
       {
         if (ApplicationSettings.TryRemove(key, out var _))
@@ -105,8 +115,6 @@ namespace EQLogParser
 
     internal static void SetSetting(string key, string value)
     {
-      Init();
-
       if (value == null)
       {
         if (ApplicationSettings.TryRemove(key, out _))
@@ -134,23 +142,20 @@ namespace EQLogParser
 
     internal static ConcurrentDictionary<string, string> ReadPetMapping()
     {
-      Init();
       var petMapping = new ConcurrentDictionary<string, string>();
-      var fileName = ConfigDir + @"\" + ServerName + @"\" + PetmapFile;
+      var fileName = ConfigDir + @"\" + ServerName + @"\" + PetMappingFile;
       LoadProperties(petMapping, ReadList(fileName));
       return petMapping;
     }
 
     internal static List<string> ReadPlayers()
     {
-      Init();
       var fileName = ConfigDir + @"\" + ServerName + @"\" + PlayersFile;
       return ReadList(fileName);
     }
 
     internal static void SavePlayers(List<string> list)
     {
-      Init();
       var playerDir = ConfigDir + @"\" + ServerName;
       Directory.CreateDirectory(playerDir);
       SaveList(playerDir + @"\" + PlayersFile, list);
@@ -158,16 +163,13 @@ namespace EQLogParser
 
     internal static void SavePetMapping(IEnumerable<KeyValuePair<string, string>> enumeration)
     {
-      Init();
       var petDir = ConfigDir + @"\" + ServerName;
       Directory.CreateDirectory(petDir);
-      SaveProperties(petDir + @"\" + PetmapFile, enumeration);
+      SaveProperties(petDir + @"\" + PetMappingFile, enumeration);
     }
 
     internal static void Save()
     {
-      Init();
-
       if (_settingsUpdated)
       {
         ApplicationSettings.TryRemove("IncludeAEHealing", out _); // not used anymore
@@ -195,31 +197,6 @@ namespace EQLogParser
         ApplicationSettings.TryRemove("ShowTankingSummaryAtStartup", out _); // not used anymore);
         SaveProperties(_settingsFile, ApplicationSettings);
         _settingsUpdated = false;
-      }
-    }
-
-    internal static string GetTriggersDbFile()
-    {
-      Init();
-      return _triggersDbFile;
-    }
-
-    private static void Init()
-    {
-      if (!_initDone)
-      {
-        _initDone = true;
-        _archiveDir = Environment.ExpandEnvironmentVariables(AppData + @"\archive\");
-        ConfigDir = Environment.ExpandEnvironmentVariables(AppData + @"\config\");
-        LogsDir = Environment.ExpandEnvironmentVariables(AppData + @"\logs\");
-        _settingsFile = ConfigDir + @"\settings.txt";
-        _triggersDbFile = ConfigDir + @"triggers.db";
-
-        // create config dir if it doesn't exist
-        Directory.CreateDirectory(ConfigDir);
-        // create logs dir if it doesn't exist
-        Directory.CreateDirectory(LogsDir);
-        LoadProperties(ApplicationSettings, ReadList(_settingsFile));
       }
     }
 

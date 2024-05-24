@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -14,16 +15,60 @@ namespace EQLogParser
   public partial class TriggersCharacterView : IDisposable
   {
     internal event Action<List<TriggerCharacter>> SelectedCharacterEvent;
+    private readonly DispatcherTimer _statusTimer;
 
     // public to be referenced from xaml?
     public TriggersCharacterView()
     {
       InitializeComponent();
+      _statusTimer = new DispatcherTimer(DispatcherPriority.Background)
+      {
+        Interval = new TimeSpan(0, 0, 0, 5),
+      };
+
+      _statusTimer.Tick += StatusTimerTick;
+      _statusTimer.Start();
       TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
     }
 
     internal void SetConfig(TriggerConfig config) => dataGrid.ItemsSource = config.Characters;
     internal TriggerCharacter GetSelectedCharacter() => dataGrid?.SelectedItem as TriggerCharacter;
+    private void StatusTimerTick(object sender, EventArgs e) => UpdateStatus();
+
+    private void UpdateStatus()
+    {
+      if (dataGrid.ItemsSource is List<TriggerCharacter> characters)
+      {
+        var dataChanged = false;
+        foreach (var reader in TriggerManager.Instance.GetLogReaders())
+        {
+          if (reader.GetProcessor() is TriggerProcessor processor && characters.FirstOrDefault(item => item.Id == processor.CurrentCharacterId) is { } character)
+          {
+            bool? update;
+            if (reader.IsWaiting())
+            {
+              update = true;
+            }
+            else
+            {
+              var diff = DateTime.UtcNow.Ticks - processor.ActivityLastTicks;
+              update = (diff / TimeSpan.TicksPerSecond > 120) ? null : false;
+            }
+
+            if (character.IsWaiting != update)
+            {
+              character.IsWaiting = update;
+              dataChanged = true;
+            }
+          }
+        }
+
+        if (dataChanged)
+        {
+          RefreshData();
+        }
+      }
+    }
 
     private void TriggerConfigUpdateEvent(TriggerConfig config)
     {
@@ -36,9 +81,7 @@ namespace EQLogParser
         }
         else
         {
-          var selected = dataGrid.SelectedIndex;
-          dataGrid.View.Refresh();
-          dataGrid.SelectedIndex = selected;
+          RefreshData();
         }
       }
     }
@@ -74,7 +117,7 @@ namespace EQLogParser
 
     private void CharacterSelectionChanged(object sender, GridSelectionChangedEventArgs e)
     {
-      if (dataGrid?.SelectedItems?.Cast<TriggerCharacter>().ToList() is List<TriggerCharacter> { Count: > 0 } characters)
+      if (dataGrid?.SelectedItems?.Cast<TriggerCharacter>().ToList() is { Count: > 0 } characters)
       {
         modifyCharacter.IsEnabled = characters.Count == 1;
         deleteCharacter.IsEnabled = characters.Count == 1;
@@ -98,9 +141,23 @@ namespace EQLogParser
         if (checkBox.DataContext is TriggerCharacter character)
         {
           character.IsEnabled = checkBox.IsChecked == true;
+
+          if (character.IsEnabled)
+          {
+            character.IsWaiting = true;
+            RefreshData();
+          }
+
           TriggerStateManager.Instance.UpdateCharacter(character);
         }
       }
+    }
+
+    private void RefreshData()
+    {
+      var selected = dataGrid.SelectedIndex;
+      dataGrid.View.Refresh();
+      dataGrid.SelectedIndex = selected;
     }
 
     #region IDisposable Support
@@ -110,6 +167,8 @@ namespace EQLogParser
     {
       if (!_disposedValue)
       {
+        _statusTimer.Stop();
+        _statusTimer.Tick -= StatusTimerTick;
         TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
         _disposedValue = true;
         dataGrid?.Dispose();

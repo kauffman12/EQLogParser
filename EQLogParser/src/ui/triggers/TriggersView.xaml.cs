@@ -223,7 +223,7 @@ namespace EQLogParser
         if (_theConfig.Characters.Count(user => user.IsEnabled) is var count and > 0)
         {
           titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
-          var updatedTitle = $"Triggers Active for {count} Character";
+          var updatedTitle = $"Triggers Enabled for {count} Character";
           if (count > 1)
           {
             updatedTitle = $"{updatedTitle}s";
@@ -233,7 +233,7 @@ namespace EQLogParser
         else
         {
           titleLabel.SetResourceReference(ForegroundProperty, "EQStopForegroundBrush");
-          titleLabel.Content = "No Triggers Active";
+          titleLabel.Content = "No Triggers Enabled";
         }
 
         advancedText.Text = "Switch to Basic Settings";
@@ -254,12 +254,12 @@ namespace EQLogParser
         if (_theConfig.IsEnabled)
         {
           titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
-          titleLabel.Content = "Triggers Active";
+          titleLabel.Content = "Triggers Enabled";
         }
         else
         {
           titleLabel.SetResourceReference(ForegroundProperty, "EQStopForegroundBrush");
-          titleLabel.Content = "Check to Activate Triggers";
+          titleLabel.Content = "Check to Enable Triggers";
         }
 
         advancedText.Text = "Switch to Advanced Settings";
@@ -499,6 +499,11 @@ namespace EQLogParser
         {
           timerChange = timerOverlay.FontBrush.Color.ToHexString() != original.FontColor;
           Application.Current.Resources["TimerBarFontColor-" + timerOverlay.Node.Id] = timerOverlay.FontBrush;
+        }
+        else if (args.Property.Name == fontFamilyItem.PropertyName)
+        {
+          timerChange = timerOverlay.FontFamily != original.FontFamily;
+          Application.Current.Resources["TimerBarFontFamily-" + timerOverlay.Node.Id] = new FontFamily(timerOverlay.FontFamily);
         }
         else if (args.Property.Name == fontSizeItem.PropertyName && timerOverlay.FontSize.Split("pt") is { Length: 2 } split &&
           double.TryParse(split[0], NumberStyles.Any, CultureInfo.InvariantCulture, out var newFontSize))

@@ -336,7 +336,7 @@ namespace EQLogParser
     internal static void UpdateTableMargin(SfGridBase gridBase)
     {
       var size = 2;
-      switch (MainWindow.CurrentFontSize)
+      switch (MainActions.CurrentFontSize)
       {
         case 11:
           size = 4;

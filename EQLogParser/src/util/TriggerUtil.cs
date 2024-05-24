@@ -201,6 +201,12 @@ namespace EQLogParser
           AssignResource(toModel, fromOverlay, "ResetColor", "ResetBrush", "TimerBarResetColor");
           AssignResource(toModel, fromOverlay, "BackgroundColor", "BackgroundBrush", "TimerBarTrackColor");
 
+          if (!string.IsNullOrEmpty(fromOverlay.FontFamily))
+          {
+            toModel.FontFamily = fromOverlay.FontFamily;
+            Application.Current.Resources["TimerBarFontFamily-" + toModel.Node.Id] = new FontFamily(toModel.FontFamily);
+          }
+
           if (!string.IsNullOrEmpty(fromOverlay.FontSize) && fromOverlay.FontSize.Split("pt") is { Length: 2 } split &&
             double.TryParse(split[0], NumberStyles.Any, CultureInfo.InvariantCulture, out var newFontSize))
           {
@@ -430,7 +436,9 @@ namespace EQLogParser
               return characters;
             }
 
+            var waiting = list[i].IsWaiting;
             list[i] = characters[i];
+            list[i].IsWaiting = waiting;
           }
           else
           {

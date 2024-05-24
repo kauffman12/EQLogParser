@@ -15,7 +15,8 @@ namespace EQLogParser
   {
     private const long M = 1000000;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly Regex FileNameRegex = TheFileNameRegex();
+    private static readonly Regex ArchiveFileNameRegex = TheArchiveFileNameRegex();
+    private static readonly Regex ServerFileNameRegex = TheServerFileNameRegex();
     private static readonly object LockObject = new();
     private static readonly HashSet<LogReader> ArchiveQueue = [];
 
@@ -48,110 +49,129 @@ namespace EQLogParser
     internal static void ArchiveFile(LogReader logReader)
     {
       var file = Path.GetFileName(logReader.FileName);
-      if (string.IsNullOrEmpty(file) || !FileNameRegex.IsMatch(file) || !ConfigUtil.IfSet("LogManagementEnabled"))
+      if (string.IsNullOrEmpty(file) || !ArchiveFileNameRegex.IsMatch(file) || !ConfigUtil.IfSet("LogManagementEnabled"))
       {
         return;
       }
 
       lock (LockObject)
       {
-        ArchiveQueue.Add(logReader);
-        if (ArchiveQueue.Count == 1)
+        if (ArchiveQueue.FirstOrDefault(item => item.FileName == logReader.FileName) == null)
         {
-          Task.Delay(2500).ContinueWith(_ => ArchiveProcess());
+          ArchiveQueue.Add(logReader);
+
+          if (ArchiveQueue.Count == 1)
+          {
+            Task.Delay(2500).ContinueWith(_ => ArchiveProcess());
+          }
         }
       }
     }
 
     private static void ArchiveProcess()
     {
+      List<string> readyList = [];
+      bool remaining;
+
       lock (LockObject)
       {
-        var notReady = ArchiveQueue.Where(reader => reader.GetProgress() < 100.0).Select(reader => reader.FileName).ToArray();
         foreach (var reader in ArchiveQueue.ToArray())
         {
-          if (notReady.Contains(reader.FileName))
+          if (reader.IsInValid())
           {
-            continue;
+            ArchiveQueue.Remove(reader);
           }
 
-          ArchiveQueue.Remove(reader);
-          var path = reader.FileName;
-
-          if (!File.Exists(path))
+          if (reader.GetProgress() >= 100.0)
           {
-            // was archived by another process?
-            continue;
-          }
-
-          // can remove defaults in the future. fixing issue where config was enabled but settings were never chosen/saved
-          var savedFileSize = ConfigUtil.GetSetting("LogManagementMinFileSize", "500M");
-          if (string.IsNullOrEmpty(savedFileSize))
-          {
-            continue;
-          }
-
-          savedFileSize = savedFileSize.ToLower();
-          if (!ArchiveFileSizes.ContainsKey(savedFileSize))
-          {
-            continue;
-          }
-
-          var savedFileAge = ConfigUtil.GetSetting("LogManagementMinFileAge", "1 Week");
-          if (string.IsNullOrEmpty(savedFileAge))
-          {
-            continue;
-          }
-
-          savedFileAge = savedFileAge.ToLower();
-          if (!ArchiveFileAges.ContainsKey(savedFileAge))
-          {
-            continue;
-          }
-
-          var archiveFolder = ConfigUtil.GetSetting("LogManagementArchiveFolder");
-          if (string.IsNullOrEmpty(archiveFolder) || Path.GetDirectoryName(archiveFolder) == null)
-          {
-            continue;
-          }
-
-          var fileInfo = new FileInfo(path);
-          if (fileInfo.CreationTime > DateTime.Now.Subtract(TimeSpan.FromDays(ArchiveFileAges[savedFileAge])))
-          {
-            continue;
-          }
-
-          if (fileInfo.Length < ArchiveFileSizes[savedFileSize])
-          {
-            continue;
-          }
-
-          var compress = ConfigUtil.GetSetting("LogManagementCompressArchive", "Yes");
-
-          try
-          {
-            var formatted = DateTime.Now.ToString("_yyyyMMddHHmm_ssfff") + ".txt";
-            var destination = archiveFolder + Path.DirectorySeparatorChar + fileInfo.Name.Replace(".txt", formatted);
-            File.Move(path, destination);
-
-            // compress if specified
-            if ("Yes".Equals(compress, StringComparison.OrdinalIgnoreCase))
-            {
-              CompressFile(destination);
-            }
-
-            Log.Info($"Archived File: {path}");
-          }
-          catch (Exception e)
-          {
-            Log.Error(e);
+            readyList.Add(reader.FileName);
+            ArchiveQueue.Remove(reader);
           }
         }
 
-        if (ArchiveQueue.Count > 0)
+        remaining = ArchiveQueue.Count > 0;
+      }
+
+      foreach (var path in readyList)
+      {
+        if (!File.Exists(path))
         {
-          Task.Delay(5000).ContinueWith(_ => ArchiveProcess());
+          // was archived by another process?
+          continue;
         }
+
+        // can remove defaults in the future. fixing issue where config was enabled but settings were never chosen/saved
+        var savedFileSize = ConfigUtil.GetSetting("LogManagementMinFileSize", "500M");
+        if (string.IsNullOrEmpty(savedFileSize))
+        {
+          continue;
+        }
+
+        savedFileSize = savedFileSize.ToLower();
+        if (!ArchiveFileSizes.ContainsKey(savedFileSize))
+        {
+          continue;
+        }
+
+        var savedFileAge = ConfigUtil.GetSetting("LogManagementMinFileAge", "1 Week");
+        if (string.IsNullOrEmpty(savedFileAge))
+        {
+          continue;
+        }
+
+        savedFileAge = savedFileAge.ToLower();
+        if (!ArchiveFileAges.ContainsKey(savedFileAge))
+        {
+          continue;
+        }
+
+        var archiveFolder = ConfigUtil.GetSetting("LogManagementArchiveFolder");
+        if (string.IsNullOrEmpty(archiveFolder) || Path.GetDirectoryName(archiveFolder) == null)
+        {
+          continue;
+        }
+
+        var fileInfo = new FileInfo(path);
+        if (fileInfo.CreationTimeUtc > DateTime.UtcNow.Subtract(TimeSpan.FromDays(ArchiveFileAges[savedFileAge])))
+        {
+          continue;
+        }
+
+        if (fileInfo.Length < ArchiveFileSizes[savedFileSize])
+        {
+          continue;
+        }
+
+        var compress = ConfigUtil.GetSetting("LogManagementCompressArchive", "Yes");
+
+        try
+        {
+          var formatted = DateTime.Now.ToString("_yyyyMMddHHmm_ssfff") + ".txt";
+          var destination = archiveFolder + Path.DirectorySeparatorChar + fileInfo.Name.Replace(".txt", formatted);
+
+          File.Move(path, destination);
+
+          // compress if specified
+          if ("Yes".Equals(compress, StringComparison.OrdinalIgnoreCase))
+          {
+            CompressFile(destination);
+          }
+
+          Log.Info($"Archived File: {path}");
+
+          // pause before archiving each file
+          Task.Delay(250);
+        }
+        catch (Exception e)
+        {
+          Log.Error(e);
+        }
+      }
+
+      // try again
+      if (remaining)
+      {
+        Task.Delay(2500).ContinueWith(_ => ArchiveProcess());
       }
     }
 
@@ -179,7 +199,7 @@ namespace EQLogParser
     internal static void ParseFileName(string theFile, ref string name, ref string server)
     {
       var file = Path.GetFileName(theFile);
-      var matches = FileNameRegex.Matches(file);
+      var matches = ServerFileNameRegex.Matches(file);
 
       if (matches.Count == 1)
       {
@@ -263,7 +283,10 @@ namespace EQLogParser
       }
     }
 
-    [GeneratedRegex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+)(?!.*_\d{5}\.txt$).*\.txt$", RegexOptions.Singleline)]
-    private static partial Regex TheFileNameRegex();
+    [GeneratedRegex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+)(?!.*\d).*\.txt$", RegexOptions.Singleline)]
+    private static partial Regex TheArchiveFileNameRegex();
+
+    [GeneratedRegex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt$", RegexOptions.Singleline)]
+    private static partial Regex TheServerFileNameRegex();
   }
 }

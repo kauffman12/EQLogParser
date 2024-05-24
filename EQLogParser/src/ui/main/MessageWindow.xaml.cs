@@ -26,15 +26,11 @@ namespace EQLogParser
 
     public MessageWindow(string text, string caption, IconType type = IconType.Warn, string yes1 = null, string yes2 = null, bool extra = false)
     {
-      MainActions.SetTheme(this, MainWindow.CurrentTheme);
+      MainActions.SetCurrentTheme(this);
       InitializeComponent();
+      Owner = MainActions.GetOwner();
       textBox.Text = text;
       Title = caption;
-
-      if (Application.Current.MainWindow?.IsLoaded == true)
-      {
-        Owner = Application.Current.MainWindow;
-      }
 
       var brush = "";
       var image = EFontAwesomeIcon.None;

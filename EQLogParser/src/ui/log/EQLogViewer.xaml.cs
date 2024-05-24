@@ -115,7 +115,7 @@ namespace EQLogParser
 
       try
       {
-        var colorSetting = "EQLogViewerFontFgColor" + MainWindow.CurrentTheme;
+        var colorSetting = "EQLogViewerFontFgColor" + MainActions.CurrentTheme;
         var fgColor = ConfigUtil.GetSetting(colorSetting, defaultColor.ToString());
         colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor)!;
       }
@@ -603,7 +603,7 @@ namespace EQLogParser
       {
         logBox.Foreground = new SolidColorBrush(colorPicker.Color);
         contextBox.Foreground = new SolidColorBrush(colorPicker.Color);
-        var colorSetting = "EQLogViewerFontFgColor" + MainWindow.CurrentTheme;
+        var colorSetting = "EQLogViewerFontFgColor" + MainActions.CurrentTheme;
         ConfigUtil.SetSetting(colorSetting, colorPicker.Color.ToString());
       }
     }

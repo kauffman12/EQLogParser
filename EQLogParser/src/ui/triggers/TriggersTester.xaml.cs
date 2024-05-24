@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -85,14 +84,6 @@ namespace EQLogParser
             }
           }
         }
-      }
-    }
-
-    private void TriggersTesterClosing(object sender, CancelEventArgs e)
-    {
-      if (testButton.Content.ToString() == "Stop Test")
-      {
-        testButton.Content = "Stopping Test";
       }
     }
 
@@ -328,7 +319,6 @@ namespace EQLogParser
         if (TriggerStateManager.Instance.IsActive())
         {
           TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
-          ((MainWindow)Application.Current.MainWindow)!.Closing += TriggersTesterClosing;
           MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
           theBasicLabel.Content = $"Current Player {{C}} " + (string.IsNullOrEmpty(ConfigUtil.PlayerName) ? "is not set" : "set to " + ConfigUtil.PlayerName);
 

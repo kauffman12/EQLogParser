@@ -46,7 +46,7 @@ namespace EQLogParser
     public GanttChart()
     {
       InitializeComponent();
-      _rowHeight = (int)MainWindow.CurrentFontSize + 12;
+      _rowHeight = (int)MainActions.CurrentFontSize + 12;
       MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
@@ -174,7 +174,7 @@ namespace EQLogParser
 
     private void EventsThemeChanged(string _)
     {
-      _rowHeight = (int)MainWindow.CurrentFontSize + 12;
+      _rowHeight = (int)MainActions.CurrentFontSize + 12;
       Display();
     }
 

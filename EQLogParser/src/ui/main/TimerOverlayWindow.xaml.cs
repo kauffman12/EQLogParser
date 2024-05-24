@@ -39,7 +39,7 @@ namespace EQLogParser
 
       if (_preview)
       {
-        MainActions.SetTheme(this, MainWindow.CurrentTheme);
+        MainActions.SetCurrentTheme(this);
         ResizeMode = ResizeMode.CanResizeWithGrip;
         SetResourceReference(BorderBrushProperty, "PreviewBackgroundBrush");
         SetResourceReference(BackgroundProperty, "OverlayBrushColor-" + _node.Id);
@@ -115,7 +115,7 @@ namespace EQLogParser
         if (_node.OverlayData.SortBy == 0)
         {
           // create order
-          orderedList = timerList.Where(ShouldProcess).ToArray();
+          orderedList = [.. timerList.Where(ShouldProcess).OrderBy(timerData => timerData.BeginTicks)];
         }
         else if (_node.OverlayData.SortBy == 1)
         {

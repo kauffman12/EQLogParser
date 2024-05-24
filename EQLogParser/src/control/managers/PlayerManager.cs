@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -102,13 +103,14 @@ namespace EQLogParser
       {
         lock (LockObject)
         {
-          if (!_petToPlayer.TryGetValue(pet, out var value) || value != player)
+          if ((!_petToPlayer.TryGetValue(pet, out var value) || value != player) && !IsVerifiedPlayer(pet))
           {
-            if (!IsVerifiedPlayer(pet))
+            _petToPlayer[pet] = player;
+            EventsNewPetMapping?.Invoke(this, new PetMapping { Pet = pet, Owner = player });
+
+            if (!initialLoad)
             {
-              _petToPlayer[pet] = player;
-              EventsNewPetMapping?.Invoke(this, new PetMapping { Pet = pet, Owner = player });
-              _petMappingUpdated = !initialLoad;
+              _petMappingUpdated = true;
             }
           }
         }
@@ -260,6 +262,11 @@ namespace EQLogParser
       }
 
       return player;
+    }
+
+    internal ImmutableDictionary<string, string> GetPetPlayerMappings()
+    {
+      return _petToPlayer.ToImmutableDictionary();
     }
 
     internal bool IsVerifiedPet(string name)

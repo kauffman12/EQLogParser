@@ -9,50 +9,74 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  internal class LogReader : IDisposable
+  internal class LogReader(ILogProcessor logProcessor, string fileName, int minBack = 0)
+    : IDisposable
   {
     private readonly BlockingCollection<Tuple<string, double, bool>> _lines = new(new ConcurrentQueue<Tuple<string, double, bool>>(), 100000);
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private readonly FileSystemWatcher _fileWatcher;
-    private int _minBack;
-    private CancellationTokenSource _cts;
-    private readonly ILogProcessor _logProcessor;
-    private Task _readFileTask;
+    private const int BufferSize = 147456;
+    private CancellationTokenSource _cts = new();
+    private StreamReader _reader;
+    private FileStream _fs;
+    private FileSystemWatcher _watcher;
     private long _initSize;
     private long _currentPos;
     private long _nextUpdateThreshold;
+    private double _lastParsedTime;
+    private bool _fileDeleted;
+    private bool _waiting = true;
     private bool _ready;
+    private bool _invalid;
 
-    public LogReader(ILogProcessor logProcessor, string fileName, int minBack = 0)
+    public string FileName { get; } = fileName;
+    public IDisposable GetProcessor() => logProcessor;
+    public bool IsWaiting() => _waiting;
+    public bool IsInValid() => _invalid;
+
+    public async void StartAsync()
     {
-      _logProcessor = logProcessor;
-      FileName = fileName;
-      _minBack = minBack;
-
-      if (Path.GetDirectoryName(fileName) is { } directory && Directory.Exists(directory))
+      var exists = await WhenFileExists();
+      if (exists)
       {
         logProcessor.LinkTo(_lines);
-
-        _fileWatcher = new FileSystemWatcher(directory, Path.GetFileName(fileName))
-        {
-          NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.LastAccess
-        };
-
-        _fileWatcher.Created += OnFileCreated;
-        _fileWatcher.Deleted += OnFileMoved;
-        _fileWatcher.Renamed += OnFileMoved;
-        _fileWatcher.EnableRaisingEvents = true;
         FileUtil.ArchiveFile(this);
-        StartReadingFile();
-      }
-      else
-      {
-        Log.Error($"Can not open file: {fileName}.");
+
+        await Task.Run(async () =>
+        {
+          try
+          {
+            await ReadFile();
+          }
+          catch (Exception)
+          {
+            Log.Warn($"Error Loading File: ${FileName}. Re-open or toggle Triggers to try again.");
+          }
+          finally
+          {
+            CleanupStreams();
+
+            if (_watcher != null)
+            {
+              _watcher.EnableRaisingEvents = false;
+              _watcher.Dispose();
+              _watcher = null;
+            }
+
+            _cts?.Dispose();
+            _cts = null;
+
+            if (!_lines.IsCompleted)
+            {
+              _lines.CompleteAdding();
+            }
+
+            logProcessor?.Dispose();
+            logProcessor = null;
+            _invalid = true;
+          }
+        });
       }
     }
-
-    public string FileName { get; }
-    public IDisposable GetProcessor() => _logProcessor;
 
     public double GetProgress()
     {
@@ -69,36 +93,20 @@ namespace EQLogParser
       return _currentPos / (double)_initSize * 100;
     }
 
-    private void OnFileCreated(object sender, FileSystemEventArgs e) => StartReadingFile();
-
-    private void OnFileMoved(object sender, FileSystemEventArgs e)
+    private async Task ReadFile()
     {
-      _cts?.Cancel();
-      _readFileTask?.Wait();
-      _minBack = 0;
-    }
-
-    private void StartReadingFile()
-    {
-      _cts = new CancellationTokenSource();
-      _readFileTask = Task.Run(() => ReadFile(FileName, _minBack, _cts.Token), _cts.Token);
-    }
-
-    private async Task ReadFile(string fileName, int minBack, CancellationToken cancelToken)
-    {
-      const int bufferSize = 147456;
+      string line;
+      string previous = null;
 
       try
       {
-        var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete,
-          bufferSize);
-
-        _initSize = fs.Length;
+        _fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, BufferSize);
+        _initSize = _fs.Length;
         _nextUpdateThreshold = _initSize / 50;
 
         if (minBack == 0)
         {
-          fs.Seek(0, SeekOrigin.End);
+          _fs.Seek(0, SeekOrigin.End);
         }
 
         var minDate = DateTime.MinValue;
@@ -110,63 +118,98 @@ namespace EQLogParser
           beginTime = DateUtil.ToDouble(minDate);
         }
 
-        var reader = FileUtil.GetStreamReader(fs, beginTime);
-        SearchLinear(reader, minDate, cancelToken);
+        _reader = FileUtil.GetStreamReader(_fs, beginTime);
+        SearchLinear(_reader, minDate);
 
         _ready = true;
-        _currentPos = fs.Position;
-        await using (fs)
-        using (reader)
+        _currentPos = _fs.Position;
+        var bytesRead = _fs.Position;
+
+        // date is now valid so read every line
+        while ((line = await _reader.ReadLineAsync(_cts.Token)) != null)
         {
-          string line;
-          string previous = null;
-          double doubleValue = 0;
-          var bytesRead = fs.Position;
-
-          // date is now valid so read every line
-          while ((line = await reader.ReadLineAsync(cancelToken)) != null && !cancelToken.IsCancellationRequested)
+          if (_cts.IsCancellationRequested)
           {
-            if (cancelToken.IsCancellationRequested) break;
-
-            // update progress during initial load
-            bytesRead += Encoding.UTF8.GetByteCount(line) + 2;
-            if (bytesRead >= _nextUpdateThreshold)
-            {
-              _currentPos = fs.Position;
-              _nextUpdateThreshold += _initSize / 50; // 2% of InitSize
-            }
-            else if ((_initSize - bytesRead) < 10000)
-            {
-              _currentPos = fs.Position;
-            }
-
-            HandleLine(line, ref previous, ref doubleValue, cancelToken);
+            throw new TaskCanceledException();
           }
 
-          // continue reading for new updates
-          while (!cancelToken.IsCancellationRequested)
+          // update progress during initial load
+          bytesRead += Encoding.UTF8.GetByteCount(line) + 2;
+          if (bytesRead >= _nextUpdateThreshold)
           {
-            while ((line = await reader.ReadLineAsync(cancelToken)) != null)
-            {
-              HandleLine(line, ref previous, ref doubleValue, cancelToken, true);
-            }
-
-            if (cancelToken.IsCancellationRequested) break;
-            await Task.Delay(200, cancelToken);
+            _currentPos = _fs.Position;
+            _nextUpdateThreshold += _initSize / 50; // 2% of InitSize
           }
+          else if ((_initSize - bytesRead) < 10000)
+          {
+            _currentPos = _fs.Position;
+          }
+
+          HandleLine(line, ref previous);
         }
       }
       catch (TaskCanceledException)
       {
-        // ignore
+        return;
       }
-      catch (IOException e)
+      catch (Exception)
       {
-        Log.Debug(e);
+        Log.Warn($"Error Loading File: ${FileName}. Re-open or toggle Triggers to try again.");
+        return;
+      }
+
+      if (Path.GetDirectoryName(FileName) is { } directory)
+      {
+        _watcher = new FileSystemWatcher(directory);
+        _watcher.Deleted += (_, fileArgs) =>
+        {
+          if (fileArgs?.FullPath == FileName)
+          {
+            _fileDeleted = true;
+          }
+        };
+
+        _watcher.EnableRaisingEvents = true;
+      }
+
+      // continue reading for new updates
+      while (_reader != null)
+      {
+        _waiting = false;
+
+        try
+        {
+          if (_fileDeleted)
+          {
+            await ReOpen();
+          }
+
+          if (_cts.IsCancellationRequested)
+          {
+            // stop
+            break;
+          }
+
+          while ((line = await _reader.ReadLineAsync(_cts.Token)) != null)
+          {
+            HandleLine(line, ref previous, true);
+          }
+
+          await Task.Delay(250, _cts.Token);
+        }
+        catch (TaskCanceledException)
+        {
+          // stop
+          break;
+        }
+        catch (Exception)
+        {
+          await ReOpen();
+        }
       }
     }
 
-    private void HandleLine(string theLine, ref string previous, ref double doubleValue, CancellationToken cancelToken, bool monitor = false)
+    private void HandleLine(string theLine, ref string previous, bool monitor = false)
     {
       if (theLine.Length > 28)
       {
@@ -179,10 +222,13 @@ namespace EQLogParser
             return;
           }
 
-          doubleValue = DateUtil.ToDouble(dateTime);
+          _lastParsedTime = DateUtil.ToDouble(dateTime);
         }
 
-        if (cancelToken.IsCancellationRequested) return;
+        if (_cts.Token.IsCancellationRequested)
+        {
+          throw new TaskCanceledException();
+        }
 
         // if zoning during monitor try to archive
         if (monitor && lineSpan[27..].StartsWith("LOADING, PLEASE WAIT..."))
@@ -190,12 +236,12 @@ namespace EQLogParser
           FileUtil.ArchiveFile(this);
         }
 
-        _lines.Add(Tuple.Create(theLine, doubleValue, monitor), cancelToken);
+        _lines.Add(Tuple.Create(theLine, _lastParsedTime, monitor), _cts.Token);
         previous = theLine;
       }
     }
 
-    private void SearchLinear(StreamReader reader, DateTime minDate, CancellationToken cancelToken)
+    private void SearchLinear(StreamReader reader, DateTime minDate)
     {
       if (minDate != DateTime.MinValue)
       {
@@ -209,15 +255,63 @@ namespace EQLogParser
 
           if (dateTime >= minDate)
           {
-            if (!cancelToken.IsCancellationRequested)
-            {
-              string previous = null;
-              double doubleValue = 0;
-              HandleLine(line, ref previous, ref doubleValue, cancelToken);
-            }
+            string previous = null;
+            HandleLine(line, ref previous);
             break;
           }
         }
+      }
+    }
+
+    private async Task<bool> WhenFileExists()
+    {
+      while (true)
+      {
+        _waiting = true;
+
+        try
+        {
+          if (_cts.IsCancellationRequested)
+          {
+            return false;
+          }
+
+          if (File.Exists(FileName))
+          {
+            return true;
+          }
+
+          await Task.Delay(250, _cts.Token);
+        }
+        catch (Exception ex) when (ex is TaskCanceledException or ObjectDisposedException)
+        {
+          return false;
+        }
+      }
+    }
+
+    private async Task ReOpen()
+    {
+      CleanupStreams();
+      var exists = await WhenFileExists();
+      if (exists)
+      {
+        _fileDeleted = false;
+        _fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, BufferSize);
+        _fs.Seek(0, SeekOrigin.End);
+        _reader = FileUtil.GetStreamReader(_fs);
+      }
+    }
+
+    private async void CleanupStreams()
+    {
+      _reader?.Dispose();
+      _reader = null;
+
+      if (_fs != null)
+      {
+        await _fs.DisposeAsync();
+        _fs = null;
       }
     }
 
@@ -228,11 +322,25 @@ namespace EQLogParser
     {
       if (!_disposedValue)
       {
+        if (_watcher != null)
+        {
+          _watcher.EnableRaisingEvents = false;
+          _watcher.Dispose();
+          _watcher = null;
+        }
+
         _cts?.Cancel();
         _cts?.Dispose();
-        _fileWatcher?.Dispose();
-        _lines.CompleteAdding();
-        _logProcessor?.Dispose();
+        _cts = null;
+
+        if (!_lines.IsCompleted)
+        {
+          _lines.CompleteAdding();
+        }
+
+        logProcessor?.Dispose();
+        logProcessor = null;
+        _invalid = true;
         _disposedValue = true;
       }
     }

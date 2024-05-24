@@ -15,10 +15,10 @@ namespace EQLogParser
 
     internal LogManagementWindow()
     {
-      MainActions.SetTheme(this, MainWindow.CurrentTheme);
+      MainActions.SetCurrentTheme(this);
       InitializeComponent();
+      Owner = MainActions.GetOwner();
 
-      Owner = Application.Current.MainWindow;
       enableCheckBox.IsChecked = ConfigUtil.IfSet("LogManagementEnabled");
       txtFolderPath.IsEnabled =
         fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = enableCheckBox.IsChecked == true;
@@ -51,6 +51,15 @@ namespace EQLogParser
     {
       if (_ready)
       {
+        ConfigUtil.SetSetting("LogManagementEnabled", enableCheckBox.IsChecked == true);
+        closeButton.IsEnabled = !(enableCheckBox.IsChecked == true && fileAges.SelectedIndex == 0 && fileSizes.SelectedIndex == 0);
+
+        // ignore invalid settings
+        if (fileAges.SelectedIndex == 0 && fileSizes.SelectedIndex == 0)
+        {
+          return;
+        }
+
         if (fileSizes.SelectedItem is ComboBoxItem item)
         {
           ConfigUtil.SetSetting("LogManagementMinFileSize", item.Content.ToString());
@@ -68,7 +77,7 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateComboBox(ComboBox combo, string setting, string defaultValue)
+    private static void UpdateComboBox(ComboBox combo, string setting, string defaultValue)
     {
       // read compress settings
       var index = 0;
@@ -106,7 +115,6 @@ namespace EQLogParser
       txtFolderPath.IsEnabled = fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = true;
       titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
       titleLabel.Content = "Log Management Active";
-      ConfigUtil.SetSetting("LogManagementEnabled", true);
       UpdateSettings();
     }
 
@@ -115,7 +123,7 @@ namespace EQLogParser
       txtFolderPath.IsEnabled = fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = false;
       titleLabel.SetResourceReference(ForegroundProperty, "EQStopForegroundBrush");
       titleLabel.Content = "Enable Log Management";
-      ConfigUtil.SetSetting("LogManagementEnabled", false);
+      UpdateSettings();
     }
   }
 }
