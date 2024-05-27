@@ -37,12 +37,12 @@ namespace EQLogParser
 
     private void UpdateStatus()
     {
-      if (dataGrid.ItemsSource is List<TriggerCharacter> characters)
+      if (dataGrid?.ItemsSource is List<TriggerCharacter> characters)
       {
         var dataChanged = false;
         foreach (var reader in TriggerManager.Instance.GetLogReaders())
         {
-          if (reader.GetProcessor() is TriggerProcessor processor && characters.FirstOrDefault(item => item.Id == processor.CurrentCharacterId) is { } character)
+          if (reader.GetProcessor() is TriggerProcessor processor && characters.FirstOrDefault(item => item.Id == processor?.CurrentCharacterId) is { } character)
           {
             bool? update;
             if (reader.IsWaiting())
@@ -155,9 +155,12 @@ namespace EQLogParser
 
     private void RefreshData()
     {
-      var selected = dataGrid.SelectedIndex;
-      dataGrid.View.Refresh();
-      dataGrid.SelectedIndex = selected;
+      if (dataGrid?.View != null)
+      {
+        var selected = dataGrid.SelectedIndex;
+        dataGrid.View.Refresh();
+        dataGrid.SelectedIndex = selected;
+      }
     }
 
     #region IDisposable Support

@@ -184,7 +184,7 @@ namespace EQLogParser
             await ReOpen();
           }
 
-          if (_cts.IsCancellationRequested)
+          if (_cts == null || _cts.IsCancellationRequested)
           {
             // stop
             break;

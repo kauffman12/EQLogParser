@@ -812,7 +812,7 @@ namespace EQLogParser
       }
     }
 
-    private SfTreeView GetTreeViewFromMenu(object sender)
+    private static SfTreeView GetTreeViewFromMenu(object sender)
     {
       if (sender is MenuItem { DataContext: TreeViewItemContextMenuInfo info })
       {
