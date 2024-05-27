@@ -13,6 +13,7 @@ namespace EQLogParser
   {
     private TextBox _theTextBox;
     private CheckBox _theCheckBox;
+    private bool _userTurnedOff;
 
     public void SetForeground(string foreground)
     {
@@ -49,7 +50,7 @@ namespace EQLogParser
           Mode = info.CanWrite ? BindingMode.TwoWay : BindingMode.OneWay,
           Source = info.SelectedObject,
           ValidatesOnExceptions = true,
-          ValidatesOnDataErrors = true
+          ValidatesOnDataErrors = true,
         };
 
         BindingOperations.SetBinding(_theCheckBox, ToggleButton.IsCheckedProperty, binding);
@@ -61,6 +62,7 @@ namespace EQLogParser
 
     private object Create()
     {
+      _userTurnedOff = false;
       var grid = new Grid();
       grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
       grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
@@ -76,6 +78,8 @@ namespace EQLogParser
       };
 
       _theTextBox.SetValue(Grid.ColumnProperty, 0);
+      _theTextBox.TextChanged += TheTextChanged;
+
       _theCheckBox = new CheckBox { Content = "Use Regex" };
       _theCheckBox.SetValue(Grid.ColumnProperty, 1);
       _theCheckBox.Checked += TheCheckBoxChecked;
@@ -85,14 +89,39 @@ namespace EQLogParser
       return grid;
     }
 
+    private void TheTextChanged(object sender, TextChangedEventArgs e)
+    {
+      if (!_userTurnedOff && TriggerUtil.IsProbRegex(_theTextBox?.Text) && _theCheckBox.IsChecked == false)
+      {
+        _theCheckBox.IsChecked = true;
+      }
+    }
+
     private void TheCheckBoxChecked(object sender, RoutedEventArgs e)
     {
+      // used for init check
       if (sender is CheckBox { DataContext: not null })
       {
-        // used for init check
+        // turn off listeners
+        _theTextBox.TextChanged -= TheTextChanged;
+        // toggle text to trigger the ValueChanged event
         var previous = _theTextBox.Text;
         _theTextBox.Text += " ";
         _theTextBox.Text = previous;
+        _theTextBox.SelectionStart = _theTextBox.Text.Length;
+        // put listener back on
+        _theTextBox.TextChanged += TheTextChanged;
+
+        // if the toggle is changed to false it must have been a user decision
+        if (_theCheckBox.IsChecked == false)
+        {
+          _userTurnedOff = true;
+        }
+      }
+      else
+      {
+        // reset just in case
+        _userTurnedOff = false;
       }
     }
 
@@ -105,6 +134,7 @@ namespace EQLogParser
     {
       if (_theTextBox != null)
       {
+        _theTextBox.TextChanged -= TheTextChanged;
         BindingOperations.ClearAllBindings(_theTextBox);
         _theTextBox = null;
       }

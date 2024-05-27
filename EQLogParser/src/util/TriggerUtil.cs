@@ -647,6 +647,16 @@ namespace EQLogParser
       }
     }
 
+    internal static bool IsProbRegex(string value)
+    {
+      if (string.IsNullOrEmpty(value))
+      {
+        return false;
+      }
+
+      return TestRegex().Match(value).Success;
+    }
+
     internal static async Task ShareAsync(List<TriggerTreeViewNode> viewNodes)
     {
       if (BuildExportList(viewNodes) is { Count: > 0 } exportList)
@@ -958,8 +968,11 @@ namespace EQLogParser
       }
     }
 
-    [GeneratedRegex(@"<<(.*\.wav)>>$")]
+    [GeneratedRegex(@"<<(.*\.wav)>>$", RegexOptions.IgnoreCase)]
     private static partial Regex WavFileRegex();
+
+    [GeneratedRegex(@"\{(TS|[sn](?:\s*[0-9]+\s*|\s*[><]=?\s*[0-9]+\s*|=\s*[0-9]+\s*)?)\}", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
+    private static partial Regex TestRegex();
   }
 
   internal class CharacterData
