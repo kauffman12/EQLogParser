@@ -283,10 +283,10 @@ namespace EQLogParser
       }
     }
 
-    [GeneratedRegex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+)(?!.*\d).*\.txt$", RegexOptions.Singleline)]
+    [GeneratedRegex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+)(?!.*\d).*\.txt$", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
     private static partial Regex TheArchiveFileNameRegex();
 
-    [GeneratedRegex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt$", RegexOptions.Singleline)]
+    [GeneratedRegex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.txt(?:\.gz)?$", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
     private static partial Regex TheServerFileNameRegex();
   }
 }

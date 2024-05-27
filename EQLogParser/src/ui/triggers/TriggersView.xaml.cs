@@ -363,7 +363,6 @@ namespace EQLogParser
         var isValid = TriggerUtil.TestRegexProperty(trigger.UseRegex, trigger.Pattern, _patternEditor);
         isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex, trigger.EndEarlyPattern, _endEarlyPatternEditor);
         isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex2, trigger.EndEarlyPattern2, _endEarlyPattern2Editor);
-        isValid = isValid && !string.IsNullOrEmpty(trigger.Pattern);
 
         if (args.Property.Name == patternItem.PropertyName)
         {
