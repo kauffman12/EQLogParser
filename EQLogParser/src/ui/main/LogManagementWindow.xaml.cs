@@ -11,6 +11,10 @@ namespace EQLogParser
   /// </summary>
   public partial class LogManagementWindow
   {
+    public static string CompressNo => "No";
+    public static string CompressYes => "Yes";
+    public static string OrganizeInFiles => "Individual Files";
+    public static string OrganizeInFolders => "Server and Character Folders";
     private readonly bool _ready;
 
     internal LogManagementWindow()
@@ -20,8 +24,8 @@ namespace EQLogParser
       Owner = MainActions.GetOwner();
 
       enableCheckBox.IsChecked = ConfigUtil.IfSet("LogManagementEnabled");
-      txtFolderPath.IsEnabled =
-        fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = enableCheckBox.IsChecked == true;
+      txtFolderPath.IsEnabled = fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled =
+        organize.IsEnabled = enableCheckBox.IsChecked == true;
 
       // read archive folder
       var savedFolder = ConfigUtil.GetSetting("LogManagementArchiveFolder");
@@ -33,7 +37,8 @@ namespace EQLogParser
       // read saved settings
       UpdateComboBox(fileSizes, "LogManagementMinFileSize", "500M");
       UpdateComboBox(fileAges, "LogManagementMinFileAge", "1 Week");
-      UpdateComboBox(compress, "LogManagementCompressArchive", "Yes");
+      UpdateComboBox(compress, "LogManagementCompressArchive", CompressYes);
+      UpdateComboBox(organize, "LogManagementOrganize", OrganizeInFiles);
       _ready = true;
     }
 
@@ -74,12 +79,16 @@ namespace EQLogParser
         {
           ConfigUtil.SetSetting("LogManagementCompressArchive", item3.Content.ToString());
         }
+
+        if (organize.SelectedItem is ComboBoxItem item4)
+        {
+          ConfigUtil.SetSetting("LogManagementOrganize", item4.Content.ToString());
+        }
       }
     }
 
     private static void UpdateComboBox(ComboBox combo, string setting, string defaultValue)
     {
-      // read compress settings
       var index = 0;
       var saved = ConfigUtil.GetSetting(setting, defaultValue);
       for (var i = 0; i < combo.Items.Count; i++)
@@ -112,7 +121,7 @@ namespace EQLogParser
 
     private void EnableCheckBoxOnChecked(object sender, RoutedEventArgs e)
     {
-      txtFolderPath.IsEnabled = fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = true;
+      txtFolderPath.IsEnabled = fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = organize.IsEnabled = true;
       titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
       titleLabel.Content = "Log Management Active";
       UpdateSettings();
@@ -120,7 +129,7 @@ namespace EQLogParser
 
     private void EnableCheckBoxOnUnchecked(object sender, RoutedEventArgs e)
     {
-      txtFolderPath.IsEnabled = fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = false;
+      txtFolderPath.IsEnabled = fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = organize.IsEnabled = false;
       titleLabel.SetResourceReference(ForegroundProperty, "EQStopForegroundBrush");
       titleLabel.Content = "Enable Log Management";
       UpdateSettings();

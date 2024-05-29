@@ -4,6 +4,7 @@
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
   xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+  xmlns:local="clr-namespace:EQLogParser"
   mc:Ignorable="d"
   ResizeMode="NoResize"
   Icon="EQLogParser.ico"
@@ -98,8 +99,21 @@
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Compress Archive" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only Archive Log File if it was created prior to the selected time range."/>
             <ComboBox Grid.Column="1" x:Name="compress" SelectedIndex="0" Margin="8,0,0,0" Width="320" SelectionChanged="OptionsChanged">
-              <ComboBoxItem>Yes</ComboBoxItem>
-              <ComboBoxItem>No</ComboBoxItem>
+              <ComboBoxItem Content="{x:Static local:LogManagementWindow.CompressYes}" />
+              <ComboBoxItem Content="{x:Static local:LogManagementWindow.CompressNo}" />
+            </ComboBox>
+          </Grid>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="160" />
+              <ColumnDefinition Width="70*" />
+            </Grid.ColumnDefinitions>
+            <Label Grid.Column="0" Content="Organize By" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="How to Organize the Archive Folder."/>
+            <ComboBox Grid.Column="1" x:Name="organize" SelectedIndex="0" Margin="8,0,0,0" Width="320" SelectionChanged="OptionsChanged">
+              <ComboBoxItem Content="{x:Static local:LogManagementWindow.OrganizeInFiles}" />
+              <ComboBoxItem Content="{x:Static local:LogManagementWindow.OrganizeInFolders}" />
             </ComboBox>
           </Grid>
         </StackPanel>
