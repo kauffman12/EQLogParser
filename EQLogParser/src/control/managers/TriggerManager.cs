@@ -100,9 +100,12 @@ namespace EQLogParser
     internal void SetTestProcessor(TriggerCharacter character, BlockingCollection<Tuple<string, double, bool>> collection)
     {
       _testProcessor?.Dispose();
-      string server = null;
-      var playerName = character.Name;
-      FileUtil.ParseFileName(character.FilePath, ref playerName, ref server);
+      // if cant parse then use character name
+      if (!FileUtil.ParseFileName(character.FilePath, out var playerName, out _))
+      {
+        playerName = character.Name;
+      }
+
       _testProcessor = new TriggerProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, character.Voice,
         character.VoiceRate, character.ActiveColor, character.FontColor, AddTextEvent, AddTimerEvent);
       _testProcessor.SetTesting(true);
@@ -194,9 +197,12 @@ namespace EQLogParser
             {
               if (character.IsEnabled && !alreadyRunning.Contains(character.Id))
               {
-                string server = null;
-                var playerName = character.Name;
-                FileUtil.ParseFileName(character.FilePath, ref playerName, ref server);
+                // if cant parse then use character name
+                if (!FileUtil.ParseFileName(character.FilePath, out var playerName, out _))
+                {
+                  playerName = character.Name;
+                }
+
                 var reader = new LogReader(new TriggerProcessor(character.Id, character.Name, playerName,
                   character.Voice, character.VoiceRate, character.ActiveColor, character.FontColor, AddTextEvent, AddTimerEvent), character.FilePath);
                 _logReaders.Add(reader);

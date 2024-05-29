@@ -142,17 +142,26 @@ namespace EQLogParser
           continue;
         }
 
-        var compress = ConfigUtil.GetSetting("LogManagementCompressArchive", "Yes");
+        var compress = ConfigUtil.GetSetting("LogManagementCompressArchive", LogManagementWindow.CompressYes);
+        var organize = ConfigUtil.GetSetting("LogManagementOrganize", LogManagementWindow.OrganizeInFiles);
 
         try
         {
+          var archivePath = archiveFolder;
+          if (LogManagementWindow.OrganizeInFolders.Equals(organize, StringComparison.OrdinalIgnoreCase) &&
+              ParseFileName(fileInfo.Name, out var name, out var server))
+          {
+            archivePath = Path.Combine(archivePath, server, name);
+          }
+
+          Directory.CreateDirectory(archivePath);
           var formatted = DateTime.Now.ToString("_yyyyMMddHHmm_ssfff") + ".txt";
-          var destination = archiveFolder + Path.DirectorySeparatorChar + fileInfo.Name.Replace(".txt", formatted);
+          var destination = archivePath + Path.DirectorySeparatorChar + fileInfo.Name.Replace(".txt", formatted);
 
           File.Move(path, destination);
 
           // compress if specified
-          if ("Yes".Equals(compress, StringComparison.OrdinalIgnoreCase))
+          if (LogManagementWindow.CompressYes.Equals(compress, StringComparison.OrdinalIgnoreCase))
           {
             CompressFile(destination);
           }
@@ -196,8 +205,11 @@ namespace EQLogParser
       }
     }
 
-    internal static void ParseFileName(string theFile, ref string name, ref string server)
+    internal static bool ParseFileName(string theFile, out string name, out string server)
     {
+      name = "You";
+      server = "Unknown";
+      var found = 0;
       var file = Path.GetFileName(theFile);
       var matches = ServerFileNameRegex.Matches(file);
 
@@ -206,13 +218,17 @@ namespace EQLogParser
         if (matches[0].Groups.Count > 1)
         {
           name = matches[0].Groups[1].Value;
+          found++;
         }
 
         if (matches[0].Groups.Count > 2)
         {
           server = matches[0].Groups[2].Value;
+          found++;
         }
       }
+
+      return found == 2;
     }
 
     internal static StreamReader GetStreamReader(FileStream f, double start = 0)

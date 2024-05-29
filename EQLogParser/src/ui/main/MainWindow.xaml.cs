@@ -903,14 +903,8 @@ namespace EQLogParser
 
         if (!string.IsNullOrEmpty(theFile))
         {
-          var name = "You";
-          var server = "Unknown";
-          if (theFile.Length > 0)
-          {
-            Log.Info("Selected Log File: " + theFile);
-            FileUtil.ParseFileName(theFile, ref name, ref server);
-          }
-
+          Log.Info("Selected Log File: " + theFile);
+          FileUtil.ParseFileName(theFile, out var name, out var server);
           var changed = ConfigUtil.ServerName != server;
 
           Dispatcher.Invoke(() =>
