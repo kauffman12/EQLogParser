@@ -26,9 +26,10 @@ namespace EQLogParser
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
 
-      CreateSpellCountMenuItems(menuItemShowSpellCounts, DataGridShowSpellCountsClick, DataGridSpellCountsByClassClick);
-      CreateClassMenuItems(menuItemShowSpellCasts, DataGridShowSpellCastsClick, DataGridSpellCastsByClassClick);
-      CreateClassMenuItems(menuItemShowBreakdown, DataGridShowBreakdownClick, DataGridShowBreakdownByClassClick);
+      CreateSpellCountMenuItems(menuItemShowSpellCounts, DataGridSpellCountsByClassClick, DataGridShowSpellCountsClick);
+      CreateClassMenuItems(menuItemShowSpellCasts, DataGridSpellCastsByClassClick, false, DataGridShowSpellCastsClick);
+      CreateClassMenuItems(menuItemShowBreakdown, DataGridShowBreakdownByClassClick, false, DataGridShowBreakdownClick);
+      CreateClassMenuItems(menuItemSetPlayerClass, DataGridSetPlayerClassClick, true);
 
       // call after everything else is initialized
       InitSummaryTable(title, dataGrid, selectedColumns);
@@ -48,6 +49,8 @@ namespace EQLogParser
 
     internal override void UpdateDataGridMenuItems()
     {
+      var selectedName = "Unknown";
+
       Dispatcher.InvokeAsync(() =>
       {
         if (CurrentStats != null && CurrentStats.StatsList.Count > 0 && dataGrid.View != null)
@@ -58,11 +61,15 @@ namespace EQLogParser
           copyTopHealsParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) && (dataGrid.SelectedItem as PlayerStats)?.SubStats?.Count > 0;
           menuItemShowHealingTimeline.IsEnabled = dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2;
 
+          // default before making check
           menuItemShowDeathLog.IsEnabled = false;
+          menuItemSetPlayerClass.IsEnabled = false;
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
+            menuItemSetPlayerClass.IsEnabled = PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName);
             menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X");
+            selectedName = playerStats.OrigName;
           }
 
           EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats.UniqueClasses);
@@ -72,9 +79,11 @@ namespace EQLogParser
         else
         {
           menuItemShowBreakdown.IsEnabled = copyOptions.IsEnabled =
-            menuItemShowHealingLog.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyHealParseToEQClick.IsEnabled =
-            menuItemShowSpellCasts.IsEnabled = menuItemShowHealingTimeline.IsEnabled = false;
+          menuItemShowHealingLog.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyHealParseToEQClick.IsEnabled =
+            menuItemSetPlayerClass.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowHealingTimeline.IsEnabled = false;
         }
+
+        menuItemSetPlayerClass.Header = $"Assign {selectedName} to Class";
       });
     }
 

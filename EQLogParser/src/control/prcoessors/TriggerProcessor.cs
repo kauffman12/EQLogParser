@@ -42,6 +42,7 @@ namespace EQLogParser
     private readonly BlockingCollection<string> _triggerTimeCollection = [];
     private readonly string _activeColor;
     private readonly string _fontColor;
+    private readonly CancellationTokenSource _cts = new();
     private TriggerWrapper _previousSpoken;
     private List<TriggerWrapper> _activeTriggers;
     private List<LexiconItem> _lexicon;
@@ -79,64 +80,98 @@ namespace EQLogParser
     {
       _speakTask = Task.Run(() =>
       {
-        // ReSharper disable once InconsistentlySynchronizedField
-        foreach (var data in _speakCollection.GetConsumingEnumerable())
+        try
         {
-          try
+          // ReSharper disable once InconsistentlySynchronizedField
+          foreach (var data in _speakCollection.GetConsumingEnumerable(_cts.Token))
           {
-            HandleSpeech(data);
+            try
+            {
+              HandleSpeech(data);
+            }
+            catch (Exception)
+            {
+              // ignore
+            }
           }
-          catch (Exception)
-          {
-            // ignore
-          }
+        }
+        catch (Exception)
+        {
+          // ignore (should only be cancel requests)
         }
       });
 
       _chatTask = Task.Run(() =>
       {
-        foreach (var data in _chatCollection.GetConsumingEnumerable())
+        try
         {
-          try
+          foreach (var data in _chatCollection.GetConsumingEnumerable(_cts.Token))
           {
-            HandleChat(data);
+            try
+            {
+              HandleChat(data);
+            }
+            catch (Exception)
+            {
+              // ignore
+            }
           }
-          catch (Exception)
-          {
-            // ignore
-          }
+        }
+        catch (Exception)
+        {
+          // ignore (should only be cancel requests)
         }
       });
 
       _triggerTimeTask = Task.Run(() =>
       {
-        foreach (var data in _triggerTimeCollection.GetConsumingEnumerable())
+        try
         {
-          try
+          foreach (var data in _triggerTimeCollection.GetConsumingEnumerable(_cts.Token))
           {
-            var beginTicks = DateTime.UtcNow.Ticks;
-            var updatedTime = beginTicks / TimeSpan.TicksPerMillisecond;
-            TriggerStateManager.Instance.UpdateLastTriggered(data, updatedTime);
+            try
+            {
+              var beginTicks = DateTime.UtcNow.Ticks;
+              var updatedTime = beginTicks / TimeSpan.TicksPerMillisecond;
+              TriggerStateManager.Instance.UpdateLastTriggered(data, updatedTime);
+            }
+            catch (Exception)
+            {
+              // ignore
+            }
           }
-          catch (Exception)
-          {
-            // ignore
-          }
+        }
+        catch (Exception)
+        {
+          // ignore (should only be cancel requests)
         }
       });
 
       _processTask = Task.Run(() =>
       {
-        foreach (var data in collection.GetConsumingEnumerable())
+        try
         {
-          try
+          foreach (var data in collection.GetConsumingEnumerable(_cts.Token))
           {
-            DoProcess(data.Item1, data.Item2);
+            try
+            {
+              DoProcess(data.Item1, data.Item2);
+            }
+            catch (Exception)
+            {
+              // ignore
+            }
           }
-          catch (Exception)
-          {
-            // ignore
-          }
+        }
+        catch (Exception)
+        {
+          // ignore (should only be cancel requests)
+        }
+
+        // cleanup on process exit
+        lock (_activeTriggerLock)
+        {
+          _activeTriggers.ToList().ForEach(CleanupWrapper);
         }
       });
     }
@@ -214,9 +249,9 @@ namespace EQLogParser
       {
         foreach (var wrapper in CollectionsMarshal.AsSpan(_activeTriggers))
         {
-          if (CheckLine(wrapper, lineData, out var matches))
+          if (CheckLine(wrapper, lineData, out var matches, out var timing))
           {
-            HandleTrigger(wrapper, lineData, ActivityLastTicks, matches);
+            HandleTrigger(wrapper, lineData, matches, timing);
           }
 
           CheckTimers(wrapper, lineData);
@@ -230,14 +265,16 @@ namespace EQLogParser
       }
     }
 
-    private static bool CheckLine(TriggerWrapper wrapper, LineData lineData, out MatchCollection matches)
+    private static bool CheckLine(TriggerWrapper wrapper, LineData lineData, out MatchCollection matches, out long timing)
     {
+      var beginTicks = DateTime.UtcNow.Ticks;
       var found = false;
       matches = null;
       lock (wrapper)
       {
         if (wrapper.IsDisabled)
         {
+          timing = 0;
           return false;
         }
 
@@ -269,6 +306,7 @@ namespace EQLogParser
           {
             Log.Warn($"Disabling {wrapper.Name} with slow Regex: {wrapper.TriggerData?.Pattern}");
             wrapper.IsDisabled = true;
+            timing = DateTime.UtcNow.Ticks - beginTicks;
             return false;
           }
 
@@ -284,6 +322,7 @@ namespace EQLogParser
         }
       }
 
+      timing = DateTime.UtcNow.Ticks - beginTicks;
       return found;
     }
 
@@ -340,14 +379,26 @@ namespace EQLogParser
       }
     }
 
-    private void HandleTrigger(TriggerWrapper wrapper, LineData lineData, long startTicks, MatchCollection matches, int loopCount = 0)
+    private void HandleTrigger(TriggerWrapper wrapper, LineData lineData, MatchCollection matches, long timing, int loopCount = 0)
     {
       lock (wrapper)
       {
         var beginTicks = DateTime.UtcNow.Ticks;
-        var updatedTime = beginTicks / TimeSpan.TicksPerMillisecond;
+        if (loopCount == 0 && wrapper.TriggerData.LockoutTime > 0)
+        {
+          if (wrapper.LockedOutTicks > 0 && beginTicks <= wrapper.LockedOutTicks)
+          {
+            // during lockout do nothing
+            Log.Warn("LOCKOUT");
+            return;
+          }
+
+          // update lockout time
+          wrapper.LockedOutTicks = beginTicks + (wrapper.TriggerData.LockoutTime * TimeSpan.TicksPerMillisecond);
+        }
 
         // no need to constantly updated the DB. 6 hour check
+        var updatedTime = beginTicks / TimeSpan.TicksPerMillisecond;
         if (updatedTime - wrapper.TriggerData.LastTriggered > SixtyHours)
         {
           if (!_triggerTimeCollection.IsCompleted)
@@ -357,7 +408,6 @@ namespace EQLogParser
           wrapper.TriggerData.LastTriggered = updatedTime;
         }
 
-        var time = (beginTicks - startTicks) / 10;
         if (ProcessMatchesText(wrapper.ModifiedTimerName, matches) is { } displayName)
         {
           displayName = ModLine(displayName, lineData.Action);
@@ -402,7 +452,7 @@ namespace EQLogParser
           UiUtil.InvokeAsync(() => Clipboard.SetText(updatedShareText));
         }
 
-        AddEntry(lineData, wrapper, "Trigger", time);
+        AddEntry(lineData, wrapper, "Trigger", timing / 10);
 
         if (speak != null)
         {
@@ -594,12 +644,12 @@ namespace EQLogParser
             CleanupTimer(wrapper, data2);
 
             // repeating
-            if (wrapper.TriggerData.TimerType == 4 && _ready && wrapper.TriggerData.TimesToLoop > data2.TimesToLoopCount)
+            if (_ready && wrapper.TriggerData.TimerType == 4 && wrapper.TriggerData.TimesToLoop > data2.TimesToLoopCount)
             {
               // repeat normal process
-              if (CheckLine(wrapper, data2.RepeatingTimerLineData, out var matchAgain))
+              if (CheckLine(wrapper, data2.RepeatingTimerLineData, out var matchAgain, out var timing))
               {
-                HandleTrigger(wrapper, data2.RepeatingTimerLineData, DateTime.UtcNow.Ticks, matchAgain, data2.TimesToLoopCount + 1);
+                HandleTrigger(wrapper, data2.RepeatingTimerLineData, matchAgain, timing, data2.TimesToLoopCount + 1);
               }
 
               CheckTimers(wrapper, lineData);
@@ -1065,6 +1115,7 @@ namespace EQLogParser
         _speakCollection.CompleteAdding();
         _chatCollection.CompleteAdding();
         _triggerTimeCollection.CompleteAdding();
+        _cts?.Cancel();
         _speakTask?.Wait();
         _chatTask?.Wait();
         _triggerTimeTask?.Wait();
@@ -1077,15 +1128,11 @@ namespace EQLogParser
         _chatCollection?.Dispose();
         _triggerTimeCollection?.Dispose();
         _soundPlayer?.Dispose();
+        _cts?.Dispose();
 
         lock (_voiceLock)
         {
           _synth?.Dispose();
-        }
-
-        lock (_activeTriggerLock)
-        {
-          _activeTriggers.ToList().ForEach(CleanupWrapper);
         }
       }
     }
@@ -1133,6 +1180,7 @@ namespace EQLogParser
       public string ContainsText { get; set; }
       public string StartText { get; set; }
       public BitmapImage TimerIcon { get; set; }
+      public double LockedOutTicks { get; set; }
     }
 
     [GeneratedRegex(@"{(s\d?)}", RegexOptions.IgnoreCase, "en-US")]
