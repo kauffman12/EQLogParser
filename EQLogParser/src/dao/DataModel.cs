@@ -184,6 +184,7 @@ namespace EQLogParser
     public string WarningSoundToPlay { get; set; }
     public string TextToShare { get; set; }
     public long TimesToLoop { get; set; }
+    public double LockoutTime { get; set; }
   }
 
   internal class TimerOverlayPropertyModel : Overlay

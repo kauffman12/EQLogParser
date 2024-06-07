@@ -99,6 +99,12 @@
             </MenuItem>
           </MenuItem>
           <Separator />
+          <MenuItem x:Name="menuItemSetPlayerClass" IsEnabled="False" Header="Assign Unknown to Class">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_User" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
           <MenuItem x:Name="menuItemShowHealingTimeline" IsEnabled="False" Header="Healing Timeline" Click="DataGridHealingTimelineClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="showHealingTimelineIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Film" />

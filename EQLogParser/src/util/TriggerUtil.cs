@@ -28,7 +28,6 @@ namespace EQLogParser
     private static readonly ConcurrentDictionary<string, CharacterData> QuickShareCache = new();
     private const string ExtTrigger = "tgf";
     private const string ExtOverlay = "ogf";
-    internal static double GetTimerBarHeight(double fontSize) => fontSize + 2;
     internal static void ImportTriggers(TriggerNode parent) => Import(parent);
     internal static void ImportOverlays(TriggerNode triggerNode) => Import(triggerNode, false);
 
@@ -45,6 +44,28 @@ namespace EQLogParser
       var newTop = relativeTop * newResolution.Height;
       var newLeft = relativeLeft * newResolution.Width;
       return new Point(newLeft, newTop);
+    }
+
+    internal static double CalculateTimerBarHeight(double fontSize, FontFamily family)
+    {
+      if (family != null)
+      {
+        return UiElementUtil.CalculateTextBoxHeight(family, fontSize, new Thickness(), new Thickness());
+      }
+
+      return fontSize + 2;
+    }
+
+    internal static double ParseFontSize(string fontSize)
+    {
+      if (!string.IsNullOrEmpty(fontSize) && fontSize.Split("pt") is { Length: 2 } split && double.TryParse(split[0], NumberStyles.Any,
+            CultureInfo.InvariantCulture, out var newFontSize))
+      {
+        return newFontSize;
+      }
+
+      // original default
+      return 12;
     }
 
     internal static SpeechSynthesizer GetSpeechSynthesizer()
@@ -85,6 +106,7 @@ namespace EQLogParser
         toTrigger.ResetDurationSeconds = fromTrigger.ResetDurationSeconds;
         toTrigger.Priority = fromTrigger.Priority;
         toTrigger.RepeatedResetTime = fromTrigger.RepeatedResetTime;
+        toTrigger.LockoutTime = fromTrigger.LockoutTime;
         toTrigger.SelectedOverlays = fromTrigger.SelectedOverlays;
         toTrigger.TriggerAgainOption = fromTrigger.TriggerAgainOption;
         toTrigger.TimerType = fromTrigger.TimerType;
@@ -201,18 +223,17 @@ namespace EQLogParser
           AssignResource(toModel, fromOverlay, "ResetColor", "ResetBrush", "TimerBarResetColor");
           AssignResource(toModel, fromOverlay, "BackgroundColor", "BackgroundBrush", "TimerBarTrackColor");
 
+          FontFamily family = null;
           if (!string.IsNullOrEmpty(fromOverlay.FontFamily))
           {
             toModel.FontFamily = fromOverlay.FontFamily;
-            Application.Current.Resources["TimerBarFontFamily-" + toModel.Node.Id] = new FontFamily(toModel.FontFamily);
+            family = new FontFamily(toModel.FontFamily);
+            Application.Current.Resources["TimerBarFontFamily-" + toModel.Node.Id] = family;
           }
 
-          if (!string.IsNullOrEmpty(fromOverlay.FontSize) && fromOverlay.FontSize.Split("pt") is { Length: 2 } split &&
-            double.TryParse(split[0], NumberStyles.Any, CultureInfo.InvariantCulture, out var newFontSize))
-          {
-            Application.Current.Resources["TimerBarFontSize-" + toModel.Node.Id] = newFontSize;
-            Application.Current.Resources["TimerBarHeight-" + toModel.Node.Id] = GetTimerBarHeight(newFontSize);
-          }
+          var fontSize = ParseFontSize(fromOverlay.FontSize);
+          Application.Current.Resources["TimerBarFontSize-" + toModel.Node.Id] = fontSize;
+          Application.Current.Resources["TimerBarHeight-" + toModel.Node.Id] = CalculateTimerBarHeight(fontSize, family);
         }
         else if (fromOverlay is TimerOverlayPropertyModel fromModel)
         {

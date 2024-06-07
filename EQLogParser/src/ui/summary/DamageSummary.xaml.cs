@@ -3,7 +3,6 @@ using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -37,9 +36,10 @@ namespace EQLogParser
       petOrPlayerList.ItemsSource = new List<string> { Labels.PetPlayerOption, Labels.PlayerOption, Labels.PetOption, Labels.AllOption };
       petOrPlayerList.SelectedIndex = 0;
 
-      CreateSpellCountMenuItems(menuItemShowSpellCounts, DataGridShowSpellCountsClick, DataGridSpellCountsByClassClick);
-      CreateClassMenuItems(menuItemShowSpellCasts, DataGridShowSpellCastsClick, DataGridSpellCastsByClassClick);
-      CreateClassMenuItems(menuItemShowBreakdown, DataGridShowBreakdownClick, DataGridShowBreakdownByClassClick);
+      CreateSpellCountMenuItems(menuItemShowSpellCounts, DataGridSpellCountsByClassClick, DataGridShowSpellCountsClick);
+      CreateClassMenuItems(menuItemShowSpellCasts, DataGridSpellCastsByClassClick, false, DataGridShowSpellCastsClick);
+      CreateClassMenuItems(menuItemShowBreakdown, DataGridShowBreakdownByClassClick, false, DataGridShowBreakdownClick);
+      CreateClassMenuItems(menuItemSetPlayerClass, DataGridSetPlayerClassClick, true);
 
       // call after everything else is initialized
       InitSummaryTable(title, dataGrid, selectedColumns);
@@ -97,11 +97,13 @@ namespace EQLogParser
           copyDamageParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
 
           // default before making check
-          menuItemSetAsPet.IsEnabled = false;
           menuItemShowDeathLog.IsEnabled = false;
+          menuItemSetPlayerClass.IsEnabled = false;
+          menuItemSetAsPet.IsEnabled = false;
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
+            menuItemSetPlayerClass.IsEnabled = PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName);
             menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.Unk && playerStats.OrigName != Labels.Rs &&
             !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
             selectedName = playerStats.OrigName;
@@ -115,11 +117,13 @@ namespace EQLogParser
         else
         {
           menuItemShowBreakdown.IsEnabled = menuItemShowDamageLog.IsEnabled =
-            menuItemSetAsPet.IsEnabled = menuItemShowSpellCounts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled =
-            copyOptions.IsEnabled = menuItemShowAdpsTimeline.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowDeathLog.IsEnabled = false;
+          menuItemSetAsPet.IsEnabled = menuItemShowSpellCounts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled =
+          copyOptions.IsEnabled = menuItemShowAdpsTimeline.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemSetPlayerClass.IsEnabled =
+          menuItemShowDeathLog.IsEnabled = false;
         }
 
-        menuItemSetAsPet.Header = string.Format(CultureInfo.CurrentCulture, "Assign {0} as Pet to", selectedName);
+        menuItemSetAsPet.Header = $"Assign {selectedName} as Pet of";
+        menuItemSetPlayerClass.Header = $"Assign {selectedName} to Class";
       });
     }
 

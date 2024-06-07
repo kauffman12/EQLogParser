@@ -76,23 +76,26 @@ namespace EQLogParser
     internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(TheColumnsCombo, TheDataGrid);
     internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
 
-    internal static void CreateClassMenuItems(MenuItem parent, Action<object, RoutedEventArgs> selectedHandler, Action<object, RoutedEventArgs> classHandler)
+    internal static void CreateClassMenuItems(MenuItem parent, Action<object, RoutedEventArgs> classHandler, bool enabled, Action<object, RoutedEventArgs> selectedHandler = null)
     {
-      var selected = new MenuItem { IsEnabled = false, Header = "Selected" };
-      selected.Click += new RoutedEventHandler(selectedHandler);
-      parent.Items.Add(selected);
+      if (selectedHandler != null)
+      {
+        var selected = new MenuItem { IsEnabled = enabled, Header = "Selected" };
+        selected.Click += new RoutedEventHandler(selectedHandler);
+        parent.Items.Add(selected);
+      }
 
       PlayerManager.Instance.GetClassList().ForEach(name =>
       {
-        var item = new MenuItem { IsEnabled = false, Header = name };
+        var item = new MenuItem { IsEnabled = enabled, Header = name };
         item.Click += new RoutedEventHandler(classHandler);
         parent.Items.Add(item);
       });
     }
 
-    internal static void CreateSpellCountMenuItems(MenuItem parent, Action<object, RoutedEventArgs> selectedHandler, Action<object, RoutedEventArgs> classHandler)
+    internal static void CreateSpellCountMenuItems(MenuItem parent, Action<object, RoutedEventArgs> classHandler, Action<object, RoutedEventArgs> selectedHandler)
     {
-      CreateClassMenuItems(parent, selectedHandler, classHandler);
+      CreateClassMenuItems(parent, selectedHandler, false, classHandler);
       parent.Items.Add(new Separator());
       var item = new MenuItem { IsEnabled = true, Header = "All Players" };
       item.Click += new RoutedEventHandler(classHandler);
@@ -103,6 +106,20 @@ namespace EQLogParser
     {
       TheTitle.Content = DefaultTableLabel;
       TheDataGrid.ItemsSource = null;
+    }
+
+    internal void DataGridSetPlayerClassClick(object sender, RoutedEventArgs e)
+    {
+      if (sender is MenuItem { Header: string className })
+      {
+        var selected = GetSelectedStats().FirstOrDefault();
+        if (selected != null && !string.IsNullOrEmpty(selected.OrigName))
+        {
+          PlayerManager.Instance.SetPlayerClass(selected.OrigName, className, "User assigned the class.");
+          selected.ClassName = className;
+          DataGridUtil.RefreshTable(TheDataGrid);
+        }
+      }
     }
 
     internal static void EnableClassMenuItems(MenuItem menu, SfGridBase gridBase, Dictionary<string, byte> uniqueClasses)

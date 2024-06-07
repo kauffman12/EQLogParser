@@ -25,7 +25,7 @@
         <DropShadowEffect ShadowDepth="2" Direction="270" Color="Black" Opacity="0.3" BlurRadius="1"/>
       </Image.Effect>
     </Image>
-    <syncfusion:SfLinearProgressBar Grid.Row="1" Grid.Column="1" x:Name="progress" ProgressColor="{x:Null}" Height="16" Margin="0,0,2,0" IndicatorCornerRadius="2" Progress="60">
+    <syncfusion:SfLinearProgressBar Grid.Row="1" Grid.Column="1" x:Name="progress" ProgressColor="{x:Null}" Height="26" Margin="0,0,2,0" IndicatorCornerRadius="2" Progress="60">
       <syncfusion:SfLinearProgressBar.Effect>
         <DropShadowEffect ShadowDepth="2" Direction="270" Color="Black" Opacity="0.3" BlurRadius="1"/>
       </syncfusion:SfLinearProgressBar.Effect>

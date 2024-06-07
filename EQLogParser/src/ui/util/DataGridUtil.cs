@@ -397,6 +397,29 @@ namespace EQLogParser
       }
     }
 
+    internal static void RefreshTable(SfGridBase gridBase)
+    {
+      try
+      {
+        if (gridBase is SfDataGrid { ItemsSource: not null } dataGrid)
+        {
+          var source = dataGrid.ItemsSource;
+          dataGrid.ItemsSource = null;
+          dataGrid.ItemsSource = source;
+        }
+        else if (gridBase is SfTreeGrid { ItemsSource: not null } treeGrid)
+        {
+          var source = treeGrid.ItemsSource;
+          treeGrid.ItemsSource = null;
+          treeGrid.ItemsSource = source;
+        }
+      }
+      catch (Exception ex)
+      {
+        Log.Debug(ex);
+      }
+    }
+
     private static double GetTableHeight(SfGridBase gridBase, bool allData)
     {
       var height = gridBase.HeaderRowHeight + 1;

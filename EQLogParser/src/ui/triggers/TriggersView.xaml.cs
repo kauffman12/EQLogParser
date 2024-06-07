@@ -94,8 +94,22 @@ namespace EQLogParser
       AddEditorInstance(new RangeEditor(typeof(long), 0, 99999), "WarningSeconds");
       AddEditorInstance(new RangeEditor(typeof(long), 1, 99999), "TimesToLoop");
       AddEditorInstance(new RangeEditor(typeof(double), 0, 99999), "RepeatedResetTime");
+      AddEditorInstance(new RangeEditor(typeof(double), 0, 99999), "LockoutTime");
       AddEditorInstance(new DurationEditor(2), "DurationTimeSpan");
       AddEditorInstance(new RangeEditor(typeof(long), 1, 60), "FadeDelay");
+
+      // don't disconnect this one so tree stays in-sync when receiving quick shares
+      TriggerStateManager.Instance.TriggerImportEvent += TriggerImportEvent;
+      theTreeView.Init(_currentCharacterId, IsCancelSelection, !config.IsAdvanced);
+      return;
+
+      ITypeEditor AddEditorInstance(ITypeEditor typeEditor, string propName)
+      {
+        var editor = new CustomEditor { Editor = typeEditor };
+        editor.Properties.Add(propName);
+        thePropertyGrid.CustomEditorCollection.Add(editor);
+        return editor.Editor;
+      }
 
       void AddEditor<T>(params string[] propNames) where T : new()
       {
@@ -106,18 +120,6 @@ namespace EQLogParser
           thePropertyGrid.CustomEditorCollection.Add(editor);
         }
       }
-
-      ITypeEditor AddEditorInstance(ITypeEditor typeEditor, string propName)
-      {
-        var editor = new CustomEditor { Editor = typeEditor };
-        editor.Properties.Add(propName);
-        thePropertyGrid.CustomEditorCollection.Add(editor);
-        return editor.Editor;
-      }
-
-      // don't disconnect this one so tree stays in-sync when receiving quick shares
-      TriggerStateManager.Instance.TriggerImportEvent += TriggerImportEvent;
-      theTreeView.Init(_currentCharacterId, IsCancelSelection, !config.IsAdvanced);
     }
 
     private void TriggerImportEvent(bool _)
@@ -502,14 +504,18 @@ namespace EQLogParser
         else if (args.Property.Name == fontFamilyItem.PropertyName)
         {
           timerChange = timerOverlay.FontFamily != original.FontFamily;
-          Application.Current.Resources["TimerBarFontFamily-" + timerOverlay.Node.Id] = new FontFamily(timerOverlay.FontFamily);
+          var family = new FontFamily(timerOverlay.FontFamily);
+          Application.Current.Resources["TimerBarFontFamily-" + timerOverlay.Node.Id] = family;
+          var fontSize = TriggerUtil.ParseFontSize(timerOverlay.FontSize);
+          Application.Current.Resources["TimerBarHeight-" + timerOverlay.Node.Id] = TriggerUtil.CalculateTimerBarHeight(fontSize, family);
         }
-        else if (args.Property.Name == fontSizeItem.PropertyName && timerOverlay.FontSize.Split("pt") is { Length: 2 } split &&
-          double.TryParse(split[0], NumberStyles.Any, CultureInfo.InvariantCulture, out var newFontSize))
+        else if (args.Property.Name == fontSizeItem.PropertyName)
         {
+          var newFontSize = TriggerUtil.ParseFontSize(timerOverlay.FontSize);
           timerChange = timerOverlay.FontSize != original.FontSize;
+          var family = !string.IsNullOrEmpty(timerOverlay.FontFamily) ? new FontFamily(timerOverlay.FontFamily) : null;
           Application.Current.Resources["TimerBarFontSize-" + timerOverlay.Node.Id] = newFontSize;
-          Application.Current.Resources["TimerBarHeight-" + timerOverlay.Node.Id] = TriggerUtil.GetTimerBarHeight(newFontSize);
+          Application.Current.Resources["TimerBarHeight-" + timerOverlay.Node.Id] = TriggerUtil.CalculateTimerBarHeight(newFontSize, family);
         }
         else if (args.Property.Name == timerModeItem.PropertyName)
         {
