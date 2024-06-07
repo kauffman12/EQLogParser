@@ -46,10 +46,11 @@ namespace EQLogParser
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
 
-      CreateSpellCountMenuItems(menuItemShowSpellCounts, DataGridShowSpellCountsClick, DataGridSpellCountsByClassClick);
-      CreateClassMenuItems(menuItemShowSpellCasts, DataGridShowSpellCastsClick, DataGridSpellCastsByClassClick);
-      CreateClassMenuItems(menuItemShowTankingBreakdown, DataGridShowBreakdownClick, DataGridShowBreakdownByClassClick);
-      CreateClassMenuItems(menuItemShowHealingBreakdown, DataGridShowBreakdown2Click, DataGridShowBreakdown2ByClassClick);
+      CreateSpellCountMenuItems(menuItemShowSpellCounts, DataGridSpellCountsByClassClick, DataGridShowSpellCountsClick);
+      CreateClassMenuItems(menuItemShowSpellCasts, DataGridSpellCastsByClassClick, false, DataGridShowSpellCastsClick);
+      CreateClassMenuItems(menuItemShowTankingBreakdown, DataGridShowBreakdownByClassClick, false, DataGridShowBreakdownClick);
+      CreateClassMenuItems(menuItemShowHealingBreakdown, DataGridShowBreakdown2ByClassClick, true, DataGridShowBreakdown2Click);
+      CreateClassMenuItems(menuItemSetPlayerClass, DataGridSetPlayerClassClick, true);
 
       // call after everything else is initialized
       InitSummaryTable(title, dataGrid, selectedColumns);
@@ -95,12 +96,16 @@ namespace EQLogParser
           copyTankingParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
           copyReceivedHealingParseToEQClick.IsEnabled = (dataGrid.SelectedItems.Count == 1) &&
             (dataGrid.SelectedItem as PlayerStats)?.MoreStats != null;
-          menuItemShowDefensiveTimeline.IsEnabled = (dataGrid.SelectedItems.Count == 1 || dataGrid.SelectedItems.Count == 2) && _currentGroupCount == 1;
+          menuItemShowDefensiveTimeline.IsEnabled = dataGrid.SelectedItems.Count is 1 or 2 && _currentGroupCount == 1;
 
+          // default before making check
           menuItemShowDeathLog.IsEnabled = false;
+          menuItemSetPlayerClass.IsEnabled = false;
+          menuItemSetAsPet.IsEnabled = false;
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
+            menuItemSetPlayerClass.IsEnabled = PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName);
             menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.Unk && playerStats.OrigName != Labels.Rs &&
             !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
             selectedName = playerStats.OrigName;
@@ -115,12 +120,13 @@ namespace EQLogParser
         else
         {
           menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled =
-             menuItemShowTankingLog.IsEnabled = menuItemSetAsPet.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyTankingParseToEQClick.IsEnabled =
-             copyOptions.IsEnabled = copyReceivedHealingParseToEQClick.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowHitFreq.IsEnabled =
-             menuItemShowDefensiveTimeline.IsEnabled = false;
+          menuItemShowTankingLog.IsEnabled = menuItemSetAsPet.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyTankingParseToEQClick.IsEnabled =
+          copyOptions.IsEnabled = copyReceivedHealingParseToEQClick.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowHitFreq.IsEnabled =
+          menuItemSetPlayerClass.IsEnabled = menuItemShowDefensiveTimeline.IsEnabled = false;
         }
 
-        menuItemSetAsPet.Header = $"Set {selectedName} as Pet to";
+        menuItemSetAsPet.Header = $"Assign {selectedName} as Pet of";
+        menuItemSetPlayerClass.Header = $"Assign {selectedName} to Class";
       });
     }
 

@@ -118,13 +118,18 @@
             </MenuItem>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="menuItemSetAsPet" IsEnabled="False" Header="Assign Unknown as Pet to" >
+          <MenuItem x:Name="menuItemSetAsPet" IsEnabled="False" Header="Assign Unknown as Pet of" >
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="setPetIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Paw" />
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Paw" />
             </MenuItem.Icon>
             <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="200" Margin="0" Padding="0">
               <StackPanel x:Name="menuItemPetOptions" Margin="0" />
             </ScrollViewer>
+          </MenuItem>
+          <MenuItem x:Name="menuItemSetPlayerClass" IsEnabled="False" Header="Assign Unknown to Class">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_User" />
+            </MenuItem.Icon>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="menuItemShowAdpsTimeline" IsEnabled="False" Header="ADPS Timeline" Click="DataGridAdpsTimelineClick">
