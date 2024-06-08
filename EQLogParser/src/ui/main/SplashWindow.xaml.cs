@@ -37,6 +37,7 @@ namespace EQLogParser
         {
           _isClosed = true;
           ConfigUtil.EventsLoadingText -= ConfigUtilEventsLoadingText;
+          MainActions.GetOwner().IsEnabled = true;
           Dispatcher.InvokeAsync(Close, DispatcherPriority.Background);
         }
         else

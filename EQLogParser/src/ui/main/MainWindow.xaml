@@ -10,6 +10,7 @@
         Title="EQLogParser"
         Closing="WindowClosing"
         ResizeMode="CanResize"
+        IsEnabled="False"
         BorderThickness="2"
         MinWidth="400"
         MinHeight="250"
