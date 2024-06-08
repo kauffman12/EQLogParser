@@ -95,7 +95,7 @@ namespace EQLogParser
 
     internal static void CreateSpellCountMenuItems(MenuItem parent, Action<object, RoutedEventArgs> classHandler, Action<object, RoutedEventArgs> selectedHandler)
     {
-      CreateClassMenuItems(parent, selectedHandler, false, classHandler);
+      CreateClassMenuItems(parent, classHandler, false, selectedHandler);
       parent.Items.Add(new Separator());
       var item = new MenuItem { IsEnabled = true, Header = "All Players" };
       item.Click += new RoutedEventHandler(classHandler);

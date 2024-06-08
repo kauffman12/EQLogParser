@@ -9,6 +9,7 @@
         Style="{x:Null}"
         BorderBrush="{x:Null}"
         BorderThickness="0"
+        ShowInTaskbar="False"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         Title="SplashWindow" Height="210" Width="384"
