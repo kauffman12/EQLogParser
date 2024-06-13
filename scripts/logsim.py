@@ -60,5 +60,5 @@ def simulate_real_time_processing(source_file, destination_file):
 
 
 simulate_real_time_processing(
-    "r:/eqlog_Kizant_xegony-selected2.txt", "r:/eqlog_Kizant_xegony.txt"
+    "r:/eqlog_Kizant_xegony-selected.txt", "r:/eqlog_Kizant_xegony.txt"
 )
