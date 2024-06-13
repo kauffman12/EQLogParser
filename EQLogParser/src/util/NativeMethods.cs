@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
@@ -97,17 +98,12 @@ namespace EQLogParser
       return result;
     }
 
-    internal static void SetWindowTopMost(IntPtr hWnd)
-    {
-      SetWindowPos(hWnd, new IntPtr(-1), 0, 0, 0, 0, SwpNosize | SwpNomove | SwpNoactivate);
-    }
-
     [SuppressMessage("Microsoft.Interoperability", "CA1400:PInvokeEntryPointsShouldExist")]
     [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr", SetLastError = true)]
     private static extern IntPtr IntSetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
     [DllImport("user32.dll", EntryPoint = "SetWindowLong", SetLastError = true)]
-    private static extern Int32 IntSetWindowLong(IntPtr hWnd, int nIndex, Int32 dwNewLong);
+    private static extern int IntSetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
     [DllImport("user32.dll")]
     private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
@@ -120,5 +116,104 @@ namespace EQLogParser
     [DllImport("kernel32.dll", EntryPoint = "SetLastError")]
     internal static extern void SetLastError(int dwErrorCode);
     #endregion
+  }
+
+  [StructLayout(LayoutKind.Sequential)]
+  internal struct DoubleKeyValuePair
+  {
+    public IntPtr Key;
+    public double Value;
+  }
+
+  internal static class CachingLib
+  {
+    [DllImport("EQLogParserCache.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern void CreateMap(string id);
+
+    [DllImport("EQLogParserCache.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern void CreateSet(string id);
+
+    [DllImport("EQLogParserCache.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern bool TryAddDoubleToMap(string id, string key, double value);
+
+    [DllImport("EQLogParserCache.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern bool TryAddStringToMap(string id, string key, string value);
+
+    [DllImport("EQLogParserCache.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern bool TryAddStringToSet(string id, string key);
+
+    [DllImport("EQLogParserCache.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern bool TryRemoveFromMap(string id, string key);
+
+    [DllImport("EQLogParserCache.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern bool TryRemoveFromSet(string id, string key);
+
+    [DllImport("EQLogParserCache.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern bool IsInMap(string id, string key);
+
+    [DllImport("EQLogParserCache.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern bool IsInSet(string id, string key);
+
+    [DllImport("EQLogParserCache.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern long GetMapSize(string id);
+
+    [DllImport("EQLogParserCache.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern long GetSetSize(string id);
+
+    [DllImport("EQLogParserCache.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr GetStringMapValue(string id, string key);
+
+    [DllImport("EQLogParserCache.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern double GetDoubleMapValue(string id, string key);
+
+    [DllImport("EQLogParserCache.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr GetDoubleMapEntries(string id, out int size);
+
+    public static IEnumerable<(string, double)> GetAllMapEntries(string id)
+    {
+      var ptr = GetDoubleMapEntries(id, out var size);
+
+      if (ptr == IntPtr.Zero)
+      {
+        yield break;
+      }
+
+      for (var i = 0; i < size; i++)
+      {
+        var entryPtr = new IntPtr(ptr.ToInt64() + (i * Marshal.SizeOf(typeof(DoubleKeyValuePair))));
+        var entry = Marshal.PtrToStructure<DoubleKeyValuePair>(entryPtr);
+        var key = Marshal.PtrToStringAnsi(entry.Key);
+        yield return (key, entry.Value);
+      }
+
+      // Free the allocated memory
+      Marshal.FreeCoTaskMem(ptr);
+    }
+
+    public static bool TryGetMapValue(string id, string key, out string result)
+    {
+      result = null;
+      var ptr = GetStringMapValue(id, key);
+      if (ptr != IntPtr.Zero)
+      {
+        result = Marshal.PtrToStringAnsi(ptr);
+        return true;
+      }
+
+      return false;
+    }
+
+    public static bool TryGetMapValue(string id, string key, out double result)
+    {
+      result = 0;
+      var value = GetDoubleMapValue(id, key);
+      if (value > double.MinValue)
+      {
+        result = value;
+        return true;
+      }
+
+      return false;
+    }
   }
 }

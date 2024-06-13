@@ -196,6 +196,7 @@
     <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\EQLogParserCache\EQLogParserCache.vcxproj" />
     <ProjectReference Include="..\MaterialDarkCustom\Syncfusion.Themes.MaterialDarkCustom.WPF.csproj" />
   </ItemGroup>
   <ItemGroup>

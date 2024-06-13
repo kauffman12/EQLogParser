@@ -42,6 +42,8 @@ namespace EQLogParser
     internal static readonly BitmapImage WizIcon = new(new Uri(@"pack://application:,,,/icons/Wiz.png"));
 
     // static data
+    private const string VerifiedPetsKey = "verifiedPets";
+    private const string VerifiedPlayersKey = "verifiedPlayers";
     private readonly ConcurrentDictionary<SpellClass, string> _classNames = new();
     private readonly ConcurrentDictionary<string, SpellClass> _classesByName = new();
     private readonly ConcurrentDictionary<string, byte> _gameGeneratedPets = new();
@@ -50,8 +52,6 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, string> _petToPlayer = new();
     private readonly ConcurrentDictionary<string, SpellClassCounter> _playerToClass = new();
     private readonly ConcurrentDictionary<string, byte> _takenPetOrPlayerAction = new();
-    private readonly ConcurrentDictionary<string, byte> _verifiedPets = new();
-    private readonly ConcurrentDictionary<string, double> _verifiedPlayers = new();
     private readonly ConcurrentDictionary<string, byte> _mercs = new();
     private readonly List<string> _sortedClassList = [];
     private readonly List<string> _sortedClassListWithNull = [];
@@ -61,6 +61,10 @@ namespace EQLogParser
 
     private PlayerManager()
     {
+      // using native hashsets
+      CachingLib.CreateMap(VerifiedPlayersKey);
+      CachingLib.CreateSet(VerifiedPetsKey);
+
       AddMultiCase(["you", "your", "yourself"], _secondPerson);
       AddMultiCase(["himself", "herself", "itself"], _thirdPerson);
 
@@ -91,7 +95,7 @@ namespace EQLogParser
 
     private void SaveTimer_Tick(object sender, EventArgs e) => Save();
     internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.Unassigned || _secondPerson.ContainsKey(name)
-      || _thirdPerson.ContainsKey(name) || _verifiedPlayers.ContainsKey(name));
+      || _thirdPerson.ContainsKey(name) || CachingLib.IsInMap(VerifiedPlayersKey, name));
     internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name));
     internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || DataManager.Instance.IsPlayerSpell(name);
     internal List<string> GetClassList(bool withNull = false) => withNull ? [.. _sortedClassListWithNull] : [.. _sortedClassList];
@@ -132,10 +136,10 @@ namespace EQLogParser
       {
         lock (LockObject)
         {
-          if (!_verifiedPets.ContainsKey(name))
+          if (!CachingLib.IsInSet(VerifiedPetsKey, name))
           {
             name = string.Intern(name);
-            if (_verifiedPlayers.TryRemove(name, out _))
+            if (CachingLib.TryRemoveFromMap(VerifiedPlayersKey, name))
             {
               _playersUpdated = true;
             }
@@ -147,7 +151,7 @@ namespace EQLogParser
 
             _takenPetOrPlayerAction.TryRemove(name, out _);
 
-            if (_verifiedPets.TryAdd(name, 1))
+            if (CachingLib.TryAddStringToSet(VerifiedPetsKey, name))
             {
               EventsNewVerifiedPet?.Invoke(this, name);
               _playersUpdated = true;
@@ -164,21 +168,21 @@ namespace EQLogParser
         lock (LockObject)
         {
           name = string.Intern(name);
-          if (_verifiedPlayers.TryGetValue(name, out var lastTime))
+          if (CachingLib.TryGetMapValue(VerifiedPlayersKey, name, out double lastTime))
           {
             if (playerTime > lastTime)
             {
-              _verifiedPlayers[name] = playerTime;
+              CachingLib.TryAddDoubleToMap(VerifiedPlayersKey, name, playerTime);
             }
           }
           else
           {
-            _verifiedPlayers[name] = playerTime;
+            CachingLib.TryAddDoubleToMap(VerifiedPlayersKey, name, playerTime);
             EventsNewVerifiedPlayer?.Invoke(this, name);
           }
 
           _takenPetOrPlayerAction.TryRemove(name, out _);
-          if (_verifiedPets.TryRemove(name, out _))
+          if (CachingLib.TryRemoveFromSet(VerifiedPetsKey, name))
           {
             TryRemovePetMapping(name);
             EventsRemoveVerifiedPet?.Invoke(this, name);
@@ -276,7 +280,7 @@ namespace EQLogParser
 
       if (!string.IsNullOrEmpty(name))
       {
-        found = _verifiedPets.ContainsKey(name);
+        found = CachingLib.IsInSet(VerifiedPetsKey, name);
         isGameGenerated = !found && _gameGeneratedPets.ContainsKey(name);
 
         if (isGameGenerated && !_petToPlayer.ContainsKey(name))
@@ -294,7 +298,7 @@ namespace EQLogParser
       {
         lock (LockObject)
         {
-          if (_verifiedPets.TryRemove(name, out _))
+          if (CachingLib.TryRemoveFromSet(VerifiedPetsKey, name))
           {
             TryRemovePetMapping(name);
           }
@@ -310,7 +314,7 @@ namespace EQLogParser
       {
         lock (LockObject)
         {
-          if (_verifiedPlayers.TryRemove(name, out _))
+          if (CachingLib.TryRemoveFromMap(VerifiedPlayersKey, name))
           {
             string found = null;
 
@@ -352,11 +356,13 @@ namespace EQLogParser
     {
       lock (LockObject)
       {
+        // create also clears
+        CachingLib.CreateMap(VerifiedPlayersKey);
+        CachingLib.CreateSet(VerifiedPetsKey);
+
         _petToPlayer.Clear();
         _playerToClass.Clear();
         _takenPetOrPlayerAction.Clear();
-        _verifiedPets.Clear();
-        _verifiedPlayers.Clear();
         _mercs.Clear();
 
         AddVerifiedPlayer(ConfigUtil.PlayerName, DateUtil.ToDouble(DateTime.Now));
@@ -407,7 +413,7 @@ namespace EQLogParser
         var mapping = ConfigUtil.ReadPetMapping();
         foreach (var key in mapping.Keys)
         {
-          if (!_verifiedPlayers.ContainsKey(mapping[key]))
+          if (!CachingLib.IsInMap(VerifiedPlayersKey, mapping[key]))
           {
             AddVerifiedPlayer(mapping[key], 0d);
           }
@@ -437,32 +443,28 @@ namespace EQLogParser
 
       if (_playersUpdated)
       {
-        lock (_verifiedPlayers)
+        var list = new List<string>();
+        var now = DateTime.Now;
+        foreach (var kv in CachingLib.GetAllMapEntries(VerifiedPlayersKey))
         {
-          var list = new List<string>();
-          var now = DateTime.Now;
-          foreach (var kv in _verifiedPlayers)
+          if (!string.IsNullOrEmpty(kv.Item1) && IsPossiblePlayerName(kv.Item1))
           {
-            if (!string.IsNullOrEmpty(kv.Key) && IsPossiblePlayerName(kv.Key))
+            if (kv.Item2 != 0 && (now - DateUtil.FromDouble(kv.Item2)).TotalDays < 300)
             {
-              if (kv.Value != 0 && (now - DateUtil.FromDouble(kv.Value)).TotalDays < 300)
+              var output = kv.Item1 + "=" + Math.Round(kv.Item2);
+              if (_playerToClass.TryGetValue(kv.Item1, out var value) && value.CurrentMax == long.MaxValue &&
+                _classNames.TryGetValue(value.CurrentClass, out var className))
               {
-                var output = kv.Key + "=" + Math.Round(kv.Value);
-                if (_playerToClass.TryGetValue(kv.Key, out var value) && value.CurrentMax == long.MaxValue &&
-                  _classNames.TryGetValue(value.CurrentClass, out var className))
-                {
-                  output += "," + className;
-                  output += "," + value.Reason;
-                }
-
-                list.Add(output);
+                output += "," + className;
+                output += "," + value.Reason;
               }
+
+              list.Add(output);
             }
           }
-
-          ConfigUtil.SavePlayers(list);
         }
 
+        ConfigUtil.SavePlayers(list);
         _playersUpdated = false;
       }
     }
