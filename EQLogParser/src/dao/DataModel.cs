@@ -702,6 +702,7 @@ namespace EQLogParser
     public byte Adps { get; set; }
     public byte Rank { get; set; }
     public bool Mgb { get; set; }
+    public bool SeenRecently { get; set; }
   }
 
   internal class SpellCountData
