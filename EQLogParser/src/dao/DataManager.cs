@@ -83,6 +83,7 @@ namespace EQLogParser
 
     private static readonly SpellAbbrvComparer AbbrvComparer = new();
     private readonly List<string> _adpsKeys = ["#DoTCritRate", "#NukeCritRate"];
+    private readonly HashSet<SpellData> _allSpellData = [];
     private readonly Dictionary<string, Dictionary<string, uint>> _adpsActive = [];
     private readonly Dictionary<string, Dictionary<string, uint>> _adpsValues = [];
     private readonly Dictionary<string, HashSet<SpellData>> _adpsLandsOn = [];
@@ -193,6 +194,7 @@ namespace EQLogParser
 
       spellList.ForEach(spell =>
       {
+        _allSpellData.Add(spell);
         // exact match meaning class-only spell that are of certain target types
         var tgt = (SpellTarget)spell.Target;
         if (spell.Level <= 254 && spell.Proc == 0 && (tgt == SpellTarget.Self || tgt == SpellTarget.Singletarget || tgt == SpellTarget.Los || spell.Rank > 1) &&
@@ -751,6 +753,12 @@ namespace EQLogParser
 
     internal void Clear()
     {
+      // clear used recently
+      foreach (var spellData in _allSpellData)
+      {
+        spellData.SeenRecently = false;
+      }
+
       _activeFights.Clear();
       _lifetimeFights.Clear();
       _overlayFights.Clear();
@@ -772,12 +780,20 @@ namespace EQLogParser
     {
       replaced = null;
 
-      if (spell.Ambiguity.Count < 30)
+      if (spell.Ambiguity.Count < 50)
       {
         var spellClass = (int)PlayerManager.Instance.GetPlayerClassEnum(spell.Receiver);
         var subset = spell.Ambiguity.FindAll(test => test.Target == (int)SpellTarget.Self && spellClass != 0 && (test.ClassMask & spellClass) == spellClass);
         var distinct = subset.Distinct(AbbrvComparer).ToList();
-        replaced = distinct.Count == 1 ? distinct.First() : spell.Ambiguity.First();
+        if (distinct.Count == 1)
+        {
+          replaced = distinct.First();
+        }
+        else
+        {
+          var recent = spell.Ambiguity.FirstOrDefault(spellData => spellData.SeenRecently);
+          replaced = recent ?? spell.Ambiguity.First();
+        }
       }
 
       return replaced != null;

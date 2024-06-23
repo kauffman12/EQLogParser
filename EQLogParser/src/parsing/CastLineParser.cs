@@ -139,6 +139,7 @@ namespace EQLogParser
 
               if (spellData != null)
               {
+                spellData.SeenRecently = true;
                 var cast = new SpellCast { Caster = string.Intern(player), Spell = string.Intern(spellName), SpellData = spellData };
                 RecordManager.Instance.Add(cast, currentTime);
 
