@@ -51,5 +51,13 @@ namespace EQLogParser
         dispatcher.InvokeAsync(action, priority);
       }
     }
+
+    internal static void InvokeSync(Action action, DispatcherPriority priority = DispatcherPriority.Normal)
+    {
+      if (Application.Current?.Dispatcher is { } dispatcher)
+      {
+        dispatcher.Invoke(action, priority);
+      }
+    }
   }
 }

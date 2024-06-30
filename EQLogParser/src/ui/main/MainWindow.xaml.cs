@@ -366,6 +366,8 @@ namespace EQLogParser
     internal FightTable GetFightTable() => npcWindow?.Content as FightTable;
     private void RestoreTableColumnsClick(object sender, RoutedEventArgs e) => DataGridUtil.RestoreAllTableColumns();
     private void AboutClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/#readme");
+    private void CreateBackupClick(object sender, RoutedEventArgs e) => MainActions.CreateBackup();
+    private void RestoreClick(object sender, RoutedEventArgs e) => MainActions.Restore();
     private void OpenSoundsFolderClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("\"" + @"data\sounds" + "\"");
     private void ReportProblemClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
     private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(@"data\releasenotes.rtf");
@@ -1116,7 +1118,7 @@ namespace EQLogParser
     {
       ConfigUtil.SetSetting("WindowState", WindowState.ToString());
 
-      if (!_resetWindowState)
+      if (!_resetWindowState && Directory.Exists(ConfigUtil.ConfigDir))
       {
         try
         {
@@ -1140,7 +1142,12 @@ namespace EQLogParser
       ChatManager.Instance.Stop();
       TriggerManager.Instance.Stop();
       TriggerStateManager.Instance.Stop();
-      Application.Current.Shutdown();
+
+      // restore from backup will use explicit mode
+      if (Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)
+      {
+        Application.Current.Shutdown();
+      }
     }
 
     // This is where closing summary tables and line charts will get disposed

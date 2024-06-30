@@ -1,12 +1,11 @@
 ﻿using Microsoft.Win32;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Speech.Synthesis;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Windows.Media.SpeechSynthesis;
 
 namespace EQLogParser
 {
@@ -17,7 +16,6 @@ namespace EQLogParser
   {
     private const string EnterName = "Enter Character Name";
     private readonly TriggerCharacter _theCharacter;
-    private readonly SpeechSynthesizer _testSynth;
     private readonly bool _ready;
 
     internal TriggerPlayerConfigWindow(TriggerCharacter character = null)
@@ -27,10 +25,8 @@ namespace EQLogParser
 
       Owner = MainActions.GetOwner();
 
-      if ((_testSynth = TriggerUtil.GetSpeechSynthesizer()) != null)
-      {
-        voices.ItemsSource = _testSynth.GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList();
-      }
+      var allVoices = SpeechSynthesizer.AllVoices;
+      voices.ItemsSource = allVoices.Select(voice => voice.DisplayName).ToList();
 
       _theCharacter = character;
       if (_theCharacter != null)
@@ -133,33 +129,31 @@ namespace EQLogParser
     {
       if (_ready)
       {
-        if (Equals(sender, voices))
+        // this only plays the text as a test and does not save setting changes
+        var testSynth = AudioManager.CreateSpeechSynthesizer();
+        if (testSynth == null)
         {
-          if (voices.SelectedValue is string voiceName)
-          {
-            if (_testSynth != null)
-            {
-              _testSynth.Rate = rateOption.SelectedIndex;
-              _testSynth.SelectVoice(voiceName);
-              _testSynth.SpeakAsync(voiceName);
-            }
-          }
+          return;
         }
-        else if (Equals(sender, rateOption))
-        {
-          if (_testSynth != null)
-          {
-            _testSynth.Rate = rateOption.SelectedIndex;
-            if (voices.SelectedItem is string voice && !string.IsNullOrEmpty(voice))
-            {
-              _testSynth.SelectVoice(voice);
-            }
 
-            var rateText = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex;
-            _testSynth.SpeakAsync(rateText);
+        // default to rate
+        var tts = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex;
+        testSynth.Options.SpeakingRate = AudioManager.GetSpeakingRate(rateOption.SelectedIndex);
+        if (voices.SelectedItem is string voiceName && !string.IsNullOrEmpty(voiceName))
+        {
+          testSynth.Voice = AudioManager.GetVoice(voiceName);
+          if (Equals(sender, voices))
+          {
+            tts = voiceName;
           }
         }
 
+        if (!string.IsNullOrEmpty(tts))
+        {
+          AudioManager.Instance.SpeakAsync(testSynth, tts);
+        }
+
+        testSynth.Dispose();
         EnableSave();
       }
     }
@@ -181,11 +175,6 @@ namespace EQLogParser
         txtFilePath.FontStyle = FontStyles.Normal;
         txtFilePath.Text = openFileDialog.FileName;
       }
-    }
-
-    private void TriggerPlayerConfigWindowOnClosing(object sender, CancelEventArgs e)
-    {
-      _testSynth?.Dispose();
     }
 
     private void ResetActiveColorClick(object sender, RoutedEventArgs e)

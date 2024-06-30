@@ -780,20 +780,17 @@ namespace EQLogParser
     {
       replaced = null;
 
-      if (spell.Ambiguity.Count < 50)
+      var spellClass = (int)PlayerManager.Instance.GetPlayerClassEnum(spell.Receiver);
+      var subset = spell.Ambiguity.FindAll(test => test.Target == (int)SpellTarget.Self && spellClass != 0 && (test.ClassMask & spellClass) == spellClass);
+      var distinct = subset.Distinct(AbbrvComparer).ToList();
+      if (distinct.Count == 1)
       {
-        var spellClass = (int)PlayerManager.Instance.GetPlayerClassEnum(spell.Receiver);
-        var subset = spell.Ambiguity.FindAll(test => test.Target == (int)SpellTarget.Self && spellClass != 0 && (test.ClassMask & spellClass) == spellClass);
-        var distinct = subset.Distinct(AbbrvComparer).ToList();
-        if (distinct.Count == 1)
-        {
-          replaced = distinct.First();
-        }
-        else
-        {
-          var recent = spell.Ambiguity.FirstOrDefault(spellData => spellData.SeenRecently);
-          replaced = recent ?? spell.Ambiguity.First();
-        }
+        replaced = distinct.First();
+      }
+      else
+      {
+        var recent = spell.Ambiguity.FirstOrDefault(spellData => spellData.SeenRecently);
+        replaced = recent ?? spell.Ambiguity.First();
       }
 
       return replaced != null;

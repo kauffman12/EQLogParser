@@ -10,7 +10,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
-using System.Speech.Synthesis;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -66,21 +65,6 @@ namespace EQLogParser
 
       // original default
       return 12;
-    }
-
-    internal static SpeechSynthesizer GetSpeechSynthesizer()
-    {
-      SpeechSynthesizer result = null;
-      try
-      {
-        result = new SpeechSynthesizer();
-        result.SetOutputToDefaultAudioDevice();
-      }
-      catch (Exception ex)
-      {
-        Log.Error(ex);
-      }
-      return result;
     }
 
     internal static bool TestRegexProperty(bool useRegex, string pattern, PatternEditor editor)

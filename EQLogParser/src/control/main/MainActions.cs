@@ -1,6 +1,7 @@
 ﻿using FontAwesome5;
 using log4net;
 using Microsoft.Win32;
+using Microsoft.WindowsAPICodePack.Dialogs;
 using Syncfusion.SfSkinManager;
 using Syncfusion.Themes.MaterialDarkCustom.WPF;
 using Syncfusion.Themes.MaterialLight.WPF;
@@ -12,6 +13,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
@@ -639,6 +641,138 @@ namespace EQLogParser
       icon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
       var options = new GenerateStatsOptions();
       Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
+    }
+
+    internal static void CreateBackup()
+    {
+      var saveFileDialog = new SaveFileDialog();
+      const string fileName = "EQLogParser-backup.zip";
+      saveFileDialog.Filter = "EQLogParser Backup Files (*.zip)|*.zip";
+      saveFileDialog.FileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()));
+
+      if (saveFileDialog.ShowDialog() == true)
+      {
+        var dialog = new MessageWindow($"Creating EQLogParser Backup", Resource.CREATE_BACKUP, MessageWindow.IconType.Save);
+
+        Task.Delay(150).ContinueWith(_ =>
+        {
+          // turn off triggers so copy works
+          var triggersActive = TriggerStateManager.Instance.IsActive();
+          if (triggersActive)
+          {
+            TriggerStateManager.Instance.Stop();
+          }
+
+          var accessError = false;
+          var source = Environment.ExpandEnvironmentVariables(ConfigUtil.AppData);
+          ChatManager.Instance.Stop();
+
+          try
+          {
+            if (File.Exists(saveFileDialog.FileName))
+            {
+              File.Delete(saveFileDialog.FileName);
+            }
+
+            ZipFile.CreateFromDirectory(source, saveFileDialog.FileName, CompressionLevel.Optimal, false);
+          }
+          catch (Exception ex)
+          {
+            accessError = true;
+            Log.Error("Problem creating backup file.", ex);
+          }
+          finally
+          {
+            // restart triggers
+            if (triggersActive)
+            {
+              TriggerStateManager.Instance.Start();
+            }
+
+            ChatManager.Instance.Init();
+
+            UiUtil.InvokeAsync(() =>
+            {
+              dialog.Close();
+
+              if (accessError)
+              {
+                new MessageWindow("Error Creating Backup. See log file for details.", Resource.CREATE_BACKUP, MessageWindow.IconType.Save).ShowDialog();
+              }
+            });
+          }
+        });
+
+        dialog.ShowDialog();
+      }
+    }
+
+    internal static void Restore()
+    {
+      var dialog = new CommonOpenFileDialog
+      {
+        // Set to false because we're opening a file, not selecting a folder
+        IsFolderPicker = false,
+      };
+
+      // Show dialog and read result
+      dialog.Filters.Add(new CommonFileDialogFilter("EQLogParser-backup.zip", "*.zip"));
+      if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+      {
+        Task.Delay(150).ContinueWith(_ =>
+        {
+          try
+          {
+            using var archive = ZipFile.OpenRead(dialog.FileName);
+            // Check for the presence of the folder at the top level
+            var containsFolder = archive.Entries
+              .Any(entry => entry.FullName.StartsWith("config/", StringComparison.OrdinalIgnoreCase));
+
+            if (containsFolder)
+            {
+              _mainWindow.Dispatcher.Invoke(() =>
+              {
+                new MessageWindow("Click OK to Restart.", Resource.RESTORE_FROM_BACKUP, MessageWindow.IconType.Info).ShowDialog();
+                Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                _mainWindow.Close();
+              });
+
+              var source = Environment.ExpandEnvironmentVariables(ConfigUtil.AppData);
+              if (Directory.Exists(source))
+              {
+                Directory.Delete(source, true);
+              }
+
+              Directory.CreateDirectory(source);
+              ZipFile.ExtractToDirectory(dialog.FileName, source);
+
+              // restart
+              var processModule = Process.GetCurrentProcess().MainModule;
+              if (processModule != null)
+              {
+                var exePath = processModule.FileName;
+                Process.Start(exePath);
+              }
+
+              _mainWindow.Dispatcher.Invoke(() =>
+              {
+                Application.Current.Shutdown();
+              });
+            }
+            else
+            {
+              UiUtil.InvokeAsync(() =>
+              {
+                new MessageWindow("Invalid backup file. Can not restore.", Resource.RESTORE_FROM_BACKUP).ShowDialog();
+              });
+            }
+          }
+          catch (Exception ex)
+          {
+            Log.Error("Problem restoring backup file.", ex);
+          }
+        });
+      }
     }
 
     internal static void ExportFights(string currentFile, List<Fight> fights)

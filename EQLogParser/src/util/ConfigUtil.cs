@@ -16,10 +16,10 @@ namespace EQLogParser
     public static string LogsDir;
     public static string ConfigDir;
     internal static event Action<string> EventsLoadingText;
+    internal const string AppData = @"%AppData%\EQLogParser";
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly ConcurrentDictionary<string, string> ApplicationSettings = new();
-    private const string AppData = @"%AppData%\EQLogParser";
     private const string PetMappingFile = "petmapping.txt";
     private const string PlayersFile = "players.txt";
     private static string _archiveDir;

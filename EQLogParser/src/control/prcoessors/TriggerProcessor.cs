@@ -5,16 +5,15 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Media;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Speech.Synthesis;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media.Imaging;
+using Windows.Media.SpeechSynthesis;
 
 namespace EQLogParser
 {
@@ -36,14 +35,12 @@ namespace EQLogParser
     private readonly Action<string, Trigger, string> _addTextEvent;
     private readonly Action<Trigger, List<TimerData>> _addTimerEvent;
     private readonly SpeechSynthesizer _synth;
-    private readonly SoundPlayer _soundPlayer;
     private readonly BlockingCollection<Speak> _speakCollection = [];
     private readonly BlockingCollection<LineData> _chatCollection = [];
     private readonly BlockingCollection<string> _triggerTimeCollection = [];
     private readonly string _activeColor;
     private readonly string _fontColor;
     private readonly CancellationTokenSource _cts = new();
-    private TriggerWrapper _previousSpoken;
     private List<TriggerWrapper> _activeTriggers;
     private List<LexiconItem> _lexicon;
     private Task _speakTask;
@@ -62,16 +59,14 @@ namespace EQLogParser
       _currentPlayer = playerName;
       _activeColor = activeColor;
       _fontColor = fontColor;
-
       _addTextEvent = addTextEvent;
       _addTimerEvent = addTimerEvent;
-      BindingOperations.EnableCollectionSynchronization(AlertLog, _collectionLock);
+      _synth = AudioManager.CreateSpeechSynthesizer();
 
+      BindingOperations.EnableCollectionSynchronization(AlertLog, _collectionLock);
       GetActiveTriggers();
-      _synth = TriggerUtil.GetSpeechSynthesizer();
       SetVoice(voice);
       SetVoiceRate(voiceRate);
-      _soundPlayer = new SoundPlayer();
       _lexicon = TriggerStateManager.Instance.GetLexicon().ToList();
       TriggerStateManager.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
     }
@@ -183,22 +178,25 @@ namespace EQLogParser
 
     internal void SetVoice(string voice)
     {
-      lock (_voiceLock)
+      if (_synth != null && !string.IsNullOrEmpty(voice))
       {
-        if (_synth != null && !string.IsNullOrEmpty(voice) && _synth.Voice.Name != voice)
+        lock (_voiceLock)
         {
-          _synth.SelectVoice(voice);
+          if (_synth.Voice?.DisplayName != voice)
+          {
+            _synth.Voice = AudioManager.GetVoice(voice);
+          }
         }
       }
     }
 
     internal void SetVoiceRate(int rate)
     {
-      lock (_voiceLock)
+      if (_synth != null)
       {
-        if (_synth != null)
+        lock (_voiceLock)
         {
-          _synth.Rate = rate;
+          _synth.Options.SpeakingRate = AudioManager.GetSpeakingRate(rate);
         }
       }
     }
@@ -214,9 +212,12 @@ namespace EQLogParser
       {
         _ready = false;
         _activeTriggers.ToList().ForEach(CleanupWrapper);
-        _synth?.SpeakAsyncCancelAll();
-        _soundPlayer?.Stop();
         GetActiveTriggers();
+      }
+
+      lock (_voiceLock)
+      {
+        AudioManager.Instance.Stop();
       }
     }
 
@@ -270,6 +271,7 @@ namespace EQLogParser
       var beginTicks = DateTime.UtcNow.Ticks;
       var found = false;
       matches = null;
+
       lock (wrapper)
       {
         if (wrapper.IsDisabled)
@@ -675,56 +677,26 @@ namespace EQLogParser
 
       if (!string.IsNullOrEmpty(speak.TtsOrSound))
       {
-        var cancel = speak.Wrapper.TriggerData.Priority < _previousSpoken?.TriggerData?.Priority;
-
         if (speak.IsSound)
         {
-          if (_soundPlayer != null)
+          var theFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sounds", speak.TtsOrSound);
+
+          // locking here just to handle the Stop case better on trigger reset
+          // we don't start playing a sound at the same time we try to stop them all
+          lock (_voiceLock)
           {
-            try
-            {
-              if (cancel)
-              {
-                _soundPlayer.Stop();
-              }
-
-              var theFile = @"data\sounds\" + speak.TtsOrSound;
-              if (_soundPlayer.SoundLocation != theFile && File.Exists(theFile))
-              {
-                _soundPlayer.SoundLocation = theFile;
-              }
-
-              if (!string.IsNullOrEmpty(_soundPlayer.SoundLocation))
-              {
-                _soundPlayer.Play();
-              }
-            }
-            catch (Exception)
-            {
-              // ignore
-            }
+            AudioManager.Instance.SpeakAsync(theFile, speak.Wrapper.TriggerData.Priority);
           }
         }
         else
         {
-          if (cancel)
+          if (_synth != null)
           {
-            lock (_voiceLock)
-            {
-              if (_synth.State == SynthesizerState.Speaking)
-              {
-                _synth.SpeakAsyncCancelAll();
-              }
-            }
-          }
+            var tts = ProcessMatchesText(speak.TtsOrSound, speak.OriginalMatches);
+            tts = ProcessMatchesText(tts, speak.Matches);
+            tts = ModLine(tts, speak.Action);
 
-          var tts = ProcessMatchesText(speak.TtsOrSound, speak.OriginalMatches);
-          tts = ProcessMatchesText(tts, speak.Matches);
-          tts = ModLine(tts, speak.Action);
-
-          if (!string.IsNullOrEmpty(tts))
-          {
-            lock (_voiceLock)
+            if (!string.IsNullOrEmpty(tts))
             {
               foreach (var item in CollectionsMarshal.AsSpan(_lexicon))
               {
@@ -734,13 +706,18 @@ namespace EQLogParser
                 }
               }
 
-              _synth?.SpeakAsync(tts);
+              if (!string.IsNullOrEmpty(tts))
+              {
+                tts = ReplaceBadCharsRegex().Replace(tts, string.Empty);
+                lock (_voiceLock)
+                {
+                  AudioManager.Instance.SpeakAsync(_synth, tts, speak.Wrapper.TriggerData.Priority);
+                }
+              }
             }
           }
         }
       }
-
-      _previousSpoken = speak.Wrapper;
     }
 
     private void HandleChat(LineData lineData)
@@ -1067,7 +1044,8 @@ namespace EQLogParser
         Type = type,
         Eval = eval,
         NodeId = wrapper.Id,
-        Priority = wrapper.TriggerData.Priority
+        Priority = wrapper.TriggerData.Priority,
+        CharacterId = CurrentCharacterId
       };
 
       lock (_collectionLock)
@@ -1127,7 +1105,6 @@ namespace EQLogParser
         _speakCollection?.Dispose();
         _chatCollection?.Dispose();
         _triggerTimeCollection?.Dispose();
-        _soundPlayer?.Dispose();
         _cts?.Dispose();
 
         lock (_voiceLock)
@@ -1189,5 +1166,7 @@ namespace EQLogParser
     private static partial Regex ReplaceNumberRegex();
     [GeneratedRegex(@"{(ts)}", RegexOptions.IgnoreCase, "en-US")]
     private static partial Regex ReplaceTsRegex();
+    [GeneratedRegex(@"[^a-zA-Z0-9 .,!?;:'""-()]", RegexOptions.IgnoreCase, "en-US")]
+    private static partial Regex ReplaceBadCharsRegex();
   }
 }

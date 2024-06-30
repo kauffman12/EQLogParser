@@ -24,7 +24,7 @@ namespace EQLogParser
 
     public App()
     {
-      SyncfusionLicenseProvider.RegisterLicense("LICENSE");
+      SyncfusionLicenseProvider.RegisterLicense("INSERT_KEY");
     }
 
     protected override void OnStartup(StartupEventArgs e)
@@ -68,6 +68,7 @@ namespace EQLogParser
       // Read app settings
       ConfigUtil.Init();
 
+      // Set Debug level
       if (ConfigUtil.IfSet("Debug"))
       {
         ((Hierarchy)LogManager.GetRepository()).Root.Level = Level.Debug;
@@ -79,9 +80,9 @@ namespace EQLogParser
 
       ((Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
       AutoMap = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
-      Log.Info($"Using DotNet {Environment.Version}");
+      var version = Application.ResourceAssembly.GetName().Version;
+      Log.Info($"EQLogParser: {version}, DotNet: {Environment.Version}");
       RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
-      Log.Info("RenderMode: " + RenderOptions.ProcessRenderMode);
 
       var main = new MainWindow();
       // give time for themes to load

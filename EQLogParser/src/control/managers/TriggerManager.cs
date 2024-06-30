@@ -10,7 +10,7 @@ namespace EQLogParser
   internal class TriggerManager
   {
     internal event Action<bool> EventsProcessorsUpdated;
-    internal event Action<string> EventsSelectTrigger;
+    internal event Action<AlertEntry> EventsSelectTrigger;
     internal static TriggerManager Instance => Lazy.Value; // instance
     public readonly Dictionary<string, bool> RunningFiles = [];
     private static readonly Lazy<TriggerManager> Lazy = new(() => new TriggerManager());
@@ -49,7 +49,7 @@ namespace EQLogParser
 
     internal void CloseOverlay(string id) => CloseOverlay(id, _textWindows, _timerWindows);
     internal void CloseOverlays() => CloseOverlays(_textWindows, _timerWindows);
-    internal void Select(string id) => EventsSelectTrigger?.Invoke(id);
+    internal void Select(AlertEntry entry) => EventsSelectTrigger?.Invoke(entry);
 
     internal void TriggersUpdated()
     {

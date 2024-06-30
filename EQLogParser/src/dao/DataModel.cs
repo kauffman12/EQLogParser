@@ -49,6 +49,7 @@ namespace EQLogParser
     public string NodeId { get; set; }
     public long Eval { get; set; }
     public long Priority { get; set; }
+    public string CharacterId { get; set; }
   }
 
   internal class LexiconItem

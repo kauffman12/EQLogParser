@@ -2,7 +2,6 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Speech.Synthesis;
 using System.Text.RegularExpressions;
 using System.Windows;
 
@@ -13,7 +12,6 @@ namespace EQLogParser
   /// </summary>
   public partial class TriggerDictionaryWindow
   {
-    private readonly SpeechSynthesizer _testSynth;
     private readonly ObservableCollection<LexiconItem> _items = [];
     private LexiconItem _previous;
 
@@ -22,7 +20,6 @@ namespace EQLogParser
       MainActions.SetCurrentTheme(this);
       InitializeComponent();
       Owner = MainActions.GetOwner();
-      _testSynth = TriggerUtil.GetSpeechSynthesizer();
 
       foreach (var item in TriggerStateManager.Instance.GetLexicon())
       {
@@ -68,17 +65,23 @@ namespace EQLogParser
       }
     }
 
-    private void TestClicked(object sender, RoutedEventArgs e)
+    private async void TestClicked(object sender, RoutedEventArgs e)
     {
       if (dataGrid.SelectedItem is LexiconItem item)
       {
-        _testSynth.SpeakAsync(item.With ?? "");
+        var testSynth = AudioManager.CreateSpeechSynthesizer();
+        if (testSynth == null)
+        {
+          return;
+        }
+
+        AudioManager.Instance.SpeakAsync(testSynth, item.With ?? "");
+        testSynth.Dispose();
       }
     }
 
     private void TriggerDictionaryWindowOnClosing(object sender, CancelEventArgs e)
     {
-      _testSynth?.Dispose();
       dataGrid?.Dispose();
     }
 

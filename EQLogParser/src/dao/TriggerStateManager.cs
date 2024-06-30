@@ -36,19 +36,82 @@ namespace EQLogParser
     internal static TriggerStateManager Instance => Lazy.Value; // instance
     private readonly object _lockObject = new();
     private readonly object _configLock = new();
-    private readonly LiteDatabase _db;
+    private readonly object _initLock = new();
+    private LiteDatabase _db;
 
     private TriggerStateManager()
     {
+      Start();
+    }
+
+    internal void Start()
+    {
+      lock (_initLock)
+      {
+        // ignore start if already initialized
+        if (_db != null)
+        {
+          return;
+        }
+
+        var path = ConfigUtil.GetTriggersDbFile();
+        if (!string.IsNullOrEmpty(path))
+        {
+          try
+          {
+            _db = new LiteDatabase(path)
+            {
+              CheckpointSize = 10
+            };
+
+            _db.Rebuild();
+
+            Init();
+          }
+          catch (Exception ex)
+          {
+            if (ex is IOException)
+            {
+              Log.Warn("Trigger Database already in use.");
+            }
+            else
+            {
+              Log.Error(ex);
+
+              try
+              {
+                if (!string.IsNullOrEmpty(path))
+                {
+                  _db?.Dispose();
+                  File.Delete(path);
+
+                  _db = new LiteDatabase(path)
+                  {
+                    CheckpointSize = 10
+                  };
+
+                  _db.Rebuild();
+
+                  Init();
+                }
+              }
+              catch (Exception)
+              {
+                Log.Error(ex);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    internal void Init()
+    {
       var path = ConfigUtil.GetTriggersDbFile();
-      var needUpgrade = !File.Exists(path);
 
       try
       {
-        _db = new LiteDatabase(path)
-        {
-          CheckpointSize = 10
-        };
+        var needUpgrade = !File.Exists(path);
 
         if (needUpgrade)
         {
@@ -133,14 +196,29 @@ namespace EQLogParser
       }
       catch (Exception ex)
       {
-        if (ex is IOException)
+        Log.Error(ex);
+      }
+    }
+
+    internal void Stop()
+    {
+      lock (_initLock)
+      {
+        if (_db == null)
         {
-          Log.Warn("Trigger Database already in use.");
+          return;
         }
-        else
-        {
-          Log.Error(ex);
-        }
+
+        _db?.Dispose();
+        _db = null;
+      }
+    }
+
+    internal bool IsActive()
+    {
+      lock (_initLock)
+      {
+        return _db != null;
       }
     }
 
@@ -155,10 +233,8 @@ namespace EQLogParser
     internal TriggerNode GetOverlayById(string id) => _db?.GetCollection<TriggerNode>(TreeCol).FindOne(n => n.Id == id && n.OverlayData != null);
     internal void ImportTriggers(TriggerNode parent, IEnumerable<ExportTriggerNode> imported) => Import(parent, imported, Triggers);
     internal void ImportOverlays(TriggerNode parent, IEnumerable<ExportTriggerNode> imported) => Import(parent, imported, Overlays);
-    internal bool IsActive() => _db != null;
     internal void SetAllExpanded(bool expanded) => _db?.Execute($"UPDATE {TreeCol} SET IsExpanded = {expanded}");
     internal IEnumerable<LexiconItem> GetLexicon() => _db?.GetCollection<LexiconItem>(LexiconCol)?.FindAll();
-    internal void Stop() => _db?.Dispose();
 
     internal void SaveLexicon(List<LexiconItem> list)
     {

@@ -4,12 +4,12 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
-using System.Speech.Synthesis;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Windows.Media.SpeechSynthesis;
 
 namespace EQLogParser
 {
@@ -27,7 +27,6 @@ namespace EQLogParser
     private readonly RangeEditor _leftEditor;
     private readonly RangeEditor _heightEditor;
     private readonly RangeEditor _widthEditor;
-    private readonly SpeechSynthesizer _testSynth;
     private readonly GridLength _characterViewWidth;
     private string _currentCharacterId;
     private bool _ready;
@@ -52,10 +51,8 @@ namespace EQLogParser
         watchQuickShare.IsChecked = true;
       }
 
-      if ((_testSynth = TriggerUtil.GetSpeechSynthesizer()) != null)
-      {
-        voices.ItemsSource = _testSynth.GetInstalledVoices().Select(voice => voice.VoiceInfo.Name).ToList();
-      }
+      var allVoices = SpeechSynthesizer.AllVoices;
+      voices.ItemsSource = allVoices.Select(voice => voice.DisplayName).ToList();
 
       var selectedVoice = _theConfig.Voice;
       if (voices.ItemsSource is List<string> populated && populated.IndexOf(selectedVoice) is var found and > -1)
@@ -127,6 +124,26 @@ namespace EQLogParser
       theTreeView.RefreshTriggers();
       // in case of merge
       TriggerManager.Instance.TriggersUpdated();
+    }
+
+    private void EventsSelectTrigger(AlertEntry entry)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        if (characterView?.Visibility == Visibility.Visible)
+        {
+          if (characterView.dataGrid.ItemsSource is List<TriggerCharacter> characters)
+          {
+            var index = characters.FindIndex(character => character.Id == entry.CharacterId);
+            if (index > -1)
+            {
+              characterView.dataGrid.SelectedIndex = index;
+            }
+          }
+        }
+
+        Dispatcher.InvokeAsync(() => theTreeView.SelectNode(entry.NodeId));
+      });
     }
 
     internal bool IsCancelSelection()
@@ -289,36 +306,37 @@ namespace EQLogParser
         {
           ConfigUtil.SetSetting("TriggersWatchForQuickShare", watchQuickShare.IsChecked == true);
         }
-        else if (Equals(sender, voices))
+        else
         {
-          if (voices.SelectedValue is string voiceName)
+          string tts = null;
+          if (Equals(sender, voices))
           {
-            _theConfig.Voice = voiceName;
-            TriggerStateManager.Instance.UpdateConfig(_theConfig);
-
-            if (_testSynth != null)
+            if (voices.SelectedValue is string voiceName)
             {
-              _testSynth.Rate = rateOption.SelectedIndex;
-              _testSynth.SelectVoice(voiceName);
-              _testSynth.SpeakAsync(voiceName);
+              _theConfig.Voice = voiceName;
+              TriggerStateManager.Instance.UpdateConfig(_theConfig);
+              tts = voiceName;
             }
           }
-        }
-        else if (Equals(sender, rateOption))
-        {
-          _theConfig.VoiceRate = rateOption.SelectedIndex;
-          TriggerStateManager.Instance.UpdateConfig(_theConfig);
-
-          if (_testSynth != null)
+          else if (Equals(sender, rateOption))
           {
-            _testSynth.Rate = rateOption.SelectedIndex;
-            if (voices.SelectedItem is string voice && !string.IsNullOrEmpty(voice))
-            {
-              _testSynth.SelectVoice(voice);
-            }
+            _theConfig.VoiceRate = rateOption.SelectedIndex;
+            TriggerStateManager.Instance.UpdateConfig(_theConfig);
+            tts = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex;
+          }
 
-            var rateText = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex;
-            _testSynth.SpeakAsync(rateText);
+          // do nothing if tts not set
+          if (string.IsNullOrEmpty(tts))
+          {
+            return;
+          }
+
+          if (AudioManager.CreateSpeechSynthesizer() is var testSynth && testSynth != null)
+          {
+            testSynth.Options.SpeakingRate = AudioManager.GetSpeakingRate(_theConfig.VoiceRate);
+            testSynth.Voice = AudioManager.GetVoice(_theConfig.Voice);
+            AudioManager.Instance.SpeakAsync(testSynth, tts);
+            testSynth.Dispose();
           }
         }
       }
@@ -665,6 +683,7 @@ namespace EQLogParser
         TriggerStateManager.Instance.DeleteEvent += TriggerOverlayDeleteEvent;
         TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
         TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+        TriggerManager.Instance.EventsSelectTrigger += EventsSelectTrigger;
         characterView.SelectedCharacterEvent += CharacterSelectedCharacterEvent;
         theTreeView.TreeSelectionChangedEvent += TreeSelectionChangedEvent;
         theTreeView.ClosePreviewOverlaysEvent += ClosePreviewOverlaysEvent;
@@ -679,6 +698,7 @@ namespace EQLogParser
       TriggerStateManager.Instance.DeleteEvent -= TriggerOverlayDeleteEvent;
       TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
       TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
+      TriggerManager.Instance.EventsSelectTrigger -= EventsSelectTrigger;
       characterView.SelectedCharacterEvent -= CharacterSelectedCharacterEvent;
       theTreeView.TreeSelectionChangedEvent -= TreeSelectionChangedEvent;
       theTreeView.ClosePreviewOverlaysEvent -= ClosePreviewOverlaysEvent;
