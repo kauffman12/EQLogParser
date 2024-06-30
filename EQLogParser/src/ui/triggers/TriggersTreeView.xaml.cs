@@ -38,7 +38,6 @@ namespace EQLogParser
       InitializeComponent();
       SetupDragNDrop(triggerTreeView);
       SetupDragNDrop(overlayTreeView);
-      TriggerManager.Instance.EventsSelectTrigger += EventsSelectTrigger;
       findTrigger.Text = Resource.TRIGGER_SEARCH_TEXT;
       _findTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
       _findTimer.Tick += (_, _) =>
@@ -58,6 +57,7 @@ namespace EQLogParser
     internal void RefreshOverlays() => RefreshOverlayNode();
     internal void RefreshTriggers() => RefreshTriggerNode();
     internal void SetConfig(TriggerConfig config) => _theConfig = config;
+    internal void SelectNode(string id) => SelectNode(triggerTreeView, id);
 
     internal void Init(string characterId, Func<bool> isCanceled, bool enable)
     {
@@ -92,7 +92,6 @@ namespace EQLogParser
 
     private void CreateTextOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(true);
     private void CreateTimerOverlayClick(object sender, RoutedEventArgs e) => CreateOverlay(false);
-    private void EventsSelectTrigger(string id) => Dispatcher.InvokeAsync(() => SelectNode(triggerTreeView, id));
     private void NodeExpanded(object sender, NodeExpandedCollapsedEventArgs e) => TriggerStateManager.Instance.SetExpanded(e.Node as TriggerTreeViewNode);
     private void AssignOverlayClick(object sender, RoutedEventArgs e) => SetOverlay(sender);
     private void UnassignOverlayClick(object sender, RoutedEventArgs e) => SetOverlay(sender, true);
@@ -848,7 +847,6 @@ namespace EQLogParser
       if (!_disposedValue)
       {
         _disposedValue = true;
-        TriggerManager.Instance.EventsSelectTrigger -= EventsSelectTrigger;
         triggerTreeView?.DragDropController.Dispose();
         triggerTreeView?.Dispose();
         overlayTreeView?.DragDropController.Dispose();

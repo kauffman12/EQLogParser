@@ -165,6 +165,9 @@
   <data name="COPY_LARGE_IMAGE" xml:space="preserve">
     <value>Copy Large Image</value>
   </data>
+  <data name="CREATE_BACKUP" xml:space="preserve">
+    <value>Create Backup File</value>
+  </data>
   <data name="CUSTOM_PARSE_TITLE" xml:space="preserve">
     <value>Custom Parse Title</value>
   </data>
@@ -233,6 +236,9 @@
   </data>
   <data name="RESTART_NEEDED" xml:space="preserve">
     <value>Restart Required</value>
+  </data>
+  <data name="RESTORE_FROM_BACKUP" xml:space="preserve">
+    <value>Restore From Backup</value>
   </data>
   <data name="RESTORE_TABLE_COLUMNS" xml:space="preserve">
     <value>Default Table Columns Restored!</value>

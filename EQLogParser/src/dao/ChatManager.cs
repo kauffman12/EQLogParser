@@ -94,8 +94,11 @@ namespace EQLogParser
 
     internal void Stop()
     {
-      _archiveTimer?.Dispose();
-      _currentArchive?.Dispose();
+      lock (LockObject)
+      {
+        _archiveTimer?.Dispose();
+        _currentArchive?.Dispose();
+      }
     }
 
     internal bool DeleteArchivedPlayer(string player)
