@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
-using System.Media;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
@@ -17,7 +16,6 @@ namespace EQLogParser
   internal class TextSoundEditor : BaseTypeEditor
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private SoundPlayer _soundPlayer;
     private readonly ObservableCollection<string> _fileList;
     private ComboBox _theOptionsCombo;
     private ComboBox _theSoundCombo;
@@ -100,20 +98,17 @@ namespace EQLogParser
       _theFakeTextBox.TextChanged += TextBoxTextChanged;
       _theSoundCombo.SelectionChanged += SoundComboSelectionChanged;
       _theOptionsCombo.SelectionChanged += TypeComboBoxSelectionChanged;
-      _soundPlayer ??= new SoundPlayer();
 
       return _grid;
     }
 
     private void TestButtonOnClick(object sender, RoutedEventArgs e)
     {
-      var synth = TriggerUtil.GetSpeechSynthesizer();
-      if (!string.IsNullOrEmpty(_theRealTextBox.Text))
+      if (!string.IsNullOrEmpty(_theRealTextBox.Text) && AudioManager.CreateSpeechSynthesizer() is var synth && synth != null)
       {
-        synth.Speak(_theRealTextBox.Text);
+        AudioManager.Instance.SpeakAsync(synth, _theRealTextBox.Text);
+        synth.Dispose();
       }
-
-      synth.Dispose();
     }
 
     private void RealTextBoxTextChanged(object sender, TextChangedEventArgs e)
@@ -195,25 +190,17 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(selected))
         {
           // change from real text box being modified
-          if (combo.Tag == null && _soundPlayer != null && File.Exists(@"data/sounds/" + selected))
+          if (combo.Tag == null && File.Exists(@"data/sounds/" + selected))
           {
-            try
-            {
-              _soundPlayer.SoundLocation = @"data/sounds/" + selected;
-              _soundPlayer.Play();
-            }
-            catch (Exception ex)
-            {
-              Log.Error("Error playing sound file.", ex);
-            }
-
             var codedName = "<<" + selected + ">>";
             if (_theRealTextBox.Text != codedName)
             {
               _theRealTextBox.Text = codedName;
             }
-          }
 
+            var theFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sounds", selected);
+            AudioManager.Instance.SpeakAsync(theFile);
+          }
           combo.Tag = null;
         }
       }
@@ -270,8 +257,6 @@ namespace EQLogParser
       }
 
       _grid.Children.Clear();
-      _soundPlayer?.Dispose();
-      _soundPlayer = null;
     }
   }
 }

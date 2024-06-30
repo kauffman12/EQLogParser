@@ -205,6 +205,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Create Backup File.
+        /// </summary>
+        internal static string CREATE_BACKUP {
+            get {
+                return ResourceManager.GetString("CREATE_BACKUP", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Custom Parse Title.
         /// </summary>
         internal static string CUSTOM_PARSE_TITLE {
@@ -408,6 +417,15 @@ namespace EQLogParser {
         internal static string RESTART_NEEDED {
             get {
                 return ResourceManager.GetString("RESTART_NEEDED", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Restore From Backup.
+        /// </summary>
+        internal static string RESTORE_FROM_BACKUP {
+            get {
+                return ResourceManager.GetString("RESTORE_FROM_BACKUP", resourceCulture);
             }
         }
         

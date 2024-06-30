@@ -75,7 +75,7 @@ namespace EQLogParser
           dataGrid.SelectedItem = entry;
         }
 
-        TriggerManager.Instance.Select(entry.NodeId);
+        TriggerManager.Instance.Select(entry);
       }
     }
 
