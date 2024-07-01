@@ -105,7 +105,9 @@ namespace EQLogParser
           {
             if (characterList.Visibility != Visibility.Visible)
             {
+              _buffer?.CompleteAdding();
               _buffer?.Dispose();
+              _buffer = null;
               if (_theConfig != null)
               {
                 _buffer = new BlockingCollection<Tuple<string, double, bool>>(new ConcurrentQueue<Tuple<string, double, bool>>());
@@ -116,7 +118,9 @@ namespace EQLogParser
             {
               if (characterList.SelectedItem is TriggerCharacter character)
               {
+                _buffer?.CompleteAdding();
                 _buffer?.Dispose();
+                _buffer = null;
                 _buffer = new BlockingCollection<Tuple<string, double, bool>>(new ConcurrentQueue<Tuple<string, double, bool>>());
                 TriggerManager.Instance.SetTestProcessor(character, _buffer);
               }
@@ -165,7 +169,6 @@ namespace EQLogParser
             }
           }
         });
-        _buffer?.CompleteAdding();
         characterList.IsEnabled = true;
         realTime.IsEnabled = true;
         clearButton.IsEnabled = true;
@@ -284,8 +287,6 @@ namespace EQLogParser
                     var remaining = data.Length - count;
                     Dispatcher.InvokeAsync(() => testStatus.Text = "| Time Remaining: " + remaining + " seconds");
                   }
-
-                  _buffer?.CompleteAdding();
                 }
               }
             }
