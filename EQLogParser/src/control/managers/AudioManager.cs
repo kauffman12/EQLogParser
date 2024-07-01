@@ -63,7 +63,10 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(tts) && CreateSpeechSynthesizer() is var synth && synth != null)
       {
-        if (await SynthesizeTextToByteArrayAsync(synth, tts, rate, voice) is { } data)
+        synth.Voice = GetVoice(voice);
+        synth.Options.SpeakingRate = GetSpeakingRate(rate);
+
+        if (await SynthesizeTextToByteArrayAsync(synth, tts) is { } data)
         {
           var waveFormat = new WaveFormat(16000, 16, 1);
           PlayAudioData(data, waveFormat);
@@ -133,12 +136,10 @@ namespace EQLogParser
       }
     }
 
-    private static async Task<byte[]> SynthesizeTextToByteArrayAsync(SpeechSynthesizer synth, string tts, int rate = 1, string voice = null)
+    private static async Task<byte[]> SynthesizeTextToByteArrayAsync(SpeechSynthesizer synth, string tts)
     {
       try
       {
-        synth.Voice = GetVoice(voice);
-        synth.Options.SpeakingRate = GetSpeakingRate(rate);
         var stream = await synth.SynthesizeTextToStreamAsync(tts);
         var memStream = new MemoryStream();
         await stream.AsStream().CopyToAsync(memStream);
