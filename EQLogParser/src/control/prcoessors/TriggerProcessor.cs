@@ -62,6 +62,7 @@ namespace EQLogParser
       _addTextEvent = addTextEvent;
       _addTimerEvent = addTimerEvent;
       _synth = AudioManager.CreateSpeechSynthesizer();
+      AudioManager.Instance.Add(CurrentCharacterId);
 
       BindingOperations.EnableCollectionSynchronization(AlertLog, _collectionLock);
       GetActiveTriggers();
@@ -217,7 +218,7 @@ namespace EQLogParser
 
       lock (_voiceLock)
       {
-        AudioManager.Instance.Stop();
+        AudioManager.Instance.Stop(CurrentCharacterId);
       }
     }
 
@@ -685,7 +686,7 @@ namespace EQLogParser
           // we don't start playing a sound at the same time we try to stop them all
           lock (_voiceLock)
           {
-            AudioManager.Instance.SpeakAsync(theFile, speak.Wrapper.TriggerData.Priority);
+            AudioManager.Instance.SpeakFileAsync(CurrentCharacterId, theFile, speak.Wrapper.TriggerData.Priority);
           }
         }
         else
@@ -711,7 +712,7 @@ namespace EQLogParser
                 tts = ReplaceBadCharsRegex().Replace(tts, string.Empty);
                 lock (_voiceLock)
                 {
-                  AudioManager.Instance.SpeakAsync(_synth, tts, speak.Wrapper.TriggerData.Priority);
+                  AudioManager.Instance.SpeakTtsAsync(CurrentCharacterId, _synth, tts, speak.Wrapper.TriggerData.Priority);
                 }
               }
             }
@@ -1089,6 +1090,7 @@ namespace EQLogParser
       {
         _isDisposed = true;
         _ready = false;
+        AudioManager.Instance.Stop(CurrentCharacterId, true);
         TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
         _speakCollection.CompleteAdding();
         _chatCollection.CompleteAdding();

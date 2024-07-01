@@ -129,31 +129,19 @@ namespace EQLogParser
     {
       if (_ready)
       {
-        // this only plays the text as a test and does not save setting changes
-        var testSynth = AudioManager.CreateSpeechSynthesizer();
-        if (testSynth == null)
-        {
-          return;
-        }
-
         // default to rate
         var tts = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex;
-        testSynth.Options.SpeakingRate = AudioManager.GetSpeakingRate(rateOption.SelectedIndex);
-        if (voices.SelectedItem is string voiceName && !string.IsNullOrEmpty(voiceName))
+        string voice = null;
+        if (voices.SelectedItem is string name && !string.IsNullOrEmpty(name))
         {
-          testSynth.Voice = AudioManager.GetVoice(voiceName);
+          voice = name;
           if (Equals(sender, voices))
           {
-            tts = voiceName;
+            tts = name;
           }
         }
 
-        if (!string.IsNullOrEmpty(tts))
-        {
-          AudioManager.Instance.SpeakAsync(testSynth, tts);
-        }
-
-        testSynth.Dispose();
+        AudioManager.Instance.TestSpeakTtsAsync(tts, voice, rateOption.SelectedIndex);
         EnableSave();
       }
     }

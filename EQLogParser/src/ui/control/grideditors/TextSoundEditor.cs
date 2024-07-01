@@ -104,10 +104,9 @@ namespace EQLogParser
 
     private void TestButtonOnClick(object sender, RoutedEventArgs e)
     {
-      if (!string.IsNullOrEmpty(_theRealTextBox.Text) && AudioManager.CreateSpeechSynthesizer() is var synth && synth != null)
+      if (!string.IsNullOrEmpty(_theRealTextBox.Text))
       {
-        AudioManager.Instance.SpeakAsync(synth, _theRealTextBox.Text);
-        synth.Dispose();
+        AudioManager.Instance.TestSpeakTtsAsync(_theRealTextBox.Text);
       }
     }
 
@@ -199,7 +198,7 @@ namespace EQLogParser
             }
 
             var theFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sounds", selected);
-            AudioManager.Instance.SpeakAsync(theFile);
+            AudioManager.Instance.TestSpeakFileAsync(theFile);
           }
           combo.Tag = null;
         }

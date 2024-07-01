@@ -1,6 +1,7 @@
 ﻿using log4net;
 using NAudio.Wave;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,6 +9,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.Media.SpeechSynthesis;
+using SpeechSynthesizer = Windows.Media.SpeechSynthesis.SpeechSynthesizer;
 
 namespace EQLogParser
 {
@@ -15,28 +17,71 @@ namespace EQLogParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<AudioManager> Lazy = new(() => new AudioManager());
-    internal static AudioManager Instance => Lazy.Value; // instance
-    private readonly List<PlaybackEvent> _playBackEvents;
-    private readonly object _lockObject = new();
+    internal static AudioManager Instance => Lazy.Value;
+    private readonly ConcurrentDictionary<string, PlayerAudio> _playerAudios = new();
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-    private AudioManager()
+    private AudioManager() { }
+
+    internal void Add(string id)
     {
-      _playBackEvents = Enumerable.Range(0, 20).Select(_ => new PlaybackEvent()).ToList();
+      var audio = new PlayerAudio();
+      _playerAudios.TryAdd(id, audio);
+      ProcessAsync(id, audio);
     }
 
-    internal async Task SpeakAsync(string filePath, long priority = 5)
+    internal void Stop(string id, bool remove = false)
     {
-      if (!string.IsNullOrEmpty(filePath))
+      if (_playerAudios.TryGetValue(id, out var playerAudio))
+      {
+        lock (playerAudio)
+        {
+          playerAudio.WaveOut.Stop();
+          playerAudio.CurrentEvent = null;
+          playerAudio.Events.Clear();
+
+          if (remove)
+          {
+            playerAudio.CancellationTokenSource.Cancel();
+            playerAudio.WaveOut?.Dispose();
+            _playerAudios.TryRemove(id, out _);
+          }
+        }
+      }
+    }
+
+    internal async void TestSpeakFileAsync(string filePath)
+    {
+      if (!string.IsNullOrEmpty(filePath) && await ReadFileToByteArrayAsync(filePath) is { } data)
+      {
+        var reader = new WaveFileReader(filePath);
+        PlayAudioData(data, reader.WaveFormat);
+      }
+    }
+
+    internal async void TestSpeakTtsAsync(string tts, string voice = null, int rate = 1)
+    {
+      if (!string.IsNullOrEmpty(tts) && CreateSpeechSynthesizer() is var synth && synth != null)
+      {
+        if (await SynthesizeTextToByteArrayAsync(synth, tts, rate, voice) is { } data)
+        {
+          var waveFormat = new WaveFormat(16000, 16, 1);
+          PlayAudioData(data, waveFormat);
+        }
+      }
+    }
+
+    internal async void SpeakFileAsync(string id, string filePath, long priority = 5)
+    {
+      if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(filePath))
       {
         try
         {
-          var reader = new WaveFileReader(filePath);
-          var memStream = new MemoryStream();
-          await reader.CopyToAsync(memStream);
-          memStream.Position = 0;
-          var audio = new RawSourceWaveStream(memStream, reader.WaveFormat);
-          await SpeakAsync(audio, priority);
+          if (await ReadFileToByteArrayAsync(filePath) is { Length: > 0 } data)
+          {
+            var reader = new WaveFileReader(filePath);
+            SpeakAsync(id, data, reader.WaveFormat, priority);
+          }
         }
         catch (Exception ex)
         {
@@ -45,22 +90,15 @@ namespace EQLogParser
       }
     }
 
-    internal async Task SpeakAsync(SpeechSynthesizer synth, string tts, long priority = 5)
+    internal async void SpeakTtsAsync(string id, SpeechSynthesizer synth, string tts, long priority = 5)
     {
-      if (synth != null && !string.IsNullOrEmpty(tts))
+      if (!string.IsNullOrEmpty(id) && synth != null && !string.IsNullOrEmpty(tts))
       {
         byte[] data = null;
         await _semaphore.WaitAsync();
         try
         {
-          // synthesize and make sure we're done with the TTS API before releasing
-          var stream = await synth.SynthesizeTextToStreamAsync(tts);
-          var memStream = new MemoryStream();
-          await stream.AsStream().CopyToAsync(memStream);
-          memStream.Position = 0;
-          data = memStream.ToArray();
-          await memStream.DisposeAsync();
-          stream.Dispose();
+          data = await SynthesizeTextToByteArrayAsync(synth, tts);
         }
         catch (Exception ex)
         {
@@ -71,63 +109,127 @@ namespace EQLogParser
           _semaphore.Release();
         }
 
-        if (data != null)
+        if (data is { Length: > 0 })
         {
-          var memStream = new MemoryStream(data);
-          var audio = new RawSourceWaveStream(memStream, new WaveFormat(16000, 16, 1));
-          await SpeakAsync(audio, priority);
+          var waveFormat = new WaveFormat(16000, 16, 1);
+          SpeakAsync(id, data, waveFormat, priority);
         }
       }
     }
 
-    private Task SpeakAsync(RawSourceWaveStream audioStream, long priority = 5)
+    private static async Task<byte[]> ReadFileToByteArrayAsync(string filePath)
     {
-      lock (_lockObject)
+      try
       {
-        // stop any playbacks of lower priority
-        foreach (var item in _playBackEvents)
-        {
-          if (priority < item.Priority && item.WaveOut.PlaybackState != PlaybackState.Stopped)
-          {
-            item.WaveOut.Stop();
-            item.Priority = -1;
-          }
-        }
-
-        if (_playBackEvents.FirstOrDefault(item => item.WaveOut.PlaybackState == PlaybackState.Stopped) is { } playback)
-        {
-          playback.Priority = priority;
-          playback.WaveOut.PlaybackStopped += PlaybackStopped;
-          playback.WaveOut.Init(audioStream);
-          playback.WaveOut.Play();
-        }
+        var reader = new WaveFileReader(filePath);
+        var memStream = new MemoryStream();
+        await reader.CopyToAsync(memStream);
+        return memStream.ToArray();
       }
-
-      return Task.CompletedTask;
-
-      async void PlaybackStopped(object sender, StoppedEventArgs e)
+      catch (Exception ex)
       {
-        await audioStream.DisposeAsync();
-        if (sender is WaveOutEvent waveOut)
+        Log.Debug($"Error reading file to byte array: {filePath}", ex);
+        return null;
+      }
+    }
+
+    private static async Task<byte[]> SynthesizeTextToByteArrayAsync(SpeechSynthesizer synth, string tts, int rate = 1, string voice = null)
+    {
+      try
+      {
+        synth.Voice = GetVoice(voice);
+        synth.Options.SpeakingRate = GetSpeakingRate(rate);
+        var stream = await synth.SynthesizeTextToStreamAsync(tts);
+        var memStream = new MemoryStream();
+        await stream.AsStream().CopyToAsync(memStream);
+        return memStream.ToArray();
+      }
+      catch (Exception ex)
+      {
+        Log.Debug("Error synthesizing text to byte array.", ex);
+        return null;
+      }
+    }
+
+    private void SpeakAsync(string id, byte[] audioData, WaveFormat waveFormat, long priority = 5)
+    {
+      if (_playerAudios.TryGetValue(id, out var playerAudio))
+      {
+        lock (playerAudio)
         {
-          waveOut.PlaybackStopped -= PlaybackStopped;
+          playerAudio.Events = playerAudio.Events.Where(pa => pa.Priority <= priority).ToList();
+          playerAudio.Events.Add(new PlaybackEvent { AudioData = audioData, WaveFormat = waveFormat, Priority = priority });
+          if (playerAudio.CurrentEvent != null && playerAudio.WaveOut.PlaybackState != PlaybackState.Stopped && playerAudio.CurrentEvent.Priority > priority)
+          {
+            playerAudio.WaveOut.Stop();
+            playerAudio.CurrentEvent = null;
+          }
         }
       }
     }
 
-    internal void Stop()
+    private static void PlayAudioData(byte[] data, WaveFormat waveFormat)
     {
-      lock (_lockObject)
+      var bufferedWaveProvider = new BufferedWaveProvider(waveFormat);
+      bufferedWaveProvider.AddSamples(data, 0, data.Length);
+      var waveOut = new WaveOutEvent();
+      waveOut.PlaybackStopped += (sender, e) => waveOut.Dispose();
+      waveOut.Init(bufferedWaveProvider);
+      waveOut.Play();
+    }
+
+    private static void ProcessAsync(string id, PlayerAudio audio)
+    {
+      var cancellationTokenSource = new CancellationTokenSource();
+      audio.CancellationTokenSource = cancellationTokenSource;
+
+      Task.Run(() =>
       {
-        foreach (var item in _playBackEvents)
+        RawSourceWaveStream stream = null;
+        try
         {
-          if (item.WaveOut.PlaybackState != PlaybackState.Stopped)
+          while (!cancellationTokenSource.Token.IsCancellationRequested)
           {
-            item.WaveOut.Stop();
-            item.Priority = -1;
+            lock (audio)
+            {
+              if (audio.WaveOut.PlaybackState == PlaybackState.Stopped)
+              {
+                // cleanup previous stream
+                if (stream != null)
+                {
+                  stream.DisposeAsync();
+                  stream = null;
+                }
+
+                if (audio.Events.Count > 0)
+                {
+                  audio.CurrentEvent = audio.Events[0];
+                  audio.Events.RemoveAt(0);
+                  stream = new RawSourceWaveStream(audio.CurrentEvent.AudioData, 0,
+                    audio.CurrentEvent.AudioData.Length, audio.CurrentEvent.WaveFormat);
+                  audio.WaveOut.Init(stream);
+                  audio.WaveOut.Play();
+                }
+              }
+            }
+
+            Thread.Sleep(100);
           }
         }
-      }
+        catch (OperationCanceledException)
+        {
+          // ignore cancel event
+        }
+        catch (Exception ex)
+        {
+          Log.Debug("Error during playback.", ex);
+        }
+        finally
+        {
+          stream?.DisposeAsync();
+          cancellationTokenSource.Dispose();
+        }
+      }, cancellationTokenSource.Token);
     }
 
     internal static SpeechSynthesizer CreateSpeechSynthesizer()
@@ -139,28 +241,31 @@ namespace EQLogParser
       catch (Exception ex)
       {
         Log.Error(ex);
+        return null;
       }
-
-      return null;
     }
 
-    internal static double GetSpeakingRate(int oldRate)
-    {
-      // estimate but also gives a little faster
-      return 1.0 + (oldRate / 10.0 * 1.6);
-    }
+    internal static double GetSpeakingRate(int oldRate) => 1.0 + (oldRate / 10.0 * 1.6);
 
     internal static VoiceInformation GetVoice(string name)
     {
-      // old Synthesizer had different names like Microsoft David Desktop vs Microsoft David
       return SpeechSynthesizer.AllVoices.FirstOrDefault(voice => voice.DisplayName == name || name?.StartsWith(voice.DisplayName) == true)
              ?? SpeechSynthesizer.DefaultVoice;
     }
 
-    private class PlaybackEvent
+    private class PlayerAudio
     {
       internal WaveOutEvent WaveOut { get; } = new();
-      internal long Priority { get; set; } = -1;
+      internal List<PlaybackEvent> Events { get; set; } = [];
+      internal PlaybackEvent CurrentEvent { get; set; }
+      internal CancellationTokenSource CancellationTokenSource { get; set; }
+    }
+
+    private class PlaybackEvent
+    {
+      internal long Priority { get; init; } = -1;
+      internal byte[] AudioData { get; init; }
+      internal WaveFormat WaveFormat { get; init; }
     }
   }
 }
