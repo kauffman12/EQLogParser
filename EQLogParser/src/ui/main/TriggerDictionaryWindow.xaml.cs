@@ -65,18 +65,11 @@ namespace EQLogParser
       }
     }
 
-    private async void TestClicked(object sender, RoutedEventArgs e)
+    private void TestClicked(object sender, RoutedEventArgs e)
     {
       if (dataGrid.SelectedItem is LexiconItem item)
       {
-        var testSynth = AudioManager.CreateSpeechSynthesizer();
-        if (testSynth == null)
-        {
-          return;
-        }
-
-        AudioManager.Instance.SpeakAsync(testSynth, item.With ?? "");
-        testSynth.Dispose();
+        AudioManager.Instance.TestSpeakTtsAsync(item.With);
       }
     }
 

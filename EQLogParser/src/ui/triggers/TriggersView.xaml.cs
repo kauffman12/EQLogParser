@@ -325,19 +325,7 @@ namespace EQLogParser
             tts = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex;
           }
 
-          // do nothing if tts not set
-          if (string.IsNullOrEmpty(tts))
-          {
-            return;
-          }
-
-          if (AudioManager.CreateSpeechSynthesizer() is var testSynth && testSynth != null)
-          {
-            testSynth.Options.SpeakingRate = AudioManager.GetSpeakingRate(_theConfig.VoiceRate);
-            testSynth.Voice = AudioManager.GetVoice(_theConfig.Voice);
-            AudioManager.Instance.SpeakAsync(testSynth, tts);
-            testSynth.Dispose();
-          }
+          AudioManager.Instance.TestSpeakTtsAsync(tts, _theConfig.Voice, _theConfig.VoiceRate);
         }
       }
     }
