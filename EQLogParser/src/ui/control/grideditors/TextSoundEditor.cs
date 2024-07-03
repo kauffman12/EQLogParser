@@ -104,9 +104,9 @@ namespace EQLogParser
 
     private void TestButtonOnClick(object sender, RoutedEventArgs e)
     {
-      if (!string.IsNullOrEmpty(_theRealTextBox.Text))
+      if (!string.IsNullOrEmpty(_theRealTextBox.Text) && sender is Button { DataContext: PropertyItem { SelectedObject: TriggerPropertyModel { DataContext: TriggersTreeView view } } })
       {
-        AudioManager.Instance.TestSpeakTtsAsync(_theRealTextBox.Text);
+        view.PlayTts(_theRealTextBox.Text);
       }
     }
 

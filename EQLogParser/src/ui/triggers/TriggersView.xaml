@@ -21,7 +21,7 @@
       <TextBlock VerticalAlignment="Center" Margin="8,0,20,4" PreviewMouseDown="ToggleAdvancedPreviewMouseDown">
         <InlineUIContainer>
           <StackPanel Orientation="Vertical">
-            <TextBlock x:Name="advancedText" Cursor="Hand" FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource EQWarnForegroundBrush}" Text="Switch to Advanced Settings"/>
+            <TextBlock x:Name="advancedText" Cursor="Hand" FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource EQWarnForegroundBrush}" Text="Switch to Advanced Mode"/>
             <Rectangle x:Name="underlineRect" Fill="{DynamicResource EQWarnForegroundBrush}" Height="1" Width="{Binding ActualWidth, ElementName=advancedText}" />
           </StackPanel>
         </InlineUIContainer>
@@ -37,6 +37,12 @@
         <ComboBoxItem>Increased Rate 5</ComboBoxItem>
         <ComboBoxItem>Increased Rate 6</ComboBoxItem>
       </ComboBox>
+      <Button Name="volumeBtn" Content="Volume" Margin="0,0,4,1" Padding="8,0,8,0" Height="{DynamicResource EQButtonHeight}" Click="VolumeButtonClick" />
+      <Popup Name="volumePopup" PlacementTarget="{Binding ElementName=volumeBtn}" Height="320" Placement="Right" StaysOpen="False" VerticalOffset="30" HorizontalOffset="-20">
+        <Border Background="{DynamicResource ContentBackgroundAlt2}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+          <syncfusion:SfRangeSlider Name="volumeSlider" Height="300" Minimum="0" Maximum="100" TickFrequency="10" ValuePlacement="BottomRight" ShowValueLabels="True" Orientation="Vertical" PreviewMouseLeftButtonUp="VolumeSliderChanged"/>
+        </Border>
+      </Popup>
       <Button x:Name="dictButton" Margin="0,0,8,1" Padding="8,0,8,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}" Click="DictionaryClick">Phonetic Dictionary</Button>
     </StackPanel>
     <Grid x:Name="mainGrid" Grid.Row="1">

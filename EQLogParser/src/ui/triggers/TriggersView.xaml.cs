@@ -119,6 +119,14 @@ namespace EQLogParser
       }
     }
 
+    private void VolumeSliderChanged(object sender, MouseButtonEventArgs mouseButtonEventArgs) => HandleChanged(sender);
+
+    private void VolumeButtonClick(object sender, RoutedEventArgs e)
+    {
+      volumeSlider.Value = AudioManager.Instance.GetVolume();
+      volumePopup.IsOpen = true;
+    }
+
     private void TriggerImportEvent(bool _)
     {
       theTreeView.RefreshTriggers();
@@ -208,7 +216,7 @@ namespace EQLogParser
     {
       if (advancedText != null)
       {
-        if (advancedText.Text == "Switch to Advanced Settings")
+        if (advancedText.Text == "Switch to Advanced Mode")
         {
           _theConfig.IsAdvanced = true;
           basicCheckBox.Visibility = Visibility.Collapsed;
@@ -255,7 +263,7 @@ namespace EQLogParser
           titleLabel.Content = "No Triggers Enabled";
         }
 
-        advancedText.Text = "Switch to Basic Settings";
+        advancedText.Text = "Switch to Basic Mode";
         mainGrid.ColumnDefinitions[0].Width = _characterViewWidth;
         mainGrid.ColumnDefinitions[1].Width = new GridLength(2);
       }
@@ -281,13 +289,13 @@ namespace EQLogParser
           titleLabel.Content = "Check to Enable Triggers";
         }
 
-        advancedText.Text = "Switch to Advanced Settings";
+        advancedText.Text = "Switch to Advanced Mode";
         mainGrid.ColumnDefinitions[0].Width = new GridLength(0);
         mainGrid.ColumnDefinitions[1].Width = new GridLength(0);
       }
 
       advancedText.UpdateLayout();
-      advancedText.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+      advancedText.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
       advancedText.Arrange(new Rect(advancedText.DesiredSize));
       underlineRect.Width = advancedText.ActualWidth;
     }
@@ -298,7 +306,9 @@ namespace EQLogParser
       _previewWindows.Clear();
     }
 
-    private void OptionsChanged(object sender, RoutedEventArgs e)
+    private void OptionsChanged(object sender, RoutedEventArgs e) => HandleChanged(sender);
+
+    private void HandleChanged(object sender)
     {
       if (_ready)
       {
@@ -323,6 +333,12 @@ namespace EQLogParser
             _theConfig.VoiceRate = rateOption.SelectedIndex;
             TriggerStateManager.Instance.UpdateConfig(_theConfig);
             tts = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex;
+          }
+          else if (Equals(sender, volumeSlider))
+          {
+            var volume = (int)Math.Round(volumeSlider.Value);
+            tts = "Volume " + volume + " Percent";
+            AudioManager.Instance.SetVolume(volume);
           }
 
           AudioManager.Instance.TestSpeakTtsAsync(tts, _theConfig.Voice, _theConfig.VoiceRate);
@@ -660,7 +676,7 @@ namespace EQLogParser
 
     private void DictionaryClick(object sender, RoutedEventArgs e)
     {
-      var window = new TriggerDictionaryWindow();
+      var window = new TriggerDictionaryWindow(theTreeView);
       window.ShowDialog();
     }
 
