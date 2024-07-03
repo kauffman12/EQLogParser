@@ -7,6 +7,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
+using Application = System.Windows.Application;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace EQLogParser
 {
@@ -58,6 +60,23 @@ namespace EQLogParser
     internal void RefreshTriggers() => RefreshTriggerNode();
     internal void SetConfig(TriggerConfig config) => _theConfig = config;
     internal void SelectNode(string id) => SelectNode(triggerTreeView, id);
+
+    internal void PlayTts(string text)
+    {
+      var config = TriggerStateManager.Instance.GetConfig();
+      if (!config.IsAdvanced)
+      {
+        AudioManager.Instance.TestSpeakTtsAsync(text, config.Voice, config.VoiceRate);
+      }
+      else if (config.Characters.FirstOrDefault(character => character.Id == _currentCharacterId) is { } found)
+      {
+        AudioManager.Instance.TestSpeakTtsAsync(text, found.Voice, found.VoiceRate);
+      }
+      else
+      {
+        AudioManager.Instance.TestSpeakTtsAsync(text);
+      }
+    }
 
     internal void Init(string characterId, Func<bool> isCanceled, bool enable)
     {
@@ -788,7 +807,7 @@ namespace EQLogParser
           var data = node.SerializedData;
           if (node.IsTrigger())
           {
-            model = new TriggerPropertyModel { Node = data };
+            model = new TriggerPropertyModel { Node = data, DataContext = this };
             TriggerUtil.Copy(model, node.SerializedData?.TriggerData);
           }
           else if (node.IsOverlay())

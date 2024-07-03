@@ -223,6 +223,7 @@ namespace EQLogParser
     public string EndSoundOrText { get; set; }
     public string WarningSoundOrText { get; set; }
     public TriggerNode Node { get; set; }
+    public DependencyObject DataContext { get; set; }
   }
 
   internal class TriggerState
@@ -266,6 +267,7 @@ namespace EQLogParser
     public bool IsEnabled { get; set; }
     public string Voice { get; set; }
     public int VoiceRate { get; set; }
+    public int Volume { get; set; }
   }
 
   internal class ExportTriggerNode : TriggerNode
