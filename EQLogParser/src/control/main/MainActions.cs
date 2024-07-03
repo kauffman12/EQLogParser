@@ -367,17 +367,17 @@ namespace EQLogParser
       }
     }
 
-    internal static void SetCurrentTheme(Window window)
+    internal static void SetCurrentTheme(DependencyObject obj)
     {
-      if (window != null)
+      if (obj != null)
       {
         switch (CurrentTheme)
         {
           case "MaterialLight":
-            SfSkinManager.SetTheme(window, new Theme("MaterialLight"));
+            SfSkinManager.SetTheme(obj, new Theme("MaterialLight"));
             break;
           default:
-            SfSkinManager.SetTheme(window, new Theme("MaterialDarkCustom;MaterialDark"));
+            SfSkinManager.SetTheme(obj, new Theme("MaterialDarkCustom;MaterialDark"));
             break;
         }
       }

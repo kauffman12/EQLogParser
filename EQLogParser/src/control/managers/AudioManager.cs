@@ -1,8 +1,10 @@
 ﻿using log4net;
+using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -10,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Windows.Media.SpeechSynthesis;
 using SpeechSynthesizer = Windows.Media.SpeechSynthesis.SpeechSynthesizer;
+using Task = System.Threading.Tasks.Task;
 
 namespace EQLogParser
 {
@@ -20,8 +23,67 @@ namespace EQLogParser
     internal static AudioManager Instance => Lazy.Value;
     private readonly ConcurrentDictionary<string, PlayerAudio> _playerAudios = new();
     private readonly SemaphoreSlim _semaphore = new(1, 1);
+    private readonly AudioSessionControl _session = null;
 
-    private AudioManager() { }
+    private AudioManager()
+    {
+      var silentWav = new byte[]
+      {
+        0x52, 0x49, 0x46, 0x46, 0x24, 0x08, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45, 0x66, 0x6D, 0x74, 0x20,
+        0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x44, 0xAC, 0x00, 0x00, 0x88, 0x58, 0x01, 0x00,
+        0x02, 0x00, 0x10, 0x00, 0x64, 0x61, 0x74, 0x61, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00
+      };
+
+      // play something to register the audio session with windows
+      var memStream = new MemoryStream(silentWav);
+      var reader = new WaveFileReader(memStream);
+      var waveOut = new WaveOutEvent();
+      waveOut.Init(reader);
+
+      waveOut.PlaybackStopped += (object sender, StoppedEventArgs e) =>
+      {
+        memStream.DisposeAsync();
+        reader.DisposeAsync();
+        waveOut.Dispose();
+      };
+
+      waveOut.Play();
+      waveOut.Stop();
+
+      var deviceEnumerator = new MMDeviceEnumerator();
+      var defaultDevice = deviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+      var sessionManager = defaultDevice.AudioSessionManager;
+      for (var i = 0; i < sessionManager.Sessions.Count; i++)
+      {
+        if (sessionManager.Sessions[i].GetProcessID == Process.GetCurrentProcess().Id)
+        {
+          _session = sessionManager.Sessions[i];
+        }
+      }
+    }
+
+    internal int GetVolume()
+    {
+      if (_session?.SimpleAudioVolume?.Volume != null)
+      {
+        return (int)(_session.SimpleAudioVolume.Volume * 100);
+      }
+
+      var waveOut = new WaveOutEvent();
+      var volume = (int)waveOut.Volume * 100;
+      waveOut.Dispose();
+      return volume;
+    }
+
+    internal void SetVolume(int volume)
+    {
+      if (_session?.SimpleAudioVolume?.Volume != null)
+      {
+        _session.SimpleAudioVolume.Volume = volume / 100.0f;
+      }
+    }
 
     internal void Add(string id)
     {
@@ -169,7 +231,7 @@ namespace EQLogParser
       }
     }
 
-    private static void PlayAudioData(byte[] data, WaveFormat waveFormat)
+    private void PlayAudioData(byte[] data, WaveFormat waveFormat)
     {
       var bufferedWaveProvider = new BufferedWaveProvider(waveFormat);
       bufferedWaveProvider.AddSamples(data, 0, data.Length);
@@ -179,7 +241,7 @@ namespace EQLogParser
       waveOut.Play();
     }
 
-    private static void ProcessAsync(string id, PlayerAudio audio)
+    private void ProcessAsync(string id, PlayerAudio audio)
     {
       var cancellationTokenSource = new CancellationTokenSource();
       audio.CancellationTokenSource = cancellationTokenSource;

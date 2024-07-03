@@ -14,8 +14,9 @@ namespace EQLogParser
   {
     private readonly ObservableCollection<LexiconItem> _items = [];
     private LexiconItem _previous;
+    private TriggersTreeView _treeView;
 
-    public TriggerDictionaryWindow()
+    public TriggerDictionaryWindow(TriggersTreeView view)
     {
       MainActions.SetCurrentTheme(this);
       InitializeComponent();
@@ -27,6 +28,7 @@ namespace EQLogParser
       }
 
       dataGrid.ItemsSource = _items;
+      _treeView = view;
       _items.CollectionChanged += ItemsChanged;
     }
 
@@ -69,12 +71,13 @@ namespace EQLogParser
     {
       if (dataGrid.SelectedItem is LexiconItem item)
       {
-        AudioManager.Instance.TestSpeakTtsAsync(item.With);
+        _treeView?.PlayTts(item.With);
       }
     }
 
     private void TriggerDictionaryWindowOnClosing(object sender, CancelEventArgs e)
     {
+      _treeView = null;
       dataGrid?.Dispose();
     }
 
