@@ -56,22 +56,25 @@ namespace EQLogParser
 
       lock (LockObject)
       {
-        if (ArchiveQueue.FirstOrDefault(item => item.FileName == logReader.FileName) == null)
+        if (ArchiveQueue.Any(item => item.FileName == logReader.FileName))
         {
-          ArchiveQueue.Add(logReader);
+          return;
+        }
 
-          if (ArchiveQueue.Count == 1)
-          {
-            Task.Delay(2500).ContinueWith(_ => ArchiveProcess());
-          }
+        ArchiveQueue.Add(logReader);
+        if (ArchiveQueue.Count == 1)
+        {
+          ScheduleArchive(1000);
         }
       }
     }
 
+    private static void ScheduleArchive(int timeout) => Task.Delay(timeout).ContinueWith(_ => ArchiveProcess());
+
     private static void ArchiveProcess()
     {
-      List<string> readyList = [];
       bool remaining;
+      List<string> readyList = [];
 
       lock (LockObject)
       {
@@ -89,7 +92,7 @@ namespace EQLogParser
           }
         }
 
-        remaining = ArchiveQueue.Count > 0;
+        remaining = ArchiveQueue.Any();
       }
 
       foreach (var path in readyList)
@@ -160,6 +163,16 @@ namespace EQLogParser
 
           File.Move(path, destination);
 
+          // create new empty file
+          try
+          {
+            File.CreateText(path);
+          }
+          catch (Exception)
+          {
+            // ignore
+          }
+
           // compress if specified
           if (LogManagementWindow.CompressYes.Equals(compress, StringComparison.OrdinalIgnoreCase))
           {
@@ -169,7 +182,7 @@ namespace EQLogParser
           Log.Info($"Archived File: {path}");
 
           // pause before archiving each file
-          Task.Delay(250);
+          Task.Delay(100);
         }
         catch (Exception e)
         {
@@ -180,7 +193,7 @@ namespace EQLogParser
       // try again
       if (remaining)
       {
-        Task.Delay(2500).ContinueWith(_ => ArchiveProcess());
+        ScheduleArchive(3000);
       }
     }
 

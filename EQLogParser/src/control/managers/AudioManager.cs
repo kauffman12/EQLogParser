@@ -11,8 +11,6 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.Media.SpeechSynthesis;
-using SpeechSynthesizer = Windows.Media.SpeechSynthesis.SpeechSynthesizer;
-using Task = System.Threading.Tasks.Task;
 
 namespace EQLogParser
 {
@@ -23,7 +21,7 @@ namespace EQLogParser
     internal static AudioManager Instance => Lazy.Value;
     private readonly ConcurrentDictionary<string, PlayerAudio> _playerAudios = new();
     private readonly SemaphoreSlim _semaphore = new(1, 1);
-    private readonly AudioSessionControl _session = null;
+    private readonly AudioSessionControl _session;
 
     private AudioManager()
     {
@@ -39,10 +37,10 @@ namespace EQLogParser
       // play something to register the audio session with windows
       var memStream = new MemoryStream(silentWav);
       var reader = new WaveFileReader(memStream);
-      var waveOut = new WaveOutEvent();
+      var waveOut = CreateWaveOut();
       waveOut.Init(reader);
 
-      waveOut.PlaybackStopped += (object sender, StoppedEventArgs e) =>
+      waveOut.PlaybackStopped += (_, _) =>
       {
         memStream.DisposeAsync();
         reader.DisposeAsync();
@@ -71,7 +69,7 @@ namespace EQLogParser
         return (int)(_session.SimpleAudioVolume.Volume * 100);
       }
 
-      var waveOut = new WaveOutEvent();
+      var waveOut = CreateWaveOut();
       var volume = (int)waveOut.Volume * 100;
       waveOut.Dispose();
       return volume;
@@ -89,7 +87,7 @@ namespace EQLogParser
     {
       var audio = new PlayerAudio();
       _playerAudios.TryAdd(id, audio);
-      ProcessAsync(id, audio);
+      ProcessAsync(audio);
     }
 
     internal void Stop(string id, bool remove = false)
@@ -182,6 +180,15 @@ namespace EQLogParser
       }
     }
 
+    private static WaveOutEvent CreateWaveOut()
+    {
+      return new WaveOutEvent()
+      {
+        DesiredLatency = 50,
+        NumberOfBuffers = 4
+      };
+    }
+
     private static async Task<byte[]> ReadFileToByteArrayAsync(string filePath)
     {
       try
@@ -231,17 +238,20 @@ namespace EQLogParser
       }
     }
 
-    private void PlayAudioData(byte[] data, WaveFormat waveFormat)
+    private static void PlayAudioData(byte[] data, WaveFormat waveFormat)
     {
-      var bufferedWaveProvider = new BufferedWaveProvider(waveFormat);
-      bufferedWaveProvider.AddSamples(data, 0, data.Length);
-      var waveOut = new WaveOutEvent();
-      waveOut.PlaybackStopped += (sender, e) => waveOut.Dispose();
-      waveOut.Init(bufferedWaveProvider);
+      var stream = new RawSourceWaveStream(data, 0, data.Length, waveFormat);
+      var waveOut = CreateWaveOut();
+      waveOut.PlaybackStopped += (_, _) =>
+      {
+        stream.DisposeAsync();
+        waveOut.Dispose();
+      };
+      waveOut.Init(stream);
       waveOut.Play();
     }
 
-    private void ProcessAsync(string id, PlayerAudio audio)
+    private static void ProcessAsync(PlayerAudio audio)
     {
       var cancellationTokenSource = new CancellationTokenSource();
       audio.CancellationTokenSource = cancellationTokenSource;
@@ -249,6 +259,7 @@ namespace EQLogParser
       Task.Run(() =>
       {
         RawSourceWaveStream stream = null;
+
         try
         {
           while (!cancellationTokenSource.Token.IsCancellationRequested)
@@ -257,7 +268,6 @@ namespace EQLogParser
             {
               if (audio.WaveOut.PlaybackState == PlaybackState.Stopped)
               {
-                // cleanup previous stream
                 if (stream != null)
                 {
                   stream.DisposeAsync();
@@ -268,15 +278,14 @@ namespace EQLogParser
                 {
                   audio.CurrentEvent = audio.Events[0];
                   audio.Events.RemoveAt(0);
-                  stream = new RawSourceWaveStream(audio.CurrentEvent.AudioData, 0,
-                    audio.CurrentEvent.AudioData.Length, audio.CurrentEvent.WaveFormat);
+                  stream = new RawSourceWaveStream(audio.CurrentEvent.AudioData, 0, audio.CurrentEvent.AudioData.Length, audio.CurrentEvent.WaveFormat);
                   audio.WaveOut.Init(stream);
                   audio.WaveOut.Play();
                 }
               }
             }
 
-            Thread.Sleep(100);
+            Thread.Sleep(20);
           }
         }
         catch (OperationCanceledException)

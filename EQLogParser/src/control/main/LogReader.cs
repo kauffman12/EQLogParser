@@ -35,46 +35,42 @@ namespace EQLogParser
 
     public async void StartAsync()
     {
-      var exists = await WhenFileExists();
-      if (exists)
+      if (await WhenFileExists())
       {
         logProcessor.LinkTo(_lines);
         FileUtil.ArchiveFile(this);
+      }
 
-        await Task.Run(async () =>
+      try
+      {
+        await ReadFile();
+      }
+      catch (Exception)
+      {
+        Log.Warn($"Error Loading File: ${FileName}. Re-open or toggle Triggers to try again.");
+      }
+      finally
+      {
+        CleanupStreams();
+
+        if (_watcher != null)
         {
-          try
-          {
-            await ReadFile();
-          }
-          catch (Exception)
-          {
-            Log.Warn($"Error Loading File: ${FileName}. Re-open or toggle Triggers to try again.");
-          }
-          finally
-          {
-            CleanupStreams();
+          _watcher.EnableRaisingEvents = false;
+          _watcher.Dispose();
+          _watcher = null;
+        }
 
-            if (_watcher != null)
-            {
-              _watcher.EnableRaisingEvents = false;
-              _watcher.Dispose();
-              _watcher = null;
-            }
+        _cts?.Dispose();
+        _cts = null;
 
-            _cts?.Dispose();
-            _cts = null;
+        if (!_lines.IsCompleted)
+        {
+          _lines.CompleteAdding();
+        }
 
-            if (!_lines.IsCompleted)
-            {
-              _lines.CompleteAdding();
-            }
-
-            logProcessor?.Dispose();
-            logProcessor = null;
-            _invalid = true;
-          }
-        });
+        logProcessor?.Dispose();
+        logProcessor = null;
+        _invalid = true;
       }
     }
 
@@ -195,7 +191,7 @@ namespace EQLogParser
             HandleLine(line, ref previous, true);
           }
 
-          await Task.Delay(250, _cts.Token);
+          await Task.Delay(200, _cts.Token);
         }
         catch (TaskCanceledException)
         {
@@ -281,7 +277,7 @@ namespace EQLogParser
             return true;
           }
 
-          await Task.Delay(250, _cts.Token);
+          await Task.Delay(200, _cts.Token);
         }
         catch (Exception ex) when (ex is TaskCanceledException or ObjectDisposedException)
         {
@@ -330,8 +326,6 @@ namespace EQLogParser
         }
 
         _cts?.Cancel();
-        _cts?.Dispose();
-        _cts = null;
 
         if (!_lines.IsCompleted)
         {

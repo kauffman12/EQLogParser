@@ -21,9 +21,9 @@ namespace EQLogParser
       TriggerManager.Instance.EventsProcessorsUpdated += EventsProcessorsUpdated;
     }
 
-    private void EventsProcessorsUpdated(bool _)
+    private async void EventsProcessorsUpdated(bool _)
     {
-      _alertLogs = TriggerManager.Instance.GetAlertLogs().ToList();
+      _alertLogs = (await TriggerManager.Instance.GetAlertLogs()).ToList();
       if (_alertLogs != null)
       {
         var selected = logList?.SelectedItem as string;

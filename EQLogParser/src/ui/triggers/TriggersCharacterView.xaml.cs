@@ -23,7 +23,7 @@ namespace EQLogParser
       InitializeComponent();
       _statusTimer = new DispatcherTimer(DispatcherPriority.Background)
       {
-        Interval = new TimeSpan(0, 0, 0, 5),
+        Interval = new TimeSpan(0, 0, 0, 0, 2000),
       };
 
       _statusTimer.Tick += StatusTimerTick;
@@ -35,12 +35,12 @@ namespace EQLogParser
     internal TriggerCharacter GetSelectedCharacter() => dataGrid?.SelectedItem as TriggerCharacter;
     private void StatusTimerTick(object sender, EventArgs e) => UpdateStatus();
 
-    private void UpdateStatus()
+    private async void UpdateStatus()
     {
       if (dataGrid?.ItemsSource is List<TriggerCharacter> characters)
       {
         var dataChanged = false;
-        foreach (var reader in TriggerManager.Instance.GetLogReaders())
+        foreach (var reader in await TriggerManager.Instance.GetLogReadersAsync())
         {
           if (reader.GetProcessor() is TriggerProcessor processor && characters.FirstOrDefault(item => item.Id == processor?.CurrentCharacterId) is { } character)
           {
