@@ -337,6 +337,7 @@ namespace EQLogParser
         existing.Name = update.Name;
         existing.FilePath = update.FilePath;
         existing.IsEnabled = update.IsEnabled;
+        existing.IsWaiting = update.IsWaiting;
         UpdateConfig(config);
       }
     }

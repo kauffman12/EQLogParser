@@ -1,8 +1,12 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -12,20 +16,22 @@ namespace EQLogParser
     internal event Action<bool> EventsProcessorsUpdated;
     internal event Action<AlertEntry> EventsSelectTrigger;
     internal static TriggerManager Instance => Lazy.Value; // instance
-    public readonly Dictionary<string, bool> RunningFiles = [];
+    public readonly Dictionary<string, bool> RunningFiles = new();
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<TriggerManager> Lazy = new(() => new TriggerManager());
     private readonly DispatcherTimer _configUpdateTimer;
     private readonly DispatcherTimer _triggerUpdateTimer;
     private readonly DispatcherTimer _textOverlayTimer;
     private readonly DispatcherTimer _timerOverlayTimer;
-    private readonly Dictionary<string, OverlayWindowData> _textWindows = [];
-    private readonly Dictionary<string, OverlayWindowData> _timerWindows = [];
+    private readonly Dictionary<string, OverlayWindowData> _textWindows = new();
+    private readonly Dictionary<string, OverlayWindowData> _timerWindows = new();
     private readonly List<LogReader> _logReaders = [];
     private readonly TriggerNode _noDefaultOverlay = new();
     private TriggerNode _defaultTextOverlay; // cache to avoid excess queries
     private TriggerNode _defaultTimerOverlay; // cache to avoid excess queries
     private TriggerProcessor _testProcessor;
     private int _timerIncrement;
+    private static readonly SemaphoreSlim LogReadersSemaphore = new(1, 1);
 
     public TriggerManager()
     {
@@ -64,25 +70,36 @@ namespace EQLogParser
       TriggerConfigUpdateEvent(null);
     }
 
-    internal void Stop()
+    internal async void Stop()
     {
       MainActions.EventsLogLoadingComplete -= TriggerManagerEventsLogLoadingComplete;
+      await LogReadersSemaphore.WaitAsync();
 
-      lock (_logReaders)
+      try
       {
         _logReaders?.ForEach(reader => reader.Dispose());
         _logReaders?.Clear();
+      }
+      finally
+      {
+        LogReadersSemaphore.Release();
       }
 
       _textOverlayTimer?.Stop();
       _timerOverlayTimer?.Stop();
     }
 
-    internal List<LogReader> GetLogReaders()
+    internal async Task<List<LogReader>> GetLogReadersAsync()
     {
-      lock (_logReaders)
+      await LogReadersSemaphore.WaitAsync();
+
+      try
       {
         return _logReaders.ToList();
+      }
+      finally
+      {
+        LogReadersSemaphore.Release();
       }
     }
 
@@ -119,9 +136,10 @@ namespace EQLogParser
       _testProcessor = null;
     }
 
-    internal List<Tuple<string, ObservableCollection<AlertEntry>>> GetAlertLogs()
+    internal async Task<List<Tuple<string, ObservableCollection<AlertEntry>>>> GetAlertLogs()
     {
-      return GetProcessors().Select(p => Tuple.Create(p.CurrentProcessorName, p.AlertLog)).ToList();
+      var processors = await GetProcessorsAsync();
+      return processors.Select(p => Tuple.Create(p.CurrentProcessorName, p.AlertLog)).ToList();
     }
 
     private void TextTick(object sender, EventArgs e) => WindowTick(_textWindows, _textOverlayTimer);
@@ -141,7 +159,7 @@ namespace EQLogParser
       _configUpdateTimer?.Start();
     }
 
-    private void ConfigDoUpdate(object sender, EventArgs e)
+    private async void ConfigDoUpdate(object sender, EventArgs e)
     {
       _configUpdateTimer.Stop();
       UiUtil.InvokeAsync(CloseOverlays);
@@ -152,14 +170,27 @@ namespace EQLogParser
 
       if (TriggerStateManager.Instance.GetConfig() is { } config)
       {
-        lock (_logReaders)
+        await LogReadersSemaphore.WaitAsync();
+
+        try
         {
+          var startTasks = new List<Task>();
           if (config.IsAdvanced)
           {
             // Only clear out everything if switched from basic
-            if (GetProcessors().FirstOrDefault(p => p.CurrentCharacterId == TriggerStateManager.DefaultUser) != null)
+            var clearReaders = false;
+            foreach (var reader in _logReaders)
             {
-              _logReaders.ForEach(reader => reader.Dispose());
+              if (reader.GetProcessor() is TriggerProcessor { CurrentCharacterId: TriggerStateManager.DefaultUser })
+              {
+                clearReaders = true;
+                break;
+              }
+            }
+
+            if (clearReaders)
+            {
+              _logReaders.ForEach(item => item.Dispose());
               _logReaders.Clear();
             }
 
@@ -206,7 +237,8 @@ namespace EQLogParser
                 var reader = new LogReader(new TriggerProcessor(character.Id, character.Name, playerName,
                   character.Voice, character.VoiceRate, character.ActiveColor, character.FontColor, AddTextEvent, AddTimerEvent), character.FilePath);
                 _logReaders.Add(reader);
-                reader.StartAsync();
+
+                startTasks.Add(Task.Run(() => reader.StartAsync()));
                 RunningFiles[character.FilePath] = true;
               }
             }
@@ -227,7 +259,7 @@ namespace EQLogParser
                     ConfigUtil.PlayerName, config.Voice, config.VoiceRate, null, null, AddTextEvent, AddTimerEvent),
                   currentFile);
                 _logReaders.Add(reader);
-                reader.StartAsync();
+                startTasks.Add(Task.Run(() => reader.StartAsync()));
                 MainActions.ShowTriggersEnabled(true);
 
                 // only 1 running file in basic mode
@@ -241,17 +273,24 @@ namespace EQLogParser
               RunningFiles.Clear();
             }
           }
+
+          await Task.WhenAll(startTasks);
+        }
+        finally
+        {
+          LogReadersSemaphore.Release();
         }
 
         EventsProcessorsUpdated?.Invoke(true);
       }
     }
 
-    private void TriggersDoUpdate(object sender, EventArgs e)
+    private async void TriggersDoUpdate(object sender, EventArgs e)
     {
       _triggerUpdateTimer.Stop();
       CloseOverlays();
-      GetProcessors().ForEach(p => p.UpdateActiveTriggers());
+      var processors = await GetProcessorsAsync();
+      processors.ForEach(p => p.UpdateActiveTriggers());
     }
 
     private void CloseOverlay(string id, params Dictionary<string, OverlayWindowData>[] windowList)
@@ -291,11 +330,13 @@ namespace EQLogParser
       });
     }
 
-    private List<TriggerProcessor> GetProcessors()
+    private async Task<List<TriggerProcessor>> GetProcessorsAsync()
     {
-      var list = new List<TriggerProcessor>();
-      lock (_logReaders)
+      await LogReadersSemaphore.WaitAsync();
+
+      try
       {
+        var list = new List<TriggerProcessor>();
         foreach (var reader in _logReaders)
         {
           if (reader.GetProcessor() is TriggerProcessor processor)
@@ -308,8 +349,12 @@ namespace EQLogParser
         {
           list.Add(_testProcessor);
         }
+        return list;
       }
-      return list;
+      finally
+      {
+        LogReadersSemaphore.Release();
+      }
     }
 
     private void TimerTick(object sender, EventArgs e)
@@ -326,7 +371,7 @@ namespace EQLogParser
     private void WindowTick(Dictionary<string, OverlayWindowData> windows, DispatcherTimer dispatchTimer, int increment = 10)
     {
       var removeList = new List<string>();
-      var data = GetProcessors().SelectMany(processor => processor.GetActiveTimers()).ToList();
+      var data = GetProcessorsAsync().Result.SelectMany(processor => processor.GetActiveTimers()).ToList();
 
       foreach (var kv in windows)
       {

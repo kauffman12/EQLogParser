@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "EQLogParser"
-#define MyAppVersion "2.2.29"
+#define MyAppVersion "2.2.30"
 #define MyAppPublisher "Kizant"
 #define MyAppURL "https://github.com/kauffman12/EQLogParser"
 #define MyAppExeName "EQLogParser.exe"
