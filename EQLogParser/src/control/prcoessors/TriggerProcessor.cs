@@ -333,6 +333,7 @@ namespace EQLogParser
     {
       lock (wrapper)
       {
+        var cleanup = new List<TimerData>();
         foreach (var timerData in CollectionsMarshal.AsSpan(wrapper.TimerList))
         {
           var endEarly = CheckEndEarly(timerData.EndEarlyRegex, timerData.EndEarlyRegexNOptions, timerData.EndEarlyPattern,
@@ -376,9 +377,12 @@ namespace EQLogParser
               _speakCollection.Add(speak);
             }
 
-            CleanupTimer(wrapper, timerData);
+            cleanup.Add(timerData);
           }
         }
+
+        // cleanup timers after we've finished iterating over the list
+        cleanup.ForEach(timerData => CleanupTimer(wrapper, timerData));
       }
     }
 
