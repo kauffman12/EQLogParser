@@ -1,6 +1,7 @@
 ﻿using log4net;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -135,7 +136,9 @@ namespace EQLogParser
         }
 
         var fileInfo = new FileInfo(path);
-        if (fileInfo.CreationTimeUtc > DateTime.UtcNow.Subtract(TimeSpan.FromDays(ArchiveFileAges[savedFileAge])))
+        var creationTime = fileInfo.CreationTimeUtc;
+
+        if (creationTime > DateTime.UtcNow.Subtract(TimeSpan.FromDays(ArchiveFileAges[savedFileAge])))
         {
           continue;
         }
@@ -163,10 +166,23 @@ namespace EQLogParser
 
           File.Move(path, destination);
 
-          // create new empty file
           try
           {
+            // create new empty file or EQ may do this for us
             File.CreateText(path);
+          }
+          catch (Exception)
+          {
+            // ignore
+          }
+
+          try
+          {
+            // fix creation time as a workaround
+            var updatedFileInfo = new FileInfo(path)
+            {
+              CreationTime = DateTime.Now
+            };
           }
           catch (Exception)
           {
@@ -179,7 +195,7 @@ namespace EQLogParser
             CompressFile(destination);
           }
 
-          Log.Info($"Archived File: {path}");
+          Log.Info($"Archived File (Originally Created {creationTime.ToLocalTime().ToString(CultureInfo.InvariantCulture)}): {path}");
 
           // pause before archiving each file
           Task.Delay(100);
