@@ -1,6 +1,16 @@
 {\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Segoe UI;}{\f1\fnil\fcharset2 Symbol;}}
 {\*\generator Riched20 10.0.22621}\viewkind4\uc1 
-\pard\ul\f0\fs20\lang1033 Updates in Version 2.2.31\ulnone\par
+\pard\ul\f0\fs20\lang1033 Updates in Version 2.2.33\ulnone\par
+\par
+
+\pard 
+{\pntext\f0 1.\tab}{\*\pn\pnlvlbody\pnf0\pnindent0\pnstart1\pndec{\pntxta.}}
+\fi-360\li720 Added additional Volume setting Triggers. If Increase by 80% is chosen then it will increase the current Volume level by that amount for just that Trigger. Note that the total percentage can not go above 100% or below 0%. So, if you're Volume defaults to 100% don't expect it to get any louder. You'll have to set your Default to something in the middle so that the increase/decrease percentage means something. It's done this way so that the Trigger Volume is always relative to your parser's Volume.\par
+{\pntext\f0 2.\tab}Fix for Log Archive sometimes archiving the same file over and over again. The file Creation Date is now set by the parser when Archive happens. So far, it's been working.\par
+{\pntext\f0 3.\tab}Added auto-delete of trigger database backup files that are created by LiteDB. There's a bug where it's not cleaning those files up on its own so I'm doing for now.\ul\par
+
+\pard\par
+Updates in Version 2.2.31\ulnone\par
 \par
 
 \pard 
