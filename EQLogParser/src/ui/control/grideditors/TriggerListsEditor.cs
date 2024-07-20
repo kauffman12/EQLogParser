@@ -34,6 +34,11 @@ namespace EQLogParser
       { "TimerMode", ["Standard", "Cooldown"] },
       { "TimerType", ["No Timer", "Countdown", "Fast Countdown", "Progress", "Looping"] },
       { "FontFamily", UiElementUtil.GetSystemFontFamilies().Select(font => font.Source).ToList() },
+      { "Volume", [
+        "Increase by 80%", "Increase by 60%", "Increase by 40%", "Increase by 20%", "Default",
+        "Decrease by 20%", "Decrease by 40%", "Decrease by 60%", "Decrease by 80%"
+        ]
+      }
     };
 
     private static readonly Dictionary<string, DependencyProperty> Props = new()
@@ -43,7 +48,8 @@ namespace EQLogParser
       { "SortBy", Selector.SelectedIndexProperty },
       { "TimerMode", Selector.SelectedIndexProperty },
       { "TimerType", Selector.SelectedIndexProperty },
-      { "FontFamily", Selector.SelectedValueProperty }
+      { "FontFamily", Selector.SelectedValueProperty },
+      { "Volume", Selector.SelectedIndexProperty }
     };
 
     public override void Attach(PropertyViewItem property, PropertyItem info)

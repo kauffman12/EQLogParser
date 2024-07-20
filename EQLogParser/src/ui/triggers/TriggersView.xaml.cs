@@ -79,7 +79,7 @@ namespace EQLogParser
       AddEditor<ExampleTimerBar>("TimerBarPreview");
       AddEditor<OptionalColorEditor>("TriggerActiveBrush", "TriggerFontBrush");
       AddEditor<OptionalIconEditor>("TriggerIconSource");
-      AddEditor<TriggerListsEditor>("TriggerAgainOption", "FontSize", "FontFamily", "SortBy", "TimerMode", "TimerType");
+      AddEditor<TriggerListsEditor>("TriggerAgainOption", "FontSize", "FontFamily", "SortBy", "TimerMode", "TimerType", "Volume");
       AddEditor<WrapTextEditor>("EndEarlyTextToDisplay", "EndTextToDisplay", "TextToDisplay", "TextToShare",
         "WarningTextToDisplay", "Comments", "OverlayComments");
       AddEditorInstance(new RangeEditor(typeof(double), 0.2, 2.0), "DurationSeconds");

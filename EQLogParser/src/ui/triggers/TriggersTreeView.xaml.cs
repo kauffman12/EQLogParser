@@ -61,16 +61,16 @@ namespace EQLogParser
     internal void SetConfig(TriggerConfig config) => _theConfig = config;
     internal void SelectNode(string id) => SelectNode(triggerTreeView, id);
 
-    internal void PlayTts(string text)
+    internal void PlayTts(string text, int volume = 4)
     {
       var config = TriggerStateManager.Instance.GetConfig();
       if (!config.IsAdvanced)
       {
-        AudioManager.Instance.TestSpeakTtsAsync(text, config.Voice, config.VoiceRate);
+        AudioManager.Instance.TestSpeakTtsAsync(text, config.Voice, config.VoiceRate, volume);
       }
       else if (config.Characters.FirstOrDefault(character => character.Id == _currentCharacterId) is { } found)
       {
-        AudioManager.Instance.TestSpeakTtsAsync(text, found.Voice, found.VoiceRate);
+        AudioManager.Instance.TestSpeakTtsAsync(text, found.Voice, found.VoiceRate, volume);
       }
       else
       {
