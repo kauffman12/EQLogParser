@@ -198,6 +198,22 @@ namespace EQLogParser
       {
         Log.Error(ex);
       }
+
+      if (Directory.Exists(ConfigUtil.ConfigDir))
+      {
+        try
+        {
+          // cleanup old backup files that are left around from rebuild (bug in litedb)
+          foreach (var file in Directory.GetFiles(ConfigUtil.ConfigDir, "triggers-backup*.db"))
+          {
+            File.Delete(file);
+          }
+        }
+        catch (Exception)
+        {
+          // ignore
+        }
+      }
     }
 
     internal void Stop()

@@ -1,6 +1,7 @@
 ﻿using log4net;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -79,7 +80,8 @@ namespace EQLogParser
     {
       if (_session?.SimpleAudioVolume?.Volume != null)
       {
-        _session.SimpleAudioVolume.Volume = volume / 100.0f;
+        var update = volume / 100.0f;
+        _session.SimpleAudioVolume.Volume = update;
       }
     }
 
@@ -119,7 +121,7 @@ namespace EQLogParser
       }
     }
 
-    internal async void TestSpeakTtsAsync(string tts, string voice = null, int rate = 1)
+    internal async void TestSpeakTtsAsync(string tts, string voice = null, int rate = 1, int volume = 4)
     {
       if (!string.IsNullOrEmpty(tts) && CreateSpeechSynthesizer() is var synth && synth != null)
       {
@@ -129,12 +131,12 @@ namespace EQLogParser
         if (await SynthesizeTextToByteArrayAsync(synth, tts) is { } data)
         {
           var waveFormat = new WaveFormat(16000, 16, 1);
-          PlayAudioData(data, waveFormat);
+          PlayAudioData(data, waveFormat, volume);
         }
       }
     }
 
-    internal async void SpeakFileAsync(string id, string filePath, long priority = 5)
+    internal async void SpeakFileAsync(string id, string filePath, Trigger trigger)
     {
       if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(filePath))
       {
@@ -143,7 +145,7 @@ namespace EQLogParser
           if (await ReadFileToByteArrayAsync(filePath) is { Length: > 0 } data)
           {
             var reader = new WaveFileReader(filePath);
-            SpeakAsync(id, data, reader.WaveFormat, priority);
+            SpeakAsync(id, data, reader.WaveFormat, trigger.Priority, trigger.Volume);
           }
         }
         catch (Exception ex)
@@ -153,7 +155,7 @@ namespace EQLogParser
       }
     }
 
-    internal async void SpeakTtsAsync(string id, SpeechSynthesizer synth, string tts, long priority = 5)
+    internal async void SpeakTtsAsync(string id, SpeechSynthesizer synth, string tts, Trigger trigger)
     {
       if (!string.IsNullOrEmpty(id) && synth != null && !string.IsNullOrEmpty(tts))
       {
@@ -175,7 +177,7 @@ namespace EQLogParser
         if (data is { Length: > 0 })
         {
           var waveFormat = new WaveFormat(16000, 16, 1);
-          SpeakAsync(id, data, waveFormat, priority);
+          SpeakAsync(id, data, waveFormat, trigger.Priority, trigger.Volume);
         }
       }
     }
@@ -221,14 +223,14 @@ namespace EQLogParser
       }
     }
 
-    private void SpeakAsync(string id, byte[] audioData, WaveFormat waveFormat, long priority = 5)
+    private void SpeakAsync(string id, byte[] audioData, WaveFormat waveFormat, long priority = 5, int volume = 4)
     {
       if (_playerAudios.TryGetValue(id, out var playerAudio))
       {
         lock (playerAudio)
         {
           playerAudio.Events = playerAudio.Events.Where(pa => pa.Priority <= priority).ToList();
-          playerAudio.Events.Add(new PlaybackEvent { AudioData = audioData, WaveFormat = waveFormat, Priority = priority });
+          playerAudio.Events.Add(new PlaybackEvent { AudioData = audioData, WaveFormat = waveFormat, Priority = priority, Volume = volume });
           if (playerAudio.CurrentEvent != null && playerAudio.WaveOut.PlaybackState != PlaybackState.Stopped && playerAudio.CurrentEvent.Priority > priority)
           {
             playerAudio.WaveOut.Stop();
@@ -238,17 +240,56 @@ namespace EQLogParser
       }
     }
 
-    private static void PlayAudioData(byte[] data, WaveFormat waveFormat)
+    internal static double GetSpeakingRate(int oldRate) => 1.0 + (oldRate / 10.0 * 1.6);
+
+    internal static VoiceInformation GetVoice(string name)
+    {
+      return SpeechSynthesizer.AllVoices.FirstOrDefault(voice => voice.DisplayName == name || name?.StartsWith(voice.DisplayName) == true)
+             ?? SpeechSynthesizer.DefaultVoice;
+    }
+
+    private static void PlayAudioData(byte[] data, WaveFormat waveFormat, int volume = 4)
     {
       var stream = new RawSourceWaveStream(data, 0, data.Length, waveFormat);
       var waveOut = CreateWaveOut();
+
       waveOut.PlaybackStopped += (_, _) =>
       {
         stream.DisposeAsync();
         waveOut.Dispose();
       };
-      waveOut.Init(stream);
+
+      var provider = new VolumeSampleProvider(stream.ToSampleProvider())
+      {
+        Volume = ConvertVolume(waveOut.Volume, volume)
+      };
+
+      waveOut.Init(provider);
       waveOut.Play();
+    }
+
+    private static float ConvertVolume(float current, int increase)
+    {
+      var newValue = current *
+                     increase switch
+                     {
+                       0 => 1.8f,
+                       1 => 1.6f,
+                       2 => 1.4f,
+                       3 => 1.2f,
+                       5 => 0.8f,
+                       6 => 0.6f,
+                       7 => 0.4f,
+                       8 => 0.2f,
+                       _ => 1.0f
+                     };
+
+      return newValue switch
+      {
+        < 0 => 0.0f,
+        > 1.0f => 1.0f,
+        _ => newValue
+      };
     }
 
     private static void ProcessAsync(PlayerAudio audio)
@@ -278,8 +319,14 @@ namespace EQLogParser
                 {
                   audio.CurrentEvent = audio.Events[0];
                   audio.Events.RemoveAt(0);
+
                   stream = new RawSourceWaveStream(audio.CurrentEvent.AudioData, 0, audio.CurrentEvent.AudioData.Length, audio.CurrentEvent.WaveFormat);
-                  audio.WaveOut.Init(stream);
+                  var provider = new VolumeSampleProvider(stream.ToSampleProvider())
+                  {
+                    Volume = ConvertVolume(audio.WaveOut.Volume, audio.CurrentEvent.Volume)
+                  };
+
+                  audio.WaveOut.Init(provider);
                   audio.WaveOut.Play();
                 }
               }
@@ -317,14 +364,6 @@ namespace EQLogParser
       }
     }
 
-    internal static double GetSpeakingRate(int oldRate) => 1.0 + (oldRate / 10.0 * 1.6);
-
-    internal static VoiceInformation GetVoice(string name)
-    {
-      return SpeechSynthesizer.AllVoices.FirstOrDefault(voice => voice.DisplayName == name || name?.StartsWith(voice.DisplayName) == true)
-             ?? SpeechSynthesizer.DefaultVoice;
-    }
-
     private class PlayerAudio
     {
       internal WaveOutEvent WaveOut { get; } = new();
@@ -336,6 +375,7 @@ namespace EQLogParser
     private class PlaybackEvent
     {
       internal long Priority { get; init; } = -1;
+      internal int Volume { get; init; } = 4;
       internal byte[] AudioData { get; init; }
       internal WaveFormat WaveFormat { get; init; }
     }

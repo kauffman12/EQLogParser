@@ -396,7 +396,6 @@ namespace EQLogParser
           if (wrapper.LockedOutTicks > 0 && beginTicks <= wrapper.LockedOutTicks)
           {
             // during lockout do nothing
-            Log.Warn("LOCKOUT");
             return;
           }
 
@@ -690,7 +689,7 @@ namespace EQLogParser
           // we don't start playing a sound at the same time we try to stop them all
           lock (_voiceLock)
           {
-            AudioManager.Instance.SpeakFileAsync(CurrentCharacterId, theFile, speak.Wrapper.TriggerData.Priority);
+            AudioManager.Instance.SpeakFileAsync(CurrentCharacterId, theFile, speak.Wrapper.TriggerData);
           }
         }
         else
@@ -716,7 +715,7 @@ namespace EQLogParser
                 tts = ReplaceBadCharsRegex().Replace(tts, string.Empty);
                 lock (_voiceLock)
                 {
-                  AudioManager.Instance.SpeakTtsAsync(CurrentCharacterId, _synth, tts, speak.Wrapper.TriggerData.Priority);
+                  AudioManager.Instance.SpeakTtsAsync(CurrentCharacterId, _synth, tts, speak.Wrapper.TriggerData);
                 }
               }
             }

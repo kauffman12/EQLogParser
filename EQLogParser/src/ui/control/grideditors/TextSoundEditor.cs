@@ -104,9 +104,12 @@ namespace EQLogParser
 
     private void TestButtonOnClick(object sender, RoutedEventArgs e)
     {
-      if (!string.IsNullOrEmpty(_theRealTextBox.Text) && sender is Button { DataContext: PropertyItem { SelectedObject: TriggerPropertyModel { DataContext: TriggersTreeView view } } })
+      if (!string.IsNullOrEmpty(_theRealTextBox.Text) && sender is Button { DataContext: PropertyItem { SelectedObject: TriggerPropertyModel model } })
       {
-        view.PlayTts(_theRealTextBox.Text);
+        if (model.DataContext is TriggersTreeView view)
+        {
+          view.PlayTts(_theRealTextBox.Text, model.Volume);
+        }
       }
     }
 

@@ -186,6 +186,7 @@ namespace EQLogParser
     public string TextToShare { get; set; }
     public long TimesToLoop { get; set; }
     public double LockoutTime { get; set; }
+    public int Volume { get; set; } = 4; // no increase
   }
 
   internal class TimerOverlayPropertyModel : Overlay
