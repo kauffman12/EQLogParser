@@ -57,6 +57,7 @@ namespace EQLogParser
         var path = ConfigUtil.GetTriggersDbFile();
         if (!string.IsNullOrEmpty(path))
         {
+          var needUpgrade = !File.Exists(path);
           try
           {
             _db = new LiteDatabase(path)
@@ -64,9 +65,7 @@ namespace EQLogParser
               CheckpointSize = 10
             };
 
-            _db.Rebuild();
-
-            Init();
+            Init(needUpgrade);
           }
           catch (Exception ex)
           {
@@ -74,45 +73,17 @@ namespace EQLogParser
             {
               Log.Warn("Trigger Database already in use.");
             }
-            else
-            {
-              Log.Error(ex);
-
-              try
-              {
-                if (!string.IsNullOrEmpty(path))
-                {
-                  _db?.Dispose();
-                  File.Delete(path);
-
-                  _db = new LiteDatabase(path)
-                  {
-                    CheckpointSize = 10
-                  };
-
-                  _db.Rebuild();
-
-                  Init();
-                }
-              }
-              catch (Exception)
-              {
-                Log.Error(ex);
-              }
-            }
           }
         }
       }
     }
 
-    internal void Init()
+    private void Init(bool needUpgrade)
     {
       var path = ConfigUtil.GetTriggersDbFile();
 
       try
       {
-        var needUpgrade = !File.Exists(path);
-
         if (needUpgrade)
         {
           // upgrade from old json trigger format
