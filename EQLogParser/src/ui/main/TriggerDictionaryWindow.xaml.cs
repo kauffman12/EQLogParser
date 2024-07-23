@@ -22,10 +22,19 @@ namespace EQLogParser
       InitializeComponent();
       Owner = MainActions.GetOwner();
 
-      foreach (var item in TriggerStateManager.Instance.GetLexicon())
+      TriggerStateManager.Instance.GetLexicon().ContinueWith(task =>
       {
-        _items.Add(item);
-      }
+        if (task.Result != null)
+        {
+          Dispatcher.Invoke(() =>
+          {
+            foreach (var item in task.Result)
+            {
+              _items.Add(item);
+            }
+          });
+        }
+      });
 
       dataGrid.ItemsSource = _items;
       _treeView = view;
@@ -49,10 +58,10 @@ namespace EQLogParser
 
     private void CloseClicked(object sender, RoutedEventArgs e) => Close();
 
-    private void SaveClicked(object sender, RoutedEventArgs e)
+    private async void SaveClicked(object sender, RoutedEventArgs e)
     {
       CleanupTable();
-      TriggerStateManager.Instance.SaveLexicon([.. _items]);
+      await TriggerStateManager.Instance.SaveLexicon([.. _items]);
       saveButton.IsEnabled = false;
     }
 

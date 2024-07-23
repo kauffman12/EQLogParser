@@ -16,7 +16,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
-using Path = System.IO.Path;
 
 namespace EQLogParser
 {
@@ -27,8 +26,8 @@ namespace EQLogParser
     private static readonly ConcurrentDictionary<string, CharacterData> QuickShareCache = new();
     private const string ExtTrigger = "tgf";
     private const string ExtOverlay = "ogf";
-    internal static void ImportTriggers(TriggerNode parent) => Import(parent);
-    internal static void ImportOverlays(TriggerNode triggerNode) => Import(triggerNode, false);
+    internal static async Task ImportTriggers(TriggerNode parent) => await Import(parent);
+    internal static async Task ImportOverlays(TriggerNode triggerNode) => await Import(triggerNode, false);
 
     private static readonly Size OriginalResolution = new(1920, 1080); // Hard-coded original screen resolution
     private const double OriginalTop = 550; // Hard-coded original top position
@@ -74,7 +73,7 @@ namespace EQLogParser
       return isValid;
     }
 
-    internal static void Copy(object to, object from)
+    internal static async Task Copy(object to, object from)
     {
       if (to is Trigger toTrigger && from is Trigger fromTrigger)
       {
@@ -118,7 +117,7 @@ namespace EQLogParser
           toModel.TriggerFontBrush = UiUtil.GetBrush(fromTrigger.FontColor);
           toModel.TriggerIconSource = UiElementUtil.CreateBitmap(fromTrigger.IconSource);
 
-          var (textItems, timerItems) = GetOverlayItems(toModel.SelectedOverlays);
+          var (textItems, timerItems) = await GetOverlayItems(toModel.SelectedOverlays);
           toModel.SelectedTextOverlays = textItems;
           toModel.SelectedTimerOverlays = timerItems;
           toModel.ResetDurationTimeSpan = new TimeSpan(0, 0, (int)toModel.ResetDurationSeconds);
@@ -257,21 +256,21 @@ namespace EQLogParser
       }
     }
 
-    internal static void LoadOverlayStyles()
+    internal static async Task LoadOverlayStyles()
     {
-      foreach (var od in TriggerStateManager.Instance.GetAllOverlays())
+      foreach (var od in await TriggerStateManager.Instance.GetAllOverlays())
       {
         var node = new TriggerNode { Name = od.Name, Id = od.Id, OverlayData = od.OverlayData };
         Application.Current.Resources["OverlayText-" + od.Id] = od.Name;
         if (od.OverlayData?.IsTextOverlay == true)
         {
           // workaround to load styles
-          Copy(new TextOverlayPropertyModel { Node = node }, od.OverlayData);
+          await Copy(new TextOverlayPropertyModel { Node = node }, od.OverlayData);
         }
         else if (od.OverlayData?.IsTextOverlay == false)
         {
           // workaround to load styles
-          Copy(new TimerOverlayPropertyModel { Node = node }, od.OverlayData);
+          await Copy(new TimerOverlayPropertyModel { Node = node }, od.OverlayData);
         }
       }
     }
@@ -287,13 +286,12 @@ namespace EQLogParser
       }
     }
 
-    private static (ObservableCollection<ComboBoxItemDetails>, ObservableCollection<ComboBoxItemDetails>)
-      GetOverlayItems(List<string> overlayIds)
+    private static async Task<(ObservableCollection<ComboBoxItemDetails>, ObservableCollection<ComboBoxItemDetails>)> GetOverlayItems(List<string> overlayIds)
     {
       var text = new ObservableCollection<ComboBoxItemDetails>();
       var timer = new ObservableCollection<ComboBoxItemDetails>();
 
-      foreach (var data in TriggerStateManager.Instance.GetAllOverlays())
+      foreach (var data in await TriggerStateManager.Instance.GetAllOverlays())
       {
         var isChecked = overlayIds?.Contains(data.Id) ?? false;
         var details = new ComboBoxItemDetails { IsChecked = isChecked, Text = data.Name, Value = data.Id };
@@ -313,7 +311,7 @@ namespace EQLogParser
     internal static string GetFromCodedSoundOrText(string soundToPlay, string text, out bool isSound)
     {
       isSound = false;
-      if (!string.IsNullOrEmpty(soundToPlay) && soundToPlay.EndsWith(".wav"))
+      if (!string.IsNullOrEmpty(soundToPlay) && SoundFileRegex().IsMatch(soundToPlay))
       {
         isSound = true;
         return "<<" + soundToPlay + ">>";
@@ -325,7 +323,7 @@ namespace EQLogParser
     internal static string GetFromDecodedSoundOrText(string soundToPlay, string text, out bool isSound)
     {
       isSound = false;
-      if (!string.IsNullOrEmpty(soundToPlay) && soundToPlay.EndsWith(".wav"))
+      if (!string.IsNullOrEmpty(soundToPlay) && SoundFileRegex().IsMatch(soundToPlay))
       {
         isSound = true;
         return soundToPlay;
@@ -341,7 +339,7 @@ namespace EQLogParser
       var success = false;
       if (!string.IsNullOrEmpty(text))
       {
-        var match = WavFileRegex().Match(text);
+        var match = SoundFileTextRegex().Match(text);
         if (match.Success)
         {
           file = match.Groups[1].Value;
@@ -468,11 +466,10 @@ namespace EQLogParser
         if (Directory.Exists("data/sounds"))
         {
           LoadSounds(fileList);
-          watcher = new FileSystemWatcher(@"data/sounds");
+          watcher = new FileSystemWatcher("data/sounds");
           watcher.Created += (_, _) => OnWatcherUpdated(fileList);
           watcher.Deleted += (_, _) => OnWatcherUpdated(fileList);
           watcher.Changed += (_, _) => OnWatcherUpdated(fileList);
-          watcher.Filter = "*.wav";
           watcher.EnableRaisingEvents = true;
         }
       }
@@ -489,9 +486,16 @@ namespace EQLogParser
       }
     }
 
+    private static void Watcher_Deleted(object sender, FileSystemEventArgs e)
+    {
+      throw new NotImplementedException();
+    }
+
     private static void LoadSounds(ObservableCollection<string> fileList)
     {
-      var current = Directory.GetFiles("data/sounds", "*.wav").Select(Path.GetFileName).OrderBy(file => file).ToList();
+      var current = Directory.GetFiles("data/sounds", "*.*")
+        .Where(file => SoundFileRegex().IsMatch(file))
+        .Select(Path.GetFileName).OrderBy(file => file).ToList();
 
       UiUtil.InvokeNow(() =>
       {
@@ -806,7 +810,7 @@ namespace EQLogParser
         var player = quickShareData.Sender;
         var characterIds = quickShareData.CharacterIds;
 
-        UiUtil.InvokeAsync(() =>
+        UiUtil.InvokeAsync(async () =>
         {
           var nodes = JsonSerializer.Deserialize<List<ExportTriggerNode>>(data, new JsonSerializerOptions { IncludeFields = true });
           if (nodes.Count > 0 && nodes[0].Nodes.Count == 0)
@@ -834,13 +838,13 @@ namespace EQLogParser
 
             if (msgDialog.IsYes2Clicked)
             {
-              TriggerStateManager.Instance.ImportTriggers("", nodes, characterIds);
+              await TriggerStateManager.Instance.ImportTriggers("", nodes, characterIds);
             }
             if (msgDialog.IsYes1Clicked)
             {
               var folderName = (player == null) ? "New Folder" : "From " + player;
               folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
-              TriggerStateManager.Instance.ImportTriggers(folderName, nodes, characterIds);
+              await TriggerStateManager.Instance.ImportTriggers(folderName, nodes, characterIds);
             }
           }
 
@@ -876,7 +880,7 @@ namespace EQLogParser
       return exportList;
     }
 
-    private static void Import(TriggerNode parent, bool triggers = true)
+    private static async Task Import(TriggerNode parent, bool triggers = true)
     {
       try
       {
@@ -901,24 +905,27 @@ namespace EQLogParser
             {
               var decompressionStream = new GZipStream(fileInfo.OpenRead(), CompressionMode.Decompress);
               var reader = new StreamReader(decompressionStream);
-              var json = reader.ReadToEnd();
+              var json = await reader.ReadToEndAsync();
               reader.Close();
               var data = JsonSerializer.Deserialize<List<ExportTriggerNode>>(json, new JsonSerializerOptions { IncludeFields = true });
               if (triggers)
               {
-                TriggerStateManager.Instance.ImportTriggers(parent, data);
+                await TriggerStateManager.Instance.ImportTriggers(parent, data);
               }
               else
               {
-                TriggerStateManager.Instance.ImportOverlays(parent, data);
+                await TriggerStateManager.Instance.ImportOverlays(parent, data);
               }
             }
             else if (dialog.FileName.EndsWith(".gtp"))
             {
               var data = new byte[fileInfo.Length];
-              fileInfo.OpenRead().Read(data);
-              var imported = GinaUtil.CovertToTriggerNodes(data);
-              TriggerStateManager.Instance.ImportTriggers(parent, imported);
+              var read = fileInfo.OpenRead().Read(data);
+              if (read > 0)
+              {
+                var imported = GinaUtil.CovertToTriggerNodes(data);
+                await TriggerStateManager.Instance.ImportTriggers(parent, imported);
+              }
             }
           }
         }
@@ -974,8 +981,11 @@ namespace EQLogParser
       }
     }
 
-    [GeneratedRegex(@"<<(.*\.wav)>>$", RegexOptions.IgnoreCase)]
-    private static partial Regex WavFileRegex();
+    [GeneratedRegex(@"<<(.*\.(wav|mp3))>>$", RegexOptions.IgnoreCase)]
+    private static partial Regex SoundFileTextRegex();
+
+    [GeneratedRegex(@"\.(wav|mp3)$", RegexOptions.IgnoreCase, "en-US")]
+    private static partial Regex SoundFileRegex();
 
     [GeneratedRegex(@"\{(TS|[sn](?:\s*[0-9]+\s*|\s*[><]=?\s*[0-9]+\s*|=\s*[0-9]+\s*)?)\}", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
     private static partial Regex TestRegex();

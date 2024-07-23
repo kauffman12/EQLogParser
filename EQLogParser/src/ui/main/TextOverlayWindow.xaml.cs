@@ -153,7 +153,7 @@ namespace EQLogParser
 
       // create cache of blocks needed to cover Overlay height
       var max = (Height / blockSize) + 1;
-      _blockCache = Enumerable.Range(0, (int)max).Select(b =>
+      _blockCache = Enumerable.Range(0, (int)max).Select(_ =>
       {
         var block = new TextBlock
         {
@@ -199,7 +199,7 @@ namespace EQLogParser
       _savedLeft = (long)Left;
     }
 
-    private void SaveClick(object sender, RoutedEventArgs e)
+    private async void SaveClick(object sender, RoutedEventArgs e)
     {
       _node.OverlayData.Height = _savedHeight = (long)Height;
       _node.OverlayData.Width = _savedWidth = (long)Width;
@@ -208,8 +208,8 @@ namespace EQLogParser
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
-      TriggerStateManager.Instance.Update(_node);
-      TriggerManager.Instance.CloseOverlay(_node.Id);
+      await TriggerStateManager.Instance.Update(_node);
+      await TriggerManager.Instance.CloseOverlay(_node.Id);
     }
 
     private void CancelClick(object sender, RoutedEventArgs e)

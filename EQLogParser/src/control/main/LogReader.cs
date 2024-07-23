@@ -33,7 +33,7 @@ namespace EQLogParser
     public bool IsWaiting() => _waiting;
     public bool IsInValid() => _invalid;
 
-    public async void StartAsync()
+    public async void Start()
     {
       if (await WhenFileExists())
       {

@@ -102,13 +102,13 @@ namespace EQLogParser
       return _grid;
     }
 
-    private void TestButtonOnClick(object sender, RoutedEventArgs e)
+    private async void TestButtonOnClick(object sender, RoutedEventArgs e)
     {
       if (!string.IsNullOrEmpty(_theRealTextBox.Text) && sender is Button { DataContext: PropertyItem { SelectedObject: TriggerPropertyModel model } })
       {
         if (model.DataContext is TriggersTreeView view)
         {
-          view.PlayTts(_theRealTextBox.Text, model.Volume);
+          await view.PlayTts(_theRealTextBox.Text, model.Volume);
         }
       }
     }

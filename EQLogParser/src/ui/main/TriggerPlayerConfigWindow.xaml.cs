@@ -97,19 +97,19 @@ namespace EQLogParser
       }
     }
 
-    private void SaveClicked(object sender, RoutedEventArgs e)
+    private async void SaveClicked(object sender, RoutedEventArgs e)
     {
       var activeColor = activeColorPicker.Visibility == Visibility.Visible ? activeColorPicker?.Color.ToHexString() : null;
       var fontColor = fontColorPicker.Visibility == Visibility.Visible ? fontColorPicker?.Color.ToHexString() : null;
 
       if (_theCharacter == null)
       {
-        TriggerStateManager.Instance.AddCharacter(characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(),
+        await TriggerStateManager.Instance.AddCharacter(characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(),
           rateOption.SelectedIndex, activeColor, fontColor);
       }
       else
       {
-        TriggerStateManager.Instance.UpdateCharacter(_theCharacter.Id, characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(),
+        await TriggerStateManager.Instance.UpdateCharacter(_theCharacter.Id, characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(),
           rateOption.SelectedIndex, activeColor, fontColor);
       }
 

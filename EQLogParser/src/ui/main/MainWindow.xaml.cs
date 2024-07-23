@@ -190,7 +190,7 @@ namespace EQLogParser
       MainActions.AddDocumentWindows(dockSite);
     }
 
-    private void MainWindowOnLoaded(object sender, RoutedEventArgs args)
+    private async void MainWindowOnLoaded(object sender, RoutedEventArgs args)
     {
       try
       {
@@ -251,20 +251,21 @@ namespace EQLogParser
         };
 
         // Init Trigger Manager
-        TriggerManager.Instance.Start();
+        await TriggerStateManager.Instance.Start();
+        await TriggerManager.Instance.Start();
         ConfigUtil.UpdateStatus("Trigger Manager Started");
 
         // cleanup downloads
-        Task.Delay(250).ContinueWith(_ => MainActions.Cleanup());
+        await Task.Delay(250).ContinueWith(_ => MainActions.Cleanup());
 
         // start save timer
         _saveTimer.Start();
 
         // send done a little after the last block
-        Task.Delay(1000).ContinueWith(_ => ConfigUtil.UpdateStatus("Done"));
+        await Task.Delay(1000).ContinueWith(_ => ConfigUtil.UpdateStatus("Done"));
 
         // last delay splash screen and auto monitor
-        Task.Delay(500).ContinueWith(_ =>
+        await Task.Delay(500).ContinueWith(_ =>
         {
           // check need monitor
           var previousFile = ConfigUtil.GetSetting("LastOpenedFile");
@@ -326,20 +327,20 @@ namespace EQLogParser
       }
     }
 
-    private void SystemEventsPowerModeChanged(object sender, PowerModeChangedEventArgs e)
+    private async void SystemEventsPowerModeChanged(object sender, PowerModeChangedEventArgs e)
     {
       switch (e.Mode)
       {
         case PowerModes.Suspend:
           Log.Warn("Suspending");
           ConfigUtil.Save();
-          TriggerManager.Instance.Stop();
+          await TriggerManager.Instance.Stop();
           DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
           CloseDamageOverlay();
           break;
         case PowerModes.Resume:
           Log.Warn("Resume");
-          TriggerManager.Instance.Start();
+          await TriggerManager.Instance.Start();
           DataManager.Instance.ResetOverlayFights(true);
           OpenDamageOverlayIfEnabled(true, false);
           DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
@@ -387,27 +388,6 @@ namespace EQLogParser
     internal void AddAndCopyTankParse(CombinedStats combined, List<PlayerStats> selected)
     {
       (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.TankParse, TankingStatsManager.Instance, combined, selected, true);
-    }
-
-    internal void DisableTriggers()
-    {
-      // delay so window owner can be set correctly
-      Task.Delay(1500).ContinueWith(_ =>
-      {
-        Dispatcher.InvokeAsync(() =>
-        {
-          new MessageWindow("Trigger Database not available. In use by another EQLogParser?\r\nTrigger Management disabled until restart.",
-            Resource.Warning).Show();
-        });
-      });
-
-      Dispatcher.InvokeAsync(() =>
-      {
-        triggersMenuItem.IsEnabled = false;
-        triggerTestMenuItem.IsEnabled = false;
-        triggerLogMenuItem.IsEnabled = false;
-        quickShareLogMenuItem.IsEnabled = false;
-      });
     }
 
     internal void ShowTriggersEnabled(bool active)
@@ -955,7 +935,7 @@ namespace EQLogParser
             CurrentLogFile = theFile;
             _npcDamageManager.Reset();
             _eqLogReader = new LogReader(new LogProcessor(theFile), theFile, lastMins);
-            _eqLogReader.StartAsync();
+            _eqLogReader.Start();
             UpdateLoadingProgress();
           }, DispatcherPriority.Render);
         }
@@ -1114,7 +1094,7 @@ namespace EQLogParser
       }
     }
 
-    private void WindowClosing(object sender, EventArgs e)
+    private async void WindowClosing(object sender, EventArgs e)
     {
       ConfigUtil.SetSetting("WindowState", WindowState.ToString());
 
@@ -1140,8 +1120,8 @@ namespace EQLogParser
       PlayerManager.Instance?.Save();
       RecordManager.Instance.Stop();
       ChatManager.Instance.Stop();
-      TriggerManager.Instance.Stop();
-      TriggerStateManager.Instance.Stop();
+      await TriggerManager.Instance.Stop();
+      await TriggerStateManager.Instance.Stop();
 
       // restore from backup will use explicit mode
       if (Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)

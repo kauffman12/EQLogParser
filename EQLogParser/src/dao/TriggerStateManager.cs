@@ -7,7 +7,9 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows.Media;
+using System.Windows.Threading;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace EQLogParser
@@ -30,70 +32,64 @@ namespace EQLogParser
     private const string StatesCol = "States";
     private const string TreeCol = "Tree";
     private const string LexiconCol = "Lexicon";
-    private const string VersionCol = "Version";
+    private const string BadVersionCol = "Version";
+    private const string VersionCol = "FixVersion";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<TriggerStateManager> Lazy = new(() => new TriggerStateManager());
     internal static TriggerStateManager Instance => Lazy.Value; // instance
-    private readonly object _lockObject = new();
-    private readonly object _configLock = new();
-    private readonly object _initLock = new();
-    private LiteDatabase _db;
+    private readonly bool _needUpgrade;
+    private readonly LiteDbTaskQueue _taskQueue;
+    private readonly LiteDatabase _db;
 
     private TriggerStateManager()
     {
-      Start();
-    }
-
-    internal void Start()
-    {
-      lock (_initLock)
+      var path = ConfigUtil.GetTriggersDbFile();
+      if (!string.IsNullOrEmpty(path))
       {
-        // ignore start if already initialized
-        if (_db != null)
+        _needUpgrade = !File.Exists(path);
+
+        try
         {
-          return;
+          var connString = new ConnectionString
+          {
+            Filename = path,
+            Connection = ConnectionType.Shared
+          };
+
+          _db = new LiteDatabase(connString)
+          {
+            CheckpointSize = 10
+          };
+
+          _taskQueue = new LiteDbTaskQueue(_db);
         }
-
-        var path = ConfigUtil.GetTriggersDbFile();
-        if (!string.IsNullOrEmpty(path))
+        catch (Exception ex)
         {
-          var needUpgrade = !File.Exists(path);
-          try
-          {
-            _db = new LiteDatabase(path)
-            {
-              CheckpointSize = 10
-            };
-
-            Init(needUpgrade);
-          }
-          catch (Exception ex)
-          {
-            if (ex is IOException)
-            {
-              Log.Warn("Trigger Database already in use.");
-            }
-          }
+          Log.Warn("Error opening Trigger Database.", ex);
         }
       }
     }
 
-    private void Init(bool needUpgrade)
+    internal async Task Start()
     {
-      var path = ConfigUtil.GetTriggersDbFile();
-
-      try
+      if (_needUpgrade)
       {
-        if (needUpgrade)
-        {
-          // upgrade from old json trigger format
-          Upgrade();
-        }
+        // upgrade from old json trigger format
+        await _taskQueue.EnqueueTransaction(Upgrade);
+      }
 
+      // upgrade config if needed
+      await _taskQueue.EnqueueTransaction(() =>
+      {
         var configs = _db.GetCollection<TriggerConfig>(ConfigCol);
         configs.EnsureIndex(x => x.Id);
         UpgradeConfig(configs);
+        return Task.CompletedTask;
+      });
 
+      // create default data
+      await _taskQueue.EnqueueTransaction(() =>
+      {
         var tree = _db.GetCollection<TriggerNode>(TreeCol);
 
         // create overlay node if it doesn't exist
@@ -115,14 +111,20 @@ namespace EQLogParser
         var states = _db.GetCollection<TriggerState>(StatesCol);
         states.EnsureIndex(x => x.Id);
 
-        // add version if not defined
-        var versions = _db.GetCollection<Version>(VersionCol);
-        if (versions.FindAll().FirstOrDefault() == null)
+        // remove old bad version
+        var versions = _db.GetCollection<Version>(BadVersionCol);
+        if (versions.Count() > 0)
         {
-          versions.Insert(new Version(1, 0, 0));
+          versions.DeleteAll();
+        }
+
+        var fixVersions = _db.GetCollection<VersionData>(VersionCol);
+        if (fixVersions.Count() == 0)
+        {
+          fixVersions.Insert(new VersionData { Id = "1", Version = "1.0.1" });
 
           // add default overlays if none exist
-          if (tree.Find(n => n.OverlayData != null && n.Parent != null).FirstOrDefault() == null)
+          if (!tree.Find(n => n.OverlayData != null && n.Parent != null).Any())
           {
             if (tree.FindOne(n => n.Parent == null && n.Name == Overlays) is { } parentNode)
             {
@@ -163,63 +165,38 @@ namespace EQLogParser
               tree.Insert(timerNode);
             }
           }
+
+          // save current values
+          _db.Checkpoint();
+
+          var lastPath = ConfigUtil.GetTriggersLastDbFile();
+          if (!string.IsNullOrEmpty(lastPath) && !File.Exists(lastPath))
+          {
+            try
+            {
+              // create backup during for the 1.0.1 upgrade
+              File.Copy(ConfigUtil.GetTriggersDbFile(), lastPath);
+            }
+            catch (Exception)
+            {
+              // ignore
+            }
+          }
         }
-      }
-      catch (Exception ex)
-      {
-        Log.Error(ex);
-      }
+
+        return Task.CompletedTask;
+      });
     }
 
-    internal void Stop()
+    internal Task<TriggerNode> GetDefaultTextOverlay() => GetDefaultOverlay(true);
+    internal Task<TriggerNode> GetDefaultTimerOverlay() => GetDefaultOverlay(false);
+    internal Task<TriggerTreeViewNode> GetOverlayTreeView() => GetTreeView(Overlays);
+    internal Task<TriggerTreeViewNode> GetTriggerTreeView(string playerId) => GetTreeView(Triggers, playerId);
+    internal async Task Stop() => await _taskQueue.Stop();
+
+    internal async Task AddCharacter(string name, string filePath, string voice, int voiceRate, string activeColor, string fontColor)
     {
-      lock (_initLock)
-      {
-        if (_db == null)
-        {
-          return;
-        }
-
-        _db?.Dispose();
-        _db = null;
-      }
-    }
-
-    internal bool IsActive()
-    {
-      lock (_initLock)
-      {
-        return _db != null;
-      }
-    }
-
-    internal void AssignOverlay(string id, IEnumerable<TriggerNode> nodes) => AssignOverlay(_db?.GetCollection<TriggerNode>(TreeCol), id, nodes);
-    internal void AssignPriority(int pri, IEnumerable<TriggerNode> nodes) => AssignPriority(_db?.GetCollection<TriggerNode>(TreeCol), pri, nodes);
-    internal void UnassignOverlay(string id, IEnumerable<TriggerNode> nodes) => UnassignOverlay(_db?.GetCollection<TriggerNode>(TreeCol), id, nodes);
-    internal TriggerTreeViewNode CreateOverlay(string parentId, string name, bool isTextOverlay) => CreateNode(parentId, name, Overlays, isTextOverlay);
-    internal TriggerTreeViewNode GetTriggerTreeView(string playerId) => GetTreeView(Triggers, playerId);
-    internal TriggerTreeViewNode GetOverlayTreeView() => GetTreeView(Overlays);
-    internal TriggerNode GetDefaultTextOverlay() => GetDefaultOverlay(true);
-    internal TriggerNode GetDefaultTimerOverlay() => GetDefaultOverlay(false);
-    internal TriggerNode GetOverlayById(string id) => _db?.GetCollection<TriggerNode>(TreeCol).FindOne(n => n.Id == id && n.OverlayData != null);
-    internal void ImportTriggers(TriggerNode parent, IEnumerable<ExportTriggerNode> imported) => Import(parent, imported, Triggers);
-    internal void ImportOverlays(TriggerNode parent, IEnumerable<ExportTriggerNode> imported) => Import(parent, imported, Overlays);
-    internal void SetAllExpanded(bool expanded) => _db?.Execute($"UPDATE {TreeCol} SET IsExpanded = {expanded}");
-    internal IEnumerable<LexiconItem> GetLexicon() => _db?.GetCollection<LexiconItem>(LexiconCol)?.FindAll();
-
-    internal void SaveLexicon(List<LexiconItem> list)
-    {
-      if (_db?.GetCollection<LexiconItem>(LexiconCol) is { } lexicon)
-      {
-        lexicon.DeleteAll();
-        lexicon.InsertBulk(list);
-        LexiconUpdateEvent?.Invoke(list);
-      }
-    }
-
-    internal void AddCharacter(string name, string filePath, string voice, int voiceRate, string activeColor, string fontColor)
-    {
-      if (GetConfig() is { } config)
+      if (await GetConfig() is { } config)
       {
         var newCharacter = new TriggerCharacter
         {
@@ -234,245 +211,130 @@ namespace EQLogParser
 
         config.Characters.Add(newCharacter);
         config.Characters.Sort((x, y) => string.Compare(x.Name, y.Name, StringComparison.Ordinal));
-        UpdateConfig(config);
+        await UpdateConfig(config);
       }
     }
 
-    internal TriggerTreeViewNode CreateFolder(string parentId, string name, string playerId)
+    internal async Task AssignOverlay(string id, IEnumerable<TriggerNode> nodes)
     {
-      var node = CreateNode(parentId, name);
-      SetStateFromParent(parentId, playerId, node);
-      return node;
-    }
-
-    internal TriggerTreeViewNode CreateTrigger(string parentId, string name, string playerId)
-    {
-      var node = CreateNode(parentId, name, Triggers);
-      SetStateFromParent(parentId, playerId, node);
-      return node;
-    }
-
-    internal void SetStateFromParent(string parentId, string playerId, TriggerTreeViewNode node)
-    {
-      if (_db?.GetCollection<TriggerState>(StatesCol) is { } states)
+      await _taskQueue.EnqueueTransaction(() =>
       {
-        foreach (var state in states.FindAll())
+        AssignOverlay(_db?.GetCollection<TriggerNode>(TreeCol), id, nodes);
+        return Task.CompletedTask;
+      });
+    }
+
+    internal async Task AssignPriority(int pri, IEnumerable<TriggerNode> nodes)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        AssignPriority(_db?.GetCollection<TriggerNode>(TreeCol), pri, nodes);
+        return Task.CompletedTask;
+      });
+    }
+
+    internal async Task Copy(TriggerNode src, TriggerNode dst)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        if (dst?.Id is { } parentId && App.AutoMap.Map(src, new TriggerNode()) is { } copied)
         {
-          // if parent is enabled for the player then also enable the new trigger
-          if (state.Enabled.TryGetValue(parentId, out var currentState))
+          if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
           {
-            if (playerId == state.Id)
+            copied.Id = Guid.NewGuid().ToString();
+            copied.Name = (tree.FindOne(n => n.Parent == parentId && n.Name == src.Name) != null) ? $"Copied {src.Name}" : src.Name;
+            copied.Parent = parentId;
+            copied.Index = GetNextIndex(tree, parentId);
+
+            if (copied.TriggerData != null)
             {
-              node.IsChecked = currentState == true;
+              copied.TriggerData.WorstEvalTime = -1;
+            }
+            else if (copied.OverlayData != null)
+            {
+              // can only be one
+              copied.OverlayData.IsDefault = false;
             }
 
-            UpdateChildState(state, node, currentState == true);
-            states.Update(state);
+            tree.Insert(copied);
           }
         }
-      }
+
+        return Task.CompletedTask;
+      });
     }
 
-    internal void CopyState(TriggerTreeViewNode treeView, string from, string to)
+    internal async Task CopyState(TriggerTreeViewNode treeView, string from, string to)
     {
-      if (treeView?.SerializedData is { } node && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
+      await _taskQueue.EnqueueTransaction(() =>
       {
-        var fromState = states.FindOne(s => s.Id == from);
-        var toState = states.FindOne(s => s.Id == to);
-        if (fromState != null && toState != null)
+        if (treeView?.SerializedData is { } node && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
         {
-          CopyState(node, fromState, toState);
-          states.Update(toState);
-        }
-      }
-    }
-
-    internal void DeleteCharacter(string id)
-    {
-      if (GetConfig() is { } config && config.Characters.FirstOrDefault(character => character.Id == id) is { } existing)
-      {
-        config.Characters.Remove(existing);
-        UpdateConfig(config);
-
-        if (GetPlayerState(id) is { } state)
-        {
-          _db?.GetCollection<TriggerState>(StatesCol)?.Delete(state.Id);
-        }
-      }
-    }
-
-    internal void UpdateCharacter(TriggerCharacter update)
-    {
-      if (GetConfig() is { } config && config.Characters.FirstOrDefault(character => character.Id == update.Id) is { } existing)
-      {
-        existing.Name = update.Name;
-        existing.FilePath = update.FilePath;
-        existing.IsEnabled = update.IsEnabled;
-        existing.IsWaiting = update.IsWaiting;
-        UpdateConfig(config);
-      }
-    }
-
-    internal void UpdateCharacter(string id, string name, string filePath, string voice, int voiceRate, string activeColor, string fontColor)
-    {
-      if (GetConfig() is { } config && config.Characters.FirstOrDefault(character => character.Id == id) is { } existing)
-      {
-        existing.Name = name;
-        existing.FilePath = filePath;
-        existing.Voice = voice;
-        existing.VoiceRate = voiceRate;
-        existing.ActiveColor = activeColor;
-        existing.FontColor = fontColor;
-        UpdateConfig(config);
-      }
-    }
-
-    internal void UpdateLastTriggered(string id, double updatedTime)
-    {
-      if (id is not null && _db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
-      {
-        if (tree.FindOne(n => n.Id == id && n.TriggerData != null) is { } found)
-        {
-          found.TriggerData.LastTriggered = updatedTime;
-          tree.Update(found);
-        }
-      }
-    }
-
-    internal TriggerConfig GetConfig()
-    {
-      if (_db?.GetCollection<TriggerConfig>(ConfigCol) is { } configs)
-      {
-        lock (_configLock)
-        {
-          if (configs.Count() == 0)
+          var fromState = states.FindOne(s => s.Id == from);
+          var toState = states.FindOne(s => s.Id == to);
+          if (fromState != null && toState != null)
           {
-            configs.Insert(new TriggerConfig { Id = Guid.NewGuid().ToString() });
+            CopyState(node, fromState, toState);
+            states.Update(toState);
           }
-
-          return configs.FindAll().FirstOrDefault();
-        }
-      }
-
-      return null;
-    }
-
-    internal void UpdateConfig(TriggerConfig config)
-    {
-      _db?.GetCollection<TriggerConfig>(ConfigCol).Update(config);
-      TriggerConfigUpdateEvent?.Invoke(config);
-    }
-
-    internal TriggerNode GetDefaultOverlay(bool isTextOverlay)
-    {
-      if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
-      {
-        if (isTextOverlay)
-        {
-          return tree.Query().Where(n => n.OverlayData != null && n.OverlayData.IsDefault && n.OverlayData.IsTextOverlay).FirstOrDefault();
         }
 
-        return tree.Query().Where(n => n.OverlayData != null && n.OverlayData.IsDefault && n.OverlayData.IsTimerOverlay).FirstOrDefault();
-      }
-      return null;
+        return Task.CompletedTask;
+      });
     }
 
-    internal void Copy(TriggerNode src, TriggerNode dst)
+    internal async Task CreateCheckpoint()
     {
-      if (dst?.Id is { } parentId && App.AutoMap.Map(src, new TriggerNode()) is { } copied)
+      await _taskQueue.EnqueueTransaction(() =>
       {
+        _db.Checkpoint();
+        return Task.CompletedTask;
+      });
+    }
+
+    internal async Task<TriggerTreeViewNode> CreateFolder(string parentId, string name, string playerId)
+    {
+      return await _taskQueue.EnqueueTransaction(() =>
+      {
+        var node = CreateNode(parentId, name);
+        SetStateFromParentInternal(parentId, playerId, node);
+        return Task.FromResult(node);
+      });
+    }
+
+    internal async Task<TriggerTreeViewNode> CreateOverlay(string parentId, string name, bool isTextOverlay)
+    {
+      return await _taskQueue.EnqueueTransaction(() =>
+      {
+        var result = CreateNode(parentId, name, Overlays, isTextOverlay);
+        return Task.FromResult(result);
+      });
+    }
+
+    internal async Task<TriggerTreeViewNode> CreateTrigger(string parentId, string name, string playerId)
+    {
+      return await _taskQueue.EnqueueTransaction(() =>
+      {
+        var node = CreateNode(parentId, name, Triggers);
+        SetStateFromParentInternal(parentId, playerId, node);
+        return Task.FromResult(node);
+      });
+    }
+
+    internal async Task Delete(string id)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        var removed = new HashSet<string>();
+        var removedOverlays = new HashSet<string>();
+
         if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
-        {
-          copied.Id = Guid.NewGuid().ToString();
-          copied.Name = (tree.FindOne(n => n.Parent == parentId && n.Name == src.Name) != null) ? $"Copied {src.Name}" : src.Name;
-          copied.Parent = parentId;
-          copied.Index = GetNextIndex(tree, parentId);
-
-          if (copied.TriggerData != null)
-          {
-            copied.TriggerData.WorstEvalTime = -1;
-          }
-          else if (copied.OverlayData != null)
-          {
-            // can only be one
-            copied.OverlayData.IsDefault = false;
-          }
-
-          tree.Insert(copied);
-        }
-      }
-    }
-
-    internal IEnumerable<OtData> GetEnabledTriggers(string playerId)
-    {
-      var active = new List<OtData>();
-      if (GetPlayerState(playerId) is { } state)
-      {
-        var tree = _db.GetCollection<TriggerNode>(TreeCol);
-        foreach (var node in tree.FindAll().Where(n => n.TriggerData != null))
-        {
-          if (node.Id is { } id && state.Enabled.TryGetValue(id, out var value) && value == true)
-          {
-            active.Add(new OtData { Id = node.Id, Name = node.Name, Trigger = node.TriggerData, OverlayData = node.OverlayData });
-          }
-        }
-      }
-      return active;
-    }
-
-    // node already updated with new parentId that it wants
-    internal void Update(TriggerNode node, bool updateIndex = false)
-    {
-      if (node?.Id is null) return;
-
-      if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
-      {
-        lock (_lockObject)
-        {
-          if (updateIndex)
-          {
-            node.Index = GetNextIndex(tree, node.Parent);
-          }
-
-          if (node.OverlayData is { IsDefault: true })
-          {
-            EnsureNoOtherDefaults(tree, node.Id, node.OverlayData.IsTextOverlay);
-          }
-
-          tree.Update(node);
-          TriggerUpdateEvent?.Invoke(node);
-        }
-      }
-    }
-
-    internal IEnumerable<OtData> GetAllOverlays()
-    {
-      return _db?.GetCollection<TriggerNode>(TreeCol).FindAll().Where(n => n.OverlayData != null)
-        .Select(n => new OtData { Name = n.Name, Id = n.Id, OverlayData = n.OverlayData }) ?? [];
-    }
-
-    internal void SetExpanded(TriggerTreeViewNode viewNode)
-    {
-      if (viewNode?.SerializedData is { Id: not null } node)
-      {
-        _db?.Execute($"UPDATE {TreeCol} SET IsExpanded = {viewNode.IsExpanded} WHERE _id = '{node.Id}'");
-      }
-    }
-
-    internal void Delete(string id)
-    {
-      var removed = new HashSet<string>();
-      var removedOverlays = new HashSet<string>();
-
-      if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
-      {
-        lock (_lockObject)
         {
           Delete(tree, tree.FindOne(n => n.Id == id), removed, removedOverlays);
 
           if (_db?.GetCollection<TriggerState>(StatesCol) is { } states)
           {
-            foreach (var state in states.FindAll())
+            foreach (var state in states.FindAll().ToArray())
             {
               var needUpdate = false;
               foreach (var removedId in removed)
@@ -492,7 +354,7 @@ namespace EQLogParser
 
           if (removedOverlays.Count > 0)
           {
-            foreach (var node in tree.Query().Where(n => n.TriggerData != null && n.TriggerData.SelectedOverlays.Count > 0).ToEnumerable())
+            foreach (var node in tree.Query().Where(n => n.TriggerData != null && n.TriggerData.SelectedOverlays.Count > 0).ToArray())
             {
               var needUpdate = false;
               foreach (var overlayId in removedOverlays)
@@ -511,51 +373,333 @@ namespace EQLogParser
           }
         }
 
-        DeleteEvent?.Invoke(id);
+        return Task.CompletedTask;
+      });
+
+      DeleteEvent?.Invoke(id);
+    }
+
+    internal async Task DeleteCharacter(string id)
+    {
+      if (await GetConfig() is { } config && config.Characters.FirstOrDefault(character => character.Id == id) is { } existing)
+      {
+        await _taskQueue.EnqueueTransaction(() =>
+        {
+          config.Characters.Remove(existing);
+          _db?.GetCollection<TriggerConfig>(ConfigCol).Update(config);
+
+          if (GetPlayerState(id) is { } state)
+          {
+            _db?.GetCollection<TriggerState>(StatesCol)?.Delete(state.Id);
+          }
+
+          return Task.CompletedTask;
+        });
+
+        TriggerConfigUpdateEvent?.Invoke(config);
       }
     }
 
-    internal bool IsAnyEnabled(string triggerId)
+    internal async Task<IEnumerable<OtData>> GetAllOverlays()
     {
-      if (triggerId != null && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
+      return await _taskQueue.Enqueue(() =>
       {
-        foreach (var state in states.FindAll())
-        {
-          if (state.Enabled.TryGetValue(triggerId, out var enabled) && enabled == true)
-          {
-            return true;
-          }
-        }
-      }
-      return false;
+        var result = _db?.GetCollection<TriggerNode>(TreeCol).FindAll().Where(n => n.OverlayData != null)
+          .Select(n => new OtData { Name = n.Name, Id = n.Id, OverlayData = n.OverlayData }) ?? [];
+        return Task.FromResult(result);
+      });
     }
 
-    internal void SetState(List<string> playerIds, TriggerTreeViewNode viewNode)
+    internal Task<TriggerConfig> GetConfig()
     {
-      if (viewNode?.SerializedData is not null && !viewNode.IsOverlay() &&
-        _db?.GetCollection<TriggerState>(StatesCol) is { } states)
+      return _taskQueue.EnqueueTransaction(() =>
       {
-        foreach (var playerId in playerIds)
+        if (_db?.GetCollection<TriggerConfig>(ConfigCol) is { } configs)
         {
-          if (states.FindOne(s => s.Id == playerId) is { } state)
+          if (configs.Count() == 0)
           {
-            UpdateChildState(state, viewNode, viewNode.IsChecked);
-            states.Update(state);
+            configs.Insert(new TriggerConfig { Id = Guid.NewGuid().ToString() });
+          }
+
+          return Task.FromResult(configs.FindAll().FirstOrDefault());
+        }
+
+        return Task.FromResult<TriggerConfig>(null);
+      });
+    }
+
+    internal async Task<TriggerNode> GetDefaultOverlay(bool isTextOverlay)
+    {
+      return await _taskQueue.Enqueue(() =>
+      {
+        TriggerNode result = null;
+        if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+        {
+          if (isTextOverlay)
+          {
+            result = tree.Query().Where(n => n.OverlayData != null && n.OverlayData.IsDefault
+              && n.OverlayData.IsTextOverlay).FirstOrDefault();
+          }
+          else
+          {
+            result = tree.Query().Where(n => n.OverlayData != null && n.OverlayData.IsDefault
+              && n.OverlayData.IsTimerOverlay).FirstOrDefault();
           }
         }
+
+        return Task.FromResult(result);
+      });
+    }
+
+    internal async Task<IEnumerable<OtData>> GetEnabledTriggers(string playerId)
+    {
+      return await _taskQueue.EnqueueTransaction(() =>
+      {
+        var result = new List<OtData>();
+        if (GetPlayerState(playerId) is { } state)
+        {
+          var tree = _db.GetCollection<TriggerNode>(TreeCol);
+          foreach (var node in tree.FindAll().Where(n => n.TriggerData != null).ToArray())
+          {
+            if (node.Id is { } id && state.Enabled.TryGetValue(id, out var value) && value == true)
+            {
+              result.Add(new OtData { Id = node.Id, Name = node.Name, Trigger = node.TriggerData, OverlayData = node.OverlayData });
+            }
+          }
+        }
+
+        return Task.FromResult(result);
+      });
+    }
+
+    internal async Task<List<LexiconItem>> GetLexicon()
+    {
+      return await _taskQueue.Enqueue(() =>
+      {
+        var result = _db?.GetCollection<LexiconItem>(LexiconCol)?.FindAll().ToList();
+        return Task.FromResult(result);
+      });
+    }
+
+    internal async Task<TriggerNode> GetOverlayById(string id)
+    {
+      return await _taskQueue.Enqueue(() =>
+      {
+        var result = _db?.GetCollection<TriggerNode>(TreeCol).FindOne(n => n.Id == id && n.OverlayData != null);
+        return Task.FromResult(result);
+      });
+    }
+
+    internal async Task ImportOverlays(TriggerNode parent, IEnumerable<ExportTriggerNode> imported)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        Import(parent, imported, Overlays);
+        return Task.CompletedTask;
+      });
+    }
+
+    internal async Task ImportTriggers(TriggerNode parent, IEnumerable<ExportTriggerNode> imported)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        Import(parent, imported, Triggers);
+        return Task.CompletedTask;
+      });
+    }
+
+    internal async Task<bool> IsAnyEnabled(string triggerId)
+    {
+      return await _taskQueue.Enqueue(() =>
+      {
+        if (triggerId != null && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
+        {
+          foreach (var state in states.FindAll().ToArray())
+          {
+            if (state.Enabled.TryGetValue(triggerId, out var enabled) && enabled == true)
+            {
+              return Task.FromResult(true);
+            }
+          }
+        }
+        return Task.FromResult(false);
+      });
+    }
+
+    internal async Task SaveLexicon(List<LexiconItem> list)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        if (_db?.GetCollection<LexiconItem>(LexiconCol) is { } lexicon)
+        {
+          lexicon.DeleteAll();
+          lexicon.InsertBulk(list);
+        }
+
+        return Task.CompletedTask;
+      });
+
+      LexiconUpdateEvent?.Invoke(list);
+    }
+
+    internal async Task SetAllExpanded(bool expanded)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        _db?.Execute($"UPDATE {TreeCol} SET IsExpanded = {expanded}");
+        return Task.CompletedTask;
+      });
+    }
+
+    internal async Task SetExpanded(TriggerTreeViewNode viewNode)
+    {
+      await _taskQueue.Enqueue(() =>
+      {
+        if (viewNode?.SerializedData is { Id: not null } node)
+        {
+          _db?.Execute($"UPDATE {TreeCol} SET IsExpanded = {viewNode.IsExpanded} WHERE _id = '{node.Id}'");
+        }
+
+        return Task.CompletedTask;
+      });
+    }
+
+    internal async Task SetState(List<string> playerIds, TriggerTreeViewNode viewNode)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        if (viewNode?.SerializedData is not null && !viewNode.IsOverlay() &&
+            _db?.GetCollection<TriggerState>(StatesCol) is { } states)
+        {
+          foreach (var playerId in playerIds)
+          {
+            if (states.FindOne(s => s.Id == playerId) is { } state)
+            {
+              UpdateChildState(state, viewNode, viewNode.IsChecked);
+              states.Update(state);
+            }
+          }
+        }
+
+        return Task.CompletedTask;
+      });
+    }
+
+    internal async Task SetStateFromParent(string parentId, string playerId, TriggerTreeViewNode node)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        SetStateFromParentInternal(parentId, playerId, node);
+        return Task.CompletedTask;
+      });
+    }
+
+    internal async Task UnassignOverlay(string id, IEnumerable<TriggerNode> nodes)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        UnassignOverlay(_db?.GetCollection<TriggerNode>(TreeCol), id, nodes);
+        return Task.CompletedTask;
+      });
+    }
+
+    // node already updated with new parentId that it wants
+    internal async Task Update(TriggerNode node, bool updateIndex = false)
+    {
+      if (node?.Id is null) return;
+
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+        {
+          if (updateIndex)
+          {
+            node.Index = GetNextIndex(tree, node.Parent);
+          }
+
+          if (node.OverlayData is { IsDefault: true })
+          {
+            EnsureNoOtherDefaults(tree, node.Id, node.OverlayData.IsTextOverlay);
+          }
+
+          tree.Update(node);
+        }
+
+        return Task.CompletedTask;
+      });
+
+      TriggerUpdateEvent?.Invoke(node);
+    }
+
+    internal async Task UpdateCharacter(TriggerCharacter update)
+    {
+      if (await GetConfig() is { } config && config.Characters.FirstOrDefault(character => character.Id == update.Id) is { } existing)
+      {
+        existing.Name = update.Name;
+        existing.FilePath = update.FilePath;
+        existing.IsEnabled = update.IsEnabled;
+        existing.IsWaiting = update.IsWaiting;
+        await UpdateConfig(config);
       }
+    }
+
+    internal async Task UpdateCharacter(string id, string name, string filePath, string voice, int voiceRate, string activeColor, string fontColor)
+    {
+      if (await GetConfig() is { } config && config.Characters.FirstOrDefault(character => character.Id == id) is { } existing)
+      {
+        existing.Name = name;
+        existing.FilePath = filePath;
+        existing.Voice = voice;
+        existing.VoiceRate = voiceRate;
+        existing.ActiveColor = activeColor;
+        existing.FontColor = fontColor;
+        await UpdateConfig(config);
+      }
+    }
+
+    internal async Task UpdateConfig(TriggerConfig config)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        _db?.GetCollection<TriggerConfig>(ConfigCol).Update(config);
+        return Task.CompletedTask;
+      });
+
+      TriggerConfigUpdateEvent?.Invoke(config);
+    }
+
+    internal async void UpdateLastTriggered(string id, double updatedTime)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        if (id is not null && _db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+        {
+          if (tree.FindOne(n => n.Id == id && n.TriggerData != null) is { } found)
+          {
+            found.TriggerData.LastTriggered = updatedTime;
+            tree.Update(found);
+          }
+        }
+
+        return Task.CompletedTask;
+      });
     }
 
     // from GINA or Quick Share with custom Folder name
-    internal void ImportTriggers(string name, IEnumerable<ExportTriggerNode> imported, HashSet<string> characterIds)
+    internal async Task ImportTriggers(string name, IEnumerable<ExportTriggerNode> imported, HashSet<string> characterIds)
     {
-      if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+      await _taskQueue.EnqueueTransaction(() =>
       {
-        var root = tree.FindOne(n => n.Parent == null && n.Name == Triggers);
-        var parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name).SerializedData;
-        Import(parent, imported, Triggers, characterIds);
-        TriggerImportEvent?.Invoke(true);
-      }
+        if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+        {
+          var root = tree.FindOne(n => n.Parent == null && n.Name == Triggers);
+          var parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name).SerializedData;
+          Import(parent, imported, Triggers, characterIds);
+          TriggerImportEvent?.Invoke(true);
+        }
+
+        return Task.CompletedTask;
+      });
     }
 
     private static void AssignOverlay(ILiteCollection<TriggerNode> tree, string id, IEnumerable<TriggerNode> nodes)
@@ -617,7 +761,7 @@ namespace EQLogParser
       if (tree == null) return;
 
       foreach (var node in tree.Query().Where(o => o.Id != id && o.OverlayData != null &&
-        o.OverlayData.IsTextOverlay == isTextOverlay && o.OverlayData.IsDefault).ToEnumerable())
+        o.OverlayData.IsTextOverlay == isTextOverlay && o.OverlayData.IsDefault).ToArray())
       {
         node.OverlayData.IsDefault = false;
         tree.Update(node);
@@ -631,7 +775,7 @@ namespace EQLogParser
       toState.Enabled[node.Id] = fromState.Enabled[node.Id];
       if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
       {
-        foreach (var child in tree.Query().Where(n => n.Parent == node.Id).ToEnumerable())
+        foreach (var child in tree.Query().Where(n => n.Parent == node.Id).ToArray())
         {
           CopyState(child, fromState, toState);
         }
@@ -643,43 +787,40 @@ namespace EQLogParser
       TriggerTreeViewNode viewNode = null;
       if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
       {
-        lock (_lockObject)
+        var newNode = new TriggerNode
         {
-          var newNode = new TriggerNode
-          {
-            Name = name,
-            Id = Guid.NewGuid().ToString(),
-            Parent = parentId,
-            Index = GetNextIndex(tree, parentId),
-          };
+          Name = name,
+          Id = Guid.NewGuid().ToString(),
+          Parent = parentId,
+          Index = GetNextIndex(tree, parentId),
+        };
 
-          if (type == Triggers)
-          {
-            newNode.TriggerData = new Trigger();
-            newNode.IsExpanded = false;
-          }
-          else if (type == Overlays)
-          {
-            newNode.OverlayData = new Overlay();
-            newNode.IsExpanded = false;
-            newNode.OverlayData.IsTimerOverlay = !isTextOverlay;
-            newNode.OverlayData.IsTextOverlay = isTextOverlay;
-
-            // better default for text
-            if (newNode.OverlayData.IsTextOverlay)
-            {
-              newNode.OverlayData.FontSize = "20pt";
-            }
-          }
-          // folder
-          else
-          {
-            newNode.IsExpanded = true;
-          }
-
-          tree.Insert(newNode);
-          viewNode = CreateViewNode(newNode);
+        if (type == Triggers)
+        {
+          newNode.TriggerData = new Trigger();
+          newNode.IsExpanded = false;
         }
+        else if (type == Overlays)
+        {
+          newNode.OverlayData = new Overlay();
+          newNode.IsExpanded = false;
+          newNode.OverlayData.IsTimerOverlay = !isTextOverlay;
+          newNode.OverlayData.IsTextOverlay = isTextOverlay;
+
+          // better default for text
+          if (newNode.OverlayData.IsTextOverlay)
+          {
+            newNode.OverlayData.FontSize = "20pt";
+          }
+        }
+        // folder
+        else
+        {
+          newNode.IsExpanded = true;
+        }
+
+        tree.Insert(newNode);
+        viewNode = CreateViewNode(newNode);
       }
 
       return viewNode;
@@ -692,7 +833,7 @@ namespace EQLogParser
       // must be a directory
       if (node.OverlayData == null && node.TriggerData == null)
       {
-        foreach (var child in tree.Query().Where(n => n.Parent == id).ToEnumerable())
+        foreach (var child in tree.Query().Where(n => n.Parent == id).ToArray())
         {
           Delete(tree, child, removed, removedOverlays);
         }
@@ -711,22 +852,19 @@ namespace EQLogParser
     {
       if (parent?.Id is not { } parentId || imported == null || _db?.GetCollection<TriggerNode>(TreeCol) is not { } tree) return;
 
-      lock (_lockObject)
+      // get character state if needed (here so we can search once)
+      List<TriggerState> characterStates = null;
+      if (characterIds?.Count > 0 && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
       {
-        // get character state if needed (here so we can search once)
-        List<TriggerState> characterStates = null;
-        if (characterIds?.Count > 0 && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
-        {
-          characterStates = states.Query().Where(s => characterIds.Contains(s.Id)).ToList();
-        }
+        characterStates = states.Query().Where(s => characterIds.Contains(s.Id)).ToList();
+      }
 
-        // exports include the tree root so ignore
-        foreach (var newNode in imported)
+      // exports include the tree root so ignore
+      foreach (var newNode in imported)
+      {
+        if (newNode.Nodes?.Count > 0)
         {
-          if (newNode.Nodes?.Count > 0)
-          {
-            Import(tree, parentId, newNode.Nodes, type, characterStates);
-          }
+          Import(tree, parentId, newNode.Nodes, type, characterStates);
         }
       }
     }
@@ -824,36 +962,63 @@ namespace EQLogParser
       }
     }
 
-    private TriggerTreeViewNode GetTreeView(string name, string playerId = null)
+    private void SetStateFromParentInternal(string parentId, string playerId, TriggerTreeViewNode node)
     {
-      TriggerTreeViewNode root = null;
-      if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+      if (_db?.GetCollection<TriggerState>(StatesCol) is { } states)
       {
-        TriggerState state = null;
-        if (name == Triggers)
+        foreach (var state in states.FindAll().ToArray())
         {
-          state = GetPlayerState(playerId);
-        }
-
-        if (tree.FindOne(n => n.Parent == null && n.Name == name) is { } parent)
-        {
-          root = CreateViewNode(parent, state);
-          Populate(root, state, tree);
-        }
-
-        if (name == Triggers && state != null)
-        {
-          var needUpdate = false;
-          FixEnabledState(root, state, ref needUpdate);
-
-          if (needUpdate)
+          // if parent is enabled for the player then also enable the new trigger
+          if (state.Enabled.TryGetValue(parentId, out var currentState))
           {
-            _db?.GetCollection<TriggerState>(StatesCol).Update(state);
+            if (playerId == state.Id)
+            {
+              UiUtil.InvokeNow(() =>
+              {
+                node.IsChecked = currentState == true;
+              }, DispatcherPriority.Render);
+            }
+
+            UpdateChildState(state, node, currentState == true);
+            states.Update(state);
           }
         }
       }
+    }
 
-      return root;
+    private async Task<TriggerTreeViewNode> GetTreeView(string name, string playerId = null)
+    {
+      return await _taskQueue.EnqueueTransaction(() =>
+      {
+        TriggerTreeViewNode root = null;
+        if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+        {
+          TriggerState state = null;
+          if (name == Triggers)
+          {
+            state = GetPlayerState(playerId);
+          }
+
+          if (tree.FindOne(n => n.Parent == null && n.Name == name) is { } parent)
+          {
+            root = CreateViewNode(parent, state);
+            Populate(root, state, tree);
+          }
+
+          if (name == Triggers && state != null)
+          {
+            var needUpdate = false;
+            FixEnabledState(root, state, ref needUpdate);
+
+            if (needUpdate)
+            {
+              _db?.GetCollection<TriggerState>(StatesCol).Update(state);
+            }
+          }
+        }
+
+        return Task.FromResult(root);
+      });
     }
 
     private TriggerState GetPlayerState(string playerId)
@@ -894,7 +1059,7 @@ namespace EQLogParser
     {
       if (parent.SerializedData.Id is { } parentId)
       {
-        foreach (var node in tree.Query().Where(n => n.Parent == parentId).OrderBy(n => n.Index).ToEnumerable())
+        foreach (var node in tree.Query().Where(n => n.Parent == parentId).OrderBy(n => n.Index).ToArray())
         {
           var child = CreateViewNode(node, state);
           if (child.IsDir())
@@ -975,41 +1140,38 @@ namespace EQLogParser
     }
 
     // remove eventually
-    private void UpgradeConfig(ILiteCollection<TriggerConfig> configs)
+    private static void UpgradeConfig(ILiteCollection<TriggerConfig> configs)
     {
-      lock (_configLock)
+      if (configs.FindAll().FirstOrDefault() is { } config)
       {
-        if (configs.FindAll().FirstOrDefault() is { } config)
+        var needUpdate = false;
+        var rate = ConfigUtil.GetSettingAsInteger("TriggersVoiceRate");
+        var voice = ConfigUtil.GetSetting("TriggersSelectedVoice");
+        if (string.IsNullOrEmpty(config.Voice))
         {
-          var needUpdate = false;
-          var rate = ConfigUtil.GetSettingAsInteger("TriggersVoiceRate");
-          var voice = ConfigUtil.GetSetting("TriggersSelectedVoice");
-          if (string.IsNullOrEmpty(config.Voice))
+          config.VoiceRate = (rate == int.MaxValue) ? 0 : rate;
+          config.Voice = voice;
+          needUpdate = true;
+        }
+
+        foreach (var character in config.Characters)
+        {
+          if (string.IsNullOrEmpty(character.Voice))
           {
-            config.VoiceRate = (rate == int.MaxValue) ? 0 : rate;
-            config.Voice = voice;
+            character.VoiceRate = (rate == int.MaxValue) ? 0 : rate;
+            character.Voice = voice;
             needUpdate = true;
           }
+        }
 
-          foreach (var character in config.Characters)
-          {
-            if (string.IsNullOrEmpty(character.Voice))
-            {
-              character.VoiceRate = (rate == int.MaxValue) ? 0 : rate;
-              character.Voice = voice;
-              needUpdate = true;
-            }
-          }
-
-          if (needUpdate)
-          {
-            configs.Update(config);
-          }
+        if (needUpdate)
+        {
+          configs.Update(config);
         }
       }
     }
 
-    private void Upgrade()
+    private Task Upgrade()
     {
       var overlayIds = new Dictionary<string, string>();
       var defaultEnabled = new Dictionary<string, bool?>();
@@ -1030,7 +1192,7 @@ namespace EQLogParser
       }
 
       _db?.Checkpoint();
-      return;
+      return Task.CompletedTask;
 
       void ReadJson(string file, string title)
       {
@@ -1119,6 +1281,12 @@ namespace EQLogParser
       }
 
       return value;
+    }
+
+    private class VersionData
+    {
+      public string Id { get; set; }
+      public string Version { get; set; }
     }
   }
 
