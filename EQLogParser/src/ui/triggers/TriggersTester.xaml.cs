@@ -95,7 +95,7 @@ namespace EQLogParser
       }
     }
 
-    private void TestTriggersClick(object sender, RoutedEventArgs e)
+    private async void TestTriggersClick(object sender, RoutedEventArgs e)
     {
       if (testButton.Content.ToString() == "Run Test")
       {
@@ -111,7 +111,7 @@ namespace EQLogParser
               if (_theConfig != null)
               {
                 _buffer = new BlockingCollection<Tuple<string, double, bool>>(new ConcurrentQueue<Tuple<string, double, bool>>());
-                TriggerManager.Instance.SetTestProcessor(_theConfig, _buffer);
+                await TriggerManager.Instance.SetTestProcessor(_theConfig, _buffer);
               }
             }
             else
@@ -122,7 +122,7 @@ namespace EQLogParser
                 _buffer?.Dispose();
                 _buffer = null;
                 _buffer = new BlockingCollection<Tuple<string, double, bool>>(new ConcurrentQueue<Tuple<string, double, bool>>());
-                TriggerManager.Instance.SetTestProcessor(character, _buffer);
+                await TriggerManager.Instance.SetTestProcessor(character, _buffer);
               }
               else
               {
@@ -157,7 +157,7 @@ namespace EQLogParser
         characterList.IsEnabled = false;
         realTime.IsEnabled = false;
         clearButton.IsEnabled = false;
-        allLines.ForEach(line =>
+        foreach (var line in allLines)
         {
           if (line.Length > MainWindow.ActionIndex)
           {
@@ -168,7 +168,7 @@ namespace EQLogParser
               _buffer?.Add(Tuple.Create(line, beginTime, true));
             }
           }
-        });
+        }
         characterList.IsEnabled = true;
         realTime.IsEnabled = true;
         clearButton.IsEnabled = true;
@@ -313,20 +313,17 @@ namespace EQLogParser
       }
     }
 
-    private void ContentLoaded(object sender, RoutedEventArgs e)
+    private async void ContentLoaded(object sender, RoutedEventArgs e)
     {
       if (VisualParent != null && !_ready)
       {
-        if (TriggerStateManager.Instance.IsActive())
-        {
-          TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
-          MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
-          theBasicLabel.Content = $"Current Player {{C}} " + (string.IsNullOrEmpty(ConfigUtil.PlayerName) ? "is not set" : "set to " + ConfigUtil.PlayerName);
+        TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+        MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
+        theBasicLabel.Content = $"Current Player {{C}} " + (string.IsNullOrEmpty(ConfigUtil.PlayerName) ? "is not set" : "set to " + ConfigUtil.PlayerName);
 
-          if (TriggerStateManager.Instance.GetConfig() is { } config)
-          {
-            UpdateCharacterList(config);
-          }
+        if (await TriggerStateManager.Instance.GetConfig() is { } config)
+        {
+          UpdateCharacterList(config);
         }
 
         _ready = true;

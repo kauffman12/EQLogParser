@@ -25,10 +25,12 @@ namespace EQLogParser
     private static string _archiveDir;
     private static string _settingsFile;
     private static string _triggersDbFile;
+    private static string _triggersLastDbFile;
     private static bool _settingsUpdated;
 
     internal static string GetArchiveDir() => _archiveDir;
     internal static string GetTriggersDbFile() => _triggersDbFile;
+    internal static string GetTriggersLastDbFile() => _triggersLastDbFile;
     internal static void SetSetting(string key, bool value) => SetSetting(key, value.ToString());
     internal static void SetSetting(string key, double value) => SetSetting(key, value.ToString(CultureInfo.InvariantCulture));
     internal static void SetSetting(string key, int value) => SetSetting(key, value.ToString(CultureInfo.InvariantCulture));
@@ -40,6 +42,7 @@ namespace EQLogParser
       LogsDir = Environment.ExpandEnvironmentVariables(AppData + @"\logs\");
       _settingsFile = ConfigDir + @"\settings.txt";
       _triggersDbFile = ConfigDir + @"triggers.db";
+      _triggersLastDbFile = ConfigDir + @"triggers-2.2.36.db";
 
       // create config dir if it doesn't exist
       Directory.CreateDirectory(ConfigDir);

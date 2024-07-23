@@ -123,11 +123,6 @@ namespace EQLogParser
       UiUtil.InvokeNow(() => _mainWindow?.CopyToEqClick(label));
     }
 
-    internal static void DisableTriggers()
-    {
-      UiUtil.InvokeNow(() => _mainWindow?.DisableTriggers());
-    }
-
     internal static void ShowTriggersEnabled(bool show)
     {
       UiUtil.InvokeNow(() => _mainWindow?.ShowTriggersEnabled(show));
@@ -646,7 +641,10 @@ namespace EQLogParser
     internal static void CreateBackup()
     {
       var saveFileDialog = new SaveFileDialog();
-      const string fileName = "EQLogParser-backup.zip";
+      var dateTime = DateTime.Now.ToString("yyyyMMdd-ssfff");
+      var version = Application.ResourceAssembly.GetName().Version?.ToString();
+      version = string.IsNullOrEmpty(version) ? "unknown" : version[..^2];
+      var fileName = $"EQLogParser_backup_{version}_{dateTime}.zip";
       saveFileDialog.Filter = "EQLogParser Backup Files (*.zip)|*.zip";
       saveFileDialog.FileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()));
 
@@ -654,15 +652,8 @@ namespace EQLogParser
       {
         var dialog = new MessageWindow($"Creating EQLogParser Backup", Resource.CREATE_BACKUP, MessageWindow.IconType.Save);
 
-        Task.Delay(150).ContinueWith(_ =>
+        Task.Delay(150).ContinueWith(async _ =>
         {
-          // turn off triggers so copy works
-          var triggersActive = TriggerStateManager.Instance.IsActive();
-          if (triggersActive)
-          {
-            TriggerStateManager.Instance.Stop();
-          }
-
           var accessError = false;
           var source = Environment.ExpandEnvironmentVariables(ConfigUtil.AppData);
           ChatManager.Instance.Stop();
@@ -674,6 +665,8 @@ namespace EQLogParser
               File.Delete(saveFileDialog.FileName);
             }
 
+            // create checkpoint before backup
+            await TriggerStateManager.Instance.CreateCheckpoint();
             ZipFile.CreateFromDirectory(source, saveFileDialog.FileName, CompressionLevel.Optimal, false);
           }
           catch (Exception ex)
@@ -683,12 +676,6 @@ namespace EQLogParser
           }
           finally
           {
-            // restart triggers
-            if (triggersActive)
-            {
-              TriggerStateManager.Instance.Start();
-            }
-
             ChatManager.Instance.Init();
 
             UiUtil.InvokeAsync(() =>

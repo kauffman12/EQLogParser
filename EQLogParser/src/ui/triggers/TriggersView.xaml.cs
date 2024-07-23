@@ -3,7 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -28,6 +30,7 @@ namespace EQLogParser
     private readonly RangeEditor _heightEditor;
     private readonly RangeEditor _widthEditor;
     private readonly GridLength _characterViewWidth;
+    private readonly FileSystemWatcher _soundWatcher;
     private string _currentCharacterId;
     private bool _ready;
 
@@ -35,16 +38,7 @@ namespace EQLogParser
     {
       InitializeComponent();
 
-      if (!TriggerStateManager.Instance.IsActive())
-      {
-        IsEnabled = false;
-        return;
-      }
-
       _characterViewWidth = mainGrid.ColumnDefinitions[0].Width;
-      var config = TriggerStateManager.Instance.GetConfig();
-      characterView.SetConfig(config);
-      UpdateConfig(config);
 
       if (ConfigUtil.IfSet("TriggersWatchForQuickShare"))
       {
@@ -54,17 +48,9 @@ namespace EQLogParser
       var allVoices = SpeechSynthesizer.AllVoices;
       voices.ItemsSource = allVoices.Select(voice => voice.DisplayName).ToList();
 
-      var selectedVoice = _theConfig.Voice;
-      if (voices.ItemsSource is List<string> populated && populated.IndexOf(selectedVoice) is var found and > -1)
-      {
-        voices.SelectedIndex = found;
-      }
-
-      rateOption.SelectedIndex = _theConfig.VoiceRate;
-
       // watch file system for new sounds
       var fileList = new ObservableCollection<string>();
-      TriggerUtil.CreateSoundsWatcher(fileList);
+      _soundWatcher = TriggerUtil.CreateSoundsWatcher(fileList);
 
       _topEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Top");
       _heightEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Height");
@@ -97,7 +83,6 @@ namespace EQLogParser
 
       // don't disconnect this one so tree stays in-sync when receiving quick shares
       TriggerStateManager.Instance.TriggerImportEvent += TriggerImportEvent;
-      theTreeView.Init(_currentCharacterId, IsCancelSelection, !config.IsAdvanced);
       return;
 
       ITypeEditor AddEditorInstance(ITypeEditor typeEditor, string propName)
@@ -119,6 +104,23 @@ namespace EQLogParser
       }
     }
 
+    private async void TriggersViewOnInitialized(object sender, EventArgs e)
+    {
+      if (await TriggerStateManager.Instance.GetConfig() is { } config)
+      {
+        characterView.SetConfig(config);
+        await UpdateConfig(config);
+        var selectedVoice = _theConfig.Voice;
+        if (voices.ItemsSource is List<string> populated && populated.IndexOf(selectedVoice) is var found and > -1)
+        {
+          voices.SelectedIndex = found;
+        }
+
+        rateOption.SelectedIndex = config.VoiceRate;
+        await theTreeView.Init(_currentCharacterId, IsCancelSelection, !config.IsAdvanced);
+      }
+    }
+
     private void VolumeSliderChanged(object sender, MouseButtonEventArgs mouseButtonEventArgs) => HandleChanged(sender);
 
     private void VolumeButtonClick(object sender, RoutedEventArgs e)
@@ -127,9 +129,9 @@ namespace EQLogParser
       volumePopup.IsOpen = true;
     }
 
-    private void TriggerImportEvent(bool _)
+    private async void TriggerImportEvent(bool _)
     {
-      theTreeView.RefreshTriggers();
+      await theTreeView.RefreshTriggers();
       // in case of merge
       TriggerManager.Instance.TriggersUpdated();
     }
@@ -150,7 +152,7 @@ namespace EQLogParser
           }
         }
 
-        Dispatcher.InvokeAsync(() => theTreeView.SelectNode(entry.NodeId));
+        Dispatcher.InvokeAsync(async () => await theTreeView.SelectNode(entry.NodeId));
       });
     }
 
@@ -179,18 +181,18 @@ namespace EQLogParser
       return cancel;
     }
 
-    private void TriggerConfigUpdateEvent(TriggerConfig config) => UpdateConfig(config);
+    private async void TriggerConfigUpdateEvent(TriggerConfig config) => await UpdateConfig(config);
 
-    private void BasicChecked(object sender, RoutedEventArgs e)
+    private async void BasicChecked(object sender, RoutedEventArgs e)
     {
       if (_ready && sender is CheckBox checkBox)
       {
         _theConfig.IsEnabled = checkBox.IsChecked == true;
-        TriggerStateManager.Instance.UpdateConfig(_theConfig);
+        await TriggerStateManager.Instance.UpdateConfig(_theConfig);
       }
     }
 
-    private void CharacterSelectedCharacterEvent(List<TriggerCharacter> characters)
+    private async void CharacterSelectedCharacterEvent(List<TriggerCharacter> characters)
     {
       if (characters == null)
       {
@@ -198,7 +200,7 @@ namespace EQLogParser
         {
           _currentCharacterId = null;
           thePropertyGrid.SelectedObject = null;
-          theTreeView.EnableAndRefreshTriggers(false, _currentCharacterId);
+          await theTreeView.EnableAndRefreshTriggers(false, _currentCharacterId);
         }
       }
       else
@@ -207,12 +209,12 @@ namespace EQLogParser
         {
           _currentCharacterId = characters[0].Id;
           thePropertyGrid.SelectedObject = null;
-          theTreeView.EnableAndRefreshTriggers(true, _currentCharacterId, characters);
+          await theTreeView.EnableAndRefreshTriggers(true, _currentCharacterId, characters);
         }
       }
     }
 
-    private void ToggleAdvancedPreviewMouseDown(object sender, MouseButtonEventArgs e)
+    private async void ToggleAdvancedPreviewMouseDown(object sender, MouseButtonEventArgs e)
     {
       if (advancedText != null)
       {
@@ -227,11 +229,11 @@ namespace EQLogParser
           basicCheckBox.Visibility = Visibility.Visible;
         }
 
-        TriggerStateManager.Instance.UpdateConfig(_theConfig);
+        await TriggerStateManager.Instance.UpdateConfig(_theConfig);
       }
     }
 
-    private void UpdateConfig(TriggerConfig config)
+    private async Task UpdateConfig(TriggerConfig config)
     {
       _theConfig = config; // use latest
       theTreeView.SetConfig(_theConfig);
@@ -275,7 +277,7 @@ namespace EQLogParser
         {
           _currentCharacterId = TriggerStateManager.DefaultUser;
           thePropertyGrid.SelectedObject = null;
-          theTreeView.EnableAndRefreshTriggers(true, _currentCharacterId);
+          await theTreeView.EnableAndRefreshTriggers(true, _currentCharacterId);
         }
 
         if (_theConfig.IsEnabled)
@@ -308,7 +310,7 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, RoutedEventArgs e) => HandleChanged(sender);
 
-    private void HandleChanged(object sender)
+    private async void HandleChanged(object sender)
     {
       if (_ready)
       {
@@ -324,14 +326,14 @@ namespace EQLogParser
             if (voices.SelectedValue is string voiceName)
             {
               _theConfig.Voice = voiceName;
-              TriggerStateManager.Instance.UpdateConfig(_theConfig);
+              await TriggerStateManager.Instance.UpdateConfig(_theConfig);
               tts = voiceName;
             }
           }
           else if (Equals(sender, rateOption))
           {
             _theConfig.VoiceRate = rateOption.SelectedIndex;
-            TriggerStateManager.Instance.UpdateConfig(_theConfig);
+            await TriggerStateManager.Instance.UpdateConfig(_theConfig);
             tts = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex;
           }
           else if (Equals(sender, volumeSlider))
@@ -572,35 +574,35 @@ namespace EQLogParser
       }
     }
 
-    private void SaveClick(object sender, RoutedEventArgs e)
+    private async void SaveClick(object sender, RoutedEventArgs e)
     {
       dynamic model = thePropertyGrid?.SelectedObject;
       if (model is TriggerPropertyModel)
       {
-        TriggerUtil.Copy(model.Node.TriggerData, model);
-        TriggerStateManager.Instance.Update(model.Node);
+        await TriggerUtil.Copy(model.Node.TriggerData, model);
+        await TriggerStateManager.Instance.Update(model.Node);
 
         // reload triggers if current one is enabled by anyone
-        if (TriggerStateManager.Instance.IsAnyEnabled(model.Node.Id))
+        if (await TriggerStateManager.Instance.IsAnyEnabled(model.Node.Id))
         {
           TriggerManager.Instance.TriggersUpdated();
         }
       }
       else if (model is TextOverlayPropertyModel or TimerOverlayPropertyModel)
       {
-        TriggerManager.Instance.CloseOverlay(model.Node.Id);
+        await TriggerManager.Instance.CloseOverlay(model.Node.Id);
 
         // if this overlay is changing to default, and it isn't previously then need to refresh Overlay tree
         var old = model.Node.OverlayData as Overlay;
         var needRefresh = model.IsDefault && (old?.IsDefault != model.IsDefault);
 
-        TriggerUtil.Copy(model.Node.OverlayData, model);
-        TriggerStateManager.Instance.Update(model.Node);
+        await TriggerUtil.Copy(model.Node.OverlayData, model);
+        await TriggerStateManager.Instance.Update(model.Node);
 
         // if this node is a default then refresh 
         if (needRefresh)
         {
-          theTreeView.RefreshOverlays();
+          await theTreeView.RefreshOverlays();
         }
       }
 
@@ -608,22 +610,22 @@ namespace EQLogParser
       saveButton.IsEnabled = false;
     }
 
-    private void CancelClick(object sender, RoutedEventArgs e)
+    private async void CancelClick(object sender, RoutedEventArgs e)
     {
       dynamic model = thePropertyGrid?.SelectedObject;
       if (model is TriggerPropertyModel)
       {
-        TriggerUtil.Copy(model, model.Node.TriggerData);
+        await TriggerUtil.Copy(model, model.Node.TriggerData);
         var timerType = model.Node.TriggerData.TimerType;
         EnableCategories(true, timerType, false, false, true, false, false);
       }
       else if (model is TimerOverlayPropertyModel or TextOverlayPropertyModel)
       {
-        TriggerUtil.Copy(model, model.Node.OverlayData);
+        await TriggerUtil.Copy(model, model.Node.OverlayData);
       }
 
       thePropertyGrid?.RefreshPropertygrid();
-      Dispatcher.InvokeAsync(() => cancelButton.IsEnabled = saveButton.IsEnabled = false, DispatcherPriority.Background);
+      Dispatcher.Invoke(() => cancelButton.IsEnabled = saveButton.IsEnabled = false, DispatcherPriority.Background);
     }
 
     private void TriggerUpdateEvent(TriggerNode node)

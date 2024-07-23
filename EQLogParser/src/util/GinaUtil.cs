@@ -108,7 +108,7 @@ namespace EQLogParser
         var player = quickShareData.Sender;
         var characterIds = quickShareData.CharacterIds;
 
-        UiUtil.InvokeAsync(() =>
+        UiUtil.InvokeAsync(async () =>
         {
           if (nodes.Count > 0 && nodes[0].Nodes.Count == 0)
           {
@@ -135,13 +135,13 @@ namespace EQLogParser
 
             if (msgDialog.IsYes2Clicked)
             {
-              TriggerStateManager.Instance.ImportTriggers("", nodes, characterIds);
+              await TriggerStateManager.Instance.ImportTriggers("", nodes, characterIds);
             }
             if (msgDialog.IsYes1Clicked)
             {
               var folderName = (player == null) ? "New Folder" : "From " + player;
               folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
-              TriggerStateManager.Instance.ImportTriggers(folderName, nodes, characterIds);
+              await TriggerStateManager.Instance.ImportTriggers(folderName, nodes, characterIds);
             }
           }
 
@@ -194,15 +194,18 @@ namespace EQLogParser
           var response = MainActions.TheHttpClient.Send(message);
           if (response.IsSuccessStatusCode)
           {
+            string xml = null;
             using var data = response.Content.ReadAsStream();
             var buffer = new byte[data.Length];
-            data.Read(buffer, 0, buffer.Length);
-
-            using var bufferStream = new MemoryStream(buffer);
-            using var gzip = new GZipStream(bufferStream, CompressionMode.Decompress);
-            using var memory = new MemoryStream();
-            gzip.CopyTo(memory);
-            var xml = Encoding.UTF8.GetString(memory.ToArray());
+            var read = data.Read(buffer, 0, buffer.Length);
+            if (read > 0)
+            {
+              using var bufferStream = new MemoryStream(buffer);
+              using var gzip = new GZipStream(bufferStream, CompressionMode.Decompress);
+              using var memory = new MemoryStream();
+              gzip.CopyTo(memory);
+              xml = Encoding.UTF8.GetString(memory.ToArray());
+            }
 
             if (!string.IsNullOrEmpty(xml) && xml.IndexOf("<a:ChunkData>", StringComparison.Ordinal) is var start and > -1
                                            && xml.IndexOf("</a:ChunkData>", StringComparison.Ordinal) is var end && end > start)

@@ -1,19 +1,25 @@
 {\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Segoe UI;}{\f1\fnil\fcharset2 Symbol;}}
 {\*\generator Riched20 10.0.22621}\viewkind4\uc1 
-\pard\ul\f0\fs20\lang1033 Updates in Version 2.2.35\ulnone\par
+\pard\ul\f0\fs20\lang1033 Updates in Version 2.2.36\ulnone\par
+\par
+
+\pard 
+{\pntext\f0 1.\tab}{\*\pn\pnlvlbody\pnf0\pnindent0\pnstart1\pndec{\pntxta.}}
+\fi-360\li720 Re-worked trigger database to allow the it to be shared by multiple processors. This will make backups more reliable and if you start a second parser it no longer needs to disable triggers completely. Altough, changes won't be reflected immediately in both so I don't suggest making changes from two instances at once.\par
+{\pntext\f0 2.\tab}Updated the default filename when creating a backup.\par
+{\pntext\f0 3.\tab}Update for playing short wav files. If they're under 1 second they'll get cut short if another sound needs to play. This should improve playback for sounds commonly used for spammed messages in addition to having the lockout values added previously. This could be configurable if needed but if you want 'alert' sounds that may be spammed then make sure they're under 1 second long for best results.\par
+{\pntext\f0 4.\tab}Added support for mp3 sound files.\par
+{\pntext\f0 5.\tab}Fixed bug where Trigger Properties wouldn't reload the sound file list when files are added or removed from the directory.\par
+{\pntext\f0 6.\tab}More performance updates related to async tasks, rendering overlays, and trigger database access. I hope everyone has a lot of CPU cores.\par
+
+\pard\ul\par
+Updated in Version 2.2.35\ulnone\par
 \par
 
 \pard 
 {\pntext\f0 1.\tab}{\*\pn\pnlvlbody\pnf0\pnindent0\pnstart1\pndec{\pntxta.}}
 \fi-360\li720 More updates to LiteDB configuration to try and avoid issues.\par
-
-\pard\par
-\ul Updated in Version 2.2.34\ulnone\par
-\par
-
-\pard 
-{\pntext\f0 1.\tab}{\*\pn\pnlvlbody\pnf0\pnindent0\pnstart1\pndec{\pntxta.}}
-\fi-360\li720 Downgraded LiteDB back to 5.0.17 to see if the new versions was causing problems with loading Triggers.\par
+{\pntext\f0 2.\tab}Downgraded LiteDB back to 5.0.17 to see if the new versions was causing problems with loading Triggers.\par
 
 \pard\par
 \ul Updated in Version 2.2.33\ulnone\par

@@ -37,7 +37,6 @@ namespace EQLogParser
     private readonly SpeechSynthesizer _synth;
     private readonly BlockingCollection<Speak> _speakCollection = [];
     private readonly BlockingCollection<LineData> _chatCollection = [];
-    private readonly BlockingCollection<string> _triggerTimeCollection = [];
     private readonly string _activeColor;
     private readonly string _fontColor;
     private readonly CancellationTokenSource _cts = new();
@@ -45,7 +44,6 @@ namespace EQLogParser
     private List<LexiconItem> _lexicon;
     private Task _speakTask;
     private Task _chatTask;
-    private Task _triggerTimeTask;
     private Task _processTask;
     private bool _isTesting;
     private bool _ready;
@@ -65,11 +63,15 @@ namespace EQLogParser
       AudioManager.Instance.Add(CurrentCharacterId);
 
       BindingOperations.EnableCollectionSynchronization(AlertLog, _collectionLock);
-      GetActiveTriggers();
       SetVoice(voice);
       SetVoiceRate(voiceRate);
-      _lexicon = TriggerStateManager.Instance.GetLexicon().ToList();
       TriggerStateManager.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
+    }
+
+    public async Task Start()
+    {
+      await GetActiveTriggers();
+      _lexicon = (await TriggerStateManager.Instance.GetLexicon()).ToList();
     }
 
     public void LinkTo(BlockingCollection<Tuple<string, double, bool>> collection)
@@ -106,30 +108,6 @@ namespace EQLogParser
             try
             {
               HandleChat(data);
-            }
-            catch (Exception)
-            {
-              // ignore
-            }
-          }
-        }
-        catch (Exception)
-        {
-          // ignore (should only be cancel requests)
-        }
-      });
-
-      _triggerTimeTask = Task.Run(() =>
-      {
-        try
-        {
-          foreach (var data in _triggerTimeCollection.GetConsumingEnumerable(_cts.Token))
-          {
-            try
-            {
-              var beginTicks = DateTime.UtcNow.Ticks;
-              var updatedTime = beginTicks / TimeSpan.TicksPerMillisecond;
-              TriggerStateManager.Instance.UpdateLastTriggered(data, updatedTime);
             }
             catch (Exception)
             {
@@ -207,14 +185,9 @@ namespace EQLogParser
       _isTesting = testing;
     }
 
-    internal void UpdateActiveTriggers()
+    internal async Task UpdateActiveTriggers()
     {
-      lock (_activeTriggerLock)
-      {
-        _ready = false;
-        _activeTriggers.ToList().ForEach(CleanupWrapper);
-        GetActiveTriggers();
-      }
+      await GetActiveTriggers();
 
       lock (_voiceLock)
       {
@@ -405,12 +378,11 @@ namespace EQLogParser
 
         // no need to constantly updated the DB. 6 hour check
         var updatedTime = beginTicks / TimeSpan.TicksPerMillisecond;
+
         if (updatedTime - wrapper.TriggerData.LastTriggered > SixtyHours)
         {
-          if (!_triggerTimeCollection.IsCompleted)
-          {
-            _triggerTimeCollection.Add(wrapper.Id);
-          }
+          // queue update to last trigger time
+          TriggerStateManager.Instance.UpdateLastTriggered(wrapper.Id, updatedTime);
           wrapper.TriggerData.LastTriggered = updatedTime;
         }
 
@@ -677,7 +649,7 @@ namespace EQLogParser
 
     private void HandleSpeech(Speak speak)
     {
-      lock (_activeTriggerLock) if (!_ready) return;
+      if (!_ready) return;
 
       if (!string.IsNullOrEmpty(speak.TtsOrSound))
       {
@@ -728,7 +700,7 @@ namespace EQLogParser
     {
       // look for quick shares after triggers have been processed
       var chatType = ChatLineParser.ParseChatType(lineData.Action);
-      if (chatType != null && TriggerStateManager.Instance.IsActive())
+      if (chatType != null)
       {
         // Look for Quick Share entries
         TriggerUtil.CheckQuickShare(chatType, lineData.Action, lineData.BeginTime, CurrentCharacterId, CurrentProcessorName);
@@ -736,10 +708,18 @@ namespace EQLogParser
       }
     }
 
-    private void GetActiveTriggers()
+    private async Task GetActiveTriggers()
     {
+      _ready = false;
+
+      lock (_activeTriggerLock)
+      {
+        // cleanup old triggers
+        _activeTriggers?.ToList().ForEach(CleanupWrapper);
+      }
+
       var activeTriggers = new List<TriggerWrapper>();
-      var enabledTriggers = TriggerStateManager.Instance.GetEnabledTriggers(CurrentCharacterId);
+      var enabledTriggers = await TriggerStateManager.Instance.GetEnabledTriggers(CurrentCharacterId);
       var timerOverlayCache = new Dictionary<string, bool>();
       long triggerCount = 0;
       foreach (var enabled in enabledTriggers.OrderByDescending(enabled => enabled.Trigger.LastTriggered))
@@ -774,7 +754,7 @@ namespace EQLogParser
             wrapper.ModifiedTimerName = ModCounter(wrapper.ModifiedTimerName);
 
             // get overlays for timers
-            wrapper.TriggerData.SelectedOverlays?.ForEach(overlayId =>
+            foreach (var overlayId in wrapper.TriggerData.SelectedOverlays ?? [])
             {
               if (timerOverlayCache.TryGetValue(overlayId, out var isTimer))
               {
@@ -785,7 +765,7 @@ namespace EQLogParser
               }
               else
               {
-                if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { } overlay && overlay.OverlayData.IsTimerOverlay)
+                if (await TriggerStateManager.Instance.GetOverlayById(overlayId) is { } overlay && overlay.OverlayData.IsTimerOverlay)
                 {
                   wrapper.TimerOverlayIds.Add(overlayId);
                   timerOverlayCache[overlayId] = true;
@@ -795,7 +775,7 @@ namespace EQLogParser
                   timerOverlayCache[overlayId] = false;
                 }
               }
-            });
+            }
 
             wrapper.ModifiedTimerName = string.IsNullOrEmpty(wrapper.ModifiedTimerName) ? "" : wrapper.ModifiedTimerName;
             wrapper.HasRepeatedText = wrapper.ModifiedDisplay?.Contains("{repeated}", StringComparison.OrdinalIgnoreCase) == true;
@@ -844,13 +824,11 @@ namespace EQLogParser
 
             activeTriggers.Add(wrapper);
           }
-          catch (Exception ex)
+          catch (Exception)
           {
-            Log.Debug("Bad Trigger?", ex);
+            // Log.Debug("Bad Trigger?", ex);
           }
         }
-
-        _ready = true;
       }
 
       if (triggerCount > 400 && CurrentProcessorName?.Contains("Trigger Tester") == false)
@@ -858,7 +836,12 @@ namespace EQLogParser
         Log.Warn($"Over {triggerCount} triggers active for one character. To improve performance consider turning off old triggers.");
       }
 
-      _activeTriggers = activeTriggers;
+      lock (_activeTriggerLock)
+      {
+        _activeTriggers = activeTriggers;
+      }
+
+      _ready = true;
     }
 
     private static bool CheckEndEarly(Regex endEarlyRegex, List<NumberOptions> options, string endEarlyPattern,
@@ -1097,19 +1080,15 @@ namespace EQLogParser
         TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
         _speakCollection.CompleteAdding();
         _chatCollection.CompleteAdding();
-        _triggerTimeCollection.CompleteAdding();
         _cts?.Cancel();
         _speakTask?.Wait();
         _chatTask?.Wait();
-        _triggerTimeTask?.Wait();
         _processTask?.Wait();
         _speakTask?.Dispose();
         _chatTask?.Dispose();
-        _triggerTimeTask?.Dispose();
         _processTask?.Dispose();
         _speakCollection?.Dispose();
         _chatCollection?.Dispose();
-        _triggerTimeCollection?.Dispose();
         _cts?.Dispose();
 
         lock (_voiceLock)

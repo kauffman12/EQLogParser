@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -52,11 +53,21 @@ namespace EQLogParser
       }
     }
 
-    internal static void InvokeSync(Action action, DispatcherPriority priority = DispatcherPriority.Normal)
+    internal static void InvokeAsync(Func<Task> asyncAction, DispatcherPriority priority = DispatcherPriority.Normal)
     {
       if (Application.Current?.Dispatcher is { } dispatcher)
       {
-        dispatcher.Invoke(action, priority);
+        dispatcher.InvokeAsync(async () =>
+        {
+          try
+          {
+            await asyncAction();
+          }
+          catch (Exception)
+          {
+            // ignore
+          }
+        }, priority);
       }
     }
   }

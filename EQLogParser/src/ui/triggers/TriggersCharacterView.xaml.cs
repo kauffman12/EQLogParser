@@ -42,7 +42,7 @@ namespace EQLogParser
         var dataChanged = false;
         foreach (var reader in await TriggerManager.Instance.GetLogReadersAsync())
         {
-          if (reader.GetProcessor() is TriggerProcessor processor && characters.FirstOrDefault(item => item.Id == processor?.CurrentCharacterId) is { } character)
+          if (reader.GetProcessor() is TriggerProcessor processor && characters.FirstOrDefault(item => item.Id == processor.CurrentCharacterId) is { } character)
           {
             bool? update;
             if (reader.IsWaiting())
@@ -92,7 +92,7 @@ namespace EQLogParser
       configWindow.ShowDialog();
     }
 
-    private void DeleteClick(object sender, RoutedEventArgs e)
+    private async void DeleteClick(object sender, RoutedEventArgs e)
     {
       if (dataGrid?.SelectedItem is TriggerCharacter character)
       {
@@ -101,7 +101,7 @@ namespace EQLogParser
         msgDialog.ShowDialog();
         if (msgDialog.IsYes1Clicked)
         {
-          TriggerStateManager.Instance.DeleteCharacter(character.Id);
+          await TriggerStateManager.Instance.DeleteCharacter(character.Id);
         }
       }
     }
@@ -131,7 +131,7 @@ namespace EQLogParser
       }
     }
 
-    private void CharacterCheckboxPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private async void CharacterCheckboxPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
       if (sender is CheckBox checkBox)
       {
@@ -148,7 +148,7 @@ namespace EQLogParser
             RefreshData();
           }
 
-          TriggerStateManager.Instance.UpdateCharacter(character);
+          await TriggerStateManager.Instance.UpdateCharacter(character);
         }
       }
     }

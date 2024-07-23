@@ -114,9 +114,9 @@ namespace EQLogParser
 
     internal async void TestSpeakFileAsync(string filePath)
     {
-      if (!string.IsNullOrEmpty(filePath) && await ReadFileToByteArrayAsync(filePath) is { } data)
+      var reader = new AudioFileReader(filePath);
+      if (!string.IsNullOrEmpty(filePath) && await ReadFileToByteArrayAsync(reader) is { Length: > 0 } data)
       {
-        var reader = new WaveFileReader(filePath);
         PlayAudioData(data, reader.WaveFormat);
       }
     }
@@ -128,7 +128,7 @@ namespace EQLogParser
         synth.Voice = GetVoice(voice);
         synth.Options.SpeakingRate = GetSpeakingRate(rate);
 
-        if (await SynthesizeTextToByteArrayAsync(synth, tts) is { } data)
+        if (await SynthesizeTextToByteArrayAsync(synth, tts) is { Length: > 0 } data)
         {
           var waveFormat = new WaveFormat(16000, 16, 1);
           PlayAudioData(data, waveFormat, volume);
@@ -142,10 +142,10 @@ namespace EQLogParser
       {
         try
         {
-          if (await ReadFileToByteArrayAsync(filePath) is { Length: > 0 } data)
+          var reader = new AudioFileReader(filePath);
+          if (await ReadFileToByteArrayAsync(reader) is { Length: > 0 } data)
           {
-            var reader = new WaveFileReader(filePath);
-            SpeakAsync(id, data, reader.WaveFormat, trigger.Priority, trigger.Volume);
+            SpeakAsync(id, data, reader.WaveFormat, trigger.Priority, trigger.Volume, reader.TotalTime.TotalSeconds);
           }
         }
         catch (Exception ex)
@@ -191,18 +191,17 @@ namespace EQLogParser
       };
     }
 
-    private static async Task<byte[]> ReadFileToByteArrayAsync(string filePath)
+    private static async Task<byte[]> ReadFileToByteArrayAsync(AudioFileReader reader)
     {
       try
       {
-        var reader = new WaveFileReader(filePath);
         var memStream = new MemoryStream();
         await reader.CopyToAsync(memStream);
         return memStream.ToArray();
       }
       catch (Exception ex)
       {
-        Log.Debug($"Error reading file to byte array: {filePath}", ex);
+        Log.Debug($"Error reading file to byte array: {reader.FileName}", ex);
         return null;
       }
     }
@@ -223,14 +222,14 @@ namespace EQLogParser
       }
     }
 
-    private void SpeakAsync(string id, byte[] audioData, WaveFormat waveFormat, long priority = 5, int volume = 4)
+    private void SpeakAsync(string id, byte[] audioData, WaveFormat waveFormat, long priority = 5, int volume = 4, double seconds = -1)
     {
       if (_playerAudios.TryGetValue(id, out var playerAudio))
       {
         lock (playerAudio)
         {
           playerAudio.Events = playerAudio.Events.Where(pa => pa.Priority <= priority).ToList();
-          playerAudio.Events.Add(new PlaybackEvent { AudioData = audioData, WaveFormat = waveFormat, Priority = priority, Volume = volume });
+          playerAudio.Events.Add(new PlaybackEvent { AudioData = audioData, WaveFormat = waveFormat, Priority = priority, Volume = volume, Seconds = seconds });
           if (playerAudio.CurrentEvent != null && playerAudio.WaveOut.PlaybackState != PlaybackState.Stopped && playerAudio.CurrentEvent.Priority > priority)
           {
             playerAudio.WaveOut.Stop();
@@ -307,6 +306,13 @@ namespace EQLogParser
           {
             lock (audio)
             {
+              if (audio.WaveOut.PlaybackState == PlaybackState.Playing &&
+                  audio.CurrentEvent?.Seconds is > -1 and < 1.0 && audio.Events.Count > 0)
+              {
+                audio.WaveOut.Stop();
+              }
+
+              // skip through short sound files if there's audio pending
               if (audio.WaveOut.PlaybackState == PlaybackState.Stopped)
               {
                 if (stream != null)
@@ -332,7 +338,7 @@ namespace EQLogParser
               }
             }
 
-            Thread.Sleep(20);
+            Thread.Sleep(40);
           }
         }
         catch (OperationCanceledException)
@@ -378,6 +384,7 @@ namespace EQLogParser
       internal int Volume { get; init; } = 4;
       internal byte[] AudioData { get; init; }
       internal WaveFormat WaveFormat { get; init; }
+      internal double Seconds { get; init; }
     }
   }
 }

@@ -179,7 +179,7 @@ namespace EQLogParser
           try
           {
             // fix creation time as a workaround
-            var updatedFileInfo = new FileInfo(path)
+            _ = new FileInfo(path)
             {
               CreationTime = DateTime.Now
             };

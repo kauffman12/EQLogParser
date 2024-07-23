@@ -32,29 +32,22 @@ namespace EQLogParser
     private TriggerProcessor _testProcessor;
     private int _timerIncrement;
     private static readonly SemaphoreSlim LogReadersSemaphore = new(1, 1);
+    private static readonly SemaphoreSlim TextOverlaySemaphore = new(1, 1);
+    private static readonly SemaphoreSlim TimerOverlaySemaphore = new(1, 1);
 
     public TriggerManager()
     {
-      if (!TriggerStateManager.Instance.IsActive())
-      {
-        MainActions.DisableTriggers();
-        return;
-      }
-
-      TriggerUtil.LoadOverlayStyles();
       _configUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
       _triggerUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
       _textOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 450) };
       _timerOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 50) };
-      TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
       _configUpdateTimer.Tick += ConfigDoUpdate;
       _triggerUpdateTimer.Tick += TriggersDoUpdate;
       _textOverlayTimer.Tick += TextTick;
       _timerOverlayTimer.Tick += TimerTick;
+      TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
     }
 
-    internal void CloseOverlay(string id) => CloseOverlay(id, _textWindows, _timerWindows);
-    internal void CloseOverlays() => CloseOverlays(_textWindows, _timerWindows);
     internal void Select(AlertEntry entry) => EventsSelectTrigger?.Invoke(entry);
 
     internal void TriggersUpdated()
@@ -63,14 +56,14 @@ namespace EQLogParser
       _triggerUpdateTimer.Start();
     }
 
-    internal void Start()
+    internal async Task Start()
     {
-      TriggerUtil.LoadOverlayStyles();
+      await TriggerUtil.LoadOverlayStyles();
       MainActions.EventsLogLoadingComplete += TriggerManagerEventsLogLoadingComplete;
       TriggerConfigUpdateEvent(null);
     }
 
-    internal async void Stop()
+    internal async Task Stop()
     {
       MainActions.EventsLogLoadingComplete -= TriggerManagerEventsLogLoadingComplete;
       await LogReadersSemaphore.WaitAsync();
@@ -103,18 +96,98 @@ namespace EQLogParser
       }
     }
 
-    internal void SetTestProcessor(TriggerConfig config, BlockingCollection<Tuple<string, double, bool>> collection)
+    internal async Task CloseOverlay(string id)
+    {
+      if (!string.IsNullOrEmpty(id))
+      {
+        await TextOverlaySemaphore.WaitAsync();
+
+        try
+        {
+          _textWindows.Remove(id, out var textWindowData);
+
+          UiUtil.InvokeNow(() =>
+          {
+            textWindowData?.TheWindow?.Close();
+            _defaultTextOverlay = null;
+          }, DispatcherPriority.Render);
+        }
+        finally
+        {
+          TextOverlaySemaphore.Release();
+        }
+
+        await TimerOverlaySemaphore.WaitAsync();
+
+        try
+        {
+          _timerWindows.Remove(id, out var timerWindowData);
+
+          UiUtil.InvokeNow(() =>
+          {
+            timerWindowData?.TheWindow?.Close();
+            _defaultTimerOverlay = null;
+          }, DispatcherPriority.Render);
+        }
+        finally
+        {
+          TimerOverlaySemaphore.Release();
+        }
+      }
+    }
+
+    internal async Task CloseOverlays()
+    {
+      await TextOverlaySemaphore.WaitAsync();
+
+      try
+      {
+        var textList = _textWindows.Values.ToList();
+        _textWindows.Clear();
+
+        UiUtil.InvokeNow(() =>
+        {
+          textList.ForEach(window => window.TheWindow.Close());
+          _defaultTextOverlay = null;
+        }, DispatcherPriority.Render);
+      }
+      finally
+      {
+        TextOverlaySemaphore.Release();
+      }
+
+      await TimerOverlaySemaphore.WaitAsync();
+
+      try
+      {
+        var timerList = _timerWindows.Values.ToList();
+        _timerWindows.Clear();
+
+        UiUtil.InvokeNow(() =>
+        {
+          timerList.ForEach(window => window.TheWindow.Close());
+          _defaultTimerOverlay = null;
+        }, DispatcherPriority.Render);
+      }
+      finally
+      {
+        TimerOverlaySemaphore.Release();
+      }
+    }
+
+    internal async Task SetTestProcessor(TriggerConfig config, BlockingCollection<Tuple<string, double, bool>> collection)
     {
       _testProcessor?.Dispose();
       const string name = TriggerStateManager.DefaultUser;
       _testProcessor = new TriggerProcessor(name, $"Trigger Tester ({name})", ConfigUtil.PlayerName, config.Voice,
         config.VoiceRate, null, null, AddTextEvent, AddTimerEvent);
       _testProcessor.SetTesting(true);
+      await _testProcessor.Start();
       _testProcessor.LinkTo(collection);
-      UiUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
+      UiUtil.InvokeNow(() => EventsProcessorsUpdated?.Invoke(true));
     }
 
-    internal void SetTestProcessor(TriggerCharacter character, BlockingCollection<Tuple<string, double, bool>> collection)
+    internal async Task SetTestProcessor(TriggerCharacter character, BlockingCollection<Tuple<string, double, bool>> collection)
     {
       _testProcessor?.Dispose();
       // if cant parse then use character name
@@ -126,8 +199,9 @@ namespace EQLogParser
       _testProcessor = new TriggerProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, character.Voice,
         character.VoiceRate, character.ActiveColor, character.FontColor, AddTextEvent, AddTimerEvent);
       _testProcessor.SetTesting(true);
+      await _testProcessor.Start();
       _testProcessor.LinkTo(collection);
-      UiUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
+      UiUtil.InvokeNow(() => EventsProcessorsUpdated?.Invoke(true));
     }
 
     internal void StopTestProcessor()
@@ -142,12 +216,10 @@ namespace EQLogParser
       return processors.Select(p => Tuple.Create(p.CurrentProcessorName, p.AlertLog)).ToList();
     }
 
-    private void TextTick(object sender, EventArgs e) => WindowTick(_textWindows, _textOverlayTimer);
-
-    private void TriggerManagerEventsLogLoadingComplete(string _)
+    private async void TriggerManagerEventsLogLoadingComplete(string _)
     {
       // ignore event if in advanced mode
-      if (TriggerStateManager.Instance.GetConfig() is { IsAdvanced: false })
+      if (await TriggerStateManager.Instance.GetConfig() is { IsAdvanced: false })
       {
         ConfigDoUpdate(this, null);
       }
@@ -162,13 +234,11 @@ namespace EQLogParser
     private async void ConfigDoUpdate(object sender, EventArgs e)
     {
       _configUpdateTimer.Stop();
-      UiUtil.InvokeAsync(CloseOverlays);
       _textOverlayTimer?.Stop();
       _timerOverlayTimer?.Stop();
-      _defaultTextOverlay = null;
-      _defaultTimerOverlay = null;
+      await CloseOverlays();
 
-      if (TriggerStateManager.Instance.GetConfig() is { } config)
+      if (await TriggerStateManager.Instance.GetConfig() is { } config)
       {
         await LogReadersSemaphore.WaitAsync();
 
@@ -234,11 +304,14 @@ namespace EQLogParser
                   playerName = character.Name;
                 }
 
-                var reader = new LogReader(new TriggerProcessor(character.Id, character.Name, playerName,
-                  character.Voice, character.VoiceRate, character.ActiveColor, character.FontColor, AddTextEvent, AddTimerEvent), character.FilePath);
+                var processor = new TriggerProcessor(character.Id, character.Name, playerName,
+                  character.Voice, character.VoiceRate, character.ActiveColor, character.FontColor, AddTextEvent,
+                  AddTimerEvent);
+                await processor.Start();
+                var reader = new LogReader(processor, character.FilePath);
                 _logReaders.Add(reader);
 
-                startTasks.Add(Task.Run(() => reader.StartAsync()));
+                startTasks.Add(Task.Run(() => reader.Start()));
                 RunningFiles[character.FilePath] = true;
               }
             }
@@ -255,11 +328,12 @@ namespace EQLogParser
             {
               if (MainWindow.CurrentLogFile is { } currentFile)
               {
-                var reader = new LogReader(new TriggerProcessor(TriggerStateManager.DefaultUser, TriggerStateManager.DefaultUser,
-                    ConfigUtil.PlayerName, config.Voice, config.VoiceRate, null, null, AddTextEvent, AddTimerEvent),
-                  currentFile);
+                var processor = new TriggerProcessor(TriggerStateManager.DefaultUser, TriggerStateManager.DefaultUser,
+                  ConfigUtil.PlayerName, config.Voice, config.VoiceRate, null, null, AddTextEvent, AddTimerEvent);
+                await processor.Start();
+                var reader = new LogReader(processor, currentFile);
                 _logReaders.Add(reader);
-                startTasks.Add(Task.Run(() => reader.StartAsync()));
+                startTasks.Add(Task.Run(() => reader.Start()));
                 MainActions.ShowTriggersEnabled(true);
 
                 // only 1 running file in basic mode
@@ -288,46 +362,11 @@ namespace EQLogParser
     private async void TriggersDoUpdate(object sender, EventArgs e)
     {
       _triggerUpdateTimer.Stop();
-      CloseOverlays();
-      var processors = await GetProcessorsAsync();
-      processors.ForEach(p => p.UpdateActiveTriggers());
-    }
-
-    private void CloseOverlay(string id, params Dictionary<string, OverlayWindowData>[] windowList)
-    {
-      if (id != null)
+      await CloseOverlays();
+      foreach (var processor in await GetProcessorsAsync())
       {
-        UiUtil.InvokeAsync(() =>
-        {
-          foreach (var windows in windowList)
-          {
-            windows.Remove(id, out var windowData);
-            windowData?.TheWindow.Close();
-          }
-
-          _defaultTextOverlay = null;
-          _defaultTimerOverlay = null;
-        });
+        await processor.UpdateActiveTriggers();
       }
-    }
-
-    private void CloseOverlays(params Dictionary<string, OverlayWindowData>[] windowList)
-    {
-      UiUtil.InvokeAsync(() =>
-      {
-        foreach (var windows in windowList)
-        {
-          foreach (var windowData in windows.Values)
-          {
-            windowData?.TheWindow?.Close();
-          }
-
-          windows.Clear();
-        }
-
-        _defaultTextOverlay = null;
-        _defaultTimerOverlay = null;
-      });
     }
 
     private async Task<List<TriggerProcessor>> GetProcessorsAsync()
@@ -357,10 +396,75 @@ namespace EQLogParser
       }
     }
 
-    private void TimerTick(object sender, EventArgs e)
+    private async void TimerTick(object sender, EventArgs e)
     {
       _timerIncrement++;
-      WindowTick(_timerWindows, _timerOverlayTimer, _timerIncrement);
+      var removeList = new List<string>();
+      var data = GetProcessorsAsync().Result.SelectMany(processor => processor.GetActiveTimers()).ToList();
+
+      await TimerOverlaySemaphore.WaitAsync();
+
+      try
+      {
+        foreach (var kv in _timerWindows)
+        {
+          var done = false;
+          var shortTick = false;
+          if (kv.Value is { } windowData)
+          {
+            if (windowData.TheWindow is TimerOverlayWindow timerWindow)
+            {
+              // full tick every 500ms
+              if (_timerIncrement == 10)
+              {
+                done = timerWindow.Tick(data);
+              }
+              else
+              {
+                timerWindow.ShortTick(data);
+                shortTick = true;
+              }
+            }
+
+            if (!shortTick)
+            {
+              if (done)
+              {
+                var nowTicks = DateTime.UtcNow.Ticks;
+                if (windowData.RemoveTicks == -1)
+                {
+                  windowData.RemoveTicks = nowTicks + (TimeSpan.TicksPerMinute * 2);
+                }
+                else if (nowTicks > windowData.RemoveTicks)
+                {
+                  removeList.Add(kv.Key);
+                }
+              }
+              else
+              {
+                windowData.RemoveTicks = -1;
+              }
+            }
+          }
+        }
+
+        foreach (var id in removeList)
+        {
+          if (_timerWindows.Remove(id, out var windowData))
+          {
+            windowData.TheWindow?.Close();
+          }
+        }
+
+        if (_timerWindows.Count == 0)
+        {
+          _timerOverlayTimer.Stop();
+        }
+      }
+      finally
+      {
+        TimerOverlaySemaphore.Release();
+      }
 
       if (_timerIncrement == 10)
       {
@@ -368,37 +472,24 @@ namespace EQLogParser
       }
     }
 
-    private void WindowTick(Dictionary<string, OverlayWindowData> windows, DispatcherTimer dispatchTimer, int increment = 10)
+    private async void TextTick(object sender, EventArgs e)
     {
       var removeList = new List<string>();
-      var data = GetProcessorsAsync().Result.SelectMany(processor => processor.GetActiveTimers()).ToList();
 
-      foreach (var kv in windows)
+      await TextOverlaySemaphore.WaitAsync();
+
+      try
       {
-        var done = false;
-        var shortTick = false;
-        if (kv.Value is { } windowData)
+        foreach (var kv in _textWindows)
         {
-          if (windowData.TheWindow is TextOverlayWindow textWindow)
+          var done = false;
+          if (kv.Value is { } windowData)
           {
-            done = textWindow.Tick();
-          }
-          else if (windowData.TheWindow is TimerOverlayWindow timerWindow)
-          {
-            // full tick every 500ms
-            if (increment == 10)
+            if (windowData.TheWindow is TextOverlayWindow textWindow)
             {
-              done = timerWindow.Tick(data);
+              done = textWindow.Tick();
             }
-            else
-            {
-              timerWindow.ShortTick(data);
-              shortTick = true;
-            }
-          }
 
-          if (!shortTick)
-          {
             if (done)
             {
               var nowTicks = DateTime.UtcNow.Ticks;
@@ -417,137 +508,184 @@ namespace EQLogParser
             }
           }
         }
-      }
 
-      foreach (var id in removeList)
-      {
-        if (windows.Remove(id, out var windowData))
+        foreach (var id in removeList)
         {
-          windowData.TheWindow?.Close();
+          if (_textWindows.Remove(id, out var windowData))
+          {
+            windowData.TheWindow?.Close();
+          }
+        }
+
+        if (_textWindows.Count == 0)
+        {
+          _textOverlayTimer.Stop();
         }
       }
-
-      if (windows.Count == 0)
+      finally
       {
-        dispatchTimer.Stop();
+        TextOverlaySemaphore.Release();
       }
     }
 
-    private void AddTextEvent(string text, Trigger trigger, string fontColor)
+    private async void AddTextEvent(string text, Trigger trigger, string fontColor)
     {
       var beginTicks = DateTime.UtcNow.Ticks;
       fontColor ??= trigger.FontColor;
-      UiUtil.InvokeAsync(() =>
+      var textOverlayFound = false;
+
+      await Task.Run(async () =>
       {
-        var textOverlayFound = false;
-        if (trigger.SelectedOverlays != null)
+        await TextOverlaySemaphore.WaitAsync();
+
+        try
         {
-          foreach (var overlayId in trigger.SelectedOverlays)
+          if (trigger.SelectedOverlays != null)
           {
-            if (!_textWindows.TryGetValue(overlayId, out var windowData))
+            foreach (var overlayId in trigger.SelectedOverlays)
             {
-              if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { OverlayData.IsTextOverlay: true } node)
+              if (!_textWindows.TryGetValue(overlayId, out var windowData))
               {
-                windowData = GetTextWindowData(node);
+                if (await TriggerStateManager.Instance.GetOverlayById(overlayId) is { OverlayData.IsTextOverlay: true } node)
+                {
+                  windowData = GetTextWindowData(node);
+                }
+              }
+
+              if (windowData != null)
+              {
+                UiUtil.InvokeNow(() =>
+                {
+                  var brush = UiUtil.GetBrush(fontColor);
+                  (windowData.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
+                }, DispatcherPriority.Render);
+
+                textOverlayFound = true;
               }
             }
+          }
 
-            if (windowData != null)
+          if (!textOverlayFound && await GetDefaultTextOverlay() is { } node2)
+          {
+            if (!_textWindows.TryGetValue(node2.Id, out var windowData))
+            {
+              windowData = GetTextWindowData(node2);
+            }
+
+            // using default
+            UiUtil.InvokeNow(() =>
             {
               var brush = UiUtil.GetBrush(fontColor);
-              (windowData.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
-              textOverlayFound = true;
-            }
-          }
-        }
+              (windowData?.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
+            }, DispatcherPriority.Render);
 
-        if (!textOverlayFound && GetDefaultTextOverlay() is { } node2)
-        {
-          if (!_textWindows.TryGetValue(node2.Id, out var windowData))
+            textOverlayFound = true;
+          }
+
+          UiUtil.InvokeNow(() =>
           {
-            windowData = GetTextWindowData(node2);
-          }
-
-          // using default
-          var brush = UiUtil.GetBrush(fontColor);
-          (windowData?.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
-          textOverlayFound = true;
+            if (textOverlayFound && !_textOverlayTimer.IsEnabled)
+            {
+              _textOverlayTimer.Start();
+            }
+          }, DispatcherPriority.Render);
         }
-
-        if (textOverlayFound && !_textOverlayTimer.IsEnabled)
+        finally
         {
-          _textOverlayTimer.Start();
+          TextOverlaySemaphore.Release();
         }
-      }, DispatcherPriority.Render);
-      return;
-
-      OverlayWindowData GetTextWindowData(TriggerNode node)
-      {
-        var windowData = new OverlayWindowData { TheWindow = new TextOverlayWindow(node) };
-        _textWindows[node.Id] = windowData;
-        windowData.TheWindow.Show();
-        return windowData;
-      }
+      });
     }
 
-    private void AddTimerEvent(Trigger trigger, List<TimerData> data)
+    private OverlayWindowData GetTextWindowData(TriggerNode node)
     {
-      UiUtil.InvokeAsync(() =>
+      OverlayWindowData result = null;
+      UiUtil.InvokeNow(() =>
       {
-        var timerOverlayFound = false;
-        if (trigger.SelectedOverlays != null)
+        result = new OverlayWindowData { TheWindow = new TextOverlayWindow(node) };
+        _textWindows[node.Id] = result;
+        result.TheWindow.Show();
+      }, DispatcherPriority.Render);
+
+      return result;
+    }
+
+    private async void AddTimerEvent(Trigger trigger, List<TimerData> data)
+    {
+      var timerOverlayFound = false;
+
+      await Task.Run(async () =>
+      {
+        await TimerOverlaySemaphore.WaitAsync();
+
+        try
         {
-          foreach (var overlayId in trigger.SelectedOverlays)
+          if (trigger.SelectedOverlays != null)
           {
-            if (!_timerWindows.TryGetValue(overlayId, out var windowData))
+            foreach (var overlayId in trigger.SelectedOverlays)
             {
-              if (TriggerStateManager.Instance.GetOverlayById(overlayId) is { OverlayData.IsTimerOverlay: true } node)
+              if (!_timerWindows.TryGetValue(overlayId, out var windowData))
               {
-                windowData = GetTimerWindowData(node, data);
+                if (await TriggerStateManager.Instance.GetOverlayById(overlayId) is { OverlayData.IsTimerOverlay: true } node)
+                {
+                  windowData = GetTimerWindowData(node, data);
+                }
+              }
+
+              // may not have found a timer overlay
+              if (windowData != null)
+              {
+                timerOverlayFound = true;
               }
             }
-
-            // may not have found a timer overlay
-            if (windowData != null)
-            {
-              timerOverlayFound = true;
-            }
           }
-        }
 
-        if (!timerOverlayFound && GetDefaultTimerOverlay() is { } node2)
-        {
-          if (!_timerWindows.TryGetValue(node2.Id, out _))
+          if (!timerOverlayFound && await GetDefaultTimerOverlay() is { } node2)
           {
-            GetTimerWindowData(node2, data);
+            if (!_timerWindows.TryGetValue(node2.Id, out _))
+            {
+              GetTimerWindowData(node2, data);
+            }
+
+            // using default
+            timerOverlayFound = true;
           }
 
-          // using default
-          timerOverlayFound = true;
+          UiUtil.InvokeNow(() =>
+          {
+            if (timerOverlayFound && !_timerOverlayTimer.IsEnabled)
+            {
+              _timerOverlayTimer.Start();
+            }
+          }, DispatcherPriority.Render);
         }
-
-        if (timerOverlayFound && !_timerOverlayTimer.IsEnabled)
+        finally
         {
-          _timerOverlayTimer.Start();
+          TimerOverlaySemaphore.Release();
         }
-      }, DispatcherPriority.Render);
-      return;
-
-      OverlayWindowData GetTimerWindowData(TriggerNode node, List<TimerData> timerData)
-      {
-        var windowData = new OverlayWindowData { TheWindow = new TimerOverlayWindow(node) };
-        _timerWindows[node.Id] = windowData;
-        windowData.TheWindow.Show();
-        ((TimerOverlayWindow)windowData.TheWindow).Tick(timerData);
-        return windowData;
-      }
+      });
     }
 
-    private TriggerNode GetDefaultTextOverlay()
+    private OverlayWindowData GetTimerWindowData(TriggerNode node, List<TimerData> timerData)
+    {
+      OverlayWindowData result = null;
+
+      UiUtil.InvokeNow(() =>
+      {
+        result = new OverlayWindowData { TheWindow = new TimerOverlayWindow(node) };
+        _timerWindows[node.Id] = result;
+        result.TheWindow.Show();
+        ((TimerOverlayWindow)result.TheWindow).Tick(timerData);
+      }, DispatcherPriority.Render);
+
+      return result;
+    }
+
+    private async Task<TriggerNode> GetDefaultTextOverlay()
     {
       if (_defaultTextOverlay == null)
       {
-        if (TriggerStateManager.Instance.GetDefaultTextOverlay() is { } overlay)
+        if (await TriggerStateManager.Instance.GetDefaultTextOverlay() is { } overlay)
         {
           _defaultTextOverlay = overlay;
         }
@@ -565,11 +703,11 @@ namespace EQLogParser
       return _defaultTextOverlay;
     }
 
-    private TriggerNode GetDefaultTimerOverlay()
+    private async Task<TriggerNode> GetDefaultTimerOverlay()
     {
       if (_defaultTimerOverlay == null)
       {
-        if (TriggerStateManager.Instance.GetDefaultTimerOverlay() is { } overlay)
+        if (await TriggerStateManager.Instance.GetDefaultTimerOverlay() is { } overlay)
         {
           _defaultTimerOverlay = overlay;
         }
