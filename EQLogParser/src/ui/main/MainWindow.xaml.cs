@@ -1096,28 +1096,33 @@ namespace EQLogParser
 
     private async void WindowClosing(object sender, EventArgs e)
     {
-      ConfigUtil.SetSetting("WindowState", WindowState.ToString());
-
-      if (!_resetWindowState && Directory.Exists(ConfigUtil.ConfigDir))
+      // restore from backup will use explicit mode
+      if (Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)
       {
-        try
+        ConfigUtil.SetSetting("WindowState", WindowState.ToString());
+
+        if (!_resetWindowState && Directory.Exists(ConfigUtil.ConfigDir))
         {
-          var writer = XmlWriter.Create(ConfigUtil.ConfigDir + "/dockSite.xml");
-          dockSite.SaveDockState(writer);
-          writer.Close();
+          try
+          {
+            var writer = XmlWriter.Create(ConfigUtil.ConfigDir + "/dockSite.xml");
+            dockSite.SaveDockState(writer);
+            writer.Close();
+          }
+          catch (Exception)
+          {
+            // ignore
+          }
         }
-        catch (Exception)
-        {
-          // ignore
-        }
+
+        ConfigUtil.Save();
+        PlayerManager.Instance?.Save();
       }
 
-      ConfigUtil.Save();
       _eqLogReader?.Dispose();
       petMappingGrid?.Dispose();
       verifiedPetsGrid?.Dispose();
       verifiedPlayersGrid?.Dispose();
-      PlayerManager.Instance?.Save();
       RecordManager.Instance.Stop();
       ChatManager.Instance.Stop();
       await TriggerManager.Instance.Stop();

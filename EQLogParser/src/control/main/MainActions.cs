@@ -651,23 +651,24 @@ namespace EQLogParser
       if (saveFileDialog.ShowDialog() == true)
       {
         var dialog = new MessageWindow($"Creating EQLogParser Backup", Resource.CREATE_BACKUP, MessageWindow.IconType.Save);
+        ChatManager.Instance.Stop();
 
         Task.Delay(150).ContinueWith(async _ =>
         {
           var accessError = false;
           var source = Environment.ExpandEnvironmentVariables(ConfigUtil.AppData);
-          ChatManager.Instance.Stop();
+          var backupFile = saveFileDialog.FileName;
 
           try
           {
-            if (File.Exists(saveFileDialog.FileName))
+            if (File.Exists(backupFile))
             {
-              File.Delete(saveFileDialog.FileName);
+              File.Delete(backupFile);
             }
 
             // create checkpoint before backup
             await TriggerStateManager.Instance.CreateCheckpoint();
-            ZipFile.CreateFromDirectory(source, saveFileDialog.FileName, CompressionLevel.Optimal, false);
+            ZipFile.CreateFromDirectory(source, backupFile, CompressionLevel.Optimal, false);
           }
           catch (Exception ex)
           {
@@ -677,10 +678,9 @@ namespace EQLogParser
           finally
           {
             ChatManager.Instance.Init();
-
             UiUtil.InvokeAsync(() =>
             {
-              dialog.Close();
+              dialog?.Close();
 
               if (accessError)
               {
@@ -690,7 +690,7 @@ namespace EQLogParser
           }
         });
 
-        dialog.ShowDialog();
+        dialog?.ShowDialog();
       }
     }
 
@@ -703,35 +703,46 @@ namespace EQLogParser
       };
 
       // Show dialog and read result
-      dialog.Filters.Add(new CommonFileDialogFilter("EQLogParser-backup.zip", "*.zip"));
+      dialog.Filters.Add(new CommonFileDialogFilter("EQLogParser_backup.zip", "*.zip"));
       if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
       {
-        Task.Delay(150).ContinueWith(_ =>
+        Task.Delay(150).ContinueWith(async _ =>
         {
+          string temp = null;
+          var worked = false;
+          var source = Environment.ExpandEnvironmentVariables(ConfigUtil.AppData);
+
           try
           {
             using var archive = ZipFile.OpenRead(dialog.FileName);
             // Check for the presence of the folder at the top level
             var containsFolder = archive.Entries
-              .Any(entry => entry.FullName.StartsWith("config/", StringComparison.OrdinalIgnoreCase));
+              .Any(entry => entry.FullName.StartsWith("config/triggers.db", StringComparison.OrdinalIgnoreCase));
 
             if (containsFolder)
             {
               _mainWindow.Dispatcher.Invoke(() =>
               {
-                new MessageWindow("Click OK to Restart.", Resource.RESTORE_FROM_BACKUP, MessageWindow.IconType.Info).ShowDialog();
-                Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-                _mainWindow.Close();
+                new MessageWindow("Click OK to Restore and Restart.", Resource.RESTORE_FROM_BACKUP, MessageWindow.IconType.Info).ShowDialog();
               });
 
-              var source = Environment.ExpandEnvironmentVariables(ConfigUtil.AppData);
               if (Directory.Exists(source))
               {
+                temp = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+                ZipFile.CreateFromDirectory(source, temp, CompressionLevel.Optimal, false);
                 Directory.Delete(source, true);
               }
 
               Directory.CreateDirectory(source);
               ZipFile.ExtractToDirectory(dialog.FileName, source);
+              worked = true;
+
+              await Task.Delay(500);
+              _mainWindow.Dispatcher.Invoke(() =>
+              {
+                Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                _mainWindow.Close();
+              });
 
               // restart
               var processModule = Process.GetCurrentProcess().MainModule;
@@ -739,6 +750,11 @@ namespace EQLogParser
               {
                 var exePath = processModule.FileName;
                 Process.Start(exePath);
+              }
+
+              if (!string.IsNullOrEmpty(temp) && File.Exists(temp))
+              {
+                File.Delete(temp);
               }
 
               _mainWindow.Dispatcher.Invoke(() =>
@@ -757,6 +773,25 @@ namespace EQLogParser
           catch (Exception ex)
           {
             Log.Error("Problem restoring backup file.", ex);
+
+            // restore
+            if (!worked && !string.IsNullOrEmpty(temp))
+            {
+              try
+              {
+                UiUtil.InvokeAsync(() =>
+                {
+                  new MessageWindow("Problem restoring backup. See Log for details.", Resource.RESTORE_FROM_BACKUP).ShowDialog();
+                  Application.Current.ShutdownMode = ShutdownMode.OnLastWindowClose;
+                });
+                Directory.Delete(source, true);
+                ZipFile.ExtractToDirectory(temp, source);
+              }
+              catch (Exception e)
+              {
+                Log.Error("Problem rolling back restore.", e);
+              }
+            }
           }
         });
       }

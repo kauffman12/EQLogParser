@@ -163,6 +163,7 @@
   <ItemGroup>
     <None Remove="..\Dependencies\Hardcodet.Wpf.TaskbarNotification.dll" />
     <None Remove="icons\loading.png" />
+    <None Remove="src\control\managers\TriggerManager.cs.bak" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="13.0.1" />
@@ -213,7 +214,4 @@
       <LastGenOutput>Resource.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="cd $(SolutionDir)&#xD;&#xA;$(SolutionDir)\sign.cmd" />
-  </Target>
 </Project>
