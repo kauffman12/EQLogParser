@@ -9,7 +9,7 @@ Minimum Requirements:
 2. .Net 8.0 Desktop Runtime for x64
 
 .Net 8.0 is provided by Microsoft but is not included with Windows. It can be downloaded from here:</br>
-https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.5-windows-x64-installer
+https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.7-windows-x64-installer
 
 If Everquest is in windowed mode but the Damage Meter or other overlays are hidden when you switch to the game make sure Overlap with Taskbar is turned off:</br>
 
