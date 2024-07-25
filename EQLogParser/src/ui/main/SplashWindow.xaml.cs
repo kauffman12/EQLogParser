@@ -1,4 +1,9 @@
-﻿using System.ComponentModel;
+﻿using log4net;
+using log4net.Appender;
+using System.ComponentModel;
+using System.Linq;
+using System.Reflection;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 
@@ -9,12 +14,22 @@ namespace EQLogParser
   /// </summary>
   public partial class SplashWindow
   {
-    private bool _isClosed = false;
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+    private bool _isClosed;
 
     internal SplashWindow()
     {
       InitializeComponent();
       ConfigUtil.EventsLoadingText += ConfigUtilEventsLoadingText;
+    }
+
+    public void SetErrorState()
+    {
+      if (!_isClosed)
+      {
+        data.Visibility = Visibility.Collapsed;
+        error.Visibility = Visibility.Visible;
+      }
     }
 
     private void ConfigUtilEventsLoadingText(string text) => AddLoadingText(text);
@@ -46,7 +61,7 @@ namespace EQLogParser
           {
             var block = new TextBlock
             {
-              HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+              HorizontalAlignment = HorizontalAlignment.Center,
               FontSize = 10,
               Text = text
             };
@@ -60,6 +75,23 @@ namespace EQLogParser
           }, DispatcherPriority.Render);
         }
       }, DispatcherPriority.Background);
+    }
+
+    private void CloseButtonOnClick(object sender, RoutedEventArgs e)
+    {
+      if (!_isClosed)
+      {
+        _isClosed = true;
+        Application.Current.Shutdown();
+      }
+    }
+
+    private void ViewLogButtonOnClick(object sender, RoutedEventArgs e)
+    {
+      if (Log.Logger.Repository.GetAppenders().FirstOrDefault() is { } appender)
+      {
+        MainActions.OpenFileWithDefault("\"" + ((FileAppender)appender).File + "\"");
+      }
     }
   }
 }

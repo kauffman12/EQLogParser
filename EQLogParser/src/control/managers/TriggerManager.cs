@@ -1,10 +1,8 @@
-﻿using log4net;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
@@ -15,9 +13,9 @@ namespace EQLogParser
   {
     internal event Action<bool> EventsProcessorsUpdated;
     internal event Action<AlertEntry> EventsSelectTrigger;
-    internal static TriggerManager Instance => Lazy.Value; // instance
-    public readonly Dictionary<string, bool> RunningFiles = new();
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+    internal readonly ConcurrentDictionary<string, bool> RunningFiles = new();
+    internal static TriggerManager Instance => Lazy.Value;
+
     private static readonly Lazy<TriggerManager> Lazy = new(() => new TriggerManager());
     private readonly DispatcherTimer _configUpdateTimer;
     private readonly DispatcherTimer _triggerUpdateTimer;
@@ -27,24 +25,20 @@ namespace EQLogParser
     private readonly Dictionary<string, OverlayWindowData> _timerWindows = new();
     private readonly List<LogReader> _logReaders = [];
     private readonly TriggerNode _noDefaultOverlay = new();
-    private TriggerNode _defaultTextOverlay; // cache to avoid excess queries
-    private TriggerNode _defaultTimerOverlay; // cache to avoid excess queries
+    private readonly SemaphoreSlim _logReadersSemaphore = new(1, 1);
+    private readonly SemaphoreSlim _textOverlaySemaphore = new(1, 1);
+    private readonly SemaphoreSlim _timerOverlaySemaphore = new(1, 1);
+    private TriggerNode _defaultTextOverlay;
+    private TriggerNode _defaultTimerOverlay;
     private TriggerProcessor _testProcessor;
     private int _timerIncrement;
-    private static readonly SemaphoreSlim LogReadersSemaphore = new(1, 1);
-    private static readonly SemaphoreSlim TextOverlaySemaphore = new(1, 1);
-    private static readonly SemaphoreSlim TimerOverlaySemaphore = new(1, 1);
 
     public TriggerManager()
     {
-      _configUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
-      _triggerUpdateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
-      _textOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 450) };
-      _timerOverlayTimer = new DispatcherTimer(DispatcherPriority.Render) { Interval = new TimeSpan(0, 0, 0, 0, 50) };
-      _configUpdateTimer.Tick += ConfigDoUpdate;
-      _triggerUpdateTimer.Tick += TriggersDoUpdate;
-      _textOverlayTimer.Tick += TextTick;
-      _timerOverlayTimer.Tick += TimerTick;
+      _configUpdateTimer = CreateTimer(ConfigDoUpdate, 1500);
+      _triggerUpdateTimer = CreateTimer(TriggersDoUpdate, 1500);
+      _textOverlayTimer = CreateTimer(TextTick, 450, DispatcherPriority.Render);
+      _timerOverlayTimer = CreateTimer(TimerTick, 50, DispatcherPriority.Render);
       TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
     }
 
@@ -66,25 +60,25 @@ namespace EQLogParser
     internal async Task Stop()
     {
       MainActions.EventsLogLoadingComplete -= TriggerManagerEventsLogLoadingComplete;
-      await LogReadersSemaphore.WaitAsync();
+      await _logReadersSemaphore.WaitAsync();
 
       try
       {
-        _logReaders?.ForEach(reader => reader.Dispose());
-        _logReaders?.Clear();
+        _logReaders.ForEach(reader => reader.Dispose());
+        _logReaders.Clear();
       }
       finally
       {
-        LogReadersSemaphore.Release();
+        _logReadersSemaphore.Release();
       }
 
-      _textOverlayTimer?.Stop();
-      _timerOverlayTimer?.Stop();
+      _textOverlayTimer.Stop();
+      _timerOverlayTimer.Stop();
     }
 
     internal async Task<List<LogReader>> GetLogReadersAsync()
     {
-      await LogReadersSemaphore.WaitAsync();
+      await _logReadersSemaphore.WaitAsync();
 
       try
       {
@@ -92,7 +86,7 @@ namespace EQLogParser
       }
       finally
       {
-        LogReadersSemaphore.Release();
+        _logReadersSemaphore.Release();
       }
     }
 
@@ -100,114 +94,45 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(id))
       {
-        await TextOverlaySemaphore.WaitAsync();
-
-        try
-        {
-          _textWindows.Remove(id, out var textWindowData);
-
-          UiUtil.InvokeNow(() =>
-          {
-            textWindowData?.TheWindow?.Close();
-            _defaultTextOverlay = null;
-          }, DispatcherPriority.Render);
-        }
-        finally
-        {
-          TextOverlaySemaphore.Release();
-        }
-
-        await TimerOverlaySemaphore.WaitAsync();
-
-        try
-        {
-          _timerWindows.Remove(id, out var timerWindowData);
-
-          UiUtil.InvokeNow(() =>
-          {
-            timerWindowData?.TheWindow?.Close();
-            _defaultTimerOverlay = null;
-          }, DispatcherPriority.Render);
-        }
-        finally
-        {
-          TimerOverlaySemaphore.Release();
-        }
+        await CloseOverlayWindow(id, _textWindows, _textOverlaySemaphore, () => _defaultTextOverlay = null);
+        await CloseOverlayWindow(id, _timerWindows, _timerOverlaySemaphore, () => _defaultTimerOverlay = null);
       }
     }
 
     internal async Task CloseOverlays()
     {
-      await TextOverlaySemaphore.WaitAsync();
-
-      try
-      {
-        var textList = _textWindows.Values.ToList();
-        _textWindows.Clear();
-
-        UiUtil.InvokeNow(() =>
-        {
-          textList.ForEach(window => window.TheWindow.Close());
-          _defaultTextOverlay = null;
-        }, DispatcherPriority.Render);
-      }
-      finally
-      {
-        TextOverlaySemaphore.Release();
-      }
-
-      await TimerOverlaySemaphore.WaitAsync();
-
-      try
-      {
-        var timerList = _timerWindows.Values.ToList();
-        _timerWindows.Clear();
-
-        UiUtil.InvokeNow(() =>
-        {
-          timerList.ForEach(window => window.TheWindow.Close());
-          _defaultTimerOverlay = null;
-        }, DispatcherPriority.Render);
-      }
-      finally
-      {
-        TimerOverlaySemaphore.Release();
-      }
+      await CloseAllOverlayWindows(_textWindows, _textOverlaySemaphore, () => _defaultTextOverlay = null);
+      await CloseAllOverlayWindows(_timerWindows, _timerOverlaySemaphore, () => _defaultTimerOverlay = null);
     }
 
     internal async Task SetTestProcessor(TriggerConfig config, BlockingCollection<Tuple<string, double, bool>> collection)
     {
-      _testProcessor?.Dispose();
-      const string name = TriggerStateManager.DefaultUser;
-      _testProcessor = new TriggerProcessor(name, $"Trigger Tester ({name})", ConfigUtil.PlayerName, config.Voice,
-        config.VoiceRate, null, null, AddTextEvent, AddTimerEvent);
-      _testProcessor.SetTesting(true);
-      await _testProcessor.Start();
-      _testProcessor.LinkTo(collection);
-      UiUtil.InvokeNow(() => EventsProcessorsUpdated?.Invoke(true));
+      await InitTestProcessor(TriggerStateManager.DefaultUser, $"Trigger Tester ({TriggerStateManager.DefaultUser})", ConfigUtil.PlayerName,
+        config.Voice, config.VoiceRate, collection);
     }
 
     internal async Task SetTestProcessor(TriggerCharacter character, BlockingCollection<Tuple<string, double, bool>> collection)
     {
-      _testProcessor?.Dispose();
-      // if cant parse then use character name
-      if (!FileUtil.ParseFileName(character.FilePath, out var playerName, out _))
-      {
-        playerName = character.Name;
-      }
+      var playerName = !FileUtil.ParseFileName(character.FilePath, out var parsedPlayerName, out _) ? character.Name : parsedPlayerName;
+      await InitTestProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, character.Voice, character.VoiceRate, collection);
+    }
 
-      _testProcessor = new TriggerProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, character.Voice,
-        character.VoiceRate, character.ActiveColor, character.FontColor, AddTextEvent, AddTimerEvent);
+    private async Task InitTestProcessor(string id, string name, string playerName, string voice, int voiceRate, BlockingCollection<Tuple<string, double, bool>> collection)
+    {
+      _testProcessor?.Dispose();
+      _testProcessor =
+        new TriggerProcessor(id, name, playerName, voice, voiceRate, null, null, AddTextEvent, AddTimerEvent);
       _testProcessor.SetTesting(true);
       await _testProcessor.Start();
       _testProcessor.LinkTo(collection);
       UiUtil.InvokeNow(() => EventsProcessorsUpdated?.Invoke(true));
     }
 
-    internal void StopTestProcessor()
+    internal Task StopTestProcessor()
     {
       _testProcessor?.Dispose();
       _testProcessor = null;
+      return Task.CompletedTask;
     }
 
     internal async Task<List<Tuple<string, ObservableCollection<AlertEntry>>>> GetAlertLogs()
@@ -218,7 +143,6 @@ namespace EQLogParser
 
     private async void TriggerManagerEventsLogLoadingComplete(string _)
     {
-      // ignore event if in advanced mode
       if (await TriggerStateManager.Instance.GetConfig() is { IsAdvanced: false })
       {
         ConfigDoUpdate(this, null);
@@ -227,135 +151,111 @@ namespace EQLogParser
 
     private void TriggerConfigUpdateEvent(TriggerConfig _)
     {
-      _configUpdateTimer?.Stop();
-      _configUpdateTimer?.Start();
+      _configUpdateTimer.Stop();
+      _configUpdateTimer.Start();
     }
 
     private async void ConfigDoUpdate(object sender, EventArgs e)
     {
       _configUpdateTimer.Stop();
-      _textOverlayTimer?.Stop();
-      _timerOverlayTimer?.Stop();
+      _textOverlayTimer.Stop();
+      _timerOverlayTimer.Stop();
       await CloseOverlays();
 
       if (await TriggerStateManager.Instance.GetConfig() is { } config)
       {
-        await LogReadersSemaphore.WaitAsync();
+        await _logReadersSemaphore.WaitAsync();
 
         try
         {
-          var startTasks = new List<Task>();
           if (config.IsAdvanced)
           {
-            // Only clear out everything if switched from basic
-            var clearReaders = false;
-            foreach (var reader in _logReaders)
-            {
-              if (reader.GetProcessor() is TriggerProcessor { CurrentCharacterId: TriggerStateManager.DefaultUser })
-              {
-                clearReaders = true;
-                break;
-              }
-            }
-
-            if (clearReaders)
-            {
-              _logReaders.ForEach(item => item.Dispose());
-              _logReaders.Clear();
-            }
-
-            // remove stales readers first
-            var toRemove = new List<LogReader>();
-            var alreadyRunning = new List<string>();
-            foreach (var reader in _logReaders)
-            {
-              // remove readers if the character no longer exists
-              if (reader.GetProcessor() is TriggerProcessor processor)
-              {
-                // use processor name as well in-case it's a rename
-                var found = config.Characters.FirstOrDefault(character =>
-                  character.Id == processor.CurrentCharacterId && character.Name == processor.CurrentProcessorName);
-                // if file path changed or no longer enabled remove it
-                if (found is not { IsEnabled: true } || reader.FileName != found.FilePath)
-                {
-                  reader.Dispose();
-                  toRemove.Add(reader);
-                }
-                else
-                {
-                  processor.SetVoice(found.Voice);
-                  processor.SetVoiceRate(found.VoiceRate);
-                  alreadyRunning.Add(found.Id);
-                }
-              }
-            }
-
-            RunningFiles.Clear();
-            toRemove.ForEach(remove => _logReaders.Remove(remove));
-
-            // add characters that aren't enabled yet
-            foreach (var character in config.Characters)
-            {
-              if (character.IsEnabled && !alreadyRunning.Contains(character.Id))
-              {
-                // if cant parse then use character name
-                if (!FileUtil.ParseFileName(character.FilePath, out var playerName, out _))
-                {
-                  playerName = character.Name;
-                }
-
-                var processor = new TriggerProcessor(character.Id, character.Name, playerName,
-                  character.Voice, character.VoiceRate, character.ActiveColor, character.FontColor, AddTextEvent,
-                  AddTimerEvent);
-                await processor.Start();
-                var reader = new LogReader(processor, character.FilePath);
-                _logReaders.Add(reader);
-
-                startTasks.Add(Task.Run(() => reader.Start()));
-                RunningFiles[character.FilePath] = true;
-              }
-            }
-
-            MainActions.ShowTriggersEnabled(_logReaders.Count > 0);
+            await HandleAdvancedConfig(config);
           }
           else
           {
-            // Basic always clear out everything
-            _logReaders.ForEach(reader => reader.Dispose());
-            _logReaders.Clear();
-
-            if (config.IsEnabled)
-            {
-              if (MainWindow.CurrentLogFile is { } currentFile)
-              {
-                var processor = new TriggerProcessor(TriggerStateManager.DefaultUser, TriggerStateManager.DefaultUser,
-                  ConfigUtil.PlayerName, config.Voice, config.VoiceRate, null, null, AddTextEvent, AddTimerEvent);
-                await processor.Start();
-                var reader = new LogReader(processor, currentFile);
-                _logReaders.Add(reader);
-                startTasks.Add(Task.Run(() => reader.Start()));
-                MainActions.ShowTriggersEnabled(true);
-
-                // only 1 running file in basic mode
-                RunningFiles.Clear();
-                RunningFiles[currentFile] = true;
-              }
-            }
-            else
-            {
-              MainActions.ShowTriggersEnabled(false);
-              RunningFiles.Clear();
-            }
+            await HandleBasicConfig(config);
           }
-
-          await Task.WhenAll(startTasks);
         }
         finally
         {
-          LogReadersSemaphore.Release();
+          _logReadersSemaphore.Release();
         }
 
         EventsProcessorsUpdated?.Invoke(true);
+      }
+    }
+
+    private async Task HandleAdvancedConfig(TriggerConfig config)
+    {
+      var clearReaders = _logReaders.Any(reader => reader.GetProcessor() is TriggerProcessor { CurrentCharacterId: TriggerStateManager.DefaultUser });
+      if (clearReaders)
+      {
+        _logReaders.ForEach(item => item.Dispose());
+        _logReaders.Clear();
+      }
+
+      var toRemove = new List<LogReader>();
+      var alreadyRunning = new List<string>();
+
+      foreach (var reader in _logReaders)
+      {
+        if (reader.GetProcessor() is TriggerProcessor processor)
+        {
+          var found = config.Characters.FirstOrDefault(character => character.Id == processor.CurrentCharacterId && character.Name == processor.CurrentProcessorName);
+          if (found is not { IsEnabled: true } || reader.FileName != found.FilePath)
+          {
+            reader.Dispose();
+            toRemove.Add(reader);
+          }
+          else
+          {
+            processor.SetVoice(found.Voice);
+            processor.SetVoiceRate(found.VoiceRate);
+            alreadyRunning.Add(found.Id);
+          }
+        }
+      }
+
+      RunningFiles.Clear();
+      toRemove.ForEach(remove => _logReaders.Remove(remove));
+
+      var startTasks = config.Characters
+        .Where(character => character.IsEnabled && !alreadyRunning.Contains(character.Id))
+        .Select(async character =>
+        {
+          var playerName = !FileUtil.ParseFileName(character.FilePath, out var parsedPlayerName, out _) ? character.Name : parsedPlayerName;
+          var processor = new TriggerProcessor(character.Id, character.Name, playerName, character.Voice, character.VoiceRate, character.ActiveColor, character.FontColor, AddTextEvent, AddTimerEvent);
+          await processor.Start();
+          var reader = new LogReader(processor, character.FilePath);
+          _logReaders.Add(reader);
+          RunningFiles[character.FilePath] = true;
+          await Task.Run(() => reader.Start());
+        }).ToList();
+
+      await Task.WhenAll(startTasks);
+      MainActions.ShowTriggersEnabled(_logReaders.Count > 0);
+    }
+
+    private async Task HandleBasicConfig(TriggerConfig config)
+    {
+      _logReaders.ForEach(reader => reader.Dispose());
+      _logReaders.Clear();
+
+      if (config.IsEnabled && MainWindow.CurrentLogFile is { } currentFile)
+      {
+        var processor = new TriggerProcessor(TriggerStateManager.DefaultUser, TriggerStateManager.DefaultUser, ConfigUtil.PlayerName, config.Voice, config.VoiceRate, null, null, AddTextEvent, AddTimerEvent);
+        await processor.Start();
+        var reader = new LogReader(processor, currentFile);
+        _logReaders.Add(reader);
+        RunningFiles[currentFile] = true;
+        await Task.Run(() => reader.Start());
+        MainActions.ShowTriggersEnabled(true);
+      }
+      else
+      {
+        MainActions.ShowTriggersEnabled(false);
+        RunningFiles.Clear();
       }
     }
 
@@ -363,7 +263,8 @@ namespace EQLogParser
     {
       _triggerUpdateTimer.Stop();
       await CloseOverlays();
-      foreach (var processor in await GetProcessorsAsync())
+      var processors = await GetProcessorsAsync();
+      foreach (var processor in processors)
       {
         await processor.UpdateActiveTriggers();
       }
@@ -371,28 +272,17 @@ namespace EQLogParser
 
     private async Task<List<TriggerProcessor>> GetProcessorsAsync()
     {
-      await LogReadersSemaphore.WaitAsync();
+      await _logReadersSemaphore.WaitAsync();
 
       try
       {
-        var list = new List<TriggerProcessor>();
-        foreach (var reader in _logReaders)
-        {
-          if (reader.GetProcessor() is TriggerProcessor processor)
-          {
-            list.Add(processor);
-          }
-        }
-
-        if (_testProcessor != null)
-        {
-          list.Add(_testProcessor);
-        }
+        var list = _logReaders.Select(reader => reader.GetProcessor()).OfType<TriggerProcessor>().ToList();
+        if (_testProcessor != null) list.Add(_testProcessor);
         return list;
       }
       finally
       {
-        LogReadersSemaphore.Release();
+        _logReadersSemaphore.Release();
       }
     }
 
@@ -400,50 +290,35 @@ namespace EQLogParser
     {
       _timerIncrement++;
       var removeList = new List<string>();
-      var data = GetProcessorsAsync().Result.SelectMany(processor => processor.GetActiveTimers()).ToList();
+      var processors = await GetProcessorsAsync();
+      var activeTimerData = processors.SelectMany(processor => processor.GetActiveTimers()).ToList();
 
-      await TimerOverlaySemaphore.WaitAsync();
+      await _timerOverlaySemaphore.WaitAsync();
 
       try
       {
         foreach (var kv in _timerWindows)
         {
-          var done = false;
-          var shortTick = false;
-          if (kv.Value is { } windowData)
+          if (kv.Value.TheWindow is TimerOverlayWindow timerWindow)
           {
-            if (windowData.TheWindow is TimerOverlayWindow timerWindow)
+            var done = _timerIncrement == 10 && timerWindow.Tick(activeTimerData);
+            if (!done) timerWindow.ShortTick(activeTimerData);
+
+            if (done)
             {
-              // full tick every 500ms
-              if (_timerIncrement == 10)
+              var nowTicks = DateTime.UtcNow.Ticks;
+              if (kv.Value.RemoveTicks == -1)
               {
-                done = timerWindow.Tick(data);
+                kv.Value.RemoveTicks = nowTicks + (TimeSpan.TicksPerMinute * 2);
               }
-              else
+              else if (nowTicks > kv.Value.RemoveTicks)
               {
-                timerWindow.ShortTick(data);
-                shortTick = true;
+                removeList.Add(kv.Key);
               }
             }
-
-            if (!shortTick)
+            else
             {
-              if (done)
-              {
-                var nowTicks = DateTime.UtcNow.Ticks;
-                if (windowData.RemoveTicks == -1)
-                {
-                  windowData.RemoveTicks = nowTicks + (TimeSpan.TicksPerMinute * 2);
-                }
-                else if (nowTicks > windowData.RemoveTicks)
-                {
-                  removeList.Add(kv.Key);
-                }
-              }
-              else
-              {
-                windowData.RemoveTicks = -1;
-              }
+              kv.Value.RemoveTicks = -1;
             }
           }
         }
@@ -463,7 +338,7 @@ namespace EQLogParser
       }
       finally
       {
-        TimerOverlaySemaphore.Release();
+        _timerOverlaySemaphore.Release();
       }
 
       if (_timerIncrement == 10)
@@ -475,37 +350,27 @@ namespace EQLogParser
     private async void TextTick(object sender, EventArgs e)
     {
       var removeList = new List<string>();
-
-      await TextOverlaySemaphore.WaitAsync();
+      await _textOverlaySemaphore.WaitAsync();
 
       try
       {
         foreach (var kv in _textWindows)
         {
-          var done = false;
-          if (kv.Value is { } windowData)
+          if (kv.Value.TheWindow is TextOverlayWindow textWindow && textWindow.Tick())
           {
-            if (windowData.TheWindow is TextOverlayWindow textWindow)
+            var nowTicks = DateTime.UtcNow.Ticks;
+            if (kv.Value.RemoveTicks == -1)
             {
-              done = textWindow.Tick();
+              kv.Value.RemoveTicks = nowTicks + (TimeSpan.TicksPerMinute * 2);
             }
-
-            if (done)
+            else if (nowTicks > kv.Value.RemoveTicks)
             {
-              var nowTicks = DateTime.UtcNow.Ticks;
-              if (windowData.RemoveTicks == -1)
-              {
-                windowData.RemoveTicks = nowTicks + (TimeSpan.TicksPerMinute * 2);
-              }
-              else if (nowTicks > windowData.RemoveTicks)
-              {
-                removeList.Add(kv.Key);
-              }
+              removeList.Add(kv.Key);
             }
-            else
-            {
-              windowData.RemoveTicks = -1;
-            }
+          }
+          else
+          {
+            kv.Value.RemoveTicks = -1;
           }
         }
 
@@ -524,77 +389,75 @@ namespace EQLogParser
       }
       finally
       {
-        TextOverlaySemaphore.Release();
+        _textOverlaySemaphore.Release();
       }
     }
 
     private async void AddTextEvent(string text, Trigger trigger, string fontColor)
     {
-      var beginTicks = DateTime.UtcNow.Ticks;
       fontColor ??= trigger.FontColor;
+      var beginTicks = DateTime.UtcNow.Ticks;
       var textOverlayFound = false;
 
-      await Task.Run(async () =>
+      await _textOverlaySemaphore.WaitAsync();
+
+      try
       {
-        await TextOverlaySemaphore.WaitAsync();
-
-        try
+        if (trigger.SelectedOverlays != null)
         {
-          if (trigger.SelectedOverlays != null)
+          foreach (var overlayId in trigger.SelectedOverlays)
           {
-            foreach (var overlayId in trigger.SelectedOverlays)
+            var windowData = await GetOrCreateTextOverlayWindow(overlayId);
+            if (windowData != null)
             {
-              if (!_textWindows.TryGetValue(overlayId, out var windowData))
+              UiUtil.InvokeNow(() =>
               {
-                if (await TriggerStateManager.Instance.GetOverlayById(overlayId) is { OverlayData.IsTextOverlay: true } node)
-                {
-                  windowData = GetTextWindowData(node);
-                }
-              }
+                var brush = UiUtil.GetBrush(fontColor);
+                (windowData.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
+              }, DispatcherPriority.Render);
 
-              if (windowData != null)
-              {
-                UiUtil.InvokeNow(() =>
-                {
-                  var brush = UiUtil.GetBrush(fontColor);
-                  (windowData.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
-                }, DispatcherPriority.Render);
-
-                textOverlayFound = true;
-              }
+              textOverlayFound = true;
             }
           }
+        }
 
-          if (!textOverlayFound && await GetDefaultTextOverlay() is { } node2)
-          {
-            if (!_textWindows.TryGetValue(node2.Id, out var windowData))
-            {
-              windowData = GetTextWindowData(node2);
-            }
-
-            // using default
-            UiUtil.InvokeNow(() =>
-            {
-              var brush = UiUtil.GetBrush(fontColor);
-              (windowData?.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
-            }, DispatcherPriority.Render);
-
-            textOverlayFound = true;
-          }
-
+        if (!textOverlayFound && await GetDefaultTextOverlay() is { } defaultNode)
+        {
+          var windowData = await GetOrCreateTextOverlayWindow(defaultNode.Id);
           UiUtil.InvokeNow(() =>
           {
-            if (textOverlayFound && !_textOverlayTimer.IsEnabled)
-            {
-              _textOverlayTimer.Start();
-            }
+            var brush = UiUtil.GetBrush(fontColor);
+            (windowData?.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
           }, DispatcherPriority.Render);
+
+          textOverlayFound = true;
         }
-        finally
+
+        UiUtil.InvokeNow(() =>
         {
-          TextOverlaySemaphore.Release();
+          if (textOverlayFound && !_textOverlayTimer.IsEnabled)
+          {
+            _textOverlayTimer.Start();
+          }
+        }, DispatcherPriority.Render);
+      }
+      finally
+      {
+        _textOverlaySemaphore.Release();
+      }
+    }
+
+    private async Task<OverlayWindowData> GetOrCreateTextOverlayWindow(string overlayId)
+    {
+      if (!_textWindows.TryGetValue(overlayId, out var windowData))
+      {
+        var node = await TriggerStateManager.Instance.GetOverlayById(overlayId);
+        if (node?.OverlayData.IsTextOverlay == true)
+        {
+          windowData = GetTextWindowData(node);
         }
-      });
+      }
+      return windowData;
     }
 
     private OverlayWindowData GetTextWindowData(TriggerNode node)
@@ -614,56 +477,50 @@ namespace EQLogParser
     {
       var timerOverlayFound = false;
 
-      await Task.Run(async () =>
+      await _timerOverlaySemaphore.WaitAsync();
+
+      try
       {
-        await TimerOverlaySemaphore.WaitAsync();
-
-        try
+        if (trigger.SelectedOverlays != null)
         {
-          if (trigger.SelectedOverlays != null)
+          foreach (var overlayId in trigger.SelectedOverlays)
           {
-            foreach (var overlayId in trigger.SelectedOverlays)
-            {
-              if (!_timerWindows.TryGetValue(overlayId, out var windowData))
-              {
-                if (await TriggerStateManager.Instance.GetOverlayById(overlayId) is { OverlayData.IsTimerOverlay: true } node)
-                {
-                  windowData = GetTimerWindowData(node, data);
-                }
-              }
-
-              // may not have found a timer overlay
-              if (windowData != null)
-              {
-                timerOverlayFound = true;
-              }
-            }
+            var windowData = await GetOrCreateTimerOverlayWindow(overlayId, data);
+            if (windowData != null) timerOverlayFound = true;
           }
-
-          if (!timerOverlayFound && await GetDefaultTimerOverlay() is { } node2)
-          {
-            if (!_timerWindows.TryGetValue(node2.Id, out _))
-            {
-              GetTimerWindowData(node2, data);
-            }
-
-            // using default
-            timerOverlayFound = true;
-          }
-
-          UiUtil.InvokeNow(() =>
-          {
-            if (timerOverlayFound && !_timerOverlayTimer.IsEnabled)
-            {
-              _timerOverlayTimer.Start();
-            }
-          }, DispatcherPriority.Render);
         }
-        finally
+
+        if (!timerOverlayFound && await GetDefaultTimerOverlay() is { } defaultNode)
         {
-          TimerOverlaySemaphore.Release();
+          await GetOrCreateTimerOverlayWindow(defaultNode.Id, data);
+          timerOverlayFound = true;
         }
-      });
+
+        UiUtil.InvokeNow(() =>
+        {
+          if (timerOverlayFound && !_timerOverlayTimer.IsEnabled)
+          {
+            _timerOverlayTimer.Start();
+          }
+        }, DispatcherPriority.Render);
+      }
+      finally
+      {
+        _timerOverlaySemaphore.Release();
+      }
+    }
+
+    private async Task<OverlayWindowData> GetOrCreateTimerOverlayWindow(string overlayId, List<TimerData> timerData)
+    {
+      if (!_timerWindows.TryGetValue(overlayId, out var windowData))
+      {
+        var node = await TriggerStateManager.Instance.GetOverlayById(overlayId);
+        if (node?.OverlayData.IsTimerOverlay == true)
+        {
+          windowData = GetTimerWindowData(node, timerData);
+        }
+      }
+      return windowData;
     }
 
     private OverlayWindowData GetTimerWindowData(TriggerNode node, List<TimerData> timerData)
@@ -685,44 +542,66 @@ namespace EQLogParser
     {
       if (_defaultTextOverlay == null)
       {
-        if (await TriggerStateManager.Instance.GetDefaultTextOverlay() is { } overlay)
-        {
-          _defaultTextOverlay = overlay;
-        }
-        else
-        {
-          _defaultTextOverlay = _noDefaultOverlay;
-        }
+        _defaultTextOverlay = await TriggerStateManager.Instance.GetDefaultTextOverlay() ?? _noDefaultOverlay;
       }
 
-      if (_defaultTextOverlay == _noDefaultOverlay)
-      {
-        return null;
-      }
-
-      return _defaultTextOverlay;
+      return _defaultTextOverlay == _noDefaultOverlay ? null : _defaultTextOverlay;
     }
 
     private async Task<TriggerNode> GetDefaultTimerOverlay()
     {
       if (_defaultTimerOverlay == null)
       {
-        if (await TriggerStateManager.Instance.GetDefaultTimerOverlay() is { } overlay)
-        {
-          _defaultTimerOverlay = overlay;
-        }
-        else
-        {
-          _defaultTimerOverlay = _noDefaultOverlay;
-        }
+        _defaultTimerOverlay = await TriggerStateManager.Instance.GetDefaultTimerOverlay() ?? _noDefaultOverlay;
       }
 
-      if (_defaultTimerOverlay == _noDefaultOverlay)
+      return _defaultTimerOverlay == _noDefaultOverlay ? null : _defaultTimerOverlay;
+    }
+
+    private static async Task CloseOverlayWindow(string id, Dictionary<string, OverlayWindowData> windows, SemaphoreSlim semaphore, Action resetDefault)
+    {
+      await semaphore.WaitAsync();
+
+      try
       {
-        return null;
+        if (windows.Remove(id, out var windowData))
+        {
+          UiUtil.InvokeNow(() => windowData?.TheWindow?.Close(), DispatcherPriority.Render);
+          resetDefault();
+        }
       }
+      finally
+      {
+        semaphore.Release();
+      }
+    }
 
-      return _defaultTimerOverlay;
+    private static async Task CloseAllOverlayWindows(Dictionary<string, OverlayWindowData> windows, SemaphoreSlim semaphore, Action resetDefault)
+    {
+      await semaphore.WaitAsync();
+
+      try
+      {
+        var windowList = windows.Values.ToList();
+        windows.Clear();
+
+        UiUtil.InvokeNow(() =>
+        {
+          windowList.ForEach(window => window.TheWindow.Close());
+          resetDefault();
+        }, DispatcherPriority.Render);
+      }
+      finally
+      {
+        semaphore.Release();
+      }
+    }
+
+    private static DispatcherTimer CreateTimer(EventHandler tickHandler, int interval, DispatcherPriority priority = DispatcherPriority.Normal)
+    {
+      var timer = new DispatcherTimer(priority) { Interval = TimeSpan.FromMilliseconds(interval) };
+      timer.Tick += tickHandler;
+      return timer;
     }
   }
 }

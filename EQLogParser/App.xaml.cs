@@ -21,25 +21,51 @@ namespace EQLogParser
   {
     internal static IMapper AutoMap;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+    private SplashWindow _splash;
 
     public App()
     {
-      SyncfusionLicenseProvider.RegisterLicense("INSERT_KEY");
+      SyncfusionLicenseProvider.RegisterLicense("SET KEY");
     }
 
     protected override void OnStartup(StartupEventArgs e)
     {
       base.OnStartup(e);
 
-      // Load splashscreen
-      var splash = new SplashWindow();
-      splash.Show();
+      try
+      {
+        // Load splashscreen
+        _splash = new SplashWindow();
+        _splash.Show();
 
-      // unhandled exceptions
-      DispatcherUnhandledException += AppDispatcherUnhandledException;
-      AppDomain.CurrentDomain.UnhandledException += DomainUnhandledException;
-      TaskScheduler.UnobservedTaskException += TaskSchedulerUnobservedTaskException;
+        // Setup unhandled exception handlers
+        DispatcherUnhandledException += AppDispatcherUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException += DomainUnhandledException;
+        TaskScheduler.UnobservedTaskException += TaskSchedulerUnobservedTaskException;
 
+        InitializeLogging();
+
+        // Read app settings
+        ConfigUtil.Init();
+
+        // Set Debug level
+        SetLoggingLevel();
+
+        AutoMap = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
+        var version = ResourceAssembly.GetName().Version;
+        Log.Info($"EQLogParser: {version}, DotNet: {Environment.Version}");
+        RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
+        ShowMain();
+      }
+      catch (Exception ex)
+      {
+        Log.Error("CreateAppError", ex);
+        _splash?.SetErrorState();
+      }
+    }
+
+    private static void InitializeLogging()
+    {
       var appDataRoamingPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
       var logsFolderPath = Path.Combine(appDataRoamingPath, "EQLogParser", "logs");
 
@@ -64,11 +90,10 @@ namespace EQLogParser
 
       // Set the repository configuration
       BasicConfigurator.Configure(LogManager.GetRepository(), fileAppender);
+    }
 
-      // Read app settings
-      ConfigUtil.Init();
-
-      // Set Debug level
+    private static void SetLoggingLevel()
+    {
       if (ConfigUtil.IfSet("Debug"))
       {
         ((Hierarchy)LogManager.GetRepository()).Root.Level = Level.Debug;
@@ -77,37 +102,44 @@ namespace EQLogParser
       {
         ((Hierarchy)LogManager.GetRepository()).Root.Level = Level.Info;
       }
-
       ((Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
-      AutoMap = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
-      var version = Application.ResourceAssembly.GetName().Version;
-      Log.Info($"EQLogParser: {version}, DotNet: {Environment.Version}");
-      RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
+    }
 
+    private void ShowMain()
+    {
       var main = new MainWindow();
-      // give time for themes to load
-      Task.Delay(500).ContinueWith(_ => Dispatcher.Invoke(() => main.Show(), DispatcherPriority.Render));
+      Task.Delay(500).ContinueWith(_ => Dispatcher.Invoke(() =>
+      {
+        try
+        {
+          main.Show();
+        }
+        catch (Exception ex)
+        {
+          Log.Error("ShowAppError", ex);
+          _splash?.SetErrorState();
+        }
+      }, DispatcherPriority.Render));
     }
 
-    private static void TaskSchedulerUnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
+    private void TaskSchedulerUnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs ex)
     {
-      Log.Error("TaskSchedulerUnobservedTaskException");
-      Log.Error(e.Exception?.Message, e.Exception);
-      e.SetObserved();
+      Log.Error("TaskSchedulerUnobservedTaskException", ex.Exception);
+      ex.SetObserved();
+      _splash?.SetErrorState();
     }
 
-    private static void DomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    private void DomainUnhandledException(object sender, UnhandledExceptionEventArgs ex)
     {
-      var exception = e.ExceptionObject as Exception;
-      Log.Error("DomainUnhandledException");
-      Log.Error(exception?.Message, exception);
+      Log.Error("DomainUnhandledException", ex.ExceptionObject as Exception);
+      _splash?.SetErrorState();
     }
 
-    private static void AppDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    private void AppDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs ex)
     {
-      Log.Error("AppDispatcherUnhandledException");
-      Log.Error(e.Exception?.Message, e.Exception);
-      e.Handled = true; // Prevents application from closing
+      Log.Error("AppDispatcherUnhandledException", ex.Exception);
+      ex.Handled = true; // Prevents application from closing
+      _splash?.SetErrorState();
     }
   }
 }
