@@ -695,11 +695,12 @@ namespace EQLogParser
           var root = tree.FindOne(n => n.Parent == null && n.Name == Triggers);
           var parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name).SerializedData;
           Import(parent, imported, Triggers, characterIds);
-          TriggerImportEvent?.Invoke(true);
         }
 
         return Task.CompletedTask;
       });
+
+      TriggerImportEvent?.Invoke(true);
     }
 
     private static void AssignOverlay(ILiteCollection<TriggerNode> tree, string id, IEnumerable<TriggerNode> nodes)
