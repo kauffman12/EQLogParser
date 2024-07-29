@@ -186,6 +186,9 @@
   <data name="EXPORT_ERROR" xml:space="preserve">
     <value>Export Failed</value>
   </data>
+  <data name="FILEMENU_EXPORT_EXCEL" xml:space="preserve">
+    <value>Export To Excel</value>
+  </data>
   <data name="FILEMENU_EXPORT_SUMMARY" xml:space="preserve">
     <value>Can Not Save Summary Data</value>
   </data>

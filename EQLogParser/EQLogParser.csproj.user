@@ -75,6 +75,11 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Update="Resource.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
     <Page Update="src\ui\common\DamageBar.xaml">
       <SubType>Designer</SubType>
     </Page>

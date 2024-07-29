@@ -56,10 +56,10 @@ namespace EQLogParser
     }
 
     internal virtual bool IsPetsCombined() => false;
-    internal virtual void ShowBreakdown(List<PlayerStats> selected) => new object(); // need to override this method
-    internal virtual void ShowBreakdown2(List<PlayerStats> selected) => new object(); // need to override this method
-    internal virtual void UpdateDataGridMenuItems() => new object(); // need to override this method
-    internal virtual void FireSelectionChangedEvent(List<PlayerStats> stats) => new object(); // need to override this method
+    internal virtual void ShowBreakdown(List<PlayerStats> selected) => throw new Exception("Need to Override"); // need to override this method
+    internal virtual void ShowBreakdown2(List<PlayerStats> selected) => throw new Exception("Need to Override"); // need to override this method
+    internal virtual void UpdateDataGridMenuItems() => throw new Exception("Need to Override"); // need to override this method
+    internal virtual void FireSelectionChangedEvent(List<PlayerStats> stats) => throw new Exception("Need to Override"); // need to override this method
     internal string GetTargetTitle() => CurrentStats?.TargetTitle ?? GetTitle();
     internal string GetTitle() => TheTitle.Content as string;
     internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());

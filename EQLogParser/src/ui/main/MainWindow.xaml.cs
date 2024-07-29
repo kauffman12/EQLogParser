@@ -379,6 +379,8 @@ namespace EQLogParser
     private void WindowClose(object sender, EventArgs e) => Close();
     private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e) => MainActions.UpdateTheme("MaterialDark");
     private void ToggleMaterialLightClick(object sender, RoutedEventArgs e) => MainActions.UpdateTheme("MaterialLight");
+    private void MenuItemExportFightsClick(object sender, RoutedEventArgs e) => MainActions.ExportFights(CurrentLogFile);
+    private void MenuItemExportDataToExcel(object sender, RoutedEventArgs e) => MainActions.ExportExcelData();
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
@@ -508,17 +510,17 @@ namespace EQLogParser
       var opened = SyncFusionUtil.GetOpenWindows(dockSite);
       var tables = new Dictionary<string, SummaryTable>();
 
-      if (opened.TryGetValue((damageSummaryIcon.Tag as string)!, out var control))
+      if (opened.TryGetValue((damageSummaryIcon.Tag as string)!, out var control) && DockingManager.GetState(control) != DockState.Hidden)
       {
         tables.Add(DockingManager.GetHeader(control) as string ?? string.Empty, (DamageSummary)control.Content);
       }
 
-      if (opened.TryGetValue((healingSummaryIcon.Tag as string)!, out var control2))
+      if (opened.TryGetValue((healingSummaryIcon.Tag as string)!, out var control2) && DockingManager.GetState(control2) != DockState.Hidden)
       {
         tables.Add(DockingManager.GetHeader(control2) as string ?? string.Empty, (HealingSummary)control2.Content);
       }
 
-      if (opened.TryGetValue((tankingSummaryIcon.Tag as string)!, out var control3))
+      if (opened.TryGetValue((tankingSummaryIcon.Tag as string)!, out var control3) && DockingManager.GetState(control3) != DockState.Hidden)
       {
         tables.Add(DockingManager.GetHeader(control3) as string ?? string.Empty, (TankingSummary)control3.Content);
       }
@@ -530,24 +532,6 @@ namespace EQLogParser
       else
       {
         new MessageWindow("No Summary Views are Open. Nothing to Save.", Resource.FILEMENU_EXPORT_SUMMARY).ShowDialog();
-      }
-    }
-
-    private void MenuItemExportFightsClick(object sender, RoutedEventArgs e)
-    {
-      var filtered = MainActions.GetSelectedFights().OrderBy(npc => npc.Id).ToList();
-
-      if (string.IsNullOrEmpty(CurrentLogFile))
-      {
-        new MessageWindow("No Log File Opened. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
-      }
-      else if (filtered.Count > 0)
-      {
-        MainActions.ExportFights(CurrentLogFile, filtered);
-      }
-      else
-      {
-        new MessageWindow("No Fights Selected. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
       }
     }
 

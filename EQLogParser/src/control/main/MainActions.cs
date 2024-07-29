@@ -640,13 +640,16 @@ namespace EQLogParser
 
     internal static void CreateBackup()
     {
-      var saveFileDialog = new SaveFileDialog();
       var dateTime = DateTime.Now.ToString("yyyyMMdd-ssfff");
       var version = Application.ResourceAssembly.GetName().Version?.ToString();
       version = string.IsNullOrEmpty(version) ? "unknown" : version[..^2];
       var fileName = $"EQLogParser_backup_{version}_{dateTime}.zip";
-      saveFileDialog.Filter = "EQLogParser Backup Files (*.zip)|*.zip";
-      saveFileDialog.FileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()));
+
+      var saveFileDialog = new SaveFileDialog
+      {
+        Filter = "EQLogParser Backup Files (*.zip)|*.zip",
+        FileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()))
+      };
 
       if (saveFileDialog.ShowDialog() == true)
       {
@@ -797,12 +800,29 @@ namespace EQLogParser
       }
     }
 
-    internal static void ExportFights(string currentFile, List<Fight> fights)
+    internal static void ExportFights(string currentLogFile)
     {
-      var saveFileDialog = new SaveFileDialog();
-      var fileName = $"eqlog_{ConfigUtil.PlayerName}_{ConfigUtil.ServerName}-selected.txt";
-      saveFileDialog.Filter = "Text Files (*.txt)|*.txt";
-      saveFileDialog.FileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()));
+      var fights = GetSelectedFights().OrderBy(npc => npc.Id).ToList();
+
+      if (string.IsNullOrEmpty(currentLogFile))
+      {
+        new MessageWindow("No Log File Opened. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
+        return;
+      }
+
+      if (fights.Count == 0)
+      {
+        new MessageWindow("No Fights Selected. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
+        return;
+      }
+
+      var fileName = $"eqlog_{ConfigUtil.PlayerName}_{ConfigUtil.ServerName}_selected.txt";
+
+      var saveFileDialog = new SaveFileDialog
+      {
+        Filter = "Text Files (*.txt)|*.txt",
+        FileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()))
+      };
 
       if (saveFileDialog.ShowDialog() == true)
       {
@@ -825,7 +845,7 @@ namespace EQLogParser
 
               if (range.TimeSegments.Count > 0)
               {
-                using var f = File.OpenRead(currentFile);
+                using var f = File.OpenRead(currentLogFile);
                 var s = FileUtil.GetStreamReader(f, range.TimeSegments[0].BeginTime);
                 while (!s.EndOfStream)
                 {
@@ -876,7 +896,7 @@ namespace EQLogParser
           }
           finally
           {
-            UiUtil.InvokeAsync(() =>
+            UiUtil.InvokeNow(() =>
             {
               dialog.Close();
 
@@ -884,7 +904,7 @@ namespace EQLogParser
               {
                 new MessageWindow("Error Saving. Can not access save file.", Resource.FILEMENU_SAVE_FIGHTS, MessageWindow.IconType.Save).ShowDialog();
               }
-            });
+            }, DispatcherPriority.Render);
           }
         });
 
@@ -892,48 +912,50 @@ namespace EQLogParser
       }
     }
 
+    internal static void ExportExcelData()
+    {
+      var fights = GetSelectedFights().OrderBy(npc => npc.Id).ToList();
+
+      if (fights.Count == 0)
+      {
+        new MessageWindow("No Fights Selected. Nothing to Export.", Resource.FILEMENU_EXPORT_EXCEL).ShowDialog();
+        return;
+      }
+
+      var title = TextUtils.GetTitle(fights);
+      var fileName = DateTime.Now.ToString("yyyyMMdd_");
+      fileName += $"{title}.xlsx";
+      // remove bad characters
+      fileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()));
+
+      ExportWithAction(fileName, "Excel Files (*.xlsx)|*.xlsx", (selectedFile) =>
+      {
+        UiUtil.InvokeNow(() =>
+        {
+          TextUtils.ExportExcel(selectedFile, fights, GetAllRanges());
+        }, DispatcherPriority.Render);
+      });
+    }
+
     internal static void ExportAsHtml(Dictionary<string, SummaryTable> tables)
     {
-      try
-      {
-        var saveFileDialog = new SaveFileDialog
-        {
-          Filter = "HTML Files (*.html)|*.html"
-        };
+      var fileName = DateTime.Now.ToString("yyyyMMdd_");
 
-        var fileName = DateUtil.GetCurrentDate("MM-dd-yy") + " ";
-        if (tables.Values.FirstOrDefault() is { } summary)
-        {
-          fileName += summary.GetTargetTitle();
-        }
-        else
-        {
-          fileName += "No Summaries Exported";
-        }
+      if (tables.Values.FirstOrDefault() is { } summary)
+      {
+        fileName += summary.GetTargetTitle();
+      }
 
-        saveFileDialog.FileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()));
+      // remove bad characters
+      fileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()));
 
-        if (saveFileDialog.ShowDialog() == true)
+      ExportWithAction(fileName, "HTML Files (*.html)|*.html", (selectedFile) =>
+      {
+        UiUtil.InvokeNow(() =>
         {
-          TextUtils.SaveHtml(saveFileDialog.FileName, tables);
-        }
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        Log.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        Log.Error(se);
-      }
-      catch (ArgumentNullException ane)
-      {
-        Log.Error(ane);
-      }
+          TextUtils.SaveHtml(selectedFile, tables);
+        }, DispatcherPriority.Render);
+      });
     }
 
     internal static void OpenFileWithDefault(string fileName)
@@ -945,6 +967,39 @@ namespace EQLogParser
       catch (Exception ex)
       {
         Log.Error(ex);
+      }
+    }
+
+    private static void ExportWithAction(string fileName, string filter, Action<string> action)
+    {
+      var saveFileDialog = new SaveFileDialog
+      {
+        Filter = filter,
+        FileName = fileName
+      };
+
+      if (saveFileDialog.ShowDialog() == true)
+      {
+        try
+        {
+          Task.Delay(150).ContinueWith(_ => { action(saveFileDialog.FileName); });
+        }
+        catch (IOException ex)
+        {
+          Log.Error(ex);
+        }
+        catch (UnauthorizedAccessException uax)
+        {
+          Log.Error(uax);
+        }
+        catch (SecurityException se)
+        {
+          Log.Error(se);
+        }
+        catch (ArgumentNullException ane)
+        {
+          Log.Error(ane);
+        }
       }
     }
 

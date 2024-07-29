@@ -1,4 +1,5 @@
-﻿using DotLiquid;
+﻿using ClosedXML.Excel;
+using DotLiquid;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -33,6 +34,7 @@ namespace EQLogParser
     internal static bool SCompare(string s, int start, int count, string test) => s.AsSpan(start, count).SequenceEqual(test);
     internal static string ParseSpellOrNpc(string[] split, int index) => string.Join(" ", split, index, split.Length - index).Trim('.');
     internal static string ToUpper(string name) => string.IsNullOrEmpty(name) ? "" : (char.ToUpper(name[0]) + (name.Length > 1 ? name[1..] : ""));
+    internal static string GetTitle(List<Fight> selected) => (selected.Count > 1 ? "Combined (" + selected.Count + "): " : "") + selected.FirstOrDefault()?.Name ?? "";
 
     internal static string BuildCsv(List<string> header, List<List<object>> data, string title = null)
     {
@@ -132,18 +134,55 @@ namespace EQLogParser
       return sb.ToString();
     }
 
+    internal static void ExportExcel(string fileName, List<Fight> selected, TimeRange allRanges)
+    {
+      var stats = new PlayerStats
+      {
+        AllRanges = allRanges,
+        TotalSeconds = allRanges.GetTotal()
+      };
+
+      var allSpells = new HashSet<IAction>();
+      var spellTimes = new Dictionary<IAction, double>();
+      SpellCountBuilder.QuerySpells(stats, allSpells, allSpells, spellTimes);
+
+      using var workbook = new XLWorkbook();
+      // Add a worksheet to the workbook
+      var worksheet = workbook.AddWorksheet("Sheet1");
+
+      // Add some data to the worksheet
+      worksheet.Cell("A1").Value = "ID";
+      worksheet.Cell("B1").Value = "Name";
+      worksheet.Cell("C1").Value = "Age";
+
+      worksheet.Cell("A2").Value = 1;
+      worksheet.Cell("B2").Value = "John Doe";
+      worksheet.Cell("C2").Value = 30;
+
+      worksheet.Cell("A3").Value = 2;
+      worksheet.Cell("B3").Value = "Jane Smith";
+      worksheet.Cell("C3").Value = 25;
+
+      worksheet.Cell("A4").Value = 3;
+      worksheet.Cell("B4").Value = "Sam Brown";
+      worksheet.Cell("C4").Value = 28;
+
+      // Save the workbook to a file
+      workbook.SaveAs(fileName);
+    }
+
     internal static void SaveHtml(string selectedFileName, Dictionary<string, SummaryTable> tables)
     {
       var headerTemplate = Template.Parse(File.ReadAllText(@"data\html\header.html"));
-      var tableKeys = tables.Keys.OrderBy(key => key);
-      var tablechoices = new List<object>();
+      var tableKeys = tables.Keys.OrderBy(key => key).ToList();
+      var tableChoices = new List<object>();
 
       foreach (var key in tableKeys)
       {
-        tablechoices.Add(new { type = key, title = tables[key].GetTitle() });
+        tableChoices.Add(new { type = key, title = tables[key].GetTitle() });
       }
 
-      var headerValue = headerTemplate.Render(Hash.FromAnonymousObject(new { tablechoices }));
+      var headerValue = headerTemplate.Render(Hash.FromAnonymousObject(new { tablechoices = tableChoices }));
       File.WriteAllText(selectedFileName, headerValue);
 
       var contentTemplate = Template.Parse(File.ReadAllText(@"data\html\content.html"));
@@ -252,7 +291,7 @@ namespace EQLogParser
       {
         try
         {
-          new Regex(pattern);
+          _ = new Regex(pattern);
         }
         catch (Exception)
         {

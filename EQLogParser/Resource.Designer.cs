@@ -268,6 +268,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Export To Excel.
+        /// </summary>
+        internal static string FILEMENU_EXPORT_EXCEL {
+            get {
+                return ResourceManager.GetString("FILEMENU_EXPORT_EXCEL", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Can Not Save Summary Data.
         /// </summary>
         internal static string FILEMENU_EXPORT_SUMMARY {

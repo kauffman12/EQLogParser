@@ -25,7 +25,6 @@ namespace EQLogParser
     private PlayerStats _raidTotals;
     private List<Fight> _selected;
     private TimeRange _allRanges;
-    private string _title;
     private bool _isLimited;
     internal static readonly string[] Separator = [" @"];
 
@@ -73,7 +72,6 @@ namespace EQLogParser
 
           _selected = [.. options.Npcs.OrderBy(sel => sel.Id)];
           _allRanges = options.AllRanges;
-          _title = options.Npcs?.FirstOrDefault()?.Name;
           var healingValidator = new HealingValidator();
           _isLimited = healingValidator.IsHealingLimited();
 
@@ -373,7 +371,7 @@ namespace EQLogParser
             var combined = new CombinedStats
             {
               RaidStats = _raidTotals,
-              TargetTitle = (_selected.Count > 1 ? "Combined (" + _selected.Count + "): " : "") + _title,
+              TargetTitle = TextUtils.GetTitle(_selected),
               TimeTitle = string.Format(StatsUtil.TimeFormat, _raidTotals.TotalSeconds),
               TotalTitle = string.Format(StatsUtil.TotalFormat, StatsUtil.FormatTotals(_raidTotals.Total), " Heals ", StatsUtil.FormatTotals(_raidTotals.Dps))
             };
@@ -419,7 +417,6 @@ namespace EQLogParser
       _healingGroups.Clear();
       _raidTotals = StatsUtil.CreatePlayerStats(Labels.RaidTotals);
       _selected = null;
-      _title = "";
     }
 
     public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool _, bool showDps, bool showTotals,
