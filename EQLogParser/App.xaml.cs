@@ -25,7 +25,7 @@ namespace EQLogParser
 
     public App()
     {
-      SyncfusionLicenseProvider.RegisterLicense("SET KEY");
+      SyncfusionLicenseProvider.RegisterLicense("LICENSE KEY");
     }
 
     protected override void OnStartup(StartupEventArgs e)
@@ -52,7 +52,7 @@ namespace EQLogParser
         SetLoggingLevel();
 
         AutoMap = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
-        var version = ResourceAssembly.GetName().Version;
+        var version = ResourceAssembly.GetName().Version!.ToString()[..^2];
         Log.Info($"EQLogParser: {version}, DotNet: {Environment.Version}");
         RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
         ShowMain();
@@ -140,6 +140,12 @@ namespace EQLogParser
       Log.Error("AppDispatcherUnhandledException", ex.Exception);
       ex.Handled = true; // Prevents application from closing
       _splash?.SetErrorState();
+    }
+
+    private void DoNothing(object sender, RoutedEventArgs e)
+    {
+      // prevent two events from firing
+      e.Handled = true;
     }
   }
 }

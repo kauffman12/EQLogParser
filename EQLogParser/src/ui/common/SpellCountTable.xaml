@@ -6,25 +6,25 @@
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:local="clr-namespace:EQLogParser"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
-             mc:Ignorable="d" 
+             mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid SizeChanged="GridSizeChanged">
     <Grid.Resources>
       <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
     </Grid.Resources>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30"></RowDefinition>
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}" />
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel x:Name="titlePanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0">
       <Label x:Name="titleLabel" Content="Loading..." Style="{StaticResource EQTitleStyle}" />
     </StackPanel>
     <StackPanel x:Name="controlPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox Margin="0,0,0,2" x:Name="countTypes" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,0,2" x:Name="minFreqList" SelectionChanged="OptionsChanged" />
-      <ComboBox x:Name="selectedSpellRestrictions" Width="145" Margin="0,0,0,2" 
+      <ComboBox Margin="0,0,8,2" x:Name="countTypes" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="minFreqList" SelectionChanged="OptionsChanged" />
+      <ComboBox x:Name="selectedSpellRestrictions" Margin="0,0,8,2" 
                 DropDownClosed="CastTypesChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
-      <ComboBox x:Name="selectedCastTypes" Width="140" Margin="0,0,8,2" 
+      <ComboBox x:Name="selectedCastTypes" Margin="0,0,8,2" 
                 DropDownClosed="CastTypesChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
       <Button Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Reload</Button>
     </StackPanel>
@@ -33,14 +33,13 @@
                            AllowSorting="True"
                            AutoGenerateColumns="False"
                            CurrentCellBorderThickness="0"
-                           ColumnSizer="Auto"
                            FrozenColumnCount="1"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Both"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
-                           RowHeaderWidth="30"
+                           RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            ScrollViewer.CanContentScroll="False"
                            ShowRowHeader="True"

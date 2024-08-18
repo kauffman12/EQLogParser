@@ -15,9 +15,6 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for DamageLog.xaml
-  /// </summary>
   public partial class HitLogViewer : UserControl, IDisposable
   {
     private readonly Columns _checkBoxColumns = [];
@@ -41,38 +38,97 @@ namespace EQLogParser
       dataGrid.IsEnabled = false;
       UiElementUtil.SetEnabled(controlPanel.Children, false);
 
-      for (var i = 0; i <= 5; i++)
+      // Time
+      AddColumn(new GridTextColumn
       {
-        _checkBoxColumns.Add(dataGrid.Columns[i]);
-        _textColumns.Add(dataGrid.Columns[i]);
-      }
+        MappingName = "BeginTime",
+        DisplayBinding = new Binding
+        {
+          Path = new PropertyPath("BeginTime"),
+          Converter = new DateTimeConverter()
+        },
+        TextAlignment = TextAlignment.Center,
+        Width = MainActions.CurrentDateTimeWidth,
+        HeaderText = "Time"
+      });
+
+      AddColumn(new GridTextColumn
+      {
+        MappingName = "TimeSince",
+        TextAlignment = TextAlignment.Center,
+        HeaderText = "Since",
+        Width = MainActions.CurrentShortWidth
+      });
+
+      AddColumn(new GridTextColumn { MappingName = "Type", HeaderText = "Type" });
+      AddColumn(new GridTextColumn
+      {
+        MappingName = "SubType",
+        HeaderText = "Action",
+        Width = MainActions.CurrentSpellWidth
+      });
+
+      AddColumn(new GridNumericColumn
+      {
+        MappingName = "Total",
+        TextAlignment = TextAlignment.Right,
+        NumberDecimalDigits = 0,
+        NumberGroupSizes = [3],
+        HeaderText = ""
+      });
+
+      AddColumn(new GridNumericColumn
+      {
+        MappingName = "OverTotal",
+        TextAlignment = TextAlignment.Right,
+        NumberDecimalDigits = 0,
+        NumberGroupSizes = [3],
+        HeaderText = "Over Healed"
+      });
 
       _columnIds.ForEach(name =>
       {
-        _checkBoxColumns.Add(new GridCheckBoxColumn
+        var column = new GridCheckBoxColumn
         {
           MappingName = name,
           SortMode = DataReflectionMode.Value,
           HeaderText = name
-        });
+        };
+
+        column.Width = name != "Strikethrough" ? MainActions.CurrentShortWidth : DataGridUtil.CalculateMinGridHeaderWidth(name);
+        _checkBoxColumns.Add(column);
       });
 
       _columnIds.ForEach(name =>
       {
-        _textColumns.Add(new GridTextColumn
+        var column = new GridTextColumn
         {
           MappingName = name,
           SortMode = DataReflectionMode.Value,
           HeaderText = name,
-          TextAlignment = TextAlignment.Right
-        });
+          TextAlignment = TextAlignment.Right,
+          Width = DataGridUtil.CalculateMinGridHeaderWidth(name)
+        };
+
+        column.Width = name != "Strikethrough" ? MainActions.CurrentShortWidth : DataGridUtil.CalculateMinGridHeaderWidth(name);
+        _textColumns.Add(column);
       });
 
-      for (var i = 6; i < dataGrid.Columns.Count; i++)
+      AddColumn(new GridTextColumn
       {
-        _checkBoxColumns.Add(dataGrid.Columns[i]);
-        _textColumns.Add(dataGrid.Columns[i]);
-      }
+        MappingName = "Actor",
+        HeaderText = "",
+        Width = MainActions.CurrentNpcWidth
+      });
+
+      AddColumn(new GridTextColumn { MappingName = "ActorClass", HeaderText = "" });
+
+      AddColumn(new GridTextColumn
+      {
+        MappingName = "Acted",
+        HeaderText = "",
+        Width = MainActions.CurrentNpcWidth
+      });
 
       dataGrid.Columns = _textColumns;
 
@@ -84,6 +140,17 @@ namespace EQLogParser
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       MainActions.EventsThemeChanged += EventsThemeChanged;
+    }
+
+    private void AddColumn(GridColumn column)
+    {
+      if (double.IsNaN(column.Width))
+      {
+        column.Width = DataGridUtil.CalculateMinGridHeaderWidth(column.HeaderText);
+      }
+
+      _checkBoxColumns.Add(column);
+      _textColumns.Add(column);
     }
 
     internal void Init(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionGroup>> groups, bool defending = false)
@@ -147,11 +214,10 @@ namespace EQLogParser
         showPets.Visibility = Visibility.Collapsed;
       }
 
-      DataGridUtil.UpdateTableMargin(dataGrid);
-      Display();
+      Load();
     }
 
-    private void Display()
+    private void Load()
     {
       _textColumns[6].IsHidden = _checkBoxColumns[6].IsHidden = !_currentGroupActionsFilter;
 
@@ -201,11 +267,11 @@ namespace EQLogParser
         }
 
         var lastSeen = new Dictionary<string, double>();
-        foreach (var row in list.OrderBy(row => row.Time))
+        foreach (var row in list.OrderBy(row => row.BeginTime))
         {
           if (lastSeen.TryGetValue(row.SubType, out var lastTime)) // 1 day
           {
-            var diff = Math.Floor(row.Time) - lastTime;
+            var diff = Math.Floor(row.BeginTime) - lastTime;
             if (diff is > 0 and < 3600)
             {
               var t = TimeSpan.FromSeconds(diff);
@@ -213,7 +279,7 @@ namespace EQLogParser
             }
           }
 
-          lastSeen[row.SubType] = Math.Floor(row.Time);
+          lastSeen[row.SubType] = Math.Floor(row.BeginTime);
         }
 
         var actions = new List<string> { "All Actions" };
@@ -244,18 +310,19 @@ namespace EQLogParser
           dataGrid.SortColumnDescriptions.Clear();
           if (_currentGroupActionsFilter)
           {
-            dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Time", SortDirection = ListSortDirection.Ascending });
+            dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "BeginTime", SortDirection = ListSortDirection.Ascending });
             dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Total", SortDirection = ListSortDirection.Descending });
           }
           else
           {
-            dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Time", SortDirection = ListSortDirection.Ascending });
+            dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "BeginTime", SortDirection = ListSortDirection.Ascending });
           }
 
           actionList.ItemsSource = actions;
           typeList.ItemsSource = types;
           actionList.SelectedIndex = 0;
           typeList.SelectedIndex = 0;
+
           dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(list);
           dataGrid.IsEnabled = true;
           titleLabel.Content = _title;
@@ -344,7 +411,7 @@ namespace EQLogParser
       {
         row.Type = hit.Type;
         row.SubType = hit.SubType;
-        row.Time = currentTime;
+        row.BeginTime = currentTime;
 
         if (_currentGroupActionsFilter)
         {
@@ -381,7 +448,7 @@ namespace EQLogParser
 
     private static string GetRowKey(HitLogRow row, bool useActedKey = false)
     {
-      return string.Format(CultureInfo.CurrentCulture, "{0}-{1}-{2}-{3}", row.Actor, useActedKey ? row.Acted : "", row.SubType, Math.Floor(row.Time));
+      return string.Format(CultureInfo.CurrentCulture, "{0}-{1}-{2}-{3}", row.Actor, useActedKey ? row.Acted : "", row.SubType, Math.Floor(row.BeginTime));
     }
 
     private void OptionsChanged(object sender, EventArgs e)
@@ -418,7 +485,7 @@ namespace EQLogParser
               dataGrid.Columns = _checkBoxColumns;
             }
 
-            Display();
+            Load();
           }, DispatcherPriority.Background);
         }
       }
@@ -467,7 +534,7 @@ namespace EQLogParser
     #endregion
   }
 
-  internal class HitLogRow : HitRecord
+  public class HitLogRow : HitRecord
   {
     public string Actor { get; set; }
     public string ActorClass { get; set; }
@@ -479,7 +546,7 @@ namespace EQLogParser
     public uint Rampage { get; set; }
     public uint Riposte { get; set; }
     public uint Strikethrough { get; set; }
-    public double Time { get; set; }
+    public double BeginTime { get; set; }
     public bool IsPet { get; set; }
     public bool IsGroupingEnabled { get; set; }
     public string TimeSince { get; set; }

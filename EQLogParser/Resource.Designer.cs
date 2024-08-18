@@ -97,6 +97,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Audio Playback Failed.
+        /// </summary>
+        internal static string AUDIO_ERROR {
+            get {
+                return ResourceManager.GetString("AUDIO_ERROR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Berserker.
         /// </summary>
         internal static string BER {
@@ -367,7 +376,7 @@ namespace EQLogParser {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to FIght/NPC Search.
+        ///   Looks up a localized string similar to Fight Search.
         /// </summary>
         internal static string NPC_SEARCH_TEXT {
             get {
@@ -538,7 +547,7 @@ namespace EQLogParser {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Name/Pattern Search.
+        ///   Looks up a localized string similar to Trigger Search.
         /// </summary>
         internal static string TRIGGER_SEARCH_TEXT {
             get {

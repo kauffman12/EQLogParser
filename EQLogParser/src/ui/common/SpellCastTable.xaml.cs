@@ -1,14 +1,14 @@
-﻿using Syncfusion.UI.Xaml.Grid;
+﻿using Syncfusion.Data;
+using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Data;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for SpellCastTable.xaml
-  /// </summary>
   public partial class SpellCastTable
   {
     private readonly Dictionary<string, bool> _uniqueNames = [];
@@ -37,13 +37,39 @@ namespace EQLogParser
       {
         Dispatcher.InvokeAsync(() =>
         {
+          // time column
+          dataGrid.Columns.Add(new GridTextColumn
+          {
+            MappingName = "BeginTime",
+            SortMode = DataReflectionMode.Value,
+            DisplayBinding = new Binding
+            {
+              Path = new PropertyPath("BeginTime"),
+              Converter = new DateTimeConverter()
+            },
+            TextAlignment = TextAlignment.Center,
+            HeaderText = "Time",
+            Width = MainActions.CurrentDateTimeWidth
+          });
+
+          // seconds since start
+          dataGrid.Columns.Add(new GridTextColumn
+          {
+            MappingName = "Seconds",
+            SortMode = DataReflectionMode.Value,
+            TextAlignment = TextAlignment.Right,
+            HeaderText = "Sec",
+            ColumnSizer = GridLengthUnitType.Auto
+          });
+
           foreach (var name in _uniqueNames.Keys)
           {
             var column = new GridTextColumn
             {
               HeaderText = name,
               MappingName = name,
-              CellStyle = DataGridUtil.CreateHighlightForegroundStyle(name, new ReceivedSpellColorConverter())
+              CellStyle = DataGridUtil.CreateHighlightForegroundStyle(name, new ReceivedSpellColorConverter()),
+              ColumnSizer = GridLengthUnitType.Star
             };
 
             dataGrid.Columns.Add(column);
@@ -144,7 +170,7 @@ namespace EQLogParser
       for (var i = 0; i < max; i++)
       {
         var row = new ExpandoObject() as IDictionary<string, object>;
-        row.Add("Time", beginTime);
+        row.Add("BeginTime", beginTime);
         row.Add("Seconds", (int)(beginTime - startTime));
 
         foreach (var player in _uniqueNames.Keys)
@@ -173,12 +199,7 @@ namespace EQLogParser
           dataGrid.IsEnabled = true;
           UiElementUtil.SetEnabled(controlPanel.Children, true);
           dataGrid.ItemsSource = null;
-
-          for (var i = dataGrid.Columns.Count - 1; i > 1; i--)
-          {
-            dataGrid.Columns.RemoveAt(i);
-          }
-
+          dataGrid.Columns.Clear();
           Display();
         }
       }

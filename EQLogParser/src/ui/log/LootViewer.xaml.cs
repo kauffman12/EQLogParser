@@ -2,10 +2,12 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Threading;
 using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 
@@ -44,7 +46,6 @@ namespace EQLogParser
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       RecordManager.Instance.RecordsUpdatedEvent += RecordsUpdatedEvent;
-      DataGridUtil.UpdateTableMargin(dataGrid);
       MainActions.EventsThemeChanged += EventsThemeChanged;
       dataGrid.ItemsSource = _individualRecords;
 
@@ -94,10 +95,10 @@ namespace EQLogParser
       var i = 0;
       foreach (var (beginTime, looted) in RecordManager.Instance.GetAllLoot().Reverse())
       {
-        var row = new LootRow { Time = beginTime, Record = looted };
+        var row = new LootRow { BeginTime = beginTime, Record = looted };
         if (_individualRecords.Count > i)
         {
-          if (!_individualRecords[i].Time.Equals(row.Time) || !_individualRecords[i].Record.Equals(row.Record))
+          if (!_individualRecords[i].BeginTime.Equals(row.BeginTime) || !_individualRecords[i].Record.Equals(row.Record))
           {
             _individualRecords[i] = row;
           }
@@ -149,7 +150,7 @@ namespace EQLogParser
       {
         if (_totalRecords.Count > i)
         {
-          if (!_totalRecords[i].Time.Equals(row.Time) || !_totalRecords[i].Record.Equals(row.Record))
+          if (!_totalRecords[i].BeginTime.Equals(row.BeginTime) || !_totalRecords[i].Record.Equals(row.Record))
           {
             _totalRecords[i] = row;
           }
@@ -171,7 +172,6 @@ namespace EQLogParser
       UpdateItems(playersList, players, _currentSelectedPlayer);
       UpdateItems(npcsList, npcs, _currentSelectedNpc);
       dataGrid?.View?.Refresh();
-      dataGrid?.GridColumnSizer.ResetAutoCalculationforAllColumns();
       UpdateTitle();
       _reloadTimer.Stop();
     }
@@ -204,11 +204,17 @@ namespace EQLogParser
         {
           dataGrid.ItemsSource = _totalRecords;
           dataGrid.Columns[0].IsHidden = dataGrid.Columns[4].IsHidden = true;
+          dataGrid.SortColumnDescriptions.Clear();
         }
         else if (!_showSummaryView && dataGrid.ItemsSource != _individualRecords)
         {
           dataGrid.ItemsSource = _individualRecords;
           dataGrid.Columns[0].IsHidden = dataGrid.Columns[4].IsHidden = false;
+          dataGrid.SortColumnDescriptions.Add(new SortColumnDescription
+          {
+            ColumnName = "BeginTime",
+            SortDirection = ListSortDirection.Descending
+          });
         }
         else
         {
@@ -247,7 +253,7 @@ namespace EQLogParser
     {
       if (App.AutoMap.Map(looted, new LootRecord()) is { } copied)
       {
-        var row = new LootRow { Time = 0, Record = copied };
+        var row = new LootRow { BeginTime = 0, Record = copied };
         if (totalRecords.FirstOrDefault(item =>
           !looted.IsCurrency && !item.Record.IsCurrency && looted.Player == item.Record.Player && looted.Item == item.Record.Item) is { } existingItem)
         {
@@ -309,5 +315,52 @@ namespace EQLogParser
       RecordManager.Instance.RecordsUpdatedEvent -= RecordsUpdatedEvent;
       _ready = false;
     }
+
+    private void AutoGeneratingColumn(object sender, AutoGeneratingColumnArgs e)
+    {
+      var mapping = e.Column.MappingName;
+      if (mapping is "BeginTime")
+      {
+        e.Column.DisplayBinding = new Binding
+        {
+          Path = new PropertyPath(mapping),
+          Converter = new DateTimeConverter()
+        };
+        e.Column.TextAlignment = TextAlignment.Center;
+        e.Column.Width = MainActions.CurrentDateTimeWidth;
+        e.Column.HeaderText = "Time";
+      }
+      else if (mapping == "Record.Player")
+      {
+        e.Column.HeaderText = "Player";
+        e.Column.Width = DataGridUtil.CalculateMinGridHeaderWidth(e.Column.HeaderText);
+      }
+      else if (mapping == "Record.Item")
+      {
+        e.Column.HeaderText = "Item";
+        e.Column.Width = MainActions.CurrentItemWidth;
+      }
+      else if (mapping == "Record.Quantity")
+      {
+        e.Column.HeaderText = "Quantity";
+        e.Column.CellTemplateSelector = new LootQuantityTemplateSelector();
+        e.Column.Width = DataGridUtil.CalculateMinGridHeaderWidth(e.Column.HeaderText);
+      }
+      else if (mapping == "Record.Npc")
+      {
+        e.Column.HeaderText = "Npc";
+        e.Column.Width = MainActions.CurrentSpellWidth;
+      }
+      else if (mapping == "Record.IsCurrency")
+      {
+        e.Cancel = true;
+      }
+    }
+  }
+
+  internal class LootRow
+  {
+    public double BeginTime { get; set; }
+    public LootRecord Record { get; set; }
   }
 }

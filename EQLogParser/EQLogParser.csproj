@@ -178,21 +178,21 @@
     <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="NAudio" Version="2.2.1" />
-    <PackageReference Include="Syncfusion.DocIO.Wpf" Version="24.2.4" />
-    <PackageReference Include="Syncfusion.Edit.WPF" Version="24.2.4" />
-    <PackageReference Include="Syncfusion.PropertyGrid.WPF" Version="24.2.4" />
-    <PackageReference Include="Syncfusion.SfChart.WPF" Version="24.2.4" />
-    <PackageReference Include="Syncfusion.SfGrid.WPF" Version="24.2.4" />
-    <PackageReference Include="Syncfusion.SfInput.WPF" Version="24.2.4" />
-    <PackageReference Include="Syncfusion.SfProgressBar.WPF" Version="24.2.4" />
-    <PackageReference Include="Syncfusion.SfRichTextBoxAdv.WPF" Version="24.2.4" />
-    <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="24.2.4" />
-    <PackageReference Include="Syncfusion.SfTreeView.WPF" Version="24.2.4" />
-    <PackageReference Include="Syncfusion.Shared.WPF" Version="24.2.4" />
+    <PackageReference Include="Syncfusion.DocIO.Wpf" Version="26.2.8" />
+    <PackageReference Include="Syncfusion.Edit.WPF" Version="26.2.8" />
+    <PackageReference Include="Syncfusion.PropertyGrid.WPF" Version="26.2.8" />
+    <PackageReference Include="Syncfusion.SfChart.WPF" Version="26.2.8" />
+    <PackageReference Include="Syncfusion.SfGrid.WPF" Version="26.2.8" />
+    <PackageReference Include="Syncfusion.SfInput.WPF" Version="26.2.8" />
+    <PackageReference Include="Syncfusion.SfProgressBar.WPF" Version="26.2.8" />
+    <PackageReference Include="Syncfusion.SfRichTextBoxAdv.WPF" Version="26.2.8" />
+    <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="26.2.8" />
+    <PackageReference Include="Syncfusion.SfTreeView.WPF" Version="26.2.8" />
+    <PackageReference Include="Syncfusion.Shared.WPF" Version="26.2.8" />
     <PackageReference Include="Syncfusion.Shared.WPF.Classic" Version="22.2.5" />
-    <PackageReference Include="Syncfusion.Themes.MaterialDark.WPF" Version="24.2.4" />
-    <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="24.2.4" />
-    <PackageReference Include="Syncfusion.Tools.WPF" Version="24.2.4" />
+    <PackageReference Include="Syncfusion.Themes.MaterialDark.WPF" Version="26.2.8" />
+    <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="26.2.8" />
+    <PackageReference Include="Syncfusion.Tools.WPF" Version="26.2.8" />
     <PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="22.2.5" />
     <PackageReference Include="Microsoft.Windows.Compatibility" Version="8.0.7" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />

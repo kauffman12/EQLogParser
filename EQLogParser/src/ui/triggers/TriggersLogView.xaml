@@ -10,7 +10,7 @@
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30"></RowDefinition>
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}" />
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
@@ -19,9 +19,9 @@
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
-                           AllowSorting="False"
-                           AutoGenerateColumns="False"
-                           ColumnSizer="Auto"
+                           AllowSorting="True"
+                           AutoGenerateColumns="True"
+                           AutoGeneratingColumn="AutoGeneratingColumn"
                            CurrentCellBorderThickness="0"
                            FrozenColumnCount="1"
                            Grid.Row="1"
@@ -30,12 +30,11 @@
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
                            PreviewMouseLeftButtonDown="PreviewMouseLeftButtonDown"
-                           RowHeaderWidth="40"
+                           RowHeaderWidth="{DynamicResource EQTableRowHeaderWidth}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            ShowRowHeader="True">
       <syncfusion:SfDataGrid.Resources>
-        <local:DateTimeConverter x:Key="DateTimeConverter" />
         <Style TargetType="syncfusion:GridRowHeaderCell">
           <Setter Property="Template">
             <Setter.Value>
@@ -50,17 +49,6 @@
           </Setter>
         </Style>
       </syncfusion:SfDataGrid.Resources>
-      <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="EventTime" SortMode="Value" DisplayBinding="{Binding EventTime, Converter={StaticResource DateTimeConverter}}"
-                                   TextAlignment="Center" HeaderText="Event Time" MinimumWidth="110" />
-        <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" MinimumWidth="150"/>
-        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" MinimumWidth="90"/>
-        <syncfusion:GridTextColumn MappingName="Priority" HeaderText="Priority" />
-        <syncfusion:GridTextColumn MappingName="Eval" HeaderText="Eval Time (μs)" />
-        <syncfusion:GridTextColumn MappingName="LogTime" SortMode="Value" DisplayBinding="{Binding LogTime, Converter={StaticResource DateTimeConverter}}"
-                                   TextAlignment="Center" HeaderText="Log Time" MinimumWidth="120" />
-        <syncfusion:GridTextColumn MappingName="Line" HeaderText="Line Matched / Previously Matched if Started Timer" />
-      </syncfusion:SfDataGrid.Columns>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 

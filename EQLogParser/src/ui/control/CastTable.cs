@@ -242,6 +242,8 @@ namespace EQLogParser
 
     private void EventsThemeChanged(string _)
     {
+      DataGridUtil.RefreshTableColumns(_theDataGrid);
+
       if (_theDataGrid?.View != null)
       {
         // toggle styles to get them to re-render

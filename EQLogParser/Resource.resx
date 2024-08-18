@@ -220,7 +220,7 @@
     <value>Necromancer</value>
   </data>
   <data name="NPC_SEARCH_TEXT" xml:space="preserve">
-    <value>FIght/NPC Search</value>
+    <value>Fight Search</value>
   </data>
   <data name="PAL" xml:space="preserve">
     <value>Paladin</value>
@@ -277,7 +277,7 @@
     <value>Delete Character Settings</value>
   </data>
   <data name="TRIGGER_SEARCH_TEXT" xml:space="preserve">
-    <value>Name/Pattern Search</value>
+    <value>Trigger Search</value>
   </data>
   <data name="UNASSIGN_OVERLAY" xml:space="preserve">
     <value>Unassign Overlay</value>
@@ -296,5 +296,8 @@
   </data>
   <data name="WIZ" xml:space="preserve">
     <value>Wizard</value>
+  </data>
+  <data name="AUDIO_ERROR" xml:space="preserve">
+    <value>Audio Playback Failed</value>
   </data>
 </root>

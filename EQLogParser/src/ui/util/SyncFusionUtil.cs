@@ -3,6 +3,7 @@ using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace EQLogParser
@@ -13,11 +14,18 @@ namespace EQLogParser
 
     internal static void AddDocument(DockingManager dockSite, Type type, string name, string title, bool show = false)
     {
-      var control = new ContentControl { Name = name };
+      var control = new ContentControl
+      {
+        Name = name,
+        HorizontalAlignment = HorizontalAlignment.Stretch,
+        VerticalContentAlignment = VerticalAlignment.Stretch
+      };
+
       DockingManager.SetHeader(control, title);
       DockingManager.SetState(control, DockState.Document);
       DockingManager.SetSideInDockedMode(control, DockSide.Tabbed);
       DockingManager.SetCanDock(control, false);
+
       var instance = Activator.CreateInstance(type);
       control.Content = instance;
       dockSite.Children.Add(control);
@@ -40,6 +48,20 @@ namespace EQLogParser
       }
 
       return opened;
+    }
+
+    internal static void SetDesiredHeight(string resource, double size, ContentControl window)
+    {
+      Application.Current.Resources[resource] = size;
+      DockingManager.SetDesiredHeightInDockedMode(window, size);
+      DockingManager.SetDesiredMinHeightInFloatingMode(window, size);
+    }
+
+    internal static void SetDesiredWidth(string resource, double size, ContentControl window)
+    {
+      Application.Current.Resources[resource] = size;
+      DockingManager.SetDesiredWidthInDockedMode(window, size);
+      DockingManager.SetDesiredWidthInFloatingMode(window, size);
     }
 
     internal static void ToggleWindow(DockingManager dockSite, string name, bool force = false)

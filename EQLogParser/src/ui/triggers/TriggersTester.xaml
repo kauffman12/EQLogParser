@@ -9,7 +9,7 @@
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.RowDefinitions>
-      <RowDefinition Height="32" />
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}" />
       <RowDefinition Height="100*" />
     </Grid.RowDefinitions>
     <StackPanel Orientation="Horizontal" Grid.Row="0">
@@ -18,7 +18,7 @@
       <Label x:Name="theBasicLabel" Style="{StaticResource EQTitleStyle}" Visibility="Collapsed"/>
       <Button x:Name="testButton" Margin="8,1,0,0" Height="{DynamicResource EQButtonHeight}" Padding="12,0,12,0" Click="TestTriggersClick">Run Test</Button>
       <Button x:Name="clearButton" Margin="8,1,0,0" Height="{DynamicResource EQButtonHeight}" Padding="12,0,12,0" Click="ClearTextClick">Clear Text</Button>
-      <CheckBox x:Name="realTime" Margin="8,1,0,0" Content="Real-Time"/>
+      <CheckBox x:Name="realTime" Template="{StaticResource CustomCheckBoxTemplate}" Margin="8,1,0,2" Content="Real-Time"/>
       <TextBlock x:Name="testStatus" VerticalAlignment="Center" Visibility="Collapsed" Margin="7,1,0,0" Text="" />
     </StackPanel>
     <syncfusion:EditControl x:Name="testTriggersBox" Grid.Row="1" IsAutoLineNumberAreaWidthEnabled="False" LineNumberAreaWidth="65" EnableIntellisense="False" IsTrackChangesEnabled="False" 

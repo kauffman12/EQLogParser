@@ -1,5 +1,6 @@
 ﻿using log4net;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -18,8 +19,8 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly string[] CommonFontFamilies =
     [
-      "Arial", "Calibri", "Cambria", "Cascadia Code", "Century Gothic", "Lucida Sans",
-      "Open Sans", "Segoe UI", "Tahoma", "Roboto", "Helvetica"
+      "Arial", "Calibri", "Cambria", "Century Gothic", "Georgia", "Helvetica", "Lucida Sans",
+      "Open Sans", "Segoe UI", "Roboto", "Tahoma", "Times New Roman", "Trebuchet MS", "Verdana"
     ];
 
     internal static BitmapImage CreateBitmap(string path)
@@ -193,9 +194,6 @@ namespace EQLogParser
         VisualTreeHelper.GetDpi(new Window()).PixelsPerDip // This ensures the text size is scaled correctly for the display DPI
       );
 
-      // Account for FontWeight
-      formattedText.SetFontWeight(FontWeights.Normal);
-
       // Calculate the height required for the text
       var textHeight = formattedText.Height;
 
@@ -203,6 +201,52 @@ namespace EQLogParser
       var totalHeight = textHeight + padding.Top + padding.Bottom + borderThickness.Top + borderThickness.Bottom;
 
       return Math.Round(totalHeight);
+    }
+
+    internal static Style CloneStyle(Style originalStyle)
+    {
+      if (originalStyle == null)
+      {
+        return null;
+      }
+
+      // Create a new style based on the original style
+      var newStyle = new Style(originalStyle.TargetType, originalStyle.BasedOn);
+
+      // Clone each setter
+      foreach (var setterBase in originalStyle.Setters)
+      {
+        var originalSetter = (Setter)setterBase;
+        // Check if the value of the setter is a Style
+        if (originalSetter.Value is Style nestedStyle)
+        {
+          // Recursively clone the nested style
+          var clonedNestedStyle = CloneStyle(nestedStyle);
+          // Create a new setter with the cloned nested style
+          var newSetter = new Setter(originalSetter.Property, clonedNestedStyle);
+          newStyle.Setters.Add(newSetter);
+        }
+        else
+        {
+          // If the value is not a Style, just clone the setter as is
+          var newSetter = new Setter(originalSetter.Property, originalSetter.Value);
+          newStyle.Setters.Add(newSetter);
+        }
+      }
+
+      // Clone triggers (if any)
+      foreach (var trigger in originalStyle.Triggers)
+      {
+        newStyle.Triggers.Add(trigger);
+      }
+
+      // Clone resources (if any)
+      foreach (DictionaryEntry resource in originalStyle.Resources)
+      {
+        newStyle.Resources.Add(resource.Key, resource.Value);
+      }
+
+      return newStyle;
     }
   }
 }

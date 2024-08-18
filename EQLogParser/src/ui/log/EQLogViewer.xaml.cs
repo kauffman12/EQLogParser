@@ -597,7 +597,7 @@ namespace EQLogParser
         textBox.FontStyle = FontStyles.Italic;
       }
     }
-    private void FontFgColor_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private void FontFgColorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
       if (logBox != null && contextBox != null)
       {
@@ -608,7 +608,7 @@ namespace EQLogParser
       }
     }
 
-    private void FontSize_Changed(object sender, SelectionChangedEventArgs e)
+    private void FontSizeChanged(object sender, SelectionChangedEventArgs e)
     {
       if (fontSize?.SelectedItem != null && logBox != null)
       {
@@ -617,7 +617,7 @@ namespace EQLogParser
       }
     }
 
-    private void FontFamily_Changed(object sender, SelectionChangedEventArgs e)
+    private void FontFamilyChanged(object sender, SelectionChangedEventArgs e)
     {
       if (fontFamily?.SelectedItem is FontFamily family)
       {

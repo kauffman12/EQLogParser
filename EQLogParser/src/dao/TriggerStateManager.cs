@@ -386,7 +386,7 @@ namespace EQLogParser
         await _taskQueue.EnqueueTransaction(() =>
         {
           config.Characters.Remove(existing);
-          _db?.GetCollection<TriggerConfig>(ConfigCol).Update(config);
+          _db?.GetCollection<TriggerConfig>(ConfigCol)?.Update(config);
 
           if (GetPlayerState(id) is { } state)
           {
@@ -404,9 +404,12 @@ namespace EQLogParser
     {
       return await _taskQueue.Enqueue(() =>
       {
-        var result = _db?.GetCollection<TriggerNode>(TreeCol).FindAll().Where(n => n.OverlayData != null)
-          .Select(n => new OtData { Name = n.Name, Id = n.Id, OverlayData = n.OverlayData }) ?? [];
-        return Task.FromResult(result);
+        IEnumerable<OtData> result = null;
+        if (_db?.GetCollection<TriggerNode>(TreeCol)?.FindAll() is { } all)
+        {
+          result = all.Where(n => n.OverlayData != null).Select(n => new OtData { Name = n.Name, Id = n.Id, OverlayData = n.OverlayData });
+        }
+        return Task.FromResult(result ?? Enumerable.Empty<OtData>());
       });
     }
 
@@ -474,20 +477,12 @@ namespace EQLogParser
 
     internal async Task<List<LexiconItem>> GetLexicon()
     {
-      return await _taskQueue.Enqueue(() =>
-      {
-        var result = _db?.GetCollection<LexiconItem>(LexiconCol)?.FindAll().ToList();
-        return Task.FromResult(result);
-      });
+      return await _taskQueue.Enqueue(() => Task.FromResult(_db?.GetCollection<LexiconItem>(LexiconCol)?.FindAll()?.ToList() ?? []));
     }
 
     internal async Task<TriggerNode> GetOverlayById(string id)
     {
-      return await _taskQueue.Enqueue(() =>
-      {
-        var result = _db?.GetCollection<TriggerNode>(TreeCol).FindOne(n => n.Id == id && n.OverlayData != null);
-        return Task.FromResult(result);
-      });
+      return await _taskQueue.Enqueue(() => Task.FromResult(_db?.GetCollection<TriggerNode>(TreeCol)?.FindOne(n => n.Id == id && n.OverlayData != null)));
     }
 
     internal async Task ImportOverlays(TriggerNode parent, IEnumerable<ExportTriggerNode> imported)
@@ -661,7 +656,7 @@ namespace EQLogParser
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        _db?.GetCollection<TriggerConfig>(ConfigCol).Update(config);
+        _db?.GetCollection<TriggerConfig>(ConfigCol)?.Update(config);
         return Task.CompletedTask;
       });
 
@@ -1013,7 +1008,7 @@ namespace EQLogParser
 
             if (needUpdate)
             {
-              _db?.GetCollection<TriggerState>(StatesCol).Update(state);
+              _db?.GetCollection<TriggerState>(StatesCol)?.Update(state);
             }
           }
         }
@@ -1189,7 +1184,7 @@ namespace EQLogParser
       if (ConfigUtil.IfSetOrElse("TriggersEnabled"))
       {
         var config = new TriggerConfig { IsEnabled = true, Id = Guid.NewGuid().ToString() };
-        _db?.GetCollection<TriggerConfig>(ConfigCol).Insert(config);
+        _db?.GetCollection<TriggerConfig>(ConfigCol)?.Insert(config);
       }
 
       _db?.Checkpoint();
@@ -1259,7 +1254,7 @@ namespace EQLogParser
         }
       }
 
-      _db?.GetCollection<TriggerNode>(TreeCol).Insert(newNode);
+      _db?.GetCollection<TriggerNode>(TreeCol)?.Insert(newNode);
 
       if (old.Nodes != null)
       {

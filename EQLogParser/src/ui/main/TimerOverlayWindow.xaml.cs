@@ -246,7 +246,8 @@ namespace EQLogParser
       }
       else if (_node.OverlayData.IdleTimeoutSeconds > 0)
       {
-        complete = (count == idleList.Count) && (oldestIdleTicks > (_node.OverlayData.IdleTimeoutSeconds * TimeSpan.TicksPerSecond));
+        complete = (count == idleList.Count) &&
+                   (double.IsNaN(oldestIdleTicks) || (oldestIdleTicks > (_node.OverlayData.IdleTimeoutSeconds * TimeSpan.TicksPerSecond)));
       }
 
       while (count < childCount)
@@ -367,7 +368,7 @@ namespace EQLogParser
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
       await TriggerStateManager.Instance.Update(_node);
-      await TriggerManager.Instance.CloseOverlay(_node.Id);
+      TriggerManager.Instance.CloseOverlay(_node.Id);
     }
 
     private void CancelClick(object sender, RoutedEventArgs e)

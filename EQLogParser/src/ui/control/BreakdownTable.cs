@@ -32,8 +32,8 @@ namespace EQLogParser
 
       _theDataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       _theDataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+      DataGridUtil.RefreshTableColumns(_theDataGrid);
       DataGridUtil.LoadColumns(_theColumnsCombo, _theDataGrid);
-      DataGridUtil.UpdateTableMargin(_theDataGrid);
       MainActions.EventsThemeChanged += EventsThemeChanged;
 
       // workaround to avoid drag/drop failing when grid has no data
@@ -45,11 +45,7 @@ namespace EQLogParser
     internal void CreateLargeImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(_theDataGrid, TheTitle, true);
     internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
     internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(_theColumnsCombo, _theDataGrid);
-
-    private void EventsThemeChanged(string _)
-    {
-      DataGridUtil.RefreshTableColumns(_theDataGrid);
-    }
+    private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(_theDataGrid);
 
     #region IDisposable Support
     private bool _disposedValue; // To detect redundant calls

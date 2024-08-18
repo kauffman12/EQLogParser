@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -18,6 +20,29 @@ namespace EQLogParser
   internal static class UiUtil
   {
     private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new();
+
+    internal static void UpdateObservable<T>(IEnumerable<T> source, ObservableCollection<T> dest)
+    {
+      var index = 0;
+      foreach (var row in source)
+      {
+        if (dest.Count > index)
+        {
+          dest[index] = row;
+        }
+        else
+        {
+          dest.Add(row);
+        }
+
+        index++;
+      }
+
+      for (var i = dest.Count - 1; i >= index; i--)
+      {
+        dest.RemoveAt(index);
+      }
+    }
 
     internal static SolidColorBrush GetBrush(string color)
     {

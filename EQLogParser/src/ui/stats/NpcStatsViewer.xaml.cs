@@ -1,27 +1,43 @@
-﻿using System;
+﻿using Syncfusion.Data;
+using Syncfusion.UI.Xaml.Grid;
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Windows;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for NpcStatsViewer.xaml
-  /// </summary>
   public partial class NpcStatsViewer : IDocumentContent
   {
+    public ObservableCollection<NpcStatsRow> NpcStatsData { get; set; }
     private const string Nodata = "No Spell Resist Data Found";
     private bool _ready;
 
     public NpcStatsViewer()
     {
       InitializeComponent();
+      NpcStatsData = [];
+      DataContext = this;
+
       // default these columns to descending
-      var desc = new[] { "Lowest", "Cold", "Corruption", "Disease", "Magic", "Fire", "Physical", "Poison", "Average", "Reflected" };
+      var desc = new[] { "LowestText", "ColdText", "CorruptionText", "DiseaseText", "MagicText", "FireText", "PhysicalText",
+        "PoisonText", "AverageText", "ReflectedText" };
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-      DataGridUtil.UpdateTableMargin(dataGrid);
+
+      // custom compare for number fields
+      foreach (var d in desc)
+      {
+        dataGrid.SortComparers.Add(new SortComparer
+        {
+          PropertyName = d,
+          Comparer = new ResistComparer<NpcStatsRow>(d[..^4])
+        });
+      }
+
       MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
@@ -35,7 +51,7 @@ namespace EQLogParser
         {
           var count = 0u;
           var reflectedCount = 0u;
-          var row = new NpcStatsRow { Name = upperNpc };
+          var row = new NpcStatsRow { Npc = upperNpc };
           foreach (var resists in stats.ByResist)
           {
             if (resists.Key == SpellResist.Reflected)
@@ -109,7 +125,8 @@ namespace EQLogParser
         }
       }
 
-      dataGrid.ItemsSource = npcStatsRows.Values.OrderBy(row => row.Name).ToList();
+      UiUtil.UpdateObservable(npcStatsRows.Values.AsEnumerable(), NpcStatsData);
+      dataGrid.View?.Refresh();
       titleLabel.Content = npcStatsRows.Values.Count == 0 ? Nodata : "Spell Resists vs " + npcStatsRows.Count + " Unique NPCs";
       return;
 
@@ -163,18 +180,81 @@ namespace EQLogParser
     public void HideContent()
     {
       MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
-      dataGrid.ItemsSource = null;
+      NpcStatsData.Clear();
       _ready = false;
+    }
+
+    private void AutoGeneratingColumn(object sender, AutoGeneratingColumnArgs e)
+    {
+      if (e.Column.MappingName == "Npc")
+      {
+        e.Column.Width = MainActions.CurrentNpcWidth;
+      }
+      else if (!e.Column.MappingName.EndsWith("Text"))
+      {
+        e.Cancel = true;
+      }
+      else
+      {
+        if (e.Column.MappingName == "ReflectedText")
+        {
+          e.Column.HeaderText = "Reflected %";
+        }
+        else
+        {
+          e.Column.HeaderText = e.Column.MappingName[..^4] + " Resist %";
+        }
+
+        e.Column.TextAlignment = TextAlignment.Right;
+        e.Column.Width = DataGridUtil.CalculateMinGridHeaderWidth(e.Column.HeaderText);
+      }
+    }
+
+    private class ResistComparer<T>(string field) : IComparer<object>
+    {
+      private readonly PropertyInfo _propertyInfo = typeof(T).GetProperty(field);
+      private readonly PropertyInfo _totalInfo = typeof(T).GetProperty(field + "Total");
+
+      public int Compare(object x, object y)
+      {
+        if (_propertyInfo == null || x is not NpcStatsRow || y is not NpcStatsRow r2)
+          return 0;
+
+        var valueX = _propertyInfo.GetValue(x);
+        var valueY = _propertyInfo.GetValue(y);
+
+        if (valueX == null || valueY == null)
+        {
+          return 0;
+        }
+
+        if (valueX is IComparable comparableX)
+        {
+          var result = comparableX.CompareTo(valueY);
+          if (result == 0 && valueX is double and 0)
+          {
+            var totalX = _totalInfo.GetValue(x);
+            var totalY = _totalInfo.GetValue(y);
+            if (totalX is IComparable totalComparableX)
+            {
+              return totalComparableX.CompareTo(totalY);
+            }
+          }
+
+          return result;
+        }
+
+        return 0;
+      }
     }
   }
 
   public class NpcStatsRow
   {
-    public string Name { get; set; }
+    public string Npc { get; set; }
     public double Average { get; set; } = -1.0;
     public string AverageText { get; set; } = "-";
     public uint AverageTotal { get; set; }
-    public string TooltipText { get; set; }
     public double Cold { get; set; } = -1.0;
     public string ColdText { get; set; } = "-";
     public uint ColdTotal { get; set; }

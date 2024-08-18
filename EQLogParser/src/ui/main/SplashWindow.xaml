@@ -16,8 +16,8 @@
         Closing="SplashWindowOnClosing">
     <Grid Margin="0">
       <Image Source="../../../icons/loading.png" Margin="0"/>
-      <StackPanel x:Name="data" Margin="0,60,0,0" Height="40" Orientation="Vertical" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-        <TextBlock FontSize="10" HorizontalAlignment="Center">Starting</TextBlock>
+      <StackPanel x:Name="data" Margin="0,58,0,0" Height="42" Orientation="Vertical" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <TextBlock FontSize="12" FontStretch="Condensed" HorizontalAlignment="Center">Starting</TextBlock>
       </StackPanel>
       <StackPanel x:Name="error" Visibility="Collapsed" Margin="0,60,0,0" Height="40" Orientation="Vertical" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <TextBlock FontSize="14" Foreground="DarkRed" HorizontalAlignment="Center">Critical Error</TextBlock>

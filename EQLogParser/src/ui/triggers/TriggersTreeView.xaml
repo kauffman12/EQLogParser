@@ -24,10 +24,10 @@
           <RowDefinition Height="40" />
           <RowDefinition Height="100*" />
         </Grid.RowDefinitions>
-        <Border Grid.Row="0" Padding="8,2,0,0" Background="{DynamicResource ContentBackgroundAlt}" BorderThickness="0">
+        <Border Grid.Row="0" Padding="8,2,0,0" Background="{DynamicResource ContentBackgroundAlt2}" BorderThickness="0">
           <DockPanel>
             <TextBlock Text="Manage Triggers" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
-            <TextBox x:Name="findTrigger" DockPanel.Dock="Right" HorizontalAlignment="Right" Margin="0,0,8,4" Height="{DynamicResource EQButtonHeight}" FontStyle="Italic" Width="140" LostFocus="FindLostFocus" GotFocus="FindGotFocus" PreviewKeyDown="FindKeyDown" TextChanged="FindTextChanged" />
+            <TextBox x:Name="findTrigger" DockPanel.Dock="Right" HorizontalAlignment="Right" Margin="0,0,8,4" Height="{DynamicResource EQButtonHeight}" ToolTip="Search Triggers by Name and Pattern" FontStyle="Italic" Width="140" LostFocus="FindLostFocus" GotFocus="FindGotFocus" PreviewKeyDown="FindKeyDown" TextChanged="FindTextChanged" />
           </DockPanel>
         </Border>
         <Grid Grid.Row="1">
@@ -154,10 +154,10 @@
         <RowDefinition Height="40" />
         <RowDefinition Height="100*" />
       </Grid.RowDefinitions>
-      <Border Grid.Row="0" Padding="8,1,0,0" Background="{DynamicResource ContentBackgroundAlt}">
+      <Border Grid.Row="0" Padding="8,1,0,0" Background="{DynamicResource ContentBackgroundAlt2}">
         <DockPanel>
           <TextBlock Text="Manage Overlays" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
-          <Button DockPanel.Dock="Right" Width="110" HorizontalAlignment="Right" Margin="0,0,8,4" Height="{DynamicResource EQButtonHeight}" Content="Close Overlays" Click="CloseOverlaysClick" />
+          <Button DockPanel.Dock="Right" Padding="6,0,6,0"  HorizontalAlignment="Right" Margin="0,0,8,4" Height="{DynamicResource EQButtonHeight}" Content="Close Overlays" Click="CloseOverlaysClick" />
         </DockPanel>
       </Border>
       <syncfusion:SfTreeView

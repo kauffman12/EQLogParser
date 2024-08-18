@@ -44,6 +44,13 @@ namespace EQLogParser
     internal static string CurrentTheme;
     internal static string CurrentFontFamily;
     internal static double CurrentFontSize;
+    internal static double CurrentDateTimeWidth;
+    internal static double CurrentItemWidth;
+    internal static double CurrentNpcWidth;
+    internal static double CurrentNameWidth;
+    internal static double CurrentSpellWidth;
+    internal static double CurrentShortWidth;
+    internal static double CurrentMediumWidth;
 
     private const string PetsListTitle = "Verified Pets ({0})";
     private const string PlayerListTitle = "Verified Players ({0})";
@@ -61,7 +68,6 @@ namespace EQLogParser
     internal static void FireTankingSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsTankingSelectionChanged?.Invoke(args);
     internal static void FireHealingSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsHealingSelectionChanged?.Invoke(args);
     internal static void FireLoadingEvent(string log) => EventsLogLoadingComplete?.Invoke(log);
-    internal static void FireThemeChanged(string theme) => EventsThemeChanged?.Invoke(theme);
     internal static void FireFightSelectionChanged(List<Fight> fights) => EventsFightSelectionChanged?.Invoke(fights);
     internal static DockingManager GetDockSite() => _mainWindow.dockSite;
     internal static Window GetOwner() => _mainWindow;
@@ -243,7 +249,7 @@ namespace EQLogParser
         }
         catch (Exception ex)
         {
-          Log.Error("Error Checking for Updates", ex);
+          Log.Error($"Error Checking for Updates: {ex.Message}");
           UiUtil.InvokeAsync(() => errorText.Text = "Update Check Failed. Firewall?");
         }
       });
@@ -310,6 +316,10 @@ namespace EQLogParser
       parent.Items.Add(CreateMenuItem(12, callback, EFontAwesomeIcon.Solid_Check));
       parent.Items.Add(CreateMenuItem(13, callback, EFontAwesomeIcon.Solid_Check));
       parent.Items.Add(CreateMenuItem(14, callback, EFontAwesomeIcon.Solid_Check));
+      parent.Items.Add(CreateMenuItem(15, callback, EFontAwesomeIcon.Solid_Check));
+      parent.Items.Add(CreateMenuItem(16, callback, EFontAwesomeIcon.Solid_Check));
+      parent.Items.Add(CreateMenuItem(17, callback, EFontAwesomeIcon.Solid_Check));
+      parent.Items.Add(CreateMenuItem(18, callback, EFontAwesomeIcon.Solid_Check));
       return;
 
       static MenuItem CreateMenuItem(double size, RoutedEventHandler handler, EFontAwesomeIcon awesome)
@@ -378,96 +388,89 @@ namespace EQLogParser
       }
     }
 
-    internal static void UpdateTheme(string theme)
+    internal static void InitThemes(MainWindow main)
     {
-      if (CurrentTheme != theme)
-      {
-        CurrentTheme = theme;
-        LoadTheme(_mainWindow);
-        ConfigUtil.SetSetting("CurrentTheme", theme);
-      }
-    }
-
-    internal static void LoadTheme(MainWindow main)
-    {
-      Application.Current.Resources["EQTitleSize"] = CurrentFontSize + 2;
-      Application.Current.Resources["EQContentSize"] = CurrentFontSize;
-      Application.Current.Resources["EQDescriptionSize"] = CurrentFontSize - 1;
-      Application.Current.Resources["EQButtonHeight"] = CurrentFontSize + 12 + (CurrentFontSize % 2 == 0 ? 1 : 0);
-      Application.Current.Resources["EQTableHeaderRowHeight"] = CurrentFontSize + 14;
-      Application.Current.Resources["EQTableRowHeight"] = CurrentFontSize + 12;
-
-      if (CurrentTheme == "MaterialLight")
-      {
-        var themeSettings = new MaterialLightThemeSettings
-        {
-          PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF343434")! },
-          FontFamily = new FontFamily(CurrentFontFamily),
-          BodyAltFontSize = CurrentFontSize - 2,
-          BodyFontSize = CurrentFontSize,
-          HeaderFontSize = CurrentFontSize + 4,
-          SubHeaderFontSize = CurrentFontSize + 2,
-          SubTitleFontSize = CurrentFontSize,
-          TitleFontSize = CurrentFontSize + 2
-        };
-        SfSkinManager.RegisterThemeSettings("MaterialLight", themeSettings);
-        Application.Current.Resources["EQGoodForegroundBrush"] = new SolidColorBrush { Color = Colors.DarkGreen };
-        Application.Current.Resources["EQMenuIconBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF3d7baf")! };
-        Application.Current.Resources["EQSearchBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFa7baab")! };
-        Application.Current.Resources["EQWarnBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFeaa6ac")! };
-        Application.Current.Resources["EQWarnForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFb02021")! };
-        Application.Current.Resources["EQStopForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFcc434d")! };
-        Application.Current.Resources["EQDisabledBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#88000000")! };
-        SfSkinManager.SetTheme(main, new Theme("MaterialLight"));
-        LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/MSControl/CheckBox.xaml");
-        LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/SfDataGrid/SfDataGrid.xaml");
-        LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/Common/Brushes.xaml");
-        main.BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
-
-        if (!string.IsNullOrEmpty(main.statusText?.Text))
-        {
-          main.statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
-        }
-      }
-      else
-      {
-        var themeSettings = new MaterialDarkCustomThemeSettings
-        {
-          PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFE1E1E1")! },
-          FontFamily = new FontFamily(CurrentFontFamily),
-          BodyAltFontSize = CurrentFontSize - 2,
-          BodyFontSize = CurrentFontSize,
-          HeaderFontSize = CurrentFontSize + 4,
-          SubHeaderFontSize = CurrentFontSize + 2,
-          SubTitleFontSize = CurrentFontSize,
-          TitleFontSize = CurrentFontSize + 2
-        };
-        SfSkinManager.RegisterThemeSettings("MaterialDarkCustom", themeSettings);
-
-        Application.Current.Resources["EQGoodForegroundBrush"] = new SolidColorBrush { Color = Colors.LightGreen };
-        Application.Current.Resources["EQMenuIconBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF4F9FE2")! };
-        Application.Current.Resources["EQSearchBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF314435")! };
-        Application.Current.Resources["EQWarnBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF96410d")! };
-        Application.Current.Resources["EQWarnForegroundBrush"] = new SolidColorBrush { Color = Colors.Orange };
-        Application.Current.Resources["EQStopForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFcc434d")! };
-        Application.Current.Resources["EQDisabledBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#88FFFFFF")! };
-        SfSkinManager.SetTheme(main, new Theme("MaterialDarkCustom"));
-        LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/CheckBox.xaml");
-        LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfDataGrid/SfDataGrid.xaml");
-        LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/Brushes.xaml");
-        main.BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
-
-        if (!string.IsNullOrEmpty(main.statusText?.Text))
-        {
-          main.statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
-        }
-      }
-
+      // constant for all themes
       Application.Current.Resources["PreviewBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#BB000000")! };
       Application.Current.Resources["DamageOverlayBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#99000000")! };
       Application.Current.Resources["DamageOverlayDamageBrush"] = new SolidColorBrush { Color = Colors.White };
       Application.Current.Resources["DamageOverlayProgressBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF1D397E")! };
-      FireThemeChanged(CurrentTheme);
+
+      // init of settings needs to block
+      UiUtil.InvokeNow(() =>
+      {
+        SetThemeFontSizes();
+        RegisterThemeSettings();
+        ChangeTheme(main);
+      }, DispatcherPriority.Send);
+
+      UiUtil.InvokeAsync(() =>
+      {
+        EventsThemeChanged?.Invoke(CurrentTheme);
+      }, DispatcherPriority.DataBind);
+    }
+
+    internal static void ChangeTheme(string theme)
+    {
+      if (CurrentTheme != theme)
+      {
+        CurrentTheme = theme;
+        UiUtil.InvokeAsync(() =>
+        {
+          RegisterThemeSettings();
+          ChangeTheme(_mainWindow);
+          // set after change succeeds
+          ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
+        }, DispatcherPriority.DataBind);
+
+        UiUtil.InvokeAsync(() =>
+        {
+          EventsThemeChanged?.Invoke(CurrentTheme);
+        }, DispatcherPriority.Background);
+      }
+    }
+
+    internal static void ChangeThemeFontFamily(string family)
+    {
+      if (CurrentFontFamily != family)
+      {
+        CurrentFontFamily = family;
+        UiUtil.InvokeAsync(() =>
+        {
+          RegisterThemeSettings();
+          ChangeTheme(_mainWindow);
+          // set after change succeeds
+          ConfigUtil.SetSetting("ApplicationFontFamily", CurrentFontFamily);
+          EventsThemeChanged?.Invoke(CurrentTheme);
+        }, DispatcherPriority.DataBind);
+
+        UiUtil.InvokeAsync(() =>
+        {
+          EventsThemeChanged?.Invoke(CurrentTheme);
+        }, DispatcherPriority.Background);
+      }
+    }
+
+    internal static void ChangeThemeFontSizes(double size)
+    {
+      if (!CurrentFontSize.Equals(size))
+      {
+        CurrentFontSize = size;
+        UiUtil.InvokeAsync(() =>
+        {
+          SetThemeFontSizes();
+          RegisterThemeSettings();
+          ChangeTheme(_mainWindow);
+          // set after change succeeds
+          ConfigUtil.SetSetting("ApplicationFontSize", CurrentFontSize);
+          EventsThemeChanged?.Invoke(CurrentTheme);
+        }, DispatcherPriority.DataBind);
+
+        UiUtil.InvokeAsync(() =>
+        {
+          EventsThemeChanged?.Invoke(CurrentTheme);
+        }, DispatcherPriority.Background);
+      }
     }
 
     // should already run on the UI thread
@@ -534,7 +537,7 @@ namespace EQLogParser
           }
 
           DockingManager.SetHeader(petMappingWindow, string.Format(PetOwnersTitle, PetPlayersView.Count));
-        }, DispatcherPriority.Input);
+        });
 
         main.CheckComputeStats();
       };
@@ -554,7 +557,7 @@ namespace EQLogParser
           var entry = InsertNameIntoSortedList(name, VerifiedPlayersView);
           entry.PlayerClass = PlayerManager.Instance.GetPlayerClass(name);
           DockingManager.SetHeader(playersWindow, string.Format(PlayerListTitle, VerifiedPlayersView.Count));
-        }, DispatcherPriority.Input);
+        });
       };
 
       PlayerManager.Instance.EventsUpdatePlayerClass += (name, playerClass) =>
@@ -568,7 +571,7 @@ namespace EQLogParser
           {
             VerifiedPlayersView[index].PlayerClass = playerClass;
           }
-        }, DispatcherPriority.Input);
+        });
       };
 
       PlayerManager.Instance.EventsRemoveVerifiedPlayer += (_, name) =>
@@ -590,7 +593,7 @@ namespace EQLogParser
 
             main.CheckComputeStats();
           }
-        }, DispatcherPriority.Input);
+        });
       };
     }
 
@@ -604,7 +607,7 @@ namespace EQLogParser
         {
           InsertNameIntoSortedList(name, VerifiedPetsView);
           DockingManager.SetHeader(petsWindow, string.Format(PetsListTitle, VerifiedPetsView.Count));
-        }, DispatcherPriority.Input);
+        });
       });
 
       PlayerManager.Instance.EventsRemoveVerifiedPet += (_, name) =>
@@ -626,7 +629,7 @@ namespace EQLogParser
 
             main.CheckComputeStats();
           }
-        }, DispatcherPriority.Input);
+        });
       };
     }
 
@@ -680,7 +683,7 @@ namespace EQLogParser
             ChatManager.Instance.Init();
             UiUtil.InvokeAsync(() =>
             {
-              dialog?.Close();
+              dialog.Close();
 
               if (accessError)
               {
@@ -690,7 +693,7 @@ namespace EQLogParser
           }
         });
 
-        dialog?.ShowDialog();
+        dialog.ShowDialog();
       }
     }
 
@@ -766,7 +769,7 @@ namespace EQLogParser
             {
               UiUtil.InvokeAsync(() =>
               {
-                new MessageWindow("Invalid backup file. Can not restore.", Resource.RESTORE_FROM_BACKUP).ShowDialog();
+                new MessageWindow("Invalid backup file. Cannot restore.", Resource.RESTORE_FROM_BACKUP).ShowDialog();
               });
             }
           }
@@ -945,6 +948,160 @@ namespace EQLogParser
       catch (Exception ex)
       {
         Log.Error(ex);
+      }
+    }
+
+    private static void SetThemeFontSizes()
+    {
+      CurrentNameWidth = (10.0 * CurrentFontSize) + 25;
+      CurrentNpcWidth = (10.0 * CurrentFontSize) + 50;
+      CurrentDateTimeWidth = (10.0 * CurrentFontSize) - 10;
+      CurrentSpellWidth = (10.0 * CurrentFontSize) + 90;
+      CurrentItemWidth = (15.0 * CurrentFontSize) + 115;
+      CurrentShortWidth = 5.0 * CurrentFontSize;
+      CurrentMediumWidth = 6.5 * CurrentFontSize;
+      Application.Current.Resources["EQGridTitleHeight"] = new GridLength(18 + CurrentFontSize);
+      Application.Current.Resources["EQGridFooterHeight"] = new GridLength(10 + CurrentFontSize);
+      Application.Current.Resources["EQFightGridTitleHeight"] = new GridLength(21 + CurrentFontSize);
+      Application.Current.Resources["EQTriggerCharacterList"] = new GridLength(180 + (CurrentFontSize * 4));
+      Application.Current.Resources["EQAlertIconSize"] = CurrentFontSize + 18;
+      Application.Current.Resources["EQTitleSize"] = CurrentFontSize + 2;
+      Application.Current.Resources["EQContentSize"] = CurrentFontSize;
+      Application.Current.Resources["EQDescriptionSize"] = CurrentFontSize - 1;
+      Application.Current.Resources["EQButtonHeight"] = CurrentFontSize + 12 + (CurrentFontSize % 2 == 0 ? 1 : 0);
+      Application.Current.Resources["EQTabHeaderHeight"] = CurrentFontSize + 12;
+      Application.Current.Resources["EQTableHeaderRowHeight"] = CurrentFontSize + 14;
+      Application.Current.Resources["EQTableRowHeight"] = CurrentFontSize + 12;
+      Application.Current.Resources["EQIconButtonHeight"] = CurrentFontSize + 6;
+      Application.Current.Resources["EQTableRowHeaderWidth"] = 32 + ((CurrentFontSize - 10) * 2);
+      Application.Current.Resources["EQTableShortRowHeaderWidth"] = 20 + ((CurrentFontSize - 10) * 2);
+      Application.Current.Resources["EQTableExtendedRowHeaderWidth"] = 38 + ((CurrentFontSize - 10) * 2);
+      Application.Current.Resources["EQCheckBoxScale"] = 0.9 + ((CurrentFontSize - 10) * 0.06);
+      SyncFusionUtil.SetDesiredWidth("EQFightWindowWidth", 220 + (14.0 * CurrentFontSize), _mainWindow.npcWindow);
+      SyncFusionUtil.SetDesiredWidth("EQPetMappingWindowWidth", 220 + (10.0 * CurrentFontSize), _mainWindow.petMappingWindow);
+      SyncFusionUtil.SetDesiredWidth("EQPlayersWindowWidth", 180 + (10.0 * CurrentFontSize), _mainWindow.verifiedPlayersWindow);
+      SyncFusionUtil.SetDesiredHeight("EQParseWindowHeight", 10.0 * (CurrentFontSize + 2), _mainWindow.playerParseTextWindow);
+    }
+
+    private static void RegisterThemeSettings()
+    {
+      if (CurrentTheme == "MaterialLight")
+      {
+        var themeSettings = new MaterialLightThemeSettings
+        {
+          PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF343434")! },
+          FontFamily = new FontFamily(CurrentFontFamily),
+          BodyAltFontSize = CurrentFontSize - 2,
+          BodyFontSize = CurrentFontSize,
+          HeaderFontSize = CurrentFontSize + 4,
+          SubHeaderFontSize = CurrentFontSize + 2,
+          SubTitleFontSize = CurrentFontSize,
+          TitleFontSize = CurrentFontSize + 2
+        };
+
+        SfSkinManager.RegisterThemeSettings("MaterialLight", themeSettings);
+      }
+      else
+      {
+        var themeSettings = new MaterialDarkCustomThemeSettings
+        {
+          PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFE1E1E1")! },
+          FontFamily = new FontFamily(CurrentFontFamily),
+          BodyAltFontSize = CurrentFontSize - 2,
+          BodyFontSize = CurrentFontSize,
+          HeaderFontSize = CurrentFontSize + 4,
+          SubHeaderFontSize = CurrentFontSize + 2,
+          SubTitleFontSize = CurrentFontSize,
+          TitleFontSize = CurrentFontSize + 2
+        };
+
+        SfSkinManager.RegisterThemeSettings("MaterialDarkCustom", themeSettings);
+      }
+
+      SetThemeResources(_mainWindow);
+    }
+
+    private static void SetThemeResources(MainWindow main)
+    {
+      if (CurrentTheme == "MaterialLight")
+      {
+        Application.Current.Resources["EQGoodForegroundBrush"] = new SolidColorBrush { Color = Colors.DarkGreen };
+        Application.Current.Resources["EQMenuIconBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF3d7baf")! };
+        Application.Current.Resources["EQSearchBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFa7baab")! };
+        Application.Current.Resources["EQWarnBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFeaa6ac")! };
+        Application.Current.Resources["EQWarnForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF946e00")! };
+        Application.Current.Resources["EQStopForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFcc434d")! };
+        Application.Current.Resources["EQDisabledBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#88000000")! };
+        LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/MSControl/CheckBox.xaml");
+        LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/SfDataGrid/SfDataGrid.xaml");
+        LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/Common/Brushes.xaml");
+        LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/DockingManager/DockingManager.xaml");
+        main.BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
+
+        if (!string.IsNullOrEmpty(main.statusText?.Text))
+        {
+          main.statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
+        }
+      }
+      else
+      {
+        Application.Current.Resources["EQGoodForegroundBrush"] = new SolidColorBrush { Color = Colors.LightGreen };
+        Application.Current.Resources["EQMenuIconBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF4F9FE2")! };
+        Application.Current.Resources["EQSearchBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF314435")! };
+        Application.Current.Resources["EQWarnBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF96410d")! };
+        Application.Current.Resources["EQWarnForegroundBrush"] = new SolidColorBrush { Color = Colors.Orange };
+        Application.Current.Resources["EQStopForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFcc434d")! };
+        Application.Current.Resources["EQDisabledBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#88FFFFFF")! };
+        LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/CheckBox.xaml");
+        LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfDataGrid/SfDataGrid.xaml");
+        LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/Brushes.xaml");
+        LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/DockingManager/DockingManager.xaml");
+        main.BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
+
+        if (!string.IsNullOrEmpty(main.statusText?.Text))
+        {
+          main.statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
+        }
+      }
+
+      // after everything loads fix the tab height
+      if (Application.Current.Resources["EQTabHeaderHeight"] is double height && GetDockSite() is var dockSite)
+      {
+        var tabStyle = new Style
+        {
+          TargetType = typeof(TabItemExt),
+          BasedOn = (Style)Application.Current.FindResource(typeof(TabItemExt))
+        };
+        tabStyle.Setters.Add(new Setter(FrameworkElement.MinHeightProperty, height));
+        dockSite.SetValue(DockingManager.DocumentTabItemStyleProperty, tabStyle);
+
+        var docStyle = new Style
+        {
+          TargetType = typeof(DockHeaderPresenter),
+          BasedOn = (Style)Application.Current.FindResource(typeof(DockHeaderPresenter))
+        };
+        docStyle.Setters.Add(new Setter(FrameworkElement.MinHeightProperty, height));
+        dockSite.SetValue(DockingManager.DockHeaderStyleProperty, docStyle);
+
+        dockSite.SidePanelSize = height;
+      }
+    }
+
+    private static void ChangeTheme(MainWindow main)
+    {
+      var theme = CurrentTheme == "MaterialLight" ? new Theme("MaterialLight") : new Theme("MaterialDarkCustom");
+      SfSkinManager.SetTheme(main, theme);
+
+      // workaround for DM
+      if (CurrentTheme == "MaterialLight")
+      {
+        Application.Current.Resources["EQDamageMeterCheckBoxForeground"] =
+          Application.Current.Resources["ContentBackground"];
+      }
+      else
+      {
+        Application.Current.Resources["EQDamageMeterCheckBoxForeground"] =
+          Application.Current.Resources["ContentForeground"];
       }
     }
 

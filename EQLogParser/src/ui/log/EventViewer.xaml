@@ -12,7 +12,6 @@
   <Grid>
     <Grid.Resources>
       <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
-      <local:DateTimeConverter x:Key="DateTimeConverter" />
       <Style TargetType="syncfusion:GridRowHeaderCell">
         <Setter Property="Template">
           <Setter.Value>
@@ -28,14 +27,14 @@
       </Style>
     </Grid.Resources>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30"></RowDefinition>
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}" />
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox x:Name="eventFilterModifier" Margin="0,0,0,2" SelectedIndex="0" Width="84" DropDownClosed="FilterOptionChange">
+      <ComboBox x:Name="eventFilterModifier" Margin="0,0,8,2" SelectedIndex="0" DropDownClosed="FilterOptionChange">
         <ComboBoxItem>Includes</ComboBoxItem>
         <ComboBoxItem>Excludes</ComboBoxItem>
         <ComboBoxItem>Equals</ComboBoxItem>
@@ -48,8 +47,8 @@
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
                            AllowSorting="True"
-                           AutoGenerateColumns="False"
-                           ColumnSizer="Auto"
+                           AutoGenerateColumns="True"
+                           AutoGeneratingColumn="AutoGeneratingColumn"
                            CurrentCellBorderThickness="0"
                            FrozenColumnCount="1"
                            Grid.Row="1"
@@ -57,21 +56,14 @@
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
-                           ItemsSourceChanged="ItemsSourceChanged"
-                           RowHeaderWidth="40"
+                           ItemsSource="{Binding EventData}"
+                           RowHeaderWidth="{DynamicResource EQTableRowHeaderWidth}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            ShowRowHeader="True">
       <syncfusion:SfDataGrid.SortColumnDescriptions>
-        <syncfusion:SortColumnDescription ColumnName="Time" SortDirection="Descending" />
+        <syncfusion:SortColumnDescription ColumnName="BeginTime" SortDirection="Descending" />
       </syncfusion:SfDataGrid.SortColumnDescriptions>
-      <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Path=Time, Converter={StaticResource DateTimeConverter}}" 
-                                   TextAlignment="Center" HeaderText="Time" />
-        <syncfusion:GridTextColumn MappingName="Actor" HeaderText="Actor" />
-        <syncfusion:GridTextColumn MappingName="Event" HeaderText="Event" />
-        <syncfusion:GridTextColumn MappingName="Target" HeaderText="Target" MinimumWidth="450" />
-      </syncfusion:SfDataGrid.Columns>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 

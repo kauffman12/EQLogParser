@@ -47,8 +47,8 @@ namespace EQLogParser
         dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       }
 
+      DataGridUtil.RefreshTableColumns(TheDataGrid);
       DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
-      DataGridUtil.UpdateTableMargin(TheDataGrid);
       MainActions.EventsThemeChanged += EventsThemeChanged;
 
       // workaround to avoid drag/drop failing when grid has no data

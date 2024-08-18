@@ -15,14 +15,14 @@
       <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
     </Grid.Resources>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30" />
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}"></RowDefinition>
       <RowDefinition Height="300*" />
     </Grid.RowDefinitions>
     <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0" >
       <Label x:Name="title" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox Margin="0,0,0,2" x:Name="classesList" SelectionChanged="ClassSelectionChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="classesList" SelectionChanged="ClassSelectionChanged" />
       <ComboBox x:Name="selectedColumns" Tag="HealingSummaryColumns" Margin="0,0,8,2" 
                 DropDownClosed="SelectDataGridColumns" ItemTemplateSelector="{StaticResource ComboBoxSelector}"/>
     </StackPanel>
@@ -32,7 +32,6 @@
                            AllowSelectionOnPointerPressed="True"
                            AllowSorting="True"
                            AutoGenerateColumns="False"                           
-                           ColumnSizer="Auto"
                            CurrentCellBorderThickness="0"
                            FrozenColumnCount="1"
                            Grid.Row="1"
@@ -42,7 +41,7 @@
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
                            PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
-                           RowHeaderWidth="40"
+                           RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            SelectionChanged="DataGridSelectionChanged"
@@ -148,24 +147,24 @@
       </syncfusion:SfDataGrid.ContextMenu>
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name"/>
-        <syncfusion:GridTextColumn MaximumWidth="70" MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
+        <syncfusion:GridTextColumn MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
         <syncfusion:GridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Healing" />
-        <syncfusion:GridNumericColumn MaximumWidth="100" MappingName="Extra" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderOverHealTemplateToolTip}" TextAlignment="Right" HeaderText="Over Healed" />
-        <syncfusion:GridNumericColumn MaximumWidth="100" MappingName="Potential" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource PotentialHealTemplateToolTip}" TextAlignment="Right" HeaderText="Potential Heals" />
+        <syncfusion:GridNumericColumn MappingName="Extra" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderOverHealTemplateToolTip}" TextAlignment="Right" HeaderText="Over Healed" />
+        <syncfusion:GridNumericColumn MappingName="Potential" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource PotentialHealTemplateToolTip}" TextAlignment="Right" HeaderText="Potential Heals" />
         <syncfusion:GridNumericColumn MappingName="Dps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderHPSTemplateToolTip}" TextAlignment="Right" HeaderText="HPS" />
         <syncfusion:GridNumericColumn MappingName="Sdps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSHPSTemplateToolTip}" TextAlignment="Right" HeaderText="SHPS" />
         <syncfusion:GridNumericColumn MappingName="Pdps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderPHPSTemplateToolTip}" TextAlignment="Right" HeaderText="PHPS" />
-        <syncfusion:GridNumericColumn MaximumWidth="65" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
-        <syncfusion:GridNumericColumn MaximumWidth="70" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Heals" />
-        <syncfusion:GridNumericColumn MaximumWidth="90" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Heal" />
-        <syncfusion:GridNumericColumn MaximumWidth="130" MappingName="MaxPotentialHit" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource PotentialHealTemplateToolTip}" TextAlignment="Right" HeaderText="Max Potential Heal" />
-        <syncfusion:GridNumericColumn MaximumWidth="80" MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Heal" />
-        <syncfusion:GridNumericColumn MaximumWidth="85" MappingName="AvgCrit" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Crit" />
-        <syncfusion:GridNumericColumn MaximumWidth="85" MappingName="AvgLucky" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Lucky" />
-        <syncfusion:GridTextColumn MaximumWidth="65" MappingName="ExtraRate" DisplayBinding="{Binding Path=ExtraRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderOverHealPercentTemplateToolTip}" TextAlignment="Right" HeaderText="% Over" />
-        <syncfusion:GridTextColumn MaximumWidth="70" MappingName="CritRate" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Crit" />
-        <syncfusion:GridTextColumn MaximumWidth="75" MappingName="LuckRate" DisplayBinding="{Binding Path=LuckRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Lucky" />
-        <syncfusion:GridTextColumn Width="65" MappingName="Special" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSpecialTemplateToolTip}" TextAlignment="Left" HeaderText="Special" />
+        <syncfusion:GridNumericColumn MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
+        <syncfusion:GridNumericColumn MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Heals" />
+        <syncfusion:GridNumericColumn MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Heal" />
+        <syncfusion:GridNumericColumn MappingName="MaxPotentialHit" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource PotentialHealTemplateToolTip}" TextAlignment="Right" HeaderText="Max Potential Heal" />
+        <syncfusion:GridNumericColumn MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Heal" />
+        <syncfusion:GridNumericColumn MappingName="AvgCrit" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Crit" />
+        <syncfusion:GridNumericColumn MappingName="AvgLucky" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Lucky" />
+        <syncfusion:GridTextColumn MappingName="ExtraRate" DisplayBinding="{Binding Path=ExtraRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderOverHealPercentTemplateToolTip}" TextAlignment="Right" HeaderText="% Over" />
+        <syncfusion:GridTextColumn MappingName="CritRate" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Crit" />
+        <syncfusion:GridTextColumn MappingName="LuckRate" DisplayBinding="{Binding Path=LuckRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Lucky" />
+        <syncfusion:GridTextColumn MappingName="Special" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSpecialTemplateToolTip}" TextAlignment="Left" HeaderText="Special" />
         <syncfusion:GridTextColumn MappingName="ClassName" HeaderText="Class" />
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>

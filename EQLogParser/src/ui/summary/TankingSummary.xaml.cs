@@ -9,9 +9,6 @@ using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventA
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for TankingSummary.xaml
-  /// </summary>
   public partial class TankingSummary : IDocumentContent
   {
     // Made property since it's used outside this class
@@ -216,9 +213,9 @@ namespace EQLogParser
     {
       if (dataGrid.SelectedItems.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(out var timeline, typeof(GanttChart), "defensiveTimeline", "Defensive Timeline"))
+        if (SyncFusionUtil.OpenWindow(out var timeline, typeof(Timeline), "defensiveTimeline", "Defensive Timeline"))
         {
-          ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 0);
+          ((Timeline)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 0);
         }
       }
     }
@@ -339,7 +336,7 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, RoutedEventArgs e)
     {
-      if (dataGrid is { ItemsSource: not null })
+      if (dataGrid?.View != null)
       {
         var needRequery = DamageType != damageTypes.SelectedIndex;
         _currentPetValue = showPets.IsChecked == true;

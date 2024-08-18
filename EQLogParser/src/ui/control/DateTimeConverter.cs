@@ -10,7 +10,11 @@ namespace EQLogParser
     {
       if (value?.GetType() == typeof(double))
       {
-        return DateUtil.FormatSimpleDate(System.Convert.ToDouble(value, CultureInfo.CurrentCulture));
+        var doubleValue = System.Convert.ToDouble(value, CultureInfo.CurrentCulture);
+        if (doubleValue > 0)
+        {
+          return DateUtil.FormatSimpleDate(doubleValue);
+        }
       }
       return string.Empty;
     }

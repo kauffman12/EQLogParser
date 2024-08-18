@@ -16,29 +16,37 @@
       <local:ZeroConverter x:Key="ZeroConverter" />
     </Grid.Resources>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30" />
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}"></RowDefinition>
       <RowDefinition Height="300*" />
     </Grid.RowDefinitions>
-    <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0" >
+    <StackPanel Orientation="Horizontal" Grid.Row="0">
       <Label x:Name="title" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <fa:ImageAwesome x:Name="prog" Visibility="Hidden" Height="14" Width="14" Margin="0,0,8,0" HorizontalAlignment="Center" Foreground="{DynamicResource EQMenuIconBrush}" />
-      <syncfusion:UpDown x:Name="minTimeChooser" Margin="0,0,0,2" Width="60" ZeroColor="{DynamicResource ContentForeground}" TextAlignment="Right" 
+      <fa:ImageAwesome x:Name="prog" Visibility="Hidden" Height="14" Width="14" Margin="0,0,8,0" HorizontalAlignment="Center" Foreground="{DynamicResource EQMenuIconBrush}">
+        <fa:ImageAwesome.LayoutTransform>
+          <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+        </fa:ImageAwesome.LayoutTransform>
+      </fa:ImageAwesome>
+      <syncfusion:UpDown x:Name="minTimeChooser" Margin="0,0,0,2" Padding="10,0,0,0" ZeroColor="{DynamicResource ContentForeground}" TextAlignment="Right" 
                          Value="0" MaxValue="0" MinValue="0" ValueChanged="TimeChanged" ToolTip="Start Time (seconds)">
         <syncfusion:UpDown.NumberFormatInfo>
           <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
         </syncfusion:UpDown.NumberFormatInfo>
-      </syncfusion:UpDown>      
-      <fa:ImageAwesome Height="14" Width="14" Margin="8,0,8,0" HorizontalAlignment="Center" Icon="Solid_ArrowRight" Foreground="{DynamicResource ContentForeground}"/>
-      <syncfusion:UpDown x:Name="maxTimeChooser" Margin="0,0,8,2" Width="60" ZeroColor="{DynamicResource ContentForeground}" TextAlignment="Right" 
+      </syncfusion:UpDown>
+      <fa:ImageAwesome Height="14" Width="14" Margin="8,0,8,0" HorizontalAlignment="Center" Icon="Solid_ArrowRight" Foreground="{DynamicResource ContentForeground}">
+        <fa:ImageAwesome.LayoutTransform>
+          <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+        </fa:ImageAwesome.LayoutTransform>
+      </fa:ImageAwesome>
+      <syncfusion:UpDown x:Name="maxTimeChooser" Margin="0,0,8,2" Padding="10,0,0,0" ZeroColor="{DynamicResource ContentForeground}" TextAlignment="Right" 
                          Value="0" MaxValue="0" MinValue="0" ValueChanged="TimeChanged" ToolTip="End Time (seconds)">
         <syncfusion:UpDown.NumberFormatInfo>
           <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
         </syncfusion:UpDown.NumberFormatInfo>
       </syncfusion:UpDown>
-      <ComboBox Margin="0,0,0,2" x:Name="petOrPlayerList" SelectionChanged="ListSelectionChanged" />
-      <ComboBox Margin="0,0,0,2" x:Name="classesList" SelectionChanged="ClassSelectionChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="petOrPlayerList" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="classesList" SelectionChanged="ClassSelectionChanged" />
       <ComboBox x:Name="selectedColumns" Tag="DamageSummaryColumns" Margin="0,0,8,2" 
                 DropDownClosed="SelectDataGridColumns" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
     </StackPanel>
@@ -51,7 +59,6 @@
                            AutoExpandMode="None"
                            AutoGenerateColumns="False"
                            ChildPropertyName="Children"
-                           ColumnSizer="Auto"
                            CurrentCellBorderThickness="0"
                            ExpanderCellStyle="{DynamicResource EQExpanderCellStyle}"
                            FrozenColumnCount="1"
@@ -60,7 +67,7 @@
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            RequestTreeItems="RequestTreeItems"
-                           RowHeaderWidth="40"
+                           RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
@@ -179,22 +186,22 @@
         </ContextMenu>
       </syncfusion:SfTreeGrid.ContextMenu>
       <syncfusion:SfTreeGrid.Columns>
-        <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" MinimumWidth="135"/>
-        <syncfusion:TreeGridTextColumn MaximumWidth="70" MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
+        <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" />
+        <syncfusion:TreeGridTextColumn MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
         <syncfusion:TreeGridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Damage" />
         <syncfusion:TreeGridNumericColumn MappingName="Dps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
         <syncfusion:TreeGridNumericColumn MappingName="Sdps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
-        <syncfusion:TreeGridNumericColumn MaximumWidth="65" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
-        <syncfusion:TreeGridNumericColumn MaximumWidth="70" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
-        <syncfusion:TreeGridNumericColumn MaximumWidth="95" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
-        <syncfusion:TreeGridNumericColumn MaximumWidth="95" MappingName="BestSec" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderBestSecondTemplateToolTip}" TextAlignment="Right" HeaderText="Best Second" />
-        <syncfusion:TreeGridNumericColumn MaximumWidth="80" MappingName="BaneHits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Bane" />
-        <syncfusion:TreeGridNumericColumn MaximumWidth="85" MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Hit" />
-        <syncfusion:TreeGridNumericColumn MaximumWidth="85" MappingName="AvgCrit" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Crit" />
-        <syncfusion:TreeGridNumericColumn MaximumWidth="85" MappingName="AvgLucky" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Lucky" />
-        <syncfusion:TreeGridTextColumn MaximumWidth="70" MappingName="CritRate" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Crit" />
-        <syncfusion:TreeGridTextColumn MaximumWidth="75" MappingName="LuckRate" DisplayBinding="{Binding Path=LuckRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Lucky" />
-        <syncfusion:TreeGridTextColumn Width="65" MappingName="Special" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSpecialTemplateToolTip}" TextAlignment="Left" HeaderText="Special" />
+        <syncfusion:TreeGridNumericColumn MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
+        <syncfusion:TreeGridNumericColumn MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
+        <syncfusion:TreeGridNumericColumn MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
+        <syncfusion:TreeGridNumericColumn MappingName="BestSec" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderBestSecondTemplateToolTip}" TextAlignment="Right" HeaderText="Best Sec" />
+        <syncfusion:TreeGridNumericColumn MappingName="BaneHits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Bane" />
+        <syncfusion:TreeGridNumericColumn MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Hit" />
+        <syncfusion:TreeGridNumericColumn MappingName="AvgCrit" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Crit" />
+        <syncfusion:TreeGridNumericColumn MappingName="AvgLucky" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Lucky" />
+        <syncfusion:TreeGridTextColumn MappingName="CritRate" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Crit" />
+        <syncfusion:TreeGridTextColumn MappingName="LuckRate" DisplayBinding="{Binding Path=LuckRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Lucky" />
+        <syncfusion:TreeGridTextColumn MappingName="Special" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSpecialTemplateToolTip}" TextAlignment="Left" HeaderText="Special" />
         <syncfusion:TreeGridTextColumn MappingName="ClassName" HeaderText="Class" />
       </syncfusion:SfTreeGrid.Columns>
     </syncfusion:SfTreeGrid>

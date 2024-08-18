@@ -14,7 +14,7 @@
       <local:ZeroConverter x:Key="ZeroConverter" />
     </Grid.Resources>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30"></RowDefinition>
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">

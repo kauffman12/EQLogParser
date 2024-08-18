@@ -8,7 +8,7 @@
              d:DesignHeight="250" d:DesignWidth="800">
   <Grid>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30"></RowDefinition>
+      <RowDefinition Height="{DynamicResource EQFightGridTitleHeight}" />
       <RowDefinition Height="200*"></RowDefinition>
     </Grid.RowDefinitions>
     <!-- Setting Background colors -->
@@ -16,7 +16,7 @@
       <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
-      <ComboBox Margin="0,0,0,2" x:Name="petOrPlayerList" MinWidth="60" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="petOrPlayerList" MinWidth="60" SelectionChanged="ListSelectionChanged" />
       <ComboBox Margin="0,0,8,2" x:Name="choicesList" MinWidth="60" SelectionChanged="ListSelectionChanged" />
     </StackPanel>
     <syncfusion:SfChart x:Name="sfLineChart" Grid.Row="2" Margin="0">

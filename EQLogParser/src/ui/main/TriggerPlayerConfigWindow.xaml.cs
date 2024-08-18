@@ -1,4 +1,4 @@
-﻿using Microsoft.Win32;
+﻿using Microsoft.WindowsAPICodePack.Dialogs;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -150,18 +150,21 @@ namespace EQLogParser
     {
       var initialPath = string.IsNullOrEmpty(txtFilePath.Text) ? string.Empty : Path.GetDirectoryName(txtFilePath.Text);
 
-      var openFileDialog = new OpenFileDialog
+      var dialog = new CommonOpenFileDialog
       {
-        // filter to txt files
-        DefaultExt = ".txt",
-        Filter = "eqlog_Player_server (.txt)|*.txt",
-        InitialDirectory = initialPath ?? ""
+        // Set to false because we're opening a file, not selecting a folder
+        IsFolderPicker = false,
+        // Set the initial directory
+        InitialDirectory = initialPath ?? "",
       };
 
-      if (openFileDialog.ShowDialog() == true)
+      // Show dialog and read result
+      dialog.Filters.Add(new CommonFileDialogFilter("eqlog_Player_server", "*.txt"));
+
+      if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
       {
         txtFilePath.FontStyle = FontStyles.Normal;
-        txtFilePath.Text = openFileDialog.FileName;
+        txtFilePath.Text = dialog.FileName;
       }
     }
 

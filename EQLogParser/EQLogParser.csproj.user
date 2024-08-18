@@ -34,6 +34,9 @@
     <Compile Update="src\ui\main\TriggerPlayerConfigWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="src\ui\chart\Timeline.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="src\ui\triggers\QuickShareLogView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -88,6 +91,9 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\main\TriggerPlayerConfigWindow.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="src\ui\chart\Timeline.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\triggers\QuickShareLogView.xaml">

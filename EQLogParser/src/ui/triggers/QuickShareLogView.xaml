@@ -5,31 +5,35 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
-             xmlns:local="clr-namespace:EQLogParser"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
     <Grid.RowDefinitions>
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}" />
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
+      <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
+        <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}" Content="Quick Shares"/>
+      </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
                            AllowSorting="False"
-                           AutoGenerateColumns="False"
-                           ColumnSizer="AutoWithLastColumnFill"
+                           AutoGenerateColumns="True"
+                           AutoGeneratingColumn="AutoGeneratingColumn"
                            CurrentCellBorderThickness="0"
                            FrozenColumnCount="1"
+                           Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
-                           RowHeaderWidth="40"
+                           ItemsSource="{Binding QuickShareData}"
+                           RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Single"
                            SelectionChanged="DataGridSelectionChanged"
                            ShowRowHeader="True">
       <syncfusion:SfDataGrid.Resources>
-        <local:DateTimeConverter x:Key="DateTimeConverter" />
         <Style TargetType="syncfusion:GridRowHeaderCell">
           <Setter Property="Template">
             <Setter.Value>
@@ -44,14 +48,9 @@
           </Setter>
         </Style>
       </syncfusion:SfDataGrid.Resources>
-      <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="BeginTime" SortMode="Value" DisplayBinding="{Binding BeginTime, Converter={StaticResource DateTimeConverter}}"
-                                   TextAlignment="Center" HeaderText="Share Time" MinimumWidth="110" />
-        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" MinimumWidth="70" TextAlignment="Center"/>
-        <syncfusion:GridTextColumn MappingName="To" HeaderText="To" MinimumWidth="120"/>
-        <syncfusion:GridTextColumn MappingName="From" HeaderText="From" MinimumWidth="100"/>
-        <syncfusion:GridTextColumn MappingName="Key" HeaderText="Share Key" MinimumWidth="500"/>
-      </syncfusion:SfDataGrid.Columns>
+      <syncfusion:SfDataGrid.SortColumnDescriptions>
+        <syncfusion:SortColumnDescription ColumnName="BeginTime" SortDirection="Descending" />
+      </syncfusion:SfDataGrid.SortColumnDescriptions>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem IsEnabled="False" x:Name="download" Header="Import" Click="ImportClick">

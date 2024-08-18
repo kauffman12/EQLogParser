@@ -9,9 +9,6 @@ using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventA
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for HealSummary.xaml
-  /// </summary>
   public partial class HealingSummary : IDocumentContent
   {
     private string _currentClass;
@@ -139,9 +136,9 @@ namespace EQLogParser
     {
       if (dataGrid.SelectedItems.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(out var timeline, typeof(GanttChart), "healingTimeline", "Healing Timeline"))
+        if (SyncFusionUtil.OpenWindow(out var timeline, typeof(Timeline), "healingTimeline", "Healing Timeline"))
         {
-          ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 2);
+          ((Timeline)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 2);
         }
       }
     }

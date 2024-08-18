@@ -10,7 +10,7 @@
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30"></RowDefinition>
+      <RowDefinition Height="{DynamicResource EQFightGridTitleHeight}" />
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
@@ -21,9 +21,9 @@
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
-                           AllowSorting="True"
-                           AutoGenerateColumns="False"
-                           ColumnSizer="Auto"
+                           AllowSorting="False"
+                           AutoGenerateColumns="True"
+                           AutoGeneratingColumn="AutoGeneratingColumn"
                            CurrentCellBorderThickness="0"
                            FrozenColumnCount="1"
                            Grid.Row="1"
@@ -31,12 +31,12 @@
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
-                           RowHeaderWidth="40"
+                           ItemsSource="{Binding DeathData}"
+                           RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            ShowRowHeader="True"               
                            SelectionMode="Extended">
       <syncfusion:SfDataGrid.Resources>
-        <local:DateTimeConverter x:Key="DateTimeConverter" />
         <Style TargetType="syncfusion:GridRowHeaderCell">
           <Setter Property="Template">
             <Setter.Value>
@@ -83,13 +83,6 @@
           </MenuItem>
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>
-      <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Time, Converter={StaticResource DateTimeConverter}}"
-                                   TextAlignment="Center" HeaderText="Time" />
-        <syncfusion:GridTextColumn MappingName="Damage" HeaderText="Received Damage" />
-        <syncfusion:GridTextColumn MappingName="Healing" HeaderText="Received Healing" />
-        <syncfusion:GridTextColumn MappingName="Spell" HeaderText="Received Spells" />
-      </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>
   </Grid>
 </UserControl>

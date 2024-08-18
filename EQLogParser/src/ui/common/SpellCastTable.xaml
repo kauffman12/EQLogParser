@@ -27,14 +27,14 @@
       </Style>
     </Grid.Resources>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30"></RowDefinition>
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}" />
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0">
       <Label x:Name="titleLabel" Content="Loading..." Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel x:Name="controlPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox x:Name="selectedSpellRestrictions" Margin="0,0,0,2" 
+      <ComboBox x:Name="selectedSpellRestrictions" Margin="0,0,8,2" 
                 DropDownClosed="CastTypesChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
       <ComboBox x:Name="selectedCastTypes" Margin="0,0,8,2" 
                 DropDownClosed="CastTypesChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
@@ -43,7 +43,6 @@
                            AllowResizingColumns="True"
                            AllowSorting="True"
                            AutoGenerateColumns="False"
-                           ColumnSizer="Auto"
                            CurrentCellBorderThickness="0"
                            FrozenColumnCount="2"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
@@ -51,12 +50,12 @@
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Both"
                            IsReadOnly="True"
-                           RowHeaderWidth="40"
+                           RowHeaderWidth="{DynamicResource EQTableRowHeaderWidth}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            ShowRowHeader="True"
                            SelectionMode="Extended">
       <syncfusion:SfDataGrid.SortColumnDescriptions>
-        <syncfusion:SortColumnDescription ColumnName="Time" SortDirection="Ascending" />
+        <syncfusion:SortColumnDescription ColumnName="BeginTime" SortDirection="Ascending" />
       </syncfusion:SfDataGrid.SortColumnDescriptions>      
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
@@ -100,11 +99,6 @@
           </MenuItem>
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>
-      <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Path=Time, Converter={StaticResource dateTimeConverter}}" 
-                                   MinimumWidth="120" TextAlignment="Center" HeaderText="Time" />
-        <syncfusion:GridTextColumn MappingName="Seconds" SortMode="Value" DisplayBinding="{Binding Path=Seconds}" TextAlignment="Right" HeaderText="Sec" />
-      </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>
   </Grid>
 </local:CastTable>
