@@ -150,8 +150,9 @@ namespace EQLogParser
         SetResourceReference(BorderBrushProperty, "PreviewBackgroundBrush");
         SetResourceReference(BackgroundProperty, "PreviewBackgroundBrush");
         border.Background = null;
-        LoadTestData(true);
+        LoadTestData();
         damageContent.Visibility = Visibility.Visible;
+        controlPanel.Visibility = Visibility.Visible;
         SetMinHeight(true);
       }
       else
@@ -160,6 +161,7 @@ namespace EQLogParser
         ResizeMode = ResizeMode.NoResize;
         buttonsPanel.Visibility = Visibility.Collapsed;
         lineGrid.Visibility = Visibility.Collapsed;
+        controlPanel.Visibility = Visibility.Collapsed;
         BorderBrush = null;
         Background = null;
         border.SetResourceReference(Border.BackgroundProperty, "DamageOverlayBackgroundBrush");
@@ -346,30 +348,14 @@ namespace EQLogParser
       }
     }
 
-    private void LoadTestData(bool load)
+    private void LoadTestData()
     {
       for (var i = 0; i < damageContent.Children.Count - 1; i++)
       {
-        if (load)
-        {
-          (damageContent.Children[i] as DamageBar)?.Update(ConfigUtil.PlayerName, i + 1 + ". Example Player " + i, "120.5M", "100.1K", "123", 120 - (i * 10));
-        }
-        else
-        {
-          (damageContent.Children[i] as DamageBar)?.Update("", "", "", "", "", 0);
-          ((DamageBar)damageContent.Children[i]).Visibility = Visibility.Collapsed;
-        }
+        (damageContent.Children[i] as DamageBar)?.Update(ConfigUtil.PlayerName, i + 1 + ". Example Player " + i, "120.5M", "100.1K", "123", 120 - (i * 10));
       }
 
-      if (load)
-      {
-        (damageContent.Children[^1] as DamageBar)?.Update("", "Example NPC", "500.2M", "490.5K", "456", 0);
-      }
-      else
-      {
-        (damageContent.Children[^1] as DamageBar)?.Update("", "", "", "", "", 0);
-        ((DamageBar)damageContent.Children[^1]).Visibility = Visibility.Collapsed;
-      }
+      (damageContent.Children[^1] as DamageBar)?.Update("", "Example NPC", "500.2M", "490.5K", "456", 0);
     }
 
     private void CloseClick(object sender, RoutedEventArgs e) => MainActions.CloseDamageOverlay(false);
@@ -474,6 +460,7 @@ namespace EQLogParser
 
     private double GetOverlayHeight()
     {
+      var barHeight = (double)Application.Current.Resources["DamageOverlayBarHeight"]!;
       var pos = heightRectangle.TransformToAncestor(this).Transform(new Point(0, 0));
       return pos.Y - 2;
     }
@@ -731,7 +718,7 @@ namespace EQLogParser
 
       if (_preview)
       {
-        LoadTestData(_preview);
+        LoadTestData();
       }
     }
 
