@@ -16,12 +16,12 @@
       <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
     </Grid.Resources>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30" />
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}" />
       <RowDefinition Height="300*" />
-      <RowDefinition Height="20" />
+      <RowDefinition Height="{DynamicResource EQGridFooterHeight}" />
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <ComboBox x:Name="players" SelectedIndex="0" Width="140" Margin="8,0,0,2" SelectionChanged="PlayerChanged" FontSize="{DynamicResource EQTitleSize}" FontWeight="Bold" Foreground="{DynamicResource EQMenuIconBrush}" />
+      <ComboBox x:Name="players" SelectedIndex="0" Width="140" Margin="8,0,8,2" SelectionChanged="PlayerChanged" FontSize="{DynamicResource EQTitleSize}" FontWeight="Bold" Foreground="{DynamicResource EQMenuIconBrush}" />
       <ComboBox x:Name="channels" Width="150" Margin="0,0,0,2" DropDownClosed="ChannelsDropDownClosed" ItemTemplateSelector="{StaticResource ComboBoxSelector}">
         <ComboBox.ItemContainerStyle>
           <Style>
@@ -31,12 +31,12 @@
       </ComboBox>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <syncfusion:DateTimeEdit x:Name="startDate" Width="90" Margin="0,0,0,2" CanEdit="False" FlowDirection="LeftToRight" DateTimeChanged="SelectedDatesChanged"/>
+      <syncfusion:DateTimeEdit x:Name="startDate" Padding="2,0,2,0" Margin="0,0,0,2" CanEdit="False" FlowDirection="LeftToRight" DateTimeChanged="SelectedDatesChanged"/>
       <fa:ImageAwesome Height="14" Width="14" Margin="8,0,8,0" HorizontalAlignment="Center" Icon="Solid_ArrowRight" Foreground="{DynamicResource ContentForeground}"/>
-      <syncfusion:DateTimeEdit x:Name="endDate" Width="90" Margin="0,0,8,2" CanEdit="False" FlowDirection="LeftToRight" DateTimeChanged="SelectedDatesChanged"/>
-      <syncfusion:SfTextBoxExt x:Name="toFilter" Margin="0,0,0,2" VerticalContentAlignment="Center" FontStyle="Italic"
+      <syncfusion:DateTimeEdit x:Name="endDate" Padding="2,0,2,0" Margin="0,0,8,2" CanEdit="False" FlowDirection="LeftToRight" DateTimeChanged="SelectedDatesChanged"/>
+      <syncfusion:SfTextBoxExt x:Name="toFilter" Margin="0,0,8,2" VerticalContentAlignment="Center" FontStyle="Italic"
                                AutoCompleteMode="SuggestAppend" Width="80" LostFocus="ToFilterLostFocus" GotFocus="ToFilterGotFocus" PreviewKeyDown="ToFilterKeyDown" TextChanged="FilterTextChanged" />
-      <syncfusion:SfTextBoxExt x:Name="fromFilter" Margin="0,0,0,2" VerticalContentAlignment="Center" FontStyle="Italic"
+      <syncfusion:SfTextBoxExt x:Name="fromFilter" Margin="0,0,8,2" VerticalContentAlignment="Center" FontStyle="Italic"
                                AutoCompleteMode="SuggestAppend" Width="80" LostFocus="FromFilterLostFocus" GotFocus="FromFilterGotFocus" PreviewKeyDown="FromFilterKeyDown" TextChanged="FilterTextChanged" />
       <TextBox x:Name="textFilter" Margin="0,0,8,2" FontStyle="Italic" Width="170" LostFocus="TextFilterLostFocus" GotFocus="TextFilterGotFocus" PreviewKeyDown="TextFilterKeyDown" TextChanged="FilterTextChanged" />
       <Button Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Refresh</Button>
@@ -54,11 +54,10 @@
     <StatusBar Grid.Row="2" FontSize="{DynamicResource EQContentSize}">
       <TextBlock x:Name="statusCount"/>
     </StatusBar>
-    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,1,0,0">
-      <syncfusion:ComboBoxAdv x:Name="fontFamily" Height="20" BorderThickness="0" FontSize="{DynamicResource EQContentSize}" Width="120" SelectionChanged="FontFamilyChanged" />
-      <syncfusion:ComboBoxAdv x:Name="fontSize" Height="20" BorderThickness="0" FontSize="{DynamicResource EQContentSize}" SelectionChanged="FontSizeChanged" />
-      <syncfusion:ColorPicker x:Name="colorPicker" Width="34" BorderThickness="0" Padding="4,0,0,4" Margin="0" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False"
-        HeaderTemplate="{DynamicResource ColorPickerMinHeaderTemplate}" ColorChanged="FontFgColorChanged" />
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0" VerticalAlignment="Center">
+      <syncfusion:ComboBoxAdv x:Name="fontFamily" BorderThickness="0" FontSize="{DynamicResource EQContentSize}" Width="120" SelectionChanged="FontFamilyChanged" />
+      <syncfusion:ComboBoxAdv x:Name="fontSize" BorderThickness="0" FontSize="{DynamicResource EQContentSize}" SelectionChanged="FontSizeChanged" />
+      <syncfusion:ColorPicker x:Name="colorPicker" Padding="0,2,0,0"  VerticalAlignment="Center" VerticalContentAlignment="Center" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False" BorderThickness="0,0,0,1" ColorChanged="FontFgColorChanged" />
     </StackPanel>
   </Grid>
 </UserControl>

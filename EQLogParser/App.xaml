@@ -6,30 +6,38 @@
   <Application.Resources>
     <Style x:Key="EQIconStyle" TargetType="fa:ImageAwesome">
       <Setter Property="Foreground" Value="{DynamicResource EQMenuIconBrush}" />
-      <Setter Property="Height" Value="12"/>
-      <Setter Property="Width" Value="12" />
+      <Setter Property="Height" Value="{DynamicResource EQContentSize}"/>
+      <Setter Property="Width" Value="{DynamicResource EQContentSize}" />
       <Setter Property="HorizontalAlignment" Value="Center" />
     </Style>
 
     <Style x:Key="EQTitleStyle" TargetType="Label">
       <Setter Property="Background" Value="{x:Null}" />
       <Setter Property="Foreground" Value="{DynamicResource EQMenuIconBrush}" />
-      <Setter Property="Height" Value="30"/>
       <Setter Property="FontSize" Value="{DynamicResource EQTitleSize}" />
       <Setter Property="FontWeight" Value="DemiBold" />
-      <Setter Property="Margin" Value="0" />
+      <Setter Property="Margin" Value="0,0,0,0" />
     </Style>
 
     <Style x:Key="EQExpanderCellStyle" TargetType="syncfusion:TreeGridExpanderCell">
       <Setter Property="FontSize" Value="{DynamicResource EQContentSize}" />
       <Setter Property="CurrentCellBorderThickness" Value="0" />
-      <Setter Property="BorderThickness" Value="0.4" />
+      <Setter Property="BorderThickness">
+        <Setter.Value>
+          <Thickness Left="0" Top="0" Right="0" Bottom="1"></Thickness>
+        </Setter.Value>
+      </Setter>
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderAlt}" />
     </Style>
 
     <DataTemplate x:Key="TextOverlayFileTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
-          <fa:ImageAwesome Margin="0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Font" />
+          <fa:ImageAwesome Margin="0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Font">
+            <fa:ImageAwesome.LayoutTransform>
+              <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+            </fa:ImageAwesome.LayoutTransform>
+          </fa:ImageAwesome>
           <TextBlock Margin="5,0,0,0" Padding="0" VerticalAlignment="Center" Text="{Binding Content}" FontStyle="Normal" FontWeight="DemiBold" />
         </StackPanel>
       </Grid>
@@ -38,7 +46,11 @@
     <DataTemplate x:Key="TimerOverlayFileTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
-          <fa:ImageAwesome Margin="0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Clock" />
+          <fa:ImageAwesome Margin="0" Height="15" Width="15" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Solid_Clock">
+            <fa:ImageAwesome.LayoutTransform>
+              <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+            </fa:ImageAwesome.LayoutTransform>
+          </fa:ImageAwesome>
           <TextBlock Margin="5,0,0,0" Padding="0" VerticalAlignment="Center" Text="{Binding Content}" FontStyle="Normal" FontWeight="DemiBold" />
         </StackPanel>
       </Grid>
@@ -46,24 +58,32 @@
 
     <ToolTip x:Key="AdpsHideMineToolTipTemplate">
       <TextBlock Text="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common."
-                 FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryColor}" />
+        FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryColor}" />
     </ToolTip>
 
     <ToolTip x:Key="RecentTriggerTipTemplate">
       <TextBlock Text="This Trigger have been recently updated via Import/Merge"
-                 FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryColor}" />
+        FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryColor}" />
     </ToolTip>
 
     <ToolTip x:Key="RecentFolderTipTemplate">
       <TextBlock Text="Triggers in this Folder have been recently updated via Import/Merge"
-                 FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryColor}" />
+        FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryColor}" />
     </ToolTip>
 
     <DataTemplate x:Key="TriggerFileTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
-          <CheckBox x:Name="CheckBox" Margin="0" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
-          <fa:ImageAwesome Margin="5,0,0,0" Height="16" Width="16" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Regular_FileAudio" />
+          <CheckBox x:Name="CheckBox" Margin="0" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}">
+            <CheckBox.LayoutTransform>
+              <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+            </CheckBox.LayoutTransform>
+          </CheckBox>
+          <fa:ImageAwesome Margin="5,0,0,0" Height="16" Width="16" HorizontalAlignment="Center" Foreground="{DynamicResource Border}" Icon="Regular_FileAudio">
+            <fa:ImageAwesome.LayoutTransform>
+              <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+            </fa:ImageAwesome.LayoutTransform>
+          </fa:ImageAwesome>
           <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}">
             <TextBlock.Style>
               <Style TargetType="TextBlock">
@@ -91,8 +111,15 @@
     <DataTemplate x:Key="TriggerNodeTemplate">
       <Grid>
         <StackPanel Orientation="Horizontal">
-          <CheckBox x:Name="CheckBox" Margin="0" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+          <CheckBox x:Name="CheckBox" Margin="0" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}">
+            <CheckBox.LayoutTransform>
+              <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+            </CheckBox.LayoutTransform>
+          </CheckBox>
           <fa:ImageAwesome Margin="5,0,0,0" Height="16" Width="16" HorizontalAlignment="Center" Foreground="{DynamicResource Border}">
+            <fa:ImageAwesome.LayoutTransform>
+              <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+            </fa:ImageAwesome.LayoutTransform>
             <fa:ImageAwesome.Style>
               <Style TargetType="fa:ImageAwesome">
                 <Style.Triggers>
@@ -126,6 +153,9 @@
       <Grid>
         <StackPanel Orientation="Horizontal">
           <fa:ImageAwesome Margin="5,0,0,0" Height="16" Width="16" HorizontalAlignment="Center" Foreground="{DynamicResource Border}">
+            <fa:ImageAwesome.LayoutTransform>
+              <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+            </fa:ImageAwesome.LayoutTransform>
             <fa:ImageAwesome.Style>
               <Style TargetType="fa:ImageAwesome">
                 <Style.Triggers>
@@ -144,8 +174,42 @@
       </Grid>
     </DataTemplate>
 
+    <ControlTemplate x:Key="CustomCheckBoxTemplate" TargetType="CheckBox">
+      <StackPanel Orientation="Horizontal">
+        <CheckBox Margin="0,2,0,0"
+                  FocusVisualStyle="{x:Null}"
+                  IsChecked="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsChecked, Mode=TwoWay}"
+                  IsEnabled="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsEnabled, Mode=TwoWay}"
+                  Checked="DoNothing" Unchecked="DoNothing"
+                  VerticalContentAlignment="Stretch">
+          <CheckBox.LayoutTransform>
+            <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+          </CheckBox.LayoutTransform>
+        </CheckBox>
+        <Label Content="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Content, Mode=TwoWay}" 
+               VerticalContentAlignment="Center"/>
+      </StackPanel>
+    </ControlTemplate>
+
+    <ControlTemplate x:Key="CustomDamageMeterCheckBoxTemplate" TargetType="CheckBox">
+      <StackPanel Orientation="Horizontal">
+        <CheckBox Margin="0,2,0,0"
+                  FocusVisualStyle="{x:Null}"
+                  IsChecked="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsChecked, Mode=TwoWay}"
+                  IsEnabled="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsEnabled, Mode=TwoWay}"
+                  Checked="DoNothing" Unchecked="DoNothing"
+                  VerticalContentAlignment="Stretch">
+          <CheckBox.LayoutTransform>
+            <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+          </CheckBox.LayoutTransform>
+        </CheckBox>
+        <Label Content="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Content, Mode=TwoWay}" 
+               VerticalContentAlignment="Center" Foreground="{DynamicResource EQDamageMeterCheckBoxForeground}"/>
+      </StackPanel>
+    </ControlTemplate>
+
     <DataTemplate x:Key="CurrencyTemplate">
-      <fa:ImageAwesome x:Name="cellIcon" Height="12" Width="12" HorizontalAlignment="Center" Icon="Solid_MoneyBillWave" Foreground="#73b15d" />
+      <fa:ImageAwesome x:Name="cellIcon" Height="{DynamicResource EQContentSize}" Width="{DynamicResource EQContentSize}" HorizontalAlignment="Center" Icon="Solid_MoneyBillWave" Foreground="#73b15d" />
     </DataTemplate>
     <DataTemplate x:Key="QuantityTemplate">
       <TextBlock Text="{Binding Record.Quantity}" HorizontalAlignment="Center" VerticalAlignment="Center"></TextBlock>
@@ -220,13 +284,6 @@
     </DataTemplate>
     <DataTemplate x:Key="HeaderAvgNonTwincastLuckyTemplateToolTip">
       <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Average Lucky Damage for all Hits that were not a Twincast" />
-    </DataTemplate>
-
-    <!-- Syncfusion ColorPicker -->
-    <DataTemplate x:Key="ColorPickerMinHeaderTemplate">
-      <StackPanel Orientation="Horizontal" Margin="0">
-        <Border Width="20" Height="15" Margin="0,0,0,2" Background="{Binding Brush, RelativeSource={RelativeSource FindAncestor, AncestorLevel=1, AncestorType={x:Type syncfusion:ColorPicker}}}" />
-      </StackPanel>
     </DataTemplate>
   </Application.Resources>
 </Application>

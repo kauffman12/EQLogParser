@@ -11,28 +11,29 @@
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30"></RowDefinition>
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}" />
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showPlayers" IsChecked="True" Margin="0,0,8,2" Checked="OptionsChanged" Unchecked="OptionsChanged">Verified Players</CheckBox>
-      <ComboBox Margin="0,0,0,2" x:Name="fightOption" SelectedIndex="0" SelectionChanged="OptionsChanged">
+      <CheckBox x:Name="showPlayers" Margin="0,0,8,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="OptionsChanged"
+                Unchecked="OptionsChanged" IsChecked="True" Content="Verified Players"/>
+      <ComboBox Margin="0,0,8,2" x:Name="fightOption" SelectedIndex="0" SelectionChanged="OptionsChanged">
         <ComboBoxItem>All Fights</ComboBoxItem>
         <ComboBoxItem>Selected Fights</ComboBoxItem>        
       </ComboBox>
-      <ComboBox Margin="0,0,0,2" x:Name="playerList" IsEnabled="True" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,0,2" x:Name="spellList" IsEnabled="True" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="playerList" IsEnabled="True" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="spellList" IsEnabled="True" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,8,2" x:Name="typeList" IsEnabled="True" SelectionChanged="OptionsChanged" />
       <Button Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Refresh</Button>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
                            AllowSorting="True"
-                           AutoGenerateColumns="False"
-                           ColumnSizer="Auto"
+                           AutoGenerateColumns="True"
+                           AutoGeneratingColumn="AutoGeneratingColumn"
                            CurrentCellBorderThickness="0"
                            FrozenColumnCount="1"
                            Grid.Row="1"
@@ -40,8 +41,8 @@
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
-                           ItemsSourceChanged="ItemsSourceChanged"
-                           RowHeaderWidth="40"
+                           ItemsSource="{Binding SpellDamageData}"
+                           RowHeaderWidth="{DynamicResource EQTableRowHeaderWidth}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            ShowRowHeader="True">
@@ -63,15 +64,6 @@
       <syncfusion:SfDataGrid.SortColumnDescriptions>
         <syncfusion:SortColumnDescription ColumnName="Avg" SortDirection="Descending" />
       </syncfusion:SfDataGrid.SortColumnDescriptions>
-      <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Spell" HeaderText="Spell" MinimumWidth="250"/>
-        <syncfusion:GridTextColumn MappingName="Caster" HeaderText="Caster" MinimumWidth="120"/>
-        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" />
-        <syncfusion:GridNumericColumn MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Av Hit" TextAlignment="Right"/>
-        <syncfusion:GridNumericColumn MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Max Hit" TextAlignment="Right"/>
-        <syncfusion:GridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="Total" TextAlignment="Right"/>
-        <syncfusion:GridNumericColumn MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" HeaderText="# Hits" TextAlignment="Right"/>
-      </syncfusion:SfDataGrid.Columns>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 

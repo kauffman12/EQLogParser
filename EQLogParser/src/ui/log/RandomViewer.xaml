@@ -12,7 +12,7 @@
   <Grid>
     <Grid>
       <Grid.RowDefinitions>
-        <RowDefinition Height="30"></RowDefinition>
+        <RowDefinition Height="{DynamicResource EQFightGridTitleHeight}" />
         <RowDefinition Height="300*"></RowDefinition>
       </Grid.RowDefinitions>
       <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
@@ -30,49 +30,28 @@
       <syncfusion:SfTreeGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
                            AllowSorting="False"
-                           AutoGenerateColumns="False"
-                           ChildPropertyName="Children"
-                           ColumnSizer="Auto"
-                           CurrentCellBorderThickness="0"
                            AutoExpandMode="None"
+                           AutoGenerateColumns="True"
+                           AutoGeneratingColumn="AutoGeneratingColumn"
+                           ChildPropertyName="Children"
+                           CurrentCellBorderThickness="0"
+                           ExpanderCellStyle="{DynamicResource EQExpanderCellStyle}"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
+                           ItemsSource="{Binding RandomData}"
+                           LiveNodeUpdateMode="AllowDataShaping"
                            PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            ShowRowHeader="False"
                            ShowSortNumbers="True">
-        <syncfusion:SfTreeGrid.Resources>
-          <local:DateTimeConverter x:Key="DateTimeConverter" />
-          <local:RandomPlayerStyleConverter x:Key="RandomStyleConverter"></local:RandomPlayerStyleConverter>
-        </syncfusion:SfTreeGrid.Resources>
         <syncfusion:SfTreeGrid.SortColumnDescriptions>
-          <syncfusion:SortColumnDescription ColumnName="StartTime" SortDirection="Descending" />
+          <syncfusion:SortColumnDescription ColumnName="BeginTime" SortDirection="Descending" />
           <syncfusion:SortColumnDescription ColumnName="Rolled" SortDirection="Descending" />
         </syncfusion:SfTreeGrid.SortColumnDescriptions>
-        <syncfusion:SfTreeGrid.Columns>
-          <syncfusion:TreeGridTextColumn MappingName="StartTime" DisplayBinding="{Binding Path=StartTime, Converter={StaticResource DateTimeConverter}}" 
-                                   TextAlignment="Center" HeaderText="Start Time" />
-          <syncfusion:TreeGridTextColumn MappingName="Duration" HeaderText="Duration" MinimumWidth="150"/>
-          <syncfusion:TreeGridNumericColumn MappingName="Count" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Rolls" />
-          <syncfusion:TreeGridTextColumn MappingName="Highest" HeaderText="Highest Rolls" Width="250">
-            <syncfusion:TreeGridTextColumn.CellStyle>
-              <Style TargetType="syncfusion:TreeGridCell">
-                <Setter Property="Background"  Value="{Binding Converter={StaticResource RandomStyleConverter}}"/>
-                <Setter Property="BorderThickness" Value="0.24"></Setter>
-              </Style>
-            </syncfusion:TreeGridTextColumn.CellStyle>
-          </syncfusion:TreeGridTextColumn>
-          <syncfusion:TreeGridNumericColumn MappingName="From" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="From" />
-          <syncfusion:TreeGridNumericColumn MappingName="To" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="To" />
-          <syncfusion:TreeGridNumericColumn MappingName="Rolled" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Rolled" />
-          <syncfusion:TreeGridTextColumn MappingName="RollTime" DisplayBinding="{Binding Path=RollTime, Converter={StaticResource DateTimeConverter}}" 
-                                   TextAlignment="Center" HeaderText="Roll Time" MinimumWidth="120" />
-          <syncfusion:TreeGridTextColumn MappingName="Details" HeaderText="Player Details" Width="250" />
-        </syncfusion:SfTreeGrid.Columns>
         <syncfusion:SfTreeGrid.ContextMenu>
           <ContextMenu>
             <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 

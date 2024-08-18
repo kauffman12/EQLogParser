@@ -80,7 +80,12 @@ namespace EQLogParser
       _theTextBox.SetValue(Grid.ColumnProperty, 0);
       _theTextBox.TextChanged += TheTextChanged;
 
-      _theCheckBox = new CheckBox { Content = "Use Regex" };
+      _theCheckBox = new CheckBox
+      {
+        Content = "Use Regex",
+        Template = (ControlTemplate)Application.Current.Resources["CustomCheckBoxTemplate"]
+      };
+
       _theCheckBox.SetValue(Grid.ColumnProperty, 1);
       _theCheckBox.Checked += TheCheckBoxChecked;
       _theCheckBox.Unchecked += TheCheckBoxChecked;
@@ -99,29 +104,40 @@ namespace EQLogParser
 
     private void TheCheckBoxChecked(object sender, RoutedEventArgs e)
     {
-      // used for init check
-      if (sender is CheckBox { DataContext: not null })
+      // original source will be either the real checkbox or one in the
+      // control template. this is handled with default callbacks in
+      // app.xaml.cs for normal cases?
+      if (e.OriginalSource is CheckBox box)
       {
-        // turn off listeners
-        _theTextBox.TextChanged -= TheTextChanged;
-        // toggle text to trigger the ValueChanged event
-        var previous = _theTextBox.Text;
-        _theTextBox.Text += " ";
-        _theTextBox.Text = previous;
-        _theTextBox.SelectionStart = _theTextBox.Text.Length;
-        // put listener back on
-        _theTextBox.TextChanged += TheTextChanged;
-
-        // if the toggle is changed to false it must have been a user decision
-        if (_theCheckBox.IsChecked == false)
+        // ignore checkbox in the control template (has no name)
+        if (box.Content == null)
         {
-          _userTurnedOff = true;
+          return;
         }
-      }
-      else
-      {
-        // reset just in case
-        _userTurnedOff = false;
+
+        if (box.DataContext == null)
+        {
+          // reset just in case
+          _userTurnedOff = false;
+        }
+        else
+        {
+          // turn off listeners
+          _theTextBox.TextChanged -= TheTextChanged;
+          // toggle text to trigger the ValueChanged event
+          var previous = _theTextBox.Text;
+          _theTextBox.Text += " ";
+          _theTextBox.Text = previous;
+          _theTextBox.SelectionStart = _theTextBox.Text.Length;
+          // put listener back on
+          _theTextBox.TextChanged += TheTextChanged;
+
+          // if the toggle is changed to false it must have been a user decision
+          if (_theCheckBox.IsChecked == false)
+          {
+            _userTurnedOff = true;
+          }
+        }
       }
     }
 

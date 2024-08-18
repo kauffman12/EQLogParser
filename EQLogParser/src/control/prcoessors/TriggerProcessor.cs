@@ -32,8 +32,8 @@ namespace EQLogParser
     private readonly List<TimerData> _activeTimers = [];
     private readonly Dictionary<string, Dictionary<string, RepeatedData>> _repeatedTextTimes = [];
     private readonly Dictionary<string, Dictionary<string, RepeatedData>> _repeatedTimerTimes = [];
-    private readonly Action<string, Trigger, string> _addTextEvent;
-    private readonly Action<Trigger, List<TimerData>> _addTimerEvent;
+    private readonly Action<string, Trigger, string, string> _addTextEvent;
+    private readonly Action<string, Trigger, List<TimerData>> _addTimerEvent;
     private readonly SpeechSynthesizer _synth;
     private readonly BlockingCollection<Speak> _speakCollection = [];
     private readonly BlockingCollection<LineData> _chatCollection = [];
@@ -50,7 +50,7 @@ namespace EQLogParser
     private bool _isDisposed;
 
     internal TriggerProcessor(string id, string name, string playerName, string voice, int voiceRate,
-      string activeColor, string fontColor, Action<string, Trigger, string> addTextEvent, Action<Trigger, List<TimerData>> addTimerEvent)
+      string activeColor, string fontColor, Action<string, Trigger, string, string> addTextEvent, Action<string, Trigger, List<TimerData>> addTimerEvent)
     {
       CurrentCharacterId = id;
       CurrentProcessorName = name;
@@ -340,7 +340,7 @@ namespace EQLogParser
 
             if (ProcessDisplayText(displayText, lineData.Action, earlyMatches, timerData.OriginalMatches) is { } updatedDisplayText)
             {
-              _addTextEvent(updatedDisplayText, wrapper.TriggerData, _fontColor);
+              _addTextEvent(wrapper.Id, wrapper.TriggerData, updatedDisplayText, _fontColor);
             }
 
             AddEntry(lineData, wrapper, "Timer End Early");
@@ -422,7 +422,7 @@ namespace EQLogParser
             updatedDisplayText = updatedDisplayText.Replace("{repeated}", currentCount.ToString(), StringComparison.OrdinalIgnoreCase);
           }
 
-          _addTextEvent(updatedDisplayText, wrapper.TriggerData, _fontColor);
+          _addTextEvent(wrapper.Id, wrapper.TriggerData, updatedDisplayText, _fontColor);
         }
 
         if (ProcessDisplayText(wrapper.ModifiedShare, lineData.Action, matches, null) is { } updatedShareText)
@@ -430,7 +430,7 @@ namespace EQLogParser
           UiUtil.InvokeAsync(() => Clipboard.SetText(updatedShareText));
         }
 
-        AddEntry(lineData, wrapper, "Trigger", timing / 10);
+        AddEntry(lineData, wrapper, "Initial Trigger", timing / 10);
 
         if (speak != null)
         {
@@ -511,7 +511,7 @@ namespace EQLogParser
 
               if (ProcessDisplayText(wrapper.ModifiedWarningDisplay, lineData.Action, matches, null) is { } updatedDisplayText)
               {
-                _addTextEvent(updatedDisplayText, trigger, _fontColor);
+                _addTextEvent(wrapper.Id, trigger, updatedDisplayText, _fontColor);
               }
 
               AddEntry(lineData, wrapper, "Timer Warning");
@@ -615,7 +615,7 @@ namespace EQLogParser
 
             if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, data2.OriginalMatches) is { } updatedDisplayText)
             {
-              _addTextEvent(updatedDisplayText, trigger, _fontColor);
+              _addTextEvent(wrapper.Id, trigger, updatedDisplayText, _fontColor);
             }
 
             AddEntry(lineData, wrapper, "Timer End");
@@ -643,7 +643,7 @@ namespace EQLogParser
 
       if (needEvent)
       {
-        _addTimerEvent(trigger, GetActiveTimers());
+        _addTimerEvent(wrapper.Id, trigger, GetActiveTimers());
       }
     }
 
@@ -1024,7 +1024,7 @@ namespace EQLogParser
       // update log
       var log = new AlertEntry
       {
-        EventTime = DateUtil.ToDouble(DateTime.Now),
+        BeginTime = DateUtil.ToDouble(DateTime.Now),
         LogTime = lineData?.BeginTime ?? double.NaN,
         Line = lineData?.Action ?? "",
         Name = wrapper.Name,

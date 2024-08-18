@@ -29,6 +29,7 @@ namespace EQLogParser
     {
       var style = new Style(typeof(GridCell));
       style.Setters.Add(new Setter(Control.ForegroundProperty, new Binding(name) { Converter = converter }));
+      style.Setters.Add(new Setter(Control.FontSizeProperty, new DynamicResourceExtension("EQContentSize")));
       style.BasedOn = Application.Current.Resources["SyncfusionGridCellStyle"] as Style;
       return style;
     }
@@ -199,7 +200,7 @@ namespace EQLogParser
 
             if (parent != null)
             {
-              gridBase.Dispatcher.InvokeAsync(() =>
+              gridBase.Dispatcher.Invoke(() =>
               {
                 if (needHeightChange)
                 {
@@ -210,7 +211,7 @@ namespace EQLogParser
                 {
                   parent.Width = tableWidth + 200;
                 }
-              }, DispatcherPriority.Background);
+              }, DispatcherPriority.Send);
             }
           }
 
@@ -280,7 +281,7 @@ namespace EQLogParser
               dialog?.Close();
             }
           }, DispatcherPriority.Background);
-        }, DispatcherPriority.Background);
+        });
       });
     }
 
@@ -333,61 +334,34 @@ namespace EQLogParser
       }
     }
 
-    internal static void UpdateTableMargin(SfGridBase gridBase)
-    {
-      var size = 2;
-      switch (MainActions.CurrentFontSize)
-      {
-        case 11:
-          size = 4;
-          break;
-        case 12:
-          size = 8;
-          break;
-        case 13:
-          size = 12;
-          break;
-        case 14:
-          size = 16;
-          break;
-        case 15:
-          size = 20;
-          break;
-        case 16:
-          size = 24;
-          break;
-      }
-
-      if (gridBase is SfDataGrid dataGrid)
-      {
-        dataGrid.GridColumnSizer.Margin = new Thickness(size, 0, size, 0);
-      }
-      else if (gridBase is SfTreeGrid treeGrid)
-      {
-        treeGrid.TreeGridColumnSizer.Margin = new Thickness(size, 0, size, 0);
-      }
-    }
-
     internal static void RefreshTableColumns(SfGridBase gridBase)
     {
-      UpdateTableMargin(gridBase);
-
       try
       {
-        if (gridBase is SfDataGrid { ItemsSource: not null } dataGrid)
+        if (gridBase is SfDataGrid dataGrid)
         {
-          dataGrid.GridColumnSizer?.ResetAutoCalculationforAllColumns();
-          if (dataGrid.View != null)
+          foreach (var column in dataGrid.Columns)
           {
-            dataGrid.GridColumnSizer?.Refresh();
+            // ignore hidden columns or ones using a sizer
+            if (column.ColumnSizer != GridLengthUnitType.None || column.IsHidden)
+            {
+              continue;
+            }
+
+            column.Width = GetColumnWidth(column.MappingName, column.HeaderText);
           }
         }
-        else if (gridBase is SfTreeGrid { ItemsSource: not null } treeGrid)
+        else if (gridBase is SfTreeGrid treeGrid)
         {
-          treeGrid.TreeGridColumnSizer?.ResetAutoCalculationforAllColumns();
-          if (treeGrid.View != null)
+          foreach (var column in treeGrid.Columns)
           {
-            treeGrid.TreeGridColumnSizer?.Refresh();
+            // ignore hidden columns or ones using a sizer
+            if (column.ColumnSizer != TreeColumnSizer.None || column.IsHidden)
+            {
+              continue;
+            }
+
+            column.Width = GetColumnWidth(column.MappingName, column.HeaderText);
           }
         }
       }
@@ -418,6 +392,29 @@ namespace EQLogParser
       {
         Log.Debug(ex);
       }
+    }
+
+    internal static double CalculateMinGridHeaderWidth(string value)
+    {
+      const string defaultValue = "123456789";
+      if (string.IsNullOrEmpty(value) || value.Length < 9)
+      {
+        value = defaultValue;
+      }
+
+      // Create the FormattedText object
+      var formattedText = new FormattedText(
+        value,
+        System.Globalization.CultureInfo.CurrentCulture,
+        FlowDirection.LeftToRight,
+        new Typeface(MainActions.CurrentFontFamily),
+        MainActions.CurrentFontSize,
+        Brushes.Black, // The brush doesn't affect size calculation
+        VisualTreeHelper.GetDpi(new Window()).PixelsPerDip // This ensures the text size is scaled correctly for the display DPI
+      );
+
+      // Calculate the height required for the text
+      return Math.Round(formattedText.Width + 30);
     }
 
     private static double GetTableHeight(SfGridBase gridBase, bool allData)
@@ -618,6 +615,56 @@ namespace EQLogParser
 
       columnCombo.ItemsSource = list;
       UiElementUtil.SetComboBoxTitle(columnCombo, selectedCount, Resource.COLUMNS_SELECTED);
+    }
+
+    private static double GetColumnWidth(string mappingName, string text)
+    {
+      if (mappingName is "Acted" or "Actor" or "Record.Npc" or "Npc" or "Target")
+      {
+        return MainActions.CurrentNpcWidth;
+      }
+
+      if (mappingName is "Name")
+      {
+        return MainActions.CurrentNameWidth;
+      }
+
+      if (mappingName is "Spell" or "Key" or "Action")
+      {
+        return MainActions.CurrentSpellWidth;
+      }
+
+      if (mappingName is "SortId" or "BeginTime" or "LogTime" or "RollTime")
+      {
+        return MainActions.CurrentDateTimeWidth;
+      }
+
+      if (mappingName is "Record.Item" or "Details")
+      {
+        return MainActions.CurrentItemWidth;
+      }
+
+      if (mappingName is "TimeSince" or "Hits" or "Lucky" or "Critical" or "Twincast" or
+          "Rampage" or "Riposte" or "Percent" or "PercentOfRaid" or "TotalSeconds" or "CritRate" or
+          "LuckRate" or "ExtraRate" or "BaneHits" or "MeleeAccRate" or "MeleeHitRate" or
+          "TwincastRate" or "TwincastHits")
+      {
+        return MainActions.CurrentShortWidth;
+      }
+
+      if (mappingName is "Avg" or "AvgCrit" or "AvgLucky" or "Special" or "Dps" or "Sdps" or
+          "Eval" or "Priority" or "Count" or "From" or "To" or "Rolled" or "MeleeAttempts"
+          or "Min" or "Max" or "BestSec" or "FlurryRate" or "ResistRate")
+      {
+        return MainActions.CurrentMediumWidth;
+      }
+
+      if (!string.IsNullOrEmpty(text))
+      {
+        return CalculateMinGridHeaderWidth(text);
+      }
+
+      return double.NaN;
     }
 
     private static dynamic SetColumns(FrameworkElement columnCombo, SfDataGrid dataGrid, dynamic updated)

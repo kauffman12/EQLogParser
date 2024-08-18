@@ -8,36 +8,32 @@
              d:DesignHeight="140" d:DesignWidth="900">
   <Grid>
     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="125" />
+      <ColumnDefinition Width="150" />
       <ColumnDefinition Width="400*" />
     </Grid.ColumnDefinitions>
     <Grid Grid.Column="0">
-      <Grid.RowDefinitions>
-        <RowDefinition Height="50*" />
-        <RowDefinition Height="50" />
-      </Grid.RowDefinitions>
-      <TextBlock x:Name="sharePlayerParseLabel" Grid.Row="0" TextWrapping="Wrap" FontSize="{DynamicResource EQContentSize}" Margin="10,2,0,0">No Players Selected</TextBlock>
-      <StackPanel Grid.Row="1" Orientation="Vertical">
+      <TextBlock x:Name="sharePlayerParseLabel" TextWrapping="Wrap" FontSize="{DynamicResource EQContentSize}" Margin="10,2,0,0">No Players Selected</TextBlock>
+      <StackPanel Orientation="Vertical" VerticalAlignment="Bottom">
         <TextBlock x:Name="sharePlayerParseWarningLabel" TextWrapping="Wrap" FontSize="{DynamicResource EQContentSize}" Margin="12,0,0,4" FontStyle="Italic" Visibility="Hidden">0 / 509</TextBlock>
-        <StackPanel Orientation="Horizontal">
-          <Button x:Name="copyToEQButton" Height="{DynamicResource EQButtonHeight}" VerticalAlignment="Center" VerticalContentAlignment="Center" Margin="4,0,0,0"  Padding="6,0,6,0" Content="Send Parse to EQ" IsEnabled="True" Click="CopyToEqButtonClick"/>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Stretch" Margin="0,0,0,4">
+          <Button x:Name="copyToEQButton" Height="{DynamicResource EQButtonHeight}" VerticalAlignment="Top" VerticalContentAlignment="Center" Margin="4,0,0,0" ToolTip="Send Parse to EQ" Padding="6,0,6,0" Content="Send Parse" IsEnabled="True" Click="CopyToEqButtonClick"/>
         </StackPanel>
       </StackPanel>
     </Grid>
     <Grid Grid.Column="1">
       <Grid.RowDefinitions>
-        <RowDefinition Height="30" />
+        <RowDefinition Height="{DynamicResource EQGridTitleHeight}" />
         <RowDefinition Height="50*" />
       </Grid.RowDefinitions>
       <StackPanel HorizontalAlignment="Right" Grid.Row="0" Orientation="Horizontal">
-        <TextBox x:Name="customParseTitle" Margin="0,0,0,2" Width="200" TextChanged="CustomTitleTextChanged" KeyDown="CustomTitleKeyDown" GotFocus="CustomTitleGotFocus" LostFocus="CustomTitleLostFocus" />
-        <ComboBox Margin="0,0,0,2" x:Name="parseList" IsEnabled="True" SelectionChanged="ParseListSelectionChanged" />
-        <CheckBox x:Name="playerParseTextDoPetLabel" IsChecked="True" Margin="8,0,0,2" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Denote Pets</CheckBox>
-        <CheckBox x:Name="playerParseTextDoDPS" IsChecked="True" Margin="8,0,0,2" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include DPS/HPS</CheckBox>
-        <CheckBox x:Name="playerParseTextDoTotals" IsChecked="True" Margin="8,0,0,2" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Raid Total</CheckBox>
-        <CheckBox x:Name="playerParseTextDoSpecials" IsChecked="True" Margin="8,0,0,2" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Specials</CheckBox>
-        <CheckBox x:Name="playerParseTextDoTime" IsChecked="True" Margin="8,0,0,2" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Include Time</CheckBox>
-        <CheckBox x:Name="playerParseTextDoRank" IsChecked="True" Margin="8,0,8,2" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange">Rank Players</CheckBox>
+        <TextBox x:Name="customParseTitle" Margin="0,0,4,2" Width="200" TextChanged="CustomTitleTextChanged" KeyDown="CustomTitleKeyDown" GotFocus="CustomTitleGotFocus" LostFocus="CustomTitleLostFocus" />
+        <ComboBox Margin="0,0,2,2" x:Name="parseList" IsEnabled="True" SelectionChanged="ParseListSelectionChanged" />
+        <CheckBox x:Name="playerParseTextDoPetLabel" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,0,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Denote Pets"/>
+        <CheckBox x:Name="playerParseTextDoDPS" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,0,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Include DPS/HPS"/>
+        <CheckBox x:Name="playerParseTextDoTotals" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,0,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Include Raid Total"/>
+        <CheckBox x:Name="playerParseTextDoSpecials" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,0,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Include Specials"/>
+        <CheckBox x:Name="playerParseTextDoTime" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,0,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Include Time"/>
+        <CheckBox x:Name="playerParseTextDoRank" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,8,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Rank Players"/>
       </StackPanel>
       <TextBox Grid.Column="1" Grid.Row="1" x:Name="playerParseTextBox" TextWrapping="Wrap" IsReadOnly="True" VerticalContentAlignment="Top" BorderThickness="0" FontSize="{DynamicResource EQTitleSize}" MouseEnter="PlayerParseTextMouseEnter" TextChanged="PlayerParseTextBoxTextChanged"/>
     </Grid>

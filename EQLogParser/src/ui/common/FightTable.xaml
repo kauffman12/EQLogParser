@@ -11,9 +11,7 @@
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.Resources>
-      <local:TotalFormatConverter x:Key="TotalFormatConverter" />
       <local:ColorRowStyleConverter x:Key="ColorRowStyleConverter" />
-
       <!-- sfgrid namespace due to class naming conflict -->
       <Style x:Key="RowStyle" TargetType="sfgrid:VirtualizingCellsControl">
         <Style.Triggers>
@@ -39,20 +37,23 @@
       </Style>
     </Grid.Resources>
     <Grid.RowDefinitions>
-      <RowDefinition Height="32" />
-      <RowDefinition Height="500*" />
+      <RowDefinition Height="{DynamicResource EQFightGridTitleHeight}"></RowDefinition>
+      <RowDefinition Height="300*" />
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <TextBox x:Name="fightSearchBox" Margin="8,0,0,2" Width="130" GotFocus="FightSearchBoxGotFocus" LostFocus="FightSearchBoxLostFocus" TextChanged="FightSearchBoxTextChanged" PreviewKeyDown="FightSearchBoxKeyDown" />
-      <CheckBox x:Name="fightShowHitPoints" IsChecked="True" Margin="10,0,0,2" ToolTip="Show Hit Points" Checked="ShowHitPointsChange" Unchecked="ShowHitPointsChange">HP</CheckBox>
-      <CheckBox x:Name="fightShowBreaks" IsChecked="True" Margin="8,0,0,2" ToolTip="Add Breaks for Inactivity" Checked="ShowBreakChange" Unchecked="ShowBreakChange">Inactivty</CheckBox>
-      <CheckBox x:Name="fightShowTanking" IsChecked="True" Margin="8,0,0,2" ToolTip="Include Fights with only Tanking data" Checked="ShowTankingChange" Unchecked="ShowTankingChange">Tanking</CheckBox>
+      <TextBox x:Name="fightSearchBox" Margin="4,2,0,2" Width="130" GotFocus="FightSearchBoxGotFocus" LostFocus="FightSearchBoxLostFocus" TextChanged="FightSearchBoxTextChanged" PreviewKeyDown="FightSearchBoxKeyDown" />
+      <CheckBox x:Name="fightShowHitPoints" Margin="14,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowHitPointsChanged" Unchecked="ShowHitPointsChanged"
+                IsChecked="True" Content="HP" ToolTip="Show Hit Points"/>
+      <CheckBox x:Name="fightShowBreaks" Margin="8,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowBreakChanged" Unchecked="ShowBreakChanged"
+                IsChecked="True" Content="Inactivity" ToolTip="Add Breaks for Inactivity"/>
+      <CheckBox x:Name="fightShowTanking" Margin="8,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowTankingChanged" Unchecked="ShowTankingChanged"
+                IsChecked="True" Content="Tanking" ToolTip="Include Fights with only Tanking data"/>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
                            AllowSorting="True"
-                           AutoGenerateColumns="False"
-                           ColumnSizer="AutoWithLastColumnFill"
+                           AutoGenerateColumns="True"
+                           AutoGeneratingColumn="AutoGeneratingColumn"
                            ContextMenuClosing="RightClickClosed"
                            ContextMenuOpening="RightClickOpening"
                            CurrentCellBorderThickness="0"
@@ -60,10 +61,10 @@
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
-                           RowHeight="24"
+                           RowHeight="{DynamicResource EQTableRowHeight}"
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
-                           RowHeaderWidth="45"
+                           RowHeaderWidth="{DynamicResource EQTableExtendedRowHeaderWidth}"
                            RowStyle="{DynamicResource RowStyle}"
                            SelectionChanged="SelectionChanged"
                            SelectionMode="Extended"
@@ -125,12 +126,6 @@
           </MenuItem>
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>
-      <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="SortId" SortMode="Value" DisplayBinding="{Binding BeginTimeString}" 
-                                   TextAlignment="Center" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" HeaderText="Initial Hit Time" />
-        <syncfusion:GridTextColumn DisplayBinding="{Binding DamageTotal, Converter={StaticResource TotalFormatConverter}}" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" TextAlignment="Right" HeaderText="HP" />
-        <syncfusion:GridTextColumn DisplayBinding="{Binding Name}" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}" HeaderText="Name" />
-      </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>
   </Grid>
 </UserControl>

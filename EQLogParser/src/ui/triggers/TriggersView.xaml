@@ -11,23 +11,20 @@
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30"></RowDefinition>
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <CheckBox x:Name="basicCheckBox" Margin="4,0,0,0" FontWeight="Normal" FocusVisualStyle="{x:Null}" Unchecked="BasicChecked" Checked="BasicChecked"/>
-      <Label x:Name="titleLabel" Margin="8,0,8,0" VerticalContentAlignment="Center" Padding="0,0,0,2" Content="Check to Activate Triggers" Style="{DynamicResource EQTitleStyle}" Foreground="{DynamicResource EQStopForegroundBrush}"/>
+      <CheckBox x:Name="basicCheckBox" Template="{StaticResource CustomCheckBoxTemplate}" Margin="6,0,-8,2" FontWeight="Normal" Unchecked="BasicChecked" Checked="BasicChecked" />
+      <Label x:Name="titleLabel" Margin="4,0,0,2" VerticalContentAlignment="Center" Padding="0" Content="Check to Activate Triggers" Style="{DynamicResource EQTitleStyle}" Foreground="{DynamicResource EQStopForegroundBrush}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <TextBlock VerticalAlignment="Center" Margin="8,0,20,4" PreviewMouseDown="ToggleAdvancedPreviewMouseDown">
-        <InlineUIContainer>
-          <StackPanel Orientation="Vertical">
-            <TextBlock x:Name="advancedText" Cursor="Hand" FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource EQWarnForegroundBrush}" Text="Switch to Advanced Mode"/>
-            <Rectangle x:Name="underlineRect" Fill="{DynamicResource EQWarnForegroundBrush}" Height="1" Width="{Binding ActualWidth, ElementName=advancedText}" />
-          </StackPanel>
-        </InlineUIContainer>
-      </TextBlock>
-      <CheckBox x:Name="watchQuickShare" IsChecked="False" Margin="0,0,8,2" Checked="OptionsChanged" Unchecked="OptionsChanged">Watch for Quick Shares</CheckBox>
+      <Grid Margin="0,0,20,8" PreviewMouseLeftButtonDown="ToggleAdvancedPreviewMouseDown">
+        <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource EQWarnForegroundBrush}">
+          <TextBlock x:Name="advancedText" Text="Switch to Advanced" Cursor="Hand" TextWrapping="Wrap" FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource EQWarnForegroundBrush}" VerticalAlignment="Bottom" Padding="0,0,0,1"/>
+        </Border>
+      </Grid>
+      <CheckBox x:Name="watchQuickShare" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="False" Margin="0,0,8,2" Checked="OptionsChanged" Unchecked="OptionsChanged" Content="Quick Shares Prompt" ToolTip="Prompt when a new Quick Share is received." />
       <ComboBox x:Name="voices" SelectedIndex="0" Margin="0,0,8,2" SelectionChanged="OptionsChanged" />
       <ComboBox x:Name="rateOption" SelectedIndex="0" Margin="0,0,8,2" SelectionChanged="OptionsChanged">
         <ComboBoxItem>Default Voice Rate</ComboBoxItem>
@@ -44,13 +41,13 @@
           <syncfusion:SfRangeSlider Name="volumeSlider" Height="300" Minimum="0" Maximum="100" TickFrequency="10" ValuePlacement="BottomRight" ShowValueLabels="True" Orientation="Vertical" PreviewMouseLeftButtonUp="VolumeSliderChanged"/>
         </Border>
       </Popup>
-      <Button x:Name="dictButton" Margin="0,0,8,1" Padding="8,0,8,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}" Click="DictionaryClick">Phonetic Dictionary</Button>
+      <Button x:Name="dictButton" Margin="0,0,8,1" Padding="8,0,8,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}"  ToolTip="Phonetic Dictionary" Click="DictionaryClick">Dictionary</Button>
     </StackPanel>
     <Grid x:Name="mainGrid" Grid.Row="1">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="215"></ColumnDefinition>
+        <ColumnDefinition Width="{DynamicResource EQTriggerCharacterList}"></ColumnDefinition>
         <ColumnDefinition Width="3"></ColumnDefinition>
-        <ColumnDefinition Width="350"></ColumnDefinition>
+        <ColumnDefinition Width="355"></ColumnDefinition>
         <ColumnDefinition Width="3"></ColumnDefinition>
         <ColumnDefinition Width="200*"></ColumnDefinition>
       </Grid.ColumnDefinitions>
@@ -145,7 +142,7 @@
             <syncfusion:PropertyGridItem CategoryName="Cooldown Overlay" PropertyName="ShowReset" DisplayName="Show Reset" Visibility="Collapsed" Description="Show Cooldown Timer when in Reset state." />
           </syncfusion:PropertyGrid.Items>
         </syncfusion:PropertyGrid>
-        <Border Grid.Row="0" Padding="10,1,0,0" Background="{DynamicResource ContentBackgroundAlt}" BorderThickness="0">
+        <Border Grid.Row="0" Padding="10,1,0,0" Background="{DynamicResource ContentBackgroundAlt2}" BorderThickness="0">
           <Grid>
             <Grid.RowDefinitions>
               <RowDefinition Height="40" />
@@ -153,8 +150,8 @@
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
               <TextBlock Text="Edit Properties" Margin="0,1,20,0" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
               <Button x:Name="showButton" Visibility="Collapsed" Margin="0,0,4,3" Padding="16,0,16,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}" Click="ShowClick">Preview Overlay</Button>
-              <Button x:Name="saveButton" Margin="0,0,4,3" Width="80" IsEnabled="False" Height="{DynamicResource EQButtonHeight}" Click="SaveClick">Save</Button>
-              <Button x:Name="cancelButton" Margin="0,0,0,3" Width="80" IsEnabled="False" Height="{DynamicResource EQButtonHeight}" Click="CancelClick">Cancel</Button>
+              <Button x:Name="saveButton" Margin="0,0,4,3" Padding="10,0,10,0"  IsEnabled="False" Height="{DynamicResource EQButtonHeight}" Click="SaveClick">Save</Button>
+              <Button x:Name="cancelButton" Margin="0,0,0,3" Padding="10,0,10,0" IsEnabled="False" Height="{DynamicResource EQButtonHeight}" Click="CancelClick">Cancel</Button>
             </StackPanel>
           </Grid>
         </Border>

@@ -30,7 +30,12 @@ namespace EQLogParser
 
     private object Create()
     {
-      var colorPicker = new ColorPicker { EnableSolidToGradientSwitch = false, BorderThickness = new Thickness(0, 0, 0, 0) };
+      var colorPicker = new ColorPicker
+      {
+        EnableSolidToGradientSwitch = false,
+        Margin = new Thickness(0, 0, 2, 0),
+        BorderThickness = new Thickness(0, 0, 0, 0)
+      };
       _theColorPicker = colorPicker;
       return colorPicker;
     }

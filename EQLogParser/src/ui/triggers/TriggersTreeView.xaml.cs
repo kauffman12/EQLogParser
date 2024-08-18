@@ -13,9 +13,6 @@ using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for TriggersTreeView.xaml
-  /// </summary>
   public partial class TriggersTreeView : IDisposable
   {
     internal event Action<bool> ClosePreviewOverlaysEvent;
@@ -152,9 +149,9 @@ namespace EQLogParser
       };
     }
 
-    private async void CloseOverlaysClick(object sender, RoutedEventArgs e)
+    private void CloseOverlaysClick(object sender, RoutedEventArgs e)
     {
-      await TriggerManager.Instance.CloseOverlays();
+      TriggerManager.Instance.CloseOverlays();
       ClosePreviewOverlaysEvent?.Invoke(true);
       e.Handled = true;
     }
@@ -468,7 +465,7 @@ namespace EQLogParser
           if (node.IsOverlay())
           {
             overlayDelete = true;
-            await TriggerManager.Instance.CloseOverlay(id);
+            TriggerManager.Instance.CloseOverlay(id);
           }
           else if ((node.IsDir() || node.IsTrigger()) && node.IsChecked != false)
           {
@@ -562,7 +559,7 @@ namespace EQLogParser
               Application.Current.Resources["OverlayText-" + node.SerializedData.Id] = node.SerializedData.Name;
             }
           }
-        }, DispatcherPriority.Normal);
+        }, DispatcherPriority.DataBind);
       }
     }
 

@@ -7,17 +7,15 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Windows.Media.SpeechSynthesis;
+using Application = System.Windows.Application;
+using CheckBox = System.Windows.Controls.CheckBox;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for TriggersView.xaml
-  /// </summary>
   public partial class TriggersView : IDocumentContent
   {
     private readonly Dictionary<string, Window> _previewWindows = [];
@@ -50,6 +48,7 @@ namespace EQLogParser
 
       // watch file system for new sounds
       var fileList = new ObservableCollection<string>();
+      // watcher needs to stay referenced i think
       _soundWatcher = TriggerUtil.CreateSoundsWatcher(fileList);
 
       _topEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Top");
@@ -158,22 +157,34 @@ namespace EQLogParser
 
     internal bool IsCancelSelection()
     {
-      dynamic model = thePropertyGrid?.SelectedObject;
+      var model = thePropertyGrid?.SelectedObject;
       var cancel = false;
+
       if (saveButton.IsEnabled)
       {
-        if (model is TriggerPropertyModel or TextOverlayPropertyModel or TimerOverlayPropertyModel)
+        string name = null;
+        if (model is TriggerPropertyModel triggerModel)
         {
-          if (model.Node?.Name is string name)
+          name = triggerModel.Node?.Name;
+        }
+        else if (model is TextOverlayPropertyModel textModel)
+        {
+          name = textModel.Node?.Name;
+        }
+        else if (model is TimerOverlayPropertyModel timerModel)
+        {
+          name = timerModel.Node?.Name;
+        }
+
+        if (!string.IsNullOrEmpty(name))
+        {
+          var msgDialog = new MessageWindow($"Do you want to save changes to {name}?", Resource.UNSAVED,
+            MessageWindow.IconType.Question, "Don't Save", "Save");
+          msgDialog.ShowDialog();
+          cancel = !msgDialog.IsYes1Clicked && !msgDialog.IsYes2Clicked;
+          if (msgDialog.IsYes2Clicked)
           {
-            var msgDialog = new MessageWindow("Do you want to save changes to " + name + "?", Resource.UNSAVED,
-              MessageWindow.IconType.Question, "Don't Save", "Save");
-            msgDialog.ShowDialog();
-            cancel = !msgDialog.IsYes1Clicked && !msgDialog.IsYes2Clicked;
-            if (msgDialog.IsYes2Clicked)
-            {
-              SaveClick(this, null);
-            }
+            SaveClick(this, null);
           }
         }
       }
@@ -218,7 +229,7 @@ namespace EQLogParser
     {
       if (advancedText != null)
       {
-        if (advancedText.Text == "Switch to Advanced Mode")
+        if (advancedText.Text == "Switch to Advanced")
         {
           _theConfig.IsAdvanced = true;
           basicCheckBox.Visibility = Visibility.Collapsed;
@@ -265,7 +276,7 @@ namespace EQLogParser
           titleLabel.Content = "No Triggers Enabled";
         }
 
-        advancedText.Text = "Switch to Basic Mode";
+        advancedText.Text = "Switch to Basic";
         mainGrid.ColumnDefinitions[0].Width = _characterViewWidth;
         mainGrid.ColumnDefinitions[1].Width = new GridLength(2);
       }
@@ -291,15 +302,10 @@ namespace EQLogParser
           titleLabel.Content = "Check to Enable Triggers";
         }
 
-        advancedText.Text = "Switch to Advanced Mode";
+        advancedText.Text = "Switch to Advanced";
         mainGrid.ColumnDefinitions[0].Width = new GridLength(0);
         mainGrid.ColumnDefinitions[1].Width = new GridLength(0);
       }
-
-      advancedText.UpdateLayout();
-      advancedText.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-      advancedText.Arrange(new Rect(advancedText.DesiredSize));
-      underlineRect.Width = advancedText.ActualWidth;
     }
 
     private void ClosePreviewOverlaysEvent(bool _)
@@ -557,13 +563,25 @@ namespace EQLogParser
 
     private void ShowClick(object sender, RoutedEventArgs e)
     {
-      dynamic model = thePropertyGrid?.SelectedObject;
-      if (model is TimerOverlayPropertyModel or TextOverlayPropertyModel && model.Node?.Id is string id)
+      TriggerNode node = null;
+      var model = thePropertyGrid?.SelectedObject;
+      var isTimer = false;
+      if (model is TimerOverlayPropertyModel timerModel)
+      {
+        isTimer = true;
+        node = timerModel.Node;
+      }
+      else if (model is TextOverlayPropertyModel textModel)
+      {
+        node = textModel.Node;
+      }
+
+      if (node?.Id is { } id)
       {
         if (!_previewWindows.TryGetValue(id, out var window))
         {
-          _previewWindows[id] = (model is TimerOverlayPropertyModel) ? new TimerOverlayWindow(model.Node, _previewWindows)
-            : new TextOverlayWindow(model.Node, _previewWindows);
+          _previewWindows[id] = isTimer ? new TimerOverlayWindow(node, _previewWindows)
+            : new TextOverlayWindow(node, _previewWindows);
           _previewWindows[id].Show();
         }
         else
@@ -576,33 +594,46 @@ namespace EQLogParser
 
     private async void SaveClick(object sender, RoutedEventArgs e)
     {
-      dynamic model = thePropertyGrid?.SelectedObject;
-      if (model is TriggerPropertyModel)
+      var model = thePropertyGrid?.SelectedObject;
+      if (model is TriggerPropertyModel triggerModel)
       {
-        await TriggerUtil.Copy(model.Node.TriggerData, model);
-        await TriggerStateManager.Instance.Update(model.Node);
+        await TriggerUtil.Copy(triggerModel.Node.TriggerData, model);
+        await TriggerStateManager.Instance.Update(triggerModel.Node);
 
         // reload triggers if current one is enabled by anyone
-        if (await TriggerStateManager.Instance.IsAnyEnabled(model.Node.Id))
+        if (await TriggerStateManager.Instance.IsAnyEnabled(triggerModel.Node.Id))
         {
           TriggerManager.Instance.TriggersUpdated();
         }
       }
-      else if (model is TextOverlayPropertyModel or TimerOverlayPropertyModel)
+      else
       {
-        await TriggerManager.Instance.CloseOverlay(model.Node.Id);
-
-        // if this overlay is changing to default, and it isn't previously then need to refresh Overlay tree
-        var old = model.Node.OverlayData as Overlay;
-        var needRefresh = model.IsDefault && (old?.IsDefault != model.IsDefault);
-
-        await TriggerUtil.Copy(model.Node.OverlayData, model);
-        await TriggerStateManager.Instance.Update(model.Node);
-
-        // if this node is a default then refresh 
-        if (needRefresh)
+        TriggerNode node = null;
+        var isDefault = false;
+        if (model is TextOverlayPropertyModel textModel)
         {
-          await theTreeView.RefreshOverlays();
+          node = textModel.Node;
+          isDefault = textModel.IsDefault;
+        }
+        else if (model is TimerOverlayPropertyModel timerModel)
+        {
+          node = timerModel.Node;
+          isDefault = timerModel.IsDefault;
+        }
+
+        if (node != null)
+        {
+          TriggerManager.Instance.CloseOverlay(node.Id);
+          var wasDefault = node.OverlayData?.IsDefault == true;
+          await TriggerUtil.Copy(node.OverlayData, model);
+          await TriggerStateManager.Instance.Update(node);
+
+          // if this overlay is changing to default, and it wasn't previously
+          // then need to refresh Overlay tree
+          if (isDefault && !wasDefault)
+          {
+            await theTreeView.RefreshOverlays();
+          }
         }
       }
 
@@ -612,20 +643,24 @@ namespace EQLogParser
 
     private async void CancelClick(object sender, RoutedEventArgs e)
     {
-      dynamic model = thePropertyGrid?.SelectedObject;
-      if (model is TriggerPropertyModel)
+      var model = thePropertyGrid?.SelectedObject;
+      if (model is TriggerPropertyModel triggerModel)
       {
-        await TriggerUtil.Copy(model, model.Node.TriggerData);
-        var timerType = model.Node.TriggerData.TimerType;
+        await TriggerUtil.Copy(model, triggerModel.Node.TriggerData);
+        var timerType = triggerModel.Node.TriggerData.TimerType;
         EnableCategories(true, timerType, false, false, true, false, false);
       }
-      else if (model is TimerOverlayPropertyModel or TextOverlayPropertyModel)
+      else if (model is TimerOverlayPropertyModel timerModel)
       {
-        await TriggerUtil.Copy(model, model.Node.OverlayData);
+        await TriggerUtil.Copy(model, timerModel.Node.OverlayData);
+      }
+      else if (model is TextOverlayPropertyModel textModel)
+      {
+        await TriggerUtil.Copy(model, textModel.Node.OverlayData);
       }
 
       thePropertyGrid?.RefreshPropertygrid();
-      Dispatcher.Invoke(() => cancelButton.IsEnabled = saveButton.IsEnabled = false, DispatcherPriority.Background);
+      Dispatcher.Invoke(() => cancelButton.IsEnabled = saveButton.IsEnabled = false, DispatcherPriority.DataBind);
     }
 
     private void TriggerUpdateEvent(TriggerNode node)

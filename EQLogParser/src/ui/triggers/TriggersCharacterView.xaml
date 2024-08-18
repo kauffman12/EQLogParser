@@ -19,9 +19,9 @@
         </DockPanel>
       </Border>
       <syncfusion:ToolBarAdv Grid.Row="1" GripperVisibility="Hidden" Background="{DynamicResource ContentBackground}">
-        <Button x:Name="addCharacter" FontSize="{DynamicResource EQContentSize}" Width="60" Padding="0,4,0,4" Click="AddClick">Add</Button>
-        <Button x:Name="modifyCharacter" FontSize="{DynamicResource EQContentSize}" Width="60" IsEnabled="False" Click="ModifyClick">Modify</Button>
-        <Button x:Name="deleteCharacter" FontSize="{DynamicResource EQContentSize}" Width="60" IsEnabled="False" Click="DeleteClick">Delete</Button>
+        <Button x:Name="addCharacter" FontSize="{DynamicResource EQContentSize}" Margin="0,0,12,0" Padding="0,4,0,4" Click="AddClick">Add</Button>
+        <Button x:Name="modifyCharacter" FontSize="{DynamicResource EQContentSize}" Margin="0,0,12,0" Padding="0,4,0,4" IsEnabled="False" Click="ModifyClick">Modify</Button>
+        <Button x:Name="deleteCharacter" FontSize="{DynamicResource EQContentSize}" Padding="0,4,0,4" IsEnabled="False" Click="DeleteClick">Delete</Button>
       </syncfusion:ToolBarAdv>
       <syncfusion:SfDataGrid x:Name="dataGrid"
                                Grid.Row="2"

@@ -209,7 +209,7 @@ namespace EQLogParser
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
       await TriggerStateManager.Instance.Update(_node);
-      await TriggerManager.Instance.CloseOverlay(_node.Id);
+      TriggerManager.Instance.CloseOverlay(_node.Id);
     }
 
     private void CancelClick(object sender, RoutedEventArgs e)

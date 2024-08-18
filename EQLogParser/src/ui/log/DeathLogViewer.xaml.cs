@@ -1,23 +1,26 @@
-﻿using System;
+﻿using Syncfusion.Data;
+using Syncfusion.UI.Xaml.Grid;
+using System;
 using System.Collections.Generic;
-using System.Dynamic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Data;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for DeathLogViewer.xaml
-  /// </summary>
   public partial class DeathLogViewer : IDisposable
   {
+    public ObservableCollection<DeathRow> DeathData { get; set; }
     private PlayerStats _currentPlayer;
     private readonly List<DeathEvent> _deaths = [];
 
     public DeathLogViewer()
     {
       InitializeComponent();
+      DeathData = [];
+      DataContext = this;
       MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
@@ -35,16 +38,14 @@ namespace EQLogParser
       deathList.ItemsSource = list;
       deathList.SelectedIndex = 0;
       _currentPlayer = playerStats;
-
-      DataGridUtil.UpdateTableMargin(dataGrid);
-      Display();
+      Load();
     }
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
 
-    private void Display()
+    private void Load()
     {
       var death = _deaths[deathList.SelectedIndex];
       var end = death.BeginTime;
@@ -134,19 +135,22 @@ namespace EQLogParser
         }
       }
 
-      var list = new List<dynamic>();
+      var list = new List<DeathRow>();
+
       foreach (var time in times.Keys.OrderBy(x => x))
       {
-        var sub = new List<dynamic>();
+        var sub = new ObservableCollection<DeathRow>();
         if (damages.TryGetValue(time, out var damageList))
         {
           damageList.ForEach(damage =>
           {
-            var row = new ExpandoObject() as dynamic;
-            row.Time = time;
-            row.Damage = damage;
-            row.Healing = null;
-            row.Spell = null;
+            var row = new DeathRow
+            {
+              BeginTime = time,
+              Damage = damage,
+              Healing = null,
+              Spell = null
+            };
             sub.Add(row);
           });
         }
@@ -162,11 +166,14 @@ namespace EQLogParser
             }
             else
             {
-              var row = new ExpandoObject() as dynamic;
-              row.Time = time;
-              row.Healing = heal;
-              row.Damage = null;
-              row.Spell = null;
+              var row = new DeathRow
+              {
+                BeginTime = time,
+                Healing = heal,
+                Damage = null,
+                Spell = null
+              };
+
               sub.Add(row);
             }
           });
@@ -183,17 +190,22 @@ namespace EQLogParser
             }
             else
             {
-              var row = new ExpandoObject() as dynamic;
-              row.Time = time;
-              row.Spell = spell;
-              row.Damage = null;
-              row.Healing = null;
+              var row = new DeathRow
+              {
+                BeginTime = time,
+                Spell = spell,
+                Damage = null,
+                Healing = null
+              };
               sub.Add(row);
             }
           });
         }
 
-        list.AddRange(sub);
+        foreach (var item in sub)
+        {
+          list.Add(item);
+        }
       }
 
       var combined = death.Record.Message;
@@ -222,22 +234,26 @@ namespace EQLogParser
       }
 
       AppendMessage(list, combined, end);
-      dataGrid.ItemsSource = list;
+      UiUtil.UpdateObservable(list, DeathData);
+      dataGrid?.View?.Refresh();
     }
 
-    private static void AppendMessage(List<dynamic> list, string message, double end)
+    private static void AppendMessage(List<DeathRow> list, string message, double end)
     {
       if (!string.IsNullOrEmpty(message))
       {
-        if (list.Count > 0 && list[^1].Time == end && string.IsNullOrEmpty(list[^1].Damage))
+        if (list.Count > 0 && list[^1].BeginTime.Equals(end) && string.IsNullOrEmpty(list[^1].Damage))
         {
           list[^1].Damage = message;
         }
         else
         {
-          var row = new ExpandoObject() as dynamic;
-          row.Time = end;
-          row.Damage = message;
+          var row = new DeathRow
+          {
+            BeginTime = end,
+            Damage = message
+          };
+
           list.Add(row);
         }
       }
@@ -245,9 +261,41 @@ namespace EQLogParser
 
     private void OptionsChanged(object sender, EventArgs e)
     {
-      if (_currentPlayer != null)
+      if (dataGrid.View != null)
       {
-        Display();
+        Load();
+      }
+    }
+
+    private void AutoGeneratingColumn(object sender, AutoGeneratingColumnArgs e)
+    {
+      var mapping = e.Column.MappingName;
+      if (mapping == "BeginTime")
+      {
+        e.Column.SortMode = DataReflectionMode.Value;
+        e.Column.DisplayBinding = new Binding
+        {
+          Path = new PropertyPath(mapping),
+          Converter = new DateTimeConverter()
+        };
+        e.Column.TextAlignment = TextAlignment.Center;
+        e.Column.Width = MainActions.CurrentDateTimeWidth;
+        e.Column.HeaderText = "Time";
+      }
+      else if (mapping == "Damage")
+      {
+        e.Column.HeaderText = "Received Damage";
+        e.Column.ColumnSizer = GridLengthUnitType.Star;
+      }
+      else if (mapping == "Healing")
+      {
+        e.Column.HeaderText = "Received Healing";
+        e.Column.ColumnSizer = GridLengthUnitType.Star;
+      }
+      else if (mapping == "Spell")
+      {
+        e.Column.HeaderText = "Received Spells";
+        e.Column.ColumnSizer = GridLengthUnitType.Star;
       }
     }
 
@@ -259,6 +307,7 @@ namespace EQLogParser
       if (!_disposedValue)
       {
         MainActions.EventsThemeChanged -= EventsThemeChanged;
+        DeathData.Clear();
         dataGrid?.Dispose();
         _disposedValue = true;
       }
@@ -273,5 +322,13 @@ namespace EQLogParser
       GC.SuppressFinalize(this);
     }
     #endregion
+  }
+
+  public class DeathRow
+  {
+    public double BeginTime { get; set; }
+    public string Spell { get; set; }
+    public string Damage { get; set; }
+    public string Healing { get; set; }
   }
 }

@@ -19,16 +19,13 @@
         Topmost="True"
         MaxWidth="1500"
         MaxHeight="1000"
-        MinWidth="290"
-        MinHeight="100"
-        Height="250"
+        MinWidth="250"
         MouseLeftButtonDown="OverlayMouseLeftDown"
         SizeChanged="WindowSizeChanged"
         Loaded="WindowLoaded"
         UseLayoutRounding="True"
         Closing="WindowClosing"
         Style="{x:Null}"
-        Width="350"
         WindowStyle="None"
         ShowInTaskbar="False">
   <Grid>
@@ -61,31 +58,19 @@
           <StackPanel x:Name="tankContent" Orientation="Vertical" Visibility="Collapsed" />
         </StackPanel>
       </Border>
+      <Grid x:Name="lineGrid">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"></ColumnDefinition>
+          <ColumnDefinition Width="Auto"></ColumnDefinition>
+          <ColumnDefinition Width="*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <Rectangle Grid.Column="0" x:Name="heightRectangle" Height="2" Fill="{DynamicResource EQStopForegroundBrush}" HorizontalAlignment="Stretch" />
+        <TextBlock Grid.Column="1" Margin="2,0,2,0" Padding="0" Foreground="{DynamicResource EQStopForegroundBrush}" FontFamily="Roboto" FontSize="{DynamicResource EQDescriptionSize}" Text="Height Set At This Line" />
+        <Rectangle Grid.Column="2" Height="2" Fill="{DynamicResource EQStopForegroundBrush}" HorizontalAlignment="Stretch" />
+      </Grid>
       <StackPanel x:Name="buttonsPanel" Visibility="Collapsed" Orientation="Vertical" HorizontalAlignment="Left" Margin="0,4,0,0">
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-          <ComboBox x:Name="showNames" SelectionChanged="ShowNamesChanged" ToolTip="Select Hide Others if you want to hide other Player names and classes." FontStretch="Condensed" FontSize="11">
-            <ComboBoxItem>All Names</ComboBoxItem>
-            <ComboBoxItem>Hide Others</ComboBoxItem>
-          </ComboBox>
-          <ComboBox x:Name="showCritRate" SelectionChanged="ShowCritRateChanged" SelectedIndex="0" FontStretch="Condensed" FontSize="11"
-            ToolTip="Displays Additional Crit Rate for DD or DoT based ADPS. Assumes Max Level/AAs.">
-            <ComboBoxItem>Crit% Off</ComboBoxItem>
-            <ComboBoxItem>DoT Crit%</ComboBoxItem>
-            <ComboBoxItem>Nuke Crit%</ComboBoxItem>
-            <ComboBoxItem>Both Crit%</ComboBoxItem>
-          </ComboBox>
-          <ComboBox x:Name="damageModeList" SelectionChanged="DamageModeChanged" FontStretch="Condensed" FontSize="11"
-            ToolTip="Choose On Kill for the Damage Meter to reset damage after NPCs are killed. Otherwise the Damage Meter stays up and continues counting until the selected timeout.">
-            <ComboBoxItem Tag="0">Reset On Kill</ComboBoxItem>
-            <ComboBoxItem Tag="30">Reset 30s</ComboBoxItem>
-            <ComboBoxItem Tag="40">Reset 40s</ComboBoxItem>
-            <ComboBoxItem Tag="50">Reset 50s</ComboBoxItem>
-            <ComboBoxItem Tag="60">Reset 60s</ComboBoxItem>
-          </ComboBox>
-          <ComboBox x:Name="classList" SelectionChanged="SelectedClassChanged" FontStretch="Condensed" FontSize="11" ToolTip="Display all classes or the selected class."></ComboBox>
-        </StackPanel>
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Height="30">
-          <ComboBox x:Name="maxRowsList" SelectionChanged="MaxRowsChanged" ToolTip="Number of Plays to Display" FontStretch="Condensed" FontSize="11">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0">
+          <ComboBox x:Name="maxRowsList" FontFamily="Roboto" Background="{DynamicResource ContentBackground}" FontSize="{DynamicResource EQContentSize}" SelectionChanged="MaxRowsChanged" ToolTip="Number of Players to display.">
             <ComboBoxItem>1</ComboBoxItem>
             <ComboBoxItem>2</ComboBoxItem>
             <ComboBoxItem>3</ComboBoxItem>
@@ -97,20 +82,42 @@
             <ComboBoxItem>9</ComboBoxItem>
             <ComboBoxItem>10</ComboBoxItem>
           </ComboBox>
-          <ComboBox x:Name="fontList" SelectionChanged="FontSizeChanged" ToolTip="Font Size" FontStretch="Condensed" FontSize="11">
+          <ComboBox x:Name="fontList" FontFamily="Roboto" Background="{DynamicResource ContentBackground}" FontSize="{DynamicResource EQContentSize}" SelectionChanged="FontSizeChanged" ToolTip="Font Size">
             <ComboBoxItem Tag="10">10pt</ComboBoxItem>
             <ComboBoxItem Tag="12">12pt</ComboBoxItem>
             <ComboBoxItem Tag="14">14pt</ComboBoxItem>
             <ComboBoxItem Tag="16">16pt</ComboBoxItem>
           </ComboBox>
-          <syncfusion:ColorPicker x:Name="progressBrush" Margin="2,4,0,0" ToolTip="Bar Color" HeaderTemplate="{DynamicResource ColorPickerMinHeaderTemplate}" EnableSolidToGradientSwitch="False" IsGradientPropertyEnabled="False" BorderThickness="0" Background="Transparent" ColorChanged="SelectedProgressBrush"/>
-          <CheckBox x:Name="miniBars" Content="Thin Bars" Margin="2,5,2,0" ToolTip="Thin Ranking Bars" Checked="MiniBarsChecked" Unchecked="MiniBarsChecked" FontSize="11"></CheckBox>
-          <CheckBox x:Name="streamer" Content="Streamer Mode" Margin="2,5,2,0" ToolTip="Allow DPS Meter to show up as its own Window to make it available in OBS." Checked="StreamerChecked" Unchecked="StreamerChecked" FontSize="11"></CheckBox>
+          <syncfusion:ColorPicker x:Name="progressBrush" Height="{DynamicResource EQTabHeaderHeight}" ToolTip="Bar Color" EnableSolidToGradientSwitch="False" IsGradientPropertyEnabled="False" BorderThickness="0,0,0,1" Background="{DynamicResource ContentBackground}" ColorChanged="SelectedProgressBrush"/>
         </StackPanel>
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Height="30">
-          <Button x:Name="saveButton" Margin="0,5,0,0" VerticalAlignment="Top" Padding="0" FontSize="11" IsEnabled="False" Height="25" Width="40" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
-          <Button x:Name="cancelButton" Margin="2,5,0,0" VerticalAlignment="Top" Padding="0" FontSize="11" IsEnabled="False" Width="40" Height="25" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
-          <Button x:Name="closeButton" Margin="2,5,0,0" VerticalAlignment="Top" Padding="0" FontSize="11" IsEnabled="True" Width="40" Height="25" HorizontalAlignment="Left" Click="CloseClick">Close</Button>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <ComboBox x:Name="showCritRate" FontFamily="Roboto" Height="{DynamicResource EQTabHeaderHeight}" Background="{DynamicResource ContentBackground}" FontSize="{DynamicResource EQContentSize}" SelectionChanged="ShowCritRateChanged" SelectedIndex="0"
+                    ToolTip="Displays Additional Crit Rate for DD or DoT based ADPS. Assumes Max Level/AAs.">
+            <ComboBoxItem>Crit% Off</ComboBoxItem>
+            <ComboBoxItem>DoT Crit%</ComboBoxItem>
+            <ComboBoxItem>Nuke Crit%</ComboBoxItem>
+            <ComboBoxItem>Both Crit%</ComboBoxItem>
+          </ComboBox>
+          <ComboBox x:Name="damageModeList" Background="{DynamicResource ContentBackground}" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" SelectionChanged="DamageModeChanged"
+                    ToolTip="Choose 'On Kill' for the Damage Meter to reset damage after NPCs are killed. Otherwise, the Damage Meter stays up and continues counting until the selected timeout.">
+            <ComboBoxItem Tag="0">Reset On Kill</ComboBoxItem>
+            <ComboBoxItem Tag="30">Reset 30s</ComboBoxItem>
+            <ComboBoxItem Tag="40">Reset 40s</ComboBoxItem>
+            <ComboBoxItem Tag="50">Reset 50s</ComboBoxItem>
+            <ComboBoxItem Tag="60">Reset 60s</ComboBoxItem>
+          </ComboBox>
+          <ComboBox x:Name="classList" Background="{DynamicResource ContentBackground}" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" SelectionChanged="SelectedClassChanged" ToolTip="Display all classes or the selected class."></ComboBox>
+
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <CheckBox x:Name="miniBars" Content="Thin" Height="{DynamicResource EQTabHeaderHeight}" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Template="{StaticResource CustomDamageMeterCheckBoxTemplate}" ToolTip="Use thin Ranking Bars" Checked="MiniBarsChecked" Unchecked="MiniBarsChecked" />
+          <CheckBox x:Name="hideOthers" Content="Hide Others" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Template="{StaticResource CustomDamageMeterCheckBoxTemplate}" ToolTip="Hide the names of other Players." Checked="HideOthersChecked" Unchecked="HideOthersChecked" />
+          <CheckBox x:Name="streamer" Content="Streamer" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Template="{StaticResource CustomDamageMeterCheckBoxTemplate}" ToolTip="Streamer Mode. Allow DPS Meter to show up as its own Window to make it available in OBS." Checked="StreamerChecked" Unchecked="StreamerChecked" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <Button x:Name="saveButton" Margin="2,4,0,0" Height="{DynamicResource EQTabHeaderHeight}" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Padding="4,2,4,2" VerticalAlignment="Top" IsEnabled="False" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
+          <Button x:Name="cancelButton" Margin="2,4,0,0" Height="{DynamicResource EQTabHeaderHeight}" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Padding="4,2,4,2" VerticalAlignment="Top" IsEnabled="False" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
+          <Button x:Name="closeButton" Margin="2,4,0,0" Height="{DynamicResource EQTabHeaderHeight}" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Padding="4,2,4,2" VerticalAlignment="Top" IsEnabled="True" HorizontalAlignment="Left" Click="CloseClick">Close</Button>
         </StackPanel>
       </StackPanel>
     </StackPanel>

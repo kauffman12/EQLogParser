@@ -10,24 +10,33 @@
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30"></RowDefinition>
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <Label x:Name="titleLabel" Content="Loading..." Style="{StaticResource EQTitleStyle}" />
     </StackPanel>
     <StackPanel x:Name="controlPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="groupHits" Visibility="Visible" IsChecked="True" Margin="0,0,8,2" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Group Actions</CheckBox>
-      <CheckBox x:Name="showPets" Visibility="Collapsed" IsChecked="True" Margin="0,0,8,2" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">Show Pets</CheckBox>
-      <ComboBox Margin="0,0,0,2" x:Name="typeList" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,0,2" x:Name="actionList" SelectionChanged="OptionsChanged" />
+      <CheckBox x:Name="groupHits" Visibility="Visible" IsChecked="True" Margin="0,0,4,2" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">
+        <CheckBox.LayoutTransform>
+          <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+        </CheckBox.LayoutTransform>
+      </CheckBox>
+      <Label Content="Group Actions" Margin="0,0,8,2" Padding="0" VerticalAlignment="Center" FontSize="{DynamicResource EQContentSize}" />
+      <CheckBox x:Name="showPets" Visibility="Collapsed" IsChecked="True" Margin="0,0,4,2" VerticalAlignment="Center" VerticalContentAlignment="Center" Checked="OptionsChanged" Unchecked="OptionsChanged">
+        <CheckBox.LayoutTransform>
+          <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+        </CheckBox.LayoutTransform>
+      </CheckBox>
+      <Label Content="Show Pets" Margin="0,0,8,2" Padding="0" VerticalAlignment="Center" FontSize="{DynamicResource EQContentSize}" />
+      <ComboBox Margin="0,0,8,2" x:Name="typeList" SelectionChanged="OptionsChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="actionList" SelectionChanged="OptionsChanged" />
       <ComboBox Margin="0,0,8,2" x:Name="actedList" SelectionChanged="OptionsChanged" />
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
                            AllowSorting="True"
                            AutoGenerateColumns="False"
-                           ColumnSizer="AutoWithLastColumnFill"
                            CurrentCellBorderThickness="0"
                            FrozenColumnCount="2"
                            Grid.Row="1"
@@ -36,7 +45,7 @@
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
-                           RowHeaderWidth="50"
+                           RowHeaderWidth="{DynamicResource EQTableRowHeaderWidth}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            ShowRowHeader="True"               
                            SelectionMode="Extended">
@@ -87,20 +96,7 @@
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
-      </syncfusion:SfDataGrid.ContextMenu>      
-      <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Time" SortMode="Value" DisplayBinding="{Binding Time, Converter={StaticResource DateTimeConverter}}"
-                                   TextAlignment="Center" HeaderText="Time" />
-        <syncfusion:GridTextColumn MappingName="TimeSince" TextAlignment="Center" HeaderText="Since" />
-        <syncfusion:GridTextColumn MappingName="Type" HeaderText="Type" />
-        <syncfusion:GridTextColumn MappingName="SubType" HeaderText="Action" />
-        <syncfusion:GridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="" />
-        <syncfusion:GridNumericColumn MappingName="OverTotal" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Over Healed" />
-        <!-- columns 5 to 12 added dynamically -->
-        <syncfusion:GridTextColumn MappingName="Actor" HeaderText="" />
-        <syncfusion:GridTextColumn MappingName="ActorClass" HeaderText="" />
-        <syncfusion:GridTextColumn MappingName="Acted" HeaderText="" />
-      </syncfusion:SfDataGrid.Columns>
+      </syncfusion:SfDataGrid.ContextMenu>
     </syncfusion:SfDataGrid>
   </Grid>
 </UserControl>

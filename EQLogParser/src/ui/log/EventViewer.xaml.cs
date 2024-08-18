@@ -1,9 +1,12 @@
-﻿using Syncfusion.UI.Xaml.Grid;
+﻿using Syncfusion.Data;
+using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 
@@ -14,11 +17,13 @@ namespace EQLogParser
   /// </summary>
   public partial class EventViewer : IDocumentContent
   {
+    public ObservableCollection<EventRow> EventData { get; set; }
+
     private const string ZoneEvent = "Entered Area";
-    private const string KillshotEvent = "Kill Shot";
-    private const string PlayerslainEvent = "Player Slain";
-    private const string PlayerkillEvent = "Player Killing";
-    private const string MezbreakEvent = "Mez Break";
+    private const string KillShotEvent = "Kill Shot";
+    private const string PlayerSlainEvent = "Player Slain";
+    private const string PlayerKillEvent = "Player Killing";
+    private const string MezBreakEvent = "Mez Break";
 
     private readonly DispatcherTimer _filterTimer;
     private bool _currentShowMezBreaks = true;
@@ -33,19 +38,20 @@ namespace EQLogParser
     public EventViewer()
     {
       InitializeComponent();
+      EventData = [];
+      DataContext = this;
 
       var list = new List<ComboBoxItemDetails>
       {
         new() { IsChecked = true, Text = ZoneEvent },
-        new() { IsChecked = true, Text = KillshotEvent },
-        new() { IsChecked = true, Text = MezbreakEvent },
-        new() { IsChecked = true, Text = PlayerkillEvent },
-        new() { IsChecked = true, Text = PlayerslainEvent }
+        new() { IsChecked = true, Text = KillShotEvent },
+        new() { IsChecked = true, Text = MezBreakEvent },
+        new() { IsChecked = true, Text = PlayerKillEvent },
+        new() { IsChecked = true, Text = PlayerSlainEvent }
       };
 
       selectedOptions.ItemsSource = list;
       UiElementUtil.SetComboBoxTitle(selectedOptions, list.Count, Resource.EVENT_TYPES_SELECTED);
-      DataGridUtil.UpdateTableMargin(dataGrid);
       MainActions.EventsThemeChanged += EventsThemeChanged;
 
       eventFilter.Text = Resource.EVENT_FILTER_TEXT;
@@ -56,7 +62,7 @@ namespace EQLogParser
         if (_currentFilterText != eventFilter.Text)
         {
           _currentFilterText = eventFilter.Text;
-          UpdateTitleAndRefresh();
+          Refresh();
         }
       };
     }
@@ -68,7 +74,7 @@ namespace EQLogParser
 
     private void Load()
     {
-      var rows = new List<EventRow>();
+      var list = new List<EventRow>();
       foreach (var (beginTime, record) in RecordManager.Instance.GetAllDeaths())
       {
         if (!(PlayerManager.Instance.IsVerifiedPet(record.Killed) && !PlayerManager.IsPossiblePlayerName(record.Killed)))
@@ -78,52 +84,41 @@ namespace EQLogParser
           var isActorPlayer = PlayerManager.Instance.IsPetOrPlayerOrSpell(record.Killer);
           var isTargetPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Killed);
 
-          var text = KillshotEvent;
+          var text = KillShotEvent;
           if (isTargetPlayer && isActorPlayer)
           {
-            text = PlayerkillEvent;
+            text = PlayerKillEvent;
           }
           else if (isTargetPlayer || (isActorNpc && !isTargetNpc && PlayerManager.IsPossiblePlayerName(record.Killed)))
           {
-            text = PlayerslainEvent;
+            text = PlayerSlainEvent;
           }
 
-          rows.Add(new EventRow { Time = beginTime, Actor = record.Killer, Target = record.Killed, Event = text });
+          list.Add(new EventRow { BeginTime = beginTime, Actor = record.Killer, Target = record.Killed, Event = text });
         }
       }
 
       foreach (var (beginTime, record) in RecordManager.Instance.GetAllMezBreaks())
       {
-        rows.Add(new EventRow { Time = beginTime, Actor = record.Breaker, Target = record.Awakened, Event = MezbreakEvent });
+        list.Add(new EventRow { BeginTime = beginTime, Actor = record.Breaker, Target = record.Awakened, Event = MezBreakEvent });
       }
 
       foreach (var (beginTime, record) in RecordManager.Instance.GetAllZoning())
       {
-        rows.Add(new EventRow { Time = beginTime, Actor = ConfigUtil.PlayerName, Event = ZoneEvent, Target = record.Zone });
+        list.Add(new EventRow { BeginTime = beginTime, Actor = ConfigUtil.PlayerName, Event = ZoneEvent, Target = record.Zone });
       }
 
-      dataGrid.ItemsSource = rows;
-      UpdateTitleAndRefresh();
-    }
+      UiUtil.UpdateObservable(list, EventData);
 
-    private void UpdateTitleAndRefresh()
-    {
-      dataGrid?.View?.RefreshFilter();
-      var count = dataGrid?.View != null ? dataGrid.View.Records.Count : 0;
-      titleLabel.Content = count == 0 ? "No Events Found" : count + " Events Found";
-    }
-
-    private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
-    {
-      if (dataGrid.ItemsSource != null)
+      if (dataGrid.View != null)
       {
         dataGrid.View.Filter = obj =>
         {
           var result = false;
           if (obj is EventRow row)
           {
-            result = (_currentShowMezBreaks && row.Event == MezbreakEvent) || (_currentShowEnterZone && row.Event == ZoneEvent) || (_currentShowKillShots &&
-              row.Event == KillshotEvent) || (_currentShowPlayerKilling && row.Event == PlayerkillEvent) || (_currentShowPlayerSlain && row.Event == PlayerslainEvent);
+            result = (_currentShowMezBreaks && row.Event == MezBreakEvent) || (_currentShowEnterZone && row.Event == ZoneEvent) || (_currentShowKillShots &&
+              row.Event == KillShotEvent) || (_currentShowPlayerKilling && row.Event == PlayerKillEvent) || (_currentShowPlayerSlain && row.Event == PlayerSlainEvent);
 
             if (result && !string.IsNullOrEmpty(_currentFilterText) && _currentFilterText != Resource.EVENT_FILTER_TEXT)
             {
@@ -147,8 +142,18 @@ namespace EQLogParser
           return result;
         };
 
-        UpdateTitleAndRefresh();
+        dataGrid.View.Refresh();
       }
+
+      UpdateTitle();
+    }
+
+    private void UpdateTitle() => titleLabel.Content = EventData.Count == 0 ? "No Events Found" : EventData.Count + " Events Found";
+
+    private void Refresh()
+    {
+      dataGrid?.View?.RefreshFilter();
+      UpdateTitle();
     }
 
     private void FilterOptionChange(object sender, EventArgs e)
@@ -156,7 +161,7 @@ namespace EQLogParser
       if (eventFilterModifier?.SelectedIndex > -1 && eventFilterModifier.SelectedIndex != _currentFilterModifier)
       {
         _currentFilterModifier = eventFilterModifier.SelectedIndex;
-        UpdateTitleAndRefresh();
+        Refresh();
       }
     }
 
@@ -173,19 +178,19 @@ namespace EQLogParser
               _currentShowEnterZone = item.IsChecked;
               count += item.IsChecked ? 1 : 0;
               break;
-            case MezbreakEvent:
+            case MezBreakEvent:
               _currentShowMezBreaks = item.IsChecked;
               count += item.IsChecked ? 1 : 0;
               break;
-            case PlayerkillEvent:
+            case PlayerKillEvent:
               _currentShowPlayerKilling = item.IsChecked;
               count += item.IsChecked ? 1 : 0;
               break;
-            case PlayerslainEvent:
+            case PlayerSlainEvent:
               _currentShowPlayerSlain = item.IsChecked;
               count += item.IsChecked ? 1 : 0;
               break;
-            case KillshotEvent:
+            case KillShotEvent:
               _currentShowKillShots = item.IsChecked;
               count += item.IsChecked ? 1 : 0;
               break;
@@ -193,7 +198,7 @@ namespace EQLogParser
         }
 
         UiElementUtil.SetComboBoxTitle(selectedOptions, count, Resource.EVENT_TYPES_SELECTED);
-        UpdateTitleAndRefresh();
+        Refresh();
       }
     }
 
@@ -246,16 +251,41 @@ namespace EQLogParser
     public void HideContent()
     {
       MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
-      dataGrid.ItemsSource = null;
+      EventData.Clear();
       _ready = false;
+    }
+
+    private void AutoGeneratingColumn(object sender, AutoGeneratingColumnArgs e)
+    {
+      var mapping = e.Column.MappingName;
+      if (mapping == "BeginTime")
+      {
+        e.Column.SortMode = DataReflectionMode.Value;
+        e.Column.DisplayBinding = new Binding
+        {
+          Path = new PropertyPath(mapping),
+          Converter = new DateTimeConverter()
+        };
+        e.Column.TextAlignment = TextAlignment.Center;
+        e.Column.Width = MainActions.CurrentDateTimeWidth;
+        e.Column.HeaderText = "Time";
+      }
+      else if (mapping == "Target")
+      {
+        e.Column.Width = MainActions.CurrentNpcWidth;
+      }
+      else
+      {
+        e.Column.Width = DataGridUtil.CalculateMinGridHeaderWidth(e.Column.HeaderText);
+      }
     }
   }
 
-  internal class EventRow
+  public class EventRow
   {
-    public double Time { get; set; }
+    public double BeginTime { get; set; }
     public string Actor { get; set; }
-    public string Target { get; set; }
     public string Event { get; set; }
+    public string Target { get; set; }
   }
 }

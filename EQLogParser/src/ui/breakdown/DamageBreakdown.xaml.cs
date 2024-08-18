@@ -68,10 +68,10 @@ namespace EQLogParser
         Dispatcher.InvokeAsync(() =>
         {
           titleLabel.Content = _title;
-          showPets.IsEnabled = pets;
           dataGrid.ItemsSource = list;
           dataGrid.IsEnabled = true;
           UiElementUtil.SetEnabled(controlPanel.Children, true);
+          showPets.IsEnabled = pets;
         });
       });
     }
@@ -170,10 +170,10 @@ namespace EQLogParser
       }
     }
 
-    private void OptionsChange(object sender, RoutedEventArgs e)
+    private void OptionsChanged(object sender, RoutedEventArgs e)
     {
       // check if call is during initialization
-      if (dataGrid?.View != null)
+      if (dataGrid?.View != null && _currentShowPets != showPets.IsChecked == true)
       {
         _currentShowPets = showPets.IsChecked == true;
         dataGrid.View.RefreshFilter();

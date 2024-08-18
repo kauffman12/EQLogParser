@@ -11,32 +11,32 @@
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30" />
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}" />
       <RowDefinition Height="300*" />
-      <RowDefinition Height="20" />
+      <RowDefinition Height="{DynamicResource EQGridFooterHeight}" />
     </Grid.RowDefinitions>
     <Grid.Resources>
       <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
     </Grid.Resources>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <TextBox x:Name="logSearch" Margin="8,0,0,2" ToolTip="Minimum of 2 Characters" FontStyle="Italic" Width="175" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
-      <ComboBox x:Name="logSearchModifier" Margin="0,0,0,2" SelectedIndex="0" Width="76" VerticalContentAlignment="Center">
+      <TextBox x:Name="logSearch" Margin="8,0,8,2" ToolTip="Minimum of 2 Characters" FontStyle="Italic" Width="175" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
+      <ComboBox x:Name="logSearchModifier" Margin="0,0,8,2" SelectedIndex="0" Width="76" VerticalContentAlignment="Center">
         <ComboBoxItem>And</ComboBoxItem>
         <ComboBoxItem>Or</ComboBoxItem>
         <ComboBoxItem>Excluding</ComboBoxItem>
       </ComboBox>
-      <TextBox x:Name="logSearch2" Margin="0,0,0,2" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" FontStyle="Italic" Width="175" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
-      <ComboBox x:Name="logSearchTime" Margin="0,0,0,2" SelectedIndex="0" Width="100" VerticalContentAlignment="Center" />
-      <CheckBox x:Name="useRegex" IsChecked="False" Margin="6,1,2,0" ToolTip="Allow regex to be used as search terms.">Use Regex</CheckBox>
-      <fa:ImageAwesome x:Name="searchIcon" Rotation="0" Margin="6,4,0,1" Height="18" Icon="Solid_Search" ToolTip="Start Searching" MouseLeftButtonDown="SearchClick" IsEnabledChanged="SearchIconIsEnabledChanged" />
+      <TextBox x:Name="logSearch2" Margin="0,0,8,2" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" FontStyle="Italic" Width="175" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
+      <ComboBox x:Name="logSearchTime" Margin="0,0,8,2" SelectedIndex="0" Width="100" VerticalContentAlignment="Center" />
+      <CheckBox x:Name="useRegex" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="False" Margin="6,1,2,2" Content="Use Regex" ToolTip="Allow regex to be used as search terms." />
+      <fa:ImageAwesome x:Name="searchIcon" Rotation="0" Margin="2,4,0,4" VerticalAlignment="Center" Height="{DynamicResource EQIconButtonHeight}" Icon="Solid_Search" ToolTip="Start Searching" MouseLeftButtonDown="SearchClick" IsEnabledChanged="SearchIconIsEnabledChanged" />
       <Label x:Name="progress" Visibility="Hidden" FontStyle="Italic" />
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox x:Name="logFilterModifier" Margin="0,0,0,2" SelectedIndex="0" Width="84" VerticalContentAlignment="Center" DropDownClosed="OptionsChange">
+      <ComboBox x:Name="logFilterModifier" Margin="0,0,8,2" SelectedIndex="0" VerticalContentAlignment="Center" DropDownClosed="OptionsChange">
         <ComboBoxItem>Includes</ComboBoxItem>
         <ComboBoxItem>Excludes</ComboBoxItem>
       </ComboBox>
-      <TextBox x:Name="logFilter" Margin="0,0,0,2" FontStyle="Italic" Width="175" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged"/>
+      <TextBox x:Name="logFilter" Margin="0,0,8,2" FontStyle="Italic" Width="175" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged"/>
       <ComboBox x:Name="lineTypes" Width="135" Margin="0,0,8,2" DropDownClosed="SelectLineTypes" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
     </StackPanel>
     <syncfusion:TabControlExt x:Name="tabControl" TabClosed="TabClosed" PreviewSelectedItemChangedEvent="PreviewSelectedItemChangedEvent" Grid.Row="1" AllowDragDrop="False" EnableLabelEdit="False" CloseMode="Hide" TabStripPlacement="Top" CloseButtonType="Individual" ShowTabItemContextMenu="False" TabListContextMenuOptions="None">
@@ -71,10 +71,9 @@
       <TextBlock x:Name="statusCount">0 Lines</TextBlock>
     </StatusBar>
     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
-      <syncfusion:ComboBoxAdv x:Name="fontFamily" Height="20" BorderThickness="0" FontSize="{DynamicResource EQContentSize}" Width="120" SelectionChanged="FontFamily_Changed" />
-      <syncfusion:ComboBoxAdv x:Name="fontSize" Height="20" BorderThickness="0" FontSize="{DynamicResource EQContentSize}" SelectionChanged="FontSize_Changed" />
-      <syncfusion:ColorPicker x:Name="colorPicker" Width="34" BorderThickness="0" Padding="4,0,0,4" Margin="0" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False"
-        HeaderTemplate="{DynamicResource ColorPickerMinHeaderTemplate}" ColorChanged="FontFgColor_Changed" />
+      <syncfusion:ComboBoxAdv x:Name="fontFamily" BorderThickness="0" FontSize="{DynamicResource EQContentSize}" Width="120" SelectionChanged="FontFamilyChanged" />
+      <syncfusion:ComboBoxAdv x:Name="fontSize" BorderThickness="0" FontSize="{DynamicResource EQContentSize}" SelectionChanged="FontSizeChanged" />
+      <syncfusion:ColorPicker x:Name="colorPicker" Padding="0,2,0,0"  VerticalAlignment="Center" VerticalContentAlignment="Center" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False" BorderThickness="0,0,0,1" ColorChanged="FontFgColorChanged" />
     </StackPanel>    
   </Grid>
 </UserControl>

@@ -72,9 +72,9 @@ namespace EQLogParser
             {
               data.Children.RemoveAt(0);
             }
-          }, DispatcherPriority.Render);
+          });
         }
-      }, DispatcherPriority.Background);
+      }, DispatcherPriority.Loaded);
     }
 
     private void CloseButtonOnClick(object sender, RoutedEventArgs e)

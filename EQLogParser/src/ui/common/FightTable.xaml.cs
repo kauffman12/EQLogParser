@@ -1,4 +1,5 @@
-﻿using Syncfusion.UI.Xaml.Grid;
+﻿using Syncfusion.Data;
+using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.ScrollAxis;
 using Syncfusion.Windows.Tools.Controls;
 using System;
@@ -8,14 +9,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for NpcTable.xaml
-  /// </summary>
   public partial class FightTable
   {
     // time before creating new group
@@ -30,6 +29,7 @@ namespace EQLogParser
     private readonly ObservableCollection<Fight> _fights = [];
     private readonly ObservableCollection<Fight> _nonTankingFights = [];
     private bool _currentShowBreaks;
+    private bool _currentShowHp;
     private int _currentGroup = 1;
     private int _currentNonTankingGroup = 1;
     private uint _currentSortId = 1;
@@ -54,7 +54,7 @@ namespace EQLogParser
       menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled =
         menuItemSetPet.IsEnabled = menuItemSetPlayer.IsEnabled = menuItemRefresh.IsEnabled = false;
 
-      _selectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
+      _selectionTimer = new DispatcherTimer(DispatcherPriority.Send) { Interval = new TimeSpan(0, 0, 0, 0, 750) };
       _selectionTimer.Tick += (_, _) =>
       {
         if (!rightClickMenu.IsOpen)
@@ -98,8 +98,8 @@ namespace EQLogParser
       _updateTimer.Start();
 
       // read show hp setting
-      fightShowHitPoints.IsChecked = ConfigUtil.IfSet("NpcShowHitPoints");
-      dataGrid.Columns[1].IsHidden = !fightShowHitPoints.IsChecked.Value;
+      _currentShowHp = ConfigUtil.IfSet("NpcShowHitPoints");
+      fightShowHitPoints.IsChecked = _currentShowHp;
 
       // read show breaks and spells setting
       fightShowBreaks.IsChecked = _currentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", true);
@@ -157,6 +157,7 @@ namespace EQLogParser
       var style = dataGrid.RowStyle;
       dataGrid.RowStyle = null;
       dataGrid.RowStyle = style;
+      DataGridUtil.RefreshTableColumns(dataGrid);
     }
 
     private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
@@ -415,9 +416,9 @@ namespace EQLogParser
       }
     }
 
-    private void ShowBreakChange(object sender, RoutedEventArgs e)
+    private void ShowBreakChanged(object sender, RoutedEventArgs e)
     {
-      if (dataGrid?.ItemsSource is ObservableCollection<Fight>)
+      if (dataGrid?.View != null)
       {
         _currentShowBreaks = fightShowBreaks.IsChecked == true;
         ConfigUtil.SetSetting("NpcShowInactivityBreaks", _currentShowBreaks);
@@ -425,9 +426,9 @@ namespace EQLogParser
       }
     }
 
-    private void ShowTankingChange(object sender, RoutedEventArgs e)
+    private void ShowTankingChanged(object sender, RoutedEventArgs e)
     {
-      if (dataGrid?.ItemsSource is ObservableCollection<Fight>)
+      if (dataGrid?.View != null)
       {
         dataGrid.ItemsSource = (fightShowTanking.IsChecked == true) ? _fights : _nonTankingFights;
         ConfigUtil.SetSetting("NpcShowTanking", fightShowTanking.IsChecked == true);
@@ -435,12 +436,13 @@ namespace EQLogParser
       }
     }
 
-    private void ShowHitPointsChange(object sender, RoutedEventArgs e)
+    private void ShowHitPointsChanged(object sender, RoutedEventArgs e)
     {
-      if (dataGrid != null)
+      if (dataGrid?.View != null)
       {
-        dataGrid.Columns[1].IsHidden = !dataGrid.Columns[1].IsHidden;
-        ConfigUtil.SetSetting("NpcShowHitPoints", !dataGrid.Columns[1].IsHidden);
+        _currentShowHp = !_currentShowHp;
+        dataGrid.Columns[1].IsHidden = !_currentShowHp;
+        ConfigUtil.SetSetting("NpcShowHitPoints", _currentShowHp);
       }
     }
 
@@ -589,6 +591,49 @@ namespace EQLogParser
       _currentGroup = 1;
       _currentNonTankingGroup = 1;
       _currentSearchEntry = null;
+    }
+
+    private void AutoGeneratingColumn(object sender, AutoGeneratingColumnArgs e)
+    {
+      if (e.Column.MappingName == "SortId")
+      {
+        e.Column.SortMode = DataReflectionMode.Value;
+        e.Column.DisplayBinding = new Binding
+        {
+          Path = new PropertyPath("BeginTimeString")
+        };
+        e.Column.TextAlignment = TextAlignment.Center;
+        e.Column.ShowToolTip = true;
+        e.Column.ToolTipTemplate = (DataTemplate)Application.Current.Resources["TemplateToolTip"];
+        e.Column.HeaderText = "Initial Hit Time";
+        e.Column.Width = MainActions.CurrentDateTimeWidth;
+      }
+      else if (e.Column.MappingName == "DamageTotal")
+      {
+        e.Column.IsHidden = !_currentShowHp;
+        e.Column.DisplayBinding = new Binding
+        {
+          Path = new PropertyPath(e.Column.MappingName),
+          Converter = new TotalFormatConverter()
+        };
+        e.Column.TextAlignment = TextAlignment.Right;
+        e.Column.ShowToolTip = true;
+        e.Column.ToolTipTemplate = (DataTemplate)Application.Current.Resources["TemplateToolTip"];
+        e.Column.HeaderText = "HP";
+        e.Column.ColumnSizer = GridLengthUnitType.Auto;
+        e.Column.Padding = new Thickness(4, 0, 4, 0);
+      }
+      else if (e.Column.MappingName == "Name")
+      {
+        e.Column.ShowToolTip = true;
+        e.Column.ToolTipTemplate = (DataTemplate)Application.Current.Resources["TemplateToolTip"];
+        e.Column.ColumnSizer = GridLengthUnitType.AutoLastColumnFill;
+        e.Column.Padding = new Thickness(4, 0, 0, 0);
+      }
+      else
+      {
+        e.Cancel = true;
+      }
     }
   }
 }

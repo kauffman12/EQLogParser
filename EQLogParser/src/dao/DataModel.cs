@@ -39,19 +39,6 @@ namespace EQLogParser
     public void HideContent();
   }
 
-  internal class AlertEntry
-  {
-    public double EventTime { get; set; }
-    public double LogTime { get; set; }
-    public string Line { get; set; }
-    public string Name { get; set; }
-    public string Type { get; set; }
-    public string NodeId { get; set; }
-    public long Eval { get; set; }
-    public long Priority { get; set; }
-    public string CharacterId { get; set; }
-  }
-
   internal class LexiconItem
   {
     public string Replace { get; set; }
@@ -145,6 +132,7 @@ namespace EQLogParser
   {
     public Window TheWindow { get; set; }
     public long RemoveTicks { get; set; } = -1;
+    public bool IsCooldown { get; set; } = false;
   }
 
   internal class Trigger
@@ -398,15 +386,6 @@ namespace EQLogParser
     public ISummaryBuilder Source { get; set; }
   }
 
-  internal class QuickShareRecord : TimedAction
-  {
-    public string Key { get; set; }
-    public string From { get; set; }
-    public string To { get; set; }
-    public string Type { get; set; }
-    public bool IsMine { get; set; }
-  }
-
   internal class ResistRecord : IAction
   {
     public string Attacker { get; set; }
@@ -422,7 +401,7 @@ namespace EQLogParser
     public int From { get; set; }
   }
 
-  internal class HitRecord : IAction
+  public class HitRecord : IAction
   {
     public uint Total { get; set; }
     public uint OverTotal { get; set; }
@@ -464,9 +443,9 @@ namespace EQLogParser
   [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
   internal class LootRecord : IAction
   {
+    public string Player { get; set; }
     public string Item { get; set; }
     public uint Quantity { get; set; }
-    public string Player { get; set; }
     public string Npc { get; set; }
     public bool IsCurrency { get; set; }
 
@@ -533,12 +512,6 @@ namespace EQLogParser
     public double BeginTime { get; set; }
     public long LineNumber { get; set; }
     public string[] Split { get; set; }
-  }
-
-  internal class LootRow
-  {
-    public LootRecord Record { get; set; }
-    public double Time { get; set; }
   }
 
   internal class ActionGroup : TimedAction
@@ -613,20 +586,21 @@ namespace EQLogParser
     }
 
     public const string Breaktime = "Break Time";
+    // keeping these 3 fields in this order for display
+    public uint SortId { get; set; }
+    public long DamageTotal { get; set; }
+    public string Name { get; set; }
     public bool Dead { get; set; } = false;
     public double BeginDamageTime { get; set; } = double.NaN;
     public double BeginTankingTime { get; set; } = double.NaN;
     public double LastDamageTime { get; set; } = double.NaN;
     public double LastTankingTime { get; set; } = double.NaN;
     public string BeginTimeString { get; set; }
-    public string Name { get; set; }
     public long Id { get; set; }
     public string CorrectMapKey { get; set; }
     public int GroupId { get; set; }
-    public uint SortId { get; set; }
     public int NonTankingGroupId { get; set; }
     public bool IsInactivity { get; set; } = false;
-    public long DamageTotal { get; set; }
     public long TankTotal { get; set; }
     public long DamageHits { get; set; }
     public long TankHits { get; set; }

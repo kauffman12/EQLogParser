@@ -2,21 +2,18 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Dynamic;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for SpellDamageStatsViewer.xaml
-  /// </summary>
   public partial class SpellDamageStatsViewer : IDocumentContent
   {
     private readonly ObservableCollection<string> _players = [];
     private readonly ObservableCollection<string> _spells = [];
     private readonly ObservableCollection<string> _types = [];
+    public ObservableCollection<SpellDamageRow> SpellDamageData { get; set; }
     private bool _currentShowPlayers = true;
     private string _currentPlayer;
     private string _currentSpell;
@@ -26,6 +23,7 @@ namespace EQLogParser
     public SpellDamageStatsViewer()
     {
       InitializeComponent();
+      SpellDamageData = [];
       typeList.ItemsSource = _types;
       spellList.ItemsSource = _spells;
       playerList.ItemsSource = _players;
@@ -34,13 +32,12 @@ namespace EQLogParser
       _types.Add(Labels.Dot);
       _types.Add(Labels.Proc);
       typeList.SelectedIndex = 0;
+      DataContext = this;
 
       // default these columns to descending
       var desc = new[] { "Avg", "Max", "Total", "Hits" };
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-
-      DataGridUtil.UpdateTableMargin(dataGrid);
       MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
@@ -49,6 +46,7 @@ namespace EQLogParser
     private void LogLoadingComplete(string _) => Load();
     private void RefreshClick(object sender, RoutedEventArgs e) => Load();
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
+    private void UpdateTitle() => titleLabel.Content = SpellDamageData.Count == 0 ? "No Spell Data Found" : SpellDamageData.Count + " Spell Entries Found";
 
     private void SelectionChange(List<Fight> _)
     {
@@ -133,7 +131,7 @@ namespace EQLogParser
         }
       }
 
-      var list = new List<IDictionary<string, object>>();
+      var list = new List<SpellDamageRow>();
       foreach (var stats in playerDoTTotals.Values)
       {
         AddRow(list, stats, Labels.Dot);
@@ -161,35 +159,33 @@ namespace EQLogParser
 
       spellList.SelectedIndex = _spells.IndexOf(selectedSpell) is var s and > -1 ? s : 0;
       playerList.SelectedIndex = _players.IndexOf(selectedPlayer) is var p and > -1 ? p : 0;
-      dataGrid.ItemsSource = list.Count > 0 ? list : null;
-    }
+      UiUtil.UpdateObservable(list, SpellDamageData);
 
-    private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
-    {
       if (dataGrid.View != null)
       {
         dataGrid.View.Filter = item =>
         {
           var pass = false;
-          if (item is IDictionary<string, object> dict)
+          if (item is SpellDamageRow row)
           {
-            pass = !_currentShowPlayers || PlayerManager.Instance.IsVerifiedPlayer(dict["Caster"] as string) ||
-              PlayerManager.Instance.IsMerc(dict["Caster"] as string);
-            pass = pass && (_currentType == null || _currentType.Equals(dict["Type"])) && (_currentSpell == null ||
-              _currentSpell.Equals(dict["Spell"])) && (_currentPlayer == null || _currentPlayer.Equals(dict["Caster"]));
+            pass = !_currentShowPlayers || PlayerManager.Instance.IsVerifiedPlayer(row.Caster) ||
+                   PlayerManager.Instance.IsMerc(row.Caster);
+            pass = pass && (_currentType == null || _currentType.Equals(row.Type)) && (_currentSpell == null ||
+              _currentSpell.Equals(row.Spell)) && (_currentPlayer == null || _currentPlayer.Equals(row.Caster));
           }
           return pass;
         };
 
-        UpdateTitle();
+        dataGrid.View.Refresh();
       }
+
+      UpdateTitle();
     }
 
-    private void UpdateTitle()
+    private void Refresh()
     {
       dataGrid?.View?.RefreshFilter();
-      var count = (dataGrid?.View != null) ? dataGrid.View.Records.Count : 0;
-      titleLabel.Content = count == 0 ? "No Spell Data Found" : count + " Spell Entries Found";
+      UpdateTitle();
     }
 
     private void OptionsChanged(object sender, EventArgs e)
@@ -207,21 +203,24 @@ namespace EQLogParser
         }
         else
         {
-          UpdateTitle();
+          Refresh();
         }
       }
     }
 
-    private static void AddRow(ICollection<IDictionary<string, object>> list, SpellDamageStats stats, string type)
+    private static void AddRow(ICollection<SpellDamageRow> list, SpellDamageStats stats, string type)
     {
-      var row = new ExpandoObject() as IDictionary<string, object>;
-      row["Caster"] = stats.Caster;
-      row["Spell"] = stats.Spell;
-      row["Max"] = stats.Max;
-      row["Hits"] = stats.Count;
-      row["Avg"] = stats.Total / stats.Count;
-      row["Total"] = stats.Total;
-      row["Type"] = type;
+      var row = new SpellDamageRow
+      {
+        Caster = stats.Caster,
+        Spell = stats.Spell,
+        Max = stats.Max,
+        Hits = stats.Count,
+        Avg = stats.Total / stats.Count,
+        Total = stats.Total,
+        Type = type
+      };
+
       list.Add(row);
     }
 
@@ -240,8 +239,58 @@ namespace EQLogParser
     {
       MainActions.EventsFightSelectionChanged -= SelectionChange;
       MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
-      dataGrid.ItemsSource = null;
+      SpellDamageData.Clear();
       _ready = false;
     }
+
+    private void AutoGeneratingColumn(object sender, AutoGeneratingColumnArgs e)
+    {
+      var mapping = e.Column.MappingName;
+      if (mapping == "Spell")
+      {
+        e.Column.Width = MainActions.CurrentSpellWidth;
+      }
+      else if (mapping is "Avg" or "Max" or "Total" or "Hits")
+      {
+        var column = new GridNumericColumn
+        {
+          MappingName = mapping,
+          NumberDecimalDigits = 0,
+          NumberGroupSizes = [3],
+          TextAlignment = TextAlignment.Right
+        };
+
+        if (mapping == "Avg")
+        {
+          column.HeaderText = "Av Hit";
+        }
+        else if (mapping == "Max")
+        {
+          column.HeaderText = "Max Hit";
+        }
+        else if (mapping == "Hits")
+        {
+          column.HeaderText = "# Hits";
+        }
+
+        column.Width = DataGridUtil.CalculateMinGridHeaderWidth(e.Column.HeaderText);
+        e.Column = column;
+      }
+      else
+      {
+        e.Column.Width = DataGridUtil.CalculateMinGridHeaderWidth(e.Column.HeaderText);
+      }
+    }
+  }
+
+  public class SpellDamageRow
+  {
+    public string Spell { get; set; }
+    public string Caster { get; set; }
+    public string Type { get; set; }
+    public ulong Avg { get; set; }
+    public uint Max { get; set; }
+    public ulong Total { get; set; }
+    public uint Hits { get; set; }
   }
 }

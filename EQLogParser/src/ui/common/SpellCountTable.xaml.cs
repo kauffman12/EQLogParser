@@ -22,10 +22,7 @@ using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventA
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for SpellCountTable.xaml
-  /// </summary>
-  public partial class SpellCountTable : CastTable
+  public partial class SpellCountTable
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
@@ -81,7 +78,8 @@ namespace EQLogParser
       {
         HeaderText = "",
         MappingName = "Spell",
-        CellStyle = DataGridUtil.CreateHighlightForegroundStyle("Spell", new ReceivedSpellColorConverter())
+        CellStyle = DataGridUtil.CreateHighlightForegroundStyle("Spell", new ReceivedSpellColorConverter()),
+        Width = MainActions.CurrentSpellWidth
       };
 
       dataGrid.Columns.Add(headerCol);
@@ -136,7 +134,8 @@ namespace EQLogParser
               DisplayBinding = new Binding(name + "Text"),
               TextAlignment = TextAlignment.Right,
               ShowHeaderToolTip = true,
-              HeaderToolTipTemplate = Application.Current.Resources["HeaderSpellCountsTemplateToolTip"] as DataTemplate
+              HeaderToolTipTemplate = Application.Current.Resources["HeaderSpellCountsTemplateToolTip"] as DataTemplate,
+              Width = DataGridUtil.CalculateMinGridHeaderWidth(header)
             };
 
             playerColumns.Add(playerCol);
@@ -145,13 +144,15 @@ namespace EQLogParser
 
           playerColumns.OrderBy(col => col.HeaderText, _totalColumnComparer).ToList().ForEach(col => dataGrid.Columns.Add(col));
 
+          var totalText = GetHeaderValue("Total", totalCasts, totalCasts);
           var totalCol = new GridTextColumn
           {
-            HeaderText = GetHeaderValue("Total", totalCasts, totalCasts),
+            HeaderText = totalText,
             MappingName = "totalColumn",
             SortMode = DataReflectionMode.Value,
             DisplayBinding = new Binding("totalColumnText"),
-            TextAlignment = TextAlignment.Right
+            TextAlignment = TextAlignment.Right,
+            Width = DataGridUtil.CalculateMinGridHeaderWidth(totalText)
           };
 
           dataGrid.Columns.Add(totalCol);

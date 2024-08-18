@@ -178,16 +178,15 @@ namespace EQLogParser
       DockingManager.SetState(petMappingWindow, DockState.AutoHidden);
 
       // update theme
-      MainActions.LoadTheme(this);
-      ConfigUtil.UpdateStatus("Themes Loaded");
+      MainActions.InitThemes(this);
+      ConfigUtil.UpdateStatus("Themes Initialized");
+      MainActions.AddDocumentWindows(dockSite);
 
       // create menu items for deleting chat
-      Dispatcher.InvokeAsync(UpdateDeleteChatMenu, DispatcherPriority.Input);
+      Dispatcher.InvokeAsync(UpdateDeleteChatMenu, DispatcherPriority.DataBind);
 
       // general events
       SystemEvents.PowerModeChanged += SystemEventsPowerModeChanged;
-
-      MainActions.AddDocumentWindows(dockSite);
     }
 
     private async void MainWindowOnLoaded(object sender, RoutedEventArgs args)
@@ -223,7 +222,7 @@ namespace EQLogParser
         MainActions.EventsHealingSelectionChanged += HealingSummary_SelectionChanged;
         MainActions.EventsTankingSelectionChanged += TankingSummary_SelectionChanged;
 
-        _computeStatsTimer = new DispatcherTimer(DispatcherPriority.Render)
+        _computeStatsTimer = new DispatcherTimer(DispatcherPriority.Normal)
         {
           Interval = new TimeSpan(0, 0, 0, 0, 500)
         };
@@ -256,16 +255,15 @@ namespace EQLogParser
         ConfigUtil.UpdateStatus("Trigger Manager Started");
 
         // cleanup downloads
-        await Task.Delay(250).ContinueWith(_ => MainActions.Cleanup());
+        _ = Task.Delay(250).ContinueWith(_ => MainActions.Cleanup());
 
         // start save timer
         _saveTimer.Start();
 
-        // send done a little after the last block
-        await Task.Delay(1000).ContinueWith(_ => ConfigUtil.UpdateStatus("Done"));
+        // send done in 5 seconds if it hasn't been received yet
+        _ = Task.Delay(5000).ContinueWith(_ => ConfigUtil.UpdateStatus("Done"));
 
-        // last delay splash screen and auto monitor
-        await Task.Delay(500).ContinueWith(_ =>
+        await Task.Delay(50).ContinueWith(_ =>
         {
           // check need monitor
           var previousFile = ConfigUtil.GetSetting("LastOpenedFile");
@@ -377,8 +375,8 @@ namespace EQLogParser
     private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
     private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
     private void WindowClose(object sender, EventArgs e) => Close();
-    private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e) => MainActions.UpdateTheme("MaterialDark");
-    private void ToggleMaterialLightClick(object sender, RoutedEventArgs e) => MainActions.UpdateTheme("MaterialLight");
+    private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e) => MainActions.ChangeTheme("MaterialDark");
+    private void ToggleMaterialLightClick(object sender, RoutedEventArgs e) => MainActions.ChangeTheme("MaterialLight");
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
@@ -728,25 +726,21 @@ namespace EQLogParser
       preview?.UpdateParse(data, TankingStatsManager.Instance, addReceiveParse, Labels.TankParse, Labels.ReceivedHealParse);
     }
 
-    private void MenuItemFontFamilyClicked(object sender, RoutedEventArgs e)
+    private static void MenuItemFontFamilyClicked(object sender, RoutedEventArgs e)
     {
       if (sender is MenuItem menuItem)
       {
         MainActions.UpdateCheckedMenuItem(menuItem, (menuItem.Parent as MenuItem)?.Items);
-        MainActions.CurrentFontFamily = menuItem.Header as string;
-        ConfigUtil.SetSetting("ApplicationFontFamily", MainActions.CurrentFontFamily);
-        MainActions.LoadTheme(this);
+        MainActions.ChangeThemeFontFamily(menuItem.Header as string);
       }
     }
 
-    private void MenuItemFontSizeClicked(object sender, RoutedEventArgs e)
+    private static void MenuItemFontSizeClicked(object sender, RoutedEventArgs e)
     {
       if (sender is MenuItem menuItem)
       {
         MainActions.UpdateCheckedMenuItem(menuItem, (menuItem.Parent as MenuItem)?.Items);
-        MainActions.CurrentFontSize = (double)menuItem.Tag;
-        ConfigUtil.SetSetting("ApplicationFontSize", MainActions.CurrentFontSize);
-        MainActions.LoadTheme(this);
+        MainActions.ChangeThemeFontSizes((double)menuItem.Tag);
       }
     }
 
@@ -815,6 +809,7 @@ namespace EQLogParser
 
             ConfigUtil.SetSetting("LastOpenedFile", CurrentLogFile);
             Log.Info($"Finished Loading Log File in {seconds} seconds.");
+            ConfigUtil.UpdateStatus("Done");
 
             Task.Delay(1000).ContinueWith(_ => Dispatcher.InvokeAsync(() =>
             {
@@ -825,7 +820,7 @@ namespace EQLogParser
                 DataManager.Instance.ResetOverlayFights(true);
                 OpenDamageOverlayIfEnabled(true, false);
                 DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
-              }, DispatcherPriority.Background);
+              }, DispatcherPriority.DataBind);
             }));
           }
           else
@@ -833,7 +828,7 @@ namespace EQLogParser
             Task.Delay(500).ContinueWith(_ => UpdateLoadingProgress(), TaskScheduler.Default);
           }
         }
-      });
+      }, DispatcherPriority.Render);
     }
 
     private void PlayerClassDropDownSelectionChanged(object sender, CurrentCellDropDownSelectionChangedEventArgs e)
@@ -876,7 +871,8 @@ namespace EQLogParser
           };
 
           // Show dialog and read result
-          dialog.Filters.Add(new CommonFileDialogFilter("eqlog_Player_server", "*.txt;*.txt.gz"));
+          dialog.Filters.Add(new CommonFileDialogFilter("eqlog_Player_server", "*.txt;*.gz;*.log"));
+
           if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
           {
             theFile = dialog.FileName; // Get the selected file name

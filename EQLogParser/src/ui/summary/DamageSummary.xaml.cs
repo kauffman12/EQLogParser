@@ -250,9 +250,9 @@ namespace EQLogParser
     {
       if (dataGrid.SelectedItems.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(out var timeline, typeof(GanttChart), "adpsTimeline", "ADPS Timeline"))
+        if (SyncFusionUtil.OpenWindow(out var timeline, typeof(Timeline), "adpsTimeline", "ADPS Timeline"))
         {
-          ((GanttChart)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 1);
+          ((Timeline)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 1);
         }
       }
     }

@@ -7,6 +7,7 @@
         xmlns:listCollection="clr-namespace:System.Collections;assembly=mscorlib"
         x:Class="EQLogParser.MainWindow"
         Icon="EQLogParser.ico"
+        ShowIcon="False"
         Title="EQLogParser"
         Closing="WindowClosing"
         ResizeMode="CanResize"
@@ -24,6 +25,7 @@
         StateChanged="WindowStateChanged">
   <syncfusion:ChromelessWindow.LeftHeaderItemsSource>
     <listCollection:ArrayList>
+      <Image Height="{DynamicResource EQIconButtonHeight}" Source="EQLogParser.ico" Margin="6,3,4,0"/>
       <Menu x:Name="theMenu" Margin="0" Padding="0" VerticalAlignment="Bottom">
         <MenuItem Header="_File">
           <MenuItem x:Name="fileOpenMenu" Header="Open and Monitor _Log File" ToolTip="Open Log File, Archive Chat and Start Monitoring">
@@ -409,7 +411,7 @@
         </MenuItem>
       </Menu>
       <TextBlock x:Name="initialText" Margin="100,0,0,0" Visibility="Hidden" Text="" VerticalAlignment="Center" IsHitTestVisible="False" Foreground="{DynamicResource EQGoodForegroundBrush}"/>
-      <TextBlock x:Name="statusTriggersText" Margin="0,0,0,0" Visibility="Collapsed" VerticalAlignment="Center" IsHitTestVisible="False"  Text="Triggers Active " Foreground="{DynamicResource EQGoodForegroundBrush}"/>
+      <TextBlock x:Name="statusTriggersText" Margin="0,0,4,0" Visibility="Collapsed" VerticalAlignment="Center" IsHitTestVisible="False"  Text="Triggers Active " Foreground="{DynamicResource EQGoodForegroundBrush}"/>
       <TextBlock x:Name="statusText" Margin="0,0,4,0" VerticalAlignment="Center" IsHitTestVisible="False" />
       <TextBlock x:Name="fileText" Margin="1,0,4,0" VerticalAlignment="Center" IsHitTestVisible="False" Foreground="{DynamicResource ContentForegroundAlt}"/>
     </listCollection:ArrayList>
@@ -420,20 +422,22 @@
       <TextBlock x:Name="versionText" VerticalAlignment="Center" Margin="0,0,10,0" IsHitTestVisible="False" Foreground="{DynamicResource ContentForeground}" FontStyle="Italic" Text="v1.0.0.0" HorizontalAlignment="Right"/>
     </listCollection:ArrayList>
   </syncfusion:ChromelessWindow.RightHeaderItemsSource>
-  <Grid Margin="0">
-    <syncfusion:NotifyIcon x:Name="notifyIcon" ShowInTaskBar="True" Header="NotifyIcon" Text="EQLogParser" Icon="EQLogParser.ico" Click="NotifyIconClick"/>
-    <syncfusion:DockingManager x:Name="dockSite" Margin="0" UseDocumentContainer="True" DocumentCloseButtonType="Individual" CloseButtonClick="DockSiteCloseButtonClick"
-                               WindowClosing="DockSiteWindowClosing" CloseTabOnMiddleClick="True" PersistState="False">
+  <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="*"></RowDefinition>
+    </Grid.RowDefinitions>
+    <syncfusion:DockingManager x:Name="dockSite" Grid.Row="0" Margin="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" UseDocumentContainer="True" DocumentCloseButtonType="Individual" CloseButtonClick="DockSiteCloseButtonClick"
+                               UseNativeFloatWindow="True" WindowClosing="DockSiteWindowClosing" CloseTabOnMiddleClick="True" PersistState="False">
       <ContentControl x:Name="playerParseTextWindow" syncfusion:DockingManager.Header="Preview Parse" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
-                      syncfusion:DockingManager.DesiredHeightInDockedMode="150" syncfusion:DockingManager.CanDocument="False" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="150">
+                      syncfusion:DockingManager.DesiredHeightInDockedMode="{DynamicResource EQParseWindowHeight}" syncfusion:DockingManager.CanDocument="False" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="{DynamicResource EQParseWindowHeight}">
         <local:ParsePreview />
       </ContentControl>
       <ContentControl x:Name="npcWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Fight List" syncfusion:DockingManager.State="Dock" 
-                      syncfusion:DockingManager.DesiredWidthInDockedMode="360" syncfusion:DockingManager.DesiredWidthInFloatingMode="360" syncfusion:DockingManager.CanDocument="False">
+                      syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.CanDocument="False">
         <local:FightTable />
       </ContentControl>
       <ContentControl x:Name="petMappingWindow" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="Dock" syncfusion:DockingManager.SideInDockedMode="Right" 
-                      syncfusion:DockingManager.DesiredWidthInDockedMode="320" syncfusion:DockingManager.DesiredWidthInFloatingMode="320" syncfusion:DockingManager.CanDocument="False">
+                      syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQPetMappingWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQPetMappingWindowWidth}" syncfusion:DockingManager.CanDocument="False">
         <syncfusion:SfDataGrid x:Name="petMappingGrid"
                                AllowResizingColumns="False"
                                AutoGenerateColumns="False"
@@ -452,20 +456,20 @@
         </syncfusion:SfDataGrid>
       </ContentControl>
       <ContentControl x:Name="verifiedPlayersWindow" syncfusion:DockingManager.Header="Verified Players" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Tabbed" 
-                      syncfusion:DockingManager.TargetNameInDockedMode="verifiedPetsWindow" syncfusion:DockingManager.DesiredWidthInDockedMode="270" syncfusion:DockingManager.DesiredWidthInFloatingMode="270"
+                      syncfusion:DockingManager.TargetNameInDockedMode="verifiedPetsWindow" syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQPlayersWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQPlayersWindowWidth}"
                       syncfusion:DockingManager.CanDocument="False">
         <syncfusion:SfDataGrid x:Name="verifiedPlayersGrid"
                                AllowResizingColumns="False"
                                AutoGenerateColumns="False"
                                CellToolTipOpening="PlayerCellToolTipOpening"
-                               ColumnSizer="AutoLastColumnFill"
+                               ColumnSizer="Star"
                                CurrentCellBorderThickness="0"
                                CurrentCellDropDownSelectionChanged="PlayerClassDropDownSelectionChanged"
                                EditTrigger="OnTap"
                                HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                                IsReadOnly="True"
                                RowHeight="{DynamicResource EQTableRowHeight}"
-                               RowHeaderWidth="25"
+                               RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
                                ShowRowHeader="True"
                                GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                                SelectionMode="Extended">
@@ -500,7 +504,7 @@
                                HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                                IsReadOnly="True"
                                RowHeight="{DynamicResource EQTableRowHeight}"
-                               RowHeaderWidth="25"
+                               RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
                                ShowRowHeader="True"
                                GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                                SelectionMode="Extended">
@@ -525,5 +529,6 @@
         </syncfusion:SfDataGrid>
       </ContentControl>
     </syncfusion:DockingManager>
+    <syncfusion:NotifyIcon x:Name="notifyIcon" ShowInTaskBar="True" Header="NotifyIcon" Text="EQLogParser" Icon="EQLogParser.ico" Click="NotifyIconClick"/>
   </Grid>
 </syncfusion:ChromelessWindow>

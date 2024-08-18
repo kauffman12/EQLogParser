@@ -7,7 +7,7 @@
   xmlns:local="clr-namespace:EQLogParser"
   mc:Ignorable="d"
   ResizeMode="NoResize"
-  Icon="EQLogParser.ico"
+  ShowIcon="False"
   TitleBarHeight="{DynamicResource EQTableHeaderRowHeight}"
   TitleFontSize="{DynamicResource EQContentSize}"
   TitleBarForeground="{DynamicResource PrimaryDarken}"
@@ -18,7 +18,7 @@
   SizeToContent="WidthAndHeight"
   MinHeight="135"
   Title="Configure Log Management" 
-  Height="180" Width="375">
+  Height="180">
   <Grid>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="1*" />
@@ -32,8 +32,8 @@
     </Grid.RowDefinitions>
     <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3">
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="20,4,0,0">
-        <CheckBox x:Name="enableCheckBox" Margin="-5,3,0,0" VerticalAlignment="Center" FontWeight="Normal" FocusVisualStyle="{x:Null}" Checked="EnableCheckBoxOnChecked" Unchecked="EnableCheckBoxOnUnchecked"/>
-        <Label x:Name="titleLabel" Margin="8,4,8,0" VerticalContentAlignment="Center" Padding="0,0,0,2" Content="Enable Log Management" Style="{DynamicResource EQTitleStyle}" Foreground="{DynamicResource EQStopForegroundBrush}"/>
+        <CheckBox x:Name="enableCheckBox" Template="{StaticResource CustomCheckBoxTemplate}" VerticalAlignment="Center" FontWeight="Normal" Checked="EnableCheckBoxOnChecked" Unchecked="EnableCheckBoxOnUnchecked"/>
+        <Label x:Name="titleLabel" Margin="-2,0,20,0" VerticalContentAlignment="Center" Padding="0,0,0,2" Content="Enable Log Management" Style="{DynamicResource EQTitleStyle}" Foreground="{DynamicResource EQStopForegroundBrush}"/>
       </StackPanel>
       <StackPanel Orientation="Vertical" Margin="12,5,5,0">
         <TextBlock Margin="0,0,0,0" TextWrapping="WrapWithOverflow" FontSize="{DynamicResource EQContentSize}" Width="270" FontStyle="Italic" Text="The archived logs will only be created when a file is first opened or when zoning."></TextBlock>
@@ -44,17 +44,17 @@
         <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
           <Grid>
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="160" />
+              <ColumnDefinition Width="210" />
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
-            <Button Grid.Column="0" Content="Select Archive Folder" FontSize="{DynamicResource EQContentSize}" HorizontalAlignment="Left" Width="145" Padding="10,4,12,4" Click="ChooseFolderClicked" ToolTip="Folder where Log File Archives are kept."/>
+            <Button Grid.Column="0" Content="Select Archive Folder" FontSize="{DynamicResource EQContentSize}" HorizontalAlignment="Left" Padding="10,6,12,6" Click="ChooseFolderClicked" ToolTip="Folder where Log File Archives are kept."/>
             <TextBox Grid.Column="1" Name="txtFolderPath" FontStyle="Italic" Margin="8,0,0,0" Text="Select Archive Folder" FontSize="{DynamicResource EQContentSize}" IsReadOnly="True" Width="320"/>
           </Grid>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
           <Grid>
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="160" />
+              <ColumnDefinition Width="210" />
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Archive If File Size  > " HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only Archive Log File if it is larger than the selected size." />
@@ -76,7 +76,7 @@
         <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
           <Grid>
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="160" />
+              <ColumnDefinition Width="210" />
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Archive If File Age  >" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only Archive Log File if it was created prior to the selected time range."/>
@@ -94,7 +94,7 @@
         <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
           <Grid>
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="160" />
+              <ColumnDefinition Width="210" />
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Compress Archive" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only Archive Log File if it was created prior to the selected time range."/>
@@ -107,7 +107,7 @@
         <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
           <Grid>
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="160" />
+              <ColumnDefinition Width="210" />
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Organize By" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="How to Organize the Archive Folder."/>

@@ -6,7 +6,7 @@
    xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
    mc:Ignorable="d" 
    ResizeMode="NoResize"
-   Icon="EQLogParser.ico"
+   ShowIcon="False"
    TitleBarHeight="{DynamicResource EQTableHeaderRowHeight}"
    TitleFontSize="{DynamicResource EQContentSize}"
    TitleBarForeground="{DynamicResource PrimaryDarken}"
@@ -18,7 +18,7 @@
    SizeToContent="WidthAndHeight"
    MinHeight="135"
    Title="Phonetic Dictionary" 
-   Height="180" Width="375">
+   Height="180">
     <Grid>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="1*" />
@@ -32,7 +32,7 @@
     <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.ColumnSpan="3">
       <syncfusion:SfDataGrid x:Name="dataGrid"
                              AddNewRowPosition="FixedTop"
-                             AddNewRowText="Click here to add a new row, delete key to remove a row"
+                             AddNewRowText="Click here to add row, delete key to remove"
                              AllowDeleting="True"
                              AutoGenerateColumns="True"
                              ColumnSizer="Star"
@@ -59,8 +59,8 @@
     </StackPanel>
     <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Right" Margin="0,20,20,10">
       <Button x:Name="testButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}" FontSize="{DynamicResource EQContentSize}" Click="TestClicked" Margin="2,0,4,0" Padding="15,0,15,0"  Content="Test Selected" IsEnabled="False" />
-      <Button x:Name="saveButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}" FontSize="{DynamicResource EQContentSize}" Click="SaveClicked" Margin="2,0,4,0" Width="80" Content="Save" IsEnabled="False" />
-      <Button x:Name="closeButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}" FontSize="{DynamicResource EQContentSize}" Click="CloseClicked" Margin="2,0,4,0" Width="80" Content="Close" />
+      <Button x:Name="saveButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}" FontSize="{DynamicResource EQContentSize}" Click="SaveClicked" Margin="2,0,4,0" Padding="10,0,10,0" Content="Save" IsEnabled="False" />
+      <Button x:Name="closeButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}" FontSize="{DynamicResource EQContentSize}" Click="CloseClicked" Margin="2,0,4,0" Padding="10,0,10,0" Content="Close" />
     </StackPanel>
   </Grid>
 </syncfusion:ChromelessWindow>

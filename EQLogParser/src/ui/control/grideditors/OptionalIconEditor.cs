@@ -37,7 +37,7 @@ namespace EQLogParser
     {
       var grid = new Grid();
       grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
-      grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(40) });
+      grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(65, GridUnitType.Auto) });
 
       _theTextBox = new TextBox
       {
@@ -59,8 +59,8 @@ namespace EQLogParser
       _theButton = new Button
       {
         Content = "Reset",
-        Padding = new Thickness(0, 2, 0, 2),
-        Margin = new Thickness(0, 1, 0, 1)
+        Padding = new Thickness(8, 2, 8, 2),
+        Margin = new Thickness(2, 1, 2, 1)
       };
       _theButton.SetValue(Grid.ColumnProperty, 1);
       _theButton.Click += TheButton_Click;

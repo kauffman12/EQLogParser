@@ -15,20 +15,20 @@
       <local:ZeroConverter x:Key="ZeroConverter" />
     </Grid.Resources>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30" />
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}"></RowDefinition>
       <RowDefinition Height="300*" />
     </Grid.RowDefinitions>
     <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0" >
       <Label x:Name="title" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <CheckBox x:Name="showPets" IsChecked="True" Margin="0,0,8,2" Checked="OptionsChanged" Unchecked="OptionsChanged">Show Pets</CheckBox>
-      <ComboBox Margin="0,0,0,2" x:Name="damageTypes" Width="85" SelectionChanged="OptionsChanged">
+      <CheckBox x:Name="showPets" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="0,0,4,2" Checked="OptionsChanged" Unchecked="OptionsChanged" Content="Show Pets"/>
+      <ComboBox Margin="0,0,8,2" x:Name="damageTypes" SelectionChanged="OptionsChanged">
         <ComboBoxItem>All Damage</ComboBoxItem>
         <ComboBoxItem>Melee</ComboBoxItem>
         <ComboBoxItem>Non-Melee</ComboBoxItem>
       </ComboBox>
-      <ComboBox Margin="0,0,0,2" x:Name="classesList" SelectionChanged="ClassSelectionChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="classesList" SelectionChanged="ClassSelectionChanged" />
       <ComboBox x:Name="selectedColumns" Tag="TankingSummaryColumns" Margin="0,0,8,2" 
                 DropDownClosed="SelectDataGridColumns" ItemTemplateSelector="{StaticResource ComboBoxSelector}"/>
     </StackPanel>
@@ -38,8 +38,7 @@
                            AllowSelectionOnPointerPressed="True"
                            AllowSorting="True"
                            AutoGenerateColumns="False"
-                           CurrentCellBorderThickness="0"    
-                           ColumnSizer="Auto"                      
+                           CurrentCellBorderThickness="0"
                            FrozenColumnCount="1"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeFormat,IncludeHeaders"
@@ -48,7 +47,7 @@
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
                            PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
-                           RowHeaderWidth="40"
+                           RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            SelectionChanged="DataGridSelectionChanged"
@@ -172,20 +171,20 @@
       </syncfusion:SfDataGrid.ContextMenu>
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" />
-        <syncfusion:GridTextColumn MaximumWidth="70" MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
+        <syncfusion:GridTextColumn MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
         <syncfusion:GridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Damaged" />
         <syncfusion:GridNumericColumn MappingName="Extra" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Healed" />
         <syncfusion:GridNumericColumn MappingName="Dps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
         <syncfusion:GridNumericColumn MappingName="Sdps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
-        <syncfusion:GridNumericColumn MaximumWidth="65" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
-        <syncfusion:GridNumericColumn MaximumWidth="70" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
-        <syncfusion:GridNumericColumn MaximumWidth="90" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
-        <syncfusion:GridNumericColumn MaximumWidth="80" MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Hit" />
-        <syncfusion:GridTextColumn MaximumWidth="70" MappingName="MeleeAccRate" DisplayBinding="{Binding Path=MeleeAccRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeAccRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Acc" />
-        <syncfusion:GridTextColumn MaximumWidth="70" MappingName="MeleeHitRate" DisplayBinding="{Binding Path=MeleeHitRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeHitRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Hit" />
-        <syncfusion:GridNumericColumn MaximumWidth="90" MappingName="MeleeAttempts" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeAttemptsTemplateToolTip}" TextAlignment="Right" HeaderText="# Attempts" />
+        <syncfusion:GridNumericColumn MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
+        <syncfusion:GridNumericColumn MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
+        <syncfusion:GridNumericColumn MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
+        <syncfusion:GridNumericColumn MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Hit" />
+        <syncfusion:GridTextColumn MappingName="MeleeAccRate" DisplayBinding="{Binding Path=MeleeAccRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeAccRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Acc" />
+        <syncfusion:GridTextColumn MappingName="MeleeHitRate" DisplayBinding="{Binding Path=MeleeHitRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeHitRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Hit" />
+        <syncfusion:GridNumericColumn MappingName="MeleeAttempts" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeAttemptsTemplateToolTip}" TextAlignment="Right" HeaderText="# Attempts" />
         <syncfusion:GridTextColumn MappingName="RampageRate" DisplayBinding="{Binding Path=RampageRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderRampageTemplateToolTip}" TextAlignment="Right" HeaderText="% Rampage" />
-        <syncfusion:GridTextColumn Width="65" MappingName="Special" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSpecialTemplateToolTip}" TextAlignment="Left" HeaderText="Special" />
+        <syncfusion:GridTextColumn MappingName="Special" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSpecialTemplateToolTip}" TextAlignment="Left" HeaderText="Special" />
         <syncfusion:GridTextColumn MappingName="ClassName" HeaderText="Class" />
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>

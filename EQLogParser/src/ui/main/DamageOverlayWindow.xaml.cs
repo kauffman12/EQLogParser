@@ -46,9 +46,8 @@ namespace EQLogParser
 
     internal DamageOverlayWindow(bool preview = false, bool reset = false)
     {
-      InitializeComponent();
-
       MainActions.SetCurrentTheme(this);
+      InitializeComponent();
       dpsButton.Foreground = ActiveBrush;
       tankButton.Foreground = InActiveBrush;
       _preview = preview;
@@ -147,17 +146,20 @@ namespace EQLogParser
         _updateTimer.Stop();
         ResizeMode = ResizeMode.CanResizeWithGrip;
         buttonsPanel.Visibility = Visibility.Visible;
+        lineGrid.Visibility = Visibility.Visible;
         SetResourceReference(BorderBrushProperty, "PreviewBackgroundBrush");
         SetResourceReference(BackgroundProperty, "PreviewBackgroundBrush");
         border.Background = null;
         LoadTestData(true);
         damageContent.Visibility = Visibility.Visible;
-        this.MinHeight = this.Height;
+        SetMinHeight(true);
       }
       else
       {
+        SetMinHeight(false);
         ResizeMode = ResizeMode.NoResize;
         buttonsPanel.Visibility = Visibility.Collapsed;
+        lineGrid.Visibility = Visibility.Collapsed;
         BorderBrush = null;
         Background = null;
         border.SetResourceReference(Border.BackgroundProperty, "DamageOverlayBackgroundBrush");
@@ -374,9 +376,10 @@ namespace EQLogParser
 
     private void SaveClick(object sender, RoutedEventArgs e)
     {
-      ConfigUtil.SetSetting("OverlayHeight", Height);
+      var calcHeight = GetOverlayHeight();
+      ConfigUtil.SetSetting("OverlayHeight", calcHeight);
       ConfigUtil.SetSetting("OverlayWidth", Width);
-      _savedHeight = Height;
+      _savedHeight = calcHeight;
       _savedWidth = Width;
 
       ConfigUtil.SetSetting("OverlayTop", Top);
@@ -451,6 +454,28 @@ namespace EQLogParser
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
+    }
+
+    private void SetMinHeight(bool isFixed)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        if (isFixed)
+        {
+          var pos = cancelButton.TransformToAncestor(this).Transform(new Point(0, 0));
+          Height = MinHeight = pos.Y + cancelButton.ActualHeight + 10;
+        }
+        else
+        {
+          MinHeight = 0;
+        }
+      }, DispatcherPriority.Background);
+    }
+
+    private double GetOverlayHeight()
+    {
+      var pos = heightRectangle.TransformToAncestor(this).Transform(new Point(0, 0));
+      return pos.Y - 2;
     }
 
     private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)
@@ -585,23 +610,23 @@ namespace EQLogParser
       }
     }
 
-    private void ShowNamesChanged(object sender, SelectionChangedEventArgs e)
+    private void HideOthersChecked(object sender, RoutedEventArgs e)
     {
-      if (showNames.SelectedIndex != -1 && e.RemovedItems.Count > 0)
+      if (hideOthers != null)
       {
-        UpdateHideOthers(showNames.SelectedIndex == 1);
+        UpdateHideOthers(hideOthers.IsChecked == true);
         DataChanged();
       }
     }
 
-    private void UpdateHideOthers(bool hideOthers)
+    private void UpdateHideOthers(bool isHideOthers)
     {
-      _currentHideOthers = hideOthers;
+      _currentHideOthers = isHideOthers;
 
       var selectedIndex = _currentHideOthers ? 1 : 0;
-      if (showNames.SelectedIndex != selectedIndex)
+      if (_currentHideOthers != hideOthers.IsChecked)
       {
-        showNames.SelectedIndex = selectedIndex;
+        hideOthers.IsChecked = _currentHideOthers;
       }
     }
 
@@ -761,7 +786,7 @@ namespace EQLogParser
         if (!needed.Equals(Height))
         {
           Height = needed;
-          this.MinHeight = this.Height;
+          SetMinHeight(true);
         }
       }, DispatcherPriority.Background);
     }

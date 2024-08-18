@@ -9,7 +9,7 @@
              mc:Ignorable="d" 
              Loaded="ContentLoaded"
               d:DesignHeight="450" d:DesignWidth="800">
-  <Grid>
+  <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
     <Grid.Resources>
       <Style TargetType="syncfusion:GridRowHeaderCell">
         <Setter Property="Template">
@@ -26,7 +26,7 @@
       </Style>
     </Grid.Resources>
     <Grid.RowDefinitions>
-      <RowDefinition Height="30"></RowDefinition>
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
@@ -38,32 +38,25 @@
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
                            AllowSorting="True"
-                           AutoGenerateColumns="False"
-                           ColumnSizer="Auto"
+                           AutoGenerateColumns="True"
+                           AutoGeneratingColumn="AutoGeneratingColumn"
                            CurrentCellBorderThickness="0"
-                           FrozenColumnCount="1"                           
+                           FrozenColumnCount="1"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
-                           RowHeaderWidth="40"
+                           ItemsSource="{Binding NpcStatsData}"
+                           RowHeaderWidth="{DynamicResource EQTableRowHeaderWidth}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
-                           ShowRowHeader="True">
-      <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" MinimumWidth="225"/>
-        <syncfusion:GridTextColumn MappingName="Lowest" DisplayBinding="{Binding Path=LowestText}" TextAlignment="Right" HeaderText="Chromatic Resist %" />
-        <syncfusion:GridTextColumn MappingName="Cold" DisplayBinding="{Binding Path=ColdText}" TextAlignment="Right" HeaderText="Cold Resist %" />
-        <syncfusion:GridTextColumn MappingName="Corruption" DisplayBinding="{Binding Path=CorruptionText}" TextAlignment="Right" HeaderText="Corruption Resist %" />
-        <syncfusion:GridTextColumn MappingName="Disease" DisplayBinding="{Binding Path=DiseaseText}" TextAlignment="Right" HeaderText="Disease Resist %" />
-        <syncfusion:GridTextColumn MappingName="Fire" DisplayBinding="{Binding Path=FireText}" TextAlignment="Right" HeaderText="Fire Resist %" />
-        <syncfusion:GridTextColumn MappingName="Magic" DisplayBinding="{Binding Path=MagicText}" TextAlignment="Right" HeaderText="Magic Resist %" />
-        <syncfusion:GridTextColumn MappingName="Physical" DisplayBinding="{Binding Path=PhysicalText}" TextAlignment="Right" HeaderText="Physical Resist %" />
-        <syncfusion:GridTextColumn MappingName="Poison" DisplayBinding="{Binding Path=PoisonText}" TextAlignment="Right" HeaderText="Poison Resist %" />
-        <syncfusion:GridTextColumn MappingName="Average" DisplayBinding="{Binding Path=AverageText}" TextAlignment="Right" HeaderText="Prismatic Resist %" />
-        <syncfusion:GridTextColumn MappingName="Reflected" DisplayBinding="{Binding Path=ReflectedText}" TextAlignment="Right" HeaderText="Reflected %" />
-      </syncfusion:SfDataGrid.Columns>
+                           ShowRowHeader="True"
+                           HorizontalAlignment="Stretch"
+                           VerticalAlignment="Stretch">
+      <syncfusion:SfDataGrid.SortColumnDescriptions>
+        <syncfusion:SortColumnDescription ColumnName="Npc" SortDirection="Ascending" />
+      </syncfusion:SfDataGrid.SortColumnDescriptions>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
