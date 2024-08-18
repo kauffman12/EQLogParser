@@ -338,6 +338,7 @@ namespace EQLogParser
         if (await TriggerStateManager.Instance.CreateOverlay(parent.SerializedData.Id, label, isTextOverlay) is { } newNode)
         {
           parent.ChildNodes.Add(newNode);
+          TriggerManager.Instance.CloseOverlays();
           await SelectNode(overlayTreeView, newNode.SerializedData.Id);
         }
       }

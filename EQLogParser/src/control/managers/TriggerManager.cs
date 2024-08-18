@@ -28,7 +28,6 @@ namespace EQLogParser
     private readonly Dictionary<string, OverlayWindowData> _textWindows = new();
     private readonly Dictionary<string, OverlayWindowData> _timerWindows = new();
     private readonly List<LogReader> _logReaders = [];
-    private readonly TriggerNode _noDefaultOverlay = new();
     private readonly SemaphoreSlim _logReadersSemaphore = new(1, 1);
     private TriggerNode _defaultTextOverlay;
     private TriggerNode _defaultTimerOverlay;
@@ -102,6 +101,9 @@ namespace EQLogParser
           {
             _textOverlayTimer.Stop();
           }
+
+          _textOverlayCache.Clear();
+          _textOverlayResultCache.Clear();
         });
 
         CloseOverlayWindow(id, _timerWindows, () =>
@@ -111,6 +113,9 @@ namespace EQLogParser
           {
             _timerOverlayTimer.Stop();
           }
+
+          _timerOverlayCache.Clear();
+          _timerOverlayResultCache.Clear();
         });
       }
     }
@@ -122,6 +127,7 @@ namespace EQLogParser
         _defaultTextOverlay = null;
         _textOverlayResultCache.Clear();
         _textOverlayCache.Clear();
+        _textOverlayResultCache.Clear();
         _textOverlayTimer.Stop();
       });
 
@@ -130,6 +136,7 @@ namespace EQLogParser
         _defaultTimerOverlay = null;
         _timerOverlayResultCache.Clear();
         _timerOverlayCache.Clear();
+        _timerOverlayResultCache.Clear();
         _timerOverlayTimer.Stop();
       });
     }
@@ -428,6 +435,7 @@ namespace EQLogParser
 
     private async void AddTextEvent(string id, Trigger trigger, string text, string fontColor)
     {
+      if (id == null) return;
       fontColor ??= trigger.FontColor;
       var beginTicks = DateTime.UtcNow.Ticks;
       var overlayNodes = await GetOverlayNodes(id, trigger, _textOverlayCache);
@@ -436,6 +444,7 @@ namespace EQLogParser
       {
         foreach (var node in overlayNodes)
         {
+          if (node.Id == null) continue;
           if (!_textWindows.TryGetValue(node.Id, out var windowData))
           {
             windowData = new OverlayWindowData { TheWindow = new TextOverlayWindow(node) };
@@ -456,12 +465,14 @@ namespace EQLogParser
 
     private async void AddTimerEvent(string id, Trigger trigger, List<TimerData> data)
     {
+      if (id == null) return;
       var overlayNodes = await GetOverlayNodes(id, trigger, _timerOverlayCache);
 
       UiUtil.InvokeNow(() =>
       {
         foreach (var node in overlayNodes)
         {
+          if (node.Id == null) continue;
           if (!_timerWindows.TryGetValue(node.Id, out var windowData))
           {
             windowData = new OverlayWindowData
@@ -536,7 +547,7 @@ namespace EQLogParser
         {
           if (_defaultTextOverlay == null)
           {
-            _defaultTextOverlay = await TriggerStateManager.Instance.GetDefaultTextOverlay() ?? _noDefaultOverlay;
+            _defaultTextOverlay = await TriggerStateManager.Instance.GetDefaultTextOverlay();
           }
 
           if (_defaultTextOverlay != null)
@@ -548,7 +559,7 @@ namespace EQLogParser
         {
           if (_defaultTimerOverlay == null)
           {
-            _defaultTimerOverlay = await TriggerStateManager.Instance.GetDefaultTimerOverlay() ?? _noDefaultOverlay;
+            _defaultTimerOverlay = await TriggerStateManager.Instance.GetDefaultTimerOverlay();
           }
 
           if (_defaultTimerOverlay != null)
