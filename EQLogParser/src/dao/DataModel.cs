@@ -150,9 +150,11 @@ namespace EQLogParser
     public bool EndUseRegex2 { get; set; }
     public long WorstEvalTime { get; set; } = -1;
     public string Pattern { get; set; }
+    public string PreviousPattern { get; set; }
     public long Priority { get; set; } = 3;
     public int TriggerAgainOption { get; set; }
     public bool UseRegex { get; set; }
+    public bool PreviousUseRegex { get; set; }
     public string ActiveColor { get; set; } = null;
     public string FontColor { get; set; } = null;
     public string IconSource { get; set; } = null;

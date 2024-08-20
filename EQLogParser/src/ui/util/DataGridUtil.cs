@@ -414,7 +414,7 @@ namespace EQLogParser
       );
 
       // Calculate the height required for the text
-      return Math.Round(formattedText.Width + 30);
+      return Math.Round(formattedText.Width + 34);
     }
 
     private static double GetTableHeight(SfGridBase gridBase, bool allData)
