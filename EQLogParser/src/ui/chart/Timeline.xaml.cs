@@ -564,25 +564,45 @@ namespace EQLogParser
         var startXPosition = (StartTimeOffset * _pixelsPerSecond) + (range.BeginSeconds * _pixelsPerSecond); // 90 for the -1:30 offset
         var rectangleWidth = range.Duration * _pixelsPerSecond;
 
-        var taskRectangle = new Rectangle
+        FrameworkElement shape;
+        if (adps == "Player Death")
         {
-          Width = rectangleWidth,
-          StrokeThickness = 0.2,
-          HorizontalAlignment = HorizontalAlignment.Left,
-          VerticalAlignment = VerticalAlignment.Top,
-          Opacity = 1.0,
-          Effect = new DropShadowEffect { ShadowDepth = 2, Direction = 240, BlurRadius = 0.5, Opacity = 0.5 },
-          RadiusX = 2,
-          RadiusY = 2,
-          Tag = adps
-        };
+          shape = new ImageAwesome
+          {
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Icon = EFontAwesomeIcon.Solid_SkullCrossbones,
+            ToolTip = ":("
+          };
 
-        taskRectangle.SetValue(Panel.ZIndexProperty, zIndex);
-        taskRectangle.SetResourceReference(Shape.FillProperty, fillKey);
-        taskRectangle.SetResourceReference(HeightProperty, "EQTimelineBarHeight");
-        Canvas.SetLeft(taskRectangle, startXPosition);
-        Canvas.SetTop(taskRectangle, pos);
-        canvas.Children.Add(taskRectangle);
+          shape.SetResourceReference(ImageAwesome.ForegroundProperty, fillKey);
+          shape.SetResourceReference(HeightProperty, "EQContentSize");
+          shape.SetResourceReference(WidthProperty, "EQContentSize");
+          startXPosition -= 4 - (_pixelsPerSecond * 1.1);
+        }
+        else
+        {
+          shape = new Rectangle
+          {
+            Width = rectangleWidth,
+            StrokeThickness = 0.2,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Opacity = 1.0,
+            Effect = new DropShadowEffect { ShadowDepth = 2, Direction = 240, BlurRadius = 0.5, Opacity = 0.5 },
+            RadiusX = 2,
+            RadiusY = 2,
+            ToolTip = adps
+          };
+
+          shape.SetResourceReference(Shape.FillProperty, fillKey);
+          shape.SetResourceReference(HeightProperty, "EQTimelineBarHeight");
+        }
+
+        shape.SetValue(Panel.ZIndexProperty, zIndex);
+        Canvas.SetLeft(shape, startXPosition);
+        Canvas.SetTop(shape, pos);
+        canvas.Children.Add(shape);
       }
     }
 
@@ -737,58 +757,31 @@ namespace EQLogParser
           }
         }
 
-        var player1 = new Dictionary<string, List<Rectangle>>();
-        var player2 = new Dictionary<string, List<Rectangle>>();
-
-        foreach (var visual in mainStackPanel.Children)
-        {
-          if (visual is StackPanel { Children.Count: > 0 } rightPanel)
-          {
-            foreach (var child in rightPanel.Children)
-            {
-              if (child is Canvas { } canvas)
-              {
-                foreach (var rect in canvas.Children)
-                {
-                  if (rect is Rectangle { Tag: string adps } rectangle && !string.IsNullOrEmpty(adps))
-                  {
-                    var selected = titleLabel1.Foreground.ToString() == rectangle.Fill.ToString() ? player1 : player2;
-                    AddValue(selected, adps, rectangle);
-                  }
-                }
-              }
-            }
-          }
-        }
-
         var playerData = new List<List<object>>();
-        var offsetTime = -StartTimeOffset;
-        foreach (var label in CollectionsMarshal.AsSpan(labels))
+        foreach (var label in labels)
         {
-          if (player1.TryGetValue(label, out var rectangles1))
+          if (!string.IsNullOrEmpty(label) && _spellRanges.TryGetValue(label, out var value))
           {
-            foreach (var rectangle in CollectionsMarshal.AsSpan(rectangles1))
+            foreach (var top in value.TopRanges)
             {
               playerData.Add(
-                [
-                  label,
-                  _selectedStats[0].OrigName,
-                  offsetTime + Canvas.GetLeft(rectangle),
-                  offsetTime + Canvas.GetLeft(rectangle) + rectangle.ActualWidth
-                ]);
+              [
+                label,
+                _selectedStats[0].OrigName,
+                top.BeginSeconds,
+                label == "Player Death" ? 1 : top.Duration
+              ]);
             }
-          }
 
-          if (player2.TryGetValue(label, out var rectangles2))
-          {
-            foreach (var rectangle in CollectionsMarshal.AsSpan(rectangles2))
+            foreach (var bottom in value.BottomRanges)
             {
               playerData.Add(
-                [
-                  label,
-                  _selectedStats[1].OrigName, offsetTime + Canvas.GetLeft(rectangle),
-                  offsetTime + Canvas.GetLeft(rectangle) + rectangle.ActualWidth
-                ]);
+              [
+                label,
+                _selectedStats[1].OrigName,
+                bottom.BeginSeconds,
+                label == "Player Death" ? 1 : bottom.Duration
+              ]);
             }
           }
         }
@@ -810,18 +803,6 @@ namespace EQLogParser
       catch (ExternalException ex)
       {
         Log.Error(ex);
-      }
-    }
-
-    private static void AddValue(Dictionary<string, List<Rectangle>> dict, string name, Rectangle value)
-    {
-      if (dict.TryGetValue(name, out var list))
-      {
-        list.Add(value);
-      }
-      else
-      {
-        dict[name] = [value];
       }
     }
 

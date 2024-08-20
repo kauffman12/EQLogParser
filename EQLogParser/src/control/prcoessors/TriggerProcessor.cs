@@ -45,6 +45,7 @@ namespace EQLogParser
     private Task _speakTask;
     private Task _chatTask;
     private Task _processTask;
+    private LineData _previous;
     private bool _isTesting;
     private bool _ready;
     private bool _isDisposed;
@@ -224,14 +225,18 @@ namespace EQLogParser
       {
         foreach (var wrapper in CollectionsMarshal.AsSpan(_activeTriggers))
         {
-          if (CheckLine(wrapper, lineData, out var matches, out var timing))
+          if (CheckLine(wrapper, lineData, out var matches, out var timing) &&
+              CheckPreviousLine(wrapper, _previous, out _, out var previousTiming))
           {
+            timing += previousTiming;
             HandleTrigger(wrapper, lineData, matches, timing);
           }
 
           CheckTimers(wrapper, lineData);
         }
       }
+
+      _previous = lineData;
 
       // await Task.WhenAll(processingTasks);
       if (!_chatCollection.IsCompleted)
@@ -299,6 +304,62 @@ namespace EQLogParser
       }
 
       timing = DateTime.UtcNow.Ticks - beginTicks;
+      return found;
+    }
+
+    private static bool CheckPreviousLine(TriggerWrapper wrapper, LineData lineData, out MatchCollection matches, out long timing)
+    {
+      timing = 0;
+      matches = null;
+      var found = true;
+
+      if (!string.IsNullOrEmpty(lineData?.Action))
+      {
+        var beginTicks = DateTime.UtcNow.Ticks;
+        lock (wrapper)
+        {
+          if (wrapper.PreviousRegex != null)
+          {
+            try
+            {
+              if (!string.IsNullOrEmpty(wrapper.PreviousStartText))
+              {
+                if (lineData.Action.StartsWith(wrapper.PreviousStartText, StringComparison.OrdinalIgnoreCase))
+                {
+                  matches = wrapper.PreviousRegex.Matches(lineData.Action);
+                }
+              }
+              else if (!string.IsNullOrEmpty(wrapper.PreviousContainsText))
+              {
+                if (lineData.Action.Contains(wrapper.PreviousContainsText, StringComparison.OrdinalIgnoreCase))
+                {
+                  matches = wrapper.PreviousRegex.Matches(lineData.Action);
+                }
+              }
+              else
+              {
+                matches = wrapper.PreviousRegex.Matches(lineData.Action);
+              }
+            }
+            catch (RegexMatchTimeoutException)
+            {
+              Log.Warn($"Disabling {wrapper.Name} with slow Regex: {wrapper.TriggerData?.PreviousPattern}");
+              wrapper.IsDisabled = true;
+              timing = DateTime.UtcNow.Ticks - beginTicks;
+              return false;
+            }
+
+            found = matches?.Count > 0 && TriggerUtil.CheckOptions(wrapper.PreviousRegexNOptions, matches, out _);
+          }
+          else if (!string.IsNullOrEmpty(wrapper.ModifiedPreviousPattern))
+          {
+            found = lineData.Action.Contains(wrapper.ModifiedPreviousPattern, StringComparison.OrdinalIgnoreCase);
+          }
+        }
+
+        timing = DateTime.UtcNow.Ticks - beginTicks;
+      }
+
       return found;
     }
 
@@ -780,8 +841,6 @@ namespace EQLogParser
             wrapper.ModifiedTimerName = string.IsNullOrEmpty(wrapper.ModifiedTimerName) ? "" : wrapper.ModifiedTimerName;
             wrapper.HasRepeatedText = wrapper.ModifiedDisplay?.Contains("{repeated}", StringComparison.OrdinalIgnoreCase) == true;
             wrapper.HasRepeatedTimer = wrapper.ModifiedTimerName?.Contains("{repeated}", StringComparison.OrdinalIgnoreCase) == true;
-            pattern = UpdatePattern(trigger.UseRegex, pattern, out var numberOptions);
-            pattern = UpdateTimePattern(trigger.UseRegex, pattern);
 
             // temp
             if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.TimerType == 0)
@@ -789,6 +848,10 @@ namespace EQLogParser
               wrapper.TriggerData.TimerType = 1;
             }
 
+            pattern = UpdatePattern(trigger.UseRegex, pattern, out var numberOptions);
+            pattern = UpdateTimePattern(trigger.UseRegex, pattern);
+
+            // main pattern
             if (trigger.UseRegex)
             {
               wrapper.Regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
@@ -820,6 +883,46 @@ namespace EQLogParser
             else
             {
               wrapper.ModifiedPattern = pattern;
+            }
+
+            // previous line
+            if (trigger.PreviousPattern is { } previousPattern && !string.IsNullOrEmpty(previousPattern))
+            {
+              previousPattern = UpdatePattern(trigger.PreviousUseRegex, previousPattern, out var previousNumberOptions);
+              previousPattern = UpdateTimePattern(trigger.PreviousUseRegex, previousPattern);
+
+              if (trigger.PreviousUseRegex)
+              {
+                wrapper.PreviousRegex = new Regex(previousPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
+                // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+                wrapper.PreviousRegex.Match(""); // warm up the regex
+                wrapper.PreviousRegexNOptions = previousNumberOptions;
+
+                // save some start text to search for before trying the regex
+                if (!string.IsNullOrEmpty(previousPattern) && previousPattern.Length > 3)
+                {
+                  if (previousPattern[0] == '^')
+                  {
+                    var startText = TextUtils.GetSearchableTextFromStart(previousPattern, 1);
+                    if (!string.IsNullOrEmpty(startText))
+                    {
+                      wrapper.PreviousStartText = startText;
+                    }
+                  }
+                  else
+                  {
+                    var containsText = TextUtils.GetSearchableTextFromStart(previousPattern, 0);
+                    if (!string.IsNullOrEmpty(containsText) && containsText.Length > 2)
+                    {
+                      wrapper.PreviousContainsText = containsText;
+                    }
+                  }
+                }
+              }
+              else
+              {
+                wrapper.ModifiedPreviousPattern = previousPattern;
+              }
             }
 
             activeTriggers.Add(wrapper);
@@ -1120,6 +1223,7 @@ namespace EQLogParser
       public string Name { get; init; }
       public List<TimerData> TimerList { get; } = [];
       public string ModifiedPattern { get; set; }
+      public string ModifiedPreviousPattern { get; set; }
       public string ModifiedSpeak { get; init; }
       public string ModifiedEndSpeak { get; init; }
       public string ModifiedEndEarlySpeak { get; init; }
@@ -1133,13 +1237,17 @@ namespace EQLogParser
       public double ModifiedDurationSeconds { get; set; }
       public List<string> TimerOverlayIds { get; } = [];
       public Regex Regex { get; set; }
+      public Regex PreviousRegex { get; set; }
       public List<NumberOptions> RegexNOptions { get; set; }
+      public List<NumberOptions> PreviousRegexNOptions { get; set; }
       public Trigger TriggerData { get; init; }
       public bool HasRepeatedTimer { get; set; }
       public bool HasRepeatedText { get; set; }
       public bool IsDisabled { get; set; }
       public string ContainsText { get; set; }
+      public string PreviousContainsText { get; set; }
       public string StartText { get; set; }
+      public string PreviousStartText { get; set; }
       public BitmapImage TimerIcon { get; set; }
       public double LockedOutTicks { get; set; }
     }

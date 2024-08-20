@@ -38,6 +38,7 @@ namespace EQLogParser
       var bindName = info.Name switch
       {
         "Pattern" => "UseRegex",
+        "PreviousPattern" => "PreviousUseRegex",
         "EndEarlyPattern" => "EndUseRegex",
         "EndEarlyPattern2" => "EndUseRegex2",
         _ => null

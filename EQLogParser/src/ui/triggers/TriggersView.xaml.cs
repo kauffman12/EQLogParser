@@ -21,6 +21,7 @@ namespace EQLogParser
     private readonly Dictionary<string, Window> _previewWindows = [];
     private TriggerConfig _theConfig;
     private readonly PatternEditor _patternEditor;
+    private readonly PatternEditor _previousPatternEditor;
     private readonly PatternEditor _endEarlyPatternEditor;
     private readonly PatternEditor _endEarlyPattern2Editor;
     private readonly RangeEditor _topEditor;
@@ -56,6 +57,7 @@ namespace EQLogParser
       _leftEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Left");
       _widthEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Width");
       _patternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "Pattern");
+      _previousPatternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "PreviousPattern");
       _endEarlyPatternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "EndEarlyPattern");
       _endEarlyPattern2Editor = (PatternEditor)AddEditorInstance(new PatternEditor(), "EndEarlyPattern2");
       AddEditor<CheckComboBoxEditor>("SelectedTextOverlays", "SelectedTimerOverlays");
@@ -393,10 +395,11 @@ namespace EQLogParser
       {
         var triggerChange = true;
         var isValid = TriggerUtil.TestRegexProperty(trigger.UseRegex, trigger.Pattern, _patternEditor);
+        isValid = isValid && TriggerUtil.TestRegexProperty(trigger.PreviousUseRegex, trigger.PreviousPattern, _previousPatternEditor);
         isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex, trigger.EndEarlyPattern, _endEarlyPatternEditor);
         isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex2, trigger.EndEarlyPattern2, _endEarlyPattern2Editor);
 
-        if (args.Property.Name == patternItem.PropertyName)
+        if (args.Property.Name == patternItem.PropertyName || args.Property.Name == previousPatternItem.PropertyName)
         {
           trigger.WorstEvalTime = -1;
         }
