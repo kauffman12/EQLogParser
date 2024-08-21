@@ -35,23 +35,14 @@ namespace EQLogParser
 
     internal int GetVolume()
     {
-      if (_session?.SimpleAudioVolume?.Volume != null)
-      {
-        return (int)(_session.SimpleAudioVolume.Volume * 100);
-      }
-
-      var waveOut = CreateWaveOut();
-      var volume = (int)waveOut.Volume * 100;
-      waveOut.Dispose();
-      return volume;
+      return _session?.SimpleAudioVolume?.Volume != null ? (int)(_session.SimpleAudioVolume.Volume * 100) : 0;
     }
 
     internal void SetVolume(int volume)
     {
-      if (_session?.SimpleAudioVolume?.Volume != null)
+      if (_session?.SimpleAudioVolume != null)
       {
-        var update = volume / 100.0f;
-        _session.SimpleAudioVolume.Volume = update;
+        _session.SimpleAudioVolume.Volume = volume / 100.0f;
       }
     }
 
@@ -68,14 +59,21 @@ namespace EQLogParser
       {
         lock (playerAudio)
         {
-          playerAudio.WaveOut.Stop();
           playerAudio.CurrentEvent = null;
           playerAudio.Events.Clear();
+          playerAudio.CurrentPlayback?.Stop();
 
           if (remove)
           {
-            playerAudio.WaveOut?.Dispose();
             _playerAudios.TryRemove(id, out _);
+            try
+            {
+              playerAudio.ProcessingToken.Cancel();
+            }
+            catch (Exception)
+            {
+              // ignore
+            }
           }
         }
       }
@@ -172,63 +170,75 @@ namespace EQLogParser
 
       _lastAudioCheck = now;
 
-      try
+      if (GetDefaultDevice() is { } device)
       {
-        var silentWav = new byte[]
+        Log.Info($"Using audio device: {device.FriendlyName}.");
+
+        try
         {
-          0x52, 0x49, 0x46, 0x46, 0x24, 0x08, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45, 0x66, 0x6D, 0x74, 0x20,
-          0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x44, 0xAC, 0x00, 0x00, 0x88, 0x58, 0x01, 0x00,
-          0x02, 0x00, 0x10, 0x00, 0x64, 0x61, 0x74, 0x61, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-          0x00, 0x00, 0x00, 0x00
-        };
-
-        // play something to register the audio session with windows
-        var memStream = new MemoryStream(silentWav);
-        var reader = new WaveFileReader(memStream);
-        var waveOut = CreateWaveOut();
-        waveOut.Init(reader);
-
-        waveOut.PlaybackStopped += (_, _) =>
-        {
-          memStream.DisposeAsync();
-          reader.DisposeAsync();
-          waveOut.Dispose();
-        };
-
-        waveOut.Play();
-        waveOut.Stop();
-
-        var deviceEnumerator = new MMDeviceEnumerator();
-        var defaultDevice = deviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-        var sessionManager = defaultDevice.AudioSessionManager;
-        for (var i = 0; i < sessionManager.Sessions.Count; i++)
-        {
-          if (sessionManager.Sessions[i].GetProcessID == Process.GetCurrentProcess().Id)
+          var silentWav = new byte[]
           {
-            _session = sessionManager.Sessions[i];
-            Log.Info($"Using audio device: {defaultDevice.FriendlyName}.");
-            return true;
+            0x52, 0x49, 0x46, 0x46, 0x24, 0x08, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45, 0x66, 0x6D, 0x74, 0x20,
+            0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x44, 0xAC, 0x00, 0x00, 0x88, 0x58, 0x01, 0x00,
+            0x02, 0x00, 0x10, 0x00, 0x64, 0x61, 0x74, 0x61, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00
+          };
+
+          // play something to register the audio session with windows
+          var memStream = new MemoryStream(silentWav);
+          var reader = new WaveFileReader(memStream);
+          var output = CreateWasapiOut();
+
+          output.Init(reader);
+
+          output.PlaybackStopped += (_, _) =>
+          {
+            memStream.DisposeAsync();
+            reader.DisposeAsync();
+            output.Dispose();
+          };
+
+          output.Play();
+          output.Stop();
+
+          var sessionManager = device.AudioSessionManager;
+          for (var i = 0; i < sessionManager.Sessions.Count; i++)
+          {
+            if (sessionManager.Sessions[i].GetProcessID == Process.GetCurrentProcess().Id)
+            {
+              _session = sessionManager.Sessions[i];
+              return true;
+            }
           }
         }
-      }
-      catch (Exception)
-      {
-        // no audio device
+        catch (Exception ex)
+        {
+          Log.Error($"Failed to initialize Audio: {ex.Message}");
+        }
+        finally
+        {
+          device?.Dispose();
+        }
       }
 
       _session?.Dispose();
       _session = null;
+
       return false;
     }
 
-    private static WaveOutEvent CreateWaveOut()
+    private static WasapiOut CreateWasapiOut() => new(AudioClientShareMode.Shared, false, 50);
+
+    private static MMDevice GetDefaultDevice()
     {
-      return new WaveOutEvent()
+      var enumerator = new MMDeviceEnumerator();
+      if (enumerator.HasDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia))
       {
-        DesiredLatency = 50,
-        NumberOfBuffers = 4
-      };
+        return enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+      }
+
+      return null;
     }
 
     private static async Task<byte[]> ReadFileToByteArrayAsync(AudioFileReader reader)
@@ -270,11 +280,6 @@ namespace EQLogParser
         {
           playerAudio.Events = playerAudio.Events.Where(pa => pa.Priority <= priority).ToList();
           playerAudio.Events.Add(new PlaybackEvent { AudioData = audioData, WaveFormat = waveFormat, Priority = priority, Volume = volume, Seconds = seconds });
-          if (playerAudio.CurrentEvent != null && playerAudio.WaveOut.PlaybackState != PlaybackState.Stopped && playerAudio.CurrentEvent.Priority > priority)
-          {
-            playerAudio.WaveOut.Stop();
-            playerAudio.CurrentEvent = null;
-          }
         }
       }
     }
@@ -295,23 +300,23 @@ namespace EQLogParser
       }
 
       var stream = new RawSourceWaveStream(data, 0, data.Length, waveFormat);
-      var waveOut = CreateWaveOut();
+      var output = CreateWasapiOut();
 
-      waveOut.PlaybackStopped += (_, _) =>
+      output.PlaybackStopped += (_, _) =>
       {
         stream.DisposeAsync();
-        waveOut.Dispose();
+        output.Dispose();
       };
 
       try
       {
         var provider = new VolumeSampleProvider(stream.ToSampleProvider())
         {
-          Volume = ConvertVolume(waveOut.Volume, volume)
+          Volume = ConvertVolume(output.Volume, volume)
         };
 
-        waveOut.Init(provider);
-        waveOut.Play();
+        output.Init(provider);
+        output.Play();
       }
       catch (Exception)
       {
@@ -350,31 +355,55 @@ namespace EQLogParser
     private void ProcessAsync(PlayerAudio audio)
     {
       var cancellationTokenSource = new CancellationTokenSource();
-      audio.CancellationTokenSource = cancellationTokenSource;
+      audio.ProcessingToken = cancellationTokenSource;
 
       Task.Run(() =>
       {
         RawSourceWaveStream stream = null;
-
+        WasapiOut output = null;
         try
         {
           while (!cancellationTokenSource.Token.IsCancellationRequested)
           {
             lock (audio)
             {
-              if (audio.WaveOut.PlaybackState == PlaybackState.Playing &&
-                  audio.CurrentEvent?.Seconds is > -1 and < 1.0 && audio.Events.Count > 0)
+              if (output != null)
               {
-                audio.WaveOut.Stop();
+                try
+                {
+                  if (output.PlaybackState != PlaybackState.Stopped)
+                  {
+                    foreach (var item in audio.Events)
+                    {
+                      if (audio.CurrentEvent != item && audio.CurrentEvent?.Priority > item.Priority)
+                      {
+                        output.Stop();
+                        break;
+                      }
+                    }
+                  }
+
+                  // skip through short sound files if there's audio pending
+                  if (output.PlaybackState == PlaybackState.Playing &&
+                      audio.CurrentEvent?.Seconds is > -1 and < 1.0 && audio.Events.Count > 0)
+                  {
+                    output.Stop();
+                  }
+                }
+                catch (Exception)
+                {
+                  // ignore stop errors
+                }
               }
 
-              // skip through short sound files if there's audio pending
-              if (audio.WaveOut.PlaybackState == PlaybackState.Stopped)
+              if (output == null || output.PlaybackState == PlaybackState.Stopped)
               {
                 if (stream != null)
                 {
                   stream.DisposeAsync();
                   stream = null;
+                  output?.Dispose();
+                  audio.CurrentPlayback = null;
                 }
 
                 if (audio.Events.Count > 0)
@@ -384,22 +413,32 @@ namespace EQLogParser
 
                   stream = new RawSourceWaveStream(audio.CurrentEvent.AudioData, 0, audio.CurrentEvent.AudioData.Length, audio.CurrentEvent.WaveFormat);
 
+                  // make sure audio is still valid
                   if (InitAudio())
                   {
                     try
                     {
+                      output = CreateWasapiOut();
+                      audio.CurrentPlayback = output;
+
                       var provider = new VolumeSampleProvider(stream.ToSampleProvider())
                       {
-                        Volume = ConvertVolume(audio.WaveOut.Volume, audio.CurrentEvent.Volume)
+                        Volume = ConvertVolume(output.Volume, audio.CurrentEvent.Volume)
                       };
 
-                      audio.WaveOut.Init(provider);
-                      audio.WaveOut.Play();
+                      output.Init(provider);
+                      output.Play();
                     }
                     catch (Exception)
                     {
+                      // invalid audio device now?
                       _session?.Dispose();
                       _session = null;
+                      output?.Dispose();
+                      output = null;
+                      audio.CurrentPlayback = null;
+                      // sleep before re-trying
+                      Thread.Sleep(2000);
                     }
                   }
                 }
@@ -419,6 +458,12 @@ namespace EQLogParser
         }
         finally
         {
+          if (output != null)
+          {
+            output.Stop();
+            output.Dispose();
+          }
+
           stream?.DisposeAsync();
           cancellationTokenSource.Dispose();
         }
@@ -440,10 +485,10 @@ namespace EQLogParser
 
     private class PlayerAudio
     {
-      internal WaveOutEvent WaveOut { get; } = new();
       internal List<PlaybackEvent> Events { get; set; } = [];
       internal PlaybackEvent CurrentEvent { get; set; }
-      internal CancellationTokenSource CancellationTokenSource { get; set; }
+      internal WasapiOut CurrentPlayback { get; set; }
+      internal CancellationTokenSource ProcessingToken { get; set; }
     }
 
     private class PlaybackEvent
