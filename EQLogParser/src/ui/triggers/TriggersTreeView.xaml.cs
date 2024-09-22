@@ -244,6 +244,7 @@ namespace EQLogParser
         {
           await TriggerUtil.ImportOverlays(node.SerializedData);
           await RefreshOverlayNode();
+          TriggerManager.Instance.CloseOverlays();
         }
       }
     }

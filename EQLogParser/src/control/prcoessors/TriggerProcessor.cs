@@ -226,10 +226,10 @@ namespace EQLogParser
         foreach (var wrapper in CollectionsMarshal.AsSpan(_activeTriggers))
         {
           if (CheckLine(wrapper, lineData, out var matches, out var timing) &&
-              CheckPreviousLine(wrapper, _previous, out _, out var previousTiming))
+              CheckPreviousLine(wrapper, _previous, out var previousMatches, out var previousTiming))
           {
             timing += previousTiming;
-            HandleTrigger(wrapper, lineData, matches, timing);
+            HandleTrigger(wrapper, lineData, matches, previousMatches, timing);
           }
 
           CheckTimers(wrapper, lineData);
@@ -395,11 +395,12 @@ namespace EQLogParser
                 IsSound = isSound,
                 Matches = earlyMatches,
                 OriginalMatches = timerData.OriginalMatches,
+                PreviousMatches = timerData.PreviousMatches,
                 Action = lineData.Action
               };
             }
 
-            if (ProcessDisplayText(displayText, lineData.Action, earlyMatches, timerData.OriginalMatches) is { } updatedDisplayText)
+            if (ProcessDisplayText(displayText, lineData.Action, earlyMatches, timerData.OriginalMatches, timerData.PreviousMatches) is { } updatedDisplayText)
             {
               _addTextEvent(wrapper.Id, wrapper.TriggerData, updatedDisplayText, _fontColor);
             }
@@ -420,7 +421,8 @@ namespace EQLogParser
       }
     }
 
-    private void HandleTrigger(TriggerWrapper wrapper, LineData lineData, MatchCollection matches, long timing, int loopCount = 0)
+    private void HandleTrigger(TriggerWrapper wrapper, LineData lineData, MatchCollection matches,
+      MatchCollection previousMatches, long timing, int loopCount = 0)
     {
       lock (wrapper)
       {
@@ -449,6 +451,7 @@ namespace EQLogParser
 
         if (ProcessMatchesText(wrapper.ModifiedTimerName, matches) is { } displayName)
         {
+          displayName = ProcessMatchesText(displayName, previousMatches);
           displayName = ModLine(displayName, lineData.Action);
           if (wrapper.HasRepeatedTimer)
           {
@@ -457,7 +460,7 @@ namespace EQLogParser
 
           if (wrapper.TriggerData.TimerType > 0 && wrapper.TriggerData.DurationSeconds > 0)
           {
-            StartTimer(wrapper, displayName, beginTicks, lineData, matches, loopCount);
+            StartTimer(wrapper, displayName, beginTicks, lineData, matches, previousMatches, loopCount);
           }
         }
 
@@ -471,11 +474,12 @@ namespace EQLogParser
             TtsOrSound = tts,
             IsSound = isSound,
             Matches = matches,
+            PreviousMatches = previousMatches,
             Action = lineData.Action
           };
         }
 
-        if (ProcessDisplayText(wrapper.ModifiedDisplay, lineData.Action, matches, null) is { } updatedDisplayText)
+        if (ProcessDisplayText(wrapper.ModifiedDisplay, lineData.Action, matches, null, previousMatches) is { } updatedDisplayText)
         {
           if (wrapper.HasRepeatedText)
           {
@@ -486,7 +490,7 @@ namespace EQLogParser
           _addTextEvent(wrapper.Id, wrapper.TriggerData, updatedDisplayText, _fontColor);
         }
 
-        if (ProcessDisplayText(wrapper.ModifiedShare, lineData.Action, matches, null) is { } updatedShareText)
+        if (ProcessDisplayText(wrapper.ModifiedShare, lineData.Action, matches, null, previousMatches) is { } updatedShareText)
         {
           UiUtil.InvokeAsync(() => Clipboard.SetText(updatedShareText));
         }
@@ -504,7 +508,7 @@ namespace EQLogParser
     }
 
     private void StartTimer(TriggerWrapper wrapper, string displayName, long beginTicks, LineData lineData,
-      MatchCollection matches, int loopCount = 0)
+      MatchCollection matches, MatchCollection previousMatches, int loopCount = 0)
     {
       var trigger = wrapper.TriggerData;
       switch (trigger.TriggerAgainOption)
@@ -566,11 +570,12 @@ namespace EQLogParser
                   TtsOrSound = speak,
                   IsSound = isSound,
                   Matches = matches,
+                  PreviousMatches = previousMatches,
                   Action = lineData.Action
                 });
               }
 
-              if (ProcessDisplayText(wrapper.ModifiedWarningDisplay, lineData.Action, matches, null) is { } updatedDisplayText)
+              if (ProcessDisplayText(wrapper.ModifiedWarningDisplay, lineData.Action, matches, null, previousMatches) is { } updatedDisplayText)
               {
                 _addTextEvent(wrapper.Id, trigger, updatedDisplayText, _fontColor);
               }
@@ -598,6 +603,7 @@ namespace EQLogParser
       newTimerData.TriggerAgainOption = trigger.TriggerAgainOption;
       newTimerData.TimerType = trigger.TimerType;
       newTimerData.OriginalMatches = matches;
+      newTimerData.PreviousMatches = previousMatches;
       newTimerData.ActiveColor = _activeColor ?? trigger.ActiveColor;
       newTimerData.FontColor = _fontColor ?? trigger.FontColor;
       newTimerData.Key = wrapper.Id + "-" + displayName;
@@ -614,6 +620,7 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(trigger.EndEarlyPattern))
       {
         var endEarlyPattern = ProcessMatchesText(trigger.EndEarlyPattern, matches);
+        endEarlyPattern = ProcessMatchesText(endEarlyPattern, previousMatches);
         endEarlyPattern = UpdatePattern(trigger.EndUseRegex, endEarlyPattern, out var numberOptions2);
 
         if (trigger.EndUseRegex)
@@ -630,6 +637,7 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(trigger.EndEarlyPattern2))
       {
         var endEarlyPattern2 = ProcessMatchesText(trigger.EndEarlyPattern2, matches);
+        endEarlyPattern2 = ProcessMatchesText(endEarlyPattern2, previousMatches);
         endEarlyPattern2 = UpdatePattern(trigger.EndUseRegex2, endEarlyPattern2, out var numberOptions3);
 
         if (trigger.EndUseRegex2)
@@ -670,11 +678,12 @@ namespace EQLogParser
                 IsSound = isSound,
                 Matches = matches,
                 OriginalMatches = data2.OriginalMatches,
+                PreviousMatches = data2.PreviousMatches,
                 Action = lineData.Action
               });
             }
 
-            if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, data2.OriginalMatches) is { } updatedDisplayText)
+            if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, data2.OriginalMatches, data2.PreviousMatches) is { } updatedDisplayText)
             {
               _addTextEvent(wrapper.Id, trigger, updatedDisplayText, _fontColor);
             }
@@ -688,7 +697,7 @@ namespace EQLogParser
               // repeat normal process
               if (CheckLine(wrapper, data2.RepeatingTimerLineData, out var matchAgain, out var timing))
               {
-                HandleTrigger(wrapper, data2.RepeatingTimerLineData, matchAgain, timing, data2.TimesToLoopCount + 1);
+                HandleTrigger(wrapper, data2.RepeatingTimerLineData, matchAgain, null, timing, data2.TimesToLoopCount + 1);
               }
 
               CheckTimers(wrapper, lineData);
@@ -731,6 +740,7 @@ namespace EQLogParser
           {
             var tts = ProcessMatchesText(speak.TtsOrSound, speak.OriginalMatches);
             tts = ProcessMatchesText(tts, speak.Matches);
+            tts = ProcessMatchesText(tts, speak.PreviousMatches);
             tts = ModLine(tts, speak.Action);
 
             if (!string.IsNullOrEmpty(tts))
@@ -972,12 +982,14 @@ namespace EQLogParser
       return endEarly;
     }
 
-    private static string ProcessDisplayText(string text, string line, MatchCollection matches, MatchCollection originalMatches)
+    private static string ProcessDisplayText(string text, string line, MatchCollection matches,
+      MatchCollection originalMatches, MatchCollection previousMatches)
     {
       if (!string.IsNullOrEmpty(text))
       {
         text = ProcessMatchesText(text, originalMatches);
         text = ProcessMatchesText(text, matches);
+        text = ProcessMatchesText(text, previousMatches);
         text = ModLine(text, line);
         return text;
       }
@@ -1208,6 +1220,7 @@ namespace EQLogParser
       public bool IsSound { get; init; }
       public MatchCollection Matches { get; init; }
       public MatchCollection OriginalMatches { get; init; }
+      public MatchCollection PreviousMatches { get; init; }
       public string Action { get; init; }
     }
 
