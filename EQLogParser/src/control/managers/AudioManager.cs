@@ -330,26 +330,26 @@ namespace EQLogParser
 
     private static float ConvertVolume(float current, int increase)
     {
-      var newValue = current *
-                     increase switch
-                     {
-                       0 => 1.8f,
-                       1 => 1.6f,
-                       2 => 1.4f,
-                       3 => 1.2f,
-                       5 => 0.8f,
-                       6 => 0.6f,
-                       7 => 0.4f,
-                       8 => 0.2f,
-                       _ => 1.0f
-                     };
-
-      return newValue switch
+      var floatIncrease = increase switch
       {
-        < 0 => 0.0f,
-        > 1.0f => 1.0f,
-        _ => newValue
+        0 => 1.8f,
+        1 => 1.6f,
+        2 => 1.4f,
+        3 => 1.2f,
+        5 => 0.8f,
+        6 => 0.6f,
+        7 => 0.4f,
+        8 => 0.2f,
+        _ => 1.0f
       };
+
+      var totalValue = current * floatIncrease;
+      if (totalValue > 1.0f)
+      {
+        return 1.0f / current;
+      }
+
+      return floatIncrease;
     }
 
     private void ProcessAsync(PlayerAudio audio)

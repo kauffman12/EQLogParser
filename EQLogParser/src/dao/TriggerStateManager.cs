@@ -873,51 +873,78 @@ namespace EQLogParser
 
       foreach (var newNode in imported)
       {
-        if (tree.FindOne(n => n.Parent == parentId && n.Name == newNode.Name) is { } found)
+        if (triggers)
         {
-          // trigger
-          if (triggers && found.TriggerData != null)
+          if (tree.FindOne(n => n.Parent == parentId && n.Name == newNode.Name) is { } foundTrigger)
           {
-            found.TriggerData = newNode.TriggerData;
-            tree.Update(found);
-            enableId = found.Id;
+            // update trigger data
+            if (foundTrigger.TriggerData != null)
+            {
+              foundTrigger.TriggerData = newNode.TriggerData;
+              tree.Update(foundTrigger);
+              enableId = foundTrigger.Id;
+            }
+            // directory but make sure it is one
+            else if (foundTrigger.OverlayData == null && foundTrigger.TriggerData == null && newNode.Nodes?.Count > 0)
+            {
+              Import(tree, foundTrigger.Id, newNode.Nodes, type, characterStates);
+              enableId = foundTrigger.Id;
+            }
           }
-          // overlay
-          else if (!triggers && found.OverlayData != null)
+          else
           {
-            found.OverlayData = newNode.OverlayData;
-            tree.Update(found);
-          }
-          // make sure it is a directory
-          else if (found.OverlayData == null && found.TriggerData == null && newNode.Nodes?.Count > 0)
-          {
-            Import(tree, found.Id, newNode.Nodes, type, characterStates);
-            enableId = found.Id;
+            var index = GetNextIndex(tree, parentId);
+
+            // new trigger
+            if (newNode.TriggerData != null)
+            {
+              newNode.TriggerData.SelectedOverlays = ValidateOverlays(newNode.TriggerData.SelectedOverlays);
+              Insert(newNode, index);
+              enableId = newNode.Id;
+            }
+            // make sure it's a new directory
+            else if (newNode.OverlayData == null && newNode.TriggerData == null && App.AutoMap.Map(newNode, new TriggerNode()) is { } node)
+            {
+              Insert(node, index);
+              Import(tree, node.Id, newNode.Nodes, type, characterStates);
+              enableId = node.Id;
+            }
           }
         }
         else
         {
-          var index = GetNextIndex(tree, parentId);
+          if (tree.FindOne(n => n.Parent == parentId && n.Id == newNode.Id) is { } foundOverlay)
+          {
+            // update overlay data
+            if (foundOverlay.OverlayData != null)
+            {
+              foundOverlay.OverlayData = newNode.OverlayData;
+              tree.Update(foundOverlay);
+            }
+            // directory but make sure it is one
+            else if (foundOverlay.OverlayData == null && foundOverlay.TriggerData == null && newNode.Nodes?.Count > 0)
+            {
+              Import(tree, foundOverlay.Id, newNode.Nodes, type, characterStates);
+              enableId = foundOverlay.Id;
+            }
+          }
+          else
+          {
+            var index = GetNextIndex(tree, parentId);
 
-          // new trigger
-          if (triggers && newNode.TriggerData != null)
-          {
-            newNode.TriggerData.SelectedOverlays = ValidateOverlays(tree, newNode.TriggerData.SelectedOverlays);
-            Insert(newNode, index);
-            enableId = newNode.Id;
-          }
-          // new overlay
-          if (!triggers && newNode.OverlayData != null)
-          {
-            newNode.OverlayData = newNode.OverlayData;
-            Insert(newNode, index);
-          }
-          // make sure it's a new directory
-          else if (newNode.OverlayData == null && newNode.TriggerData == null && App.AutoMap.Map(newNode, new TriggerNode()) is { } node)
-          {
-            Insert(node, index);
-            Import(tree, node.Id, newNode.Nodes, type, characterStates);
-            enableId = node.Id;
+            // new overlay
+            if (newNode.OverlayData != null)
+            {
+              newNode.OverlayData = newNode.OverlayData;
+              Insert(newNode, index, newNode.Id);
+            }
+            // make sure it's a new directory
+            else if (newNode.OverlayData == null && newNode.TriggerData == null && App.AutoMap.Map(newNode, new TriggerNode()) is { } node)
+            {
+              Insert(node, index);
+              Import(tree, node.Id, newNode.Nodes, type, characterStates);
+              enableId = node.Id;
+            }
           }
         }
 
@@ -937,10 +964,10 @@ namespace EQLogParser
 
       return;
 
-      void Insert(TriggerNode node, int index)
+      void Insert(TriggerNode node, int index, string overrideId = null)
       {
         node.Parent = parentId;
-        node.Id = Guid.NewGuid().ToString();
+        node.Id = overrideId ?? Guid.NewGuid().ToString();
         node.Index = index;
         node.IsExpanded = false;
         tree.Insert(node);
@@ -1068,6 +1095,17 @@ namespace EQLogParser
       }
     }
 
+    private List<string> ValidateOverlays(IEnumerable<string> existing)
+    {
+      if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+      {
+        var allOverlays = tree.Find(node => node.OverlayData != null).ToList();
+        return existing?.Where(id => tree.FindOne(node => node.Id == id) != null).ToList() ?? [];
+      }
+
+      return [];
+    }
+
     private static void FixEnabledState(TriggerTreeViewNode viewNode, TriggerState state, ref bool needUpdate)
     {
       if (!viewNode.IsDir()) return;
@@ -1128,11 +1166,6 @@ namespace EQLogParser
     {
       var highest = tree.Query().Where(n => n.Parent == parentId).OrderByDescending(n => n.Index).FirstOrDefault();
       return highest?.Index + 1 ?? 0;
-    }
-
-    private static List<string> ValidateOverlays(ILiteCollection<TriggerNode> tree, IEnumerable<string> existing)
-    {
-      return existing?.Where(id => tree.Exists(o => o.Id == id && o.OverlayData != null)).ToList() ?? [];
     }
 
     // remove eventually

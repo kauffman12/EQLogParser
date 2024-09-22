@@ -79,6 +79,7 @@ namespace EQLogParser
     public List<NumberOptions> EndEarlyRegexNOptions { get; set; }
     public List<NumberOptions> EndEarlyRegex2NOptions { get; set; }
     public MatchCollection OriginalMatches { get; set; }
+    public MatchCollection PreviousMatches { get; set; }
     public long RepeatedCount { get; set; } = -1;
     public string ActiveColor { get; set; }
     public string FontColor { get; set; }

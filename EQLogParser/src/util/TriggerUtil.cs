@@ -943,6 +943,7 @@ namespace EQLogParser
     {
       return new ExportTriggerNode
       {
+        Id = viewNode.SerializedData.OverlayData != null ? viewNode.SerializedData.Id : null,
         Name = viewNode.SerializedData.Name,
         TriggerData = viewNode.SerializedData.TriggerData,
         OverlayData = viewNode.SerializedData.OverlayData,
