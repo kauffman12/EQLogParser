@@ -413,6 +413,8 @@ namespace EQLogParser
         _overlayCopiedNode = null;
       }
 
+      return;
+
       async Task HandlePaste(SfTreeView tree, TriggerTreeViewNode copiedNode, bool isCutNode)
       {
         if (tree.SelectedItem is TriggerTreeViewNode node && copiedNode != null)

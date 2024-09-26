@@ -66,7 +66,8 @@ namespace EQLogParser
       AddEditor<ExampleTimerBar>("TimerBarPreview");
       AddEditor<OptionalColorEditor>("TriggerActiveBrush", "TriggerFontBrush");
       AddEditor<OptionalIconEditor>("TriggerIconSource");
-      AddEditor<TriggerListsEditor>("TriggerAgainOption", "FontSize", "FontFamily", "SortBy", "TimerMode", "TimerType", "Volume");
+      AddEditor<TriggerListsEditor>("TriggerAgainOption", "FontSize", "FontFamily", "SortBy", "TimerMode",
+        "TimerType", "VerticalAlignment", "Volume");
       AddEditor<WrapTextEditor>("EndEarlyTextToDisplay", "EndTextToDisplay", "TextToDisplay", "TextToShare",
         "WarningTextToDisplay", "Comments", "OverlayComments");
       AddEditorInstance(new RangeEditor(typeof(double), 0.2, 2.0), "DurationSeconds");
@@ -164,30 +165,38 @@ namespace EQLogParser
 
       if (saveButton.IsEnabled)
       {
-        string name = null;
+        TriggerNode node = null;
         if (model is TriggerPropertyModel triggerModel)
         {
-          name = triggerModel.Node?.Name;
+          node = triggerModel.Node;
         }
         else if (model is TextOverlayPropertyModel textModel)
         {
-          name = textModel.Node?.Name;
+          node = textModel.Node;
         }
         else if (model is TimerOverlayPropertyModel timerModel)
         {
-          name = timerModel.Node?.Name;
+          node = timerModel.Node;
         }
 
-        if (!string.IsNullOrEmpty(name))
+        if (!string.IsNullOrEmpty(node?.Name))
         {
-          var msgDialog = new MessageWindow($"Do you want to save changes to {name}?", Resource.UNSAVED,
+          var msgDialog = new MessageWindow($"Do you want to save changes to {node.Name}?", Resource.UNSAVED,
             MessageWindow.IconType.Question, "Don't Save", "Save");
           msgDialog.ShowDialog();
-          cancel = !msgDialog.IsYes1Clicked && !msgDialog.IsYes2Clicked;
           if (msgDialog.IsYes2Clicked)
           {
             SaveClick(this, null);
           }
+          else if (msgDialog.IsYes1Clicked)
+          {
+            if (node.OverlayData != null)
+            {
+              _ = TriggerUtil.LoadOverlayStyle(node, node.OverlayData);
+            }
+          }
+
+          cancel = !msgDialog.IsYes1Clicked && !msgDialog.IsYes2Clicked;
         }
       }
 
@@ -492,6 +501,12 @@ namespace EQLogParser
           textChange = textOverlay.FontSize != original.FontSize;
           Application.Current.Resources["TextOverlayFontSize-" + textOverlay.Node.Id] = newFontSize;
         }
+        else if (args.Property.Name == verticalAlignment.PropertyName)
+        {
+          // not currently using vertical alignment for text overlays
+          textChange = textOverlay.VerticalAlignment != original.VerticalAlignment;
+          Application.Current.Resources["OverlayVerticalAlignment-" + textOverlay.Node.Id] = (VerticalAlignment)textOverlay.VerticalAlignment;
+        }
 
         if (textChange)
         {
@@ -554,6 +569,11 @@ namespace EQLogParser
         {
           PropertyGridUtil.EnableCategories(thePropertyGrid,
             [new { Name = idleBrushItem.CategoryName, IsEnabled = (int)args.Property.Value == 1 }]);
+        }
+        else if (args.Property.Name == verticalAlignment.PropertyName)
+        {
+          timerChange = timerOverlay.VerticalAlignment != original.VerticalAlignment;
+          Application.Current.Resources["OverlayVerticalAlignment-" + timerOverlay.Node.Id] = (VerticalAlignment)timerOverlay.VerticalAlignment;
         }
 
         if (timerChange)

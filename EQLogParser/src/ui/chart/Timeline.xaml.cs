@@ -33,6 +33,7 @@ namespace EQLogParser
     private readonly string[] _types = ["Defensive Skills", "ADPS", "Healing Skills"];
     private readonly Dictionary<string, SpellRange> _spellRanges = [];
     private readonly Dictionary<string, byte> _selfOnly = [];
+    private readonly Dictionary<string, byte> _spellCasts = [];
     private readonly List<UIElement> _draggedElements = [];
     private readonly List<string> _keyOrder = [];
     private Rectangle _selectedRectangle;
@@ -115,6 +116,8 @@ namespace EQLogParser
             {
               castSpells.Add(cast.SpellData);
               UpdateSpellRange(cast.SpellData, beginTime, startTime, endTime, i == 0, deathTimes);
+              _spellCasts[cast.SpellData.NameAbbrv] = 1;
+              _selfOnly.Remove(cast.SpellData.NameAbbrv);
             }
             else if (action is ReceivedSpell received && received.Receiver == player)
             {
@@ -144,7 +147,7 @@ namespace EQLogParser
 
               if (spellData is { Adps: > 0 } && (spellData.MaxHits > 0 || spellData.Duration <= 1800) && ClassFilter(spellData))
               {
-                if (string.IsNullOrEmpty(spellData.LandsOnOther))
+                if (string.IsNullOrEmpty(spellData.LandsOnOther) && !_spellCasts.ContainsKey(spellData.NameAbbrv))
                 {
                   _selfOnly[spellData.NameAbbrv] = 1;
                 }

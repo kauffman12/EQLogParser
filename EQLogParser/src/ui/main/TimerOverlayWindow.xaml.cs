@@ -31,6 +31,7 @@ namespace EQLogParser
       _preview = previews != null;
       _previewWindows = previews;
       title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + _node.Id);
+      mainPanel.SetResourceReference(VerticalAlignmentProperty, "OverlayVerticalAlignment-" + _node.Id);
 
       Height = _node.OverlayData.Height;
       Width = _node.OverlayData.Width;

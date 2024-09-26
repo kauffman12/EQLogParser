@@ -32,6 +32,7 @@ namespace EQLogParser
     private readonly List<TimerData> _activeTimers = [];
     private readonly Dictionary<string, Dictionary<string, RepeatedData>> _repeatedTextTimes = [];
     private readonly Dictionary<string, Dictionary<string, RepeatedData>> _repeatedTimerTimes = [];
+    private readonly Dictionary<string, Dictionary<string, RepeatedData>> _repeatedSpeakTimes = [];
     private readonly Action<string, Trigger, string, string> _addTextEvent;
     private readonly Action<string, Trigger, List<TimerData>> _addTimerEvent;
     private readonly SpeechSynthesizer _synth;
@@ -468,6 +469,12 @@ namespace EQLogParser
         var tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.SoundToPlay, wrapper.ModifiedSpeak, out var isSound);
         if (!string.IsNullOrEmpty(tts))
         {
+          if (wrapper.HasRepeatedSpeak)
+          {
+            var currentCount = UpdateRepeatedTimes(_repeatedSpeakTimes, wrapper, tts, beginTicks);
+            tts = tts.Replace("{repeated}", currentCount.ToString(), StringComparison.OrdinalIgnoreCase);
+          }
+
           speak = new Speak
           {
             Wrapper = wrapper,
@@ -823,6 +830,7 @@ namespace EQLogParser
             // replace GINA counted with repeated
             wrapper.ModifiedDisplay = ModCounter(wrapper.ModifiedDisplay);
             wrapper.ModifiedTimerName = ModCounter(wrapper.ModifiedTimerName);
+            wrapper.ModifiedSpeak = ModCounter(wrapper.ModifiedSpeak);
 
             // get overlays for timers
             foreach (var overlayId in wrapper.TriggerData.SelectedOverlays ?? [])
@@ -851,6 +859,7 @@ namespace EQLogParser
             wrapper.ModifiedTimerName = string.IsNullOrEmpty(wrapper.ModifiedTimerName) ? "" : wrapper.ModifiedTimerName;
             wrapper.HasRepeatedText = wrapper.ModifiedDisplay?.Contains("{repeated}", StringComparison.OrdinalIgnoreCase) == true;
             wrapper.HasRepeatedTimer = wrapper.ModifiedTimerName?.Contains("{repeated}", StringComparison.OrdinalIgnoreCase) == true;
+            wrapper.HasRepeatedSpeak = wrapper.ModifiedSpeak?.Contains("{repeated}", StringComparison.OrdinalIgnoreCase) == true;
 
             // temp
             if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.TimerType == 0)
@@ -1237,7 +1246,7 @@ namespace EQLogParser
       public List<TimerData> TimerList { get; } = [];
       public string ModifiedPattern { get; set; }
       public string ModifiedPreviousPattern { get; set; }
-      public string ModifiedSpeak { get; init; }
+      public string ModifiedSpeak { get; set; }
       public string ModifiedEndSpeak { get; init; }
       public string ModifiedEndEarlySpeak { get; init; }
       public string ModifiedWarningSpeak { get; init; }
@@ -1256,6 +1265,7 @@ namespace EQLogParser
       public Trigger TriggerData { get; init; }
       public bool HasRepeatedTimer { get; set; }
       public bool HasRepeatedText { get; set; }
+      public bool HasRepeatedSpeak { get; set; }
       public bool IsDisabled { get; set; }
       public string ContainsText { get; set; }
       public string PreviousContainsText { get; set; }
