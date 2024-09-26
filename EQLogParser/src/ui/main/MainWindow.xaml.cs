@@ -250,7 +250,6 @@ namespace EQLogParser
         };
 
         // Init Trigger Manager
-        await TriggerStateManager.Instance.Start();
         await TriggerManager.Instance.Start();
         ConfigUtil.UpdateStatus("Trigger Manager Started");
 
@@ -1122,7 +1121,7 @@ namespace EQLogParser
       RecordManager.Instance.Stop();
       ChatManager.Instance.Stop();
       await TriggerManager.Instance.Stop();
-      await TriggerStateManager.Instance.Stop();
+      await TriggerStateManager.Instance.Dispose();
 
       // restore from backup will use explicit mode
       if (Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)

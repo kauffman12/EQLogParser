@@ -100,6 +100,7 @@ namespace EQLogParser
     public string OverlayComments { get; set; }
     public string FontSize { get; set; } = "12pt";
     public int SortBy { get; set; }
+    public int VerticalAlignment { get; set; } = -1;
     public string FontColor { get; set; } = "#FFFFFFFF";
     public string FontFamily { get; set; } = "Segoe UI";
     public string ActiveColor { get; set; } = "#FF1D397E";

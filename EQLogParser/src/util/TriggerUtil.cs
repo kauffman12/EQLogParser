@@ -196,11 +196,15 @@ namespace EQLogParser
         toOverlay.ShowIdle = fromOverlay.ShowIdle;
         toOverlay.ShowReset = fromOverlay.ShowReset;
         toOverlay.Width = fromOverlay.Width;
+        toOverlay.VerticalAlignment = fromOverlay.VerticalAlignment;
 
         if (toOverlay is TimerOverlayPropertyModel toModel)
         {
           toModel.IdleTimeoutTimeSpan = new TimeSpan(0, 0, (int)toModel.IdleTimeoutSeconds);
           Application.Current.Resources["OverlayText-" + toModel.Node.Id] = toModel.Node.Name;
+
+          // make sure old default data is no longer set (should be fixed during startup)
+          Application.Current.Resources["OverlayVerticalAlignment-" + toModel.Node.Id] = (VerticalAlignment)toModel.VerticalAlignment;
 
           AssignResource(toModel, fromOverlay, "OverlayColor", "OverlayBrush", "OverlayBrushColor");
           AssignResource(toModel, fromOverlay, "FontColor", "FontBrush", "TimerBarFontColor");
@@ -220,6 +224,7 @@ namespace EQLogParser
           var fontSize = ParseFontSize(fromOverlay.FontSize);
           Application.Current.Resources["TimerBarFontSize-" + toModel.Node.Id] = fontSize;
           Application.Current.Resources["TimerBarHeight-" + toModel.Node.Id] = CalculateTimerBarHeight(fontSize, family);
+
         }
         else if (fromOverlay is TimerOverlayPropertyModel fromModel)
         {
@@ -234,6 +239,9 @@ namespace EQLogParser
         else if (toOverlay is TextOverlayPropertyModel toTextModel)
         {
           Application.Current.Resources["OverlayText-" + toTextModel.Node.Id] = toTextModel.Node.Name;
+
+          // make sure old default data is no longer set (should be fixed during startup)
+          Application.Current.Resources["OverlayVerticalAlignment-" + toTextModel.Node.Id] = (VerticalAlignment)toTextModel.VerticalAlignment;
 
           AssignResource(toTextModel, fromOverlay, "OverlayColor", "OverlayBrush", "OverlayBrushColor");
           AssignResource(toTextModel, fromOverlay, "FontColor", "FontBrush", "TextOverlayFontColor");
@@ -264,27 +272,33 @@ namespace EQLogParser
       {
         var node = new TriggerNode { Name = od.Name, Id = od.Id, OverlayData = od.OverlayData };
         Application.Current.Resources["OverlayText-" + od.Id] = od.Name;
-        if (od.OverlayData?.IsTextOverlay == true)
-        {
-          // workaround to load styles
-          await Copy(new TextOverlayPropertyModel { Node = node }, od.OverlayData);
-        }
-        else if (od.OverlayData?.IsTextOverlay == false)
-        {
-          // workaround to load styles
-          await Copy(new TimerOverlayPropertyModel { Node = node }, od.OverlayData);
-        }
+        await LoadOverlayStyle(node, od.OverlayData);
       }
     }
 
-    private static void AssignResource(dynamic toModel, object fromOverlay, string colorProperty, string brushProperty, string prefixx)
+    internal static async Task LoadOverlayStyle(TriggerNode node, Overlay overlay)
+    {
+
+      if (overlay?.IsTextOverlay == true)
+      {
+        // workaround to load styles
+        await Copy(new TextOverlayPropertyModel { Node = node }, overlay);
+      }
+      else if (overlay?.IsTextOverlay == false)
+      {
+        // workaround to load styles
+        await Copy(new TimerOverlayPropertyModel { Node = node }, overlay);
+      }
+    }
+
+    private static void AssignResource(dynamic toModel, object fromOverlay, string colorProperty, string brushProperty, string prefix)
     {
       var colorValue = (string)fromOverlay.GetType().GetProperty(colorProperty)?.GetValue(fromOverlay);
       if (!string.IsNullOrEmpty(colorValue))
       {
         var brush = UiUtil.GetBrush(colorValue);
         toModel.GetType().GetProperty(brushProperty)?.SetValue(toModel, brush);
-        Application.Current.Resources[$"{prefixx}-{toModel.Node.Id}"] = brush;
+        Application.Current.Resources[$"{prefix}-{toModel.Node.Id}"] = brush;
       }
     }
 

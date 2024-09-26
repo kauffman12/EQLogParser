@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
 using JsonSerializer = System.Text.Json.JsonSerializer;
@@ -37,7 +38,6 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<TriggerStateManager> Lazy = new(() => new TriggerStateManager());
     internal static TriggerStateManager Instance => Lazy.Value; // instance
-    private readonly bool _needUpgrade;
     private readonly LiteDbTaskQueue _taskQueue;
     private readonly LiteDatabase _db;
 
@@ -46,7 +46,7 @@ namespace EQLogParser
       var path = ConfigUtil.GetTriggersDbFile();
       if (!string.IsNullOrEmpty(path))
       {
-        _needUpgrade = !File.Exists(path);
+        var needUpgrade = !File.Exists(path);
 
         try
         {
@@ -62,6 +62,128 @@ namespace EQLogParser
           };
 
           _taskQueue = new LiteDbTaskQueue(_db);
+
+          if (needUpgrade)
+          {
+            // upgrade from old json trigger format
+            UpgradeFromOldParser();
+          }
+
+          // upgrade config if needed
+          var configs = _db.GetCollection<TriggerConfig>(ConfigCol);
+          configs.EnsureIndex(x => x.Id);
+          UpgradeConfig(configs);
+
+          // create default data
+          var tree = _db.GetCollection<TriggerNode>(TreeCol);
+
+          // create overlay node if it doesn't exist
+          if (tree.FindOne(n => n.Parent == null && n.Name == Overlays) == null)
+          {
+            tree.Insert(new TriggerNode { Name = Overlays, Id = Guid.NewGuid().ToString() });
+          }
+
+          // create trigger node if it doesn't exist
+          if (tree.FindOne(n => n.Parent == null && n.Name == Triggers) == null)
+          {
+            tree.Insert(new TriggerNode { Name = Triggers, Id = Guid.NewGuid().ToString() });
+          }
+
+          // fix overlay data
+          if (tree.Find(n => n.OverlayData != null) is { } overlays)
+          {
+            var updated = new List<TriggerNode>();
+            foreach (var overlay in overlays)
+            {
+              if (overlay.OverlayData.VerticalAlignment == -1)
+              {
+                SetVerticalAlignment(overlay);
+                updated.Add(overlay);
+              }
+            }
+
+            updated.ForEach(node => tree.Update(node));
+          }
+
+          tree.EnsureIndex(x => x.Id);
+          tree.EnsureIndex(x => x.Parent);
+          tree.EnsureIndex(x => x.Name);
+
+          var states = _db.GetCollection<TriggerState>(StatesCol);
+          states.EnsureIndex(x => x.Id);
+
+          // remove old bad version
+          var versions = _db.GetCollection<Version>(BadVersionCol);
+          if (versions.Count() > 0)
+          {
+            versions.DeleteAll();
+          }
+
+          var fixVersions = _db.GetCollection<VersionData>(VersionCol);
+          if (fixVersions.Count() == 0)
+          {
+            fixVersions.Insert(new VersionData { Id = "1", Version = "1.0.1" });
+
+            // add default overlays if none exist
+            if (!tree.Find(n => n.OverlayData != null && n.Parent != null).Any())
+            {
+              if (tree.FindOne(n => n.Parent == null && n.Name == Overlays) is { } parentNode)
+              {
+                var position = TriggerUtil.CalculateDefaultTextOverlayPosition();
+
+                var textNode = new TriggerNode
+                {
+                  Name = "Default Text Overlay",
+                  Id = Guid.NewGuid().ToString(),
+                  Parent = parentNode.Id,
+                  OverlayData = new Overlay
+                  {
+                    IsDefault = true,
+                    IsTextOverlay = true,
+                    Left = (long)position.X,
+                    Top = (long)position.Y,
+                    Height = 150,
+                    Width = 450,
+                    FontSize = "16pt",
+                    FontColor = "#FFE9C405"
+                  }
+                };
+
+                tree.Insert(textNode);
+
+                var timerNode = new TriggerNode
+                {
+                  Name = "Default Timer Overlay",
+                  Id = Guid.NewGuid().ToString(),
+                  Parent = parentNode.Id,
+                  OverlayData = new Overlay
+                  {
+                    IsDefault = true,
+                    IsTimerOverlay = true
+                  }
+                };
+
+                tree.Insert(timerNode);
+              }
+            }
+
+            // save current values
+            _db.Checkpoint();
+
+            var lastPath = ConfigUtil.GetTriggersLastDbFile();
+            if (!string.IsNullOrEmpty(lastPath) && !File.Exists(lastPath))
+            {
+              try
+              {
+                // create backup during for the 1.0.1 upgrade
+                File.Copy(ConfigUtil.GetTriggersDbFile(), lastPath);
+              }
+              catch (Exception)
+              {
+                // ignore
+              }
+            }
+          }
         }
         catch (Exception ex)
         {
@@ -70,129 +192,11 @@ namespace EQLogParser
       }
     }
 
-    internal async Task Start()
-    {
-      if (_needUpgrade)
-      {
-        // upgrade from old json trigger format
-        await _taskQueue.EnqueueTransaction(Upgrade);
-      }
-
-      // upgrade config if needed
-      await _taskQueue.EnqueueTransaction(() =>
-      {
-        var configs = _db.GetCollection<TriggerConfig>(ConfigCol);
-        configs.EnsureIndex(x => x.Id);
-        UpgradeConfig(configs);
-        return Task.CompletedTask;
-      });
-
-      // create default data
-      await _taskQueue.EnqueueTransaction(() =>
-      {
-        var tree = _db.GetCollection<TriggerNode>(TreeCol);
-
-        // create overlay node if it doesn't exist
-        if (tree.FindOne(n => n.Parent == null && n.Name == Overlays) == null)
-        {
-          tree.Insert(new TriggerNode { Name = Overlays, Id = Guid.NewGuid().ToString() });
-        }
-
-        // create trigger node if it doesn't exist
-        if (tree.FindOne(n => n.Parent == null && n.Name == Triggers) == null)
-        {
-          tree.Insert(new TriggerNode { Name = Triggers, Id = Guid.NewGuid().ToString() });
-        }
-
-        tree.EnsureIndex(x => x.Id);
-        tree.EnsureIndex(x => x.Parent);
-        tree.EnsureIndex(x => x.Name);
-
-        var states = _db.GetCollection<TriggerState>(StatesCol);
-        states.EnsureIndex(x => x.Id);
-
-        // remove old bad version
-        var versions = _db.GetCollection<Version>(BadVersionCol);
-        if (versions.Count() > 0)
-        {
-          versions.DeleteAll();
-        }
-
-        var fixVersions = _db.GetCollection<VersionData>(VersionCol);
-        if (fixVersions.Count() == 0)
-        {
-          fixVersions.Insert(new VersionData { Id = "1", Version = "1.0.1" });
-
-          // add default overlays if none exist
-          if (!tree.Find(n => n.OverlayData != null && n.Parent != null).Any())
-          {
-            if (tree.FindOne(n => n.Parent == null && n.Name == Overlays) is { } parentNode)
-            {
-              var position = TriggerUtil.CalculateDefaultTextOverlayPosition();
-
-              var textNode = new TriggerNode
-              {
-                Name = "Default Text Overlay",
-                Id = Guid.NewGuid().ToString(),
-                Parent = parentNode.Id,
-                OverlayData = new Overlay
-                {
-                  IsDefault = true,
-                  IsTextOverlay = true,
-                  Left = (long)position.X,
-                  Top = (long)position.Y,
-                  Height = 150,
-                  Width = 450,
-                  FontSize = "16pt",
-                  FontColor = "#FFE9C405"
-                }
-              };
-
-              tree.Insert(textNode);
-
-              var timerNode = new TriggerNode
-              {
-                Name = "Default Timer Overlay",
-                Id = Guid.NewGuid().ToString(),
-                Parent = parentNode.Id,
-                OverlayData = new Overlay
-                {
-                  IsDefault = true,
-                  IsTimerOverlay = true
-                }
-              };
-
-              tree.Insert(timerNode);
-            }
-          }
-
-          // save current values
-          _db.Checkpoint();
-
-          var lastPath = ConfigUtil.GetTriggersLastDbFile();
-          if (!string.IsNullOrEmpty(lastPath) && !File.Exists(lastPath))
-          {
-            try
-            {
-              // create backup during for the 1.0.1 upgrade
-              File.Copy(ConfigUtil.GetTriggersDbFile(), lastPath);
-            }
-            catch (Exception)
-            {
-              // ignore
-            }
-          }
-        }
-
-        return Task.CompletedTask;
-      });
-    }
-
     internal Task<TriggerNode> GetDefaultTextOverlay() => GetDefaultOverlay(true);
     internal Task<TriggerNode> GetDefaultTimerOverlay() => GetDefaultOverlay(false);
     internal Task<TriggerTreeViewNode> GetOverlayTreeView() => GetTreeView(Overlays);
     internal Task<TriggerTreeViewNode> GetTriggerTreeView(string playerId) => GetTreeView(Triggers, playerId);
-    internal async Task Stop() => await _taskQueue.Stop();
+    internal async Task Dispose() => await _taskQueue.Stop();
 
     internal async Task AddCharacter(string name, string filePath, string voice, int voiceRate, string activeColor, string fontColor)
     {
@@ -802,6 +806,7 @@ namespace EQLogParser
           newNode.IsExpanded = false;
           newNode.OverlayData.IsTimerOverlay = !isTextOverlay;
           newNode.OverlayData.IsTextOverlay = isTextOverlay;
+          newNode.OverlayData.VerticalAlignment = (int)(isTextOverlay ? VerticalAlignment.Bottom : VerticalAlignment.Top);
 
           // better default for text
           if (newNode.OverlayData.IsTextOverlay)
@@ -919,6 +924,8 @@ namespace EQLogParser
             if (foundOverlay.OverlayData != null)
             {
               foundOverlay.OverlayData = newNode.OverlayData;
+              // fix alignment from old imports if needed
+              SetVerticalAlignment(foundOverlay);
               tree.Update(foundOverlay);
             }
             // directory but make sure it is one
@@ -936,6 +943,8 @@ namespace EQLogParser
             if (newNode.OverlayData != null)
             {
               newNode.OverlayData = newNode.OverlayData;
+              // fix alignment from old imports if needed
+              SetVerticalAlignment(newNode);
               Insert(newNode, index, newNode.Id);
             }
             // make sure it's a new directory
@@ -1162,6 +1171,14 @@ namespace EQLogParser
       }
     }
 
+    private static void SetVerticalAlignment(TriggerNode overlay)
+    {
+      if (overlay.OverlayData?.VerticalAlignment == -1)
+      {
+        overlay.OverlayData.VerticalAlignment = (int)(overlay.OverlayData.IsTextOverlay ? VerticalAlignment.Bottom : VerticalAlignment.Top);
+      }
+    }
+
     private static int GetNextIndex(ILiteCollection<TriggerNode> tree, string parentId)
     {
       var highest = tree.Query().Where(n => n.Parent == parentId).OrderByDescending(n => n.Index).FirstOrDefault();
@@ -1200,7 +1217,7 @@ namespace EQLogParser
       }
     }
 
-    private Task Upgrade()
+    private void UpgradeFromOldParser()
     {
       var overlayIds = new Dictionary<string, string>();
       var defaultEnabled = new Dictionary<string, bool?>();
@@ -1221,7 +1238,7 @@ namespace EQLogParser
       }
 
       _db?.Checkpoint();
-      return Task.CompletedTask;
+      return;
 
       void ReadJson(string file, string title)
       {
