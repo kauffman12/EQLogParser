@@ -47,6 +47,7 @@ namespace EQLogParser
     private Task _chatTask;
     private Task _processTask;
     private LineData _previous;
+    private int _voiceRate;
     private bool _isTesting;
     private bool _ready;
     private bool _isDisposed;
@@ -61,12 +62,12 @@ namespace EQLogParser
       _fontColor = fontColor;
       _addTextEvent = addTextEvent;
       _addTimerEvent = addTimerEvent;
+      _voiceRate = voiceRate;
       _synth = AudioManager.CreateSpeechSynthesizer();
       AudioManager.Instance.Add(CurrentCharacterId);
 
       BindingOperations.EnableCollectionSynchronization(AlertLog, _collectionLock);
       SetVoice(voice);
-      SetVoiceRate(voiceRate);
       TriggerStateManager.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
     }
 
@@ -152,6 +153,9 @@ namespace EQLogParser
       });
     }
 
+    internal void SetVoiceRate(int rate) => _voiceRate = rate;
+    internal void SetTesting(bool testing) => _isTesting = testing;
+
     internal List<TimerData> GetActiveTimers()
     {
       lock (_activeTimers) return [.. _activeTimers];
@@ -169,22 +173,6 @@ namespace EQLogParser
           }
         }
       }
-    }
-
-    internal void SetVoiceRate(int rate)
-    {
-      if (_synth != null)
-      {
-        lock (_voiceLock)
-        {
-          _synth.Options.SpeakingRate = AudioManager.GetSpeakingRate(rate);
-        }
-      }
-    }
-
-    internal void SetTesting(bool testing)
-    {
-      _isTesting = testing;
     }
 
     internal async Task UpdateActiveTriggers()
@@ -765,7 +753,7 @@ namespace EQLogParser
                 tts = ReplaceBadCharsRegex().Replace(tts, string.Empty);
                 lock (_voiceLock)
                 {
-                  AudioManager.Instance.SpeakTtsAsync(CurrentCharacterId, _synth, tts, speak.Wrapper.TriggerData);
+                  AudioManager.Instance.SpeakTtsAsync(CurrentCharacterId, _synth, tts, _voiceRate, speak.Wrapper.TriggerData);
                 }
               }
             }

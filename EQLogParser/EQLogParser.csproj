@@ -178,6 +178,8 @@
     <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="SoundTouch.Net" Version="2.3.2" />
+    <PackageReference Include="SoundTouch.Net.NAudioSupport.Core" Version="2.3.2" />
     <PackageReference Include="Syncfusion.DocIO.Wpf" Version="26.2.8" />
     <PackageReference Include="Syncfusion.Edit.WPF" Version="26.2.8" />
     <PackageReference Include="Syncfusion.PropertyGrid.WPF" Version="26.2.8" />
