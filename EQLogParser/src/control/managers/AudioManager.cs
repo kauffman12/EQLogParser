@@ -2,6 +2,7 @@
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
+using SoundTouch.Net.NAudioSupport;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -30,6 +31,25 @@ namespace EQLogParser
       if (!InitAudio())
       {
         Log.Warn("No audio device found!");
+      }
+    }
+
+    internal static VoiceInformation GetVoice(string name)
+    {
+      return SpeechSynthesizer.AllVoices.FirstOrDefault(voice => voice.DisplayName == name || name?.StartsWith(voice.DisplayName) == true)
+             ?? SpeechSynthesizer.DefaultVoice;
+    }
+
+    internal static SpeechSynthesizer CreateSpeechSynthesizer()
+    {
+      try
+      {
+        return new SpeechSynthesizer();
+      }
+      catch (Exception ex)
+      {
+        Log.Error(ex);
+        return null;
       }
     }
 
@@ -91,21 +111,21 @@ namespace EQLogParser
       }
     }
 
-    internal async void TestSpeakTtsAsync(string tts, string voice = null, int rate = 1, int volume = 4)
+    internal async void TestSpeakTtsAsync(string tts, string voice = null, int rate = 0, int volume = 4)
     {
       if (!string.IsNullOrEmpty(tts) && CreateSpeechSynthesizer() is var synth && synth != null)
       {
         synth.Voice = GetVoice(voice);
-        synth.Options.SpeakingRate = GetSpeakingRate(rate);
-
         if (await SynthesizeTextToByteArrayAsync(synth, tts) is { Length: > 0 } data)
         {
           var waveFormat = new WaveFormat(16000, 16, 1);
-          if (!PlayAudioData(data, waveFormat, volume))
+          if (!PlayAudioData(data, waveFormat, rate, volume))
           {
             new MessageWindow("Unable to Play sound. No audio device?", Resource.AUDIO_ERROR).ShowDialog();
           }
         }
+
+        synth.Dispose();
       }
     }
 
@@ -118,7 +138,7 @@ namespace EQLogParser
           var reader = new AudioFileReader(filePath);
           if (await ReadFileToByteArrayAsync(reader) is { Length: > 0 } data)
           {
-            SpeakAsync(id, data, reader.WaveFormat, trigger.Priority, trigger.Volume, reader.TotalTime.TotalSeconds);
+            SpeakAsync(id, data, reader.WaveFormat, 0, trigger.Priority, trigger.Volume, reader.TotalTime.TotalSeconds);
           }
         }
         catch (Exception ex)
@@ -128,7 +148,7 @@ namespace EQLogParser
       }
     }
 
-    internal async void SpeakTtsAsync(string id, SpeechSynthesizer synth, string tts, Trigger trigger)
+    internal async void SpeakTtsAsync(string id, SpeechSynthesizer synth, string tts, int rate, Trigger trigger)
     {
       if (!string.IsNullOrEmpty(id) && synth != null && !string.IsNullOrEmpty(tts))
       {
@@ -150,7 +170,7 @@ namespace EQLogParser
         if (data is { Length: > 0 })
         {
           var waveFormat = new WaveFormat(16000, 16, 1);
-          SpeakAsync(id, data, waveFormat, trigger.Priority, trigger.Volume);
+          SpeakAsync(id, data, waveFormat, rate, trigger.Priority, trigger.Volume);
         }
       }
     }
@@ -228,76 +248,35 @@ namespace EQLogParser
       return false;
     }
 
-    private static WasapiOut CreateWasapiOut() => new(AudioClientShareMode.Shared, false, 50);
-
-    private static MMDevice GetDefaultDevice()
-    {
-      var enumerator = new MMDeviceEnumerator();
-      if (enumerator.HasDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia))
-      {
-        return enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-      }
-
-      return null;
-    }
-
-    private static async Task<byte[]> ReadFileToByteArrayAsync(AudioFileReader reader)
-    {
-      try
-      {
-        var memStream = new MemoryStream();
-        await reader.CopyToAsync(memStream);
-        return memStream.ToArray();
-      }
-      catch (Exception ex)
-      {
-        Log.Debug($"Error reading file to byte array: {reader.FileName}", ex);
-        return null;
-      }
-    }
-
-    private static async Task<byte[]> SynthesizeTextToByteArrayAsync(SpeechSynthesizer synth, string tts)
-    {
-      try
-      {
-        var stream = await synth.SynthesizeTextToStreamAsync(tts);
-        var memStream = new MemoryStream();
-        await stream.AsStream().CopyToAsync(memStream);
-        return memStream.ToArray();
-      }
-      catch (Exception ex)
-      {
-        Log.Debug("Error synthesizing text to byte array.", ex);
-        return null;
-      }
-    }
-
-    private void SpeakAsync(string id, byte[] audioData, WaveFormat waveFormat, long priority = 5, int volume = 4, double seconds = -1)
+    private void SpeakAsync(string id, byte[] audioData, WaveFormat waveFormat, int rate = 0, long priority = 5, int volume = 4, double seconds = -1)
     {
       if (_playerAudios.TryGetValue(id, out var playerAudio))
       {
         lock (playerAudio)
         {
           playerAudio.Events = playerAudio.Events.Where(pa => pa.Priority <= priority).ToList();
-          playerAudio.Events.Add(new PlaybackEvent { AudioData = audioData, WaveFormat = waveFormat, Priority = priority, Volume = volume, Seconds = seconds });
+          playerAudio.Events.Add(new PlaybackEvent
+          {
+            AudioData = audioData,
+            WaveFormat = waveFormat,
+            Priority = priority,
+            Rate = rate,
+            Volume = volume,
+            Seconds = seconds
+          });
         }
       }
     }
 
-    internal static double GetSpeakingRate(int oldRate) => 1.0 + (oldRate / 10.0 * 1.6);
-
-    internal static VoiceInformation GetVoice(string name)
-    {
-      return SpeechSynthesizer.AllVoices.FirstOrDefault(voice => voice.DisplayName == name || name?.StartsWith(voice.DisplayName) == true)
-             ?? SpeechSynthesizer.DefaultVoice;
-    }
-
-    private bool PlayAudioData(byte[] data, WaveFormat waveFormat, int volume = 4)
+    private bool PlayAudioData(byte[] data, WaveFormat waveFormat, int rate = 0, int volume = 4)
     {
       if (!InitAudio())
       {
         return false;
       }
+
+      // remove header
+      data = data[44..];
 
       var stream = new RawSourceWaveStream(data, 0, data.Length, waveFormat);
       var output = CreateWasapiOut();
@@ -310,12 +289,7 @@ namespace EQLogParser
 
       try
       {
-        var provider = new VolumeSampleProvider(stream.ToSampleProvider())
-        {
-          Volume = ConvertVolume(output.Volume, volume)
-        };
-
-        output.Init(provider);
+        output.Init(CreateProvider(stream, output, rate, volume));
         output.Play();
       }
       catch (Exception)
@@ -328,28 +302,24 @@ namespace EQLogParser
       return true;
     }
 
-    private static float ConvertVolume(float current, int increase)
+    private static ISampleProvider CreateProvider(RawSourceWaveStream stream, WasapiOut output, int rate, int volume)
     {
-      var floatIncrease = increase switch
-      {
-        0 => 1.8f,
-        1 => 1.6f,
-        2 => 1.4f,
-        3 => 1.2f,
-        5 => 0.8f,
-        6 => 0.6f,
-        7 => 0.4f,
-        8 => 0.2f,
-        _ => 1.0f
-      };
+      var soundTouchProvider = stream.WaveFormat.Encoding == WaveFormatEncoding.IeeeFloat ? new SoundTouchWaveProvider(stream)
+        : new SoundTouchWaveProvider(stream.ToSampleProvider().ToWaveProvider());
 
-      var totalValue = current * floatIncrease;
-      if (totalValue > 1.0f)
+      // only TTS will specify a custom rate
+      if (rate > 0)
       {
-        return 1.0f / current;
+        soundTouchProvider.OptimizeForSpeech();
+        soundTouchProvider.Tempo = 1.0f + (rate / 10.0f * 1.6f);
       }
 
-      return floatIncrease;
+      var volumeProvider = new VolumeSampleProvider(soundTouchProvider.ToSampleProvider())
+      {
+        Volume = ConvertVolume(output.Volume, volume)
+      };
+
+      return volumeProvider;
     }
 
     private void ProcessAsync(PlayerAudio audio)
@@ -411,7 +381,9 @@ namespace EQLogParser
                   audio.CurrentEvent = audio.Events[0];
                   audio.Events.RemoveAt(0);
 
-                  stream = new RawSourceWaveStream(audio.CurrentEvent.AudioData, 0, audio.CurrentEvent.AudioData.Length, audio.CurrentEvent.WaveFormat);
+                  // remove header
+                  var data = audio.CurrentEvent.AudioData[44..];
+                  stream = new RawSourceWaveStream(data, 0, data.Length, audio.CurrentEvent.WaveFormat);
 
                   // make sure audio is still valid
                   if (InitAudio())
@@ -420,13 +392,7 @@ namespace EQLogParser
                     {
                       output = CreateWasapiOut();
                       audio.CurrentPlayback = output;
-
-                      var provider = new VolumeSampleProvider(stream.ToSampleProvider())
-                      {
-                        Volume = ConvertVolume(output.Volume, audio.CurrentEvent.Volume)
-                      };
-
-                      output.Init(provider);
+                      output.Init(CreateProvider(stream, output, audio.CurrentEvent.Rate, audio.CurrentEvent.Volume));
                       output.Play();
                     }
                     catch (Exception)
@@ -470,17 +436,75 @@ namespace EQLogParser
       }, cancellationTokenSource.Token);
     }
 
-    internal static SpeechSynthesizer CreateSpeechSynthesizer()
+    private static WasapiOut CreateWasapiOut() => new(AudioClientShareMode.Shared, false, 50);
+
+    private static MMDevice GetDefaultDevice()
+    {
+      var enumerator = new MMDeviceEnumerator();
+      if (enumerator.HasDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia))
+      {
+        return enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+      }
+
+      return null;
+    }
+
+    private static async Task<byte[]> ReadFileToByteArrayAsync(AudioFileReader reader)
     {
       try
       {
-        return new SpeechSynthesizer();
+        var memStream = new MemoryStream();
+        await reader.CopyToAsync(memStream);
+        return memStream.ToArray();
       }
       catch (Exception ex)
       {
-        Log.Error(ex);
+        Log.Debug($"Error reading file to byte array: {reader.FileName}", ex);
         return null;
       }
+    }
+
+    private static async Task<byte[]> SynthesizeTextToByteArrayAsync(SpeechSynthesizer synth, string tts)
+    {
+      try
+      {
+        var stream = await synth.SynthesizeTextToStreamAsync(tts);
+        var memStream = new MemoryStream();
+        await stream.AsStream().CopyToAsync(memStream);
+        stream.Dispose();
+        var data = memStream.ToArray();
+        await memStream.DisposeAsync();
+        return data;
+      }
+      catch (Exception ex)
+      {
+        Log.Debug("Error synthesizing text to byte array.", ex);
+        return null;
+      }
+    }
+
+    private static float ConvertVolume(float current, int increase)
+    {
+      var floatIncrease = increase switch
+      {
+        0 => 1.8f,
+        1 => 1.6f,
+        2 => 1.4f,
+        3 => 1.2f,
+        5 => 0.8f,
+        6 => 0.6f,
+        7 => 0.4f,
+        8 => 0.2f,
+        _ => 1.0f
+      };
+
+      var totalValue = current * floatIncrease;
+      if (totalValue > 1.0f)
+      {
+        return 1.0f / current;
+      }
+
+      return floatIncrease;
     }
 
     private class PlayerAudio
@@ -494,6 +518,7 @@ namespace EQLogParser
     private class PlaybackEvent
     {
       internal long Priority { get; init; } = -1;
+      internal int Rate { get; init; }
       internal int Volume { get; init; } = 4;
       internal byte[] AudioData { get; init; }
       internal WaveFormat WaveFormat { get; init; }
