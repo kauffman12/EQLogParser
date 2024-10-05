@@ -131,7 +131,7 @@ namespace EQLogParser
 
     internal async void SpeakFileAsync(string id, string filePath, Trigger trigger)
     {
-      if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(filePath))
+      if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(filePath) && File.Exists(filePath))
       {
         try
         {

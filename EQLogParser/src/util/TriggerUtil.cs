@@ -502,11 +502,6 @@ namespace EQLogParser
       }
     }
 
-    private static void Watcher_Deleted(object sender, FileSystemEventArgs e)
-    {
-      throw new NotImplementedException();
-    }
-
     private static void LoadSounds(ObservableCollection<string> fileList)
     {
       var current = Directory.GetFiles("data/sounds", "*.*")
