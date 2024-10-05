@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Linq;
 
 namespace EQLogParser
 {
@@ -159,7 +160,6 @@ namespace EQLogParser
         using var sr = new StreamReader(entry.Open());
         result = sr.ReadToEnd();
       }
-
       return result;
     }
 
@@ -180,55 +180,81 @@ namespace EQLogParser
       {
         try
         {
-          var postData = "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"><s:Body><DownloadPackageChunk xmlns=\"http://tempuri.org/\"><sessionId>" +
-                         ginaKey + "</sessionId><chunkNumber>0</chunkNumber></DownloadPackageChunk></s:Body></s:Envelope>";
+          var totalRead = 0;
+          var totalSize = 0;
+          XNamespace ns = "http://schemas.datacontract.org/2004/07/GimaSoft.Service.GINA";
+          using var decodedStream = new MemoryStream();
 
-          var content = new StringContent(postData, Encoding.UTF8, "text/xml");
-          content.Headers.Add("Content-Length", postData.Length.ToString());
-
-          var message = new HttpRequestMessage(HttpMethod.Post, @"http://eq.gimasoft.com/GINAServices/Package.svc");
-          message.Content = content;
-          message.Headers.Add("SOAPAction", "http://tempuri.org/IPackageService/DownloadPackageChunk");
-          message.Headers.Add("Accept-Encoding", "gzip, deflate");
-
-          var response = MainActions.TheHttpClient.Send(message);
-          if (response.IsSuccessStatusCode)
+          for (var chunk = 0; chunk < 100; chunk++)
           {
-            string xml = null;
-            using var data = response.Content.ReadAsStream();
-            var buffer = new byte[data.Length];
-            var read = data.Read(buffer, 0, buffer.Length);
-            if (read > 0)
-            {
-              using var bufferStream = new MemoryStream(buffer);
-              using var gzip = new GZipStream(bufferStream, CompressionMode.Decompress);
-              using var memory = new MemoryStream();
-              gzip.CopyTo(memory);
-              xml = Encoding.UTF8.GetString(memory.ToArray());
-            }
+            var postData = "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"><s:Body><DownloadPackageChunk xmlns=\"http://tempuri.org/\"><sessionId>" +
+                           ginaKey + "</sessionId><chunkNumber>" + chunk + "</chunkNumber></DownloadPackageChunk></s:Body></s:Envelope>";
 
-            if (!string.IsNullOrEmpty(xml) && xml.IndexOf("<a:ChunkData>", StringComparison.Ordinal) is var start and > -1
-                                           && xml.IndexOf("</a:ChunkData>", StringComparison.Ordinal) is var end && end > start)
-            {
-              var encoded = xml.Substring(start + 13, end - start - 13);
-              var decoded = System.Convert.FromBase64String(encoded);
-              ImportFromGina(decoded, ginaKey);
-            }
-            else
-            {
-              UiUtil.InvokeAsync(() =>
-                new MessageWindow("Unable to Import. No supported data found.", Resource.RECEIVED_GINA).ShowDialog());
+            var content = new StringContent(postData, Encoding.UTF8, "text/xml");
+            content.Headers.Add("Content-Length", postData.Length.ToString());
 
-              // no chunk data in response. too old?
-              NextGinaTask(ginaKey);
+            var message = new HttpRequestMessage(HttpMethod.Post, @"http://eq.gimasoft.com/GINAServices/Package.svc");
+            message.Content = content;
+            message.Headers.Add("SOAPAction", "http://tempuri.org/IPackageService/DownloadPackageChunk");
+            message.Headers.Add("Accept-Encoding", "gzip, deflate");
+            var response = MainActions.TheHttpClient.Send(message);
+            if (response.IsSuccessStatusCode)
+            {
+              string xml = null;
+              using var data = response.Content.ReadAsStream();
+              var buffer = new byte[data.Length];
+              var read = data.Read(buffer, 0, buffer.Length);
+              if (read > 0)
+              {
+                using var bufferStream = new MemoryStream(buffer);
+                using var gzip = new GZipStream(bufferStream, CompressionMode.Decompress);
+                using var memory = new MemoryStream();
+                gzip.CopyTo(memory);
+                xml = Encoding.UTF8.GetString(memory.ToArray());
+              }
+
+              var handled = false;
+              if (!string.IsNullOrEmpty(xml))
+              {
+                try
+                {
+                  var doc = XDocument.Parse(xml);
+                  var chunkData = doc.Descendants(ns + "ChunkData").FirstOrDefault()?.Value;
+                  var totalSizeString = doc.Descendants(ns + "TotalSize").FirstOrDefault()?.Value;
+                  var success = doc.Descendants(ns + "Success").FirstOrDefault()?.Value == "true";
+                  if (success && chunkData != null && int.TryParse(totalSizeString, out totalSize))
+                  {
+                    var decoded = System.Convert.FromBase64String(chunkData);
+                    decodedStream.Write(decoded, 0, decoded.Length);
+                    totalRead += decoded.Length;
+                    handled = true;
+                  }
+                }
+                catch (Exception)
+                {
+                  // something is wrong so just break
+                  break;
+                }
+              }
+
+              if (!handled || totalRead >= totalSize)
+              {
+                break;
+              }
             }
+          }
+
+          var allDecoded = decodedStream.ToArray();
+          if (allDecoded.Length > 0)
+          {
+            ImportFromGina(allDecoded, ginaKey);
           }
           else
           {
             UiUtil.InvokeAsync(() =>
-              new MessageWindow("Unable to Import. Probably Expired.", Resource.RECEIVED_GINA).ShowDialog());
+              new MessageWindow("Unable to Import. No data found, possibly expired?", Resource.RECEIVED_GINA).ShowDialog());
 
-            Log.Error("Error Downloading GINA Triggers. Received Status Code = " + response.StatusCode);
+            // no chunk data in response. too old?
             NextGinaTask(ginaKey);
           }
         }
