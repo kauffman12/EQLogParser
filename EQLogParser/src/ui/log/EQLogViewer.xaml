@@ -47,7 +47,7 @@
             <ContextMenu>
               <MenuItem Command="Copy" />
               <Separator />
-              <MenuItem x:Name="selectedContext" IsEnabled="False" Header="Show Conext For Row" Click="SelectedContext" />
+              <MenuItem x:Name="selectedContext" IsEnabled="False" Header="Show Context For Row" Click="SelectedContext" />
               <Separator />
               <MenuItem Command="SelectAll" />
             </ContextMenu>
