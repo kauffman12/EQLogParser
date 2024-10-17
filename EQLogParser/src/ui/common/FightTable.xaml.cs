@@ -360,11 +360,6 @@ namespace EQLogParser
     {
       if (dataGrid != null)
       {
-        if (dataGrid.ItemsSource == list)
-        {
-          _needRefresh = false;
-        }
-
         if (Parent is ContentControl control && DockingManager.GetState(control) != DockState.Hidden &&
           !dataGrid.IsMouseOver && dataGrid.View?.Records?.Count > 1)
         {

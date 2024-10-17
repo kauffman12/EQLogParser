@@ -13,6 +13,8 @@ namespace EQLogParser
     private readonly ObjectCache<DamageRecord> _damageCache = new();
     private const int RecentSpellTime = 300;
 
+    private readonly List<Defender> _defenders = [];
+
     public NpcDamageManager()
     {
       DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
@@ -34,8 +36,42 @@ namespace EQLogParser
       AddAction(fight.TauntBlocks, e.Record, e.BeginTime);
     }
 
+    private void TestProcessed(DamageProcessedEvent processed)
+    {
+      Defender found = null;
+      var oldest = processed.BeginTime - DataManager.FightTimeout;
+      for (var i = _defenders.Count - 1; i >= 0; i--)
+      {
+        if (oldest > _defenders[i].BeginTime)
+        {
+          break;
+        }
+
+        if (_defenders[i].Name == processed.Record.Defender)
+        {
+          found = _defenders[i];
+          found.BeginTime = processed.BeginTime;
+          break;
+        }
+      }
+
+      if (found == null)
+      {
+        found = new Defender
+        {
+          Name = processed.Record.Defender,
+          BeginTime = processed.BeginTime
+        };
+
+        _defenders.Add(found);
+      }
+
+      found.Records.Add(processed.Record);
+    }
+
     private void HandleDamageProcessed(DamageProcessedEvent processed)
     {
+      //TestProcessed(processed);
       var beginTime = processed.BeginTime;
       var record = _damageCache.Add(processed.Record);
 
