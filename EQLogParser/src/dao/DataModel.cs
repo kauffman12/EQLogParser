@@ -570,6 +570,14 @@ namespace EQLogParser
     public Dictionary<long, int> NonCritFreqValues { get; } = [];
   }
 
+  internal class Defender
+  {
+    public string Name { get; set; }
+    public double BeginTime { get; set; } = double.NaN;
+    public bool Dead { get; set; } = false;
+    public List<DamageRecord> Records { get; init; } = [];
+  }
+
   internal class Fight : FullTimedAction, INotifyPropertyChanged
   {
     public event PropertyChangedEventHandler PropertyChanged;

@@ -77,7 +77,6 @@ namespace EQLogParser
 
     internal const int MaxTimeout = 60;
     internal const int FightTimeout = 30;
-    internal const double BuffsOffset = 90;
     internal uint MyNukeCritRateMod { get; private set; }
     internal uint MyDoTCritRateMod { get; private set; }
 
