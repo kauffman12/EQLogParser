@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "EQLogParser"
-#define MyAppVersion "2.2.49"
+#define MyAppVersion "2.2.50"
 #define MyAppPublisher "Kizant"
 #define MyAppURL "https://github.com/kauffman12/EQLogParser"
 #define MyAppExeName "EQLogParser.exe"
@@ -138,10 +138,10 @@ procedure LabelLinkClick(Sender: TObject);
 var
   ErrorCode: Integer;
 begin
-  ShellExec('open', 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.7-windows-x64-installer', '', '', SW_SHOW, ewNoWait, ErrorCode);
+  ShellExec('open', 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.10-windows-x64-installer', '', '', SW_SHOW, ewNoWait, ErrorCode);
 end;
 
-procedure ShowDotNetDownloadPage;
+function ShowDotNetDownloadPage: Boolean;
 var
   Form: TSetupForm;
   InfoLabel: TLabel;
@@ -150,8 +150,8 @@ var
 begin
   // Create the form
   Form := CreateCustomForm;
-  Form.ClientWidth := 358;
-  Form.ClientHeight := 118; // Adjusted for extra text
+  Form.ClientWidth := ScaleX(358);
+  Form.ClientHeight := ScaleY(118);
   Form.Font.Size := 10
   Form.Caption := 'Additional Components Required';
   Form.Position := poScreenCenter;
@@ -159,17 +159,18 @@ begin
   // Create an informational label
   InfoLabel := TLabel.Create(Form);
   InfoLabel.Parent := Form;
-  InfoLabel.Caption := 'EQLogParser requires .NET 8.0 x64 Desktop Runtime. Found here:';
+  InfoLabel.Caption := 'EQLogParser requires .NET 8.0 x64 Desktop Runtime. Please install ' + #13#10 +
+  'before continuing. A recent version can be found here:';
   InfoLabel.Font.Size := 9;
-  InfoLabel.Top := 18;
-  InfoLabel.Left := 15;
+  InfoLabel.Top := ScaleY(10);
+  InfoLabel.Left := ScaleX(15);
   InfoLabel.AutoSize := True;
   InfoLabel.WordWrap := True; // Enable word wrapping
 
   // Create a clickable label for the link
   LabelLink := TMemo.Create(Form);
   LabelLink.Parent := Form;
-  LabelLink.Text := 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.7-windows-x64-installer';
+  LabelLink.Text := 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.10-windows-x64-installer';
   LabelLink.Font.Style := [fsUnderline];
   LabelLink.Font.Color := clBlue;
   LabelLink.Font.Size := 8;
@@ -177,21 +178,23 @@ begin
   LabelLink.ScrollBars := ssNone;
   LabelLink.Cursor := crHand;
   LabelLink.OnClick := @LabelLinkClick;
-  LabelLink.Top := InfoLabel.Top + InfoLabel.Height + 10; // Position below the informational text
-  LabelLink.Left := 15;
-  LabelLink.height := 40;
-  LabelLink.Width := 400;
+  LabelLink.Top := InfoLabel.Top + InfoLabel.Height + ScaleY(14);
+  LabelLink.Left := ScaleX(15);
+  LabelLink.Height := ScaleY(40);
+  LabelLink.Width := ScaleX(400);
 
   // Create an OK button
   OkButton := TButton.Create(Form);
   OkButton.Parent := Form;
-  OkButton.Caption := 'Exit';
+  OkButton.Caption := 'Continue';
   OkButton.ModalResult := mrOk; // Sets the button to close the form when clicked
-  OkButton.Top := 100;
-  OkButton.Left := 342; // Center the button
+  OkButton.Top := ScaleY(100);
+  OkButton.Left := ScaleX(342); // Center the button
+  OkButton.Width := ScaleX(80);
+  OkButton.Height := ScaleY(24);
 
   // Show the form
-  Form.ShowModal;
+  Result := (Form.ShowModal = mrOk);
 end;
 
 function CreatePowerShellScript(): string;
@@ -339,8 +342,7 @@ begin
   // Check if .NET 8 is installed
   if not IsDotNet8Installed then
   begin
-    ShowDotNetDownloadPage;
-    Result := False;
+    Result := ShowDotNetDownloadPage;
   end
   else
     // Proceed with the new installation
