@@ -1,6 +1,9 @@
 ﻿using Microsoft.WindowsAPICodePack.Dialogs;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -24,7 +27,7 @@ namespace EQLogParser
       Owner = MainActions.GetOwner();
 
       enableCheckBox.IsChecked = ConfigUtil.IfSet("LogManagementEnabled");
-      txtFolderPath.IsEnabled = fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled =
+      fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled =
         organize.IsEnabled = enableCheckBox.IsChecked == true;
 
       // read archive folder
@@ -119,9 +122,73 @@ namespace EQLogParser
       }
     }
 
+    private async void NowClicked(object sender, RoutedEventArgs e)
+    {
+      var path = txtFolderPath.Text;
+      if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+      {
+        new MessageWindow("Archive Folder not defined or missing!", "Archive Now").ShowDialog();
+        return;
+      }
+
+      if (await TriggerStateManager.Instance.GetConfig() is var config)
+      {
+        var logFiles = new HashSet<string>();
+        if (MainWindow.CurrentLogFile is { } currentFile)
+        {
+          logFiles.Add(currentFile);
+        }
+
+        if (config.IsAdvanced)
+        {
+          foreach (var file in config.Characters.Select(character => character.FilePath))
+          {
+            logFiles.Add(file);
+          }
+        }
+
+        if (logFiles.Count > 0)
+        {
+          await Task.Run(async () =>
+          {
+            MessageWindow running = null;
+            try
+            {
+              Dispatcher.InvokeAsync(() =>
+              {
+                running = new MessageWindow($"Running Archive Process for {logFiles.Count} Files.", "Archive Now", MessageWindow.IconType.Info, null, null, false, true);
+                running.Show();
+              });
+
+              await Task.Delay(500);
+              FileUtil.ArchiveNow(logFiles);
+
+              Dispatcher.InvokeAsync(() =>
+              {
+                running?.Close();
+                new MessageWindow($"Archiving Complete.", "Archive Now", MessageWindow.IconType.Info).ShowDialog();
+              });
+            }
+            catch (Exception)
+            {
+              Dispatcher.InvokeAsync(() =>
+              {
+                running?.Close();
+                new MessageWindow("Archive Process Failed. Check the Error Log for Details.", "Archive Now").ShowDialog();
+              });
+            }
+          });
+        }
+        else
+        {
+          new MessageWindow("No Open or Configured Files to Archive.", "Archive Now").ShowDialog();
+        }
+      }
+    }
+
     private void EnableCheckBoxOnChecked(object sender, RoutedEventArgs e)
     {
-      txtFolderPath.IsEnabled = fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = organize.IsEnabled = true;
+      fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = organize.IsEnabled = true;
       titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
       titleLabel.Content = "Log Management Active";
       UpdateSettings();
@@ -129,7 +196,7 @@ namespace EQLogParser
 
     private void EnableCheckBoxOnUnchecked(object sender, RoutedEventArgs e)
     {
-      txtFolderPath.IsEnabled = fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = organize.IsEnabled = false;
+      fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = organize.IsEnabled = false;
       titleLabel.SetResourceReference(ForegroundProperty, "EQStopForegroundBrush");
       titleLabel.Content = "Enable Log Management";
       UpdateSettings();

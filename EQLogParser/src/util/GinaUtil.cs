@@ -174,9 +174,9 @@ namespace EQLogParser
       }
     }
 
-    private static void RunGinaTask(string ginaKey)
+    private static void RunGinaTask(string ginaKey, int tries = 0)
     {
-      Task.Delay(1000).ContinueWith(_ =>
+      Task.Delay(1500).ContinueWith(_ =>
       {
         try
         {
@@ -271,6 +271,14 @@ namespace EQLogParser
           }
           else
           {
+            // try again
+            if (tries == 0)
+            {
+              // try a 2nd time
+              RunGinaTask(ginaKey, 1);
+              return;
+            }
+
             UiUtil.InvokeAsync(() =>
             {
               new MessageWindow("Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
