@@ -14,8 +14,8 @@
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-ArchitecturesInstallIn64BitMode=x64
-ArchitecturesAllowed=x64
+ArchitecturesInstallIn64BitMode=x64compatible
+ArchitecturesAllowed=x64compatible
 AppId={{EBB73706-893E-4CD4-96D7-FE2E864EE327}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
@@ -111,6 +111,7 @@ var
   LogDir: string;
   FindRec: TFindRec;
 begin
+  Log('Delete Old Log Files');
   // Specify the directory containing the log files
   LogDir := ExpandConstant('{userappdata}\EQLogParser\logs');
 
@@ -118,6 +119,7 @@ begin
   if FindFirst(LogDir + '\*.log', FindRec) then
   begin
     repeat
+      Log('Deleting ' + FindRec.Name)
       DeleteFile(LogDir + '\' + FindRec.Name);
     until not FindNext(FindRec);
     FindClose(FindRec);
@@ -127,6 +129,7 @@ begin
   if FindFirst(LogDir + '\*.log.*', FindRec) then
   begin
     repeat
+      Log('Deleting ' + FindRec.Name)
       DeleteFile(LogDir + '\' + FindRec.Name);
     until not FindNext(FindRec);
     FindClose(FindRec);
@@ -202,6 +205,7 @@ var
   PSFileName: string;
   ScriptContent: string;
 begin
+  Log('Creating Script for finding old version of EQLogParser')
   // Define the path of the PowerShell script file
   PSFileName := ExpandConstant('{tmp}\FindProductCode.ps1');
 
@@ -214,6 +218,7 @@ begin
 
   // Write the script to the file
   SaveStringToFile(PSFileName, ScriptContent, False);
+  Log('Script saved to ' + PSFileName)
 
   // Return the path of the PowerShell script file
   Result := PSFileName;
@@ -227,6 +232,7 @@ begin
   // Initialize the result as false
   Result := False;
 
+  Log('Execute Script')
   // Define the output file path
   OutputFile := ExpandConstant('{tmp}\UninstallString.txt');
 
@@ -234,9 +240,11 @@ begin
   // Note: Using 'Exec' with 'cmd.exe /C' to wait for PowerShell script completion and redirect output to a file
   if Exec('cmd.exe', '/C powershell.exe -ExecutionPolicy Bypass -File "' + PSFilePath + '" > "' + OutputFile + '"', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode) then
   begin
+    Log('Script ran successfully')
     // Check if the output file exists and is not empty
     if FileExists(OutputFile) then
     begin
+      Log('Script output found')
       // Attempt to load the output from the file
       if LoadStringFromFile(OutputFile, Output) then
       begin
@@ -247,6 +255,7 @@ begin
         end;
       end;
       
+      Log('Removing temporary file ' + OutputFile)
       // Clean up: Delete the output file after reading it
       DeleteFile(OutputFile);
     end;
@@ -258,6 +267,7 @@ var
   CmdFileName: string;
   BatchCommands: TStringList;
 begin
+  Log('Creating cmd file for checking dotnet version')
   // Determine the full path to the batch file in the temporary directory
   CmdFileName := ExpandConstant('{tmp}\CheckDotNetVersion.cmd');
   
@@ -267,6 +277,7 @@ begin
     BatchCommands.Add('@echo off');
     BatchCommands.Add('dotnet --list-runtimes > "' + ExpandConstant('{tmp}\dotnet_runtimes.txt') + '"');
     
+    Log('Saving dotnet versions to file')
     // Write the commands to the batch file
     BatchCommands.SaveToFile(CmdFileName);
   finally
@@ -279,6 +290,7 @@ var
   FindResult: TFindRec;
   Path: string;
 begin
+  Log('Checking if dotnet is installed')
   Result := False;
   // Construct the path to the .NET shared directory for x64 installations
   Path := ExpandConstant('{pf64}\dotnet\shared\Microsoft.WindowsDesktop.App\');
@@ -286,10 +298,12 @@ begin
   if FindFirst(Path + '*', FindResult) then
   begin
     repeat
+      Log('Checking against ' + FindResult.Name)
       // Check if the found item is a directory and starts with '8'
       if (FindResult.Attributes and FILE_ATTRIBUTE_DIRECTORY <> 0) and
          (Pos('8', FindResult.Name) = 1) then
       begin
+        Log('dotnet found')
         Result := True;
         Break;  // Found a directory, no need to continue
       end;
@@ -307,6 +321,7 @@ var
 begin
   if CurStep = ssInstall then
   begin
+    Log('CurStepChanged')
     PSFilePath := CreatePowerShellScript();
 
     // Execute the PowerShell script and load the output into 'Output'
@@ -321,6 +336,7 @@ begin
           ProductCode := Trim(Lines[i]);  // Access each line using an index
           if ProductCode <> '' then
           begin
+            Log('Running msiexec to uninstall old EQLogParser')
             // Construct and execute the silent uninstall command for each ProductCode
             Exec('msiexec.exe', '/x' + ProductCode + ' /qn', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
           end;
@@ -342,6 +358,7 @@ begin
   // Check if .NET 8 is installed
   if not IsDotNet8Installed then
   begin
+    Log('dotnet version not found. showing error dialog')
     Result := ShowDotNetDownloadPage;
   end
   else

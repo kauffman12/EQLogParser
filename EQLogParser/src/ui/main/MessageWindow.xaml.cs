@@ -24,7 +24,7 @@ namespace EQLogParser
       Clipboard.SetText(copyData);
     }
 
-    public MessageWindow(string text, string caption, IconType type = IconType.Warn, string yes1 = null, string yes2 = null, bool extra = false)
+    public MessageWindow(string text, string caption, IconType type = IconType.Warn, string yes1 = null, string yes2 = null, bool extra = false, bool noButtons = false)
     {
       MainActions.SetCurrentTheme(this);
       InitializeComponent();
@@ -56,6 +56,11 @@ namespace EQLogParser
       }
 
       cancelButton.Content = "Ok";
+
+      if (noButtons)
+      {
+        cancelButton.Visibility = Visibility.Hidden;
+      }
 
       if (!string.IsNullOrEmpty(yes1))
       {

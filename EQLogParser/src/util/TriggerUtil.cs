@@ -752,7 +752,7 @@ namespace EQLogParser
 
     private static void RunQuickShareTask(string quickShareKey, int tries = 0)
     {
-      Task.Delay(1200).ContinueWith(async _ =>
+      Task.Delay(1500).ContinueWith(async _ =>
       {
         try
         {

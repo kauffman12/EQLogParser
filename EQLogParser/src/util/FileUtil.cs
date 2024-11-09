@@ -70,6 +70,21 @@ namespace EQLogParser
       }
     }
 
+    internal static void ArchiveNow(HashSet<string> files)
+    {
+      lock (LockObject)
+      {
+        ArchiveQueue.Clear();
+        foreach (var file in files)
+        {
+          if (File.Exists(file))
+          {
+            DoArchive(file);
+          }
+        }
+      }
+    }
+
     private static void ScheduleArchive(int timeout) => Task.Delay(timeout).ContinueWith(_ => ArchiveProcess());
 
     private static void ArchiveProcess()
@@ -129,12 +144,6 @@ namespace EQLogParser
           continue;
         }
 
-        var archiveFolder = ConfigUtil.GetSetting("LogManagementArchiveFolder");
-        if (string.IsNullOrEmpty(archiveFolder) || Path.GetDirectoryName(archiveFolder) == null)
-        {
-          continue;
-        }
-
         var fileInfo = new FileInfo(path);
         var creationTime = fileInfo.CreationTimeUtc;
 
@@ -148,57 +157,9 @@ namespace EQLogParser
           continue;
         }
 
-        var compress = ConfigUtil.GetSetting("LogManagementCompressArchive", LogManagementWindow.CompressYes);
-        var organize = ConfigUtil.GetSetting("LogManagementOrganize", LogManagementWindow.OrganizeInFiles);
-
         try
         {
-          var archivePath = archiveFolder;
-          if (LogManagementWindow.OrganizeInFolders.Equals(organize, StringComparison.OrdinalIgnoreCase) &&
-              ParseFileName(fileInfo.Name, out var name, out var server))
-          {
-            archivePath = Path.Combine(archivePath, server, name);
-          }
-
-          Directory.CreateDirectory(archivePath);
-          var formatted = DateTime.Now.ToString("_yyyyMMddHHmm_ssfff") + ".txt";
-          var destination = archivePath + Path.DirectorySeparatorChar + fileInfo.Name.Replace(".txt", formatted);
-
-          File.Move(path, destination);
-
-          try
-          {
-            // create new empty file or EQ may do this for us
-            File.CreateText(path);
-          }
-          catch (Exception)
-          {
-            // ignore
-          }
-
-          try
-          {
-            // fix creation time as a workaround
-            _ = new FileInfo(path)
-            {
-              CreationTime = DateTime.Now
-            };
-          }
-          catch (Exception)
-          {
-            // ignore
-          }
-
-          // compress if specified
-          if (LogManagementWindow.CompressYes.Equals(compress, StringComparison.OrdinalIgnoreCase))
-          {
-            CompressFile(destination);
-          }
-
-          Log.Info($"Archived File (Originally Created {creationTime.ToLocalTime().ToString(CultureInfo.InvariantCulture)}): {path}");
-
-          // pause before archiving each file
-          Task.Delay(100);
+          DoArchive(path);
         }
         catch (Exception e)
         {
@@ -211,6 +172,68 @@ namespace EQLogParser
       {
         ScheduleArchive(3000);
       }
+    }
+
+    private static void DoArchive(string path)
+    {
+      var fileInfo = new FileInfo(path);
+      var creationTime = fileInfo.CreationTimeUtc;
+
+      var archiveFolder = ConfigUtil.GetSetting("LogManagementArchiveFolder");
+      if (string.IsNullOrEmpty(archiveFolder) || Path.GetDirectoryName(archiveFolder) == null)
+      {
+        return;
+      }
+
+      var compress = ConfigUtil.GetSetting("LogManagementCompressArchive", LogManagementWindow.CompressYes);
+      var organize = ConfigUtil.GetSetting("LogManagementOrganize", LogManagementWindow.OrganizeInFiles);
+
+      var archivePath = archiveFolder;
+      if (LogManagementWindow.OrganizeInFolders.Equals(organize, StringComparison.OrdinalIgnoreCase) &&
+          ParseFileName(fileInfo.Name, out var name, out var server))
+      {
+        archivePath = Path.Combine(archivePath, server, name);
+      }
+
+      Directory.CreateDirectory(archivePath);
+      var formatted = DateTime.Now.ToString("_yyyyMMddHHmm_ssfff") + ".txt";
+      var destination = archivePath + Path.DirectorySeparatorChar + fileInfo.Name.Replace(".txt", formatted);
+
+      File.Move(path, destination);
+
+      try
+      {
+        // create new empty file or EQ may do this for us
+        File.CreateText(path);
+      }
+      catch (Exception)
+      {
+        // ignore
+      }
+
+      try
+      {
+        // fix creation time as a workaround
+        _ = new FileInfo(path)
+        {
+          CreationTime = DateTime.Now
+        };
+      }
+      catch (Exception)
+      {
+        // ignore
+      }
+
+      // compress if specified
+      if (LogManagementWindow.CompressYes.Equals(compress, StringComparison.OrdinalIgnoreCase))
+      {
+        CompressFile(destination);
+      }
+
+      Log.Info($"Archived File (Originally Created {creationTime.ToLocalTime().ToString(CultureInfo.InvariantCulture)}): {path}");
+
+      // pause before archiving each file
+      Task.Delay(100);
     }
 
     private static async void CompressFile(string filePath)
