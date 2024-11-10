@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "EQLogParser"
-#define MyAppVersion "2.2.50"
+#define MyAppVersion "2.2.51"
 #define MyAppPublisher "Kizant"
 #define MyAppURL "https://github.com/kauffman12/EQLogParser"
 #define MyAppExeName "EQLogParser.exe"
@@ -200,68 +200,6 @@ begin
   Result := (Form.ShowModal = mrOk);
 end;
 
-function CreatePowerShellScript(): string;
-var
-  PSFileName: string;
-  ScriptContent: string;
-begin
-  Log('Creating Script for finding old version of EQLogParser')
-  // Define the path of the PowerShell script file
-  PSFileName := ExpandConstant('{tmp}\FindProductCode.ps1');
-
-  // Prepare the PowerShell script content
-  ScriptContent :=
-    'Get-WmiObject -Class Win32_Product | ' +
-    'Where-Object {$_.Name -match "EQLogParser"} | ' +
-    'Select-Object -Property IdentifyingNumber | ' +
-    'ForEach-Object { Write-Output $_.IdentifyingNumber }';
-
-  // Write the script to the file
-  SaveStringToFile(PSFileName, ScriptContent, False);
-  Log('Script saved to ' + PSFileName)
-
-  // Return the path of the PowerShell script file
-  Result := PSFileName;
-end;
-
-function ExecutePowerShellScriptAndGetOutput(PSFilePath: string; var Output: AnsiString): Boolean;
-var
-  OutputFile: string;
-  ErrorCode: Integer;
-begin
-  // Initialize the result as false
-  Result := False;
-
-  Log('Execute Script')
-  // Define the output file path
-  OutputFile := ExpandConstant('{tmp}\UninstallString.txt');
-
-  // Construct the PowerShell command
-  // Note: Using 'Exec' with 'cmd.exe /C' to wait for PowerShell script completion and redirect output to a file
-  if Exec('cmd.exe', '/C powershell.exe -ExecutionPolicy Bypass -File "' + PSFilePath + '" > "' + OutputFile + '"', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode) then
-  begin
-    Log('Script ran successfully')
-    // Check if the output file exists and is not empty
-    if FileExists(OutputFile) then
-    begin
-      Log('Script output found')
-      // Attempt to load the output from the file
-      if LoadStringFromFile(OutputFile, Output) then
-      begin
-        // Check if Output is not empty
-        if Output <> '' then
-        begin
-          Result := True; // Successfully loaded and output is not empty
-        end;
-      end;
-      
-      Log('Removing temporary file ' + OutputFile)
-      // Clean up: Delete the output file after reading it
-      DeleteFile(OutputFile);
-    end;
-  end;
-end;
-
 procedure CreateBatchFile;
 var
   CmdFileName: string;
@@ -319,33 +257,6 @@ var
   Lines: TStringList;
   i: Integer;  // Index for looping over the lines
 begin
-  if CurStep = ssInstall then
-  begin
-    Log('CurStepChanged')
-    PSFilePath := CreatePowerShellScript();
-
-    // Execute the PowerShell script and load the output into 'Output'
-    if ExecutePowerShellScriptAndGetOutput(PSFilePath, Output) then
-    begin
-      Lines := TStringList.Create;
-      try
-        Lines.Text := Output; // Converts the entire output into a list of lines
-        // Iterate through each line, assuming each line is a potential ProductCode
-        for i := 0 to Lines.Count - 1 do
-        begin
-          ProductCode := Trim(Lines[i]);  // Access each line using an index
-          if ProductCode <> '' then
-          begin
-            Log('Running msiexec to uninstall old EQLogParser')
-            // Construct and execute the silent uninstall command for each ProductCode
-            Exec('msiexec.exe', '/x' + ProductCode + ' /qn', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
-          end;
-        end;
-      finally
-        Lines.Free;
-      end;
-    end;
-  end;
   // Run the log file deletion at the end of the installation
   if CurStep = ssPostInstall then
   begin
