@@ -102,6 +102,29 @@ namespace EQLogParser
       SetWindowPos(hWnd, new IntPtr(-1), 0, 0, 0, 0, SwpNosize | SwpNomove | SwpNoactivate);
     }
 
+    internal static string GetDownloadsFolderPath()
+    {
+      var path = IntPtr.Zero;
+      var folderId = new Guid("374DE290-123F-4565-9164-39C4925E467B");
+      try
+      {
+        var hr = SHGetKnownFolderPath(ref folderId, 0, IntPtr.Zero, out path);
+        if (hr != 0) // S_OK is 0
+        {
+          throw Marshal.GetExceptionForHR(hr)!;
+        }
+
+        return Marshal.PtrToStringUni(path);
+      }
+      finally
+      {
+        if (path != IntPtr.Zero)
+        {
+          Marshal.FreeCoTaskMem(path);
+        }
+      }
+    }
+
     [SuppressMessage("Microsoft.Interoperability", "CA1400:PInvokeEntryPointsShouldExist")]
     [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr", SetLastError = true)]
     private static extern IntPtr IntSetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
@@ -119,6 +142,10 @@ namespace EQLogParser
 
     [DllImport("kernel32.dll", EntryPoint = "SetLastError")]
     internal static extern void SetLastError(int dwErrorCode);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
+    private static extern int SHGetKnownFolderPath(ref Guid rfid, uint dwFlags, IntPtr hToken, out IntPtr ppszPath);
+
     #endregion
   }
 }

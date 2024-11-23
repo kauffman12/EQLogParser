@@ -37,6 +37,7 @@ namespace EQLogParser
     internal static bool IsHeadshotDamageEnabled = true;
     internal static bool IsSlayUndeadDamageEnabled = true;
     internal static bool IsHideOnMinimizeEnabled;
+    internal static bool IsHideSplashScreenEnabled;
     internal static bool IsMapSendToEqEnabled;
     internal const int ActionIndex = 27;
 
@@ -79,7 +80,6 @@ namespace EQLogParser
         "Maximized" => WindowState.Maximized,
         _ => WindowState.Normal
       };
-
 
       InitializeComponent();
 
@@ -124,6 +124,10 @@ namespace EQLogParser
       // Hide window when minimized
       IsHideOnMinimizeEnabled = ConfigUtil.IfSet("HideWindowOnMinimize");
       enableHideOnMinimizeIcon.Visibility = IsHideOnMinimizeEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      // Hide splash screen
+      IsHideSplashScreenEnabled = ConfigUtil.IfSet("HideSplashScreen");
+      enableHideSplashScreenIcon.Visibility = IsHideSplashScreenEnabled ? Visibility.Visible : Visibility.Hidden;
 
       // Allow Ctrl+C for SendToEQ
       IsMapSendToEqEnabled = ConfigUtil.IfSet("MapSendToEQAsCtrlC");
@@ -576,6 +580,13 @@ namespace EQLogParser
       IsHideOnMinimizeEnabled = !IsHideOnMinimizeEnabled;
       ConfigUtil.SetSetting("HideWindowOnMinimize", IsHideOnMinimizeEnabled);
       enableHideOnMinimizeIcon.Visibility = IsHideOnMinimizeEnabled ? Visibility.Visible : Visibility.Hidden;
+    }
+
+    private void ToggleHideSplashScreenClick(object sender, RoutedEventArgs e)
+    {
+      IsHideSplashScreenEnabled = !IsHideSplashScreenEnabled;
+      ConfigUtil.SetSetting("HideSplashScreen", IsHideSplashScreenEnabled);
+      enableHideSplashScreenIcon.Visibility = IsHideSplashScreenEnabled ? Visibility.Visible : Visibility.Hidden;
     }
 
     private void ToggleAoEHealingClick(object sender, RoutedEventArgs e)

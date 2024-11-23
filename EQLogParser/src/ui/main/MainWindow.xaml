@@ -253,7 +253,12 @@
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="checkUpdatesIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
-          </MenuItem>          
+          </MenuItem>
+          <MenuItem x:Name="hideSplashScreen" Header="Hide _Splash Screen" Click="ToggleHideSplashScreenClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="enableHideSplashScreenIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+            </MenuItem.Icon>
+          </MenuItem>
           <MenuItem x:Name="hideOnMinimize" Header="Hide _Window if Minimized" Click="ToggleHideOnMinimizeClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableHideOnMinimizeIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
