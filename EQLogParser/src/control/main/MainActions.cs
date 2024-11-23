@@ -208,7 +208,7 @@ namespace EQLogParser
                 try
                 {
                   await using var download = await TheHttpClient.GetStreamAsync(url);
-                  var path = Environment.ExpandEnvironmentVariables("%userprofile%\\Downloads");
+                  var path = NativeMethods.GetDownloadsFolderPath();
                   if (!Directory.Exists(path))
                   {
                     new MessageWindow("Unable to Access Downloads Folder. Can Not Download Update.", Resource.CHECK_VERSION).ShowDialog();

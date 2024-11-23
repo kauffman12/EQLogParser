@@ -25,7 +25,7 @@ namespace EQLogParser
 
     public App()
     {
-      SyncfusionLicenseProvider.RegisterLicense("LICENSE KEY");
+      SyncfusionLicenseProvider.RegisterLicense("LICENSE");
     }
 
     protected override void OnStartup(StartupEventArgs e)
@@ -36,7 +36,6 @@ namespace EQLogParser
       {
         // Load splashscreen
         _splash = new SplashWindow();
-        _splash.Show();
 
         // Setup unhandled exception handlers
         DispatcherUnhandledException += AppDispatcherUnhandledException;
@@ -47,6 +46,12 @@ namespace EQLogParser
 
         // Read app settings
         ConfigUtil.Init();
+
+        if (!ConfigUtil.IfSet("HideSplashScreen"))
+        {
+          // show splash screen
+          _splash.Show();
+        }
 
         // Set Debug level
         SetLoggingLevel();

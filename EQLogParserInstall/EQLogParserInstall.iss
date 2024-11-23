@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "EQLogParser"
-#define MyAppVersion "2.2.51"
+#define MyAppVersion "2.2.52"
 #define MyAppPublisher "Kizant"
 #define MyAppURL "https://github.com/kauffman12/EQLogParser"
 #define MyAppExeName "EQLogParser.exe"
@@ -251,11 +251,6 @@ begin
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
-var
-  PSFilePath, Output, ProductCode: AnsiString;
-  ErrorCode: Integer;
-  Lines: TStringList;
-  i: Integer;  // Index for looping over the lines
 begin
   // Run the log file deletion at the end of the installation
   if CurStep = ssPostInstall then
