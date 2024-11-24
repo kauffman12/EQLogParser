@@ -334,7 +334,12 @@ namespace EQLogParser
         if (diff > MaxTimeout || (diff > FightTimeout && fight.DamageBlocks.Count > 0))
         {
           removeActiveKeys.Add(fight.CorrectMapKey);
-          RemoveOverlayFight(fight.Id);
+
+          // cleanup overlay data if overlay isn't actually open
+          if (!MainActions.IsDamageOverlayOpen())
+          {
+            RemoveOverlayFight(fight.Id);
+          }
         }
       }
 
@@ -366,6 +371,11 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(name))
       {
         _activeFights.TryGetValue(name, out result);
+        // don't think this happens but just in-case
+        if (result?.Dead == true)
+        {
+          _activeFights.TryRemove(name, out _);
+        }
       }
       return result;
     }
