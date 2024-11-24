@@ -52,6 +52,7 @@ namespace EQLogParser
     private LogReader _eqLogReader;
     private readonly List<bool> _logWindows = [];
     private readonly List<string> _recentFiles = [];
+    private bool _isDamageOverlayOpen;
     private bool _resetWindowState;
     private bool _isLoading;
 
@@ -400,7 +401,10 @@ namespace EQLogParser
     {
       _damageOverlay?.Close();
       _damageOverlay = null;
+      _isDamageOverlayOpen = false;
     }
+
+    internal bool IsDamageOverlayOpen() => _isDamageOverlayOpen;
 
     internal void OpenDamageOverlayIfEnabled(bool reset, bool configure)
     {
@@ -417,6 +421,7 @@ namespace EQLogParser
           _damageOverlay?.Close();
           _damageOverlay = new DamageOverlayWindow(false, reset);
           _damageOverlay.Show();
+          _isDamageOverlayOpen = true;
         }
       }
     }

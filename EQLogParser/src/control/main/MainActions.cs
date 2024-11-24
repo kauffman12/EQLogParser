@@ -146,6 +146,8 @@ namespace EQLogParser
       });
     }
 
+    internal static bool IsDamageOverlayOpen() => _mainWindow.IsDamageOverlayOpen();
+
     internal static TimeRange GetAllRanges()
     {
       TimeRange result = null;
