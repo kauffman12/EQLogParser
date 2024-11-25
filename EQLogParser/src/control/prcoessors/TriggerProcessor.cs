@@ -425,7 +425,7 @@ namespace EQLogParser
           }
 
           // update lockout time
-          wrapper.LockedOutTicks = beginTicks + (wrapper.TriggerData.LockoutTime * TimeSpan.TicksPerMillisecond);
+          wrapper.LockedOutTicks = beginTicks + (wrapper.TriggerData.LockoutTime * TimeSpan.TicksPerSecond);
         }
 
         // no need to constantly updated the DB. 6 hour check
@@ -589,7 +589,7 @@ namespace EQLogParser
       }
 
       newTimerData.BeginTicks = beginTicks;
-      newTimerData.EndTicks = beginTicks + (long)(TimeSpan.TicksPerMillisecond * wrapper.ModifiedDurationSeconds * 1000);
+      newTimerData.EndTicks = beginTicks + (long)(TimeSpan.TicksPerSecond * wrapper.ModifiedDurationSeconds);
       newTimerData.DurationTicks = newTimerData.EndTicks - beginTicks;
       newTimerData.ResetTicks = trigger.ResetDurationSeconds > 0 ?
         beginTicks + (long)(TimeSpan.TicksPerSecond * trigger.ResetDurationSeconds) : 0;
