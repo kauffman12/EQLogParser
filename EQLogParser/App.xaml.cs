@@ -121,30 +121,53 @@ namespace EQLogParser
         }
         catch (Exception ex)
         {
-          Log.Error("ShowAppError", ex);
+          Log.Error($"ShowAppError: {ex.Message}");
+          LogDetails(ex);
           _splash?.SetErrorState();
         }
       }, DispatcherPriority.Render));
     }
 
-    private void TaskSchedulerUnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs ex)
-    {
-      Log.Error("TaskSchedulerUnobservedTaskException", ex.Exception);
-      ex.SetObserved();
-      _splash?.SetErrorState();
-    }
-
     private void DomainUnhandledException(object sender, UnhandledExceptionEventArgs ex)
     {
-      Log.Error("DomainUnhandledException", ex.ExceptionObject as Exception);
+      if (ex.ExceptionObject is Exception exception)
+      {
+        Log.Error($"DomainUnhandledException: {exception.Message}");
+        LogDetails(exception);
+      }
+
       _splash?.SetErrorState();
     }
 
     private void AppDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs ex)
     {
-      Log.Error("AppDispatcherUnhandledException", ex.Exception);
+      Log.Error($"AppDispatcherUnhandledException: {ex.Exception.Message}");
+      LogDetails(ex.Exception);
       ex.Handled = true; // Prevents application from closing
       _splash?.SetErrorState();
+    }
+
+    private void TaskSchedulerUnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs ex)
+    {
+      Log.Error($"TaskSchedulerUnobservedTaskException: {ex.Exception.Message}");
+      LogDetails(ex.Exception);
+      ex.SetObserved();
+      _splash?.SetErrorState();
+    }
+
+    private static void LogDetails(Exception ex)
+    {
+      Log.Error($"Thread ID: {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+      Log.Error($"Thread Name: {System.Threading.Thread.CurrentThread.Name}");
+      Log.Error(ex.StackTrace);
+
+      var inner = ex.InnerException;
+      while (inner != null)
+      {
+        Log.Error($"Inner Exception: {inner.Message}");
+        Log.Error(inner.StackTrace);
+        inner = inner.InnerException;
+      }
     }
 
     private void DoNothing(object sender, RoutedEventArgs e)

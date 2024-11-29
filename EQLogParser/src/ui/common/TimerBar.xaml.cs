@@ -108,13 +108,16 @@ namespace EQLogParser
           _animation.From = progress.Progress;
           _animation.To = targetProgress;
 
-          // start
-          _storyboard.Begin(this, true);
-          _isAnimationRunning = true;
+          if (progress.IsLoaded)
+          {
+            // start
+            _storyboard.Begin(progress, true);
+            _isAnimationRunning = true;
+          }
         }
         else
         {
-          _storyboard.Stop(this);
+          _storyboard.Stop(progress);
         }
       }
       else

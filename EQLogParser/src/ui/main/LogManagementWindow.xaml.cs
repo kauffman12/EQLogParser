@@ -154,7 +154,7 @@ namespace EQLogParser
             MessageWindow running = null;
             try
             {
-              Dispatcher.InvokeAsync(() =>
+              await Dispatcher.InvokeAsync(() =>
               {
                 running = new MessageWindow($"Running Archive Process for {logFiles.Count} Files.", "Archive Now", MessageWindow.IconType.Info, null, null, false, true);
                 running.Show();
@@ -163,7 +163,7 @@ namespace EQLogParser
               await Task.Delay(500);
               FileUtil.ArchiveNow(logFiles);
 
-              Dispatcher.InvokeAsync(() =>
+              _ = Dispatcher.InvokeAsync(() =>
               {
                 running?.Close();
                 new MessageWindow($"Archiving Complete.", "Archive Now", MessageWindow.IconType.Info).ShowDialog();
@@ -171,7 +171,7 @@ namespace EQLogParser
             }
             catch (Exception)
             {
-              Dispatcher.InvokeAsync(() =>
+              _ = Dispatcher.InvokeAsync(() =>
               {
                 running?.Close();
                 new MessageWindow("Archive Process Failed. Check the Error Log for Details.", "Archive Now").ShowDialog();

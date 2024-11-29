@@ -3,6 +3,7 @@
     <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
     <OutputType>WinExe</OutputType>
     <IsWebBootstrapper>false</IsWebBootstrapper>
@@ -30,14 +31,10 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>x64</PlatformTarget>
-    <DefineConstants>
-    </DefineConstants>
     <CodeAnalysisIgnoreGeneratedCode>false</CodeAnalysisIgnoreGeneratedCode>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <PlatformTarget>x64</PlatformTarget>
-    <DefineConstants>
-    </DefineConstants>
     <CodeAnalysisIgnoreGeneratedCode>false</CodeAnalysisIgnoreGeneratedCode>
   </PropertyGroup>
   <PropertyGroup>
@@ -167,7 +164,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="13.0.1" />
-    <PackageReference Include="DotLiquid" Version="2.2.692" />
+    <PackageReference Include="DotLiquid" Version="2.2.717" />
     <PackageReference Include="FontAwesome5">
       <Version>2.1.6</Version>
     </PackageReference>
@@ -196,8 +193,7 @@
     <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="26.2.8" />
     <PackageReference Include="Syncfusion.Tools.WPF" Version="26.2.8" />
     <PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="22.2.5" />
-    <PackageReference Include="Microsoft.Windows.Compatibility" Version="8.0.7" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
+    <PackageReference Include="Microsoft.Windows.Compatibility" Version="8.0.11" />
     <PackageReference Include="System.Formats.Asn1" Version="8.0.1" />
   </ItemGroup>
   <ItemGroup>
