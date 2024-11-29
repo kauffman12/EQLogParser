@@ -7,7 +7,7 @@
 #define MyAppURL "https://github.com/kauffman12/EQLogParser"
 #define MyAppExeName "EQLogParser.exe"
 #define MyReleaseDir "C:\Users\kauff\code\github\EQLogParser\EQLogParser\bin\Release\net8.0-windows10.0.17763.0"
-;#define MyReleaseDir "C:\Users\kauff\code\github\EQLogParser\EQLogParser\bin\x64\Debug\net8.0-windows10.0.17763.0"
+;#define MyReleaseDir "C:\Users\kauff\code\github\EQLogParser\EQLogParser\bin\Debug\net8.0-windows10.0.17763.0"
 #define MySrcDir "C:\Users\kauff\code\github\EQLogParser\EQLogParser"
 #define BackupUtilDir "C:\Users\kauff\code\github\EQLogParser\BackupUtil\bin\Release\net8.0-windows10.0.17763.0"
 
