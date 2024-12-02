@@ -1,14 +1,9 @@
 ﻿using Syncfusion.UI.Xaml.ProgressBar;
-using System;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media.Animation;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for TimerBar.xaml
-  /// </summary>
   public partial class TimerBar
   {
     public enum State
@@ -19,37 +14,13 @@ namespace EQLogParser
       Reset
     };
 
-    private readonly DoubleAnimation _animation;
-    private readonly Storyboard _storyboard;
     private string _overlayId;
     private State _theState = State.None;
     private TimerData _lastTimerData;
-    private bool _isAnimationRunning;
-    private string _lastDisplayName;
 
     public TimerBar()
     {
       InitializeComponent();
-
-      // setup animation for smoother update
-      _animation = new DoubleAnimation
-      {
-        // 500ms between ticks. see TriggerManager:WindowTick
-        // use something slightly less to avoid pausing
-        Duration = TimeSpan.FromMilliseconds(480),
-        EasingFunction = null
-      };
-
-      _storyboard = new Storyboard();
-      _storyboard.Children.Add(_animation);
-
-      _storyboard.Completed += (_, _) =>
-      {
-        _isAnimationRunning = false;
-      };
-
-      Storyboard.SetTarget(_animation, progress);
-      Storyboard.SetTargetProperty(_animation, new PropertyPath(ProgressBarBase.ProgressProperty));
       progress.SizeChanged += ProgressSizeChanged;
     }
 
@@ -100,25 +71,6 @@ namespace EQLogParser
         // 3 is an increasing timer.
         var targetProgress = timerData.TimerType == 3 ? 100 - remaining : remaining;
         progress.Progress = targetProgress;
-
-        // only animate if it's the same timer bar as previous
-        if ((_lastDisplayName == null || _lastDisplayName == displayName) && !_isAnimationRunning)
-        {
-          // animate during update cycle
-          _animation.From = progress.Progress;
-          _animation.To = targetProgress;
-
-          if (progress.IsLoaded)
-          {
-            // start
-            _storyboard.Begin(progress, true);
-            _isAnimationRunning = true;
-          }
-        }
-        else
-        {
-          _storyboard.Stop(progress);
-        }
       }
       else
       {
@@ -128,7 +80,6 @@ namespace EQLogParser
 
       title.Text = displayName;
       time.Text = timeText;
-      _lastDisplayName = displayName;
     }
 
     internal void SetActive(TimerData timerData)

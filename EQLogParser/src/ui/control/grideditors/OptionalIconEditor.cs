@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Interop;
 
 namespace EQLogParser
 {
@@ -112,7 +113,9 @@ namespace EQLogParser
 
       // Show dialog and read result
       dialog.Filters.Add(new CommonFileDialogFilter("Images", "*.png;*.jpg;*.jpeg"));
-      if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+
+      var handle = new WindowInteropHelper(MainActions.GetOwner()).Handle;
+      if (dialog.ShowDialog(handle) == CommonFileDialogResult.Ok)
       {
         var file = dialog.FileName; // Get the selected file name
         _theImage.Source = UiElementUtil.CreateBitmap(file);

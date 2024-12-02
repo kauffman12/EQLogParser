@@ -1,8 +1,10 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
@@ -16,6 +18,7 @@ namespace EQLogParser
     internal readonly ConcurrentDictionary<string, bool> RunningFiles = new();
     internal static TriggerManager Instance => Lazy.Value;
 
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<TriggerManager> Lazy = new(() => new TriggerManager());
     private readonly ConcurrentDictionary<string, TriggerNode> _textOverlayCache = new();
     private readonly ConcurrentDictionary<string, TriggerNode> _timerOverlayCache = new();
@@ -376,6 +379,10 @@ namespace EQLogParser
           }
         }
       }
+      catch (Exception ex)
+      {
+        Log.Error("Error in TimerTick", ex);
+      }
       finally
       {
         if (_timerWindows.Count == 0)
@@ -424,6 +431,10 @@ namespace EQLogParser
           }
         }
       }
+      catch (Exception ex)
+      {
+        Log.Error("Error in TextTick", ex);
+      }
       finally
       {
         if (_textWindows.Count == 0)
@@ -442,23 +453,30 @@ namespace EQLogParser
 
       UiUtil.InvokeNow(() =>
       {
-        foreach (var node in overlayNodes)
+        try
         {
-          if (node.Id == null) continue;
-          if (!_textWindows.TryGetValue(node.Id, out var windowData))
+          foreach (var node in overlayNodes)
           {
-            windowData = new OverlayWindowData { TheWindow = new TextOverlayWindow(node) };
-            _textWindows[node.Id] = windowData;
-            windowData.TheWindow.Show();
+            if (node.Id == null) continue;
+            if (!_textWindows.TryGetValue(node.Id, out var windowData))
+            {
+              windowData = new OverlayWindowData { TheWindow = new TextOverlayWindow(node) };
+              _textWindows[node.Id] = windowData;
+              windowData.TheWindow.Show();
+            }
+
+            var brush = UiUtil.GetBrush(fontColor);
+            (windowData.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
           }
 
-          var brush = UiUtil.GetBrush(fontColor);
-          (windowData.TheWindow as TextOverlayWindow)?.AddTriggerText(text, beginTicks, brush);
+          if (!_textOverlayTimer.IsEnabled)
+          {
+            _textOverlayTimer.Start();
+          }
         }
-
-        if (!_textOverlayTimer.IsEnabled)
+        catch (Exception ex)
         {
-          _textOverlayTimer.Start();
+          Log.Warn("Error during AddTextEvent", ex);
         }
       });
     }
@@ -470,26 +488,33 @@ namespace EQLogParser
 
       UiUtil.InvokeNow(() =>
       {
-        foreach (var node in overlayNodes)
+        try
         {
-          if (node.Id == null) continue;
-          if (!_timerWindows.TryGetValue(node.Id, out var windowData))
+          foreach (var node in overlayNodes)
           {
-            windowData = new OverlayWindowData
+            if (node.Id == null) continue;
+            if (!_timerWindows.TryGetValue(node.Id, out var windowData))
             {
-              TheWindow = new TimerOverlayWindow(node),
-              IsCooldown = node.OverlayData?.TimerMode == 1
-            };
+              windowData = new OverlayWindowData
+              {
+                TheWindow = new TimerOverlayWindow(node),
+                IsCooldown = node.OverlayData?.TimerMode == 1
+              };
 
-            _timerWindows[node.Id] = windowData;
-            windowData.TheWindow.Show();
-            ((TimerOverlayWindow)windowData.TheWindow).Tick(data);
-          }
+              _timerWindows[node.Id] = windowData;
+              windowData.TheWindow.Show();
+              ((TimerOverlayWindow)windowData.TheWindow).Tick(data);
+            }
 
-          if (!_timerOverlayTimer.IsEnabled)
-          {
-            _timerOverlayTimer.Start();
+            if (!_timerOverlayTimer.IsEnabled)
+            {
+              _timerOverlayTimer.Start();
+            }
           }
+        }
+        catch (Exception ex)
+        {
+          Log.Error("Error during AddTimerEvent", ex);
         }
       });
     }
@@ -585,10 +610,17 @@ namespace EQLogParser
     {
       UiUtil.InvokeNow(() =>
       {
-        if (windows.Remove(id, out var windowData))
+        try
         {
-          windowData?.TheWindow?.Close();
-          resetDefault();
+          if (windows.Remove(id, out var windowData))
+          {
+            windowData?.TheWindow?.Close();
+            resetDefault();
+          }
+        }
+        catch (Exception ex)
+        {
+          Log.Error("Error closing OverlayWindow", ex);
         }
       }, DispatcherPriority.Send);
     }
@@ -597,11 +629,17 @@ namespace EQLogParser
     {
       UiUtil.InvokeNow(() =>
       {
-        var windowList = windows.Values.ToList();
-        windows.Clear();
-
-        windowList.ForEach(window => window.TheWindow.Close());
-        resetDefault();
+        try
+        {
+          var windowList = windows.Values.ToList();
+          windows.Clear();
+          windowList.ForEach(window => window.TheWindow.Close());
+          resetDefault();
+        }
+        catch (Exception ex)
+        {
+          Log.Error("Error closing all OverlayWindows", ex);
+        }
       }, DispatcherPriority.Send);
     }
 
