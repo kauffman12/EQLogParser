@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "EQLogParser"
-#define MyAppVersion "2.2.55"
+#define MyAppVersion "2.2.56"
 #define MyAppPublisher "Kizant"
 #define MyAppURL "https://github.com/kauffman12/EQLogParser"
 #define MyAppExeName "EQLogParser.exe"
@@ -141,7 +141,7 @@ procedure LabelLinkClick(Sender: TObject);
 var
   ErrorCode: Integer;
 begin
-  ShellExec('open', 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.10-windows-x64-installer', '', '', SW_SHOW, ewNoWait, ErrorCode);
+  ShellExec('open', 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.11-windows-x64-installer', '', '', SW_SHOW, ewNoWait, ErrorCode);
 end;
 
 function ShowDotNetDownloadPage: Boolean;
@@ -173,7 +173,7 @@ begin
   // Create a clickable label for the link
   LabelLink := TMemo.Create(Form);
   LabelLink.Parent := Form;
-  LabelLink.Text := 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.10-windows-x64-installer';
+  LabelLink.Text := 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.11-windows-x64-installer';
   LabelLink.Font.Style := [fsUnderline];
   LabelLink.Font.Color := clBlue;
   LabelLink.Font.Size := 8;
@@ -223,6 +223,42 @@ begin
   end;
 end;
 
+function IsVersionValid(const Version: string): Boolean;
+var
+  Major, Minor, Patch: Integer;
+  DotPos1, DotPos2: Integer;
+  MajorStr, MinorStr, PatchStr: string;
+begin
+  Result := False;
+
+  // Find the position of the first dot
+  DotPos1 := Pos('.', Version);
+  if DotPos1 = 0 then
+    Exit; // Invalid format, no dots found
+
+  // Find the position of the second dot
+  DotPos2 := Pos('.', Copy(Version, DotPos1 + 1, Length(Version)));
+  if DotPos2 > 0 then
+    DotPos2 := DotPos2 + DotPos1; // Adjust position relative to the full string
+
+  // Extract major, minor, and patch parts
+  MajorStr := Copy(Version, 1, DotPos1 - 1);
+  MinorStr := Copy(Version, DotPos1 + 1, DotPos2 - DotPos1 - 1);
+  PatchStr := Copy(Version, DotPos2 + 1, Length(Version) - DotPos2);
+
+  // Convert the parts to integers, defaulting to 0 if conversion fails
+  Major := StrToIntDef(MajorStr, 0);
+  Minor := StrToIntDef(MinorStr, 0);
+  Patch := StrToIntDef(PatchStr, 0);
+
+  // Check version validity
+  if (Major = 8) and (Minor > 0) then
+    Result := True;
+
+  if (Major = 8) and (Minor = 0) and (Patch >= 11) then
+    Result := True;
+end;
+
 function IsDotNet8Installed: Boolean;
 var
   FindResult: TFindRec;
@@ -239,7 +275,7 @@ begin
       Log('Checking against ' + FindResult.Name)
       // Check if the found item is a directory and starts with '8'
       if (FindResult.Attributes and FILE_ATTRIBUTE_DIRECTORY <> 0) and
-         (Pos('8', FindResult.Name) = 1) then
+         IsVersionValid(FindResult.Name) then
       begin
         Log('dotnet found')
         Result := True;

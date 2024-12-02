@@ -2,14 +2,14 @@
 Everquest Log Parser for Live/TLP servers with basic support for P99.
 
 Link to DOWNLOAD the latest Installer:</br>
-https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-install-2.2.55.exe
+https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-install-2.2.56.exe
 
 Minimum Requirements:
 1. Windows 10 x64
 2. .Net 8.0 Desktop Runtime for x64
 
 .Net 8.0 is provided by Microsoft but is not included with Windows. It can be downloaded from here:</br>
-https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.10-windows-x64-installer
+https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.11-windows-x64-installer
 
 If Everquest is in windowed mode but the Damage Meter or other overlays are hidden when you switch to the game make sure Overlap with Taskbar is turned off:</br>
 
