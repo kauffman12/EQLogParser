@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 
 namespace EQLogParser
 {
@@ -114,7 +115,8 @@ namespace EQLogParser
         ? string.Empty
         : Path.GetDirectoryName(txtFolderPath.Text);
 
-      if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+      var handle = new WindowInteropHelper(this).Handle;
+      if (dialog.ShowDialog(handle) == CommonFileDialogResult.Ok)
       {
         txtFolderPath.FontStyle = FontStyles.Normal;
         txtFolderPath.Text = dialog.FileName;

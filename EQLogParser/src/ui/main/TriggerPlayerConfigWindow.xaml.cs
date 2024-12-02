@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using Windows.Media.SpeechSynthesis;
 
 namespace EQLogParser
@@ -161,7 +162,8 @@ namespace EQLogParser
       // Show dialog and read result
       dialog.Filters.Add(new CommonFileDialogFilter("eqlog_Player_server", "*.txt"));
 
-      if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+      var handle = new WindowInteropHelper(this).Handle;
+      if (dialog.ShowDialog(handle) == CommonFileDialogResult.Ok)
       {
         txtFilePath.FontStyle = FontStyles.Normal;
         txtFilePath.Text = dialog.FileName;
