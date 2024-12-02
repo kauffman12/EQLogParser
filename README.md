@@ -6,7 +6,7 @@ https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-install
 
 Minimum Requirements:
 1. Windows 10 x64
-2. .Net 8.0 Desktop Runtime for x64
+2. .Net 8.0.11 Desktop Runtime for x64 (or newer version of 8.0)
 
 .Net 8.0 is provided by Microsoft but is not included with Windows. It can be downloaded from here:</br>
 https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.11-windows-x64-installer
