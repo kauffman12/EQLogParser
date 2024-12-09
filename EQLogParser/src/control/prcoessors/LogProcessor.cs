@@ -8,7 +8,7 @@ namespace EQLogParser
   {
     private readonly string _fileName;
     private long _lineCount;
-    private bool _disposed;
+    private volatile bool _isDisposed;
 
     internal LogProcessor(string fileName)
     {
@@ -21,12 +21,19 @@ namespace EQLogParser
     {
       Task.Run(() =>
       {
-        foreach (var data in collection.GetConsumingEnumerable())
+        try
         {
-          if (!_disposed)
+          foreach (var data in collection.GetConsumingEnumerable())
           {
-            DoPreProcess(data.Item1, data.Item2, data.Item3);
+            if (!_isDisposed)
+            {
+              DoPreProcess(data.Item1, data.Item2, data.Item3);
+            }
           }
+        }
+        finally
+        {
+          collection?.Dispose();
         }
       });
     }
@@ -94,7 +101,7 @@ namespace EQLogParser
 
     public void Dispose()
     {
-      _disposed = true;
+      _isDisposed = true;
     }
   }
 }

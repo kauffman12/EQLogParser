@@ -40,17 +40,13 @@ namespace EQLogParser
     private readonly BlockingCollection<LineData> _chatCollection = [];
     private readonly string _activeColor;
     private readonly string _fontColor;
-    private readonly CancellationTokenSource _cts = new();
     private List<TriggerWrapper> _activeTriggers;
     private List<LexiconItem> _lexicon;
-    private Task _speakTask;
-    private Task _chatTask;
-    private Task _processTask;
     private LineData _previous;
     private int _voiceRate;
     private bool _isTesting;
     private bool _ready;
-    private bool _isDisposed;
+    private volatile bool _isDisposed;
 
     internal TriggerProcessor(string id, string name, string playerName, string voice, int voiceRate,
       string activeColor, string fontColor, Action<string, Trigger, string, string> addTextEvent, Action<string, Trigger, List<TimerData>> addTimerEvent)
@@ -79,13 +75,13 @@ namespace EQLogParser
 
     public void LinkTo(BlockingCollection<Tuple<string, double, bool>> collection)
     {
-      _speakTask = Task.Run(() =>
+      Task.Run(() =>
       {
         try
         {
-          // ReSharper disable once InconsistentlySynchronizedField
-          foreach (var data in _speakCollection.GetConsumingEnumerable(_cts.Token))
+          foreach (var data in _speakCollection.GetConsumingEnumerable())
           {
+            if (_isDisposed) continue;
             try
             {
               HandleSpeech(data);
@@ -100,36 +96,46 @@ namespace EQLogParser
         {
           // ignore (should only be cancel requests)
         }
-      });
-
-      _chatTask = Task.Run(() =>
-      {
-        try
+        finally
         {
-          foreach (var data in _chatCollection.GetConsumingEnumerable(_cts.Token))
-          {
-            try
-            {
-              HandleChat(data);
-            }
-            catch (Exception)
-            {
-              // ignore
-            }
-          }
-        }
-        catch (Exception)
-        {
-          // ignore (should only be cancel requests)
+          _speakCollection?.Dispose();
         }
       });
 
-      _processTask = Task.Run(() =>
+      Task.Run(() =>
+       {
+         try
+         {
+           foreach (var data in _chatCollection.GetConsumingEnumerable())
+           {
+             if (_isDisposed) continue;
+             try
+             {
+               HandleChat(data);
+             }
+             catch (Exception)
+             {
+               // ignore
+             }
+           }
+         }
+         catch (Exception)
+         {
+           // ignore (should only be cancel requests)
+         }
+         finally
+         {
+           _chatCollection?.Dispose();
+         }
+       });
+
+      Task.Run(() =>
       {
         try
         {
-          foreach (var data in collection.GetConsumingEnumerable(_cts.Token))
+          foreach (var data in collection.GetConsumingEnumerable())
           {
+            if (_isDisposed) continue;
             try
             {
               DoProcess(data.Item1, data.Item2);
@@ -143,6 +149,10 @@ namespace EQLogParser
         catch (Exception)
         {
           // ignore (should only be cancel requests)
+        }
+        finally
+        {
+          collection?.Dispose();
         }
 
         // cleanup on process exit
@@ -1192,16 +1202,6 @@ namespace EQLogParser
         TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
         _speakCollection.CompleteAdding();
         _chatCollection.CompleteAdding();
-        _cts?.Cancel();
-        _speakTask?.Wait();
-        _chatTask?.Wait();
-        _processTask?.Wait();
-        _speakTask?.Dispose();
-        _chatTask?.Dispose();
-        _processTask?.Dispose();
-        _speakCollection?.Dispose();
-        _chatCollection?.Dispose();
-        _cts?.Dispose();
 
         lock (_voiceLock)
         {

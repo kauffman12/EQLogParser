@@ -62,12 +62,6 @@ namespace EQLogParser
 
         _cts?.Dispose();
         _cts = null;
-
-        if (!_lines.IsCompleted)
-        {
-          _lines.CompleteAdding();
-        }
-
         logProcessor?.Dispose();
         logProcessor = null;
         _invalid = true;
