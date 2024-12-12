@@ -1,3 +1,45 @@
+Adalaide Galerider
+Alleza
+Anguillifor
+Aqua Castroll
+Arcanist Aunrae V`Len
+Atathus, the Red Lord
+Ballafore
+Brood Architect Hazuri
+Bucktooth XXVI
+Bunny
+Captain Luft
+Captain Riyu
+Chthamalus
+Copperworth
+Councilmember Lizzrel
+Councilmember Myjinn
+Diabollis
+Efiiren Solitai
+Elewisa the Oathbound
+Ephialtes
+Eye of Mother
+First Raider
+First Scout
+First Soldier
+First Stormer
+Harla Dar
+Keikolin the Enlightened
+Kellis the Young
+Ma`Maie, the Nest Mother
+Mambatali
+Mirala
+Muji
+Norlan Prellmoss
+Queseris Trisleth
+Riptide
+Silverwing
+Tamlin Wrathbone
+Tatanami
+Tha`k Rustae, the Butcher
+Unigami
+Venesh the Greenblood
+Zarek
 a babbling muck
 a baby oashim
 a backwards sphinx
@@ -10870,6 +10912,7 @@ a scalewrought lookout
 a scalewrought maker
 a scalewrought manastriker
 a scalewrought manipulator
+a scalewrought maniupulator
 a scalewrought mender
 a scalewrought mintstriker
 a scalewrought mountstriker
@@ -12372,6 +12415,8 @@ a spiderwork scavenger
 a spiked succulent
 a spinebloom
 a spinechill spider
+a spinechiller egg sac
+a spinechiller matriarch
 a spinechiller spider
 a spinechiller widow
 a spinecutter basilisk
@@ -22312,6 +22357,7 @@ desaliar ter`fediskian
 desalin the sea terror
 descending light`s laughter
 desirae fanfare
+despair
 despairing trueborn soul
 despondo
 destroyer golem
@@ -27482,6 +27528,7 @@ inquisitor dalin
 inquisitor harona
 inquisitor lliev kinth
 inquisitor ukkag
+insanity
 insidious dragorn
 instadis
 instructor anom
@@ -31381,6 +31428,8 @@ pietro zarn
 pika
 pikatu
 pikebreath
+pile of carapace
+pile of crab
 pile of debris
 pile of dusty rocks
 pile of waste
@@ -32875,13 +32924,34 @@ scaleback
 scalebone skeleton
 scaled prowler
 scalek
+scalewrought administrator
+scalewrought aerialist
+scalewrought archseer
+scalewrought breaker
+scalewrought crusher
+scalewrought director
+scalewrought driver
 scalewrought foreman
+scalewrought machinist
+scalewrought manager
+scalewrought marshal
 scalewrought monitor
+scalewrought nimbus
+scalewrought operator
+scalewrought overseer
+scalewrought overwatch
 scalewrought quartermaster
+scalewrought rancher
+scalewrought servitor
+scalewrought skykeeper
+scalewrought skymarshal
+scalewrought smasher
 scalewrought tool
 scalewrought trainer
+scalewrought trooper
 scalewrought viceroy
 scalewrought vitalmancer
+scalewrought watcher
 scalithid the deepwalker
 scar
 scarbrow ga`hruk
@@ -36274,6 +36344,7 @@ tribal leader diseranon
 tribal mineralist
 tribesman juill
 tribesman zuldar
+tribulation
 tribunal puppet
 tribute master
 tricerasaur

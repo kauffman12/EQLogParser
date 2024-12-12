@@ -197,7 +197,6 @@ namespace EQLogParser
     private async void ConfigDoUpdate(object sender, EventArgs e)
     {
       _configUpdateTimer.Stop();
-      CloseOverlays();
 
       if (await TriggerStateManager.Instance.GetConfig() is { } config)
       {
@@ -225,21 +224,25 @@ namespace EQLogParser
 
     private async Task HandleAdvancedConfig(TriggerConfig config)
     {
-      var clearReaders = _logReaders.Any(reader => reader.GetProcessor() is TriggerProcessor { CurrentCharacterId: TriggerStateManager.DefaultUser });
-      if (clearReaders)
+      RunningFiles.Clear();
+
+      // if Default User is being used then we switched from basic so clear all
+      if (_logReaders.Any(reader => reader.GetProcessor() is TriggerProcessor { CurrentCharacterId: TriggerStateManager.DefaultUser }))
       {
         _logReaders.ForEach(item => item.Dispose());
         _logReaders.Clear();
+        CloseOverlays();
       }
 
       var toRemove = new List<LogReader>();
       var alreadyRunning = new List<string>();
-
       foreach (var reader in _logReaders)
       {
         if (reader.GetProcessor() is TriggerProcessor processor)
         {
-          var found = config.Characters.FirstOrDefault(character => character.Id == processor.CurrentCharacterId && character.Name == processor.CurrentProcessorName);
+          var found = config.Characters.FirstOrDefault(character => character.Id == processor.CurrentCharacterId &&
+            character.Name == processor.CurrentProcessorName);
+
           if (found is not { IsEnabled: true } || reader.FileName != found.FilePath)
           {
             reader.Dispose();
@@ -250,11 +253,11 @@ namespace EQLogParser
             processor.SetVoice(found.Voice);
             processor.SetVoiceRate(found.VoiceRate);
             alreadyRunning.Add(found.Id);
+            RunningFiles[found.FilePath] = true;
           }
         }
       }
 
-      RunningFiles.Clear();
       toRemove.ForEach(remove => _logReaders.Remove(remove));
 
       var startTasks = config.Characters
@@ -277,23 +280,51 @@ namespace EQLogParser
 
     private async Task HandleBasicConfig(TriggerConfig config)
     {
-      _logReaders.ForEach(reader => reader.Dispose());
-      _logReaders.Clear();
+      RunningFiles.Clear();
 
-      if (config.IsEnabled && MainWindow.CurrentLogFile is { } currentFile)
+      var currentFile = MainWindow.CurrentLogFile;
+      LogReader defReader = null;
+      TriggerProcessor defProcessor = null;
+
+      if (_logReaders.Count > 0)
       {
-        var processor = new TriggerProcessor(TriggerStateManager.DefaultUser, TriggerStateManager.DefaultUser, ConfigUtil.PlayerName, config.Voice, config.VoiceRate, null, null, AddTextEvent, AddTimerEvent);
-        await processor.Start();
-        var reader = new LogReader(processor, currentFile);
-        _logReaders.Add(reader);
+        if (config.IsEnabled && _logReaders[0].GetProcessor() is TriggerProcessor { CurrentCharacterId: TriggerStateManager.DefaultUser } p
+          && _logReaders[0].FileName == currentFile)
+        {
+          defReader = _logReaders[0];
+          defProcessor = p;
+        }
+        else
+        {
+          _logReaders.ForEach(item => item.Dispose());
+          _logReaders.Clear();
+          CloseOverlays();
+        }
+      }
+
+      if (config.IsEnabled)
+      {
+        if (defReader == null || defProcessor == null)
+        {
+          var processor = new TriggerProcessor(TriggerStateManager.DefaultUser, TriggerStateManager.DefaultUser, ConfigUtil.PlayerName, config.Voice,
+            config.VoiceRate, null, null, AddTextEvent, AddTimerEvent);
+          await processor.Start();
+          var reader = new LogReader(processor, currentFile);
+          _logReaders.Add(reader);
+          await Task.Run(() => reader.Start());
+          MainActions.ShowTriggersEnabled(true);
+        }
+        else
+        {
+          defProcessor.SetVoice(config.Voice);
+          defProcessor.SetVoiceRate(config.VoiceRate);
+        }
+
         RunningFiles[currentFile] = true;
-        await Task.Run(() => reader.Start());
-        MainActions.ShowTriggersEnabled(true);
       }
       else
       {
         MainActions.ShowTriggersEnabled(false);
-        RunningFiles.Clear();
       }
     }
 

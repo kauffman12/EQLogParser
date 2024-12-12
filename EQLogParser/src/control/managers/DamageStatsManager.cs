@@ -32,20 +32,27 @@ namespace EQLogParser
 
     internal static DamageOverlayStats ComputeOverlayStats(bool reset, int mode, int maxRows, string selectedClass)
     {
-      // clear out anything pending in the queue
-      DamageLineParser.CheckSlainQueue(DateUtil.ToDouble(DateTime.Now.AddSeconds(-3)));
-
       var deadFights = new HashSet<long>();
       var damage = ComputeOverlayDamageStats(OverlayDamageData, true, reset, mode, maxRows, selectedClass, deadFights);
       var tank = ComputeOverlayDamageStats(OverlayTankData, false, reset, mode, maxRows, selectedClass, deadFights);
       deadFights.ToList().ForEach(id => DataManager.Instance.RemoveOverlayFight(id));
-      return (damage == null && tank == null) ? null : new DamageOverlayStats { DamageStats = damage, TankStats = tank };
+      var result = (damage == null && tank == null) ? null : new DamageOverlayStats { DamageStats = damage, TankStats = tank };
+
+      if (result == null)
+      {
+        // make sure stale data is removed
+        DataManager.Instance.ResetOverlayFights();
+      }
+
+      return result;
     }
 
     private static CombinedStats ComputeOverlayDamageStats(OverlayData data, bool dps, bool reset, int mode,
       int maxRows, string selectedClass, HashSet<long> deadFights)
     {
       CombinedStats combined = null;
+      var timeout = mode == 0 ? DataManager.FightTimeout : mode;
+      var now = DateTime.Now;
 
       if (reset)
       {
@@ -152,9 +159,8 @@ namespace EQLogParser
         data.FightName = oldestFight.Name;
       }
 
-      var timeout = mode == 0 ? DataManager.FightTimeout : mode;
       var totalSeconds = allTime.GetTotal();
-      var diff = (DateTime.Now - DateTime.MinValue.AddSeconds(data.UpdateTime)).TotalSeconds;
+      var diff = (now - DateTime.MinValue.AddSeconds(data.UpdateTime)).TotalSeconds;
       // added >= 0 check because this broke while testing when clocks moved an hour back in the fall
       if (data.FightName != null && totalSeconds > 0 && allDamage > 0 && diff >= 0 && diff <= timeout)
       {
@@ -166,7 +172,7 @@ namespace EQLogParser
         foreach (var total in playerTotals.Values.OrderByDescending(total => total.Damage))
         {
           var time = total.Range.GetTotal();
-          if (time > 0 && (DateTime.Now - DateTime.MinValue.AddSeconds(total.UpdateTime)).TotalSeconds <= DataManager.MaxTimeout)
+          if (time > 0 && (now - DateTime.MinValue.AddSeconds(total.UpdateTime)).TotalSeconds <= DataManager.MaxTimeout)
           {
             var playerStats = new PlayerStats
             {

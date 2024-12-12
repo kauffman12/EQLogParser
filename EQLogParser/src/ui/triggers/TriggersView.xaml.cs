@@ -188,12 +188,9 @@ namespace EQLogParser
           {
             SaveClick(this, null);
           }
-          else if (msgDialog.IsYes1Clicked)
+          else if (msgDialog.IsYes1Clicked && node.OverlayData != null)
           {
-            if (node.OverlayData != null)
-            {
-              _ = TriggerUtil.LoadOverlayStyle(node, node.OverlayData);
-            }
+            _ = TriggerUtil.LoadOverlayStyle(node, node.OverlayData);
           }
 
           cancel = !msgDialog.IsYes1Clicked && !msgDialog.IsYes2Clicked;

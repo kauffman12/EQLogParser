@@ -271,14 +271,13 @@ namespace EQLogParser
       foreach (var od in await TriggerStateManager.Instance.GetAllOverlays())
       {
         var node = new TriggerNode { Name = od.Name, Id = od.Id, OverlayData = od.OverlayData };
-        Application.Current.Resources["OverlayText-" + od.Id] = od.Name;
         await LoadOverlayStyle(node, od.OverlayData);
       }
     }
 
     internal static async Task LoadOverlayStyle(TriggerNode node, Overlay overlay)
     {
-
+      Application.Current.Resources["OverlayText-" + node.Id] = node.Name;
       if (overlay?.IsTextOverlay == true)
       {
         // workaround to load styles
@@ -926,6 +925,8 @@ namespace EQLogParser
               else
               {
                 await TriggerStateManager.Instance.ImportOverlays(parent, data);
+                // refresh styles
+                await LoadOverlayStyles();
               }
             }
             else if (dialog.FileName.EndsWith(".gtp"))
