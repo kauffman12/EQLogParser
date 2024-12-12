@@ -34,28 +34,24 @@ namespace EQLogParser
       }
     }
 
-    internal static VoiceInformation GetVoice(string name)
-    {
-      return SpeechSynthesizer.AllVoices.FirstOrDefault(voice => voice.DisplayName == name || name?.StartsWith(voice.DisplayName) == true)
-             ?? SpeechSynthesizer.DefaultVoice;
-    }
-
-    internal static SpeechSynthesizer CreateSpeechSynthesizer()
-    {
-      try
-      {
-        return new SpeechSynthesizer();
-      }
-      catch (Exception ex)
-      {
-        Log.Error(ex);
-        return null;
-      }
-    }
-
     internal int GetVolume()
     {
       return _session?.SimpleAudioVolume?.Volume != null ? (int)(_session.SimpleAudioVolume.Volume * 100) : 0;
+    }
+
+    internal void SetVoice(string id, string name)
+    {
+      if (!string.IsNullOrEmpty(name) && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) &&
+        _playerAudios.TryGetValue(id, out var playerAudio))
+      {
+        lock (playerAudio)
+        {
+          if (playerAudio?.Synth != null && GetVoiceInfo(name) is { } voiceInfo)
+          {
+            playerAudio.Synth.Voice = voiceInfo;
+          }
+        }
+      }
     }
 
     internal void SetVolume(int volume)
@@ -66,16 +62,20 @@ namespace EQLogParser
       }
     }
 
-    internal void Add(string id)
+    internal void Add(string id, string voice)
     {
-      var audio = new PlayerAudio();
+      var audio = new PlayerAudio
+      {
+        Synth = CreateSpeechSynthesizer(voice)
+      };
+
       _playerAudios.TryAdd(id, audio);
       ProcessAsync(audio);
     }
 
     internal void Stop(string id, bool remove = false)
     {
-      if (_playerAudios.TryGetValue(id, out var playerAudio))
+      if (!string.IsNullOrEmpty(id) && _playerAudios.TryGetValue(id, out var playerAudio))
       {
         lock (playerAudio)
         {
@@ -89,6 +89,11 @@ namespace EQLogParser
             try
             {
               playerAudio.ProcessingToken.Cancel();
+              if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+              {
+                playerAudio.Synth?.Dispose();
+                playerAudio.Synth = null;
+              }
             }
             catch (Exception)
             {
@@ -113,10 +118,9 @@ namespace EQLogParser
 
     internal async void TestSpeakTtsAsync(string tts, string voice = null, int rate = 0, int volume = 4)
     {
-      if (!string.IsNullOrEmpty(tts) && CreateSpeechSynthesizer() is var synth && synth != null)
+      if (!string.IsNullOrEmpty(tts) && CreateSpeechSynthesizer(voice) is { } synth)
       {
-        synth.Voice = GetVoice(voice);
-        if (await SynthesizeTextToByteArrayAsync(synth, tts) is { Length: > 0 } data)
+        if (await SynthesizeTextToByteArrayAsync(tts, synth) is { Length: > 0 } data)
         {
           var waveFormat = new WaveFormat(16000, 16, 1);
           if (!PlayAudioData(data, waveFormat, rate, volume))
@@ -125,7 +129,7 @@ namespace EQLogParser
           }
         }
 
-        synth.Dispose();
+        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240)) synth.Dispose();
       }
     }
 
@@ -148,15 +152,24 @@ namespace EQLogParser
       }
     }
 
-    internal async void SpeakTtsAsync(string id, SpeechSynthesizer synth, string tts, int rate, Trigger trigger)
+    internal async void SpeakTtsAsync(string id, string tts, int rate, Trigger trigger)
     {
-      if (!string.IsNullOrEmpty(id) && synth != null && !string.IsNullOrEmpty(tts))
+      if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(tts))
       {
         byte[] data = null;
         await _semaphore.WaitAsync();
         try
         {
-          data = await SynthesizeTextToByteArrayAsync(synth, tts);
+          if (_playerAudios.TryGetValue(id, out var playerAudio))
+          {
+            SpeechSynthesizer synth = null;
+            lock (playerAudio)
+            {
+              synth = playerAudio.Synth;
+            }
+
+            data = await SynthesizeTextToByteArrayAsync(tts, synth);
+          }
         }
         catch (Exception ex)
         {
@@ -327,7 +340,7 @@ namespace EQLogParser
       var cancellationTokenSource = new CancellationTokenSource();
       audio.ProcessingToken = cancellationTokenSource;
 
-      Task.Run(() =>
+      _ = Task.Run(() =>
       {
         RawSourceWaveStream stream = null;
         WasapiOut output = null;
@@ -438,6 +451,51 @@ namespace EQLogParser
 
     private static WasapiOut CreateWasapiOut() => new(AudioClientShareMode.Shared, false, 50);
 
+    private static SpeechSynthesizer CreateSpeechSynthesizer(string voice)
+    {
+      SpeechSynthesizer synth = null;
+      try
+      {
+        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+        {
+          synth = new SpeechSynthesizer();
+          if (GetVoiceInfo(voice) is { } voiceInfo)
+          {
+            synth.Voice = voiceInfo;
+          }
+        }
+      }
+      catch (Exception ex)
+      {
+        Log.Error(ex);
+      }
+
+      return synth;
+    }
+
+    private static VoiceInformation GetVoiceInfo(string name)
+    {
+      if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+      {
+        return null;
+      }
+
+      var voiceInfo = SpeechSynthesizer.DefaultVoice;
+      if (!string.IsNullOrEmpty(name))
+      {
+        foreach (var voice in SpeechSynthesizer.AllVoices)
+        {
+          if (voice.DisplayName == name || name.StartsWith(voice.DisplayName) == true)
+          {
+            voiceInfo = voice;
+            break;
+          }
+        }
+      }
+
+      return voiceInfo;
+    }
+
     private static MMDevice GetDefaultDevice()
     {
       var enumerator = new MMDeviceEnumerator();
@@ -464,8 +522,13 @@ namespace EQLogParser
       }
     }
 
-    private static async Task<byte[]> SynthesizeTextToByteArrayAsync(SpeechSynthesizer synth, string tts)
+    private static async Task<byte[]> SynthesizeTextToByteArrayAsync(string tts, SpeechSynthesizer synth)
     {
+      if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+      {
+        return null;
+      }
+
       try
       {
         var stream = await synth.SynthesizeTextToStreamAsync(tts);
@@ -513,6 +576,7 @@ namespace EQLogParser
       internal PlaybackEvent CurrentEvent { get; set; }
       internal WasapiOut CurrentPlayback { get; set; }
       internal CancellationTokenSource ProcessingToken { get; set; }
+      internal SpeechSynthesizer Synth { get; set; }
     }
 
     private class PlaybackEvent

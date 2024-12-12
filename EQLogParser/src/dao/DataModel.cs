@@ -62,13 +62,15 @@ namespace EQLogParser
   {
     public CancellationTokenSource CancelSource { get; set; }
     public CancellationTokenSource WarningSource { get; set; }
+    public bool Canceled { get; set; }
+    public bool Warned { get; set; }
     public string DisplayName { get; set; }
     public long BeginTicks { get; set; }
     public long EndTicks { get; set; }
     public long ResetTicks { get; set; }
     public long ResetDurationTicks { get; set; }
     public long DurationTicks { get; set; }
-    public List<string> TimerOverlayIds { get; set; }
+    public ReadOnlyCollection<string> TimerOverlayIds { get; set; }
     public int TriggerAgainOption { get; set; }
     public int TimerType { get; set; }
     public string Key { get; set; }
