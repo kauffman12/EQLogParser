@@ -654,6 +654,9 @@ namespace EQLogParser
           {
             await theTreeView.RefreshOverlays();
           }
+
+          // update overlay data in each trigger wrapper
+          TriggerManager.Instance.OverlaysUpdated();
         }
       }
 

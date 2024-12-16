@@ -413,7 +413,7 @@ namespace EQLogParser
         {
           result = all.Where(n => n.OverlayData != null).Select(n => new OtData { Name = n.Name, Id = n.Id, OverlayData = n.OverlayData });
         }
-        return Task.FromResult(result ?? Enumerable.Empty<OtData>());
+        return Task.FromResult(result ?? []);
       });
     }
 
