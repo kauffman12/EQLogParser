@@ -20,33 +20,37 @@ namespace EQLogParser
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<TriggerManager> Lazy = new(() => new TriggerManager());
-    private readonly ConcurrentDictionary<string, TriggerNode> _textOverlayCache = new();
-    private readonly ConcurrentDictionary<string, TriggerNode> _timerOverlayCache = new();
-    private readonly ConcurrentDictionary<string, List<TriggerNode>> _textOverlayResultCache = new();
-    private readonly ConcurrentDictionary<string, List<TriggerNode>> _timerOverlayResultCache = new();
     private readonly DispatcherTimer _configUpdateTimer;
+    private readonly DispatcherTimer _overlayUpdateTimer;
     private readonly DispatcherTimer _triggerUpdateTimer;
     private readonly DispatcherTimer _textOverlayTimer;
     private readonly DispatcherTimer _timerOverlayTimer;
-    private readonly Dictionary<string, OverlayWindowData> _textWindows = new();
-    private readonly Dictionary<string, OverlayWindowData> _timerWindows = new();
+    private readonly Dictionary<string, OverlayWindowData> _textWindows = [];
+    private readonly Dictionary<string, OverlayWindowData> _timerWindows = [];
     private readonly List<LogReader> _logReaders = [];
     private readonly SemaphoreSlim _logReadersSemaphore = new(1, 1);
-    private TriggerNode _defaultTextOverlay;
-    private TriggerNode _defaultTimerOverlay;
+    private readonly List<string> _removeTextList = [];
+    private readonly List<string> _removeTimerList = [];
     private TriggerProcessor _testProcessor;
     private int _timerIncrement;
 
     public TriggerManager()
     {
-      _configUpdateTimer = CreateTimer(ConfigDoUpdate, 1500);
-      _triggerUpdateTimer = CreateTimer(TriggersDoUpdate, 1500);
+      _configUpdateTimer = CreateTimer(ConfigDoUpdate, 1000);
+      _overlayUpdateTimer = CreateTimer(OverlaysDoUpdate, 1000);
+      _triggerUpdateTimer = CreateTimer(TriggersDoUpdate, 1000);
       _textOverlayTimer = CreateTimer(TextTick, 450);
       _timerOverlayTimer = CreateTimer(TimerTick, 50);
       TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
     }
 
     internal void Select(AlertEntry entry) => EventsSelectTrigger?.Invoke(entry);
+
+    internal void OverlaysUpdated()
+    {
+      _overlayUpdateTimer.Stop();
+      _overlayUpdateTimer.Start();
+    }
 
     internal void TriggersUpdated()
     {
@@ -85,7 +89,7 @@ namespace EQLogParser
 
       try
       {
-        return _logReaders.ToList();
+        return [.. _logReaders];
       }
       finally
       {
@@ -99,49 +103,26 @@ namespace EQLogParser
       {
         CloseOverlayWindow(id, _textWindows, () =>
         {
-          _defaultTextOverlay = null;
           if (_textWindows.Count == 0)
           {
             _textOverlayTimer.Stop();
           }
-
-          _textOverlayCache.Clear();
-          _textOverlayResultCache.Clear();
         });
 
         CloseOverlayWindow(id, _timerWindows, () =>
         {
-          _defaultTimerOverlay = null;
           if (_timerWindows.Count == 0)
           {
             _timerOverlayTimer.Stop();
           }
-
-          _timerOverlayCache.Clear();
-          _timerOverlayResultCache.Clear();
         });
       }
     }
 
     internal void CloseOverlays()
     {
-      CloseAllOverlayWindows(_textWindows, () =>
-      {
-        _defaultTextOverlay = null;
-        _textOverlayResultCache.Clear();
-        _textOverlayCache.Clear();
-        _textOverlayResultCache.Clear();
-        _textOverlayTimer.Stop();
-      });
-
-      CloseAllOverlayWindows(_timerWindows, () =>
-      {
-        _defaultTimerOverlay = null;
-        _timerOverlayResultCache.Clear();
-        _timerOverlayCache.Clear();
-        _timerOverlayResultCache.Clear();
-        _timerOverlayTimer.Stop();
-      });
+      CloseAllOverlayWindows(_textWindows, _textOverlayTimer.Stop);
+      CloseAllOverlayWindows(_timerWindows, _timerOverlayTimer.Stop);
     }
 
     internal async Task SetTestProcessor(TriggerConfig config, BlockingCollection<Tuple<string, double, bool>> collection)
@@ -328,6 +309,16 @@ namespace EQLogParser
       }
     }
 
+    private async void OverlaysDoUpdate(object sender, EventArgs e)
+    {
+      _overlayUpdateTimer.Stop();
+      var processors = await GetProcessorsAsync();
+      foreach (var processor in processors)
+      {
+        await processor.UpdateOverlaysAsync();
+      }
+    }
+
     private async void TriggersDoUpdate(object sender, EventArgs e)
     {
       _triggerUpdateTimer.Stop();
@@ -355,12 +346,11 @@ namespace EQLogParser
       }
     }
 
-    private async void TimerTick(object sender, EventArgs e)
+    private void TimerTick(object sender, EventArgs e)
     {
       _timerIncrement++;
-      var removeList = new List<string>();
-      var processors = await GetProcessorsAsync();
-      var activeTimerData = processors.SelectMany(processor => processor.GetActiveTimers()).ToList();
+      var activeTimerData = TriggerProcessor.ActiveTimers.ToList();
+      _removeTimerList.Clear();
 
       try
       {
@@ -375,7 +365,7 @@ namespace EQLogParser
               {
                 if (kv.Value.IsCooldown)
                 {
-                  removeList.Add(kv.Key);
+                  _removeTimerList.Add(kv.Key);
                 }
                 else
                 {
@@ -386,7 +376,7 @@ namespace EQLogParser
                   }
                   else if (nowTicks > kv.Value.RemoveTicks)
                   {
-                    removeList.Add(kv.Key);
+                    _removeTimerList.Add(kv.Key);
                   }
                 }
               }
@@ -402,7 +392,7 @@ namespace EQLogParser
           }
         }
 
-        foreach (var id in removeList)
+        foreach (var id in _removeTimerList)
         {
           if (_timerWindows.Remove(id, out var windowData))
           {
@@ -430,7 +420,7 @@ namespace EQLogParser
 
     private void TextTick(object sender, EventArgs e)
     {
-      var removeList = new List<string>();
+      _removeTextList.Clear();
 
       try
       {
@@ -445,7 +435,7 @@ namespace EQLogParser
             }
             else if (nowTicks > kv.Value.RemoveTicks)
             {
-              removeList.Add(kv.Key);
+              _removeTextList.Add(kv.Key);
             }
           }
           else
@@ -454,7 +444,7 @@ namespace EQLogParser
           }
         }
 
-        foreach (var id in removeList)
+        foreach (var id in _removeTextList)
         {
           if (_textWindows.Remove(id, out var windowData))
           {
@@ -475,12 +465,11 @@ namespace EQLogParser
       }
     }
 
-    private async void AddTextEvent(string id, Trigger trigger, string text, string fontColor)
+    private void AddTextEvent(string id, Trigger trigger, List<TriggerNode> overlayNodes, string text, string fontColor)
     {
       if (id == null) return;
       fontColor ??= trigger.FontColor;
       var beginTicks = DateTime.UtcNow.Ticks;
-      var overlayNodes = await GetOverlayNodes(id, trigger, _textOverlayCache);
 
       UiUtil.InvokeNow(() =>
       {
@@ -512,10 +501,10 @@ namespace EQLogParser
       });
     }
 
-    private async void AddTimerEvent(string id, Trigger trigger, List<TimerData> data)
+    private void AddTimerEvent(string id, Trigger trigger, List<TriggerNode> overlayNodes)
     {
       if (id == null) return;
-      var overlayNodes = await GetOverlayNodes(id, trigger, _timerOverlayCache);
+      var activeTimerData = TriggerProcessor.ActiveTimers.ToList();
 
       UiUtil.InvokeNow(() =>
       {
@@ -534,7 +523,7 @@ namespace EQLogParser
 
               _timerWindows[node.Id] = windowData;
               windowData.TheWindow.Show();
-              ((TimerOverlayWindow)windowData.TheWindow).Tick(data);
+              ((TimerOverlayWindow)windowData.TheWindow).Tick(activeTimerData);
             }
 
             if (!_timerOverlayTimer.IsEnabled)
@@ -548,93 +537,6 @@ namespace EQLogParser
           Log.Error("Error during AddTimerEvent", ex);
         }
       });
-    }
-
-    private async Task<List<TriggerNode>> GetOverlayNodes(string id, Trigger trigger, ConcurrentDictionary<string, TriggerNode> cache)
-    {
-      var isTextOverlay = cache == _textOverlayCache;
-      List<TriggerNode> cachedResult = null;
-
-      UiUtil.InvokeNow(() =>
-      {
-        if (isTextOverlay)
-        {
-          _textOverlayResultCache.TryGetValue(id, out cachedResult);
-        }
-
-        if (!isTextOverlay)
-        {
-          _timerOverlayResultCache.TryGetValue(id, out cachedResult);
-        }
-      });
-
-      if (cachedResult != null)
-      {
-        return cachedResult;
-      }
-
-      var result = new List<TriggerNode>();
-      if (trigger.SelectedOverlays != null)
-      {
-        foreach (var overlayId in trigger.SelectedOverlays)
-        {
-          if (!string.IsNullOrEmpty(overlayId))
-          {
-            if (cache.TryGetValue(overlayId, out var existing))
-            {
-              result.Add(existing);
-            }
-            else
-            {
-              var node = await TriggerStateManager.Instance.GetOverlayById(overlayId);
-              if (node?.OverlayData.IsTextOverlay == isTextOverlay || node?.OverlayData.IsTimerOverlay == !isTextOverlay)
-              {
-                result.Add(node);
-                cache.TryAdd(node.Id, node);
-              }
-            }
-          }
-        }
-      }
-
-      if (result.Count == 0)
-      {
-        if (isTextOverlay)
-        {
-          if (_defaultTextOverlay == null)
-          {
-            _defaultTextOverlay = await TriggerStateManager.Instance.GetDefaultTextOverlay();
-          }
-
-          if (_defaultTextOverlay != null)
-          {
-            result.Add(_defaultTextOverlay);
-          }
-        }
-        else
-        {
-          if (_defaultTimerOverlay == null)
-          {
-            _defaultTimerOverlay = await TriggerStateManager.Instance.GetDefaultTimerOverlay();
-          }
-
-          if (_defaultTimerOverlay != null)
-          {
-            result.Add(_defaultTimerOverlay);
-          }
-        }
-      }
-
-      if (isTextOverlay)
-      {
-        _textOverlayResultCache[id] = result;
-      }
-      else
-      {
-        _timerOverlayResultCache[id] = result;
-      }
-
-      return result;
     }
 
     private static void CloseOverlayWindow(string id, Dictionary<string, OverlayWindowData> windows, Action resetDefault)
