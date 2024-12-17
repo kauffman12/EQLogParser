@@ -234,7 +234,11 @@ namespace EQLogParser
             processor.SetVoice(found.Voice);
             processor.SetVoiceRate(found.VoiceRate);
             alreadyRunning.Add(found.Id);
-            RunningFiles[found.FilePath] = true;
+
+            if (!string.IsNullOrEmpty(reader.FileName))
+            {
+              RunningFiles[found.FilePath] = true;
+            }
           }
         }
       }
@@ -245,14 +249,17 @@ namespace EQLogParser
         .Where(character => character.IsEnabled && !alreadyRunning.Contains(character.Id))
         .Select(async character =>
         {
-          var playerName = !FileUtil.ParseFileName(character.FilePath, out var parsedPlayerName, out _) ? character.Name : parsedPlayerName;
-          var processor = new TriggerProcessor(character.Id, character.Name, playerName, character.Voice, character.VoiceRate,
-            character.ActiveColor, character.FontColor, AddTextEvent, AddTimerEvent);
-          await processor.Start();
-          var reader = new LogReader(processor, character.FilePath);
-          _logReaders.Add(reader);
-          RunningFiles[character.FilePath] = true;
-          await Task.Run(() => reader.Start());
+          if (!string.IsNullOrEmpty(character.FilePath))
+          {
+            var playerName = !FileUtil.ParseFileName(character.FilePath, out var parsedPlayerName, out _) ? character.Name : parsedPlayerName;
+            var processor = new TriggerProcessor(character.Id, character.Name, playerName, character.Voice, character.VoiceRate,
+              character.ActiveColor, character.FontColor, AddTextEvent, AddTimerEvent);
+            await processor.Start();
+            var reader = new LogReader(processor, character.FilePath);
+            _logReaders.Add(reader);
+            RunningFiles[character.FilePath] = true;
+            await Task.Run(() => reader.Start());
+          }
         }).ToList();
 
       await Task.WhenAll(startTasks);
@@ -270,7 +277,7 @@ namespace EQLogParser
       if (_logReaders.Count > 0)
       {
         if (config.IsEnabled && _logReaders[0].GetProcessor() is TriggerProcessor { CurrentCharacterId: TriggerStateManager.DefaultUser } p
-          && _logReaders[0].FileName == currentFile)
+          && !string.IsNullOrEmpty(currentFile) && _logReaders[0].FileName == currentFile)
         {
           defReader = _logReaders[0];
           defProcessor = p;
@@ -283,7 +290,7 @@ namespace EQLogParser
         }
       }
 
-      if (config.IsEnabled)
+      if (config.IsEnabled && !string.IsNullOrEmpty(currentFile))
       {
         if (defReader == null || defProcessor == null)
         {
