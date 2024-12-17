@@ -559,7 +559,6 @@ namespace EQLogParser
           lock (wrapper.TimerList)
           {
             proceed = !data.Warned;
-            CleanupTimer(wrapper, data);
           }
 
           if (proceed)
