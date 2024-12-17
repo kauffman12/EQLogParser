@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import time
+import threading
 
 
 def parse_date_from_line(line):
@@ -59,6 +60,11 @@ def simulate_real_time_processing(source_file, destination_file):
                 dst.close()
 
 
-simulate_real_time_processing(
-    "r:/eqlog_Kizant_xegony-selected.txt", "r:/eqlog_Kizant_xegony.txt"
-)
+def thread1f():
+    simulate_real_time_processing(
+        "r:/eqlog_Kizant_xegony-picked.txt", "r:/eqlog_Kizant_xegony.txt"
+    )
+
+thread1 = threading.Thread(target=thread1f)
+thread1.start()
+thread1.join()
