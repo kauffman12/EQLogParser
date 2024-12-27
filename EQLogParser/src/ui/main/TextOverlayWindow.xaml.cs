@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -11,23 +14,26 @@ using System.Windows.Media.Effects;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for TextOverlayWindow.xaml
-  /// </summary>
-  public partial class TextOverlayWindow : Window
+  public partial class TextOverlayWindow : IDisposable
   {
-    private TriggerNode _node;
     private readonly bool _preview;
+    private readonly ConcurrentQueue<TextData> _queue;
+    private readonly SemaphoreSlim _renderSemaphore = new(1, 1);
     private List<TextBlock> _blockCache;
+    private TriggerNode _node;
     private long _savedHeight;
     private long _savedWidth;
     private long _savedTop = long.MaxValue;
     private long _savedLeft = long.MaxValue;
     private Dictionary<string, Window> _previewWindows;
+    private volatile bool _isRendering;
+    private volatile bool _isClosed;
+    private bool _disposed;
 
     internal TextOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
     {
       InitializeComponent();
+      _queue = [];
       _node = node;
       _preview = previews != null;
       _previewWindows = previews;
@@ -52,18 +58,96 @@ namespace EQLogParser
         buttonsPanel.Visibility = Visibility.Visible;
 
         // test data
-        AddTriggerText("test overlay message", DateTime.UtcNow.Ticks, null);
-
-        TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
+        RenderText("test overlay message", DateTime.UtcNow.Ticks, null);
         Dispatcher.InvokeAsync(Tick);
       }
       else
       {
         content.SetResourceReference(Panel.BackgroundProperty, "OverlayBrushColor-" + _node.Id);
       }
+
+      TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
     }
 
-    internal void AddTriggerText(string text, double beginTicks, SolidColorBrush brush)
+    internal async void AddTextAsync(string text, long beginTicks, Brush brush)
+    {
+      if (_isClosed)
+      {
+        return;
+      }
+
+      await _renderSemaphore.WaitAsync();
+
+      try
+      {
+        _queue.Enqueue(new TextData { Text = text, BeginTicks = beginTicks, FontColorBrush = brush });
+
+        if (!_isRendering)
+        {
+          _isRendering = true;
+          _ = StartRenderingAsync();
+        }
+      }
+      finally
+      {
+        _renderSemaphore.Release();
+      }
+    }
+
+    private async Task StartRenderingAsync()
+    {
+      while (_isRendering)
+      {
+        var isComplete = false;
+        await UiUtil.InvokeAsync(() =>
+        {
+          while (_queue.TryDequeue(out var textData))
+          {
+            RenderText(textData.Text, textData.BeginTicks, textData.FontColorBrush);
+            Visibility = Visibility.Visible;
+          }
+
+          if (Visibility != Visibility.Visible)
+          {
+            return;
+          }
+
+          // true if complete
+          isComplete = Tick();
+        });
+
+        await Task.Delay(250);
+
+        if (_isClosed)
+        {
+          return;
+        }
+
+        if (isComplete)
+        {
+          await _renderSemaphore.WaitAsync();
+
+          try
+          {
+            if (_queue.IsEmpty)
+            {
+              _isRendering = false;
+
+              UiUtil.InvokeNow(() =>
+              {
+                Visibility = Visibility.Collapsed;
+              });
+            }
+          }
+          finally
+          {
+            _renderSemaphore.Release();
+          }
+        }
+      }
+    }
+
+    private void RenderText(string text, double beginTicks, Brush brush)
     {
       TextBlock block;
       if (content.Children.Count > 0 && content.Children.Count == _blockCache.Count)
@@ -90,35 +174,14 @@ namespace EQLogParser
           block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + _node.Id);
         }
 
-        block.Visibility = Visibility.Visible;
         content.Children.Add(block);
+        block.Visibility = Visibility.Visible;
       }
     }
 
-    internal bool Tick()
+    private bool Tick()
     {
       var currentTicks = DateTime.UtcNow.Ticks;
-      content.Visibility = Visibility.Collapsed;
-
-      if (!_node.OverlayData.Width.Equals((long)Width))
-      {
-        Width = _node.OverlayData.Width;
-      }
-
-      if (!_node.OverlayData.Height.Equals((long)Height))
-      {
-        Height = _node.OverlayData.Height;
-      }
-
-      if (!_node.OverlayData.Top.Equals((long)Top))
-      {
-        Top = _node.OverlayData.Top;
-      }
-
-      if (!_node.OverlayData.Left.Equals((long)Left))
-      {
-        Left = _node.OverlayData.Left;
-      }
 
       for (var last = content.Children.Count - 1; last >= 0; last--)
       {
@@ -129,13 +192,11 @@ namespace EQLogParser
             content.Children.RemoveAt(last);
             block.Visibility = Visibility.Collapsed;
           }
-          else if (content.Visibility != Visibility.Visible)
-          {
-            content.Visibility = Visibility.Visible;
-          }
         }
       }
 
+      // Set visibility only once after all updates
+      content.Visibility = content.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
       // return true if done
       return content.Children.Count == 0;
     }
@@ -210,8 +271,6 @@ namespace EQLogParser
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
       await TriggerStateManager.Instance.Update(_node);
-      TriggerManager.Instance.CloseOverlay(_node.Id);
-      TriggerManager.Instance.OverlaysUpdated();
     }
 
     private void CancelClick(object sender, RoutedEventArgs e)
@@ -262,11 +321,41 @@ namespace EQLogParser
       }
     }
 
-    private void WindowClosing(object sender, CancelEventArgs e)
+    private async void WindowClosing(object sender, CancelEventArgs e)
     {
-      TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
-      _previewWindows?.Remove(_node.Id);
-      _previewWindows = null;
+      try
+      {
+        _isClosed = true;
+        _isRendering = false;
+        TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
+        _previewWindows?.Remove(_node.Id);
+        _previewWindows = null;
+        _queue.Clear();
+        await Task.Delay(750);
+        Dispose();
+      }
+      catch (Exception)
+      {
+        // do nothing
+      }
+    }
+
+    public void Dispose()
+    {
+      Dispose(true);
+      GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (_disposed) return;
+
+      if (disposing)
+      {
+        _renderSemaphore?.Dispose();
+      }
+
+      _disposed = true;
     }
 
     // Possible workaround for data area passed to system call is too small
@@ -287,6 +376,13 @@ namespace EQLogParser
           NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, exStyle);
         }
       }
+    }
+
+    private class TextData
+    {
+      public long BeginTicks { get; init; }
+      public string Text { get; init; }
+      public Brush FontColorBrush { get; init; }
     }
   }
 }

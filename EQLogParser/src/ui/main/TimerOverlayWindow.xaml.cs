@@ -1,7 +1,11 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -9,20 +13,24 @@ using System.Windows.Interop;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for TimerOverlayWindow.xaml
-  /// </summary>
-  public partial class TimerOverlayWindow
+  public partial class TimerOverlayWindow : IDisposable
   {
-    private TriggerNode _node;
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly bool _preview;
+    private readonly Dictionary<string, TimerData> _cooldownTimerData = [];
+    private readonly List<ShortDurationData> _shortDurationBars = [];
+    private readonly SemaphoreSlim _renderSemaphore = new(1, 1);
+    private readonly SynchronizedCollection<TimerData> _timerList = [];
+    private TriggerNode _node;
     private long _savedHeight;
     private long _savedWidth;
     private long _savedTop = long.MaxValue;
     private long _savedLeft = long.MaxValue;
-    private readonly Dictionary<string, TimerData> _cooldownTimerData = [];
-    private readonly Dictionary<string, ShortDurationData> _shortDurationBars = [];
     private Dictionary<string, Window> _previewWindows;
+    private volatile bool _isClosed;
+    private volatile bool _isRendering;
+    private volatile bool _newData;
+    private bool _disposed;
 
     internal TimerOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
     {
@@ -48,15 +56,139 @@ namespace EQLogParser
         buttonsPanel.Visibility = Visibility.Visible;
         CreatePreviewTimer("Example Trigger Name", "03:00", 90.0);
         CreatePreviewTimer("Example Trigger Name #2", "01:00", 30.0);
-        TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
       }
       else
       {
         border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + _node.Id);
       }
+
+      TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
     }
 
-    private void CloseClick(object sender, RoutedEventArgs e) => Close();
+    internal async void StopTimer(TimerData timerData)
+    {
+      _timerList.Remove(timerData);
+
+      if (timerData.TimerType == 2)
+      {
+        await UiUtil.InvokeAsync(() => RemoveShortDurationBar(timerData));
+      }
+    }
+
+    internal async void DeleteTimerAsync(TimerData timerData)
+    {
+      StopTimer(timerData);
+
+      var key = timerData.Key;
+      if (!string.IsNullOrEmpty(timerData.Key))
+      {
+        await UiUtil.InvokeAsync(() =>
+        {
+          _cooldownTimerData.Remove(timerData.Key);
+          RemoveShortDurationBar(timerData);
+        });
+      }
+    }
+
+    internal async void StartTimerAsync(TimerData timerData)
+    {
+      if (_isClosed)
+      {
+        return;
+      }
+
+      await _renderSemaphore.WaitAsync();
+
+      try
+      {
+        _timerList.Add(timerData);
+        _newData = true;
+
+        if (!_isRendering)
+        {
+          _isRendering = true;
+          _ = StartRenderingAsync();
+        }
+      }
+      finally
+      {
+        _renderSemaphore.Release();
+      }
+    }
+
+    private async Task StartRenderingAsync()
+    {
+      var timerIncrement = 0;
+
+      while (_isRendering)
+      {
+        var isComplete = false;
+        await UiUtil.InvokeAsync(() =>
+        {
+          if (_newData)
+          {
+            Visibility = Visibility.Visible;
+            _newData = false;
+          }
+
+          if (Visibility != Visibility.Visible)
+          {
+            return;
+          }
+
+          // true if complete
+          if (timerIncrement == 0)
+          {
+            isComplete = Tick();
+          }
+          else
+          {
+            if (_timerList.Count(timerData => timerData.TimerType == 2) != _shortDurationBars.Count)
+            {
+              isComplete = Tick();
+              timerIncrement = 0;
+            }
+            else
+            {
+              ShortTick();
+            }
+          }
+        });
+
+        await Task.Delay(50);
+
+        if (_isClosed)
+        {
+          return;
+        }
+
+        if (isComplete)
+        {
+          await _renderSemaphore.WaitAsync();
+
+          try
+          {
+            if (_timerList.Count == 0)
+            {
+              _isRendering = false;
+              await UiUtil.InvokeAsync(() =>
+              {
+                Visibility = Visibility.Collapsed;
+              });
+            }
+          }
+          finally
+          {
+            _renderSemaphore.Release();
+          }
+        }
+
+        if (timerIncrement++ == 10)
+        {
+          timerIncrement = 0;
+        }
+      }
+    }
 
     internal void CreatePreviewTimer(string displayName, string timeText, double progress)
     {
@@ -67,69 +199,41 @@ namespace EQLogParser
       content.Children.Add(timerBar);
     }
 
-    internal void ShortTick(List<TimerData> timerList)
+    private void ShortTick()
     {
-      if (timerList.Count > 0)
+      var currentTicks = DateTime.UtcNow.Ticks;
+      foreach (var value in _shortDurationBars.ToArray())
       {
-        var currentTicks = DateTime.UtcNow.Ticks;
-        foreach (var timerData in timerList.Where(timerData => timerData.TimerType == 2 && ShouldProcess(timerData)))
-        {
-          if (_shortDurationBars.TryGetValue(timerData.Key, out var value))
-          {
-            var remainingTicks = timerData.EndTicks - currentTicks;
-            UpdateTimerBar(remainingTicks, value.TheTimerBar, timerData, value.MaxDuration, true);
-          }
-          else
-          {
-            Tick(timerList);
-            return;
-          }
-        }
+        var remainingTicks = value.TheTimerData.EndTicks - currentTicks;
+        UpdateTimerBar(remainingTicks, value.TheTimerBar, value.TheTimerData, value.MaxDuration, true);
       }
     }
 
-    internal bool Tick(List<TimerData> timerList)
+    private bool Tick()
     {
       var currentTicks = DateTime.UtcNow.Ticks;
       var maxDurationTicks = double.NaN;
-
-      if (!_node.OverlayData.Width.Equals((long)Width))
-      {
-        Width = _node.OverlayData.Width;
-      }
-      else if (!_node.OverlayData.Height.Equals((long)Height))
-      {
-        Height = _node.OverlayData.Height;
-      }
-      else if (!_node.OverlayData.Top.Equals((long)Top))
-      {
-        Top = _node.OverlayData.Top;
-      }
-      else if (!_node.OverlayData.Left.Equals((long)Left))
-      {
-        Left = _node.OverlayData.Left;
-      }
-
       TimerData[] orderedList = null;
-      if (timerList.Count > 0)
+
+      lock (_timerList.SyncRoot)
       {
         if (_node.OverlayData.SortBy == 0)
         {
           // create order
-          orderedList = [.. timerList.Where(ShouldProcess).OrderBy(timerData => timerData.BeginTicks)];
+          orderedList = [.. _timerList.OrderBy(timerData => timerData.BeginTicks)];
         }
         else if (_node.OverlayData.SortBy == 1)
         {
           // remaining order
-          orderedList = [.. timerList.Where(ShouldProcess).OrderBy(timerData => timerData.EndTicks - currentTicks)];
+          orderedList = [.. _timerList.OrderBy(timerData => timerData.EndTicks - currentTicks)];
         }
         else if (_node.OverlayData.SortBy == 2)
         {
           // alpha
-          orderedList = [.. timerList.Where(ShouldProcess).OrderBy(timerData => timerData.DisplayName)];
+          orderedList = [.. _timerList.OrderBy(timerData => timerData.DisplayName)];
         }
 
-        if (orderedList != null && _node.OverlayData.UseStandardTime && orderedList.Length > 0)
+        if (orderedList?.Length > 0 && _node.OverlayData.UseStandardTime && orderedList.Length > 0)
         {
           maxDurationTicks = orderedList.Select(timerData => timerData.DurationTicks).Max();
         }
@@ -265,6 +369,8 @@ namespace EQLogParser
       return complete;
     }
 
+    private void CloseClick(object sender, RoutedEventArgs e) => Close();
+
     private void UpdateTimerBar(double remainingTicks, TimerBar timerBar, TimerData timerData, double maxDurationTicks, bool shortTick = false)
     {
       var endTicks = double.IsNaN(maxDurationTicks) ? timerData.DurationTicks : maxDurationTicks;
@@ -284,25 +390,25 @@ namespace EQLogParser
       {
         if (timerData.TimerType == 2)
         {
-          if (!_shortDurationBars.TryGetValue(timerData.Key, out var value))
+          ShortDurationData value = _shortDurationBars.Find(value => value.TheTimerData == timerData);
+          if (value == null)
           {
-            value = new ShortDurationData();
-            _shortDurationBars[timerData.Key] = value;
+            value = new ShortDurationData
+            {
+              TheTimerData = timerData,
+              TheTimerBar = timerBar
+            };
+
+            _shortDurationBars.Add(value);
           }
 
-          value.TheTimerBar = timerBar;
           value.MaxDuration = maxDurationTicks;
         }
       }
 
-      if (remainingTicks < (TimeSpan.TicksPerMillisecond * 60))
+      if (remainingTicks <= (TimeSpan.TicksPerMillisecond * 10))
       {
-        timerBar.Visibility = Visibility.Collapsed;
-
-        if (timerData.TimerType == 2)
-        {
-          _shortDurationBars.Remove(timerData.Key);
-        }
+        RemoveShortDurationBar(timerData);
       }
       else
       {
@@ -349,11 +455,20 @@ namespace EQLogParser
       }
     }
 
+    private void RemoveShortDurationBar(TimerData timerData)
+    {
+      if (_shortDurationBars.FindIndex(value => value.TheTimerData == timerData) is var index and >= 0)
+      {
+        _shortDurationBars[index].TheTimerBar.Visibility = Visibility.Collapsed;
+        _shortDurationBars.RemoveAt(index);
+      }
+    }
+
     private static string GetDisplayName(TimerData timerData)
     {
       if (timerData.RepeatedCount > -1)
       {
-        return timerData.DisplayName.Replace("{repeated}", timerData.RepeatedCount.ToString(), StringComparison.OrdinalIgnoreCase);
+        return timerData.DisplayName.Replace("{repeated}", $"{timerData.RepeatedCount}", StringComparison.OrdinalIgnoreCase);
       }
 
       return timerData.DisplayName;
@@ -369,8 +484,6 @@ namespace EQLogParser
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
       await TriggerStateManager.Instance.Update(_node);
-      TriggerManager.Instance.CloseOverlay(_node.Id);
-      TriggerManager.Instance.OverlaysUpdated();
     }
 
     private void CancelClick(object sender, RoutedEventArgs e)
@@ -421,16 +534,6 @@ namespace EQLogParser
       }
     }
 
-    private bool ShouldProcess(TimerData timerData)
-    {
-      if ((timerData.TimerOverlayIds == null || timerData.TimerOverlayIds.Count == 0) && _node?.OverlayData.IsDefault == true)
-      {
-        return true;
-      }
-
-      return timerData.TimerOverlayIds != null && timerData.TimerOverlayIds.Contains(_node?.Id);
-    }
-
     private void WindowLoaded(object sender, RoutedEventArgs e)
     {
       _savedHeight = (long)Height;
@@ -457,14 +560,44 @@ namespace EQLogParser
       }
     }
 
-    private void WindowClosing(object sender, CancelEventArgs e)
+    private async void WindowClosing(object sender, CancelEventArgs e)
     {
-      TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
-      content.Children.Clear();
-      _cooldownTimerData.Clear();
-      _shortDurationBars.Clear();
-      _previewWindows?.Remove(_node.Id);
-      _previewWindows = null;
+      try
+      {
+        _isClosed = true;
+        _isRendering = false;
+        TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
+        content.Children.Clear();
+        _cooldownTimerData.Clear();
+        _shortDurationBars.Clear();
+        _previewWindows?.Remove(_node.Id);
+        _previewWindows = null;
+        _timerList.Clear();
+        await Task.Delay(200);
+        Dispose();
+      }
+      catch (Exception)
+      {
+        // do nothing
+      }
+    }
+
+    public void Dispose()
+    {
+      Dispose(true);
+      GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (_disposed) return;
+
+      if (disposing)
+      {
+        _renderSemaphore?.Dispose();
+      }
+
+      _disposed = true;
     }
 
     // Possible workaround for data area passed to system call is too small
@@ -489,6 +622,7 @@ namespace EQLogParser
 
     private class ShortDurationData
     {
+      public TimerData TheTimerData { get; set; }
       public TimerBar TheTimerBar { get; set; }
       public double MaxDuration { get; set; }
     }

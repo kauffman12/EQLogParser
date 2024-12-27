@@ -41,8 +41,8 @@ namespace EQLogParser
     }
 
     internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(_theDataGrid, TheTitle.Content.ToString());
-    internal void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(_theDataGrid, TheTitle);
-    internal void CreateLargeImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(_theDataGrid, TheTitle, true);
+    internal async void CreateImageClick(object sender, RoutedEventArgs e) => await DataGridUtil.CreateImageAsync(_theDataGrid, TheTitle);
+    internal async void CreateLargeImageClick(object sender, RoutedEventArgs e) => await DataGridUtil.CreateImageAsync(_theDataGrid, TheTitle, true);
     internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
     internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(_theColumnsCombo, _theDataGrid);
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(_theDataGrid);

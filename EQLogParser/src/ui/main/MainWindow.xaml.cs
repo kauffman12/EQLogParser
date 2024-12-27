@@ -255,38 +255,37 @@ namespace EQLogParser
         };
 
         // Init Trigger Manager
-        await TriggerManager.Instance.Start();
+        await TriggerManager.Instance.StartAsync();
         ConfigUtil.UpdateStatus("Trigger Manager Started");
 
         // cleanup downloads
-        _ = Task.Delay(250).ContinueWith(_ => MainActions.Cleanup());
+        await MainActions.Cleanup();
 
         // start save timer
         _saveTimer.Start();
 
-        // send done in 5 seconds if it hasn't been received yet
-        _ = Task.Delay(5000).ContinueWith(_ => ConfigUtil.UpdateStatus("Done"));
+        await Task.Delay(100);
 
-        await Task.Delay(50).ContinueWith(_ =>
+        // check need monitor
+        var previousFile = ConfigUtil.GetSetting("LastOpenedFile");
+        if (enableAutoMonitorIcon.Visibility == Visibility.Visible && File.Exists(previousFile))
         {
-          // check need monitor
-          var previousFile = ConfigUtil.GetSetting("LastOpenedFile");
-          if (enableAutoMonitorIcon.Visibility == Visibility.Visible && File.Exists(previousFile))
-          {
-            ConfigUtil.UpdateStatus("Monitoring Last Log");
-            // OpenLogFile with update status
-            OpenLogFile(previousFile, 0);
-          }
+          ConfigUtil.UpdateStatus("Monitoring Last Log");
+          // OpenLogFile with update status
+          OpenLogFile(previousFile, 0);
+        }
 
-          // Actually start the check.
-          if (checkUpdatesIcon.Visibility == Visibility.Visible)
-          {
-            // CheckVersion is delayed by 3 seconds
-            MainActions.CheckVersion(errorText);
-          }
+        _ = Dispatcher.InvokeAsync(CheckWindowPosition, DispatcherPriority.Background);
 
-          Dispatcher.InvokeAsync(CheckWindowPosition, DispatcherPriority.Background);
-        });
+        // Actually start the check.
+        if (checkUpdatesIcon.Visibility == Visibility.Visible)
+        {
+          await MainActions.CheckVersionAsync(errorText);
+        }
+
+        // send done in 5 more seconds if it hasn't been received yet
+        await Task.Delay(5000);
+        ConfigUtil.UpdateStatus("Done");
       }
       catch (Exception e)
       {
@@ -336,13 +335,13 @@ namespace EQLogParser
         case PowerModes.Suspend:
           Log.Warn("Suspending");
           ConfigUtil.Save();
-          await TriggerManager.Instance.Stop();
+          await TriggerManager.Instance.StopAsync();
           DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
           CloseDamageOverlay();
           break;
         case PowerModes.Resume:
           Log.Warn("Resume");
-          await TriggerManager.Instance.Start();
+          await TriggerManager.Instance.StartAsync();
           DataManager.Instance.ResetOverlayFights(true);
           OpenDamageOverlayIfEnabled(true, false);
           DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
@@ -369,7 +368,6 @@ namespace EQLogParser
     internal FightTable GetFightTable() => npcWindow?.Content as FightTable;
     private void RestoreTableColumnsClick(object sender, RoutedEventArgs e) => DataGridUtil.RestoreAllTableColumns();
     private void AboutClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/#readme");
-    private void CreateBackupClick(object sender, RoutedEventArgs e) => MainActions.CreateBackup();
     private void RestoreClick(object sender, RoutedEventArgs e) => MainActions.Restore();
     private void OpenSoundsFolderClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("\"" + @"data\sounds" + "\"");
     private void ReportProblemClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
@@ -390,6 +388,11 @@ namespace EQLogParser
     internal void AddAndCopyTankParse(CombinedStats combined, List<PlayerStats> selected)
     {
       (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.TankParse, TankingStatsManager.Instance, combined, selected, true);
+    }
+
+    private void CreateBackupClick(object sender, RoutedEventArgs e)
+    {
+      _ = MainActions.CreateBackupAsync();
     }
 
     internal void ShowTriggersEnabled(bool active)
@@ -807,7 +810,7 @@ namespace EQLogParser
 
     private void UpdateLoadingProgress()
     {
-      Dispatcher.InvokeAsync(() =>
+      Dispatcher.InvokeAsync(async () =>
       {
         if (_eqLogReader != null)
         {
@@ -826,21 +829,20 @@ namespace EQLogParser
             Log.Info($"Finished Loading Log File in {seconds} seconds.");
             ConfigUtil.UpdateStatus("Done");
 
-            Task.Delay(1000).ContinueWith(_ => Dispatcher.InvokeAsync(() =>
+            await Task.Delay(1000);
+            MainActions.FireLoadingEvent(CurrentLogFile);
+            _isLoading = false;
+            await Dispatcher.InvokeAsync(() =>
             {
-              MainActions.FireLoadingEvent(CurrentLogFile);
-              _isLoading = false;
-              Dispatcher.InvokeAsync(() =>
-              {
-                DataManager.Instance.ResetOverlayFights(true);
-                OpenDamageOverlayIfEnabled(true, false);
-                DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
-              }, DispatcherPriority.DataBind);
-            }));
+              DataManager.Instance.ResetOverlayFights(true);
+              OpenDamageOverlayIfEnabled(true, false);
+              DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
+            }, DispatcherPriority.DataBind);
           }
           else
           {
-            Task.Delay(500).ContinueWith(_ => UpdateLoadingProgress(), TaskScheduler.Default);
+            await Task.Delay(500);
+            UpdateLoadingProgress();
           }
         }
       }, DispatcherPriority.Render);
@@ -930,11 +932,7 @@ namespace EQLogParser
               PlayerManager.Instance.Init();
             }
 
-            if (_recentFiles.Contains(theFile))
-            {
-              _recentFiles.Remove(theFile);
-            }
-
+            _recentFiles.Remove(theFile);
             _recentFiles.Insert(0, theFile);
             ConfigUtil.SetSetting("RecentFiles", string.Join(",", _recentFiles));
             UpdateRecentFiles();
@@ -1136,7 +1134,7 @@ namespace EQLogParser
       verifiedPlayersGrid?.Dispose();
       RecordManager.Instance.Stop();
       ChatManager.Instance.Stop();
-      await TriggerManager.Instance.Stop();
+      await TriggerManager.Instance.StopAsync();
       await TriggerStateManager.Instance.Dispose();
 
       // restore from backup will use explicit mode
@@ -1153,10 +1151,10 @@ namespace EQLogParser
       {
         if (DockingManager.GetHeader(window) is string title)
         {
-          var last = title.LastIndexOf(" ", StringComparison.Ordinal);
+          var last = title.LastIndexOf(' ');
           if (last > -1)
           {
-            var value = title.Substring(last, title.Length - last);
+            var value = title[last..];
             if (int.TryParse(value, out var result) && result > 0 && _logWindows.Count >= result)
             {
               _logWindows[result - 1] = false;

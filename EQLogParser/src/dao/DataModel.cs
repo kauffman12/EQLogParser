@@ -159,9 +159,9 @@ namespace EQLogParser
     public int TriggerAgainOption { get; set; }
     public bool UseRegex { get; set; }
     public bool PreviousUseRegex { get; set; }
-    public string ActiveColor { get; set; } = null;
-    public string FontColor { get; set; } = null;
-    public string IconSource { get; set; } = null;
+    public string ActiveColor { get; set; }
+    public string FontColor { get; set; }
+    public string IconSource { get; set; }
     public List<string> SelectedOverlays { get; set; } = [];
     public double ResetDurationSeconds { get; set; }
     public long WarningSeconds { get; set; }

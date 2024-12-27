@@ -495,7 +495,7 @@ namespace EQLogParser
 
       return watcher;
 
-      void OnWatcherUpdated(ObservableCollection<string> soundFiles)
+      static void OnWatcherUpdated(ObservableCollection<string> soundFiles)
       {
         LoadSounds(soundFiles);
       }
@@ -631,7 +631,7 @@ namespace EQLogParser
                 {
                   QuickShareCache[quickShareKey] = new CharacterData { Sender = chatType.Sender };
                   QuickShareCache[quickShareKey].CharacterIds.Add(characterId);
-                  RunQuickShareTask(quickShareKey);
+                  _ = RunQuickShareTaskAsync(quickShareKey);
                 }
                 else
                 {
@@ -660,7 +660,7 @@ namespace EQLogParser
             QuickShareCache.TryAdd(quickShareKey, new CharacterData { Sender = from });
             if (QuickShareCache.Count == 1)
             {
-              RunQuickShareTask(quickShareKey);
+              _ = RunQuickShareTaskAsync(quickShareKey);
             }
           }
         }
@@ -749,78 +749,77 @@ namespace EQLogParser
       }
     }
 
-    private static void RunQuickShareTask(string quickShareKey, int tries = 0)
+    private static async Task RunQuickShareTaskAsync(string quickShareKey, int tries = 0)
     {
-      Task.Delay(1500).ContinueWith(async _ =>
+      await Task.Delay(1000);
+
+      try
       {
-        try
+        var url = $"http://share.kizant.net:8080/download/{quickShareKey}";
+        var response = MainActions.TheHttpClient.GetAsync(url).Result;
+        if (response.IsSuccessStatusCode)
         {
-          var url = $"http://share.kizant.net:8080/download/{quickShareKey}";
-          var response = MainActions.TheHttpClient.GetAsync(url).Result;
-          if (response.IsSuccessStatusCode)
-          {
-            await using var decompressionStream = new GZipStream(await response.Content.ReadAsStreamAsync(), CompressionMode.Decompress);
-            using var ms = new MemoryStream();
-            await decompressionStream.CopyToAsync(ms);
-            ms.Position = 0;
-            ImportFromQuickShare(Encoding.UTF8.GetString(ms.ToArray()), quickShareKey);
-          }
-          else
-          {
-            if (tries == 0)
-            {
-              // try a 2nd time
-              RunQuickShareTask(quickShareKey, 1);
-              return;
-            }
-
-            UiUtil.InvokeAsync(() =>
-            {
-              new MessageWindow($"Unable to Import. Key Expired.", Resource.RECEIVED_SHARE).ShowDialog();
-              NextQuickShareTask(quickShareKey);
-            });
-          }
+          await using var decompressionStream = new GZipStream(await response.Content.ReadAsStreamAsync(), CompressionMode.Decompress);
+          using var ms = new MemoryStream();
+          await decompressionStream.CopyToAsync(ms);
+          ms.Position = 0;
+          await ImportFromQuickShareAsync(Encoding.UTF8.GetString(ms.ToArray()), quickShareKey);
         }
-        catch (Exception ex)
+        else
         {
-          if (ex.Message.Contains("An attempt was made to access a socket in a way forbidden by its access permissions"))
+          if (tries == 0)
           {
-            UiUtil.InvokeAsync(() =>
-            {
-              new MessageWindow("Unable to Import. Blocked by Firewall?", Resource.SHARE_ERROR).ShowDialog();
-              Log.Error("Error Downloading Quick Share", ex);
-              NextQuickShareTask(quickShareKey);
-            });
+            // try a 2nd time
+            _ = RunQuickShareTaskAsync(quickShareKey, 1);
+            return;
           }
-          else
+
+          await UiUtil.InvokeAsync(() =>
           {
-            if (tries == 0)
-            {
-              // try a 2nd time
-              RunQuickShareTask(quickShareKey, 1);
-              return;
-            }
-
-            UiUtil.InvokeAsync(() =>
-            {
-              new MessageWindow("Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
-            });
-
+            new MessageWindow($"Unable to Import. Key Expired.", Resource.RECEIVED_SHARE).ShowDialog();
+            NextQuickShareTask(quickShareKey);
+          });
+        }
+      }
+      catch (Exception ex)
+      {
+        if (ex.Message.Contains("An attempt was made to access a socket in a way forbidden by its access permissions"))
+        {
+          await UiUtil.InvokeAsync(() =>
+          {
+            new MessageWindow("Unable to Import. Blocked by Firewall?", Resource.SHARE_ERROR).ShowDialog();
             Log.Error("Error Downloading Quick Share", ex);
             NextQuickShareTask(quickShareKey);
-          }
+          });
         }
-      });
+        else
+        {
+          if (tries == 0)
+          {
+            // try a 2nd time
+            _ = RunQuickShareTaskAsync(quickShareKey, 1);
+            return;
+          }
+
+          await UiUtil.InvokeAsync(() =>
+          {
+            new MessageWindow("Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
+          });
+
+          Log.Error("Error Downloading Quick Share", ex);
+          NextQuickShareTask(quickShareKey);
+        }
+      }
     }
 
-    private static void ImportFromQuickShare(string data, string quickShareKey)
+    private static async Task ImportFromQuickShareAsync(string data, string quickShareKey)
     {
       if (QuickShareCache.TryGetValue(quickShareKey, out var quickShareData))
       {
         var player = quickShareData.Sender;
         var characterIds = quickShareData.CharacterIds;
 
-        UiUtil.InvokeAsync(async () =>
+        await UiUtil.InvokeAsync(async () =>
         {
           var nodes = JsonSerializer.Deserialize<List<ExportTriggerNode>>(data, new JsonSerializerOptions { IncludeFields = true });
           if (nodes.Count > 0 && nodes[0].Nodes.Count == 0)
@@ -865,12 +864,12 @@ namespace EQLogParser
 
     private static void NextQuickShareTask(string quickShareKey)
     {
-      QuickShareCache.TryRemove(quickShareKey, out var _);
+      QuickShareCache.TryRemove(quickShareKey, out _);
 
-      if (QuickShareCache.Count > 0)
+      if (!QuickShareCache.IsEmpty)
       {
         var nextKey = QuickShareCache.Keys.First();
-        RunQuickShareTask(nextKey);
+        _ = RunQuickShareTaskAsync(nextKey);
       }
     }
 

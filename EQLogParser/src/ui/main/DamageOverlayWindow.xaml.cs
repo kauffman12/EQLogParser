@@ -42,6 +42,7 @@ namespace EQLogParser
     private bool _savedMiniBars;
     private bool _savedStreamerMode;
     private string _savedProgressColor;
+    private string _savedHighlightColor;
     private bool _currentShowDps;
 
     internal DamageOverlayWindow(bool preview = false, bool reset = false)
@@ -86,6 +87,15 @@ namespace EQLogParser
 
       UpdateProgressBrush(_savedProgressColor);
 
+      // highlight color
+      _savedHighlightColor = ConfigUtil.GetSetting("OverlayHighlightColor");
+      if (_savedHighlightColor == null || ColorConverter.ConvertFromString(_savedHighlightColor) == null)
+      {
+        _savedHighlightColor = _savedProgressColor;
+      }
+
+      UpdateHighlightBrush(_savedHighlightColor);
+
       // Max Rows
       var maxRowsString = ConfigUtil.GetSetting("OverlayMaxRows");
       if (maxRowsString == null || !int.TryParse(maxRowsString, out _savedMaxRows) || _savedMaxRows < 1 || _savedMaxRows > 10)
@@ -93,14 +103,13 @@ namespace EQLogParser
         _savedMaxRows = 5;
       }
 
-      UpdateMaxRows(_savedMaxRows);
-
       // damage mode
       _savedDamageMode = ConfigUtil.GetSettingAsInteger("OverlayDamageMode");
       if (_savedDamageMode != 0 && _savedDamageMode != 30 && _savedDamageMode != 40 && _savedDamageMode != 50 && _savedDamageMode != 60)
       {
         _savedDamageMode = 0;
       }
+
       UpdateDamageMode(_savedDamageMode);
 
       var list = PlayerManager.Instance.GetClassList();
@@ -129,6 +138,8 @@ namespace EQLogParser
       _savedMiniBars = ConfigUtil.IfSet("OverlayMiniBars");
       UpdateMiniBars(_savedMiniBars);
 
+      UpdateMaxRows(_savedMaxRows);
+
       // Streamer Mode
       _savedStreamerMode = ConfigUtil.IfSet("OverlayStreamerMode");
       streamer.IsChecked = _savedStreamerMode;
@@ -150,7 +161,6 @@ namespace EQLogParser
         SetResourceReference(BorderBrushProperty, "PreviewBackgroundBrush");
         SetResourceReference(BackgroundProperty, "PreviewBackgroundBrush");
         border.Background = null;
-        LoadTestData();
         damageContent.Visibility = Visibility.Visible;
         controlPanel.Visibility = Visibility.Visible;
         SetMinHeight(true);
@@ -295,6 +305,8 @@ namespace EQLogParser
             origName = stat.OrigName;
           }
 
+          var overrideColor = isMe ? "DamageOverlayHighlightBrush" : null;
+
           if (_currentShowCritRate > 0)
           {
             var critMods = new List<string>();
@@ -315,7 +327,7 @@ namespace EQLogParser
           }
 
           damageBar?.Update(origName, name, StatsUtil.FormatTotals(stat.Total),
-          StatsUtil.FormatTotals(stat.Dps, 1), stat.TotalSeconds.ToString(CultureInfo.InvariantCulture), barPercent);
+          StatsUtil.FormatTotals(stat.Dps, 1), stat.TotalSeconds.ToString(CultureInfo.InvariantCulture), barPercent, overrideColor);
 
           if (damageBar?.Visibility == Visibility.Collapsed)
           {
@@ -352,7 +364,17 @@ namespace EQLogParser
     {
       for (var i = 0; i < damageContent.Children.Count - 1; i++)
       {
-        (damageContent.Children[i] as DamageBar)?.Update(ConfigUtil.PlayerName, i + 1 + ". Example Player " + i, "120.5M", "100.1K", "123", 120 - (i * 10));
+        if (damageContent.Children[i] is DamageBar { } bar)
+        {
+          if (i == 0)
+          {
+            bar.Update(ConfigUtil.PlayerName, "Your Player Name", "120.5M", "100.1K", "123", 120 - (i * 10), "DamageOverlayHighlightBrush");
+          }
+          else
+          {
+            bar.Update(ConfigUtil.PlayerName, i + 1 + ". Example Player " + i, "120.5M", "100.1K", "123", 120 - (i * 10));
+          }
+        }
       }
 
       (damageContent.Children[^1] as DamageBar)?.Update("", "Example NPC", "500.2M", "490.5K", "456", 0);
@@ -400,8 +422,11 @@ namespace EQLogParser
       ConfigUtil.SetSetting("OverlayMaxRows", maxRowsList.SelectedIndex + 1);
       _savedMaxRows = maxRowsList.SelectedIndex + 1;
 
-      ConfigUtil.SetSetting("OverlayRankColor", progressBrush.Color.ToString());
-      _savedProgressColor = progressBrush.Color.ToString();
+      ConfigUtil.SetSetting("OverlayRankColor", progressBrush.Color.ToString(CultureInfo.CurrentCulture));
+      _savedProgressColor = progressBrush.Color.ToString(CultureInfo.CurrentCulture);
+
+      ConfigUtil.SetSetting("OverlayHighlightColor", highlightBrush.Color.ToString(CultureInfo.CurrentCulture));
+      _savedHighlightColor = highlightBrush.Color.ToString(CultureInfo.CurrentCulture);
 
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
@@ -435,7 +460,9 @@ namespace EQLogParser
       UpdateFontSize(_savedFontSize);
       UpdateMiniBars(_savedMiniBars);
       streamer.IsChecked = _savedStreamerMode;
+
       UpdateProgressBrush(_savedProgressColor);
+      UpdateHighlightBrush(_savedHighlightColor);
 
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
@@ -674,7 +701,7 @@ namespace EQLogParser
 
     private void UpdateProgressBrush(string colorString)
     {
-      if (progressBrush.Color.ToString() != colorString)
+      if (progressBrush.Color.ToString(CultureInfo.InvariantCulture) != colorString)
       {
         progressBrush.Brush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(colorString)! };
         progressBrush.Color = (Color)ColorConverter.ConvertFromString(colorString)!;
@@ -685,9 +712,29 @@ namespace EQLogParser
 
     private void SelectedProgressBrush(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-      if (progressBrush.Brush.ToString() != progressBrush.Color.ToString())
+      if (progressBrush.Brush.ToString(CultureInfo.InvariantCulture) != progressBrush.Color.ToString(CultureInfo.InvariantCulture))
       {
-        UpdateProgressBrush(progressBrush.Color.ToString());
+        UpdateProgressBrush(progressBrush.Color.ToString(CultureInfo.InvariantCulture));
+        DataChanged();
+      }
+    }
+
+    private void UpdateHighlightBrush(string colorString)
+    {
+      if (highlightBrush.Color.ToString(CultureInfo.InvariantCulture) != colorString)
+      {
+        highlightBrush.Brush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(colorString)! };
+        highlightBrush.Color = (Color)ColorConverter.ConvertFromString(colorString)!;
+      }
+
+      Application.Current.Resources["DamageOverlayHighlightBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(colorString)! };
+    }
+
+    private void SelectedHighlightBrush(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+      if (highlightBrush.Brush.ToString(CultureInfo.InvariantCulture) != highlightBrush.Color.ToString(CultureInfo.InvariantCulture))
+      {
+        UpdateHighlightBrush(highlightBrush.Color.ToString(CultureInfo.InvariantCulture));
         DataChanged();
       }
     }
