@@ -18,8 +18,8 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly bool _preview;
     private readonly Dictionary<string, TimerData> _cooldownTimerData = [];
-    private readonly List<ShortDurationData> _shortDurationBars = [];
     private readonly SemaphoreSlim _renderSemaphore = new(1, 1);
+    private readonly SynchronizedCollection<TimerBarCache> _barCache = [];
     private readonly SynchronizedCollection<TimerData> _timerList = [];
     private TriggerNode _node;
     private long _savedHeight;
@@ -30,6 +30,8 @@ namespace EQLogParser
     private volatile bool _isClosed;
     private volatile bool _isRendering;
     private volatile bool _newData;
+    private volatile bool _useStandardTime;
+    private volatile int _sortBy;
     private bool _disposed;
 
     internal TimerOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
@@ -45,6 +47,8 @@ namespace EQLogParser
       Width = _node.OverlayData.Width;
       Top = _node.OverlayData.Top;
       Left = _node.OverlayData.Left;
+      _useStandardTime = _node.OverlayData.UseStandardTime;
+      _sortBy = _node.OverlayData.SortBy;
 
       if (_preview)
       {
@@ -71,7 +75,7 @@ namespace EQLogParser
 
       if (timerData.TimerType == 2)
       {
-        await UiUtil.InvokeAsync(() => RemoveShortDurationBar(timerData));
+        await UiUtil.InvokeAsync(() => RemoveFromCache(timerData));
       }
     }
 
@@ -85,7 +89,7 @@ namespace EQLogParser
         await UiUtil.InvokeAsync(() =>
         {
           _cooldownTimerData.Remove(timerData.Key);
-          RemoveShortDurationBar(timerData);
+          RemoveFromCache(timerData);
         });
       }
     }
@@ -123,6 +127,28 @@ namespace EQLogParser
       while (_isRendering)
       {
         var isComplete = false;
+        var currentTicks = DateTime.UtcNow.Ticks;
+        List<TimerData> orderedList = null;
+        long maxDurationTicks;
+
+        if (timerIncrement == 0 || _newData)
+        {
+          timerIncrement = 0;
+          orderedList = GetSortedTimerList(currentTicks);
+          if (orderedList?.Count > 0)
+          {
+            maxDurationTicks = orderedList.Select(timerData => timerData.DurationTicks).Max();
+          }
+        }
+        else
+        {
+          await Task.Delay(100);
+          if (timerIncrement++ == 5)
+          {
+            timerIncrement = 0;
+          }
+        }
+
         await UiUtil.InvokeAsync(() =>
         {
           if (_newData)
@@ -137,25 +163,15 @@ namespace EQLogParser
           }
 
           // true if complete
-          if (timerIncrement == 0)
+          if (orderedList != null)
           {
-            isComplete = Tick();
+            isComplete = Tick(currentTicks, orderedList);
           }
           else
           {
-            if (_timerList.Count(timerData => timerData.TimerType == 2) != _shortDurationBars.Count)
-            {
-              isComplete = Tick();
-              timerIncrement = 0;
-            }
-            else
-            {
-              ShortTick();
-            }
+            ShortTick();
           }
         });
-
-        await Task.Delay(50);
 
         if (_isClosed)
         {
@@ -174,6 +190,13 @@ namespace EQLogParser
               await UiUtil.InvokeAsync(() =>
               {
                 Visibility = Visibility.Collapsed;
+                foreach (var child in content.Children)
+                {
+                  if (child is TimerBar bar)
+                  {
+                    bar.Visibility = Visibility.Collapsed;
+                  }
+                }
               });
             }
           }
@@ -181,11 +204,6 @@ namespace EQLogParser
           {
             _renderSemaphore.Release();
           }
-        }
-
-        if (timerIncrement++ == 10)
-        {
-          timerIncrement = 0;
         }
       }
     }
@@ -202,76 +220,45 @@ namespace EQLogParser
     private void ShortTick()
     {
       var currentTicks = DateTime.UtcNow.Ticks;
-      foreach (var value in _shortDurationBars.ToArray())
+      foreach (var value in _barCache.ToArray())
       {
         var remainingTicks = value.TheTimerData.EndTicks - currentTicks;
         UpdateTimerBar(remainingTicks, value.TheTimerBar, value.TheTimerData, value.MaxDuration, true);
       }
     }
 
-    private bool Tick()
+    private bool Tick(long currentTicks, List<TimerData> orderedList, double maxDurationTicks = double.NaN)
     {
-      var currentTicks = DateTime.UtcNow.Ticks;
-      var maxDurationTicks = double.NaN;
-      TimerData[] orderedList = null;
-
-      lock (_timerList.SyncRoot)
-      {
-        if (_node.OverlayData.SortBy == 0)
-        {
-          // create order
-          orderedList = [.. _timerList.OrderBy(timerData => timerData.BeginTicks)];
-        }
-        else if (_node.OverlayData.SortBy == 1)
-        {
-          // remaining order
-          orderedList = [.. _timerList.OrderBy(timerData => timerData.EndTicks - currentTicks)];
-        }
-        else if (_node.OverlayData.SortBy == 2)
-        {
-          // alpha
-          orderedList = [.. _timerList.OrderBy(timerData => timerData.DisplayName)];
-        }
-
-        if (orderedList?.Length > 0 && _node.OverlayData.UseStandardTime && orderedList.Length > 0)
-        {
-          maxDurationTicks = orderedList.Select(timerData => timerData.DurationTicks).Max();
-        }
-      }
-
       var count = 0;
       var childCount = content.Children.Count;
       var handledKeys = new Dictionary<string, bool>();
 
-      if (orderedList != null)
+      foreach (var timerData in orderedList)
       {
-        foreach (var timerData in orderedList)
+        var remainingTicks = timerData.EndTicks - currentTicks;
+        remainingTicks = Math.Max(remainingTicks, 0);
+
+        if (_node.OverlayData.TimerMode == 1 && timerData.ResetTicks > 0)
         {
-          var remainingTicks = timerData.EndTicks - currentTicks;
-          remainingTicks = Math.Max(remainingTicks, 0);
-
-          if (_node.OverlayData.TimerMode == 1 && timerData.ResetTicks > 0)
-          {
-            handledKeys[timerData.Key] = true;
-            _cooldownTimerData[timerData.Key] = timerData;
-          }
-
-          TimerBar timerBar;
-          if (count < childCount)
-          {
-            timerBar = content.Children[count] as TimerBar;
-          }
-          else
-          {
-            timerBar = new TimerBar();
-            timerBar.Init(_node.Id);
-            content.Children.Add(timerBar);
-            childCount++;
-          }
-
-          UpdateTimerBar(remainingTicks, timerBar, timerData, maxDurationTicks);
-          count++;
+          handledKeys[timerData.Key] = true;
+          _cooldownTimerData[timerData.Key] = timerData;
         }
+
+        TimerBar timerBar;
+        if (count < childCount)
+        {
+          timerBar = content.Children[count] as TimerBar;
+        }
+        else
+        {
+          timerBar = new TimerBar();
+          timerBar.Init(_node.Id);
+          content.Children.Add(timerBar);
+          childCount++;
+        }
+
+        UpdateTimerBar(remainingTicks, timerBar, timerData, maxDurationTicks);
+        count++;
       }
 
       var oldestIdleTicks = double.NaN;
@@ -388,27 +375,25 @@ namespace EQLogParser
 
       if (!shortTick)
       {
-        if (timerData.TimerType == 2)
+        lock (_barCache.SyncRoot)
         {
-          ShortDurationData value = _shortDurationBars.Find(value => value.TheTimerData == timerData);
+          TimerBarCache value = _barCache.ToList().Find(value => value.TheTimerData == timerData);
           if (value == null)
           {
-            value = new ShortDurationData
-            {
-              TheTimerData = timerData,
-              TheTimerBar = timerBar
-            };
-
-            _shortDurationBars.Add(value);
+            value = new TimerBarCache();
+            _barCache.Add(value);
           }
 
+          // keep this cache pointing the latest pairs
+          value.TheTimerData = timerData;
+          value.TheTimerBar = timerBar;
           value.MaxDuration = maxDurationTicks;
         }
       }
 
       if (remainingTicks <= (TimeSpan.TicksPerMillisecond * 10))
       {
-        RemoveShortDurationBar(timerData);
+        RemoveFromCache(timerData);
       }
       else
       {
@@ -455,12 +440,38 @@ namespace EQLogParser
       }
     }
 
-    private void RemoveShortDurationBar(TimerData timerData)
+    private List<TimerData> GetSortedTimerList(long currentTicks)
     {
-      if (_shortDurationBars.FindIndex(value => value.TheTimerData == timerData) is var index and >= 0)
+      List<TimerData> copyList = null;
+      lock (_timerList.SyncRoot)
       {
-        _shortDurationBars[index].TheTimerBar.Visibility = Visibility.Collapsed;
-        _shortDurationBars.RemoveAt(index);
+        copyList = [.. _timerList];
+      }
+
+      // Sort the copy
+      copyList.Sort((x, y) =>
+      {
+        return _sortBy switch
+        {
+          0 => x.BeginTicks.CompareTo(y.BeginTicks), // Sort by BeginTicks
+          1 => (x.EndTicks - currentTicks).CompareTo(y.EndTicks - currentTicks), // Sort by remaining time
+          2 => string.Compare(x.DisplayName, y.DisplayName, StringComparison.Ordinal), // Alphabetical
+          _ => 0
+        };
+      });
+
+      return copyList;
+    }
+
+    private void RemoveFromCache(TimerData timerData)
+    {
+      lock (_barCache.SyncRoot)
+      {
+        if (_barCache.ToList().FindIndex(value => value.TheTimerData == timerData) is var index and >= 0)
+        {
+          _barCache[index].TheTimerBar.Visibility = Visibility.Collapsed;
+          _barCache.RemoveAt(index);
+        }
       }
     }
 
@@ -510,6 +521,8 @@ namespace EQLogParser
         Width = _node.OverlayData.Width;
         Top = _node.OverlayData.Top;
         Left = _node.OverlayData.Left;
+        _useStandardTime = _node.OverlayData.UseStandardTime;
+        _sortBy = _node.OverlayData.SortBy;
 
         saveButton.IsEnabled = false;
         cancelButton.IsEnabled = false;
@@ -569,7 +582,7 @@ namespace EQLogParser
         TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
         content.Children.Clear();
         _cooldownTimerData.Clear();
-        _shortDurationBars.Clear();
+        _barCache.Clear();
         _previewWindows?.Remove(_node.Id);
         _previewWindows = null;
         _timerList.Clear();
@@ -620,7 +633,7 @@ namespace EQLogParser
       }
     }
 
-    private class ShortDurationData
+    private class TimerBarCache
     {
       public TimerData TheTimerData { get; set; }
       public TimerBar TheTimerBar { get; set; }
