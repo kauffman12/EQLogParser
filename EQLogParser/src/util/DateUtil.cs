@@ -26,19 +26,27 @@ namespace EQLogParser
     internal static string FormatSimpleMs(long ticks)
     {
       if (ticks < 0) ticks = 0; // Ensure non-negative ticks.
-      var totalSeconds = ticks / TimeSpan.TicksPerSecond; // Convert ticks to seconds.
+
+      // Convert ticks to total seconds and round to the nearest second.
+      var totalSeconds = (long)Math.Round((double)ticks / TimeSpan.TicksPerSecond);
+
       var hours = totalSeconds / 3600; // Find total hours.
       var minutes = totalSeconds % 3600 / 60; // Find remaining minutes.
       var seconds = totalSeconds % 60; // Find remaining seconds.
-      return (hours > 0) ? $"{hours:D2}:{minutes:D2}:{seconds:D2}" : $"{minutes:D2}:{seconds:D2}";
+      return (hours > 0)
+          ? $"{hours:D2}:{minutes:D2}:{seconds:D2}"
+          : $"{minutes:D2}:{seconds:D2}";
     }
 
     internal static string FormatSimpleMillis(long ticks)
     {
       if (ticks < 0) ticks = 0; // Ensure non-negative ticks.
-      var totalSeconds = ticks / TimeSpan.TicksPerSecond; // Convert ticks to seconds.
-      var seconds = totalSeconds % 60; // Find remaining seconds.
-      var milliseconds = ticks % TimeSpan.TicksPerSecond / TimeSpan.TicksPerMillisecond; // Find remaining milliseconds.
+
+      // Convert ticks to total milliseconds and round to the nearest millisecond.
+      var totalMilliseconds = (long)Math.Round((double)ticks / TimeSpan.TicksPerMillisecond);
+
+      var seconds = totalMilliseconds / 1000 % 60; // Find total seconds, capped at 60.
+      var milliseconds = totalMilliseconds % 1000; // Find remaining milliseconds.
       return $"{seconds:D2}.{milliseconds:D3}";
     }
 

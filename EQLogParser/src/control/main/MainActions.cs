@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Dynamic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -52,9 +53,9 @@ namespace EQLogParser
     internal static double CurrentShortWidth;
     internal static double CurrentMediumWidth;
 
-    private const string PetsListTitle = "Verified Pets ({0})";
-    private const string PlayerListTitle = "Verified Players ({0})";
-    private const string PetOwnersTitle = "Pet Owners ({0})";
+    private const string PetsListTitle = "Verified Pets";
+    private const string PlayerListTitle = "Verified Players";
+    private const string PetOwnersTitle = "Pet Owners";
     private static readonly ObservableCollection<dynamic> VerifiedPlayersView = [];
     private static readonly ObservableCollection<dynamic> VerifiedPetsView = [];
     private static readonly ObservableCollection<PetMapping> PetPlayersView = [];
@@ -181,84 +182,90 @@ namespace EQLogParser
       return result;
     }
 
-    internal static void CheckVersion(TextBlock errorText)
+    internal static async Task CheckVersionAsync(TextBlock errorText)
     {
+      await Task.Delay(2000);
       var version = Application.ResourceAssembly.GetName().Version;
-      Task.Delay(3000).ContinueWith(_ =>
+
+      try
       {
-        try
+        var request = TheHttpClient.GetStringAsync("https://github.com/kauffman12/EQLogParser/blob/master/README.md");
+        request.Wait();
+
+        var matches = InstallerName().Match(request.Result);
+        if (version != null && matches.Success && matches.Groups.Count == 5 && int.TryParse(matches.Groups[2].Value, out var v1) &&
+            int.TryParse(matches.Groups[3].Value, out var v2) && int.TryParse(matches.Groups[4].Value, out var v3)
+            && (v1 > version.Major || (v1 == version.Major && v2 > version.Minor) ||
+                (v1 == version.Major && v2 == version.Minor && v3 > version.Build)))
         {
-          var request = TheHttpClient.GetStringAsync("https://github.com/kauffman12/EQLogParser/blob/master/README.md");
-          request.Wait();
-
-          var matches = InstallerName().Match(request.Result);
-          if (version != null && matches.Success && matches.Groups.Count == 5 && int.TryParse(matches.Groups[2].Value, out var v1) &&
-              int.TryParse(matches.Groups[3].Value, out var v2) && int.TryParse(matches.Groups[4].Value, out var v3)
-              && (v1 > version.Major || (v1 == version.Major && v2 > version.Minor) ||
-                  (v1 == version.Major && v2 == version.Minor && v3 > version.Build)))
+          async void Action()
           {
-            async void Action()
+            var msg = new MessageWindow($"Version {matches.Groups[1].Value} is Available. Download and Install?", Resource.CHECK_VERSION,
+              MessageWindow.IconType.Question, "Yes");
+            msg.ShowDialog();
+
+            if (msg.IsYes1Clicked)
             {
-              var msg = new MessageWindow($"Version {matches.Groups[1].Value} is Available. Download and Install?", Resource.CHECK_VERSION,
-                MessageWindow.IconType.Question, "Yes");
-              msg.ShowDialog();
+              var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-install-" + matches.Groups[1].Value + ".exe";
 
-              if (msg.IsYes1Clicked)
+              try
               {
-                var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-install-" + matches.Groups[1].Value + ".exe";
-
-                try
+                await using var download = await TheHttpClient.GetStreamAsync(url);
+                var path = NativeMethods.GetDownloadsFolderPath();
+                if (!Directory.Exists(path))
                 {
-                  await using var download = await TheHttpClient.GetStreamAsync(url);
-                  var path = NativeMethods.GetDownloadsFolderPath();
-                  if (!Directory.Exists(path))
-                  {
-                    new MessageWindow("Unable to Access Downloads Folder. Can Not Download Update.", Resource.CHECK_VERSION).ShowDialog();
-                    return;
-                  }
-
-                  path += "\\AutoUpdateEQLogParser";
-                  if (!Directory.Exists(path))
-                  {
-                    Directory.CreateDirectory(path);
-                  }
-
-                  var fullPath = $"{path}\\EQLogParser-install-{matches.Groups[1].Value}.exe";
-                  await using (var fs = new FileStream(fullPath, FileMode.Create))
-                  {
-                    await download.CopyToAsync(fs);
-                  }
-
-                  if (File.Exists(fullPath))
-                  {
-                    var process = Process.Start(fullPath);
-                    if (process is { HasExited: false })
-                    {
-                      await Task.Delay(1000).ContinueWith(_ => { UiUtil.InvokeAsync(() => _mainWindow?.Close()); });
-                    }
-                  }
+                  new MessageWindow("Unable to Access Downloads Folder. Can Not Download Update.", Resource.CHECK_VERSION).ShowDialog();
+                  return;
                 }
-                catch (Exception ex2)
+
+                path += "\\AutoUpdateEQLogParser";
+                if (!Directory.Exists(path))
                 {
-                  new MessageWindow("Problem Installing Updates. Check Error Log for Details.", Resource.CHECK_VERSION).ShowDialog();
-                  Log.Error("Error Installing Updates", ex2);
+                  Directory.CreateDirectory(path);
+                }
+
+                var fullPath = $"{path}\\EQLogParser-install-{matches.Groups[1].Value}.exe";
+                await using (var fs = new FileStream(fullPath, FileMode.Create))
+                {
+                  await download.CopyToAsync(fs);
+                }
+
+                if (File.Exists(fullPath))
+                {
+                  var process = Process.Start(fullPath);
+                  if (process is { HasExited: false })
+                  {
+                    await Task.Delay(1000).ContinueWith(_ =>
+                    {
+                      _ = UiUtil.InvokeAsync(() => _mainWindow?.Close());
+                    });
+                  }
                 }
               }
+              catch (Exception ex2)
+              {
+                new MessageWindow("Problem Installing Updates. Check Error Log for Details.", Resource.CHECK_VERSION).ShowDialog();
+                Log.Error("Error Installing Updates", ex2);
+              }
             }
-
-            UiUtil.InvokeAsync(Action);
           }
+
+          await UiUtil.InvokeAsync(Action);
         }
-        catch (Exception ex)
-        {
-          Log.Error($"Error Checking for Updates: {ex.Message}");
-          UiUtil.InvokeAsync(() => errorText.Text = "Update Check Failed. Firewall?");
-        }
-      });
+      }
+      catch (Exception ex)
+      {
+        Log.Error($"Error Checking for Updates: {ex.Message}");
+        await UiUtil.InvokeAsync(() => errorText.Text = "Update Check Failed. Firewall?");
+      }
     }
 
-    internal static void Cleanup()
+    internal static async
+    Task
+Cleanup()
     {
+      await Task.Delay(100);
+
       try
       {
         var path = Environment.ExpandEnvironmentVariables("%userprofile%\\Downloads");
@@ -273,7 +280,7 @@ namespace EQLogParser
           foreach (var file in Directory.GetFiles(path))
           {
             var test = Path.GetFileName(file).Trim();
-            if (test.StartsWith("EQLogParser") && test.EndsWith(".msi"))
+            if (test.StartsWith("EQLogParser", StringComparison.OrdinalIgnoreCase) && test.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
             {
               File.Delete(file);
             }
@@ -406,7 +413,7 @@ namespace EQLogParser
         ChangeTheme(main);
       }, DispatcherPriority.Send);
 
-      UiUtil.InvokeAsync(() =>
+      _ = UiUtil.InvokeAsync(() =>
       {
         EventsThemeChanged?.Invoke(CurrentTheme);
       }, DispatcherPriority.DataBind);
@@ -417,7 +424,7 @@ namespace EQLogParser
       if (CurrentTheme != theme)
       {
         CurrentTheme = theme;
-        UiUtil.InvokeAsync(() =>
+        _ = UiUtil.InvokeAsync(() =>
         {
           RegisterThemeSettings();
           ChangeTheme(_mainWindow);
@@ -425,7 +432,7 @@ namespace EQLogParser
           ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
         }, DispatcherPriority.DataBind);
 
-        UiUtil.InvokeAsync(() =>
+        _ = UiUtil.InvokeAsync(() =>
         {
           EventsThemeChanged?.Invoke(CurrentTheme);
         }, DispatcherPriority.Background);
@@ -437,7 +444,7 @@ namespace EQLogParser
       if (CurrentFontFamily != family)
       {
         CurrentFontFamily = family;
-        UiUtil.InvokeAsync(() =>
+        _ = UiUtil.InvokeAsync(() =>
         {
           RegisterThemeSettings();
           ChangeTheme(_mainWindow);
@@ -446,7 +453,7 @@ namespace EQLogParser
           EventsThemeChanged?.Invoke(CurrentTheme);
         }, DispatcherPriority.DataBind);
 
-        UiUtil.InvokeAsync(() =>
+        _ = UiUtil.InvokeAsync(() =>
         {
           EventsThemeChanged?.Invoke(CurrentTheme);
         }, DispatcherPriority.Background);
@@ -458,7 +465,7 @@ namespace EQLogParser
       if (!CurrentFontSize.Equals(size))
       {
         CurrentFontSize = size;
-        UiUtil.InvokeAsync(() =>
+        _ = UiUtil.InvokeAsync(() =>
         {
           SetThemeFontSizes();
           RegisterThemeSettings();
@@ -468,7 +475,7 @@ namespace EQLogParser
           EventsThemeChanged?.Invoke(CurrentTheme);
         }, DispatcherPriority.DataBind);
 
-        UiUtil.InvokeAsync(() =>
+        _ = UiUtil.InvokeAsync(() =>
         {
           EventsThemeChanged?.Invoke(CurrentTheme);
         }, DispatcherPriority.Background);
@@ -485,9 +492,9 @@ namespace EQLogParser
       var entry = new ExpandoObject() as dynamic;
       entry.Name = Labels.Unassigned;
       VerifiedPlayersView.Add(entry);
-      DockingManager.SetHeader(petsWindow, string.Format(PetsListTitle, VerifiedPetsView.Count));
-      DockingManager.SetHeader(playersWindow, string.Format(PlayerListTitle, VerifiedPlayersView.Count));
-      DockingManager.SetHeader(petMappingWindow, string.Format(PetOwnersTitle, PetPlayersView.Count));
+      DockingManager.SetHeader(petsWindow, $"{PetsListTitle} ({VerifiedPetsView.Count})");
+      DockingManager.SetHeader(playersWindow, $"{PlayerListTitle} ({VerifiedPlayersView.Count})");
+      DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
     }
 
     internal static dynamic InsertNameIntoSortedList(string name, ObservableCollection<object> collection)
@@ -514,15 +521,15 @@ namespace EQLogParser
       // pet -> players
       petMappingGrid.ItemsSource = PetPlayersView;
       ownerList.ItemsSource = VerifiedPlayersView;
-      PlayerManager.Instance.EventsNewPetMapping += (_, mapping) =>
+      PlayerManager.Instance.EventsNewPetMapping += async (_, mapping) =>
       {
         // ignore swarm pets
-        if (mapping.Pet?.EndsWith("`s pet") == true)
+        if (mapping.Pet?.EndsWith("`s pet", StringComparison.InvariantCulture) == true)
         {
           return;
         }
 
-        UiUtil.InvokeAsync(() =>
+        await UiUtil.InvokeAsync(() =>
         {
           var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(mapping.Pet, StringComparison.OrdinalIgnoreCase));
           if (existing != null)
@@ -538,7 +545,7 @@ namespace EQLogParser
             InsertPetMappingIntoSortedList(mapping, PetPlayersView);
           }
 
-          DockingManager.SetHeader(petMappingWindow, string.Format(PetOwnersTitle, PetPlayersView.Count));
+          DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
         });
 
         main.CheckComputeStats();
@@ -552,19 +559,19 @@ namespace EQLogParser
       // verified player table
       playersGrid.ItemsSource = VerifiedPlayersView;
       classList.ItemsSource = PlayerManager.Instance.GetClassList(true);
-      PlayerManager.Instance.EventsNewVerifiedPlayer += (_, name) =>
+      PlayerManager.Instance.EventsNewVerifiedPlayer += async (_, name) =>
       {
-        UiUtil.InvokeAsync(() =>
+        await UiUtil.InvokeAsync(() =>
         {
           var entry = InsertNameIntoSortedList(name, VerifiedPlayersView);
           entry.PlayerClass = PlayerManager.Instance.GetPlayerClass(name);
-          DockingManager.SetHeader(playersWindow, string.Format(PlayerListTitle, VerifiedPlayersView.Count));
+          DockingManager.SetHeader(playersWindow, $"{PlayerListTitle} ({VerifiedPlayersView.Count})");
         });
       };
 
-      PlayerManager.Instance.EventsUpdatePlayerClass += (name, playerClass) =>
+      PlayerManager.Instance.EventsUpdatePlayerClass += async (name, playerClass) =>
       {
-        UiUtil.InvokeAsync(() =>
+        await UiUtil.InvokeAsync(() =>
         {
           var entry = new ExpandoObject() as dynamic;
           entry.Name = name;
@@ -576,21 +583,21 @@ namespace EQLogParser
         });
       };
 
-      PlayerManager.Instance.EventsRemoveVerifiedPlayer += (_, name) =>
+      PlayerManager.Instance.EventsRemoveVerifiedPlayer += async (_, name) =>
       {
-        UiUtil.InvokeAsync(() =>
+        await UiUtil.InvokeAsync(() =>
         {
           var found = VerifiedPlayersView.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
           if (found != null)
           {
             VerifiedPlayersView.Remove(found);
-            DockingManager.SetHeader(playersWindow, string.Format(PlayerListTitle, VerifiedPlayersView.Count));
+            DockingManager.SetHeader(playersWindow, $"{PlayerListTitle} ({VerifiedPlayersView.Count})");
 
             var existing = PetPlayersView.FirstOrDefault(item => item.Owner.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (existing != null)
             {
               PetPlayersView.Remove(existing);
-              DockingManager.SetHeader(petMappingWindow, string.Format(PetOwnersTitle, PetPlayersView.Count));
+              DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
             }
 
             main.CheckComputeStats();
@@ -603,30 +610,30 @@ namespace EQLogParser
     {
       // verified pets table
       petsGrid.ItemsSource = VerifiedPetsView;
-      PlayerManager.Instance.EventsNewVerifiedPet += (_, name) => main.Dispatcher.InvokeAsync(() =>
+      PlayerManager.Instance.EventsNewVerifiedPet += (_, name) => main.Dispatcher.InvokeAsync(async () =>
       {
-        UiUtil.InvokeAsync(() =>
+        await UiUtil.InvokeAsync(() =>
         {
           InsertNameIntoSortedList(name, VerifiedPetsView);
-          DockingManager.SetHeader(petsWindow, string.Format(PetsListTitle, VerifiedPetsView.Count));
+          DockingManager.SetHeader(petsWindow, $"{PetsListTitle} ({VerifiedPetsView.Count})");
         });
       });
 
-      PlayerManager.Instance.EventsRemoveVerifiedPet += (_, name) =>
+      PlayerManager.Instance.EventsRemoveVerifiedPet += async (_, name) =>
       {
-        UiUtil.InvokeAsync(() =>
+        await UiUtil.InvokeAsync(() =>
         {
           var found = VerifiedPetsView.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
           if (found != null)
           {
             VerifiedPetsView.Remove(found);
-            DockingManager.SetHeader(petsWindow, string.Format(PetsListTitle, VerifiedPetsView.Count));
+            DockingManager.SetHeader(petsWindow, $"{PetsListTitle} ({VerifiedPetsView.Count})");
 
             var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (existing != null)
             {
               PetPlayersView.Remove(existing);
-              DockingManager.SetHeader(petMappingWindow, string.Format(PetOwnersTitle, PetPlayersView.Count));
+              DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
             }
 
             main.CheckComputeStats();
@@ -643,10 +650,10 @@ namespace EQLogParser
       Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
     }
 
-    internal static void CreateBackup()
+    internal static async Task CreateBackupAsync()
     {
       var saveFileDialog = new SaveFileDialog();
-      var dateTime = DateTime.Now.ToString("yyyyMMdd-ssfff");
+      var dateTime = DateTime.Now.ToString("yyyyMMdd-ssfff", CultureInfo.InvariantCulture);
       var version = Application.ResourceAssembly.GetName().Version?.ToString();
       version = string.IsNullOrEmpty(version) ? "unknown" : version[..^2];
       var fileName = $"EQLogParser_backup_{version}_{dateTime}.zip";
@@ -658,42 +665,42 @@ namespace EQLogParser
         var dialog = new MessageWindow($"Creating EQLogParser Backup", Resource.CREATE_BACKUP, MessageWindow.IconType.Save);
         ChatManager.Instance.Stop();
 
-        Task.Delay(150).ContinueWith(async _ =>
+        await Task.Delay(150);
+
+        var accessError = false;
+        var source = Environment.ExpandEnvironmentVariables(ConfigUtil.AppData);
+        var backupFile = saveFileDialog.FileName;
+
+        try
         {
-          var accessError = false;
-          var source = Environment.ExpandEnvironmentVariables(ConfigUtil.AppData);
-          var backupFile = saveFileDialog.FileName;
-
-          try
+          if (File.Exists(backupFile))
           {
-            if (File.Exists(backupFile))
+            File.Delete(backupFile);
+          }
+
+          // create checkpoint before backup
+          await TriggerStateManager.Instance.CreateCheckpoint();
+          ZipFile.CreateFromDirectory(source, backupFile, CompressionLevel.Optimal, false);
+        }
+        catch (Exception ex)
+        {
+          accessError = true;
+          Log.Error("Problem creating backup file.", ex);
+        }
+        finally
+        {
+          ChatManager.Instance.Init();
+          await UiUtil.InvokeAsync(() =>
+          {
+            dialog.Close();
+
+            if (accessError)
             {
-              File.Delete(backupFile);
+              new MessageWindow("Error Creating Backup. See log file for details.", Resource.CREATE_BACKUP,
+                MessageWindow.IconType.Save).ShowDialog();
             }
-
-            // create checkpoint before backup
-            await TriggerStateManager.Instance.CreateCheckpoint();
-            ZipFile.CreateFromDirectory(source, backupFile, CompressionLevel.Optimal, false);
-          }
-          catch (Exception ex)
-          {
-            accessError = true;
-            Log.Error("Problem creating backup file.", ex);
-          }
-          finally
-          {
-            ChatManager.Instance.Init();
-            UiUtil.InvokeAsync(() =>
-            {
-              dialog.Close();
-
-              if (accessError)
-              {
-                new MessageWindow("Error Creating Backup. See log file for details.", Resource.CREATE_BACKUP, MessageWindow.IconType.Save).ShowDialog();
-              }
-            });
-          }
-        });
+          });
+        }
 
         dialog.ShowDialog();
       }
@@ -769,7 +776,7 @@ namespace EQLogParser
             }
             else
             {
-              UiUtil.InvokeAsync(() =>
+              await UiUtil.InvokeAsync(() =>
               {
                 new MessageWindow("Invalid backup file. Cannot restore.", Resource.RESTORE_FROM_BACKUP).ShowDialog();
               });
@@ -784,7 +791,7 @@ namespace EQLogParser
             {
               try
               {
-                UiUtil.InvokeAsync(() =>
+                await UiUtil.InvokeAsync(() =>
                 {
                   new MessageWindow("Problem restoring backup. See Log for details.", Resource.RESTORE_FROM_BACKUP).ShowDialog();
                   Application.Current.ShutdownMode = ShutdownMode.OnLastWindowClose;
@@ -814,7 +821,7 @@ namespace EQLogParser
         var dialog = new MessageWindow($"Saving {fights.Count} Selected Fights.", Resource.FILEMENU_SAVE_FIGHTS,
           MessageWindow.IconType.Save);
 
-        Task.Delay(150).ContinueWith(_ =>
+        Task.Delay(150).ContinueWith(async _ =>
         {
           var accessError = false;
 
@@ -881,7 +888,7 @@ namespace EQLogParser
           }
           finally
           {
-            UiUtil.InvokeAsync(() =>
+            await UiUtil.InvokeAsync(() =>
             {
               dialog.Close();
 

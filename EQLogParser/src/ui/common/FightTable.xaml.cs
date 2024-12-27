@@ -203,27 +203,26 @@ namespace EQLogParser
       }, DispatcherPriority.DataBind);
     }
 
-    private void SetPetClick(object sender, RoutedEventArgs e)
+    private async void SetPetClick(object sender, RoutedEventArgs e)
     {
       if (dataGrid.SelectedItem is Fight { IsInactivity: false } npc)
       {
         var name = npc.Name;
-        Task.Delay(120).ContinueWith(_ =>
-        {
-          PlayerManager.Instance.AddVerifiedPet(name);
-          PlayerManager.Instance.AddPetToPlayer(name, Labels.Unassigned);
-          RemoveFight(name); // force in case already in the pet list for some reason
-        }, TaskScheduler.Default);
+        await Task.Delay(120);
+        PlayerManager.Instance.AddVerifiedPet(name);
+        PlayerManager.Instance.AddPetToPlayer(name, Labels.Unassigned);
+        RemoveFight(name); // force in case already in the pet list for some reason
       }
     }
 
-    private void SetPlayerClick(object sender, RoutedEventArgs e)
+    private async void SetPlayerClick(object sender, RoutedEventArgs e)
     {
       if (dataGrid.SelectedItem is Fight { IsInactivity: false } npc)
       {
         var name = npc.Name;
         var dateTime = DateUtil.ToDouble(DateTime.Now);
-        Task.Delay(120).ContinueWith(_ => PlayerManager.Instance.AddVerifiedPlayer(name, dateTime), TaskScheduler.Default);
+        await Task.Delay(120);
+        PlayerManager.Instance.AddVerifiedPlayer(name, dateTime);
         RemoveFight(name); // force in case already in the player list for some reason
       }
     }

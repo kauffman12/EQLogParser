@@ -151,8 +151,8 @@ namespace EQLogParser
 
     private void CloseOverlaysClick(object sender, RoutedEventArgs e)
     {
-      TriggerManager.Instance.CloseOverlays();
       ClosePreviewOverlaysEvent?.Invoke(true);
+      TriggerOverlayManager.Instance.HideOverlays();
       e.Handled = true;
     }
 
@@ -244,7 +244,6 @@ namespace EQLogParser
         {
           await TriggerUtil.ImportOverlays(node.SerializedData);
           await RefreshOverlayNode();
-          TriggerManager.Instance.CloseOverlays();
         }
       }
     }
@@ -339,7 +338,6 @@ namespace EQLogParser
         if (await TriggerStateManager.Instance.CreateOverlay(parent.SerializedData.Id, label, isTextOverlay) is { } newNode)
         {
           parent.ChildNodes.Add(newNode);
-          TriggerManager.Instance.CloseOverlays();
           await SelectNode(overlayTreeView, newNode.SerializedData.Id);
         }
       }
@@ -469,7 +467,6 @@ namespace EQLogParser
           if (node.IsOverlay())
           {
             overlayDelete = true;
-            TriggerManager.Instance.CloseOverlay(id);
           }
           else if ((node.IsDir() || node.IsTrigger()) && node.IsChecked != false)
           {

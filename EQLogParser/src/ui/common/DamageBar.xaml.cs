@@ -9,10 +9,14 @@ namespace EQLogParser
   /// </summary>
   public partial class DamageBar
   {
+    private readonly string _defaultColor;
+    private string _lastColor;
+
     public DamageBar(string foregroundColor, string progressColor, bool showClassIcon)
     {
       InitializeComponent();
 
+      _lastColor = _defaultColor = progressColor;
       player.SetResourceReference(TextBlock.ForegroundProperty, foregroundColor);
       progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, progressColor);
       classImage.Visibility = showClassIcon ? Visibility.Visible : Visibility.Collapsed;
@@ -40,8 +44,20 @@ namespace EQLogParser
       }
     }
 
-    internal void Update(string origName, string playerName, string damageValue, string dpsValue, string timeValue, double barPercent)
+    internal void Update(string origName, string playerName, string damageValue, string dpsValue,
+      string timeValue, double barPercent, string colorOverride = null)
     {
+      if (colorOverride != null && _lastColor != colorOverride)
+      {
+        progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, colorOverride);
+        _lastColor = colorOverride;
+      }
+      else if (colorOverride == null && _lastColor != _defaultColor)
+      {
+        progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, _defaultColor);
+        _lastColor = _defaultColor;
+      }
+
       if (Visibility != Visibility.Visible)
       {
         Visibility = Visibility.Visible;

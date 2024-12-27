@@ -58,8 +58,8 @@ namespace EQLogParser
     }
 
     protected void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(_theDataGrid, _theTitleLabel.Content.ToString());
-    protected void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(_theDataGrid, _theTitleLabel);
-    protected void CreateLargeImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(_theDataGrid, _theTitleLabel, true);
+    protected async void CreateImageClick(object sender, RoutedEventArgs e) => await DataGridUtil.CreateImageAsync(_theDataGrid, _theTitleLabel);
+    protected async void CreateLargeImageClick(object sender, RoutedEventArgs e) => await DataGridUtil.CreateImageAsync(_theDataGrid, _theTitleLabel, true);
 
     protected void CopyBbCodeClick(object sender, RoutedEventArgs e)
     {

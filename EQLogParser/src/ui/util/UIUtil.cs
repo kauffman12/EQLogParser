@@ -21,6 +21,13 @@ namespace EQLogParser
   {
     private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new();
 
+    internal static DispatcherTimer CreateTimer(EventHandler tickHandler, int interval, DispatcherPriority priority = DispatcherPriority.Normal)
+    {
+      var timer = new DispatcherTimer(priority) { Interval = TimeSpan.FromMilliseconds(interval) };
+      timer.Tick += tickHandler;
+      return timer;
+    }
+
     internal static void UpdateObservable<T>(IEnumerable<T> source, ObservableCollection<T> dest)
     {
       var index = 0;
@@ -44,6 +51,7 @@ namespace EQLogParser
       }
     }
 
+    // return a static brush for the given color
     internal static SolidColorBrush GetBrush(string color)
     {
       SolidColorBrush brush = null;
@@ -51,6 +59,7 @@ namespace EQLogParser
       {
         brush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(color)! };
         BrushCache[color] = brush;
+        brush.Freeze();
       }
       return brush;
     }
@@ -70,19 +79,19 @@ namespace EQLogParser
       }
     }
 
-    internal static void InvokeAsync(Action action, DispatcherPriority priority = DispatcherPriority.Normal)
+    internal static async Task InvokeAsync(Action action, DispatcherPriority priority = DispatcherPriority.Normal)
     {
       if (Application.Current?.Dispatcher is { } dispatcher)
       {
-        dispatcher.InvokeAsync(action, priority);
+        await dispatcher.InvokeAsync(action, priority);
       }
     }
 
-    internal static void InvokeAsync(Func<Task> asyncAction, DispatcherPriority priority = DispatcherPriority.Normal)
+    internal static async Task InvokeAsync(Func<Task> asyncAction, DispatcherPriority priority = DispatcherPriority.Normal)
     {
       if (Application.Current?.Dispatcher is { } dispatcher)
       {
-        dispatcher.InvokeAsync(async () =>
+        await dispatcher.InvokeAsync(async () =>
         {
           try
           {

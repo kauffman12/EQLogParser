@@ -88,7 +88,8 @@
             <ComboBoxItem Tag="14">14pt</ComboBoxItem>
             <ComboBoxItem Tag="16">16pt</ComboBoxItem>
           </ComboBox>
-          <syncfusion:ColorPicker x:Name="progressBrush" Height="{DynamicResource EQTabHeaderHeight}" ToolTip="Bar Color" EnableSolidToGradientSwitch="False" IsGradientPropertyEnabled="False" BorderThickness="0,0,0,1" Background="{DynamicResource ContentBackground}" ColorChanged="SelectedProgressBrush"/>
+          <syncfusion:ColorPicker x:Name="progressBrush" Width="80" Height="{DynamicResource EQTabHeaderHeight}" ToolTip="Bar Color" EnableSolidToGradientSwitch="False" IsGradientPropertyEnabled="False" BorderThickness="0,0,0,1" Background="{DynamicResource ContentBackground}" ColorChanged="SelectedProgressBrush"/>
+          <syncfusion:ColorPicker x:Name="highlightBrush" Width="80" Height="{DynamicResource EQTabHeaderHeight}" ToolTip="Highlight Color" EnableSolidToGradientSwitch="False" IsGradientPropertyEnabled="False" BorderThickness="0,0,0,1" Background="{DynamicResource ContentBackground}" ColorChanged="SelectedHighlightBrush"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
           <ComboBox x:Name="showCritRate" FontFamily="Roboto" Height="{DynamicResource EQTabHeaderHeight}" Background="{DynamicResource ContentBackground}" FontSize="{DynamicResource EQContentSize}" SelectionChanged="ShowCritRateChanged" SelectedIndex="0"

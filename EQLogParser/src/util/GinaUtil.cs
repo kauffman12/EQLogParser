@@ -65,7 +65,7 @@ namespace EQLogParser
                 {
                   GinaCache[ginaKey] = new CharacterData { Sender = chatType.Sender };
                   GinaCache[ginaKey].CharacterIds.Add(characterId);
-                  RunGinaTask(ginaKey);
+                  _ = RunGinaTaskAsync(ginaKey);
                 }
                 else
                 {
@@ -94,14 +94,14 @@ namespace EQLogParser
             GinaCache.TryAdd(quickShareKey, new CharacterData { Sender = from });
             if (GinaCache.Count == 1)
             {
-              RunGinaTask(quickShareKey);
+              _ = RunGinaTaskAsync(quickShareKey);
             }
           }
         }
       }
     }
 
-    private static void ImportFromGina(byte[] data, string ginaKey)
+    private static async Task ImportFromGinaAsync(byte[] data, string ginaKey)
     {
       var nodes = Convert(ReadXml(data));
       if (GinaCache.TryGetValue(ginaKey, out var quickShareData))
@@ -109,7 +109,7 @@ namespace EQLogParser
         var player = quickShareData.Sender;
         var characterIds = quickShareData.CharacterIds;
 
-        UiUtil.InvokeAsync(async () =>
+        await UiUtil.InvokeAsync(async () =>
         {
           if (nodes.Count > 0 && nodes[0].Nodes.Count == 0)
           {
@@ -165,130 +165,129 @@ namespace EQLogParser
 
     private static void NextGinaTask(string ginaKey)
     {
-      GinaCache.TryRemove(ginaKey, out var _);
+      GinaCache.TryRemove(ginaKey, out _);
 
       if (!GinaCache.IsEmpty)
       {
         var nextKey = GinaCache.Keys.First();
-        RunGinaTask(nextKey);
+        _ = RunGinaTaskAsync(nextKey);
       }
     }
 
-    private static void RunGinaTask(string ginaKey, int tries = 0)
+    private static async Task RunGinaTaskAsync(string ginaKey, int tries = 0)
     {
-      Task.Delay(1500).ContinueWith(_ =>
+      await Task.Delay(1000);
+
+      try
       {
-        try
+        var totalRead = 0;
+        var totalSize = 0;
+        XNamespace ns = "http://schemas.datacontract.org/2004/07/GimaSoft.Service.GINA";
+        using var decodedStream = new MemoryStream();
+
+        for (var chunk = 0; chunk < 100; chunk++)
         {
-          var totalRead = 0;
-          var totalSize = 0;
-          XNamespace ns = "http://schemas.datacontract.org/2004/07/GimaSoft.Service.GINA";
-          using var decodedStream = new MemoryStream();
+          var postData = "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"><s:Body><DownloadPackageChunk xmlns=\"http://tempuri.org/\"><sessionId>" +
+                         ginaKey + "</sessionId><chunkNumber>" + chunk + "</chunkNumber></DownloadPackageChunk></s:Body></s:Envelope>";
 
-          for (var chunk = 0; chunk < 100; chunk++)
+          var content = new StringContent(postData, Encoding.UTF8, "text/xml");
+          content.Headers.Add("Content-Length", postData.Length.ToString());
+
+          var message = new HttpRequestMessage(HttpMethod.Post, @"http://eq.gimasoft.com/GINAServices/Package.svc");
+          message.Content = content;
+          message.Headers.Add("SOAPAction", "http://tempuri.org/IPackageService/DownloadPackageChunk");
+          message.Headers.Add("Accept-Encoding", "gzip, deflate");
+          var response = MainActions.TheHttpClient.Send(message);
+          if (response.IsSuccessStatusCode)
           {
-            var postData = "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"><s:Body><DownloadPackageChunk xmlns=\"http://tempuri.org/\"><sessionId>" +
-                           ginaKey + "</sessionId><chunkNumber>" + chunk + "</chunkNumber></DownloadPackageChunk></s:Body></s:Envelope>";
-
-            var content = new StringContent(postData, Encoding.UTF8, "text/xml");
-            content.Headers.Add("Content-Length", postData.Length.ToString());
-
-            var message = new HttpRequestMessage(HttpMethod.Post, @"http://eq.gimasoft.com/GINAServices/Package.svc");
-            message.Content = content;
-            message.Headers.Add("SOAPAction", "http://tempuri.org/IPackageService/DownloadPackageChunk");
-            message.Headers.Add("Accept-Encoding", "gzip, deflate");
-            var response = MainActions.TheHttpClient.Send(message);
-            if (response.IsSuccessStatusCode)
+            string xml = null;
+            using var data = response.Content.ReadAsStream();
+            var buffer = new byte[data.Length];
+            var read = data.Read(buffer, 0, buffer.Length);
+            if (read > 0)
             {
-              string xml = null;
-              using var data = response.Content.ReadAsStream();
-              var buffer = new byte[data.Length];
-              var read = data.Read(buffer, 0, buffer.Length);
-              if (read > 0)
-              {
-                using var bufferStream = new MemoryStream(buffer);
-                using var gzip = new GZipStream(bufferStream, CompressionMode.Decompress);
-                using var memory = new MemoryStream();
-                gzip.CopyTo(memory);
-                xml = Encoding.UTF8.GetString(memory.ToArray());
-              }
+              using var bufferStream = new MemoryStream(buffer);
+              using var gzip = new GZipStream(bufferStream, CompressionMode.Decompress);
+              using var memory = new MemoryStream();
+              gzip.CopyTo(memory);
+              xml = Encoding.UTF8.GetString(memory.ToArray());
+            }
 
-              var handled = false;
-              if (!string.IsNullOrEmpty(xml))
+            var handled = false;
+            if (!string.IsNullOrEmpty(xml))
+            {
+              try
               {
-                try
+                var doc = XDocument.Parse(xml);
+                var chunkData = doc.Descendants(ns + "ChunkData").FirstOrDefault()?.Value;
+                var totalSizeString = doc.Descendants(ns + "TotalSize").FirstOrDefault()?.Value;
+                var success = doc.Descendants(ns + "Success").FirstOrDefault()?.Value == "true";
+                if (success && chunkData != null && int.TryParse(totalSizeString, out totalSize))
                 {
-                  var doc = XDocument.Parse(xml);
-                  var chunkData = doc.Descendants(ns + "ChunkData").FirstOrDefault()?.Value;
-                  var totalSizeString = doc.Descendants(ns + "TotalSize").FirstOrDefault()?.Value;
-                  var success = doc.Descendants(ns + "Success").FirstOrDefault()?.Value == "true";
-                  if (success && chunkData != null && int.TryParse(totalSizeString, out totalSize))
-                  {
-                    var decoded = System.Convert.FromBase64String(chunkData);
-                    decodedStream.Write(decoded, 0, decoded.Length);
-                    totalRead += decoded.Length;
-                    handled = true;
-                  }
-                }
-                catch (Exception)
-                {
-                  // something is wrong so just break
-                  break;
+                  var decoded = System.Convert.FromBase64String(chunkData);
+                  decodedStream.Write(decoded, 0, decoded.Length);
+                  totalRead += decoded.Length;
+                  handled = true;
                 }
               }
-
-              if (!handled || totalRead >= totalSize)
+              catch (Exception)
               {
+                // something is wrong so just break
                 break;
               }
             }
-          }
 
-          var allDecoded = decodedStream.ToArray();
-          if (allDecoded.Length > 0)
-          {
-            ImportFromGina(allDecoded, ginaKey);
-          }
-          else
-          {
-            UiUtil.InvokeAsync(() =>
-              new MessageWindow("Unable to Import. No data found, possibly expired?", Resource.RECEIVED_GINA).ShowDialog());
-
-            // no chunk data in response. too old?
-            NextGinaTask(ginaKey);
+            if (!handled || totalRead >= totalSize)
+            {
+              break;
+            }
           }
         }
-        catch (Exception ex)
+
+        var allDecoded = decodedStream.ToArray();
+        if (allDecoded.Length > 0)
         {
-          if (ex.Message.Contains("An attempt was made to access a socket in a way forbidden by its access permissions"))
-          {
-            UiUtil.InvokeAsync(() =>
-            {
-              new MessageWindow("Error Downloading GINA Triggers. Blocked by Firewall?", Resource.RECEIVED_GINA).ShowDialog();
-              Log.Error("Error Downloading GINA Triggers", ex);
-              NextGinaTask(ginaKey);
-            });
-          }
-          else
-          {
-            // try again
-            if (tries == 0)
-            {
-              // try a 2nd time
-              RunGinaTask(ginaKey, 1);
-              return;
-            }
+          await ImportFromGinaAsync(allDecoded, ginaKey);
+        }
+        else
+        {
+          await UiUtil.InvokeAsync(() =>
+            new MessageWindow("Unable to Import. No data found, possibly expired?", Resource.RECEIVED_GINA).ShowDialog());
 
-            UiUtil.InvokeAsync(() =>
-            {
-              new MessageWindow("Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
-            });
-
+          // no chunk data in response. too old?
+          NextGinaTask(ginaKey);
+        }
+      }
+      catch (Exception ex)
+      {
+        if (ex.Message.Contains("An attempt was made to access a socket in a way forbidden by its access permissions"))
+        {
+          await UiUtil.InvokeAsync(() =>
+          {
+            new MessageWindow("Error Downloading GINA Triggers. Blocked by Firewall?", Resource.RECEIVED_GINA).ShowDialog();
             Log.Error("Error Downloading GINA Triggers", ex);
             NextGinaTask(ginaKey);
-          }
+          });
         }
-      });
+        else
+        {
+          // try again
+          if (tries == 0)
+          {
+            // try a 2nd time
+            _ = RunGinaTaskAsync(ginaKey, 1);
+            return;
+          }
+
+          await UiUtil.InvokeAsync(() =>
+          {
+            new MessageWindow("Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
+          });
+
+          Log.Error("Error Downloading GINA Triggers", ex);
+          NextGinaTask(ginaKey);
+        }
+      }
     }
 
     private static List<ExportTriggerNode> Convert(string xml)
@@ -443,11 +442,11 @@ namespace EQLogParser
                   }
 
                   var behavior = GetText(triggerNode, "TimerStartBehavior");
-                  if ("StartNewTimer".Equals(behavior))
+                  if ("StartNewTimer".Equals(behavior, StringComparison.Ordinal))
                   {
                     trigger.TriggerAgainOption = 0;
                   }
-                  else if ("RestartTimer".Equals(behavior))
+                  else if ("RestartTimer".Equals(behavior, StringComparison.Ordinal))
                   {
                     if (bool.TryParse(GetText(triggerNode, "RestartBasedOnTimerName"), out var onTimerName))
                     {

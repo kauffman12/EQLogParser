@@ -130,7 +130,7 @@ namespace EQLogParser
       titleLabel.Content = npcStatsRows.Values.Count == 0 ? Nodata : "Spell Resists vs " + npcStatsRows.Count + " Unique NPCs";
       return;
 
-      Tuple<double, string> GetRate(uint landed, uint notLanded)
+      static Tuple<double, string> GetRate(uint landed, uint notLanded)
       {
         Tuple<double, string> results;
         var computed = 0.0;
@@ -161,8 +161,8 @@ namespace EQLogParser
     }
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
-    private void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel);
-    private void CreateLargeImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImage(dataGrid, titleLabel, true);
+    private async void CreateImageClick(object sender, RoutedEventArgs e) => await DataGridUtil.CreateImageAsync(dataGrid, titleLabel);
+    private async void CreateLargeImageClick(object sender, RoutedEventArgs e) => await DataGridUtil.CreateImageAsync(dataGrid, titleLabel, true);
     private void RefreshClick(object sender, RoutedEventArgs e) => Load();
     private void EventsLogLoadingComplete(string _) => Load();
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);

@@ -177,111 +177,110 @@ namespace EQLogParser
       return (headers, data);
     }
 
-    internal static void CreateImage(SfGridBase gridBase, Label titleLabel, bool allData = false)
+    internal static async Task CreateImageAsync(SfGridBase gridBase, Label titleLabel, bool allData = false)
     {
-      Task.Delay(250).ContinueWith(_ =>
+      await Task.Delay(250);
+
+      await gridBase.Dispatcher.InvokeAsync(() =>
       {
+        MessageWindow dialog = null;
+        var tableHeight = GetTableHeight(gridBase, allData);
+        var tableWidth = GetTableWidth(gridBase, allData);
+        var needHeightChange = tableHeight > gridBase.ActualHeight;
+        var needWidthChange = tableWidth > gridBase.ActualWidth;
+
+        gridBase.SelectedItems.Clear();
+        gridBase.IsHitTestVisible = false;
+
+        var parent = gridBase.Parent as Panel;
+        if (needHeightChange || needWidthChange)
+        {
+          dialog = new MessageWindow("Please Wait while Image is Processed.", Resource.COPY_LARGE_IMAGE);
+          dialog.Show();
+
+          if (parent != null)
+          {
+            gridBase.Dispatcher.Invoke(() =>
+            {
+              if (needHeightChange)
+              {
+                parent.Height = tableHeight + 200; // be safe and make sure it has extra room to work with
+              }
+
+              if (needWidthChange)
+              {
+                parent.Width = tableWidth + 200;
+              }
+            }, DispatcherPriority.Send);
+          }
+        }
+
         gridBase.Dispatcher.InvokeAsync(() =>
         {
-          MessageWindow dialog = null;
-          var tableHeight = GetTableHeight(gridBase, allData);
-          var tableWidth = GetTableWidth(gridBase, allData);
-          var needHeightChange = tableHeight > gridBase.ActualHeight;
-          var needWidthChange = tableWidth > gridBase.ActualWidth;
-
-          gridBase.SelectedItems.Clear();
-          gridBase.IsHitTestVisible = false;
-
-          var parent = gridBase.Parent as Panel;
-          if (needHeightChange || needWidthChange)
+          try
           {
-            dialog = new MessageWindow("Please Wait while Image is Processed.", Resource.COPY_LARGE_IMAGE);
-            dialog.Show();
+            titleLabel.Measure(titleLabel.RenderSize);
+            gridBase.Measure(gridBase.RenderSize);
+
+            // if table needed resize then recalculate values
+            if (parent != null && (!double.IsNaN(parent.Height) || !double.IsNaN(parent.Width)))
+            {
+              tableHeight = GetTableHeight(gridBase, allData);
+              tableWidth = GetTableWidth(gridBase, allData);
+            }
+
+            var titleHeight = titleLabel.ActualHeight;
+            var dpiScale = UiElementUtil.GetDpi();
+
+            // create title image
+            var rtb = new RenderTargetBitmap((int)tableWidth, (int)titleHeight, dpiScale, dpiScale, PixelFormats.Default);
+            rtb.Render(titleLabel);
+            var titleImage = BitmapFrame.Create(rtb);
+
+            // create table image
+            rtb = new RenderTargetBitmap((int)tableWidth, (int)(tableHeight + titleHeight), dpiScale, dpiScale, PixelFormats.Default);
+            rtb.Render(gridBase);
+            var tableImage = BitmapFrame.Create(rtb);
+
+            // add images together and fix missing background
+            rtb = new RenderTargetBitmap((int)tableWidth, (int)(tableHeight + titleHeight),
+              dpiScale, dpiScale, PixelFormats.Default);
+
+            var dv = new DrawingVisual();
+            using (var ctx = dv.RenderOpen())
+            {
+              var background = Application.Current.Resources["ContentBackground"] as SolidColorBrush;
+              ctx.DrawRectangle(background, null, new Rect(new Point(0, 0), new Size(titleImage.Width, titleImage.Height)));
+              ctx.DrawImage(titleImage, new Rect(new Point(0, 0), new Size(titleImage.Width, titleImage.Height)));
+              ctx.DrawImage(tableImage, new Rect(new Point(0, 0), new Size(tableImage.Width, tableImage.Height)));
+            }
+
+            rtb.Render(dv);
+            Clipboard.SetImage(BitmapFrame.Create(rtb));
 
             if (parent != null)
             {
-              gridBase.Dispatcher.Invoke(() =>
+              if (!double.IsNaN(parent.Height))
               {
-                if (needHeightChange)
-                {
-                  parent.Height = tableHeight + 200; // be safe and make sure it has extra room to work with
-                }
+                parent.Height = double.NaN;
+              }
 
-                if (needWidthChange)
-                {
-                  parent.Width = tableWidth + 200;
-                }
-              }, DispatcherPriority.Send);
+              if (!double.IsNaN(parent.Width))
+              {
+                parent.Width = double.NaN;
+              }
             }
           }
-
-          gridBase.Dispatcher.InvokeAsync(() =>
+          catch (Exception ex)
           {
-            try
-            {
-              titleLabel.Measure(titleLabel.RenderSize);
-              gridBase.Measure(gridBase.RenderSize);
-
-              // if table needed resize then recalculate values
-              if (parent != null && (!double.IsNaN(parent.Height) || !double.IsNaN(parent.Width)))
-              {
-                tableHeight = GetTableHeight(gridBase, allData);
-                tableWidth = GetTableWidth(gridBase, allData);
-              }
-
-              var titleHeight = titleLabel.ActualHeight;
-              var dpiScale = UiElementUtil.GetDpi();
-
-              // create title image
-              var rtb = new RenderTargetBitmap((int)tableWidth, (int)titleHeight, dpiScale, dpiScale, PixelFormats.Default);
-              rtb.Render(titleLabel);
-              var titleImage = BitmapFrame.Create(rtb);
-
-              // create table image
-              rtb = new RenderTargetBitmap((int)tableWidth, (int)(tableHeight + titleHeight), dpiScale, dpiScale, PixelFormats.Default);
-              rtb.Render(gridBase);
-              var tableImage = BitmapFrame.Create(rtb);
-
-              // add images together and fix missing background
-              rtb = new RenderTargetBitmap((int)tableWidth, (int)(tableHeight + titleHeight),
-                dpiScale, dpiScale, PixelFormats.Default);
-
-              var dv = new DrawingVisual();
-              using (var ctx = dv.RenderOpen())
-              {
-                var background = Application.Current.Resources["ContentBackground"] as SolidColorBrush;
-                ctx.DrawRectangle(background, null, new Rect(new Point(0, 0), new Size(titleImage.Width, titleImage.Height)));
-                ctx.DrawImage(titleImage, new Rect(new Point(0, 0), new Size(titleImage.Width, titleImage.Height)));
-                ctx.DrawImage(tableImage, new Rect(new Point(0, 0), new Size(tableImage.Width, tableImage.Height)));
-              }
-
-              rtb.Render(dv);
-              Clipboard.SetImage(BitmapFrame.Create(rtb));
-
-              if (parent != null)
-              {
-                if (!double.IsNaN(parent.Height))
-                {
-                  parent.Height = double.NaN;
-                }
-
-                if (!double.IsNaN(parent.Width))
-                {
-                  parent.Width = double.NaN;
-                }
-              }
-            }
-            catch (Exception ex)
-            {
-              Log.Error("Could not Copy Image", ex);
-            }
-            finally
-            {
-              gridBase.IsHitTestVisible = true;
-              dialog?.Close();
-            }
-          }, DispatcherPriority.Background);
-        });
+            Log.Error("Could not Copy Image", ex);
+          }
+          finally
+          {
+            gridBase.IsHitTestVisible = true;
+            dialog?.Close();
+          }
+        }, DispatcherPriority.Background);
       });
     }
 

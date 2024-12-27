@@ -643,7 +643,6 @@ namespace EQLogParser
 
         if (node != null)
         {
-          TriggerManager.Instance.CloseOverlay(node.Id);
           var wasDefault = node.OverlayData?.IsDefault == true;
           await TriggerUtil.Copy(node.OverlayData, model);
           await TriggerStateManager.Instance.Update(node);
@@ -654,9 +653,6 @@ namespace EQLogParser
           {
             await theTreeView.RefreshOverlays();
           }
-
-          // update overlay data in each trigger wrapper
-          TriggerManager.Instance.OverlaysUpdated();
         }
       }
 

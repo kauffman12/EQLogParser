@@ -51,33 +51,27 @@ namespace EQLogParser
 
     private async void EventsProcessorsUpdated(bool _)
     {
-      _alertLogs = (await TriggerManager.Instance.GetAlertLogs()).ToList();
-      if (_alertLogs != null)
+      _alertLogs = [.. (await TriggerManager.Instance.GetAlertLogs())];
+      if (logList != null)
       {
-        var selected = logList?.SelectedItem as string;
+        var selected = logList.SelectedItem as string;
         var list = _alertLogs.Select(log => log.Item1).ToList();
-        if (logList != null)
-        {
-          logList.ItemsSource = list;
-          // not sure why
-          logList.SelectedIndex = -1;
 
-          if (_alertLogs?.Count > 0)
+        logList.ItemsSource = list;
+        // not sure why
+        logList.SelectedIndex = -1;
+
+        if (_alertLogs.Count > 0)
+        {
+          if (selected != null && list.IndexOf(selected) is var found and > -1)
           {
-            if (selected != null && list.IndexOf(selected) is var found and > -1)
-            {
-              logList.SelectedIndex = found;
-            }
-            else
-            {
-              logList.SelectedIndex = 0;
-            }
+            logList.SelectedIndex = found;
+          }
+          else
+          {
+            logList.SelectedIndex = 0;
           }
         }
-      }
-      else
-      {
-        logList.ItemsSource = null;
       }
     }
 
