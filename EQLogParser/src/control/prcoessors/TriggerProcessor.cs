@@ -34,6 +34,7 @@ namespace EQLogParser
     private readonly BlockingCollection<Speak> _speakCollection = [];
     private readonly SemaphoreSlim _activeTriggerSemaphore = new(1, 1);
     private readonly ConcurrentDictionary<string, bool> _activeTimerLists = [];
+    private readonly ConcurrentDictionary<string, bool> _enabledTriggers = [];
     private readonly ConcurrentDictionary<string, bool> _requiredOverlays = [];
     private readonly string _activeColor;
     private readonly string _fontColor;
@@ -66,6 +67,7 @@ namespace EQLogParser
 
     internal long GetActivityLastTicks() => Interlocked.Read(ref _activityLastTicks);
     internal List<string> GetRequiredOverlayIds() => [.. _requiredOverlays.Keys];
+    internal List<string> GetEnabledTriggers() => [.. _enabledTriggers.Keys];
 
     internal async Task Start()
     {
@@ -622,6 +624,7 @@ namespace EQLogParser
       newTimerData.PreviousMatches = previousMatches;
       newTimerData.ActiveColor = _activeColor ?? trigger.ActiveColor;
       newTimerData.FontColor = _fontColor ?? trigger.FontColor;
+      newTimerData.TriggerId = wrapper.Id;
       newTimerData.Key = wrapper.Id + "-" + displayName;
       newTimerData.CancelSource = new CancellationTokenSource();
       newTimerData.TimesToLoopCount = loopCount;
@@ -786,6 +789,7 @@ namespace EQLogParser
     {
       _ready = false;
       _requiredOverlays.Clear();
+      _enabledTriggers.Clear();
 
       var activeTriggers = new List<TriggerWrapper>();
       var enabledTriggers = await TriggerStateManager.Instance.GetEnabledTriggers(CurrentCharacterId);
@@ -797,8 +801,10 @@ namespace EQLogParser
         {
           try
           {
-            triggerCount++;
+            // keep track of everything enabled
+            _enabledTriggers[enabled.Id] = true;
 
+            triggerCount++;
             pattern = UpdatePattern(trigger.UseRegex, pattern, out var numberOptions);
             pattern = UpdateTimePattern(trigger.UseRegex, pattern);
             var modifiedDisplay = ModCounter(ModPlayer(trigger.TextToDisplay));
@@ -1189,17 +1195,6 @@ namespace EQLogParser
               {
                 wrapper.TimerList.AddRange(old.TimerList);
                 old.TimerList.Clear();
-              }
-            }
-            else
-            {
-              lock (old.TimerList)
-              {
-                foreach (var timerData in old.TimerList)
-                {
-                  // delete needed for cooldown timers
-                  TriggerOverlayManager.Instance.UpdateTimer(old.TriggerData, timerData, TriggerOverlayManager.TimerStateChange.Delete);
-                }
               }
             }
           }

@@ -1,9 +1,7 @@
-﻿using log4net;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -15,40 +13,42 @@ namespace EQLogParser
 {
   public partial class TimerOverlayWindow : IDisposable
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly bool _preview;
-    private readonly Dictionary<string, TimerData> _cooldownTimerData = [];
     private readonly SemaphoreSlim _renderSemaphore = new(1, 1);
-    private readonly SynchronizedCollection<TimerBarCache> _barCache = [];
     private readonly SynchronizedCollection<TimerData> _timerList = [];
+    private readonly SynchronizedCollection<TimerData> _idleTimerList = [];
     private TriggerNode _node;
     private long _savedHeight;
     private long _savedWidth;
     private long _savedTop = long.MaxValue;
     private long _savedLeft = long.MaxValue;
     private Dictionary<string, Window> _previewWindows;
+    private int _tickCounter;
     private volatile bool _isClosed;
     private volatile bool _isRendering;
     private volatile bool _newData;
+    private volatile bool _newShortTickData;
     private volatile bool _useStandardTime;
     private volatile int _sortBy;
+    private volatile int _timerMode;
+    private volatile int _idleTimeoutSeconds;
+    private volatile bool _showActive;
+    private volatile bool _showIdle;
+    private volatile bool _showReset;
+    private long _lastActiveTicks = long.MinValue;
     private bool _disposed;
 
     internal TimerOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
     {
       InitializeComponent();
+
       _node = node;
       _preview = previews != null;
       _previewWindows = previews;
       title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + _node.Id);
       mainPanel.SetResourceReference(VerticalAlignmentProperty, "OverlayVerticalAlignment-" + _node.Id);
 
-      Height = _node.OverlayData.Height;
-      Width = _node.OverlayData.Width;
-      Top = _node.OverlayData.Top;
-      Left = _node.OverlayData.Left;
-      _useStandardTime = _node.OverlayData.UseStandardTime;
-      _sortBy = _node.OverlayData.SortBy;
+      UpdateFields();
 
       if (_preview)
       {
@@ -69,31 +69,6 @@ namespace EQLogParser
       TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
     }
 
-    internal async void StopTimer(TimerData timerData)
-    {
-      _timerList.Remove(timerData);
-
-      if (timerData.TimerType == 2)
-      {
-        await UiUtil.InvokeAsync(() => RemoveFromCache(timerData));
-      }
-    }
-
-    internal async void DeleteTimerAsync(TimerData timerData)
-    {
-      StopTimer(timerData);
-
-      var key = timerData.Key;
-      if (!string.IsNullOrEmpty(timerData.Key))
-      {
-        await UiUtil.InvokeAsync(() =>
-        {
-          _cooldownTimerData.Remove(timerData.Key);
-          RemoveFromCache(timerData);
-        });
-      }
-    }
-
     internal async void StartTimerAsync(TimerData timerData)
     {
       if (_isClosed)
@@ -108,6 +83,11 @@ namespace EQLogParser
         _timerList.Add(timerData);
         _newData = true;
 
+        if (timerData.TimerType == 2)
+        {
+          _newShortTickData = true;
+        }
+
         if (!_isRendering)
         {
           _isRendering = true;
@@ -120,91 +100,72 @@ namespace EQLogParser
       }
     }
 
-    private async Task StartRenderingAsync()
+    internal async void StopTimer(TimerData timerData)
     {
-      var timerIncrement = 0;
+      await _renderSemaphore.WaitAsync();
 
-      while (_isRendering)
+      try
       {
-        var isComplete = false;
-        var currentTicks = DateTime.UtcNow.Ticks;
-        List<TimerData> orderedList = null;
-        long maxDurationTicks;
-
-        if (timerIncrement == 0 || _newData)
+        // if cooldown timer don't lose the data
+        if (_timerList.Remove(timerData) && _timerMode == 1 && timerData.ResetTicks > 0)
         {
-          timerIncrement = 0;
-          orderedList = GetSortedTimerList(currentTicks);
-          if (orderedList?.Count > 0)
-          {
-            maxDurationTicks = orderedList.Select(timerData => timerData.DurationTicks).Max();
-          }
+          _idleTimerList.Add(timerData);
         }
-        else
+      }
+      finally
+      {
+        _renderSemaphore.Release();
+      }
+    }
+
+    internal async void HideOverlay()
+    {
+      await _renderSemaphore.WaitAsync();
+
+      try
+      {
+        lock (_idleTimerList.SyncRoot)
         {
-          await Task.Delay(100);
-          if (timerIncrement++ == 5)
-          {
-            timerIncrement = 0;
-          }
+          _idleTimerList.Clear();
         }
+      }
+      finally
+      {
+        _renderSemaphore.Release();
+      }
+    }
 
-        await UiUtil.InvokeAsync(() =>
+    internal async void ValidateTimers(HashSet<string> enabledTriggers)
+    {
+      await _renderSemaphore.WaitAsync();
+
+      try
+      {
+        lock (_idleTimerList)
         {
-          if (_newData)
+          foreach (var idle in _idleTimerList.ToArray())
           {
-            Visibility = Visibility.Visible;
-            _newData = false;
-          }
-
-          if (Visibility != Visibility.Visible)
-          {
-            return;
-          }
-
-          // true if complete
-          if (orderedList != null)
-          {
-            isComplete = Tick(currentTicks, orderedList);
-          }
-          else
-          {
-            ShortTick();
-          }
-        });
-
-        if (_isClosed)
-        {
-          return;
-        }
-
-        if (isComplete)
-        {
-          await _renderSemaphore.WaitAsync();
-
-          try
-          {
-            if (_timerList.Count == 0)
+            if (!enabledTriggers.Contains(idle.TriggerId))
             {
-              _isRendering = false;
-              await UiUtil.InvokeAsync(() =>
-              {
-                Visibility = Visibility.Collapsed;
-                foreach (var child in content.Children)
-                {
-                  if (child is TimerBar bar)
-                  {
-                    bar.Visibility = Visibility.Collapsed;
-                  }
-                }
-              });
+              _idleTimerList.Remove(idle);
             }
           }
-          finally
+        }
+
+        lock (_timerList)
+        {
+          foreach (var timerData in _timerList.ToArray())
           {
-            _renderSemaphore.Release();
+            if (!enabledTriggers.Contains(timerData.TriggerId))
+            {
+              _timerList.Remove(timerData);
+            }
           }
         }
+      }
+      finally
+      {
+        _renderSemaphore.Release();
       }
     }
 
@@ -217,272 +178,425 @@ namespace EQLogParser
       content.Children.Add(timerBar);
     }
 
-    private void ShortTick()
+    private void CloseClick(object sender, RoutedEventArgs e) => Close();
+
+    private async Task StartRenderingAsync()
     {
-      var currentTicks = DateTime.UtcNow.Ticks;
-      foreach (var value in _barCache.ToArray())
+      while (_isRendering)
       {
-        var remainingTicks = value.TheTimerData.EndTicks - currentTicks;
-        UpdateTimerBar(remainingTicks, value.TheTimerBar, value.TheTimerData, value.MaxDuration, true);
-      }
-    }
-
-    private bool Tick(long currentTicks, List<TimerData> orderedList, double maxDurationTicks = double.NaN)
-    {
-      var count = 0;
-      var childCount = content.Children.Count;
-      var handledKeys = new Dictionary<string, bool>();
-
-      foreach (var timerData in orderedList)
-      {
-        var remainingTicks = timerData.EndTicks - currentTicks;
-        remainingTicks = Math.Max(remainingTicks, 0);
-
-        if (_node.OverlayData.TimerMode == 1 && timerData.ResetTicks > 0)
+        if (_tickCounter++ == 0 || _newShortTickData)
         {
-          handledKeys[timerData.Key] = true;
-          _cooldownTimerData[timerData.Key] = timerData;
-        }
+          if (_newShortTickData)
+          {
+            _newShortTickData = false;
+            _tickCounter = 1;
+          }
 
-        TimerBar timerBar;
-        if (count < childCount)
-        {
-          timerBar = content.Children[count] as TimerBar;
+          var models = GenerateTimerBarModels();
+          await RenderTimerBarsAsync(models);
+
+          // Remove expired non-cooldown timers
+          lock (_timerList.SyncRoot)
+          {
+            foreach (var model in models.Where(m => m.IsRemoved && !m.IsCooldown))
+            {
+              _timerList.Remove(model.TimerData);
+            }
+          }
         }
         else
         {
-          timerBar = new TimerBar();
-          timerBar.Init(_node.Id);
-          content.Children.Add(timerBar);
-          childCount++;
+          await ShortTickAsync();
+
+          if (_tickCounter > 5)
+          {
+            _tickCounter = 0;
+          }
         }
 
-        UpdateTimerBar(remainingTicks, timerBar, timerData, maxDurationTicks);
-        count++;
-      }
-
-      var oldestIdleTicks = double.NaN;
-      var idleList = new List<dynamic>();
-      var resetList = new List<dynamic>();
-      if (_node.OverlayData.TimerMode == 1)
-      {
-        foreach (var timerData in _cooldownTimerData.Values)
+        if (_isClosed)
         {
-          if (!handledKeys.ContainsKey(timerData.Key))
+          return;
+        }
+
+        await _renderSemaphore.WaitAsync();
+
+        try
+        {
+          if (_timerList.Count == 0)
           {
-            var remainingTicks = timerData.ResetTicks - currentTicks;
-            var data = new { RemainingTicks = remainingTicks, TimerData = timerData };
-            if (remainingTicks > 0)
+            if (_idleTimerList.Count > 0 && _timerMode == 1)
             {
-              resetList.Add(data);
+              // if not set then just let it idle forever
+              if (_idleTimeoutSeconds > 0)
+              {
+                var lastUpdateTicks = Interlocked.Read(ref _lastActiveTicks);
+                var secondsSince = (DateTime.UtcNow.Ticks - lastUpdateTicks) / (double)TimeSpan.TicksPerSecond;
+                if (secondsSince >= _idleTimeoutSeconds)
+                {
+                  // remove data
+                  _isRendering = false;
+                  _tickCounter = 0;
+
+                  lock (_idleTimerList.SyncRoot)
+                  {
+                    _idleTimerList.Clear();
+                  }
+
+                  await HideContentAsync();
+                }
+              }
             }
             else
             {
-              if (double.IsNaN(oldestIdleTicks))
-              {
-                oldestIdleTicks = Math.Abs(data.RemainingTicks);
-              }
-              else
-              {
-                oldestIdleTicks = Math.Min(oldestIdleTicks, Math.Abs(data.RemainingTicks));
-              }
-
-              idleList.Add(data);
+              _isRendering = false;
+              _tickCounter = 0;
+              await HideContentAsync();
             }
           }
         }
-
-        foreach (var data in idleList.OrderBy(data => data.TimerData.DurationTicks))
+        finally
         {
-          TimerBar timerBar;
-          if (count >= childCount)
-          {
-            timerBar = new TimerBar();
-            timerBar.Init(_node.Id);
-            content.Children.Add(timerBar);
-            childCount++;
-          }
-          else
-          {
-            timerBar = content.Children[count] as TimerBar;
-          }
-
-          UpdateCooldownTimerBar(data.RemainingTicks, timerBar, data.TimerData);
-          count++;
+          _renderSemaphore.Release();
         }
 
-        foreach (var data in resetList.OrderBy(data => data.RemainingTicks))
-        {
-          TimerBar timerBar;
-          if (count >= childCount)
-          {
-            timerBar = new TimerBar();
-            timerBar.Init(_node.Id);
-            content.Children.Add(timerBar);
-            childCount++;
-          }
-          else
-          {
-            timerBar = content.Children[count] as TimerBar;
-          }
-
-          UpdateCooldownTimerBar(data.RemainingTicks, timerBar, data.TimerData);
-          count++;
-        }
-      }
-
-      var complete = false;
-      if (_node.OverlayData.TimerMode == 0)
-      {
-        complete = count == 0;
-      }
-      else if (_node.OverlayData.IdleTimeoutSeconds > 0)
-      {
-        complete = (count == idleList.Count) &&
-                   (double.IsNaN(oldestIdleTicks) || (oldestIdleTicks > (_node.OverlayData.IdleTimeoutSeconds * TimeSpan.TicksPerSecond)));
-      }
-
-      while (count < childCount)
-      {
-        if (content.Children[count].Visibility == Visibility.Collapsed)
-        {
-          break;
-        }
-
-        content.Children[count].Visibility = Visibility.Collapsed;
-        count++;
-      }
-
-      return complete;
-    }
-
-    private void CloseClick(object sender, RoutedEventArgs e) => Close();
-
-    private void UpdateTimerBar(double remainingTicks, TimerBar timerBar, TimerData timerData, double maxDurationTicks, bool shortTick = false)
-    {
-      var endTicks = double.IsNaN(maxDurationTicks) ? timerData.DurationTicks : maxDurationTicks;
-      var progress = remainingTicks / endTicks * 100.0;
-
-      var timeText = timerData.TimerType switch
-      {
-        2 => DateUtil.FormatSimpleMillis((long)remainingTicks),
-        3 => DateUtil.FormatSimpleMs((long)(endTicks - remainingTicks)),
-        _ => DateUtil.FormatSimpleMs((long)remainingTicks)
-      };
-
-      timerBar.SetActive(timerData);
-      timerBar.Update(GetDisplayName(timerData), timeText, progress, timerData);
-
-      if (!shortTick)
-      {
-        lock (_barCache.SyncRoot)
-        {
-          TimerBarCache value = _barCache.ToList().Find(value => value.TheTimerData == timerData);
-          if (value == null)
-          {
-            value = new TimerBarCache();
-            _barCache.Add(value);
-          }
-
-          // keep this cache pointing the latest pairs
-          value.TheTimerData = timerData;
-          value.TheTimerBar = timerBar;
-          value.MaxDuration = maxDurationTicks;
-        }
-      }
-
-      if (remainingTicks <= (TimeSpan.TicksPerMillisecond * 10))
-      {
-        RemoveFromCache(timerData);
-      }
-      else
-      {
-        UpdateTimerBarVisibility(timerBar);
+        await Task.Delay(75); // Adjust delay as needed
       }
     }
 
-    private void UpdateCooldownTimerBar(double remainingTicks, TimerBar timerBar, TimerData timerData)
+    private List<TimerBarModel> GenerateTimerBarModels()
     {
-      if (remainingTicks > 0)
-      {
-        var progress = 100.0 - (remainingTicks / timerData.ResetDurationTicks * 100.0);
-        var timeText = DateUtil.FormatSimpleMs((long)remainingTicks);
-        timerBar.SetReset();
-        timerBar.Update(GetDisplayName(timerData), timeText, progress, timerData);
-      }
-      else
-      {
-        var timeText = DateUtil.FormatSimpleMs(timerData.DurationTicks);
-        timerBar.SetIdle();
-        timerBar.Update(GetDisplayName(timerData), timeText, 100.0, timerData);
-      }
+      var currentTicks = DateTime.UtcNow.Ticks;
 
-      UpdateTimerBarVisibility(timerBar);
-    }
-
-    private void UpdateTimerBarVisibility(TimerBar timerBar)
-    {
-      var state = timerBar.GetState();
-      if (_node.OverlayData.TimerMode == 1 &&
-          ((state is TimerBar.State.Active or TimerBar.State.None && _node.OverlayData.ShowActive == false) ||
-          (state == TimerBar.State.None && _node.OverlayData.ShowActive == false) ||
-          (state == TimerBar.State.Idle && _node.OverlayData.ShowIdle == false) ||
-          (state == TimerBar.State.Reset && _node.OverlayData.ShowReset == false)))
-      {
-        if (timerBar.Visibility != Visibility.Collapsed)
-        {
-          timerBar.Visibility = Visibility.Collapsed;
-        }
-      }
-      else if (timerBar.Visibility != Visibility.Visible)
-      {
-        timerBar.Visibility = Visibility.Visible;
-      }
-    }
-
-    private List<TimerData> GetSortedTimerList(long currentTicks)
-    {
-      List<TimerData> copyList = null;
+      // Lock the timer list to copy
+      List<TimerData> tempList;
       lock (_timerList.SyncRoot)
       {
-        copyList = [.. _timerList];
+        tempList = [.. _timerList];
       }
 
-      // Sort the copy
-      copyList.Sort((x, y) =>
+      // add idle timers
+      lock (_idleTimerList.SyncRoot)
       {
-        return _sortBy switch
+        if (_idleTimerList.Count > 0)
         {
-          0 => x.BeginTicks.CompareTo(y.BeginTicks), // Sort by BeginTicks
-          1 => (x.EndTicks - currentTicks).CompareTo(y.EndTicks - currentTicks), // Sort by remaining time
-          2 => string.Compare(x.DisplayName, y.DisplayName, StringComparison.Ordinal), // Alphabetical
-          _ => 0
-        };
-      });
-
-      return copyList;
-    }
-
-    private void RemoveFromCache(TimerData timerData)
-    {
-      lock (_barCache.SyncRoot)
-      {
-        if (_barCache.ToList().FindIndex(value => value.TheTimerData == timerData) is var index and >= 0)
-        {
-          _barCache[index].TheTimerBar.Visibility = Visibility.Collapsed;
-          _barCache.RemoveAt(index);
+          foreach (var idle in _idleTimerList.ToArray())
+          {
+            // if latest timerData contains the previously idle timer then remove it
+            if (tempList.Find(timerData => timerData.Key == idle.Key) != null)
+            {
+              _idleTimerList.Remove(idle);
+            }
+            else
+            {
+              tempList.Add(idle);
+            }
+          }
         }
       }
-    }
 
-    private static string GetDisplayName(TimerData timerData)
-    {
-      if (timerData.RepeatedCount > -1)
+      // Determine maxDurationTicks based on the current state of timers
+      var maxDurationTicks = long.MinValue;
+
+      if (_useStandardTime && tempList.Count > 0)
       {
-        return timerData.DisplayName.Replace("{repeated}", $"{timerData.RepeatedCount}", StringComparison.OrdinalIgnoreCase);
+        maxDurationTicks = tempList.Select(timer => timer.DurationTicks).Max();
       }
 
-      return timerData.DisplayName;
+      var models = new List<TimerBarModel>();
+      var idleModels = new List<TimerBarModel>();
+      var resetModels = new List<TimerBarModel>();
+
+      // Process timers
+      foreach (var timerData in tempList)
+      {
+        var type = timerData.TimerType;
+        var remainingTicks = timerData.EndTicks - currentTicks;
+
+        if (_timerMode == 1 && timerData.ResetTicks > 0)
+        {
+          var isInIdleList = false;
+          if (_idleTimerList.Count > 0)
+          {
+            lock (_idleTimerList.SyncRoot)
+            {
+              isInIdleList = _idleTimerList.Contains(timerData);
+            }
+          }
+
+          if (remainingTicks > 0 && !isInIdleList)
+          {
+            // Normal countdown phase
+            models.Add(new TimerBarModel
+            {
+              DisplayName = GetDisplayName(timerData),
+              TimeText = DateUtil.FormatSimpleMs(remainingTicks),
+              Progress = CalcProgress(type, timerData.DurationTicks, remainingTicks, maxDurationTicks),
+              TimerData = timerData,
+              State = TimerBar.State.Active,
+              IsCooldown = true,
+              IsRemoved = false,
+              MaxDurationTicks = maxDurationTicks,
+              RemainingTicks = remainingTicks
+            });
+
+            Interlocked.Exchange(ref _lastActiveTicks, currentTicks);
+          }
+          else
+          {
+            // Reset phase
+            var remainingResetTicks = timerData.ResetTicks - currentTicks;
+            var state = remainingResetTicks > 0 ? TimerBar.State.Reset : TimerBar.State.Idle;
+
+            var model = new TimerBarModel
+            {
+              DisplayName = GetDisplayName(timerData),
+              TimeText = remainingResetTicks > 0
+                    ? DateUtil.FormatSimpleMs(remainingResetTicks)
+                    : DateUtil.FormatSimpleMs(timerData.DurationTicks),
+              Progress = remainingResetTicks > 0 ? 100.0 - CalcProgress(type, timerData.ResetDurationTicks, remainingResetTicks, long.MinValue) : 100.0,
+              TimerData = timerData,
+              State = state,
+              IsCooldown = true,
+              IsRemoved = false,
+              MaxDurationTicks = maxDurationTicks,
+              RemainingTicks = remainingResetTicks > 0 ? remainingResetTicks : timerData.DurationTicks,
+            };
+
+            if (model.State == TimerBar.State.Idle)
+            {
+              idleModels.Add(model);
+            }
+            else if (model.State == TimerBar.State.Reset)
+            {
+              resetModels.Add(model);
+              Interlocked.Exchange(ref _lastActiveTicks, currentTicks);
+            }
+          }
+        }
+        else if (remainingTicks >= 0)
+        {
+          // Regular timers
+          models.Add(new TimerBarModel
+          {
+            DisplayName = GetDisplayName(timerData),
+            TimeText = timerData.TimerType switch
+            {
+              2 => DateUtil.FormatSimpleMillis(remainingTicks),
+              3 => DateUtil.FormatSimpleMs(timerData.DurationTicks - remainingTicks),
+              _ => DateUtil.FormatSimpleMs(remainingTicks)
+            },
+            Progress = CalcProgress(type, timerData.DurationTicks, remainingTicks, maxDurationTicks),
+            TimerData = timerData,
+            State = TimerBar.State.Active,
+            IsCooldown = false,
+            IsRemoved = remainingTicks <= 0,
+            MaxDurationTicks = maxDurationTicks,
+            RemainingTicks = remainingTicks
+          });
+
+          Interlocked.Exchange(ref _lastActiveTicks, currentTicks);
+        }
+      }
+
+      // Sort the timers based on the sort criteria
+      models.Sort(TimerBarModelSort);
+      idleModels.Sort(TimerBarModelSort);
+      resetModels.Sort(TimerBarModelSort);
+
+      // order things by idle -> active -> reset
+      models.AddRange(idleModels);
+      models.AddRange(resetModels);
+      return models;
+    }
+
+    private int TimerBarModelSort(TimerBarModel x, TimerBarModel y)
+    {
+      return _sortBy switch
+      {
+        0 => x.TimerData.BeginTicks.CompareTo(y.TimerData.BeginTicks),
+        1 => x.RemainingTicks.CompareTo(y.RemainingTicks),
+        2 => string.Compare(x.DisplayName, y.DisplayName, StringComparison.Ordinal),
+        _ => 0
+      };
+    }
+
+    private async Task RenderTimerBarsAsync(List<TimerBarModel> models)
+    {
+      await UiUtil.InvokeAsync(() =>
+      {
+        if (_newData)
+        {
+          Visibility = Visibility.Visible;
+          _newData = false;
+        }
+
+        if (Visibility != Visibility.Visible)
+        {
+          return;
+        }
+
+        var childCount = content.Children.Count;
+        var count = 0;
+
+        foreach (var model in models)
+        {
+          if (model.IsRemoved)
+          {
+            // Skip rendering removed timers
+            continue;
+          }
+
+          // dont render if turned off for cooldown overlays
+          if (_timerMode == 1 && ((model.State == TimerBar.State.Active && !_showActive) || (model.State == TimerBar.State.Idle && !_showIdle) ||
+            (model.State == TimerBar.State.Reset && !_showReset)))
+          {
+            continue;
+          }
+
+          TimerBar timerBar;
+          if (count < childCount)
+          {
+            timerBar = content.Children[count] as TimerBar;
+          }
+          else
+          {
+            timerBar = new TimerBar();
+            timerBar.Init(_node.Id);
+            content.Children.Add(timerBar);
+          }
+
+          // Update the TimerBar based on its state
+          UpdateTimerBarState(model.State, model.TimerData, timerBar);
+          timerBar.Update(model.DisplayName, model.TimeText, model.Progress, model.TimerData);
+          timerBar.Visibility = Visibility.Visible;
+
+          // Store the associated TimerBarModel in the Tag field
+          timerBar.Tag = model;
+          count++;
+        }
+
+        // Collapse unused bars
+        var extraCount = 0;
+        while (count < childCount)
+        {
+          // remove some when we get too many
+          if (extraCount > 5)
+          {
+            content.Children.RemoveAt(count);
+            childCount--;
+            continue;
+          }
+          else if (content.Children[count] is TimerBar bar)
+          {
+            bar.Visibility = Visibility.Collapsed;
+            bar.Tag = null;
+            extraCount++;
+          }
+          count++;
+        }
+      });
+    }
+
+    private async Task ShortTickAsync()
+    {
+      var currentTicks = DateTime.UtcNow.Ticks;
+
+      await UiUtil.InvokeAsync(() =>
+      {
+        foreach (var child in content.Children)
+        {
+          if (child is TimerBar timerBar && timerBar.Visibility == Visibility.Visible)
+          {
+            if (timerBar.Tag is not TimerBarModel model) continue;
+
+            var timerData = model.TimerData;
+            var type = timerData.TimerType;
+            var remainingTicks = timerData.EndTicks - currentTicks;
+            var maxDurationTicks = model.MaxDurationTicks;
+
+            if (_timerMode == 1 && timerData.ResetTicks > 0)
+            {
+              var isInIdleList = false;
+              if (_idleTimerList.Count > 0)
+              {
+                lock (_idleTimerList.SyncRoot)
+                {
+                  isInIdleList = _idleTimerList.Contains(timerData);
+                }
+              }
+
+              if (remainingTicks > 0 && !isInIdleList)
+              {
+                // Update the TimerBar based on its state
+                UpdateTimerBarState(TimerBar.State.Active, timerData, timerBar);
+
+                timerBar.Update(
+                  model.DisplayName,
+                  DateUtil.FormatSimpleMs(remainingTicks),
+                  CalcProgress(type, timerData.DurationTicks, remainingTicks, maxDurationTicks),
+                  timerData
+                );
+              }
+              else
+              {
+                // Reset phase
+                var remainingResetTicks = timerData.ResetTicks - currentTicks;
+                var state = remainingResetTicks > 0 ? TimerBar.State.Reset : TimerBar.State.Idle;
+
+                // Update the TimerBar based on its state
+                UpdateTimerBarState(state, timerData, timerBar);
+
+                timerBar.Update(
+                  model.DisplayName,
+                  remainingResetTicks > 0 ? DateUtil.FormatSimpleMs(remainingResetTicks) : DateUtil.FormatSimpleMs(timerData.DurationTicks),
+                  remainingResetTicks > 0 ? 100.0 - CalcProgress(type, timerData.ResetDurationTicks, remainingResetTicks, long.MinValue) : 100.0,
+                  timerData
+                );
+              }
+            }
+            else if (remainingTicks >= 0)
+            {
+              // Update progress and time text for active timers
+              timerBar.Update(
+                model.DisplayName,
+                timerData.TimerType switch
+                {
+                  2 => DateUtil.FormatSimpleMillis(remainingTicks),
+                  3 => DateUtil.FormatSimpleMs(timerData.DurationTicks - remainingTicks),
+                  _ => DateUtil.FormatSimpleMs(remainingTicks)
+                },
+                CalcProgress(type, timerData.DurationTicks, remainingTicks, maxDurationTicks),
+                timerData
+              );
+            }
+          }
+        }
+      });
+    }
+
+    private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)
+    {
+      DragMove();
+      if (!saveButton.IsEnabled)
+      {
+        saveButton.IsEnabled = true;
+        closeButton.IsEnabled = false;
+      }
+
+      if (!cancelButton.IsEnabled)
+      {
+        cancelButton.IsEnabled = true;
+        closeButton.IsEnabled = false;
+      }
+    }
+
+    private void WindowLoaded(object sender, RoutedEventArgs e)
+    {
+      _savedHeight = (long)Height;
+      _savedWidth = (long)Width;
+      _savedTop = (long)Top;
+      _savedLeft = (long)Left;
     }
 
     private async void SaveClick(object sender, RoutedEventArgs e)
@@ -517,42 +631,27 @@ namespace EQLogParser
           _node = node;
         }
 
-        Height = _node.OverlayData.Height;
-        Width = _node.OverlayData.Width;
-        Top = _node.OverlayData.Top;
-        Left = _node.OverlayData.Left;
-        _useStandardTime = _node.OverlayData.UseStandardTime;
-        _sortBy = _node.OverlayData.SortBy;
-
+        UpdateFields();
         saveButton.IsEnabled = false;
         cancelButton.IsEnabled = false;
         closeButton.IsEnabled = true;
       }
     }
 
-    private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)
+    private async Task HideContentAsync()
     {
-      DragMove();
-
-      if (!saveButton.IsEnabled)
+      await UiUtil.InvokeAsync(async () =>
       {
-        saveButton.IsEnabled = true;
-        closeButton.IsEnabled = false;
-      }
-
-      if (!cancelButton.IsEnabled)
-      {
-        cancelButton.IsEnabled = true;
-        closeButton.IsEnabled = false;
-      }
-    }
-
-    private void WindowLoaded(object sender, RoutedEventArgs e)
-    {
-      _savedHeight = (long)Height;
-      _savedWidth = (long)Width;
-      _savedTop = (long)Top;
-      _savedLeft = (long)Left;
+        foreach (var child in content.Children)
+        {
+          if (child is TimerBar { } bar && bar.Visibility != Visibility.Collapsed)
+          {
+            bar.Visibility = Visibility.Collapsed;
+          }
+        }
+        await Task.Delay(50);
+        Visibility = Visibility.Collapsed;
+      });
     }
 
     private void WindowSizeChanged(object sender, SizeChangedEventArgs e)
@@ -573,25 +672,77 @@ namespace EQLogParser
       }
     }
 
+    private void UpdateFields()
+    {
+      Height = _node.OverlayData.Height;
+      Width = _node.OverlayData.Width;
+      Top = _node.OverlayData.Top;
+      Left = _node.OverlayData.Left;
+
+      _useStandardTime = _node.OverlayData.UseStandardTime;
+      _sortBy = _node.OverlayData.SortBy;
+      _timerMode = _node.OverlayData.TimerMode;
+      _idleTimeoutSeconds = (int)_node.OverlayData.IdleTimeoutSeconds;
+      _showActive = _node.OverlayData.ShowActive;
+      _showIdle = _node.OverlayData.ShowIdle;
+      _showReset = _node.OverlayData.ShowReset;
+    }
+
     private async void WindowClosing(object sender, CancelEventArgs e)
     {
       try
       {
         _isClosed = true;
         _isRendering = false;
+        _newData = false;
+        _newShortTickData = false;
         TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
-        content.Children.Clear();
-        _cooldownTimerData.Clear();
-        _barCache.Clear();
         _previewWindows?.Remove(_node.Id);
         _previewWindows = null;
-        _timerList.Clear();
-        await Task.Delay(200);
+        await Task.Delay(750);
         Dispose();
       }
       catch (Exception)
       {
         // do nothing
+      }
+    }
+
+    private static double CalcProgress(int type, long durationTicks, long remainingTicks, long maxDurationTicks)
+    {
+      var progress = (double)remainingTicks / (long.MinValue == maxDurationTicks ? durationTicks : maxDurationTicks) * 100.0;
+      // to allow count up timers to start from 0
+      if (type == 3 && maxDurationTicks != long.MinValue)
+      {
+        progress += (1 - ((double)durationTicks / maxDurationTicks)) * 100.0;
+      }
+      return progress;
+    }
+
+    private static string GetDisplayName(TimerData timerData)
+    {
+      if (timerData.RepeatedCount > -1)
+      {
+        return timerData.DisplayName.Replace("{repeated}", $"{timerData.RepeatedCount}", StringComparison.OrdinalIgnoreCase);
+      }
+
+      return timerData.DisplayName;
+    }
+
+    private static void UpdateTimerBarState(TimerBar.State state, TimerData timerData, TimerBar timerBar)
+    {
+      // Update the TimerBar based on its state
+      switch (state)
+      {
+        case TimerBar.State.Active:
+          timerBar.SetActive(timerData);
+          break;
+        case TimerBar.State.Reset:
+          timerBar.SetReset();
+          break;
+        case TimerBar.State.Idle:
+          timerBar.SetIdle();
+          break;
       }
     }
 
@@ -633,11 +784,17 @@ namespace EQLogParser
       }
     }
 
-    private class TimerBarCache
+    internal class TimerBarModel
     {
-      public TimerData TheTimerData { get; set; }
-      public TimerBar TheTimerBar { get; set; }
-      public double MaxDuration { get; set; }
+      public string DisplayName { get; set; }
+      public string TimeText { get; set; }
+      public double Progress { get; set; }
+      public TimerData TimerData { get; set; }
+      public TimerBar.State State { get; set; } // Active, Reset, Idle
+      public bool IsCooldown { get; set; }     // Indicates cooldown behavior
+      public bool IsRemoved { get; set; }      // Indicates whether it should be hidden/removed
+      public long MaxDurationTicks { get; set; }
+      public long RemainingTicks { get; set; }
     }
   }
 }

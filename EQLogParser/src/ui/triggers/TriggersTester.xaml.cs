@@ -105,9 +105,14 @@ namespace EQLogParser
           {
             if (characterList.Visibility != Visibility.Visible)
             {
-              _buffer?.CompleteAdding();
-              _buffer?.Dispose();
-              _buffer = null;
+              if (_buffer != null)
+              {
+                // should get disposed by the processor
+                _buffer.CompleteAdding();
+                _buffer = null;
+                await TriggerManager.Instance.StopTestProcessor();
+              }
+
               if (_theConfig != null)
               {
                 _buffer = new BlockingCollection<Tuple<string, double, bool>>(new ConcurrentQueue<Tuple<string, double, bool>>());
@@ -118,9 +123,14 @@ namespace EQLogParser
             {
               if (characterList.SelectedItem is TriggerCharacter character)
               {
-                _buffer?.CompleteAdding();
-                _buffer?.Dispose();
-                _buffer = null;
+                if (_buffer != null)
+                {
+                  // should get disposed by the processor
+                  _buffer.CompleteAdding();
+                  _buffer = null;
+                  await TriggerManager.Instance.StopTestProcessor();
+                }
+
                 _buffer = new BlockingCollection<Tuple<string, double, bool>>(new ConcurrentQueue<Tuple<string, double, bool>>());
                 await TriggerManager.Instance.SetTestProcessor(character, _buffer);
               }
@@ -255,6 +265,9 @@ namespace EQLogParser
                       if (content.ToString() == "Stopping Test")
                       {
                         stop = true;
+                        // buffer disposed by the processor
+                        _buffer.CompleteAdding();
+                        _buffer = null;
                         TriggerManager.Instance.StopTestProcessor();
                       }
                     });

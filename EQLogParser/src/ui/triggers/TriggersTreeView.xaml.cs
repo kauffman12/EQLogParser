@@ -31,7 +31,7 @@ namespace EQLogParser
     private TriggerConfig _theConfig;
     private List<TriggerCharacter> _selectedCharacters;
     private IEnumerator<TriggerTreeViewNode> _findTriggerEnumerator;
-    private bool _shiftDown = false;
+    private bool _shiftDown;
 
     public TriggersTreeView()
     {
@@ -532,6 +532,7 @@ namespace EQLogParser
         if (needRefresh)
         {
           await RefreshTriggerNode();
+          TriggerManager.Instance.TriggersUpdated();
         }
       }
     }

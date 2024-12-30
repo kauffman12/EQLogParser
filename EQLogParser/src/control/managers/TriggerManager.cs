@@ -274,27 +274,33 @@ namespace EQLogParser
         await processor.UpdateActiveTriggers();
       }
 
-      await UpdateRequiredOverlays();
+      await UpdateOverlayInfo();
     }
 
     private async Task FireEventsProcessorsUpdatedAsync()
     {
-      await UpdateRequiredOverlays();
+      await UpdateOverlayInfo();
       await UiUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
     }
 
-    private async Task UpdateRequiredOverlays()
+    private async Task UpdateOverlayInfo()
     {
       var idSet = new HashSet<string>();
+      var triggerSet = new HashSet<string>();
       foreach (var processor in await GetProcessorsAsync())
       {
         foreach (var id in processor.GetRequiredOverlayIds())
         {
           idSet.Add(id);
         }
+
+        foreach (var id in processor.GetEnabledTriggers())
+        {
+          triggerSet.Add(id);
+        }
       }
 
-      await TriggerOverlayManager.Instance.UpdateOverlayWindowsAsync([.. idSet]);
+      await TriggerOverlayManager.Instance.UpdateOverlayInfoAsync(idSet, triggerSet);
     }
 
     private async Task<List<TriggerProcessor>> GetProcessorsAsync()

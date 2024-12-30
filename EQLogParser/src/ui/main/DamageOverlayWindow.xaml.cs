@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -25,6 +26,7 @@ namespace EQLogParser
     private readonly DispatcherTimer _updateTimer;
     private readonly bool _preview;
     private readonly bool _ready;
+    private Task _lastUpdateTask = Task.CompletedTask;
     private double _savedHeight;
     private double _savedWidth;
     private double _savedTop = double.NaN;
@@ -179,7 +181,7 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateTimerTick(object sender, EventArgs e)
+    private async void UpdateTimerTick(object sender, EventArgs e)
     {
       // if turned off
       if (!ConfigUtil.IfSet("IsDamageOverlayEnabled"))
@@ -188,27 +190,41 @@ namespace EQLogParser
         return;
       }
 
+      if (!_lastUpdateTask.IsCompleted) return;
+
       var maxRows = maxRowsList.SelectedIndex + 1;
+      DamageOverlayStats damageOverlayStats = null;
 
-      DamageOverlayStats damageOverlayStats;
-      lock (StatsLock)
+      _lastUpdateTask = Task.Run(() =>
       {
-        damageOverlayStats = _stats;
-        var update = DamageStatsManager.ComputeOverlayStats(_stats == null, _currentDamageMode, maxRows, _currentSelectedClass);
-
-        if (update == null)
+        try
         {
-          if (_stats != null && (_currentDamageMode != 0 || (DateTime.Now.Ticks - _stats.LastUpdateTicks) >= DamageModeZeroTimeout))
+          lock (StatsLock)
           {
-            damageOverlayStats = _stats = null;
+            damageOverlayStats = _stats;
+            var update = DamageStatsManager.ComputeOverlayStats(_stats == null, _currentDamageMode, maxRows, _currentSelectedClass);
+
+            if (update == null)
+            {
+              if (_stats != null && (_currentDamageMode != 0 || (DateTime.Now.Ticks - _stats.LastUpdateTicks) >= DamageModeZeroTimeout))
+              {
+                damageOverlayStats = _stats = null;
+              }
+            }
+            else
+            {
+              update.LastUpdateTicks = DateTime.Now.Ticks;
+              damageOverlayStats = _stats = update;
+            }
           }
         }
-        else
+        catch (Exception)
         {
-          update.LastUpdateTicks = DateTime.Now.Ticks;
-          damageOverlayStats = _stats = update;
+          // ignore for now
         }
-      }
+      });
+
+      await _lastUpdateTask;
 
       if (damageOverlayStats != null)
       {

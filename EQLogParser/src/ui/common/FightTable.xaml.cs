@@ -333,8 +333,6 @@ namespace EQLogParser
     private void AddFight(Fight fight, ObservableCollection<Fight> list)
     {
       fight.SortId = _currentSortId++;
-      var ttl = fight.LastTime - fight.BeginTime + 1;
-      fight.TooltipText = $"#Hits To Players: {fight.TankHits}, #Hits From Players: {fight.DamageHits}, Time Alive: {ttl}s";
       list.Add(fight);
     }
 

@@ -74,6 +74,7 @@ namespace EQLogParser
     public int TriggerAgainOption { get; set; }
     public int TimerType { get; set; }
     public string Key { get; set; }
+    public string TriggerId { get; set; }
     public string EndEarlyPattern { get; set; }
     public string EndEarlyPattern2 { get; set; }
     public Regex EndEarlyRegex { get; set; }
@@ -145,7 +146,7 @@ namespace EQLogParser
     public string AltTimerName { get; set; }
     public string Comments { get; set; }
     public double RepeatedResetTime { get; set; } = 0.75;
-    public double DurationSeconds { get; set; }
+    public double DurationSeconds { get; set; } = 0.2;
     public bool EnableTimer { get; set; }
     public int TimerType { get; set; }
     public string EndEarlyPattern { get; set; }
@@ -576,7 +577,7 @@ namespace EQLogParser
   {
     public string Name { get; set; }
     public double BeginTime { get; set; } = double.NaN;
-    public bool Dead { get; set; } = false;
+    public bool Dead { get; set; }
     public List<DamageRecord> Records { get; init; } = [];
   }
 
@@ -604,7 +605,7 @@ namespace EQLogParser
     public uint SortId { get; set; }
     public long DamageTotal { get; set; }
     public string Name { get; set; }
-    public bool Dead { get; set; } = false;
+    public bool Dead { get; set; }
     public double BeginDamageTime { get; set; } = double.NaN;
     public double BeginTankingTime { get; set; } = double.NaN;
     public double LastDamageTime { get; set; } = double.NaN;
@@ -614,7 +615,7 @@ namespace EQLogParser
     public string CorrectMapKey { get; set; }
     public int GroupId { get; set; }
     public int NonTankingGroupId { get; set; }
-    public bool IsInactivity { get; set; } = false;
+    public bool IsInactivity { get; set; }
     public long TankTotal { get; set; }
     public long DamageHits { get; set; }
     public long TankHits { get; set; }

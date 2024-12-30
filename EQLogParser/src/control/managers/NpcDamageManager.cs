@@ -216,6 +216,9 @@ namespace EQLogParser
 
         fight.LastTime = beginTime;
         LastFightProcessTime = beginTime;
+        // tooltip
+        var ttl = fight.LastTime - fight.BeginTime + 1;
+        fight.TooltipText = $"#Hits To Players: {fight.TankHits}, #Hits From Players: {fight.DamageHits}, Time Alive: {ttl}s";
         DataManager.Instance.UpdateIfNewFightMap(fight.CorrectMapKey, fight, isNonTankingFight);
       }
     }
