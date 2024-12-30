@@ -260,15 +260,13 @@ namespace EQLogParser
       }
     }
 
-    internal static async
-    Task
-Cleanup()
+    internal static async Task Cleanup()
     {
       await Task.Delay(100);
 
       try
       {
-        var path = Environment.ExpandEnvironmentVariables("%userprofile%\\Downloads");
+        var path = NativeMethods.GetDownloadsFolderPath();
         if (!Directory.Exists(path))
         {
           return;

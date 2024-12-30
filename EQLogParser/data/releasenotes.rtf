@@ -1,15 +1,21 @@
 {\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Segoe UI;}{\f1\fnil\fcharset2 Symbol;}}
 {\*\generator Riched20 10.0.22621}\viewkind4\uc1 
-\pard\ul\f0\fs20\lang1033 Updates in Version 2.2.60\ulnone\par
+\pard\ul\f0\fs20\lang1033 Updates in Version 2.2.62\ulnone\par
 \par
 
 \pard 
 {\pntext\f0 1.\tab}{\*\pn\pnlvlbody\pnf0\pnindent0\pnstart1\pndec{\pntxta.}}
-\fi-360\li720 Reworked Trigger processing and how Overlays are updated. Hopefully, there is some performance improvements. I still have no replaced the Timer Bar animation itself but everything else has been cleaned up.\par
-{\pntext\f0 2.\tab}Turning on and off individual Triggers should no longer close Overlays. If a Timer is displayed and the associated Trigger is turned off, it should remove the Timer Bar from any Overlays using it. Note that no special case like this exists for Text Overlays. The old data will just need to timeout like normal.\par
-{\pntext\f0 3.\tab}Made additional changes for better use of multiple threads through the UI.\par
-{\pntext\f0 4.\tab}Fixed handling many Fast Countdown Timers being started at the same time. They would often not count down quickly enough.\par
-{\pntext\f0 5.\tab}Added a 2nd color to the Damage Meter used to highlight your player.\par
+\fi-360\li720 Continued reworking Trigger and Overlay processing. Hopefully, there are some performance improvements for people with older PCs.\par
+{\pntext\f0 2.\tab}Turning on and off individual Triggers should no longer close Overlays. If a Timer is displayed and the associated Trigger is turned off, it should remove the Timer Bar from the Overlays using it. Note that no special case like this exists for Text Overlays. The old data will just need to timeout like normal.\par
+{\pntext\f0 3.\tab}Fixed handling of many Fast Countdown Timers running at the same time. They would often not count down quickly enough.\par
+{\pntext\f0 4.\tab}Fixed sorting when using Cooldown Timers. All the options should work now instead of them always being forced to sort by the time displayed.\par
+{\pntext\f0 5.\tab}Fixed bug with Progress Timers where they would not display at zero seconds when using the Standardized Time setting. Also, fixed the display time.\par
+{\pntext\f0 6.\tab}Updated Cooldown Overlays to remove Rest and Idle Timers when you manually Close Overlays as a way to clean up the window. If the Overlay pops back up based on a new Timer all the existing Active Timers should display. Even if they transitioned to Reset or Idle.\par
+{\pntext\f0 7.\tab}Added a 2nd color to the Damage Meter used to highlight your Player.\par
+{\pntext\f0 8.\tab}Fix Trigger Tester sometimes hanging after Stop is used multiple times.\par
+{\pntext\f0 9.\tab}Fix for tooltip in the Fight list not showing the full count of time and hits.\par
+{\pntext\f0 10.\tab}Fix cleanup of downloads from parser updates when the Downloads folder is customed.\par
+{\pntext\f0 11.\tab}Updated UI related functions in various places to better use background threads. This includes the Damage Meter which may have been too much for some systems.\par
 
 \pard\par
 \ul Updated in Version 2.2.59\ulnone\par
@@ -17,7 +23,7 @@
 
 \pard 
 {\pntext\f0 1.\tab}{\*\pn\pnlvlbody\pnf0\pnindent0\pnstart1\pndec{\pntxta.}}
-\fi-360\li720 Fix for timer warnings causing the timer to end.\par
+\fi-360\li720 Fix for Timer warnings causing the Timer to end.\par
 
 \pard\par
 \ul Updated in Version 2.2.58\ulnone\par
