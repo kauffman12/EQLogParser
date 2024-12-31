@@ -184,7 +184,6 @@ namespace EQLogParser
 
     internal static async Task CheckVersionAsync(TextBlock errorText)
     {
-      await Task.Delay(2000);
       var version = Application.ResourceAssembly.GetName().Version;
 
       try
@@ -252,6 +251,11 @@ namespace EQLogParser
 
           await UiUtil.InvokeAsync(Action);
         }
+        else
+        {
+          // cleanup downloads
+          Cleanup();
+        }
       }
       catch (Exception ex)
       {
@@ -260,10 +264,8 @@ namespace EQLogParser
       }
     }
 
-    internal static async Task Cleanup()
+    internal static void Cleanup()
     {
-      await Task.Delay(100);
-
       try
       {
         var path = NativeMethods.GetDownloadsFolderPath();

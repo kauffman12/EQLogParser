@@ -258,9 +258,6 @@ namespace EQLogParser
         await TriggerManager.Instance.StartAsync();
         ConfigUtil.UpdateStatus("Trigger Manager Started");
 
-        // cleanup downloads
-        await MainActions.Cleanup();
-
         // start save timer
         _saveTimer.Start();
 
@@ -280,12 +277,17 @@ namespace EQLogParser
         // Actually start the check.
         if (checkUpdatesIcon.Visibility == Visibility.Visible)
         {
+          await Task.Delay(2000);
           await MainActions.CheckVersionAsync(errorText);
         }
 
         // send done in 5 more seconds if it hasn't been received yet
         await Task.Delay(5000);
         ConfigUtil.UpdateStatus("Done");
+
+        // cleanup downloads
+        await Task.Delay(500);
+        MainActions.Cleanup();
       }
       catch (Exception e)
       {
