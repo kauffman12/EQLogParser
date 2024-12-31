@@ -57,6 +57,8 @@ namespace EQLogParser
         SetLoggingLevel();
 
         AutoMap = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
+        var osVersion = Environment.OSVersion;
+        Log.Info($"Detected OS Version: {osVersion.VersionString}");
         var version = ResourceAssembly.GetName().Version!.ToString()[..^2];
         Log.Info($"EQLogParser: {version}, DotNet: {Environment.Version}");
         RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;

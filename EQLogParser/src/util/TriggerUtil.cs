@@ -575,7 +575,7 @@ namespace EQLogParser
       }
     }
 
-    internal static void CheckQuickShare(ChatType chatType, string action, double dateTime, string characterId, string processorName)
+    internal static async void CheckQuickShare(ChatType chatType, string action, double dateTime, string characterId, string processorName)
     {
       if (chatType.Sender == null || action == null)
       {
@@ -586,7 +586,7 @@ namespace EQLogParser
       if (chatType.SenderIsYou && (chatType.TextStart - 27) is var s and > 0 && action.Length > s
           && action.AsSpan()[s..].StartsWith("{EQLP:STOP}"))
       {
-        TriggerManager.Instance.TriggersUpdated();
+        await TriggerManager.Instance.StopTriggersAsync();
         return;
       }
 

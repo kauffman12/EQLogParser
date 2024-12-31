@@ -6,7 +6,6 @@ using SoundTouch.Net.NAudioSupport;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -16,7 +15,7 @@ using Windows.Media.SpeechSynthesis;
 
 namespace EQLogParser
 {
-  internal class AudioManager
+  internal class AudioManager : IDisposable
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<AudioManager> Lazy = new(() => new AudioManager());
@@ -25,6 +24,7 @@ namespace EQLogParser
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private AudioSessionControl _session;
     private DateTime _lastAudioCheck;
+    private bool _disposed;
 
     private AudioManager()
     {
@@ -225,10 +225,10 @@ namespace EQLogParser
 
           output.Init(reader);
 
-          output.PlaybackStopped += (_, _) =>
+          output.PlaybackStopped += async (_, _) =>
           {
-            memStream.DisposeAsync();
-            reader.DisposeAsync();
+            await memStream.DisposeAsync();
+            await reader.DisposeAsync();
             output.Dispose();
           };
 
@@ -238,7 +238,7 @@ namespace EQLogParser
           var sessionManager = device.AudioSessionManager;
           for (var i = 0; i < sessionManager.Sessions.Count; i++)
           {
-            if (sessionManager.Sessions[i].GetProcessID == Process.GetCurrentProcess().Id)
+            if (sessionManager.Sessions[i].GetProcessID == Environment.ProcessId)
             {
               _session = sessionManager.Sessions[i];
               return true;
@@ -383,7 +383,7 @@ namespace EQLogParser
               {
                 if (stream != null)
                 {
-                  stream.DisposeAsync();
+                  stream.Dispose();
                   stream = null;
                   output?.Dispose();
                   audio.CurrentPlayback = null;
@@ -443,7 +443,7 @@ namespace EQLogParser
             output.Dispose();
           }
 
-          stream?.DisposeAsync();
+          stream?.Dispose();
           cancellationTokenSource.Dispose();
         }
       }, cancellationTokenSource.Token);
@@ -485,7 +485,7 @@ namespace EQLogParser
       {
         foreach (var voice in SpeechSynthesizer.AllVoices)
         {
-          if (voice.DisplayName == name || name.StartsWith(voice.DisplayName) == true)
+          if (voice.DisplayName == name || name.StartsWith(voice.DisplayName, StringComparison.OrdinalIgnoreCase))
           {
             voiceInfo = voice;
             break;
@@ -568,6 +568,24 @@ namespace EQLogParser
       }
 
       return floatIncrease;
+    }
+
+    public void Dispose()
+    {
+      Dispose(true);
+      GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+      if (_disposed) return;
+
+      if (disposing)
+      {
+        _semaphore?.Dispose();
+      }
+
+      _disposed = true;
     }
 
     private class PlayerAudio

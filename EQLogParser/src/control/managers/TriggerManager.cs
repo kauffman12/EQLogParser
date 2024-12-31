@@ -62,6 +62,17 @@ namespace EQLogParser
       }
     }
 
+    internal async Task StopTriggersAsync()
+    {
+      var processors = await GetProcessorsAsync();
+      foreach (var processor in processors)
+      {
+        await processor.StopTriggersAsync();
+      }
+
+      TriggerOverlayManager.Instance.HideOverlays();
+    }
+
     internal async Task<List<LogReader>> GetLogReadersAsync()
     {
       await _logReadersSemaphore.WaitAsync();
@@ -94,7 +105,7 @@ namespace EQLogParser
       _testProcessor =
         new TriggerProcessor(id, name, playerName, voice, voiceRate, null, null);
       _testProcessor.SetTesting(true);
-      await _testProcessor.Start();
+      await _testProcessor.StartAsync();
       _testProcessor.LinkTo(collection);
       await FireEventsProcessorsUpdatedAsync();
     }
@@ -204,7 +215,7 @@ namespace EQLogParser
             var playerName = !FileUtil.ParseFileName(character.FilePath, out var parsedPlayerName, out _) ? character.Name : parsedPlayerName;
             var processor = new TriggerProcessor(character.Id, character.Name, playerName, character.Voice, character.VoiceRate,
               character.ActiveColor, character.FontColor);
-            await processor.Start();
+            await processor.StartAsync();
             var reader = new LogReader(processor, character.FilePath);
             _logReaders.Add(reader);
             RunningFiles[character.FilePath] = true;
@@ -245,7 +256,7 @@ namespace EQLogParser
         {
           var processor = new TriggerProcessor(TriggerStateManager.DefaultUser, TriggerStateManager.DefaultUser, ConfigUtil.PlayerName, config.Voice,
             config.VoiceRate, null, null);
-          await processor.Start();
+          await processor.StartAsync();
           var reader = new LogReader(processor, currentFile);
           _logReaders.Add(reader);
           await Task.Run(() => reader.Start());
