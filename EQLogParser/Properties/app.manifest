@@ -38,7 +38,9 @@
       <!-- Windows 8.1 -->
       <!--<supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}" />-->
       <!-- Windows 10 -->
-      <!--<supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />-->
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />
+      <!-- Windows 11 -->
+      <supportedOS Id="{9fdf0d10-61a6-4b0d-9e6d-98de1a4a01e5}"/>
     </application>
   </compatibility>
   <!-- Enable themes for Windows common controls and dialogs (Windows XP and later) -->
