@@ -15,6 +15,9 @@ If Everquest is in windowed mode but the Damage Meter or other overlays are hidd
 
 ![Parser](./examples/eqsetting.png)
 
+If everything works except for Text to Speech make sure Compatibility mode is turned OFF.
+![Compat Mode](./examples/compat.png)
+
 Note for Developers:</br>
 Syncfusion components used by this application require a license. If you apply for a community license you should be able to get one for free.
 
