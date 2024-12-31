@@ -32,6 +32,11 @@ namespace EQLogParser
       {
         Log.Warn("No audio device found!");
       }
+
+      if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+      {
+        Log.Warn("TTS is disabled as Windows 10 (build 10240) or newer is required. Make sure you have Windows Compatibility mode turned off.");
+      }
     }
 
     internal int GetVolume()
