@@ -267,7 +267,7 @@ namespace EQLogParser
         }
       }
 
-      void AddValue(Dictionary<long, int> dict, long key, int amount)
+      static void AddValue(Dictionary<long, int> dict, long key, int amount)
       {
         if (!dict.TryAdd(key, amount))
         {
