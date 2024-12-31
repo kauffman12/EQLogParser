@@ -64,10 +64,16 @@ namespace EQLogParser
 
     internal void Add(string id, string voice)
     {
+      Log.Info($"Adding speech synthesizer for {id} and voice {voice}.");
       var audio = new PlayerAudio
       {
         Synth = CreateSpeechSynthesizer(voice)
       };
+
+      if (audio.Synth != null)
+      {
+        Log.Info("Synth looks to be created.");
+      }
 
       _playerAudios.TryAdd(id, audio);
       ProcessAsync(audio);
@@ -118,10 +124,13 @@ namespace EQLogParser
 
     internal async void TestSpeakTtsAsync(string tts, string voice = null, int rate = 0, int volume = 4)
     {
+      Log.Warn("Testing Speech: " + tts);
       if (!string.IsNullOrEmpty(tts) && CreateSpeechSynthesizer(voice) is { } synth)
       {
+        Log.Warn("test synthesizer created with selected voice");
         if (await SynthesizeTextToByteArrayAsync(tts, synth) is { Length: > 0 } data)
         {
+          Log.Warn("speech generated");
           var waveFormat = new WaveFormat(16000, 16, 1);
           if (!PlayAudioData(data, waveFormat, rate, volume))
           {
@@ -195,6 +204,7 @@ namespace EQLogParser
         return true;
       }
 
+      Log.Info("Init Audio Manager");
       var now = DateTime.Now;
       if (now.Subtract(_lastAudioCheck).TotalSeconds < 5)
       {
@@ -434,6 +444,7 @@ namespace EQLogParser
         catch (Exception ex)
         {
           Log.Debug("Error during playback.", ex);
+          Log.Warn("Error during playback.", ex);
         }
         finally
         {
@@ -459,10 +470,17 @@ namespace EQLogParser
         if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
         {
           synth = new SpeechSynthesizer();
+          Log.Info("Getting Voice Info");
           if (GetVoiceInfo(voice) is { } voiceInfo)
           {
+            Log.Info("Setting Voice");
             synth.Voice = voiceInfo;
+            Log.Info("Voice Set");
           }
+        }
+        else
+        {
+          Log.Warn("Failed Windows Version Check");
         }
       }
       catch (Exception ex)
@@ -542,6 +560,7 @@ namespace EQLogParser
       catch (Exception ex)
       {
         Log.Debug("Error synthesizing text to byte array.", ex);
+        Log.Warn("Error synthesizing text to byte array.", ex);
         return null;
       }
     }

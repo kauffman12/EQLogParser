@@ -68,11 +68,39 @@ namespace EQLogParser
     internal long GetActivityLastTicks() => Interlocked.Read(ref _activityLastTicks);
     internal List<string> GetRequiredOverlayIds() => [.. _requiredOverlays.Keys];
     internal List<string> GetEnabledTriggers() => [.. _enabledTriggers.Keys];
+    internal void SetVoice(string voice) => AudioManager.Instance.SetVoice(CurrentCharacterId, voice);
+    internal void SetVoiceRate(int rate) => _voiceRate = rate;
+    internal void SetTesting(bool testing) => _isTesting = testing;
 
-    internal async Task Start()
+    internal async Task StartAsync()
     {
       await GetActiveTriggersAsync();
       _lexicon = [.. (await TriggerStateManager.Instance.GetLexicon())];
+    }
+
+    internal async Task StopTriggersAsync()
+    {
+      await _activeTriggerSemaphore.WaitAsync();
+
+      try
+      {
+        AudioManager.Instance.Stop(CurrentCharacterId);
+
+        foreach (var wrapper in _activeTriggers)
+        {
+          CleanupWrapper(wrapper);
+        }
+      }
+      finally
+      {
+        _activeTriggerSemaphore.Release();
+      }
+    }
+
+    internal async Task UpdateActiveTriggers()
+    {
+      await GetActiveTriggersAsync();
+      AudioManager.Instance.Stop(CurrentCharacterId);
     }
 
     public void LinkTo(BlockingCollection<Tuple<string, double, bool>> collection)
@@ -176,16 +204,6 @@ namespace EQLogParser
           collection?.Dispose();
         }
       });
-    }
-
-    internal void SetVoice(string voice) => AudioManager.Instance.SetVoice(CurrentCharacterId, voice);
-    internal void SetVoiceRate(int rate) => _voiceRate = rate;
-    internal void SetTesting(bool testing) => _isTesting = testing;
-
-    internal async Task UpdateActiveTriggers()
-    {
-      await GetActiveTriggersAsync();
-      AudioManager.Instance.Stop(CurrentCharacterId);
     }
 
     private static string ModLine(string text, string line) => !string.IsNullOrEmpty(text) ?

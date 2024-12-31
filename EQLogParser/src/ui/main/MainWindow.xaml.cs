@@ -73,8 +73,7 @@ namespace EQLogParser
       Top = top;
       Left = left;
 
-      Log.Info($"Window Pos ({Top}, {Left})");
-      Log.Info($"Window Size ({Width}, {Height})");
+      Log.Info($"Window Pos ({Top}, {Left}) | Window Size ({Width}, {Height})");
 
       WindowState = ConfigUtil.GetSetting("WindowState", "Normal") switch
       {
@@ -1138,6 +1137,7 @@ namespace EQLogParser
       ChatManager.Instance.Stop();
       await TriggerManager.Instance.StopAsync();
       await TriggerStateManager.Instance.Dispose();
+      AudioManager.Instance.Dispose();
 
       // restore from backup will use explicit mode
       if (Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)
