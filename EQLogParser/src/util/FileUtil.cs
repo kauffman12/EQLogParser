@@ -196,7 +196,7 @@ namespace EQLogParser
       }
 
       Directory.CreateDirectory(archivePath);
-      var formatted = DateTime.Now.ToString("_yyyyMMddHHmm_ssfff") + ".txt";
+      var formatted = DateTime.Now.ToString("_yyyyMMddHHmm_ssfff", CultureInfo.InvariantCulture) + ".txt";
       var destination = archivePath + Path.DirectorySeparatorChar + fileInfo.Name.Replace(".txt", formatted);
 
       File.Move(path, destination);

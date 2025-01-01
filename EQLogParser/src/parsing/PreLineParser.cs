@@ -24,7 +24,7 @@ namespace EQLogParser
         }
         else if (action.Length > 45 && action.StartsWith("You successfully loaded your ", StringComparison.OrdinalIgnoreCase))
         {
-          if (action.IndexOf(" ", 29, StringComparison.Ordinal) is var end and > -1)
+          if (action.IndexOf(' ', 29) is var end and > -1)
           {
             var className = action.Substring(29, end - 29);
             PlayerManager.Instance.SetPlayerClass(ConfigUtil.PlayerName, className, "Class chosen from persona change.");

@@ -684,7 +684,7 @@ namespace EQLogParser
         else if (attentionIndex > -1 && attentionIndex == (split.Length - 1))
         {
           // starts with beast warder or single name
-          var i = (split[1] == "warder" && split[0].EndsWith("`s")) ? 2 : 1;
+          var i = (split[1] == "warder" && split[0].EndsWith("`s", StringComparison.OrdinalIgnoreCase)) ? 2 : 1;
 
           var name = (i == 2) ? split[0] + " " + split[1] : split[0];
           if (split[i] == "has" && split[i + 1] == "captured" && ParseNpcName(split, 3 + i, out var npc))
@@ -696,7 +696,7 @@ namespace EQLogParser
         else if (split.Length > 4)
         {
           // starts with beast warder or single name
-          var i = (split[1] == "warder" && split[0].EndsWith("`s")) ? 2 : 1;
+          var i = (split[1] == "warder" && split[0].EndsWith("`s", StringComparison.OrdinalIgnoreCase)) ? 2 : 1;
 
           var name = (i == 2) ? split[0] + " " + split[1] : split[0];
           if (failedIndex == i && split[i + 1] == "to" && split[i + 2] == "taunt")
@@ -974,7 +974,7 @@ namespace EQLogParser
       var ignore = name.EndsWith("`s Mount", StringComparison.OrdinalIgnoreCase) || ChestTypes.FindIndex(type => name.EndsWith(type, StringComparison.OrdinalIgnoreCase)) >= 0;
       if (!ignore && CheckEyeRegex.IsMatch(name))
       {
-        ignore = !name.EndsWith("Veeshan") && !name.EndsWith("Despair");
+        ignore = !name.EndsWith("Veeshan", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("Despair", StringComparison.OrdinalIgnoreCase);
       }
       return ignore;
     }
