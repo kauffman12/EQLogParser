@@ -65,13 +65,13 @@ namespace EQLogParser
       AddMultiCase(["himself", "herself", "itself"], _thirdPerson);
 
       // populate ClassNames from SpellClass enum and resource table
-      foreach (var item in Enum.GetValues(typeof(SpellClass)))
+      foreach (var item in Enum.GetValues<SpellClass>())
       {
-        var name = Resource.ResourceManager.GetString(Enum.GetName(typeof(SpellClass), item)?.ToUpper() ?? string.Empty, CultureInfo.InvariantCulture);
+        var name = Resource.ResourceManager.GetString(Enum.GetName(item)?.ToUpperInvariant() ?? string.Empty, CultureInfo.InvariantCulture);
         if (name != null)
         {
-          _classNames[(SpellClass)item] = name;
-          _classesByName[name] = (SpellClass)item;
+          _classNames[item] = name;
+          _classesByName[name] = item;
         }
       }
 

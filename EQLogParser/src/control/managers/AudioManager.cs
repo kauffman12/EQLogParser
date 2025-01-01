@@ -15,7 +15,7 @@ using Windows.Media.SpeechSynthesis;
 
 namespace EQLogParser
 {
-  internal class AudioManager : IDisposable
+  internal partial class AudioManager : IDisposable
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<AudioManager> Lazy = new(() => new AudioManager());
@@ -30,13 +30,38 @@ namespace EQLogParser
     {
       if (!InitAudio())
       {
-        Log.Warn("No audio device found!");
+        Log.Warn("Audio is NOT Initialized!");
       }
 
       if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
       {
-        Log.Warn("TTS is disabled as Windows 10 (build 10240) or newer is required. Make sure you have Windows Compatibility mode turned off.");
+        Log.Warn("TTS is disabled as Windows 10 (build 10240) or newer is required. Make sure you have Windows Compatibility mode turned OFF.");
       }
+    }
+
+    internal static List<string> GetVoiceList()
+    {
+      var list = new List<string>();
+
+      try
+      {
+        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+        {
+          foreach (var voice in SpeechSynthesizer.AllVoices)
+          {
+            if (voice is not null && voice.DisplayName is string name)
+            {
+              list.Add(name);
+            }
+          }
+        }
+      }
+      catch (Exception)
+      {
+        Log.Error("Unable to read Voices from SpeechSynthesizer");
+      }
+
+      return list;
     }
 
     internal int GetVolume()
@@ -226,8 +251,8 @@ namespace EQLogParser
           // play something to register the audio session with windows
           var memStream = new MemoryStream(silentWav);
           var reader = new WaveFileReader(memStream);
-          var output = CreateWasapiOut();
 
+          var output = CreateWasapiOut();
           output.Init(reader);
 
           output.PlaybackStopped += async (_, _) =>
@@ -241,6 +266,7 @@ namespace EQLogParser
           output.Stop();
 
           var sessionManager = device.AudioSessionManager;
+
           for (var i = 0; i < sessionManager.Sessions.Count; i++)
           {
             if (sessionManager.Sessions[i].GetProcessID == Environment.ProcessId)
@@ -252,7 +278,7 @@ namespace EQLogParser
         }
         catch (Exception ex)
         {
-          Log.Error($"Failed to initialize Audio: {ex.Message}");
+          Log.Error($"Failed to access AudioSessionManager: {ex.Message}");
         }
         finally
         {
@@ -299,9 +325,9 @@ namespace EQLogParser
       var stream = new RawSourceWaveStream(data, 0, data.Length, waveFormat);
       var output = CreateWasapiOut();
 
-      output.PlaybackStopped += (_, _) =>
+      output.PlaybackStopped += async (_, _) =>
       {
-        stream.DisposeAsync();
+        await stream.DisposeAsync();
         output.Dispose();
       };
 
@@ -320,7 +346,7 @@ namespace EQLogParser
       return true;
     }
 
-    private static ISampleProvider CreateProvider(RawSourceWaveStream stream, WasapiOut output, int rate, int volume)
+    private static VolumeSampleProvider CreateProvider(RawSourceWaveStream stream, WasapiOut output, int rate, int volume)
     {
       var soundTouchProvider = stream.WaveFormat.Encoding == WaveFormatEncoding.IeeeFloat ? new SoundTouchWaveProvider(stream)
         : new SoundTouchWaveProvider(stream.ToSampleProvider().ToWaveProvider());

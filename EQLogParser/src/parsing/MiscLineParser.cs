@@ -334,7 +334,7 @@ namespace EQLogParser
             if (!string.IsNullOrEmpty(looter) && lootedIndex == 2 && split.Length > 4)
             {
               var item = string.Join(" ", split, 4, split.Length - 4);
-              if (item.Length > 3 && item.EndsWith(".--"))
+              if (item.Length > 3 && item.EndsWith(".--", StringComparison.OrdinalIgnoreCase))
               {
                 // covers "a" or "an"
                 var count = split[3][0] == 'a' ? 1 : StatsUtil.ParseUInt(split[3]); item = item[..^3];

@@ -10,7 +10,6 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using Windows.Media.SpeechSynthesis;
 using Application = System.Windows.Application;
 using CheckBox = System.Windows.Controls.CheckBox;
 
@@ -44,8 +43,7 @@ namespace EQLogParser
         watchQuickShare.IsChecked = true;
       }
 
-      var allVoices = SpeechSynthesizer.AllVoices;
-      voices.ItemsSource = allVoices.Select(voice => voice.DisplayName).ToList();
+      voices.ItemsSource = AudioManager.GetVoiceList();
 
       // watch file system for new sounds
       var fileList = new ObservableCollection<string>();

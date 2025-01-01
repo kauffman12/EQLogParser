@@ -1,18 +1,13 @@
 ﻿using Microsoft.WindowsAPICodePack.Dialogs;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
-using Windows.Media.SpeechSynthesis;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for TriggerPlayerConfig.xaml
-  /// </summary>
   public partial class TriggerPlayerConfigWindow
   {
     private const string EnterName = "Enter Character Name";
@@ -25,9 +20,7 @@ namespace EQLogParser
       InitializeComponent();
 
       Owner = MainActions.GetOwner();
-
-      var allVoices = SpeechSynthesizer.AllVoices;
-      voices.ItemsSource = allVoices.Select(voice => voice.DisplayName).ToList();
+      voices.ItemsSource = AudioManager.GetVoiceList();
 
       _theCharacter = character;
       if (_theCharacter != null)
