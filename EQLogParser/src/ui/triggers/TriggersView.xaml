@@ -35,6 +35,7 @@
         <ComboBoxItem>Increased Rate 5</ComboBoxItem>
         <ComboBoxItem>Increased Rate 6</ComboBoxItem>
       </ComboBox>
+      <ComboBox x:Name="deviceList" SelectedIndex="0" Margin="0,0,8,2" MaxWidth="150" SelectionChanged="OptionsChanged" />
       <Button Name="volumeBtn" Content="Volume" Margin="0,0,4,1" Padding="8,0,8,0" Height="{DynamicResource EQButtonHeight}" Click="VolumeButtonClick" />
       <Popup Name="volumePopup" PlacementTarget="{Binding ElementName=volumeBtn}" Height="320" Placement="Right" StaysOpen="False" VerticalOffset="30" HorizontalOffset="-20">
         <Border Background="{DynamicResource ContentBackgroundAlt2}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
