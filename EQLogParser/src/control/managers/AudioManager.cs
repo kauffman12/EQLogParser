@@ -1,5 +1,6 @@
 ﻿using log4net;
 using NAudio.CoreAudioApi;
+using NAudio.CoreAudioApi.Interfaces;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using SoundTouch.Net.NAudioSupport;
@@ -11,31 +12,52 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Threading;
 using Windows.Media.SpeechSynthesis;
 
 namespace EQLogParser
 {
   internal partial class AudioManager : IDisposable
   {
+    internal event Action<bool> DeviceListChanged;
+    internal const string DefaultDevice = "default";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<AudioManager> Lazy = new(() => new AudioManager());
     internal static AudioManager Instance => Lazy.Value;
     private readonly ConcurrentDictionary<string, PlayerAudio> _playerAudios = new();
     private readonly SemaphoreSlim _semaphore = new(1, 1);
-    private AudioSessionControl _session;
-    private DateTime _lastAudioCheck;
+    private readonly AudioDeviceNotificationClient _notificationClient = new();
+    private readonly DispatcherTimer _updateTimer;
+    private readonly object _deviceLock = new();
+    private MMDeviceEnumerator _deviceEnumerator;
+    private string _deviceId = DefaultDevice;
+    private volatile float _fallbackSystemVolume = 100.0f;
+    private readonly bool _isUsingWine;
     private bool _disposed;
+    private volatile bool _initialized;
 
     private AudioManager()
     {
-      if (!InitAudio())
+      _isUsingWine = Environment.GetEnvironmentVariable("WINELOADER") != null;
+      if (_isUsingWine)
       {
-        Log.Warn("Audio is NOT Initialized!");
+        Log.Info("Found WINELOADER in Env.");
       }
 
-      if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+      _updateTimer = new DispatcherTimer();
+      _updateTimer.Tick += DoUpdateDeviceList;
+      _updateTimer.Interval = new TimeSpan(0, 0, 0, 0, 500);
+      InitAudio();
+    }
+
+    internal void SelectDevice(string id)
+    {
+      if (!string.IsNullOrEmpty(id))
       {
-        Log.Warn("TTS is disabled as Windows 10 (build 10240) or newer is required. Make sure you have Windows Compatibility mode turned OFF.");
+        lock (_deviceLock)
+        {
+          _deviceId = id;
+        }
       }
     }
 
@@ -58,15 +80,66 @@ namespace EQLogParser
       }
       catch (Exception)
       {
-        Log.Error("Unable to read Voices from SpeechSynthesizer");
+        Log.Error("Unable to read Voices from Windows.Media.SpeechSynthesizer.");
       }
 
       return list;
     }
 
+    internal static (List<string> idList, List<string> nameList) GetDeviceList()
+    {
+      List<string> idList = [DefaultDevice];
+      List<string> nameList = ["Default Audio"];
+
+      try
+      {
+        var enumerator = new MMDeviceEnumerator();
+        foreach (var device in enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
+        {
+          idList.Add(device.ID);
+          nameList.Add(device.FriendlyName);
+          device.Dispose();
+        }
+        enumerator.Dispose();
+      }
+      catch (Exception)
+      {
+        // not supported
+      }
+
+      return (idList, nameList);
+    }
+
     internal int GetVolume()
     {
-      return _session?.SimpleAudioVolume?.Volume != null ? (int)(_session.SimpleAudioVolume.Volume * 100) : 0;
+      var volume = _fallbackSystemVolume;
+
+      lock (_deviceLock)
+      {
+        try
+        {
+          if (!_isUsingWine)
+          {
+            var device = GetDeviceById(_deviceId) ?? GetDefaultDevice();
+            if (device?.AudioSessionManager?.SimpleAudioVolume is var simple and not null)
+            {
+              volume = simple.Volume;
+            }
+            else
+            {
+              volume = _fallbackSystemVolume;
+            }
+
+            device?.Dispose();
+          }
+        }
+        catch (Exception)
+        {
+          // not supported
+        }
+      }
+
+      return (int)(volume * 100.0f);
     }
 
     internal void SetVoice(string id, string name)
@@ -86,9 +159,28 @@ namespace EQLogParser
 
     internal void SetVolume(int volume)
     {
-      if (_session?.SimpleAudioVolume != null)
+      var updatedVolume = volume / 100.0f;
+
+      lock (_deviceLock)
       {
-        _session.SimpleAudioVolume.Volume = volume / 100.0f;
+        try
+        {
+          _fallbackSystemVolume = updatedVolume;
+
+          if (!_isUsingWine)
+          {
+            var device = GetDeviceById(_deviceId) ?? GetDefaultDevice();
+            if (device?.AudioSessionManager?.SimpleAudioVolume is var simple and not null)
+            {
+              simple.Volume = updatedVolume;
+            }
+            device?.Dispose();
+          }
+        }
+        catch (Exception)
+        {
+          // not supported
+        }
       }
     }
 
@@ -218,21 +310,40 @@ namespace EQLogParser
       }
     }
 
-    private bool InitAudio()
+    private void DoUpdateDeviceList(object sender, EventArgs e)
     {
-      if (_session != null)
+      lock (_deviceLock)
       {
-        return true;
+        if (_deviceId != DefaultDevice)
+        {
+          var device = GetDeviceById(_deviceId);
+          if (device == null)
+          {
+            _deviceId = DefaultDevice;
+          }
+          else
+          {
+            device.Dispose();
+          }
+        }
       }
 
-      var now = DateTime.Now;
-      if (now.Subtract(_lastAudioCheck).TotalSeconds < 5)
+      if (!_initialized)
       {
-        return false;
+        InitAudio();
       }
 
-      _lastAudioCheck = now;
+      DeviceListChanged?.Invoke(true);
+    }
 
+    protected void UpdateDeviceList()
+    {
+      _updateTimer.Stop();
+      _updateTimer.Start();
+    }
+
+    private void InitAudio()
+    {
       if (GetDefaultDevice() is { } device)
       {
         Log.Info($"Using audio device: {device.FriendlyName}.");
@@ -252,7 +363,7 @@ namespace EQLogParser
           var memStream = new MemoryStream(silentWav);
           var reader = new WaveFileReader(memStream);
 
-          var output = CreateWasapiOut();
+          var output = CreateWasapiOut(device);
           output.Init(reader);
 
           output.PlaybackStopped += async (_, _) =>
@@ -264,32 +375,29 @@ namespace EQLogParser
 
           output.Play();
           output.Stop();
-
-          var sessionManager = device.AudioSessionManager;
-
-          for (var i = 0; i < sessionManager.Sessions.Count; i++)
-          {
-            if (sessionManager.Sessions[i].GetProcessID == Environment.ProcessId)
-            {
-              _session = sessionManager.Sessions[i];
-              return true;
-            }
-          }
+          _initialized = true;
         }
         catch (Exception ex)
         {
-          Log.Error($"Failed to access AudioSessionManager: {ex.Message}");
+          Log.Warn($"Error Initializing Playback Device: {ex.Message}");
         }
         finally
         {
           device?.Dispose();
         }
+
+        try
+        {
+          _deviceEnumerator?.UnregisterEndpointNotificationCallback(_notificationClient);
+          _deviceEnumerator?.Dispose();
+          _deviceEnumerator = new MMDeviceEnumerator();
+          _deviceEnumerator.RegisterEndpointNotificationCallback(_notificationClient);
+        }
+        catch (Exception)
+        {
+          // not supported
+        }
       }
-
-      _session?.Dispose();
-      _session = null;
-
-      return false;
     }
 
     private void SpeakAsync(string id, byte[] audioData, WaveFormat waveFormat, int rate = 0, long priority = 5, int volume = 4, double seconds = -1)
@@ -314,56 +422,75 @@ namespace EQLogParser
 
     private bool PlayAudioData(byte[] data, WaveFormat waveFormat, int rate = 0, int volume = 4)
     {
-      if (!InitAudio())
-      {
-        return false;
-      }
-
       // remove header
       data = data[44..];
 
       var stream = new RawSourceWaveStream(data, 0, data.Length, waveFormat);
-      var output = CreateWasapiOut();
+      WasapiOut output;
+      MMDevice device;
+      lock (_deviceLock)
+      {
+        device = GetDeviceById(_deviceId);
+        output = CreateWasapiOut(device);
+      }
 
       output.PlaybackStopped += async (_, _) =>
       {
         await stream.DisposeAsync();
         output.Dispose();
+        device?.Dispose();
       };
 
       try
       {
-        output.Init(CreateProvider(stream, output, rate, volume));
+        if (_isUsingWine)
+        {
+          output.Init(stream);
+          // was hoping this would work with wine
+          //output.Volume = _fallbackSystemVolume;
+        }
+        else
+        {
+          output.Init(CreateVolumeProvider(stream, output, rate, volume));
+        }
+
         output.Play();
       }
       catch (Exception)
       {
-        _session?.Dispose();
-        _session = null;
         return false;
       }
 
       return true;
     }
 
-    private static VolumeSampleProvider CreateProvider(RawSourceWaveStream stream, WasapiOut output, int rate, int volume)
+    private static VolumeSampleProvider CreateVolumeProvider(RawSourceWaveStream stream, WasapiOut output, int rate, int volume)
     {
-      var soundTouchProvider = stream.WaveFormat.Encoding == WaveFormatEncoding.IeeeFloat ? new SoundTouchWaveProvider(stream)
-        : new SoundTouchWaveProvider(stream.ToSampleProvider().ToWaveProvider());
-
-      // only TTS will specify a custom rate
-      if (rate > 0)
+      try
       {
-        soundTouchProvider.OptimizeForSpeech();
-        soundTouchProvider.Tempo = 1.0f + (rate / 10.0f * 1.6f);
+        var soundTouchProvider = stream.WaveFormat.Encoding == WaveFormatEncoding.IeeeFloat ? new SoundTouchWaveProvider(stream)
+          : new SoundTouchWaveProvider(stream.ToSampleProvider().ToWaveProvider());
+
+        // only TTS will specify a custom rate
+        if (rate > 0)
+        {
+          soundTouchProvider.OptimizeForSpeech();
+          soundTouchProvider.Tempo = 1.0f + (rate / 10.0f * 1.6f);
+        }
+
+        var volumeProvider = new VolumeSampleProvider(soundTouchProvider.ToSampleProvider())
+        {
+          Volume = ConvertVolume(output.Volume, volume)
+        };
+
+        return volumeProvider;
+      }
+      catch (Exception)
+      {
+        // not supported
       }
 
-      var volumeProvider = new VolumeSampleProvider(soundTouchProvider.ToSampleProvider())
-      {
-        Volume = ConvertVolume(output.Volume, volume)
-      };
-
-      return volumeProvider;
+      return null;
     }
 
     private void ProcessAsync(PlayerAudio audio)
@@ -375,10 +502,23 @@ namespace EQLogParser
       {
         RawSourceWaveStream stream = null;
         WasapiOut output = null;
+        MMDevice device = null;
+        string lastDeviceId = null;
+
         try
         {
           while (!cancellationTokenSource.Token.IsCancellationRequested)
           {
+            lock (_deviceLock)
+            {
+              if (_deviceId != lastDeviceId)
+              {
+                lastDeviceId = _deviceId;
+                device?.Dispose();
+                device = GetDeviceById(_deviceId);
+              }
+            }
+
             lock (audio)
             {
               if (output != null)
@@ -430,26 +570,31 @@ namespace EQLogParser
                   stream = new RawSourceWaveStream(data, 0, data.Length, audio.CurrentEvent.WaveFormat);
 
                   // make sure audio is still valid
-                  if (InitAudio())
+                  try
                   {
-                    try
+                    output = CreateWasapiOut(device);
+                    audio.CurrentPlayback = output;
+
+                    if (_isUsingWine)
                     {
-                      output = CreateWasapiOut();
-                      audio.CurrentPlayback = output;
-                      output.Init(CreateProvider(stream, output, audio.CurrentEvent.Rate, audio.CurrentEvent.Volume));
-                      output.Play();
+                      output.Init(stream);
+                      // was hoping this would work with wine
+                      //output.Volume = _fallbackSystemVolume;
                     }
-                    catch (Exception)
+                    else
                     {
-                      // invalid audio device now?
-                      _session?.Dispose();
-                      _session = null;
-                      output?.Dispose();
-                      output = null;
-                      audio.CurrentPlayback = null;
-                      // sleep before re-trying
-                      Thread.Sleep(2000);
+                      output.Init(CreateVolumeProvider(stream, output, audio.CurrentEvent.Rate, audio.CurrentEvent.Volume));
                     }
+
+                    output.Play();
+                  }
+                  catch (Exception)
+                  {
+                    output?.Dispose();
+                    output = null;
+                    audio.CurrentPlayback = null;
+                    // sleep before re-trying
+                    Thread.Sleep(500);
                   }
                 }
               }
@@ -480,25 +625,37 @@ namespace EQLogParser
       }, cancellationTokenSource.Token);
     }
 
-    private static WasapiOut CreateWasapiOut() => new(AudioClientShareMode.Shared, false, 50);
+    private static WasapiOut CreateWasapiOut(MMDevice device = null)
+    {
+      if (device == null)
+      {
+        return new(AudioClientShareMode.Shared, false, 50);
+      }
 
-    private static SpeechSynthesizer CreateSpeechSynthesizer(string voice)
+      return new(device, AudioClientShareMode.Shared, false, 50);
+    }
+
+    private SpeechSynthesizer CreateSpeechSynthesizer(string voice)
     {
       SpeechSynthesizer synth = null;
-      try
+
+      if (!_isUsingWine)
       {
-        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+        try
         {
-          synth = new SpeechSynthesizer();
-          if (GetVoiceInfo(voice) is { } voiceInfo)
+          if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
           {
-            synth.Voice = voiceInfo;
+            synth = new SpeechSynthesizer();
+            if (GetVoiceInfo(voice) is { } voiceInfo)
+            {
+              synth.Voice = voiceInfo;
+            }
           }
         }
-      }
-      catch (Exception ex)
-      {
-        Log.Error(ex);
+        catch (Exception)
+        {
+          // not supported
+        }
       }
 
       return synth;
@@ -511,17 +668,26 @@ namespace EQLogParser
         return null;
       }
 
-      var voiceInfo = SpeechSynthesizer.DefaultVoice;
-      if (!string.IsNullOrEmpty(name))
+      VoiceInformation voiceInfo = null;
+
+      try
       {
-        foreach (var voice in SpeechSynthesizer.AllVoices)
+        voiceInfo = SpeechSynthesizer.DefaultVoice;
+        if (!string.IsNullOrEmpty(name))
         {
-          if (voice.DisplayName == name || name.StartsWith(voice.DisplayName, StringComparison.OrdinalIgnoreCase))
+          foreach (var voice in SpeechSynthesizer.AllVoices)
           {
-            voiceInfo = voice;
-            break;
+            if (voice.DisplayName == name || name.StartsWith(voice.DisplayName, StringComparison.OrdinalIgnoreCase))
+            {
+              voiceInfo = voice;
+              break;
+            }
           }
         }
+      }
+      catch (Exception)
+      {
+        // not supported
       }
 
       return voiceInfo;
@@ -529,12 +695,25 @@ namespace EQLogParser
 
     private static MMDevice GetDefaultDevice()
     {
+      MMDevice device = null;
       var enumerator = new MMDeviceEnumerator();
       if (enumerator.HasDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia))
       {
-        return enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+        device = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
       }
+      enumerator.Dispose();
+      return device;
+    }
 
+    private static MMDevice GetDeviceById(string id)
+    {
+      if (!string.IsNullOrEmpty(id) && id != DefaultDevice)
+      {
+        var enumerator = new MMDeviceEnumerator();
+        var device = enumerator.GetDevice(id);
+        enumerator.Dispose();
+        return device;
+      }
       return null;
     }
 
@@ -614,6 +793,8 @@ namespace EQLogParser
       if (disposing)
       {
         _semaphore?.Dispose();
+        _deviceEnumerator?.UnregisterEndpointNotificationCallback(_notificationClient);
+        _deviceEnumerator?.Dispose();
       }
 
       _disposed = true;
@@ -636,6 +817,15 @@ namespace EQLogParser
       internal byte[] AudioData { get; init; }
       internal WaveFormat WaveFormat { get; init; }
       internal double Seconds { get; init; }
+    }
+
+    private class AudioDeviceNotificationClient : IMMNotificationClient
+    {
+      public void OnDeviceStateChanged(string deviceId, DeviceState newState) { }
+      public void OnDeviceAdded(string deviceId) => Instance.UpdateDeviceList();
+      public void OnDeviceRemoved(string deviceId) => Instance.UpdateDeviceList();
+      public void OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId) => Instance.UpdateDeviceList();
+      public void OnPropertyValueChanged(string deviceId, PropertyKey key) { }
     }
   }
 }

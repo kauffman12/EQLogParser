@@ -29,6 +29,8 @@ namespace EQLogParser
     private readonly RangeEditor _widthEditor;
     private readonly GridLength _characterViewWidth;
     private readonly FileSystemWatcher _soundWatcher;
+    private List<string> _deviceIdList;
+    private List<string> _deviceNameList;
     private string _currentCharacterId;
     private bool _ready;
 
@@ -44,6 +46,29 @@ namespace EQLogParser
       }
 
       voices.ItemsSource = AudioManager.GetVoiceList();
+
+      // Update audio device list
+      var deviceInfo = AudioManager.GetDeviceList();
+      _deviceIdList = deviceInfo.idList;
+      _deviceNameList = deviceInfo.nameList;
+      deviceList.ItemsSource = _deviceNameList;
+
+      var savedDevice = ConfigUtil.GetSetting("DefaultAudioDevice");
+      var selectedIndex = 0;
+      if (!string.IsNullOrEmpty(savedDevice))
+      {
+        if (_deviceIdList.FindIndex(item => item == savedDevice) is var index && index > -1)
+        {
+          selectedIndex = index;
+        }
+      }
+
+      deviceList.SelectedIndex = selectedIndex;
+
+      if (selectedIndex > 0)
+      {
+        AudioManager.Instance.SelectDevice(_deviceIdList[selectedIndex]);
+      }
 
       // watch file system for new sounds
       var fileList = new ObservableCollection<string>();
@@ -81,8 +106,9 @@ namespace EQLogParser
       AddEditorInstance(new DurationEditor(2), "DurationTimeSpan");
       AddEditorInstance(new RangeEditor(typeof(long), 1, 60), "FadeDelay");
 
-      // don't disconnect this one so tree stays in-sync when receiving quick shares
+      // don't disconnect these so tree stays in-sync if hidden
       TriggerStateManager.Instance.TriggerImportEvent += TriggerImportEvent;
+      AudioManager.Instance.DeviceListChanged += AudioDeviceListChanged;
       return;
 
       ITypeEditor AddEditorInstance(ITypeEditor typeEditor, string propName)
@@ -102,6 +128,28 @@ namespace EQLogParser
           thePropertyGrid.CustomEditorCollection.Add(editor);
         }
       }
+    }
+
+    private async void AudioDeviceListChanged(bool _)
+    {
+      await UiUtil.InvokeAsync(() =>
+      {
+        var id = deviceList.SelectedIndex > -1 ? _deviceIdList[deviceList.SelectedIndex] : AudioManager.DefaultDevice;
+
+        var deviceInfo = AudioManager.GetDeviceList();
+        _deviceIdList = deviceInfo.idList;
+        _deviceNameList = deviceInfo.nameList;
+        deviceList.ItemsSource = _deviceNameList;
+
+        if (_deviceIdList.FindIndex(item => item == id) is var index && index > -1)
+        {
+          deviceList.SelectedIndex = index;
+        }
+        else
+        {
+          deviceList.SelectedIndex = 0;
+        }
+      });
     }
 
     private async void TriggersViewOnInitialized(object sender, EventArgs e)
@@ -329,6 +377,14 @@ namespace EQLogParser
         if (Equals(sender, watchQuickShare))
         {
           ConfigUtil.SetSetting("TriggersWatchForQuickShare", watchQuickShare.IsChecked == true);
+        }
+        else if (Equals(sender, deviceList))
+        {
+          if (deviceList.SelectedIndex > -1)
+          {
+            AudioManager.Instance.SelectDevice(_deviceIdList[deviceList.SelectedIndex]);
+            ConfigUtil.SetSetting("DefaultAudioDevice", _deviceIdList[deviceList.SelectedIndex]);
+          }
         }
         else
         {
