@@ -128,7 +128,7 @@ namespace EQLogParser
             if (_theSoundCombo.SelectedValue is string selected && !string.IsNullOrEmpty(selected))
             {
               var theFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sounds", selected);
-              AudioManager.Instance.TestSpeakFileAsync(theFile);
+              AudioManager.Instance.TestSpeakFileAsync(theFile, model.Volume);
             }
           }
         }

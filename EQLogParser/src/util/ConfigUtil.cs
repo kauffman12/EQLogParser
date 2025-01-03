@@ -90,11 +90,11 @@ namespace EQLogParser
       return result;
     }
 
-    internal static int GetSettingAsInteger(string key)
+    internal static int GetSettingAsInteger(string key, int def = 0)
     {
       if (int.TryParse(GetSetting(key), out var result) == false)
       {
-        result = int.MaxValue;
+        result = def;
       }
       return result;
     }
