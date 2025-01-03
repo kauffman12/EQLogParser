@@ -44,6 +44,11 @@ namespace EQLogParser
 
         InitializeLogging();
 
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+        {
+          Log.Warn("Windows 10 (build 10240) or newer is required. Make sure you have Windows Compatibility mode turned OFF.");
+        }
+
         // Read app settings
         ConfigUtil.Init();
 
@@ -159,7 +164,7 @@ namespace EQLogParser
 
     private static void LogDetails(Exception ex)
     {
-      Log.Error($"Thread ID: {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+      Log.Error($"Thread ID: {Environment.CurrentManagedThreadId}");
       Log.Error($"Thread Name: {System.Threading.Thread.CurrentThread.Name}");
       Log.Error(ex.StackTrace);
 

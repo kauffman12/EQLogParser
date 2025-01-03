@@ -47,6 +47,10 @@ namespace EQLogParser
 
       voices.ItemsSource = AudioManager.GetVoiceList();
 
+      // Update volume
+      var volume = ConfigUtil.GetSettingAsInteger("DefaultAudioVolume", 100);
+      AudioManager.Instance.SetVolume(volume);
+
       // Update audio device list
       var deviceInfo = AudioManager.GetDeviceList();
       _deviceIdList = deviceInfo.idList;
@@ -134,7 +138,7 @@ namespace EQLogParser
     {
       await UiUtil.InvokeAsync(() =>
       {
-        var id = deviceList.SelectedIndex > -1 ? _deviceIdList[deviceList.SelectedIndex] : AudioManager.DefaultDevice;
+        var id = deviceList.SelectedIndex > -1 ? _deviceIdList[deviceList.SelectedIndex] : Guid.Empty.ToString();
 
         var deviceInfo = AudioManager.GetDeviceList();
         _deviceIdList = deviceInfo.idList;
@@ -409,6 +413,7 @@ namespace EQLogParser
             var volume = (int)Math.Round(volumeSlider.Value);
             tts = "Volume " + volume + " Percent";
             AudioManager.Instance.SetVolume(volume);
+            ConfigUtil.SetSetting("DefaultAudioVolume", volume);
           }
 
           AudioManager.Instance.TestSpeakTtsAsync(tts, _theConfig.Voice, _theConfig.VoiceRate);

@@ -37,6 +37,7 @@ namespace EQLogParser
     private const string VersionCol = "FixVersion";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<TriggerStateManager> Lazy = new(() => new TriggerStateManager());
+    private static readonly JsonSerializerOptions SerializerOptions = new() { IncludeFields = true };
     internal static TriggerStateManager Instance => Lazy.Value; // instance
     private readonly LiteDbTaskQueue _taskQueue;
     private readonly LiteDatabase _db;
@@ -149,6 +150,7 @@ namespace EQLogParser
                   }
                 };
 
+                SetVerticalAlignment(textNode);
                 tree.Insert(textNode);
 
                 var timerNode = new TriggerNode
@@ -159,10 +161,12 @@ namespace EQLogParser
                   OverlayData = new Overlay
                   {
                     IsDefault = true,
-                    IsTimerOverlay = true
+                    IsTimerOverlay = true,
+                    VerticalAlignment = 0
                   }
                 };
 
+                SetVerticalAlignment(timerNode);
                 tree.Insert(timerNode);
               }
             }
@@ -806,7 +810,7 @@ namespace EQLogParser
           newNode.IsExpanded = false;
           newNode.OverlayData.IsTimerOverlay = !isTextOverlay;
           newNode.OverlayData.IsTextOverlay = isTextOverlay;
-          newNode.OverlayData.VerticalAlignment = (int)(isTextOverlay ? VerticalAlignment.Bottom : VerticalAlignment.Top);
+          SetVerticalAlignment(newNode);
 
           // better default for text
           if (newNode.OverlayData.IsTextOverlay)
@@ -1191,11 +1195,11 @@ namespace EQLogParser
       if (configs.FindAll().FirstOrDefault() is { } config)
       {
         var needUpdate = false;
-        var rate = ConfigUtil.GetSettingAsInteger("TriggersVoiceRate");
+        var rate = ConfigUtil.GetSettingAsInteger("TriggersVoiceRate", 0);
         var voice = ConfigUtil.GetSetting("TriggersSelectedVoice");
         if (string.IsNullOrEmpty(config.Voice))
         {
-          config.VoiceRate = (rate == int.MaxValue) ? 0 : rate;
+          config.VoiceRate = rate;
           config.Voice = voice;
           needUpdate = true;
         }
@@ -1204,7 +1208,7 @@ namespace EQLogParser
         {
           if (string.IsNullOrEmpty(character.Voice))
           {
-            character.VoiceRate = (rate == int.MaxValue) ? 0 : rate;
+            character.VoiceRate = rate;
             character.Voice = voice;
             needUpdate = true;
           }
@@ -1246,7 +1250,7 @@ namespace EQLogParser
         {
           try
           {
-            if (JsonSerializer.Deserialize<LegacyTriggerNode>(json, new JsonSerializerOptions { IncludeFields = true }) is { } legacy)
+            if (JsonSerializer.Deserialize<LegacyTriggerNode>(json, SerializerOptions) is { } legacy)
             {
               legacy.Name = title;
               UpgradeTree(legacy, overlayIds, defaultEnabled);
@@ -1291,6 +1295,7 @@ namespace EQLogParser
         {
           overlayIds[old.OverlayData.Id] = newNode.Id;
         }
+        SetVerticalAlignment(newNode);
       }
 
       if (newNode.TriggerData != null)
