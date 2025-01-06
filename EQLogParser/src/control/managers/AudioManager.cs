@@ -23,6 +23,7 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<AudioManager> Lazy = new(() => new AudioManager());
     internal static AudioManager Instance => Lazy.Value;
+    private const int LATENCY = 75;
     private readonly ConcurrentDictionary<string, PlayerAudio> _playerAudios = new();
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly AudioDeviceNotificationClient _notificationClient = new();
@@ -301,7 +302,7 @@ namespace EQLogParser
         // play something to register the audio session with windows
         var memStream = new MemoryStream(silentWav);
         var reader = new WaveFileReader(memStream);
-        var output = new DirectSoundOut(GetDevice());
+        var output = new DirectSoundOut(GetDevice(), LATENCY);
         output.Init(reader);
 
         output.PlaybackStopped += async (_, _) =>
@@ -412,7 +413,7 @@ namespace EQLogParser
       var cancellationTokenSource = new CancellationTokenSource();
       audio.ProcessingToken = cancellationTokenSource;
 
-      _ = Task.Run(() =>
+      _ = Task.Run(async () =>
       {
         RawSourceWaveStream stream = null;
         DirectSoundOut output = null;
@@ -483,14 +484,12 @@ namespace EQLogParser
                     output?.Dispose();
                     output = null;
                     audio.CurrentPlayback = null;
-                    // sleep before re-trying
-                    Thread.Sleep(500);
                   }
                 }
               }
             }
 
-            Thread.Sleep(20);
+            await Task.Delay(50);
           }
         }
         catch (OperationCanceledException)
@@ -538,10 +537,9 @@ namespace EQLogParser
           }
         }
       }
-      catch (Exception ex)
+      catch (Exception)
       {
         // not supported
-        Log.Warn("TEST", ex);
       }
 
       return synth;
@@ -549,7 +547,7 @@ namespace EQLogParser
 
     private static DirectSoundOut CreateDirectSoundOut(float appVolume, Guid device, RawSourceWaveStream stream, int rate, int volume)
     {
-      var output = new DirectSoundOut(device);
+      var output = new DirectSoundOut(device, LATENCY);
       var provider = CreateVolumeProvider(appVolume, stream, output, rate, volume);
       if (provider != null)
       {
@@ -593,21 +591,6 @@ namespace EQLogParser
       }
 
       return voiceInfo;
-    }
-
-    private static int GetDeviceIndex(string id)
-    {
-      for (var deviceIndex = 0; deviceIndex < WaveOut.DeviceCount; deviceIndex++)
-      {
-        if (WaveOut.GetCapabilities(deviceIndex) is { } capabilities)
-        {
-          if (id == capabilities.ProductGuid.ToString())
-          {
-            return deviceIndex;
-          }
-        }
-      }
-      return 0;
     }
 
     private static async Task<byte[]> ReadFileToByteArrayAsync(AudioFileReader reader)
