@@ -1,13 +1,17 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Concurrent;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace EQLogParser
 {
   internal class LogProcessor : ILogProcessor
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly string _fileName;
     private long _lineCount;
+    private Task _readTask;
     private volatile bool _isDisposed;
 
     internal LogProcessor(string fileName)
@@ -19,7 +23,7 @@ namespace EQLogParser
 
     public void LinkTo(BlockingCollection<Tuple<string, double, bool>> collection)
     {
-      Task.Run(() =>
+      _readTask = Task.Run(() =>
       {
         try
         {
@@ -30,6 +34,10 @@ namespace EQLogParser
               DoPreProcess(data.Item1, data.Item2, data.Item3);
             }
           }
+        }
+        catch (Exception ex)
+        {
+          Log.Error("Problem loading log file.", ex);
         }
         finally
         {
@@ -101,7 +109,19 @@ namespace EQLogParser
 
     public void Dispose()
     {
-      _isDisposed = true;
+      if (!_isDisposed)
+      {
+        _isDisposed = true;
+
+        try
+        {
+          _readTask.Wait(2000);
+        }
+        catch (Exception ex)
+        {
+          Log.Error("Log reading task not completed.", ex);
+        }
+      }
     }
   }
 }

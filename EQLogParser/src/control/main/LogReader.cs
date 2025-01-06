@@ -45,9 +45,9 @@ namespace EQLogParser
       {
         await ReadFile();
       }
-      catch (Exception)
+      catch (Exception ex)
       {
-        Log.Warn($"Error Loading File: ${FileName}. Re-open or toggle Triggers to try again.");
+        Log.Error($"Error Loading File: ${FileName}. Re-open or toggle Triggers to try again.", ex);
       }
       finally
       {
@@ -142,9 +142,9 @@ namespace EQLogParser
       {
         return;
       }
-      catch (Exception)
+      catch (Exception ex)
       {
-        Log.Warn($"Error Loading File: ${FileName}. Re-open or toggle Triggers to try again.");
+        Log.Error($"Error Loading File: ${FileName}. Re-open or toggle Triggers to try again.", ex);
         return;
       }
 
