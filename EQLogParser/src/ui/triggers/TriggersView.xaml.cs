@@ -45,7 +45,7 @@ namespace EQLogParser
         watchQuickShare.IsChecked = true;
       }
 
-      voices.ItemsSource = AudioManager.GetVoiceList();
+      voices.ItemsSource = AudioManager.Instance.GetVoiceList();
 
       // Update volume
       var volume = ConfigUtil.GetSettingAsInteger("DefaultAudioVolume", 100);
@@ -163,9 +163,17 @@ namespace EQLogParser
         characterView.SetConfig(config);
         await UpdateConfig(config);
         var selectedVoice = _theConfig.Voice;
-        if (voices.ItemsSource is List<string> populated && populated.IndexOf(selectedVoice) is var found and > -1)
+
+        if (voices.ItemsSource is List<string> { } populated)
         {
-          voices.SelectedIndex = found;
+          if (populated.IndexOf(selectedVoice) is var found and > -1)
+          {
+            voices.SelectedIndex = found;
+          }
+          else if (populated.IndexOf(AudioManager.Instance.GetDefaultVoice()) is var found2 and > -1)
+          {
+            voices.SelectedIndex = found2;
+          }
         }
 
         rateOption.SelectedIndex = config.VoiceRate;

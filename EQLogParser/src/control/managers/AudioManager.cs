@@ -32,6 +32,7 @@ namespace EQLogParser
     private MMDeviceEnumerator _deviceEnumerator;
     private Guid _selectedDeviceGuid = Guid.Empty;
     private bool _disposed;
+    private readonly bool _usePiper;
     private volatile float _appVolume = 1.0f;
     private volatile bool _initialized;
 
@@ -41,13 +42,21 @@ namespace EQLogParser
       _updateTimer.Tick += DoUpdateDeviceList;
       _updateTimer.Interval = new TimeSpan(0, 0, 0, 0, 500);
       InitAudio();
+
+      if (PiperTts.Initialize())
+      {
+        Log.Info("Using piper-tts");
+        _usePiper = true;
+      }
     }
 
     internal int GetVolume() => (int)(_appVolume * 100.0f);
     internal void SetVolume(int volume) => _appVolume = volume / 100.0f;
 
-    internal static List<string> GetVoiceList()
+    internal List<string> GetVoiceList()
     {
+      if (_usePiper) return PiperTts.GetVoiceList();
+
       var list = new List<string>();
 
       try
@@ -69,6 +78,18 @@ namespace EQLogParser
       }
 
       return list;
+    }
+
+    internal string GetDefaultVoice()
+    {
+      if (_usePiper) return PiperTts.GetDefaultVoice();
+
+      if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) && GetVoiceInfo(null) is VoiceInformation { } voiceInfo)
+      {
+        return voiceInfo.DisplayName;
+      }
+
+      return string.Empty;
     }
 
     internal static (List<string> idList, List<string> nameList) GetDeviceList()
@@ -109,14 +130,21 @@ namespace EQLogParser
       }
     }
 
-    internal void SetVoice(string id, string name)
+    internal void SetVoice(string id, string voice)
     {
-      if (!string.IsNullOrEmpty(name) && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) &&
-        _playerAudios.TryGetValue(id, out var playerAudio))
+      if (!string.IsNullOrEmpty(voice) && _playerAudios.TryGetValue(id, out var playerAudio))
       {
         lock (playerAudio)
         {
-          if (playerAudio?.Synth != null && GetVoiceInfo(name) is { } voiceInfo)
+          if (_usePiper)
+          {
+            if (PiperTts.LoadVoice(id, voice, out var piperVoice))
+            {
+              playerAudio.PiperSampleRate = piperVoice.Sample;
+            }
+          }
+          else if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) && playerAudio?.Synth != null
+            && GetVoiceInfo(voice) is { } voiceInfo)
           {
             playerAudio.Synth.Voice = voiceInfo;
           }
@@ -126,10 +154,19 @@ namespace EQLogParser
 
     internal void Add(string id, string voice)
     {
-      var audio = new PlayerAudio
+      var audio = new PlayerAudio();
+
+      if (_usePiper)
       {
-        Synth = CreateSpeechSynthesizer(voice)
-      };
+        if (PiperTts.LoadVoice(id, voice, out var voiceData))
+        {
+          audio.PiperSampleRate = voiceData.Sample;
+        }
+      }
+      else
+      {
+        audio.Synth = CreateSpeechSynthesizer(voice);
+      }
 
       _playerAudios.TryAdd(id, audio);
       ProcessAsync(audio);
@@ -151,7 +188,12 @@ namespace EQLogParser
             try
             {
               playerAudio.ProcessingToken.Cancel();
-              if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+
+              if (_usePiper)
+              {
+                PiperTts.RemoveVoice(id);
+              }
+              else if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
               {
                 playerAudio.Synth?.Dispose();
                 playerAudio.Synth = null;
@@ -180,18 +222,39 @@ namespace EQLogParser
 
     internal async void TestSpeakTtsAsync(string tts, string voice = null, int rate = 0, int volume = 4)
     {
-      if (!string.IsNullOrEmpty(tts) && CreateSpeechSynthesizer(voice) is { } synth)
+      if (!string.IsNullOrEmpty(tts))
       {
-        if (await SynthesizeTextToByteArrayAsync(tts, synth) is { Length: > 0 } data)
+        byte[] audio = null;
+        var sample = 16000;
+
+        if (_usePiper)
         {
-          var waveFormat = new WaveFormat(16000, 16, 1);
-          if (!PlayAudioData(data, waveFormat, rate, volume))
+          const string testSpeaker = "testSpeaker";
+          if (PiperTts.LoadVoice(testSpeaker, voice, out var voiceData))
+          {
+            audio = PiperTts.SynthesizeText(testSpeaker, tts);
+            sample = voiceData.Sample;
+            PiperTts.RemoveVoice(testSpeaker);
+          }
+        }
+        else if (CreateSpeechSynthesizer(voice) is { } synth)
+        {
+          if (await SynthesizeTextToByteArrayAsync(tts, synth) is { Length: > 0 } data)
+          {
+            audio = data;
+          }
+
+          if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240)) synth.Dispose();
+        }
+
+        if (audio?.Length > 0)
+        {
+          var waveFormat = new WaveFormat(sample, 16, 1);
+          if (!PlayAudioData(audio, waveFormat, rate, volume))
           {
             new MessageWindow("Unable to Play sound. No audio device?", Resource.AUDIO_ERROR).ShowDialog();
           }
         }
-
-        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240)) synth.Dispose();
       }
     }
 
@@ -218,19 +281,29 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(tts))
       {
-        byte[] data = null;
+        byte[] audio = null;
+        var sample = 16000;
         await _semaphore.WaitAsync();
+
         try
         {
           if (_playerAudios.TryGetValue(id, out var playerAudio))
           {
-            SpeechSynthesizer synth = null;
-            lock (playerAudio)
+            if (_usePiper)
             {
-              synth = playerAudio.Synth;
+              audio = PiperTts.SynthesizeText(id, tts);
+              sample = playerAudio.PiperSampleRate;
             }
+            else
+            {
+              SpeechSynthesizer synth = null;
+              lock (playerAudio)
+              {
+                synth = playerAudio.Synth;
+              }
 
-            data = await SynthesizeTextToByteArrayAsync(tts, synth);
+              audio = await SynthesizeTextToByteArrayAsync(tts, synth);
+            }
           }
         }
         catch (Exception ex)
@@ -242,10 +315,10 @@ namespace EQLogParser
           _semaphore.Release();
         }
 
-        if (data is { Length: > 0 })
+        if (audio is { Length: > 0 })
         {
-          var waveFormat = new WaveFormat(16000, 16, 1);
-          SpeakAsync(id, data, waveFormat, rate, trigger.Priority, trigger.Volume);
+          var waveFormat = new WaveFormat(sample, 16, 1);
+          SpeakAsync(id, audio, waveFormat, rate, trigger.Priority, trigger.Volume);
         }
       }
     }
@@ -665,6 +738,11 @@ namespace EQLogParser
         _semaphore?.Dispose();
         _deviceEnumerator?.UnregisterEndpointNotificationCallback(_notificationClient);
         _deviceEnumerator?.Dispose();
+
+        if (_usePiper)
+        {
+          PiperTts.Release();
+        }
       }
 
       _disposed = true;
@@ -677,6 +755,7 @@ namespace EQLogParser
       internal DirectSoundOut CurrentPlayback { get; set; }
       internal CancellationTokenSource ProcessingToken { get; set; }
       internal SpeechSynthesizer Synth { get; set; }
+      internal int PiperSampleRate { get; set; }
     }
 
     private class PlaybackEvent

@@ -39,6 +39,19 @@ namespace EQLogParser
     public void HideContent();
   }
 
+  internal class PiperVoice
+  {
+    public string Name { get; set; }
+    public string Model { get; set; }
+    public string Config { get; set; }
+    public int Sample { get; set; }
+  }
+
+  internal class PiperVoiceData
+  {
+    public List<PiperVoice> Voices { get; set; }
+  }
+
   internal class LexiconItem
   {
     public string Replace { get; set; }
@@ -137,7 +150,7 @@ namespace EQLogParser
   {
     public Window TheWindow { get; set; }
     public long RemoveTicks { get; set; } = -1;
-    public bool IsCooldown { get; set; } = false;
+    public bool IsCooldown { get; set; }
   }
 
   internal class Trigger
@@ -274,7 +287,7 @@ namespace EQLogParser
   internal class LegacyTriggerNode
   {
     public bool? IsEnabled { get; set; } = false;
-    public bool IsExpanded { get; set; } = false;
+    public bool IsExpanded { get; set; }
     public string Name { get; set; }
     public List<LegacyTriggerNode> Nodes { get; set; } = [];
     public Trigger TriggerData { get; set; }
