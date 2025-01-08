@@ -143,6 +143,9 @@ namespace EQLogParser
     [DllImport("kernel32.dll", EntryPoint = "SetLastError")]
     internal static extern void SetLastError(int dwErrorCode);
 
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    internal static extern bool SetDllDirectory(string lpPathName);
+
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
     private static extern int SHGetKnownFolderPath(ref Guid rfid, uint dwFlags, IntPtr hToken, out IntPtr ppszPath);
 

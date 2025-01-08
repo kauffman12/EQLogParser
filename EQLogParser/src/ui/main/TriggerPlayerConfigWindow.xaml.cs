@@ -20,7 +20,7 @@ namespace EQLogParser
       InitializeComponent();
 
       Owner = MainActions.GetOwner();
-      voices.ItemsSource = AudioManager.GetVoiceList();
+      voices.ItemsSource = AudioManager.Instance.GetVoiceList();
 
       _theCharacter = character;
       if (_theCharacter != null)
@@ -32,9 +32,16 @@ namespace EQLogParser
         Title = "Modify Character Settings";
 
         var selectedVoice = _theCharacter.Voice;
-        if (voices.ItemsSource is List<string> populated && populated.IndexOf(selectedVoice) is var found and > -1)
+        if (voices.ItemsSource is List<string> { } populated)
         {
-          voices.SelectedIndex = found;
+          if (populated.IndexOf(selectedVoice) is var found and > -1)
+          {
+            voices.SelectedIndex = found;
+          }
+          else if (populated.IndexOf(AudioManager.Instance.GetDefaultVoice()) is var found2 and > -1)
+          {
+            voices.SelectedIndex = found2;
+          }
         }
 
         rateOption.SelectedIndex = _theCharacter.VoiceRate;
