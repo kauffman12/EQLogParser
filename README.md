@@ -2,7 +2,7 @@
 Everquest Log Parser for Live/TLP servers with basic support for P99.
 
 Link to DOWNLOAD the latest Installer:</br>
-https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-install-2.2.67.exe
+https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-install-2.2.68.exe
 
 Minimum Requirements:
 1. Windows 10 x64
@@ -16,7 +16,16 @@ If Everquest is in windowed mode but the Damage Meter or other overlays are hidd
 ![Parser](./examples/eqsetting.png)
 
 If everything works except for Text to Speech make sure Compatibility mode is turned OFF.
+
 ![Compat Mode](./examples/compat.png)
+
+Using on Linux with WINE:
+1. Install WINE 9.x or 10.x
+2. Get the latest winetricks and install corefonts
+3. Windows TTS does not work with 64bit WINE but I have included a custom built version of piper-tts that can be used. Download it and unzip into Program Files\EQLogParser\piper-tts. Then restart the parser.
+
+Piper TTS:</br>
+https://drive.google.com/file/d/1G2Ecg9sfOMxifRzrKwqySGwHoVV3tHUJ/view?usp=sharing
 
 Note for Developers:</br>
 Syncfusion components used by this application require a license. If you apply for a community license you should be able to get one for free.
