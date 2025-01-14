@@ -27,6 +27,8 @@ Using on Linux with WINE:
 Piper TTS:</br>
 https://drive.google.com/file/d/1G2Ecg9sfOMxifRzrKwqySGwHoVV3tHUJ/view?usp=sharing
 
+Thanks to the Piper TTS folks for providing such a nice product for free.
+
 Note for Developers:</br>
 Syncfusion components used by this application require a license. If you apply for a community license you should be able to get one for free.
 
