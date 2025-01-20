@@ -15,7 +15,6 @@
         Padding="0"
         BorderBrush="#00000000"
         BorderThickness="1"
-        Topmost="True"
         MaxWidth="1500"
         MaxHeight="1000"
         MinWidth="50"

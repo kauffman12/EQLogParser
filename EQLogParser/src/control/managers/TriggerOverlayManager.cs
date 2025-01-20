@@ -248,7 +248,7 @@ namespace EQLogParser
     // only run this from UI thread
     private void AddWindow(ConcurrentDictionary<string, OverlayWindowData> theWindows, TriggerNode overlay)
     {
-      if (overlay != null)
+      if (overlay != null && !theWindows.ContainsKey(overlay.Id))
       {
         var windowData = new OverlayWindowData
         {

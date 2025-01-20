@@ -18,11 +18,11 @@ namespace EQLogParser
   public partial class DamageOverlayWindow
   {
     private const double DamageModeZeroTimeout = TimeSpan.TicksPerSecond * 7; // with 3 second slain queue delay
+    private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
     private static readonly object StatsLock = new();
     private static readonly SolidColorBrush ActiveBrush = new(Color.FromRgb(254, 156, 30));
     private static readonly SolidColorBrush InActiveBrush = new(Colors.White);
     private static DamageOverlayStats _stats;
-
     private readonly DispatcherTimer _updateTimer;
     private readonly bool _preview;
     private readonly bool _ready;
@@ -31,21 +31,22 @@ namespace EQLogParser
     private double _savedWidth;
     private double _savedTop = double.NaN;
     private double _savedLeft;
+    private long _lastTopTicks = long.MinValue;
     private int _savedFontSize;
     private int _savedMaxRows;
-    private string _currentSelectedClass;
-    private string _savedSelectedClass;
     private int _currentDamageMode;
     private int _savedDamageMode;
-    private bool _currentHideOthers;
-    private bool _savedHideOthers;
     private int _currentShowCritRate;
     private int _savedShowCritRate;
+    private bool _currentHideOthers;
+    private bool _savedHideOthers;
     private bool _savedMiniBars;
     private bool _savedStreamerMode;
+    private bool _currentShowDps;
+    private string _currentSelectedClass;
+    private string _savedSelectedClass;
     private string _savedProgressColor;
     private string _savedHighlightColor;
-    private bool _currentShowDps;
 
     internal DamageOverlayWindow(bool preview = false, bool reset = false)
     {
@@ -228,6 +229,13 @@ namespace EQLogParser
 
       if (damageOverlayStats != null)
       {
+        var currentTicks = DateTime.UtcNow.Ticks;
+        if (_lastTopTicks == long.MinValue || (currentTicks - _lastTopTicks) > TopTimeout)
+        {
+          Topmost = true;
+          _lastTopTicks = currentTicks;
+        }
+
         if (damageOverlayStats.DamageStats != null)
         {
           LoadStats(damageContent.Children, damageOverlayStats.DamageStats);
@@ -1048,11 +1056,16 @@ namespace EQLogParser
         {
           // set to layered and topmost by xaml
           var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
-          exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExTransparent;
+
+          // Add transparency and layered styles
+          exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExLayered | (int)NativeMethods.ExtendedWindowStyles.WsExTransparent;
+
           if (!_savedStreamerMode)
           {
+            // tool window to not show up in alt-tab
             exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow;
           }
+
           NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, exStyle);
         }
       }

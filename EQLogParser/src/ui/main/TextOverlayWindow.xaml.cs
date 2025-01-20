@@ -1,8 +1,10 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -16,16 +18,20 @@ namespace EQLogParser
 {
   public partial class TextOverlayWindow : IDisposable
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+    private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
     private readonly bool _preview;
     private readonly ConcurrentQueue<TextData> _queue;
     private readonly SemaphoreSlim _renderSemaphore = new(1, 1);
     private List<TextBlock> _blockCache;
     private TriggerNode _node;
+    private Dictionary<string, Window> _previewWindows;
+    private long _lastTopTicks = long.MinValue;
     private long _savedHeight;
     private long _savedWidth;
     private long _savedTop = long.MaxValue;
     private long _savedLeft = long.MaxValue;
-    private Dictionary<string, Window> _previewWindows;
+    private nint _windowHndl;
     private volatile bool _isRendering;
     private volatile bool _isClosed;
     private bool _disposed;
@@ -182,6 +188,11 @@ namespace EQLogParser
     private bool Tick()
     {
       var currentTicks = DateTime.UtcNow.Ticks;
+      if (_windowHndl != 0 && (_lastTopTicks == long.MinValue || (currentTicks - _lastTopTicks) > TopTimeout))
+      {
+        NativeMethods.SetWindowTopMost(_windowHndl);
+        _lastTopTicks = currentTicks;
+      }
 
       for (var last = content.Children.Count - 1; last >= 0; last--)
       {
@@ -362,19 +373,35 @@ namespace EQLogParser
     protected override void OnSourceInitialized(EventArgs e)
     {
       base.OnSourceInitialized(e);
-      var source = (HwndSource)PresentationSource.FromVisual(this)!;
-      if (source != null)
-      {
-        source.AddHook(NativeMethods.BandAidHook); // Make sure this is hooked first. That ensures it runs last
-        source.AddHook(NativeMethods.ProblemHook);
 
-        if (!_preview)
+      try
+      {
+        var source = (HwndSource)PresentationSource.FromVisual(this)!;
+        if (source != null)
         {
-          // set to layered and topmost by xaml
-          var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
-          exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow | (int)NativeMethods.ExtendedWindowStyles.WsExTransparent;
-          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, exStyle);
+          source.AddHook(NativeMethods.BandAidHook); // Make sure this is hooked first. That ensures it runs last
+          source.AddHook(NativeMethods.ProblemHook);
+          NativeMethods.SetWindowTopMost(source.Handle);
+          _windowHndl = source.Handle;
+
+          if (!_preview)
+          {
+            // Get current extended styles
+            var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
+
+            // Add transparency and layered styles
+            exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExLayered | (int)NativeMethods.ExtendedWindowStyles.WsExTransparent;
+            // tool window to not show up in alt-tab
+            exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow | (int)NativeMethods.ExtendedWindowStyles.WsExNoActive;
+
+            // Apply the new extended styles
+            NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, new IntPtr(exStyle));
+          }
         }
+      }
+      catch (Exception ex)
+      {
+        Log.Error("Problem in OnSourceInitialized", ex);
       }
     }
 
