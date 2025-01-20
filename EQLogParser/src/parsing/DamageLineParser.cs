@@ -15,10 +15,12 @@ namespace EQLogParser
     public static event Action<TauntEvent> EventsNewTaunt;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Regex CheckEyeRegex = EyeRegex();
+    private static readonly Dictionary<string, bool> ReverseHitMap = [];
     private static readonly Dictionary<string, string> SpellTypeCache = [];
     private static readonly List<string> SlainQueue = [];
     private static double _slainTime = double.NaN;
     private static string _previousAction;
+    private static DamageProcessedEvent _delayedEvent;
 
     private static readonly Dictionary<string, string> HitMap = new()
     {
@@ -56,7 +58,7 @@ namespace EQLogParser
 
     static DamageLineParser()
     {
-      HitMap.Keys.ToList().ForEach(key => HitMap[HitMap[key]] = HitMap[key]); // add two-way mapping
+      HitMap.Keys.ToList().ForEach(key => ReverseHitMap[HitMap[key]] = true); // add two-way mapping
     }
 
     public static void CheckSlainQueue(double currentTime)
@@ -152,12 +154,14 @@ namespace EQLogParser
       string attacker = null;
       string defender = null;
 
-      var isYou = split[0] == "You";
+      var isYou = split[0] is "You" or "Your";
       int byIndex = -1, forIndex = -1, pointsOfIndex = -1, endDamage = -1, byDamage = -1, extraIndex = -1;
-      int fromDamage = -1, hasIndex = -1, haveIndex = -1, hitType = -1, hitTypeAdd = -1, slainIndex = -1;
-      int takenIndex = -1, tryIndex = -1, yourIndex = -1, isIndex = -1, dsIndex = -1, butIndex = -1;
-      int missType = -1, nonMeleeIndex = -1, attentionIndex = -1, failedIndex = -1, harmedIndex = -1;
+      int fromDamage = -1, hasIndex = -1, haveIndex = -1, hitTypeIndex = -1, hitTypeAdd = -1, slainIndex = -1;
+      int takenIndex = -1, tryIndex = -1, yourIndex = -1, isIndex = -1, nonMeleeIndex = -1, butIndex = -1;
+      int missType = -1, attentionIndex = -1, failedIndex = -1, harmedIndex = -1, emuAbsorbedIndex = -1;
+      int emuPetIndex = -1, shieldedIndex = -1, absorbsIndex = -1;
       string subType = null;
+      var foundType = false;
 
       var found = false;
       for (var i = 0; i <= stop && !found; i++)
@@ -166,10 +170,27 @@ namespace EQLogParser
         {
           if (split[i][0] == '(')
           {
+            // Heroes Forge EMU
+            if (split[i] == "(Owner:")
+            {
+              emuPetIndex = i;
+              continue;
+            }
             return null;  // short circuit over heal
           }
           switch (split[i])
           {
+            case "absorbs":
+              // live
+              if (i > 2 && split[i - 1] == "skin" && split[i - 2] == "magical")
+              {
+                absorbsIndex = i - 2;
+              }
+              break;
+            case "absorbed":
+              // emu
+              emuAbsorbedIndex = i;
+              break;
             case "attention!":
             case "attention.":
               attentionIndex = i;
@@ -183,8 +204,10 @@ namespace EQLogParser
             case "failed":
               failedIndex = i;
               break;
+            case "are":
             case "is":
             case "was":
+            case "were":
               isIndex = i;
               break;
             case "has":
@@ -233,11 +256,6 @@ namespace EQLogParser
               break;
             case "non-melee":
               nonMeleeIndex = i;
-              if (i > 9 && stop == (i + 1) && split[i + 1] == "damage." && pointsOfIndex == (i - 2) && forIndex == (i - 4))
-              {
-                dsIndex = i - 5;
-                found = true; // short circuit
-              }
               break;
             case "point":
             case "points":
@@ -252,6 +270,9 @@ namespace EQLogParser
               break;
             case "blocks!":
               missType = (stop == i && butIndex > -1 && i > tryIndex) ? 0 : missType;
+              break;
+            case "shielded":
+              shieldedIndex = i;
               break;
             case "shield!":
             case "staff!":
@@ -302,30 +323,50 @@ namespace EQLogParser
               }
               break;
             case "Crippling":
-              if (stop == (i + 1) && split.Length > 4 && split[i + 1].StartsWith("Blow!") && split[i - 2] == "lands")
+              if (stop == (i + 1) && split.Length > 4 && split[i + 1].StartsWith("Blow!", StringComparison.OrdinalIgnoreCase) && split[i - 2] == "lands")
               {
                 _lastCrit = new OldCritData { Attacker = split[0], LineData = lineData };
               }
               break;
             default:
-              if (slainIndex == -1 && i > 0 && tryIndex == -1 && HitMap.TryGetValue(split[i], out var testSubType))
+              if (slainIndex == -1 && i > 0 && i < stop && tryIndex == -1 && !foundType)
               {
-                // stop after hit type is found without exception where the hit type is found again on the next index
-                // workaround for a Mephit named mep hit during beta
-                if (string.IsNullOrEmpty(subType) || (hitType == (i - 1)))
+                // You/singular case
+                if (isYou)
                 {
-                  hitType = i;
-                  if (i < stop && HitAdditionalMap.ContainsKey(split[i]))
+                  if (HitMap.TryGetValue(split[i], out var sub))
                   {
-                    hitTypeAdd = i + i;
+                    hitTypeIndex = i;
+                    subType = sub; // use plural
+                    foundType = true;
                   }
-
+                }
+                else if (ReverseHitMap.ContainsKey(split[i]))
+                {
+                  hitTypeIndex = i;
+                  subType = split[i];
+                  foundType = true;
+                }
+                else if (HitMap.TryGetValue(split[i], out var sub2))
+                {
                   if (i > 2 && split[i - 1] == "to" && (split[i - 2] == "tries" || split[i - 2] == "try"))
                   {
+                    hitTypeIndex = i;
+                    subType = sub2; // use plural
                     tryIndex = i - 2;
+                    foundType = true;
                   }
+                  else if (sub2 == "hits")
+                  {
+                    hitTypeIndex = i;
+                    subType = sub2; // use plural
+                    foundType = false; // may not be correct so let it try again
+                  }
+                }
 
-                  subType = testSubType;
+                if (hitTypeIndex > -1 && HitAdditionalMap.ContainsKey(split[i]))
+                {
+                  hitTypeAdd = i + i;
                 }
               }
               break;
@@ -333,40 +374,40 @@ namespace EQLogParser
         }
       }
 
+      var delayEvent = false;
+
       // [Sun Apr 18 19:36:39 2021] Tantor is pierced by Tolzol's thorns for 6718 points of non-melee damage.
       // [Mon Apr 19 22:02:52 2021] Honvar is tormented by Reisil's frost for 7809 points of non-melee damage.
       // [Sun Apr 25 13:47:12 2021] Test One Hundred Three is burned by YOUR flames for 5224 points of non-melee damage.
       // [Sun Apr 18 14:16:13 2021] A failed reclaimer is pierced by YOUR thorns for 193 points of non-melee damage.
-      if (dsIndex > -1 && pointsOfIndex > dsIndex && isIndex > -1 && isIndex < dsIndex && byIndex > isIndex)
+      if (isIndex > -1 && byIndex > isIndex && (forIndex + 2) == pointsOfIndex && nonMeleeIndex > pointsOfIndex && endDamage > -1)
       {
-        attacker = string.Join(" ", split, byIndex + 1, dsIndex - byIndex - 1);
-        if (!string.IsNullOrEmpty(attacker))
+        var valid = false;
+        for (var i = byIndex + 1; i < forIndex; i++)
         {
-          var valid = attacker == "YOUR";
-          if (!valid && attacker.EndsWith("'s", StringComparison.OrdinalIgnoreCase))
+          if (split[i] == "YOUR")
           {
+            attacker = split[i];
+            valid = true;
+            break;
+          }
+          else if (split[i].EndsWith("'s", StringComparison.OrdinalIgnoreCase) && (forIndex - byIndex - 2) is var end and > 0)
+          {
+            attacker = string.Join(" ", split, byIndex + 1, end);
             attacker = attacker[..^2];
             valid = true;
-          }
-
-          if (valid)
-          {
-            defender = string.Join(" ", split, 0, isIndex);
-            var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
-            attacker = UpdateAttacker(attacker, Labels.Ds);
-            defender = UpdateDefender(defender, attacker);
-            record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Ds, Labels.Ds);
+            break;
           }
         }
-      }
-      // [Mon May 10 22:18:46 2021] A dendridic shard was chilled to the bone for 410 points of non-melee damage.
-      else if (dsIndex > -1 && pointsOfIndex > dsIndex && isIndex > -1 && isIndex < dsIndex && byIndex == -1)
-      {
-        defender = string.Join(" ", split, 0, isIndex);
-        var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
-        attacker = Labels.Rs;
-        defender = UpdateDefender(defender, attacker);
-        record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Ds, Labels.Ds);
+
+        if (valid)
+        {
+          defender = string.Join(" ", split, 0, isIndex);
+          var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
+          attacker = UpdateAttacker(attacker, Labels.Ds);
+          defender = UpdateDefender(defender, attacker);
+          record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Ds, Labels.Ds);
+        }
       }
       // [Tue Mar 26 22:43:47 2019] a wave sentinel has taken an extra 6250000 points of non-melee damage from Kazint's Greater Fetter spell.
       // [Tue Feb 05 18:48:53 2019] A whorling wildfire has taken an extra 100000000 points of non-melee damage from your Divergent Lightning Rk. III spell.
@@ -383,8 +424,9 @@ namespace EQLogParser
         }
         else if (attackerSplit == "your")
         {
-          if (harmedIndex > -1 && harmedIndex < (takenIndex - 1))
+          if (harmedIndex > 1 && split[harmedIndex - 2] == "has" && harmedIndex < (takenIndex - 1))
           {
+            // parse this because even if it says 'your' at the end it may not be yours
             attacker = string.Join(" ", split, 0, harmedIndex - 2);
             defender = string.Join(" ", split, harmedIndex, takenIndex - harmedIndex - 1).Trim('.');
           }
@@ -410,14 +452,14 @@ namespace EQLogParser
       }
       // [Sun Apr 18 21:26:15 2021] Astralx crushes Sontalak for 126225 points of damage. (Strikethrough Critical)
       // [Sun Apr 18 20:20:32 2021] Susarrak the Crusader claws Villette for 27699 points of damage. (Strikethrough Wild Rampage)
-      //
+      // [Sun Dec 15 01:08:49 2024] Useless crushes an abyssal terror for 9022 points of damage.
+      // [Sat Jan 04 13:03:43 2025] You crush Ogna, Artisan of War for 20581 points of damage. (Lucky Critical)
       // NOTE: The isIndex check is to ignore lines like below where someone probably died while their DoTs were going
-      // [Sun Apr 18 20:20:32 2021] Susarrak the Crusader was hit by non-melee for 27699 points of damage. (Strikethrough Wild Rampage)
-      else if (!string.IsNullOrEmpty(subType) && isIndex == -1 && endDamage > -1 && pointsOfIndex == (endDamage - 2) && forIndex > -1 && hitType < forIndex)
+      else if (!string.IsNullOrEmpty(subType) && isIndex == -1 && pointsOfIndex == (endDamage - 2) && forIndex > -1 && hitTypeIndex < forIndex && nonMeleeIndex == -1)
       {
         var hitTypeMod = hitTypeAdd > 0 ? 1 : 0;
-        attacker = string.Join(" ", split, 0, hitType);
-        defender = string.Join(" ", split, hitType + hitTypeMod + 1, forIndex - hitType - hitTypeMod - 1);
+        attacker = string.Join(" ", split, 0, hitTypeIndex);
+        defender = string.Join(" ", split, hitTypeIndex + hitTypeMod + 1, forIndex - hitTypeIndex - hitTypeMod - 1);
         subType = ToUpper(subType);
         var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
         attacker = UpdateAttacker(attacker, subType);
@@ -425,15 +467,17 @@ namespace EQLogParser
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Melee, subType);
       }
       // [Sun Apr 18 20:24:56 2021] Sonozen hit Jortreva the Crusader for 38948 points of fire damage by Burst of Flames. (Lucky Critical Twincast)
+      // [Sat Jan 04 15:29:18 2025] Piemastaj hit Boss for 176000 points of unresistable damage by Elemental Conversion VI.
+      // [Sat Jan 04 15:29:18 2025] You hit a treant for 1633489 points of magic damage by Chromospheric Vortex Rk. II. (Lucky Critical)
       else if (byDamage > 3 && pointsOfIndex == (byDamage - 3) && byIndex == (byDamage + 1) && forIndex > -1 &&
-        subType == "hits" && hitType < forIndex && split[stop].Length > 0 && split[stop][^1] == '.')
+        split[hitTypeIndex] == "hit" && hitTypeIndex < forIndex && split[stop].Length > 0 && split[stop][^1] == '.')
       {
         var spell = string.Join(" ", split, byIndex + 1, stop - byIndex);
         if (!string.IsNullOrEmpty(spell) && spell[^1] == '.')
         {
           spell = spell[..^1];
-          attacker = string.Join(" ", split, 0, hitType);
-          defender = string.Join(" ", split, hitType + 1, forIndex - hitType - 1);
+          attacker = string.Join(" ", split, 0, hitTypeIndex);
+          defender = string.Join(" ", split, hitTypeIndex + 1, forIndex - hitTypeIndex - 1);
           var type = GetTypeFromSpell(spell, Labels.Dd);
           var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
           SpellResistMap.TryGetValue(split[byDamage - 1], out resist);
@@ -456,9 +500,11 @@ namespace EQLogParser
       // [Thu Mar 18 01:05:46 2021] You have taken 2354 damage from Flashbroil Singe III.
       // [Thu Mar 18 01:05:46 2021] Goratoar has taken 18724 damage from Slicing Energy by .
       // Old (eqemu) [Sat Jan 15 21:09:10 2022] Pixtt Invi Mal has taken 189 damage from Goanna by Tuyen`s Chant of Fire.
+      // Old (eqemu) [Sat Jan 15 21:09:10 2022] You have taken 1 damage from a bonecrawler hatchling by Feeble Poison
       else if (fromDamage > 3 && takenIndex == (fromDamage - 3) && (byIndex > fromDamage || yourIndex > fromDamage || isYou))
       {
         string spell = null;
+        var attackerIsSpell = false;
         if (byIndex > -1)
         {
           spell = string.Join(" ", split, fromDamage + 2, byIndex - fromDamage - 2);
@@ -468,14 +514,25 @@ namespace EQLogParser
           if (attacker == ".")
           {
             attacker = spell;
+            attackerIsSpell = true;
           }
           else if (string.IsNullOrEmpty(spell))
           {
+            // not sure when this happens
             spell = attacker;
           }
           else
           {
-            attacker = (!string.IsNullOrEmpty(attacker) && attacker[^1] == '.') ? attacker[..^1] : null;
+            // fix spell name
+            if (!string.IsNullOrEmpty(attacker) && attacker[^1] == '.')
+            {
+              attacker = attacker[..^1];
+            }
+            else
+            {
+              // old emu
+              (attacker, spell) = (spell, attacker);
+            }
           }
         }
         else if (yourIndex > -1)
@@ -514,7 +571,7 @@ namespace EQLogParser
           resist = spellData?.Resist ?? SpellResist.Undefined;
           attacker = UpdateAttacker(attacker, spell);
           defender = UpdateDefender(defender, attacker);
-          record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, type, spell);
+          record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, type, spell, attackerIsSpell);
         }
       }
       // [Mon Apr 26 21:07:21 2021] Lawlstryke has taken 216717 damage by Wisp Explosion.
@@ -545,25 +602,139 @@ namespace EQLogParser
         defender = UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, label, spell, true);
       }
-      // Old (eqemu direct damage) [Sat Jan 15 21:08:54 2022] Jaun hit Pixtt Invi Mal for 150 points of non-melee damage.
-      else if (hitType > -1 && forIndex > -1 && forIndex < pointsOfIndex && nonMeleeIndex > pointsOfIndex)
+      // [Mon May 10 22:18:46 2021] A dendridic shard was chilled to the bone for 410 points of non-melee damage.
+      // [Sat Jan 04 13:22:29 2025] YOU are chilled to the bone for 2700 points of non-melee damage!
+      else if (isIndex > -1 && byIndex == -1 && (forIndex + 2) == pointsOfIndex && nonMeleeIndex > pointsOfIndex
+        && split[stop].StartsWith("damage", StringComparison.OrdinalIgnoreCase))
       {
-        var hitTypeMod = hitTypeAdd > 0 ? 1 : 0;
-        attacker = string.Join(" ", split, 0, hitType);
-        defender = string.Join(" ", split, hitType + hitTypeMod + 1, forIndex - hitType - hitTypeMod - 1);
+        defender = string.Join(" ", split, 0, isIndex);
         var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
-        attacker = UpdateAttacker(attacker, Labels.Dd);
+        attacker = Labels.Rs;
         defender = UpdateDefender(defender, attacker);
-        record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, Labels.Dd);
+        record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Ds, Labels.Ds);
+        delayEvent = true;
       }
+      // Unknown but often from spell recourse like from The Protector's Grasp when the player is dead
+      // but also seems to be damage shield values for eqemu
       // [Mon Oct 23 22:18:46 2022] Demonstrated Depletion was hit by non-melee for 6734 points of damage.
-      else if (hitType > -1 && forIndex > -1 && forIndex < pointsOfIndex && nonMeleeIndex < pointsOfIndex &&
-               byIndex == (nonMeleeIndex - 1) && isIndex > -1 && isIndex < hitType)
+      else if (forIndex > -1 && forIndex < pointsOfIndex && nonMeleeIndex < pointsOfIndex &&
+               byIndex == (nonMeleeIndex - 1) && isIndex > -1 && split[isIndex + 1] == "hit")
       {
         defender = string.Join(" ", split, 0, isIndex);
         attacker = Labels.Unk;
         var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
+        defender = UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, Labels.Dd);
+        delayEvent = true;
+      }
+      // Old (eqemu direct damage) [Sat Jan 15 21:08:54 2022] Jaun hit Pixtt Invi Mal for 150 points of non-melee damage.
+      // Heroes Forge EMU [Sun Dec 08 04:56:54 2024] Lobekn (Owner: Bulron) hit a wan ghoul knight for 311 points of non-melee damage. (Earthquake)
+      else if (forIndex > -1 && hitTypeIndex > -1 && split[hitTypeIndex] == "hit" && forIndex < pointsOfIndex && nonMeleeIndex > pointsOfIndex)
+      {
+        if (emuPetIndex > -1)
+        {
+          attacker = string.Join(" ", split, 0, emuPetIndex);
+          if (split[emuPetIndex + 1].EndsWith(")", StringComparison.OrdinalIgnoreCase))
+          {
+            var player = split[emuPetIndex + 1][..^1];
+            PlayerManager.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
+            PlayerManager.Instance.AddVerifiedPet(attacker);
+            PlayerManager.Instance.AddPetToPlayer(attacker, player);
+          }
+        }
+        else
+        {
+          attacker = string.Join(" ", split, 0, hitTypeIndex);
+        }
+
+        defender = string.Join(" ", split, hitTypeIndex + 1, forIndex - hitTypeIndex - 1);
+        var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
+        attacker = UpdateAttacker(attacker, Labels.Dd);
+        defender = UpdateDefender(defender, attacker);
+
+        subType = Labels.Dd;
+        var end = stop + 1;
+
+        if (split.Length > end && split[end].StartsWith('(') && string.Join(" ", split, end, split.Length - stop - 1) is { } oldSpell && oldSpell.Length > 2)
+        {
+          subType = oldSpell[1..^1];
+          subType = ToUpper(subType);
+        }
+
+        record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, subType);
+      }
+      // Old (eqemu) aura damage? [Fri Mar 04 21:28:19 2022] You are immolated by raging energy.  You have taken 179 points of damage.
+      else if (haveIndex > -1 && haveIndex == takenIndex && pointsOfIndex == takenIndex + 3 && split[haveIndex - 1] == "You")
+      {
+        var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
+        attacker = Labels.Unk;
+        defender = ConfigUtil.PlayerName;
+        record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dot, Labels.Dot);
+      }
+      // falling damage? [Fri Mar 04 21:28:19 2022] You were hit by non-melee for 16 damage
+      else if (isIndex > -1 && nonMeleeIndex == (isIndex + 3) && split[isIndex + 1] == "hit" && endDamage == stop && pointsOfIndex == -1)
+      {
+        var damage = StatsUtil.ParseUInt(split[endDamage - 1]);
+        attacker = Labels.Unk;
+
+        if (isYou)
+        {
+          defender = ConfigUtil.PlayerName;
+        }
+        else
+        {
+          defender = string.Join(" ", split, 0, isIndex);
+        }
+
+        defender = UpdateDefender(defender, attacker);
+        record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, Labels.Dd);
+      }
+      // [Sat Jan 04 13:21:13 2025] Fllint's magical skin absorbs the damage of Firethorn's thorns.
+      // [Thu Jan 09 21:14:32 2025] YOUR magical skin absorbs the damage of Herald of the Outer Brood's thorns.
+      else if (absorbsIndex > -1 && split.Length > (absorbsIndex + 6) && split[absorbsIndex + 4] == "damage"
+        && split[absorbsIndex + 5] == "of" && split[stop - 1].EndsWith("'s", StringComparison.OrdinalIgnoreCase))
+      {
+        // absorbsIndex accounts for magical skin
+        defender = string.Join(" ", split, 0, absorbsIndex);
+        if (defender.EndsWith("'s", StringComparison.OrdinalIgnoreCase))
+        {
+          defender = defender[..^2];
+        }
+
+        attacker = string.Join(" ", split, absorbsIndex + 6, stop - absorbsIndex - 6);
+        attacker = attacker[..^2];
+        attacker = UpdateAttacker(attacker, subType);
+        defender = UpdateDefender(defender, attacker);
+        record = CreateDamageRecord(lineData, split, stop, attacker, defender, 0, Labels.Absorb, "Hits");
+      }
+      // Old (eqemu) [Fri Mar 04 21:28:19 2022] The Spellshield absorbed 132 of 162 points of damage
+      else if (emuAbsorbedIndex > -1 && pointsOfIndex > emuAbsorbedIndex && split[stop] == "damage")
+      {
+        defender = ConfigUtil.PlayerName;
+        record = CreateDamageRecord(lineData, split, stop, Labels.Unk, defender, 0, Labels.Absorb, "Hits");
+      }
+      // [Sun Dec 08 22:14:14 2024] Gaber (Owner: Claus) has shielded itself from 116 points of damage. (Rune II)
+      // Old (eqemu) [Sun Dec 08 21:36:40 2024] Leela has shielded herself from 658 points of damage. (Manaskin)
+      else if (hasIndex > -1 && (shieldedIndex == (hasIndex + 1)) && pointsOfIndex == (stop - 2))
+      {
+        if (emuPetIndex > -1 && emuPetIndex < hasIndex)
+        {
+          defender = string.Join(" ", split, 0, emuPetIndex);
+          if (split[emuPetIndex + 1].EndsWith(")", StringComparison.OrdinalIgnoreCase))
+          {
+            var player = split[emuPetIndex + 1][..^1];
+            PlayerManager.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
+            PlayerManager.Instance.AddVerifiedPet(defender);
+            PlayerManager.Instance.AddPetToPlayer(defender, player);
+          }
+        }
+        else
+        {
+          defender = string.Join(" ", split, 0, hasIndex);
+        }
+
+        defender = UpdateDefender(defender, Labels.Unk);
+        record = CreateDamageRecord(lineData, split, stop, Labels.Unk, defender, 0, Labels.Absorb, "Hits");
       }
       // [Fri Mar 04 21:28:19 2022] A failed reclaimer tries to punch YOU, but YOUR magical skin absorbs the blow!
       // [Mon Aug 05 02:05:12 2019] An enchanted Syldon stalker tries to crush YOU, but YOU parry!
@@ -615,7 +786,7 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(label))
         {
           var hitTypeMod = hitTypeAdd > 0 ? 1 : 0;
-          defender = string.Join(" ", split, hitType + hitTypeMod + 1, butIndex - hitType - hitTypeMod - 1);
+          defender = string.Join(" ", split, hitTypeIndex + hitTypeMod + 1, butIndex - hitTypeIndex - hitTypeMod - 1);
           if (!string.IsNullOrEmpty(defender) && defender[^1] == ',')
           {
             defender = defender[..^1];
@@ -727,6 +898,42 @@ namespace EQLogParser
       {
         if (!checkLineType && !InIgnoreList(defender))
         {
+          // if delayed event data from latest damage record is used to figure out
+          // what the original event was for
+          if (_delayedEvent != null)
+          {
+            if (lineData.BeginTime - _delayedEvent.BeginTime <= 1)
+            {
+              // attackerisSpell should only work on live
+              if (record.AttackerIsSpell && record.Attacker != Labels.Unk && (record.Type == Labels.Dot || record.Type == Labels.Dd))
+              {
+                // probably spell effect from dead player on live
+                _delayedEvent.Record.Attacker = record.Attacker;
+                _delayedEvent.Record.AttackerIsSpell = record.AttackerIsSpell;
+                _delayedEvent.Record.Type = record.Type;
+                _delayedEvent.Record.SubType = record.SubType;
+                EventsDamageProcessed?.Invoke(_delayedEvent);
+                _delayedEvent = null;
+              }
+              else if (record.Type == Labels.Melee && string.Equals(record.Attacker, _delayedEvent.Record.Defender, StringComparison.OrdinalIgnoreCase))
+              {
+                // probably a damage shield on emu
+                _delayedEvent.Record.Type = Labels.Ds;
+                _delayedEvent.Record.SubType = Labels.Ds;
+                _delayedEvent.Record.Attacker = record.Defender;
+                EventsDamageProcessed?.Invoke(_delayedEvent);
+                _delayedEvent = null;
+              }
+            }
+
+            if (_delayedEvent != null)
+            {
+              // stick with unknown
+              EventsDamageProcessed?.Invoke(_delayedEvent);
+              _delayedEvent = null;
+            }
+          }
+
           if (resist != SpellResist.Undefined && defender != attacker &&
             (attacker == ConfigUtil.PlayerName || PlayerManager.Instance.GetPlayerFromPet(attacker) == ConfigUtil.PlayerName))
           {
@@ -748,8 +955,15 @@ namespace EQLogParser
 
             CheckSlainQueue(lineData.BeginTime);
 
-            var e = new DamageProcessedEvent { Record = record, BeginTime = lineData.BeginTime };
-            EventsDamageProcessed?.Invoke(e);
+            var damageEvent = new DamageProcessedEvent { Record = record, BeginTime = lineData.BeginTime };
+            if (!delayEvent)
+            {
+              EventsDamageProcessed?.Invoke(damageEvent);
+            }
+            else
+            {
+              _delayedEvent = damageEvent;
+            }
 
             if (record.Type == Labels.Dd && SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) &&
             record.SubType.Contains(special)) is { } key && !string.IsNullOrEmpty(key))
@@ -882,7 +1096,7 @@ namespace EQLogParser
       {
         attacker = subType;
       }
-      else if (attacker.EndsWith("'s corpse", StringComparison.Ordinal))
+      else if (attacker.EndsWith("'s corpse", StringComparison.Ordinal) || attacker.EndsWith("`s corpse", StringComparison.Ordinal))
       {
         attacker = attacker[..^9];
       }
@@ -971,6 +1185,11 @@ namespace EQLogParser
 
     private static bool InIgnoreList(string name)
     {
+      if (string.IsNullOrEmpty(name))
+      {
+        return false;
+      }
+
       var ignore = name.EndsWith("`s Mount", StringComparison.OrdinalIgnoreCase) || ChestTypes.FindIndex(type => name.EndsWith(type, StringComparison.OrdinalIgnoreCase)) >= 0;
       if (!ignore && CheckEyeRegex.IsMatch(name))
       {

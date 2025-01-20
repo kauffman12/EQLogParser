@@ -1,7 +1,9 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -13,17 +15,23 @@ namespace EQLogParser
 {
   public partial class TimerOverlayWindow : IDisposable
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+    private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
     private readonly bool _preview;
     private readonly SemaphoreSlim _renderSemaphore = new(1, 1);
     private readonly SynchronizedCollection<TimerData> _timerList = [];
     private readonly SynchronizedCollection<TimerData> _idleTimerList = [];
+    private Dictionary<string, Window> _previewWindows;
     private TriggerNode _node;
     private long _savedHeight;
     private long _savedWidth;
     private long _savedTop = long.MaxValue;
     private long _savedLeft = long.MaxValue;
-    private Dictionary<string, Window> _previewWindows;
+    private long _lastActiveTicks = long.MinValue;
+    private long _lastTopTicks = long.MinValue;
     private int _tickCounter;
+    private nint _windowHndl;
+    private bool _disposed;
     private volatile bool _isClosed;
     private volatile bool _isRendering;
     private volatile bool _newData;
@@ -35,8 +43,6 @@ namespace EQLogParser
     private volatile bool _showActive;
     private volatile bool _showIdle;
     private volatile bool _showReset;
-    private long _lastActiveTicks = long.MinValue;
-    private bool _disposed;
 
     internal TimerOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
     {
@@ -430,8 +436,7 @@ namespace EQLogParser
           Visibility = Visibility.Visible;
           _newData = false;
         }
-
-        if (Visibility != Visibility.Visible)
+        else if (Visibility != Visibility.Visible)
         {
           return;
         }
@@ -469,7 +474,16 @@ namespace EQLogParser
           // Update the TimerBar based on its state
           UpdateTimerBarState(model.State, model.TimerData, timerBar);
           timerBar.Update(model.DisplayName, model.TimeText, model.Progress, model.TimerData);
-          timerBar.Visibility = Visibility.Visible;
+
+          if (timerBar.Visibility != Visibility.Visible)
+          {
+            timerBar.Visibility = Visibility.Visible;
+
+            if (content.Visibility != Visibility.Visible)
+            {
+              content.Visibility = Visibility.Visible;
+            }
+          }
 
           // Store the associated TimerBarModel in the Tag field
           timerBar.Tag = model;
@@ -504,6 +518,12 @@ namespace EQLogParser
 
       await UiUtil.InvokeAsync(() =>
       {
+        if (_windowHndl != 0 && (_lastTopTicks == long.MinValue || (currentTicks - _lastTopTicks) > TopTimeout))
+        {
+          NativeMethods.SetWindowTopMost(_windowHndl);
+          _lastTopTicks = currentTicks;
+        }
+
         foreach (var child in content.Children)
         {
           if (child is TimerBar timerBar && timerBar.Visibility == Visibility.Visible)
@@ -649,6 +669,7 @@ namespace EQLogParser
             bar.Visibility = Visibility.Collapsed;
           }
         }
+
         await Task.Delay(50);
         Visibility = Visibility.Collapsed;
       });
@@ -768,19 +789,35 @@ namespace EQLogParser
     protected override void OnSourceInitialized(EventArgs e)
     {
       base.OnSourceInitialized(e);
-      var source = (HwndSource)PresentationSource.FromVisual(this)!;
-      if (source != null)
-      {
-        source.AddHook(NativeMethods.BandAidHook); // Make sure this is hooked first. That ensures it runs last
-        source.AddHook(NativeMethods.ProblemHook);
 
-        if (!_preview)
+      try
+      {
+        var source = (HwndSource)PresentationSource.FromVisual(this)!;
+        if (source != null)
         {
-          // set to layered and topmost by xaml
-          var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
-          exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow | (int)NativeMethods.ExtendedWindowStyles.WsExTransparent;
-          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, exStyle);
+          source.AddHook(NativeMethods.BandAidHook); // Make sure this is hooked first. That ensures it runs last
+          source.AddHook(NativeMethods.ProblemHook);
+          NativeMethods.SetWindowTopMost(source.Handle);
+          _windowHndl = source.Handle;
+
+          if (!_preview)
+          {
+            // Get current extended styles
+            var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
+
+            // Add transparency and layered styles
+            exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExLayered | (int)NativeMethods.ExtendedWindowStyles.WsExTransparent;
+            // tool window to not show up in alt-tab
+            exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow | (int)NativeMethods.ExtendedWindowStyles.WsExNoActive;
+
+            // Apply the new extended styles
+            NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, new IntPtr(exStyle));
+          }
         }
+      }
+      catch (Exception ex)
+      {
+        Log.Error("Problem in OnSourceInitialized", ex);
       }
     }
 

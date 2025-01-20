@@ -73,6 +73,7 @@ namespace EQLogParser
       var healer = "";
       var healed = "";
       string spell = null;
+      string subType = null;
       var type = Labels.Heal;
       var heal = uint.MaxValue;
       uint overHeal = 0;
@@ -97,6 +98,12 @@ namespace EQLogParser
           {
             type = Labels.Hot;
           }
+        }
+        else if (previous >= 0 && test.IndexOf("has", previous, StringComparison.Ordinal) > -1)
+        {
+          healer = test[..previous];
+          type = Labels.Heal;
+          subType = Labels.Heal;
         }
         else if (previous - 5 >= 0 && test.IndexOf("have been", previous - 4, StringComparison.Ordinal) > -1)
         {
@@ -197,7 +204,7 @@ namespace EQLogParser
 
         if (!string.IsNullOrEmpty(healed))
         {
-          if (healed == "You")
+          if ("You".Equals(healed, StringComparison.OrdinalIgnoreCase))
           {
             healed = ConfigUtil.PlayerName;
           }
@@ -223,6 +230,11 @@ namespace EQLogParser
 
           if (!string.IsNullOrEmpty(healer) && heal != uint.MaxValue && healer.Length <= 64)
           {
+            if (subType == null)
+            {
+              subType = string.IsNullOrEmpty(spell) ? Labels.SelfHeal : string.Intern(spell);
+            }
+
             record = new HealRecord
             {
               Total = heal,
@@ -231,7 +243,7 @@ namespace EQLogParser
               Healed = string.Intern(healed),
               Type = string.Intern(type),
               ModifiersMask = -1,
-              SubType = string.IsNullOrEmpty(spell) ? Labels.SelfHeal : string.Intern(spell)
+              SubType = subType
             };
 
             if (part[^1] == ')')
