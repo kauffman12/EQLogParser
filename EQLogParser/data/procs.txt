@@ -1542,6 +1542,9 @@ Night's Endless Darkness III
 Night's Endless Terror
 Night's Endless Terror Rk. II
 Night's Endless Terror Rk. III
+Night's Eternal Darkness
+Night's Eternal Darkness II
+Night's Eternal Darkness III
 Night's Perpetual Darkness
 Night's Perpetual Darkness II
 Night's Perpetual Darkness III
@@ -3237,6 +3240,12 @@ Ecliptic Roar Strike 3
 Ecliptic Roar Strike 4
 Ecliptic Roar Strike 5
 Ecliptic Roar Strike 6
+Reciprocal Roar Strike 1
+Reciprocal Roar Strike 2
+Reciprocal Roar Strike 3
+Reciprocal Roar Strike 4
+Reciprocal Roar Strike 5
+Reciprocal Roar Strike 6
 
 # Shaman Feral Bite/Rabid Bear
 Feral Bite I

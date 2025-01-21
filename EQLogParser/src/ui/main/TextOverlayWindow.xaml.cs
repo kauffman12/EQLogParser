@@ -105,7 +105,7 @@ namespace EQLogParser
       while (_isRendering)
       {
         var isComplete = false;
-        await UiUtil.InvokeAsync(() =>
+        await Dispatcher.InvokeAsync(() =>
         {
           while (_queue.TryDequeue(out var textData))
           {
@@ -139,7 +139,7 @@ namespace EQLogParser
             {
               _isRendering = false;
 
-              UiUtil.InvokeNow(() =>
+              Dispatcher.Invoke(() =>
               {
                 Visibility = Visibility.Collapsed;
               });

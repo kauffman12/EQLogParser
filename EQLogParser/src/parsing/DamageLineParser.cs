@@ -20,7 +20,6 @@ namespace EQLogParser
     private static readonly List<string> SlainQueue = [];
     private static double _slainTime = double.NaN;
     private static string _previousAction;
-    private static DamageProcessedEvent _delayedEvent;
 
     private static readonly Dictionary<string, string> HitMap = new()
     {
@@ -99,7 +98,7 @@ namespace EQLogParser
           }
           else
           {
-            if (ParseLine(false, lineData, split, stop) is not null)
+            if (ParseLine(false, lineData, split, stop) is { } damageRecord)
             {
               processed = true;
             }
@@ -374,8 +373,6 @@ namespace EQLogParser
         }
       }
 
-      var delayEvent = false;
-
       // [Sun Apr 18 19:36:39 2021] Tantor is pierced by Tolzol's thorns for 6718 points of non-melee damage.
       // [Mon Apr 19 22:02:52 2021] Honvar is tormented by Reisil's frost for 7809 points of non-melee damage.
       // [Sun Apr 25 13:47:12 2021] Test One Hundred Three is burned by YOUR flames for 5224 points of non-melee damage.
@@ -521,18 +518,10 @@ namespace EQLogParser
             // not sure when this happens
             spell = attacker;
           }
-          else
+          else if (!string.IsNullOrEmpty(attacker) && attacker[^1] == '.')
           {
             // fix spell name
-            if (!string.IsNullOrEmpty(attacker) && attacker[^1] == '.')
-            {
-              attacker = attacker[..^1];
-            }
-            else
-            {
-              // old emu
-              (attacker, spell) = (spell, attacker);
-            }
+            attacker = attacker[..^1];
           }
         }
         else if (yourIndex > -1)
@@ -546,6 +535,12 @@ namespace EQLogParser
           spell = string.Join(" ", split, fromDamage + 2, stop - fromDamage - 1);
           spell = (!string.IsNullOrEmpty(spell) && spell[^1] == '.') ? spell[..^1] : spell;
           attacker = spell;
+        }
+
+        if (MainWindow.IsEmuParsingEnabled)
+        {
+          // old emu
+          (attacker, spell) = (spell, attacker);
         }
 
         if (!string.IsNullOrEmpty(attacker) && !string.IsNullOrEmpty(spell))
@@ -612,24 +607,22 @@ namespace EQLogParser
         attacker = Labels.Rs;
         defender = UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Ds, Labels.Ds);
-        delayEvent = true;
       }
       // Unknown but often from spell recourse like from The Protector's Grasp when the player is dead
-      // but also seems to be damage shield values for eqemu
       // [Mon Oct 23 22:18:46 2022] Demonstrated Depletion was hit by non-melee for 6734 points of damage.
+      // also seems to be emu direct damage for current player?
       else if (forIndex > -1 && forIndex < pointsOfIndex && nonMeleeIndex < pointsOfIndex &&
                byIndex == (nonMeleeIndex - 1) && isIndex > -1 && split[isIndex + 1] == "hit")
       {
         defender = string.Join(" ", split, 0, isIndex);
-        attacker = Labels.Unk;
+        attacker = MainWindow.IsEmuParsingEnabled ? ConfigUtil.PlayerName : Labels.Unk;
         var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
         defender = UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, Labels.Dd);
-        delayEvent = true;
       }
       // Old (eqemu direct damage) [Sat Jan 15 21:08:54 2022] Jaun hit Pixtt Invi Mal for 150 points of non-melee damage.
       // Heroes Forge EMU [Sun Dec 08 04:56:54 2024] Lobekn (Owner: Bulron) hit a wan ghoul knight for 311 points of non-melee damage. (Earthquake)
-      else if (forIndex > -1 && hitTypeIndex > -1 && split[hitTypeIndex] == "hit" && forIndex < pointsOfIndex && nonMeleeIndex > pointsOfIndex)
+      else if (forIndex > -1 && hitTypeIndex > -1 && split[hitTypeIndex] == "hit" && forIndex < pointsOfIndex && nonMeleeIndex > pointsOfIndex && MainWindow.IsEmuParsingEnabled)
       {
         if (emuPetIndex > -1)
         {
@@ -708,14 +701,14 @@ namespace EQLogParser
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, 0, Labels.Absorb, "Hits");
       }
       // Old (eqemu) [Fri Mar 04 21:28:19 2022] The Spellshield absorbed 132 of 162 points of damage
-      else if (emuAbsorbedIndex > -1 && pointsOfIndex > emuAbsorbedIndex && split[stop] == "damage")
+      else if (emuAbsorbedIndex > -1 && pointsOfIndex > emuAbsorbedIndex && split[stop] == "damage" && MainWindow.IsEmuParsingEnabled)
       {
         defender = ConfigUtil.PlayerName;
         record = CreateDamageRecord(lineData, split, stop, Labels.Unk, defender, 0, Labels.Absorb, "Hits");
       }
       // [Sun Dec 08 22:14:14 2024] Gaber (Owner: Claus) has shielded itself from 116 points of damage. (Rune II)
       // Old (eqemu) [Sun Dec 08 21:36:40 2024] Leela has shielded herself from 658 points of damage. (Manaskin)
-      else if (hasIndex > -1 && (shieldedIndex == (hasIndex + 1)) && pointsOfIndex == (stop - 2))
+      else if (hasIndex > -1 && (shieldedIndex == (hasIndex + 1)) && pointsOfIndex == (stop - 2) && MainWindow.IsEmuParsingEnabled)
       {
         if (emuPetIndex > -1 && emuPetIndex < hasIndex)
         {
@@ -898,42 +891,6 @@ namespace EQLogParser
       {
         if (!checkLineType && !InIgnoreList(defender))
         {
-          // if delayed event data from latest damage record is used to figure out
-          // what the original event was for
-          if (_delayedEvent != null)
-          {
-            if (lineData.BeginTime - _delayedEvent.BeginTime <= 1)
-            {
-              // attackerisSpell should only work on live
-              if (record.AttackerIsSpell && record.Attacker != Labels.Unk && (record.Type == Labels.Dot || record.Type == Labels.Dd))
-              {
-                // probably spell effect from dead player on live
-                _delayedEvent.Record.Attacker = record.Attacker;
-                _delayedEvent.Record.AttackerIsSpell = record.AttackerIsSpell;
-                _delayedEvent.Record.Type = record.Type;
-                _delayedEvent.Record.SubType = record.SubType;
-                EventsDamageProcessed?.Invoke(_delayedEvent);
-                _delayedEvent = null;
-              }
-              else if (record.Type == Labels.Melee && string.Equals(record.Attacker, _delayedEvent.Record.Defender, StringComparison.OrdinalIgnoreCase))
-              {
-                // probably a damage shield on emu
-                _delayedEvent.Record.Type = Labels.Ds;
-                _delayedEvent.Record.SubType = Labels.Ds;
-                _delayedEvent.Record.Attacker = record.Defender;
-                EventsDamageProcessed?.Invoke(_delayedEvent);
-                _delayedEvent = null;
-              }
-            }
-
-            if (_delayedEvent != null)
-            {
-              // stick with unknown
-              EventsDamageProcessed?.Invoke(_delayedEvent);
-              _delayedEvent = null;
-            }
-          }
-
           if (resist != SpellResist.Undefined && defender != attacker &&
             (attacker == ConfigUtil.PlayerName || PlayerManager.Instance.GetPlayerFromPet(attacker) == ConfigUtil.PlayerName))
           {
@@ -956,14 +913,7 @@ namespace EQLogParser
             CheckSlainQueue(lineData.BeginTime);
 
             var damageEvent = new DamageProcessedEvent { Record = record, BeginTime = lineData.BeginTime };
-            if (!delayEvent)
-            {
-              EventsDamageProcessed?.Invoke(damageEvent);
-            }
-            else
-            {
-              _delayedEvent = damageEvent;
-            }
+            EventsDamageProcessed?.Invoke(damageEvent);
 
             if (record.Type == Labels.Dd && SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) &&
             record.SubType.Contains(special)) is { } key && !string.IsNullOrEmpty(key))

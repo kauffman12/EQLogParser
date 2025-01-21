@@ -270,6 +270,12 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
+          <MenuItem x:Name="emuParsing" Header="_EMU Server Parsing" Click="ToggleEmuParsingClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="emuParsingIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
           <MenuItem x:Name="damageOptions" Header="_Damage Settings">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="damageOptionsIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Meteor" />
