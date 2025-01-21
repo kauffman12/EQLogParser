@@ -1,6 +1,21 @@
 {\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Segoe UI;}{\f1\fnil\fcharset2 Symbol;}}
-{\*\generator Riched20 10.0.22621}\viewkind4\uc1 
-\pard\ul\f0\fs20\lang1033 Updates in Version 2.2.68\ulnone\par
+{\*\generator Riched20 10.0.26100}\viewkind4\uc1 
+\pard\ul\f0\fs20\lang1033 Updates in Version 2.2.69\par
+\ulnone  \par
+
+\pard 
+{\pntext\f0 1.\tab}{\*\pn\pnlvlbody\pnf0\pnindent0\pnstart1\pndec{\pntxta.}}
+\fi-360\li720 Updated Window style settings for Overlays and added some checks to try and enforce top most window. Hopefully, it helps with some conflicts when running with ISBoxer.\par
+{\pntext\f0 2.\tab}Updated damage parsing to catch a few cases that we\rquote re being missed. Things like falling damage are now counted and labeled Unknown and some reverse damage shield messages should be counted that weren't.\par
+{\pntext\f0 3.\tab}Updated damage parsing for EMU servers with some additional checks to support the \b Heroes Forge \b0 server. However, there is now a new\b  "EMU Server Parsing" selection under the Options menu\b0  that needs to be enabled if you're opening these older log files. There were a few cases that couldn't easily be figured out/handled automatically.\ul\par
+{\pntext\f0 4.\tab}\ulnone Updated Syncfusion to last version from 26.x. Includes varios bug fixes.\ul\par
+{\pntext\f0 5.\tab}\ulnone Added PDF versions of the Release Notes and Trigger Variables. Windows 11 Build 2611 removes Wordpad so there\rquote s good default RTF viewer so the PDF versions will be opened if you try to view them from the parser. The RTF versions are still installed if you want to look at them manually.\ul\par
+{\pntext\f0 6.\tab}\ulnone Fix for Timer Bars sometimes getting stuck while using Trigger Tester and changing settings in the associated Overlay.\ul\par
+{\pntext\f0 7.\tab}\ulnone Fix for summary and chart windows showing checked when closed via X button.\ul\par
+{\pntext\f0 8.\tab}\ulnone Fix for Night's Eternal Darkness and Reciprocal Roar Strike not showing up as procs.\ul\par
+
+\pard\ulnone\par
+\ul Updated in Version 2.2.68\ulnone\par
 \par
 
 \pard 
@@ -551,7 +566,6 @@ Updated in Version 2.2.13\ulnone\par
 
 \pard\par
 \ul\b\par
-\par
 Major Updates from Version 2.1\par
 \par
 \ulnone Basic Log Management feature\b0 . It is available under Tools -> Log Management. Check the box to enable archiving, choose a folder for the archived files, select options from the two dropdowns. It will attempt to archive files that meet those criteria whenever the parser is started, whenever you add/enable a character's triggers or when you open a file to display a parse. Note that it will not archive randomly during a raid and it will wait for the parse to finish loading before attempting to archive.\par

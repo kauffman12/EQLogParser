@@ -39,6 +39,7 @@ namespace EQLogParser
     internal static bool IsHideOnMinimizeEnabled;
     internal static bool IsHideSplashScreenEnabled;
     internal static bool IsMapSendToEqEnabled;
+    internal static bool IsEmuParsingEnabled;
     internal const int ActionIndex = 27;
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -142,6 +143,10 @@ namespace EQLogParser
 
       // Check for Updates
       checkUpdatesIcon.Visibility = ConfigUtil.IfSet("CheckUpdatesAtStartup") ? Visibility.Visible : Visibility.Hidden;
+
+      // Enable EMU parsing
+      IsEmuParsingEnabled = ConfigUtil.IfSet("EnableEmuParsing");
+      emuParsingIcon.Visibility = IsEmuParsingEnabled ? Visibility.Visible : Visibility.Hidden;
 
       // upgrade
       if (ConfigUtil.IfSet("TriggersWatchForGINA"))
@@ -624,6 +629,13 @@ namespace EQLogParser
     {
       ConfigUtil.SetSetting("CheckUpdatesAtStartup", checkUpdatesIcon.Visibility == Visibility.Hidden);
       checkUpdatesIcon.Visibility = checkUpdatesIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
+    }
+
+    private void ToggleEmuParsingClick(object sender, RoutedEventArgs e)
+    {
+      IsEmuParsingEnabled = !IsEmuParsingEnabled;
+      ConfigUtil.SetSetting("EnableEmuParsing", IsEmuParsingEnabled);
+      emuParsingIcon.Visibility = IsEmuParsingEnabled ? Visibility.Visible : Visibility.Hidden;
     }
 
     private void ToggleMapSendToEqClick(object sender, RoutedEventArgs e)

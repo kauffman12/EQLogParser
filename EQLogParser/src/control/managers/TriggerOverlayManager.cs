@@ -47,7 +47,6 @@ namespace EQLogParser
           if (value is OverlayWindowData windowData && windowData.TheWindow is TimerOverlayWindow { } timerWindow)
           {
             timerWindow.HideOverlay();
-            timerWindow.Visibility = System.Windows.Visibility.Collapsed;
           }
         }
       });

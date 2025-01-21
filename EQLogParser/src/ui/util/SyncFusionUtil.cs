@@ -120,6 +120,7 @@ namespace EQLogParser
       else if (window?.Content is IDocumentContent doc)
       {
         doc.HideContent();
+        DockingManager.SetState(window, DockState.Hidden);
       }
     }
 

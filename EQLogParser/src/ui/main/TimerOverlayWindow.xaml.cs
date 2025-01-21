@@ -134,6 +134,8 @@ namespace EQLogParser
         {
           _idleTimerList.Clear();
         }
+
+        HideContentAsync();
       }
       finally
       {
@@ -249,7 +251,7 @@ namespace EQLogParser
                     _idleTimerList.Clear();
                   }
 
-                  await HideContentAsync();
+                  HideContentAsync();
                 }
               }
             }
@@ -257,7 +259,7 @@ namespace EQLogParser
             {
               _isRendering = false;
               _tickCounter = 0;
-              await HideContentAsync();
+              HideContentAsync();
             }
           }
         }
@@ -429,7 +431,7 @@ namespace EQLogParser
 
     private async Task RenderTimerBarsAsync(List<TimerBarModel> models)
     {
-      await UiUtil.InvokeAsync(() =>
+      await Dispatcher.InvokeAsync(() =>
       {
         if (_newData)
         {
@@ -478,7 +480,6 @@ namespace EQLogParser
           if (timerBar.Visibility != Visibility.Visible)
           {
             timerBar.Visibility = Visibility.Visible;
-
             if (content.Visibility != Visibility.Visible)
             {
               content.Visibility = Visibility.Visible;
@@ -516,7 +517,7 @@ namespace EQLogParser
     {
       var currentTicks = DateTime.UtcNow.Ticks;
 
-      await UiUtil.InvokeAsync(() =>
+      await Dispatcher.InvokeAsync(() =>
       {
         if (_windowHndl != 0 && (_lastTopTicks == long.MinValue || (currentTicks - _lastTopTicks) > TopTimeout))
         {
@@ -658,9 +659,9 @@ namespace EQLogParser
       }
     }
 
-    private async Task HideContentAsync()
+    private void HideContentAsync()
     {
-      await UiUtil.InvokeAsync(async () =>
+      Dispatcher.Invoke(async () =>
       {
         foreach (var child in content.Children)
         {
@@ -671,7 +672,21 @@ namespace EQLogParser
         }
 
         await Task.Delay(50);
-        Visibility = Visibility.Collapsed;
+
+        // the previous Delay causes an unlock
+        await _renderSemaphore.WaitAsync();
+
+        try
+        {
+          if (_timerList.Count == 0)
+          {
+            Visibility = Visibility.Collapsed;
+          }
+        }
+        finally
+        {
+          _renderSemaphore.Release();
+        }
       });
     }
 
