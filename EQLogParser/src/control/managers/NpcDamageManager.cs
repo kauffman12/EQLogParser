@@ -306,9 +306,27 @@ namespace EQLogParser
 
         if (isDefenderPlayer)
         {
-          npcDefender = false;
           return true;
         }
+
+        if (isAttackerPlayer)
+        {
+          npcDefender = true;
+          return true;
+        }
+
+        if (!PlayerManager.IsPossiblePlayerName(record.Defender))
+        {
+          npcDefender = true;
+          return true;
+        }
+
+        if (!PlayerManager.IsPossiblePlayerName(record.Attacker))
+        {
+          return true;
+        }
+
+        npcDefender = true;
       }
 
       return true;
