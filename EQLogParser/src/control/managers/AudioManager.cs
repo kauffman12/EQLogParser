@@ -23,7 +23,7 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<AudioManager> Lazy = new(() => new AudioManager());
     internal static AudioManager Instance => Lazy.Value;
-    private const int LATENCY = 75;
+    private const int LATENCY = 72;
     private readonly ConcurrentDictionary<string, PlayerAudio> _playerAudios = new();
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly AudioDeviceNotificationClient _notificationClient = new();
@@ -375,7 +375,7 @@ namespace EQLogParser
         // play something to register the audio session with windows
         var memStream = new MemoryStream(silentWav);
         var reader = new WaveFileReader(memStream);
-        var output = new DirectSoundOut(GetDevice(), LATENCY);
+        var output = new DirectSoundOut(GetDevice(), 100);
         output.Init(reader);
 
         output.PlaybackStopped += async (_, _) =>
@@ -429,9 +429,6 @@ namespace EQLogParser
 
     private bool PlayAudioData(byte[] data, WaveFormat waveFormat, int rate = 0, int volume = 4)
     {
-      // remove header
-      data = data[44..];
-
       try
       {
         var stream = new RawSourceWaveStream(data, 0, data.Length, waveFormat);
@@ -620,7 +617,10 @@ namespace EQLogParser
 
     private static DirectSoundOut CreateDirectSoundOut(float appVolume, Guid device, RawSourceWaveStream stream, int rate, int volume)
     {
-      var output = new DirectSoundOut(device, LATENCY);
+      // short sounds need a shorter latency but don't go below 10 as it may break entirely
+      var latencyCalc = (int)Math.Min(Math.Max(stream.TotalTime.TotalMilliseconds - 5, 30), LATENCY);
+      var output = new DirectSoundOut(device, latencyCalc);
+
       var provider = CreateVolumeProvider(appVolume, stream, output, rate, volume);
       if (provider != null)
       {
@@ -696,7 +696,8 @@ namespace EQLogParser
         stream.Dispose();
         var data = memStream.ToArray();
         await memStream.DisposeAsync();
-        return data;
+        // return without wav header
+        return data[44..];
       }
       catch (Exception ex)
       {
