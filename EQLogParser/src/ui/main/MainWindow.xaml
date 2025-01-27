@@ -189,7 +189,7 @@
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
-          <MenuItem x:Name="statsView" Header="S_tatistics">
+          <MenuItem x:Name="statsView" Header="St_atistics">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="statsViewIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Calculator" />
             </MenuItem.Icon>
@@ -264,13 +264,13 @@
               <fa:ImageAwesome x:Name="enableHideOnMinimizeIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="enableMapSendtoEQ" Header="_Send To EQ With Ctrl+C" Click="ToggleMapSendToEqClick">
+          <MenuItem x:Name="enableMapSendtoEQ" Header="Send To _EQ With Ctrl+C" Click="ToggleMapSendToEqClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableMapSendToEQIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="emuParsing" Header="_EMU Server Parsing" Click="ToggleEmuParsingClick">
+          <MenuItem x:Name="emuParsing" Header="EMU Server _Parsing" Click="ToggleEmuParsingClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="emuParsingIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
@@ -369,13 +369,13 @@
               <fa:ImageAwesome x:Name="resetWindowStateIcon" Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Undo" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="restoreTableColumns" Header="_Restore Default Table Columns" Click="RestoreTableColumnsClick">
+          <MenuItem x:Name="restoreTableColumns" Header="Restore _Default Table Columns" Click="RestoreTableColumnsClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="restoreTableColumnsIcon" Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Undo" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
-          <MenuItem Header="_Create Backup File" Click="CreateBackupClick">
+          <MenuItem Header="Create _Backup File" Click="CreateBackupClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Regular_Save" />
             </MenuItem.Icon>
@@ -386,6 +386,11 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
+          <MenuItem Header="Create WAV _Audio" Click="OpenCreateWavClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_FileAudio" />
+            </MenuItem.Icon>
+          </MenuItem>
           <MenuItem Header="_Open Sounds Folder" Click="OpenSoundsFolderClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_FolderOpen" />
