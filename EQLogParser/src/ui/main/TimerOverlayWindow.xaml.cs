@@ -136,6 +136,7 @@ namespace EQLogParser
         }
 
         HideContentAsync();
+        Visibility = Visibility.Collapsed;
       }
       finally
       {
