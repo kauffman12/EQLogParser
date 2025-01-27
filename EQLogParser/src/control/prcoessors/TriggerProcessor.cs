@@ -36,8 +36,8 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, bool> _activeTimerLists = [];
     private readonly ConcurrentDictionary<string, bool> _enabledTriggers = [];
     private readonly ConcurrentDictionary<string, bool> _requiredOverlays = [];
-    private readonly string _activeColor;
-    private readonly string _fontColor;
+    private volatile string _activeColor;
+    private volatile string _fontColor;
     private volatile bool _isDisposed;
     private volatile bool _ready;
     private volatile List<LexiconItem> _lexicon;
@@ -68,6 +68,8 @@ namespace EQLogParser
     internal long GetActivityLastTicks() => Interlocked.Read(ref _activityLastTicks);
     internal List<string> GetRequiredOverlayIds() => [.. _requiredOverlays.Keys];
     internal List<string> GetEnabledTriggers() => [.. _enabledTriggers.Keys];
+    internal void SetActiveColor(string color) => _activeColor = color;
+    internal void SetFontColor(string color) => _fontColor = color;
     internal void SetVoice(string voice) => AudioManager.Instance.SetVoice(CurrentCharacterId, voice);
     internal void SetVoiceRate(int rate) => _voiceRate = rate;
     internal void SetTesting(bool testing) => _isTesting = testing;

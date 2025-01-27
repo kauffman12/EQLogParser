@@ -13,7 +13,6 @@ namespace EQLogParser
   {
     internal event Action<bool> EventsProcessorsUpdated;
     internal event Action<AlertEntry> EventsSelectTrigger;
-    internal readonly ConcurrentDictionary<string, bool> RunningFiles = new();
     internal static TriggerManager Instance => Lazy.Value;
 
     private static readonly Lazy<TriggerManager> Lazy = new(() => new TriggerManager());
@@ -90,20 +89,22 @@ namespace EQLogParser
     internal async Task SetTestProcessor(TriggerConfig config, BlockingCollection<Tuple<string, double, bool>> collection)
     {
       await InitTestProcessor(TriggerStateManager.DefaultUser, $"Trigger Tester ({TriggerStateManager.DefaultUser})", ConfigUtil.PlayerName,
-        config.Voice, config.VoiceRate, collection);
+        config.Voice, config.VoiceRate, null, null, collection);
     }
 
     internal async Task SetTestProcessor(TriggerCharacter character, BlockingCollection<Tuple<string, double, bool>> collection)
     {
       var playerName = !FileUtil.ParseFileName(character.FilePath, out var parsedPlayerName, out _) ? character.Name : parsedPlayerName;
-      await InitTestProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, character.Voice, character.VoiceRate, collection);
+      await InitTestProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, character.Voice,
+        character.VoiceRate, character.ActiveColor, character.FontColor, collection);
     }
 
-    private async Task InitTestProcessor(string id, string name, string playerName, string voice, int voiceRate, BlockingCollection<Tuple<string, double, bool>> collection)
+    private async Task InitTestProcessor(string id, string name, string playerName, string voice, int voiceRate,
+      string activeColor, string fontColor, BlockingCollection<Tuple<string, double, bool>> collection)
     {
       _testProcessor?.Dispose();
       _testProcessor =
-        new TriggerProcessor(id, name, playerName, voice, voiceRate, null, null);
+        new TriggerProcessor(id, name, playerName, voice, voiceRate, activeColor, fontColor);
       _testProcessor.SetTesting(true);
       await _testProcessor.StartAsync();
       _testProcessor.LinkTo(collection);
@@ -167,8 +168,6 @@ namespace EQLogParser
 
     private async Task HandleAdvancedConfig(TriggerConfig config)
     {
-      RunningFiles.Clear();
-
       // if Default User is being used then we switched from basic so clear all
       if (_logReaders.Any(reader => reader.GetProcessor() is TriggerProcessor { CurrentCharacterId: TriggerStateManager.DefaultUser }))
       {
@@ -192,14 +191,11 @@ namespace EQLogParser
           }
           else
           {
+            processor.SetActiveColor(found.ActiveColor);
+            processor.SetFontColor(found.FontColor);
             processor.SetVoice(found.Voice);
             processor.SetVoiceRate(found.VoiceRate);
             alreadyRunning.Add(found.Id);
-
-            if (!string.IsNullOrEmpty(reader.FileName))
-            {
-              RunningFiles[found.FilePath] = true;
-            }
           }
         }
       }
@@ -218,7 +214,6 @@ namespace EQLogParser
             await processor.StartAsync();
             var reader = new LogReader(processor, character.FilePath);
             _logReaders.Add(reader);
-            RunningFiles[character.FilePath] = true;
             await Task.Run(() => reader.Start());
           }
         }).ToList();
@@ -229,8 +224,6 @@ namespace EQLogParser
 
     private async Task HandleBasicConfig(TriggerConfig config)
     {
-      RunningFiles.Clear();
-
       var currentFile = MainWindow.CurrentLogFile;
       LogReader defReader = null;
       TriggerProcessor defProcessor = null;
@@ -267,8 +260,6 @@ namespace EQLogParser
           defProcessor.SetVoice(config.Voice);
           defProcessor.SetVoiceRate(config.VoiceRate);
         }
-
-        RunningFiles[currentFile] = true;
       }
       else
       {

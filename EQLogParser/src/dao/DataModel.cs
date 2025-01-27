@@ -239,7 +239,7 @@ namespace EQLogParser
   {
     [BsonId]
     public string Id { get; set; }
-    public Dictionary<string, bool?> Enabled { get; set; } = new();
+    public Dictionary<string, bool?> Enabled { get; set; } = [];
   }
 
   internal class TriggerNode
@@ -262,8 +262,8 @@ namespace EQLogParser
     public bool IsEnabled { get; set; }
     public string Voice { get; set; }
     public int VoiceRate { get; set; }
-    public string ActiveColor { get; set; } = null;
-    public string FontColor { get; set; } = null;
+    public string ActiveColor { get; set; }
+    public string FontColor { get; set; }
     [BsonIgnore] public bool? IsWaiting { get; set; } = true;
   }
 
@@ -397,7 +397,7 @@ namespace EQLogParser
 
   internal class StatsGenerationEvent
   {
-    public bool Limited { get; set; } = false;
+    public bool Limited { get; set; }
     public string Type { get; set; }
     public string State { get; set; }
     public CombinedStats CombinedStats { get; set; }

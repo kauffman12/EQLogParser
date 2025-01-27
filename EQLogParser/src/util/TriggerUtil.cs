@@ -29,6 +29,7 @@ namespace EQLogParser
     internal static async Task ImportTriggers(TriggerNode parent) => await Import(parent);
     internal static async Task ImportOverlays(TriggerNode triggerNode) => await Import(triggerNode, false);
 
+    private static readonly JsonSerializerOptions SerializationOptions = new JsonSerializerOptions { IncludeFields = true };
     private static readonly Size OriginalResolution = new(1920, 1080); // Hard-coded original screen resolution
     private const double OriginalTop = 550; // Hard-coded original top position
     private const double OriginalLeft = 650; // Hard-coded original left position
@@ -821,7 +822,7 @@ namespace EQLogParser
 
         await UiUtil.InvokeAsync(async () =>
         {
-          var nodes = JsonSerializer.Deserialize<List<ExportTriggerNode>>(data, new JsonSerializerOptions { IncludeFields = true });
+          var nodes = JsonSerializer.Deserialize<List<ExportTriggerNode>>(data, SerializationOptions);
           if (nodes.Count > 0 && nodes[0].Nodes.Count == 0)
           {
             var badMessage = "Quick Share Received";
@@ -910,7 +911,8 @@ namespace EQLogParser
           var fileInfo = new FileInfo(dialog.FileName);
           if (fileInfo.Exists && fileInfo.Length < 100000000)
           {
-            if (dialog.FileName.EndsWith($"{ExtTrigger}.gz") || dialog.FileName.EndsWith($"{ExtOverlay}.gz"))
+            if (dialog.FileName.EndsWith($"{ExtTrigger}.gz", StringComparison.OrdinalIgnoreCase) ||
+              dialog.FileName.EndsWith($"{ExtOverlay}.gz", StringComparison.OrdinalIgnoreCase))
             {
               var decompressionStream = new GZipStream(fileInfo.OpenRead(), CompressionMode.Decompress);
               var reader = new StreamReader(decompressionStream);

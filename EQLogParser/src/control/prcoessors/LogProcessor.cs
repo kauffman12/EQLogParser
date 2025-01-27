@@ -56,12 +56,6 @@ namespace EQLogParser
         chatType.BeginTime = lineData.BeginTime;
         chatType.Text = line; // workaround for now?
         ChatManager.Instance.Add(chatType);
-
-        if (!monitor || !TriggerManager.Instance.RunningFiles.ContainsKey(_fileName))
-        {
-          TriggerUtil.CheckQuickShare(chatType, lineData.Action, dateTime, null, null);
-          GinaUtil.CheckGina(chatType, lineData.Action, dateTime, null, null);
-        }
       }
       else
       {
