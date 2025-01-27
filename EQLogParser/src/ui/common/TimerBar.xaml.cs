@@ -43,11 +43,13 @@ namespace EQLogParser
       // only reset colors if the timer has been assigned to something else
       if (_lastTimerData != timerData)
       {
-        if (timerData?.FontColor != null)
+        if (timerData?.FontColor != null && UiUtil.GetBrush(timerData.FontColor) is { } brush && brush.Color.A > 0)
         {
-          var brush = UiUtil.GetBrush(timerData.FontColor);
-          time.Foreground = brush;
-          title.Foreground = brush;
+          if (time.Foreground != brush || title.Foreground != brush)
+          {
+            time.Foreground = brush;
+            title.Foreground = brush;
+          }
         }
         else
         {
@@ -84,13 +86,14 @@ namespace EQLogParser
 
     internal void SetActive(TimerData timerData)
     {
-      if (timerData?.ActiveColor != null)
+      if (timerData?.ActiveColor != null && UiUtil.GetBrush(timerData.ActiveColor) is { } brush && brush.Color.A > 0)
       {
-        if (UiUtil.GetBrush(timerData.ActiveColor) is var color && progress.ProgressColor != color)
+        if (progress.ProgressColor != brush)
         {
-          progress.ProgressColor = color;
-          _theState = State.None;
+          progress.ProgressColor = brush;
         }
+
+        _theState = State.None;
       }
       else if (_theState != State.Active)
       {
