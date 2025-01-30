@@ -97,7 +97,7 @@ namespace EQLogParser
       List<string> idList = [Guid.Empty.ToString()];
       List<string> nameList = ["Default Audio"];
 
-      foreach (var device in DirectSoundOut.Devices)
+      foreach (var device in DirectSoundOut.Devices.ToList())
       {
         if (device.Guid != Guid.Empty)
         {
@@ -111,9 +111,10 @@ namespace EQLogParser
 
     internal void SelectDevice(string id)
     {
+      var device = GetDeviceOrDefault(id);
       lock (_deviceLock)
       {
-        _selectedDeviceGuid = GetDeviceOrDefault(id);
+        _selectedDeviceGuid = device;
       }
     }
 
@@ -386,19 +387,25 @@ namespace EQLogParser
     {
       _updateTimer.Stop();
 
+      Guid selected;
       lock (_deviceLock)
       {
-        var found = false;
-        foreach (var device in DirectSoundOut.Devices)
-        {
-          if (device.Guid == _selectedDeviceGuid)
-          {
-            found = true;
-            break;
-          }
-        }
+        selected = _selectedDeviceGuid;
+      }
 
-        if (!found)
+      var found = false;
+      foreach (var device in DirectSoundOut.Devices.ToList())
+      {
+        if (device.Guid == selected)
+        {
+          found = true;
+          break;
+        }
+      }
+
+      if (!found)
+      {
+        lock (_deviceLock)
         {
           _selectedDeviceGuid = Guid.Empty;
         }
@@ -698,7 +705,7 @@ namespace EQLogParser
       var foundGuid = Guid.Empty;
       if (!string.IsNullOrEmpty(id) && Guid.TryParse(id, out var result))
       {
-        foreach (var device in DirectSoundOut.Devices)
+        foreach (var device in DirectSoundOut.Devices.ToList())
         {
           if (device.Guid == result)
           {
