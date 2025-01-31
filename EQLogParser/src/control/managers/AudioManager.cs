@@ -591,36 +591,46 @@ namespace EQLogParser
 
               if (output == null || output.PlaybackState == PlaybackState.Stopped)
               {
-                if (stream != null)
+                try
                 {
-                  stream.Dispose();
-                  stream = null;
-                  output?.Dispose();
-                  audio.CurrentPlayback = null;
-                }
-
-                if (audio.Events.Count > 0)
-                {
-                  audio.CurrentEvent = audio.Events[0];
-                  audio.Events.RemoveAt(0);
-
-                  // remove header
-                  var data = audio.CurrentEvent.AudioData[44..];
-                  stream = new RawSourceWaveStream(data, 0, data.Length, audio.CurrentEvent.WaveFormat);
-
-                  // make sure audio is still valid
-                  try
+                  if (stream != null)
                   {
-                    output = CreateDirectSoundOut(GetDevice(), _appVolume, stream, audio.CurrentEvent.Rate, audio.CurrentEvent.AdjustedVolume);
-                    audio.CurrentPlayback = output;
-                    output.Play();
-                  }
-                  catch (Exception)
-                  {
+                    stream.Dispose();
+                    stream = null;
                     output?.Dispose();
-                    output = null;
                     audio.CurrentPlayback = null;
                   }
+
+                  if (audio.Events.Count > 0)
+                  {
+                    audio.CurrentEvent = audio.Events[0];
+                    audio.Events.RemoveAt(0);
+
+                    // remove header
+                    var data = audio.CurrentEvent.AudioData;
+                    if (data?.Length > 0)
+                    {
+                      stream = new RawSourceWaveStream(data, 0, data.Length, audio.CurrentEvent.WaveFormat);
+
+                      // make sure audio is still valid
+                      try
+                      {
+                        output = CreateDirectSoundOut(GetDevice(), _appVolume, stream, audio.CurrentEvent.Rate, audio.CurrentEvent.AdjustedVolume);
+                        audio.CurrentPlayback = output;
+                        output.Play();
+                      }
+                      catch (Exception)
+                      {
+                        output?.Dispose();
+                        output = null;
+                        audio.CurrentPlayback = null;
+                      }
+                    }
+                  }
+                }
+                catch (Exception ex)
+                {
+                  Log.Error("Error Playing Audio", ex);
                 }
               }
             }
@@ -628,13 +638,9 @@ namespace EQLogParser
             await Task.Delay(50);
           }
         }
-        catch (OperationCanceledException)
+        catch (Exception)
         {
-          // ignore cancel event
-        }
-        catch (Exception ex)
-        {
-          Log.Debug("Error during playback.", ex);
+          // ignore cancel event. the rest should have it's own try/catch
         }
         finally
         {
