@@ -1,6 +1,16 @@
 {\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Segoe UI;}{\f1\fnil\fcharset2 Symbol;}}
 {\*\generator Riched20 10.0.26100}\viewkind4\uc1 
-\pard\ul\f0\fs20\lang1033 Updates in Version 2.2.72\ulnone\par
+\pard\ul\f0\fs20\lang1033 Updates in Version 2.2.74\ulnone\par
+\par
+
+\pard 
+{\pntext\f0 1.\tab}{\*\pn\pnlvlbody\pnf0\pnindent0\pnstart1\pndec{\pntxta.}}
+\fi-360\li720 Added a new option that may be useful for Timer End Early messages. Basically, if you have settings in the Timer End section to Display Text or to Speak/Play a Sound and you do not want them to happen based on a Timer End Early pattern. You can specify \b\{null\} \b0 in the End Early Text to Display or Speak fields. Normally, the End Early message will override the message specified in the Timer End section but if you simply do not want a message at all.. This is the workaround. The triggerVariables doc is updated to try and explain it as it is a little confusing.\par
+{\pntext\f0 2.\tab}Fix for very short audio data sometimes causing playback to fail and stopping audio from working with triggers until restart.\par
+{\pntext\f0 3.\tab}Added some extra debug/error handling to the audio code to check for any more issues. Hopefully, this is now pretty stable for everyone.\par
+
+\pard\par
+\ul Updated in Version 2.2.72\ulnone\par
 \par
 
 \pard 

@@ -389,14 +389,13 @@ namespace EQLogParser
 
           if (endEarly)
           {
-            Speak speak = null;
             var tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out var isSound);
             tts = string.IsNullOrEmpty(tts) ? TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound) : tts;
             var displayText = string.IsNullOrEmpty(wrapper.ModifiedEndEarlyDisplay) ? wrapper.ModifiedEndDisplay : wrapper.ModifiedEndEarlyDisplay;
 
-            if (!string.IsNullOrEmpty(tts))
+            if (!string.IsNullOrEmpty(tts) && !tts.Equals("{null}", StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
             {
-              speak = new Speak
+              _speakCollection.Add(new Speak
               {
                 Wrapper = wrapper,
                 TtsOrSound = tts,
@@ -405,7 +404,7 @@ namespace EQLogParser
                 OriginalMatches = timerData.OriginalMatches,
                 PreviousMatches = timerData.PreviousMatches,
                 Action = lineData.Action
-              };
+              });
             }
 
             if (ProcessDisplayText(displayText, lineData.Action, earlyMatches, timerData.OriginalMatches,
@@ -417,11 +416,6 @@ namespace EQLogParser
             if (!_alertCollection.IsCompleted)
             {
               _alertCollection.Add((lineData, wrapper, "Timer End Early", 0));
-            }
-
-            if (speak != null && !_speakCollection.IsCompleted)
-            {
-              _speakCollection.Add(speak);
             }
 
             // lazy initialize a list as it most often won't be needed
@@ -482,9 +476,8 @@ namespace EQLogParser
         }
       }
 
-      Speak speak = null;
       var tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.SoundToPlay, wrapper.ModifiedSpeak, out var isSound);
-      if (!string.IsNullOrEmpty(tts))
+      if (!string.IsNullOrEmpty(tts) && !tts.Equals("{null}", StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
       {
         if (wrapper.HasRepeatedSpeak)
         {
@@ -492,7 +485,7 @@ namespace EQLogParser
           tts = tts.Replace("{repeated}", currentCount.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
         }
 
-        speak = new Speak
+        _speakCollection.Add(new Speak
         {
           Wrapper = wrapper,
           TtsOrSound = tts,
@@ -500,7 +493,7 @@ namespace EQLogParser
           Matches = matches,
           PreviousMatches = previousMatches,
           Action = lineData.Action
-        };
+        });
       }
 
       if (ProcessDisplayText(wrapper.ModifiedDisplay, lineData.Action, matches, null, previousMatches) is { } updatedDisplayText)
@@ -522,11 +515,6 @@ namespace EQLogParser
       if (!_alertCollection.IsCompleted)
       {
         _alertCollection.Add((lineData, wrapper, "Initial Trigger", timing / 10));
-      }
-
-      if (speak != null && !_speakCollection.IsCompleted)
-      {
-        _speakCollection.Add(speak);
       }
     }
 
@@ -597,13 +585,13 @@ namespace EQLogParser
 
           if (proceed)
           {
-            var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out var isSound);
-            if (!_speakCollection.IsCompleted)
+            var tts = TriggerUtil.GetFromDecodedSoundOrText(trigger.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out var isSound);
+            if (!string.IsNullOrEmpty(tts) && !tts.Equals("{null}", StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
             {
               _speakCollection.Add(new Speak
               {
                 Wrapper = wrapper,
-                TtsOrSound = speak,
+                TtsOrSound = tts,
                 IsSound = isSound,
                 Matches = matches,
                 PreviousMatches = previousMatches,
@@ -711,14 +699,13 @@ namespace EQLogParser
 
         if (proceed)
         {
-          var speak = TriggerUtil.GetFromDecodedSoundOrText(trigger.EndSoundToPlay, wrapper.ModifiedEndSpeak, out var isSound);
-
-          if (!_speakCollection.IsCompleted)
+          var tts = TriggerUtil.GetFromDecodedSoundOrText(trigger.EndSoundToPlay, wrapper.ModifiedEndSpeak, out var isSound);
+          if (!string.IsNullOrEmpty(tts) && !tts.Equals("{null}", StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
           {
             _speakCollection.Add(new Speak
             {
               Wrapper = wrapper,
-              TtsOrSound = speak,
+              TtsOrSound = tts,
               IsSound = isSound,
               Matches = matches,
               OriginalMatches = data2.OriginalMatches,
@@ -985,7 +972,7 @@ namespace EQLogParser
     private static string ProcessDisplayText(string text, string line, MatchCollection matches,
       MatchCollection originalMatches, MatchCollection previousMatches)
     {
-      if (!string.IsNullOrEmpty(text))
+      if (!string.IsNullOrEmpty(text) && !text.Equals("{null}", StringComparison.OrdinalIgnoreCase))
       {
         text = ProcessMatchesText(text, originalMatches);
         text = ProcessMatchesText(text, matches);
