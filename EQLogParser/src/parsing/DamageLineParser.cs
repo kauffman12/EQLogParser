@@ -696,108 +696,105 @@ namespace EQLogParser
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, 0, Labels.Absorb, "Hits");
       }
       // EMU specific stuff
-      if (MainWindow.IsEmuParsingEnabled)
+      // Old (eqemu direct damage) [Sat Jan 15 21:08:54 2022] Jaun hit Pixtt Invi Mal for 150 points of non-melee damage.
+      // Heroes Forge EMU [Sun Dec 08 04:56:54 2024] Lobekn (Owner: Bulron) hit a wan ghoul knight for 311 points of non-melee damage. (Earthquake)
+      else if (MainWindow.IsEmuParsingEnabled && forIndex > -1 && hitTypeIndex > -1 && split[hitTypeIndex] == "hit" && forIndex < pointsOfIndex && nonMeleeIndex > pointsOfIndex)
       {
-        // Old (eqemu direct damage) [Sat Jan 15 21:08:54 2022] Jaun hit Pixtt Invi Mal for 150 points of non-melee damage.
-        // Heroes Forge EMU [Sun Dec 08 04:56:54 2024] Lobekn (Owner: Bulron) hit a wan ghoul knight for 311 points of non-melee damage. (Earthquake)
-        if (forIndex > -1 && hitTypeIndex > -1 && split[hitTypeIndex] == "hit" && forIndex < pointsOfIndex && nonMeleeIndex > pointsOfIndex)
+        if (emuPetIndex > -1)
         {
-          if (emuPetIndex > -1)
+          attacker = string.Join(" ", split, 0, emuPetIndex);
+          if (split[emuPetIndex + 1].EndsWith(")", StringComparison.OrdinalIgnoreCase))
           {
-            attacker = string.Join(" ", split, 0, emuPetIndex);
-            if (split[emuPetIndex + 1].EndsWith(")", StringComparison.OrdinalIgnoreCase))
-            {
-              var player = split[emuPetIndex + 1][..^1];
-              PlayerManager.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
-              PlayerManager.Instance.AddVerifiedPet(attacker);
-              PlayerManager.Instance.AddPetToPlayer(attacker, player);
-            }
-          }
-          else
-          {
-            attacker = string.Join(" ", split, 0, hitTypeIndex);
-          }
-
-          defender = string.Join(" ", split, hitTypeIndex + 1, forIndex - hitTypeIndex - 1);
-          var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
-          attacker = UpdateAttacker(attacker, Labels.Dd);
-          defender = UpdateDefender(defender, attacker);
-
-          subType = Labels.Dd;
-          var end = stop + 1;
-
-          if (split.Length > end && split[end].StartsWith('(') && string.Join(" ", split, end, split.Length - stop - 1) is { } oldSpell && oldSpell.Length > 2)
-          {
-            subType = oldSpell[1..^1];
-            subType = ToUpper(subType);
-          }
-
-          record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, subType);
-
-          // handle old style crits for eqemu
-          if (record != null && _lastCrit != null && string.Equals(_lastCrit.Attacker, record.Attacker, StringComparison.OrdinalIgnoreCase) &&
-            (lineData.BeginTime - _lastCrit.BeginTime) <= 1 && _lastCrit.Value?.Length > 2 &&
-            _lastCrit.Value.AsSpan(1, _lastCrit.Value.Length - 2).SequenceEqual(split[pointsOfIndex - 1].AsSpan()))
-          {
-            record.ModifiersMask = LineModifiersParser.Crit;
-            _lastCrit = null;
+            var player = split[emuPetIndex + 1][..^1];
+            PlayerManager.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
+            PlayerManager.Instance.AddVerifiedPet(attacker);
+            PlayerManager.Instance.AddPetToPlayer(attacker, player);
           }
         }
-        // Old (eqemu) [Fri Mar 04 21:28:19 2022] The Spellshield absorbed 132 of 162 points of damage
-        else if (emuAbsorbedIndex > -1 && pointsOfIndex > emuAbsorbedIndex && split[stop] == "damage")
+        else
         {
-          defender = ConfigUtil.PlayerName;
-          record = CreateDamageRecord(lineData, split, stop, Labels.Unk, defender, 0, Labels.Absorb, "Hits");
+          attacker = string.Join(" ", split, 0, hitTypeIndex);
         }
-        // Old (eqemu) aura damage? [Fri Mar 04 21:28:19 2022] You are immolated by raging energy.  You have taken 179 points of damage.
-        else if (haveIndex > -1 && haveIndex == takenIndex && pointsOfIndex == takenIndex + 3 && split[haveIndex - 1] == "You")
+
+        defender = string.Join(" ", split, hitTypeIndex + 1, forIndex - hitTypeIndex - 1);
+        var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
+        attacker = UpdateAttacker(attacker, Labels.Dd);
+        defender = UpdateDefender(defender, attacker);
+
+        subType = Labels.Dd;
+        var end = stop + 1;
+
+        if (split.Length > end && split[end].StartsWith('(') && string.Join(" ", split, end, split.Length - stop - 1) is { } oldSpell && oldSpell.Length > 2)
         {
-          var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
-          attacker = Labels.Unk;
-          defender = ConfigUtil.PlayerName;
-          record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dot, Labels.Dot);
+          subType = oldSpell[1..^1];
+          subType = ToUpper(subType);
         }
-        // [Sun Dec 08 22:14:14 2024] Gaber (Owner: Claus) has shielded itself from 116 points of damage. (Rune II)
-        // Old (eqemu) [Sun Dec 08 21:36:40 2024] Leela has shielded herself from 658 points of damage. (Manaskin)
-        else if (hasIndex > -1 && (shieldedIndex == (hasIndex + 1)) && pointsOfIndex == (stop - 2))
+
+        record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, subType);
+
+        // handle old style crits for eqemu
+        if (record != null && _lastCrit != null && string.Equals(_lastCrit.Attacker, record.Attacker, StringComparison.OrdinalIgnoreCase) &&
+          (lineData.BeginTime - _lastCrit.BeginTime) <= 1 && _lastCrit.Value?.Length > 2 &&
+          _lastCrit.Value.AsSpan(1, _lastCrit.Value.Length - 2).SequenceEqual(split[pointsOfIndex - 1].AsSpan()))
         {
-          if (emuPetIndex > -1 && emuPetIndex < hasIndex)
+          record.ModifiersMask = LineModifiersParser.Crit;
+          _lastCrit = null;
+        }
+      }
+      // Old (eqemu) [Fri Mar 04 21:28:19 2022] The Spellshield absorbed 132 of 162 points of damage
+      else if (MainWindow.IsEmuParsingEnabled && emuAbsorbedIndex > -1 && pointsOfIndex > emuAbsorbedIndex && split[stop] == "damage")
+      {
+        defender = ConfigUtil.PlayerName;
+        record = CreateDamageRecord(lineData, split, stop, Labels.Unk, defender, 0, Labels.Absorb, "Hits");
+      }
+      // Old (eqemu) aura damage? [Fri Mar 04 21:28:19 2022] You are immolated by raging energy.  You have taken 179 points of damage.
+      else if (MainWindow.IsEmuParsingEnabled && haveIndex > -1 && haveIndex == takenIndex && pointsOfIndex == takenIndex + 3 && split[haveIndex - 1] == "You")
+      {
+        var damage = StatsUtil.ParseUInt(split[pointsOfIndex - 1]);
+        attacker = Labels.Unk;
+        defender = ConfigUtil.PlayerName;
+        record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dot, Labels.Dot);
+      }
+      // [Sun Dec 08 22:14:14 2024] Gaber (Owner: Claus) has shielded itself from 116 points of damage. (Rune II)
+      // Old (eqemu) [Sun Dec 08 21:36:40 2024] Leela has shielded herself from 658 points of damage. (Manaskin)
+      else if (MainWindow.IsEmuParsingEnabled && hasIndex > -1 && (shieldedIndex == (hasIndex + 1)) && pointsOfIndex == (stop - 2))
+      {
+        if (emuPetIndex > -1 && emuPetIndex < hasIndex)
+        {
+          defender = string.Join(" ", split, 0, emuPetIndex);
+          if (split[emuPetIndex + 1].EndsWith(")", StringComparison.OrdinalIgnoreCase))
           {
-            defender = string.Join(" ", split, 0, emuPetIndex);
-            if (split[emuPetIndex + 1].EndsWith(")", StringComparison.OrdinalIgnoreCase))
-            {
-              var player = split[emuPetIndex + 1][..^1];
-              PlayerManager.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
-              PlayerManager.Instance.AddVerifiedPet(defender);
-              PlayerManager.Instance.AddPetToPlayer(defender, player);
-            }
+            var player = split[emuPetIndex + 1][..^1];
+            PlayerManager.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
+            PlayerManager.Instance.AddVerifiedPet(defender);
+            PlayerManager.Instance.AddPetToPlayer(defender, player);
           }
-          else
+        }
+        else
+        {
+          defender = string.Join(" ", split, 0, hasIndex);
+        }
+
+        defender = UpdateDefender(defender, Labels.Unk);
+        record = CreateDamageRecord(lineData, split, stop, Labels.Unk, defender, 0, Labels.Absorb, "Hits");
+      }
+      // [Thu Jan 23 21:36:37 2025] Vorgash scores a critical hit! (780)
+      // [Thu Jan 23 21:37:44 2025] Arilyn lands a Crippling Blow!(244)
+      else if (MainWindow.IsEmuParsingEnabled && oldCritIndex > -1 && (crippleDamageFix > -1 || (split.Length > stop + 1 && split[stop + 1].Length > 2)))
+      {
+        var damage = crippleDamageFix != -1 ? (uint)crippleDamageFix : StatsUtil.ParseUInt(split[stop + 1].AsSpan(1, split[stop + 1].Length - 2));
+        if (damage != uint.MaxValue)
+        {
+          attacker = string.Join(" ", split, 0, oldCritIndex);
+          attacker = UpdateAttacker(attacker, Labels.Unk);
+
+          var damageRecord = CreateDamageRecord(lineData, split, stop, attacker, Labels.Unk, damage, Labels.Melee, "Hits");
+          if (damageRecord != null)
           {
-            defender = string.Join(" ", split, 0, hasIndex);
+            damageRecord.ModifiersMask = LineModifiersParser.Crit;
           }
 
-          defender = UpdateDefender(defender, Labels.Unk);
-          record = CreateDamageRecord(lineData, split, stop, Labels.Unk, defender, 0, Labels.Absorb, "Hits");
-        }
-        // [Thu Jan 23 21:36:37 2025] Vorgash scores a critical hit! (780)
-        // [Thu Jan 23 21:37:44 2025] Arilyn lands a Crippling Blow!(244)
-        else if (oldCritIndex > -1 && (crippleDamageFix > -1 || (split.Length > stop + 1 && split[stop + 1].Length > 2)))
-        {
-          var damage = crippleDamageFix != -1 ? (uint)crippleDamageFix : StatsUtil.ParseUInt(split[stop + 1].AsSpan(1, split[stop + 1].Length - 2));
-          if (damage != uint.MaxValue)
-          {
-            attacker = string.Join(" ", split, 0, oldCritIndex);
-            attacker = UpdateAttacker(attacker, Labels.Unk);
-
-            var damageRecord = CreateDamageRecord(lineData, split, stop, attacker, Labels.Unk, damage, Labels.Melee, "Hits");
-            if (damageRecord != null)
-            {
-              damageRecord.ModifiersMask = LineModifiersParser.Crit;
-            }
-
-            _delayRecord = new DelayRecord { Record = damageRecord, BeginTime = lineData.BeginTime };
-          }
+          _delayRecord = new DelayRecord { Record = damageRecord, BeginTime = lineData.BeginTime };
         }
       }
       // [Fri Mar 04 21:28:19 2022] A failed reclaimer tries to punch YOU, but YOUR magical skin absorbs the blow!
