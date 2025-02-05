@@ -1,7 +1,6 @@
 ﻿
 using FontAwesome5;
 using log4net;
-using Syncfusion.Linq;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -678,8 +677,17 @@ namespace EQLogParser
           var dpiScale = UiElementUtil.GetDpi();
           var titleHeight = titlePane.ActualHeight;
 
-          var height = (int)titlePane.ActualHeight + (int)headerPanel.ActualHeight +
-                       (int)labelStackPanel.Children.ToList<FrameworkElement>().Select(elem => elem.ActualHeight).Sum();
+          var calcLabelHeight = 0d;
+          foreach (var child in labelStackPanel.Children)
+          {
+            if (child is FrameworkElement { } elem)
+            {
+              calcLabelHeight += elem.ActualHeight;
+            }
+          }
+
+          var labelHeight = (int)calcLabelHeight;
+          var height = (int)titlePane.ActualHeight + (int)headerPanel.ActualHeight + labelHeight;
           var width = (int)labelStackPanel.ActualWidth + (int)mainStackPanel.ActualWidth;
 
           // create title image
@@ -693,20 +701,18 @@ namespace EQLogParser
           var headerImage = BitmapFrame.Create(rtb);
 
           // create labels pane image
-          rtb = new RenderTargetBitmap((int)labelStackPanel.ActualWidth, (int)labelStackPanel.ActualHeight,
-            dpiScale, dpiScale, PixelFormats.Default);
+          rtb = new RenderTargetBitmap((int)labelStackPanel.ActualWidth, labelHeight, dpiScale, dpiScale, PixelFormats.Default);
           rtb.Render(labelStackPanel);
           var labelsImage = BitmapFrame.Create(rtb);
 
           // create content pane image
-          rtb = new RenderTargetBitmap((int)mainStackPanel.ActualWidth, (int)mainStackPanel.ActualHeight,
-            dpiScale, dpiScale, PixelFormats.Default);
+          rtb = new RenderTargetBitmap((int)mainStackPanel.ActualWidth, labelHeight, dpiScale, dpiScale, PixelFormats.Default);
           rtb.Render(mainStackPanel);
           var contentImage = BitmapFrame.Create(rtb);
 
           if (!everything)
           {
-            height = (int)titlePane.ActualHeight + (int)headerPanel.ActualHeight + (int)mainScroller.ActualHeight;
+            height = (int)titlePane.ActualHeight + (int)headerPanel.ActualHeight + (int)Math.Min(mainScroller.ActualHeight, labelHeight);
             width = (int)labelStackPanel.ActualWidth + (int)mainScroller.ActualWidth;
           }
 

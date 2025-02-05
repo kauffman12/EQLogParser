@@ -1,10 +1,12 @@
 ﻿using FontAwesome5;
+using log4net;
 using Syncfusion.Windows.Edit;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -16,11 +18,9 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for EQLogViewer.xaml
-  /// </summary>
   public partial class EqLogViewer : IDisposable
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private const int Context = 30000;
     private const int MaxRows = 250000;
     private const string Damageavoided = "Damage Avoided";
@@ -246,52 +246,103 @@ namespace EQLogParser
     {
       Task.Delay(50).ContinueWith(_ =>
       {
-        using var f = File.OpenRead(_currentFile);
-        f.Seek(Math.Max(0, pos - Context), SeekOrigin.Begin);
-        var s = FileUtil.GetStreamReader(f);
-        var list = new List<string>();
-
-        if (!s.EndOfStream)
+        try
         {
-          // since position is not the start of a line just read one as junk
-          s.ReadLine();
-        }
+          var list = new List<string>();
+          var foundLines = new List<int>();
+          using var f = File.OpenRead(_currentFile);
+          var isGzip = f.Name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase);
 
-        var foundLines = new List<int>();
-        while (!s.EndOfStream)
-        {
-          if (s.ReadLine() is { } line)
+          if (!isGzip)
           {
-            list.Add(line);
-            if (line.Contains(text))
+            f.Seek(Math.Max(0, pos - Context), SeekOrigin.Begin);
+            var s = FileUtil.GetStreamReader(f);
+
+            if (!s.EndOfStream)
             {
-              foundLines.Add(list.Count);
+              // since position is not the start of a line just read one as junk
+              s.ReadLine();
             }
 
-            if (f.Position >= (pos + Context))
+            while (!s.EndOfStream)
             {
-              break;
+              if (s.ReadLine() is { } line)
+              {
+                list.Add(line);
+                if (line.StartsWith(text, StringComparison.OrdinalIgnoreCase))
+                {
+                  foundLines.Add(list.Count);
+                }
+
+                if (f.Position >= (pos + Context))
+                {
+                  break;
+                }
+              }
             }
+
+            s.Close();
+            s.Dispose();
           }
-        }
-
-        var allText = string.Join(Environment.NewLine, list);
-        Dispatcher.InvokeAsync(() =>
-        {
-          var highlight = Application.Current.Resources["EQSearchBackgroundBrush"] as SolidColorBrush;
-          contextBox.Text = allText;
-          contextTab.Visibility = Visibility.Visible;
-          foundLines.ForEach(line => contextBox.SetLineBackground(line, true, highlight));
-          tabControl.SelectedItem = contextTab;
-          UpdateStatusCount(contextBox.Lines.Count);
-
-          if (foundLines.Count > 0)
+          else
           {
-            GoToLine(contextBox, foundLines[0] + 3);
-          }
-        });
+            var firstFound = false;
+            var queue = new Queue<string>();
+            var s = FileUtil.GetStreamReader(f);
 
-        f.Close();
+            while (!s.EndOfStream)
+            {
+              if (s.ReadLine() is { } line)
+              {
+                queue.Enqueue(line);
+                if (line.StartsWith(text, StringComparison.OrdinalIgnoreCase))
+                {
+                  firstFound = true;
+                  foundLines.Add(queue.Count);
+                }
+
+                // grab += 1000 lines
+                // not really sure how many the non-gz is doing tbh
+                if (!firstFound && queue.Count > 1000)
+                {
+                  queue.Dequeue();
+                }
+
+                if (firstFound && queue.Count == 2000)
+                {
+                  break;
+                }
+              }
+            }
+
+            list.AddRange([.. queue]);
+            s.Close();
+            s.Dispose();
+          }
+
+          var allText = string.Join(Environment.NewLine, list);
+          Dispatcher.InvokeAsync(() =>
+          {
+            var highlight = Application.Current.Resources["EQSearchBackgroundBrush"] as SolidColorBrush;
+            contextBox.Text = allText;
+            contextTab.Visibility = Visibility.Visible;
+            foundLines.ForEach(line => contextBox.SetLineBackground(line, true, highlight));
+            tabControl.SelectedItem = contextTab;
+            UpdateStatusCount(contextBox.Lines.Count);
+
+            if (foundLines.Count > 0)
+            {
+              GoToLine(contextBox, foundLines[0] + 3);
+            }
+          });
+
+          f.Close();
+          f.Dispose();
+        }
+        catch (Exception ex)
+        {
+          Log.Error("Error Loading Context", ex);
+        }
       }, TaskScheduler.Default);
     }
 
