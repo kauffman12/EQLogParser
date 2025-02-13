@@ -524,7 +524,7 @@ namespace EQLogParser
         if (counter.CurrentMax != long.MaxValue)
         {
           long newValue = 1;
-          if (cast.SpellData.Rank > 1)
+          if (cast.SpellData?.Rank > 1)
           {
             newValue = 10;
           }

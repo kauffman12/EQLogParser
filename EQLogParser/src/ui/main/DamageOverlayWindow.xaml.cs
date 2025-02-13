@@ -12,9 +12,6 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for DamageOverlayWindow.xaml
-  /// </summary>
   public partial class DamageOverlayWindow
   {
     private const double DamageModeZeroTimeout = TimeSpan.TicksPerSecond * 7; // with 3 second slain queue delay
@@ -65,10 +62,10 @@ namespace EQLogParser
       }
 
       // dimensions
-      var width = ConfigUtil.GetSettingAsDouble("OverlayWidth", int.MaxValue);
+      var width = ConfigUtil.GetSettingAsDouble("OverlayWidth", SystemParameters.VirtualScreenWidth / 4);
       var height = ConfigUtil.GetSettingAsDouble("OverlayHeight", int.MaxValue);
-      var top = ConfigUtil.GetSettingAsDouble("OverlayTop", int.MaxValue);
-      var left = ConfigUtil.GetSettingAsDouble("OverlayLeft", int.MaxValue);
+      var top = ConfigUtil.GetSettingAsDouble("OverlayTop", 20);
+      var left = ConfigUtil.GetSettingAsDouble("OverlayLeft", 100);
       SetWindowSizes(height, width, top, left);
 
       // fonts
@@ -546,6 +543,11 @@ namespace EQLogParser
       {
         Height = height;
       }
+      else
+      {
+        // workaround for GetOverlayHeight needing to be called after init
+        _ = Dispatcher.InvokeAsync(() => Height = _savedHeight = GetOverlayHeight());
+      }
 
       if (top < int.MaxValue && top < SystemParameters.VirtualScreenHeight)
       {
@@ -1003,7 +1005,7 @@ namespace EQLogParser
     {
       if (_preview)
       {
-        if (!double.IsNaN(_savedTop))
+        if ((!double.IsNaN(_savedTop) && _savedTop != Top) || (_savedWidth > 0 && _savedWidth != Width))
         {
           DataChanged();
         }

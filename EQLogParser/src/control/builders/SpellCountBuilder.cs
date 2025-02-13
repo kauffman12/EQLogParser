@@ -110,7 +110,7 @@ namespace EQLogParser
 
       void Add(double theTime, SpellData spellData, IAction theAction)
       {
-        if ((theTime >= damageAfter && theTime <= damageBefore) || spellData.Damaging < 1)
+        if ((theTime >= damageAfter && theTime <= damageBefore) || spellData == null || spellData.Damaging < 1)
         {
           actions.Add(theAction);
         }

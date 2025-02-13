@@ -166,6 +166,11 @@ namespace EQLogParser
 
     internal bool PassFilters(SpellData spellData, bool received)
     {
+      if (spellData == null)
+      {
+        return true;
+      }
+
       // if nothing selected return nothing
       if (!CurrentShowAnySpellType)
       {

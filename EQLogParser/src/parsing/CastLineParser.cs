@@ -140,13 +140,19 @@ namespace EQLogParser
               if (spellData != null)
               {
                 spellData.SeenRecently = true;
-                var cast = new SpellCast { Caster = string.Intern(player), Spell = string.Intern(spellName), SpellData = spellData };
-                RecordManager.Instance.Add(cast, currentTime);
+              }
+              else
+              {
+                // unknown spell
+                spellData = DataManager.Instance.AddUnknownSpell(spellName);
+              }
 
-                if (DataManager.Instance.GetSpellClass(cast.Spell) is { } theClass)
-                {
-                  PlayerManager.Instance.UpdatePlayerClassFromSpell(cast, theClass);
-                }
+              var cast = new SpellCast { Caster = string.Intern(player), Spell = string.Intern(spellName), SpellData = spellData };
+              RecordManager.Instance.Add(cast, currentTime);
+
+              if (DataManager.Instance.GetSpellClass(cast.Spell) is { } theClass)
+              {
+                PlayerManager.Instance.UpdatePlayerClassFromSpell(cast, theClass);
               }
 
               if (specialKey != null && spellData != null)
