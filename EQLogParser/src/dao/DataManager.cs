@@ -105,6 +105,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, string> _spellAbbrvCache = new();
     private readonly ConcurrentDictionary<string, string> _ranksCache = new();
     private readonly ConcurrentDictionary<string, List<SpellData>> _spellsNameDb = new();
+    private readonly ConcurrentDictionary<string, SpellData> _unknownSpellDb = new();
 
     private DataManager()
     {
@@ -292,7 +293,7 @@ namespace EQLogParser
     internal bool IsLifetimeNpc(string name) => !string.IsNullOrEmpty(name) && _lifetimeFights.ContainsKey(name);
     internal Dictionary<long, Fight> GetOverlayFights() => _overlayFights.ToDictionary(i => i.Key, i => i.Value);
     internal void RemoveOverlayFight(long id) => _overlayFights.Remove(id, out _);
-    internal bool HasOverlayFights() => _overlayFights.Count > 0;
+    internal bool HasOverlayFights() => !_overlayFights.IsEmpty;
     internal string GetClassFromTitle(string title) => _titleToClass.GetValueOrDefault(title);
 
     internal string AbbreviateSpellName(string spell)
@@ -323,6 +324,23 @@ namespace EQLogParser
       }
 
       return string.Intern(result);
+    }
+
+    internal SpellData AddUnknownSpell(string spellName)
+    {
+      if (!_unknownSpellDb.TryGetValue(spellName, out var result))
+      {
+        // unknown spell
+        var spellData = new SpellData
+        {
+          Id = string.Intern(spellName),
+          Name = string.Intern(spellName),
+          NameAbbrv = string.Intern(DataManager.Instance.AbbreviateSpellName(spellName))
+        };
+        _unknownSpellDb[spellName] = spellData;
+        result = spellData;
+      }
+      return result;
     }
 
     internal void CheckExpireFights(double currentTime)
@@ -771,6 +789,7 @@ namespace EQLogParser
       _activeFights.Clear();
       _lifetimeFights.Clear();
       _overlayFights.Clear();
+      _unknownSpellDb.Clear();
       ClearActiveAdps();
       EventsClearedActiveData?.Invoke(true);
     }

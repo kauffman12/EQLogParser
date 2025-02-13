@@ -5075,6 +5075,16 @@ Strike of Flames XII
 Strike of Flames XIII
 Strike of Flames XIV
 Strike of Flames XV
+Strike of Ice
+Strike of Ice I
+Strike of Ice III
+Strike of Ice IV
+Strike of Ice V
+Strike of Ice VI
+Strike of Ice VII
+Strike of Ice VIII
+Strike of Ice IX
+Strike of Ice X
 Strike of Magic
 Strike of Magic I
 Strike of Magic II

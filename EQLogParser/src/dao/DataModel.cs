@@ -683,7 +683,7 @@ namespace EQLogParser
     public string Spell { get; set; }
     public SpellData SpellData { get; set; }
     public string Caster { get; set; }
-    public bool Interrupted { get; set; } = false;
+    public bool Interrupted { get; set; }
   }
 
   internal class SpellData
