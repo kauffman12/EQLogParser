@@ -142,6 +142,10 @@ namespace EQLogParser
       {
         return;
       }
+      catch (FileNotFoundException)
+      {
+        Log.Warn($"File Not Available: ${FileName}");
+      }
       catch (Exception ex)
       {
         Log.Error($"Error Loading File: ${FileName}. Re-open or toggle Triggers to try again.", ex);

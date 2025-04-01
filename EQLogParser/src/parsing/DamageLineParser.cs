@@ -361,15 +361,11 @@ namespace EQLogParser
             default:
               if (slainIndex == -1 && i > 0 && i < stop && tryIndex == -1 && !foundType)
               {
-                // You/singular case
-                if (isYou)
+                if (HitMap.TryGetValue(split[i], out var sub))
                 {
-                  if (HitMap.TryGetValue(split[i], out var sub))
-                  {
-                    hitTypeIndex = i;
-                    subType = sub; // use plural
-                    foundType = true;
-                  }
+                  hitTypeIndex = i;
+                  subType = sub; // use plural
+                  foundType = true;
                 }
                 else if (ReverseHitMap.ContainsKey(split[i]))
                 {
@@ -377,19 +373,17 @@ namespace EQLogParser
                   subType = split[i];
                   foundType = true;
                 }
-                else if (HitMap.TryGetValue(split[i], out var sub2))
+
+                if (foundType)
                 {
                   if (i > 2 && split[i - 1] == "to" && (split[i - 2] == "tries" || split[i - 2] == "try"))
                   {
-                    hitTypeIndex = i;
-                    subType = sub2; // use plural
                     tryIndex = i - 2;
-                    foundType = true;
                   }
-                  else if (sub2 == "hits")
+
+                  if (subType == "hits")
                   {
                     hitTypeIndex = i;
-                    subType = sub2; // use plural
                     foundType = false; // may not be correct so let it try again
                   }
                 }
@@ -505,7 +499,7 @@ namespace EQLogParser
       // [Sun Apr 18 20:24:56 2021] Sonozen hit Jortreva the Crusader for 38948 points of fire damage by Burst of Flames. (Lucky Critical Twincast)
       // [Sat Jan 04 15:29:18 2025] Piemastaj hit Boss for 176000 points of unresistable damage by Elemental Conversion VI.
       // [Sat Jan 04 15:29:18 2025] You hit a treant for 1633489 points of magic damage by Chromospheric Vortex Rk. II. (Lucky Critical)
-      else if (byDamage > 3 && pointsOfIndex == (byDamage - 3) && byIndex == (byDamage + 1) && forIndex > -1 &&
+      else if (byDamage > 3 && pointsOfIndex == (byDamage - 3) && byIndex == (byDamage + 1) && forIndex > -1 && hitTypeIndex > 0 &&
         split[hitTypeIndex] == "hit" && hitTypeIndex < forIndex && split[stop].Length > 0 && split[stop][^1] == '.')
       {
         var spell = string.Join(" ", split, byIndex + 1, stop - byIndex);

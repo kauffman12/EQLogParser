@@ -1232,7 +1232,13 @@ namespace EQLogParser
 
         try
         {
-          Task.WaitAll(_speakTask, _chatTask, _alertTask, _mainTask);
+          foreach (var task in new Task[] { _speakTask, _chatTask, _alertTask, _mainTask })
+          {
+            if (task != null)
+            {
+              task.Wait();
+            }
+          }
         }
         finally
         {
