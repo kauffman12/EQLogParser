@@ -776,7 +776,15 @@ namespace EQLogParser
     {
       if (node?.Id == null) return;
 
-      toState.Enabled[node.Id] = fromState.Enabled[node.Id];
+      if (fromState.Enabled.TryGetValue(node.Id, out var value))
+      {
+        toState.Enabled[node.Id] = value;
+      }
+      else
+      {
+        toState.Enabled.Remove(node.Id);
+      }
+
       if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
       {
         foreach (var child in tree.Query().Where(n => n.Parent == node.Id).ToArray())

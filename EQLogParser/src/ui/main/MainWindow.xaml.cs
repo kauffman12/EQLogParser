@@ -186,6 +186,9 @@ namespace EQLogParser
       // load document state
       DockingManager.SetState(petMappingWindow, DockState.AutoHidden);
 
+      // listen for done event
+      ConfigUtil.EventsLoadingText += ConfigUtilEventsLoadingText;
+
       // update theme
       MainActions.InitThemes(this);
       ConfigUtil.UpdateStatus("Themes Initialized");
@@ -278,26 +281,28 @@ namespace EQLogParser
 
         _ = Dispatcher.InvokeAsync(CheckWindowPosition, DispatcherPriority.Background);
 
-        // Actually start the check.
-        if (checkUpdatesIcon.Visibility == Visibility.Visible)
-        {
-          await Task.Delay(2000);
-          await MainActions.CheckVersionAsync(errorText);
-        }
-
         // send done in 5 more seconds if it hasn't been received yet
         await Task.Delay(5000);
         ConfigUtil.UpdateStatus("Done");
-
-        // cleanup downloads
-        await Task.Delay(500);
-        MainActions.Cleanup();
       }
       catch (Exception e)
       {
         // make sure splash screen goes away
         ConfigUtil.UpdateStatus("Done");
         Log.Error(e);
+      }
+    }
+
+    private async void ConfigUtilEventsLoadingText(string text)
+    {
+      // cleanup downloads
+      MainActions.Cleanup();
+
+      // Actually start the check.
+      if (text == "Done" && checkUpdatesIcon.Visibility == Visibility.Visible)
+      {
+        await Task.Delay(500);
+        await MainActions.CheckVersionAsync(errorText);
       }
     }
 
