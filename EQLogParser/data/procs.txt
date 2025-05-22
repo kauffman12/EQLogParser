@@ -578,9 +578,6 @@ Venon's Vindictiveness II
 Venon's Vindictiveness III
 
 # Berserker Alliance
-Conqueror's Bladestrike IV Azia
-Conqueror's Bladestrike IV Beza
-Conqueror's Bladestrike IV Caza
 Demolisher's Bladestrike
 Demolisher's Bladestrike II
 Demolisher's Bladestrike III
@@ -590,6 +587,12 @@ Mangler's Bladestrike III
 Vindicator's Bladestrike III Azia
 Vindicator's Bladestrike III Beza
 Vindicator's Bladestrike III Caza
+Conqueror's Bladestrike IV Azia
+Conqueror's Bladestrike IV Beza
+Conqueror's Bladestrike IV Caza
+Eviscerator's Bladestrike V Azia
+Eviscerator's Bladestrike V Beza
+Eviscerator's Bladestrike V Caza
 
 # Berserker Axe of Rallos
 Axe of Graster Dread Effect
@@ -793,6 +796,9 @@ Fearless Frenzy Strike III
 Fighting Frenzy Strike
 Fighting Frenzy Strike II
 Fighting Frenzy Strike III
+Heightened Frenzy Strike
+Heightened Frenzy Strike II
+Heightened Frenzy Strike III
 Magnified Frenzy Strike
 Magnified Frenzy Strike II
 Magnified Frenzy Strike III
@@ -871,6 +877,9 @@ Sapping Strikes Effect III
 Shriveling Strike
 Shriveling Strike II
 Shriveling Strike III
+Draining Strike
+Draining Strike II
+Draining Strike III
 
 # Berserker Uncontained Frenzy
 Uncontained Frenzy I
@@ -2000,9 +2009,6 @@ Companion's Assault XXXV
 Companion's Assault XXXVI
 
 # Monk Alliance
-Bloodwalker's Soulstrike IV Azia
-Bloodwalker's Soulstrike IV Beza
-Bloodwalker's Soulstrike IV Caza
 Doomwalker's Soulstrike
 Doomwalker's Soulstrike II
 Doomwalker's Soulstrike III
@@ -2012,6 +2018,12 @@ Firewalker's Soulstrike III
 Icewalker's Soulstrike
 Icewalker's Soulstrike II
 Icewalker's Soulstrike III
+Bloodwalker's Soulstrike IV Azia
+Bloodwalker's Soulstrike IV Beza
+Bloodwalker's Soulstrike IV Caza
+Fatewalker's Soulstrike V Azia
+Fatewalker's Soulstrike V Beza
+Fatewalker's Soulstrike V Caza
 
 # Monk Balance
 Dragon's Balance Effect
@@ -2481,6 +2493,49 @@ Fervor Strike
 Major Pious Shield Effect
 Minor Pious Shield Effect
 
+# Paladin Blessing of Life
+Blessing of Life I
+Blessing of Life II
+Blessing of Life III
+Blessing of Life IV
+Blessing of Life V
+Blessing of Life VI
+Blessing of Life VII
+Blessing of Life VIII
+Blessing of Life IX
+Blessing of Life X
+Blessing of Life XI
+Blessing of Life XII
+Blessing of Life XIII
+Blessing of Life XIV
+Blessing of Life XV
+Blessing of Life XVI
+Blessing of Life XVII
+Blessing of Life XVIII
+Blessing of Life XIX
+Blessing of Life XX
+Blessing of Life XXI
+Blessing of Life XXII
+Blessing of Life XXIII
+Blessing of Life XXIV
+Blessing of Life XXV
+Blessing of Life XXVI
+Blessing of Life XXVII
+Blessing of Life XXVIII
+Blessing of Life XXIX
+Blessing of Life XXX
+Blessing of Life XXXI
+Blessing of Life XXXII
+Blessing of Life XXXIII
+Blessing of Life XXXIV
+Blessing of Life XXXV
+Blessing of Life XXXVI
+Blessing of Life XXXVII
+Blessing of Life XXXVIII
+Blessing of Life XXXIX
+Blessing of Life XL
+Blessing of Life XLI
+
 # Paladin Blessed Guardian
 Blessed Guardian Heal
 Blessed Guardian Heal II
@@ -2528,6 +2583,9 @@ Inquisitor's Judgment Strike XV
 Inquisitor's Judgment Strike XVI
 Inquisitor's Judgment Strike XVII
 Inquisitor's Judgment Strike XVIII
+Inquisitor's Judgment Strike XXVII
+Inquisitor's Judgment Strike XXVIII
+Inquisitor's Judgment Strike XXIX
 Inquisitor's Judgment Strike XIX
 Inquisitor's Judgment Strike XX
 Inquisitor's Judgment Strike XXI
@@ -2536,12 +2594,13 @@ Inquisitor's Judgment Strike XXIII
 Inquisitor's Judgment Strike XXIV
 Inquisitor's Judgment Strike XXV
 Inquisitor's Judgment Strike XXVI
-Inquisitor's Judgment Strike XXVII
-Inquisitor's Judgment Strike XXVIII
-Inquisitor's Judgment Strike XXIX
 Inquisitor's Judgment Strike XXX
 Inquisitor's Judgment Strike XXXI
 Inquisitor's Judgment Strike XXXII
+Inquisitor's Judgment Strike XXXIII
+Inquisitor's Judgment Strike XXXIV
+Inquisitor's Judgment Strike XXXV
+Inquisitor's Judgment Strike XXXVI
 
 # Paladin Last Rites
 Benediction Trigger
@@ -2599,6 +2658,12 @@ Penitent Reward IV Caza
 Penitent Reward V Azia
 Penitent Reward V Beza
 Penitent Reward V Caza
+
+# Paladin Oathbound
+Oathbound Bulwark I
+Oathbound Bulwark II
+Oathbound Bulwark III
+Oathbound Bulwark IV
 
 # Paladin Remorse for the Fallen
 Remorseful Effect
@@ -2666,6 +2731,9 @@ Condemnation Strike
 Condemnation Strike II
 Condemnation Strike III
 Devout Fury Strike
+Disdained Strike
+Disdained Strike II
+Disdained Strike III
 Earnest Fury Strike
 Earnest Fury Strike II
 Earnest Fury Strike III
@@ -3975,6 +4043,14 @@ Timeworn Runes Effect
 Timeworn Runes Effect Rk. II
 Timeworn Runes Effect Rk. III
 
+# Warrior Sneering Grin
+Sneering Grin I
+Sneering Grin II
+Sneering Grin III
+Sneering Grin IV
+Sneering Grin V
+Sneering Grin VI
+
 # Warrior Stun Defense
 Levincrash Defense Stun I
 Levincrash Defense Stun II
@@ -3986,6 +4062,19 @@ Stun Effect
 Tempestuous Defense Stun I
 Tempestuous Defense Stun II
 Tempestuous Defense Stun III
+
+# Warrior Stunning Kick
+Stunning Kick IV
+Stunning Kick I
+Stunning Kick II
+Stunning Kick I
+Stunning Kick II
+Stunning Kick III
+Stunning Kick IV
+Stunning Kick V
+Stunning Kick VI
+Stunning Kick VII
+Stunning Kick VIII
 
 # Warrior TBM BP
 Martial Rage Strike

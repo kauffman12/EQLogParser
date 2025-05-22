@@ -102,10 +102,15 @@
           <ComboBox x:Name="damageModeList" Background="{DynamicResource ContentBackground}" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" SelectionChanged="DamageModeChanged"
                     ToolTip="Choose 'On Kill' for the Damage Meter to reset damage after NPCs are killed. Otherwise, the Damage Meter stays up and continues counting until the selected timeout.">
             <ComboBoxItem Tag="0">Reset On Kill</ComboBoxItem>
+            <ComboBoxItem Tag="3">Reset 3s</ComboBoxItem>
+            <ComboBoxItem Tag="5">Reset 5s</ComboBoxItem>
+            <ComboBoxItem Tag="10">Reset 10s</ComboBoxItem>
+            <ComboBoxItem Tag="20">Reset 20s</ComboBoxItem>
             <ComboBoxItem Tag="30">Reset 30s</ComboBoxItem>
             <ComboBoxItem Tag="40">Reset 40s</ComboBoxItem>
             <ComboBoxItem Tag="50">Reset 50s</ComboBoxItem>
             <ComboBoxItem Tag="60">Reset 60s</ComboBoxItem>
+            <ComboBoxItem Tag="90">Reset 90s</ComboBoxItem>
           </ComboBox>
           <ComboBox x:Name="classList" Background="{DynamicResource ContentBackground}" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" SelectionChanged="SelectedClassChanged" ToolTip="Display all classes or the selected class."></ComboBox>
 
