@@ -105,7 +105,7 @@ namespace EQLogParser
 
       // damage mode
       _savedDamageMode = ConfigUtil.GetSettingAsInteger("OverlayDamageMode");
-      if (_savedDamageMode != 0 && _savedDamageMode != 30 && _savedDamageMode != 40 && _savedDamageMode != 50 && _savedDamageMode != 60)
+      if (_savedDamageMode < 0 || _savedDamageMode > 100)
       {
         _savedDamageMode = 0;
       }
