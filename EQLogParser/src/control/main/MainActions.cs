@@ -20,6 +20,8 @@ using System.Net.Http;
 using System.Reflection;
 using System.Security;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
@@ -62,6 +64,7 @@ namespace EQLogParser
     private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new();
     private static readonly SortableNameComparer TheSortableNameComparer = new();
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+    private static readonly JsonSerializerOptions DiscordSerializationOptions = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
     private static MainWindow _mainWindow;
 
     internal static void FireChartOpened(string name) => EventsChartOpened?.Invoke(name);
@@ -180,6 +183,24 @@ namespace EQLogParser
       });
 
       return result;
+    }
+
+    internal static async Task SendDiscordMessage(string content, string webhookUrl)
+    {
+      try
+      {
+        var payload = new { content };
+        var json = JsonSerializer.Serialize(payload, DiscordSerializationOptions);
+        using var body = new StringContent(json, Encoding.UTF8, "application/json");
+
+        // Reuses the same HttpClient instance & its connection pool
+        var request = await TheHttpClient.PostAsync(webhookUrl, body);
+        request.EnsureSuccessStatusCode();
+      }
+      catch (Exception ex)
+      {
+        Log.Error("Problem Sending to Discord", ex);
+      }
     }
 
     internal static async Task CheckVersionAsync(TextBlock errorText)

@@ -753,7 +753,7 @@ namespace EQLogParser
       }
     }
 
-    internal void ResetOverlayFights(bool active = false)
+    internal void ResetOverlayFights(bool active = false, bool deadAlso = false)
     {
       var groupId = (active && !_activeFights.IsEmpty) ? _activeFights.Values.First().GroupId : -1;
       // active is used after the log as been loaded. the overlay opening is displayed so that
@@ -767,7 +767,7 @@ namespace EQLogParser
       var removeList = new List<long>();
       foreach (var fight in _overlayFights.Values)
       {
-        if (fight != null && (groupId == -1 || fight.GroupId != groupId))
+        if (fight != null && (groupId == -1 || fight.GroupId != groupId || (deadAlso && fight.Dead)))
         {
           fight.PlayerDamageTotals.Clear();
           fight.PlayerTankTotals.Clear();

@@ -77,7 +77,7 @@ namespace EQLogParser
     internal async Task StartAsync()
     {
       await GetActiveTriggersAsync();
-      _lexicon = [.. (await TriggerStateManager.Instance.GetLexicon())];
+      _lexicon = [.. await TriggerStateManager.Instance.GetLexicon()];
     }
 
     internal async Task StopTriggersAsync()
@@ -512,6 +512,20 @@ namespace EQLogParser
         _ = UiUtil.InvokeAsync(() => Clipboard.SetText(updatedShareText));
       }
 
+      if (ProcessDisplayText(wrapper.ModifiedSendToChat, lineData.Action, matches, null, previousMatches) is { } updatedSendToChatText)
+      {
+        var url = wrapper.TriggerData.ChatWebhook;
+        if (string.IsNullOrEmpty(url) || !url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        {
+          url = url ?? "Not Set";
+          Log.Warn($"Can not send to chat, invalid webhook: {url}");
+        }
+        else
+        {
+          _ = MainActions.SendDiscordMessage(updatedSendToChatText, wrapper.TriggerData.ChatWebhook);
+        }
+      }
+
       if (!_alertCollection.IsCompleted)
       {
         _alertCollection.Add((lineData, wrapper, "Initial Trigger", timing / 10));
@@ -830,6 +844,7 @@ namespace EQLogParser
               ModifiedEndEarlySpeak = ModPlayer(trigger.EndEarlyTextToSpeak),
               ModifiedDisplay = modifiedDisplay,
               ModifiedShare = ModPlayer(trigger.TextToShare),
+              ModifiedSendToChat = ModPlayer(trigger.TextToSendToChat),
               ModifiedWarningDisplay = ModPlayer(trigger.WarningTextToDisplay),
               ModifiedEndDisplay = ModPlayer(trigger.EndTextToDisplay),
               ModifiedEndEarlyDisplay = ModPlayer(trigger.EndEarlyTextToDisplay),
@@ -1278,6 +1293,7 @@ namespace EQLogParser
       public string ModifiedWarningSpeak { get; init; }
       public string ModifiedDisplay { get; init; }
       public string ModifiedShare { get; init; }
+      public string ModifiedSendToChat { get; init; }
       public string ModifiedEndDisplay { get; init; }
       public string ModifiedEndEarlyDisplay { get; init; }
       public string ModifiedWarningDisplay { get; init; }
