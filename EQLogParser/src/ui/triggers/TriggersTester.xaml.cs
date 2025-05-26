@@ -347,6 +347,5 @@ namespace EQLogParser
     {
       // nothing to do
     }
-
   }
 }

@@ -63,13 +63,15 @@ namespace EQLogParser
         data.TimeSegments = new TimeRange();
         data.FightName = null;
         data.DeadFightCount = 0;
+        // remove anything not active and also anything that is dead
+        DataManager.Instance.ResetOverlayFights(true, true);
       }
 
       var allDamage = data.DeadTotalDamage;
       var allTime = data.TimeSegments.TimeSegments.Count > 0 ? new TimeRange(data.TimeSegments.TimeSegments) : new TimeRange();
       var playerTotals = new Dictionary<string, OverlayPlayerTotal>();
       var playerHasPet = new Dictionary<string, bool>();
-      var fightCount = data.DeadFightCount;
+      var fightCount = mode == 0 ? 0 : data.DeadFightCount;
 
       if (dps)
       {
@@ -97,13 +99,13 @@ namespace EQLogParser
 
       foreach (var (id, fight) in DataManager.Instance.GetOverlayFights())
       {
-        fightCount++;
-
         if (!fight.Dead || mode > 0)
         {
+          fightCount++;
           var theTotals = dps ? fight.PlayerDamageTotals : fight.PlayerTankTotals;
           foreach (var kv in theTotals)
           {
+            data.FightName = fight.Name;
             var player = dps ? UpdateOverlayHasPet(kv.Key, kv.Value.PetOwner, playerHasPet, playerTotals) : kv.Key;
 
             // save current state and remove dead fight at the end
@@ -154,7 +156,7 @@ namespace EQLogParser
         }
       }
 
-      if (data.FightName == null && oldestFight != null)
+      if (oldestFight != null)
       {
         data.FightName = oldestFight.Name;
       }

@@ -103,6 +103,8 @@ namespace EQLogParser
         toTrigger.EndEarlyTextToDisplay = TextUtils.Trim(fromTrigger.EndEarlyTextToDisplay);
         toTrigger.TextToDisplay = TextUtils.Trim(fromTrigger.TextToDisplay);
         toTrigger.TextToShare = TextUtils.Trim(fromTrigger.TextToShare);
+        toTrigger.ChatWebhook = TextUtils.Trim(fromTrigger.ChatWebhook);
+        toTrigger.TextToSendToChat = TextUtils.Trim(fromTrigger.TextToSendToChat);
         toTrigger.WarningTextToDisplay = TextUtils.Trim(fromTrigger.WarningTextToDisplay);
         toTrigger.EndTextToSpeak = TextUtils.Trim(fromTrigger.EndTextToSpeak);
         toTrigger.EndEarlyTextToSpeak = TextUtils.Trim(fromTrigger.EndEarlyTextToSpeak);

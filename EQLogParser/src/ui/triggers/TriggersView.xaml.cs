@@ -96,7 +96,7 @@ namespace EQLogParser
       AddEditor<TriggerListsEditor>("TriggerAgainOption", "FontSize", "FontFamily", "SortBy", "TimerMode",
         "TimerType", "VerticalAlignment", "Volume");
       AddEditor<WrapTextEditor>("EndEarlyTextToDisplay", "EndTextToDisplay", "TextToDisplay", "TextToShare",
-        "WarningTextToDisplay", "Comments", "OverlayComments");
+        "WarningTextToDisplay", "Comments", "OverlayComments", "TextToSendToChat", "ChatWebhook");
       AddEditorInstance(new RangeEditor(typeof(double), 0.2, 2.0), "DurationSeconds");
       AddEditorInstance(new TextSoundEditor(fileList), "SoundOrText");
       AddEditorInstance(new TextSoundEditor(fileList), "EndEarlySoundOrText");
@@ -117,6 +117,10 @@ namespace EQLogParser
 
       ITypeEditor AddEditorInstance(ITypeEditor typeEditor, string propName)
       {
+        if (thePropertyGrid.CustomEditorCollection == null)
+        {
+          thePropertyGrid.CustomEditorCollection = new CustomEditorCollection();
+        }
         var editor = new CustomEditor { Editor = typeEditor };
         editor.Properties.Add(propName);
         thePropertyGrid.CustomEditorCollection.Add(editor);

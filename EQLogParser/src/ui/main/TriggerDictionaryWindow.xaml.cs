@@ -1,4 +1,6 @@
 ﻿using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.Grid.Helpers;
+using Syncfusion.UI.Xaml.ScrollAxis;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -15,6 +17,7 @@ namespace EQLogParser
     private readonly ObservableCollection<LexiconItem> _items = [];
     private LexiconItem _previous;
     private TriggersTreeView _treeView;
+    private bool _addInProgress;
 
     public TriggerDictionaryWindow(TriggersTreeView view)
     {
@@ -80,7 +83,7 @@ namespace EQLogParser
     {
       if (dataGrid.SelectedItem is LexiconItem item)
       {
-        _treeView?.PlayTts(item.With);
+        _treeView?.PlayTts(item.Replace + " will be spoken as " + item.With);
       }
     }
 
@@ -126,16 +129,40 @@ namespace EQLogParser
       CleanupTable();
     }
 
+    private void DataGridLostKeyboardFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs e)
+    {
+      var cellManager = dataGrid.SelectionController.CurrentCellManager;
+      if (dataGrid.View.IsAddingNew && cellManager != null && cellManager.HasCurrentCell && cellManager.CurrentCell.IsEditing &&
+        cellManager.CurrentCell.Element.DataContext is LexiconItem item && !string.IsNullOrEmpty(item.Replace) && !string.IsNullOrEmpty(item.With))
+      {
+        if (dataGrid.View.IsEditingItem)
+        {
+          dataGrid.View.CommitEdit();
+        }
+
+        if (!_addInProgress)
+        {
+          _addInProgress = true;
+
+          dataGrid.MoveCurrentCell(new RowColumnIndex(dataGrid.View.Records.Count + 1, 1));
+          dataGrid.GetAddNewRowController().CommitAddNew();
+          dataGrid.SelectedIndex = dataGrid.View.Records.Count - 1;
+        }
+        else
+        {
+          _addInProgress = false;
+        }
+      }
+    }
+
     private void UpdateTestButton(LexiconItem item)
     {
-      if (item != null && !string.IsNullOrEmpty(item.Replace))
+      if (item != null && !string.IsNullOrEmpty(item.Replace) && !string.IsNullOrEmpty(item.With))
       {
-        testButton.Content = "Test " + item.Replace;
         testButton.IsEnabled = true;
       }
       else
       {
-        testButton.Content = "Test Selected";
         testButton.IsEnabled = false;
       }
     }

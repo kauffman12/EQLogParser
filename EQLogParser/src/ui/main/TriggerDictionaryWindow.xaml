@@ -42,6 +42,7 @@
                              AllowEditing="True"
                              CurrentCellBeginEdit="DataGridCurrentCellBeginEdit"
                              CurrentCellEndEdit="DataGridCurrentCellEndEdit"
+                             LostKeyboardFocus="DataGridLostKeyboardFocus"
                              EditTrigger="OnTap"
                              HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                              RowHeight="{DynamicResource EQTableRowHeight}"

@@ -71,6 +71,7 @@ namespace EQLogParser
       {
         if (DockingManager.GetState(control) == DockState.Hidden || force)
         {
+          DockingManager.SetState(control, DockState.Document);
           dockSite.ActivateWindow(name);
         }
         else
