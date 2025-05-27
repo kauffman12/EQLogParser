@@ -71,7 +71,23 @@ namespace EQLogParser
       {
         if (DockingManager.GetState(control) == DockState.Hidden || force)
         {
-          DockingManager.SetState(control, DockState.Document);
+          if (DockingManager.GetCanDocument(control))
+          {
+            DockingManager.SetState(control, DockState.Document);
+          }
+          else if (DockingManager.GetCanDock(control))
+          {
+            DockingManager.SetState(control, DockState.Dock);
+          }
+          else if (DockingManager.GetCanFloat(control))
+          {
+            DockingManager.SetState(control, DockState.Float);
+          }
+          else
+          {
+            Log.Warn("Can not determine ControlControl state for: " + name);
+          }
+
           dockSite.ActivateWindow(name);
         }
         else
