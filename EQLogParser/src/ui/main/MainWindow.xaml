@@ -511,7 +511,7 @@
         </syncfusion:SfDataGrid>
       </ContentControl>
       <ContentControl x:Name="verifiedPetsWindow" syncfusion:DockingManager.Header="Verified Pets" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Right" 
-                      syncfusion:DockingManager.DesiredWidthInDockedMode="270" syncfusion:DockingManager.DesiredWidthInFloatingMode="270">
+                      syncfusion:DockingManager.DesiredWidthInDockedMode="270" syncfusion:DockingManager.DesiredWidthInFloatingMode="270" syncfusion:DockingManager.CanDocument="False">
         <syncfusion:SfDataGrid x:Name="verifiedPetsGrid" 
                                AllowResizingColumns="False"
                                AutoGenerateColumns="False"
