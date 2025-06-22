@@ -85,6 +85,7 @@ namespace EQLogParser
 
     internal async Task StopTriggersAsync()
     {
+      if (_isDisposed) return;
       await _activeTriggerSemaphore.WaitAsync();
 
       try
@@ -98,7 +99,7 @@ namespace EQLogParser
       }
       finally
       {
-        _activeTriggerSemaphore.Release();
+        if (!_isDisposed) _activeTriggerSemaphore.Release();
       }
     }
 
@@ -232,6 +233,7 @@ namespace EQLogParser
       Interlocked.Exchange(ref _activityLastTicks, DateTime.UtcNow.Ticks);
       var lineData = new LineData { Action = line[27..], BeginTime = dateTime };
 
+      if (_isDisposed) return;
       await _activeTriggerSemaphore.WaitAsync();
 
       try
@@ -250,7 +252,7 @@ namespace EQLogParser
       }
       finally
       {
-        _activeTriggerSemaphore.Release();
+        if (!_isDisposed) _activeTriggerSemaphore.Release();
       }
 
       _previous = lineData;
@@ -1203,6 +1205,7 @@ namespace EQLogParser
       // cleanup on process exit
       List<TriggerWrapper> cleanup = null;
 
+      if (_isDisposed) return;
       await _activeTriggerSemaphore.WaitAsync();
 
       try
@@ -1228,13 +1231,13 @@ namespace EQLogParser
       }
       finally
       {
-        _activeTriggerSemaphore.Release();
+        if (!_isDisposed) _activeTriggerSemaphore.Release();
       }
 
       cleanup?.ForEach(CleanupWrapper);
     }
 
-    public void Dispose()
+    public async void Dispose()
     {
       if (!_isDisposed)
       {
@@ -1242,7 +1245,7 @@ namespace EQLogParser
         _ready = false;
 
         // cleanup on process exit
-        _ = SetActiveTriggersAsync();
+        await SetActiveTriggersAsync();
 
         TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
         TriggerStateManager.Instance.TrustedPlayersUpdateEvent -= TrustedPlayersUpdateEvent;

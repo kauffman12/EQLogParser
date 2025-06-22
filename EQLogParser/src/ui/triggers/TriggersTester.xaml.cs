@@ -10,9 +10,6 @@ using System.Windows;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for TriggersTester.xaml
-  /// </summary>
   public partial class TriggersTester : IDocumentContent
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -91,7 +88,7 @@ namespace EQLogParser
     {
       if (testButton.Content.ToString() == "Run Test" && !string.IsNullOrEmpty(testTriggersBox.Text))
       {
-        testTriggersBox.Text = "";
+        testTriggersBox.Text = "[Fri Feb 03 20:27:50 2023] Paste lines from your log here and click Run Test.";
       }
     }
 

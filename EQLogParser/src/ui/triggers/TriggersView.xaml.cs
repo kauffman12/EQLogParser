@@ -448,7 +448,8 @@ namespace EQLogParser
         new { Name = activeBrushItem.CategoryName, IsEnabled = overlayTimer },
         new { Name = idleBrushItem.CategoryName, IsEnabled = cooldownTimer },
         new { Name = assignedOverlaysItem.CategoryName, IsEnabled = overlayAssigned },
-        new { Name = fadeDelayItem.CategoryName, IsEnabled = overlayText }
+        new { Name = fadeDelayItem.CategoryName, IsEnabled = overlayText },
+        new { Name = triggerVolumeItem.CategoryName, IsEnabled = trigger }
       ]);
 
       resetDurationItem.Visibility = (timerType > 0 && timerType != 2 && timerType != 4) ? Visibility.Visible : Visibility.Collapsed;
