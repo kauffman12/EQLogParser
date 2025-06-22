@@ -88,7 +88,7 @@
           </syncfusion:PropertyGrid.PropertyNameColumnDefinition>
           <syncfusion:PropertyGrid.Items>
             <syncfusion:PropertyGridItem CategoryName="General" PropertyName="ChatWebhook" DisplayName="Webhook (Discord)" Description="Webhook/URL for sending messages to a Chat service. Discord is the only supported API at this time."/>
-            <syncfusion:PropertyGridItem CategoryName="General" PropertyName="Volume" DisplayName="Volume" Description="Modifies the Volume used for this Trigger. Note that increase can not go above the max 100% volume level. For this to be useful your Default Volume needs to be below 100% or above 0%."/>
+            <syncfusion:PropertyGridItem CategoryName="General" x:Name="triggerVolumeItem" PropertyName="Volume" DisplayName="Volume" Description="Modifies the Volume used for this Trigger. Note that increase can not go above the max 100% volume level. For this to be useful your Default Volume needs to be below 100% or above 0%."/>
             <syncfusion:PropertyGridItem CategoryName="Overlays" PropertyName="SelectedTextOverlays" DisplayName="Assigned Text" Visibility="Collapsed" Description="Overlays used to display spoken Text associated with this Trigger."/>
             <syncfusion:PropertyGridItem x:Name="assignedOverlaysItem" CategoryName="Overlays" PropertyName="SelectedTimerOverlays" DisplayName="Assigned Timer" Visibility="Collapsed" Description="Overlays used to display Timers."/>
             <syncfusion:PropertyGridItem x:Name="triggerActiveBrushItem" CategoryName="Overlays" PropertyName="TriggerActiveBrush" DisplayName="Custom Active Color" Visibility="Collapsed" Description="Use default Active Color defined by the Overlay or choose a specific color for this Trigger."/>
