@@ -101,7 +101,6 @@ namespace EQLogParser
     {
       SyncFusionUtil.AddDocument(dockSite, typeof(TriggersTester), "triggerTestWindow", "Trigger Tester");
       SyncFusionUtil.AddDocument(dockSite, typeof(TriggersLogView), "triggerLogWindow", "Trigger Log");
-      SyncFusionUtil.AddDocument(dockSite, typeof(QuickShareLogView), "quickShareLogWindow", "Quick Share Log");
       SyncFusionUtil.AddDocument(dockSite, typeof(HealingSummary), "healingSummaryWindow", "Healing Summary");
       SyncFusionUtil.AddDocument(dockSite, typeof(TankingSummary), "tankingSummaryWindow", "Tanking Summary");
       SyncFusionUtil.AddDocument(dockSite, typeof(DamageChart), "damageChartWindow", "DPS Chart");
@@ -1002,6 +1001,9 @@ namespace EQLogParser
       Application.Current.Resources["EQTabHeaderHeight"] = CurrentFontSize + 12;
       Application.Current.Resources["EQTableHeaderRowHeight"] = CurrentFontSize + 14;
       Application.Current.Resources["EQTableRowHeight"] = CurrentFontSize + 12;
+      Application.Current.Resources["EQTableSixRowHeight"] = ((CurrentFontSize + 12) * 6) + (CurrentFontSize + 14);
+      Application.Current.Resources["EQTableTenRowHeight"] = ((CurrentFontSize + 12) * 10) + (CurrentFontSize + 14);
+      Application.Current.Resources["EQTableFifteenRowHeight"] = ((CurrentFontSize + 12) * 15) + (CurrentFontSize + 14);
       Application.Current.Resources["EQIconButtonHeight"] = CurrentFontSize + 6;
       Application.Current.Resources["EQTableRowHeaderWidth"] = 32 + ((CurrentFontSize - 10) * 2);
       Application.Current.Resources["EQTableShortRowHeaderWidth"] = 20 + ((CurrentFontSize - 10) * 2);

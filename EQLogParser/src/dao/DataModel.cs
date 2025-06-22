@@ -58,6 +58,11 @@ namespace EQLogParser
     public string With { get; set; }
   }
 
+  internal class TrustedPlayer
+  {
+    public string Name { get; set; }
+  }
+
   internal class ResistCount
   {
     public uint Landed { get; set; }

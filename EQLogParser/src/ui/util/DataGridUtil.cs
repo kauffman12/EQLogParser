@@ -337,7 +337,7 @@ namespace EQLogParser
     {
       try
       {
-        if (gridBase is SfDataGrid dataGrid)
+        if (gridBase is SfDataGrid dataGrid && dataGrid.Columns != null)
         {
           foreach (var column in dataGrid.Columns)
           {
@@ -350,7 +350,7 @@ namespace EQLogParser
             column.Width = GetColumnWidth(column.MappingName, column.HeaderText);
           }
         }
-        else if (gridBase is SfTreeGrid treeGrid)
+        else if (gridBase is SfTreeGrid treeGrid && treeGrid.Columns != null)
         {
           foreach (var column in treeGrid.Columns)
           {

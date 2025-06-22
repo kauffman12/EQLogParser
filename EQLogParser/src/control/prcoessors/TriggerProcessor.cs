@@ -41,6 +41,7 @@ namespace EQLogParser
     private volatile bool _isDisposed;
     private volatile bool _ready;
     private volatile List<LexiconItem> _lexicon;
+    private volatile List<TrustedPlayer> _trustedPlayers;
     private volatile int _voiceRate;
     private Task _alertTask;
     private Task _chatTask;
@@ -63,6 +64,7 @@ namespace EQLogParser
       AudioManager.Instance.Add(CurrentCharacterId, voice);
       BindingOperations.EnableCollectionSynchronization(AlertLog, _collectionLock);
       TriggerStateManager.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
+      TriggerStateManager.Instance.TrustedPlayersUpdateEvent += TrustedPlayersUpdateEvent;
     }
 
     internal long GetActivityLastTicks() => Interlocked.Read(ref _activityLastTicks);
@@ -78,6 +80,7 @@ namespace EQLogParser
     {
       await GetActiveTriggersAsync();
       _lexicon = [.. await TriggerStateManager.Instance.GetLexicon()];
+      _trustedPlayers = [.. await TriggerStateManager.Instance.GetTrustedPlayers()];
     }
 
     internal async Task StopTriggersAsync()
@@ -216,6 +219,7 @@ namespace EQLogParser
     private string ModPlayer(string text) => !string.IsNullOrEmpty(text) ?
       text.Replace("{c}", _currentPlayer ?? string.Empty, StringComparison.OrdinalIgnoreCase) : text;
     private void LexiconUpdateEvent(List<LexiconItem> update) => _lexicon = update;
+    private void TrustedPlayersUpdateEvent(List<TrustedPlayer> update) => _trustedPlayers = update;
 
     private async Task DoProcessAsync(string line, double dateTime)
     {
@@ -801,8 +805,8 @@ namespace EQLogParser
       if (chatType != null)
       {
         // Look for Quick Share entries
-        TriggerUtil.CheckQuickShare(chatType, lineData.Action, lineData.BeginTime, CurrentCharacterId, CurrentProcessorName);
-        GinaUtil.CheckGina(chatType, lineData.Action, lineData.BeginTime, CurrentCharacterId, CurrentProcessorName);
+        TriggerUtil.CheckQuickShare(_trustedPlayers, chatType, lineData.Action, lineData.BeginTime, CurrentCharacterId, CurrentProcessorName);
+        GinaUtil.CheckGina(_trustedPlayers, chatType, lineData.Action, lineData.BeginTime, CurrentCharacterId, CurrentProcessorName);
       }
     }
 
@@ -1241,6 +1245,7 @@ namespace EQLogParser
         _ = SetActiveTriggersAsync();
 
         TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
+        TriggerStateManager.Instance.TrustedPlayersUpdateEvent -= TrustedPlayersUpdateEvent;
         _alertCollection.CompleteAdding();
         _chatCollection.CompleteAdding();
         _speakCollection.CompleteAdding();

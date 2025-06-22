@@ -25,6 +25,9 @@
     <Compile Update="src\ui\main\LogManagementWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="src\ui\main\QuickShareWindow.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="src\ui\main\SplashWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -38,9 +41,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="src\ui\main\WavCreatorWindow.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="src\ui\triggers\QuickShareLogView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="src\ui\triggers\TriggersCharacterView.xaml.cs">
@@ -100,9 +100,6 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\main\WavCreatorWindow.xaml">
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Update="src\ui\triggers\QuickShareLogView.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Update="src\ui\triggers\TriggersCharacterView.xaml">

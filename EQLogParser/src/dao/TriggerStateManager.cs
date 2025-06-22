@@ -22,6 +22,7 @@ namespace EQLogParser
     internal event Action<TriggerConfig> TriggerConfigUpdateEvent;
     internal event Action<bool> TriggerImportEvent;
     internal event Action<List<LexiconItem>> LexiconUpdateEvent;
+    internal event Action<List<TrustedPlayer>> TrustedPlayersUpdateEvent;
     internal const string DefaultUser = "Default";
     internal const string Overlays = "Overlays";
     internal const string Triggers = "Triggers";
@@ -33,6 +34,7 @@ namespace EQLogParser
     private const string StatesCol = "States";
     private const string TreeCol = "Tree";
     private const string LexiconCol = "Lexicon";
+    private const string TrustedPlayersCol = "TrustedPlayers";
     private const string BadVersionCol = "Version";
     private const string VersionCol = "FixVersion";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -488,6 +490,11 @@ namespace EQLogParser
       return await _taskQueue.Enqueue(() => Task.FromResult(_db?.GetCollection<LexiconItem>(LexiconCol)?.FindAll()?.ToList() ?? []));
     }
 
+    internal async Task<List<TrustedPlayer>> GetTrustedPlayers()
+    {
+      return await _taskQueue.Enqueue(() => Task.FromResult(_db?.GetCollection<TrustedPlayer>(TrustedPlayersCol)?.FindAll()?.ToList() ?? []));
+    }
+
     internal async Task<TriggerNode> GetOverlayById(string id)
     {
       return await _taskQueue.Enqueue(() => Task.FromResult(_db?.GetCollection<TriggerNode>(TreeCol)?.FindOne(n => n.Id == id && n.OverlayData != null)));
@@ -543,6 +550,22 @@ namespace EQLogParser
       });
 
       LexiconUpdateEvent?.Invoke(list);
+    }
+
+    internal async Task SaveTrustedPlayers(List<TrustedPlayer> list)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        if (_db?.GetCollection<TrustedPlayer>(TrustedPlayersCol) is { } trustedPlayers)
+        {
+          trustedPlayers.DeleteAll();
+          trustedPlayers.InsertBulk(list);
+        }
+
+        return Task.CompletedTask;
+      });
+
+      TrustedPlayersUpdateEvent?.Invoke(list);
     }
 
     internal async Task SetAllExpanded(bool expanded)
