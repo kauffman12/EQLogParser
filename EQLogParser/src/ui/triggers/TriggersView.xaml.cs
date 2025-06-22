@@ -40,11 +40,6 @@ namespace EQLogParser
 
       _characterViewWidth = mainGrid.ColumnDefinitions[0].Width;
 
-      if (ConfigUtil.IfSet("TriggersWatchForQuickShare"))
-      {
-        watchQuickShare.IsChecked = true;
-      }
-
       voices.ItemsSource = AudioManager.Instance.GetVoiceList();
 
       // Update volume
@@ -390,11 +385,7 @@ namespace EQLogParser
     {
       if (_ready)
       {
-        if (Equals(sender, watchQuickShare))
-        {
-          ConfigUtil.SetSetting("TriggersWatchForQuickShare", watchQuickShare.IsChecked == true);
-        }
-        else if (Equals(sender, deviceList))
+        if (Equals(sender, deviceList))
         {
           if (deviceList.SelectedIndex > -1)
           {
@@ -804,6 +795,12 @@ namespace EQLogParser
     private void DictionaryClick(object sender, RoutedEventArgs e)
     {
       var window = new TriggerDictionaryWindow(theTreeView);
+      window.ShowDialog();
+    }
+
+    private void QuickShareClick(object sender, RoutedEventArgs e)
+    {
+      var window = new QuickShareWindow();
       window.ShowDialog();
     }
 

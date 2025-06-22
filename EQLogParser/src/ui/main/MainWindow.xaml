@@ -166,11 +166,6 @@
                 <fa:ImageAwesome x:Name="triggerLogIcon" Tag="triggerLogWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="quickShareLogMenuItem" Header="Quick _Share Log" Click="MenuItemWindowClick">
-              <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="quickShareLogIcon" Tag="quickShareLogWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
-              </MenuItem.Icon>
-            </MenuItem>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="searchView" Header="_Search">

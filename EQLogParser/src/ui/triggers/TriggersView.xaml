@@ -24,7 +24,6 @@
           <TextBlock x:Name="advancedText" Text="Switch to Advanced" Cursor="Hand" TextWrapping="Wrap" FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource EQWarnForegroundBrush}" VerticalAlignment="Bottom" Padding="0,0,0,1"/>
         </Border>
       </Grid>
-      <CheckBox x:Name="watchQuickShare" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="False" Margin="0,0,8,2" Checked="OptionsChanged" Unchecked="OptionsChanged" Content="Quick Shares Prompt" ToolTip="Prompt when a new Quick Share is received." />
       <ComboBox x:Name="voices" SelectedIndex="0" Margin="0,0,8,2" SelectionChanged="OptionsChanged" />
       <ComboBox x:Name="rateOption" SelectedIndex="0" Margin="0,0,8,2" SelectionChanged="OptionsChanged">
         <ComboBoxItem>Default Voice Rate</ComboBoxItem>
@@ -42,7 +41,8 @@
           <syncfusion:SfRangeSlider Name="volumeSlider" Height="300" Minimum="0" Maximum="100" TickFrequency="10" ValuePlacement="BottomRight" ShowValueLabels="True" Orientation="Vertical" PreviewMouseLeftButtonUp="VolumeSliderChanged"/>
         </Border>
       </Popup>
-      <Button x:Name="dictButton" Margin="0,0,8,1" Padding="8,0,8,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}"  ToolTip="Phonetic Dictionary" Click="DictionaryClick">Dictionary</Button>
+      <Button x:Name="dictButton" Margin="0,0,4,1" Padding="8,0,8,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}"  ToolTip="Phonetic Dictionary" Click="DictionaryClick">Dictionary</Button>
+      <Button x:Name="quickShareButton" Margin="0,0,8,1" Padding="8,0,8,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}"  ToolTip="Quick Share Settings and Received Log" Click="QuickShareClick">Quick Shares</Button>
     </StackPanel>
     <Grid x:Name="mainGrid" Grid.Row="1">
       <Grid.ColumnDefinitions>

@@ -578,7 +578,7 @@ namespace EQLogParser
       }
     }
 
-    internal static async void CheckQuickShare(ChatType chatType, string action, double dateTime, string characterId, string processorName)
+    internal static async void CheckQuickShare(List<TrustedPlayer> trust, ChatType chatType, string action, double dateTime, string characterId, string processorName)
     {
       if (chatType.Sender == null || action == null)
       {
@@ -632,9 +632,10 @@ namespace EQLogParser
               {
                 if (!QuickShareCache.TryGetValue(quickShareKey, out var value))
                 {
-                  QuickShareCache[quickShareKey] = new CharacterData { Sender = chatType.Sender };
+                  var autoMerge = chatType.Channel != ChatChannels.Tell && trust.Any(tp => tp.Name.Equals(chatType.Sender, StringComparison.OrdinalIgnoreCase));
+                  QuickShareCache[quickShareKey] = new CharacterData { Sender = chatType.Sender, AutoMerge = autoMerge };
                   QuickShareCache[quickShareKey].CharacterIds.Add(characterId);
-                  _ = RunQuickShareTaskAsync(quickShareKey);
+                  _ = RunQuickShareTaskAsync(quickShareKey, autoMerge);
                 }
                 else
                 {
@@ -649,7 +650,6 @@ namespace EQLogParser
 
     internal static void ImportQuickShare(string shareKey, string from)
     {
-      // if Quick Share data is recent then try to handle it
       if (shareKey.IndexOf($"{{{ShareTrigger}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
           shareKey.IndexOf('}') is var end && end > (index + 10))
       {
@@ -663,7 +663,7 @@ namespace EQLogParser
             QuickShareCache.TryAdd(quickShareKey, new CharacterData { Sender = from });
             if (QuickShareCache.Count == 1)
             {
-              _ = RunQuickShareTaskAsync(quickShareKey);
+              _ = RunQuickShareTaskAsync(quickShareKey, false);
             }
           }
         }
@@ -752,7 +752,18 @@ namespace EQLogParser
       }
     }
 
-    private static async Task RunQuickShareTaskAsync(string quickShareKey, int tries = 0)
+    private static void NextQuickShareTask(string quickShareKey)
+    {
+      QuickShareCache.TryRemove(quickShareKey, out _);
+
+      if (!QuickShareCache.IsEmpty)
+      {
+        var nextKey = QuickShareCache.Keys.First();
+        _ = RunQuickShareTaskAsync(nextKey, QuickShareCache[nextKey].AutoMerge);
+      }
+    }
+
+    private static async Task RunQuickShareTaskAsync(string quickShareKey, bool autoMerge, int tries = 0)
     {
       await Task.Delay(1000);
 
@@ -766,14 +777,14 @@ namespace EQLogParser
           using var ms = new MemoryStream();
           await decompressionStream.CopyToAsync(ms);
           ms.Position = 0;
-          await ImportFromQuickShareAsync(Encoding.UTF8.GetString(ms.ToArray()), quickShareKey);
+          await ImportFromQuickShareAsync(Encoding.UTF8.GetString(ms.ToArray()), quickShareKey, autoMerge);
         }
         else
         {
           if (tries == 0)
           {
             // try a 2nd time
-            _ = RunQuickShareTaskAsync(quickShareKey, 1);
+            _ = RunQuickShareTaskAsync(quickShareKey, autoMerge, 1);
             return;
           }
 
@@ -800,7 +811,7 @@ namespace EQLogParser
           if (tries == 0)
           {
             // try a 2nd time
-            _ = RunQuickShareTaskAsync(quickShareKey, 1);
+            _ = RunQuickShareTaskAsync(quickShareKey, autoMerge, 1);
             return;
           }
 
@@ -815,7 +826,7 @@ namespace EQLogParser
       }
     }
 
-    private static async Task ImportFromQuickShareAsync(string data, string quickShareKey)
+    private static async Task ImportFromQuickShareAsync(string data, string quickShareKey, bool autoMerge)
     {
       if (QuickShareCache.TryGetValue(quickShareKey, out var quickShareData))
       {
@@ -838,41 +849,37 @@ namespace EQLogParser
           }
           else
           {
-            var message = "Merge Quick Share or Import to New Folder?\r\n";
-            if (!string.IsNullOrEmpty(player))
-            {
-              message = $"Merge Quick Share from {player} or Import to New Folder?\r\n";
-            }
-
-            var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question,
-              "New Folder", "Merge", characterIds.Count > 0);
-            msgDialog.ShowDialog();
-
-            if (msgDialog.IsYes2Clicked)
+            if (autoMerge)
             {
               await TriggerStateManager.Instance.ImportTriggers("", nodes, characterIds);
             }
-            if (msgDialog.IsYes1Clicked)
+            else
             {
-              var folderName = (player == null) ? "New Folder" : "From " + player;
-              folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
-              await TriggerStateManager.Instance.ImportTriggers(folderName, nodes, characterIds);
+              var message = "Merge Quick Share or Import to New Folder?\r\n";
+              if (!string.IsNullOrEmpty(player))
+              {
+                message = $"Merge Quick Share from {player} or Import to New Folder?\r\n";
+              }
+
+              var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question,
+                "New Folder", "Merge", characterIds.Count > 0);
+              msgDialog.ShowDialog();
+
+              if (msgDialog.IsYes2Clicked)
+              {
+                await TriggerStateManager.Instance.ImportTriggers("", nodes, characterIds);
+              }
+              if (msgDialog.IsYes1Clicked)
+              {
+                var folderName = (player == null) ? "New Folder" : "From " + player;
+                folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
+                await TriggerStateManager.Instance.ImportTriggers(folderName, nodes, characterIds);
+              }
             }
           }
 
           NextQuickShareTask(quickShareKey);
         });
-      }
-    }
-
-    private static void NextQuickShareTask(string quickShareKey)
-    {
-      QuickShareCache.TryRemove(quickShareKey, out _);
-
-      if (!QuickShareCache.IsEmpty)
-      {
-        var nextKey = QuickShareCache.Keys.First();
-        _ = RunQuickShareTaskAsync(nextKey);
       }
     }
 
@@ -1011,5 +1018,6 @@ namespace EQLogParser
   {
     public string Sender { get; set; }
     public HashSet<string> CharacterIds { get; set; } = [];
+    public bool AutoMerge { get; set; }
   }
 }
