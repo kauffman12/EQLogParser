@@ -58,7 +58,7 @@
               <ColumnDefinition Width="210" />
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
-            <Label Grid.Column="0" Content="Archive If File Size  > " HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only Archive Log File if it is larger than the selected size." />
+            <Label Grid.Column="0" Content="Archive If File Size  > " HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only archive Log File if it is larger than the selected size." />
             <ComboBox Grid.Column="1" x:Name="fileSizes" SelectedIndex="0" Margin="8,0,0,0" Width="320" SelectionChanged="OptionsChanged">
               <ComboBoxItem>Any Size</ComboBoxItem>
               <ComboBoxItem>25M</ComboBoxItem>
@@ -80,7 +80,7 @@
               <ColumnDefinition Width="210" />
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
-            <Label Grid.Column="0" Content="Archive If File Age  >" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only Archive Log File if it was created prior to the selected time range."/>
+            <Label Grid.Column="0" Content="Archive If File Age  >" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only archive Log File if it was created prior to the selected time range."/>
             <ComboBox Grid.Column="1" x:Name="fileAges" SelectedIndex="0" Margin="8,0,0,0" Width="320" SelectionChanged="OptionsChanged">
               <ComboBoxItem>Any Age</ComboBoxItem>
               <ComboBoxItem>1 Day</ComboBoxItem>
@@ -98,7 +98,7 @@
               <ColumnDefinition Width="210" />
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
-            <Label Grid.Column="0" Content="Compress Archive" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only Archive Log File if it was created prior to the selected time range."/>
+            <Label Grid.Column="0" Content="Compress Archive" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only archive Log File if it was created prior to the selected time range."/>
             <ComboBox Grid.Column="1" x:Name="compress" SelectedIndex="0" Margin="8,0,0,0" Width="320" SelectionChanged="OptionsChanged">
               <ComboBoxItem Content="{x:Static local:LogManagementWindow.CompressYes}" />
               <ComboBoxItem Content="{x:Static local:LogManagementWindow.CompressNo}" />
