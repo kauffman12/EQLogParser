@@ -106,6 +106,7 @@ namespace EQLogParser
       AddEditorInstance(new RangeEditor(typeof(long), 1, 60), "FadeDelay");
 
       // don't disconnect these so tree stays in-sync if hidden
+      TriggerStateManager.Instance.OverlayImportEvent += OverlayImportEvent;
       TriggerStateManager.Instance.TriggerImportEvent += TriggerImportEvent;
       AudioManager.Instance.DeviceListChanged += AudioDeviceListChanged;
       return;
@@ -188,11 +189,16 @@ namespace EQLogParser
       volumePopup.IsOpen = true;
     }
 
+    private async void OverlayImportEvent(bool _)
+    {
+      thePropertyGrid.SelectedObject = null;
+      await theTreeView.RefreshOverlays();
+    }
+
     private async void TriggerImportEvent(bool _)
     {
+      thePropertyGrid.SelectedObject = null;
       await theTreeView.RefreshTriggers();
-      // in case of merge
-      TriggerManager.Instance.TriggersUpdated();
     }
 
     private void EventsSelectTrigger(AlertEntry entry)

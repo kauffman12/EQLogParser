@@ -21,18 +21,20 @@ namespace EQLogParser
 {
   internal static partial class TriggerUtil
   {
+    public const string ShareOverlay = "EQLPO";
     public const string ShareTrigger = "EQLPT";
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly ConcurrentDictionary<string, CharacterData> QuickShareCache = new();
-    private const string ExtTrigger = "tgf";
-    private const string ExtOverlay = "ogf";
     internal static async Task ImportTriggers(TriggerNode parent) => await Import(parent);
     internal static async Task ImportOverlays(TriggerNode triggerNode) => await Import(triggerNode, false);
 
-    private static readonly JsonSerializerOptions SerializationOptions = new JsonSerializerOptions { IncludeFields = true };
-    private static readonly Size OriginalResolution = new(1920, 1080); // Hard-coded original screen resolution
+    private const string ExtTrigger = "tgf";
+    private const string ExtOverlay = "ogf";
     private const double OriginalTop = 550; // Hard-coded original top position
     private const double OriginalLeft = 650; // Hard-coded original left position
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+    private static readonly ConcurrentDictionary<string, CharacterData> QuickShareCache = new();
+    private static readonly JsonSerializerOptions SerializationOptions = new JsonSerializerOptions { IncludeFields = true };
+    private static readonly Size OriginalResolution = new(1920, 1080); // Hard-coded original screen resolution
+    private static readonly Regex ShareRegex = new(@"\{(" + ShareTrigger + "|" + ShareOverlay + @"):([^\{\}]+)\}", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     internal static Point CalculateDefaultTextOverlayPosition()
     {
@@ -593,56 +595,51 @@ namespace EQLogParser
         return;
       }
 
-      // if Quick Share data is recent then try to handle it
-      if (action.IndexOf($"{{{ShareTrigger}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
-          action.IndexOf('}') is var end && end > (index + 10))
+      var match = ShareRegex.Match(action);
+      if (!match.Success && match.Groups.Count != 3)
       {
-        var start = index + 7;
-        var finish = end - start;
-        if (action.Length > (start + finish))
+        return;
+      }
+
+      var type = match.Groups[1].Value.Trim();
+      var quickShareKey = match.Groups[2].Value.Trim();
+      var fullKey = $"{{{type}:{quickShareKey}}}";
+      var to = chatType.Channel == ChatChannels.Tell ? "You" : chatType.Channel;
+
+      var record = new QuickShareRecord
+      {
+        BeginTime = dateTime,
+        Key = fullKey,
+        From = chatType.Sender,
+        To = (to == "You" && processorName != null && characterId != TriggerStateManager.DefaultUser) ? processorName : TextUtils.ToUpper(to),
+        IsMine = chatType.SenderIsYou,
+        Type = type
+      };
+
+      RecordManager.Instance.Add(record);
+
+      // don't handle immediately unless enabled
+      if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild or
+            ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") && !RecordManager.Instance.IsQuickShareMine(fullKey))
+      {
+        // ignore if we're still processing a bunch
+        if (QuickShareCache.Count > 5)
         {
-          var quickShareKey = action.Substring(start, finish);
-          var fullKey = $"{{{ShareTrigger}:{quickShareKey}}}";
-          if (!string.IsNullOrEmpty(quickShareKey))
+          return;
+        }
+
+        lock (QuickShareCache)
+        {
+          if (!QuickShareCache.TryGetValue(quickShareKey, out var value))
           {
-            var to = chatType.Channel == ChatChannels.Tell ? "You" : chatType.Channel;
-            var record = new QuickShareRecord
-            {
-              BeginTime = dateTime,
-              Key = fullKey,
-              From = chatType.Sender,
-              To = (to == "You" && processorName != null && characterId != TriggerStateManager.DefaultUser) ? processorName : TextUtils.ToUpper(to),
-              IsMine = chatType.SenderIsYou,
-              Type = ShareTrigger
-            };
-
-            RecordManager.Instance.Add(record);
-
-            // don't handle immediately unless enabled
-            if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild or
-                  ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") && !RecordManager.Instance.IsQuickShareMine(fullKey))
-            {
-              // ignore if we're still processing a bunch
-              if (QuickShareCache.Count > 5)
-              {
-                return;
-              }
-
-              lock (QuickShareCache)
-              {
-                if (!QuickShareCache.TryGetValue(quickShareKey, out var value))
-                {
-                  var autoMerge = chatType.Channel != ChatChannels.Tell && trust.Any(tp => tp.Name.Equals(chatType.Sender, StringComparison.OrdinalIgnoreCase));
-                  QuickShareCache[quickShareKey] = new CharacterData { Sender = chatType.Sender, AutoMerge = autoMerge };
-                  QuickShareCache[quickShareKey].CharacterIds.Add(characterId);
-                  _ = RunQuickShareTaskAsync(quickShareKey, autoMerge);
-                }
-                else
-                {
-                  value.CharacterIds.Add(characterId);
-                }
-              }
-            }
+            var autoMerge = chatType.Channel != ChatChannels.Tell && trust.Any(tp => tp.Name.Equals(chatType.Sender, StringComparison.OrdinalIgnoreCase));
+            QuickShareCache[quickShareKey] = new CharacterData { Sender = chatType.Sender, AutoMerge = autoMerge, IsTrigger = type == ShareTrigger };
+            QuickShareCache[quickShareKey].CharacterIds.Add(characterId);
+            _ = RunQuickShareTaskAsync(quickShareKey, autoMerge);
+          }
+          else
+          {
+            value.CharacterIds.Add(characterId);
           }
         }
       }
@@ -650,23 +647,18 @@ namespace EQLogParser
 
     internal static void ImportQuickShare(string shareKey, string from)
     {
-      if (shareKey.IndexOf($"{{{ShareTrigger}:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
-          shareKey.IndexOf('}') is var end && end > (index + 10))
+      var match = ShareRegex.Match(shareKey);
+      if (!match.Success && match.Groups.Count != 3)
       {
-        var start = index + 7;
-        var finish = end - start;
-        if (shareKey.Length > (start + finish))
-        {
-          var quickShareKey = shareKey.Substring(start, finish);
-          if (!string.IsNullOrEmpty(quickShareKey))
-          {
-            QuickShareCache.TryAdd(quickShareKey, new CharacterData { Sender = from });
-            if (QuickShareCache.Count == 1)
-            {
-              _ = RunQuickShareTaskAsync(quickShareKey, false);
-            }
-          }
-        }
+        return;
+      }
+
+      var type = match.Groups[1].Value.Trim();
+      var quickShareKey = match.Groups[2].Value.Trim();
+      QuickShareCache.TryAdd(quickShareKey, new CharacterData { Sender = from, IsTrigger = type == ShareTrigger });
+      if (QuickShareCache.Count == 1)
+      {
+        _ = RunQuickShareTaskAsync(quickShareKey, false);
       }
     }
 
@@ -680,7 +672,7 @@ namespace EQLogParser
       return TestRegex().Match(value).Success;
     }
 
-    internal static async Task ShareAsync(List<TriggerTreeViewNode> viewNodes)
+    internal static async Task ShareAsync(List<TriggerTreeViewNode> viewNodes, bool isTrigger)
     {
       if (BuildExportList(viewNodes) is { Count: > 0 } exportList)
       {
@@ -715,7 +707,8 @@ namespace EQLogParser
           {
             if (await response.Content.ReadAsStringAsync() is var shareLink && shareLink != "")
             {
-              var withKey = $"{{{ShareTrigger}:{shareLink}}}";
+              var type = isTrigger ? ShareTrigger : ShareOverlay;
+              var withKey = $"{{{type}:{shareLink}}}";
 
               var record = new QuickShareRecord
               {
@@ -724,7 +717,7 @@ namespace EQLogParser
                 From = "You",
                 IsMine = true,
                 To = "Created Share Key",
-                Type = ShareTrigger
+                Type = type
               };
 
               RecordManager.Instance.Add(record);
@@ -851,29 +844,55 @@ namespace EQLogParser
           {
             if (autoMerge)
             {
-              await TriggerStateManager.Instance.ImportTriggers("", nodes, characterIds);
-            }
-            else
-            {
-              var message = "Merge Quick Share or Import to New Folder?\r\n";
-              if (!string.IsNullOrEmpty(player))
-              {
-                message = $"Merge Quick Share from {player} or Import to New Folder?\r\n";
-              }
-
-              var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question,
-                "New Folder", "Merge", characterIds.Count > 0);
-              msgDialog.ShowDialog();
-
-              if (msgDialog.IsYes2Clicked)
+              if (quickShareData.IsTrigger)
               {
                 await TriggerStateManager.Instance.ImportTriggers("", nodes, characterIds);
               }
-              if (msgDialog.IsYes1Clicked)
+              else
               {
-                var folderName = (player == null) ? "New Folder" : "From " + player;
-                folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
-                await TriggerStateManager.Instance.ImportTriggers(folderName, nodes, characterIds);
+                await TriggerStateManager.Instance.ImportOverlays(nodes);
+              }
+            }
+            else
+            {
+              if (quickShareData.IsTrigger)
+              {
+                var message = "Merge Triggers or Import to New Folder?\r\n";
+                if (!string.IsNullOrEmpty(player))
+                {
+                  message = $"Merge Triggers from {player} or Import to New Folder?\r\n";
+                }
+
+                var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question,
+                  "New Folder", "Merge", characterIds.Count > 0);
+                msgDialog.ShowDialog();
+
+                if (msgDialog.IsYes2Clicked)
+                {
+                  await TriggerStateManager.Instance.ImportTriggers("", nodes, characterIds);
+                }
+                if (msgDialog.IsYes1Clicked)
+                {
+                  var folderName = (player == null) ? "New Folder" : "From " + player;
+                  folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
+                  await TriggerStateManager.Instance.ImportTriggers(folderName, nodes, characterIds);
+                }
+              }
+              else
+              {
+                var message = "Import Overlays?\r\n";
+                if (!string.IsNullOrEmpty(player))
+                {
+                  message = $"Import Overlays from {player}?\r\n";
+                }
+
+                var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question, "Import");
+                msgDialog.ShowDialog();
+
+                if (msgDialog.IsYes1Clicked)
+                {
+                  await TriggerStateManager.Instance.ImportOverlays(nodes);
+                }
               }
             }
           }
@@ -927,19 +946,17 @@ namespace EQLogParser
               var reader = new StreamReader(decompressionStream);
               var json = await reader.ReadToEndAsync();
               reader.Close();
-              var data = JsonSerializer.Deserialize<List<ExportTriggerNode>>(json, new JsonSerializerOptions { IncludeFields = true });
+              var data = JsonSerializer.Deserialize<List<ExportTriggerNode>>(json, SerializationOptions);
               if (triggers)
               {
                 await TriggerStateManager.Instance.ImportTriggers(parent, data);
               }
               else
               {
-                await TriggerStateManager.Instance.ImportOverlays(parent, data);
-                // refresh styles
-                await LoadOverlayStyles();
+                await TriggerStateManager.Instance.ImportOverlays(data);
               }
             }
-            else if (dialog.FileName.EndsWith(".gtp"))
+            else if (dialog.FileName.EndsWith(".gtp", StringComparison.InvariantCulture))
             {
               var data = new byte[fileInfo.Length];
               var read = fileInfo.OpenRead().Read(data);
@@ -1019,5 +1036,6 @@ namespace EQLogParser
     public string Sender { get; set; }
     public HashSet<string> CharacterIds { get; set; } = [];
     public bool AutoMerge { get; set; }
+    public bool IsTrigger { get; set; }
   }
 }

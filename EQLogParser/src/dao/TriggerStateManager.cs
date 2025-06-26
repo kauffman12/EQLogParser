@@ -18,6 +18,7 @@ namespace EQLogParser
   internal class TriggerStateManager
   {
     internal event Action<string> DeleteEvent;
+    internal event Action<bool> OverlayImportEvent;
     internal event Action<TriggerNode> TriggerUpdateEvent;
     internal event Action<TriggerConfig> TriggerConfigUpdateEvent;
     internal event Action<bool> TriggerImportEvent;
@@ -500,13 +501,22 @@ namespace EQLogParser
       return await _taskQueue.Enqueue(() => Task.FromResult(_db?.GetCollection<TriggerNode>(TreeCol)?.FindOne(n => n.Id == id && n.OverlayData != null)));
     }
 
-    internal async Task ImportOverlays(TriggerNode parent, IEnumerable<ExportTriggerNode> imported)
+    // from GINA or Quick Share
+    internal async Task ImportOverlays(IEnumerable<ExportTriggerNode> imported)
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        Import(parent, imported, Overlays);
+        if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+        {
+          // Overlays only have the one root node
+          var root = tree.FindOne(n => n.Parent == null && n.Name == Overlays);
+          Import(root, imported, Overlays);
+        }
+
         return Task.CompletedTask;
       });
+
+      OverlayImportEvent?.Invoke(true);
     }
 
     internal async Task ImportTriggers(TriggerNode parent, IEnumerable<ExportTriggerNode> imported)
@@ -516,6 +526,24 @@ namespace EQLogParser
         Import(parent, imported, Triggers);
         return Task.CompletedTask;
       });
+    }
+
+    // from GINA or Quick Share with custom Folder name
+    internal async Task ImportTriggers(string name, IEnumerable<ExportTriggerNode> imported, HashSet<string> characterIds)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+        {
+          var root = tree.FindOne(n => n.Parent == null && n.Name == Triggers);
+          var parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name).SerializedData;
+          Import(parent, imported, Triggers, characterIds);
+        }
+
+        return Task.CompletedTask;
+      });
+
+      TriggerImportEvent?.Invoke(true);
     }
 
     internal async Task<bool> IsAnyEnabled(string triggerId)
@@ -709,24 +737,6 @@ namespace EQLogParser
 
         return Task.CompletedTask;
       });
-    }
-
-    // from GINA or Quick Share with custom Folder name
-    internal async Task ImportTriggers(string name, IEnumerable<ExportTriggerNode> imported, HashSet<string> characterIds)
-    {
-      await _taskQueue.EnqueueTransaction(() =>
-      {
-        if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
-        {
-          var root = tree.FindOne(n => n.Parent == null && n.Name == Triggers);
-          var parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name).SerializedData;
-          Import(parent, imported, Triggers, characterIds);
-        }
-
-        return Task.CompletedTask;
-      });
-
-      TriggerImportEvent?.Invoke(true);
     }
 
     private static void AssignOverlay(ILiteCollection<TriggerNode> tree, string id, IEnumerable<TriggerNode> nodes)
