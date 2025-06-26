@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -187,6 +188,9 @@ namespace EQLogParser
     {
       volumeSlider.Value = AudioManager.Instance.GetVolume();
       volumePopup.IsOpen = true;
+      // workaround to get labels to display
+      volumeSlider.LabelOrientation = Orientation.Vertical;
+      volumeSlider.LabelOrientation = Orientation.Horizontal;
     }
 
     private async void OverlayImportEvent(bool _)
