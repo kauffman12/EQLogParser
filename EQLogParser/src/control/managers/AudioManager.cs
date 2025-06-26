@@ -71,10 +71,21 @@ namespace EQLogParser
             }
           }
         }
+
+        using var sapi = new System.Speech.Synthesis.SpeechSynthesizer();
+#pragma warning disable CA1304 // If culture info is used then not all voices are returned
+        foreach (var voice in sapi.GetInstalledVoices())
+        {
+          if (voice is not null && voice.VoiceInfo is System.Speech.Synthesis.VoiceInfo info && !string.IsNullOrEmpty(info.Name))
+          {
+            list.Add("(Legacy) " + info.Name);
+          }
+        }
+#pragma warning restore CA1304 // Specify CultureInfo
       }
       catch (Exception)
       {
-        Log.Error("Unable to read Voices from Windows.Media.SpeechSynthesizer.");
+        Log.Error("Unable to read Voices from Windows SpeechSynthesizer.");
       }
 
       return list;
@@ -120,22 +131,11 @@ namespace EQLogParser
 
     internal void SetVoice(string id, string voice)
     {
-      if (!string.IsNullOrEmpty(voice) && _playerAudios.TryGetValue(id, out var playerAudio))
+      if (!string.IsNullOrEmpty(voice) && _playerAudios.TryGetValue(id, out var audio))
       {
-        lock (playerAudio)
+        lock (audio)
         {
-          if (_usePiper)
-          {
-            if (PiperTts.LoadVoice(id, voice, out var piperVoice))
-            {
-              playerAudio.PiperSampleRate = piperVoice.Sample;
-            }
-          }
-          else if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) && playerAudio?.Synth != null
-            && GetVoiceInfo(voice) is { } voiceInfo)
-          {
-            playerAudio.Synth.Voice = voiceInfo;
-          }
+          LoadVoice(id, voice, audio);
         }
       }
     }
@@ -143,19 +143,7 @@ namespace EQLogParser
     internal void Add(string id, string voice)
     {
       var audio = new PlayerAudio();
-
-      if (_usePiper)
-      {
-        if (PiperTts.LoadVoice(id, voice, out var voiceData))
-        {
-          audio.PiperSampleRate = voiceData.Sample;
-        }
-      }
-      else
-      {
-        audio.Synth = CreateSpeechSynthesizer(voice);
-      }
-
+      LoadVoice(id, voice, audio);
       _playerAudios.TryAdd(id, audio);
       ProcessAsync(audio);
     }
@@ -181,10 +169,16 @@ namespace EQLogParser
               {
                 PiperTts.RemoveVoice(id);
               }
-              else if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+              else
               {
-                playerAudio.Synth?.Dispose();
-                playerAudio.Synth = null;
+                if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+                {
+                  playerAudio.Synth?.Dispose();
+                  playerAudio.Synth = null;
+                }
+
+                playerAudio.SapiSynth?.Dispose();
+                playerAudio.SapiSynth = null;
               }
             }
             catch (Exception)
@@ -225,14 +219,24 @@ namespace EQLogParser
             PiperTts.RemoveVoice(testSpeaker);
           }
         }
-        else if (CreateSpeechSynthesizer(voice) is { } synth)
+        else
         {
-          if (await SynthesizeTextToByteArrayAsync(tts, synth) is { Length: > 0 } data)
+          if (IsLegacyVoice(voice))
           {
-            audio = data;
+            if (CreateSapiSpeechSynthesizer(voice) is { } synth && SynthesizeTextToByteArray(tts, synth, out sample) is { Length: > 0 } data)
+            {
+              audio = data;
+              synth.Dispose();
+            }
           }
-
-          if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240)) synth.Dispose();
+          else
+          {
+            if (CreateSpeechSynthesizer(voice) is { } synth && await SynthesizeTextToByteArrayAsync(tts, synth) is { Length: > 0 } data)
+            {
+              audio = data;
+              if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240)) synth.Dispose();
+            }
+          }
         }
 
         if (audio?.Length > 0)
@@ -263,14 +267,24 @@ namespace EQLogParser
             PiperTts.RemoveVoice(testSpeaker);
           }
         }
-        else if (CreateSpeechSynthesizer(voice) is { } synth)
+        else
         {
-          if (await SynthesizeTextToByteArrayAsync(tts, synth) is { Length: > 0 } data)
+          if (IsLegacyVoice(voice))
           {
-            audio = data;
+            if (CreateSapiSpeechSynthesizer(voice) is { } synth && SynthesizeTextToByteArray(tts, synth, out sample) is { Length: > 0 } data)
+            {
+              audio = data;
+              synth.Dispose();
+            }
           }
-
-          if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240)) synth.Dispose();
+          else
+          {
+            if (CreateSpeechSynthesizer(voice) is { } synth && await SynthesizeTextToByteArrayAsync(tts, synth) is { Length: > 0 } data)
+            {
+              audio = data;
+              if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240)) synth.Dispose();
+            }
+          }
         }
 
         if (audio?.Length > 0)
@@ -357,12 +371,21 @@ namespace EQLogParser
             else
             {
               SpeechSynthesizer synth = null;
+              System.Speech.Synthesis.SpeechSynthesizer sapiSynth = null;
               lock (playerAudio)
               {
                 synth = playerAudio.Synth;
+                sapiSynth = playerAudio.SapiSynth;
               }
 
-              audio = await SynthesizeTextToByteArrayAsync(tts, synth);
+              if (synth != null)
+              {
+                audio = await SynthesizeTextToByteArrayAsync(tts, synth);
+              }
+              else if (sapiSynth != null)
+              {
+                audio = SynthesizeTextToByteArray(tts, sapiSynth, out sample);
+              }
             }
           }
         }
@@ -544,6 +567,41 @@ namespace EQLogParser
       return null;
     }
 
+    // load voice. note not synchronized
+    private void LoadVoice(string id, string voice, PlayerAudio playerAudio)
+    {
+      if (_usePiper)
+      {
+        if (PiperTts.LoadVoice(id, voice, out var piperVoice))
+        {
+          playerAudio.PiperSampleRate = piperVoice.Sample;
+        }
+      }
+      else
+      {
+        if (IsLegacyVoice(voice))
+        {
+          playerAudio.SapiSynth?.Dispose();
+          playerAudio.SapiSynth = CreateSapiSpeechSynthesizer(voice);
+          if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+          {
+            playerAudio.Synth?.Dispose();
+            playerAudio.Synth = null;
+          }
+        }
+        else
+        {
+          if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+          {
+            playerAudio.Synth?.Dispose();
+            playerAudio.Synth = CreateSpeechSynthesizer(voice);
+            playerAudio.SapiSynth?.Dispose();
+            playerAudio.SapiSynth = null;
+          }
+        }
+      }
+    }
+
     private void ProcessAsync(PlayerAudio audio)
     {
       var cancellationTokenSource = new CancellationTokenSource();
@@ -687,6 +745,29 @@ namespace EQLogParser
       return synth;
     }
 
+    private static System.Speech.Synthesis.SpeechSynthesizer CreateSapiSpeechSynthesizer(string voice)
+    {
+      System.Speech.Synthesis.SpeechSynthesizer synth = null;
+
+      try
+      {
+        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+        {
+          synth = new System.Speech.Synthesis.SpeechSynthesizer();
+          if (GetSapiVoiceInfo(voice) is { } voiceInfo)
+          {
+            synth.SelectVoice(voiceInfo.Name);
+          }
+        }
+      }
+      catch (Exception)
+      {
+        // not supported
+      }
+
+      return synth;
+    }
+
     private static DirectSoundOut CreateDirectSoundOut(Guid device, float appVolume, RawSourceWaveStream stream, int rate, int adjustedVolume)
     {
       // short sounds need a shorter latency but don't go below 10 as it may break entirely
@@ -756,6 +837,34 @@ namespace EQLogParser
       return voiceInfo;
     }
 
+    private static System.Speech.Synthesis.VoiceInfo GetSapiVoiceInfo(string name)
+    {
+      System.Speech.Synthesis.VoiceInfo voiceInfo = null;
+
+      try
+      {
+        var synth = new System.Speech.Synthesis.SpeechSynthesizer();
+        voiceInfo = synth.Voice;
+        if (!string.IsNullOrEmpty(name))
+        {
+          foreach (var voice in synth.GetInstalledVoices())
+          {
+            if (!string.IsNullOrEmpty(name) && name.Contains(voice.VoiceInfo.Name, StringComparison.OrdinalIgnoreCase))
+            {
+              voiceInfo = voice.VoiceInfo;
+              break;
+            }
+          }
+        }
+      }
+      catch (Exception)
+      {
+        // not supported
+      }
+
+      return voiceInfo;
+    }
+
     private static async Task<byte[]> ReadFileToByteArrayAsync(AudioFileReader reader)
     {
       try
@@ -796,6 +905,32 @@ namespace EQLogParser
       }
     }
 
+    private static byte[] SynthesizeTextToByteArray(string tts, System.Speech.Synthesis.SpeechSynthesizer synth, out int sample)
+    {
+      sample = 16000; // default sample rate
+
+      try
+      {
+        var memStream = new MemoryStream();
+        synth.SetOutputToWaveStream(memStream);
+        synth.Speak(tts);
+        var data = memStream.ToArray();
+        // Use NAudio to read WAV format
+        memStream.Position = 0;
+        using var reader = new WaveFileReader(memStream);
+        var format = reader.WaveFormat;
+        sample = format.SampleRate;
+        memStream.Dispose();
+        // return without wav header
+        return data[44..];
+      }
+      catch (Exception ex)
+      {
+        Log.Debug("Error synthesizing text to byte array.", ex);
+        return null;
+      }
+    }
+
     private static float ConvertVolume(float current, int increase)
     {
       var floatIncrease = increase switch
@@ -812,6 +947,11 @@ namespace EQLogParser
       };
 
       return current * floatIncrease;
+    }
+
+    private static bool IsLegacyVoice(string voice)
+    {
+      return !string.IsNullOrEmpty(voice) && voice.StartsWith("(Legacy) ", StringComparison.OrdinalIgnoreCase);
     }
 
     public void Dispose()
@@ -846,6 +986,7 @@ namespace EQLogParser
       internal DirectSoundOut CurrentPlayback { get; set; }
       internal CancellationTokenSource ProcessingToken { get; set; }
       internal SpeechSynthesizer Synth { get; set; }
+      internal System.Speech.Synthesis.SpeechSynthesizer SapiSynth { get; set; }
       internal int PiperSampleRate { get; set; }
     }
 
