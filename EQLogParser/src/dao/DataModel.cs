@@ -216,6 +216,8 @@ namespace EQLogParser
     // preview referenced dynamically
     public string TimerBarPreview { get; set; }
     public TriggerNode Node { get; set; }
+    // expose node.Id for binding
+    public string NodeId => Node?.Id;
   }
 
   internal class TextOverlayPropertyModel : Overlay
@@ -223,6 +225,8 @@ namespace EQLogParser
     public SolidColorBrush FontBrush { get; set; }
     public SolidColorBrush OverlayBrush { get; set; }
     public TriggerNode Node { get; set; }
+    // expose node.Id for binding
+    public string NodeId => Node?.Id;
   }
 
   internal class TriggerPropertyModel : Trigger

@@ -19,6 +19,7 @@
         TitleBarHeight="{DynamicResource EQTableHeaderRowHeight}"
         ShowTitle="False"
         UseNativeChrome="True"
+        UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Display"
         Loaded="MainWindowOnLoaded"
         WindowStartupLocation="Manual"

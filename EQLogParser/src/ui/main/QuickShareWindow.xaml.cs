@@ -63,7 +63,7 @@ namespace EQLogParser
         {
           GinaUtil.ImportQuickShare(record.Key, record.From);
         }
-        else if (record.Type == TriggerUtil.ShareTrigger)
+        else if (record.Type == TriggerUtil.ShareTrigger || record.Type == TriggerUtil.ShareOverlay)
         {
           TriggerUtil.ImportQuickShare(record.Key, record.From);
         }

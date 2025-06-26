@@ -184,7 +184,17 @@ namespace EQLogParser
     {
       if (GetTreeViewFromMenu(sender) is { } treeView)
       {
-        TriggerUtil.Export(treeView.SelectedItems?.Cast<TriggerTreeViewNode>());
+        var nodes = treeView.SelectedItems?.Cast<TriggerTreeViewNode>().ToList();
+        Dispatcher.InvokeAsync(() => TriggerUtil.Export(nodes));
+      }
+    }
+
+    private void ShareOverlayClick(object sender, RoutedEventArgs e)
+    {
+      if (GetTreeViewFromMenu(sender) is { } treeView)
+      {
+        var nodes = treeView.SelectedItems?.Cast<TriggerTreeViewNode>().ToList();
+        Dispatcher.InvokeAsync(() => TriggerUtil.ShareAsync(nodes, false));
       }
     }
 
@@ -193,7 +203,7 @@ namespace EQLogParser
       if (GetTreeViewFromMenu(sender) is { } treeView)
       {
         var nodes = treeView.SelectedItems?.Cast<TriggerTreeViewNode>().ToList();
-        Dispatcher.InvokeAsync(() => TriggerUtil.ShareAsync(nodes));
+        Dispatcher.InvokeAsync(() => TriggerUtil.ShareAsync(nodes, true));
       }
     }
 

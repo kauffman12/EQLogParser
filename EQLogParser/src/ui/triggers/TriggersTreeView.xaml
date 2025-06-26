@@ -137,7 +137,7 @@
                 </MenuItem>
                 <Separator />
                 <MenuItem x:Name="clearRecentlyMergedMenuItem" Header="Clear Highlighting" Click="ClearRecentlyMergedClick" ToolTip="Clear Highlighting for recently Imported/Merged Triggers"/>
-                <MenuItem x:Name="shareTriggerMenuItem" Header="Quick Share" ToolTip="Share Selected Triggers via URL" Click="ShareTriggersClick">
+                <MenuItem x:Name="shareTriggerMenuItem" Header="Quick Share" ToolTip="Share Selected Triggers with Quick Share code" Click="ShareTriggersClick">
                   <MenuItem.Icon>
                     <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_ExternalLinkAlt" />
                   </MenuItem.Icon>
@@ -228,6 +228,12 @@
             <MenuItem x:Name="importOverlayMenuItem" Header="Import" ToolTip="Imports and Merges to the Selected Folder" Click="ImportClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Upload" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem x:Name="shareOverlayMenuItem" Header="Quick Share" ToolTip="Share Selected Overlay with Quick Share code" Click="ShareOverlayClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_ExternalLinkAlt" />
               </MenuItem.Icon>
             </MenuItem>
           </ContextMenu>

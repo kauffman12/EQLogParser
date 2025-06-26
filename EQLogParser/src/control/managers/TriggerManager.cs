@@ -26,7 +26,21 @@ namespace EQLogParser
     {
       _configUpdateTimer = UiUtil.CreateTimer(ConfigDoUpdate, 500);
       _triggerUpdateTimer = UiUtil.CreateTimer(TriggersDoUpdate, 1000);
+      TriggerStateManager.Instance.OverlayImportEvent += OverlayImportEvent;
       TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+      TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
+    }
+
+    private async void OverlayImportEvent(bool obj)
+    {
+      // refresh styles
+      await TriggerUtil.LoadOverlayStyles();
+    }
+
+    private void TriggerUpdateEvent(TriggerNode obj)
+    {
+      // in case of merge
+      TriggersUpdated();
     }
 
     internal void Select(AlertEntry entry) => EventsSelectTrigger?.Invoke(entry);
