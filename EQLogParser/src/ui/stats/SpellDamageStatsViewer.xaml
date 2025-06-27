@@ -45,8 +45,7 @@
                            RowHeaderWidth="{DynamicResource EQTableRowHeaderWidth}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
-                           ShowRowHeader="True"
-                           UseDrawing="Default">
+                           ShowRowHeader="True">
       <syncfusion:SfDataGrid.Resources>
         <Style TargetType="syncfusion:GridRowHeaderCell">
           <Setter Property="Template">
@@ -62,6 +61,7 @@
           </Setter>
         </Style>
       </syncfusion:SfDataGrid.Resources>
+
       <syncfusion:SfDataGrid.SortColumnDescriptions>
         <syncfusion:SortColumnDescription ColumnName="Avg" SortDirection="Descending" />
       </syncfusion:SfDataGrid.SortColumnDescriptions>

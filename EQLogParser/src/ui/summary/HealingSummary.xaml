@@ -31,7 +31,7 @@
                            AllowResizingColumns="True"
                            AllowSelectionOnPointerPressed="True"
                            AllowSorting="True"
-                           AutoGenerateColumns="False"                           
+                           AutoGenerateColumns="False"
                            CurrentCellBorderThickness="0"
                            FrozenColumnCount="1"
                            Grid.Row="1"
@@ -45,8 +45,7 @@
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            SelectionChanged="DataGridSelectionChanged"
-                           ShowRowHeader="True"
-                           UseDrawing="Default">
+                           ShowRowHeader="True">
       <syncfusion:SfDataGrid.Resources>
         <Style TargetType="syncfusion:GridRowHeaderCell">
           <Setter Property="Template">

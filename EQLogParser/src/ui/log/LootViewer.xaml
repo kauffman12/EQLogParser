@@ -55,8 +55,7 @@
                            RowHeaderWidth="{DynamicResource EQTableRowHeaderWidth}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
-                           ShowRowHeader="True"
-                           UseDrawing="Default">
+                           ShowRowHeader="True">
       <syncfusion:SfDataGrid.SortColumnDescriptions>
         <syncfusion:SortColumnDescription ColumnName="BeginTime" SortDirection="Descending" />
       </syncfusion:SfDataGrid.SortColumnDescriptions>
