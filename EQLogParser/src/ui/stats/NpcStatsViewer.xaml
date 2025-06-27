@@ -48,11 +48,12 @@
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
                            ItemsSource="{Binding NpcStatsData}"
+                           HorizontalAlignment="Stretch"
                            RowHeaderWidth="{DynamicResource EQTableRowHeaderWidth}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            ShowRowHeader="True"
-                           HorizontalAlignment="Stretch"
+                           UseDrawing="Default"
                            VerticalAlignment="Stretch">
       <syncfusion:SfDataGrid.SortColumnDescriptions>
         <syncfusion:SortColumnDescription ColumnName="Npc" SortDirection="Ascending" />

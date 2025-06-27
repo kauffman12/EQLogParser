@@ -147,7 +147,7 @@ namespace EQLogParser
         {
           if (!_hasPets.TryGetValue(totalName, out var value))
           {
-            value = ([]);
+            value = [];
             _hasPets[totalName] = value;
           }
 
