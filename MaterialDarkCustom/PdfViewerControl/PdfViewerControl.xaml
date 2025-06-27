@@ -333,6 +333,7 @@
                                     <ColumnDefinition Width="40" />
                                     <ColumnDefinition Width="0" />
                                     <ColumnDefinition />
+                                    <ColumnDefinition Width="0"/>
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
                                     <RowDefinition />
@@ -361,6 +362,15 @@
                                     x:Name="PART_LayerPane" 
                                     Grid.Row="1"
                                     Grid.Column="1" />
+                                <pdfviewer:CommentsPane
+                                    x:Name="PART_CommentPanels"
+                                    Grid.Row="1"
+                                    Grid.Column="3" />
+                                <pdfviewer:CommentsLabel
+                                    x:Name="PART_CommentsLabel"
+                                    Grid.Row="0"
+                                    Grid.Column="3"
+                                    Height="30" />
                                 <pdfviewer:PdfDocumentView
                                     x:Name="PART_DocumentView"
                                     Grid.Row="0"
@@ -1937,7 +1947,8 @@
                                               StrokeThickness="2" />
                                     </RepeatButton>
                                 </Grid>
-                                <StackPanel Grid.Column="2"
+                                <StackPanel Name="PART_TextSearchStack"
+                                            Grid.Column="2"
                                             Orientation="Horizontal">
                                     <Button Name="PART_ButtonTextSearch"
                                             Width="24"
@@ -2106,7 +2117,8 @@
                                                             Free text box
                                                         </ToolTip>
                                                     </ToggleButton.ToolTip>
-                                                    <Path Width="16"
+                                                    <Path Name="PART_FreeTextPathMaterial" 
+                                                          Width="16"
                                                           Height="16"
                                                           HorizontalAlignment="Center"
                                                           VerticalAlignment="Center"
@@ -2126,7 +2138,8 @@
                                                     </ToolTip>
                                                 </ToggleButton.ToolTip>
                                                 <StackPanel Orientation="Horizontal">
-                                                    <Path Width="14"
+                                                    <Path Name="PART_InkPathMaterial"
+                                                          Width="14"
                                                           Height="14"
                                                           HorizontalAlignment="Center"
                                                           VerticalAlignment="Center"
@@ -2319,7 +2332,8 @@
                                                     </ToolTip>
                                                 </ToggleButton.ToolTip>
                                                 <StackPanel Orientation="Horizontal">
-                                                    <Path Width="15"
+                                                    <Path Name="PART_StampPathMaterial" 
+                                                          Width="15"
                                                           Height="15"
                                                           HorizontalAlignment="Center"
                                                           VerticalAlignment="Center"
@@ -2373,7 +2387,8 @@
                                                         Add sticky note
                                                     </ToolTip>
                                                 </ToggleButton.ToolTip>
-                                                <Path Width="16"
+                                                <Path Name="PART_StickyNotePathMaterial" 
+                                                      Width="16"
                                                       Height="14.001"
                                                       HorizontalAlignment="Center"
                                                       VerticalAlignment="Center"
@@ -2447,7 +2462,30 @@
                                               StrokeThickness="2" />
                                     </RepeatButton>
                                 </Grid>
-                                <Button Name="PART_CloseAnnotationToolbar"
+                                <StackPanel Orientation="Horizontal" Grid.Column="1">
+                                    <ToggleButton Name="PART_CommentsPanel"
+                                        Width="24"
+                                        Height="24"
+                                        Margin="0,0,8,0"
+                                        HorizontalAlignment="Right"
+                                        IsEnabled="True"
+                                        Style="{StaticResource SyncfusionGlyphToggleButtonStyle}">
+                                        <ToggleButton.ToolTip>
+                                            <ToolTip Style="{StaticResource WPFToolTipStyle}">
+                                                Expand comment section
+                                            </ToolTip>
+                                        </ToggleButton.ToolTip>
+                                        <Path Canvas.Left="0"
+                                          Canvas.Top="3.095"
+                                              Width="16"
+                                              Height="14"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Data="M11.5 0.5H0.5V9.5H11.5V0.5ZM1.5 8.5V1.5H7V8.5H1.5ZM8 8.5H10.5V1.5H8V8.5Z"
+                                              Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType={x:Type ToggleButton}}}"
+                                              Stretch="Fill" />
+                                    </ToggleButton>
+                                    <Button Name="PART_CloseAnnotationToolbar"
                                         Grid.Column="4"
                                         Width="24"
                                         Height="24"
@@ -2456,19 +2494,20 @@
                                         VerticalAlignment="Center"
                                         IsEnabled="True"
                                         Style="{StaticResource SyncfusionGlyphButtonStyle}">
-                                    <Button.ToolTip>
-                                        <ToolTip Style="{StaticResource WPFToolTipStyle}">
-                                            Click to close annotations toolbar
-                                        </ToolTip>
-                                    </Button.ToolTip>
-                                    <Path Canvas.Left="0"
+                                        <Button.ToolTip>
+                                            <ToolTip Style="{StaticResource WPFToolTipStyle}">
+                                                Click to close annotations toolbar
+                                            </ToolTip>
+                                        </Button.ToolTip>
+                                        <Path Canvas.Left="0"
                                           Canvas.Top="3.095"
                                           Width="12"
                                           Height="12"
                                           Data="M1.4139423,0 L7.0029922,5.5845888 12.592018,0 14.006015,1.4149939 8.4180527,6.9985202 14.006,12.582007 12.591996,13.997001 7.0030056,8.4124444 1.4140122,13.997001 1.5026823E-05,12.582007 5.5879484,6.9985092 0,1.4149939 z"
                                           Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                                           Stretch="Fill" />
-                                </Button>
+                                    </Button>
+                                </StackPanel>
                             </Grid>
                         </Border>
                         
@@ -2743,6 +2782,57 @@
         </Setter>
     </Style>
 
+    <Style x:Key="SyncfusionCommentsLabelStyle" TargetType="{x:Type pdfviewer:CommentsLabel}">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type pdfviewer:CommentsLabel}">
+                    <Border BorderBrush="{StaticResource BorderAlt}"
+                            BorderThickness="0,0,1,1"
+                            Background="{StaticResource ContentBackground}">
+                        <Grid x:Name="PART_commentGrid">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Label
+                                x:Name="PART_CommentLabel"
+                                Grid.Column="0"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center"
+                                Content="Comments"
+                                FontSize="12"
+                                FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                                FontWeight="{StaticResource MaterialDarkCustom.FontWeightNormal}"/>
+                            <Button
+                                Name="PART_ExportAndImport"
+                                Grid.Column="1"
+                                Width="24"
+                                Height="24"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                IsEnabled="True"
+                                Style="{StaticResource SyncfusionGlyphButtonStyle}">
+                                <Button.ToolTip>
+                                    <ToolTip Style="{StaticResource WPFToolTipStyle}">
+                                        Click to expand comments section
+                                    </ToolTip>
+                                </Button.ToolTip>
+                                <Path Name="PART_ExportAndImportPath"
+                                      Width="3"
+                                      Height="11"
+                                      HorizontalAlignment="Center"
+                                      Data="M1.09375 0C1.24414 6.57378e-09 1.38542 0.0296224 1.51758 0.0888672C1.64974 0.148112 1.76367 0.225586 1.85938 0.321289C1.95964 0.421549 2.03939 0.53776 2.09863 0.669922C2.15788 0.802083 2.1875 0.943359 2.1875 1.09375C2.1875 1.24414 2.15788 1.38542 2.09863 1.51758C2.03939 1.64974 1.95964 1.76367 1.85938 1.85938C1.76367 1.95964 1.64974 2.03939 1.51758 2.09863C1.38542 2.15788 1.24414 2.1875 1.09375 2.1875C0.94336 2.1875 0.802084 2.15788 0.669922 2.09863C0.537761 2.03939 0.42155 1.95964 0.321289 1.85938C0.225586 1.76367 0.148112 1.64974 0.0888676 1.51758C0.0296228 1.38542 3.75901e-07 1.24414 3.82475e-07 1.09375C3.89049e-07 0.943359 0.0296228 0.802083 0.0888676 0.669922C0.148112 0.53776 0.225586 0.421549 0.321289 0.321289C0.42155 0.225586 0.537761 0.148112 0.669922 0.0888672C0.802084 0.0296224 0.94336 -6.57378e-09 1.09375 0ZM1.09375 4.375C1.24414 4.375 1.38542 4.40462 1.51758 4.46387C1.64974 4.52311 1.76367 4.60059 1.85938 4.69629C1.95964 4.79655 2.03939 4.91276 2.09863 5.04492C2.15788 5.17708 2.1875 5.31836 2.1875 5.46875C2.1875 5.61914 2.15788 5.76042 2.09863 5.89258C2.03939 6.02474 1.95964 6.13867 1.85938 6.23438C1.76367 6.33464 1.64974 6.41439 1.51758 6.47363C1.38542 6.53288 1.24414 6.5625 1.09375 6.5625C0.943359 6.5625 0.802083 6.53288 0.669922 6.47363C0.537761 6.41439 0.42155 6.33464 0.321289 6.23438C0.225586 6.13867 0.148112 6.02474 0.0888674 5.89258C0.0296226 5.76042 1.84664e-07 5.61914 1.91238e-07 5.46875C1.97811e-07 5.31836 0.0296226 5.17708 0.0888674 5.04492C0.148112 4.91276 0.225586 4.79655 0.321289 4.69629C0.42155 4.60059 0.537761 4.52311 0.669922 4.46387C0.802084 4.40462 0.94336 4.375 1.09375 4.375ZM1.09375 8.75C1.24414 8.75 1.38542 8.77962 1.51758 8.83887C1.64974 8.89811 1.76367 8.97559 1.85938 9.07129C1.95964 9.17155 2.03939 9.28776 2.09863 9.41992C2.15788 9.55208 2.1875 9.69336 2.1875 9.84375C2.1875 9.99414 2.15788 10.1354 2.09863 10.2676C2.03939 10.3997 1.95964 10.5137 1.85938 10.6094C1.76367 10.7096 1.64974 10.7894 1.51758 10.8486C1.38542 10.9079 1.24414 10.9375 1.09375 10.9375C0.943359 10.9375 0.802083 10.9079 0.669922 10.8486C0.53776 10.7894 0.421549 10.7096 0.321289 10.6094C0.225586 10.5137 0.148112 10.3997 0.0888672 10.2676C0.0296224 10.1354 -6.57378e-09 9.99414 0 9.84375C6.57378e-09 9.69336 0.0296224 9.55208 0.0888672 9.41992C0.148112 9.28776 0.225586 9.17155 0.321289 9.07129C0.421549 8.97559 0.53776 8.89811 0.669922 8.83887C0.802083 8.77962 0.943359 8.75 1.09375 8.75Z"
+                                      Fill="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
+                                      Stretch="Fill" />
+                            </Button>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="SyncfusionBookmarkPaneStyle" TargetType="{x:Type pdfviewer:BookmarkPane}">
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
@@ -2759,6 +2849,29 @@
                                     HorizontalScrollBarVisibility="Auto"
                                     VerticalScrollBarVisibility="Auto">
                                     <TreeView x:Name="PART_TreeView" Style="{StaticResource WPFTreeViewStyle}" />
+                                </ScrollViewer>
+                            </Grid>
+                        </DockPanel>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionCommentsPanleStyle" TargetType="{x:Type pdfviewer:CommentsPane}">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type pdfviewer:CommentsPane}">
+                    <Border Background="{StaticResource ContentBackground}"
+                            BorderBrush="{StaticResource BorderAlt}" 
+                            BorderThickness="0,0,1,0">
+                        <DockPanel LastChildFill="True">
+                            <Grid>
+                                <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+                                    <Grid x:Name="Part_CommentsGrid">
+                                        <StackPanel/>
+                                    </Grid>
                                 </ScrollViewer>
                             </Grid>
                         </DockPanel>
@@ -2908,7 +3021,8 @@
                                                 IsMoveToPointEnabled="True"
                                                 Maximum="100"
                                                 Minimum="0"
-                                                Style="{StaticResource WPFSliderStyle}" />
+                                                Style="{StaticResource WPFSliderStyle}" >
+                                            </Slider>
 
                                             <Button
                                                 x:Name="ZoomIn"
@@ -3098,6 +3212,8 @@
 
     <Style BasedOn="{StaticResource SyncfusionBookmarkLabelStyle}" TargetType="{x:Type pdfviewer:BookmarkLabel}" />
     <Style BasedOn="{StaticResource SyncfusionBookmarkPaneStyle}" TargetType="{x:Type pdfviewer:BookmarkPane}" />
+    <Style BasedOn="{StaticResource SyncfusionCommentsLabelStyle}" TargetType="{x:Type pdfviewer:CommentsLabel}" />
+    <Style BasedOn="{StaticResource SyncfusionCommentsPanleStyle}" TargetType="{x:Type pdfviewer:CommentsPane}" />
     <Style BasedOn="{StaticResource SyncfusionCopyProgressIndicatorStyle}" TargetType="{x:Type pdfviewer:CopyProgressIndicator}" />
     <Style BasedOn="{StaticResource SyncfusionDocumentToolbarStyle}" TargetType="{x:Type pdfviewer:DocumentToolbar}" />
     <Style BasedOn="{StaticResource SyncfusionDocumentViewStyle}" TargetType="{x:Type pdfviewer:DocumentView}" />

@@ -61,6 +61,7 @@
                 <Setter Property="Background" TargetName="border" Value="Transparent"/>
                 <Setter Property="BorderBrush" TargetName="border" Value="Transparent"/>
                 <Setter Property="Foreground" Value="{StaticResource IconDisabledColor}"/>
+                <Setter Property="Opacity" Value="1"/>
             </Trigger>
         </ControlTemplate.Triggers>
     </ControlTemplate>
@@ -112,6 +113,7 @@
                 <Setter Property="Background" TargetName="border" Value="Transparent"/>
                 <Setter Property="BorderBrush" TargetName="border" Value="Transparent"/>
                 <Setter Property="Foreground" Value="{StaticResource IconDisabledColor}"/>
+                <Setter Property="Opacity" Value="1"/>
             </Trigger>
         </ControlTemplate.Triggers>
     </ControlTemplate>
@@ -163,6 +165,7 @@
                 <Setter Property="Background" TargetName="border" Value="Transparent"/>
                 <Setter Property="BorderBrush" TargetName="border" Value="Transparent"/>
                 <Setter Property="Foreground" Value="{StaticResource IconDisabledColor}"/>
+                <Setter Property="Opacity" Value="1"/>
             </Trigger>
         </ControlTemplate.Triggers>
     </ControlTemplate>
@@ -203,6 +206,7 @@
             </Trigger>
             <Trigger Property="IsEnabled" Value="false">
                 <Setter Property="Foreground" Value="{StaticResource IconDisabledColor}"/>
+                <Setter Property="Opacity" Value="1"/>
             </Trigger>
         </ControlTemplate.Triggers>
     </ControlTemplate>
@@ -334,6 +338,7 @@
                             <Setter Property="Fill" TargetName="ellipse" Value="Transparent"/>
                             <Setter Property="Stroke" TargetName="ellipse" Value="Transparent"/>
                             <Setter Property="Foreground" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter Property="Opacity" Value="1"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -420,6 +425,7 @@
                             <Setter Property="Background" TargetName="border" Value="Transparent"/>
                             <Setter Property="BorderBrush" TargetName="border" Value="Transparent"/>
                             <Setter Property="Foreground" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter Property="Opacity" Value="1"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

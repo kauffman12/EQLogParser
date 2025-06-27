@@ -342,7 +342,7 @@
                                         MinWidth="220"
                                         Background="{StaticResource PopupBackground}"
                                         BorderBrush="{StaticResource BorderAlt}"
-                                        
+                                        CornerRadius="0"
                                         BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                         Effect="{StaticResource Default.ShadowDepth2}"
                                         Opacity="{TemplateBinding Opacity}">
@@ -712,7 +712,7 @@
                                                 MaxHeight="315"
                                                 Background="{StaticResource PopupBackground}"
                                                 BorderBrush="{StaticResource BorderAlt}"
-                                                
+                                                CornerRadius="0"
                                                 BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                                 Effect="{StaticResource Default.ShadowDepth2}"
                                                 Width="{Binding ElementName=PART_HierarchyNavigatorHistoryListBox, Path=ActualWidth}">
@@ -914,7 +914,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type tools_controls:HierarchyNavigator}">
-                    <Grid x:Name="PART_Root" SnapsToDevicePixels="True">
+                    <Border BorderBrush="{StaticResource BorderAlt}" BorderThickness="1">
+                        <Grid x:Name="PART_Root" SnapsToDevicePixels="True">
                         <tools_controls:HierarchyNavigatorItemsControl
                             x:Name="PART_HierarchyNavigatorItemsControl"
                             MinHeight="{TemplateBinding MinHeight}"
@@ -969,6 +970,7 @@
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
                     </Grid>
+                    </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                             <Setter Property="MinHeight" Value="34" />

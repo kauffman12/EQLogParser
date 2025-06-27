@@ -19,7 +19,7 @@
 <sys:Double x:Key="MaterialDarkCustom.SubTitleTextStyle">12</sys:Double>
 <sys:Double x:Key="MaterialDarkCustom.BodyTextStyle">12</sys:Double>
 <sys:Double x:Key="MaterialDarkCustom.CaptionText">10</sys:Double>
-	<FontFamily x:Key="MaterialDarkCustom.ThemeFontFamily">pack://application:,,,/Syncfusion.Themes.MaterialDarkCustomCustom.WPF;component/Common/Fonts/#Roboto</FontFamily>
+	<FontFamily x:Key="MaterialDarkCustom.ThemeFontFamily">pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/Fonts/#Roboto</FontFamily>
 <FontWeight x:Key="MaterialDarkCustom.FontWeightNormal">Normal</FontWeight> 
 <FontWeight x:Key="MaterialDarkCustom.FontWeightMedium">Medium</FontWeight> 
 <Thickness x:Key="MaterialDarkCustom.BorderThickness">0,0,0,0</Thickness> 

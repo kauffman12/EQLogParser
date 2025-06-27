@@ -57,8 +57,6 @@
     
     <!--ClearFilterButton-->
 
-    <SolidColorBrush x:Key="TreeGridFilterControl.ClearFilterButton.Disabled.Background" Color="#000000"/>
-
     <!--AdvanceFilterButton-->
 
     <!--Separator-->
@@ -258,6 +256,8 @@
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 SnapsToDevicePixels="True">
                             <Grid>
+                                <Line x:Name="PART_DragLine" StrokeThickness="2" Visibility="Collapsed"
+                                      />
                                 <Grid Margin="{TemplateBinding Padding}" SnapsToDevicePixels="True">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -282,7 +282,7 @@
                                         </Grid.ColumnDefinitions>
 
                                         <Path x:Name="AscendingSortDirection"
-                                      Height="12" 
+                                      Height="12"
                                       Width="10"
                                       Stretch="Fill" 
                                       VerticalAlignment="Center" 
@@ -623,7 +623,7 @@
                                        Stroke="{TemplateBinding BorderBrush}"
                                        StrokeDashArray="2,2"
                                        StrokeThickness="1"
-                                       Visibility="Collapsed" />
+                                       Visibility="Collapsed"/>
                         </Border>
                         <Border x:Name="PART_SelectionBorder"
                                 Margin="{TemplateBinding IndentMargin}"
@@ -688,6 +688,7 @@
                             </MultiTrigger.Conditions>
                             <Setter Property="Background" TargetName="PART_BackgroundBorder" Value="{StaticResource ContentBackgroundHover}"/>
                             <Setter Property="Background" TargetName="PART_SelectionBorder" Value="{StaticResource ContentBackgroundHover}"/>
+                            <Setter Property="Foreground"  Value="{StaticResource ContentForeground}" />
                         </MultiTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -898,7 +899,7 @@
                                           Width="16"
                                           Height="16"
                                           MinWidth="16"
-                                          Margin="3,0,0,0"
+                                          Margin="3 0 0 0"
                                           VerticalAlignment="Center"
                                           grid:VisualContainer.WantsMouseInput="True"
                                           FocusVisualStyle="{x:Null}"
@@ -1109,11 +1110,20 @@
                                         </ObjectAnimationUsingKeyFrames>
 
                                         <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PART_RowHeaderIndicator" Storyboard.TargetProperty="Width">
-                                            <EasingDoubleKeyFrame KeyTime="0" Value="12" />
+                                            <EasingDoubleKeyFrame KeyTime="0">
+                                                <EasingDoubleKeyFrame.Value>
+                                                    <system:Double>12</system:Double>
+                                                </EasingDoubleKeyFrame.Value>
+                                            </EasingDoubleKeyFrame>
                                         </DoubleAnimationUsingKeyFrames>
 
                                         <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PART_RowHeaderIndicator" Storyboard.TargetProperty="Height">
-                                            <EasingDoubleKeyFrame KeyTime="0" Value="12" />
+                                            <EasingDoubleKeyFrame KeyTime="0">
+                                                <EasingDoubleKeyFrame.Value>
+                                                    <system:Double>12</system:Double>
+                                                </EasingDoubleKeyFrame.Value>
+                                            </EasingDoubleKeyFrame>
+
                                         </DoubleAnimationUsingKeyFrames>
 
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_RowHeaderIndicator" Storyboard.TargetProperty="Fill">
@@ -1175,8 +1185,8 @@
                 <ControlTemplate TargetType="treeGrid:TreeGridExpander">
                     <Grid Background="{TemplateBinding Background}">
                         <Path x:Name="PART_CollapseCellPath"
-                              Width="5"
-                              Height="9"
+                             Width="5"
+                             Height="9"
                               Fill="{TemplateBinding Foreground}"
                               Stretch="Fill">
                             <Path.Data>
@@ -1504,7 +1514,7 @@
                                 </Path>
                                 <ContentPresenter x:Name="clearButtonContentPresenter"
                                                   Grid.Column="1"
-                                                  Margin="2,0,8,0"
+                                                  Margin="2 0 8 0"
                                                   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                                   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                                   OpacityMask="{x:Null}"
@@ -1532,6 +1542,7 @@
             <Trigger Property="skinManager:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
                 <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}"/>
             </Trigger>
+            
         </Style.Triggers>
     </Style>
 
@@ -1653,7 +1664,7 @@
                             </Border.Margin>
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="29" />
+                                    <ColumnDefinition Width="29"/>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
@@ -1666,7 +1677,23 @@
                                                                                     AncestorType={x:Type treeGridFiltering:TreeGridFilterControl}},
                                                      Converter={StaticResource filteredFromCheckVisibilityConverter},
                                                      ConverterParameter=reverse}" />
-
+                                <Path x:Name="PART_AdvancedFilterToggleIndicator"
+                                                
+                                                                                             
+                                    Fill="{StaticResource PrimaryBackground}"
+                                                Stretch="Uniform">
+                                    <Path.Visibility>
+                                        <Visibility>Collapsed</Visibility>
+                                    </Path.Visibility>
+                                    <Path.RenderTransform>
+                                        <TransformGroup>
+                                            <TransformGroup.Children>
+                                                <RotateTransform Angle="0" />
+                                                <ScaleTransform ScaleX="1" ScaleY="1" />
+                                            </TransformGroup.Children>
+                                        </TransformGroup>
+                                    </Path.RenderTransform>
+                                </Path>
                                 <Path x:Name="PART_FilteredFromCheck"
                                       Width="11.4"
                                       Height="9"
@@ -1692,7 +1719,7 @@
                                         </TransformGroup>
                                     </Path.RenderTransform>
                                 </Path>
-                                <ContentPresenter Grid.Column="1" x:Name="ContentPresenter_filter"
+                                <ContentPresenter  Grid.Column="1" x:Name="ContentPresenter_filter"         
                                           HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                           OpacityMask="{x:Null}"
@@ -1705,7 +1732,7 @@
                                         <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                     </ContentPresenter.Resources>
                                 </ContentPresenter>
-                                <Grid Grid.Column="2"
+                                <Grid Grid.Column="2" 
                                       Width="20"
                                       Height="20">
                                     <Grid.Margin>
@@ -1739,6 +1766,7 @@
             <Trigger Property="skinManager:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
                 <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}"/>
             </Trigger>
+            
         </Style.Triggers>
     </Style>
 
@@ -1834,9 +1862,10 @@
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
                         <Border x:Name="PART_SortedBorder" Height="24" 
-                                CornerRadius="{StaticResource MaterialDarkCustom.CornerRadius4}"
+                                
                                 Visibility=" Collapsed" />
                         <Border x:Name="PART_RootBorder"
+                                
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="Transparent"
                                 BorderThickness="1"
@@ -1854,7 +1883,7 @@
                                     </Border.Margin>
                                 </Border>
                                 <ContentPresenter x:Name="SortButton_ContentPresenter" 
-                                                  Margin="0,2,8,2"
+                                                  Margin="0 2 8 2"
                                                   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                                   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                                   Content="{TemplateBinding Content}"
@@ -1869,7 +1898,7 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
-        <Style.Triggers>
+    <Style.Triggers>
             <Trigger Property="skinManager:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
                 <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusVisualStyle}"/>
             </Trigger>
@@ -2067,7 +2096,7 @@
                                         <Thickness>5,8,4,0</Thickness>
                                     </TextBox.Margin>
                                 </TextBox>
-
+                                
                                 <TextBlock HorizontalAlignment="Left"
                                            VerticalAlignment="Center"
                                            IsHitTestVisible="False"
@@ -2081,7 +2110,7 @@
                                         <Thickness>5,0,0,0</Thickness>
                                     </TextBlock.Margin>
                                 </TextBlock>
-
+                                
                                 <Border Width="12"
                                         Height="12"
                                         HorizontalAlignment="Right"
@@ -2094,7 +2123,9 @@
                                     </Border.Margin>
                                     <Path Fill="{StaticResource IconColor}"
                                           RenderTransformOrigin="0.5,0.5"
-                                          Stretch="Uniform">
+                                          Stretch="Uniform"
+                                          
+                                          >
                                         <Path.Data>
                                             <PathGeometry>M6,2 C3.7939453,2 2,3.7940063 2,6 2,8.2060089 3.7939453,10 6,10 8.2059937,10 10,8.2060089 10,6 10,3.7940063 8.2059937,2 6,2 z M6,0 C9.30896,-2.8819613E-11 12,2.6910095 12,6 12,7.44769 11.484919,8.7770891 10.628358,9.8146038 L10.585051,9.8658056 11.142985,10.420998 11.945992,10.420998 16.000025,14.485999 14.486012,16 10.420979,11.945998 10.420979,11.142998 9.8657846,10.585068 9.8145847,10.628373 C8.7770662,11.484927 7.44767,12 6,12 2.690979,12 0,9.3090057 0,6 0,2.6910095 2.690979,-2.8819613E-11 6,0 z</PathGeometry>
                                         </Path.Data>
@@ -2367,6 +2398,7 @@
                                                               Content="{TemplateBinding DescendingSortString}"
                                                               Visibility="{TemplateBinding SortOptionVisibility}"
                                                               Style="{StaticResource SyncfusionTreeGridFilterControlSortButtonStyle}">
+
                                                 <grid:SortButton.Icon>
                                                     <Grid Width="20"
                                                           Height="20"
@@ -2380,6 +2412,7 @@
                                                               Stretch="Fill">
                                                             <Path.Data>
                                                                 <PathGeometry>M6.834002,13.863987 L10.515995,13.863987 8.6749988,15.704983 z M11.797001,5.0669352 L10.264009,9.1599452 13.330024,9.1599452 z M0.031000137,3.3439566 L6.5900164,3.3439566 6.5900164,4.338957 1.9040046,11.134959 6.7390168,11.134959 6.7390168,12.39096 0,12.39096 0,11.370959 4.6770115,4.6089568 0.031000137,4.6089568 z M11.157016,3.3369578 L12.452001,3.3369578 16.000011,12.390958 14.547006,12.390958 13.820014,10.455964 9.7820139,10.455964 9.0549924,12.390958 7.6010108,12.390958 z M8.6759987,0 L10.539997,1.8639864 6.8110005,1.8639864 z</PathGeometry>
+                                                                
                                                             </Path.Data>
                                                         </Path>
                                                     </Grid>
@@ -2448,7 +2481,8 @@
                                         </Grid>
                                         <Border Grid.Row="2"
                                                 BorderBrush="{StaticResource BorderAlt}"
-                                                BorderThickness="0,0,0,1" />
+                                                BorderThickness="0,0,0,1"
+                                                />
 
                                         <StackPanel Grid.Row="3">
                                             <StackPanel
@@ -2457,8 +2491,15 @@
                                                 <StackPanel.Margin>
                                                     <Thickness>0,10,4,5</Thickness>
                                                 </StackPanel.Margin>
-
+                                                
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                
                                                 <Button x:Name="PART_TreeGridOkButton"
+                                                        Grid.Column ="0" 
                                                         Height="25"
                                                         Width="36"
                                                         Content="{grid:GridLocalizationResourceExtension ResourceName=OK}"
@@ -2473,6 +2514,7 @@
                                                     </Button.Margin>
                                                 </Button>
                                                 <Button x:Name="PART_TreeGridCancelButton"
+                                                        Grid.Column ="1" 
                                                         Height="25"
                                                         Width="68"
                                                         Content="{Binding ImmediateUpdateColumnFilter,
@@ -2482,7 +2524,9 @@
                                                     <Button.Margin>
                                                         <Thickness>4,8,8,0</Thickness>
                                                     </Button.Margin>
+                                               
                                                 </Button>
+                                                </Grid>
                                             </StackPanel>
                                             <Border Height="10"
                                                     BorderThickness="0" Visibility="Visible">
@@ -2496,10 +2540,10 @@
                                                         <ControlTemplate>
                                                             <Grid Background="Transparent">
                                                                 <Path Width="8"
-                                                                      Height="8"
-                                                                      Data="M36.396,36.017 L47.901,36.017 47.901,47.521999 36.396,47.521999 z M18.198,36.017 L29.716,36.017 29.716,47.521999 18.198,47.521999 z M0,36.017 L11.511999,36.017 11.511999,47.521999 0,47.521999 z M36.396,18.191001 L47.901,18.191001 47.901,29.696 36.396,29.696 z M18.198,18.191 L29.716,18.191 29.716,29.696 18.198,29.696 z M36.396,0 L47.901,0 47.901,11.512 36.396,11.512 z"
-                                                                      Fill="{StaticResource IconDisabledColor}"
-                                                                      Stretch="Fill" />
+                                                              Height="8"
+                                                              Data="M36.396,36.017 L47.901,36.017 47.901,47.521999 36.396,47.521999 z M18.198,36.017 L29.716,36.017 29.716,47.521999 18.198,47.521999 z M0,36.017 L11.511999,36.017 11.511999,47.521999 0,47.521999 z M36.396,18.191001 L47.901,18.191001 47.901,29.696 36.396,29.696 z M18.198,18.191 L29.716,18.191 29.716,29.696 18.198,29.696 z M36.396,0 L47.901,0 47.901,11.512 36.396,11.512 z"
+                                                              Fill="{StaticResource IconDisabledColor}"
+                                                              Stretch="Fill" />
                                                             </Grid>
                                                         </ControlTemplate>
                                                     </Thumb.Template>
@@ -2770,7 +2814,7 @@
                                             Grid.Column="1"
                                             Height="24"
                                             Width="24"
-                                            Margin="5,0,0,0"
+                                            Margin="5 0 0 0"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
                                             Style="{StaticResource SyncfusionTreeGridFilterDatePickerStyle}"
@@ -2786,7 +2830,7 @@
                                               Grid.Column="1"
                                               Height="24"
                                               Width="24"
-                                              Margin="5,0,0,0"
+                                              Margin="5 0 0 0"
                                               Foreground="{TemplateBinding Foreground}"
                                               IsChecked="{Binding IsCaseSensitive1,
                                                                   RelativeSource={RelativeSource TemplatedParent},
@@ -2836,7 +2880,7 @@
                             <ComboBox x:Name="PART_MenuComboBox2"
                                       Grid.Row="4"
                                       Height="24"
-                                      Margin="5,0,0,0"
+                                      Margin="5 0 0 0"
                                       ItemsSource="{Binding FilterTypeComboItems,
                                                             RelativeSource={RelativeSource TemplatedParent}}"
                                       SelectedItem="{Binding FilterType2,
@@ -2888,7 +2932,7 @@
 
                                 <DatePicker x:Name="PART_DatePicker2"
                                             Grid.Column="1"
-                                            Margin="5,0,0,0"
+                                            Margin="5 0 0 0"
                                             Height="24"
                                             Width="24"
                                             HorizontalAlignment="Center"
@@ -2906,7 +2950,7 @@
                                               Grid.Column="1"
                                               Height="24"
                                               Width="24"
-                                              Margin="5,0,0,0"
+                                              Margin="5 0 0 0"
                                               Foreground="{TemplateBinding Foreground}"
                                               IsChecked="{Binding IsCaseSensitive2,
                                                                   RelativeSource={RelativeSource TemplatedParent},

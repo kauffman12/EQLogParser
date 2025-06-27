@@ -11,6 +11,8 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
     </ResourceDictionary.MergedDictionaries>
+    
+    <Thickness x:Key="MaskedTextBox.ScrollViewer.Static.Margin">0,0,0,0</Thickness>
 
     <DataTemplate x:Key="WatermarkContentTemplate">
         <TextBlock Text="{Binding}" Style="{x:Null}"/>
@@ -57,12 +59,13 @@
                                     VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
                                     Background="Transparent"
                                     SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
-                                    Visibility="{TemplateBinding ContentElementVisibility}" >
+                                    Visibility="{TemplateBinding ContentElementVisibility}" 
+                                    Margin="{StaticResource MaskedTextBox.ScrollViewer.Static.Margin}">
                                 </ScrollViewer>
                                 <ContentControl
                                     x:Name="PART_Watermark"
                                     Grid.Row="0"
-                                    Margin="2 0 0 0"
+                                    Margin="2,0,0,0"
                                     VerticalAlignment="{TemplateBinding VerticalAlignment}"
                                     VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
                                     Background="{TemplateBinding WatermarkBackground}"

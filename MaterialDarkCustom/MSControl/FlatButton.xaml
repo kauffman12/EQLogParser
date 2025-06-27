@@ -73,7 +73,6 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" TargetName="border" Value="{StaticResource SecondaryHoverBackground}"/>
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SecondaryHoverBackground}" />
-                           
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource SecondaryForeground}"/>
                             <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}"/>
                             <Setter Property="BorderThickness" TargetName="border" Value="{StaticResource MaterialDarkCustom.BorderThickness1}"/>
@@ -91,6 +90,7 @@
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource SecondaryForegroundDisabled}"/>
                             <Setter Property="Foreground" Value="{StaticResource SecondaryForegroundDisabled}"/>
                             <Setter Property="BorderThickness" TargetName="border" Value="{StaticResource MaterialDarkCustom.BorderThickness1}"/>
+                            <Setter Property="Opacity" Value="1"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

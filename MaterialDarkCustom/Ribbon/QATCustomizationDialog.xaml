@@ -41,6 +41,8 @@
     <system:String x:Key="header">Header</system:String>
     <system:String x:Key="source">Source</system:String>
     <system:String x:Key="destination">Destination</system:String>
+    
+    <Thickness x:Key="Ribbon.QATDropDownButton.Popup.Border.Static.Padding">1</Thickness>
 
     <DataTemplate x:Key="ListBoxButtonItemTemplate">
             <StackPanel Margin="2" Orientation="Horizontal">
@@ -82,6 +84,47 @@
                 <DataTrigger.Setters>
                     <Setter TargetName="PART_Image" Property="Visibility" Value="Visible" />
                     <Setter TargetName="VectorImage" Property="Visibility" Value="Collapsed" />
+                </DataTrigger.Setters>
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <DataTemplate x:Key="SourceListBoxItemDataTemplate">
+        <StackPanel Margin="2" Orientation="Horizontal">
+            <Grid>
+                <Viewbox
+                        x:Name="VectorImage"
+                        Width="16"
+                        Height="16"
+                        Margin="0,0,10,0">
+                    <Grid x:Name="Path_Grid" />
+                </Viewbox>
+                <Image
+                        x:Name="PART_Image"
+                        Width="16"
+                        Height="16"
+                        Margin="0,0,10,0"
+                        Source="{Binding Path=SmallIcon}"
+                        Stretch="Fill" />
+            </Grid>
+            <TextBlock Text="{Binding Path=Label}" />
+        </StackPanel>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding Path=IconType}" Value="VectorImage">
+                <DataTrigger.Setters>
+                    <Setter TargetName="PART_Image" Property="Visibility" Value="Collapsed" />
+                    <Setter TargetName="VectorImage" Property="Visibility" Value="Visible" />
+                </DataTrigger.Setters>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Path=IconType}" Value="Icon">
+                <DataTrigger.Setters>
+                    <Setter TargetName="PART_Image" Property="Visibility" Value="Visible" />
+                    <Setter TargetName="VectorImage" Property="Visibility" Value="Collapsed" />
+                </DataTrigger.Setters>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Path=CanVisibleImage}" Value="true">
+                <DataTrigger.Setters>
+                    <Setter Property="Visibility" Value="Hidden" TargetName="PART_Image" />
                 </DataTrigger.Setters>
             </DataTrigger>
         </DataTemplate.Triggers>
@@ -168,6 +211,57 @@
         </Style.Triggers>
     </Style>
 
+    <Style x:Key="SyncfusionQATSourceListBoxItemStyle" BasedOn="{StaticResource SyncfusionQATListBoxItemStyle}" TargetType="local:QATListBoxItem">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:QATListBoxItem">
+                    <Border
+                            x:Name="Bd"
+                            Padding="{TemplateBinding Padding}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="0"
+                            SnapsToDevicePixels="true">
+                        <ContentPresenter
+                                x:Name="contentPresenter"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+								ContentTemplateSelector="{TemplateBinding IconTemplateSelector}"
+                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IconTemplate" Value="{x:Null}" />
+                                <Condition Property="IconTemplateSelector" Value="{x:Null}" />
+                            </MultiTrigger.Conditions>
+                            <Setter Property="ContentTemplate" TargetName="contentPresenter" Value="{DynamicResource SourceListBoxItemDataTemplate}" />
+                        </MultiTrigger>
+                        <Trigger Property="IsSelected" Value="true">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ContentBackgroundHover}" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter Property="TextElement.Foreground" Value="{StaticResource HoverForeground}" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsSelected" Value="true" />
+                                <Condition Property="Selector.IsSelectionActive" Value="false" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ContentBackgroundSelection}" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+                            <Setter Property="TextElement.Foreground" Value="{StaticResource SelectionForeground}" />
+                        </MultiTrigger>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="SyncfusionQATDropDownButtonStyle" TargetType="{x:Type local:DropDownButton}">
         <Setter Property="IconTemplate" Value="{Binding IconTemplate}" />
         <Setter Property="IconTemplateSelector" Value="{Binding IconTemplateSelector}" />
@@ -248,7 +342,8 @@
                                             
                                             Effect="{StaticResource Default.ShadowDepth1}"
                                             CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
-                                            BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}">
+                                            BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" 
+                                            Padding="{StaticResource Ribbon.QATDropDownButton.Popup.Border.Static.Padding}">
                                     <ScrollViewer
                                                 Margin="1,0,1,0"
                                                 CanContentScroll="True"

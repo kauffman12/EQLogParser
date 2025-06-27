@@ -38,7 +38,7 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                        CornerRadius="1"
                         SnapsToDevicePixels="true">
                         <ContentPresenter
                             x:Name="contentPresenter"
@@ -119,7 +119,7 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                            CornerRadius="1"
                             Opacity="1"
                             SnapsToDevicePixels="True">
                             <Grid x:Name="ContentHost">
@@ -285,7 +285,7 @@
                                             Background="{StaticResource PopupBackground}"
                                             BorderBrush="{StaticResource Border}"
                                             
-                                            
+                                            CornerRadius="0"
                                             Effect="{StaticResource Default.ShadowDepth3}"
                                             SnapsToDevicePixels="True">
                                             <Grid x:Name="PART_PopupGrid_Classic" Background="{StaticResource PopupBackground}">

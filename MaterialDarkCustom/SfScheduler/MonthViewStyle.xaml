@@ -318,7 +318,6 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
-
     </Style>
     <Style BasedOn="{StaticResource SyncfusionMonthCellStyle}" TargetType="scheduler:MonthCell" />
 
@@ -356,7 +355,7 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
-
     </Style>
     <Style BasedOn="{StaticResource SyncfusionSchedulerWeekNumberCellStyle}" TargetType="scheduler:WeekNumberCell" />
+    
 </ResourceDictionary>

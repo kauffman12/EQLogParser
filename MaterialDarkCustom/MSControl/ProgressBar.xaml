@@ -27,7 +27,7 @@
                             <VisualStateGroup x:Name="CommonStates">
 								<VisualState x:Name="Determinate"/>
 								<VisualState x:Name="Indeterminate">
-                                    <Storyboard RepeatBehavior="Forever" >
+                                    <Storyboard RepeatBehavior="Forever" SpeedRatio="1">
 										<DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" Storyboard.TargetName="Animation">
 											<EasingDoubleKeyFrame KeyTime="0" Value="0.25"/>
                                             <EasingDoubleKeyFrame KeyTime="0:0:1" Value="0.25"/>
@@ -45,7 +45,7 @@
                         <Border BorderBrush="{TemplateBinding BorderBrush}" 
                                 BorderThickness="{TemplateBinding BorderThickness}" 
                                 Background="{TemplateBinding Background}"
-								
+								Height="NaN"
                                 CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}" />
                         <Rectangle x:Name="PART_Track" />
                         <Grid x:Name="PART_Indicator" 

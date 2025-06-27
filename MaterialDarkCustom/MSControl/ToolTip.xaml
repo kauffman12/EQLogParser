@@ -30,7 +30,7 @@
         <Setter Property="VerticalContentAlignment"
                 Value="Center"/>
         <Setter Property="Padding"
-                Value="5,3,5,3"/>
+                Value="5,3"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ToolTip}">
@@ -40,6 +40,7 @@
                             Padding="{TemplateBinding Padding}"
                             SnapsToDevicePixels="True"
                             CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                            Margin="0"
                             Effect="{StaticResource Default.ShadowDepth3}">
                         <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"

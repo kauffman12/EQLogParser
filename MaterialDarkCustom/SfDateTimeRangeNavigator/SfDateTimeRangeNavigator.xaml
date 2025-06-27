@@ -9,37 +9,52 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
     </ResourceDictionary.MergedDictionaries>
-    
-    <DataTemplate x:Key="leftTooltipTemplate">
-		<Border 
-                Background="Transparent"
-                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}">
-			<Grid>
-				<Path x:Name="light_left"
-                  Data="F1M398.0605,350.6934L377.7585,350.6934L372.3835,350.6934L372.3215,350.6934C370.2155,350.6934,368.5085,352.5044,368.5085,354.7344C368.5085,356.9664,370.2155,358.7774,372.3215,358.7774L372.3835,358.7774L377.7585,358.7774L398.0605,358.7774z"
-                  Fill="{StaticResource TooltipBackground}"
-                  Stretch="Fill"/>
-				<TextBlock Text="{Binding}"
-                       Margin="5,5,5,5"
-                       Foreground="{StaticResource Black}" />
-			</Grid>
-		</Border>
+
+    <Thickness x:Key="SfDateTimeRangeNavigator.Tooltip.Static.Padding">0,0,0,0</Thickness>
+    <Thickness x:Key="SfDateTimeRangeNavigator.Tooltip.Static.Margin">0,0,0,0</Thickness>
+    <Thickness x:Key="SfDateTimeRangeNavigator.Tooltip.Path.Static.Margin">0,0,0,0</Thickness>
+    <Thickness x:Key="SfDateTimeRangeNavigator.Tooltip.TextBlock.Static.Padding">0,0,0,0</Thickness>
+    <Thickness x:Key="ResizableScrollBar.Thumb.Static.BorderThickness">0,0,0,0</Thickness>
+    <Thickness x:Key="ResizableScrollBar.Thumb.Static.BorderThickness1">0,0,0,0</Thickness>
+    <Thickness x:Key="RangeNavigatorSelector.Border.Static.Padding">0,0,0,0</Thickness>
+
+            <DataTemplate x:Key="leftTooltipTemplate">
+        <Border 
+             Background="Transparent"
+             CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}">
+            <Grid>
+                <Path x:Name="light_left"
+               Data="F1M398.0605,350.6934L377.7585,350.6934L372.3835,350.6934L372.3215,350.6934C370.2155,350.6934,368.5085,352.5044,368.5085,354.7344C368.5085,356.9664,370.2155,358.7774,372.3215,358.7774L372.3835,358.7774L377.7585,358.7774L398.0605,358.7774z"
+               Fill="{StaticResource TooltipBackground}"
+               Stretch="Fill"/>
+                <TextBlock Text="{Binding}"
+                           Margin="5,5,5,5"
+                           Foreground="{StaticResource Black}" 
+                           Padding="{StaticResource SfDateTimeRangeNavigator.Tooltip.Static.Padding}">
+                </TextBlock>
+            </Grid>
+        </Border>
     </DataTemplate>
 
     <DataTemplate x:Key="rightTooltipTemplate">
-		<Border 
+        <Border 
                 Background="Transparent"
-                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}">
-			<Grid>
-				<Path x:Name="dark_right"
-                  Data="F1M400.5342,362.2568L420.8372,362.2568L426.2122,362.2568L426.2742,362.2568C428.3802,362.2568,430.0872,364.0658,430.0872,366.2978C430.0872,368.5298,428.3802,370.3388,426.2742,370.3388L426.2122,370.3388L420.8372,370.3388L400.5342,370.3388z"
-                  Fill="{StaticResource TooltipBackground}"
-                  Stretch="Fill" />
-				<TextBlock Text="{Binding}"
-                       Margin="5,5,5,5"
-                       Foreground="{StaticResource Black}" />
-			</Grid>
-		</Border>
+                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
+                Margin="{StaticResource SfDateTimeRangeNavigator.Tooltip.Static.Margin}">
+            <Grid>
+                <Path x:Name="dark_right"
+                      Data="F1M400.5342,362.2568L420.8372,362.2568L426.2122,362.2568L426.2742,362.2568C428.3802,362.2568,430.0872,364.0658,430.0872,366.2978C430.0872,368.5298,428.3802,370.3388,426.2742,370.3388L426.2122,370.3388L420.8372,370.3388L400.5342,370.3388z"
+                      Fill="{StaticResource TooltipBackground}"
+                      Stretch="Fill" 
+                      Margin="{StaticResource SfDateTimeRangeNavigator.Tooltip.Path.Static.Margin}">
+                </Path>
+                <TextBlock Text="{Binding}"
+                           Foreground="{StaticResource Black}" 
+                           Padding="{StaticResource SfDateTimeRangeNavigator.Tooltip.TextBlock.Static.Padding}"
+                           Margin="5,5,5,5">
+                </TextBlock>
+            </Grid>
+        </Border>
     </DataTemplate>
 
     <Style x:Key="DefaultThumbLineStyle"
@@ -90,12 +105,12 @@
                                    Stroke="{StaticResource BorderAlt}"
                                    StrokeThickness="1"
                                    Margin="4,0,0,0" />
-                        <Path Stretch="Uniform"
-                              Height="8"
-                              Width="4"
-                              Data="F1 M 511.047,352.682L 511.047,342.252L 517.145,347.467L 511.047,352.682 Z "
-                              Fill="{StaticResource White}">
-                        </Path>
+                        <TextBlock Text="&#xe70b;"
+                                   FontSize="16"
+                                   FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                   Foreground="{StaticResource White}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
                         <Rectangle x:Name="DisabledElement"
                                    Opacity="0"
                                    Fill="#FFFFFFFF" />
@@ -111,13 +126,12 @@
                                    StrokeThickness="1"
                                    Margin="4">
                         </Rectangle>
-                        <Path Stretch="Uniform"
-                              Height="8"
-                              Width="4"
-                              Data="F1 M 110.692,342.252L 110.692,352.682L 104.594,347.467L 110.692,342.252 Z "
-                              Fill="{StaticResource White}">
-                           
-                        </Path>
+                        <TextBlock Text="&#xe70a;"
+                                   FontSize="16"
+                                   FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                   Foreground="{StaticResource White}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
                         <Rectangle x:Name="DisabledElement"
                                    Opacity="0"
                                    Fill="{StaticResource ContentBackgroundAlt}" />
@@ -143,12 +157,12 @@
                                    Stroke="{StaticResource BorderAlt}"
                                    StrokeThickness="1"
                                    Margin="4,0,0,0" />
-                        <Path Stretch="Uniform"
-                              Height="4"
-                              Width="8"
-                              Data="F1 M 531.107,321.943L 541.537,321.943L 536.322,328.042L 531.107,321.943 Z "
-                              Fill="{StaticResource White}">
-                        </Path>
+                        <TextBlock Text="&#xe708;"
+                                   FontSize="16"
+                                   FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                   Foreground="{StaticResource White}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
                         <Rectangle x:Name="DisabledElement"
                                    Opacity="0"
                                    RadiusX="8"
@@ -175,12 +189,12 @@
                                    Stroke="{StaticResource BorderAlt}"
                                    StrokeThickness="1"
                                    Margin="4,0,0,0" />
-                        <Path Stretch="Uniform"
-                              Height="4"
-                              Width="8"
-                              Data="F1 M 541.537,173.589L 531.107,173.589L 536.322,167.49L 541.537,173.589 Z "
-                              Fill="{StaticResource ContentBackgroundAlt5}">
-                            </Path>
+                        <TextBlock Text="&#xe709;"
+                                   FontSize="16"
+                                   FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                   Foreground="{StaticResource ContentBackgroundAlt5}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
                         <Rectangle x:Name="DisabledElement"
                                    Opacity="0"
                                    RadiusX="8"
@@ -479,12 +493,12 @@
                                                Stroke="{StaticResource BorderAlt}"
                                                StrokeThickness="1"
                                                Margin="1" />
-                                    <Path Stretch="Uniform"
-                                          Height="8"
-                                          Width="4"
-                                          Data="F1 M 511.047,352.682L 511.047,342.252L 517.145,347.467L 511.047,352.682 Z "
-                                          Fill="{StaticResource IconColor}">
-                                    </Path>
+                                    <TextBlock Text="&#xe70b;"
+                                               FontSize="16"
+                                               FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                               Foreground="{StaticResource IconColor}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
                                     <Rectangle x:Name="DisabledElement"
                                                Opacity="0"
                                                RadiusX="8"
@@ -502,12 +516,12 @@
                                                Fill="{StaticResource ContentBackground}"
                                                StrokeThickness="1">
                                     </Rectangle>
-                                    <Path Stretch="Uniform"
-                                          Height="8"
-                                          Width="4"
-                                          Data="F1 M 110.692,342.252L 110.692,352.682L 104.594,347.467L 110.692,342.252 Z "
-                                          Fill="{StaticResource IconColor}">
-                                    </Path>
+                                    <TextBlock Text="&#xe70a;"
+                                               FontSize="16"
+                                               FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                               Foreground="{StaticResource IconColor}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
                                     <Rectangle x:Name="DisabledElement"
                                                Opacity="0"
                                                RadiusX="8"
@@ -532,12 +546,12 @@
                                                Stroke="#FF6DBDD1"
                                                StrokeThickness="1"
                                                Margin="1" />
-                                    <Path Stretch="Uniform"
-                                          Height="4"
-                                          Width="8"
-                                          Data="F1 M 531.107,321.943L 541.537,321.943L 536.322,328.042L 531.107,321.943 Z "
-                                          Fill="{StaticResource IconColor}" >
-                                    </Path>
+                                    <TextBlock Text="&#xe708;"
+                                               FontSize="16"
+                                               FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                               Foreground="{StaticResource IconColor}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
                                     <Rectangle x:Name="DisabledElement"
                                                Opacity="0"
                                                RadiusX="8"
@@ -563,12 +577,12 @@
                                                Stroke="#FF6DBDD1"
                                                StrokeThickness="1"
                                                Margin="1" />
-                                    <Path Stretch="Uniform"
-                                          Height="4"
-                                          Width="8"
-                                          Data="F1 M 541.537,173.589L 531.107,173.589L 536.322,167.49L 541.537,173.589 Z "
-                                          Fill="{StaticResource IconColor}">
-                                    </Path>
+                                    <TextBlock Text="&#xe709;"
+                                               FontSize="16"
+                                               FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                               Foreground="{StaticResource IconColor}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
                                     <Rectangle x:Name="DisabledElement"
                                                Opacity="0"
                                                RadiusX="8"
@@ -586,14 +600,20 @@
                                                     VerticalAlignment="Center">
                                         <Grid Height="15"
                                               Width="12">
-                                            <Path Data="M0,9.5190001 L7.9320002,9.5190001 7.9320002,10.313 0,10.313 z M0,4.7600002 L7.9320002,4.7600002 7.9320002,5.5539999 0,5.5539999 z M0,0 L7.9320002,0 7.9320002,0.7940001 0,0.7940001 z"
-                                                  Fill="{StaticResource ContentBackgroundAlt5}"
-                                                  Margin="0,0.795,0,0"
-                                                  Stretch="Fill" />
-                                            <Path Data="M0,9.5200004 L7.9320002,9.5200004 7.9320002,10.314 0,10.314 z M0,4.7610006 L7.9320002,4.7610006 7.9320002,5.5550005 0,5.5550005 z M0,0 L7.9320002,0 7.9320002,0.79500008 0,0.79500008 z"
-                                                  Fill="{StaticResource ContentBackgroundAlt5}"
-                                                  Margin="0,0,0,0.794"
-                                                  Stretch="Fill" />
+                                            <TextBlock Text="&#xe7ef;"
+                                                       FontSize="22"
+                                                       FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                                       Foreground="{StaticResource ContentBackgroundAlt5}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0.795,0,0"/>
+                                            <TextBlock Text="&#xe7ef;"
+                                                       FontSize="22"
+                                                       FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                                       Foreground="{StaticResource ContentBackgroundAlt5}" 
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0,0,0.794"/>
                                         </Grid>
                                     </ContentControl>
                                 </Grid>
@@ -608,14 +628,22 @@
                                                     VerticalAlignment="Center">
                                         <Grid Height="12"
                                               Width="15">
-                                            <Path Data="M9.5190001,0 L10.313,0 10.313,7.9320002 9.5190001,7.9320002 z M4.7600002,0 L5.5539999,0 5.5539999,7.9320002 4.7600002,7.9320002 z M0,0 L0.7940001,0 0.7940001,7.9320002 0,7.9320002 z"
-                                                  Fill="{StaticResource BorderAlt}"
-                                                  Margin="0,0,0.795,0"
-                                                  Stretch="Fill" />
-                                            <Path Data="M9.5200005,0 L10.314,0 10.314,7.9320002 9.5200005,7.9320002 z M4.7610002,0 L5.5549998,0 5.5549998,7.9320002 4.7610002,7.9320002 z M0,0 L0.7940001,0 0.7940001,7.9320002 0,7.9320002 z"
-                                                  Fill="{StaticResource Border}"
-                                                  Margin="0.794,0,0,0"
-                                                  Stretch="Fill" />
+                                            <TextBlock Text="&#xe7f0;"
+                                                       FontSize="22"
+                                                       FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons" 
+                                                       Foreground="{StaticResource BorderAlt}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0,0.795,0"
+                                                       />
+                                            <TextBlock Text="&#xe7f0;"
+                                                       FontSize="22"
+                                                       FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons" 
+                                                       Foreground="{StaticResource Border}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0.794,0,0,0"
+                                                       />
                                         </Grid>
                                     </ContentControl>
                                 </Grid>
@@ -625,15 +653,12 @@
                                 <Border CornerRadius="8,0,0,8"
                                         Width="18"
                                         Background="{StaticResource ContentBackgroundAlt3}"
-										>
-									<Border.Margin>
-												<Thickness>0,-1,0,0</Thickness>
-									</Border.Margin>
+										
+                                        Margin="0,-1,0,0"
+                                        BorderThickness="{StaticResource ResizableScrollBar.Thumb.Static.BorderThickness}">
                                     <Grid VerticalAlignment="Center"
-                                          HorizontalAlignment="Center">
-										<Grid.Margin>
-                                            <Thickness>4,0,0,0</Thickness>
-                                        </Grid.Margin>
+                                          HorizontalAlignment="Center"
+                                          Margin="4,0,0,0">
                                         <ContentControl>
                                             <Ellipse Width="9"
                                                      Height="9"
@@ -648,15 +673,12 @@
                                 <Border CornerRadius="0,8,8,0"
                                         Width="18"
                                         Background="{StaticResource ContentBackgroundAlt3}"
-										>
-									<Border.Margin>
-												<Thickness>-1,0,0,0</Thickness>
-									</Border.Margin>
+										
+                                        Margin="-1,0,0,0"
+                                        BorderThickness="{StaticResource ResizableScrollBar.Thumb.Static.BorderThickness1}">
                                     <Grid VerticalAlignment="Center"
-                                          HorizontalAlignment="Center">
-										<Grid.Margin>
-                                            <Thickness>0,0,3,0</Thickness>
-                                        </Grid.Margin>
+                                          HorizontalAlignment="Center"
+                                          Margin="0,0,3,0">
                                         <ContentControl>
                                             <Ellipse Width="9"
                                                      Height="9"
@@ -941,7 +963,8 @@
                             <Border  VerticalAlignment="Top"
                                      x:Name="Part_UpperBorder"
                                      Grid.Row="0"
-                                     Background="#dddddd">
+                                     Background="#dddddd"
+                                     Padding="{StaticResource RangeNavigatorSelector.Border.Static.Padding}">
                                 <Grid>
                                     <Canvas x:Name="PART_UPPERLINE" />
                                     <local:ResizeCanvas x:Name="PART_UPPERBAR"
@@ -978,7 +1001,8 @@
                                 <ContentControl></ContentControl>
                             </Canvas>
                             <Border  x:Name="Part_Border"
-                                     Grid.Row="2">
+                                     Grid.Row="2"
+                                     Padding="{StaticResource RangeNavigatorSelector.Border.Static.Padding}">
                                 <Grid>
                                     <Canvas x:Name="PART_LOWERLINE" />
                                     <local:ResizeCanvas x:Name="PART_LOWERBAR"

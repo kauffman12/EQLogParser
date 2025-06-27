@@ -308,7 +308,7 @@
                             <Setter Property="Opacity" TargetName="SelectedBackground" Value="1"/>
                             <Setter Property="Opacity" TargetName="TodayBackground" Value="0"/>
                             <Setter Property="Width" TargetName="SelectedBackground" Value="24"/>
-                            <Setter Property="Height" TargetName="SelectedBackground" Value="24"/>
+                            <Setter Property="Height" TargetName="SelectedBackground" Value="24"/> 
                             <Setter Property="Visibility" TargetName="DayButtonFocusVisual" Value="Visible"/>
                             <Setter Property="Background" TargetName="SelectedBackground" Value="{StaticResource PrimaryBackground}"/>
                             <Setter Property="BorderBrush" TargetName="DayButtonFocusVisual" Value="{StaticResource PrimaryBackground}"/>
@@ -552,235 +552,186 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
-                        <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" 
+                        <Border BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                Background="{TemplateBinding Background}" 
                                 SnapsToDevicePixels="True"
-                                CornerRadius="1">
-                            <Border BorderBrush="{StaticResource ContentBackground}" BorderThickness="2" 
-                                    SnapsToDevicePixels="True"
-                                    CornerRadius="1">
-                                <Grid>
-                                    <Grid.Resources>
-                                        <Style
-                                            x:Key="MaterialPreviousArrowButtonStyle"
-                                            BasedOn="{StaticResource WPFGlyphButtonStyle}"
-                                            TargetType="{x:Type Button}">
-                                            <Setter Property="Content">
-                                                <Setter.Value>
-                                                    <Path
-                                                        x:Name="path"
-                                                        Width="5"
-                                                        Height="8"
-                                                        Margin="0"
-                                                        HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center"
-                                                        Stretch="Fill"
-                                                        Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-                                                        StrokeThickness="1"
-                                                        Opacity="0.67">
-                                                        <Path.RenderTransformOrigin>
-                                                            <Point X="0" Y="0"/>
-                                                        </Path.RenderTransformOrigin>
-                                                        <Path.Data>
-                                                            <PathGeometry>M4,0 L4,7 0,3.5000001 z</PathGeometry>
-                                                        </Path.Data>
-                                                        <Path.RenderTransform>
-                                                            <TransformGroup>
-                                                                <TransformGroup.Children>
-                                                                    <RotateTransform Angle="0" />
-                                                                    <ScaleTransform ScaleX="1" ScaleY="1" />
-                                                                </TransformGroup.Children>
-                                                            </TransformGroup>
-                                                        </Path.RenderTransform>
-                                                    </Path>
-                                                </Setter.Value>
-                                            </Setter>
-                                            <Style.Triggers>
-                                                <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
-                                                    <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
-                                                </Trigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                        <Style
-                                            x:Key="MaterialNextArrowButtonStyle"
-                                            BasedOn="{StaticResource WPFGlyphButtonStyle}"
-                                            TargetType="{x:Type Button}">
-                                            <Setter Property="Content">
-                                                <Setter.Value>
-                                                    <Path
-                                                        x:Name="path"
-                                                        Width="5"
-                                                        Height="8"
-                                                        Margin="0"
-                                                        HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center"
-                                                        Stretch="Fill"
-                                                        Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-                                                        StrokeThickness="1"
-                                                        Opacity="0.67">
-                                                        <Path.RenderTransformOrigin>
-                                                            <Point X="0" Y="0"/>
-                                                        </Path.RenderTransformOrigin>
-                                                        <Path.Data>
-                                                            <PathGeometry>M0,0 L4,3.5 0,7 z</PathGeometry>
-                                                        </Path.Data>
-                                                        <Path.RenderTransform>
-                                                            <TransformGroup>
-                                                                <TransformGroup.Children>
-                                                                    <RotateTransform Angle="0" />
-                                                                    <ScaleTransform ScaleX="1" ScaleY="1" />
-                                                                </TransformGroup.Children>
-                                                            </TransformGroup>
-                                                        </Path.RenderTransform>
-                                                    </Path>
-                                                </Setter.Value>
-                                            </Setter>
-                                            <Style.Triggers>
-                                                <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
-                                                    <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
-                                                </Trigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                        <Style x:Key="MaterialHeaderButtonStyle" TargetType="{x:Type Button}">
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="{x:Type Button}">
-                                                        <Border x:Name="HeaderButtonGrid"  Cursor="Hand">
-                                                            <VisualStateManager.VisualStateGroups>
-                                                                <VisualStateGroup x:Name="CommonStates">
-                                                                    <VisualState x:Name="Normal"/>
-                                                                    <VisualState x:Name="MouseOver"/>
-                                                                    <VisualState x:Name="Disabled">
-                                                                    </VisualState>
-                                                                </VisualStateGroup>
-                                                            </VisualStateManager.VisualStateGroups>
-                                                            <ContentPresenter x:Name="buttonContent"
-                                                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                                                      Content="{TemplateBinding Content}"
-                                                                      TextElement.Foreground="{StaticResource ContentForeground}"
-                                                                      TextElement.FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
-                                                                      TextElement.FontSize="{StaticResource MaterialDarkCustom.TitleTextStyle}"
-                                                                      TextElement.FontWeight="{StaticResource MaterialDarkCustom.FontWeightMedium}"
-                                                                      HorizontalAlignment="Center"
-                                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
-                                                                <ContentPresenter.Margin>
-                                                                    <Thickness>0,0,0,0</Thickness>
-                                                                </ContentPresenter.Margin>
-                                                                <ContentPresenter.Resources>
-                                                                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
-                                                                </ContentPresenter.Resources>
-                                                            </ContentPresenter>
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <Trigger Property="IsMouseOver" Value="true">
-                                                                <Setter Property="TextElement.Foreground" TargetName="buttonContent" Value="{StaticResource ContentForeground}"/>
-                                                            </Trigger>
-                                                            <Trigger Property="IsPressed" Value="true">
-                                                            </Trigger>
-                                                            <Trigger Property="IsEnabled" Value="false">
-                                                                <Setter Property="TextElement.Foreground" TargetName="buttonContent" Value="{StaticResource DisabledForeground}"/>
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Style>
-                                    </Grid.Resources>
+                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}">
+                            <Grid>
+                                <Grid.Resources>
+                                    <Style x:Key="MaterialPreviousArrowButtonStyle"
+                                           BasedOn="{StaticResource WPFGlyphButtonStyle}"
+                                           TargetType="{x:Type Button}">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <TextBlock x:Name="path"
+                                                           Margin="0"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="14"
+                                                           FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                                           Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                                           Opacity="0.67"
+                                                           Text="&#xe70a;"/>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                                                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                    <Style x:Key="MaterialNextArrowButtonStyle"
+                                           BasedOn="{StaticResource WPFGlyphButtonStyle}"
+                                           TargetType="{x:Type Button}">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <TextBlock x:Name="path"
+                                                           Margin="0"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="14"
+                                                           FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                                           Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                                           Opacity="0.67"
+                                                           Text="&#xe70b;"/>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                                                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                    <Style x:Key="MaterialHeaderButtonStyle" TargetType="{x:Type Button}">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="{x:Type Button}">
+                                                    <Border x:Name="HeaderButtonGrid" 
+                                                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}" 
+                                                            Cursor="Hand">
+                                                        <VisualStateManager.VisualStateGroups>
+                                                            <VisualStateGroup x:Name="CommonStates">
+                                                                <VisualState x:Name="Normal"/>
+                                                                <VisualState x:Name="MouseOver"/>
+                                                                <VisualState x:Name="Disabled">
+                                                                </VisualState>
+                                                            </VisualStateGroup>
+                                                        </VisualStateManager.VisualStateGroups>
+                                                        <ContentPresenter x:Name="buttonContent"
+                                                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                                          Content="{TemplateBinding Content}"
+                                                                          TextElement.Foreground="{StaticResource ContentForeground}"
+                                                                          TextElement.FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                                                                          TextElement.FontSize="{StaticResource MaterialDarkCustom.TitleTextStyle}"
+                                                                          TextElement.FontWeight="{StaticResource MaterialDarkCustom.FontWeightMedium}"
+                                                                          HorizontalAlignment="Center"
+                                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                                          Margin="0">
+                                                            <ContentPresenter.Resources>
+                                                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
+                                                            </ContentPresenter.Resources>
+                                                        </ContentPresenter>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="true">
+                                                            <Setter Property="TextElement.Foreground" TargetName="buttonContent" Value="{StaticResource ContentForeground}"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsEnabled" Value="false">
+                                                            <Setter Property="TextElement.Foreground" TargetName="buttonContent" Value="{StaticResource DisabledForeground}"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Grid.Resources>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="28"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="28"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" MinHeight="0"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <Border Grid.ColumnSpan="3" 
+                                        SnapsToDevicePixels="True"
+                                        Visibility="Collapsed"
+                                        BorderThickness="0,0,0,1"
+                                        BorderBrush="{TemplateBinding BorderBrush}"/>
+                                <Button x:Name="PART_PreviousButton"
+                                        Grid.Column="0"
+                                        HorizontalAlignment="Left"
+                                        Width="24"
+                                        Height="24"
+                                        Grid.Row="0"
+                                        Margin="0,4,0,0"
+                                        Style="{StaticResource MaterialPreviousArrowButtonStyle}"/>
+                                <Button x:Name="PART_HeaderButton"
+                                        Grid.Column="1"
+                                        FontWeight="Bold"
+                                        Focusable="False"
+                                        FontSize="10.5"
+                                        Height="24" 
+                                        MinWidth="140"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Center"
+                                        Grid.Row="0"
+                                        Margin="0,4,0,0"
+                                        Style="{StaticResource MaterialHeaderButtonStyle}"/>
+                                <Button x:Name="PART_NextButton"
+                                        Grid.Column="2"
+                                        HorizontalAlignment="Right"
+                                        Width="24"
+                                        Height="24"
+                                        Grid.Row="0"
+                                        Margin="0,4,0,0"
+                                        Style="{StaticResource MaterialNextArrowButtonStyle}"/>
+                                <Grid x:Name="PART_MonthView"
+                                      Grid.ColumnSpan="3"
+                                      HorizontalAlignment="Center "
+                                      Margin="6"
+                                      Grid.Row="1"
+                                      Visibility="Visible">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="28"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="28"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
-                                    <Border Grid.ColumnSpan="3" 
-                                            SnapsToDevicePixels="True"
-                                            Visibility="Collapsed"
-                                            BorderThickness="0,0,0,1"
-                                            BorderBrush="{TemplateBinding BorderBrush}"/>
-                                    <Button x:Name="PART_PreviousButton"
-                                            Grid.Column="0"
-                                            HorizontalAlignment="Left"
-                                            Width="24"
-                                            Height="24"
-                                            Grid.Row="0"
-                                            Style="{StaticResource MaterialPreviousArrowButtonStyle}">
-                                        <Button.Margin>
-                                            <Thickness>0,4,0,0</Thickness>
-                                        </Button.Margin>
-                                    </Button>
-                                    <Button x:Name="PART_HeaderButton"
-                                            Grid.Column="1"
-                                            FontWeight="Bold"
-                                            Focusable="False"
-                                            FontSize="10.5"
-                                            Height="24" 
-                                            MinWidth="140"
-                                            VerticalAlignment="Center"
-                                            HorizontalAlignment="Center"
-                                            Grid.Row="0"
-                                            Style="{StaticResource MaterialHeaderButtonStyle}">
-                                        <Button.Margin>
-                                            <Thickness>0,4,0,0</Thickness>
-                                        </Button.Margin>
-                                    </Button>
-                                    <Button x:Name="PART_NextButton"
-                                            Grid.Column="2"
-                                            HorizontalAlignment="Right"
-                                            Width="24"
-                                            Height="24"
-                                            Grid.Row="0"
-                                            Style="{StaticResource MaterialNextArrowButtonStyle}">
-                                        <Button.Margin>
-                                            <Thickness>0,4,0,0</Thickness>
-                                        </Button.Margin>
-                                    </Button>
-                                    <Grid x:Name="PART_MonthView"
-                                          Grid.ColumnSpan="3"
-                                          HorizontalAlignment="Center "
-                                          Margin="6"
-                                          Grid.Row="1"
-                                          Visibility="Visible">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                    </Grid>
-                                    <Grid x:Name="PART_YearView"
-                                          Grid.ColumnSpan="3"
-                                          HorizontalAlignment="Center"
-                                          Margin="6,16,6,16"
-                                          Grid.Row="1"
-                                          Visibility="Hidden">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                    </Grid>
                                 </Grid>
-                            </Border>
+                                <Grid x:Name="PART_YearView"
+                                      Grid.ColumnSpan="3"
+                                      HorizontalAlignment="Center"
+                                      Margin="6,16,6,16"
+                                      Grid.Row="1"
+                                      Visibility="Hidden">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                </Grid>
+                            </Grid>
                         </Border>
                         <Rectangle x:Name="PART_DisabledVisual"
                                    Fill="{StaticResource ContentBackground}"
@@ -1372,143 +1323,103 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="1">
-                            <Border
-                                BorderThickness="2"
-                                CornerRadius="1">
-                                <Grid>
-                                    <Grid.Resources>
-                                        <Style
-                                            x:Key="MaterialPreviousArrowButtonStyle"
-                                            BasedOn="{StaticResource WPFGlyphButtonStyle}"
-                                            TargetType="{x:Type Button}">
-                                            <Setter Property="Content">
-                                                <Setter.Value>
-                                                    <Path
-                                                        x:Name="path"
-                                                        Width="5"
-                                                        Height="8"
-                                                        Margin="0"
-                                                        HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center"
-                                                        Stretch="Fill"
-                                                        Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-                                                        StrokeThickness="1">
-                                                        <Path.RenderTransformOrigin>
-                                                            <Point X="0" Y="0"/>
-                                                        </Path.RenderTransformOrigin>
-                                                        <Path.Data>
-                                                            <PathGeometry>M4,0 L4,7 0,3.5000001 z</PathGeometry>
-                                                        </Path.Data>
-                                                        <Path.RenderTransform>
-                                                            <TransformGroup>
-                                                                <TransformGroup.Children>
-                                                                    <RotateTransform Angle="0" />
-                                                                    <ScaleTransform ScaleX="1" ScaleY="1" />
-                                                                </TransformGroup.Children>
-                                                            </TransformGroup>
-                                                        </Path.RenderTransform>
-                                                    </Path>
-                                                </Setter.Value>
-                                            </Setter>
-                                            <Style.Triggers>
-                                                <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
-                                                    <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
-                                                </Trigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                        <Style
-                                            x:Key="MaterialNextArrowButtonStyle"
-                                            BasedOn="{StaticResource WPFGlyphButtonStyle}"
-                                            TargetType="{x:Type Button}">
-                                            <Setter Property="Content">
-                                                <Setter.Value>
-                                                    <Path
-                                                        x:Name="path"
-                                                        Width="5"
-                                                        Height="8"
-                                                        Margin="0"
-                                                        HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center"
-                                                        Stretch="Fill"
-                                                        Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-                                                        StrokeThickness="1">
-                                                        <Path.RenderTransformOrigin>
-                                                            <Point X="0" Y="0"/>
-                                                        </Path.RenderTransformOrigin>
-                                                        <Path.Data>
-                                                            <PathGeometry>M0,0 L4,3.5 0,7 z</PathGeometry>
-                                                        </Path.Data>
-                                                        <Path.RenderTransform>
-                                                            <TransformGroup>
-                                                                <TransformGroup.Children>
-                                                                    <RotateTransform Angle="0" />
-                                                                    <ScaleTransform ScaleX="1" ScaleY="1" />
-                                                                </TransformGroup.Children>
-                                                            </TransformGroup>
-                                                        </Path.RenderTransform>
-                                                    </Path>
-                                                </Setter.Value>
-                                            </Setter>
-                                            <Style.Triggers>
-                                                <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
-                                                    <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
-                                                </Trigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                        <Style x:Key="MaterialHeaderButtonStyle" TargetType="{x:Type Button}">
-                                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
-                                            <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightMedium}"/>
-                                            <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.TitleTextStyle}"/>
-                                            <Setter Property="FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="{x:Type Button}">
-                                                        <Border x:Name="HeaderButtonGrid"  Cursor="Hand">
-                                                            <ContentPresenter
-                                                                x:Name="buttonContent"
-                                                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                                Content="{TemplateBinding Content}"
-                                                                ContentTemplate="{TemplateBinding ContentTemplate}">
-                                                                <ContentPresenter.Resources>
-                                                                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
-                                                                </ContentPresenter.Resources>
-                                                            </ContentPresenter>
-                                                            <VisualStateManager.VisualStateGroups>
-                                                                <VisualStateGroup x:Name="CommonStates">
-                                                                    <VisualState x:Name="Normal" />
-                                                                    <VisualState x:Name="MouseOver" />
-                                                                    <VisualState x:Name="Disabled" />
-                                                                </VisualStateGroup>
-                                                            </VisualStateManager.VisualStateGroups>
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <Trigger Property="IsMouseOver" Value="true">
-                                                                <Setter TargetName="buttonContent" Property="TextElement.Foreground" Value="{StaticResource ContentForeground}" />
-                                                            </Trigger>
-                                                            <Trigger Property="IsPressed" Value="true">
-                                                            </Trigger>
-                                                            <Trigger Property="IsEnabled" Value="false">
-                                                                <Setter TargetName="buttonContent" Property="TextElement.Foreground" Value="{StaticResource DisabledForeground}" />
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Style>
-                                    </Grid.Resources>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="28" />
-                                        <ColumnDefinition Width="auto" />
-                                        <ColumnDefinition Width="28" />
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="*" />
-                                    </Grid.RowDefinitions>
-                                    <Button
-                                        x:Name="PART_PreviousButton"
+                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}">
+                            <Grid>
+                                <Grid.Resources>
+                                    <Style x:Key="MaterialPreviousArrowButtonStyle"
+                                           BasedOn="{StaticResource WPFGlyphButtonStyle}"
+                                           TargetType="{x:Type Button}">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <TextBlock x:Name="path"
+                                                           Margin="0"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="14"
+                                                           FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                                           Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                                           Text="&#xe70a;"/>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                                                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                    <Style x:Key="MaterialNextArrowButtonStyle"
+                                           BasedOn="{StaticResource WPFGlyphButtonStyle}"
+                                           TargetType="{x:Type Button}">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <TextBlock x:Name="path"
+                                                           Margin="0"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="14"
+                                                           FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                                           Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                                           Text="&#xe70b;"/>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
+                                                <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                    <Style x:Key="MaterialHeaderButtonStyle" TargetType="{x:Type Button}">
+                                        <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
+                                        <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightMedium}"/>
+                                        <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.TitleTextStyle}"/>
+                                        <Setter Property="FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="{x:Type Button}">
+                                                    <Border x:Name="HeaderButtonGrid" 
+                                                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}" 
+                                                            Cursor="Hand">
+                                                        <ContentPresenter x:Name="buttonContent"
+                                                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                                          Content="{TemplateBinding Content}"
+                                                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                                          Margin="0">
+                                                            <ContentPresenter.Resources>
+                                                                <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                                            </ContentPresenter.Resources>
+                                                        </ContentPresenter>
+                                                        <VisualStateManager.VisualStateGroups>
+                                                            <VisualStateGroup x:Name="CommonStates">
+                                                                <VisualState x:Name="Normal" />
+                                                                <VisualState x:Name="MouseOver" />
+                                                                <VisualState x:Name="Disabled" />
+                                                            </VisualStateGroup>
+                                                        </VisualStateManager.VisualStateGroups>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="true">
+                                                            <Setter TargetName="buttonContent" Property="TextElement.Foreground" Value="{StaticResource ContentForeground}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsEnabled" Value="false">
+                                                            <Setter TargetName="buttonContent" Property="TextElement.Foreground" Value="{StaticResource DisabledForeground}" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Grid.Resources>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="28" />
+                                    <ColumnDefinition Width="auto" />
+                                    <ColumnDefinition Width="28" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Button x:Name="PART_PreviousButton"
                                         Grid.Row="0"
                                         Grid.Column="0"
                                         Width="24"
@@ -1516,8 +1427,7 @@
                                         Margin="8,0,8,0"
                                         HorizontalAlignment="Left"
                                         Style="{StaticResource MaterialPreviousArrowButtonStyle}" />
-                                    <Button
-                                        x:Name="PART_HeaderButton"
+                                <Button x:Name="PART_HeaderButton"
                                         Grid.Row="0"
                                         Grid.Column="1"
                                         Height="25"
@@ -1527,8 +1437,7 @@
                                         FontSize="10.5"
                                         FontWeight="Bold"
                                         Style="{StaticResource MaterialHeaderButtonStyle}" />
-                                    <Button
-                                        x:Name="PART_NextButton"
+                                <Button x:Name="PART_NextButton"
                                         Grid.Row="0"
                                         Grid.Column="2"
                                         Width="24"
@@ -1536,74 +1445,69 @@
                                         HorizontalAlignment="Right"
                                         Margin="0,8,8,8"
                                         Style="{StaticResource MaterialNextArrowButtonStyle}" />
-                                    <Grid
-                                        x:Name="PART_MonthView"
-                                        Grid.Row="1"
-                                        Grid.ColumnSpan="3"
-                                        Margin="6"
-                                        HorizontalAlignment="Center"
-                                        Visibility="Visible">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                    </Grid>
-                                    <Grid
-                                        x:Name="PART_YearView"
-                                        Grid.Row="1"
-                                        Grid.ColumnSpan="3"
-                                        Margin="6,16,6,16"
-                                        HorizontalAlignment="Center"
-                                        Visibility="Hidden">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                    </Grid>
+                                <Grid x:Name="PART_MonthView"
+                                      Grid.Row="1"
+                                      Grid.ColumnSpan="3"
+                                      Margin="6"
+                                      HorizontalAlignment="Center"
+                                      Visibility="Visible">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
                                 </Grid>
-                            </Border>
+                                <Grid x:Name="PART_YearView"
+                                      Grid.Row="1"
+                                      Grid.ColumnSpan="3"
+                                      Margin="6,16,6,16"
+                                      HorizontalAlignment="Center"
+                                      Visibility="Hidden">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                </Grid>
+                            </Grid>
                         </Border>
-                        <Rectangle
-                            x:Name="PART_DisabledVisual"
-                            Fill="{StaticResource ContentBackground}"
-                            Opacity="0"
-                            RadiusX="2"
-                            RadiusY="2"
-                            Stretch="Fill"
-                            Stroke="{StaticResource ContentBackground}"
-                            StrokeThickness="1"
-                            Visibility="Collapsed" />
+                        <Rectangle x:Name="PART_DisabledVisual"
+                                   Fill="{StaticResource ContentBackground}"
+                                   Opacity="0"
+                                   RadiusX="2"
+                                   RadiusY="2"
+                                   Stretch="Fill"
+                                   Stroke="{StaticResource ContentBackground}"
+                                   StrokeThickness="1"
+                                   Visibility="Collapsed" />
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="CommonStates">
                                 <VisualState x:Name="Normal" />
                                 <VisualState x:Name="Disabled">
                                     <Storyboard>
-                                        <DoubleAnimation
-                                            Storyboard.TargetName="PART_DisabledVisual"
-                                            Storyboard.TargetProperty="Opacity"
-                                            To="1"
-                                            Duration="0" />
+                                        <DoubleAnimation Storyboard.TargetName="PART_DisabledVisual"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1"
+                                                         Duration="0" />
                                     </Storyboard>
                                 </VisualState>
                             </VisualStateGroup>

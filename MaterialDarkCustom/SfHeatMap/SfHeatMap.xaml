@@ -121,9 +121,9 @@
                 Value="Stretch"/>
         <Setter Property="VerticalAlignment"
                 Value="Stretch"/>
-        <Setter Property="Height"
+        <Setter Property="MinHeight"
                 Value="29"/>
-        <Setter Property="Width"
+        <Setter Property="MinWidth"
                 Value="95.5"/>
         <Setter Property="HorizontalContentAlignment"
                 Value="Right"/>
@@ -185,9 +185,9 @@
                 Value="Center"/>
         <Setter Property="TextBlock.TextAlignment"
                 Value="Center"/>
-        <Setter Property="Height"
+        <Setter Property="MinHeight"
                 Value="29"/>
-        <Setter Property="Width"
+        <Setter Property="MinWidth"
                 Value="95.5"/>
         <Setter Property="Padding"
                 Value="2"/>

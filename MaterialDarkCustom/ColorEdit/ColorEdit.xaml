@@ -27,6 +27,10 @@
     <conv:RangedFloatToStringConverter x:Key="RangedFloatToString" />
     <conv:BrushToTextConverter x:Key="brushToTextConverter" />
     <conv:DoubleToPointConverter x:Key="DoubleToPointConverter" />
+    <BooleanToVisibilityConverter x:Key="booleanToVisibilityConverter"/>
+
+    <CornerRadius x:Key="ColorPicker.ColorPalette.Static.CornerRadius">0,0,0,1</CornerRadius>
+    <Thickness x:Key="ColorPicker.ColorEdit.TextBox.Static.Padding">0,0,0,0</Thickness>
 
     <RadialGradientBrush x:Key="ClassicRadialBrushKey" Center="0.5,0.499998" GradientOrigin="0.5,0.499998" RadiusX="0.440736" RadiusY="0.589752">
         <RadialGradientBrush.GradientStops>
@@ -747,20 +751,16 @@
                             Fill="{StaticResource BorderDark1}"
                             Placement="Left"
                             Visibility="Collapsed"
-                            Width="4">
-                    <TickBar.Margin>
-                        <Thickness>0,0,2,0</Thickness>
-                    </TickBar.Margin>
+                            Width="4"
+                            Margin="0,0,2,0">
                 </TickBar>
                 <TickBar x:Name="BottomTick" 
                             Grid.Column="2" 
                             Fill="{StaticResource BorderDark1}"
                             Placement="Right"
                             Visibility="Collapsed" 
-                            Width="4">
-                    <TickBar.Margin>
-                        <Thickness>2,0,0,0</Thickness>
-                    </TickBar.Margin>
+                            Width="4"
+                            Margin="2,0,0,0">
                 </TickBar>
                 <Border x:Name="TrackBackground"
                         Grid.Column="1"
@@ -1068,26 +1068,26 @@
                                     TextAlignment="Center" />
                             </Grid>
 
-                            <TextBlock
+                            <TextBlock Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                 Grid.Row="1"
                                 Grid.Column="0"
                                 Margin="4,2,2,2"
                                 VerticalAlignment="Center"
                                 Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=GradientOrigin}" />
-                            <TextBlock
+                            <TextBlock Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                 Grid.Row="2"
                                 Grid.Column="0"
                                 Margin="4,2,2,2"
                                 VerticalAlignment="Center"
                                 Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Center}" />
-                            <TextBlock
+                            <TextBlock Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                 Grid.Row="3"
                                 Grid.Column="0"
                                 Margin="4,2,2,2"
                                 VerticalAlignment="Center"
                                 Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Radius}" />
 
-                            <StackPanel
+                            <StackPanel Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                 Grid.Row="1"
                                 Grid.Column="1"
                                 Margin="2"
@@ -1119,7 +1119,7 @@
                                     Visibility="Visible"
                                     Value="{Binding Path=GradientOrigin, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource DoubleToPointConverter}, ConverterParameter=grady, Mode=TwoWay}" />
                             </StackPanel>
-                            <StackPanel
+                            <StackPanel Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                 Grid.Row="2"
                                 Grid.Column="1"
                                 Margin="2"
@@ -1149,7 +1149,7 @@
                                     Style="{StaticResource SyncfusionUpDownStyle}"
                                     Value="{Binding Path=CentrePoint, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource DoubleToPointConverter}, ConverterParameter=centrey, Mode=TwoWay}" />
                             </StackPanel>
-                            <StackPanel
+                            <StackPanel Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                 Grid.Row="3"
                                 Grid.Column="1"
                                 Margin="2"
@@ -1190,6 +1190,15 @@
                 <Setter TargetName="GradPopup" Property="IsOpen" Value="False" />
                 <Setter TargetName="PopButton" Property="IsChecked" Value="False" />
             </Trigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding Path=Visibility, ElementName=RadialGrid}" Value="Visible"/>
+                    <Condition Binding="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                    <Condition Binding="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                    <Condition Binding="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Visibility" Value="Collapsed" TargetName="PopButton" />
+            </MultiDataTrigger>
         </DataTemplate.Triggers>
     </DataTemplate>
     <DataTemplate x:Key="GradientExtendedEditor">
@@ -1355,25 +1364,25 @@
                     </Grid>
 
                     <TextBlock
-                        Grid.Row="1"
+                        Grid.Row="1" Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                         Grid.Column="0"
                         Margin="4,2,2,2"
                         VerticalAlignment="Center"
                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=GradientOrigin}" />
-                    <TextBlock
+                    <TextBlock Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                         Grid.Row="2"
                         Grid.Column="0"
                         Margin="4,2,2,2"
                         VerticalAlignment="Center"
                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Center}" />
-                    <TextBlock
+                    <TextBlock Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                         Grid.Row="3"
                         Grid.Column="0"
                         Margin="4,2,2,2"
                         VerticalAlignment="Center"
                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Radius}" />
 
-                    <StackPanel
+                    <StackPanel Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                         Grid.Row="1"
                         Grid.Column="1"
                         Margin="2"
@@ -1405,7 +1414,7 @@
                             Visibility="Visible"
                             Value="{Binding Path=GradientOrigin, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource DoubleToPointConverter}, ConverterParameter=grady, Mode=TwoWay}" />
                     </StackPanel>
-                    <StackPanel
+                    <StackPanel Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                         Grid.Row="2"
                         Grid.Column="1"
                         Margin="2"
@@ -1435,7 +1444,7 @@
                             Style="{StaticResource SyncfusionUpDownStyle}"
                             Value="{Binding Path=CentrePoint, RelativeSource={RelativeSource AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource DoubleToPointConverter}, ConverterParameter=centrey, Mode=TwoWay}" />
                     </StackPanel>
-                    <StackPanel
+                    <StackPanel Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                         Grid.Row="3"
                         Grid.Column="1"
                         Margin="2"
@@ -1468,6 +1477,16 @@
                 </Grid>
             </Grid>
         </Border>
+        <DataTemplate.Triggers>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}}"  Value="false"/>
+                    <Condition Binding="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}}" Value="false"/>
+                    <Condition Binding="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}}" Value="false"/>
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Visibility" Value="Collapsed" TargetName="RadialGrid" />
+            </MultiDataTrigger>
+        </DataTemplate.Triggers>
     </DataTemplate>
 
     <Style x:Key="MetroTextBoxStyle" TargetType="{x:Type TextBox}">
@@ -1564,7 +1583,7 @@
                                         BorderBrush="{StaticResource BorderAlt}"
                                         BorderThickness="1"
                                         SnapsToDevicePixels="True"
-                                        >
+                                        CornerRadius="{StaticResource ColorPicker.ColorPalette.Static.CornerRadius}">
                                         <Grid>
                                             <Border
                                                 x:Name="ColorPalitte"
@@ -1611,7 +1630,7 @@
                                                         CornerRadius="1">
                                                         <TextBox
                                                             x:Name="WordKnownColorsTextBox"
-                                                            Margin="2 1"
+                                                            Margin="2,1"
                                                             Background="Transparent"
                                                             BorderBrush="Transparent"
                                                             BorderThickness="0"
@@ -1619,7 +1638,7 @@
                                                             FontWeight="{StaticResource MaterialDarkCustom.FontWeightNormal}"
                                                             Foreground="{StaticResource Black}"
                                                             IsReadOnly="True"
-                                                            
+                                                            Padding="{StaticResource ColorPicker.ColorEdit.TextBox.Static.Padding}"
                                                             Text="{TemplateBinding Color,
                                                                                    Converter={StaticResource ColorToWordKnownColors}}" />
                                                     </Border>
@@ -2133,7 +2152,7 @@
                                         BorderBrush="{StaticResource BorderAlt}"
                                         BorderThickness="1"
                                         SnapsToDevicePixels="True"
-                                        >
+                                        CornerRadius="{StaticResource ColorPicker.ColorPalette.Static.CornerRadius}">
                                         <Grid>
                                             <Border
                                                 x:Name="ColorPalitte"
@@ -2179,14 +2198,14 @@
                                                         CornerRadius="1">
                                                         <TextBox
                                                             x:Name="WordKnownColorsTextBox"
-                                                            Margin="2 1"
+                                                            Margin="2,1"
                                                             Background="Transparent"
                                                             BorderBrush="Transparent"
                                                             BorderThickness="0"
                                                             FontSize="{StaticResource MaterialDarkCustom.CaptionText}"
                                                             FontWeight="{StaticResource MaterialDarkCustom.FontWeightNormal}"
                                                             Foreground="{StaticResource Black}"
-                                                            
+                                                            Padding="{StaticResource ColorPicker.ColorEdit.TextBox.Static.Padding}"
                                                             Text="{TemplateBinding Color,
                                                                                    Converter={StaticResource ColorToWordKnownColors}}" />
                                                     </Border>
@@ -2585,7 +2604,7 @@
                                                         Background="Transparent"
                                                         CornerRadius="1">
                                                         <Path x:Name="ReverseButtonPath" Margin="1" Data="M4.6399733,7.0310106 L5.3609704,7.7260089 3.174068,10.012953 15.999986,10.012953 15.999986,11.016953 3.1739743,11.016953 5.3609704,13.303995 4.6399733,13.998993 1.3069866,10.515002 z M11.360976,0 L14.693962,3.4850025 11.360976,6.9690056 10.639979,6.2740049 12.826932,3.987 0,3.987 0,2.9830284 12.826954,2.9830284 10.639979,0.6960001 z" Fill="{StaticResource IconColor}" RenderTransformOrigin="0.5,0.5" Stretch="Uniform" />
-                                                     </Border>
+                                                    </Border>
                                                     <ControlTemplate.Triggers>
                                                         <Trigger Property="IsMouseOver" Value="True">
                                                             <Setter TargetName="border" Property="Background" Value="{StaticResource SecondaryHoverBackground}" />
@@ -3186,21 +3205,21 @@
                                                                             Text="Y" />
                                                                     </Grid>
 
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=GradientOrigin}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Center}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
@@ -3208,7 +3227,7 @@
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Radius}" />
 
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -3232,7 +3251,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -3255,7 +3274,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -3325,6 +3344,14 @@
                                     <Setter TargetName="GridBorder" Property="Visibility" Value="Collapsed" />
                                     <Setter TargetName="GradPopup" Property="IsOpen" Value="False" />
                                 </MultiTrigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Collapsed" TargetName="RadialGrid" />
+                                </MultiDataTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
@@ -3918,21 +3945,21 @@
                                                                             Text="Y" />
                                                                     </Grid>
 
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=GradientOrigin}" />
-                                                                    <TextBlock
+                                                                    <TextBlock  Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Center}" />
-                                                                    <TextBlock
+                                                                    <TextBlock  Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
@@ -3940,7 +3967,7 @@
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Radius}" />
 
-                                                                    <StackPanel
+                                                                    <StackPanel  Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -3964,7 +3991,7 @@
                                                                             Step="0.01"
                                                                             Visibility="Visible" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel  Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -3986,7 +4013,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel  Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -4050,6 +4077,14 @@
                                 <Trigger Property="IsGradientPropertyEnabled" Value="False">
                                     <Setter TargetName="GridBorder" Property="Visibility" Value="Collapsed" />
                                 </Trigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Collapsed" TargetName="RadialGrid" />
+                                </MultiDataTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
@@ -4772,21 +4807,21 @@
                                                                             Text="Y" />
                                                                     </Grid>
 
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=GradientOrigin}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Center}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
@@ -4794,7 +4829,7 @@
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Radius}" />
 
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -4818,7 +4853,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -4842,7 +4877,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -4909,6 +4944,14 @@
                                     <Setter TargetName="GridBorder" Property="Visibility" Value="Collapsed" />
                                     <Setter TargetName="GradPopup" Property="IsOpen" Value="False" />
                                 </MultiTrigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Collapsed" TargetName="RadialGrid" />
+                                </MultiDataTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
@@ -5610,21 +5653,21 @@
                                                                             Text="Y" />
                                                                     </Grid>
 
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
-                                                                        Grid.Column="0"
+                                                                        Grid.Column="0" 
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=GradientOrigin}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Center}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
@@ -5632,7 +5675,7 @@
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Radius}" />
 
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -5656,7 +5699,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -5680,7 +5723,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -5742,6 +5785,14 @@
                                 <Trigger Property="IsGradientPropertyEnabled" Value="False">
                                     <Setter TargetName="GridBorder" Property="Visibility" Value="Collapsed" />
                                 </Trigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Collapsed" TargetName="RadialGrid" />
+                                </MultiDataTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
@@ -6348,21 +6399,21 @@
                                                                             Text="Y" />
                                                                     </Grid>
 
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="12"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=GradientOrigin}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="12"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Center}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
@@ -6370,7 +6421,7 @@
                                                                         FontSize="12"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Radius}" />
 
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -6394,7 +6445,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -6417,7 +6468,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -6490,6 +6541,14 @@
                                 <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                                     <Setter Property="EnableToolTip" Value="False" />
                                 </Trigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Collapsed" TargetName="RadialGrid" />
+                                </MultiDataTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
@@ -7083,21 +7142,21 @@
                                                                             Text="Y" />
                                                                     </Grid>
 
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
-                                                                        Grid.Column="0"
+                                                                        Grid.Column="0" 
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="12"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=GradientOrigin}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="12"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Center}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
@@ -7105,7 +7164,7 @@
                                                                         FontSize="12"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Radius}" />
 
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -7129,7 +7188,7 @@
                                                                             Step="0.01"
                                                                             Visibility="Visible" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -7151,7 +7210,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -7218,6 +7277,14 @@
                                 <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                                     <Setter Property="EnableToolTip" Value="False" />
                                 </Trigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Collapsed" TargetName="RadialGrid" />
+                                </MultiDataTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
@@ -7963,21 +8030,21 @@
                                                                             Text="Y" />
                                                                     </Grid>
 
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=GradientOrigin}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Center}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
@@ -7985,7 +8052,7 @@
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Radius}" />
 
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -8009,7 +8076,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -8033,7 +8100,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -8103,6 +8170,14 @@
                                 <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                                     <Setter Property="EnableToolTip" Value="False" />
                                 </Trigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Collapsed" TargetName="RadialGrid" />
+                                </MultiDataTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
@@ -8749,21 +8824,21 @@
                                                                             Text="Y" />
                                                                     </Grid>
 
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=GradientOrigin}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Center}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
@@ -8771,7 +8846,7 @@
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Radius}" />
 
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -8795,7 +8870,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -8819,7 +8894,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -8884,6 +8959,14 @@
                                 <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                                     <Setter Property="EnableToolTip" Value="False" />
                                 </Trigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Collapsed" TargetName="RadialGrid" />
+                                </MultiDataTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
@@ -9418,21 +9501,21 @@
                                                                             Text="Y" />
                                                                     </Grid>
 
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=GradientOrigin}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Center}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
@@ -9440,7 +9523,7 @@
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Radius}" />
 
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -9464,7 +9547,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -9487,7 +9570,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -9557,6 +9640,14 @@
                                     <Setter TargetName="GridBorder" Property="Visibility" Value="Collapsed" />
                                     <Setter TargetName="GradPopup" Property="IsOpen" Value="False" />
                                 </MultiTrigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Collapsed" TargetName="RadialGrid" />
+                                </MultiDataTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
@@ -10064,21 +10155,21 @@
                                                                             Text="Y" />
                                                                     </Grid>
 
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=GradientOrigin}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Center}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
@@ -10086,7 +10177,7 @@
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Radius}" />
 
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -10110,7 +10201,7 @@
                                                                             Step="0.01"
                                                                             Visibility="Visible" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -10132,7 +10223,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -10196,6 +10287,14 @@
                                 <Trigger Property="IsGradientPropertyEnabled" Value="False">
                                     <Setter TargetName="GridBorder" Property="Visibility" Value="Collapsed" />
                                 </Trigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Collapsed" TargetName="RadialGrid" />
+                                </MultiDataTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
@@ -10830,21 +10929,21 @@
                                                                             Text="Y" />
                                                                     </Grid>
 
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=GradientOrigin}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Center}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
@@ -10852,7 +10951,7 @@
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Radius}" />
 
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -10876,7 +10975,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -10900,7 +10999,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -10967,6 +11066,14 @@
                                     <Setter TargetName="GridBorder" Property="Visibility" Value="Collapsed" />
                                     <Setter TargetName="GradPopup" Property="IsOpen" Value="False" />
                                 </MultiTrigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Collapsed" TargetName="RadialGrid" />
+                                </MultiDataTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
@@ -11582,21 +11689,21 @@
                                                                             Text="Y" />
                                                                     </Grid>
 
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=GradientOrigin}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
                                                                         VerticalAlignment="Center"
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Center}" />
-                                                                    <TextBlock
+                                                                    <TextBlock Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="0"
                                                                         Margin="4,2,2,2"
@@ -11604,7 +11711,7 @@
                                                                         FontSize="10"
                                                                         Text="{Sync_Resources:SharedLocalizationResourceExtension ResourceName=Radius}" />
 
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="1"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -11628,7 +11735,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="2"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -11652,7 +11759,7 @@
                                                                             MinValue="-1"
                                                                             Step="0.01" />
                                                                     </StackPanel>
-                                                                    <StackPanel
+                                                                    <StackPanel Visibility="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type shared:ColorEdit}}, Converter={StaticResource booleanToVisibilityConverter}}"
                                                                         Grid.Row="3"
                                                                         Grid.Column="1"
                                                                         Margin="2"
@@ -11714,6 +11821,14 @@
                                 <Trigger Property="IsGradientPropertyEnabled" Value="False">
                                     <Setter TargetName="GridBorder" Property="Visibility" Value="Collapsed" />
                                 </Trigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding Path=IsGradientOriginVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsRadiusVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                        <Condition Binding="{Binding Path=IsCenterVisible, RelativeSource={RelativeSource Mode=TemplatedParent}}" Value="false"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Collapsed" TargetName="RadialGrid" />
+                                </MultiDataTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>

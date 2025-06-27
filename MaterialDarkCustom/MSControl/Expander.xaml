@@ -9,7 +9,7 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
     </ResourceDictionary.MergedDictionaries>
-
+    
     <SolidColorBrush x:Key="ExpanderHeader.Static.Circle.Stroke" Color="#c8c8c8"/>
 
     <SolidColorBrush x:Key="ExpanderHeader.Focused.Arrow.Stroke" Color="#FFFFFFFF"/>
@@ -21,7 +21,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ToggleButton}">
-                    <Border Margin="{TemplateBinding Margin}"
+                    <Border x:Name="border" 
+                            Margin="{TemplateBinding Margin}"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
@@ -44,33 +45,35 @@
                                 </Grid.LayoutTransform>
                                 <Ellipse x:Name="circle" 
                                          Width="19"
-                                         Height="19"                                         
+                                         Height="19"
                                          Fill="Transparent"  
                                          Stroke="Transparent" 
                                          HorizontalAlignment="Center"
                                          VerticalAlignment="Center" />
-                                <Path x:Name="arrow" 
-                                      Stroke="{StaticResource IconColor}" 
-                                      StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}" 
-                                      HorizontalAlignment="Center" 
-                                      VerticalAlignment="Center"
-                                      SnapsToDevicePixels="false">
-                                    <Path.Margin>
-                                        <Thickness>0,0,6,0</Thickness>
-                                    </Path.Margin>
-                                    <Path.Data>
-                                        <PathGeometry>M 1,1.5 L 4.5,5 L 8,1.5</PathGeometry>
-                                    </Path.Data>
-                                </Path>
+                                <TextBlock x:Name="arrow"
+                                           Text="&#xe701;"
+                                           FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                           Foreground="{StaticResource IconColor}"
+                                           HorizontalAlignment="Center" 
+                                           VerticalAlignment="Center"
+                                           SnapsToDevicePixels="false"
+                                           Margin="0,0,6,0"/>
                             </Grid>
                             <ContentPresenter  Grid.Row="1" 
                                                HorizontalAlignment="Center" 
                                                VerticalAlignment="Top"
                                                RecognizesAccessKey="True" 
-                                               SnapsToDevicePixels="True">
-                                <ContentPresenter.Margin>
-                                        <Thickness>2,6,2,0</Thickness>
-                                </ContentPresenter.Margin>
+                                               SnapsToDevicePixels="True"
+                                               Margin="2,6,2,0">
+                                <ContentPresenter.LayoutTransform>
+                                    <TransformGroup>
+                                        <TransformGroup.Children>
+                                            <TransformCollection>
+                                                <RotateTransform Angle="90"/>
+                                            </TransformCollection>
+                                        </TransformGroup.Children>
+                                    </TransformGroup>
+                                </ContentPresenter.LayoutTransform>
                                 <ContentPresenter.Resources>
                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                 </ContentPresenter.Resources>
@@ -79,16 +82,16 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="true">
-                            <Setter Property="Data" TargetName="arrow" Value="M 1,4.5  L 4.5,1  L 8,4.5"/>
+                            <Setter Property="TextBlock.Text" TargetName="arrow" Value="&#xe702;"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource HoverForeground}"/>
                             <Setter Property="Background" Value="{StaticResource ContentBackgroundHover}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="true">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource SelectionForeground}"/>
                             <Setter Property="Background" Value="{StaticResource ContentBackgroundSelection}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
@@ -97,7 +100,7 @@
                             <Setter Property="MinWidth" Value="{StaticResource TouchMode.MinWidth}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconDisabledColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource DisabledForeground}"/>
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="BorderBrush" Value="Transparent"/>
@@ -114,7 +117,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ToggleButton}">
-                    <Border Margin="{TemplateBinding Margin}"
+                    <Border x:Name="border" 
+                            Margin="{TemplateBinding Margin}"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
@@ -143,29 +147,22 @@
                                          VerticalAlignment="Center" 
                                          Width="19"
                                          Height="19"/>
-                                <Path x:Name="arrow" 
-                                      Grid.Column="0"
-                                      Stroke="{StaticResource IconColor}" 
-                                      StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
-                                      HorizontalAlignment="Center"
-                                      VerticalAlignment="Center"
-                                      SnapsToDevicePixels="false">
-                                    <Path.Margin>
-                                        <Thickness>0,0,6,0</Thickness>
-                                    </Path.Margin>
-                                    <Path.Data>
-                                        <PathGeometry>M 1,4.5  L 4.5,1  L 8,4.5</PathGeometry>
-                                    </Path.Data>
-                                </Path>
+                                <TextBlock x:Name="arrow"
+                                           Grid.Column="0"
+                                           Text="&#xe701;"
+                                           FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                           Foreground="{StaticResource IconColor}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           SnapsToDevicePixels="false"
+                                           Margin="0,0,6,0"/>
                             </Grid>
                             <ContentPresenter Grid.Column="1" 
                                               HorizontalAlignment="Left" 
                                               VerticalAlignment="Center"                                              
                                               RecognizesAccessKey="True" 
-                                              SnapsToDevicePixels="True">
-                                <ContentPresenter.Margin>
-                                    <Thickness>6,2,0,2</Thickness>
-                                </ContentPresenter.Margin>
+                                              SnapsToDevicePixels="True"
+                                              Margin="6,2,0,2">
                                 <ContentPresenter.Resources>
                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                 </ContentPresenter.Resources>
@@ -174,16 +171,16 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="true">
-                            <Setter Property="Data" TargetName="arrow" Value="M 1,1.5 L 4.5,5 L 8,1.5"/>
+                            <Setter Property="TextBlock.Text" TargetName="arrow" Value="&#xe702;"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource HoverForeground}"/>
                             <Setter Property="Background" Value="{StaticResource ContentBackgroundHover}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="true">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource SelectionForeground}"/>
                             <Setter Property="Background" Value="{StaticResource ContentBackgroundSelection}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
@@ -192,7 +189,7 @@
                             <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconDisabledColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource DisabledForeground}"/>
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="BorderBrush" Value="Transparent"/>
@@ -209,7 +206,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ToggleButton}">
-                    <Border Margin="{TemplateBinding Margin}"
+                    <Border x:Name="border" 
+                            Margin="{TemplateBinding Margin}"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}" 
@@ -232,33 +230,35 @@
                                 </Grid.LayoutTransform>
                                 <Ellipse x:Name="circle" 
                                          Width="19"
-                                         Height="19"                                          
+                                         Height="19"
                                          Fill="Transparent"  
                                          Stroke="Transparent" 
                                          HorizontalAlignment="Center" 
                                          VerticalAlignment="Center" />
-                                <Path x:Name="arrow"
-                                      Stroke="{StaticResource IconColor}" 
-                                      StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
-                                      HorizontalAlignment="Center" 
-                                      VerticalAlignment="Center"
-                                      SnapsToDevicePixels="false">
-                                    <Path.Margin>
-                                        <Thickness>6,0,0,0</Thickness>
-                                     </Path.Margin>
-                                     <Path.Data>
-                                        <PathGeometry>M 1,1.5 L 4.5,5 L 8,1.5</PathGeometry>
-                                    </Path.Data>
-                                </Path>
+                                <TextBlock x:Name="arrow"
+                                           Text="&#xe701;"
+                                           FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                           Foreground="{StaticResource IconColor}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           SnapsToDevicePixels="false"
+                                           Margin="6,0,0,0"/>
                             </Grid>
                             <ContentPresenter Grid.Row="1" 
                                               RecognizesAccessKey="True" 
                                               SnapsToDevicePixels="True" 
                                               HorizontalAlignment="Center" 
-                                              VerticalAlignment="Top">
-                                <ContentPresenter.Margin>
-                                        <Thickness>2,6,2,0</Thickness>
-                                </ContentPresenter.Margin>
+                                              VerticalAlignment="Top"
+                                              Margin="2,6,2,0">
+                                <ContentPresenter.LayoutTransform>
+                                    <TransformGroup>
+                                        <TransformGroup.Children>
+                                            <TransformCollection>
+                                                <RotateTransform Angle="90"/>
+                                            </TransformCollection>
+                                        </TransformGroup.Children>
+                                    </TransformGroup>
+                                </ContentPresenter.LayoutTransform>
                                 <ContentPresenter.Resources>
                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                 </ContentPresenter.Resources>
@@ -267,16 +267,16 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="true">
-                            <Setter Property="Data" TargetName="arrow" Value="M 1,4.5  L 4.5,1  L 8,4.5"/>
+                            <Setter Property="TextBlock.Text" TargetName="arrow" Value="&#xe702;"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource HoverForeground}"/>
                             <Setter Property="Background" Value="{StaticResource ContentBackgroundHover}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="true">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource SelectionForeground}"/>
                             <Setter Property="Background" Value="{StaticResource ContentBackgroundSelection}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
@@ -285,7 +285,7 @@
                             <Setter Property="MinWidth" Value="{StaticResource TouchMode.MinWidth}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconDisabledColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource DisabledForeground}"/>
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="BorderBrush" Value="Transparent"/>
@@ -323,29 +323,21 @@
                                      Stroke="Transparent" 
                                      HorizontalAlignment="Center"
                                      VerticalAlignment="Center" />
-                            <Path x:Name="arrow" 
-                                  Grid.Column="0"
-                                  Stroke="{StaticResource IconColor}" 
-                                  Fill="Transparent "  
-                                  StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
-                                  HorizontalAlignment="Center" 
-                                  VerticalAlignment="Center"
-                                  SnapsToDevicePixels="false">
-                                <Path.Margin>
-                                    <Thickness>6,0,0,0</Thickness>
-                                </Path.Margin>
-                                <Path.Data>
-                                    <PathGeometry>M 1,1.5 L 4.5,5 L 8,1.5</PathGeometry>
-                                </Path.Data>
-                            </Path>
+                            <TextBlock x:Name="arrow"
+                                       Grid.Column="0"
+                                       Text="&#xe701;"
+                                       FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                       Foreground="{StaticResource IconColor}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       SnapsToDevicePixels="false"
+                                       Margin="6,0,0,0"/>
                             <ContentPresenter Grid.Column="1" 
                                               HorizontalAlignment="Left" 
                                               VerticalAlignment="Center"                                              
                                               RecognizesAccessKey="True" 
-                                              SnapsToDevicePixels="True">
-                                <ContentPresenter.Margin>
-                                    <Thickness>6,2,0,2</Thickness>
-                                </ContentPresenter.Margin>
+                                              SnapsToDevicePixels="True"
+                                              Margin="6,2,0,2">
                                 <ContentPresenter.Resources>
                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                 </ContentPresenter.Resources>
@@ -354,16 +346,16 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="true">
-                            <Setter Property="Data" TargetName="arrow" Value="M 1,4.5  L 4.5,1  L 8,4.5"/>
+                            <Setter Property="TextBlock.Text" TargetName="arrow" Value="&#xe702;"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource HoverForeground}"/>
                             <Setter Property="Background" Value="{StaticResource ContentBackgroundHover}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="true">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource SelectionForeground}"/>
                             <Setter Property="Background" Value="{StaticResource ContentBackgroundSelection}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
@@ -372,7 +364,7 @@
                             <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconDisabledColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource DisabledForeground}"/>
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="BorderBrush" Value="Transparent"/>
@@ -448,10 +440,8 @@
                                     DockPanel.Dock="Bottom"
                                     Focusable="false"
                                     Margin="{TemplateBinding Padding}"
-                                    Visibility="Collapsed">
-                                <Border.Padding>
-                                    <Thickness>0,0,0,0</Thickness>
-                                </Border.Padding>
+                                    Visibility="Collapsed"
+                                    Padding="0">
                                 <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                                   VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
                             </Border>                            
@@ -554,33 +544,35 @@
                                 </Grid.LayoutTransform>
                                 <Ellipse x:Name="circle" 
                                          Width="19"
-                                         Height="19"                                         
+                                         Height="19"
                                          Fill="Transparent"  
                                          Stroke="Transparent" 
                                          HorizontalAlignment="Center"
                                          VerticalAlignment="Center" />
-                                <Path x:Name="arrow" 
-                                      Stroke="{StaticResource IconColor}" 
-                                      StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}" 
-                                      HorizontalAlignment="Center" 
-                                      VerticalAlignment="Center"
-                                      SnapsToDevicePixels="false">
-                                    <Path.Margin>
-                                        <Thickness>0,0,6,0</Thickness>
-                                    </Path.Margin>
-                                    <Path.Data>
-                                        <PathGeometry>M 1,1.5 L 4.5,5 L 8,1.5</PathGeometry>
-                                    </Path.Data>
-                                </Path>
+                                <TextBlock x:Name="arrow"
+                                           Text="&#xe701;"
+                                           FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                           Foreground="{StaticResource IconColor}"
+                                           HorizontalAlignment="Center" 
+                                           VerticalAlignment="Center"
+                                           SnapsToDevicePixels="false"
+                                           Margin="0,0,6,0"/>
                             </Grid>
                             <ContentPresenter  Grid.Row="1" 
                                                HorizontalAlignment="Center" 
                                                VerticalAlignment="Top"
                                                RecognizesAccessKey="True" 
-                                               SnapsToDevicePixels="True">
-                                <ContentPresenter.Margin>
-                                        <Thickness>2,6,2,0</Thickness>
-                                </ContentPresenter.Margin>
+                                               SnapsToDevicePixels="True"
+                                               Margin="2,6,2,0">
+                                <ContentPresenter.LayoutTransform>
+                                    <TransformGroup>
+                                        <TransformGroup.Children>
+                                            <TransformCollection>
+                                                <RotateTransform Angle="90"/>
+                                            </TransformCollection>
+                                        </TransformGroup.Children>
+                                    </TransformGroup>
+                                </ContentPresenter.LayoutTransform>
                                 <ContentPresenter.Resources>
                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                 </ContentPresenter.Resources>
@@ -589,16 +581,16 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="true">
-                            <Setter Property="Data" TargetName="arrow" Value="M 1,4.5  L 4.5,1  L 8,4.5"/>
+                            <Setter Property="TextBlock.Text" TargetName="arrow" Value="&#xe702;"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource HoverForeground}"/>
                             <Setter Property="Background" Value="{StaticResource ContentBackgroundHover}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="true">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource SelectionForeground}"/>
                             <Setter Property="Background" Value="{StaticResource ContentBackgroundSelection}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
@@ -607,7 +599,7 @@
                             <Setter Property="MinWidth" Value="{StaticResource TouchMode.MinWidth}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconDisabledColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource DisabledForeground}"/>
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="BorderBrush" Value="Transparent"/>
@@ -653,29 +645,22 @@
                                          VerticalAlignment="Center" 
                                          Width="19"
                                          Height="19"/>
-                                <Path x:Name="arrow" 
-                                      Grid.Column="0"
-                                      Stroke="{StaticResource IconColor}" 
-                                      StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
-                                      HorizontalAlignment="Center"
-                                      VerticalAlignment="Center"
-                                      SnapsToDevicePixels="false">
-                                    <Path.Margin>
-                                        <Thickness>0,0,6,0</Thickness>
-                                    </Path.Margin>
-                                    <Path.Data>
-                                        <PathGeometry>M 1,4.5  L 4.5,1  L 8,4.5</PathGeometry>
-                                    </Path.Data>
-                                </Path>
+                                <TextBlock x:Name="arrow"
+                                           Grid.Column="0"
+                                           Text="&#xe701;"
+                                           FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                           Foreground="{StaticResource IconColor}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           SnapsToDevicePixels="false"
+                                           Margin="0,0,6,0"/>
                             </Grid>
                             <ContentPresenter Grid.Column="1"
                                               HorizontalAlignment="Left" 
                                               VerticalAlignment="Center"                                              
                                               RecognizesAccessKey="True" 
-                                              SnapsToDevicePixels="True">
-                                <ContentPresenter.Margin>
-                                    <Thickness>6,2,0,2</Thickness>
-                                </ContentPresenter.Margin>
+                                              SnapsToDevicePixels="True"
+                                              Margin="6,2,0,2">
                                 <ContentPresenter.Resources>
                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                 </ContentPresenter.Resources>
@@ -684,16 +669,16 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="true">
-                            <Setter Property="Data" TargetName="arrow" Value="M 1,1.5 L 4.5,5 L 8,1.5"/>
+                            <Setter Property="TextBlock.Text" TargetName="arrow" Value="&#xe702;"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource HoverForeground}"/>
                             <Setter Property="Background" Value="{StaticResource ContentBackgroundHover}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="true">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource SelectionForeground}"/>
                             <Setter Property="Background" Value="{StaticResource ContentBackgroundSelection}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
@@ -702,7 +687,7 @@
                             <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconDisabledColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource DisabledForeground}"/>
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="BorderBrush" Value="Transparent"/>
@@ -742,34 +727,35 @@
                                 </Grid.LayoutTransform>
                                 <Ellipse x:Name="circle" 
                                          Width="19"
-                                         Height="19"                                          
+                                         Height="19"
                                          Fill="Transparent"  
                                          Stroke="Transparent" 
                                          HorizontalAlignment="Center" 
-                                         VerticalAlignment="Center" 
-                                         />
-                                <Path x:Name="arrow"
-                                      Stroke="{StaticResource IconColor}" 
-                                      StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
-                                      HorizontalAlignment="Center" 
-                                      VerticalAlignment="Center"
-                                      SnapsToDevicePixels="false">
-                                    <Path.Margin>
-                                        <Thickness>6,0,0,0</Thickness>
-                                     </Path.Margin>
-                                    <Path.Data>
-                                        <PathGeometry>M 1,1.5 L 4.5,5 L 8,1.5</PathGeometry>
-                                    </Path.Data>
-                                </Path>
+                                         VerticalAlignment="Center"/>
+                                <TextBlock x:Name="arrow"
+                                           Text="&#xe701;"
+                                           FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                           Foreground="{StaticResource IconColor}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           SnapsToDevicePixels="false"
+                                           Margin="6,0,0,0"/>
                             </Grid>
                             <ContentPresenter Grid.Row="1" 
                                               RecognizesAccessKey="True" 
                                               SnapsToDevicePixels="True" 
                                               HorizontalAlignment="Center" 
-                                              VerticalAlignment="Top">
-                                <ContentPresenter.Margin>
-                                        <Thickness>2,6,2,0</Thickness>
-                                </ContentPresenter.Margin>
+                                              VerticalAlignment="Top"
+                                              Margin="2,6,2,0">
+                                <ContentPresenter.LayoutTransform>
+                                    <TransformGroup>
+                                        <TransformGroup.Children>
+                                            <TransformCollection>
+                                                <RotateTransform Angle="90"/>
+                                            </TransformCollection>
+                                        </TransformGroup.Children>
+                                    </TransformGroup>
+                                </ContentPresenter.LayoutTransform>
                                 <ContentPresenter.Resources>
                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                 </ContentPresenter.Resources>
@@ -778,16 +764,16 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="true">
-                            <Setter Property="Data" TargetName="arrow" Value="M 1,4.5  L 4.5,1  L 8,4.5"/>
+                            <Setter Property="TextBlock.Text" TargetName="arrow" Value="&#xe702;"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource HoverForeground}"/>
                             <Setter Property="Background" Value="{StaticResource ContentBackgroundHover}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="true">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource SelectionForeground}"/>
                             <Setter Property="Background" Value="{StaticResource ContentBackgroundSelection}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
@@ -796,7 +782,7 @@
                             <Setter Property="MinWidth" Value="{StaticResource TouchMode.MinWidth}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconDisabledColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource DisabledForeground}"/>
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="BorderBrush" Value="Transparent"/>
@@ -833,28 +819,21 @@
                                      Stroke="Transparent" 
                                      HorizontalAlignment="Center"
                                      VerticalAlignment="Center" />
-                            <Path x:Name="arrow" 
-                                  Grid.Column="0"
-                                  Stroke="{StaticResource IconColor}" 
-                                  StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
-                                  HorizontalAlignment="Center" 
-                                  VerticalAlignment="Center"
-                                  SnapsToDevicePixels="false">
-                                <Path.Margin>
-                                    <Thickness>6,0,0,0</Thickness>
-                                </Path.Margin>
-                                <Path.Data>
-                                    <PathGeometry>M 1,1.5 L 4.5,5 L 8,1.5</PathGeometry>
-                                </Path.Data>
-                            </Path>
+                            <TextBlock x:Name="arrow"
+                                       Grid.Column="0"
+                                       Text="&#xe701;"
+                                       FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                       Foreground="{StaticResource IconColor}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       SnapsToDevicePixels="false"
+                                       Margin="6,0,0,0"/>
                             <ContentPresenter Grid.Column="1"
                                               HorizontalAlignment="Left" 
                                               VerticalAlignment="Center"                                              
                                               RecognizesAccessKey="True" 
-                                              SnapsToDevicePixels="True">
-                                <ContentPresenter.Margin>
-                                    <Thickness>6,2,0,2</Thickness>
-                                </ContentPresenter.Margin>
+                                              SnapsToDevicePixels="True"
+                                              Margin="6,2,0,2">
                                 <ContentPresenter.Resources>
                                     <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}"/>
                                 </ContentPresenter.Resources>
@@ -863,16 +842,16 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="true">
-                            <Setter Property="Data" TargetName="arrow" Value="M 1,4.5  L 4.5,1  L 8,4.5"/>
+                            <Setter Property="TextBlock.Text" TargetName="arrow" Value="&#xe702;"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource HoverForeground}"/>
                             <Setter Property="Background" Value="{StaticResource ContentBackgroundHover}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="true">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource SelectionForeground}"/>
                             <Setter Property="Background" Value="{StaticResource ContentBackgroundSelection}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
@@ -881,7 +860,7 @@
                             <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter Property="Foreground" TargetName="arrow" Value="{StaticResource IconDisabledColor}"/>
                             <Setter Property="Foreground" Value="{StaticResource DisabledForeground}"/>
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="BorderBrush" Value="Transparent"/>

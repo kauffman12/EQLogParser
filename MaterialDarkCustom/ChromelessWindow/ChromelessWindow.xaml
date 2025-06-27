@@ -22,7 +22,6 @@
     <SolidColorBrush x:Key="ChromelessWindow.TitleBar.CloseButton.MouseOver.Fill" Color="#000000" />
     <SolidColorBrush x:Key="ChromelessWindow.TitleBar.CloseButton.Pressed.BackColor" Color="#FFFFFF" />
     <SolidColorBrush x:Key="ChromelessWindow.TitleBar.CloseButton.Pressed.Fill" Color="#000000" />
-
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     <local:CornerRadiusConverter x:Key="CRConvert" />
     <local:IcoFileSizeSelectorConverter x:Key="IcoFileSizeSelector" />
@@ -143,6 +142,7 @@
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <Border x:Name="BorderMask" Background="{TemplateBinding Background}"/>
+                            <Border Background="{TemplateBinding Background}"/>
                             <local:ResizeGripStyle
                                     x:Name="PART_Resizegrip"
                                     Margin="0,0,3,3"
@@ -216,8 +216,8 @@
                                         x:Name="PART_RightHeaderItems"
                                         shell:WindowChrome.IsHitTestVisibleInChrome="True"
                                         Grid.Column="3"
-                                        Focusable = "False"
                                         VerticalAlignment="Center"
+                                        Focusable = "False"
                                         ItemTemplate="{TemplateBinding RightHeaderItemTemplate}"
                                         ItemsSource="{Binding RightHeaderItemsSource, RelativeSource={RelativeSource TemplatedParent}}">
                                     <ItemsControl.ItemsPanel>

@@ -49,8 +49,9 @@
                         BorderBrush="{StaticResource BorderAlt}" 
                         BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                         Background="{StaticResource PopupBackground}" 
-                        Effect="{StaticResource Default.ShadowDepth3}">
-                    
+                        Effect="{StaticResource Default.ShadowDepth3}"
+                        Padding="0"
+                        CornerRadius="0">
                     <ScrollViewer x:Name="DropDownScrollViewer" ClipToBounds="True">
                         <Grid>
                             <Canvas HorizontalAlignment="Left" 
@@ -64,12 +65,9 @@
                             </Canvas>
                             <ItemsPresenter x:Name="ItemsPresenter" 
                                             KeyboardNavigation.DirectionalNavigation="Contained" 
-                                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                                <ItemsPresenter.Margin>
-                                    <Thickness>0,0,0,0</Thickness>
-                                </ItemsPresenter.Margin>
-                            </ItemsPresenter>
-                        </Grid>
+                                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                            Margin="0"/>
+                            </Grid>
                     </ScrollViewer>
                 </Border>
             </Popup>
@@ -78,18 +76,16 @@
                     Background="{TemplateBinding Background}" 
                     BorderBrush="{TemplateBinding BorderBrush}" 
                     BorderThickness="{TemplateBinding BorderThickness}"                    
-                    CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"></Border>
+                    CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"/>
             <ToggleButton x:Name="PART_ToggleButton" 
                           Grid.ColumnSpan="2"
                           Width="16"
                           IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" 
                           Style="{StaticResource WPFGlyphEditableDropdownExpanderStyle}"
                           Height="16"
-                          HorizontalAlignment="Right">
-                <ToggleButton.Padding>
-                    <Thickness>0</Thickness>
-                </ToggleButton.Padding>
-            </ToggleButton>
+                          HorizontalAlignment="Right"
+                          Padding="0"
+                          Margin="0"/>
             <TextBox x:Name="PART_EditableTextBox" 
                      IsReadOnly="{Binding IsReadOnly, RelativeSource={RelativeSource TemplatedParent}}" 
                      Margin="2,2,0,2" 
@@ -98,11 +94,7 @@
                      TextElement.FontSize="{TemplateBinding FontSize}"
                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                     Style="{StaticResource WPFBorderlessTextBoxStyle}">
-                <TextBox.Padding>
-                    <Thickness>0</Thickness>
-                </TextBox.Padding>
-            </TextBox>
+                     Style="{StaticResource WPFBorderlessTextBoxStyle}"/>
         </Grid>
         <ControlTemplate.Triggers>
             <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
@@ -119,13 +111,6 @@
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderBrush" TargetName="Border" Value="{StaticResource BorderAlt2}"/> 
             </Trigger>
-            <MultiTrigger>
-                <MultiTrigger.Conditions>
-                    <Condition Property="IsMouseOver" SourceName="PART_ToggleButton" Value="true"/>
-                    <Condition Property="IsFocused" SourceName="PART_EditableTextBox" Value="True"/>
-                </MultiTrigger.Conditions>
-                <Setter Property="Margin" TargetName="PART_ToggleButton" Value="0,0,1,1"/>
-            </MultiTrigger>
             <Trigger Property="IsFocused" SourceName="PART_EditableTextBox" Value="True">
                 <Setter Property="Foreground" TargetName="PART_EditableTextBox" Value="{StaticResource ContentForeground}" />
                 <Setter Property="Background" TargetName="Border" Value="Transparent" />
@@ -137,6 +122,7 @@
                 <Setter Property="Background" TargetName="Border" Value="Transparent" />
                 <Setter Property="BorderBrush" TargetName="Border" Value="{StaticResource PrimaryBackground}"/>
                 <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}"/>
+                <Setter Property="CornerRadius" TargetName="Border" Value="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"/>
             </Trigger>
             <Trigger Property="IsGrouping" Value="true">
                 <Setter Property="ScrollViewer.CanContentScroll" Value="false"/>
@@ -162,11 +148,7 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush"  Value="{StaticResource Border}"/>
         <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant1}"/>
-        <Setter Property="Padding">
-            <Setter.Value>
-                <Thickness>3,2,2,2</Thickness>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Padding" Value="3,2,2,2"/>
         <Setter Property="FontFamily"
                 Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
         <Setter Property="FontSize"
@@ -195,15 +177,16 @@
                                PopupAnimation="{StaticResource {x:Static SystemParameters.ComboBoxPopupAnimationKey}}" 
                                Placement="Bottom"
                                SnapsToDevicePixels="True">
-                                <Border x:Name="DropDownBorder" 
+                            <Border x:Name="DropDownBorder" 
                                     MaxHeight="{TemplateBinding MaxDropDownHeight}" 
                                     MinWidth="{Binding ActualWidth, ElementName=templateRoot}"
                                     BorderBrush="{StaticResource BorderAlt}"
                                     SnapsToDevicePixels="True"
                                     Background="{StaticResource PopupBackground}" 
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
-                                    Effect="{StaticResource Default.ShadowDepth3}">
-                                
+                                    Effect="{StaticResource Default.ShadowDepth3}"
+                                    Padding="0"
+                                    CornerRadius="0">
                                 <ScrollViewer x:Name="DropDownScrollViewer" ClipToBounds="True">
                                     <Grid>
                                         <Canvas HorizontalAlignment="Left"
@@ -217,11 +200,8 @@
                                         </Canvas>
                                         <ItemsPresenter x:Name="ItemsPresenter" 
                                                         KeyboardNavigation.DirectionalNavigation="Contained"
-                                                        SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                                            <ItemsPresenter.Margin>
-                                                <Thickness>0,0,0,0</Thickness>
-                                            </ItemsPresenter.Margin>
-                                        </ItemsPresenter>
+                                                        SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                                        Margin="0"/>
                                     </Grid>
                                 </ScrollViewer>
                             </Border>
@@ -248,7 +228,11 @@
                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                           ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
                                           IsHitTestVisible="false"
-                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" >
+								<ContentPresenter.Resources>
+                                    <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
+                                </ContentPresenter.Resources>
+					    </ContentPresenter>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="HasItems" Value="false">
@@ -279,6 +263,7 @@
                             <Setter Property="Background" TargetName="Border" Value="Transparent" />
                             <Setter Property="BorderBrush" TargetName="Border" Value="{StaticResource PrimaryBackground}"/>
                             <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}"/>
+                            <Setter Property="CornerRadius" TargetName="Border" Value="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"/>
                         </Trigger>
                         <Trigger Property="IsGrouping" Value="true">
                             <Setter Property="ScrollViewer.CanContentScroll" Value="false" />
@@ -311,16 +296,8 @@
     <Style x:Key="WPFComboBoxItemStyle"
            TargetType="{x:Type ComboBoxItem}">
         <Setter Property="FocusVisualStyle" Value="{StaticResource ComboBoxItemFocusVisual}"/>
-        <Setter Property="Padding">
-            <Setter.Value>
-                <Thickness>4,2,4,2</Thickness>
-            </Setter.Value>
-        </Setter>
-        <Setter Property="Margin">
-            <Setter.Value>
-                <Thickness>0,0,0,0</Thickness>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Padding" Value="4,2,4,2"/>
+        <Setter Property="Margin" Value="0"/>
         <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness}"/>
         <Setter Property="Background"
                 Value="{StaticResource PopupBackground}"/>
@@ -344,7 +321,7 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             Padding="{TemplateBinding Padding}"
-                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}" 
+                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
                             SnapsToDevicePixels="true">
                             <ContentPresenter x:Name="contentPresenter" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"

@@ -351,8 +351,8 @@
                                           PanningMode="{TemplateBinding ScrollViewer.PanningMode}"
                                           PanningRatio="{TemplateBinding ScrollViewer.PanningRatio}"
                                       VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}">
-                                <treeView:TreeNodeContainer x:Name="PART_TreeNodeContainer"
-                                               Background="Transparent"/>
+                                    <treeView:TreeNodeContainer x:Name="PART_TreeNodeContainer" 
+                                                                Background="Transparent"/>
                             </ScrollViewer>
                         </Border>
                     </Grid>

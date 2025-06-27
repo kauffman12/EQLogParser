@@ -78,6 +78,7 @@
                             <Setter Property="Background" TargetName="Chrome" Value="Transparent"/>
                             <Setter Property="BorderBrush" TargetName="Chrome" Value="Transparent"/>
                             <Setter Property="Foreground" Value="{StaticResource DisabledForeground}"/>
+                            <Setter Property="Opacity" Value="1"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

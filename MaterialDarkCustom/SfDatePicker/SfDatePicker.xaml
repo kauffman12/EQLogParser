@@ -26,6 +26,8 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/TextBox.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
+    <Thickness x:Key="DatePicker.RepeatButton.Static.Margin">1</Thickness>
+
     <Input:NameToScopeConverter x:Key="NameToScope" />
 
     <BooleanToVisibilityConverter x:Key="BooleanVisibilityConverter" />
@@ -157,7 +159,7 @@
                                     Grid.Column="1"
                                     Width="20"
                                     Padding="{TemplateBinding Padding}"
-                                    
+                                    Margin="{StaticResource DatePicker.RepeatButton.Static.Margin}"
                                     HorizontalAlignment="Stretch"
                                     VerticalAlignment="Stretch"
                                     Background="Transparent"
@@ -175,13 +177,11 @@
                             SnapsToDevicePixels="True"
                             StaysOpen="False">
                             <Border
-                                Margin="8 0 8 10"
+                                Margin="8, 0, 8, 10"
                                 BorderBrush="{StaticResource Border}"
                                 BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
-                                Effect="{StaticResource Default.ShadowDepth3}">
-                                <Border.CornerRadius>
-                                    <CornerRadius>0</CornerRadius>
-                                </Border.CornerRadius>
+                                Effect="{StaticResource Default.ShadowDepth3}"
+                                CornerRadius="0">
                                 <Border.RenderTransform>
                                     <TranslateTransform/>
                                 </Border.RenderTransform>

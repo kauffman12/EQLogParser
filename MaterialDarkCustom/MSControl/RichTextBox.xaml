@@ -45,8 +45,8 @@
                                       Focusable="false" 
                                       Background="Transparent"
                                       HorizontalScrollBarVisibility="Hidden" 
-                                      VerticalScrollBarVisibility="Hidden">
-                        </ScrollViewer>
+                                      VerticalScrollBarVisibility="Hidden"
+                                      Margin="0"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="true">

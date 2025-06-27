@@ -180,21 +180,22 @@
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="SoundTouch.Net" Version="2.3.2" />
     <PackageReference Include="SoundTouch.Net.NAudioSupport.Core" Version="2.3.2" />
-    <PackageReference Include="Syncfusion.DocIO.Wpf" Version="29.2.11" />
-    <PackageReference Include="Syncfusion.Edit.WPF" Version="29.2.11" />
-    <PackageReference Include="Syncfusion.PropertyGrid.WPF" Version="29.2.11" />
-    <PackageReference Include="Syncfusion.SfChart.WPF" Version="29.2.11" />
-    <PackageReference Include="Syncfusion.SfGrid.WPF" Version="29.2.11" />
-    <PackageReference Include="Syncfusion.SfInput.WPF" Version="29.2.11" />
-    <PackageReference Include="Syncfusion.SfProgressBar.WPF" Version="29.2.11" />
-    <PackageReference Include="Syncfusion.SfRichTextBoxAdv.WPF" Version="29.2.11" />
-    <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="29.2.11" />
-    <PackageReference Include="Syncfusion.SfTreeView.WPF" Version="29.2.11" />
-    <PackageReference Include="Syncfusion.Shared.WPF" Version="29.2.11" />
+    <PackageReference Include="Syncfusion.DocIO.Wpf" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.Edit.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.PropertyGrid.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfChart.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfGrid.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfInput.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfProgressBar.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfRichTextBoxAdv.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfTreeView.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.Shared.WPF" Version="29.1.33" />
     <PackageReference Include="Syncfusion.Shared.WPF.Classic" Version="22.2.5" />
-    <PackageReference Include="Syncfusion.Themes.MaterialDark.WPF" Version="29.2.11" />
-    <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="29.2.11" />
-    <PackageReference Include="Syncfusion.Tools.WPF" Version="29.2.11" />
+    <PackageReference Include="Syncfusion.Themes.FluentDark.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.Themes.MaterialDark.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.Tools.WPF" Version="29.1.33" />
     <PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="22.2.5" />
     <PackageReference Include="System.Formats.Asn1" Version="8.0.1" />
   </ItemGroup>

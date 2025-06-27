@@ -18,28 +18,12 @@
                 <ControlTemplate TargetType="{x:Type ResizeGrip}">
                     <Grid Background="{TemplateBinding Background}" 
                           SnapsToDevicePixels="true">
-                        <Path HorizontalAlignment="Right"
-                              VerticalAlignment="Bottom"
-                              Margin="0,0,2,2" 
-                              >
-                            <Path.Data>
-                                <PathGeometry>M9,0L11,0 11,11 0,11 0,9 3,9 3,6 6,6 6,3 9,3z</PathGeometry>
-                            </Path.Data>
-                            <Path.Fill>
-                                <DrawingBrush TileMode="Tile" 
-                                              Viewbox="0,0,3,3"
-                                              Viewport="0,0,3,3" 
-                                              ViewportUnits="Absolute" 
-                                              ViewboxUnits="Absolute">
-                                    <DrawingBrush.Drawing>
-                                        <DrawingGroup>
-                                            <GeometryDrawing Brush="{StaticResource IconDisabledColor}" 
-                                                             Geometry="M 0,0 L 2,0 L 2,2 L 0,2 z"/>
-                                        </DrawingGroup>
-                                    </DrawingBrush.Drawing>
-                                </DrawingBrush>
-                            </Path.Fill>
-                        </Path>
+                        <TextBlock Margin="0,0,2,2"
+                                   Text="&#xe705;"
+                                   Foreground="{StaticResource IconDisabledColor}"
+                                   FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Bottom"/>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">

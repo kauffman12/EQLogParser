@@ -36,7 +36,7 @@
     <ControlTemplate x:Key="SyncfusionDayNameCellControlTemplate" TargetType="{x:Type shared:DayNameCell}">
         <Border
             x:Name="Border"
-            Margin="1 0"
+            Margin="1, 0"
             Width="Auto"
             Height="Auto"
             Background="{TemplateBinding Background}"
@@ -251,10 +251,8 @@
                                  IsHitTestVisible="false"
                                  BorderBrush="{Binding Path=SelectedDayCellBorderBrush, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:CalendarEdit}}}"
                                  BorderThickness="1"
-                                 Visibility="Collapsed">
-                                <Border.CornerRadius>
-                                    <CornerRadius>14</CornerRadius>
-                                </Border.CornerRadius>
+                                 Visibility="Collapsed" 
+                                 CornerRadius="14">
                             </Border>
                         </Grid>
                     </shared:DayCellPanel>
@@ -1059,7 +1057,7 @@
                                     Height="24"
                                     MinWidth="5"
                                     MinHeight="5"
-                                    Margin="0 8 8 8"
+                                    Margin="0, 8, 8, 8"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
                                     Tag="NextMonthButton"
@@ -1096,7 +1094,7 @@
                                     Height="24"
                                     MinWidth="5"
                                     MinHeight="5"
-                                    Margin="8 8 0 8"
+                                    Margin="8, 8, 0, 8"
                                     HorizontalAlignment="Left"
                                     VerticalAlignment="Center"
                                     Tag="PreviousMonthButton"

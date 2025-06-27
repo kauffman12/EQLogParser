@@ -23,6 +23,14 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/DocumentContainer/DocumentContainer.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
+    <CornerRadius x:Key="DockingManager.Header.Static.CornerRadius">1</CornerRadius>
+    <CornerRadius x:Key="DockingManager.DocumentTabItem.Border.Static.CornerRadius">1</CornerRadius>
+    <CornerRadius x:Key="DockingManager.NativeFloatWindow.Static.CornerRadius">1</CornerRadius>
+    <CornerRadius x:Key="DockingManager.SideTabItem.Static.CornerRadius">1</CornerRadius>
+    <sys:Double x:Key="DockingManager.DocumentTabItem.MouseOver.Opacity">1</sys:Double>
+    <Thickness x:Key="DockingManager.DocumentTabItem.Static.BorderThickness">1</Thickness>
+    <Thickness x:Key="DockingManager.TabItem.Static.Margin">1</Thickness>
+
     <tools_controls:DockConverter x:Key="dockConverter" />
     <tools_controls:DockTrimmingTemplate x:Key="DockTrimmingTemplate" />
     <tools_controls:TabItemTrimmingTemplate x:Key="TabItemTrimmingTemplate" />
@@ -344,7 +352,8 @@
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
                         SnapsToDevicePixels="True"
-                        ToolTip="{Binding Path=ItemToolTip, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabItemExt}}, FallbackValue=''}">
+                        ToolTip="{Binding Path=ItemToolTip, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabItemExt}}, FallbackValue=''}"
+                            CornerRadius="{StaticResource DockingManager.DocumentTabItem.Border.Static.CornerRadius}">
                             <DockPanel x:Name="PART_DockPanel" LastChildFill="True">
                                 <Button
                                 x:Name="PART_CloseButton"
@@ -526,6 +535,7 @@
                             <Setter Property="Background" Value="{Binding Path=TabItemHoverBackground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Transparent}" />
                             <Setter Property="BorderBrush" Value="{Binding Path=TabItemHoverBorderBrush, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Transparent}" />
                             <Setter Property="Foreground" Value="{Binding Path=TabItemHoverForeground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:TabControlExt}}, FallbackValue=Transparent}" />
+                            <Setter Property="Opacity" TargetName="TabSeparator" Value="{StaticResource DockingManager.DocumentTabItem.MouseOver.Opacity}"/>
                         </Trigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
@@ -656,6 +666,7 @@
                             <Setter Property="Background" Value="{StaticResource ContentBackground}" />
                             <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
                             <Setter Property="Foreground" Value="{StaticResource DisabledForeground}" />
+                            <Setter Property="BorderThickness" TargetName="Bd" Value="{StaticResource DockingManager.DocumentTabItem.Static.BorderThickness}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -692,9 +703,7 @@
         TargetType="{x:Type tools_controls:TabControlExt}">
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="TabItemSelectedBackground" Value="{StaticResource PrimaryBackground}" />
-        <Setter Property="TabItemSelectedForeground" Value="{StaticResource PrimaryForeground}" />
-        <Setter Property="TabItemSelectedBorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="TabItemHeaderStyle" Value="Fill" />
     </Style>
     <Style BasedOn="{StaticResource SyncfusionDocumentTabControlExtStyle}" TargetType="{x:Type tools_controls:TabControlExt}" />
 
@@ -1434,8 +1443,8 @@
             </MultiDataTrigger>
             <MultiDataTrigger>
                 <MultiDataTrigger.Conditions>
-                    <Condition Binding="{Binding Path=IsMouseOver, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:DockHeaderPresenter}}}" Value="True" />
                     <Condition Binding="{Binding Tag, RelativeSource={RelativeSource Mode=Self}}" Value="Dock" />
+                    <Condition Binding="{Binding Path=IsMouseOver, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:DockHeaderPresenter}}}" Value="True" />
                     <Condition Binding="{Binding Path=IsTemplateParenKeyboardFocusWithin, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:DockHeaderPresenter}}}" Value="True" />
                     <Condition Binding="{Binding Path=DockingManager.EnableMouseHoverBackground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:DockingManager}}}" Value="True" />
                 </MultiDataTrigger.Conditions>
@@ -1565,8 +1574,8 @@
             </MultiDataTrigger>
             <MultiDataTrigger>
                 <MultiDataTrigger.Conditions>
-                    <Condition Binding="{Binding Path=IsMouseOver, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:DockHeaderPresenter}}}" Value="True" />
                     <Condition Binding="{Binding Tag, RelativeSource={RelativeSource Mode=Self}}" Value="Dock" />
+                    <Condition Binding="{Binding Path=IsMouseOver, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:DockHeaderPresenter}}}" Value="True" />
                     <Condition Binding="{Binding Path=IsTemplateParenKeyboardFocusWithin, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:DockHeaderPresenter}}}" Value="True" />
                     <Condition Binding="{Binding Path=DockingManager.EnableMouseHoverBackground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:DockingManager}}}" Value="True" />
                 </MultiDataTrigger.Conditions>
@@ -2133,7 +2142,8 @@
             x:Name="Border"
             Background="{TemplateBinding Background}"
             BorderBrush="{TemplateBinding BorderBrush}"
-            BorderThickness="{TemplateBinding BorderThickness}">
+            BorderThickness="{TemplateBinding BorderThickness}"
+            CornerRadius="{StaticResource DockingManager.SideTabItem.Static.CornerRadius}">
             <Border.LayoutTransform>
                 <RotateTransform Angle="90" />
             </Border.LayoutTransform>
@@ -2185,10 +2195,10 @@
                         <RotateTransform Angle="0" />
                     </Setter.Value>
                 </Setter>
-                <Setter Property="BorderThickness" Value="0 0 0 2" />
+                <Setter Property="BorderThickness" Value="0, 0, 0, 2" />
             </Trigger>
             <Trigger Property="TabItem.TabStripPlacement" Value="Left">
-                <Setter Property="BorderThickness" Value="0 0 0 2" />
+                <Setter Property="BorderThickness" Value="0, 0, 0, 2" />
             </Trigger>
             <DataTrigger Binding="{Binding Path=(Border.DataContext).(tools_controls:DockingManager.IsSideTabItemBackgroundEnabled), RelativeSource={RelativeSource Self}}" Value="True">
                 <Setter TargetName="Border" Property="Background" Value="{Binding Path=(Border.DataContext).(tools_controls:DockingManager.SideTabItemBackground), RelativeSource={RelativeSource Self}}" />
@@ -2212,7 +2222,7 @@
         <Setter Property="MinHeight" Value="24" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
         <Setter Property="Template" Value="{StaticResource SideTabItemTemplate}" />
-        <Setter Property="BorderThickness" Value="0 2 0 0" />
+        <Setter Property="BorderThickness" Value="0, 2, 0, 0" />
         <Style.Triggers>
             <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                 <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
@@ -2879,7 +2889,8 @@
                 x:Name="Border"
                 Background="{TemplateBinding Background}"
                 BorderBrush="{TemplateBinding BorderBrush}"
-                BorderThickness="{TemplateBinding BorderThickness}">
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{StaticResource DockingManager.SideTabItem.Static.CornerRadius}">
                 <Border.ContextMenu>
                     <tools_controls:CustomContextMenu x:Name="PART_ContextMenu" Focusable="false" />
                 </Border.ContextMenu>
@@ -2933,6 +2944,7 @@
                 <Setter TargetName="Border" Property="Background" Value="{Binding Path=(tools_controls:DockedElementTabbedHost.DockingManager).(tools_controls:DockingManager.TabItemBackgroundSelected),RelativeSource={RelativeSource AncestorType={x:Type tools_controls:DockedElementTabbedHost}}}" />
                 <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
                 <Setter TargetName="Border" Property="BorderThickness" Value="{Binding Path=(tools_controls:DockedElementTabbedHost.DockingManager).(tools_controls:DockingManager.TabItemsBorderThicknessSelected),RelativeSource={RelativeSource AncestorType={x:Type tools_controls:DockedElementTabbedHost}}}" />
+                <Setter Property="Margin" TargetName="PART_DockPanel" Value="{StaticResource DockingManager.TabItem.Static.Margin}"/>
             </Trigger>
             <Trigger Property="IsSelected" Value="False">
                 <Setter TargetName="TabItemHeader" Property="TextBlock.Foreground" Value="{Binding Path=(tools_controls:DockedElementTabbedHost.DockingManager).(tools_controls:DockingManager.TabItemsForeground),RelativeSource={RelativeSource AncestorType={x:Type tools_controls:DockedElementTabbedHost}}}" />
@@ -3774,7 +3786,7 @@
                     </ToggleButton>
                     <ContentPresenter
                         x:Name="PART_ContentPresenter"
-                        Margin="4 0 0 0"
+                        Margin="4, 0, 0, 0"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
                         Content="{Binding Path=(tools_controls:DockingManager.InternalDataContext).(tools_controls:DockingManager.Header), RelativeSource={RelativeSource TemplatedParent}}"
@@ -5402,7 +5414,7 @@
                     <Border x:Name="FloatWindowHeaderBorder" 
                             BorderBrush="{StaticResource BorderAlt}"
                             Background="{TemplateBinding Background}"
-                            >
+                            CornerRadius="{StaticResource DockingManager.Header.Static.CornerRadius}">
                         <Border.ContextMenu>
                             <tools_controls:CustomContextMenu x:Name="PART_ContextMenu" Focusable="false" />
                         </Border.ContextMenu>
@@ -5556,6 +5568,7 @@
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Center"
                                 Content="{Binding Path=(tools_controls:DockingManager.InternalDataContext).(tools_controls:DockedElementTabbedHost.HostedElement).(tools_controls:DockingManager.Header), RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:NativeFloatWindow}}}"
+                                ContentTemplate="{Binding Path=(tools_controls:DockingManager.InternalDataContext).(tools_controls:DockedElementTabbedHost.HostedElement).(tools_controls:DockingManager.HeaderTemplate), RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:NativeFloatWindow}}}"
                                 DockPanel.Dock="Left"
                                 IsHitTestVisible="True"
                                 TextBlock.Foreground="{StaticResource ContentForeground}">
@@ -5696,7 +5709,7 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            
+                            CornerRadius="{StaticResource DockingManager.NativeFloatWindow.Static.CornerRadius}"
                             Focusable="False">
                             <!--<Border.Effect>
                             </Border.Effect>-->
@@ -5752,7 +5765,7 @@
 
     <Style x:Key="SyncfusionDockingManagerStyle" TargetType="{x:Type tools_controls:DockingManager}">
         <Setter Property="tools_controls:DockingManager.FocusVisualStyle" Value="{x:Null}" />
-        <Setter Property="ContainerStyle" Value="{StaticResource SyncfusionDockingDocumentContainerStyle}" />
+       <!--<Setter Property="ContainerStyle" Value="{StaticResource SyncfusionDockingDocumentContainerStyle}" />-->
         <Setter Property="ClipToBounds" Value="True" />
         <Setter Property="Background" Value="{StaticResource ContentBackground}" />
         <Setter Property="MainHostStyle" Value="{StaticResource SyncfusionMainHostStyle}" />
@@ -5797,8 +5810,8 @@
         <Setter Property="SidePanelBackground" Value="{StaticResource ContentBackgroundAlt2}" />
         <Setter Property="TabPanelBackground" Value="Transparent" />
         <Setter Property="TabItemsCornerRadius" Value="0" />
-        <Setter Property="TabItemBorderThickness" Value="0 0 0 2" />
-        <Setter Property="TabItemsBorderThicknessSelected" Value="0 0 0 2" />
+        <Setter Property="TabItemBorderThickness" Value="0, 0, 0, 2" />
+        <Setter Property="TabItemsBorderThicknessSelected" Value="0, 0, 0, 2" />
         <Setter Property="TabItemsBackground" Value="Transparent" />
         <Setter Property="tools_controls:DockingManager.SidePanelBorderBrush" Value="Transparent" />
         <Setter Property="tools_controls:DockingManager.TabPanelBorderBrush" Value="Transparent" />

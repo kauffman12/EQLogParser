@@ -219,8 +219,14 @@
                                                         HorizontalAlignment="Right"
                                                         Orientation="Horizontal" 
                                                         Visibility="Collapsed">
-
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                               
                                                 <Button x:Name="PART_OkButton"
+                                                        Grid.Column="0"
                                                         Height="24"
                                                         Width="36"
                                                         HorizontalAlignment="Center"
@@ -232,6 +238,7 @@
                                                 </Button>
 
                                                 <Button x:Name="PART_CancelButton"
+                                                        Grid.Column="1"
                                                         Height="24"
                                                         Width="68"
                                                         HorizontalAlignment="Center"
@@ -240,8 +247,8 @@
                                                     <Button.Margin>
                                                         <Thickness>8,8,5,8</Thickness>
                                                     </Button.Margin>
-                                                </Button>                                                       
-
+                                                </Button>
+                                                </Grid>
                                             </StackPanel>
                                             <Thumb x:Name="PART_ThumbGripper" 
                                                    Grid.Column="1"
@@ -260,6 +267,7 @@
                                                                   Data="M36.396,36.017 L47.901,36.017 47.901,47.521999 36.396,47.521999 z M18.198,36.017 L29.716,36.017 29.716,47.521999 18.198,47.521999 z M0,36.017 L11.511999,36.017 11.511999,47.521999 0,47.521999 z M36.396,18.191001 L47.901,18.191001 47.901,29.696 36.396,29.696 z M18.198,18.191 L29.716,18.191 29.716,29.696 18.198,29.696 z M36.396,0 L47.901,0 47.901,11.512 36.396,11.512 z"
                                                                   Fill="{StaticResource IconDisabledColor}"
                                                                   Stretch="Fill" />
+                                                            
                                                         </Grid>
                                                     </ControlTemplate>
                                                 </Thumb.Template>

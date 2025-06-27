@@ -314,8 +314,8 @@
                             x:Name="SplitBorder"
                             Grid.Row="{TemplateBinding SplitRow}"
                             Grid.Column="{TemplateBinding SplitColumn}"
-                            Background="{Binding SplitterColor, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:TileViewControl}}}"
-                            BorderBrush="{Binding SplitterColor, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type shared:TileViewControl}}}"
+                            Background="{Binding ParentTileViewControl.SplitterColor, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                            BorderBrush="{Binding ParentTileViewControl.SplitterColor, RelativeSource={RelativeSource Mode=TemplatedParent}}"
                             CornerRadius="{TemplateBinding CornerRadius}" />
                     </Grid>
                     <ControlTemplate.Triggers>

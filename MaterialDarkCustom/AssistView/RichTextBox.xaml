@@ -1,0 +1,74 @@
+<ResourceDictionary xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"  
+                    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                     xmlns:local="clr-namespace:Syncfusion.UI.Xaml.Chat;assembly=Syncfusion.SfChat.Wpf"
+ >
+
+    <Thickness x:Key="TextBoxTopHeaderMargin">0,0,0,8</Thickness>
+    <Thickness x:Key="TextBoxInnerButtonMargin">0,4,4,4</Thickness>
+
+  <SolidColorBrush x:Key="TextBox.Focus.Border" Color="#FF569DE5"/>
+    <Style TargetType="local:RichTextBox">
+        <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+        <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"/>
+        <Setter Property="AcceptsReturn" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:RichTextBox">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Border                            
+                            x:Name="border"
+                            Grid.RowSpan="2"
+                            Grid.ColumnSpan="2"
+                            Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="1" 
+                            CornerRadius="8"
+                            MinWidth="{TemplateBinding MinWidth}" 
+                            MinHeight="{TemplateBinding MinHeight}">
+                        <ScrollViewer
+                            x:Name="PART_ContentHost"                          
+                            Margin="{TemplateBinding BorderThickness}" 
+                            Padding="{TemplateBinding Padding}" 
+                            Foreground="{TemplateBinding Foreground}" 
+                            IsTabStop="False"
+                            VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock
+                            x:Name="PlaceholderTextContentPresenter" 
+                            Foreground="Black" 
+                            Margin="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}"                           
+                            TextAlignment="{TemplateBinding TextAlignment}" 
+                            TextWrapping="{TemplateBinding TextWrapping}" 
+                            IsHitTestVisible="False" />
+                        <Button 
+                             x:Name="send"
+                             Height="22"                             
+                             Width="30"                           
+                             HorizontalAlignment="Right" Padding="4" Margin="8,5,8,5"
+                             Grid.Column="1">
+                            <Button.ContentTemplate>
+                                <DataTemplate>
+                                    <Viewbox Stretch="Uniform">
+                                        <TextBlock Text="&#xE724;" FontFamily="Segoe MDL2 Assets" FontSize="28" />
+                                    </Viewbox>
+                                </DataTemplate>
+                            </Button.ContentTemplate>
+                        </Button>
+
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+          
+</ResourceDictionary>

@@ -18,13 +18,11 @@
                 <ControlTemplate TargetType="{x:Type Calendar}">
                     <StackPanel x:Name="PART_Root" HorizontalAlignment="Center">
                         <Border Effect="{StaticResource Default.ShadowDepth3}"
-                                
+                                CornerRadius="0"
                                 BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                 BorderBrush="{StaticResource Border}"
-                                >
-                            <Border.Margin>
-                                <Thickness>6,0,3,6</Thickness>
-                            </Border.Margin>
+                                
+                                Margin="6,0,3,6">
                             <CalendarItem x:Name="PART_CalendarItem"
                                       BorderBrush="{TemplateBinding BorderBrush}"
                                       BorderThickness="{TemplateBinding BorderThickness}"
@@ -86,7 +84,13 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
-                        <Border x:Name="Border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" Opacity="1" Padding="{TemplateBinding Padding}">
+                        <Border x:Name="Border" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                Background="{TemplateBinding Background}" 
+                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" 
+                                Opacity="1" 
+                                Padding="{TemplateBinding Padding}">
                             <Grid x:Name="WatermarkContent" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
                                 <Border x:Name="ContentElement"/>
                                 <Border x:Name="watermark_decorator" Padding="{TemplateBinding Padding}">
@@ -121,8 +125,8 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type DatePicker}">
                     <Border x:Name="focusBorder" BorderBrush="Transparent"
-                BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
-                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                            BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
+                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
                         <Border x:Name="PART_Border" 
                                 BorderBrush="{TemplateBinding BorderBrush}" 
                                 BorderThickness="{TemplateBinding BorderThickness}" 
@@ -148,17 +152,10 @@
                                             TargetType="{x:Type Button}">
                                         <Setter Property="Content">
                                             <Setter.Value>
-                                                <Path x:Name="Date_Picker" 
-                                              Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Width="12" 
-                                              Height="13"
-                                              Stretch="Fill">
-                                                    <Path.Data>
-                                                        <PathGeometry>M8,9 L11,9 11,12 8,12 z M13,6 L2,6 2,14 13.001,14 z M3.4860003,0 C4.0380001,0 4.4860005,0.44700003 4.4860005,1 L4.4860005,2 11,2 11,1 C11,0.44700003 11.448,0 12,0 12.552,0 13,0.44700003 13,1 L13,2 C14.104,2 15,2.8960001 15,4 L15,14 C15,15.104 14.104,16 13,16 L2,16 C0.89600003,16 0,15.104 0,14 L0,4 C0,2.8960001 0.89600003,2 2,2 L2.4860001,2 2.4860001,1 C2.4860003,0.44700003 2.9340003,0 3.4860003,0 z</PathGeometry>
-                                                    </Path.Data>
-                                                </Path>
+                                                <TextBlock Text="&#xe700;" 
+                                                           Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                                           FontSize="14"
+                                                           FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"/>
                                             </Setter.Value>
                                         </Setter>
                                     </Style>
@@ -173,8 +170,14 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <Rectangle Grid.Column="0" Fill="Transparent" RadiusY="1" Grid.Row="0" RadiusX="1"/>
-                                    <Rectangle Grid.Column="1" Fill="Transparent" Height="18" RadiusY="1" Grid.Row="0" RadiusX="1" Width="19">
-                                    </Rectangle>
+                                    <Rectangle Grid.Column="1" 
+                                               Fill="Transparent" 
+                                               Height="18" 
+                                               RadiusY="1" 
+                                               Grid.Row="0" 
+                                               RadiusX="1" 
+                                               Width="19"
+                                               Margin="0"/>
                                     <Popup x:Name="PART_Popup" AllowsTransparency="True" Placement="Bottom" PlacementTarget="{Binding ElementName=focusBorder}" StaysOpen="False">
                                     </Popup>
                                 </Grid>

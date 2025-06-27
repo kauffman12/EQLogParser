@@ -60,11 +60,7 @@
                             </Border.OpacityMask>
                             <Border BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
-                                <Border BorderBrush="Transparent" 
-                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"/>
-                            </Border>
+                                    CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"/>
                         </Border>
                         <Border x:Name="Header" 
                                 Grid.Column="1" 
@@ -78,11 +74,8 @@
                         <ContentPresenter Grid.ColumnSpan="2" 
                                           Grid.Column="1" 
                                           Grid.Row="2"
-                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                            <ContentPresenter.Margin>
-                                <Thickness>3,1,3,0</Thickness>
-                            </ContentPresenter.Margin>
-                        </ContentPresenter>
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                          Margin="3,1,3,0"/>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">

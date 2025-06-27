@@ -9,8 +9,6 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
     </ResourceDictionary.MergedDictionaries>
 
-    <Thickness x:Key="ScrollBar.Vertical.Static.StrokeThickness">0.5,0,0.5,0</Thickness>
-    <Thickness x:Key="ScrollBar.Horizontal.Static.StrokeThickness">0,0.5,0,0.5</Thickness>
     <Style x:Key="ScrollBarFocusVisual">
         <Setter Property="Control.Template">
             <Setter.Value>
@@ -29,8 +27,7 @@
         <Setter Property="FocusVisualStyle" Value="{StaticResource ScrollBarFocusVisual}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Padding"
-                Value="1"/>
+        <Setter Property="Padding" Value="1"/>
         <Setter Property="Focusable" Value="false"/>
         <Setter Property="IsTabStop" Value="false"/>
         <Setter Property="Template">
@@ -116,21 +113,21 @@
                                 <Condition Property="IsMouseOver" Value="True"/>
                                 <Condition Property="sfskin:SkinManagerHelper.ScrollBarMode" Value="Compact"/>
                             </MultiTrigger.Conditions>
-                            <Setter Property="CornerRadius" TargetName="thumbBorder" Value="0"/>
+                            <Setter Property="CornerRadius" TargetName="thumbBorder" Value="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"/>
                         </MultiTrigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsDragging" Value="True"/>
                                 <Condition Property="sfskin:SkinManagerHelper.ScrollBarMode" Value="Compact"/>
                             </MultiTrigger.Conditions>
-                            <Setter Property="CornerRadius" TargetName="thumbBorder" Value="0"/>
+                            <Setter Property="CornerRadius" TargetName="thumbBorder" Value="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"/>
                         </MultiTrigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsEnabled" Value="False"/>
                                 <Condition Property="sfskin:SkinManagerHelper.ScrollBarMode" Value="Compact"/>
                             </MultiTrigger.Conditions>
-                            <Setter Property="CornerRadius" TargetName="thumbBorder" Value="0"/>
+                            <Setter Property="CornerRadius" TargetName="thumbBorder" Value="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"/>
                         </MultiTrigger>
                         <Trigger Property="IsMouseOver" Value="true">
                             <Setter Property="Background" TargetName="thumbBorder" Value="{StaticResource ContentBackgroundAlt5}"/>
@@ -172,21 +169,21 @@
                                 <Condition Property="IsMouseOver" Value="True"/>
                                 <Condition Property="sfskin:SkinManagerHelper.ScrollBarMode" Value="Compact"/>
                             </MultiTrigger.Conditions>
-                            <Setter Property="CornerRadius" TargetName="thumbBorder" Value="0"/>
+                            <Setter Property="CornerRadius" TargetName="thumbBorder" Value="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"/>
                         </MultiTrigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsDragging" Value="True"/>
                                 <Condition Property="sfskin:SkinManagerHelper.ScrollBarMode" Value="Compact"/>
                             </MultiTrigger.Conditions>
-                            <Setter Property="CornerRadius" TargetName="thumbBorder" Value="0"/>
+                            <Setter Property="CornerRadius" TargetName="thumbBorder" Value="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"/>
                         </MultiTrigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsEnabled" Value="False"/>
                                 <Condition Property="sfskin:SkinManagerHelper.ScrollBarMode" Value="Compact"/>
                             </MultiTrigger.Conditions>
-                            <Setter Property="CornerRadius" TargetName="thumbBorder" Value="0"/>
+                            <Setter Property="CornerRadius" TargetName="thumbBorder" Value="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"/>
                         </MultiTrigger>
                         <Trigger Property="IsMouseOver" Value="true">
                             <Setter Property="Background" TargetName="thumbBorder" Value="{StaticResource ContentBackgroundAlt5}"/>
@@ -231,27 +228,14 @@
                                       Command="{x:Static ScrollBar.LineUpCommand}"
                                       BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                       Style="{StaticResource ScrollBarButton}">
-                            <Path x:Name="ArrowTop" 
-                                  Width="6"
-                                  Height="3.5"
-                                  Fill="{StaticResource IconColor}" 
-                                  Margin="1"
-                                  Stretch="Uniform">
-                                <Path.Data>
-                                    <PathGeometry>M12.797962,0L25.598,12.8 0,12.8z</PathGeometry>
-                                </Path.Data>
-                                <Path.RenderTransform>
-                                    <TransformGroup>
-                                        <TransformGroup.Children>
-                                            <RotateTransform Angle="0" />
-                                            <ScaleTransform ScaleX="1" ScaleY="1" />
-                                        </TransformGroup.Children>
-                                    </TransformGroup>
-                                </Path.RenderTransform>
-                                <Path.RenderTransformOrigin>
-                                    <Point X="0" Y="0"/>
-                                </Path.RenderTransformOrigin>
-                            </Path>
+                            <TextBlock x:Name="ArrowTop"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="{StaticResource IconColor}"
+                                       FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                       
+                                       Margin="1"
+                                       Text="&#xe709;"/>
                         </RepeatButton>
                         <Track x:Name="PART_Track" 
                                Grid.Row="1"
@@ -265,7 +249,9 @@
                                               Style="{StaticResource RepeatButtonTransparent}"/>
                             </Track.IncreaseRepeatButton>
                             <Track.Thumb>
-                                <Thumb x:Name="thumb" Style="{StaticResource ScrollBarThumbVertical}" Width="6"/>
+                                <Thumb x:Name="thumb" 
+                                       Style="{StaticResource ScrollBarThumbVertical}" 
+                                       Width="6"/>
                             </Track.Thumb>
                         </Track>
                         <RepeatButton x:Name="PART_LineDownButton" 
@@ -273,16 +259,14 @@
                                       BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                       Command="{x:Static ScrollBar.LineDownCommand}" 
                                       Style="{StaticResource ScrollBarButton}">
-                            <Path x:Name="ArrowBottom" 
-                                  Margin="1"
-                                  Width="6"
-                                  Height="3.5"
-                                  Fill="{StaticResource IconColor}"
-                                  Stretch="Uniform">
-                                <Path.Data>
-                                    <PathGeometry>M0,0L32,0 16,17.2z</PathGeometry>
-                                </Path.Data>
-                            </Path>
+                            <TextBlock x:Name="ArrowBottom"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="{StaticResource IconColor}"
+                                       FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                       
+                                       Margin="1"
+                                       Text="&#xe708;"/>
                         </RepeatButton>
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -323,32 +307,32 @@
                                 <Condition Binding="{Binding IsMouseOver, ElementName=PART_LineDownButton}" Value="true"/>
                                 <Condition Binding="{Binding IsPressed, ElementName=PART_LineDownButton}" Value="true"/>
                             </MultiDataTrigger.Conditions>
-                            <Setter Property="Fill" TargetName="ArrowBottom" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="ArrowBottom" Value="{StaticResource IconColor}"/>
                         </MultiDataTrigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding IsMouseOver, ElementName=PART_LineUpButton}" Value="true"/>
                                 <Condition Binding="{Binding IsPressed, ElementName=PART_LineUpButton}" Value="true"/>
                             </MultiDataTrigger.Conditions>
-                            <Setter Property="Fill" TargetName="ArrowTop" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="ArrowTop" Value="{StaticResource IconColor}"/>
                         </MultiDataTrigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding IsMouseOver, ElementName=PART_LineDownButton}" Value="true"/>
                                 <Condition Binding="{Binding IsPressed, ElementName=PART_LineDownButton}" Value="false"/>
                             </MultiDataTrigger.Conditions>
-                            <Setter Property="Fill" TargetName="ArrowBottom" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="ArrowBottom" Value="{StaticResource IconColor}"/>
                         </MultiDataTrigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding IsMouseOver, ElementName=PART_LineUpButton}" Value="true"/>
                                 <Condition Binding="{Binding IsPressed, ElementName=PART_LineUpButton}" Value="false"/>
                             </MultiDataTrigger.Conditions>
-                            <Setter Property="Fill" TargetName="ArrowTop" Value="{StaticResource IconColor}"/>
+                            <Setter Property="Foreground" TargetName="ArrowTop" Value="{StaticResource IconColor}"/>
                         </MultiDataTrigger>
                         <Trigger Property="IsEnabled" Value="false">
-                            <Setter Property="Fill" TargetName="ArrowTop" Value="{StaticResource IconDisabledColor}"/>
-                            <Setter Property="Fill" TargetName="ArrowBottom" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter Property="Foreground" TargetName="ArrowTop" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter Property="Foreground" TargetName="ArrowBottom" Value="{StaticResource IconDisabledColor}"/>
                         </Trigger> 
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -380,27 +364,14 @@
                                               Command="{x:Static ScrollBar.LineLeftCommand}"
                                               BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                               Style="{StaticResource ScrollBarButton}">
-                                    <Path x:Name="ArrowLeft" 
-                                          Fill="{StaticResource IconColor}" 
-                                          Margin="1"
-                                          Height="6"
-                                          Width="3.5" 
-                                          Stretch="Uniform">
-                                        <Path.Data>
-                                            <PathGeometry>M19.299999,0L19.299999,32 0,16z</PathGeometry>
-                                        </Path.Data>
-                                        <Path.RenderTransform>
-                                            <TransformGroup>
-                                                <TransformGroup.Children>
-                                                    <RotateTransform Angle="0" />
-                                                    <ScaleTransform ScaleX="1" ScaleY="1" />
-                                                </TransformGroup.Children>
-                                            </TransformGroup>
-                                        </Path.RenderTransform>
-                                        <Path.RenderTransformOrigin>
-                                            <Point X="0" Y="0"/>
-                                        </Path.RenderTransformOrigin>
-                                    </Path>
+                                    <TextBlock x:Name="ArrowLeft"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="{StaticResource IconColor}"
+                                               FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                               
+                                               Margin="1"
+                                               Text="&#xe70a;"/>
                                 </RepeatButton>
                                 <Track x:Name="PART_Track" 
                                        Grid.Column="1">
@@ -413,7 +384,9 @@
                                                       Style="{StaticResource RepeatButtonTransparent}"/>
                                     </Track.IncreaseRepeatButton>
                                     <Track.Thumb>
-                                        <Thumb x:Name="thumb" Style="{StaticResource ScrollBarThumbHorizontal}" Height="6"/>
+                                        <Thumb x:Name="thumb" 
+                                               Style="{StaticResource ScrollBarThumbHorizontal}" 
+                                               Height="6"/>
                                     </Track.Thumb>
                                 </Track>
                                 <RepeatButton x:Name="PART_LineRightButton" 
@@ -421,27 +394,14 @@
                                               Command="{x:Static ScrollBar.LineRightCommand}" 
                                               BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                               Style="{StaticResource ScrollBarButton}">
-                                    <Path x:Name="ArrowRight"
-                                          Fill="{StaticResource IconColor}" 
-                                          Margin="1"
-                                          Height="6"
-                                          Width="6" 
-                                          Stretch="Uniform">
-                                        <Path.Data>
-                                            <PathGeometry>M0,0L22.644,16 0,32z</PathGeometry>
-                                        </Path.Data>
-                                        <Path.RenderTransform>
-                                            <TransformGroup>
-                                                <TransformGroup.Children>
-                                                    <RotateTransform Angle="0" />
-                                                    <ScaleTransform ScaleX="1" ScaleY="1" />
-                                                </TransformGroup.Children>
-                                            </TransformGroup>
-                                        </Path.RenderTransform>
-                                        <Path.RenderTransformOrigin>
-                                            <Point X="0" Y="0"/>
-                                        </Path.RenderTransformOrigin>
-                                    </Path>
+                                    <TextBlock x:Name="ArrowRight"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="{StaticResource IconColor}"
+                                               FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                               
+                                               Margin="1"
+                                               Text="&#xe70b;"/>
                                 </RepeatButton>
                             </Grid>
                             <ControlTemplate.Triggers>
@@ -482,32 +442,32 @@
                                         <Condition Binding="{Binding IsMouseOver, ElementName=PART_LineRightButton}" Value="true"/>
                                         <Condition Binding="{Binding IsPressed, ElementName=PART_LineRightButton}" Value="true"/>
                                     </MultiDataTrigger.Conditions>
-                                    <Setter Property="Fill" TargetName="ArrowRight" Value="{StaticResource IconColor}"/>
+                                    <Setter Property="Foreground" TargetName="ArrowRight" Value="{StaticResource IconColor}"/>
                                 </MultiDataTrigger>
                                 <MultiDataTrigger>
                                     <MultiDataTrigger.Conditions>
                                         <Condition Binding="{Binding IsMouseOver, ElementName=PART_LineLeftButton}" Value="true"/>
                                         <Condition Binding="{Binding IsPressed, ElementName=PART_LineLeftButton}" Value="true"/>
                                     </MultiDataTrigger.Conditions>
-                                    <Setter Property="Fill" TargetName="ArrowLeft" Value="{StaticResource IconColor}"/>
+                                    <Setter Property="Foreground" TargetName="ArrowLeft" Value="{StaticResource IconColor}"/>
                                 </MultiDataTrigger>
                                 <MultiDataTrigger>
                                     <MultiDataTrigger.Conditions>
                                         <Condition Binding="{Binding IsMouseOver, ElementName=PART_LineRightButton}" Value="true"/>
                                         <Condition Binding="{Binding IsPressed, ElementName=PART_LineRightButton}" Value="false"/>
                                     </MultiDataTrigger.Conditions>
-                                    <Setter Property="Fill" TargetName="ArrowRight" Value="{StaticResource IconColor}"/>
+                                    <Setter Property="Foreground" TargetName="ArrowRight" Value="{StaticResource IconColor}"/>
                                 </MultiDataTrigger>
                                 <MultiDataTrigger>
                                     <MultiDataTrigger.Conditions>
                                         <Condition Binding="{Binding IsMouseOver, ElementName=PART_LineLeftButton}" Value="true"/>
                                         <Condition Binding="{Binding IsPressed, ElementName=PART_LineLeftButton}" Value="false"/>
                                     </MultiDataTrigger.Conditions>
-                                    <Setter Property="Fill" TargetName="ArrowLeft" Value="{StaticResource IconColor}"/>
+                                    <Setter Property="Foreground" TargetName="ArrowLeft" Value="{StaticResource IconColor}"/>
                                 </MultiDataTrigger>
                                 <Trigger Property="IsEnabled" Value="false">
-                                    <Setter Property="Fill" TargetName="ArrowLeft" Value="{StaticResource IconDisabledColor}"/>
-                                    <Setter Property="Fill" TargetName="ArrowRight" Value="{StaticResource IconDisabledColor}"/>
+                                    <Setter Property="Foreground" TargetName="ArrowLeft" Value="{StaticResource IconDisabledColor}"/>
+                                    <Setter Property="Foreground" TargetName="ArrowRight" Value="{StaticResource IconDisabledColor}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>

@@ -8,6 +8,7 @@
     <ResourceDictionary.MergedDictionaries>
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatButton.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
     <Style x:Key="WPFTextBoxStyle"
@@ -101,6 +102,7 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Stylus.IsFlicksEnabled" Value="False"/>
         <Setter Property="CaretBrush" Value="{StaticResource ContentForeground}"/>
+        <Setter Property="SelectionBrush" Value="{StaticResource PrimaryBackground}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type TextBox}">
@@ -130,4 +132,126 @@
         </Setter>
     </Style>
 
+    <Style x:Key="WPFRichTextBoxStyle"
+           TargetType="{x:Type TextBox}">
+        <Setter Property="FocusVisualStyle"
+                Value="{x:Null}"/>
+        <Setter Property="Foreground"
+                Value="{StaticResource ContentForeground}"/>
+        <Setter Property="Background"
+                Value="Transparent"/>
+        <Setter Property="BorderBrush"
+                Value="{StaticResource Border}"/>
+        <Setter Property="BorderThickness" 
+                Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant1}"/>
+        <Setter Property="FontFamily"
+                Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
+        <Setter Property="FontSize"
+                Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"/>
+        <Setter Property="FontWeight"
+                Value="{StaticResource MaterialDarkCustom.FontWeightNormal}"/>
+        <Setter Property="SelectionBrush"
+                Value="{StaticResource PrimaryBackground}"/>
+        <Setter Property="AllowDrop"
+                Value="true"/>
+        <Setter Property="KeyboardNavigation.TabNavigation" Value="None"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="AllowDrop" Value="true"/>
+        <Setter Property="ScrollViewer.PanningMode" Value="VerticalFirst"/>
+        <Setter Property="Stylus.IsFlicksEnabled" Value="False"/>
+        <Setter Property="CaretBrush" Value="{StaticResource ContentForeground}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type TextBox}">
+                    <!--<Grid>
+                        <Border x:Name="border"
+                             
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}" 
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
+                            SnapsToDevicePixels="true">
+                            <ScrollViewer x:Name="PART_ContentHost" 
+                                      Focusable="False" Background="Transparent"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden"/>
+                        </Border>
+                    </Grid>-->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Border x:Name="border"
+                                Grid.RowSpan="2"
+                                Grid.ColumnSpan="2"
+      
+     BorderBrush="{TemplateBinding BorderBrush}" 
+     BorderThickness="{TemplateBinding BorderThickness}" 
+     Background="{TemplateBinding Background}"
+     CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
+     SnapsToDevicePixels="true">
+     <ScrollViewer x:Name="PART_ContentHost" 
+               Focusable="False" Background="Transparent"
+               HorizontalScrollBarVisibility="Hidden"
+               VerticalScrollBarVisibility="Hidden"/>
+ </Border>
+                        <TextBlock
+          x:Name="PlaceholderTextContentPresenter" 
+          Foreground="Black" 
+          Margin="{TemplateBinding BorderThickness}"
+          Padding="{TemplateBinding Padding}"                           
+          TextAlignment="{TemplateBinding TextAlignment}" 
+          TextWrapping="{TemplateBinding TextWrapping}" 
+          IsHitTestVisible="False" />
+                        <Button 
+           x:Name="send"
+           Height="22"                             
+           Width="30" Style="{StaticResource WPFFlatButtonStyle}"
+           BorderThickness="1" BorderBrush="Transparent"
+           HorizontalAlignment="Right" Padding="4" Margin="8,5,8,5"
+           Grid.Column="1">
+                            <Button.ContentTemplate>
+                                <DataTemplate>
+                                    <Viewbox Stretch="Uniform">
+                                        <TextBlock Text="&#xE724;" FontFamily="Segoe MDL2 Assets" FontSize="28" />
+
+                                    </Viewbox>
+                                </DataTemplate>
+                            </Button.ContentTemplate>
+                        </Button>
+
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="true">
+                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource BorderAlt2}"/>
+                            <Setter Property="Background" TargetName="border" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
+                            <Setter Property="CaretBrush" Value="{StaticResource ContentForeground}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="true">
+                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PrimaryBackground}"/>
+                            <Setter Property="Background" TargetName="border" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}"/>
+                            <Setter Property="Padding" Value="0,0,0,-1"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Background" TargetName="border" Value="Transparent"/>
+                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource BorderAlt}"/>
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForeground}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+   
 </ResourceDictionary>

@@ -32,7 +32,9 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ToggleButton}">
-                    <Border x:Name="ExpanderBorder" Background="Transparent">
+                    <Border x:Name="ExpanderBorder" 
+                            Background="Transparent"
+                            CornerRadius="0">
                         <Grid>
                             <Path
                                 x:Name="ExpanderPath"
@@ -91,12 +93,10 @@
                 x:Name="NavigationItemHeaderBorder"
                 HorizontalAlignment="Stretch"
                 
-                CornerRadius="0"          
+                CornerRadius="0" 
                 Background="{TemplateBinding Background}"
-                Focusable="True">
-                <Border.Margin>
-                    <Thickness>0</Thickness>
-                </Border.Margin>
+                Focusable="True"
+                Margin="0">
                 <Grid x:Name="NavigationItemHeaderGrid">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" MinWidth="{Binding Path=CompactModeWidth, RelativeSource={RelativeSource AncestorType={x:Type local:SfNavigationDrawer}}}" />
@@ -106,6 +106,8 @@
                         x:Name="NavigationItemExpander"
                         Grid.Column="1"
                         Width="38"
+                        Height="NaN"
+                        Margin="0"
                         Foreground="{TemplateBinding Foreground}"
 						ClickMode="Press"
                         ContentTemplate="{Binding ExpanderTemplate, RelativeSource={RelativeSource TemplatedParent}}"
@@ -119,19 +121,15 @@
                             HorizontalAlignment="Stretch"
                             VerticalAlignment="Center"
                             Content="{TemplateBinding Icon}"
-                            ContentTemplate="{TemplateBinding IconTemplate}">
-                            <ContentPresenter.Margin>
-                                <Thickness>0,5,0,5</Thickness>
-                            </ContentPresenter.Margin>
+                            ContentTemplate="{TemplateBinding IconTemplate}"
+                            Margin="0,5,0,5">
                         </ContentPresenter>
                         <ContentPresenter
                             HorizontalAlignment="Stretch"
                             VerticalAlignment="Center"
                             Content="{TemplateBinding Header}"
-                            ContentTemplate="{TemplateBinding HeaderTemplate}">
-                            <ContentPresenter.Margin>
-                                <Thickness>5,0,15,0</Thickness>
-                            </ContentPresenter.Margin>
+                            ContentTemplate="{TemplateBinding HeaderTemplate}"
+                            Margin="5,0,15,0">
                         </ContentPresenter>
                     </StackPanel>
                 </Grid>
@@ -153,13 +151,9 @@
                         BorderBrush="{TemplateBinding BorderBrush}"
                         Effect="{StaticResource Default.ShadowDepth6}"
                         BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" 
-                        CornerRadius="{StaticResource MaterialDarkCustom.CornerRadius2}">
-                        <Border.Padding>
-                            <Thickness>0,2,0,2</Thickness>
-                        </Border.Padding>
-                        <Border.Margin>
-                            <Thickness>4,3,16,16</Thickness>
-                        </Border.Margin>
+                        CornerRadius="{StaticResource MaterialDarkCustom.CornerRadius2}"
+                        Padding="0,2,0,2"
+                        Margin="4,3,16,16">
                         <local:NavigationItemsView
                             x:Name="NavigationItemPopupItemsControl"
                             ItemTemplate="{TemplateBinding ItemTemplate}"
@@ -177,10 +171,8 @@
                 RadiusY="0"
                 Fill="{TemplateBinding SelectionBackground}"
                 Focusable="False"  
-                Visibility="Collapsed">
-                <Rectangle.Margin>
-                    <Thickness>0</Thickness>
-                </Rectangle.Margin>
+                Visibility="Collapsed"
+                Margin="0">
             </Rectangle>
             <local:NavigationItemsView
                 x:Name="NavigationItemSubItemsItemsControl"
@@ -204,7 +196,7 @@
                     <Condition Property="ItemType" Value="Tab" />
                 </MultiTrigger.Conditions>
                 <MultiTrigger.Setters>
-                    <Setter TargetName="NavigationItemSelectionRectangle" Property="Visibility" Value="Visible" />
+                    <Setter TargetName="NavigationItemSelectionRectangle" Property="Visibility" Value="Visible"/>
                     <Setter Property="Background" Value="{StaticResource ContentBackgroundSelection}" />
                     <Setter Property="Foreground" Value="{StaticResource SelectionForeground}" />
                 </MultiTrigger.Setters>
@@ -310,11 +302,9 @@
                         x:Name="HamburgurButtonBorder"
                         Background="Transparent"
                         BorderBrush="Transparent"
-                        BorderThickness="1 1 2 1"
-                        CornerRadius="0">
-                        <Border.Margin>
-                            <Thickness>0</Thickness>
-                        </Border.Margin>
+                        BorderThickness="1,1,2,1"
+                        CornerRadius="0"
+                        Margin="0">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -418,6 +408,8 @@
                                 <ContentControl
                                     IsTabStop="False"
                                     Grid.Column="1"
+                                    FontFamily="{TemplateBinding FontFamily}"
+                                    FontSize="{TemplateBinding FontSize}"
                                     ContentTemplate="{Binding ToggleButtonContentTemplate, RelativeSource={RelativeSource TemplatedParent}}"
                                     Foreground="{StaticResource ContentForeground}"/>
                             </Grid>

@@ -5,10 +5,11 @@
                     xmlns:diagram_panels="clr-namespace:Syncfusion.UI.Xaml.Diagram.Panels;assembly=Syncfusion.SfDiagram.WPF"
                     xmlns:diagram_util="clr-namespace:Syncfusion.UI.Xaml.Diagram.Utility;assembly=Syncfusion.SfDiagram.WPF"
                     xmlns:diagram_stencil="clr-namespace:Syncfusion.UI.Xaml.Diagram.Stencil;assembly=Syncfusion.SfDiagram.WPF">
-    
+
     <ResourceDictionary.MergedDictionaries>
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Button.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ComboBox.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ScrollViewer.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Expander.xaml"/>
@@ -32,6 +33,74 @@
     <diagram_util:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
     <diagram_util:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
 
+    <ControlTemplate x:Key="SymbolGroupListHeaderTemplate" TargetType="ListViewItem">
+        <Grid>
+            <Border x:Name="Border" Background="{TemplateBinding Background}">
+                <ContentPresenter HorizontalAlignment="Left" 
+                                  VerticalAlignment="Center"
+                                  Margin="8,0,0,0" 
+                                  RenderTransformOrigin="0.5,0.5"
+                                  Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding  ContentTemplate}"/>
+            </Border>
+        </Grid>
+    </ControlTemplate>
+
+    <ControlTemplate TargetType="{x:Type ListViewItem}" x:Key="StencilGroupTabHeaderTemplate">
+        <Grid>
+            <Border x:Name="Bd"
+                    CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
+                    BorderBrush="{StaticResource BorderAlt}" 
+                    BorderThickness="{TemplateBinding BorderThickness}" 
+                    Background="Transparent" 
+                    Padding="{TemplateBinding Padding}" 
+                    SnapsToDevicePixels="true">
+                <ContentPresenter x:Name="content"
+                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                    <ContentPresenter.Resources>
+                        <Style TargetType="TextBlock" BasedOn="{x:Null}"/>
+                    </ContentPresenter.Resources>
+                </ContentPresenter>
+            </Border>
+            <Border x:Name="ListViewSelectionIndicator"
+                    HorizontalAlignment="Right"             
+                    CornerRadius="1.5"
+                    Visibility="Collapsed"
+                    Height="{TemplateBinding Height}"
+                    Width="3"
+                    Background="{StaticResource PrimaryBackground}">
+                <Border.Margin>
+                    <Thickness>0,0,1,0</Thickness>
+                </Border.Margin>
+            </Border>
+        </Grid>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" TargetName="Bd" Value="{StaticResource PrimaryBackgroundOpacity}"/>
+                <Setter Property="BorderBrush" TargetName="Bd" Value="{StaticResource BorderAlt}"/>
+            </Trigger>
+            <Trigger Property="IsSelected" Value="true">
+                <Setter Property="Background" TargetName="Bd" Value="Transparent"/>
+                <Setter Property="BorderBrush" TargetName="Bd" Value="{StaticResource BorderAlt}"/>
+                <Setter Property="Visibility" TargetName="ListViewSelectionIndicator" Value="Visible"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <DataTemplate x:Key="DefaultTabHeaderTemplate">
+        <Grid RenderTransformOrigin="0.5,0.5">
+            <TextBlock Text="{Binding}" 
+                       HorizontalAlignment="Center" 
+                       VerticalAlignment="Top">
+                <TextBlock.LayoutTransform>
+                    <RotateTransform Angle="270"/>
+                </TextBlock.LayoutTransform>
+            </TextBlock>
+        </Grid>
+    </DataTemplate>
+    
     <Style TargetType="{x:Type TextBox}" x:Key="SearchTextBoxStyle" BasedOn="{StaticResource WPFTextBoxStyle}">
         <Setter Property="SnapsToDevicePixels" Value="True" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -179,25 +248,33 @@
                                 </ContentPresenter>
                             </Grid>
                             <Grid Grid.Row="2"
-                                  Margin="4,0,0,0"
                                       Background="{TemplateBinding Background}"
                                       Visibility="{Binding ElementName=expander,Path=IsExpanded,Converter={StaticResource VisibilityToBoolConverter}}">
+                                <Grid.Margin>
+                                    <Thickness>4,0,0,0</Thickness>
+                                </Grid.Margin>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
                                 <Grid x:Name="Part_SearchOption"
-                                          Grid.Row="0"
-                                          Margin="0,5,4,5"
-                                          Background="{TemplateBinding Background}"
-                                          Visibility="{TemplateBinding ShowSearchTextBox,Converter={StaticResource VisibilityToBoolConverter}}" >
+                                      Grid.Row="0" 
+                                      Grid.Column="0" 
+                                      Grid.ColumnSpan="2"
+                                      Margin="0,5,4,5"
+                                      Background="{TemplateBinding Background}"
+                                      Visibility="{TemplateBinding ShowSearchTextBox,Converter={StaticResource VisibilityToBoolConverter}}" >
                                     <TextBox x:Name="Part_SearchTextBox"
                                              Margin="2,0,0,0"
-                                                 Style="{StaticResource SearchTextBoxStyle}"></TextBox>
+                                             Style="{StaticResource SearchTextBoxStyle}"/>
                                 </Grid>
-                                <Border Grid.Row="1" 
+                                <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
                                             Background="{TemplateBinding Background}"
                                             BorderBrush="{TemplateBinding BorderBrush}"
                                             BorderThickness="{TemplateBinding BorderThickness}">
@@ -220,7 +297,7 @@
                                         <Style TargetType="{x:Type Border}">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Path=SymbolFilterDisplayMode, RelativeSource={RelativeSource TemplatedParent}}" Value="ComboBox">
+                                                <DataTrigger Binding="{Binding Path=SymbolGroupDisplayMode, RelativeSource={RelativeSource TemplatedParent}}" Value="Accordion">
                                                     <Setter Property="Visibility" Value="Visible" />
                                                 </DataTrigger>
                                             </Style.Triggers>
@@ -228,7 +305,7 @@
                                     </Border.Style>
                                 </Border>
                                 <Grid x:Name="Part_AdvancedFilter" 
-                                      Grid.Row="1"  
+                                      Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
                                       Margin="0,0,4,0"
                                           Background="{TemplateBinding Background}">
                                     <Grid.RowDefinitions>
@@ -236,17 +313,17 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <ToggleButton x:Name="Part_MoreShape"
-                                                      Height="30" 
-                                                      Style="{StaticResource WPFGlyphToggleButtonStyle}"
-                                                      IsEnabled="{Binding Path=SymbolFilters, RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToBooleanConverter}}" 
-                                                      Visibility="{Binding RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToVisibityConverter}}">
+                                                  Height="30">
                                         <ToggleButton.Content>
                                             <Grid Background="{TemplateBinding Background}" Width="{Binding ElementName=Part_MoreShape, Path=ActualWidth}">
                                                 <TextBlock x:Name="MoreShape_Text" Text="More Shapes"
                                                                    HorizontalAlignment="Left"
                                                                    VerticalAlignment="Center"
-                                                                   Style="{StaticResource WPFTextBlockStyle}"
-                                                                   Margin="4,0,0,0"/>
+                                                                   Style="{StaticResource WPFTextBlockStyle}">
+                                                    <TextBlock.Margin>
+                                                        <Thickness>4,0,0,0</Thickness>
+                                                    </TextBlock.Margin>
+                                                </TextBlock>
                                                 <Path x:Name="ButtonPath" 
                                                               HorizontalAlignment="Right"
                                                               Width="5"
@@ -261,21 +338,41 @@
                                             </Grid>
                                         </ToggleButton.Content>
                                         <ToggleButton.ContextMenu>
-                                            <ContextMenu x:Name="Part_ExpandedContextMenu"
-                                                             Style="{StaticResource WPFContextMenuStyle}"
-                                                             ItemsSource="{TemplateBinding SymbolFilters}"  
-                                                             IsEnabled="{Binding Path=SymbolFilters, RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToBooleanConverter}}" 
-                                                             Visibility="{Binding RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToVisibityConverter}}">
-                                                <ContextMenu.ItemContainerStyle>
-                                                    <Style TargetType="MenuItem" BasedOn="{StaticResource WPFMenuItemStyle}">
-                                                        <Setter Property="StaysOpenOnClick" Value="True"></Setter>
-                                                        <Setter Property="Header" Value="{Binding Content}"/>
-                                                        <Setter Property="HeaderTemplate" Value="{Binding ContentTemplate}"/>
-                                                        <Setter Property="IsChecked" Value="{Binding IsChecked,Mode=TwoWay}"/>
-                                                        <Setter Property="Command" Value="{Binding Command}"/>
-                                                        <Setter Property="CommandParameter" Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=diagram_stencil:Stencil}}"/>
+                                            <ContextMenu x:Name="Part_ExpandedContextMenu" >
+                                                <ContextMenu.Style>
+                                                    <Style TargetType="{x:Type ContextMenu}" BasedOn="{StaticResource WPFContextMenuStyle}">
+                                                        <Setter Property="ItemContainerStyle">
+                                                            <Setter.Value>
+                                                                <Style TargetType="MenuItem" BasedOn="{StaticResource WPFMenuItemStyle}">
+                                                                    <Setter Property="Height" Value="32"></Setter>
+                                                                    <Setter Property="StaysOpenOnClick" Value="True"></Setter>
+                                                                    <Setter Property="Header" Value="{Binding Header}"/>
+                                                                    <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(ContextMenu.Foreground)}"/>
+                                                                    <Setter Property="IsChecked" Value="{Binding HeaderVisibility, Converter={StaticResource VisibilityToBoolConverter}, Mode=TwoWay}"/>
+                                                                    <Setter Property="IsCheckable" Value="True"/>
+                                                                </Style>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Path=SymbolFilters, RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToBooleanConverter}}" Value="True">
+                                                                <Setter Property="ItemContainerStyle">
+                                                                    <Setter.Value>
+                                                                        <Style TargetType="MenuItem" BasedOn="{StaticResource WPFMenuItemStyle}">
+                                                                            <Setter Property="Height" Value="32"></Setter>
+                                                                            <Setter Property="StaysOpenOnClick" Value="True"></Setter>
+                                                                            <Setter Property="Header" Value="{Binding Content}"/>
+                                                                            <Setter Property="HeaderTemplate" Value="{Binding ContentTemplate}"/>
+                                                                            <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(ContextMenu.Foreground)}"/>
+                                                                            <Setter Property="IsChecked" Value="{Binding IsChecked,Mode=TwoWay}"/>
+                                                                            <Setter Property="Command" Value="{Binding Command}"/>
+                                                                            <Setter Property="CommandParameter" Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=diagram_stencil:Stencil}}"/>
+                                                                        </Style>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
                                                     </Style>
-                                                </ContextMenu.ItemContainerStyle>
+                                                </ContextMenu.Style>
                                             </ContextMenu>
                                         </ToggleButton.ContextMenu>
                                     </ToggleButton>
@@ -288,18 +385,36 @@
                                                           CanContentScroll="True">
                                             <ListView x:Name="Part_SymbolHeaders"
                                                           HorizontalAlignment="Stretch"
-                                                          VerticalAlignment="Stretch"
-                                                          Style="{StaticResource WPFListViewStyle}" 
-                                                          IsEnabled="{Binding Path=SymbolFilters, RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToBooleanConverter}}" 
-                                                          Visibility="{Binding RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToVisibityConverter}}"
-                                                          SelectedItem="{Binding Path=SelectedFilter, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
-                                                <ListView.ItemContainerStyle>
-                                                    <Style TargetType="{x:Type ListViewItem}" BasedOn="{StaticResource WPFListViewItemStyle}">
-                                                        <Setter Property="Height" Value="32"/>
-                                                        <Setter Property="Content" Value="{Binding Content}"/>
-                                                        <Setter Property="ContentTemplate" Value="{Binding ContentTemplate}"/>
+                                                          VerticalAlignment="Stretch">
+                                                <ListView.Style>
+                                                    <Style TargetType="{x:Type ListView}" BasedOn="{StaticResource WPFListViewStyle}">
+                                                        <Setter Property="ItemContainerStyle">
+                                                            <Setter.Value>
+                                                                <Style TargetType="{x:Type ListViewItem}" BasedOn="{StaticResource WPFListViewItemStyle}">
+                                                                    <Setter Property="Height" Value="32"/>
+                                                                    <Setter Property="Content" Value="{Binding Path=Header}"/>
+                                                                    <Setter Property="ContentTemplate" Value="{Binding Path=HeaderTemplate}"/>
+                                                                    <Setter Property="Template" Value="{StaticResource SymbolGroupListHeaderTemplate}"/>
+                                                                </Style>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Path=SymbolFilters, RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToBooleanConverter}}" Value="True">
+                                                                <Setter Property="SelectedItem" Value="{Binding Path=SelectedFilter, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"/>
+                                                                <Setter Property="ItemContainerStyle">
+                                                                    <Setter.Value>
+                                                                        <Style TargetType="{x:Type ListViewItem}" BasedOn="{StaticResource WPFListViewItemStyle}">
+                                                                            <Setter Property="Height" Value="32"/>
+                                                                            <Setter Property="Content" Value="{Binding Path=Content}"/>
+                                                                            <Setter Property="ContentTemplate" Value="{Binding Path=ContentTemplate}"/>
+                                                                            <Setter Property="Template" Value="{StaticResource SymbolGroupListHeaderTemplate}"/>
+                                                                        </Style>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
                                                     </Style>
-                                                </ListView.ItemContainerStyle>
+                                                </ListView.Style>
                                             </ListView>
                                         </ScrollViewer>
                                     </Grid>
@@ -307,7 +422,7 @@
                                         <Style TargetType="{x:Type Grid}">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Path=SymbolFilterDisplayMode, RelativeSource={RelativeSource TemplatedParent}}" Value="List">
+                                                <DataTrigger Binding="{Binding Path=SymbolGroupDisplayMode, RelativeSource={RelativeSource TemplatedParent}}" Value="List">
                                                     <Setter Property="Visibility" Value="Visible" />
                                                 </DataTrigger>
                                             </Style.Triggers>
@@ -315,27 +430,194 @@
                                     </Grid.Style>
                                 </Grid>
                                 <GridSplitter x:Name="Part_GridSplitter" 
-                                                  Grid.Row="2" 
-                                                  Margin="0,2,4,2"
-                                                  Height="1.5" 
-                                                  ResizeBehavior="PreviousAndNext"
-                                                  HorizontalAlignment="Stretch">
+                                              Grid.Row="2" 
+                                              Grid.Column="0" 
+                                              Grid.ColumnSpan="2"
+                                              Height="1.5" 
+                                              ResizeBehavior="PreviousAndNext"
+                                              HorizontalAlignment="Stretch">
+                                    <GridSplitter.Margin>
+                                        <Thickness>0,2,4,2</Thickness>
+                                    </GridSplitter.Margin>
                                     <GridSplitter.Style>
                                         <Style TargetType="{x:Type GridSplitter}" BasedOn="{StaticResource WPFGridSplitterStyle}">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                             <Style.Triggers>
-                                                <MultiDataTrigger>
-                                                    <MultiDataTrigger.Conditions>
-                                                        <Condition Binding="{Binding Path=SymbolFilterDisplayMode, RelativeSource={RelativeSource TemplatedParent}}" Value="List"/>
-                                                        <Condition Binding="{Binding RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToVisibityConverter}}" Value="Visible"/>
-                                                    </MultiDataTrigger.Conditions>
+                                                <DataTrigger Binding="{Binding Path=SymbolGroupDisplayMode, RelativeSource={RelativeSource TemplatedParent}}" Value="List">
                                                     <Setter Property="Visibility" Value="Visible" />
-                                                </MultiDataTrigger>
+                                                </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </GridSplitter.Style>
                                 </GridSplitter>
+                                <Grid Grid.Row="3" 
+                                      Grid.Column="0"
+                                      Width="32"
+                                      x:Name="Part_TabHeaderGrid">
+                                    <Border BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1101}"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}">
+                                        <Grid VerticalAlignment="Top">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="auto"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="auto"/>
+                                                <RowDefinition Height="auto"/>
+                                            </Grid.RowDefinitions>
+                                            <Button Grid.Row="0" 
+                                                    Margin="2" 
+                                                    x:Name="Part_TabHeaderNavUpButton" 
+                                                    Width="24" 
+                                                    Height="24"                                                     
+                                                    HorizontalAlignment="Center" 
+                                                    VerticalAlignment="Center" 
+                                                    Visibility="Collapsed"
+                                                    Style="{StaticResource WPFGlyphButtonStyle}">
+                                                <Button.Content>
+                                                    <Path Width="6"
+                                                          Height="10"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"
+                                                          Stretch="Uniform"
+                                                          Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(Button.Foreground)}"
+                                                          StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness1}">
+                                                        <Path.Data>
+                                                            <PathGeometry>M1 1L6.5 6.5L1 12</PathGeometry>
+                                                        </Path.Data>
+                                                        <Path.RenderTransform>
+                                                            <RotateTransform Angle="270" />
+                                                        </Path.RenderTransform>
+                                                        <Path.Margin>
+                                                            <Thickness Left="0" Top="12" Right="4" Bottom="0"/>
+                                                        </Path.Margin>
+                                                    </Path>
+                                                </Button.Content>
+                                            </Button>
+                                            <ScrollViewer x:Name="Part_TabHeaderScrollViewer"
+                                                          Grid.Row="1" 
+                                                          Style="{StaticResource WPFScrollViewerStyle}" 
+                                                          VerticalScrollBarVisibility="Hidden"
+                                                          CanContentScroll="True">
+                                                <ListView x:Name="Part_TabHeaderListView"
+                                                          HorizontalAlignment="Stretch" 
+                                                          VerticalAlignment="Stretch">
+                                                    <ListView.Style>
+                                                        <Style TargetType="{x:Type ListView}" BasedOn="{StaticResource WPFListViewStyle}">
+                                                            <Setter Property="ItemContainerStyle">
+                                                                <Setter.Value>
+                                                                    <Style TargetType="{x:Type ListViewItem}" BasedOn="{StaticResource WPFListViewItemStyle}">
+                                                                        <Setter Property="Content" Value="{Binding Path=Header}" />
+                                                                        <Setter Property="ContentTemplate" Value="{Binding Path=HeaderTemplate}" />
+                                                                        <Setter Property="Width" Value="28"/>
+                                                                        <Setter Property="Padding">
+                                                                            <Setter.Value>
+                                                                                <Thickness>4,4,0,4</Thickness>
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding Path=HeaderTemplate, Converter={StaticResource NullToBooleanConverter}}" Value="False">
+                                                                                <Setter Property="ContentTemplate" Value="{StaticResource DefaultTabHeaderTemplate}"/>
+                                                                                <Setter Property="Padding">
+                                                                                    <Setter.Value>
+                                                                                        <Thickness>4,4,0,4</Thickness>
+                                                                                    </Setter.Value>
+                                                                                </Setter>
+                                                                            </DataTrigger>
+                                                                            <Trigger Property="GridView.ColumnCollection" Value="{x:Null}">
+                                                                                <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
+                                                                                <Setter Property="Template" Value="{StaticResource StencilGroupTabHeaderTemplate}"/>
+                                                                                <Setter Property="Padding">
+                                                                                    <Setter.Value>
+                                                                                        <Thickness>4,4,0,4</Thickness>
+                                                                                    </Setter.Value>
+                                                                                </Setter>
+                                                                            </Trigger>
+                                                                            <Trigger Property="IsSelected" Value="True">
+                                                                                <Setter Property="Foreground" Value="{StaticResource PrimaryColorForeground}"/>
+                                                                            </Trigger>
+                                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                                <Setter Property="Foreground" Value="{StaticResource ContentForeground}"/>
+                                                                            </Trigger>
+                                                                        </Style.Triggers>                                                                        
+                                                                    </Style>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </Style>
+                                                    </ListView.Style>
+                                                </ListView>
+                                            </ScrollViewer>
+                                            <Button Grid.Row="2" 
+                                                    Margin="0,2" 
+                                                    x:Name="Part_TabHeaderNavDownButton"
+                                                    Width="24" 
+                                                    Height="24" 
+                                                    HorizontalAlignment="Center" 
+                                                    VerticalAlignment="Center"
+                                                    Visibility="Collapsed" 
+                                                    Style="{StaticResource WPFGlyphButtonStyle}">
+                                                <Button.Content>
+                                                    <Path Width="6"
+                                                          Height="10"
+                                                          HorizontalAlignment="Right"
+                                                          VerticalAlignment="Center"
+                                                          Stretch="Uniform"
+                                                          Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(Button.Foreground)}"
+                                                          StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness1}">
+                                                        <Path.Data>
+                                                            <PathGeometry>M1 1L6.5 6.5L1 12</PathGeometry>
+                                                        </Path.Data>
+                                                        <Path.RenderTransform>
+                                                            <RotateTransform Angle="90" />
+                                                        </Path.RenderTransform>
+                                                        <Path.Margin>
+                                                            <Thickness Left="12" Top="4" Right="0" Bottom="0"/>
+                                                        </Path.Margin>
+                                                    </Path>
+                                                </Button.Content>
+                                            </Button>
+                                            <ToggleButton x:Name="Part_TabHeaderAddSymbolGroup"
+                                                          Grid.Row="3" 
+                                                          Margin="0,2,0,100" 
+                                                          Width="24" 
+                                                          Height="24" 
+                                                          HorizontalAlignment="Center" 
+                                                          VerticalAlignment="Center">
+                                                <ToggleButton.Content>
+                                                    <Path Width="12" 
+                                                          Height="12" 
+                                                          Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(Button.Foreground)}"
+                                                          Data="M10.5 5.625C10.5 5.72656 10.4629 5.81445 10.3887 5.88867C10.3145 5.96289 10.2266 6 10.125 6H6V10.125C6 10.2266 5.96289 10.3145 5.88867 10.3887C5.81445 10.4629 5.72656 10.5 5.625 10.5C5.52344 10.5 5.43555 10.4629 5.36133 10.3887C5.28711 10.3145 5.25 10.2266 5.25 10.125V6H1.125C1.02344 6 0.935547 5.96289 0.861328 5.88867C0.787109 5.81445 0.75 5.72656 0.75 5.625C0.75 5.52344 0.787109 5.43555 0.861328 5.36133C0.935547 5.28711 1.02344 5.25 1.125 5.25H5.25V1.125C5.25 1.02344 5.28711 0.935547 5.36133 0.861328C5.43555 0.787109 5.52344 0.75 5.625 0.75C5.72656 0.75 5.81445 0.787109 5.88867 0.861328C5.96289 0.935547 6 1.02344 6 1.125V5.25H10.125C10.2266 5.25 10.3145 5.28711 10.3887 5.36133C10.4629 5.43555 10.5 5.52344 10.5 5.625Z"/>
+                                                </ToggleButton.Content>
+                                                <ToggleButton.ContextMenu>
+                                                    <ContextMenu x:Name="Part_TabHeaderAddSymbolGroupMenu" Style="{StaticResource WPFContextMenuStyle}">
+                                                        <ContextMenu.ItemContainerStyle>
+                                                            <Style TargetType="MenuItem" BasedOn="{StaticResource WPFMenuItemStyle}">
+                                                                <Setter Property="Height" Value="32"></Setter>
+                                                                <Setter Property="StaysOpenOnClick" Value="True"></Setter>
+                                                                <Setter Property="Header" Value="{Binding Header}"/>
+                                                                <!--<Setter Property="Foreground" Value="{StaticResource SymbolFilterTextblockForegroundBrush}"/>-->
+                                                                <Setter Property="IsChecked" Value="{Binding HeaderVisibility, Converter={StaticResource VisibilityToBoolConverter}, Mode=TwoWay}"/>
+                                                                <Setter Property="IsCheckable" Value="True"/>
+                                                            </Style>
+                                                        </ContextMenu.ItemContainerStyle>
+                                                    </ContextMenu>
+                                                </ToggleButton.ContextMenu>
+                                            </ToggleButton>
+                                        </Grid>
+                                    </Border>
+                                    <Grid.Style>
+                                        <Style TargetType="{x:Type Grid}">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Path=SymbolGroupDisplayMode, RelativeSource={RelativeSource TemplatedParent}}" Value="Tab">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
+                                </Grid>
                                 <ScrollViewer Grid.Row="3"
+                                                  Grid.Column="1"
                                                   VerticalScrollBarVisibility="Auto"
                                                   Style="{StaticResource WPFScrollViewerStyle}"
                                                   CanContentScroll="True">
@@ -393,10 +675,9 @@
                                     <RowDefinition Height="*"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
-                                <Grid Background="{TemplateBinding Background}" Visibility="{Binding RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToVisibityConverter}}">
+                                <Grid Background="{TemplateBinding Background}" Visibility="{Binding ElementName=expander,Path=IsExpanded,Converter={StaticResource InverseBoolToVisibilityConverter}}">
                                     <ToggleButton x:Name="Part_CollapsedShape"
-                                                      Height="30"
-                                                      IsEnabled="{Binding Path=SymbolFilters, RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToBooleanConverter}}">
+                                                  Height="30">
                                         <ToggleButton.Content>
                                             <Grid >
                                                 <Grid.ColumnDefinitions>
@@ -408,9 +689,9 @@
                                                               HorizontalAlignment="Right"
                                                               VerticalAlignment="Center">
                                                     <Path HorizontalAlignment="Center"
-                                                                  VerticalAlignment="Center"
-                                                                  Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
-                                                                  Data="M1 1H4V4H1V1ZM0 0H1H4H5V1V4V5H4H1H0V4V1V0ZM1 7H4V10H1V7ZM0 6H1H4H5V7V10V11H4H1H0V10V7V6ZM10 1H7V4H10V1ZM7 0H6V1V4V5H7H10H11V4V1V0H10H7ZM7 7H10V10H7V7ZM6 6H7H10H11V7V10V11H10H7H6V10V7V6Z"/>
+                                                          VerticalAlignment="Center"
+                                                          Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"
+                                                          Data="M1 1H4V4H1V1ZM0 0H1H4H5V1V4V5H4H1H0V4V1V0ZM1 7H4V10H1V7ZM0 6H1H4H5V7V10V11H4H1H0V10V7V6ZM10 1H7V4H10V1ZM7 0H6V1V4V5H7H10H11V4V1V0H10H7ZM7 7H10V10H7V7ZM6 6H7H10H11V7V10V11H10H7H6V10V7V6Z"/>
                                                 </Grid>
                                                 <Path         Grid.Column="1"
                                                               Width="5"
@@ -424,22 +705,30 @@
                                         </ToggleButton.Content>
                                         <ToggleButton.ContextMenu>
                                             <ContextMenu x:Name="Part_CollapsedContextMenu"
-                                                             Style="{StaticResource WPFContextMenuStyle}"
-                                                             IsEnabled="{Binding Path=SymbolFilters, RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToBooleanConverter}}" 
-                                                             Visibility="{Binding RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToVisibityConverter}}">
-                                                <MenuItem  Header="More Shapes" 
-                                                               ItemsSource="{TemplateBinding SymbolFilters}">
+                                                             Style="{StaticResource WPFContextMenuStyle}">
+                                                <MenuItem Header="More Shapes">
                                                     <MenuItem.ItemContainerStyle>
                                                         <Style TargetType="MenuItem" BasedOn="{StaticResource WPFMenuItemStyle}">
                                                             <Style.Setters>
-                                                                <Setter Property="Height" Value="32"/>
                                                                 <Setter Property="StaysOpenOnClick" Value="True"></Setter>
-                                                                <Setter Property="Header" Value="{Binding Content}"/>
-                                                                <Setter Property="HeaderTemplate" Value="{Binding ContentTemplate}"/>
-                                                                <Setter Property="IsChecked" Value="{Binding IsChecked,Mode=TwoWay}"/>
-                                                                <Setter Property="Command" Value="{Binding Command}"/>
-                                                                <Setter Property="CommandParameter" Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=diagram_stencil:Stencil}}"/>
+                                                                <Setter Property="Height" Value="32"/>
+                                                                <Setter Property="Header" Value=""/>
                                                             </Style.Setters>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Path=SymbolFilters, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=diagram_stencil:Stencil},Converter={StaticResource NullToBooleanConverter}}" Value="False">
+                                                                    <DataTrigger.Setters>
+                                                                        <Setter Property="Header" Value="{Binding Header}"/>
+                                                                        <Setter Property="IsChecked" Value="{Binding HeaderVisibility, Converter={StaticResource VisibilityToBoolConverter}, Mode=TwoWay}"/>
+                                                                        <Setter Property="IsCheckable" Value="True"/>
+                                                                    </DataTrigger.Setters>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Path=SymbolFilters, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=diagram_stencil:Stencil},Converter={StaticResource NullToBooleanConverter}}" Value="True">
+                                                                    <Setter Property="Header" Value="{Binding Content}"/>
+                                                                    <Setter Property="IsChecked" Value="{Binding IsChecked,Mode=TwoWay}"/>
+                                                                    <Setter Property="Command" Value="{Binding Command}"/>
+                                                                    <Setter Property="CommandParameter" Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=diagram_stencil:Stencil}}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
                                                         </Style>
                                                     </MenuItem.ItemContainerStyle>
                                                 </MenuItem>
@@ -449,7 +738,10 @@
                                             <Style TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource WPFToggleButtonStyle}">
                                                 <Setter Property="Visibility" Value="Hidden" />
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Path=SymbolFilterDisplayMode, RelativeSource={RelativeSource TemplatedParent}}" Value="List">
+                                                    <DataTrigger Binding="{Binding Path=SymbolGroupDisplayMode, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=diagram_stencil:Stencil}}" Value="List">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Path=SymbolGroupDisplayMode, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=diagram_stencil:Stencil}}" Value="Tab">
                                                         <Setter Property="Visibility" Value="Visible" />
                                                     </DataTrigger>
                                                 </Style.Triggers>
@@ -457,8 +749,7 @@
                                         </ToggleButton.Style>
                                     </ToggleButton>
                                     <ToggleButton x:Name="Part_AccordionShape"
-                                                      Height="30" 
-                                                      IsEnabled="{Binding Path=SymbolFilters, RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToBooleanConverter}}">
+                                                      Height="30">
                                         <ToggleButton.Content>
                                             <Grid  Background="{TemplateBinding Background}">
                                                 <Grid.ColumnDefinitions>
@@ -486,35 +777,44 @@
                                                               Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}"/>
                                             </Grid>
                                         </ToggleButton.Content>
-                                        <ToggleButton.ContextMenu>
-                                            <ContextMenu x:Name="Part_AccordionContextMenu"
-                                                             Style="{StaticResource WPFContextMenuStyle}"
-                                                             ItemsSource="{TemplateBinding SymbolFilters}"
-                                                             IsEnabled="{Binding Path=SymbolFilters, RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToBooleanConverter}}" 
-                                                             Visibility="{Binding RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToVisibityConverter}}">
-                                                <ContextMenu.ItemContainerStyle>
-                                                    <Style TargetType="MenuItem" BasedOn="{StaticResource WPFMenuItemStyle}">
-                                                        <Setter Property="Height" Value="32"></Setter>
-                                                        <Setter Property="StaysOpenOnClick" Value="True"></Setter>
-                                                        <Setter Property="Header" Value="{Binding Content}"/>
-                                                        <Setter Property="HeaderTemplate" Value="{Binding ContentTemplate}"/>
-                                                        <Setter Property="IsChecked" Value="{Binding IsChecked,Mode=TwoWay}"/>
-                                                        <Setter Property="Command" Value="{Binding Command}"/>
-                                                        <Setter Property="CommandParameter" Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=diagram_stencil:Stencil}}"/>
-                                                    </Style>
-                                                </ContextMenu.ItemContainerStyle>
-                                            </ContextMenu>
-                                        </ToggleButton.ContextMenu>
                                         <ToggleButton.Style>
                                             <Style TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource WPFToggleButtonStyle}">
                                                 <Setter Property="Visibility" Value="Hidden" />
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Path=SymbolFilterDisplayMode, RelativeSource={RelativeSource TemplatedParent}}" Value="ComboBox">
+                                                    <DataTrigger Binding="{Binding Path=SymbolGroupDisplayMode, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=diagram_stencil:Stencil}}" Value="Accordion">
                                                         <Setter Property="Visibility" Value="Visible" />
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </ToggleButton.Style>
+                                        <ToggleButton.ContextMenu>
+                                            <ContextMenu x:Name="Part_AccordionContextMenu"
+                                                             Style="{StaticResource WPFContextMenuStyle}">
+                                                <ContextMenu.ItemContainerStyle>
+                                                    <Style TargetType="MenuItem" BasedOn="{StaticResource WPFMenuItemStyle}">
+                                                        <Setter Property="Height" Value="32"></Setter>
+                                                        <Setter Property="StaysOpenOnClick" Value="True"></Setter>
+                                                        <Setter Property="Header" Value="{Binding Header}"/>
+                                                        <Setter Property="IsChecked" Value="{Binding IsExpanded, Mode=OneWay}"/>
+                                                        <Setter Property="IsCheckable" Value="True"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Path=SymbolFilters, RelativeSource={RelativeSource TemplatedParent},Converter={StaticResource NullToBooleanConverter}}" Value="True">
+                                                                <Setter Property="ItemContainerStyle">
+                                                                    <Setter.Value>
+                                                                        <Style TargetType="MenuItem" BasedOn="{StaticResource WPFMenuItemStyle}">
+                                                                            <Setter Property="Height" Value="32"/>
+                                                                            <Setter Property="StaysOpenOnClick" Value="True"/>
+                                                                            <Setter Property="Header" Value="{Binding Content}"/>
+                                                                            <Setter Property="IsCheckable" Value="True"/>
+                                                                        </Style>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ContextMenu.ItemContainerStyle>
+                                            </ContextMenu>
+                                        </ToggleButton.ContextMenu>
                                     </ToggleButton>
                                 </Grid>
                                 <RepeatButton x:Name="UpButton"
@@ -582,7 +882,6 @@
                                           Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(RepeatButton.Foreground)}"/>
                                 </RepeatButton>
                             </Grid>
-
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -638,7 +937,7 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 Padding="{TemplateBinding Padding}"
-                                CornerRadius="2"
+                                CornerRadius="{StaticResource MaterialDarkCustom.CornerRadius2}"
                                 Margin="1">
                             <ContentPresenter Content="{TemplateBinding Content}"
                                               ContentTemplate="{TemplateBinding ContentTemplate}"/>
@@ -693,7 +992,7 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 Padding="{TemplateBinding Padding}"
-                                CornerRadius="2"
+                                CornerRadius="{StaticResource MaterialDarkCustom.CornerRadius2}"
                                 Margin="1">
                                     <Grid>
                                         <Grid.RowDefinitions>
@@ -940,17 +1239,83 @@
                         <DataTrigger Binding="{Binding Path=DisplayMode, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=diagram_stencil:Stencil}}" Value="Expanded">
                             <Setter Property="Margin" Value="0,0,0,0" TargetName="symbolgroup"></Setter>
                         </DataTrigger>
-                        <DataTrigger Binding="{Binding Path=SymbolFilterDisplayMode, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=diagram_stencil:Stencil}}" Value="List">
-                            <Setter Property="Visibility" Value="Collapsed" TargetName="borderpath"></Setter>
-                            <Setter Property="Visibility" Value="Visible" TargetName="symbolgroup"></Setter>
-                        </DataTrigger>
                         <DataTrigger Binding="{Binding Path=ExpandMode, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=diagram_stencil:Stencil}}" Value="All">
                             <Setter Property="Visibility" Value="Collapsed" TargetName="borderpath"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=SymbolGroupDisplayMode, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=diagram_stencil:Stencil}}" Value="List">
+                            <Setter Property="Visibility" Value="Collapsed" TargetName="borderpath"/>
+                            <Setter TargetName="PART_Header" Property="ContentTemplate">
+                                <Setter.Value>
+                                    <DataTemplate>
+                                        <diagram_stencil:Header>
+                                            <diagram_stencil:Header.Template>
+                                                <ControlTemplate TargetType="diagram_stencil:Header">
+                                                    <Grid>
+                                                        <Border>
+                                                            <TextBlock Margin="10" Text="{Binding}" Style="{StaticResource WPFTextBlockStyle}"/>
+                                                        </Border>
+                                                    </Grid>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                                                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </diagram_stencil:Header.Template>
+                                        </diagram_stencil:Header>
+                                    </DataTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=SymbolGroupDisplayMode, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=diagram_stencil:Stencil}}" Value="Tab">
+                            <Setter TargetName="borderpath" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="PART_Header" Property="ContentTemplate">
+                                <Setter.Value>
+                                    <DataTemplate>
+                                        <diagram_stencil:Header>
+                                            <diagram_stencil:Header.Template>
+                                                <ControlTemplate TargetType="diagram_stencil:Header">
+                                                    <Grid>
+                                                        <Border>
+                                                            <TextBlock Margin="10" Text="{Binding}" Style="{StaticResource WPFTextBlockStyle}"/>
+                                                        </Border>
+                                                    </Grid>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
+                                                            <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </diagram_stencil:Header.Template>
+                                        </diagram_stencil:Header>
+                                    </DataTemplate>
+                                </Setter.Value>
+                            </Setter>
                         </DataTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Path=SymbolGroupDisplayMode, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=diagram_stencil:Stencil}}" Value="List">
+                <Setter Property="HeaderTemplate" Value="{x:Null}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Path=SymbolGroupDisplayMode, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=diagram_stencil:Stencil}}" Value="Tab">
+                <Setter Property="HeaderTemplate">
+                    <Setter.Value>
+                        <DataTemplate>
+                            <Grid RenderTransformOrigin="0.5,0.5">
+                                <TextBlock Text="{Binding}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock.LayoutTransform>
+                                        <RotateTransform Angle="270"/>
+                                    </TextBlock.LayoutTransform>
+                                </TextBlock>
+                            </Grid>
+                        </DataTemplate>
+                    </Setter.Value>
+                </Setter>
+            </DataTrigger>
+        </Style.Triggers>
     </Style>
 
     <Style TargetType="diagram_stencil:SymbolGroup" BasedOn="{StaticResource SyncfusionSymbolGroupStyle}"/>

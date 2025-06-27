@@ -14,7 +14,6 @@
 
     <local:BooleanToOpacityConverter x:Key="BooleanToOpacityConvert" />
     <SolidColorBrush x:Key="TabNavigationItem.Header.Static.Background" Color="#BDBDBD" />
-
     <Style x:Key="SyncfusionTabNavigationRoundButtonStyle" BasedOn="{StaticResource WPFRoundedButtonStyle}" TargetType="{x:Type Button}" >
         <Setter Property="Width" Value="24"/>
         <Setter Property="Height" Value="24"/>
@@ -68,7 +67,6 @@
                                 <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
                             </ContentPresenter.Resources>
                         </ContentPresenter>
-                        
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
@@ -201,18 +199,32 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <Border
-                                    Grid.Row="0"
                                     Height="32"
                                     Background="{TemplateBinding Background}"
+                                    
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     Visibility="{TemplateBinding HeaderVisibility}">
-                                    <Border.CornerRadius>
-                                        <CornerRadius>0,0,0,0</CornerRadius>
-                                    </Border.CornerRadius>
-                                    <ContentPresenter x:Name="header"
-                                            Grid.Row="0"
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="0"/>
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding TabStripPosition, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:TabNavigationControl}}}" Value="Bottom" />
+                                                        <Condition Binding="{Binding TabStripVisibility, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:TabNavigationControl}}}" Value="Visible" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="CornerRadius" Value="0" />
+                                                    <Setter Property="Grid.Row" Value="2"/>
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    </Border>
+                                <Grid  Grid.Row="0" Height="32" Visibility="{TemplateBinding HeaderVisibility}">
+                                        <ContentPresenter x:Name="header"
                                             Margin="12,3,3,3"
                                             VerticalAlignment="Center"
                                             Content="{Binding Path=SelectedTabItem.Header, RelativeSource={RelativeSource TemplatedParent}}"
@@ -220,17 +232,26 @@
                                             TextElement.FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
                                             TextElement.FontSize="{StaticResource MaterialDarkCustom.SubHeaderTextStyle}"
                                             TextElement.FontWeight="{StaticResource MaterialDarkCustom.FontWeightMedium}">
-                                        <ContentPresenter.Resources>
-                                            <Style BasedOn="{x:Null}" TargetType="TextBlock" />
-                                        </ContentPresenter.Resources>
-                                    </ContentPresenter>
-                                </Border>
+                                            <ContentPresenter.Resources>
+                                                <Style BasedOn="{x:Null}" TargetType="TextBlock" />
+                                            </ContentPresenter.Resources>
+                                        </ContentPresenter>
+                                    </Grid>
                                 <ItemsPresenter
-                                    Grid.Row="0"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
                                     IsHitTestVisible="{TemplateBinding IsTabStripVisible}"
-                                    Opacity="{Binding Path=IsTabStripVisible, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToOpacityConvert}}" />
+                                    Opacity="{Binding Path=IsTabStripVisible, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToOpacityConvert}}" >
+                                    <ItemsPresenter.Style>
+                                        <Style TargetType="ItemsPresenter">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TabStripPosition, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:TabNavigationControl}}}" Value="Bottom">
+                                                    <Setter Property="Grid.Row" Value="2" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ItemsPresenter.Style>
+                                </ItemsPresenter>
                                 <ContentControl
                                     x:Name="PART_OldContent"
                                     Grid.Row="1"                               

@@ -15,6 +15,9 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/RepeatButton.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
+    <Thickness x:Key="DomainUpDown.Static.Margin">0,0,0,0</Thickness>
+    <Thickness x:Key="DomainUpDown.Border.Focused.Padding">0,0,0,0</Thickness>
+
     <Style
         x:Key="UpDownRepeatButtonStyle"
         BasedOn="{StaticResource WPFGlyphRepeatButtonStyle}"
@@ -52,13 +55,13 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <ContentControl x:Name="PART_Content" IsTabStop="False" Focusable="False" Content="{TemplateBinding UpDownContent}" >
-                            </ContentControl>
+                            <ContentControl x:Name="PART_Content" IsTabStop="False" Focusable="False" Content="{TemplateBinding UpDownContent}" 
+                                            Margin="{StaticResource DomainUpDown.Static.Margin}"/>
                             <RepeatButton
                                 x:Name="PART_DownButton"
                                 Grid.Column="1"
                                 Width="16"
-                                
+                                Height="21"
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"
                                 Background="{TemplateBinding AccentBrush}"
@@ -91,7 +94,7 @@
                                 x:Name="PART_UpButton"
                                 Grid.Column="2"
                                 Width="16"
-                                
+                                Height="21"
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"
                                 Background="{TemplateBinding AccentBrush}"
@@ -203,6 +206,7 @@
                             <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
                             <Setter TargetName="Border" Property="Background" Value="{StaticResource ContentBackground}" />
                             <Setter TargetName="Border" Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}" />
+                            <Setter Property="Padding" Value="{StaticResource DomainUpDown.Border.Focused.Padding}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

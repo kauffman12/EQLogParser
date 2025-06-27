@@ -11,6 +11,7 @@
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfRichTextBoxAdv/SfRichTextBoxCommon.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/PrimaryButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatPrimaryButton.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
     <Style TargetType="richtextboxadv:TableDialog">
@@ -326,9 +327,15 @@
                         </TabControl>
                         <Border Grid.Row="2" Grid.ColumnSpan="3" Width="Auto" BorderBrush="{StaticResource BorderAlt}" Background="{StaticResource PopupBackground}" BorderThickness="0 1 0 0">
                             <StackPanel Grid.Row="2" HorizontalAlignment="Right" Orientation="Horizontal">
-                                <Button x:Name="PART_ApplyTablePropertiesButton"
-                                    Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxOk}" 
-                                    Height="24"
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="PART_ApplyTablePropertiesButton"
+                                    Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxOk}"
+                                        Grid.Column="0"
+                                        Height="24"
                                         Padding="12 2 12 2"
                                         Margin="0 5 9 5"
                                         HorizontalAlignment="Left"
@@ -339,8 +346,9 @@
                                         FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
                                         FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
                                         />
-                                <Button x:Name="PART_CancelButton" Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxCancel}"
-                                    Height="24"
+                                    <Button x:Name="PART_CancelButton" Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxCancel}"
+                                        Grid.Column="1"
+                                        Height="24"
                                         Padding="12 2 12 2"
                                         Margin="0 5 9 5"
                                         HorizontalAlignment="Left"
@@ -348,7 +356,9 @@
                                         Width="69" 
                                         TabIndex="13"
                                         FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
-                                        FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
+                                        FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                                        />
+                                </Grid>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -421,8 +431,14 @@
                         </Grid>
                         <Border Grid.Row="2" Grid.ColumnSpan="3" Width="Auto" BorderBrush="{StaticResource BorderAlt}" Background="{StaticResource PopupBackground}" BorderThickness="0 1 0 0">
                             <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right">
-                                <Button x:Name="PART_ApplyCellOptionsButton"
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="PART_ApplyCellOptionsButton"
                                         Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxOk}"
+                                        Grid.Column="0"
                                         Height="24"
                                         Padding="12 2 12 2"
                                         Margin="0 5 9 5"
@@ -434,8 +450,9 @@
                                         FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
                                         FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
                                         />
-                                <Button x:Name="PART_CancelButton"
+                                    <Button x:Name="PART_CancelButton"
                                         Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxCancel}" 
+                                        Grid.Column="1"
                                         Height="24"
                                         Padding="12 2 12 2"
                                         Margin="0 5 9 5"
@@ -444,7 +461,9 @@
                                         Width="69" 
                                         TabIndex="11"
                                         FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
-                                        FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
+                                        FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                                        />
+                                </Grid>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -655,8 +674,14 @@
                                         Grid.ColumnSpan="3" 
                                         Orientation="Horizontal" 
                                         HorizontalAlignment="Right">
-                                <Button x:Name="PART_ApplyTableOptionsButton" 
-                                        Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxOk}" 
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="PART_ApplyTableOptionsButton" 
+                                        Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxOk}"
+                                        Grid.Column="0"
                                         Height="24"
                                         FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
                                         FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
@@ -668,8 +693,9 @@
                                         TabIndex="8"
                                         IsDefault="True"
                                         />
-                                <Button x:Name="PART_CancelButton"
-                                        Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxCancel}" 
+                                    <Button x:Name="PART_CancelButton"
+                                        Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxCancel}"
+                                        Grid.Column="1"
                                         Height="24"
                                         FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
                                         FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
@@ -678,7 +704,9 @@
                                         TabIndex="9"
                                         HorizontalAlignment="Left"
                                         VerticalAlignment="Center"
-                                        Width="69"/>
+                                        Width="69"
+                                        />
+                                </Grid>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -1167,8 +1195,14 @@
                                             Grid.ColumnSpan="3"
                                             Orientation="Horizontal" 
                                             HorizontalAlignment="Right">
-                                <Button x:Name="PART_ApplyBordersAndShadingButton" 
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="PART_ApplyBordersAndShadingButton" 
                                         Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxOk}" 
+                                        Grid.Column="0"
                                         Height="24"
                                         Padding="12 2 12 2"
                                         Margin="0 -5 6 0"
@@ -1180,8 +1214,9 @@
                                         Width="50" 
                                         IsDefault="True"
                                         />
-                                <Button x:Name="PART_CancelButton" 
-                                        Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxCancel}" 
+                                    <Button x:Name="PART_CancelButton" 
+                                        Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxCancel}"
+                                        Grid.Column="1"
                                         Height="24"
                                         Padding="12 2 12 2"
                                         Margin="0 -5 6 0"
@@ -1190,7 +1225,9 @@
                                         TabIndex="10"
                                         HorizontalAlignment="Left"
                                         VerticalAlignment="Center"
-                                        Width="67"/>
+                                        Width="67"
+                                        />
+                                </Grid>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -1240,8 +1277,14 @@
                         </Grid>
                         <Border Grid.Row="2" Grid.ColumnSpan="3" Width="Auto" BorderBrush="{StaticResource BorderAlt}" Background="{StaticResource PopupBackground}" BorderThickness="0 1 0 0">
                             <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right">
-                                <Button Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxOk}" 
-                                        x:Name="PART_AddTableButton" 
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxOk}" 
+                                        x:Name="PART_AddTableButton"
+                                        Grid.Column="0"
                                         Height="24"
                                         Padding="12 2 12 2"
                                         Margin="0 5 9 5"
@@ -1253,8 +1296,9 @@
                                         FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
                                         FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
                                         />
-                                <Button Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxCancel}" 
-                                        x:Name="PART_CancelButton" 
+                                    <Button Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxCancel}" 
+                                        x:Name="PART_CancelButton"
+                                        Grid.Column="1"
                                         Height="24"
                                         Padding="12 2 12 2"
                                         Margin="0 5 9 5"
@@ -1263,7 +1307,9 @@
                                         Width="69" 
                                         TabIndex="4"
                                         FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
-                                        FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
+                                        FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                                        />
+                                </Grid>
                             </StackPanel>
                         </Border>
                     </Grid>

@@ -21,6 +21,7 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphButton.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Button.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Slider.xaml"/>
+        <ResourceDictionary Source="/Syncfusion.SfDiagram.Wpf;Component/Themes/DefaultStyles.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
     <!--Utilities-->
@@ -59,349 +60,39 @@
 
     <!--<OverView>-->
 
-    <Style TargetType="diagram:Node" x:Key="SyncfusionNodeStyle">
-        <Setter Property="ShapeStyle" 
-                Value="{Binding Path=ShapeStyle}"/>
-        <Setter Property="Shape" 
-                Value="{Binding Path=Shape,Converter={StaticResource PathConverter}}"/>
-        <Setter Property="Content"
-                Value="{Binding Path=Content}"/>
-        <Setter Property="ContentTemplate"
-                Value="{Binding Path=ContentTemplate}"/>
-        <Setter Property="ZIndex"
-                Value="{Binding Path=ZIndex}"/>
-        <Setter Property="HorizontalContentAlignment"
-                Value="Stretch"/>
-        <Setter Property="VerticalContentAlignment"
-                Value="Stretch"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="diagram:Node">
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}">
-                        <Grid>
-                            <Path x:Name="Path"
-                                  Data="{Binding RelativeSource={RelativeSource Mode=TemplatedParent},Path=Shape , Converter={StaticResource PathConverter}}"
-                                  RenderTransformOrigin="0.5,0.5"
-                                  Style="{TemplateBinding ShapeStyle}"/>
-                            <ContentPresenter x:Name="ContentPresenter"                                              
-                                              RenderTransformOrigin="0.5,0.5"
-                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                              Content="{TemplateBinding Content}"
-                                              ContentTemplate="{TemplateBinding  ContentTemplate}"/>
-                            <diagram_panels:AnnotationPanel x:Name="PART_Annotations"/>
-                        </Grid>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
+    <Style TargetType="diagram:Container" BasedOn="{StaticResource SyncfusionContainerStyle}"/>
+
+    <Style TargetType="diagram:BpmnGroup" BasedOn="{StaticResource SyncfusionBpmnGroupStyle}"/>
+
+    <Style TargetType="diagram:BpmnNode" BasedOn="{StaticResource SyncfusionBpmnNodeStyle}"/>
 
     <Style TargetType="diagram:Node" BasedOn="{StaticResource SyncfusionNodeStyle}"/>
 
-    <Style TargetType="diagram:PortBase" x:Key="SyncfusionPortBaseStyle">
-        <Setter Property="ShapeStyle" 
-                Value="{Binding Path=ShapeStyle}"/>
-        <Setter Property="Shape" 
-                Value="{Binding Path=Shape,Converter={StaticResource PathConverter}}"/>
-        <Setter Property="Content" 
-                Value="{Binding Path=Content}"/>
-        <Setter Property="ContentTemplate"
-                Value="{Binding Path=ContentTemplate}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="diagram:PortBase">
-                    <Border x:Name="port"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}">
-                        <Grid>
-                            <Path Data="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=Shape, Converter={StaticResource PathConverter}}"
-                                  Style="{TemplateBinding ShapeStyle}"/>
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                              Content="{TemplateBinding Content}"
-                                              ContentTemplate="{TemplateBinding  ContentTemplate}"/>
-                        </Grid>
-                        <VisualStateManager.VisualStateGroups>
-                            <VisualStateGroup x:Name="State">
-                                <VisualState x:Name="Collapse">
-                                    <Storyboard>
-                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="port" 
-                                                                       Storyboard.TargetProperty="(UIElement.Visibility)">
-                                            <DiscreteObjectKeyFrame KeyTime="0">
-                                                <DiscreteObjectKeyFrame.Value>
-                                                    <Visibility>Collapsed</Visibility>
-                                                </DiscreteObjectKeyFrame.Value>
-                                            </DiscreteObjectKeyFrame>
-                                        </ObjectAnimationUsingKeyFrames>
-                                    </Storyboard>
-                                </VisualState>
-                                <VisualState x:Name="Visible">
-                                    <Storyboard>
-                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="port"
-                                                                       Storyboard.TargetProperty="(UIElement.Visibility)">
-                                            <DiscreteObjectKeyFrame KeyTime="0">
-                                                <DiscreteObjectKeyFrame.Value>
-                                                    <Visibility>Visible</Visibility>
-                                                </DiscreteObjectKeyFrame.Value>
-                                            </DiscreteObjectKeyFrame>
-                                        </ObjectAnimationUsingKeyFrames>
-                                    </Storyboard>
-                                </VisualState>
-                            </VisualStateGroup>
-                        </VisualStateManager.VisualStateGroups>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
     <Style TargetType="diagram:PortBase" BasedOn="{StaticResource SyncfusionPortBaseStyle}"/>
-
-    <Style TargetType="diagram:NodePort" x:Key="SyncfusionNodePortStyle">
-        <Setter Property="ShapeStyle"
-                Value="{Binding ShapeStyle}"/>
-        <Setter Property="Shape"
-                Value="{Binding Path=Shape,Converter={StaticResource PathConverter}}"/>
-        <Setter Property="PortVisibility" 
-                Value="{Binding PortVisibility}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="diagram:NodePort">
-                    <Border x:Name="port"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}">
-                        <Grid>
-                            <Path Data="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=Shape, Converter={StaticResource PathConverter}}"
-                                  Style="{TemplateBinding ShapeStyle}"/>
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                              Content="{TemplateBinding Content}"
-                                              ContentTemplate="{TemplateBinding  ContentTemplate}"/>
-                        </Grid>
-                        <VisualStateManager.VisualStateGroups>
-                            <VisualStateGroup x:Name="State">
-                                <VisualState x:Name="Collapse">
-                                    <Storyboard>
-                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="port"
-                                                                       Storyboard.TargetProperty="(UIElement.Visibility)">
-                                            <DiscreteObjectKeyFrame KeyTime="0">
-                                                <DiscreteObjectKeyFrame.Value>
-                                                    <Visibility>Collapsed</Visibility>
-                                                </DiscreteObjectKeyFrame.Value>
-                                            </DiscreteObjectKeyFrame>
-                                        </ObjectAnimationUsingKeyFrames>
-                                    </Storyboard>
-                                </VisualState>
-                                <VisualState x:Name="Visible">
-                                    <Storyboard>
-                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="port"
-                                                                       Storyboard.TargetProperty="(UIElement.Visibility)">
-                                            <DiscreteObjectKeyFrame KeyTime="0">
-                                                <DiscreteObjectKeyFrame.Value>
-                                                    <Visibility>Visible</Visibility>
-                                                </DiscreteObjectKeyFrame.Value>
-                                            </DiscreteObjectKeyFrame>
-                                        </ObjectAnimationUsingKeyFrames>
-                                    </Storyboard>
-                                </VisualState>
-                            </VisualStateGroup>
-                        </VisualStateManager.VisualStateGroups>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
 
     <Style TargetType="diagram:NodePort" BasedOn="{StaticResource SyncfusionNodePortStyle}"/>
 
-    <Style TargetType="diagram:ConnectorPort" x:Key="SyncfusionConnectorPortStyle">
-        <Setter Property="ShapeStyle"
-                Value="{Binding ShapeStyle}"/>
-        <Setter Property="Shape" 
-                Value="{Binding Path=Shape,Converter={StaticResource PathConverter}}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="diagram:ConnectorPort">
-                    <Border x:Name="port"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}">
-                        <Grid>
-                            <Path Data="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=Shape, Converter={StaticResource PathConverter}}"
-                                  Style="{TemplateBinding ShapeStyle}"/>
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                              Content="{TemplateBinding Content}"
-                                              ContentTemplate="{TemplateBinding  ContentTemplate}"/>
-                        </Grid>
-                        <VisualStateManager.VisualStateGroups>
-                            <VisualStateGroup x:Name="State">
-                                <VisualState x:Name="Collapse">
-                                    <Storyboard>
-                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="port"
-                                                                       Storyboard.TargetProperty="(UIElement.Visibility)">
-                                            <DiscreteObjectKeyFrame KeyTime="0">
-                                                <DiscreteObjectKeyFrame.Value>
-                                                    <Visibility>Collapsed</Visibility>
-                                                </DiscreteObjectKeyFrame.Value>
-                                            </DiscreteObjectKeyFrame>
-                                        </ObjectAnimationUsingKeyFrames>
-                                    </Storyboard>
-                                </VisualState>
-                                <VisualState x:Name="Visible">
-                                    <Storyboard>
-                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="port"
-                                                                       Storyboard.TargetProperty="(UIElement.Visibility)">
-                                            <DiscreteObjectKeyFrame KeyTime="0">
-                                                <DiscreteObjectKeyFrame.Value>
-                                                    <Visibility>Visible</Visibility>
-                                                </DiscreteObjectKeyFrame.Value>
-                                            </DiscreteObjectKeyFrame>
-                                        </ObjectAnimationUsingKeyFrames>
-                                    </Storyboard>
-                                </VisualState>
-                            </VisualStateGroup>
-                        </VisualStateManager.VisualStateGroups>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
     <Style TargetType="diagram:ConnectorPort" BasedOn="{StaticResource SyncfusionConnectorPortStyle}"/>
 
-    <Style TargetType="diagram:Connector" x:Key="SyncfusionConnectorStyle">
-        <Setter Property="ConnectorGeometryStyle"
-                Value="{Binding ConnectorGeometryStyle}"/>
-        <Setter Property="SourceDecorator"
-                Value="{Binding Path=SourceDecorator,Converter={StaticResource PathConverter}}"/>
-        <Setter Property="TargetDecorator" 
-                Value="{Binding Path=TargetDecorator,Converter={StaticResource PathConverter}}"/>
-        <Setter Property="SourceDecoratorStyle" 
-                Value="{Binding SourceDecoratorStyle}"/>
-        <Setter Property="TargetDecoratorStyle" 
-                Value="{Binding TargetDecoratorStyle}"/>
-        <Setter Property="SegmentDecoratorStyle" 
-                Value="{Binding SegmentDecoratorStyle}"/>
-        <Setter Property="HitPadding" 
-                Value="{Binding HitPadding}"/>
-        <Setter Property="ZIndex" 
-                Value="{Binding ZIndex}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="diagram:Connector">
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}">
-                        <Canvas>
-                            <Path Style="{TemplateBinding ConnectorGeometryStyle}"
-                                  Data="{TemplateBinding Geometry}"/>
-                            <Path Stroke="Transparent"
-                                  StrokeThickness="{TemplateBinding HitPadding}"                                  
-                                  Data="{TemplateBinding TransparentGeometry}"/>
-                            <Path x:Name="PART_SourceDecorator" 
-                                  Style="{TemplateBinding SourceDecoratorStyle}"
-                                  Data="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=SourceDecorator, Converter={StaticResource PathConverter}}"/>
-                            <Path x:Name="PART_TargetDecorator"
-                                  Style="{TemplateBinding TargetDecoratorStyle}"
-                                  Data="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=TargetDecorator, Converter={StaticResource PathConverter}}"/>
-		 	    <Canvas x:Name="PART_SegmentDecorators" />
-                            <diagram_panels:AnnotationPanel x:Name="PART_Annotations"/>
-                        </Canvas>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
+    <Style TargetType="diagram:BpmnFlow" BasedOn="{StaticResource SyncfusionBpmnFlowStyle}"/>
 
     <Style TargetType="diagram:Connector" BasedOn="{StaticResource SyncfusionConnectorStyle}"/>
 
-    <Style TargetType="diagram:Group" x:Key="SyncfusionGroupStyle">
-        <Setter Property="ShapeStyle"
-                Value="{Binding ShapeStyle}"/>
-        <Setter Property="Shape"
-                Value="{Binding Path=Shape,Converter={StaticResource PathConverter}}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="diagram:Group">
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}">
-                        <Grid>
-                            <Canvas x:Name="PART_Ports"/>
-                            <Path x:Name="Path"  Data="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=Shape, Converter={StaticResource PathConverter}}"
-                                  RenderTransformOrigin="0.5,0.5"
-                                  Style="{TemplateBinding ShapeStyle}"/>
-                            <diagram_panels:AnnotationPanel x:Name="PART_Annotations"/>
-                        </Grid>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
     <Style TargetType="diagram:Group" BasedOn="{StaticResource SyncfusionGroupStyle}"/>
 
-    <Style TargetType="diagram:DockPort" x:Key="SyncfusionDockPortStyle">
-        <Setter Property="ConnectorGeometryStyle"
-                Value="{Binding ConnectorGeometryStyle}"/>
-        <Setter Property="HitPadding"
-                Value="{Binding HitPadding}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="diagram:DockPort">
-                    <Border x:Name="port" 
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}">
-                        <Canvas>
-                            <Path Style="{TemplateBinding ConnectorGeometryStyle}"
-                                  Data="{TemplateBinding Geometry}"/>
-                            <Path Stroke="Transparent"
-                                  StrokeThickness="{TemplateBinding HitPadding}"
-                                  StrokeLineJoin="Miter"
-                                  Data="{TemplateBinding TransparentGeometry}"/>
-                        </Canvas>
-                        <VisualStateManager.VisualStateGroups>
-                            <VisualStateGroup x:Name="State">
-                                <VisualState x:Name="Collapse">
-                                    <Storyboard>
-                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="port"
-                                                                       Storyboard.TargetProperty="(UIElement.Visibility)">
-                                            <DiscreteObjectKeyFrame KeyTime="0">
-                                                <DiscreteObjectKeyFrame.Value>
-                                                    <Visibility>Collapsed</Visibility>
-                                                </DiscreteObjectKeyFrame.Value>
-                                            </DiscreteObjectKeyFrame>
-                                        </ObjectAnimationUsingKeyFrames>
-                                    </Storyboard>
-                                </VisualState>
-                                <VisualState x:Name="Visible">
-                                    <Storyboard>
-                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="port"
-                                                                       Storyboard.TargetProperty="(UIElement.Visibility)">
-                                            <DiscreteObjectKeyFrame KeyTime="0">
-                                                <DiscreteObjectKeyFrame.Value>
-                                                    <Visibility>Visible</Visibility>
-                                                </DiscreteObjectKeyFrame.Value>
-                                            </DiscreteObjectKeyFrame>
-                                        </ObjectAnimationUsingKeyFrames>
-                                    </Storyboard>
-                                </VisualState>
-                            </VisualStateGroup>
-                        </VisualStateManager.VisualStateGroups>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
+    <Style TargetType="diagram:Swimlane" BasedOn="{StaticResource SyncfusionSwimlaneStyle}"/>
+
+    <Style TargetType="diagram:ContainerHeader" BasedOn="{StaticResource SyncfusionContainerHeaderStyle}"/>
+
+    <Style TargetType="diagram:SwimlaneHeader" BasedOn="{StaticResource SyncfusionSwimlaneHeaderStyle}"/>
+
+    <Style TargetType="diagram:Lane" BasedOn="{StaticResource SyncfusionLaneStyle}"/>
+
+    <Style TargetType="diagram:Phase" BasedOn="{StaticResource SyncfusionPhaseStyle}"/>
 
     <Style TargetType="diagram:DockPort" BasedOn="{StaticResource SyncfusionDockPortStyle}"/>
+
+    <Style TargetType="diagram:QuickCommand" BasedOn="{StaticResource SyncfusionQuickCommandStyle}"/>
 
     <Style x:Key="SyncfusionRotatorDiagramThumbStyle" TargetType="diagram_localControls:DiagramThumb">
         <Setter Property="IsTabStop" Value="False"/>
@@ -625,8 +316,6 @@
                 Value="{Binding Pivot , Mode=TwoWay}"/>
         <Setter Property="SelectorConstraints" 
                 Value="{Binding SelectorConstraints , Mode=TwoWay}"/>
-        <Setter Property="QuickCommands" 
-                Value="{Binding QuickCommands,Mode=TwoWay}" />
         <Setter Property="TooltipTemplate">
             <Setter.Value>
                 <DataTemplate>
@@ -761,7 +450,7 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}" 
                             Opacity="0.6"
-                            CornerRadius="0 "
+                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
                             RenderTransformOrigin="0.5,0.5">
                         <Border.RenderTransform>
                             <ScaleTransform></ScaleTransform>
@@ -1137,7 +826,14 @@
                     <Border BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             Background="{TemplateBinding Background}">
-                        <Canvas x:Name="Part_RulerPanel" />
+                            <Grid>
+                                <Canvas x:Name="Part_RulerPanel" />
+                                <Canvas x:Name="Part_RulerPanelOverlay">
+                                    <Line x:Name="Part_PositionIndicatorLine"
+                                            Stroke="{StaticResource PrimaryBackground}"
+                                            StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness1}"/>
+                                </Canvas>
+                            </Grid>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
@@ -1217,7 +913,7 @@
                             <Rectangle x:Name="PART_Background"
                                        Grid.Row="1"
                                        Grid.Column="1"
-                                       Fill="{StaticResource White}"/>
+                                       Fill="{TemplateBinding Background}"/>
                             <diagram_localControls:ScrollViewer x:Name="Part_Scrollviewer"
                                                                 Grid.Row="1" 
                                                                 Grid.Column="1"
@@ -1229,7 +925,89 @@
             </Setter.Value>
         </Setter>
         <Setter Property="Background"
-                Value="{StaticResource White}"></Setter>
+                Value="{StaticResource White}"/>
+        <Setter Property="FirstSelectionIndicatorStyle">
+            <Setter.Value>
+                <Style TargetType="Shape">
+                    <Setter Property="Stroke" 
+                            Value="#FF8CC63F" />
+                    <Setter Property="StrokeThickness" 
+                            Value="3"/>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="NodeSelectionIndicatorStyle">
+            <Setter.Value>
+                <Style TargetType="Rectangle">
+                    <Setter Property="Stroke" 
+                            Value="#FF8CC63F" />
+                    <Setter Property="StrokeThickness" 
+                            Value="1"/>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ConnectorSelectionIndicatorStyle">
+            <Setter.Value>
+                <Style TargetType="Path">
+                    <Setter Property="Stroke" 
+                            Value="#FF8CC63F" />
+                    <Setter Property="StrokeThickness" 
+                            Value="1"/>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="NodeDropIndicatorStyle">
+            <Setter.Value>
+                <Style TargetType="Rectangle">
+                    <Setter Property="Stroke" 
+                            Value="Green"/>
+                    <Setter Property="StrokeThickness" 
+                            Value="1"/>
+                    <Setter Property="StrokeDashArray" 
+                            Value="2,2"/>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="BpmnGroupDropIndicatorStyle">
+            <Setter.Value>
+                <Style TargetType="Rectangle">
+                    <Setter Property="Stroke" 
+                            Value="Green"/>
+                    <Setter Property="StrokeThickness" 
+                            Value="2"/>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ConnectorDropIndicatorStyle">
+            <Setter.Value>
+                <Style TargetType="Path">
+                    <Setter Property="Stroke" 
+                            Value="Green"/>
+                    <Setter Property="StrokeThickness" 
+                            Value="2"/>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="LaneDropIndicatorStyle">
+            <Setter.Value>
+                <Style TargetType="Rectangle">
+                    <Setter Property="Stroke" 
+                            Value="#FF8CC63F"/>
+                    <Setter Property="StrokeThickness" 
+                            Value="2"/>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ConnectionIndicatorStyle">
+            <Setter.Value>
+                <Style TargetType="Path">
+                    <Setter Property="Stroke" 
+                            Value="#FF0dc923"/>
+                    <Setter Property="StrokeThickness"
+                            Value="1.5"/>
+                </Style>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style TargetType="diagram:SfDiagram" BasedOn="{StaticResource SyncfusionSfDiagramStyle}"/>
@@ -1369,6 +1147,9 @@
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
                                             Style="{StaticResource WPFGlyphButtonStyle}">
+                                        <Button.Margin>
+                                            <Thickness>0,0,0,0</Thickness>
+                                        </Button.Margin>
                                         <Path Width="12" 
                                               Height="12"
                                               Stretch="Fill"
@@ -1399,6 +1180,9 @@
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
                                             Style="{StaticResource WPFGlyphButtonStyle}">
+                                        <Button.Margin>
+                                            <Thickness>0,0,0,0</Thickness>
+                                        </Button.Margin>
                                         <Path Width="12" 
                                               Height="12" 
                                               Stretch="Fill" 
@@ -1961,6 +1745,12 @@
                 Value="Top"/>
         <Setter Property="Padding" 
                 Value="0"/>
+        <Setter Property="Background"
+                Value="Transparent"/>
+        <Setter Property="BorderBrush"
+                Value="Transparent"/>
+        <Setter Property="BorderThickness"
+                Value="0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="diagram_localControls:ScrollViewer">
@@ -1989,7 +1779,7 @@
                                        Maximum="{TemplateBinding MaximumY}"
                                        SmallChange="3"
                                        LargeChange="{TemplateBinding ViewportHeight}"              
-                                       Width="12"
+                                       Width="{StaticResource MaterialDarkCustom.BodyTextStyle}"
                                        Orientation="Vertical"
                                        Style="{StaticResource WPFScrollBarStyle}"
                                        Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
@@ -2004,7 +1794,7 @@
                                        Style="{StaticResource WPFScrollBarStyle}"
                                        SmallChange="3"
                                        LargeChange="{TemplateBinding ViewportWidth}"
-                                       Height="12"
+                                       Height="{StaticResource MaterialDarkCustom.BodyTextStyle}"
                                        Orientation="Horizontal"                                       
                                        Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"
                                        ViewportSize="{TemplateBinding ViewportWidth}"

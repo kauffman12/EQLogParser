@@ -12,10 +12,12 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/DropDownButtonAdv/DropDownButtonAdv.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
-    <CornerRadius x:Key="SfScheduler.HeaderCell.AllowedViewButton.CornerRadius">16</CornerRadius>
+    <SolidColorBrush x:Key="SfScheduler.HeaderCell.AllowedViewSelectedButton.Static.Background" Color="#F5F5F5"/>
+    <CornerRadius x:Key="SfScheduler.HeaderCell.DropDownButton.CornerRadius">16</CornerRadius>
 
     <Thickness x:Key="SfScheduler.HeaderCell.AllowedViewButton.Padding">6,0,6,0</Thickness>
     <Thickness x:Key="SfScheduler.HeaderCell.AllowedViewButton.Margin">3,0,3,0</Thickness>
+    <CornerRadius x:Key="SfScheduler.HeaderCell.AllowedViewButton.CornerRadius">16</CornerRadius>
 
     <Style x:Key="SyncfusionSchedulerKeyboardFocusVisualStyle">
         <Setter Property="Control.Template">
@@ -222,14 +224,17 @@
                                     <TextBlock
                                         x:Name="PART_Text"
                                         Grid.Column="1"
-                                        Margin="5,0,5,0"
                                         HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
                                         VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                         FontFamily="{TemplateBinding FontFamily}"
                                         FontSize="{TemplateBinding FontSize}"
                                         Foreground="{TemplateBinding Foreground}"
                                         FontWeight="{TemplateBinding FontWeight}"
-                                        Text="{TemplateBinding Label}" />
+                                        Text="{TemplateBinding Label}" >
+                                        <TextBlock.Margin>
+                                            <Thickness>5,0,5,0</Thickness>
+                                        </TextBlock.Margin>
+                                    </TextBlock>
                                 </Grid>
                                 <Path
                                     x:Name="PART_Expander"
@@ -243,6 +248,9 @@
                                     <Path.Data>
                                         <PathGeometry>M 0 0 L 4 4 L 8 0 Z</PathGeometry>
                                     </Path.Data>
+                                    <Path.Margin>
+                                        <Thickness>0</Thickness>
+                                    </Path.Margin>
                                     <Path.Style>
                                         <Style TargetType="Path">
                                             <Setter Property=" Fill" Value="{StaticResource IconColor}"/>
@@ -251,7 +259,6 @@
                                 </Path>
                             </Grid>
                         </Border>
-                        
                         <Popup
                             x:Name="PART_DropDown"
                             AllowsTransparency="True"
@@ -315,6 +322,7 @@
     </Style>
 
     <Style x:Key="SyncfusionSchedulerAllowedViewsListItemStyle" TargetType="{x:Type ListViewItem}">
+        <Setter Property="Background" Value="{StaticResource PopupBackground}"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Height" Value="32"/>
@@ -340,13 +348,13 @@
                                 Visibility="Collapsed"  
                                 Background="Transparent" />
                         <Border  x:Name="PART_Border"        
-                                 Background="{StaticResource PopupBackground}"
+                                 Background="{TemplateBinding Background}"
                                  BorderBrush="Transparent" 
                                  SnapsToDevicePixels="True"
                                  BorderThickness="0"
                                  Padding="6,0,6,0"
                                  CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" 
-                                  >
+                                 >
                             <ContentPresenter   x:Name="PART_ContentPresenter"
                                                 Focusable="True"
                                                 Margin="{TemplateBinding Padding}" 
@@ -491,16 +499,16 @@
                                             Height="Auto" 
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center">
-                                    <Button x:Name="PART_TodayButton"     Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_TodayButton"     Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="{TemplateBinding Background}" Visibility="Collapsed"/>
                                     <Border x:Name="PART_Border"          Height="20"  BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1000}" BorderBrush="{StaticResource BorderAlt}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" UseLayoutRounding="True" SnapsToDevicePixels="True" Visibility="Collapsed" />
-                                    <Button x:Name="PART_ViewTypeButton1" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
-                                    <Button x:Name="PART_ViewTypeButton2" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
-                                    <Button x:Name="PART_ViewTypeButton3" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
-                                    <Button x:Name="PART_ViewTypeButton4" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
-                                    <Button x:Name="PART_ViewTypeButton5" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
-                                    <Button x:Name="PART_ViewTypeButton6" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
-                                    <Button x:Name="PART_ViewTypeButton7" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
-                                    <Button x:Name="PART_ViewTypeButton8" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="Transparent" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_ViewTypeButton1" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="{TemplateBinding Background}" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_ViewTypeButton2" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="{TemplateBinding Background}" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_ViewTypeButton3" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="{TemplateBinding Background}" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_ViewTypeButton4" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="{TemplateBinding Background}" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_ViewTypeButton5" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="{TemplateBinding Background}" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_ViewTypeButton6" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="{TemplateBinding Background}" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_ViewTypeButton7" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="{TemplateBinding Background}" Visibility="Collapsed"/>
+                                    <Button x:Name="PART_ViewTypeButton8" Style="{StaticResource SyncfusionSchedulerAllowedViewsButtonStyle}" Foreground="{TemplateBinding Foreground}" Height="{TemplateBinding Height}" FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}" FontFamily="{TemplateBinding FontFamily}" FontWeight="{TemplateBinding FontWeight}" Margin="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Margin}" Padding="{StaticResource SfScheduler.HeaderCell.AllowedViewButton.Padding}" BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}" BorderBrush="{StaticResource BorderAlt}" Background="{TemplateBinding Background}" Visibility="Collapsed"/>
                                 </StackPanel>
                                 <ToggleButton 
                                     x:Name="PART_ViewTypeComboBox" 
@@ -576,7 +584,7 @@
                                     <Popup 
                                         x:Name="PART_Popup" 
                                         PopupAnimation="Fade" 
-                                        Placement="Bottom" 
+                                        Placement="Bottom"
                                         AllowsTransparency="True"
                                         PlacementTarget="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType=ToggleButton}}" 
                                         StaysOpen="False"  
@@ -619,6 +627,9 @@
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton1" Storyboard.TargetProperty="BorderBrush">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
                                         </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton1" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{TemplateBinding Background}"/>
+                                        </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>
                                 </VisualState>
                                 <VisualState x:Name="PART_ViewTypeButton2Pressed">
@@ -628,6 +639,9 @@
                                         </ObjectAnimationUsingKeyFrames>
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton2" Storyboard.TargetProperty="BorderBrush">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton2" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{TemplateBinding Background}"/>
                                         </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>
                                 </VisualState>
@@ -639,6 +653,9 @@
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton3" Storyboard.TargetProperty="BorderBrush">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
                                         </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton3" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{TemplateBinding Background}"/>
+                                        </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>
                                 </VisualState>
                                 <VisualState x:Name="PART_ViewTypeButton4Pressed">
@@ -647,7 +664,10 @@
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
                                         </ObjectAnimationUsingKeyFrames>
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton4" Storyboard.TargetProperty="BorderBrush">
-                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton4" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{TemplateBinding Background}"/>
                                         </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>
                                 </VisualState>
@@ -659,6 +679,9 @@
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton5" Storyboard.TargetProperty="BorderBrush">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
                                         </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton5" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{TemplateBinding Background}"/>
+                                        </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>
                                 </VisualState>
                                 <VisualState x:Name="PART_ViewTypeButton6Pressed">
@@ -668,6 +691,9 @@
                                         </ObjectAnimationUsingKeyFrames>
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton6" Storyboard.TargetProperty="BorderBrush">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton6" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{TemplateBinding Background}"/>
                                         </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>
                                 </VisualState>
@@ -679,6 +705,9 @@
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton7" Storyboard.TargetProperty="BorderBrush">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
                                         </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton7" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{TemplateBinding Background}"/>
+                                        </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>
                                 </VisualState>
                                 <VisualState x:Name="PART_ViewTypeButton8Pressed">
@@ -689,12 +718,14 @@
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton8" Storyboard.TargetProperty="BorderBrush">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PrimaryColorForeground}"/>
                                         </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_ViewTypeButton8" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{TemplateBinding Background}"/>
+                                        </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
                     </Border>
-
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

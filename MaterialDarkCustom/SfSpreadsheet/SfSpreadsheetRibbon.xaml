@@ -958,8 +958,9 @@
                                             <StackPanel >
                                                 <Grid Margin="25,20,0,0">
                                                     <TextBlock FontFamily="Segoe UI"
-                                                               FontSize="36" Opacity="0.6"
+                                                               FontSize="36"
                                                                FontWeight="Normal"
+                                                               Foreground="{StaticResource ContentForeground}"
                                                                Text="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=New}" />
                                                 </Grid>
                                                 <Grid Margin="25,20,0,0" HorizontalAlignment="Left" Width="300">
@@ -1063,7 +1064,7 @@
 
                                     <tools:ButtonPanel Height="24" SeparatorVisibility="Collapsed">
                                         <tools:RibbonComboBox x:Name="Font_FontFamily" MaxDropDownHeight="500"
-                                                                   IsEditable="True" 
+                                                                   IsEditable="True" Height="20"
                                                                    Width="117" ItemsSource="{TemplateBinding FontFamilyNames}">
                                             <tools:RibbonComboBox.ToolTip>
                                                 <tools:ScreenTip Description="{spreadsheet:SpreadsheetLocalizationResourceExtension ResourceName=FontToolTipHeader}">
@@ -1085,7 +1086,7 @@
                                         </tools:RibbonComboBox>
 
                                         <tools:RibbonComboBox x:Name="Font_FontSize" MaxDropDownHeight="400" 
-                                                                   IsEditable="True" Focusable="False" 
+                                                                   IsEditable="True" Focusable="False" Height="20"
                                                                    
                                                                    Width="43"
                                                                    ItemsSource="{Binding Path=FontSizeSource,

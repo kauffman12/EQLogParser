@@ -28,6 +28,8 @@
     <shared:ColorItemList x:Key="ColorList" />
     <conv:DoubleToPointConverter x:Key="DoubleToPointConverter" />
 
+    <Thickness x:Key="ColorPicker.Focused.Static.Padding">0,0,0,0</Thickness>
+
     <Style x:Key="ToggleDropDownButtonStyle" TargetType="ToggleButton">
         <Setter Property="BorderBrush" Value="{StaticResource Border}" />
         <Setter Property="BorderThickness" Value="0"/>
@@ -59,7 +61,7 @@
                             <Border
                                 x:Name="MainBorder"
                                 Grid.Column="1"
-                                Margin="0 0 3 0"
+                                Margin="0,0,3,0"
                                 SnapsToDevicePixels="True">
                                 <Viewbox Width="9" Height="7">
                                     <Path
@@ -244,6 +246,7 @@
                             <Setter TargetName="mainBorder" Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
                             <Setter Property="Foreground" Value="{StaticResource PrimaryForeground}" />
                             <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}" />
+                            <Setter Property="Padding" Value="{StaticResource ColorPicker.Focused.Static.Padding}"/>
                         </Trigger>
                         <Trigger SourceName="colorToggleButton" Property="IsChecked" Value="True">
                             <Setter TargetName="mainBorder" Property="Background" Value="{StaticResource ContentBackground}" />

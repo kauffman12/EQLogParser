@@ -33,10 +33,9 @@
             Background="{TemplateBinding Background}"
             BorderBrush="{TemplateBinding BorderBrush}"
             BorderThickness="{TemplateBinding BorderThickness}"
-            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+            CornerRadius="{TemplateBinding CornerRadius}"
             Effect="{StaticResource Default.ShadowDepth1}"
-            SnapsToDevicePixels="True"
-            >
+            SnapsToDevicePixels="True">
             <Border.Resources>
                 <local:HorizontalContentToTextAlignmentConverter x:Key="TextAlignmentConverter" />
             </Border.Resources>
@@ -45,7 +44,8 @@
                     HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                     VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
                 <ContentPresenter x:Name="LargeIconContent" ContentTemplate="{TemplateBinding IconTemplate}" Content="{Binding}" 
-                                                          ContentTemplateSelector="{TemplateBinding IconTemplateSelector}"/>
+                                                          ContentTemplateSelector="{TemplateBinding IconTemplateSelector}"
+                                                          Validation.ErrorTemplate="{x:Null}"/>
                 <TextBlock
                         x:Name="PART_LargeText"
 						Text="{TemplateBinding Label}"
@@ -137,6 +137,7 @@
         <Setter Property="FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}" />
         <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.BodyTextStyle}" />
         <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightMedium}" />
+        <Setter Property="CornerRadius" Value="1" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="local:ButtonAdv">
@@ -146,10 +147,9 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
                         Effect="{StaticResource Default.ShadowDepth1}"
-                        SnapsToDevicePixels="True"
-                        >
+                        SnapsToDevicePixels="True">
                         <Border.Resources>
                             <local:HorizontalContentToTextAlignmentConverter x:Key="TextAlignmentConverter" />
                         </Border.Resources>
@@ -159,7 +159,8 @@
                                 <ColumnDefinition />
                             </Grid.ColumnDefinitions>
                             <ContentPresenter x:Name="SmallIconContent" ContentTemplate="{TemplateBinding IconTemplate}" Content="{Binding}" Margin="2"
-                                                          ContentTemplateSelector="{TemplateBinding IconTemplateSelector}"/>
+                                                          ContentTemplateSelector="{TemplateBinding IconTemplateSelector}"
+                                                          Validation.ErrorTemplate="{x:Null}"/>
                             <AccessText
                                     x:Name="PART_NormalText"
                                     Grid.Column="1"
@@ -190,6 +191,7 @@
                             </MultiTrigger.Conditions>
                             <Setter TargetName="ItemBorder" Property="Border.Background" Value="{StaticResource SecondaryHoverBackground}" />
                             <Setter TargetName="ItemBorder" Property="Border.BorderBrush" Value="{StaticResource SecondaryHoverBackground}" />
+                            <Setter TargetName="ItemBorder" Property="Border.BorderThickness" Value="0" />
                             <Setter TargetName="PART_NormalText" Property="TextElement.Foreground" Value="{StaticResource SecondaryForeground}" />
                             <Setter Property="Foreground" Value="{StaticResource SecondaryForeground}" />
                             <Setter TargetName="ItemBorder" Property="Effect" Value="{StaticResource Default.ShadowDepth2}" />

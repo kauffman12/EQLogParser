@@ -20,7 +20,6 @@
                 Value="Transparent"/>
         <Setter Property="BorderBrush"
                 Value="Transparent"/>
-              
         <Setter Property="BorderThickness" 
                 Value="{StaticResource MaterialDarkCustom.BorderThickness}"/>
         <Setter Property="Foreground"
@@ -88,6 +87,7 @@
                             <Setter Property="Background" TargetName="border" Value="Transparent"/>
                             <Setter Property="BorderBrush" TargetName="border" Value="Transparent"/>
                             <Setter Property="TextElement.Foreground" Value="{StaticResource SecondaryForegroundDisabled}"/>
+                            <Setter Property="Opacity" Value="1"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -130,7 +130,8 @@
                             SnapsToDevicePixels="true" 
                             Background="{TemplateBinding Background}"
                             BorderThickness="2"
-                            BorderBrush="{TemplateBinding BorderBrush}">
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            >
                         <ContentPresenter x:Name="contentPresenter" Margin="3" 
                                           HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
@@ -160,19 +161,17 @@
                             <Setter Property="TextElement.Foreground" Value="{StaticResource SecondaryForeground}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PrimaryDark}"/>
                             <Setter Property="TextElement.Foreground" Value="{StaticResource PrimaryForeground}"/>
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PrimaryDark}"/>
                             <Setter Property="TextElement.Foreground" Value="{StaticResource PrimaryForeground}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
-
                             <Setter Property="BorderBrush" TargetName="border" Value="Transparent"/>
                             <Setter Property="TextElement.Foreground" Value="{StaticResource SecondaryForegroundDisabled}"/>
+                            <Setter Property="Opacity" Value="1"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

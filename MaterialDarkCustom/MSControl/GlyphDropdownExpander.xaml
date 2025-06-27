@@ -2,7 +2,8 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     
                     xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
-                     xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF">
+                    xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
     <ResourceDictionary.MergedDictionaries>
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
@@ -32,28 +33,20 @@
                         <ContentPresenter x:Name="contentPresenter" 
                                           HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                          RecognizesAccessKey="True" 
-                                          Width="9.5" 
-                                          Height="7"
+                                          RecognizesAccessKey="True"
                                           SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                            <ContentPresenter.Margin>
-                                <Thickness>0,-2,0,0</Thickness>
-                            </ContentPresenter.Margin>
                             <ContentPresenter.Resources>
                                 <Style BasedOn="{x:Null}" TargetType="{x:Type TextBlock}" />
                             </ContentPresenter.Resources>
                             <ContentPresenter.Content>
-                                <Path Name="Arrow"   
-                                  Width="7"
-                                  Height="4"
-                                  Fill="{TemplateBinding Foreground}"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"
-                                  RenderTransformOrigin="0.5,0.5">
-                                    <Path.Data>
-                                        <PathGeometry>M 0 0 L 3.5 4 L 7 0 Z</PathGeometry>
-                                    </Path.Data>
-                                </Path>
+                                <TextBlock x:Name="Arrow"
+                                           FontSize="14"
+                                           VerticalAlignment="Center" 
+                                           HorizontalAlignment="Center"
+                                           RenderTransformOrigin="0.5,0.5"
+                                           Foreground="{TemplateBinding Foreground}"
+                                           FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                           Text="&#xe708;"/>
                             </ContentPresenter.Content>
                         </ContentPresenter>
                     </Border>
@@ -61,16 +54,7 @@
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
                             <Setter Property="MinHeight" Value="{StaticResource TouchMode.MinHeight}"/>
                             <Setter Property="MinWidth" Value="{StaticResource TouchMode.MinSize}"/>
-                            <Setter Property="Data" TargetName="Arrow">
-                                <Setter.Value>
-                                    <PathGeometry>M 0 0 L 6 6 L 12 0 Z</PathGeometry>
-                                </Setter.Value>
-                            </Setter>
-                            <Setter Property="Stretch" TargetName="Arrow" Value="Uniform"/>
-                            <Setter Property="Width" TargetName="contentPresenter" Value="10.5"/>
-                            <Setter Property="Height" TargetName="contentPresenter" Value="8.5"/>
-                            <Setter Property="Width" TargetName="Arrow" Value="10.5"/>
-                            <Setter Property="Height" TargetName="Arrow" Value="8.5"/>
+                            <Setter Property="TextBlock.FontSize" TargetName="Arrow" Value="16"/>
                         </Trigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
@@ -105,6 +89,7 @@
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="BorderBrush" Value="Transparent"/>
                             <Setter Property="Foreground" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter Property="Opacity" Value="1"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -9,6 +9,7 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/ChromelessWindow/ChromelessWindow.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Button.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/PrimaryButton.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatPrimaryButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ComboBox.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphButton.xaml" />
@@ -41,14 +42,16 @@
                                       Style="{StaticResource WPFScrollViewerStyle}">
                             <Grid Width="260" HorizontalAlignment="Center">
                                 <StackPanel>
-                                    <StackPanel Margin="0,10"  Orientation="Horizontal">
-                                        <Border Margin="0,0,10,0" BorderThickness="1" BorderBrush="{StaticResource Border}" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
-                                            <Button x:Name="PartPrintButton"
+                                    <StackPanel Margin="0 10 0 10"
+                                                 Orientation="Horizontal">
+                                        <Border Margin="0 0 10 0"
+                                                BorderThickness="1" BorderBrush="{StaticResource Border}" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                                            <Button x:Name="PartPrintButton"                                                    
                                                 Height="85"
                                                 Width="85"
-                                                Command="{Binding PrintCommand}"
+                                                Command="{Binding PrintCommand}"                                            
                                                 Style="{StaticResource WPFFlatButtonStyle}" 
-                                                Tag="Print" >
+                                                Tag="Print">
                                                 <Grid SnapsToDevicePixels="True">
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition />
@@ -72,7 +75,8 @@
                                                 </Grid>
                                             </Button>
                                         </Border>
-                                        <Border Margin="10,0,0,0" BorderThickness="1" BorderBrush="{StaticResource Border}" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                                        <Border Margin="10 0 0 0"
+                                                BorderThickness="1" BorderBrush="{StaticResource Border}" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
                                             <Button x:Name="PartQuickPrintButton"
                                                 Height="85"
                                                 Width="85"
@@ -97,7 +101,7 @@
                                                            HorizontalAlignment="Center"
                                                            VerticalAlignment="Center"
                                                            SnapsToDevicePixels="True"
-                                                           Style="{StaticResource WPFTextBlockStyle}"
+                                                           Style="{StaticResource WPFTextBlockStyle}"                                                              
                                                            Text ="{grid:GridLocalizationResourceExtension ResourceName=QuickPrint}" />
                                                 </Grid>
                                             </Button>
@@ -121,7 +125,7 @@
                                                     <Path x:Name="no_scaling"
                                                           Height="30"
                                                           
-                                                          Margin="8,10,10,10"
+                                                          Margin="8 10 10 10"
                                                           Fill="{StaticResource IconColor}"
                                                           Stretch="Fill" >
                                                         <Path.Data>
@@ -129,9 +133,9 @@
                                                         </Path.Data>
                                                     </Path>
                                                     <TextBlock Grid.Column="1"
-                                                               HorizontalAlignment="Left"
-                                                               VerticalAlignment="Center"
-                                                               Style="{StaticResource WPFTextBlockStyle}"
+                                                               HorizontalAlignment="Left"                                                             
+                                                               VerticalAlignment="Center"                                                   
+                                                               Style="{StaticResource WPFTextBlockStyle}"                                                             
                                                                Text="{grid:GridLocalizationResourceExtension ResourceName=NoScaling}" />
                                                 </Grid>
                                             </Border>
@@ -237,7 +241,7 @@
                                                     </Grid.ColumnDefinitions>
                                                     <Path Height="30"
                                                           
-                                                          Margin="8,10,10,10"
+                                                          Margin="8 10 10 10"
                                                           Fill="{StaticResource IconColor}"
                                                           RenderTransformOrigin="0.5,0.5"
                                                           Stretch="Uniform" >
@@ -255,7 +259,7 @@
                                             </Border>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="LandScape" Style="{StaticResource WPFComboBoxItemStyle}">
-                                            <Border>
+                                            <Border >
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="2*" />
@@ -293,14 +297,18 @@
                                                         <ColumnDefinition Width="2*" />
                                                         <ColumnDefinition Width="8*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <Path Data="F1M81.4015,46.427L80.4015,46.427L61.4015,46.427L60.4015,46.427L60.4015,47.427L60.4015,71.427L60.4015,72.427L61.4015,72.427L80.4015,72.427L81.4015,72.427L81.4015,71.427L81.4015,47.427z M80.4015,71.427L61.4015,71.427L61.4015,47.427L80.4015,47.427z"
-                                                          Fill="{StaticResource IconColor}"
+                                                    <Path
+                                                        Fill="{StaticResource IconColor}"
                                                           Width="21"
                                                           Height="26"
                                                           HorizontalAlignment="Left"
                                                           VerticalAlignment="Top"
-                                                          Margin="8,10,10,10"
-                                                          Stretch="Fill" />
+                                                           Margin="8 10 10 10"
+                                                          Stretch="Fill">
+                                                        <Path.Data>
+                                                            <PathGeometry>F1M81.4015,46.427L80.4015,46.427L61.4015,46.427L60.4015,46.427L60.4015,47.427L60.4015,71.427L60.4015,72.427L61.4015,72.427L80.4015,72.427L81.4015,72.427L81.4015,71.427L81.4015,47.427z M80.4015,71.427L61.4015,71.427L61.4015,47.427L80.4015,47.427z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
                                                     <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
@@ -328,12 +336,16 @@
                                                         <ColumnDefinition Width="2*" />
                                                         <ColumnDefinition Width="8*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <Path Data="F1M80.402,81.427L61.402,81.427L61.402,113.427L80.402,113.427z M79.402,112.427L62.402,112.427L62.402,82.427L79.402,82.427z" 
+                                                    <Path
                                                           Fill="{StaticResource IconColor}"
                                                           Stretch="Fill"
-                                                          Margin="8,10,10,10"
+                                                           Margin="8 10 10 10"
                                                           Height="32"
-                                                          Width="19"/>
+                                                          Width="19">
+                                                        <Path.Data>
+                                                            <PathGeometry>F1M80.402,81.427L61.402,81.427L61.402,113.427L80.402,113.427z M79.402,112.427L62.402,112.427L62.402,82.427L79.402,82.427z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
                                                     <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
@@ -356,20 +368,25 @@
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="Executive" Style="{StaticResource WPFComboBoxItemStyle}">
                                             <Border Background="Transparent">
-                                                <Grid>
+                                                <Grid  >
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="2*" />
                                                         <ColumnDefinition Width="8*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <Path Data="F1M79.4015,124.427L78.4015,124.427L62.4015,124.427L61.4015,124.427L61.4015,125.427L61.4015,148.427L61.4015,149.427L62.4015,149.427L78.4015,149.427L79.4015,149.427L79.4015,148.427L79.4015,125.427z M78.4015,148.427L62.4015,148.427L62.4015,125.427L78.4015,125.427z" 
+                                                    <Path 
                                                           Fill="{StaticResource IconColor}"
                                                           HorizontalAlignment="Left"
                                                           VerticalAlignment="Top"
                                                           Width="18"
                                                           Height="25"
-                                                          Margin="8,10,10,10"
-                                                          Stretch="Fill" />
-                                                    <Grid Grid.Column="1" >
+                                                          Margin="8 10 10 10"
+                                                          Stretch="Fill" >
+                                                        <Path.Data>
+                                                            <PathGeometry>F1M79.4015,124.427L78.4015,124.427L62.4015,124.427L61.4015,124.427L61.4015,125.427L61.4015,148.427L61.4015,149.427L62.4015,149.427L78.4015,149.427L79.4015,149.427L79.4015,148.427L79.4015,125.427z M78.4015,148.427L62.4015,148.427L62.4015,125.427L78.4015,125.427z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
+
+                                                    <Grid Grid.Column="1"  >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
                                                             <RowDefinition />
@@ -380,7 +397,7 @@
                                                                    Text="Executive" />
                                                         <TextBlock Grid.Row="1"
                                                                    HorizontalAlignment="Left"
-                                                                   VerticalAlignment="Center"
+                                                                   VerticalAlignment="Center"                                                       
                                                                    
                                                                    
                                                                    Style="{StaticResource WPFTextBlockStyle}"
@@ -396,14 +413,18 @@
                                                         <ColumnDefinition Width="2*" />
                                                         <ColumnDefinition Width="8*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <Path Data="F1M81.4015,169.427L80.4015,169.427L62.4015,169.427L61.4015,169.427L61.4015,170.427L61.4015,196.427L61.4015,197.427L62.4015,197.427L80.4015,197.427L81.4015,197.427L81.4015,196.427L81.4015,170.427z M80.4015,196.427L62.4015,196.427L62.4015,170.427L80.4015,170.427z" 
+                                                    <Path
                                                           Fill="{StaticResource IconColor}"
                                                           Stretch="Fill"
                                                           Width="20"
                                                           Height="28"
-                                                          Margin="8,10,10,10"
+                                                          Margin="8 10 10 10"
                                                           HorizontalAlignment="Left"
-                                                          VerticalAlignment="Top"/>
+                                                          VerticalAlignment="Top">
+                                                        <Path.Data>
+                                                            <PathGeometry>F1M81.4015,169.427L80.4015,169.427L62.4015,169.427L61.4015,169.427L61.4015,170.427L61.4015,196.427L61.4015,197.427L62.4015,197.427L80.4015,197.427L81.4015,197.427L81.4015,196.427L81.4015,170.427z M80.4015,196.427L62.4015,196.427L62.4015,170.427L80.4015,170.427z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
                                                     <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
@@ -431,14 +452,18 @@
                                                         <ColumnDefinition Width="2*" />
                                                         <ColumnDefinition Width="8*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <Path Data="F1M76.4015,223.427L75.4015,223.427L66.4015,223.427L65.4015,223.427L65.4015,224.427L65.4015,245.427L65.4015,246.427L66.4015,246.427L75.4015,246.427L76.4015,246.427L76.4015,245.427L76.4015,224.427z M75.4015,245.427L66.4015,245.427L66.4015,224.427L75.4015,224.427z" 
+                                                    <Path
                                                           Fill="{StaticResource IconColor}"
                                                           Stretch="Fill"
                                                           Width="11"
                                                           Height="23"
                                                           Margin="8 10 15 10"
                                                           HorizontalAlignment="Left"
-                                                          VerticalAlignment="Top"/>
+                                                          VerticalAlignment="Top">
+                                                        <Path.Data>
+                                                            <PathGeometry>F1M76.4015,223.427L75.4015,223.427L66.4015,223.427L65.4015,223.427L65.4015,224.427L65.4015,245.427L65.4015,246.427L66.4015,246.427L75.4015,246.427L76.4015,246.427L76.4015,245.427L76.4015,224.427z M75.4015,245.427L66.4015,245.427L66.4015,224.427L75.4015,224.427z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
                                                     <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
@@ -448,7 +473,7 @@
                                                                    VerticalAlignment="Center"
                                                                    Style="{StaticResource WPFTextBlockStyle}"
                                                                    Text="Envelope #10" />
-                                                        <TextBlock Grid.Row="1"
+                                                        <TextBlock Grid.Row="1"  
                                                                    HorizontalAlignment="Left"
                                                                    VerticalAlignment="Center"
                                                                    Style="{StaticResource WPFTextBlockStyle}"
@@ -466,14 +491,18 @@
                                                         <ColumnDefinition Width="2*" />
                                                         <ColumnDefinition Width="8*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <Path Data="F1M77.4015,282.427L76.4015,282.427L66.4015,282.427L65.4015,282.427L65.4015,283.427L65.4015,302.427L65.4015,303.427L66.4015,303.427L76.4015,303.427L77.4015,303.427L77.4015,302.427L77.4015,283.427z M76.4015,302.427L66.4015,302.427L66.4015,283.427L76.4015,283.427z" 
+                                                    <Path 
                                                           Fill="{StaticResource IconColor}"
                                                           Stretch="Fill"
                                                           Width="12"
                                                           Height="21"
                                                           Margin="8 10 12 10"
                                                           HorizontalAlignment="Left"
-                                                          VerticalAlignment="Top"/>
+                                                          VerticalAlignment="Top">
+                                                        <Path.Data>
+                                                            <PathGeometry>F1M77.4015,282.427L76.4015,282.427L66.4015,282.427L65.4015,282.427L65.4015,283.427L65.4015,302.427L65.4015,303.427L66.4015,303.427L76.4015,303.427L77.4015,303.427L77.4015,302.427L77.4015,283.427z M76.4015,302.427L66.4015,302.427L66.4015,283.427L76.4015,283.427z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
                                                     <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
@@ -501,14 +530,18 @@
                                                         <ColumnDefinition Width="2*" />
                                                         <ColumnDefinition Width="8*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <Path Data="F1M78.4015,346.427L77.4015,346.427L63.4015,346.427L62.4015,346.427L62.4015,347.427L62.4015,367.427L62.4015,368.427L63.4015,368.427L77.4015,368.427L78.4015,368.427L78.4015,367.427L78.4015,347.427z M77.4015,367.427L63.4015,367.427L63.4015,347.427L77.4015,347.427z" 
+                                                    <Path
                                                           Fill="{StaticResource IconColor}"
                                                           Stretch="Fill"
                                                           Width="16"
                                                           Height="22"
-                                                          Margin="8,10,10,10"
+                                                          Margin="8 10 10 10"
                                                           HorizontalAlignment="Left"
-                                                          VerticalAlignment="Top"/>
+                                                          VerticalAlignment="Top">
+                                                        <Path.Data>
+                                                            <PathGeometry>F1M78.4015,346.427L77.4015,346.427L63.4015,346.427L62.4015,346.427L62.4015,347.427L62.4015,367.427L62.4015,368.427L63.4015,368.427L77.4015,368.427L78.4015,368.427L78.4015,367.427L78.4015,347.427z M77.4015,367.427L63.4015,367.427L63.4015,347.427L77.4015,347.427z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
                                                     <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
@@ -536,14 +569,18 @@
                                                         <ColumnDefinition Width="2*" />
                                                         <ColumnDefinition Width="8*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <Path Data="F1M79.4015,406.427L78.4015,406.427L63.4015,406.427L62.4015,406.427L62.4015,407.427L62.4015,429.427L62.4015,430.427L63.4015,430.427L78.4015,430.427L79.4015,430.427L79.4015,429.427L79.4015,407.427z M78.4015,429.427L63.4015,429.427L63.4015,407.427L78.4015,407.427z" 
+                                                    <Path 
                                                           Fill="{StaticResource IconColor}"
                                                           Stretch="Fill"
                                                           Width="17"
                                                           Height="24"
-                                                          Margin="8,10,10,10"
+                                                          Margin="8 10 10 10"
                                                           HorizontalAlignment="Left"
-                                                          VerticalAlignment="Top"/>
+                                                          VerticalAlignment="Top">
+                                                        <Path.Data>
+                                                            <PathGeometry>F1M79.4015,406.427L78.4015,406.427L63.4015,406.427L62.4015,406.427L62.4015,407.427L62.4015,429.427L62.4015,430.427L63.4015,430.427L78.4015,430.427L79.4015,430.427L79.4015,429.427L79.4015,407.427z M78.4015,429.427L63.4015,429.427L63.4015,407.427L78.4015,407.427z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
                                                     <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
@@ -571,14 +608,18 @@
                                                         <ColumnDefinition Width="2*" />
                                                         <ColumnDefinition Width="8*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <Path Data="F1M76.4015,455.427L75.4015,455.427L66.4015,455.427L65.4015,455.427L65.4015,456.427L65.4015,473.427L65.4015,474.427L66.4015,474.427L75.4015,474.427L76.4015,474.427L76.4015,473.427L76.4015,456.427z M75.4015,473.427L66.4015,473.427L66.4015,456.427L75.4015,456.427z" 
+                                                    <Path
                                                           Fill="{StaticResource IconColor}" 
                                                           Stretch="Fill"
                                                           Width="11"
                                                           Height="19"
                                                           Margin="8 10 14 10"
                                                           HorizontalAlignment="Center"
-                                                          VerticalAlignment="Center"/>
+                                                          VerticalAlignment="Center">
+                                                        <Path.Data>
+                                                            <PathGeometry>F1M76.4015,455.427L75.4015,455.427L66.4015,455.427L65.4015,455.427L65.4015,456.427L65.4015,473.427L65.4015,474.427L66.4015,474.427L75.4015,474.427L76.4015,474.427L76.4015,473.427L76.4015,456.427z M75.4015,473.427L66.4015,473.427L66.4015,456.427L75.4015,456.427z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
                                                     <Grid Grid.Column="1" >
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition />
@@ -608,12 +649,15 @@
                                                     </Grid.ColumnDefinitions>
                                                     <Path Width="23.816"
                                                           Height="31"
-                                                          Margin="8,10,10,10"
+                                                          Margin="8 10 10 10"
                                                           HorizontalAlignment="Left"
-                                                          VerticalAlignment="Top"
-                                                          Data="F1M355.128,227.697L376.944,227.697L376.944,198.697L355.128,198.697z M377.945,228.697L354.129,228.697L354.129,197.697L377.945,197.697z"
+                                                          VerticalAlignment="Top"                                                         
                                                           Fill="{StaticResource IconColor}"
-                                                          Stretch="Fill" />
+                                                          Stretch="Fill" >
+                                                        <Path.Data>
+                                                            <PathGeometry>F1M355.128,227.697L376.944,227.697L376.944,198.697L355.128,198.697z M377.945,228.697L354.129,228.697L354.129,197.697L377.945,197.697z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
                                                     <Grid Grid.Column="1" >
                                                         <TextBlock HorizontalAlignment="Left"                                                                   
                                                                    VerticalAlignment="Center"
@@ -665,7 +709,8 @@
                                                 <shared:UpDown x:Name="PART_PageWidthUpDown"
                                                               Style="{StaticResource SyncfusionUpDownStyle}"
                                                                EnableFocusedColors="True"
-                                                               Width="70" Margin="3,0,0,0"
+                                                               Width="70"
+                                                               Margin="3 0 0 0"
                                                                Height="22"
                                                                HorizontalAlignment="Center"
                                                                VerticalAlignment="Center"
@@ -683,6 +728,7 @@
                                                 <TextBlock HorizontalAlignment="Right"
                                                            VerticalAlignment="Center"
                                                            IsHitTestVisible="False"
+                                                           Margin="1,0,0,0"
                                                            
                                                            
                                                            SnapsToDevicePixels="True"
@@ -690,7 +736,8 @@
                                                            Text="{grid:GridLocalizationResourceExtension ResourceName=Height}" />
                                                 <shared:UpDown x:Name="PART_PageHeightUpDown"
                                                                EnableFocusedColors="True"
-                                                               Width="70" Margin="3,0,0,0"
+                                                               Width="70" 
+                                                               Margin="3 0 0 0"
                                                                Height="22"
                                                                Style="{StaticResource SyncfusionUpDownStyle}"
                                                                HorizontalAlignment="Right"
@@ -725,7 +772,7 @@
                                                     </Grid.ColumnDefinitions>
                                                     <Grid Width="23.816"
                                                           Height="31"
-                                                          Margin="8,10,10,10"
+                                                          Margin="8,10,10,5"
                                                           VerticalAlignment="Top">
                                                         <Path Margin="0.5,0.5,0.499,0.5"
                                                               Data="M4.656024,4.5440044 L4.656024,25.419998 18.147015,25.419998 18.147015,4.5440044 z M18.147015,0 L18.647015,0 18.647015,4.0440044 22.817014,4.0440044 22.817014,4.5440044 18.647015,4.5440044 18.647015,25.419998 22.817014,25.419998 22.817014,25.919004 18.647015,25.919004 18.647015,30 18.147015,30 18.147015,25.919004 4.656024,25.919004 4.656024,30.000011 4.156024,30.000011 4.156024,25.919004 0,25.919004 0,25.419998 4.156024,25.419998 4.156024,4.5440044 0,4.5440044 0,4.0440044 4.156024,4.0440044 &#10;4.156024,1.072884E-05 4.656024,1.072884E-05 4.656024,4.0440044 18.147015,4.0440044 z"
@@ -1144,14 +1191,17 @@
                                                         <ColumnDefinition Width="2*" />
                                                         <ColumnDefinition Width="8*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <Path Width="23.816"
+                                                    <Path Width ="23.816"
                                                           Height="31"
-                                                          Margin="4,3,8,3"
+                                                          Margin="0 3 8 3"
                                                           HorizontalAlignment="Left"
                                                           VerticalAlignment="Top"
-                                                          Data="M15 1H2C1.44771 1 1 1.44772 1 2V22C1 22.5523 1.44772 23 2 23H15C15.5523 23 16 22.5523 16 22V2C16 1.44772 15.5523 1 15 1ZM2 0C0.895431 0 0 0.89543 0 2V22C0 23.1046 0.89543 24 2 24H15C16.1046 24 17 23.1046 17 22V2C17 0.895431 16.1046 0 15 0H2Z"                                            
                                                           Fill="{StaticResource IconColor}"
-                                                          Stretch="Fill" />
+                                                          Stretch="Fill" >
+                                                        <Path.Data>
+                                                            <PathGeometry>M15 1H2C1.44771 1 1 1.44772 1 2V22C1 22.5523 1.44772 23 2 23H15C15.5523 23 16 22.5523 16 22V2C16 1.44772 15.5523 1 15 1ZM2 0C0.895431 0 0 0.89543 0 2V22C0 23.1046 0.89543 24 2 24H15C16.1046 24 17 23.1046 17 22V2C17 0.895431 16.1046 0 15 0H2Z</PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
                                                     <Grid Grid.Column="1">
                                                         <TextBlock Margin="4"
                                                                    HorizontalAlignment="Left"
@@ -1178,7 +1228,8 @@
                                             BorderThickness="1"
                                             
                                             SnapsToDevicePixels="True">
-                                        <Grid x:Name="PART_CustomPageMarginGrid" Margin="5" SnapsToDevicePixels="True">
+                                        <Grid x:Name="PART_CustomPageMarginGrid" Margin="5"
+                                             SnapsToDevicePixels="True">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="35" />
                                                 <RowDefinition Height="35" />
@@ -1205,8 +1256,8 @@
                                                     <shared:UpDown x:Name="PART_LeftUpDown"
                                                                   EnableFocusedColors="True"
                                                                    Width="68"
-                                                                   Height="22" 
-                                                                   Margin="3,0,0,0"
+                                                                   Height="22"
+                                                                   Margin="3 0 0 0"
                                                                    HorizontalAlignment="Center"
                                                                    VerticalAlignment="Center"
                                                                    TextAlignment="Center"
@@ -1230,7 +1281,8 @@
                                                                Text="{grid:GridLocalizationResourceExtension ResourceName=Right}" />
                                                     <shared:UpDown x:Name="PART_RightUpDown"
                                                                   EnableFocusedColors="True"
-                                                                   Width="70" Margin="3,0,0,0"
+                                                                   Width="70"
+                                                                   Margin="3 0 0 0"
                                                                    Height="22"
                                                                    HorizontalAlignment="Center"
                                                                    VerticalAlignment="Center"
@@ -1261,7 +1313,8 @@
                                                                Text="{grid:GridLocalizationResourceExtension ResourceName=Top}" />
                                                     <shared:UpDown x:Name="PART_TopUpDown"
                                                                   EnableFocusedColors="True"
-                                                                   Width="70" Margin="3,0,0,0"
+                                                                   Width="70"
+                                                                   Margin="3 0 0 0"
                                                                    Height="22"
                                                                    HorizontalAlignment="Center"
                                                                    VerticalAlignment="Center"
@@ -1285,8 +1338,9 @@
                                                                Text="{grid:GridLocalizationResourceExtension ResourceName=Bottom}" />
                                                     <shared:UpDown x:Name="PART_BottomUpDown"
                                                                   EnableFocusedColors="True"
-                                                                   Width="70" Margin="3,0,0,0"
-                                                                   Height="22" 
+                                                                   Width="70"
+                                                                   Margin="3 0 0 0"
+                                                                   Height="22"
                                                                    HorizontalAlignment="Center"
                                                                    VerticalAlignment="Center"
                                                                    TextAlignment="Center"
@@ -1337,7 +1391,7 @@
                         <Grid Grid.Column="1">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*" />
-                                <RowDefinition Height="35" />
+                                <RowDefinition Height="35"/>
                             </Grid.RowDefinitions>
                             <Grid Background="{StaticResource ContentBackgroundAlt2}">
                                 <grid:PrintPreviewAreaControl x:Name="PART_PrintPreviewAreaControl"  />
@@ -1448,7 +1502,7 @@
                                                 <Path x:Name="pluspath"
                                                   HorizontalAlignment="Center"
                                                   VerticalAlignment="Center" 
-                                                  Width="12" 
+                                                  Width="12"
                                                   Height="12"
                                                   Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                                                   Stretch="Fill" 
@@ -1460,7 +1514,7 @@
                                             </Button>
                                             <Slider x:Name="PART_ZoomSlider"
                                                 Grid.Column="2"
-                                                Width="150"
+                                                Width="150"  
                                                 Height="20"
                                                 HorizontalAlignment="Center"
                                                 VerticalAlignment="Center"
@@ -1495,7 +1549,6 @@
                                     </DockPanel>
                                 </Border>
                             </Grid>
-
                         </Grid>
                     </Grid>
                 </ControlTemplate>

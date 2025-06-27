@@ -1,0 +1,548 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib"
+                    xmlns:skinmanager="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+                    xmlns:ganttcontrol="clr-namespace:Syncfusion.Windows.Controls.Gantt;assembly=Syncfusion.Gantt.Wpf">
+
+    <ResourceDictionary.MergedDictionaries>
+        <skinmanager:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <skinmanager:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ToolTip.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- strip line -->
+
+    <DataTemplate x:Key="DateTimeResizingTooltipTemplate">
+        <Border Width="210"
+                Height="70"
+                Background="{Binding Background, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                BorderThickness="0.5">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Border BorderBrush="{StaticResource BorderAlt}"
+                        BorderThickness="0,0,0,0.5">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Margin="5,2,2,2"
+                                   FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   Text="{ganttcontrol:GanttLocalizationResourceExtension ResourceName=TaskNameTooltip}"/>
+                        <TextBlock Grid.Column="1"
+                                   Width="125"
+                                   Margin="10,2,2,2"
+                                   FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   Text="{Binding TaskName}"
+                                   TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                </Border>
+                <Grid Grid.Row="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Margin="5"
+                               FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               Text="{ganttcontrol:GanttLocalizationResourceExtension ResourceName=StartTimeTooltip}" />
+                    <TextBlock Grid.Column="1"
+                               Margin="5"
+                               FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               Text="{Binding StartTime}" />
+                    <TextBlock Grid.Row="1"
+                               Margin="5"
+                               FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               Text="{ganttcontrol:GanttLocalizationResourceExtension ResourceName=EndTimeTooltip}" />
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="1"
+                               Margin="5"
+                               FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               Text="{Binding EndTime}" />
+                </Grid>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate x:Key="NumericResizingTooltipTemplate">
+        <Border Width="150"
+                Height="70"
+                Background="{Binding Background, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                BorderThickness="0.5">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Border BorderBrush="{StaticResource BorderAlt}" 
+                        BorderThickness="0,0,0,0.5">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Margin="5,2,2,2"
+                                   FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   Text="{ganttcontrol:GanttLocalizationResourceExtension ResourceName=TaskNameTooltip}" />
+                        <TextBlock Grid.Column="1"
+                                   Width="80"
+                                   Margin="5,2,2,2"
+                                   FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   Text="{Binding TaskName}"
+                                   TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                </Border>
+                <Grid Grid.Row="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Margin="5"
+                               FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               Text="{ganttcontrol:GanttLocalizationResourceExtension ResourceName=StartTooltip}" />
+                    <TextBlock Grid.Column="1"
+                               Margin="5"
+                               FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               Text="{Binding Start}" />
+                    <TextBlock Grid.Row="1"
+                               Margin="5"
+                               FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               Text="{ganttcontrol:GanttLocalizationResourceExtension ResourceName=EndTooltip}"/>
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="1"
+                               Margin="5"
+                               FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               Text="{Binding End}" />
+                </Grid>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate x:Key="ProgressResizingTooltipTemplate">
+        <Border Width="200"
+                Height="50"
+                Background="{Binding Background, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                BorderThickness="0.5">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Border BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                        BorderThickness="0,0,0,0.5">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Margin="5,2,2,2"
+                                   FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   Text="{ganttcontrol:GanttLocalizationResourceExtension ResourceName=TaskNameTooltip}"/>
+                        <TextBlock Grid.Column="1"
+                                   Width="120"
+                                   Margin="5,2,2,2"
+                                   FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                                   Text="{Binding TaskName}"
+                                   TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                </Border>
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Margin="5"
+                               FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               Text="{ganttcontrol:GanttLocalizationResourceExtension ResourceName=ProgressTooltip}"/>
+                    <TextBlock Grid.Column="1"
+                               Margin="5"
+                               FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                               Text="{Binding Progress}" />
+                </Grid>
+            </Grid>
+        </Border>
+
+    </DataTemplate>
+    
+    <DataTemplate x:Key="DragAndDropDefaultToolTipTemplate">
+        <Border Background="{Binding Background, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}">
+            <Grid Height="Auto" 
+                  Width="Auto" 
+                  Margin="5">
+                <Grid.RowDefinitions>
+                    <RowDefinition/>
+                    <RowDefinition/>
+                    <RowDefinition/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Row="0" 
+                           Grid.Column="0"
+                           Text="{ganttcontrol:GanttLocalizationResourceExtension ResourceName=SourceToolTip}"
+                           FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           Margin="5,0,5,0" />
+                <TextBlock Grid.Row="0"
+                           Grid.Column="1"
+                           Text="{Binding SourceId}"
+                           FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           Margin="5,0,5,0"/>
+                <TextBlock Grid.Row="0" 
+                           Grid.Column="2"
+                           Text="{ganttcontrol:GanttLocalizationResourceExtension ResourceName=Start}" 
+                           FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           Margin="5,0,5,0"/>
+                <TextBlock Grid.Row="1"
+                           Grid.Column="0"
+                           Text="{ganttcontrol:GanttLocalizationResourceExtension ResourceName=TargetToolTip}"
+                           FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           Margin="5,0,5,0"/>
+                <TextBlock Grid.Row="1" 
+                           Grid.Column="1"
+                           Text="{Binding TargetId}"
+                           FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           Margin="5,0,5,0"/>
+                <TextBlock Grid.Row="1"
+                           Grid.Column="2"
+                           Text="{ganttcontrol:GanttLocalizationResourceExtension ResourceName=Finish}"
+                           FontSize="{Binding FontSize, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           FontFamily="{Binding FontFamily, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}"
+                           Margin="5,0,5,0"/>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <Style TargetType="ganttcontrol:GanttChart">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ganttcontrol:GanttChart}">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="0"
+                            ClipToBounds="True"
+                            SnapsToDevicePixels="True">
+                        <ScrollViewer x:Name="PART_GanttChartScrollViewer"
+                                      CanContentScroll="True"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      Padding="{TemplateBinding Padding}"
+                                      VerticalScrollBarVisibility="Hidden">
+                            <ScrollViewer.Template>
+                                <ControlTemplate TargetType="{x:Type ScrollViewer}">
+                                    <Grid x:Name="Grid" 
+                                          Background="{TemplateBinding Background}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <ganttcontrol:GanttChartBackgroundPanel x:Name="PART_GanttChartBackgroundPanel"
+                                                                                Grid.Row="0"
+                                                                                Grid.Column="0"
+                                                                                HorizontalAlignment="Stretch"
+                                                                                VerticalAlignment="Stretch" />
+                                        <ganttcontrol:GanttChartStripLinePanel x:Name="PART_GanttChartStripLinePanel"
+                                                                               Grid.Row="0"
+                                                                               Grid.Column="0"
+                                                                               HorizontalAlignment="Stretch"
+                                                                               VerticalAlignment="Stretch"
+                                                                               IsHitTestVisible="True" />
+                                        <ScrollContentPresenter x:Name="PART_ScrollContentPresenter"
+                                                                Grid.Row="0"
+                                                                Grid.Column="0"
+                                                                Margin="{TemplateBinding Padding}"
+                                                                CanContentScroll="{TemplateBinding CanContentScroll}"
+                                                                CanHorizontallyScroll="False"
+                                                                CanVerticallyScroll="False"
+                                                                Content="{TemplateBinding Content}"
+                                                                ContentTemplate="{TemplateBinding ContentTemplate}" />
+                                        <ganttcontrol:GanttNodeConnector x:Name="PART_GanttNodeConnectorPanel"
+                                                                         Grid.Row="0"
+                                                                         Grid.Column="0"
+                                                                         HorizontalAlignment="Stretch"
+                                                                         VerticalAlignment="Stretch"
+                                                                         Background="Transparent"
+                                                                         IsHitTestVisible="False" />
+                                        <ScrollBar x:Name="PART_VerticalScrollBar"
+                                                   Grid.Row="0"
+                                                   Grid.Column="1"
+                                                   AutomationProperties.AutomationId="VerticalScrollBar"
+                                                   Cursor="Arrow"
+                                                   Maximum="{TemplateBinding ScrollableHeight}"
+                                                   Minimum="0"
+                                                   ViewportSize="{TemplateBinding ViewportHeight}"
+                                                   Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                                                   Value="{Binding VerticalOffset,
+                                                                   Mode=OneWay,
+                                                                   RelativeSource={RelativeSource TemplatedParent}}" />
+                                        <ScrollBar x:Name="PART_HorizontalScrollBar"
+                                                   Grid.Row="1"
+                                                   Grid.Column="0"
+                                                   AutomationProperties.AutomationId="HorizontalScrollBar"
+                                                   Cursor="Arrow"
+                                                   Maximum="{TemplateBinding ScrollableWidth}"
+                                                   Minimum="0"
+                                                   Orientation="Horizontal"
+                                                   ViewportSize="{TemplateBinding ViewportWidth}"
+                                                   Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"
+                                                   Value="{Binding HorizontalOffset,
+                                                                   Mode=OneWay,
+                                                                   RelativeSource={RelativeSource TemplatedParent}}" />
+                                    </Grid>
+                                </ControlTemplate>
+                            </ScrollViewer.Template>
+                            <ItemsPresenter />
+                        </ScrollViewer>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <ganttcontrol:GanttChartItemsPanel IsItemsHost="True" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="ganttcontrol:GanttNodeConnector">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ganttcontrol:GanttNodeConnector">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <Canvas Name="PART_NodeConnectorCanvas">
+                            <Line Name="PART_DynamicConnectorLine" 
+                                  StrokeDashArray="3,2" 
+                                  Visibility="Collapsed" 
+                                  StrokeThickness="2"
+                                  Fill="Black"
+                                  Stroke="Black"/>
+                            <ContentControl Name="PART_DragAndDropToolTip"
+                                            Visibility="Collapsed"
+                                            IsHitTestVisible="False"
+                                            Panel.ZIndex="2" 
+                                            Content="{Binding}"
+                                            ContentTemplate="{StaticResource DragAndDropDefaultToolTipTemplate}"/>
+                            <Grid x:Name="PART_FalseRelationSymbol"
+                                  Panel.ZIndex="3" 
+                                  Height="16"
+                                  Width="16"
+                                  HorizontalAlignment="Left"
+                                  VerticalAlignment="Top"
+                                  Grid.Row="2"
+                                  Grid.Column="2"
+                                  Visibility="Collapsed"
+                                  IsHitTestVisible="False">
+                                <Ellipse Height="16"
+                                         Width="16"
+                                         Fill="White"
+                                         Stroke="Red"
+                                         StrokeThickness="2.5"/>
+                                <Path Data="M63.1667,155 L74.25,143.667" 
+                                      Stroke="Red" Fill="Red" StrokeThickness="2.5"
+                                      Height="13" Margin="1" Stretch="Fill"/>
+                            </Grid>
+                            <Path Name="PART_Connetions"
+                                  Data="{TemplateBinding ConnectorGeometry}"
+                                  Stretch="None"
+                                  Stroke="{TemplateBinding ConnectorStroke}"
+                                  StrokeThickness="1" />
+                            <Path Name="PART_Arrows"
+                                  Data="{TemplateBinding ArrowGeometry}"
+                                  Fill="{TemplateBinding ConnectorStroke}"
+                                  Stretch="None"
+                                  Stroke="{TemplateBinding ConnectorStroke}"
+                                  StrokeThickness="1" />
+                        </Canvas>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <DataTrigger Binding="{Binding Path=ConnectorStroke ,RelativeSource={RelativeSource AncestorType={x:Type ganttcontrol:GanttChart}}}" Value="{x:Null}">
+                            <Setter TargetName="PART_Connetions" Property="Stroke" Value="{StaticResource BorderDark1}"/>
+                            <Setter TargetName="PART_Arrows" Property="Stroke" Value="{StaticResource BorderDark1}"/>
+                            <Setter TargetName="PART_Arrows" Property="Fill" Value="{StaticResource BorderDark1}"/>
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <DataTemplate x:Key="StripLineTemplate">
+        <Border x:Name="PART_StripLineBorder"
+            BorderBrush="{Binding RelativeSource={RelativeSource AncestorType={x:Type ganttcontrol:StripLine}}, Path=BorderBrush}"
+            Background="{Binding Background}" 
+            VerticalAlignment="Stretch" 
+            HorizontalAlignment="Stretch">
+            <TextBlock x:Name="PART_DisplayTextBlock"
+                       Text="{Binding Content}"
+                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type ganttcontrol:StripLine}}}"
+                       FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
+                       FontWeight="{StaticResource MaterialDarkCustom.FontWeightNormal}"
+                       FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                       TextWrapping="Wrap"
+                       TextTrimming="CharacterEllipsis"
+                       VerticalAlignment="Center"
+                       HorizontalAlignment="Center" />
+        </Border>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding Path=Background}" Value="{x:Null}">
+                <Setter TargetName="PART_StripLineBorder" Property="Background" Value="{StaticResource PrimaryBackground}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Path=Foreground,RelativeSource={RelativeSource TemplatedParent}}" Value="{x:Null}">
+                <Setter TargetName="PART_DisplayTextBlock" Property="Foreground" Value="{StaticResource PrimaryForeground}" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <Style TargetType="ganttcontrol:StripLine">
+        <Setter Property="Background" Value="{StaticResource PrimaryBackground}" />
+        <Setter Property="Foreground" Value="{StaticResource PrimaryForeground}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="ContentTemplate" Value="{StaticResource StripLineTemplate}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ganttcontrol:StripLine">
+                    <Border Background="Transparent">
+                        <ContentPresenter x:Name="PART_InnerContent"
+                                          HorizontalAlignment="Stretch"
+                                          VerticalAlignment="Stretch"
+                                          DataContext="{TemplateBinding DataContext}"
+                                          Content="{TemplateBinding DataContext}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}">
+                            <ContentPresenter.LayoutTransform>
+                                <RotateTransform Angle="-90" />
+                            </ContentPresenter.LayoutTransform>
+                        </ContentPresenter>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="HorizontalContentAlignment" Value="{Binding HorizontalContentAlignment, Mode=TwoWay}" />
+        <Setter Property="VerticalContentAlignment" Value="{Binding VerticalContentAlignment, Mode=TwoWay}" />
+        <Style.Triggers>
+            <Trigger Property="Type" Value="Absolute">
+                <Setter Property="Height" Value="{Binding Height}" />
+                <Setter Property="Width" Value="{Binding Width}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style TargetType="ganttcontrol:GanttChartRow">
+        <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
+        <Setter Property="MinHeight" Value="24" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ganttcontrol:GanttChartRow">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <Canvas x:Name="PART_BackgroundCanvas">
+                            <Rectangle x:Name="PART_ResizingRect"
+                                       Height="{TemplateBinding ActualHeight}"
+                                       Stroke="{StaticResource BorderAlt2}"
+                                       StrokeThickness="1"
+                                       Visibility="Hidden" />
+                            <ganttcontrol:GanttChartRowItemsPresenter x:Name="ItemsPresenterElement" Height="{TemplateBinding ActualHeight}" />
+                            <Grid>
+                                <Grid.ToolTip>
+                                    <ToolTip x:Name="PART_DateTimeResizingTooltip"
+                                             Content="{TemplateBinding DataContext}"
+                                             ContentTemplate="{StaticResource DateTimeResizingTooltipTemplate}"
+                                             Style="{StaticResource WPFToolTipStyle}">
+                                    </ToolTip>
+                                </Grid.ToolTip>
+                            </Grid>
+                            <Grid>
+                                <Grid.ToolTip>
+                                    <ToolTip x:Name="PART_NumericResizingTooltip"
+                                             Content="{TemplateBinding DataContext}"
+                                             ContentTemplate="{StaticResource NumericResizingTooltipTemplate}"
+                                             Style="{StaticResource WPFToolTipStyle}">
+                                    </ToolTip>
+                                </Grid.ToolTip>
+                            </Grid>
+                            <Grid>
+                                <Grid.ToolTip>
+                                    <ToolTip x:Name="PART_ProgressResizingTooltip"
+                                             Content="{TemplateBinding DataContext}"
+                                             ContentTemplate="{StaticResource ProgressResizingTooltipTemplate}"
+                                             Style="{StaticResource WPFToolTipStyle}">
+                                    </ToolTip>
+                                </Grid.ToolTip>
+                            </Grid>
+                        </Canvas>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+</ResourceDictionary>

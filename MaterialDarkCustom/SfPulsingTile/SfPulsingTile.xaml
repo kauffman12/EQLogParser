@@ -79,7 +79,7 @@
                             Margin="{TemplateBinding Padding}"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
-                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                            CornerRadius="1"
                             BorderThickness="{TemplateBinding BorderThickness}">
                             <Grid Margin="{TemplateBinding Padding}">
                                 <Grid ClipToBounds="false">

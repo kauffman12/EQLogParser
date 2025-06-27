@@ -34,6 +34,7 @@
                             <Border
                                 Name="border"
                                 MinHeight="98"
+                                Padding="0"
                                 Background="{Binding Path=ItemBackground, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
                                 BorderBrush="{Binding Path=ItemBorderBrush, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
                                 BorderThickness="{Binding Path=ItemBorderThickness, RelativeSource={RelativeSource AncestorType={x:Type syncfusion:Gallery}}}"
@@ -44,7 +45,7 @@
                                         <ColumnDefinition Width="102" />
                                         <ColumnDefinition />
                                     </Grid.ColumnDefinitions>
-                                    <Border x:Name="PART_Border" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" 
+                                    <Border x:Name="PART_Border" CornerRadius="1" 
                                             Background="{StaticResource ContentBackgroundAlt2}"/>
                                     <Border
                                         Grid.Column="0"
@@ -52,7 +53,7 @@
                                         Margin="10,2,0,2"
                                         Background="{StaticResource ContentBackgroundAlt2}"
                                         BorderBrush="{StaticResource BorderAlt}"
-                                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                                        CornerRadius="1"
                                         BorderThickness="1">
                                         <ContentPresenter
                                             MinWidth="0"                                           
@@ -689,8 +690,8 @@
                 <Setter Property="ItemMargin" Value="3" />
             </Trigger>
             <Trigger Property="VisualMode" Value="Detailed">
-                <Setter Property="PanelPadding" Value="0,10,0,10" />
-                <Setter Property="ItemMargin" Value="0,1,0,1" />
+                <Setter Property="PanelPadding" Value="0 10 0 10" />
+                <Setter Property="ItemMargin" Value="0 1 0 1" />
             </Trigger>
             <Trigger Property="IsFocused" Value="True">
                 <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />

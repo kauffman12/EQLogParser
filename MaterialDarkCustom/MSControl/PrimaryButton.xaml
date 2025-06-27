@@ -83,6 +83,7 @@
                             <Setter Property="Background" TargetName="border" Value="{StaticResource PrimaryLighten}"/>
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PrimaryLighten}"/>
                             <Setter Property="Foreground" Value="{StaticResource PrimaryForegroundDisabled}"/>
+                            <Setter Property="Opacity" Value="1"/>
                             <Setter Property="Effect" TargetName="border" Value="{x:Null}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>

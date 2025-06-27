@@ -345,7 +345,7 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                        CornerRadius="1">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*" />

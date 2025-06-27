@@ -35,10 +35,8 @@
                 <ControlTemplate TargetType="ContentControl">
                     <Grid 
                         Effect="{StaticResource Default.ShadowDepth2}"
-                        RenderTransformOrigin="0.5,0.5">
-                    <Grid.Margin>
-                        <Thickness>0</Thickness>
-                    </Grid.Margin>
+                        RenderTransformOrigin="0.5,0.5"
+                        Margin="0">
                     <Path
                          x:Name="ToolTipPath"
                          Height="30"
@@ -85,6 +83,7 @@
                         <Border
                             x:Name="PART_Host"
                             Grid.Row="1"
+                            Padding="0"
                             Margin="0,0,0,0"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"

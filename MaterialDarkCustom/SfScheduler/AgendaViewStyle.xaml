@@ -142,6 +142,66 @@
         </DataTemplate.Triggers>
     </DataTemplate>
 
+    <DataTemplate x:Key="SyncfusionMonthAgendaViewSelectedDateMaterial3Template">
+        <Grid Margin="10, 0, 10, 0"
+              HorizontalAlignment="Stretch" 
+              VerticalAlignment="Center" >
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="{Binding Converter={StaticResource TodayBorderSizeConverter},ConverterParameter=Material3}"  />
+            </Grid.RowDefinitions>
+            <TextBlock x:Name="PART_DayText"
+                       HorizontalAlignment="Center"
+                       FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                       FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
+                       Foreground="{StaticResource ContentForeground}"
+                       Text="{Binding Converter={StaticResource timeFormatConverter}, ConverterParameter=Day}" />
+            <Border x:Name="PART_Border" Grid.Row="1" >
+                <Border.Style>
+                    <Style>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ElementName=PART_Border, Path=IsMouseOver}" Value="true">
+                                <Setter Property="Border.Background" Value="{StaticResource ContentBackgroundHover}"/>
+                                <Setter Property="TextBlock.Foreground" Value="{StaticResource HoverForeground}"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Converter={StaticResource timeFormatConverter},ConverterParameter=Today}" Value="{x:Static system:DateTime.Today}">
+                                <Setter Property="Border.Background" Value="{StaticResource PrimaryBackground}" />
+                            </DataTrigger>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding ElementName=PART_Border, Path=IsMouseOver}" Value="true"/>
+                                    <Condition Binding="{Binding Converter={StaticResource timeFormatConverter},ConverterParameter=Today}" Value="{x:Static system:DateTime.Today}"/>
+                                </MultiDataTrigger.Conditions>
+                                <MultiDataTrigger.Setters>
+                                    <Setter Property="Border.Background" Value="{StaticResource PrimaryDark}"/>
+                                </MultiDataTrigger.Setters>
+                            </MultiDataTrigger>
+                        </Style.Triggers>
+                        <Setter Property="Border.Background" Value="Transparent"/>
+                        <Setter Property="Border.Width" Value="{Binding Converter={StaticResource TodayBorderSizeConverter},ConverterParameter=Material3}"/>
+                        <Setter Property="Border.Height" Value="{Binding Converter={StaticResource TodayBorderSizeConverter},ConverterParameter=Material3}"/>
+                        <Setter Property="Border.CornerRadius" Value="{Binding Converter={StaticResource TodayBorderSizeConverter},ConverterParameter=Material3}"/>
+                        <Setter Property="TextBlock.Foreground" Value="{StaticResource ContentForeground}"/>
+                    </Style>
+                </Border.Style>
+                <TextBlock x:Name="PART_DateText"
+                           Grid.Row="1"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           TextAlignment="Center"
+                           FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                           FontSize="{StaticResource MaterialDarkCustom.HeaderTextStyle}"
+                           Text="{Binding Converter={StaticResource timeFormatConverter}, ConverterParameter=Date}" />
+            </Border>
+        </Grid>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding Converter={StaticResource timeFormatConverter},ConverterParameter=Today}" Value="{x:Static system:DateTime.Today}">
+                <Setter TargetName="PART_DayText" Property="Foreground" Value="{StaticResource PrimaryColorForeground}" />
+                <Setter TargetName="PART_DateText" Property="Foreground" Value="{StaticResource PrimaryForeground}" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
     <Style x:Key="SyncfusionMonthAgendaViewStyle" TargetType="scheduler:MonthAgendaView">
         <Setter Property="Background" Value="{StaticResource ContentBackground}" />
         <Setter Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
@@ -164,7 +224,6 @@
             <Setter.Value>
                 <ControlTemplate TargetType="scheduler:MonthAgendaView">
                     <Border Name="Border" BorderThickness="1">
-
                         <Grid Grid.Row="2" Background="{TemplateBinding Background}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -187,7 +246,6 @@
                                 VerticalAlignment="Top"
                                 Foreground="{StaticResource ContentForeground}"
                                 x:Name="PART_NoEventsTextBlock"/>
-
                             <ScrollViewer Grid.Column="1">
                                 <ItemsPresenter />
                             </ScrollViewer>
@@ -201,4 +259,3 @@
     <Style BasedOn="{StaticResource SyncfusionMonthAgendaViewStyle}" TargetType="scheduler:MonthAgendaView" />
 
 </ResourceDictionary>
-    
