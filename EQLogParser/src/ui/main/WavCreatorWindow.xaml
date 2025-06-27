@@ -39,9 +39,9 @@
       </ComboBox>
       <ComboBox x:Name="deviceList" SelectedIndex="0" Margin="0,0,8,2" MaxWidth="150" SelectionChanged="OptionsChanged" />
       <Button Name="volumeBtn" Content="Volume" Margin="0,0,4,1" Padding="8,0,8,0" Height="{DynamicResource EQButtonHeight}" Click="VolumeButtonClick" />
-      <Popup Name="volumePopup" PlacementTarget="{Binding ElementName=volumeBtn}" Height="320" Placement="Right" StaysOpen="False" VerticalOffset="30" HorizontalOffset="-20">
+      <Popup Name="volumePopup" PlacementTarget="{Binding ElementName=volumeBtn}" Height="320" Width="60" Placement="Right" StaysOpen="False" VerticalOffset="30" HorizontalOffset="-20">
         <Border Background="{DynamicResource ContentBackgroundAlt2}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-          <syncfusion:SfRangeSlider Name="volumeSlider" Height="300" Minimum="0" Maximum="100" TickFrequency="10" ValuePlacement="BottomRight" ShowValueLabels="True" Orientation="Vertical" />
+          <syncfusion:SfRangeSlider Name="volumeSlider" Height="300" Minimum="0" Maximum="100" LabelOrientation="Horizontal" TickFrequency="10" ValuePlacement="BottomRight" ShowValueLabels="True" Orientation="Vertical" />
         </Border>
       </Popup>
     </StackPanel>
