@@ -234,11 +234,9 @@
                             VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
                         </Grid>
                     </Border>
-
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
-
     </Style>
     <Style BasedOn="{StaticResource SyncfusionTimeRulerCellStyle}" TargetType="scheduler:TimeRulerCell" />
 

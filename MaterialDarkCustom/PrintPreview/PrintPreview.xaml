@@ -18,12 +18,13 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/PrimaryButton.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/GlyphButton.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Button.xaml" />
-        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/UpDown/UpDown.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
     <resources:BooleanToVisibilityConverterEx x:Key="BooleanToVisibilityConverter" />
     <PrintPreview_printing:PageSizeTextConverter x:Key="PageSizeTextConverter"/>
     <PrintPreview_printing:PrintQueueNameToVisibilityConverter x:Key="PrintQueueNameToVisibilityConverter"/>
+
+    <CornerRadius x:Key="PrintPreview.PrintPreviewWindow.CopyCountCopyCountBox.Static.CornerRadius">2</CornerRadius>
 
     <Style x:Key="PrintWindowStyle" TargetType="{x:Type resources:ChromelessWindow}" BasedOn="{StaticResource SyncfusionChromelessWindowStyle}">
         <Setter Property="Height" 
@@ -440,16 +441,8 @@
                           VerticalAlignment="Top"
                           Height="24"  
                           Width="24">
-                        <Path Data="M4,17 L14,17 14,24 4,24 z M17,15 L19,15 19,17 17,17 z M0,4 L1,4 1,12 17,12 17,4 18,4 18,13 0,13 z M4,0 L14,0 14,7 4,7 z"
-                              Margin="3,1,2,1"
-                              Fill="White" 
-                              Stretch="Fill"/>
-                        <Path Data="M5.0000001,17 L11,17 11,18 5.0000001,18 z M5.0000001,15 L11,15 11,16 5.0000001,16 z M0,0 L2.0000001,0 2.0000001,4 14,4 14,0 16,0 16,8 0,8 z" 
-                              Margin="4,5,4,3"
-                              Fill="#FF4D82B9"
-                              Stretch="Fill" />
-                        <Path Data="M6.9999999,18 L6.9999999,20 6.9999999,25 17,25 17,20 17,18 z M20,16 L20,18 22,18 22,16 z M2,6 L3.0000002,6 3.0000002,14 21,14 21,6 22,6 C23.104,6 24,6.8959999 24,8 L24,18 C24,19.104 23.104,20 22,20 L18,20 18,26 6,26 6,20 2,20 C0.89599991,20 0,19.104 0,18 L0,8 C0,6.8959999 0.89599991,6 2,6 z M6.9999999,1 L6.9999999,8 17,8 17,1 z M6,0 L18,0 18,9 6,9 z" 
-                              Fill="#FF848484" 
+                        <Path Data="M5 7.5H3C2.45 7.5 2 7.95 2 8.5V14.5H5V11.5H17V14.5H20V8.5C20 7.95 19.55 7.5 19 7.5H17H5ZM17 5.5H19C20.65 5.5 22 6.85 22 8.5V16.5H17V20.5H5V16.5H0V8.5C0 6.85 1.35 5.5 3 5.5H5V0.5H17V5.5ZM7 5.5H15V2.5H7V5.5ZM7 16.5V18.5H15V16.5V14.5V13.5H7V14.5V16.5ZM19 9.5C19 10.05 18.55 10.5 18 10.5C17.45 10.5 17 10.05 17 9.5C17 8.95 17.45 8.5 18 8.5C18.55 8.5 19 8.95 19 9.5Z"
+                              Fill="{StaticResource IconColor}"
                               Stretch="Fill"/>
                     </Grid>
                     <Grid x:Name="Fax"
@@ -458,13 +451,9 @@
                           VerticalAlignment="Top"
                           Height="24"
                           Width="24">
-                        <Path Data="M0,15 L16,15 16,16 0,16 z M17.5,9.9999999 C17.776001,10 18,10.223999 18,10.5 18,10.776001 17.776001,11 17.5,11 17.223999,11 17,10.776001 17,10.5 17,10.223999 17.223999,10 17.5,9.9999999 z M2,0 L14,0 14,7 2,7 z" 
-                              Margin="3,1,1,3" 
-                              Fill="White"
-                              Stretch="Fill"/>
-                        <Path Data="M3,16 L3,17 19,17 19,16 z M20.5,11 C20.223999,11 20,11.223999 20,11.5 20,11.776001 20.223999,12 20.5,12 20.776001,12 21,11.776001 21,11.5 21,11.223999 20.776001,11 20.5,11 z M2,6.9999999 L3,6.9999999 3,7.9999999 3,9 3,10 19,10 19,9 19,7.9999999 19,6.9999999 20,6.9999999 C21.104,7 22,7.8959999 22,9 L22,18 C22,19.104 21.104,20 20,20 L2,20 C0.89599991,20 0,19.104 0,18 L0,9 C0,7.8959999 0.89599991,7 2,6.9999999 z M7,4.9999998 L15,4.9999998 15,5.9999999 7,5.9999999 z M7,3 L15,3 15,4.0000002 7,4.0000002 z M5,1 L5,7.9999999 17,7.9999999 17,1 z M4,0 L18,0 18,9 4,9 z"
-                              Fill="#FF848484"
-                              Stretch="Fill" />
+                        <Path Data="M3 7.5H5H17H19C19.55 7.5 20 7.95 20 8.5V14.5H7H2V8.5C2 7.95 2.45 7.5 3 7.5ZM19 5.5H17V0.5H5V5.5H3C1.35 5.5 0 6.85 0 8.5V16.5H7H22V8.5C22 6.85 20.65 5.5 19 5.5ZM15 2.5V5.5H7V2.5H15ZM19 9.5C19 10.05 18.55 10.5 18 10.5C17.45 10.5 17 10.05 17 9.5C17 8.95 17.45 8.5 18 8.5C18.55 8.5 19 8.95 19 9.5Z"
+                              Stretch="Fill"
+                              Fill="{StaticResource IconColor}"/>
                     </Grid>
                     <Grid x:Name="Tick" 
                           Visibility="{Binding IsDefault, Converter={StaticResource BooleanToVisibilityConverter}}"
@@ -474,16 +463,11 @@
                           Width="14"
                           Margin="10,10,0,0">
                         <Path Data="M8,0 C12.418,0 16,3.5820001 16,8.0000002 16,12.418 12.418,16 8,16 3.582,16 0,12.418 0,8.0000002 0,3.5820001 3.582,0 8,0 z" 
-                              Fill="White"
+                              Fill="{StaticResource PrimaryForeground}"
                               Stretch="Fill"/>
-                        <Path Data="M10.506004,3.7540016 L5.8660049,8.4070015 3.4940033,6.026001 2.572998,6.9449997 5.8660049,10.246002 11.427002,4.6710014 z M7,0 C10.866005,0 14,3.1340027 14,7 14,10.866001 10.866005,14 7,14 3.1340027,14 0,10.866001 0,7 0,3.1340027 3.1340027,0 7,0 z"
-                              Margin="1"
-                              Fill="#FF0F6E12" 
-                              Stretch="Fill" />
-                        <Path Data="M9.5060043,2.7540016 L4.8660049,7.4070015 2.4940033,5.026001 1.572998,5.9449997 4.8660049,9.2460022 10.427002,3.6710014 z M6,0 C9.3130035,0 12,2.6860008 12,6 12,9.3129997 9.3130035,12 6,12 2.6860046,12 0,9.3129997 0,6 0,2.6860008 2.6860046,0 6,0 z" 
-                              Margin="2" 
-                              Fill="#FF00A302" 
-                              Stretch="Fill" />
+                        <Path Data="M10 20.5C15.5228 20.5 20 16.0228 20 10.5C20 4.97715 15.5228 0.5 10 0.5C4.47715 0.5 0 4.97715 0 10.5C0 16.0228 4.47715 20.5 10 20.5ZM9.34885 15.4047L17.1266 7.62697L13.9839 4.48427L7.77751 10.6907L6.01552 8.92872L2.87282 12.0714L6.20616 15.4047L7.77751 16.9761L9.34885 15.4047Z"
+                              Stretch="Fill"
+                              Fill="{StaticResource IconColor}"/>
                     </Grid>
                 </Grid>
                 <TextBlock Grid.Column="1" 
@@ -519,8 +503,8 @@
                                 <StackPanel>
                                     <StackPanel  Orientation="Horizontal">
                                         <Button x:Name="Part_QuickPrintButton"
-                                                Height="85"
-                                                Width="85"
+                                                Height="80"
+                                                Width="80"
                                                 HorizontalAlignment="Left"
                                                 VerticalAlignment="Center"                                                
                                                 Command="{Binding QuickPrintCommand}"                                                
@@ -540,8 +524,8 @@
                                                       Height="31"                                                      
                                                       Fill="{Binding RelativeSource={RelativeSource Mode=Self}, Path=(TextBlock.Foreground)}" 
                                                       Stretch="Fill" 
-                                                      SnapsToDevicePixels="True"                                      
-                                                      Margin="24.1, 2, 24.1, 8">
+                                                      SnapsToDevicePixels="True"
+                                                       Margin="24.1,2,24.1,8">                                                    
                                                     <Path.Data>
                                                         <PathGeometry>M5,9.0000038 L5,12.000004 11,12.000004 11,9.0000038 z M12,6.0000038 L12,8.0000038 14,8.0000038 14,6.0000038 z M1.994,4.0000038 L14.006,4.0000038 C15.108,4.0000038 16,4.8870039 16,6.0060039 L16,11.000004 13,11.000004 13,14.000004 3,14.000004 3,11.000004 0,11.000004 0,6.0060039 C0,4.8980036 0.89499998,4.0000038 1.994,4.0000038 z M2.9999809,0 L12.999981,0 12.999981,3 2.9999809,3 z</PathGeometry>
                                                     </Path.Data>
@@ -575,7 +559,7 @@
                                                     Width="{TemplateBinding Width}"
                                                     SnapsToDevicePixels="True"
                                                     BorderThickness="1"
-                                                    
+                                                    CornerRadius="{StaticResource PrintPreview.PrintPreviewWindow.CopyCountCopyCountBox.Static.CornerRadius}"
                                                     BorderBrush="{TemplateBinding BorderBrush}"
                                                     Background="{TemplateBinding Background}">
                                                 <Grid  ClipToBounds="True">
@@ -711,7 +695,7 @@
                                                     Width="{TemplateBinding Width}"
                                                     SnapsToDevicePixels="True"
                                                     BorderThickness="1" 
-                                                    CornerRadius="0"
+                                                    CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
                                                     BorderBrush="{TemplateBinding BorderBrush}" 
                                                     Background="{TemplateBinding Background}">
                                                 <Grid ClipToBounds="True">
@@ -802,7 +786,7 @@
                                             <Border x:Name="ToPage_Border"  
                                                     Width="{TemplateBinding Width}"  
                                                     BorderThickness="1" 
-                                                    CornerRadius="0"
+                                                    CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
                                                     BorderBrush="{TemplateBinding BorderBrush}"
                                                     Background="{TemplateBinding Background}"                                                    
                                                     SnapsToDevicePixels="True">
@@ -1128,6 +1112,9 @@
                                                 Focusable="False"
                                                 HorizontalAlignment="Center"
                                                 Style="{StaticResource WPFGlyphButtonStyle}">
+                                                <Button.Margin>
+                                                    <Thickness>0,0,0,0</Thickness>
+                                                </Button.Margin>
                                                 <Path x:Name="pluspath"
                                                   HorizontalAlignment="Center"
                                                   VerticalAlignment="Center" 
@@ -1155,6 +1142,9 @@
                                                 IsMoveToPointEnabled="True"
                                                 Value="{Binding ZoomFactor}"
                                                 Style="{StaticResource WPFSliderStyle}">
+                                                <Slider.Margin>
+                                                    <Thickness Left="0" Top="0" Right="0" Bottom="0"/>
+                                                </Slider.Margin>
                                             </Slider>
                                             <Button x:Name="PART_MinusZoomButton"
                                                 Grid.Column="1"
@@ -1163,14 +1153,17 @@
                                                 Focusable="False"
                                                 HorizontalAlignment="Center"
                                                 Style="{StaticResource WPFGlyphButtonStyle}">
+                                                <Button.Margin>
+                                                    <Thickness>0,0,0,0</Thickness>
+                                                </Button.Margin>
                                                 <Path x:Name="minuspath"
-                                                  HorizontalAlignment="Center"
-                                                  VerticalAlignment="Center" 
-                                                  Width="12" 
-                                                  Height="12"
-                                                  Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
-                                                  Stretch="Fill" 
-                                                  SnapsToDevicePixels="True">
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center" 
+                                                      Width="12" 
+                                                      Height="12"
+                                                      Fill="{Binding Path=Foreground,RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
+                                                      Stretch="Fill" 
+                                                      SnapsToDevicePixels="True">
                                                     <Path.Data>
                                                         <PathGeometry>M3.9999886,7.0000038 L11.999989,7.0000038 11.999989,9.0000038 3.9999886,9.0000038 z M8,2 C4.6910095,2 2,4.6910095 2,8 2,11.309006 4.6910095,14 8,14 11.30899,14 14,11.309006 14,8 14,4.6910095 11.30899,2 8,2 z M8,0 C12.411011,0 16,3.5890045 16,8 16,12.410995 12.411011,16 8,16 3.5890198,16 0,12.410995 0,8 0,3.5890045 3.5890198,0 8,0 z</PathGeometry>
                                                     </Path.Data>

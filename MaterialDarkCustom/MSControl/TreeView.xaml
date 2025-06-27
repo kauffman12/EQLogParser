@@ -46,11 +46,7 @@
                                       HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
                                       VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}"
                                       SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                            <ItemsPresenter>
-                                    <ItemsPresenter.Margin>
-                                        <Thickness>0,0,0,0</Thickness>
-                                    </ItemsPresenter.Margin>
-                            </ItemsPresenter>
+                            <ItemsPresenter Margin="0"/>
                         </ScrollViewer>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -87,11 +83,7 @@
         <Setter Property="HorizontalContentAlignment" Value="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"/>
         <Setter Property="VerticalContentAlignment" Value="{Binding VerticalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"/>
         <Setter Property="MinHeight" Value="{StaticResource MaterialDarkCustom.MinHeight1}"/>
-        <Setter Property="Margin">
-            <Setter.Value>
-                <Thickness>0,0,0,0</Thickness>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Margin" Value="0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type TreeViewItem}">
@@ -132,14 +124,14 @@
                                               ContentSource="Header" 
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
-                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                            </ContentPresenter>
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                              Margin="0"/>
                         </Border>
                         <ItemsPresenter x:Name="ItemsHost" 
                                         Grid.ColumnSpan="2" 
                                         Grid.Column="1" 
-                                        Grid.Row="1">
-                        </ItemsPresenter>
+                                        Grid.Row="1"
+                                        Margin="0"/>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsExpanded" Value="false">

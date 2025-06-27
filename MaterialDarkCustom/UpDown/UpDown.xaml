@@ -14,6 +14,11 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/RepeatButton.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
+    <CornerRadius x:Key="UpDown.RangeAdornerBorder.Static.CornerRadius">0,0,0,1</CornerRadius>
+    <sys:Double x:Key="UpDown.Border.Static.Opacity">1</sys:Double>
+    <Thickness x:Key="UpDown.ScrollViewer.Static.Margin">0,0,0,0</Thickness>
+    <Thickness x:Key="UpDown.Static.Margin">0,0,0,0</Thickness>
+
     <shared:NullToVisibilityConverter x:Key="UpDownNullToVisibilityConverter" />
     <shared:ClipConverter x:Key="UpDownclipConverter" />
     <shared:RadiusConverter x:Key="UpDownradiusConverter" />
@@ -56,7 +61,7 @@
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                     IsHitTestVisible="False"
                                     Visibility="Collapsed"
-                                    >
+                                    Opacity="{StaticResource UpDown.Border.Static.Opacity}">
                                     <Border.RenderTransform>
                                         <ScaleTransform>
                                             <ScaleTransform.ScaleX>
@@ -77,7 +82,8 @@
                                     VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
                                     Background="{TemplateBinding Background}"
                                     SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
-                                    Visibility="{TemplateBinding ContentElementVisibility}" >
+                                    Visibility="{TemplateBinding ContentElementVisibility}" 
+                                    Margin="{StaticResource UpDown.ScrollViewer.Static.Margin}">
                                 </ScrollViewer>
 
                                 <ContentControl
@@ -119,6 +125,8 @@
                                 <Condition Property="IsKeyboardFocusWithin" Value="False" />
                             </MultiTrigger.Conditions>
                             <Setter TargetName="RangeAdornerBorder" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="RangeAdornerBorder" Property="CornerRadius" Value="{StaticResource UpDown.RangeAdornerBorder.Static.CornerRadius}"/>
+                            <Setter TargetName="RangeAdornerBorder" Property="Margin" Value="{StaticResource UpDown.Static.Margin}"/>
                         </MultiTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -142,7 +150,6 @@
         <Setter Property="FocusedBorderBrush" Value="{StaticResource PrimaryBackground}" />
         <Setter Property="FocusedForeground" Value="{StaticResource ContentForeground}" />
         <Setter Property="ZeroColor" Value="{StaticResource WarningForeground}" />
-        <Setter Property="MinHeight" Value="{StaticResource MaterialDarkCustom.MinHeight}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type shared:UpDown}">
@@ -263,13 +270,10 @@
 
                                 <RepeatButton
                                     x:Name="upbutton"
-                                    
                                     Grid.Row="0"
                                     Grid.Column="1"
                                     Width="16"
-                                    
                                     MinHeight="0"
-                                    
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                     Background="Transparent"
                                     Command="shared:UpDown.m_upValue"
@@ -302,14 +306,12 @@
 
                                 <RepeatButton
                                     x:Name="downbutton"
-                                    
                                     Grid.Row="2"
                                     Grid.Column="1"
                                     Width="16"
-                                    
                                     MinHeight="0"
                                     Margin="0"
-                                    Padding="1 "
+                                    Padding="1"
                                     Background="Transparent"
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                     Command="shared:UpDown.m_downValue"

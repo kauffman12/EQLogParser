@@ -164,11 +164,7 @@
         <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
         <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness}" />
         <Setter Property="Padding" Value="4" />
-        <Setter Property="Margin">
-            <Setter.Value>
-                <Thickness>0,0,0,0</Thickness>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Margin" Value="0,0,0,0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type shared:PinnableListBoxItem}">
@@ -225,7 +221,7 @@
                                         TextElement.FontFamily="{TemplateBinding FontFamily}"
                                         TextElement.FontSize="{TemplateBinding FontSize}"
                                         TextElement.FontWeight="{TemplateBinding FontWeight}"
-                                        Margin="0"/>
+                                        Margin="0,0,0,0"/>
                                     <TextBlock
                                         x:Name="Description"
                                         Grid.Row="1"

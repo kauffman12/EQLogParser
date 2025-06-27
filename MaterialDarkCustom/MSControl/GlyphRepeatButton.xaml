@@ -34,8 +34,7 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             Background="{TemplateBinding Background}"
                             CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
-
-                           SnapsToDevicePixels="true">
+                            SnapsToDevicePixels="true">
                         <ContentPresenter x:Name="contentPresenter"
                                           Focusable="False"
                                           HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -71,6 +70,7 @@
                             <Setter Property="Background" TargetName="border" Value="Transparent"/>
                             <Setter Property="BorderBrush" TargetName="border" Value="Transparent"/>
                             <Setter Property="TextElement.Foreground" Value="{StaticResource IconDisabledColor}"/>
+                            <Setter Property="Opacity" Value="1"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

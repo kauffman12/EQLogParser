@@ -75,6 +75,7 @@
                             <Setter Property="Background" TargetName="border" Value="Transparent"/>
                             <Setter Property="BorderBrush" TargetName="border" Value="Transparent"/>
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource SecondaryForegroundDisabled}"/>
+                            <Setter Property="Opacity" Value="1"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

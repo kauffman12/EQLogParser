@@ -13,7 +13,8 @@
 
     <Style  x:Key="SyncfusionSfTextInputLayoutStyle"
             TargetType="sync:SfTextInputLayout">
-        <Setter Property="OutlineCornerRadius" Value="4"></Setter>
+        <Setter Property="OutlineCornerRadius"
+                Value="4"></Setter>
         <Setter Property="BorderThickness"
                 Value="{StaticResource MaterialDarkCustom.BorderThickness}"></Setter>
         <Setter Property="FocusedStrokeThickness"

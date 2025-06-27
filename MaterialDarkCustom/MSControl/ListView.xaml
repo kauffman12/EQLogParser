@@ -463,16 +463,10 @@
                 Value="{StaticResource ContentForeground}"/>
                 <Setter Property="BorderThickness" 
                         Value="{StaticResource MaterialDarkCustom.BorderThickness}"/>
-                <Setter Property="Padding">
-                    <Setter.Value>
-                        <Thickness>4,1,4,1</Thickness>
-                    </Setter.Value>
-                </Setter>
-                <Setter Property="Margin">
-                    <Setter.Value>
-                        <Thickness>0,0,0,0</Thickness>
-                    </Setter.Value>
-                </Setter>
+                <Setter Property="Padding"
+                        Value="4,1"/>
+                <Setter Property="Margin"
+                        Value="0"/>
                 <Setter Property="MinHeight" Value="{StaticResource MaterialDarkCustom.MinHeight}"/>
                 <Setter Property="Template">
                     <Setter.Value>
@@ -590,11 +584,7 @@
                                       Focusable="false"
                                       Style="{StaticResource {x:Static GridView.GridViewScrollViewerStyleKey}}"
                                       Padding="{TemplateBinding Padding}">
-                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                                <ItemsPresenter.Margin>
-                                    <Thickness>0,0,0,0</Thickness>
-                                </ItemsPresenter.Margin>
-                            </ItemsPresenter>
+                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                         </ScrollViewer>
                     </Border>
                     <ControlTemplate.Triggers>

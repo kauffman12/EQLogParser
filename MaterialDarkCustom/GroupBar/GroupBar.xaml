@@ -458,7 +458,7 @@
                                 Background="{StaticResource ContentBackground}"
                                 BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                 BorderBrush="{StaticResource BorderAlt}"
-                                
+                                CornerRadius="0"
                                 Effect="{StaticResource Default.ShadowDepth3}">
                                 <Border.Margin>
                                     <Thickness>8,8,8,8</Thickness>
@@ -518,7 +518,7 @@
                         Name="PopupResizePart"
                         Background="{StaticResource ContentBackground}"
                         BorderBrush="{StaticResource BorderAlt}"
-                        
+                        CornerRadius="0"
                         BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                         Effect="{StaticResource Default.ShadowDepth3}">
                         <Border.Margin>

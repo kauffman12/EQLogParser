@@ -35,6 +35,7 @@
     <Style x:Key="WPFStatusBarStyle" TargetType="{x:Type StatusBar}">
         <Setter Property="Background" Value="{StaticResource ContentBackgroundAlt2}"/>
         <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness}"/>
         <Setter Property="FontFamily" Value="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
         <Setter Property="FontSize" Value="{StaticResource MaterialDarkCustom.CaptionText}"/>
         <Setter Property="FontWeight" Value="{StaticResource MaterialDarkCustom.FontWeightNormal}"/>
@@ -45,7 +46,7 @@
                             BorderThickness="{TemplateBinding BorderThickness}" 
                             Background="{TemplateBinding Background}" 
                             Padding="{TemplateBinding Padding}" 
-                            
+                            CornerRadius="0"
                             SnapsToDevicePixels="true">
                         <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                     </Border>

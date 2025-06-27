@@ -435,7 +435,7 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding Border.CornerRadius}"
+                        CornerRadius="1"
                         TextBlock.Foreground="{TemplateBinding Foreground}">
                         <ScrollViewer
                             VerticalScrollBarVisibility="Auto">

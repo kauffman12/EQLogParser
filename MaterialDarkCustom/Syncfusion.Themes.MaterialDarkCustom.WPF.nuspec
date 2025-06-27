@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Syncfusion.Themes.MaterialDarkCustom.WPF</id>
+    <version>14.4.0.15</version>
+    <authors>Syncfusion Inc.</authors>
+    <owners>Syncfusion Inc.</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <licenseUrl>http://www.syncfusion.com/nuget/license</licenseUrl>
+    <projectUrl>http://www.syncfusion.com/</projectUrl>
+    <iconUrl>http://www.syncfusion.com/content/images/nuget/sync_logo_icon.png</iconUrl>
+    <description>Nuget package of Syncfusion.Themes.MaterialDarkCustom.WPF assembly</description>
+    <copyright>Copyright 2001 - 2017 Syncfusion Inc.</copyright>
+    <references>
+      <reference file="Syncfusion.Themes.MaterialDarkCustom.WPF.dll" />
+    </references>
+  </metadata>
+</package>

@@ -16,6 +16,7 @@
                 
                 
                 >
+            <!--The reason for handling collapse in tooltips is to restrict the appearance of the nose part between the mouse pointer and the tooltip popup-->
             <Grid>
                 <Polygon  Fill="{StaticResource TooltipBackground}"
                          Points="{Binding PolygonPoints}"

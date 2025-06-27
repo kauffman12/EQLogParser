@@ -16,6 +16,10 @@
     <local:MoreColorVisibilityconverter x:Key="MoreColorVisibilityconverterkey" />
     <local:SizeToDoubleConverter x:Key="SizeToDoubleConverterKey" />
 
+    <CornerRadius x:Key="ColorPickerPalette.ColorItem.Static.CornerRadius">0,0,0,1</CornerRadius>
+    <CornerRadius x:Key="ColorPickerPalette.InnerBorder.Static.CornerRadius">0,0,0,1</CornerRadius>
+    <CornerRadius x:Key="ColorPickerPalette.ColorBorder.Static.CornerRadius">0,0,0,1</CornerRadius>
+    
     <shared:ColorToBrushConverter x:Key="ColorToBrushConverterKey" ></shared:ColorToBrushConverter>
     <DataTemplate x:Key="HeaderTemplateKey">
         <Grid x:Name="IconGrid">
@@ -24,16 +28,17 @@
                 <RowDefinition x:Name="colorborder_row" Height="*" />
             </Grid.RowDefinitions>
             <Image
-                x:Name="image" Stretch="Uniform"
-                Width="{Binding Path=IconSize, Converter={StaticResource SizeToDoubleConverterKey}, ConverterParameter=width, RelativeSource={RelativeSource AncestorType={x:Type local:ColorPickerPalette}}}"
-                Height="{Binding Path=IconSize, Converter={StaticResource SizeToDoubleConverterKey}, ConverterParameter=height, RelativeSource={RelativeSource AncestorType={x:Type local:ColorPickerPalette}}}"
-                Source="{Binding Path=Icon, RelativeSource={RelativeSource AncestorType={x:Type local:ColorPickerPalette}}, UpdateSourceTrigger=PropertyChanged}" />
-            <Border 
-                x:Name="color_border" 
-                Grid.Row="1" 
-                BorderThickness="1" 
-                MinHeight="5" 
-                Background="{Binding Path=Color, RelativeSource={RelativeSource AncestorType={x:Type local:ColorPickerPalette}},Converter={StaticResource ColorToBrushConverterKey}, UpdateSourceTrigger=PropertyChanged}"/>
+        x:Name="image"
+        Width="{Binding Path=IconSize, Converter={StaticResource SizeToDoubleConverterKey}, ConverterParameter=width, RelativeSource={RelativeSource AncestorType={x:Type local:ColorPickerPalette}}, FallbackValue=16}"
+        Height="{Binding Path=IconSize, Converter={StaticResource SizeToDoubleConverterKey}, ConverterParameter=height, RelativeSource={RelativeSource AncestorType={x:Type local:ColorPickerPalette}}, FallbackValue=16}"
+        Source="{Binding Path=Icon, RelativeSource={RelativeSource AncestorType={x:Type local:ColorPickerPalette}}, FallbackValue={x:Null}, UpdateSourceTrigger=PropertyChanged}"
+        Stretch="Uniform" />
+            <Border
+        x:Name="color_border"
+        Grid.Row="1"
+        MinHeight="5"
+        Background="{Binding Path=Color, RelativeSource={RelativeSource AncestorType={x:Type local:ColorPickerPalette}}, FallbackValue=Transparent, Converter={StaticResource ColorToBrushConverterKey}, UpdateSourceTrigger=PropertyChanged}"
+        BorderThickness="1" />
         </Grid>
         <DataTemplate.Triggers>
             <Trigger SourceName="image" Property="Source" Value="{x:Null}">
@@ -71,13 +76,13 @@
                             BorderBrush="{StaticResource Black}"
                             FocusVisualStyle="{x:Null}"
                             Focusable="True"
-                            
+                            CornerRadius="{StaticResource ColorPickerPalette.ColorItem.Static.CornerRadius}"
                             SnapsToDevicePixels="True">
                             <Border
                                 x:Name="InnerBorder"
                                 Background="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Color}"
                                 BorderBrush="{StaticResource PopupBackground}"
-                                >
+                                CornerRadius="{StaticResource ColorPickerPalette.InnerBorder.Static.CornerRadius}">
                                 <Border.ToolTip>
                                     <ToolTip>
                                         <TextBlock Text="{TemplateBinding ColorName}" />
@@ -146,7 +151,7 @@
                 <ControlTemplate TargetType="local:ColorGroup">
                     <Grid Visibility="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=PanelVisibility}">
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="32" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <Rectangle
@@ -233,8 +238,7 @@
             </Setter.Value>
         </Setter>
         <Setter Property="MoreColorsIconSize" Value="16,16" />
-        <Setter Property="BorderThickness" 
-                Value="0"/>
+        <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
@@ -279,7 +283,7 @@
                                             Grid.Column="0"
                                             Padding="2"
                                             SnapsToDevicePixels="True"
-                                            >
+                                            CornerRadius="{StaticResource ColorPickerPalette.ColorBorder.Static.CornerRadius}">
                                             <ContentPresenter x:Name="Header" ContentTemplate="{TemplateBinding HeaderTemplate}" />
                                         </Border>
                                         <Border
@@ -356,13 +360,13 @@
                                                                 Grid.Column="0"
                                                                 Background="{StaticResource PopupBackground}"
                                                                 BorderBrush="{StaticResource PopupBackground}"
-                                                                
+                                                                CornerRadius="{StaticResource ColorPickerPalette.ColorItem.Static.CornerRadius}"
                                                                 BorderThickness="1">
                                                                 <Border
                                                                     x:Name="aborder"
                                                                     Grid.Column="0"
                                                                     Background="{TemplateBinding AutomaticColor}"
-                                                                    />
+                                                                    CornerRadius="{StaticResource ColorPickerPalette.InnerBorder.Static.CornerRadius}"/>
                                                             </Border>
                                                         </Border>
                                                         <TextBlock
@@ -386,7 +390,7 @@
                                                     BorderThickness=".5" />
                                                 <ItemsControl
                                                     x:Name="ColorArea"
-                                                    Grid.Row="1"
+                                                    Grid.Row="1 "
                                                     IsTabStop="False">
                                                     <local:ColorGroup
                                                         x:Name="item1"
@@ -659,6 +663,18 @@
                         <Trigger Property="AutomaticColorVisibility" Value="Collapsed">
                             <Setter TargetName="border1" Property="Visibility" Value="Collapsed"/>
                         </Trigger>
+                        <MultiTrigger>
+                        <MultiTrigger.Conditions>
+                            <Condition Property="ThemePanelVisibility" Value="Collapsed"/>
+                            <Condition Property="StandardPanelVisibility" Value="Collapsed"/>
+                            <Condition Property="RecentlyUsedPanelVisibility" Value="Collapsed"/>
+                            <Condition Property="SetCustomColors" Value="True"/>
+                        </MultiTrigger.Conditions>
+                        <Setter TargetName="ColorArea" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="item1" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="item2" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="item3" Property="Visibility" Value="Collapsed"/>
+                        </MultiTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>

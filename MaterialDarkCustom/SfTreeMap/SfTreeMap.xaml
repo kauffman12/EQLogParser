@@ -95,11 +95,15 @@
                                     VerticalAlignment="Center"
                                     Margin="10 0">
                             <Path x:Name="path"
-                                  Data="M197,153.5 L197,138 186.75,145.5 z"
                                   Height="16"
                                   Width="8"
+                                  Stroke="Transparent"
                                   Fill="{StaticResource IconColor}"
-                                  Stretch="Fill" />
+                                  Stretch="Fill">
+                                <Path.Data>
+                                    <PathGeometry>M197,153.5 L197,138 186.75,145.5 z</PathGeometry>
+                                </Path.Data>
+                            </Path>
                             <TextBlock Text="{Binding}"
                                        Margin="10 0"
                                        FontSize="15"

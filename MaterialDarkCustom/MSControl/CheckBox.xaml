@@ -36,7 +36,7 @@
             </Setter.Value>
         </Setter>
     </Style>
-
+    
     <Style x:Key="WPFCheckBoxStyle" TargetType="{x:Type CheckBox}">
         <Setter Property="FocusVisualStyle" Value="{StaticResource CheckBoxFocusVisual}"/>
         <Setter Property="Background" Value="Transparent"/>
@@ -57,6 +57,11 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
+                        <Ellipse x:Name="OverlayCircle"
+                                 Height="24"
+                                 Width="24"
+                                 Fill="{StaticResource PrimaryBackground}"
+                                 Visibility="Collapsed"/>
                         <Border x:Name="checkBoxBorder"
                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
                                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}" 
@@ -69,29 +74,31 @@
                                 CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
                             <Grid x:Name="markGrid">
                                 <Path x:Name="optionMark"
-                                      StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
+                                      StrokeThickness="1.8"
+                                      Width="10"
                                       Margin="1" 
                                       Opacity="0"
-                                      Fill="{StaticResource IconColor}"
-                                      Stroke="Transparent"
+                                      Stroke="{StaticResource IconColor}"
+                                      StrokeStartLineCap="Flat"
+                                      StrokeEndLineCap="Flat"
+                                      StrokeLineJoin="Miter"
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Center"
-                                      Stretch="None"    
+                                      Stretch="Uniform"
                                       
                                       >
                                     <Path.Data>
-                                        <PathGeometry>F1 M 9.97498,1.22334L 4.6983,9.09834L 4.52164,9.09834L 0,5.19331L 1.27664,3.52165L 4.255,6.08833L 8.33331,1.52588e-005L 9.97498,1.22334 Z</PathGeometry>
+                                        <PathGeometry>M0.75 3L2.25 4.5L5.25 1.5</PathGeometry>
                                     </Path.Data>
                                 </Path>
-                                <Path x:Name="indeterminateMark" 
-                                      Data="M0,0 L7.0000002,0 7.0000002,1 0,1 z"
-                                      Fill="{StaticResource IconColor}"
-                                      Margin="2"
-                                      Height="2"
-                                      Stretch="Fill"
-                                      Opacity="0"
-                                      
-                                      />
+                                <TextBlock x:Name="indeterminateMark" 
+                                           Text="&#xe70e;"
+                                           FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                           FontSize="14"
+                                           Foreground="{StaticResource IconColor}"
+                                           Opacity="0"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
                             </Grid>
                         </Border>
                         <ContentPresenter x:Name="contentPresenter" 
@@ -117,14 +124,6 @@
                             <Setter Property="Padding" Value="4,0,0,0"/>
                             <Setter Property="FocusVisualStyle" Value="{StaticResource CheckBoxOptionMarkFocusVisual}"/>
                         </Trigger>
-                        <Trigger Property="IsChecked" Value="true">
-                            <Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource PrimaryBackground}"/>
-                            <Setter Property="BorderBrush" TargetName="checkBoxBorder" Value="{StaticResource PrimaryBackground}"/>
-                             <Setter Property="Opacity" TargetName="optionMark" Value="1"/>
-                            <Setter Property="Opacity" TargetName="indeterminateMark" Value="0"/>
-                            <Setter Property=" Fill" TargetName="optionMark" Value="{StaticResource PrimaryForeground}"/>
-                            <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource ContentForeground}"/>
-                        </Trigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
                                 <Condition  Property="IsMouseOver" Value="true"/>
@@ -132,7 +131,8 @@
                             </MultiTrigger.Conditions>
                             <Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource PrimaryBackground}"/>
                             <Setter Property="BorderBrush" TargetName="checkBoxBorder" Value="{StaticResource PrimaryBackground}"/>
-                            <Setter Property=" Fill" TargetName="optionMark" Value="{StaticResource ContentBackground}"/>
+                            <Setter Property="BorderThickness" TargetName="checkBoxBorder" Value="{StaticResource MaterialDarkCustom.BorderThickness1}"/>
+                            <Setter Property="Stroke" TargetName="optionMark" Value="{StaticResource ContentBackground}"/>
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource ContentForeground}"/>
                         </MultiTrigger>
                         <MultiTrigger>
@@ -142,7 +142,7 @@
                             </MultiTrigger.Conditions>
                             <Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource ContentBackground}"/>
                             <Setter Property="BorderBrush" TargetName="checkBoxBorder" Value="{StaticResource BorderAlt2}"/>
-                            <Setter Property=" Fill" TargetName="optionMark" Value="Transparent"/>
+                            <Setter Property="Stroke" TargetName="optionMark" Value="Transparent"/>
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource ContentForeground}"/>
                         </MultiTrigger>
                         <MultiTrigger>
@@ -150,8 +150,10 @@
                                 <Condition  Property="IsMouseOver" Value="true"/>
                                 <Condition Property="IsChecked" Value="{x:Null}"/>
                             </MultiTrigger.Conditions>
-                            <Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource ContentBackground}"/>
-                            <Setter Property="BorderBrush" TargetName="checkBoxBorder" Value="{StaticResource BorderAlt2}"/>
+                            <Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource PrimaryBackground}"/>
+                            <Setter Property="BorderBrush" TargetName="checkBoxBorder" Value="{StaticResource PrimaryBackground}"/>
+                            <Setter Property="BorderThickness" TargetName="checkBoxBorder" Value="{StaticResource MaterialDarkCustom.BorderThickness1}"/>
+                            <Setter Property="Foreground" TargetName="indeterminateMark" Value="{StaticResource ContentBackground}"/>
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource ContentForeground}"/>
                         </MultiTrigger>
                         <MultiTrigger>
@@ -161,8 +163,9 @@
                             </MultiTrigger.Conditions>
                             <Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource PrimaryBackground}"/>
                             <Setter Property="BorderBrush" TargetName="checkBoxBorder" Value="{StaticResource PrimaryBackground}"/>
-                            <Setter Property=" Fill" TargetName="optionMark" Value="{StaticResource ContentBackground}"/>
-                            <Setter Property="Fill" TargetName="indeterminateMark" Value="{StaticResource ContentBackground}"/>
+                            <Setter Property="BorderThickness" TargetName="checkBoxBorder" Value="{StaticResource MaterialDarkCustom.BorderThickness1}"/>
+                            <Setter Property="Stroke" TargetName="optionMark" Value="{StaticResource ContentBackground}"/>
+                            <Setter Property="Foreground" TargetName="indeterminateMark" Value="{StaticResource ContentBackground}"/>
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource ContentForeground}"/>
                         </MultiTrigger>
                         <MultiTrigger>
@@ -172,21 +175,46 @@
                             </MultiTrigger.Conditions>
                             <Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource ContentBackground}"/>
                             <Setter Property="BorderBrush" TargetName="checkBoxBorder" Value="{StaticResource BorderAlt2}"/>
-                            <Setter Property=" Fill" TargetName="optionMark" Value="Transparent"/>
+                            <Setter Property="Stroke" TargetName="optionMark" Value="Transparent"/>
+                            <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource ContentForeground}"/>
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition  Property="IsPressed" Value="true"/>
+                                <Condition Property="IsChecked" Value="{x:Null}"/>
+                            </MultiTrigger.Conditions>
+                            <Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource PrimaryBackground}"/>
+                            <Setter Property="BorderBrush" TargetName="checkBoxBorder" Value="{StaticResource PrimaryBackground}"/>
+                            <Setter Property="BorderThickness" TargetName="checkBoxBorder" Value="{StaticResource MaterialDarkCustom.BorderThickness1}"/>
+                            <Setter Property="Foreground" TargetName="indeterminateMark" Value="{StaticResource ContentBackground}"/>
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource ContentForeground}"/>
                         </MultiTrigger>
                         <Trigger Property="IsChecked" Value="{x:Null}">
+                            <Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource PrimaryBackground}"/>
+                            <Setter Property="BorderBrush" TargetName="checkBoxBorder" Value="{StaticResource PrimaryBackground}"/>
+                            <Setter Property="BorderThickness" TargetName="checkBoxBorder" Value="{StaticResource MaterialDarkCustom.BorderThickness1}"/>
+                            <Setter Property="Foreground" TargetName="indeterminateMark" Value="{StaticResource PrimaryForeground}"/>
+                            <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource ContentForeground}"/>
                             <Setter Property="Opacity" TargetName="optionMark" Value="0"/>
                             <Setter Property="Opacity" TargetName="indeterminateMark" Value="1"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="true">
+                            <Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource PrimaryBackground}"/>
+                            <Setter Property="BorderBrush" TargetName="checkBoxBorder" Value="{StaticResource PrimaryBackground}"/>
+                            <Setter Property="BorderThickness" TargetName="checkBoxBorder" Value="{StaticResource MaterialDarkCustom.BorderThickness1}"/>
+                            <Setter Property="Opacity" TargetName="optionMark" Value="1"/>
+                            <Setter Property="Opacity" TargetName="indeterminateMark" Value="0"/>
+                            <Setter Property="Stroke" TargetName="optionMark" Value="{StaticResource PrimaryForeground}"/>
+                            <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource ContentForeground}"/>
                         </Trigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsEnabled" Value="false"/>
                                 <Condition Property="IsChecked" Value="{x:Null}"/>
                             </MultiTrigger.Conditions>
-                            <Setter Property="Background" TargetName="checkBoxBorder" Value="Transparent"/>
+                            <Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource BorderDark}"/>
                             <Setter Property="BorderBrush" TargetName="checkBoxBorder" Value="{StaticResource BorderDark}"/>
-                            <Setter Property="Fill" TargetName="indeterminateMark" Value="{StaticResource BorderDark}"/>
+                            <Setter Property="Foreground" TargetName="indeterminateMark" Value="{StaticResource White}"/>
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource DisabledForeground}"/>
                         </MultiTrigger>
                         <MultiTrigger>
@@ -196,7 +224,7 @@
                             </MultiTrigger.Conditions>
                             <Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource BorderDark}"/>
                             <Setter Property="BorderBrush" TargetName="checkBoxBorder" Value="{StaticResource BorderDark}"/>
-                            <Setter Property=" Fill" TargetName="optionMark" Value="{StaticResource White}"/>
+                            <Setter Property="Stroke" TargetName="optionMark" Value="{StaticResource White}"/>
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource DisabledForeground}"/>
                         </MultiTrigger>
                         <MultiTrigger>
@@ -206,7 +234,7 @@
                             </MultiTrigger.Conditions>
                             <Setter Property="Background" TargetName="checkBoxBorder" Value="Transparent"/>
                             <Setter Property="BorderBrush" TargetName="checkBoxBorder" Value="{StaticResource BorderDark}"/>
-                            <Setter Property=" Fill" TargetName="optionMark" Value="Transparent"/>
+                            <Setter Property="Stroke" TargetName="optionMark" Value="Transparent"/>
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource DisabledForeground}"/>
                         </MultiTrigger>
                     </ControlTemplate.Triggers>

@@ -120,6 +120,7 @@
         <Setter Property="Foreground" Value="{StaticResource ContentForeground}" />
         <Setter Property="EditorTemplate" Value="{StaticResource PropertyNameTemplate}" />
         <Setter Property="Background" Value="{Binding Path=PropertyView.ViewBackgroundColor, RelativeSource={RelativeSource Self}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+        <Setter Property="Height" Value="NaN"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="propertygrid:PropertyViewItem">
@@ -458,7 +459,7 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                        CornerRadius="1"
                         SnapsToDevicePixels="True">
                         <Grid x:Name="RootGrid" Background="{TemplateBinding Background}">
                             <Grid.RowDefinitions>

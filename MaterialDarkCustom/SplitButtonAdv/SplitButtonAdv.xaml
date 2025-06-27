@@ -746,6 +746,9 @@
                                             Focusable="True"
                                             Background="Transparent" 
                                             Grid.Column="0">
+                                        <Border.CornerRadius>
+                                            <CornerRadius>1,1,1,1</CornerRadius>
+                                        </Border.CornerRadius>
                                         <Grid Margin="{TemplateBinding Padding}" 
                                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
@@ -773,6 +776,9 @@
                                             Grid.Column="1"
                                             BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1}"
                                             Background="Transparent">
+                                        <Border.CornerRadius>
+                                            <CornerRadius>1,1,1,1</CornerRadius>
+                                        </Border.CornerRadius>
                                         <Path Name="Arrow"
                                               HorizontalAlignment="Center"
                                               VerticalAlignment="Center"

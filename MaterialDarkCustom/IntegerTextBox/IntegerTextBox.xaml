@@ -15,6 +15,10 @@
 
     </ResourceDictionary.MergedDictionaries>
 
+    <CornerRadius x:Key="IntegerTextBox.RangeAdornerBorder.Static.CornerRadius">0,0,0,1</CornerRadius>
+    <sys:Double x:Key="IntegerTextBox.Border.Static.Opacity">1</sys:Double>
+    <Thickness x:Key="IntegerTextBox.RangeAdornerBorder.Static.Margin">0,0,0,0</Thickness>
+
     <shared:ProgressConverter x:Key="ProgressConverter" />
     <shared:ClipConverter x:Key="ClipConverter" />
     <shared:RadiusConverter x:Key="CornerRadiusConverter" />
@@ -81,7 +85,7 @@
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                     IsHitTestVisible="False"
                                     Visibility="Collapsed"
-                                    >
+                                    Opacity="{StaticResource IntegerTextBox.Border.Static.Opacity}">
                                     <Border.RenderTransform>
                                         <ScaleTransform>
                                             <ScaleTransform.ScaleX>
@@ -134,7 +138,7 @@
                                     x:Name="upbutton"
                                     Width="16"
                                     Cursor="Arrow"
-                                    Margin="0"
+                                    Margin="4,2,4,1"
                                     Padding="{TemplateBinding Padding}"
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                     Background="{TemplateBinding Background}"
@@ -161,7 +165,7 @@
                                     Grid.Row="1"
                                     Width="16"
                                     Cursor="Arrow"
-                                    Margin="0"
+                                    Margin="4,1,4,2"
                                     Padding="{TemplateBinding Padding}"
                                     Background="{TemplateBinding Background}"
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
@@ -204,7 +208,7 @@
                         <Trigger Property="IsKeyboardFocused" Value="true">
                             <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
                             <Setter TargetName="Border" Property="Background" Value="{StaticResource ContentBackground}"/>
-                            <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}" />
+                            <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}"/>
                             <Setter Property="Padding" TargetName="downbutton" Value="0,0,0,-2"/>
                         </Trigger>
                         <MultiTrigger>
@@ -243,6 +247,8 @@
                                 <Condition Property="IsKeyboardFocusWithin" Value="False" />
                             </MultiTrigger.Conditions>
                             <Setter TargetName="RangeAdornerBorder" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="RangeAdornerBorder" Property="CornerRadius" Value="{StaticResource IntegerTextBox.RangeAdornerBorder.Static.CornerRadius}"/>
+                            <Setter TargetName="RangeAdornerBorder" Property="Margin" Value="{StaticResource IntegerTextBox.RangeAdornerBorder.Static.Margin}"/>
                         </MultiTrigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource BorderAlt2}" />

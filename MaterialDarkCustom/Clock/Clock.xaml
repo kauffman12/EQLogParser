@@ -491,9 +491,9 @@
         <Setter Property="ThirdBorderFrameRadius" Value="122"/>-->
         <Setter Property="InnerBorderThickness" Value="4" />
         <Setter Property="DialBorderThickness" Value="25" />
-        <Setter Property="FrameCornerRadius" Value="0" />
+        <Setter Property="FrameCornerRadius" Value="0"/>
         <Setter Property="FrameInnerBorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness}" />
-        <Setter Property="local:Clock.AMPMSelectorCornerRadius" Value="0" />
+        <Setter Property="local:Clock.AMPMSelectorCornerRadius" Value="0"/>
         <Setter Property="AMPMSelectorBorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant1}" />
         <!--<Setter Property="CenteredEllipseRadius" Value="10"/>-->
         <Style.Triggers>

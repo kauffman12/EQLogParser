@@ -11,6 +11,8 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
     </ResourceDictionary.MergedDictionaries>
 
+    <CornerRadius x:Key="Calculator.Border.Static.CornerRadius">0,0,0,1</CornerRadius>
+
     <syncfusion:MemoryConverter x:Key="MemoryConverter" />
 
     <Style x:Key="SyncfusionCalculatorButtonStyle" TargetType="{x:Type syncfusion:CalculatorButton}">
@@ -465,7 +467,7 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
-                        >
+                        CornerRadius="{StaticResource Calculator.Border.Static.CornerRadius}">
                         <Grid Name="ContentHost">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />

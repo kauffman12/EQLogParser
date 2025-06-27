@@ -2,7 +2,6 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     
                     xmlns:skinmanager="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
-                    xmlns:scheduler="clr-namespace:Syncfusion.UI.Xaml.Scheduler;assembly=Syncfusion.SfScheduler.WPF"
                     xmlns:input="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.Wpf">
 
     <ResourceDictionary.MergedDictionaries>

@@ -94,7 +94,7 @@
                         BorderThickness="{TemplateBinding BorderThickness}"
                         Background="{TemplateBinding Background}"
                         Effect="{TemplateBinding Effect}"
-                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                        CornerRadius="1">
                         <Path x:Name="Arrow"
                                       Data="M3,8L7.3,2 12,8z"
                                       HorizontalAlignment="Center"
@@ -140,7 +140,7 @@
                         BorderThickness="{TemplateBinding BorderThickness}"
                         Background="{TemplateBinding Background}"
                         Effect="{TemplateBinding Effect}"
-                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                        CornerRadius="1">
 
                         <Path x:Name="Arrow"
                                       Data="M3,1L7.3,7 12,1z"
@@ -354,7 +354,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
-                        <Border CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                        <Border CornerRadius="1">
                             <Grid x:Name="PART_TitleGrid"
                                   Margin="8,12,0,0">
                                 <Grid.ColumnDefinitions>
@@ -421,7 +421,7 @@
                                                              IsSelected="{Binding IsReplaceTabActive}" 
                                                              IsToggle="False" 
                                                              ClickMode="Press" 
-                                                             CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                                                             CornerRadius="1"
                                                              Style="{StaticResource SyncfusionQATMenuItemRibbonButtonStyle}">
                                         <syncfusion:RibbonButton.ToolTip>
                                             <ToolTip Content="{Sync_Resources:EditLocalizationResourceExtension ResourceName=SwitchtoquickreplacetooltipText}" />
@@ -861,7 +861,7 @@
                                 <Border BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness2}" 
                                         Background="{StaticResource ContentBackground}" 
                                         BorderBrush="{StaticResource BorderAlt}" 
-                                        
+                                        CornerRadius="0"
                                         Opacity="{Binding ElementName=PART_IntellisenseBox, Path=Opacity}">
                                     <ListBox x:Name="PART_IntellisenseBox" 
                                              ItemContainerStyle="{StaticResource WPFListBoxItemStyle}" 

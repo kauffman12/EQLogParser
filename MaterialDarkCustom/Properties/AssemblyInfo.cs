@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Resources;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows;
 
@@ -10,7 +12,7 @@ using System.Windows;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("Syncfusion.Themes.MaterialDarkCustom.WPF")]
-[assembly: AssemblyCopyright("Copyright © 2001-2023 Syncfusion. Inc,")]
+[assembly: AssemblyCopyright("Copyright © 2001-2025 Syncfusion. Inc,")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -31,11 +33,11 @@ using System.Windows;
 
 [assembly: ThemeInfo(
     ResourceDictionaryLocation.None, //where theme specific resource dictionaries are located
-                                     //(used if a resource is not found in the page, 
-                                     // or application resource dictionaries)
+    //(used if a resource is not found in the page, 
+    // or application resource dictionaries)
     ResourceDictionaryLocation.SourceAssembly //where the generic resource dictionary is located
-                                              //(used if a resource is not found in the page, 
-                                              // app, or any theme specific resource dictionaries)
+    //(used if a resource is not found in the page, 
+    // app, or any theme specific resource dictionaries)
 )]
 
 
@@ -49,21 +51,17 @@ using System.Windows;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-#if NET60
-[assembly: AssemblyVersion("22.2400.5.0")]
-#elif SyncfusionFramework4_6
-[assembly: AssemblyVersion("22.2460.5.0")]
-#elif SyncfusionFramework4_5_1
-[assembly: AssemblyVersion("22.2451.5.0")]
-#elif SyncfusionFramework4_5
-[assembly: AssemblyVersion("22.2450.5.0")]
-#elif SyncfusionFramework4_0
-[assembly: AssemblyVersion("22.2400.5.0")]
+#if NET90
+[assembly: AssemblyVersion("29.1900.33.0")]
+#elif NET80
+[assembly: AssemblyVersion("29.1800.33.0")]
+#elif SyncfusionFramework4_6_2
+[assembly: AssemblyVersion("29.1462.33.0")]
 #else
-[assembly: AssemblyVersion("22.2400.5.0")]
+[assembly: AssemblyVersion("29.1400.33.0")]
 #endif
 
 
 [assembly: AssemblyDelaySign(false)]
-[assembly: AssemblyFileVersion("22.2450.5.0")]
+[assembly: AssemblyFileVersion("29.1462.33.0")]
 

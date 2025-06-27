@@ -1,0 +1,37 @@
+<ResourceDictionary 
+       xmlns:system="clr-namespace:System;assembly=mscorlib"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:Microsoft_Windows_Themes="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.Aero"
+        xmlns:Sync_Resources="clr-namespace:Syncfusion.Windows.Tools.Controls.Resources;assembly=Syncfusion.Tools.WPF"
+        xmlns:local="clr-namespace:Syncfusion.Windows.Tools.Controls;assembly=Syncfusion.Tools.WPF"
+        xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+        xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+        
+       >
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/TreeViewAdv/TreeViewAdv.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/ChromelessWindow/ChromelessWindow.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/DropDownButtonAdv/DropDownButtonAdv.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Button.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/TreeView.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/PrimaryButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/TextBlock.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ListBox.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Label.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ToggleButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ComboBox.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/Menu.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/RepeatButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/CheckBox.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ScrollViewer.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+    <SolidColorBrush x:Key="QATResetDialogBackground" Color="{StaticResource ContentBackground.Color}" />
+    <SolidColorBrush x:Key="QATPathIconForeground" Color="{StaticResource IconColor.Color}"/>
+    <Style x:Key="QATResetDialogButtonStyle"
+            BasedOn="{StaticResource WPFPrimaryButtonStyle}"
+            TargetType="{x:Type Button}" >
+    </Style>
+</ResourceDictionary>

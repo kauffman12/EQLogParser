@@ -1,7 +1,8 @@
-<ResourceDictionary  
+<ResourceDictionary 
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
+    
     xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF" 
     xmlns:local="clr-namespace:Syncfusion.UI.Xaml.Charts;assembly=Syncfusion.SfChart.WPF">
 
@@ -23,11 +24,17 @@
                 <TextBlock Grid.Column="1" Margin="3" Foreground="White" FontSize="20"  Text="{Binding NewValue, StringFormat='.###'}"></TextBlock>
                 <ContentControl Grid.Column="2" ContentTemplate="{Binding PostfixLabelTemplate}" VerticalContentAlignment="Bottom"/>
             </Grid>
-            <Path Opacity="0.6" Data="M167.5,212.46L199.5,177.507 231.5,212.46 167.5,212.46z"  Stretch="Uniform" Fill="{Binding Brush}" Width="15" Height="15" Margin="0,-3,0,0" RenderTransformOrigin="0.5,0.5">
-                <Path.RenderTransform>
+            <TextBlock Text="&#xe709;"
+                       FontSize="14"
+                       FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons" 
+                       Foreground="{Binding Brush}"
+                       Opacity="0.6"
+                       Margin="0,-3,0,0" 
+                       RenderTransformOrigin="0.5,0.5">
+                <TextBlock.RenderTransform>
                     <RotateTransform Angle="180"></RotateTransform>
-                </Path.RenderTransform>
-            </Path>
+                </TextBlock.RenderTransform>
+            </TextBlock>
         </StackPanel>
     </DataTemplate>
 
@@ -61,21 +68,33 @@
                 <TextBlock Grid.Column="1" Margin="3" Foreground="White" FontSize="20"  Text="{Binding NewValue, StringFormat='.###'}"></TextBlock>
                 <ContentControl Grid.Column="2" ContentTemplate="{Binding PostfixLabelTemplate}" VerticalContentAlignment="Bottom"/>
             </Grid>
-            <Path Opacity="0.6" Data="M167.5,212.46L199.5,177.507 231.5,212.46 167.5,212.46z" Stretch="Uniform" Fill="{Binding Brush}" Width="15" Height="15" Margin="-4,0,0,0" RenderTransformOrigin="0.5,0.5">
-                <Path.RenderTransform>
+            <TextBlock Text="&#xe709;"
+                       FontSize="14"
+                       FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons" 
+                       Foreground="{Binding Brush}"
+                       Opacity="0.6"
+                       Margin="-4,0,0,0" 
+                       RenderTransformOrigin="0.5,0.5">
+                <TextBlock.RenderTransform>
                     <RotateTransform Angle="90"></RotateTransform>
-                </Path.RenderTransform>
-            </Path>
+                </TextBlock.RenderTransform>
+            </TextBlock>
         </StackPanel>
     </DataTemplate>
 
     <DataTemplate x:Key="SegmentDragInfoOppRight">
         <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
-            <Path Opacity="0.6" Data="M167.5,212.46L199.5,177.507 231.5,212.46 167.5,212.46z" Stretch="Uniform" Fill="{Binding Brush}" Width="15" Height="15" Margin="0,0,-4,0" RenderTransformOrigin="0.5,0.5">
-                <Path.RenderTransform>
+            <TextBlock Text="&#xe709;"
+                       FontSize="14"
+                       FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons" 
+                       Foreground="{Binding Brush}"
+                       Opacity="0.6"
+                       Margin="0,0,-4,0" 
+                       RenderTransformOrigin="0.5,0.5">
+                <TextBlock.RenderTransform>
                     <RotateTransform Angle="270"></RotateTransform>
-                </Path.RenderTransform>
-            </Path>
+                </TextBlock.RenderTransform>
+            </TextBlock>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -93,15 +112,14 @@
     <DataTemplate x:Key="SegmentDragInfoOppBottom">
         <StackPanel Orientation="Vertical"
                     Margin="0,20,0,0">
-            <Path Opacity="0.6"
-                  Data="M167.5,212.46L199.5,177.507 231.5,212.46 167.5,212.46z"
-                  Stretch="Uniform"
-                  Fill="{Binding Brush}"
-                  Width="15"
-                  Height="15"
-                  Margin="0,0,0,-4"
-                  RenderTransformOrigin="0.5,0.5">
-            </Path>
+            <TextBlock Text="&#xe709;"
+                       FontSize="14"
+                       FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons" 
+                       Foreground="{Binding Brush}"
+                       Opacity="0.6"
+                       Margin="0,0,0,-4" 
+                       RenderTransformOrigin="0.5,0.5">
+            </TextBlock>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -135,16 +153,22 @@
                     <Grid.RenderTransform>
                         <RotateTransform Angle="{Binding IsNegative, Converter={StaticResource dragElementRotateConverter}}"/>
                     </Grid.RenderTransform>
-                    <Path VerticalAlignment="Top" Width="15" Height="20" Fill="{Binding Brush}" Data="F1M753.644,-13.0589L753.736,-12.9639 753.557,-12.7816 732.137,8.63641 732.137,29.7119 756.445,5.40851 764.094,-2.24384 764.275,-2.42352 771.834,5.1286 796.137,29.4372 796.137,8.36163 774.722,-13.0589 764.181,-23.5967 753.644,-13.0589z" Stretch="Uniform" Margin="0,0,0,0" RenderTransformOrigin="0.5,0.5">
-                        <Path.RenderTransform>
+                    <TextBlock Text="&#xe702;"
+                        FontSize="16"
+                        FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons" 
+                        Foreground="{Binding Brush}"
+                        VerticalAlignment="Top"
+                        Margin="0,0,0,0" 
+                        RenderTransformOrigin="0.5,0.5">
+                        <TextBlock.RenderTransform>
                             <TransformGroup>
                                 <TransformGroup.Children>
                                     <RotateTransform Angle="180" />
                                     <ScaleTransform ScaleX="1" ScaleY="-1" />
                                 </TransformGroup.Children>
                             </TransformGroup>
-                        </Path.RenderTransform>
-                    </Path>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
                     <Rectangle VerticalAlignment="Stretch" Width="3" Fill="{Binding Brush}"/>
                 </Grid>
                 <TextBlock Foreground="{Binding Brush}" VerticalAlignment="Center" FontSize="17" HorizontalAlignment="Center"  Text="{Binding
@@ -160,16 +184,22 @@
                         <RotateTransform Angle="{Binding IsNegative, Converter={StaticResource dragElementRotateConverter}}"/>
                     </Grid.RenderTransform>
                     <Rectangle HorizontalAlignment="Stretch" Height="3" Fill="{Binding Brush}"/>
-                    <Path HorizontalAlignment="Left"  Width="15" Height="20" Fill="{Binding Brush}" Data="F1M753.644,-13.0589L753.736,-12.9639 753.557,-12.7816 732.137,8.63641 732.137,29.7119 756.445,5.40851 764.094,-2.24384 764.275,-2.42352 771.834,5.1286 796.137,29.4372 796.137,8.36163 774.722,-13.0589 764.181,-23.5967 753.644,-13.0589z" Stretch="Uniform" Margin="0,0,0,0" RenderTransformOrigin="0.5,0.5">
-                        <Path.RenderTransform>
+                    <TextBlock Text="&#xe702;"
+                               FontSize="16"
+                               FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons" 
+                               Foreground="{Binding Brush}"
+                               HorizontalAlignment="Left"
+                               Margin="0,0,0,0" 
+                               RenderTransformOrigin="0.5,0.5">
+                        <TextBlock.RenderTransform>
                             <TransformGroup>
                                 <TransformGroup.Children>
                                     <RotateTransform Angle="270" />
                                     <ScaleTransform ScaleX="1" ScaleY="-1" />
                                 </TransformGroup.Children>
                             </TransformGroup>
-                        </Path.RenderTransform>
-                    </Path>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
                 </Grid>
                 <TextBlock Foreground="{Binding Brush}" VerticalAlignment="Center" FontSize="17" HorizontalAlignment="Center"  Text="{Binding
                  Delta , StringFormat='.###'}"></TextBlock>

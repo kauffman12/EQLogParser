@@ -156,8 +156,9 @@
                         Name="FontListBoxBorder"
                         Background="{Binding Path=Background, RelativeSource={RelativeSource TemplatedParent}}"
                         BorderBrush="{Binding Path=BorderBrush, RelativeSource={RelativeSource TemplatedParent}}"
-                        BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="0">
-                        <ScrollViewer Background="{Binding Path=Background, RelativeSource={RelativeSource TemplatedParent}}" Margin="{TemplateBinding Margin}">
+                        BorderThickness="{TemplateBinding BorderThickness}" 
+                        CornerRadius="0">
+                        <ScrollViewer Background="{Binding Path=Background, RelativeSource={RelativeSource TemplatedParent}}" Margin="{TemplateBinding Margin}" >
                             <local:FontListBoxInternal>
                                 <local:FontListBoxInternal.ItemsSource>
                                     <MultiBinding Converter="{StaticResource MergeCollectionsConverter}">

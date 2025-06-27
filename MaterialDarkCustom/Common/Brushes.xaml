@@ -47,6 +47,15 @@
 <Color x:Key="Series3.Color">#FF2C69DC</Color>
 <Color x:Key="PrimaryColorDark1.Color">#FF00519E</Color>
 <Color x:Key="White.Color">#FFFFFFFF</Color>
+<Color x:Key="BorderAlt3.Color">#E4000000</Color>
+<Color x:Key="ContentBackgroundAlt6.Color">#FFF9F9F9</Color>
+<Color x:Key="PopupBorder.Color">#14000000</Color>
+<Color x:Key="PopupBackground.Color">#FF252525</Color>
+<Color x:Key="ContentBackgroundPressed.Color">#06000000</Color>
+<Color x:Key="TableSelectedBackground.Color">#09000000</Color>
+<Color x:Key="PopupHoveredBackground.Color">#09000000</Color>
+<Color x:Key="PopupPressedBackground.Color">#06000000</Color>
+<Color x:Key="PrimaryColorDark2.Color">#FF00376B</Color>
 <Color x:Key="SystemAccentColorDark3.Color">#FF002A51</Color>
 <Color x:Key="ContentForegroundAlt1.Color">#9A000000</Color>
 <Color x:Key="Series7.Color">#FFFF9902</Color>
@@ -57,7 +66,6 @@
 <Color x:Key="PrimaryLight.Color">#FFCFCFCF</Color>
 <Color x:Key="PrimaryDark.Color">#FFC2C2C2</Color>
 <Color x:Key="BorderDark.Color">#FF4B4B4B</Color>
-<Color x:Key="PopupBackground.Color">#FF252525</Color>
 <Color x:Key="BadgeBackground.Color">#FF666666</Color>
 <Color x:Key="ContentBackgroundAlt5.Color">#FF404040</Color>
 <Color x:Key="ErrorForeground.Color">#FFF3584D</Color>
@@ -66,10 +74,8 @@
 <Color x:Key="PrimaryDarken.Color">#FFCFCFCF</Color>
 <Color x:Key="PrimaryLightest.Color">#FFBDBDBD</Color>
 <Color x:Key="ContentBackgroundAlt4.Color">#FF313131</Color>
-<Color x:Key="PrimaryColorDark2.Color">#FF00376B</Color>
 <Color x:Key="ContentBackgroundAlt3.Color">#FF292929</Color>
 <Color x:Key="Overlay.Color">#26FFFFFF</Color>
-<Color x:Key="BorderAlt3.Color">#E4000000</Color>
 <Color x:Key="HoveredForeground.Color">#E4000000</Color>
 <SolidColorBrush x:Key="White" Color="#FFFFFFFF" />
 <SolidColorBrush x:Key="Gray50" Color="#FF666666" />

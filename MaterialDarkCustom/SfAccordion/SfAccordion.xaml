@@ -275,7 +275,7 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            >
+                            CornerRadius="0">
                             <ScrollViewer
                                 x:Name="PART_ScrollViewer"
                                 Background="{x:Null}"
@@ -283,7 +283,18 @@
                                 HorizontalScrollBarVisibility="Disabled"
                                 IsTabStop="False"
                                 VerticalScrollBarVisibility="Auto">
-                                <ItemsPresenter x:Name="PART_ItemsPresenter" />
+                                <Border>
+                                    <Grid>
+                                        <Border x:Name="BorderMask"
+                                                Background="{StaticResource ContentBackground}"
+                                                CornerRadius="0"/>
+                                        <ItemsPresenter  x:Name="PART_ItemsPresenter">
+                                        </ItemsPresenter>
+                                    </Grid>
+                                </Border>
+                                <ScrollViewer.OpacityMask>
+                                    <VisualBrush Visual="{Binding Source={x:Reference BorderMask}}"/>
+                                </ScrollViewer.OpacityMask>
                             </ScrollViewer>
                         </Border>
                         <VisualStateManager.VisualStateGroups>

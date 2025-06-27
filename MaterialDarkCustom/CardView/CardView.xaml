@@ -20,7 +20,9 @@
     <BooleanToVisibilityConverter x:Key="Converter" />
     <tools_controls:SortDirectionToVisibilityConverter x:Key="SortDirectionToVisibilityConverter" />
     <tools_controls:SortDirectionToAngleConverter x:Key="AngleConverter" />
-    
+
+    <CornerRadius x:Key="CardView.FiltererToggleButton.CornerRadius">1,1,1,1</CornerRadius>
+
     <!--  Expander Style  -->
 
     <Style
@@ -41,7 +43,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ToggleButton}">
-                    <Border x:Name="border" CornerRadius="{StaticResource MaterialDarkCustom.CornerRadius8}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
+                    <Border x:Name="border" CornerRadius="{StaticResource CardView.FiltererToggleButton.CornerRadius}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
                         <ContentPresenter x:Name="contentPresenter" Focusable="False" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="{TemplateBinding Padding}" RecognizesAccessKey="True" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -125,7 +127,7 @@
                                 Content="{TemplateBinding Content}"
                                 HorizontalContentAlignment="{TemplateBinding HorizontalAlignment}" HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
                                 VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalAlignment}"
-                                TextBlock.Foreground="{StaticResource SecondaryForeground}" />
+                                TextBlock.Foreground="{StaticResource SecondaryForeground}"/>
                             <Border
                                 x:Name="Arrow"
                                 Grid.Column="1"
@@ -277,7 +279,7 @@
                 <ControlTemplate TargetType="{x:Type tools_controls:CardViewItem}">
                     <Grid SnapsToDevicePixels="True">
                         <Border
-                            x:Name="CardViewItemBorder" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                            x:Name="CardViewItemBorder" CornerRadius="1"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
@@ -289,7 +291,7 @@
                             </Grid.RowDefinitions>
                             <Border
                                     x:Name="headerBackground" 
-                                    Grid.Row="0" CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                                    Grid.Row="0" CornerRadius="1"
                                     Background="{StaticResource PopupBackground}"
                                     BorderBrush="{StaticResource PopupBackground}">
                                     <ContentPresenter
@@ -308,7 +310,7 @@
                                 <ContentPresenter
                                     x:Name="PART_ContentPresenter"
                                     Grid.Row="1"
-                                    Margin="2,0,2,2"
+                                    Margin="2 0 2 2"
                                     ContentSource="Content"
                                     ContentTemplate="{Binding Path=ItemTemplate, RelativeSource={RelativeSource AncestorType={x:Type tools_controls:CardView}}}"
                                     TextElement.FontSize="{Binding Path=FontSize, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:CardView}}}" />
@@ -478,7 +480,7 @@
                                                                 BorderThickness="0" 
                                                                 Effect="{StaticResource Default.ShadowDepth3}" 
                                                                 Margin="14 0 14 14"
-                                                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                                                                CornerRadius="1">
                                                                 <Grid Background="{StaticResource PopupBackground}">
                                                                 <Grid.RowDefinitions>
                                                                     <RowDefinition Height="Auto" />

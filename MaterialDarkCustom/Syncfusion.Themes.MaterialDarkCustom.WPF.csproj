@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
@@ -8,28 +8,15 @@
     <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
     <EnableDefaultEmbeddedResourceItems>False</EnableDefaultEmbeddedResourceItems>
     <EnableDefaultItems>false</EnableDefaultItems>
-	<ProjectGuid>{69dd1083-3143-4ce1-95f8-8c5491b849ca}</ProjectGuid>
-	<Platforms>AnyCPU;x64</Platforms>
+	  <ProjectGuid>{5f241e89-ef11-4af0-8205-d0b3361e1df4}</ProjectGuid>
+  	<Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;NET60;</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <Prefer32Bit>false</Prefer32Bit>
-    <DocumentationFile>
-    </DocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;NET60;</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;NET80;</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
@@ -41,19 +28,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE;NET60;</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <Prefer32Bit>false</Prefer32Bit>
-    <DocumentationFile>
-    </DocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE;NET60;</DefineConstants>
+    <DefineConstants>TRACE;NET80;</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
@@ -63,25 +38,13 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release-Xml|AnyCPU'">
     <OutputPath>bin\Release-Xml\</OutputPath>
-    <DefineConstants>TRACE;NET60;</DefineConstants>
-    <DocumentationFile>..\bin\Release-Xml\Syncfusion.Themes.MaterialDarkCustom.WPF.XML</DocumentationFile>
-    <Prefer32Bit>false</Prefer32Bit>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Xml|x64'">
-    <OutputPath>bin\Release-Xml\</OutputPath>
-    <DefineConstants>TRACE;NET60;</DefineConstants>
+    <DefineConstants>TRACE;NET80;</DefineConstants>
     <DocumentationFile>..\bin\Release-Xml\Syncfusion.Themes.MaterialDarkCustom.WPF.XML</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug-Xml|AnyCPU'">
     <OutputPath>bin\Debug-Xml\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;NET60;</DefineConstants>
-    <DocumentationFile>..\bin\Debug-Xml\Syncfusion.Themes.MaterialDarkCustom.WPF.XML</DocumentationFile>
-    <Prefer32Bit>false</Prefer32Bit>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Xml|x64'">
-    <OutputPath>bin\Debug-Xml\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;NET60;</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;NET80;</DefineConstants>
     <DocumentationFile>..\bin\Debug-Xml\Syncfusion.Themes.MaterialDarkCustom.WPF.XML</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
@@ -100,50 +63,56 @@
 		<None Include="ThemeStudio.snk" />
 	</ItemGroup>
    <ItemGroup>
-		<PackageReference Include="Syncfusion.PivotTable.Wpf" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.Shared.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfInput.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfBusyIndicator.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfScheduler.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfGrid.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.Data.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.Grid.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.GridCommon.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.Linq.Base" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.PivotAnalysis.Base" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfChart.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfDiagram.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfGauge.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfKanban.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfTreeMap.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfMaps.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfSmithChart.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfSunburstChart.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfBulletGraph.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfHeatMap.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.Tools.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.PropertyGrid.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfColorPalette.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfTextInputLayout.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfRadialMenu.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfProgressBar.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfHubTile.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="20.4.0.43" />
-		<PackageReference Include="Syncfusion.SfAccordion.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfGridCommon.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfTreeView.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfNavigationDrawer.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfTreeNavigator.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.Compression.Base" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.PdfViewer.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfRichTextBoxAdv.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfRichTextRibbon.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.Edit.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfSpreadsheet.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfCellGrid.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfImageEditor.WPF" Version="22.2.5" />
-		<PackageReference Include="Syncfusion.SfDiagramRibbon.WPF" Version="22.2.5" />
+		<Reference Include="Syncfusion.SfSkinManager.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.Shared.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfInput.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfBusyIndicator.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfScheduler.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfGrid.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.Data.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.Grid.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.GridCommon.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.Linq.Base" Version="29.1.33" />
+		<Reference Include="Syncfusion.PivotAnalysis.Base" Version="29.1.33" />
+		<Reference Include="Syncfusion.PivotAnalysis.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfChart.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfDiagram.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfGauge.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfKanban.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfTreeMap.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfMaps.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfSmithChart.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfSunburstChart.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfBulletGraph.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfHeatMap.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.Tools.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.PropertyGrid.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfColorPalette.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfTextInputLayout.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfRadialMenu.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfProgressBar.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfHubTile.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.Tools.WPF.Classic" Version="22.2.5" />
+		<Reference Include="Syncfusion.SfAccordion.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfGridCommon.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfTreeView.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfNavigationDrawer.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfTreeNavigator.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.Pdf.Base" Version="29.1.33" />
+		<Reference Include="Syncfusion.Compression.Base" Version="29.1.33" />
+		<Reference Include="Syncfusion.PdfViewer.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.DocIO.Base" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfRichTextBoxAdv.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfRichTextRibbon.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.Edit.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfSpreadsheet.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfCellGrid.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.XlsIO.Base" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfImageEditor.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.SfDiagramRibbon.WPF" Version="29.1.33" />
+		<Reference Include="Syncfusion.PDF.Base" Version="29.1.33" />
+		<Reference Include="Syncfusion.ProjIO.Base" Version="29.1.33" />
+		<Reference Include="Syncfusion.Gantt.WPF" Version="29.1.33" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="MaterialDarkCustomSkinHelper.cs" />
@@ -171,6 +140,52 @@
     </None>
     <AppDesigner Include="Properties\" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Syncfusion.DocIO.Wpf" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.Edit.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.Gantt.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.Grid.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.Pdf.Wpf" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.PdfToImageConverter.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.PdfViewer.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.PivotTable.Wpf" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.PropertyGrid.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfAccordion.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfBarcode.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfBulletGraph.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfBusyIndicator.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfChart.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfChat.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfChromelessWindow.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfColorPalette.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfDiagram.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfDiagramRibbon.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfGauge.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfGrid.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfHeatMap.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfHubTile.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfImageEditor.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfInput.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfKanban.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfMaps.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfNavigationDrawer.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfProgressBar.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfRichTextBoxAdv.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfRichTextRibbon.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfScheduler.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfSmithChart.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfSpreadsheet.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfSunburstChart.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfTextInputLayout.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfTreeMap.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfTreeNavigator.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.SfTreeView.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.Shared.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.Tools.WPF" Version="29.1.33" />
+    <PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="22.2.5" />
+    <PackageReference Include="Syncfusion.XlsIO.Wpf" Version="29.1.33" />
+  </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
@@ -179,6 +194,22 @@
   </Target>
   -->
   <ItemGroup>
+	<Page Include="AssistView\AssistView.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="AssistView\RichTextBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\FlatButton.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\TextBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
 	<Page Include="SfScheduler\SfScheduler.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
@@ -227,10 +258,6 @@
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
-	<Page Include="MSControl\TextBox.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
 	<Page Include="MSControl\TextBlock.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
@@ -244,6 +271,10 @@
 		<SubType>Designer</SubType>
 	</Page>
 	<Page Include="MSControl\GlyphEditableDropdownExpander.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\ScrollViewer.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
@@ -271,10 +302,6 @@
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
-	<Page Include="MSControl\FlatButton.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
 	<Page Include="MSControl\PrimaryButton.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
@@ -287,15 +314,15 @@
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
+	<Page Include="MSControl\ToolTip.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
 	<Page Include="SfDataGrid\SfDataGrid.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
 	<Page Include="ChromelessWindow\ChromelessWindow.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
-	<Page Include="MSControl\ToolTip.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
@@ -335,7 +362,35 @@
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
-	<Page Include="MSControl\ScrollViewer.xaml">
+	<Page Include="MSControl\Separator.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\CheckBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\ToggleButton.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\RadioButton.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\Hyperlink.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="DateTimeEdit\DateTimeEdit.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="Clock\Clock.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\Menu.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
@@ -355,23 +410,11 @@
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
-	<Page Include="MSControl\Menu.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
-	<Page Include="MSControl\Separator.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
 	<Page Include="MSControl\Window.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
 	<Page Include="MSControl\Label.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
-	<Page Include="MSControl\CheckBox.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
@@ -439,10 +482,6 @@
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
-	<Page Include="MSControl\ToggleButton.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
 	<Page Include="MSControl\ListView.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
@@ -507,6 +546,10 @@
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
+	<Page Include="AvatarView\AvatarView.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
 	<Page Include="PropertyGrid\PropertyGrid.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
@@ -536,10 +579,6 @@
 		<SubType>Designer</SubType>
 	</Page>
 	<Page Include="SfCalculator\SfCalculator.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
-	<Page Include="Clock\Clock.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
@@ -675,7 +714,11 @@
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
-	<Page Include="MSControl\RadioButton.xaml">
+	<Page Include="Ribbon\QATResetDialog.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="Ribbon\QATAlertDialog.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
@@ -775,10 +818,6 @@
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
-	<Page Include="MSControl\Hyperlink.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
 	<Page Include="SfRichTextBoxAdv\SfRichTextBoxAdv.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
@@ -831,15 +870,19 @@
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
+	<Page Include="MSControl\DataGrid.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="MSControl\PasswordBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
 	<Page Include="SfSpreadsheet\SfSpreadsheetIcons.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
 	<Page Include="SfSpreadsheet\SpreadsheetFilterControl.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
-	<Page Include="MSControl\PasswordBox.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
@@ -855,15 +898,7 @@
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
-	<Page Include="DateTimeEdit\DateTimeEdit.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
 	<Page Include="MSControl\RichTextBox.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
-	<Page Include="MSControl\DataGrid.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
@@ -872,6 +907,34 @@
 		<SubType>Designer</SubType>
 	</Page>
 	<Page Include="SfDiagramRibbon\SfDiagramRibbon.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="GanttControl\GanttControl.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="GanttControl\GanttGrid.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="GanttControl\GanttSchedule.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="GanttControl\GanttChart.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="GanttControl\GanttChartItems.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfSurfaceChart\SfSurfaceChart.xaml">
+		<Generator>MSBuild:Compile</Generator>
+		<SubType>Designer</SubType>
+	</Page>
+	<Page Include="SfSurfaceChart\SurfaceAxis.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>
@@ -885,6 +948,9 @@
 	</Page>
   </ItemGroup>
   <ItemGroup>
+	<Resource Include="Common\FontFamily\MaterialThemeControlIcons.ttf" />
+	<Resource Include="Common\Fonts\Roboto-Medium.ttf" />
+	<Resource Include="Common\Fonts\Roboto.ttf" />
   </ItemGroup>
 
 </Project>

@@ -79,17 +79,12 @@
                             Background="{TemplateBinding Background}"
                             CornerRadius="0,0,3,3" 
                             SnapsToDevicePixels="true">
-                        <Canvas Margin="2,7,2,2" 
-                                SnapsToDevicePixels="true" 
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Bottom" 
-                                Height="6" 
-                                Width="7">
-                            <Path Data="M 1.5 1 L 1.5 6" Stroke="Transparent"/>
-                            <Path Data="M 0.5 0 L 0.5 5" Stroke="{TemplateBinding Foreground}"/>
-                            <Path Data="M 3.5 0.5 L 7 3.5 L 4 6.5 Z" Fill="Transparent"/>
-                            <Path Data="M 3 -0.5 L 6 2.5 L 3 5.5 Z" Fill="{TemplateBinding Foreground}"/>
-                        </Canvas>
+                        <TextBlock Text="&#xe707;"
+                                   FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                   Foreground="{TemplateBinding Foreground}"
+                                   SnapsToDevicePixels="true" 
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Bottom"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
@@ -131,17 +126,12 @@
                             Background="{TemplateBinding Background}" 
                             CornerRadius="0,3,3,0" 
                             SnapsToDevicePixels="true">
-                        <Canvas Margin="7,2,2,2" 
-                                SnapsToDevicePixels="true"
-                                HorizontalAlignment="Right" 
-                                VerticalAlignment="Bottom" 
-                                Height="7" 
-                                Width="6">
-                            <Path Data="M 1 1.5 L 6 1.5" Stroke="Transparent"/>
-                            <Path Data="M 0 0.5 L 5 0.5" Stroke="{TemplateBinding Foreground}"/>
-                            <Path Data="M 0.5 4 L 6.5 4 L 3.5 7 Z" Fill="Transparent"/>
-                            <Path Data="M -0.5 3 L 5.5 3 L 2.5 6 Z" Fill="{TemplateBinding Foreground}"/>
-                        </Canvas>
+                        <TextBlock Text="&#xe706;"
+                                   FontFamily="pack://application:,,,/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/FontFamily/#MaterialThemeControlIcons"
+                                   Foreground="{TemplateBinding Foreground}"
+                                   SnapsToDevicePixels="true"
+                                   HorizontalAlignment="Right" 
+                                   VerticalAlignment="Bottom" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
@@ -232,64 +222,70 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ToolBar}">
-                    <Grid x:Name="Grid" Margin="3,1,1,1" SnapsToDevicePixels="true">
-                        <Grid x:Name="OverflowGrid" HorizontalAlignment="Right">
-                            <ToggleButton x:Name="OverflowButton" 
-                                          ClickMode="Press" 
-                                          FocusVisualStyle="{x:Null}" 
-                                          IsChecked="{Binding IsOverflowOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" 
-                                          IsEnabled="{TemplateBinding HasOverflowItems}"
-                                          Style="{StaticResource ToolBarHorizontalOverflowButtonStyle}"/>
-                            <Popup x:Name="OverflowPopup" 
-                                   AllowsTransparency="true" 
-                                   Focusable="false"
-                                   IsOpen="{Binding IsOverflowOpen, RelativeSource={RelativeSource TemplatedParent}}"
-                                   PopupAnimation="{StaticResource {x:Static SystemParameters.ComboBoxPopupAnimationKey}}"
-                                   Placement="Bottom" 
-                                   StaysOpen="false">
-                                <Border x:Name="ToolBarSubMenuBorder" 
-                                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" 
-                                        BorderBrush="{StaticResource BorderAlt}"
-                                        Background="{StaticResource PopupBackground}"
-                                        RenderOptions.ClearTypeHint="Enabled"
-                                        BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
-                                        Effect="{StaticResource Default.ShadowDepth3}">
-                                    <ToolBarOverflowPanel x:Name="PART_ToolBarOverflowPanel" 
-                                                          KeyboardNavigation.DirectionalNavigation="Cycle" 
-                                                          FocusVisualStyle="{x:Null}"
-                                                          Focusable="true"
-                                                          Margin="2" 
-                                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
-                                                          KeyboardNavigation.TabNavigation="Cycle" 
-                                                          WrapWidth="200"/>
-                                </Border>
-                            </Popup>
+                    <Border BorderBrush="{TemplateBinding BorderBrush}"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource MaterialDarkCustom.CornerRadius4}"
+                            BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}">
+                        <Grid x:Name="Grid" Margin="3,1,1,1" SnapsToDevicePixels="true">
+                            <Grid x:Name="OverflowGrid" HorizontalAlignment="Right" >
+                                <ToggleButton x:Name="OverflowButton" 
+                                              ClickMode="Press" 
+                                              FocusVisualStyle="{x:Null}" 
+                                              IsChecked="{Binding IsOverflowOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" 
+                                              IsEnabled="{TemplateBinding HasOverflowItems}"
+                                              Style="{StaticResource ToolBarHorizontalOverflowButtonStyle}"/>
+                                <Popup x:Name="OverflowPopup" 
+                                       AllowsTransparency="true" 
+                                       Focusable="false"
+                                       IsOpen="{Binding IsOverflowOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                       PopupAnimation="{StaticResource {x:Static SystemParameters.ComboBoxPopupAnimationKey}}"
+                                       Placement="Bottom" 
+                                       StaysOpen="False">
+                                    <Border x:Name="ToolBarSubMenuBorder" 
+                                            CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}" 
+                                            BorderBrush="{StaticResource BorderAlt}"
+                                            Background="{StaticResource PopupBackground}"
+                                            RenderOptions.ClearTypeHint="Enabled"
+                                            Padding="0"
+                                            BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
+                                            Effect="{StaticResource Default.ShadowDepth3}">
+                                        <ToolBarOverflowPanel x:Name="PART_ToolBarOverflowPanel" 
+                                                              KeyboardNavigation.DirectionalNavigation="Cycle" 
+                                                              FocusVisualStyle="{x:Null}"
+                                                              Focusable="true"
+                                                              Margin="2" 
+                                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                                              KeyboardNavigation.TabNavigation="Cycle" 
+                                                              WrapWidth="200"/>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+                            <Border x:Name="MainPanelBorder" 
+                                    BorderBrush="{TemplateBinding BorderBrush}" 
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    Background="{TemplateBinding Background}" 
+                                    Padding="{TemplateBinding Padding}" 
+                                    Style="{StaticResource ToolBarMainPanelBorderStyle}">
+                                <DockPanel KeyboardNavigation.TabIndex="1" KeyboardNavigation.TabNavigation="Local">
+                                    <Thumb x:Name="ToolBarThumb" 
+                                           Margin="-3,-1,0,0" 
+                                           Padding="6,5,1,6" 
+                                           Style="{StaticResource ToolBarThumbStyle}"
+                                           Width="10"/>
+                                    <ContentPresenter x:Name="ToolBarHeader" 
+                                                      ContentSource="Header" 
+                                                      Margin="4,0,4,0" 
+                                                      SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" 
+                                                      HorizontalAlignment="Center" 
+                                                      VerticalAlignment="Center"/>
+                                    <ToolBarPanel x:Name="PART_ToolBarPanel" 
+                                                  IsItemsHost="true"
+                                                  Margin="0"
+                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                </DockPanel>
+                            </Border>
                         </Grid>
-                        <Border x:Name="MainPanelBorder" 
-                                BorderBrush="{TemplateBinding BorderBrush}" 
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Background="{TemplateBinding Background}" 
-                                Padding="{TemplateBinding Padding}" 
-                                Style="{StaticResource ToolBarMainPanelBorderStyle}">
-                            <DockPanel KeyboardNavigation.TabIndex="1" KeyboardNavigation.TabNavigation="Local">
-                                <Thumb x:Name="ToolBarThumb" 
-                                       Margin="-3,-1,0,0" 
-                                       Padding="6,5,1,6" 
-                                       Style="{StaticResource ToolBarThumbStyle}"
-                                       Width="10"/>
-                                <ContentPresenter x:Name="ToolBarHeader" 
-                                                  ContentSource="Header" 
-                                                  Margin="4,0,4,0" 
-                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" 
-                                                  HorizontalAlignment="Center" 
-                                                  VerticalAlignment="Center"/>
-                                <ToolBarPanel x:Name="PART_ToolBarPanel" 
-                                              IsItemsHost="true"
-                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                                </ToolBarPanel>
-                            </DockPanel>
-                        </Border>
-                    </Grid>
+                    </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsOverflowOpen" Value="true">
                             <Setter Property="IsEnabled" TargetName="ToolBarThumb" Value="false"/>

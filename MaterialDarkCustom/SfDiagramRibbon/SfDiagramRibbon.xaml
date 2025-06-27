@@ -19,9 +19,12 @@
         <ResourceDictionary Source="/Syncfusion.SfDiagramRibbon.Wpf;component/Themes/Styles.xaml"/>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Ribbon/Ribbon.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Ribbon/QATCustomizationDialog.xaml" />
-        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ComboBox.xaml" />
-        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/TextBlock.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Ribbon/QATResetDialog.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Ribbon/QATAlertDialog.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/ColorPickerPalette/ColorPickerPalette.xaml" />
     </ResourceDictionary.MergedDictionaries>
+
+    <sys:Double x:Key="SfDiagramRibbon.HomeRibbonTab.ArrangeBar.GroupButton.Static.Height">22</sys:Double>
 
     <diag:GraphConstraints x:Key="UndoableParam">Undoable</diag:GraphConstraints>
     <diag:GraphConstraints x:Key="BridgingParam">Bridging</diag:GraphConstraints>
@@ -309,7 +312,8 @@
                                                              HorizontalAlignment="Left"
                                                              VerticalAlignment="Center"
                                                              Command = "diag:DiagramCommands.Paste"
-                                                             Style="{StaticResource SyncfusionRibbonButtonStyle}">
+                                                             Style="{StaticResource SyncfusionRibbonButtonStyle}"
+                                                             Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                         <syncribbon:RibbonButton.ToolTip>
                                             <syncribbon:ScreenTip Description="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=PasteScreenTip}">
                                                 <TextBlock Text="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=PasteText}" MaxWidth="200" TextWrapping="Wrap" TextAlignment="Justify"/>
@@ -380,7 +384,7 @@
                                             <DataTemplate>
                                                 <Grid>
                                                     <Path Height="16" 
-                                                          Width="16" 
+                                                          Width="{StaticResource MaterialDarkCustom.HeaderTextStyle}" 
                                                           HorizontalAlignment="Left"
                                                           VerticalAlignment="Top"
                                                           Stretch="Fill"
@@ -751,8 +755,8 @@
                                             <syncribbon:RibbonButton.IconTemplate>
                                                 <DataTemplate>
                                                     <Grid>
-                                                        <Path Width="16" 
-                                                              Height="14"
+                                                        <Path Width="{StaticResource MaterialDarkCustom.HeaderTextStyle}" 
+                                                              Height="{StaticResource MaterialDarkCustom.TitleTextStyle}"
                                                               Stretch="Fill"
                                                               HorizontalAlignment="Left"
                                                               VerticalAlignment="Center"
@@ -780,7 +784,7 @@
                                             <syncribbon:RibbonButton.IconTemplate>
                                                 <DataTemplate>
                                                     <Grid>
-                                                        <Path Height="14" 
+                                                        <Path Height="{StaticResource MaterialDarkCustom.TitleTextStyle}" 
                                                               Width="16"
                                                               Stretch="Fill"
                                                               HorizontalAlignment="Center" 
@@ -809,8 +813,8 @@
                                             <syncribbon:RibbonButton.IconTemplate>
                                                 <DataTemplate>
                                                     <Grid>
-                                                        <Path Height="14" 
-                                                              Width="16"
+                                                        <Path Height="{StaticResource MaterialDarkCustom.TitleTextStyle}" 
+                                                              Width="{StaticResource MaterialDarkCustom.HeaderTextStyle}"
                                                               Stretch="Fill"
                                                               HorizontalAlignment="Center"
                                                               VerticalAlignment="Center"
@@ -838,8 +842,8 @@
                                             <syncribbon:RibbonButton.IconTemplate>
                                                 <DataTemplate>
                                                     <Grid>
-                                                        <Path Height="14" 
-                                                              Width="16" 
+                                                        <Path Height="{StaticResource MaterialDarkCustom.TitleTextStyle}" 
+                                                              Width="{StaticResource MaterialDarkCustom.HeaderTextStyle}" 
                                                               Stretch="Fill"
                                                               HorizontalAlignment="Center"
                                                               VerticalAlignment="Center"
@@ -863,7 +867,7 @@
                                     <syncribbon:SplitButton x:Name="Part_PointerPanTool"
                                                             HorizontalAlignment="Left"
                                                             VerticalAlignment="Center"
-                                                            Height="22"
+                                                            Height="{StaticResource MaterialDarkCustom.MinHeight}"
                                                             Label = "{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=PointerTool}"
                                                             IconType="Icon"
                                                             SizeForm="Small"
@@ -897,8 +901,9 @@
                                             <syncribbon:RibbonButton x:Name="Part_PointerTool"
                                                                      Label = "{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=PointerTool}"     
                                                                      SizeForm = "Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      IconType = "Icon"
-                                                                     Height="22"
+                                                                     Height="{StaticResource MaterialDarkCustom.MinHeight}"
                                                                      Style="{StaticResource SyncfusionRibbonButtonStyle}"
                                                                      IconTemplate="{StaticResource PointerToolTemplate}"
                                                                      IsSelected="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.Tool , Mode=TwoWay , Converter={StaticResource pointertoolconverter}}">
@@ -906,8 +911,9 @@
                                             <syncribbon:RibbonButton x:Name="Part_ZoomPanTool"
                                                                      Label = "{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=PanTool}"     
                                                                      SizeForm = "Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      IconType = "Icon"
-                                                                     Height="22"
+                                                                     Height="{StaticResource MaterialDarkCustom.MinHeight}"
                                                                      Style="{StaticResource SyncfusionRibbonButtonStyle}"
                                                                      IconTemplate="{StaticResource PanToolTemplete}"
                                                                      IsSelected="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.Tool , Mode=TwoWay , Converter={StaticResource ZoomPanToolToBoolConverter}}">
@@ -918,7 +924,7 @@
                                                              Label = "{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Connector}"
                                                              SizeForm = "Small"
                                                              IconType = "Icon"
-                                                             Height="22"
+                                                             Height="{StaticResource MaterialDarkCustom.MinHeight}"
                                                              Style="{StaticResource SyncfusionRibbonButtonStyle}"
                                                              IsSelected="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.DrawingTool , Mode=TwoWay , Converter={StaticResource ConnectorDrawingToolToBoolConverter}}">
                                         <syncribbon:RibbonButton.Margin>
@@ -932,7 +938,7 @@
                                         <syncribbon:RibbonButton.IconTemplate>
                                             <DataTemplate>
                                                 <Grid>
-                                                    <Path Height="16" 
+                                                    <Path Height="{StaticResource MaterialDarkCustom.HeaderTextStyle}" 
                                                           Width="16"
                                                           Stretch="Fill"
                                                           HorizontalAlignment="Center" 
@@ -950,7 +956,7 @@
                                                              Label = "{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Text}"
                                                              SizeForm = "Small"
                                                              IconType = "Icon"
-                                                             Height="22"
+                                                             Height="{StaticResource MaterialDarkCustom.MinHeight}"
                                                              Style="{StaticResource SyncfusionRibbonButtonStyle}"
                                                              IsSelected="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.DrawingTool , Mode=TwoWay , Converter={StaticResource TextNodeDrawingToolToBoolConverter}}">
                                         <syncribbon:RibbonButton.Margin>
@@ -964,7 +970,7 @@
                                         <syncribbon:RibbonButton.IconTemplate>
                                             <DataTemplate>
                                                 <Grid>
-                                                    <Path Height="14" 
+                                                    <Path Height="{StaticResource MaterialDarkCustom.TitleTextStyle}" 
                                                           Width="13" 
                                                           Stretch="Fill"
                                                           HorizontalAlignment="Center" 
@@ -980,7 +986,7 @@
                                     </syncribbon:RibbonButton>
                                     <syncribbon:SplitButton x:Name="Part_DrawingTool"
                                                             Width="44"
-                                                            Height="22"                                                            
+                                                            Height="{StaticResource MaterialDarkCustom.MinHeight}" 
                                                             Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Rectangle}"
                                                             IconType="Icon"
                                                             SizeForm="Small"
@@ -1016,6 +1022,7 @@
                                             <syncribbon:RibbonButton x:Name="Part_RectangleTool"
                                                                      Label = "{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Rectangle}"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      IconType="Icon"
                                                                      Height="24"
                                                                      IconTemplate="{StaticResource RectangleToolTemplate}">
@@ -1023,6 +1030,7 @@
                                             <syncribbon:RibbonButton x:Name="Part_EllipseTool"
                                                                      Label = "{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Ellipse}"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      IconType="Icon"
                                                                      Height="24"
                                                                      IconTemplate="{StaticResource EllipseToolTemplate}">
@@ -1030,6 +1038,7 @@
                                             <syncribbon:RibbonButton x:Name="Part_LineTool"
                                                                      Label = "{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Line}"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      IconType="Icon"
                                                                      Height="24"
                                                                      IconTemplate="{StaticResource LineToolTemplate}">
@@ -1037,6 +1046,7 @@
                                             <syncribbon:RibbonButton x:Name="Part_PolylineTool"
                                                                      Label = "{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Polyline}"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      IconType="Icon"
                                                                      Height="24"
                                                                      IconTemplate="{StaticResource PolyLineToolTemplate}">
@@ -1044,6 +1054,7 @@
                                             <syncribbon:RibbonButton x:Name="Part_FreehandTool"
                                                                      Label = "{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=FreeHand}"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      IconType="Icon"
                                                                      Height="24"
                                                                      IconTemplate="{StaticResource FreeHandToolTemplate}">
@@ -1054,7 +1065,7 @@
                                                              SizeForm = "ExtraSmall"
                                                              IconType = "Icon"
                                                              Width="24"
-                                                             Height="22"
+                                                             Height="{StaticResource MaterialDarkCustom.MinHeight}"
                                                              HorizontalAlignment="Left"
                                                              syncribbon:SimplifiedLayoutSettings.DisplayMode="Normal"
                                                              Style="{StaticResource SyncfusionRibbonButtonStyle}"
@@ -1088,7 +1099,7 @@
                                                              SizeForm = "ExtraSmall"
                                                              IconType = "Icon"
                                                              Width="24"
-                                                             Height="22"
+                                                             Height="{StaticResource MaterialDarkCustom.MinHeight}"
                                                              HorizontalAlignment="Left"
                                                              syncribbon:SimplifiedLayoutSettings.DisplayMode="Normal"
                                                              Style="{StaticResource SyncfusionRibbonButtonStyle}">
@@ -1691,7 +1702,7 @@
                                             <DataTemplate>
                                                 <Grid>
                                                     <Path Height="16" 
-                                                          Width="14" 
+                                                          Width="{StaticResource MaterialDarkCustom.SubHeaderTextStyle}" 
                                                           Stretch="Fill"
                                                           HorizontalAlignment="Center"
                                                           VerticalAlignment="Center"                                                          
@@ -1727,7 +1738,8 @@
                                                                        Header="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Weight}"
                                                                        Height="25" 
                                                                        Width="150" 
-                                                                       HorizontalAlignment="Right">
+                                                                       HorizontalAlignment="Right"
+                                                                       Margin="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                             <syncribbon:RibbonMenuItem x:Name="Part_LineWeight1" >
                                                                 <syncribbon:RibbonMenuItem.Header>
                                                                     <Path Data="M482.2174,586.4791L567.4014,586.4791" Width="150" Stretch="Fill" Stroke="{StaticResource IconColor}" StrokeThickness="1" />
@@ -2098,7 +2110,8 @@
                                                                Margin="0,4,2,4"
                                                                ContextMenuService.Placement="Bottom"
                                                                syncribbon:SimplifiedLayoutSettings.DisplayMode="Normal"
-                                                               Style="{StaticResource SyncfusionRibbonDropDownButtonStyle}">
+                                                               Style="{StaticResource SyncfusionRibbonDropDownButtonStyle}"
+                                                               Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                         <syncribbon:DropDownButton.ToolTip>
                                             <syncribbon:ScreenTip Description="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Align}">
                                                 <TextBlock Text="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=AlignText}" MaxWidth="200" TextWrapping="Wrap" TextAlignment="Justify"/>
@@ -2125,6 +2138,7 @@
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=AlignLeftScreenTipText}"
                                                                      IconType="Icon"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      Command="diag:DiagramCommands.AlignLeft"
@@ -2133,7 +2147,7 @@
                                                     <DataTemplate>
                                                         <Grid>
                                                             <Path Height="16"
-                                                                  Width="14"
+                                                                  Width="{StaticResource MaterialDarkCustom.TitleTextStyle}"
                                                                   Stretch="Fill"                                                                  
                                                                   HorizontalAlignment="Center"
                                                                   VerticalAlignment="Center"
@@ -2150,6 +2164,7 @@
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=AlignCenterScreenTipText}"
                                                                      IconType="Icon"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      Command="diag:DiagramCommands.AlignCenter"
@@ -2157,7 +2172,7 @@
                                                 <syncribbon:RibbonButton.IconTemplate>
                                                     <DataTemplate>
                                                         <Grid>
-                                                            <Path Height="16" 
+                                                            <Path Height="{StaticResource MaterialDarkCustom.HeaderTextStyle}" 
                                                                   Width="12" 
                                                                   Stretch="Fill"
                                                                   HorizontalAlignment="Center" 
@@ -2175,6 +2190,7 @@
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=AlignRightScreenTipText}"
                                                                      IconType="Icon"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      Command="diag:DiagramCommands.AlignRight"
@@ -2183,7 +2199,7 @@
                                                     <DataTemplate>
                                                         <Grid>
                                                             <Path Height="16" 
-                                                                  Width="14"
+                                                                  Width="{StaticResource MaterialDarkCustom.TitleTextStyle}"
                                                                   Stretch="Fill"
                                                                   HorizontalAlignment="Center"
                                                                   VerticalAlignment="Center"
@@ -2201,6 +2217,7 @@
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=AlignTopScreenTipText}"
                                                                      IconType="Icon"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      Command="diag:DiagramCommands.AlignTop"
@@ -2208,7 +2225,7 @@
                                                 <syncribbon:RibbonButton.IconTemplate>
                                                     <DataTemplate>
                                                         <Grid>
-                                                            <Path Height="14" 
+                                                            <Path Height="{StaticResource MaterialDarkCustom.TitleTextStyle}" 
                                                                   Width="16"
                                                                   Stretch="Fill"
                                                                   HorizontalAlignment="Center"
@@ -2226,6 +2243,7 @@
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=AlignMiddleScreenTipText}"
                                                                      IconType="Icon"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      Command="diag:DiagramCommands.AlignMiddle"
@@ -2234,7 +2252,7 @@
                                                     <DataTemplate>
                                                         <Grid>
                                                             <Path Height="12" 
-                                                                  Width="16"
+                                                                  Width="{StaticResource MaterialDarkCustom.HeaderTextStyle}"
                                                                   Stretch="Fill"
                                                                   HorizontalAlignment="Center"
                                                                   VerticalAlignment="Center"
@@ -2251,6 +2269,7 @@
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=AlignBottomScreenTipText}"
                                                                      IconType="Icon"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      Command="diag:DiagramCommands.AlignBottom"
@@ -2258,7 +2277,7 @@
                                                 <syncribbon:RibbonButton.IconTemplate>
                                                     <DataTemplate>
                                                         <Grid>
-                                                            <Path Height="14" 
+                                                            <Path Height="{StaticResource MaterialDarkCustom.SubHeaderTextStyle}" 
                                                                   Width="16"
                                                                   Stretch="Fill"
                                                                   HorizontalAlignment="Center"
@@ -2284,7 +2303,8 @@
                                                                VerticalAlignment="Top"
                                                                ContextMenuService.Placement="Bottom"
                                                                syncribbon:SimplifiedLayoutSettings.DisplayMode="Normal"
-                                                               Style="{StaticResource SyncfusionRibbonDropDownButtonStyle}">
+                                                               Style="{StaticResource SyncfusionRibbonDropDownButtonStyle}"
+                                                               Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                         <syncribbon:DropDownButton.ToolTip>
                                             <syncribbon:ScreenTip Description="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Position}">
                                                 <TextBlock Text="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=PositionText}" MaxWidth="200" TextWrapping="Wrap" TextAlignment="Justify"/>
@@ -2311,6 +2331,7 @@
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=SpaceAcross}"
                                                                      IconType="Icon"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      Command="diag:DiagramCommands.SpaceAcross"
@@ -2336,6 +2357,7 @@
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=SpaceDown}"
                                                                      IconType="Icon"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      Command="diag:DiagramCommands.SpaceDown"
@@ -2362,6 +2384,7 @@
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=HorizontalFlip}"
                                                                      IconType="Icon"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      Command="diag:DiagramCommands.Flip"
@@ -2370,8 +2393,8 @@
                                                 <syncribbon:RibbonButton.IconTemplate>
                                                     <DataTemplate>
                                                         <Grid>
-                                                            <Path Height="14" 
-                                                                  Width="16"
+                                                            <Path Height="{StaticResource MaterialDarkCustom.TitleTextStyle}" 
+                                                                  Width="{StaticResource MaterialDarkCustom.HeaderTextStyle}"
                                                                   Stretch="Fill"
                                                                   HorizontalAlignment="Center"
                                                                   VerticalAlignment="Center"
@@ -2388,6 +2411,7 @@
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=VerticalFlip}"
                                                                      IconType="Icon"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      Command="diag:DiagramCommands.Flip"
@@ -2396,8 +2420,8 @@
                                                 <syncribbon:RibbonButton.IconTemplate>
                                                     <DataTemplate>
                                                         <Grid>
-                                                            <Path Height="16" 
-                                                                  Width="14"
+                                                            <Path Height="{StaticResource MaterialDarkCustom.HeaderTextStyle}" 
+                                                                  Width="{StaticResource MaterialDarkCustom.SubHeaderTextStyle}"
                                                                   Stretch="Fill"
                                                                   HorizontalAlignment="Center"
                                                                   VerticalAlignment="Center"
@@ -2415,6 +2439,7 @@
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=RotateClockwise}"
                                                                      IconType="Icon"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      Command="diag:DiagramCommands.Rotate"
@@ -2422,8 +2447,8 @@
                                                 <syncribbon:RibbonButton.IconTemplate>
                                                     <DataTemplate>
                                                         <Grid>
-                                                            <Path Height="14" 
-                                                                  Width="16"
+                                                            <Path Height="{StaticResource MaterialDarkCustom.TitleTextStyle}" 
+                                                                  Width="{StaticResource MaterialDarkCustom.HeaderTextStyle}"
                                                                   Stretch="Fill"
                                                                   HorizontalAlignment="Center"
                                                                   VerticalAlignment="Center"
@@ -2440,6 +2465,7 @@
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=RotateCounterClockwise}"
                                                                      IconType="Icon"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      Command="diag:DiagramCommands.Rotate"
@@ -2448,8 +2474,8 @@
                                                 <syncribbon:RibbonButton.IconTemplate>
                                                     <DataTemplate>
                                                         <Grid>
-                                                            <Path Height="14" 
-                                                                  Width="16"
+                                                            <Path Height="{StaticResource MaterialDarkCustom.TitleTextStyle}" 
+                                                                  Width="{StaticResource MaterialDarkCustom.HeaderTextStyle}"
                                                                   Stretch="Fill"
                                                                   HorizontalAlignment="Center"
                                                                   VerticalAlignment="Center"
@@ -2469,7 +2495,7 @@
                                                             HorizontalAlignment="Left"
                                                             IconType="Icon"
                                                             SizeForm="Small"
-                                                            Height="22"
+                                                            Height="{StaticResource MaterialDarkCustom.MinHeight}"
                                                             Command="diag:DiagramCommands.BringToFront"
                                                             Style="{StaticResource SyncfusionSplitButtonStyle}">
                                         <syncribbon:SplitButton.Margin>
@@ -2500,6 +2526,7 @@
                                                                  Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=BringForward}"
                                                                  IconType="Icon"
                                                                  SizeForm="Small"
+                                                                 HorizontalAlignment="Stretch"
                                                                  Height="24"
                                                                  Padding="2,0,0,0"
                                                                  Command="diag:DiagramCommands.BringForward"
@@ -2530,6 +2557,7 @@
                                                                  Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=BringToFront}"
                                                                  IconType="Icon"
                                                                  SizeForm="Small"
+                                                                 HorizontalAlignment="Stretch"
                                                                  Height="24"
                                                                  Padding="2,0,0,0"
                                                                  Command="diag:DiagramCommands.BringToFront"
@@ -2593,6 +2621,7 @@
                                                                  Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=SendBackward}"
                                                                  IconType="Icon"
                                                                  SizeForm="Small"
+                                                                 HorizontalAlignment="Stretch"
                                                                  Height="24"
                                                                  Padding="2,0,0,0"
                                                                  Command="diag:DiagramCommands.SendBackward"
@@ -2623,6 +2652,7 @@
                                                                  Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=SendToBack}"
                                                                  IconType="Icon"
                                                                  SizeForm="Small"
+                                                                 HorizontalAlignment="Stretch"
                                                                  Height="24"
                                                                  Padding="2,0,0,0"
                                                                  Command="diag:DiagramCommands.SendToBack"
@@ -2654,7 +2684,7 @@
                                                                Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Group}"
                                                                IconType="Icon"
                                                                SizeForm="Small"
-                                                               Height="22"
+                                                               Height="{StaticResource SfDiagramRibbon.HomeRibbonTab.ArrangeBar.GroupButton.Static.Height}"
                                                                HorizontalAlignment="Left"
                                                                Style="{StaticResource SyncfusionRibbonDropDownButtonStyle}">
                                         <syncribbon:DropDownButton.Margin>
@@ -2668,8 +2698,8 @@
                                         <syncribbon:DropDownButton.IconTemplate>
                                             <DataTemplate>
                                                 <Grid>
-                                                    <Path Height="16" 
-                                                          Width="16"
+                                                    <Path Height="{StaticResource MaterialDarkCustom.HeaderTextStyle}" 
+                                                          Width="{StaticResource MaterialDarkCustom.HeaderTextStyle}"
                                                           Stretch="Fill"
                                                           HorizontalAlignment="Center" 
                                                           VerticalAlignment="Center"
@@ -2685,6 +2715,7 @@
                                                                  Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Group}"
                                                                  IconType="Icon"
                                                                  SizeForm="Small"
+                                                                 HorizontalAlignment="Stretch"
                                                                  Height="24"
                                                                  Padding="2,0,0,0"
                                                                  Command="diag:DiagramCommands.Group"
@@ -2697,8 +2728,8 @@
                                             <syncribbon:RibbonButton.IconTemplate>
                                                 <DataTemplate>
                                                     <Grid>
-                                                        <Path Height="16" 
-                                                              Width="16"
+                                                        <Path Height="{StaticResource MaterialDarkCustom.HeaderTextStyle}" 
+                                                              Width="{StaticResource MaterialDarkCustom.HeaderTextStyle}"
                                                               Stretch="Fill"
                                                               HorizontalAlignment="Center" 
                                                               VerticalAlignment="Center"
@@ -2715,6 +2746,7 @@
                                                                  Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=UnGroup}"
                                                                  IconType="Icon"
                                                                  SizeForm="Small"
+                                                                 HorizontalAlignment="Stretch"
                                                                  Height="24"
                                                                  Padding="2,0,0,0"
                                                                  Command="diag:DiagramCommands.UnGroup"
@@ -2727,8 +2759,8 @@
                                             <syncribbon:RibbonButton.IconTemplate>
                                                 <DataTemplate>
                                                     <Grid>
-                                                        <Path Height="16" 
-                                                              Width="16"
+                                                        <Path Height="{StaticResource MaterialDarkCustom.HeaderTextStyle}" 
+                                                              Width="{StaticResource MaterialDarkCustom.HeaderTextStyle}"
                                                               Stretch="Fill"
                                                               HorizontalAlignment="Center" 
                                                               VerticalAlignment="Center"
@@ -2757,7 +2789,8 @@
                                                                Height="80"
                                                                HorizontalAlignment="Center"
                                                                VerticalAlignment="Top"
-                                                               Style="{StaticResource SyncfusionRibbonDropDownButtonStyle}">
+                                                               Style="{StaticResource SyncfusionRibbonDropDownButtonStyle}"
+                                                               Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                         <syncribbon:DropDownButton.ToolTip>
                                             <syncribbon:ScreenTip Description="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Select}">
                                                 <TextBlock Text="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=SelectText}" TextAlignment="Justify" TextWrapping="Wrap" MaxWidth="200"/>
@@ -2784,6 +2817,7 @@
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=SelectAll}"
                                                                      IconType="Icon"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      Command="diag:DiagramCommands.SelectAll"
@@ -2809,6 +2843,7 @@
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=SelectNodes}"
                                                                      IconType="Icon"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      Command="diag:DiagramCommands.SelectByType"
@@ -2835,6 +2870,7 @@
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=SelectConnectors}"
                                                                      IconType="Icon"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      Command="diag:DiagramCommands.SelectByType"
@@ -2869,15 +2905,16 @@
                                                       Header="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=DiagramParts}"
                                                       Style="{StaticResource SyncfusionRibbonBarStyle}">
                                     <syncribbon:RibbonButton x:Name="Part_Picture" 
-                                                             Width="50"
-                                                             Height="80"
+                                                             Width="Auto"
+                                                             Height="Auto"
                                                              Margin ="0,4,2,4"
                                                              Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Picture}"
                                                              SizeForm="Large"
                                                              IconType="Icon"
                                                              HorizontalAlignment="Left"
                                                              VerticalAlignment="Top"
-                                                             Style="{StaticResource SyncfusionRibbonButtonStyle}">
+                                                             Style="{StaticResource SyncfusionRibbonButtonStyle}"
+                                                             Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                         <syncribbon:RibbonButton.IconTemplate>
                                             <DataTemplate>
                                                 <Grid>
@@ -2901,12 +2938,13 @@
                                                              Margin="2,4,0,4"
                                                              Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Connector}"
                                                              SizeForm="Large"                                                             
-                                                             Width="50"
-                                                             Height="80"
+                                                             Width="Auto"
+                                                             Height="Auto"
                                                              HorizontalAlignment="Left"
                                                              VerticalAlignment="Top"
                                                              IconType="Icon"
-                                                             Style="{StaticResource SyncfusionRibbonButtonStyle}">
+                                                             Style="{StaticResource SyncfusionRibbonButtonStyle}"
+                                                             Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                         <syncribbon:RibbonButton.ToolTip>
                                             <syncribbon:ScreenTip Description="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Connectors}">
                                                 <TextBlock Text="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=ConnectorTooltipText}" TextAlignment="Justify" TextWrapping="Wrap" MaxWidth="200"/>
@@ -2960,7 +2998,8 @@
                                                                VerticalAlignment="Top"
                                                                SizeForm="Large"
                                                                Margin="0,4,2,4"
-                                                               Style="{StaticResource SyncfusionRibbonDropDownButtonStyle}">
+                                                               Style="{StaticResource SyncfusionRibbonDropDownButtonStyle}"
+                                                               Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                         <syncribbon:DropDownButton.ToolTip>
                                             <syncribbon:ScreenTip Description="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=PageOrientation}">
                                                 <TextBlock Text="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=PageOrientationTooltipText}" TextAlignment="Justify" TextWrapping="Wrap" MaxWidth="200"/>
@@ -2988,6 +3027,7 @@
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      IsSelected="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.PageSettings.PageOrientation, Converter={StaticResource LandscapeOrientationToBoolConverter}, Mode=TwoWay}"
                                                                      IconType="Icon"
                                                                      Style="{StaticResource SyncfusionRibbonButtonStyle}">
@@ -3012,6 +3052,7 @@
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Portrait}"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
+                                                                     HorizontalAlignment="Stretch"
                                                                      IsSelected="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.PageSettings.PageOrientation, Converter={StaticResource PortraitOrientationToBoolConverter}, Mode=TwoWay}"
                                                                      IconType="Icon"
                                                                      Style="{StaticResource SyncfusionRibbonButtonStyle}">
@@ -3071,6 +3112,7 @@
                                             <syncribbon:RibbonButton x:Name="Part_Letter"
                                                                      IconType="Icon"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Letter}"
@@ -3079,7 +3121,7 @@
                                                     <DataTemplate>
                                                         <Grid>
                                                             <Path Stretch="Fill" 
-                                                                  Width="12"
+                                                                  Width="{StaticResource MaterialDarkCustom.BodyTextStyle}"
                                                                   Height="15"
                                                                   VerticalAlignment="Center" 
                                                                   HorizontalAlignment="Center"
@@ -3098,6 +3140,7 @@
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Style="{StaticResource SyncfusionRibbonButtonStyle}">
                                                 <syncribbon:RibbonButton.IconTemplate>                                                        
                                                     <DataTemplate>
@@ -3119,11 +3162,12 @@
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Style="{StaticResource SyncfusionRibbonButtonStyle}">
                                                 <syncribbon:RibbonButton.IconTemplate>
                                                     <DataTemplate>
                                                         <Grid>
-                                                            <Path Width="12"
+                                                            <Path Width="{StaticResource MaterialDarkCustom.SubTitleTextStyle}"
                                                                   Height="13"
                                                                   Stretch="Fill" 
                                                                   VerticalAlignment="Center" 
@@ -3143,6 +3187,7 @@
                                                                      Padding="2,0,0,0"
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Statement}"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Style="{StaticResource SyncfusionRibbonButtonStyle}">
                                                 <syncribbon:RibbonButton.IconTemplate>
                                                     <DataTemplate>
@@ -3164,6 +3209,7 @@
                                                                      Padding="2,0,0,0"
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Executive}"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Style="{StaticResource SyncfusionRibbonButtonStyle}">
                                                 <syncribbon:RibbonButton.IconTemplate>
                                                     <DataTemplate>
@@ -3185,6 +3231,7 @@
                                                                      Padding="2,0,0,0"
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=A3}"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Style="{StaticResource SyncfusionRibbonButtonStyle}">
                                                 <syncribbon:RibbonButton.IconTemplate>
                                                     <DataTemplate>
@@ -3206,6 +3253,7 @@
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Style="{StaticResource SyncfusionRibbonButtonStyle}">
                                                 <syncribbon:RibbonButton.IconTemplate>
                                                     <DataTemplate>
@@ -3230,6 +3278,7 @@
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Style="{StaticResource SyncfusionRibbonButtonStyle}">
                                                 <syncribbon:RibbonButton.IconTemplate>
                                                     <DataTemplate>
@@ -3274,113 +3323,113 @@
                                         </syncribbon:RibbonGallery.GalleryFilters>
                                         <syncribbon:RibbonGallery.GalleryGroups>
                                             <syncribbon:RibbonGalleryGroup Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Professional}" syncribbon:RibbonGallery.FilterIndexes="0,1" Style="{StaticResource SyncfusionRibbonGalleryGroupStyle}">
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Office_ThemeRibbon" ThemeName="Office_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Office_ThemeRibbon" ThemeName="Office_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=OfficeTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Linear_ThemeRibbon" ThemeName="Linear_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Linear_ThemeRibbon" ThemeName="Linear_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=LinearTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Zephyr_ThemeRibbon" ThemeName="Zephyr_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Zephyr_ThemeRibbon" ThemeName="Zephyr_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=ZephyrTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Integral_ThemeRibbon" ThemeName="Integral_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
-                                                    <diagribbon:DiagramThemeGalleryItem.ToolTip>
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Integral_ThemeRibbon" ThemeName="Integral_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
+                                                        <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=IntegralTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Simple_ThemeRibbon" ThemeName="Zephyr_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Simple_ThemeRibbon" ThemeName="Zephyr_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=SimpleTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Whisp_ThemeRibbon" ThemeName="Whisp_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Whisp_ThemeRibbon" ThemeName="Whisp_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=WhispTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Daybreak_ThemeRibbon" ThemeName="Daybreak_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Daybreak_ThemeRibbon" ThemeName="Daybreak_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=DaybreakTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Parallel_ThemeRibbon" ThemeName="Parallel_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Parallel_ThemeRibbon" ThemeName="Parallel_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=ParallelTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Sequence_ThemeRibbon" ThemeName="Sequence_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Sequence_ThemeRibbon" ThemeName="Sequence_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=SequenceTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Slice_ThemeRibbon" ThemeName="Slice_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Slice_ThemeRibbon" ThemeName="Slice_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=SliceTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Ion_ThemeRibbon" ThemeName="Ion_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Ion_ThemeRibbon" ThemeName="Ion_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=IonTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
                                             </syncribbon:RibbonGalleryGroup>
                                             <syncribbon:RibbonGalleryGroup Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Modern}" syncribbon:RibbonGallery.FilterIndexes="0,2" Style="{StaticResource SyncfusionRibbonGalleryGroupStyle}">
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Retrospect_ThemeRibbon" ThemeName="Retrospect_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Retrospect_ThemeRibbon" ThemeName="Retrospect_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=RetrospectTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Bubble_ThemeRibbon" ThemeName="Bubble_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Bubble_ThemeRibbon" ThemeName="Bubble_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=BubbleTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Clouds_ThemeRibbon" ThemeName="Clouds_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Clouds_ThemeRibbon" ThemeName="Clouds_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=CloudsTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Gemstone_ThemeRibbon" ThemeName="Gemstone_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Gemstone_ThemeRibbon" ThemeName="Gemstone_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=GemstoneTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
                                             </syncribbon:RibbonGalleryGroup>
                                             <syncribbon:RibbonGalleryGroup Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Trendy}" syncribbon:RibbonGallery.FilterIndexes="0,3" Style="{StaticResource SyncfusionRibbonGalleryGroupStyle}">
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Facet_ThemeRibbon" ThemeName="Facet_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Facet_ThemeRibbon" ThemeName="Facet_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=FacetTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Prominence_ThemeRibbon" ThemeName="Prominence_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Prominence_ThemeRibbon" ThemeName="Prominence_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=ProminenceTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Smoke_ThemeRibbon" ThemeName="Smoke_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Smoke_ThemeRibbon" ThemeName="Smoke_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=SmokeTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Radiance_ThemeRibbon" ThemeName="Radiance_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Radiance_ThemeRibbon" ThemeName="Radiance_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=RadianceTheme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
                                             </syncribbon:RibbonGalleryGroup>
                                             <syncribbon:RibbonGalleryGroup Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Custom}" syncribbon:RibbonGallery.FilterIndexes="0,4" Style="{StaticResource SyncfusionRibbonGalleryGroupStyle}">
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Custom1_ThemeRibbon" ThemeName="Custom1_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Custom1_ThemeRibbon" ThemeName="Custom1_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Custom1Theme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                 </diagribbon:DiagramThemeGalleryItem>
-                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Custom2_ThemeRibbon" ThemeName="Custom2_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                <diagribbon:DiagramThemeGalleryItem x:Name ="Custom2_ThemeRibbon" ThemeName="Custom2_ThemeRibbon" Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                                     <diagribbon:DiagramThemeGalleryItem.ToolTip>
                                                         <syncribbon:ScreenTip Content="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Custom2Theme}"/>
                                                     </diagribbon:DiagramThemeGalleryItem.ToolTip>
@@ -3410,28 +3459,28 @@
                                                                                    ContentTemplate ="{ StaticResource ribbonVariantItemTemplate}"
                                                                                    Content="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.Theme.VariantStyles[0]}"
                                                                                    ConnectorVariant="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.Theme.ConnectorVariantStyles[0]}"
-                                                                                   Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                                                   Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                         </diagribbon:DiagramThemeVariantGalleryItem>
                                         <diagribbon:DiagramThemeVariantGalleryItem x:Name ="VariantGallery1" 
                                                                                    Theme="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.Theme}"
                                                                                    ContentTemplate ="{ StaticResource ribbonVariantItemTemplate}"
                                                                                    Content="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.Theme.VariantStyles[1]}"
                                                                                    ConnectorVariant="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.Theme.ConnectorVariantStyles[1]}"
-                                                                                   Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                                                   Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                         </diagribbon:DiagramThemeVariantGalleryItem>
                                         <diagribbon:DiagramThemeVariantGalleryItem x:Name ="VariantGallery2" 
                                                                                    Theme="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.Theme}"
                                                                                    ContentTemplate ="{ StaticResource ribbonVariantItemTemplate}"
                                                                                    Content="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.Theme.VariantStyles[2]}"
                                                                                    ConnectorVariant="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.Theme.ConnectorVariantStyles[2]}"
-                                                                                   Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                                                   Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                         </diagribbon:DiagramThemeVariantGalleryItem>
                                         <diagribbon:DiagramThemeVariantGalleryItem x:Name ="VariantGallery3" 
                                                                                    Theme="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.Theme}" 
                                                                                    ContentTemplate ="{ StaticResource ribbonVariantItemTemplate}"
                                                                                    Content="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.Theme.VariantStyles[3]}"
                                                                                    ConnectorVariant="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=DataContext.Theme.ConnectorVariantStyles[3]}"
-                                                                                   Style="{StaticResource SyncfusionRibbonGalleryItemStyle}">
+                                                                                   Style="{StaticResource SyncfusionRibbonGalleryItemStyle}" Padding="{StaticResource MaterialDarkCustom.BorderThickness}">
                                         </diagribbon:DiagramThemeVariantGalleryItem>
                                     </syncribbon:RibbonGallery>
                                 </syncribbon:RibbonBar>
@@ -3456,7 +3505,8 @@
                                                                VerticalAlignment="Top"
                                                                Height="80"
                                                                Margin="0,4,0,4"
-                                                               Style="{StaticResource SyncfusionRibbonDropDownButtonStyle}">
+                                                               Style="{StaticResource SyncfusionRibbonDropDownButtonStyle}"
+                                                               Padding="{StaticResource MaterialDarkCustom.BorderThickness1}">
                                         <syncribbon:DropDownButton.ToolTip>
                                             <syncribbon:ScreenTip Description="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Backgrounds}">
                                                 <TextBlock Text="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=BackgroundTooltipText}" TextAlignment="Justify" TextWrapping="Wrap" MaxWidth="200"/>
@@ -3497,7 +3547,7 @@
                                         <DataTemplate>
                                             <Grid>
                                                 <Path Height="32" 
-                                                          Width="32"
+                                                          Width="{StaticResource MaterialDarkCustom.IconPanelSize}"
                                                           Stretch="Fill"
                                                           HorizontalAlignment="Center" 
                                                           VerticalAlignment="Center" 
@@ -3517,7 +3567,8 @@
                                                                HorizontalAlignment="Left"
                                                                VerticalAlignment="Top"
                                                                Margin="0,4,0,4"
-                                                               Style="{StaticResource SyncfusionRibbonDropDownButtonStyle}">
+                                                               Style="{StaticResource SyncfusionRibbonDropDownButtonStyle}"
+                                                               Padding="{StaticResource MaterialDarkCustom.BorderThickness1}">
                                         <syncribbon:DropDownButton.ToolTip>
                                             <syncribbon:ScreenTip Description="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Connectors}">
                                                 <TextBlock Text="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=ConnectorsText}" TextAlignment="Justify" TextWrapping="Wrap" MaxWidth="200"/>
@@ -3527,7 +3578,7 @@
                                             <DataTemplate>
                                                 <Grid>
                                                     <Path Height="32" 
-                                                          Width="32"
+                                                          Width="{StaticResource MaterialDarkCustom.IconPanelSize}"
                                                           Stretch="Fill"
                                                           HorizontalAlignment="Center" 
                                                           VerticalAlignment="Center" 
@@ -3543,6 +3594,7 @@
                                             <syncribbon:RibbonButton x:Name="Part_Orthogonal"
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Orthogonal}"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      IconType="Icon"
@@ -3567,6 +3619,7 @@
                                             <syncribbon:RibbonButton x:Name="Part_StraightLine"
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=StraightLine}"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      IconType="Icon"
@@ -3592,6 +3645,7 @@
                                             <syncribbon:RibbonButton x:Name="Part_Cubic"
                                                                      Label="{diagribbon:DiagramRibbonLocalizationResourceExtension  ResourceName=Bezier}"
                                                                      SizeForm="Small"
+                                                                     HorizontalAlignment="Stretch"
                                                                      Height="24"
                                                                      Padding="2,0,0,0"
                                                                      IconType="Icon"
@@ -3730,7 +3784,8 @@
                                                                SplitLabelIntoTwoLine="False"
                                                                ContextMenuService.Placement="Bottom"
                                                                syncribbon:SimplifiedLayoutSettings.DisplayMode="Normal"
-                                                               Style="{StaticResource SyncfusionRibbonDropDownButtonStyle}">
+                                                               Style="{StaticResource SyncfusionRibbonDropDownButtonStyle}"
+                                                               Padding="{StaticResource MaterialDarkCustom.BorderThickness1}">
                                         <syncribbon:DropDownButton.IconTemplate>
                                             <DataTemplate>
                                                 <Grid>
@@ -3788,8 +3843,8 @@
                                     <syncribbon:RibbonBar.IconTemplate>
                                         <DataTemplate>
                                             <Grid>
-                                                <Path Height="16" 
-                                                      Width="16"
+                                                <Path Height="{StaticResource MaterialDarkCustom.HeaderTextStyle}" 
+                                                      Width="{StaticResource MaterialDarkCustom.HeaderTextStyle}"
                                                       Stretch="Fill"
                                                       HorizontalAlignment="Center" 
                                                       VerticalAlignment="Center"

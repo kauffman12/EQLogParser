@@ -1,0 +1,668 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:Microsoft_Windows_Themes="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.Aero"
+    xmlns:local="clr-namespace:Syncfusion.UI.Xaml.Chat;assembly=Syncfusion.SfChat.Wpf"
+    
+    xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib" xmlns:shared="http://schemas.syncfusion.com/wpf">
+    
+    <ResourceDictionary.MergedDictionaries>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
+        <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/TextBox.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/PrimaryButton.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <SolidColorBrush x:Key="AssistView.Static.FontSize" Color="#000000" />
+    <SolidColorBrush x:Key="AssistView.ChatItem.Static.Background" Color="#000000" />
+
+    <local:DateTimeToStringConverter x:Key="DateTimeConverter"/>
+    <local:TypingIndicatorVisibilityConverter x:Key="TypingIndicatorConverter"/>
+    <local:ViewTemplateSelector x:Key="viewTemplateSelector">
+        <local:ViewTemplateSelector.TextTemplate>
+            <DataTemplate>
+                <TextBlock
+                  Foreground="{StaticResource ContentForeground}"
+                  TextWrapping="Wrap"
+                  Text="{Binding Text}"/>
+            </DataTemplate>
+        </local:ViewTemplateSelector.TextTemplate>
+    </local:ViewTemplateSelector>
+
+    <local:EditTemplateSelector x:Key="editTemplateSelector">
+        <local:EditTemplateSelector.TextTemplate>
+            <DataTemplate>
+                <TextBox
+                 TextWrapping="Wrap"
+                 Text="{Binding Text}"/>
+            </DataTemplate>
+        </local:EditTemplateSelector.TextTemplate>
+    </local:EditTemplateSelector>
+
+    <local:ChatItemTemplateSelector x:Key="chatTemplateSelector">
+        <local:ChatItemTemplateSelector.DefaultTemplate>
+            <DataTemplate>
+                <local:ChatItem Content="{Binding}" Author="{Binding Author}"/>
+            </DataTemplate>
+        </local:ChatItemTemplateSelector.DefaultTemplate>
+        <local:ChatItemTemplateSelector.HeaderTemplate>
+            <DataTemplate>
+                <ContentPresenter ContentTemplate="{Binding Path=BannerTemplate,RelativeSource={RelativeSource AncestorType=local:SfAIAssistView}}" 
+                               HorizontalAlignment="Center"/>
+            </DataTemplate>
+        </local:ChatItemTemplateSelector.HeaderTemplate>
+    </local:ChatItemTemplateSelector>
+
+    <local:SuggestionTemplateSelector x:Key="suggestionTemplateSelector">
+        <local:SuggestionTemplateSelector.ButtonTemplate>
+            <DataTemplate>
+                <Button Margin="3" Padding="4" BorderThickness="1" Content="{Binding}" Style="{StaticResource WPFFlatButtonStyle}" BorderBrush="Transparent">
+                    <Button.ContentTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
+                        </DataTemplate>
+                    </Button.ContentTemplate>
+                </Button>
+            </DataTemplate>
+        </local:SuggestionTemplateSelector.ButtonTemplate>
+    </local:SuggestionTemplateSelector>
+
+    <Style BasedOn="{StaticResource WPFPrimaryButtonStyle}" x:Key="stopResponseButtonStyle" TargetType="{x:Type Button}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="btnBorder" BorderThickness="{TemplateBinding BorderThickness}" 
+                     BorderBrush="{TemplateBinding BorderBrush}" 
+                     Background="{TemplateBinding Background}"
+                     CornerRadius="{StaticResource MaterialDarkCustom.CornerRadius4}" 
+                     Width="{TemplateBinding Width}">
+                            <StackPanel Orientation="Horizontal">
+                                <Rectangle x:Name="rect" Fill="{TemplateBinding Foreground}" Width="12" Height="12" RadiusX="2" RadiusY="2" Margin="18,0,0,0"/>
+                                <TextBlock x:Name="stopBtnText" Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="ButtonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="stopBtnText" Storyboard.TargetProperty="Text">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="Canceling"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="rect" Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <DoubleAnimation Storyboard.TargetName="btnBorder" Storyboard.TargetProperty="Width" To="84" Duration="0:0:0"/>
+                                        <ThicknessAnimation Storyboard.TargetName="stopBtnText" Storyboard.TargetProperty="Margin" To="16,0,0,0" Duration="0:0:0.0"/>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="btnBorder" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{StaticResource PrimaryLighten}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="btnBorder" Storyboard.TargetProperty="BorderBrush">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{StaticResource PrimaryLighten}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="stopBtnText" Storyboard.TargetProperty="Foreground">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{StaticResource PrimaryForegroundDisabled}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="TypingIndicatorStyle" TargetType="{x:Type local:TypingIndicator}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type local:TypingIndicator}">
+                    <StackPanel x:Name="layoutRoot" Orientation="Horizontal">
+                        <shared:SfAvatarView 
+                     x:Name="PART_AvatarView"                       
+                     Content="{Binding Author.Content, RelativeSource={RelativeSource TemplatedParent}}"
+                     ContentTemplate="{Binding Author.ContentTemplate, RelativeSource={RelativeSource TemplatedParent}}"
+                     />
+                        <TextBlock x:Name="IndicatorText" VerticalAlignment="Center" 
+                            Margin="8,0,0,0"
+                            Foreground="{StaticResource ContentForeground}"
+                            FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
+                            Text="{Binding Path=Text, RelativeSource={RelativeSource TemplatedParent}}"/>
+                        <Viewbox x:Name="PART_LinearBox" 
+                                      Width="30" 
+                                      Height="30" 
+                                      Margin="-6,10,0,0"
+                                      VerticalAlignment="Center"
+                                      Visibility="Collapsed">
+                            <Grid>
+                                <Ellipse x:Name="_r1" HorizontalAlignment="Left" Margin="12,67.667,0,73.333" 
+                                    Fill="{StaticResource ContentForeground}" 
+                                    StrokeThickness="4"
+                                    Height="20"                              
+                                    Width="20"
+                                    RenderTransformOrigin="0.5,0.5">
+                                    <Ellipse.RenderTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform/>
+                                            <SkewTransform/>
+                                            <RotateTransform/>
+                                            <TranslateTransform/>
+                                        </TransformGroup>
+                                    </Ellipse.RenderTransform>
+                                </Ellipse>
+                                <Ellipse x:Name="_r2" HorizontalAlignment="Left"
+                                    Margin="39,67.667,0,73.333" 
+                                    Fill="{StaticResource ContentForeground}" 
+                                    Width="20" StrokeThickness="4" 
+                                    Height="20" 
+                                    RenderTransformOrigin="0.5,0.5">
+                                    <Ellipse.RenderTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform/>
+                                            <SkewTransform/>
+                                            <RotateTransform/>
+                                            <TranslateTransform/>
+                                        </TransformGroup>
+                                    </Ellipse.RenderTransform>
+                                </Ellipse>
+                                <Ellipse x:Name="_r3" HorizontalAlignment="Left" Margin="67,67.667,0,73.333" 
+                                    Fill="{StaticResource ContentForeground}" 
+                                    Width="20" StrokeThickness="4"
+                                    Height="20" RenderTransformOrigin="0.5,0.5">
+                                    <Ellipse.RenderTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform/>
+                                            <SkewTransform/>
+                                            <RotateTransform/>
+                                            <TranslateTransform/>
+                                        </TransformGroup>
+                                    </Ellipse.RenderTransform>
+                                </Ellipse>
+                            </Grid>
+                        </Viewbox>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="AnimationType">
+                                <VisualState x:Name="LinearBox">
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Visibility)" Storyboard.TargetName="PART_LinearBox">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)" Storyboard.TargetName="_r1">
+                                            <EasingDoubleKeyFrame KeyTime="0" Value="0"/>
+                                        </DoubleAnimationUsingKeyFrames>
+                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.Y)" Storyboard.TargetName="_r1">
+                                            <EasingDoubleKeyFrame KeyTime="0" Value="-10"/>
+                                            <EasingDoubleKeyFrame KeyTime="0:0:0.1" Value="0"/>
+                                        </DoubleAnimationUsingKeyFrames>
+                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.Y)" Storyboard.TargetName="_r2">
+                                            <EasingDoubleKeyFrame KeyTime="0:0:0.1" Value="-10"/>
+                                            <EasingDoubleKeyFrame KeyTime="0:0:0.2" Value="0"/>
+                                        </DoubleAnimationUsingKeyFrames>
+                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.Y)" Storyboard.TargetName="_r3">
+                                            <EasingDoubleKeyFrame KeyTime="0:0:0.1" Value="0"/>
+                                            <EasingDoubleKeyFrame KeyTime="0:0:0.2" Value="-10"/>
+                                            <EasingDoubleKeyFrame KeyTime="0:0:0.3" Value="0"/>
+                                        </DoubleAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource TypingIndicatorStyle}" TargetType="{x:Type local:TypingIndicator}"/>
+
+    <Style x:Key="SycfusionChat" TargetType="local:ChatItemsView">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:ChatItemsView">
+                    <Border
+                     Padding="{TemplateBinding Padding}"
+                     Background="{TemplateBinding Background}"
+                     BorderThickness="{TemplateBinding BorderThickness}">
+                        <StackPanel>
+                            <ContentPresenter Content="Helloo"/>
+                            <ItemsControl
+                         x:Name="PART_ItemsControl"
+                         ItemsSource="{TemplateBinding ItemsSource}"
+                         ItemTemplate="{TemplateBinding ItemTemplate}"
+                         ItemsPanel="{TemplateBinding ItemsPanel}"
+                         ItemContainerStyle="{TemplateBinding ItemContainerStyle}"/>
+                        </StackPanel>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SyncfusionChatStyle" TargetType="local:SfAIAssistView">
+        <Setter Property="Padding" Value="12"/>
+        <Setter Property="Width" Value="800"/>
+        <Setter Property="Background" Value="{StaticResource ContentBackground}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:SfAIAssistView">
+                    <Border
+                     Padding="{TemplateBinding Padding}"
+                     Background="{TemplateBinding Background}"
+                     BorderThickness="2">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <local:ChatItemsView
+								VirtualizingPanel.IsVirtualizing="True"
+                                VirtualizingPanel.VirtualizationMode="Recycling"
+                                VirtualizingStackPanel.ScrollUnit="Pixel"
+                             Grid.ColumnSpan="2"
+                             Margin="6,6,6,6"
+                             Background="{StaticResource ContentBackground}"
+                             Padding="0"    
+                             BorderBrush="{StaticResource ContentBackground}" 
+                             x:Name="ChatItems" 
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                ItemTemplateSelector="{StaticResource chatTemplateSelector}"
+                             ItemsSource="{Binding Path=Messages, RelativeSource={RelativeSource Mode=TemplatedParent}}">
+                                <!--<local:ChatItemsView.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel VerticalAlignment="Bottom"/>
+                                    </ItemsPanelTemplate>
+                                </local:ChatItemsView.ItemsPanel>-->
+                                <local:ChatItemsView.ItemContainerStyle>
+                                    <Style TargetType="ListViewItem">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListViewItem">
+                                                    <Border Background="{StaticResource ContentBackground}">
+                                                        <ContentPresenter />
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </local:ChatItemsView.ItemContainerStyle>
+                            </local:ChatItemsView>
+                            <local:SuggestionsViewer                             
+                             x:Name="suggest"
+                             HorizontalAlignment="Right"
+                             Margin="6,6,14,6"
+                             HorizontalContentAlignment="Right"
+                             Grid.Row="1"                  
+                             ItemsSource="{TemplateBinding Suggestions}"/>
+                            <local:TypingIndicator
+                             Grid.Row="1"
+                             Height="32"
+                             Margin="6,0,6,0"
+                             Visibility="{Binding Path=ShowTypingIndicator, RelativeSource={RelativeSource Mode=TemplatedParent},Converter={StaticResource TypingIndicatorConverter}}" 
+                             Author="{Binding Path=TypingIndicator.Author,RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                             Text="{Binding Path=TypingIndicator.Text,RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                             x:Name="PART_TypeIndicator"
+                             VerticalAlignment="Bottom"/>
+                            <ContentPresenter Grid.Row="2" Grid.Column="1" x:Name="stopResponeContentPresenter" Visibility="Collapsed">
+                            <ContentPresenter.Content>
+                            <Button x:Name="stopResponseButton" Width="143" Height="24" Tag="Stop"
+                             Content="Stop Responding" FontSize="12" Style="{StaticResource stopResponseButtonStyle}">
+                            </Button>
+                            </ContentPresenter.Content>
+                            </ContentPresenter>
+                            <local:RichTextBox
+                                Style="{StaticResource WPFRichTextBoxStyle}"
+                               Grid.Row="3"
+                               Margin="6,6,14,6"
+                               TextWrapping="Wrap"
+                               x:Name="PART_Input"/>
+
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionChatStyle}" TargetType="local:SfAIAssistView"/>
+
+    <Style x:Key="ChatMessageStyle" TargetType="local:ChatItem">
+        <Setter Property="ContentTemplateSelector" Value="{StaticResource viewTemplateSelector}"/>
+        <Setter Property="ViewTemplateSelector" Value="{StaticResource viewTemplateSelector}"/>
+        <Setter Property="EditTemplateSelector" Value="{StaticResource editTemplateSelector}"/>
+        <Setter Property="Margin" Value="0,8"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:ChatItem">
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                        <Grid
+                            x:Name="MainGrid">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition x:Name="avatarColumn" Width="36" />
+                                <ColumnDefinition x:Name="contentColumn" Width="8*" />
+                                <ColumnDefinition x:Name="spaceColumn" Width="2*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <shared:SfAvatarView 
+                                x:Name="PART_Avatar" 
+                                Grid.Row="1"
+                                Visibility="Visible"
+                                Content="{Binding Author.Content}"
+                                ContentTemplate="{Binding Author.ContentTemplate}"
+                                Width="10" Height="10"
+                                VerticalAlignment="Top"/>
+                            <StackPanel  Margin="40,6,0,0" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="3"  Orientation="Horizontal">
+                                <Button x:Name="CopyButton" Visibility="Collapsed" Tag="Copy"
+                                      Padding="8"
+                                      BorderThickness="1"
+                                      Style="{StaticResource WPFFlatButtonStyle}"
+                                      Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="3"                      
+                                      VerticalAlignment="Bottom"
+                                      HorizontalAlignment="Left"
+                                      BorderBrush="Transparent">
+                                    <Button.ContentTemplate>
+                                        <DataTemplate>
+                                            <Viewbox Stretch="Uniform">
+                                                <Path Data="M13 6.28V16H3.71429V13H0V0H6.24L9.02571 3H9.95429L13 6.28ZM3.7143 3H7.69787L5.84072 1H0.928583V12H3.7143V3ZM12.0714 7H9.28568V4H4.64282V15H12.0714V7ZM10.2143 6.00094H11.4121L10.2143 4.71094V6.00094Z"
+                                                  Fill="{StaticResource IconColor}"/>
+                                            </Viewbox>
+                                        </DataTemplate>
+                                    </Button.ContentTemplate>
+                                </Button>
+
+                                <Button x:Name="GenerateButton" Visibility="Collapsed"
+                                    Padding="8"
+                                    BorderThickness="1"
+                                    Margin="4,0,0,0"
+                                    Style="{StaticResource WPFFlatButtonStyle}"
+                                    Tag="Generate"                                     
+                                    VerticalAlignment="Bottom"
+                                    HorizontalAlignment="Left"
+                                    BorderBrush="Transparent">
+                                    <Button.ContentTemplate>
+                                        <DataTemplate>
+                                            <Viewbox Stretch="Uniform">
+                                                <Path Data="M16 8C16 8.73958 15.9036 9.45052 15.7109 10.1328C15.5234 10.8151 15.2552 11.4531 14.9062 12.0469C14.5625 12.6354 14.1458 13.1745 13.6562 13.6641C13.1719 14.1484 12.6328 14.5651 12.0391 14.9141C11.4505 15.2578 10.8151 15.526 10.1328 15.7188C9.45052 15.9062 8.73958 16 8 16C7.26042 16 6.54948 15.9062 5.86719 15.7188C5.1849 15.526 4.54688 15.2578 3.95312 14.9141C3.35938 14.5651 2.82031 14.1484 2.33594 13.6641C1.85156 13.1797 1.4349 12.6406 1.08594 12.0469C0.742188 11.4531 0.473958 10.8151 0.28125 10.1328C0.09375 9.45052 0 8.73958 0 8C0 7.26042 0.09375 6.54948 0.28125 5.86719C0.473958 5.1849 0.742188 4.54948 1.08594 3.96094C1.4349 3.36719 1.85156 2.82812 2.33594 2.34375C2.82552 1.85417 3.36458 1.4375 3.95312 1.09375C4.54688 0.744792 5.1849 0.476562 5.86719 0.289062C6.54948 0.0963542 7.26042 0 8 0C8.57812 0 9.14323 0.0625 9.69531 0.1875C10.2474 0.307292 10.7786 0.481771 11.2891 0.710938C11.7995 0.940104 12.2812 1.22396 12.7344 1.5625C13.1927 1.90104 13.6146 2.28385 14 2.71094V0.5C14 0.364583 14.0495 0.247396 14.1484 0.148438C14.2474 0.0494792 14.3646 0 14.5 0C14.6354 0 14.7526 0.0494792 14.8516 0.148438C14.9505 0.247396 15 0.364583 15 0.5C15 1.13021 15 1.75781 15 2.38281C15.0052 3.00781 15.0078 3.63542 15.0078 4.26562C15.0078 4.35417 15.0026 4.44271 14.9922 4.53125C14.9818 4.61458 14.9583 4.69271 14.9219 4.76562C14.8854 4.83333 14.8333 4.89062 14.7656 4.9375C14.6979 4.97917 14.6094 5 14.5 5H10.5C10.3646 5 10.2474 4.95052 10.1484 4.85156C10.0495 4.7526 10 4.63542 10 4.5C10 4.36458 10.0495 4.2474 10.1484 4.14844C10.2474 4.04948 10.3646 4 10.5 4H13.7422C13.4141 3.53125 13.0365 3.11198 12.6094 2.74219C12.1875 2.3724 11.7292 2.0599 11.2344 1.80469C10.7396 1.54427 10.2188 1.34635 9.67188 1.21094C9.125 1.07031 8.56771 1 8 1C7.35417 1 6.73177 1.08333 6.13281 1.25C5.53906 1.41667 4.98177 1.65365 4.46094 1.96094C3.94531 2.26302 3.47396 2.6276 3.04688 3.05469C2.625 3.47656 2.26042 3.94792 1.95312 4.46875C1.65104 4.98438 1.41667 5.54167 1.25 6.14062C1.08333 6.73438 1 7.35417 1 8C1 8.64583 1.08333 9.26823 1.25 9.86719C1.41667 10.4609 1.65104 11.0182 1.95312 11.5391C2.25521 12.0547 2.61979 12.526 3.04688 12.9531C3.47396 13.3802 3.94531 13.7448 4.46094 14.0469C4.98177 14.349 5.53906 14.5833 6.13281 14.75C6.73177 14.9167 7.35417 15 8 15C8.63021 15 9.23958 14.9219 9.82812 14.7656C10.4219 14.6042 10.9766 14.375 11.4922 14.0781C12.013 13.776 12.4896 13.4089 12.9219 12.9766C13.3594 12.5443 13.737 12.0573 14.0547 11.5156C14.3776 10.9635 14.6146 10.3984 14.7656 9.82031C14.9219 9.24219 15 8.63542 15 8C15 7.86458 15.0495 7.7474 15.1484 7.64844C15.2474 7.54948 15.3646 7.5 15.5 7.5C15.6354 7.5 15.7526 7.54948 15.8516 7.64844C15.9505 7.7474 16 7.86458 16 8Z"
+                                                      Fill="{StaticResource IconColor}"/>
+                                            </Viewbox>
+                                        </DataTemplate>
+                                    </Button.ContentTemplate>
+                                </Button>
+                            </StackPanel>
+                            <Button x:Name="EditOkButton" Visibility="Collapsed" 
+                                 Margin="0,0,50,0" Grid.Column="2" Grid.Row="3"                           
+                                
+                                 VerticalAlignment="Bottom"
+                                 HorizontalAlignment="Right">
+                                <Button.ContentTemplate>
+                                    <DataTemplate>
+                                        <Viewbox Stretch="Uniform">
+                                            <Path Data="M0 4.5C0 4.36458 0.0494792 4.2474 0.148438 4.14844C0.247396 4.04948 0.364583 4 0.5 4C0.635417 4 0.752604 4.04948 0.851562 4.14844L4 7.28906L11.1484 0.148438C11.2474 0.0494792 11.3646 0 11.5 0C11.6354 0 11.7526 0.0494792 11.8516 0.148438C11.9505 0.247396 12 0.364583 12 0.5C12 0.635417 11.9505 0.752604 11.8516 0.851562L4.35156 8.35156C4.2526 8.45052 4.13542 8.5 4 8.5C3.86458 8.5 3.7474 8.45052 3.64844 8.35156L0.148438 4.85156C0.0494792 4.7526 0 4.63542 0 4.5Z"
+                                                  Fill="Black"/>
+                                        </Viewbox>
+                                    </DataTemplate>
+                                </Button.ContentTemplate>
+                            </Button>
+                            <Button x:Name="EditCancelButton"                                 
+                                  Visibility="Collapsed"
+                                  Grid.Row="2" Grid.Column="2"
+                                  Margin="0,0,10,0"
+                                  VerticalAlignment="Bottom"
+                                  HorizontalAlignment="Right">
+                                <Button.ContentTemplate>
+                                    <DataTemplate>
+                                        <Viewbox Stretch="Uniform">
+                                            <Path Data="M6.20312 5.5L10.8516 10.1484C10.9505 10.2474 11 10.3646 11 10.5C11 10.6354 10.9505 10.7526 10.8516 10.8516C10.7526 10.9505 10.6354 11 10.5 11C10.3646 11 10.2474 10.9505 10.1484 10.8516L5.5 6.20312L0.851562 10.8516C0.752604 10.9505 0.635417 11 0.5 11C0.364583 11 0.247396 10.9505 0.148438 10.8516C0.0494792 10.7526 0 10.6354 0 10.5C0 10.3646 0.0494792 10.2474 0.148438 10.1484L4.79688 5.5L0.148438 0.851562C0.0494792 0.752604 0 0.635417 0 0.5C0 0.364583 0.0494792 0.247396 0.148438 0.148438C0.247396 0.0494792 0.364583 0 0.5 0C0.635417 0 0.752604 0.0494792 0.851562 0.148438L5.5 4.79688L10.1484 0.148438C10.2474 0.0494792 10.3646 0 10.5 0C10.6354 0 10.7526 0.0494792 10.8516 0.148438C10.9505 0.247396 11 0.364583 11 0.5C11 0.635417 10.9505 0.752604 10.8516 0.851562L6.20312 5.5Z"
+                                                  Fill="Black"/>
+                                        </Viewbox>
+                                    </DataTemplate>
+                                </Button.ContentTemplate>
+                            </Button>
+                            <StackPanel
+                                x:Name="header"
+                                Grid.Column="1"
+                                VerticalAlignment="Bottom"
+                                Margin="8,8,16,0"
+                                Orientation="Horizontal">
+                                <TextBlock 
+                                    Margin="2"
+                                    Foreground="{StaticResource ContentForegroundAlt}"
+                                    Text="{Binding Author.Name}"
+                                    VerticalAlignment="Bottom"
+                                    x:Name="AuthorName"/>
+                                <TextBlock 
+                                    Margin="2"
+                                    Foreground="{StaticResource ContentForegroundAlt}"
+                                    Text="{Binding DateTime, Converter={StaticResource DateTimeConverter}}"
+                                    VerticalAlignment="Bottom"
+                                    x:Name="MessageTime"/>
+                            </StackPanel>
+                            <Border  x:Name="message"               
+                                      Grid.Row="1"
+                                      Grid.Column="1">
+                                <Grid Background="Transparent">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition x:Name="editButtonColumn"  Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border x:Name="messageContent" 
+                                             Grid.Column="1"
+                                             CornerRadius="4"
+                                             Background="{StaticResource ContentBackgroundAlt3}"
+                                             MinHeight="32"
+                                             Padding="12,6,12,6">
+                                        <Border.Resources>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="FontSize" Value="16"/>
+                                            </Style>
+                                        </Border.Resources>
+                                        <ContentPresenter 
+                                            x:Name="presenter">
+                                        </ContentPresenter>
+                                    </Border>
+                                    <Button x:Name="Editing" Visibility="Collapsed"
+                                            Grid.Column="0"
+                                            
+                                            Padding="8"
+                                            Grid.Row="1">
+                                        <Button.ContentTemplate>
+                                            <DataTemplate>
+                                                <Viewbox Stretch="Uniform">
+                                                    <Path Fill="Black" 
+                                                          Data="M15.9453 2.57031C15.9453 2.94531 15.875 3.3099 15.7344 3.66406C15.5938 4.01302 15.3906 4.32031 15.125 4.58594L5.14062 14.5703C5.07812 14.6328 5.00521 14.6849 4.92188 14.7266C4.84375 14.7682 4.76042 14.8021 4.67188 14.8281L0.804688 15.7969C0.752604 15.8073 0.713542 15.8125 0.6875 15.8125C0.552083 15.8125 0.434896 15.7656 0.335938 15.6719C0.236979 15.5729 0.1875 15.4557 0.1875 15.3203C0.1875 15.2891 0.192708 15.2474 0.203125 15.1953L1.17188 11.3281C1.19792 11.2396 1.23177 11.1562 1.27344 11.0781C1.3151 10.9948 1.36719 10.9219 1.42969 10.8594L11.5234 0.765625C11.7682 0.520833 12.0521 0.333333 12.375 0.203125C12.7031 0.0677083 13.0391 0 13.3828 0C13.7422 0 14.0781 0.0677083 14.3906 0.203125C14.7031 0.333333 14.974 0.515625 15.2031 0.75C15.4375 0.979167 15.6198 1.25 15.75 1.5625C15.8802 1.875 15.9453 2.21094 15.9453 2.57031ZM14.9453 2.60156C14.9453 2.3776 14.9062 2.16927 14.8281 1.97656C14.7552 1.77865 14.6484 1.60677 14.5078 1.46094C14.3724 1.3151 14.2083 1.20312 14.0156 1.125C13.8229 1.04167 13.612 1 13.3828 1C13.1849 1 13.0104 1.02865 12.8594 1.08594C12.7083 1.13802 12.5677 1.21094 12.4375 1.30469C12.3125 1.39844 12.1927 1.50521 12.0781 1.625C11.9635 1.74479 11.8411 1.86979 11.7109 2L14 4.28906C14.1302 4.16406 14.2526 4.04167 14.3672 3.92188C14.4818 3.80208 14.5807 3.67708 14.6641 3.54688C14.7526 3.41667 14.8203 3.27604 14.8672 3.125C14.9193 2.97396 14.9453 2.79948 14.9453 2.60156ZM1.375 14.625L4.42969 13.8594L13.2969 4.99219L11.0078 2.70312L2.14062 11.5703L1.375 14.625Z"/>
+                                                </Viewbox>
+                                            </DataTemplate>
+                                        </Button.ContentTemplate>
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                            </VisualStateGroup>
+
+                            <VisualStateGroup x:Name="UserState">
+                                <VisualState x:Name="OtherUser">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="CopyButton" Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="GenerateButton" Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="CurrentUser">
+
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_Avatar" Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="header" Storyboard.TargetProperty="HorizontalAlignment">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static HorizontalAlignment.Right}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="message" Storyboard.TargetProperty="HorizontalAlignment">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static HorizontalAlignment.Right}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <Int32AnimationUsingKeyFrames Storyboard.TargetName="header" Storyboard.TargetProperty="(Grid.Column)" BeginTime="0">
+                                            <DiscreteInt32KeyFrame Value="2" KeyTime="0:0:0"/>
+                                        </Int32AnimationUsingKeyFrames>
+                                        <Int32AnimationUsingKeyFrames Storyboard.TargetName="message" Storyboard.TargetProperty="(Grid.Column)" BeginTime="0">
+                                            <DiscreteInt32KeyFrame Value="2" KeyTime="0:0:0"/>
+                                        </Int32AnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="contentColumn" Storyboard.TargetProperty="Width" BeginTime="0">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0">
+                                                <DiscreteObjectKeyFrame.Value>
+                                                    <GridLength>2*</GridLength>
+                                                </DiscreteObjectKeyFrame.Value>
+                                            </DiscreteObjectKeyFrame>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="spaceColumn" Storyboard.TargetProperty="Width" BeginTime="0">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0">
+                                                <DiscreteObjectKeyFrame.Value>
+                                                    <GridLength>8*</GridLength>
+                                                </DiscreteObjectKeyFrame.Value>
+                                            </DiscreteObjectKeyFrame>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="messageContent" Storyboard.TargetProperty="Padding">
+                                            <DiscreteObjectKeyFrame>
+                                                <DiscreteObjectKeyFrame.Value>
+                                                    <Thickness>12,6</Thickness>
+                                                </DiscreteObjectKeyFrame.Value>
+                                            </DiscreteObjectKeyFrame>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="message" Storyboard.TargetProperty="Margin">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0">
+                                                <DiscreteObjectKeyFrame.Value>
+                                                    <Thickness>0,0,12,0</Thickness>
+                                                </DiscreteObjectKeyFrame.Value>
+                                            </DiscreteObjectKeyFrame>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="editButtonColumn" Storyboard.TargetProperty="Width">
+                                            <DiscreteObjectKeyFrame>
+                                                <DiscreteObjectKeyFrame.Value>
+                                                    <GridLength>36</GridLength>
+                                                </DiscreteObjectKeyFrame.Value>
+                                            </DiscreteObjectKeyFrame>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <!--<ObjectAnimationUsingKeyFrames Storyboard.TargetName="messageContent" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame Value=""/>
+                                        </ObjectAnimationUsingKeyFrames>-->
+
+                                    </Storyboard>
+
+                                </VisualState>
+                            </VisualStateGroup>
+
+                            <VisualStateGroup x:Name="ViewState">
+                                <VisualState x:Name="Standalone"/>
+                                <VisualState x:Name="MergeMessage">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_Avatar" Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="header" Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+
+                            <VisualStateGroup x:Name="EditState">
+                                <VisualState x:Name="Enter">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="Editing" Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+
+                                <VisualState x:Name="Exit">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="Editing" Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+
+                                <VisualState x:Name="View">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="Editing" Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="EditOkButton" Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="EditCancelButton" Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+
+                                <VisualState x:Name="Edit">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="EditOkButton" Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="EditCancelButton" Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="messageContent" Storyboard.TargetProperty="Background">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{DynamicResource SyncfusionChatItemsBackground}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource ChatMessageStyle}" TargetType="local:ChatItem"/>
+
+    <Style x:Key="SyncfusionSuggestionVewerStyle" TargetType="local:SuggestionsViewer">
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <WrapPanel
+                     Orientation="Horizontal" 
+                     HorizontalAlignment="Right"/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemTemplateSelector" Value="{StaticResource suggestionTemplateSelector}"/>
+
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:SuggestionsViewer">
+                    <Border
+                     Background="{TemplateBinding Background}"
+                     BorderBrush="{TemplateBinding BorderBrush}"
+                     BorderThickness="{TemplateBinding BorderThickness}">
+                        <ItemsPresenter/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionSuggestionVewerStyle}" TargetType="local:SuggestionsViewer"/>
+
+</ResourceDictionary>

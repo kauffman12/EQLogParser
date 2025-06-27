@@ -14,6 +14,10 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/RepeatButton.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
+    <CornerRadius x:Key="CurrencyTextBox.RangeAdornerBorder.Static.CornerRadius">0,0,0,1</CornerRadius>
+    <sys:Double x:Key="CurrencyTextBox.Border.Static.Opacity">1</sys:Double>
+    <Thickness x:Key="CurrencyTextBox.RangeAdornerBorder.Static.Margin">0,0,0,0</Thickness>
+
     <shared:ProgressConverter x:Key="ProgressConverter" />
     <shared:ClipConverter x:Key="ClipConverter" />
     <shared:RadiusConverter x:Key="CornerRadiusConverter" />
@@ -80,7 +84,7 @@
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                     IsHitTestVisible="False"
                                     Visibility="Collapsed"
-                                    >
+                                    Opacity="{StaticResource CurrencyTextBox.Border.Static.Opacity}">
                                     <Border.RenderTransform>
                                         <ScaleTransform>
                                             <ScaleTransform.ScaleX>
@@ -242,6 +246,8 @@
                                 <Condition Property="IsKeyboardFocusWithin" Value="False" />
                             </MultiTrigger.Conditions>
                             <Setter TargetName="RangeAdornerBorder" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="RangeAdornerBorder" Property="CornerRadius" Value="{StaticResource CurrencyTextBox.RangeAdornerBorder.Static.CornerRadius}"/>
+                            <Setter TargetName="RangeAdornerBorder" Property="Margin" Value="{StaticResource CurrencyTextBox.RangeAdornerBorder.Static.Margin}"/>
                         </MultiTrigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource BorderAlt2}" />

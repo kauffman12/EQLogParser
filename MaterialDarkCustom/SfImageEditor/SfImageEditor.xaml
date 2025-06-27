@@ -248,7 +248,7 @@
                                                       VerticalAlignment="Center"
                                                       Width="12">
                                                     <Path.Data>
-                                                        <PathGeometry>M0.78299818,0 C0.99899564,0 1.1839881,0.06300234 1.3369378,0.1869929 L1.3369378,0.15000631 10.68873,7.8568447 C10.866703,8.006851 10.96869,8.1888388 10.99469,8.3998487 11.018676,8.6118353 10.961671,8.7988279 10.822698,8.9608276 10.681711,9.1238344 10.522719,9.2168196 10.345722,9.2418278 L7.7878088,9.7658203 9.5437416,13.506746 C9.6447519,13.730741 9.6587289,13.943734 9.5817655,14.142735 9.5057176,14.342728 9.3657678,14.492719 9.161733,14.591717 L6.2228497,15.938691 C6.0188149,16.013701 5.8148411,16.019698 5.6118439,15.957703 5.4078701,15.894701 5.2548593,15.763707 5.1538485,15.564706 L3.3598922,11.78577 1.3369378,13.394748 C1.1839881,13.494737 0.99899564,13.543748 0.78299818,13.543748 0.56596318,13.543748 0.38200835,13.469744 0.22899749,13.319753 0.077024122,13.169747 -1.0864096E-07,12.982755 0,12.758759 L0,0.78598057 C-1.0864096E-07,0.56198572 0.077024122,0.37499286 0.22899749,0.22500184 0.38200835,0.074995517 0.56596318,0 0.78299818,0 z</PathGeometry>
+                                                        <PathGeometry>M1,2.4459991 L1,13.044998 3.3309937,10.75 5.1259766,14.668991 6.6380005,13.974991 4.8269653,10.016998 8.55896,10.016998 z M0,0 L11,11.016998 6.4019775,11.016998 7.9849854,14.453995 4.6380005,16 3.0159912,12.467987 0,15.439987 z</PathGeometry>
                                                     </Path.Data>
                                                 </Path>
                                             </Button>
@@ -303,7 +303,7 @@
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
                                                         <imageEditor:ToolbarMenuItem HorizontalAlignment="Center"
-                                                                               VerticalAlignment="Center" />
+                                                                                     VerticalAlignment="Center" />
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
@@ -404,6 +404,30 @@
                                                                     </GeometryDrawing.Geometry>
                                                                 </GeometryDrawing>
                                                             </DrawingGroup>
+                                                        </DrawingImage.Drawing>
+                                                    </DrawingImage>
+                                                </sharedWpf:ColorPickerPalette.Icon>
+                                            </sharedWpf:ColorPickerPalette>
+                                            
+                                             <sharedWpf:ColorPickerPalette x:Name="PART_TextBackgroundColorPicker"
+                                                                          Margin="10,0,0,0"
+                                                                          MoreColorOptionVisibility="Collapsed"
+                                                                          AutomaticColor ="Transparent"
+                                                                          Style="{StaticResource SyncfusionColorPickerPaletteStyle}"
+                                                                          IsExpanded="False"
+                                                                          ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=Background}}">
+                                                <sharedWpf:ColorPickerPalette.IconSize>
+                                                    <Size>16,15</Size>
+                                                </sharedWpf:ColorPickerPalette.IconSize>
+
+                                                <sharedWpf:ColorPickerPalette.Icon>
+                                                    <DrawingImage>
+                                                        <DrawingImage.Drawing>
+                                                            <GeometryDrawing Brush="{StaticResource IconColor}">
+                                                                <GeometryDrawing.Geometry>
+                                                                    <PathGeometry>M11.7467 8.66667L6.66667 13.7467L1.58667 8.66667L5.72667 4.52667L4.14 2.94L5.08 2L11.7467 8.66667ZM9.86 8.66667L6.66667 5.47333L3.47334 8.66667H9.86ZM14 12C14 12.7333 13.4 13.3333 12.6667 13.3333C11.9333 13.3333 11.3333 12.7333 11.3333 12C11.3333 11.1133 12.6667 9.66667 12.6667 9.66667C12.6667 9.66667 14 11.1133 14 12Z</PathGeometry>
+                                                                </GeometryDrawing.Geometry>
+                                                            </GeometryDrawing>
                                                         </DrawingImage.Drawing>
                                                     </DrawingImage>
                                                 </sharedWpf:ColorPickerPalette.Icon>
@@ -549,11 +573,11 @@
                                                     <Run Text=":  "></Run>
                                                 </TextBlock>
                                                 <sharedWpf:ColorPickerPalette x:Name="PART_ShapeFillIcon"
-                                                                               MoreColorOptionVisibility="Collapsed"
-                                                                               Style="{StaticResource SyncfusionColorPickerPaletteStyle}"
-                                                                               Color="Red"
-                                                                               IsExpanded="False"
-                                                                               ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=Fill}}">
+                                                                              MoreColorOptionVisibility="Collapsed"
+                                                                              Style="{StaticResource SyncfusionColorPickerPaletteStyle}"
+                                                                              Color="Red"
+                                                                              IsExpanded="False"
+                                                                              ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=Fill}}">
                                                     <sharedWpf:ColorPickerPalette.IconSize>
                                                         <Size>12,12</Size>
                                                     </sharedWpf:ColorPickerPalette.IconSize>
@@ -579,11 +603,11 @@
                                                     <Run Text=":  "></Run>
                                                 </TextBlock>
                                                 <sharedWpf:ColorPickerPalette x:Name="PART_ShapeStrokeIcon"
-                                                                               MoreColorOptionVisibility="Collapsed"
-                                                                               Style="{StaticResource SyncfusionColorPickerPaletteStyle}"
-                                                                               IsExpanded="False"
-                                                                               Color="Red"
-                                                                               ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=Stroke}}">
+                                                                              MoreColorOptionVisibility="Collapsed"
+                                                                              Style="{StaticResource SyncfusionColorPickerPaletteStyle}"
+                                                                              IsExpanded="False"
+                                                                              Color="Red"
+                                                                              ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=Stroke}}">
                                                     <sharedWpf:ColorPickerPalette.IconSize>
                                                         <Size>12,12</Size>
                                                     </sharedWpf:ColorPickerPalette.IconSize>
@@ -608,20 +632,18 @@
                                                            Text="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=ShapeStrokeWidth}}">
                                                     <Run Text=":  "></Run>
                                                 </TextBlock>
-                                                <ComboBox MinWidth="48"
+                                                <ComboBox MinWidth="38"
                                                           SelectedIndex="2"
                                                           x:Name="PART_ShapeStrokeWidth"
                                                           ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=StrokeWidth}}"
                                                           Style="{StaticResource WPFComboBoxStyle}">
                                                 </ComboBox>
                                             </StackPanel>
-
                                         </StackPanel>
 
                                         <StackPanel x:Name="PART_CropSubItemPanel"
                                                     Orientation="Horizontal"
                                                     Visibility="Collapsed">
-
                                             <StackPanel Orientation="Horizontal"
                                                         Margin="20,0,0,0"
                                                         VerticalAlignment="Center">
@@ -716,12 +738,12 @@
                                                     <Run Text=":  "></Run>
                                                 </TextBlock>
                                                 <sharedWpf:ColorPickerPalette x:Name="PART_PathStrokePicker"
-                                                                               MoreColorOptionVisibility="Collapsed"
-                                                                               Style="{StaticResource SyncfusionColorPickerPaletteStyle}"
-                                                                               IconSize="12,12"
-                                                                               IsExpanded="False"
-                                                                               Color="Red"
-                                                                               ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=Stroke}}">
+                                                                              MoreColorOptionVisibility="Collapsed"
+                                                                              Style="{StaticResource SyncfusionColorPickerPaletteStyle}"
+                                                                              IconSize="12,12"
+                                                                              IsExpanded="False"
+                                                                              Color="Red"
+                                                                              ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=Stroke}}">
                                                     <sharedWpf:ColorPickerPalette.Icon>
                                                         <DrawingImage>
                                                             <DrawingImage.Drawing>
@@ -743,7 +765,7 @@
                                                     <Run Text=":  "></Run>
                                                 </TextBlock>
                                                 <ComboBox x:Name="PART_PathStrokeWidth"
-                                                          MinWidth="48"
+                                                          MinWidth="38"
                                                           SelectedIndex="2"
                                                           ToolTip="{Binding Source={imageEditor:ImageEditorLocalizationResourceExtension ResourceName=StrokeWidth}}"
                                                           Style="{StaticResource WPFComboBoxStyle}">
@@ -831,6 +853,7 @@
                                     <Slider x:Name="PART_ZoomFactorIcon"
                                             Foreground="#007AFF"
                                             Grid.Column="3"
+                                            Margin="0"
                                             Width="189"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
@@ -1243,10 +1266,10 @@
                         <Path x:Name="Rectangle"
                           Fill="{StaticResource IconColor}"
                           HorizontalAlignment="Center"
-                          Height="14"
+                              Height="14"
                           Stretch="Fill"
                           VerticalAlignment="Center"
-                          Width="14">
+                              Width="14">
                             <Path.Data>
                                 <PathGeometry>M2,2 L2,10 14,10 14,2 z M0,0 L16,0 16,12 0,12 z</PathGeometry>
                             </Path.Data>
@@ -1454,7 +1477,7 @@
                 Value="1" />
     </Style>
 
-    <Style x:Key="textBorderStyle"
+    <Style x:Key="TextBorderStyle"
            TargetType="Path">
         <Setter Property="Fill"
                 Value="Transparent" />

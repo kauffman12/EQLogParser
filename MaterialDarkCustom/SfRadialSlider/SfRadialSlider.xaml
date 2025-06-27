@@ -26,6 +26,7 @@
 
     <Style x:Key="SyncfusionLabelRadialListStyle" TargetType="radialmenu:RadialList">
         <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Width" Value="NaN" />
         <Setter Property="ItemsPanel">
             <Setter.Value>
                 <ItemsPanelTemplate>
@@ -106,6 +107,25 @@
         </DataTemplate.Triggers>
     </DataTemplate>
 
+    <DataTemplate x:Key="RunTimeLabelTemplate">
+        <TextBlock
+        x:Name="RunTimeLabel"
+        Width="35"
+        FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+        FontSize="{StaticResource MaterialDarkCustom.CaptionText}"
+        FontWeight="{StaticResource MaterialDarkCustom.FontWeightNormal}"
+        Foreground="{StaticResource ContentForeground}"
+        Text="{Binding}"
+        TextAlignment="Center"
+        TextTrimming="WordEllipsis" 
+        Background="{StaticResource ContentBackground}" />
+        <DataTemplate.Triggers>
+            <Trigger SourceName="RunTimeLabel" Property="IsEnabled" Value="False">
+                <Setter TargetName="RunTimeLabel" Property="Foreground" Value="{StaticResource DisabledForeground}" />
+            </Trigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
     <Style x:Key="SyncfusionRadialTickStyle" TargetType="radialmenu:RadialTick">
         <Setter Property="Width" Value="6" />
         <Setter Property="Height" Value="1" />
@@ -154,11 +174,6 @@
                             Style="{StaticResource SyncfusionTicksRadialListStyle}"
                             Visibility="{TemplateBinding TickVisibility}" />
                         <radialmenu:RadialList
-                            x:Name="PART_LabelsRunTime"
-                            ListHost="{Binding RelativeSource={RelativeSource TemplatedParent}}"
-                            Style="{StaticResource SyncfusionLabelRadialListStyle}"
-                            Visibility="{TemplateBinding LabelVisibility}" />
-                        <radialmenu:RadialList
                             x:Name="PART_Ticks"
                             ListHost="{Binding RelativeSource={RelativeSource TemplatedParent}}"
                             Style="{StaticResource SyncfusionTicksRadialListStyle}"
@@ -173,6 +188,11 @@
                             x:Name="PART_PreviewPointer"
                             Style="{TemplateBinding PreviewPointerStyle}"
                             Visibility="Collapsed" />
+						<radialmenu:RadialList
+                            x:Name="PART_LabelsRunTime"
+                            ListHost="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                            Style="{StaticResource SyncfusionLabelRadialListStyle}"
+                            Visibility="{TemplateBinding LabelVisibility}" />
 
                         <Ellipse
                             x:Name="PART_InnerEllipse"
@@ -214,6 +234,9 @@
             <Trigger Property="sfskin:SkinManagerHelper.FocusVisualKind" Value="HighVisibility">
                 <Setter Property="FocusVisualStyle" Value="{StaticResource FlatKeyboardFocusVisualStyle}"/>
             </Trigger>
+		    <DataTrigger Binding="{Binding RunTimeLabelVisible, RelativeSource={RelativeSource Self}}" Value="True">
+                <Setter Property="LabelTemplate" Value="{StaticResource RunTimeLabelTemplate}"/>
+            </DataTrigger>
         </Style.Triggers>
 
     </Style>

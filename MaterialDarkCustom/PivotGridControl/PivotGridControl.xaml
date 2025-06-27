@@ -627,6 +627,7 @@
                                 <ColumnDefinition Width="auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock x:Name="PART_contentTxt" 
+                                       
                                        Grid.Column="0" 
                                        TextTrimming="WordEllipsis"
                                        Foreground="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type syncfusion:PivotGridControl}},
@@ -1302,7 +1303,7 @@
                                                            Height="35"/>
                                         </Grid.RowDefinitions>
 
-                                        <Menu x:Name="PART_SortFilterMenu"                                             
+                                        <Menu x:Name="PART_SortFilterMenu"                                         
                                               Grid.Row="0" 
                                               BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                               TabIndex="0">
@@ -1747,7 +1748,7 @@
                                                 <ColumnDefinition />
                                             </Grid.ColumnDefinitions>
                                             <Button x:Name="PARTExcel_btnOK" 
-                                                    Grid.Column="1"
+                                                    Grid.Column="1 "
                                                     Margin="3" 
                                                     Height="25"
                                                     Content="{syncfusion:PivotAnalysisLocalizationResourceExtension ResourceName=OkButton}"
@@ -1755,7 +1756,7 @@
                                                     MinWidth="50" 
                                                     MinHeight="23"/>
                                             <Button x:Name="PARTExcel_btnCancel" 
-                                                    Grid.Column="3" 
+                                                    Grid.Column="3 " 
                                                     Style="{StaticResource WPFFlatButtonStyle}"
                                                     Margin="3" 
                                                     Height="25"

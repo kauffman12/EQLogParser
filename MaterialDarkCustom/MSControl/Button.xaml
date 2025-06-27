@@ -12,13 +12,13 @@
 
     <ControlTemplate x:Key="WPFButtonTemplate" TargetType="{x:Type Button}">
         <Border x:Name="border"                             
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
                 CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
-                            Effect="{StaticResource Default.ShadowDepth1}"
-                            SnapsToDevicePixels="true"
-                            >
+                Effect="{StaticResource Default.ShadowDepth1}"
+                SnapsToDevicePixels="true"
+                >
             <ContentPresenter x:Name="contentPresenter" 
                                           Focusable="False"
                                           Margin="{TemplateBinding Padding}" 

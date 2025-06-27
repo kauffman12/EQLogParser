@@ -58,25 +58,27 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
+                        <Ellipse x:Name="OverlayCircle"
+                                 Height="24"
+                                 Width="24"
+                                 Visibility="Collapsed"/>
                         <Border x:Name="radioButtonBorder" 
+                                UseLayoutRounding="True" 
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 Background="{TemplateBinding Background}" 
                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
-                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"                                
-                                CornerRadius="100" 
-                                Width="14" Height="14"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                CornerRadius="8"
+                                Width="14" 
+                                Height="14"
                                 Margin="1,1,2,1" >
-                            <Grid x:Name="markGrid">
-                                <Grid.Margin>
-                                    <Thickness>2,2,2,2</Thickness>
-                                </Grid.Margin>
-                                <Ellipse x:Name="optionMark"
-                                         Fill="{StaticResource IconColor}"
-                                         Width="6"
-                                         Height="6"
-                                         Opacity="0"/>
-                            </Grid>
+                            <Ellipse x:Name="optionMark" 
+                                     UseLayoutRounding="True"
+                                     Fill="{StaticResource IconColor}"
+                                     Width="6"
+                                     Height="6"
+                                     Opacity="0"/>
                         </Border>
                         <ContentPresenter x:Name="contentPresenter" 
                                           Grid.Column="1" 
@@ -101,6 +103,7 @@
                             <Setter Property="BorderBrush" TargetName="radioButtonBorder" Value="{StaticResource PrimaryBackground}"/>
                             <Setter Property="Fill" TargetName="optionMark" Value="{StaticResource PrimaryBackground}"/>
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource ContentForeground}"/>
+                            <Setter Property="BorderThickness" TargetName="radioButtonBorder" Value="{StaticResource MaterialDarkCustom.BorderThickness2}"/>
                         </Trigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
@@ -110,6 +113,9 @@
                             <Setter Property="Background" TargetName="radioButtonBorder" Value="{StaticResource ContentBackground}"/>
                             <Setter Property="BorderBrush" TargetName="radioButtonBorder" Value="{StaticResource PrimaryBackground}"/>
                             <Setter Property="Fill" TargetName="optionMark" Value="{StaticResource PrimaryBackground}"/>
+                            <Setter Property="Width" TargetName="optionMark" Value="6"/>
+                            <Setter Property="Height" TargetName="optionMark" Value="6"/>
+                            <Setter Property="BorderThickness" TargetName="radioButtonBorder" Value="{StaticResource MaterialDarkCustom.BorderThickness2}"/>
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource ContentForeground}"/>
                         </MultiTrigger>
                         <MultiTrigger>
@@ -130,6 +136,9 @@
                             <Setter Property="Background" TargetName="radioButtonBorder" Value="{StaticResource ContentBackground}"/>
                             <Setter Property="BorderBrush" TargetName="radioButtonBorder" Value="{StaticResource PrimaryBackground}"/>
                             <Setter Property="Fill" TargetName="optionMark" Value="{StaticResource PrimaryBackground}"/>
+                            <Setter Property="Width" TargetName="optionMark" Value="6"/>
+                            <Setter Property="Height" TargetName="optionMark" Value="6"/>
+                            <Setter Property="BorderThickness" TargetName="radioButtonBorder" Value="{StaticResource MaterialDarkCustom.BorderThickness2}"/>
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource ContentForeground}"/>
                         </MultiTrigger>
                         <MultiTrigger>
@@ -140,6 +149,7 @@
                             <Setter Property="Background" TargetName="radioButtonBorder" Value="{StaticResource ContentBackground}"/>
                             <Setter Property="BorderBrush" TargetName="radioButtonBorder" Value="{StaticResource BorderAlt2}"/>
                             <Setter Property="Fill" TargetName="optionMark" Value="Transparent"/>
+                            <Setter Property="Opacity" TargetName="optionMark" Value="0"/>
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource ContentForeground}"/>
                         </MultiTrigger>
                         <Trigger Property="IsChecked" Value="{x:Null}">
@@ -154,6 +164,7 @@
                             <Setter Property="BorderBrush" TargetName="radioButtonBorder" Value="{StaticResource BorderDark}"/>
                             <Setter Property="Fill" TargetName="optionMark" Value="{StaticResource IconDisabledColor}"/>
                             <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="{StaticResource DisabledForeground}"/>
+                            <Setter Property="BorderThickness" TargetName="radioButtonBorder" Value="{StaticResource MaterialDarkCustom.BorderThickness2}"/>
                         </MultiTrigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>

@@ -27,7 +27,7 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                        CornerRadius="0">
                         
                         <ContentPresenter
                             x:Name="contentPresenter"
@@ -608,6 +608,7 @@
                                         </Grid.RowDefinitions>
                                         <tools_controls:LayoutPanel
                                             x:Name="PART_TopPanel"
+                                            
                                             Grid.Row="0"
                                             Grid.Column="1"
                                             Background="{TemplateBinding Background}">

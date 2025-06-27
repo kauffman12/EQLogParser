@@ -20,15 +20,18 @@
 				<RowDefinition Height="4*" />
 			</Grid.RowDefinitions>
 
-			<TextBlock x:Name="Header"
+            <TextBlock x:Name="Header"
                        Text="{Binding Header}"
                        VerticalAlignment="Center"
                        Foreground="{StaticResource ContentForeground}"
-                       FontSize="{StaticResource MaterialDarkCustom.TitleTextStyle}" 
+                       FontSize="{StaticResource MaterialDarkCustom.TitleTextStyle}"
                        FontWeight="{StaticResource MaterialDarkCustom.FontWeightMedium}"
                        TextWrapping="NoWrap"
-                       Grid.Row="0"
-                       Margin="8,8,8,4"/>
+                       Grid.Row="0">
+                <TextBlock.Margin>
+                    <Thickness>8,8,8,4</Thickness>
+                </TextBlock.Margin>
+            </TextBlock>
 
 			<StackPanel Grid.Row="1"
                         x:Name="WIPPanel"
@@ -60,7 +63,7 @@
 	<DataTemplate x:Key="DefaultSwimlaneHeaderTemplate">
 		<StackPanel x:Name="SwimlaneHeaderPanel" 
 					Orientation="Horizontal"
-					Background="Transparent">
+                    Background="Transparent">
             <Border  x:Name="PART_Border" 
                      Margin="2" 
                      Height="24" 
@@ -238,7 +241,7 @@
 		<Setter Property="RadiusY"
                 Value="6" />
 		<Setter Property="Fill"
-				Value="{StaticResource ContentBackground}"/>
+                Value="{StaticResource ContentBackground}"/>
 		<Setter Property="FontSize"
 				Value="{StaticResource MaterialDarkCustom.BodyTextStyle}"/>
 		<Setter Property="FontWeight"
@@ -256,7 +259,7 @@
 		<Setter Property="TextVerticalAlignment"
                 Value="Top" />
 		<Setter Property="SelectedBackground"
-				Value="{StaticResource ContentBackground}"/>
+                Value="{StaticResource ContentBackground}"/>
 		<Setter Property="SelectedForeground"
 				Value="{StaticResource ContentForegroundAlt}"/>
 		<Setter Property="SelectedFontSize"
@@ -282,7 +285,8 @@
                 Value="Left" />
 		<Setter Property="TitleFontWeight"
 				Value="{StaticResource MaterialDarkCustom.FontWeightMedium}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource MaterialDarkCustom.CornerRadius4}" />
+        <Setter Property="CornerRadius"
+                Value="{StaticResource MaterialDarkCustom.CornerRadius4}" />
         <Setter Property="TagVisibility"
 						Value="Visible" />
 		<Setter Property="IndicatorVisibility"
@@ -291,20 +295,21 @@
 						Value="Visible" />
 		<Setter Property="TagBackground"
 				Value="{StaticResource ContentBackgroundAlt3}"/>
-		<Setter Property="TagForeground"
-				Value="{StaticResource ContentForeground}"/>
-
-		<Setter Property="FontSize"
+        <Setter Property="TagForeground"
+                Value="{StaticResource ContentForeground}" />
+        <Setter Property="FontSize"
 				Value="{StaticResource MaterialDarkCustom.CaptionText}"/>
 		<Setter Property="Foreground"
 				Value="{StaticResource ContentForeground}"/>
-		<Setter Property="FontWeight"
-				Value="{StaticResource MaterialDarkCustom.FontWeightNormal}"/>
-
-		<Setter Property="BorderBrush"
-				Value="{StaticResource BorderAlt}"/>
-        <Setter Property="BorderThickness"
-                Value="1.5" />
+        <Setter Property="FontWeight"
+                Value="{StaticResource MaterialDarkCustom.FontWeightNormal}" />
+        <Setter Property="BorderBrush"
+                Value="{StaticResource BorderAlt}" />
+        <Setter Property="BorderThickness">
+            <Setter.Value>
+                <Thickness>1.5</Thickness>
+            </Setter.Value>
+        </Setter>
 
         <Setter Property="Background"
 				Value="{StaticResource PopupBackground}"/>
@@ -324,51 +329,54 @@
 			</Setter.Value>
 		</Setter>
         <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness1}"></Setter>
-		<Setter Property="ColumnHeaderTemplate"
-				Value="{StaticResource DefaultSwimlaneColumnHeaderTemplate}">
-		</Setter>
-		<Setter Property="SwimlaneHeaderTemplate"
-				Value="{StaticResource DefaultSwimlaneHeaderTemplate}">
-		</Setter>
-		<Setter Property="PlaceholderStyle">
+        <Setter Property="ColumnHeaderTemplate"
+                Value="{StaticResource DefaultSwimlaneColumnHeaderTemplate}" />
+        <Setter Property="SwimlaneHeaderTemplate"
+                Value="{StaticResource DefaultSwimlaneHeaderTemplate}" />
+        <Setter Property="PlaceholderStyle">
 			<Setter.Value>
                 <local:PlaceholderStyle Style="{StaticResource SyncfusionSfKanbanPlaceholderStyle}" />
 			</Setter.Value>
 		</Setter>
 	</Style>
 
-	<Style x:Key="SyncfusionSwimlaneStyle" TargetType="local:Swimlane">
-        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-		<Setter Property="BorderBrush"
-				Value="{StaticResource BorderAlt}"/>
-		<Setter Property="Background"
-                Value="{StaticResource ContentBackground}"/>
-	</Style>
-
-    <Style BasedOn="{StaticResource SyncfusionSwimlaneStyle}" TargetType="local:Swimlane"></Style>
-
-	<Style x:Key="SyncfusionKanbanColumnStyle" TargetType="local:KanbanColumn">
-        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-		<Setter Property="BorderBrush"
-				Value="{StaticResource BorderAlt}"/>
-		<Setter Property="Background"
-				Value="{StaticResource ContentBackgroundAlt}"/>
-        <Setter Property="Margin"
-				Value="0,0,4,0"/>
-	</Style>
-
-    <Style BasedOn="{StaticResource SyncfusionKanbanColumnStyle}" TargetType="local:KanbanColumn"/>
-
-    <Style x:Key="SyncfusionSwinlaneColumnStyle" TargetType="local:SwimlaneColumn">
-        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+    <Style x:Key="SyncfusionSwimlaneStyle"
+           TargetType="local:Swimlane">
+        <Setter Property="FocusVisualStyle"
+                Value="{x:Null}" />
         <Setter Property="BorderBrush"
-				Value="{StaticResource BorderAlt}"/>
+                Value="{StaticResource BorderAlt}" />
         <Setter Property="Background"
-				Value="{StaticResource ContentBackgroundAlt}"/>
-        <Setter Property="Margin"
-				Value="0,0,4,0"/>
+                Value="{StaticResource ContentBackground}" />
     </Style>
+    <Style BasedOn="{StaticResource SyncfusionSwimlaneStyle}"
+           TargetType="local:Swimlane"></Style>
 
+    <Style x:Key="SyncfusionKanbanColumnStyle"
+           TargetType="local:KanbanColumn">
+        <Setter Property="FocusVisualStyle"
+                Value="{x:Null}" />
+        <Setter Property="BorderBrush"
+                Value="{StaticResource BorderAlt}" />
+        <Setter Property="Background"
+                Value="{StaticResource ContentBackgroundAlt}" />
+        <Setter Property="Margin"
+                Value="0,0,4,0" />
+    </Style>
+    <Style BasedOn="{StaticResource SyncfusionKanbanColumnStyle}"
+           TargetType="local:KanbanColumn" />
+        
+    <Style x:Key="SyncfusionSwinlaneColumnStyle"
+           TargetType="local:SwimlaneColumn">
+        <Setter Property="FocusVisualStyle"
+                Value="{x:Null}" />
+        <Setter Property="BorderBrush"
+                Value="{StaticResource BorderAlt}" />
+        <Setter Property="Background"
+                Value="{StaticResource ContentBackgroundAlt}" />
+        <Setter Property="Margin"
+                Value="0,0,4,0" />
+    </Style>
     <Style BasedOn="{StaticResource SyncfusionSwinlaneColumnStyle}" TargetType="local:SwimlaneColumn"/>
 
     <Style x:Key="SyncfusionTagsStackPanelStyle" TargetType="local:TagsStackPanel">

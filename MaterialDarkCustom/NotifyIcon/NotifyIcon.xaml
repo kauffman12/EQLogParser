@@ -30,7 +30,7 @@
                 BorderBrush="{StaticResource TooltipBackground}"
                 Padding="5,3,5,3"
                 SnapsToDevicePixels="True"
-                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                CornerRadius="1"
                 Effect="{StaticResource Default.ShadowDepth3}">
             <ContentPresenter ContentTemplate="{Binding Path=ToolTipTemplate, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:NotifyIcon}}}"
                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -145,7 +145,7 @@
                         BorderThickness="{TemplateBinding BorderThickness}"
                         Background="{TemplateBinding Background}"
                         Effect="{TemplateBinding Effect}"
-                        CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}">
+                        CornerRadius="1">
                         <Path Name="BallonTipHeaderCloseButtonPath"
                     Width="10"
                     Height="10"
@@ -196,7 +196,7 @@
                     <Border
                         Name="PART_Border"
                         Padding="12,7,0,7"
-                        CornerRadius="{TemplateBinding Border.CornerRadius}"
+                        CornerRadius="0"
                         Background="{TemplateBinding Background}"
                         TextBlock.Foreground="{TemplateBinding Foreground}">
                         <DockPanel Height="18" LastChildFill="True">
@@ -272,7 +272,7 @@
                         Background="{Binding Path=Background, RelativeSource={RelativeSource TemplatedParent}}"
                         BorderBrush="{Binding Path=BorderBrush, RelativeSource={RelativeSource TemplatedParent}}"
                         BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding Border.CornerRadius}"
+                        CornerRadius="0"
                         Effect="{StaticResource Default.ShadowDepth3}"
                         Opacity="{TemplateBinding Opacity}">
                         <DockPanel
@@ -292,7 +292,7 @@
                                 Padding="12,0,12,0"
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"
-                                CornerRadius="{TemplateBinding Border.CornerRadius}"
+                                CornerRadius="0"
                                 Background="{Binding Path=Background, RelativeSource={RelativeSource TemplatedParent}}"
                                 TextBlock.Foreground="{Binding Path=Foreground, RelativeSource={RelativeSource TemplatedParent}}">
                                 <Border.Margin>

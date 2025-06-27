@@ -151,7 +151,7 @@
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}">
+                                CornerRadius="2">
                             <Grid Grid.IsSharedSizeScope="True">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="8*" />
@@ -193,7 +193,7 @@
                             <Border BorderBrush="{StaticResource BorderAlt}" 
                                     Background="{StaticResource PopupBackground}"
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
-                                    
+                                    CornerRadius="0"
                                     Effect="{StaticResource Default.ShadowDepth3}">
                                 <Border.Margin>
                                     <Thickness>8,1,8,8</Thickness>
@@ -207,7 +207,8 @@
                                                            Height="14"
                                                            DockPanel.Dock="Bottom" 
                                                            Offset="{Binding Path=PopupDropDownHeight, Mode=TwoWay, Converter={ StaticResource PopupHeightToThumbOffsetConverter},
-                                                           ConverterParameter=8,  RelativeSource={RelativeSource AncestorType={x:Type syncfusion:FontListComboBox}}}" />
+                                                           ConverterParameter=8,  RelativeSource={RelativeSource AncestorType={x:Type syncfusion:FontListComboBox}}}" 
+                                                           Visibility="Visible"/>
 
                                     <syncfusion:FontListBox x:Name="FontListBoxElement"
                                                                DockPanel.Dock="Top" 

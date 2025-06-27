@@ -14,6 +14,11 @@
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/RepeatButton.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
+    <CornerRadius x:Key="DoubleTextBox.RangeAdornerBorder.Static.CornerRadius">0,0,0,1</CornerRadius>
+    <Thickness x:Key="DoubleTextBox.UpButton.KeyBoardFocus.Padding">0,0,0,0</Thickness>
+    <Thickness x:Key="DoubleTextBox.RangeAdornerBorder.Static.Margin">0,0,0,0</Thickness>
+    <sys:Double x:Key="DoubleTextBox.Border.Static.Opacity">1</sys:Double> 
+
     <shared:ProgressConverter x:Key="ProgressConverter" />
     <shared:ClipConverter x:Key="ClipConverter" />
     <shared:RadiusConverter x:Key="CornerRadiusConverter" />
@@ -81,7 +86,7 @@
                                     BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness}"
                                     IsHitTestVisible="False"
                                     Visibility="Collapsed"
-                                    >
+                                    Opacity="{StaticResource DoubleTextBox.Border.Static.Opacity}">
                                     <Border.RenderTransform>
                                         <ScaleTransform>
                                             <ScaleTransform.ScaleX>
@@ -205,7 +210,8 @@
                             <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryBackground}" />
                             <Setter TargetName="Border" Property="Background" Value="{StaticResource ContentBackground}" />
                             <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.ThemeBorderThicknessVariant2}" />
-                            <Setter Property="Padding" TargetName="downbutton" Value="0,0,0,-2"/>
+                            <Setter TargetName="downbutton" Property="Padding" Value="0,0,0,-2" />
+                            <Setter TargetName="upbutton" Property="Padding" Value="{StaticResource DoubleTextBox.UpButton.KeyBoardFocus.Padding}" />
                         </Trigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
@@ -243,6 +249,8 @@
                                 <Condition Property="IsKeyboardFocusWithin" Value="False" />
                             </MultiTrigger.Conditions>
                             <Setter TargetName="RangeAdornerBorder" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="RangeAdornerBorder" Property="CornerRadius" Value="{StaticResource DoubleTextBox.RangeAdornerBorder.Static.CornerRadius}"/>
+                            <Setter TargetName="RangeAdornerBorder" Property="Margin" Value="{StaticResource DoubleTextBox.RangeAdornerBorder.Static.Margin}"/>
                         </MultiTrigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource BorderAlt2}" />

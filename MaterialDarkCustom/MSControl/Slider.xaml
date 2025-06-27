@@ -1,6 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
                     xmlns:sfskin="clr-namespace:Syncfusion.SfSkinManager;assembly=Syncfusion.SfSkinManager.WPF">
 
     <ResourceDictionary.MergedDictionaries>
@@ -51,15 +52,26 @@
                   UseLayoutRounding="True" 
                   VerticalAlignment="Center"
                   SnapsToDevicePixels="True" />
+            <Path x:Name="OverlayCircle" 
+                  Width="40" 
+                  Height="40"
+                  Data="M362,462.135928 L367.166007,457 L372,462.135928 L372,475 C372,476.104569 371.104569,477 370,477 L367.068498,477 L367.068498,477 L364,477 C362.895431,477 362,476.104569 362,475 L362,462.135928 L362,462.135928 Z" 
+                  Stretch="Fill" 
+                  UseLayoutRounding="True" 
+                  VerticalAlignment="Center"
+                  SnapsToDevicePixels="True"
+                  Visibility="Collapsed"/>
         </Grid>
         <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="true">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource PrimaryDark}"/>
                 <Setter Property="Stroke" TargetName="grip" Value="{StaticResource PrimaryDark}"/>
+                <Setter Property="StrokeThickness" TargetName="grip" Value="{StaticResource MaterialDarkCustom.StrokeThickness2}"/>
             </Trigger>
             <Trigger Property="IsDragging" Value="true">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource PrimaryDarken}"/>
                 <Setter Property="Stroke" TargetName="grip" Value="{StaticResource PrimaryDarken}"/>
+                <Setter Property="StrokeThickness" TargetName="grip" Value="{StaticResource MaterialDarkCustom.StrokeThickness2}"/>
             </Trigger>
             <Trigger Property="IsEnabled" Value="false">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource BorderAlt}"/>
@@ -96,15 +108,26 @@
                   UseLayoutRounding="True" 
                   VerticalAlignment="Center"
                   SnapsToDevicePixels="True"/>
+            <Path x:Name="OverlayCircle" 
+                  Width="40" 
+                  Height="40"
+                  Data="M203,457 L209,457 C210.104569,457 211,457.895431 211,459 L211,471.666667 L211,471.666667 L206.068498,477 L201,471.666667 L201,459 C201,457.895431 201.895431,457 203,457 Z" 
+                  Stretch="Fill"  
+                  UseLayoutRounding="True" 
+                  VerticalAlignment="Center"
+                  SnapsToDevicePixels="True"
+                  Visibility="Collapsed"/>
         </Grid>
         <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="true">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource PrimaryDark}"/>
                 <Setter Property="Stroke" TargetName="grip" Value="{StaticResource PrimaryDark}"/>
+                <Setter Property="StrokeThickness" TargetName="grip" Value="{StaticResource MaterialDarkCustom.StrokeThickness2}"/>
             </Trigger>
             <Trigger Property="IsDragging" Value="true">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource PrimaryDarken}"/>
                 <Setter Property="Stroke" TargetName="grip" Value="{StaticResource PrimaryDarken}"/>
+                <Setter Property="StrokeThickness" TargetName="grip" Value="{StaticResource MaterialDarkCustom.StrokeThickness2}"/>
             </Trigger>
             <Trigger Property="IsEnabled" Value="false">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource BorderAlt}"/>
@@ -124,37 +147,31 @@
                     <Rectangle Fill="{TemplateBinding Background}" 
                                Height="{TemplateBinding Height}" 
                                Width="{TemplateBinding Width}"
-                               
-                               />
+                               RadiusX="0"
+                               RadiusY="0"/>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
     <ControlTemplate x:Key="SliderThumbHorizontalDefault" TargetType="{x:Type Thumb}">
         <Grid HorizontalAlignment="Center" UseLayoutRounding="True" VerticalAlignment="Center">
-            <Border x:Name="gripBorder" 
-                    Width="20" 
-                    Height="20"
-                    BorderBrush="Transparent" 
-                    BorderThickness="1"
-                    Background="Transparent" 
-                    Visibility="Collapsed"
-                    UseLayoutRounding="True" 
-                    VerticalAlignment="Center"
-                    SnapsToDevicePixels="True"                              
-                    CornerRadius="100" />
-
-            <Path x:Name="grip" 
-                  Width="12" 
-                  Height="12"
-                  Data="M16,0C24.837036,0 32,7.1629944 32,16 32,24.836975 24.837036,32 16,32 7.1630249,32 0,24.836975 0,16 0,7.1629944 7.1630249,0 16,0z" 
-                  Fill="{StaticResource PrimaryBackground}" 
-                  Stretch="Fill" 
-                  Stroke="{StaticResource ContentBackground}" 
-                  StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
-                  UseLayoutRounding="True" 
-                  VerticalAlignment="Center"
-                  SnapsToDevicePixels="True"/>
+            <Ellipse x:Name="gripBorder" 
+                     Width="20" 
+                     Height="20"
+                     Stroke="Transparent" 
+                     StrokeThickness="1"
+                     Fill="Transparent"
+                     Visibility="Collapsed"/>
+            <Ellipse x:Name="grip" 
+                     Width="12"
+                     Height="12"
+                     Fill="{StaticResource PrimaryBackground}"
+                     Stroke="{StaticResource ContentBackground}"
+                     StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"/>
+            <Ellipse x:Name="OverlayCircle"
+                     Height="40"
+                     Width="40"
+                     Visibility="Collapsed"/>
         </Grid>
         <ControlTemplate.Triggers>
             <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
@@ -164,16 +181,10 @@
             <Trigger Property="IsMouseOver" Value="true">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource PrimaryDark}"/>
                 <Setter Property="Stroke" TargetName="grip" Value="{StaticResource PrimaryDark}"/>
-                <Trigger.ExitActions>
-                        
-                </Trigger.ExitActions>
             </Trigger>
             <Trigger Property="IsDragging" Value="true">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource PrimaryDarken}"/>
                 <Setter Property="Stroke" TargetName="grip" Value="{StaticResource PrimaryDarken}"/>
-                <Trigger.ExitActions>
-
-                </Trigger.ExitActions>
             </Trigger>
             <Trigger Property="IsEnabled" Value="false">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource BorderAlt}"/>
@@ -199,26 +210,20 @@
                          Height="5" 
                          Placement="Top" 
                          Visibility="Collapsed"
-                         Fill="{StaticResource BorderDark1}">
-                    <TickBar.Margin>
-                        <Thickness>0,0,0,2</Thickness>
-                    </TickBar.Margin>
-                </TickBar>
+                         Fill="{StaticResource BorderDark1}"
+                         Margin="0,0,0,2"/>
                 <TickBar x:Name="BottomTick" 
                          Grid.Row="2" 
                          Height="5" 
                          Placement="Bottom" 
                          Visibility="Collapsed"
-                         Fill="{StaticResource BorderDark1}">
-                    <TickBar.Margin>
-                        <Thickness>0,2,0,0</Thickness>
-                    </TickBar.Margin>
-                </TickBar>
+                         Fill="{StaticResource BorderDark1}"
+                         Margin="0,2,0,0"/>
                 <Border x:Name="TrackBackground" 
                         Grid.Row="1" 
                         Height="2"
                         CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
-                        Margin="5,0"                         
+                        Margin="5,0,5,0"
                         BorderBrush="{StaticResource BorderDark}" 
                         Background="{StaticResource BorderDark}"
                         VerticalAlignment="center">
@@ -234,8 +239,8 @@
                     <Track.DecreaseRepeatButton>
                         <RepeatButton Command="{x:Static Slider.DecreaseLarge}" 
                                       Style="{StaticResource RepeatButtonTransparent}"
-                                      
-                                      />
+                                      Height="NaN"
+                                      Background="Transparent"/>
                     </Track.DecreaseRepeatButton>
                     <Track.IncreaseRepeatButton>
                         <RepeatButton Command="{x:Static Slider.IncreaseLarge}" 
@@ -246,6 +251,7 @@
                                Width="12" 
                                Height="18"
                                Focusable="False" 
+                               Margin="0"
                                OverridesDefaultStyle="True" 
                                Template="{StaticResource SliderThumbHorizontalDefault}" 
                                VerticalAlignment="Center" />
@@ -262,12 +268,10 @@
             <Trigger Property="TickPlacement" Value="TopLeft">
                 <Setter Property="Visibility" TargetName="TopTick" Value="Visible"/>
                 <Setter Property="Template" TargetName="Thumb" Value="{StaticResource SliderThumbHorizontalTop}"/>
-                <Setter Property="Margin" TargetName="TrackBackground" Value="5,2,5,0"/>
             </Trigger>
             <Trigger Property="TickPlacement" Value="BottomRight">
                 <Setter Property="Visibility" TargetName="BottomTick" Value="Visible"/>
                 <Setter Property="Template" TargetName="Thumb" Value="{StaticResource SliderThumbHorizontalBottom}"/>
-                <Setter Property="Margin" TargetName="TrackBackground" Value="5,0,5,2"/>
             </Trigger>
             <Trigger Property="TickPlacement" Value="Both">
                 <Setter Property="Visibility" TargetName="TopTick" Value="Visible"/>
@@ -304,22 +308,30 @@
                   Stroke="Transparent" />
 
             <Path x:Name="grip"
-                  Width="12" 
-                  Height="18"
+                  Width="18" 
+                  Height="12"
                   Data="M412,457 L425,457 C426.104569,457 427,457.895431 427,459 L427,465 C427,466.104569 426.104569,467 425,467 L412,467 L412,467 L407,462.111033 L412,457 Z" 
                   Fill="{StaticResource PrimaryBackground}" 
                   Stretch="Fill" 
                   StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
                   Stroke="{StaticResource ContentBackground}"/>
+            <Path x:Name="OverlayCircle"
+                  Width="40" 
+                  Height="40"
+                  Data="M412,457 L425,457 C426.104569,457 427,457.895431 427,459 L427,465 C427,466.104569 426.104569,467 425,467 L412,467 L412,467 L407,462.111033 L412,457 Z" 
+                  Visibility="Collapsed"
+                  Stretch="Fill"/>
         </Grid>
         <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="true">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource PrimaryDark}"/>
                 <Setter Property="Stroke" TargetName="grip" Value="{StaticResource PrimaryDark}"/>
+                <Setter Property="StrokeThickness" TargetName="grip" Value="{StaticResource MaterialDarkCustom.StrokeThickness2}"/>
             </Trigger>
             <Trigger Property="IsDragging" Value="true">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource PrimaryDarken}"/>
                 <Setter Property="Stroke" TargetName="grip" Value="{StaticResource PrimaryDarken}"/>
+                <Setter Property="StrokeThickness" TargetName="grip" Value="{StaticResource MaterialDarkCustom.StrokeThickness2}"/>
             </Trigger>
             <Trigger Property="IsEnabled" Value="false">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource BorderAlt}"/>
@@ -342,22 +354,30 @@
                   StrokeThickness="1"/>
             
             <Path x:Name="grip" 
-                  Width="12" 
-                  Height="18"
+                  Width="18" 
+                  Height="12"
                   Data="M387,457 L400,457 L400,457 L405,462.082328 L400,467 L387,467 C385.895431,467 385,466.104569 385,465 L385,459 C385,457.895431 385.895431,457 387,457 Z"
                   Fill="{StaticResource PrimaryBackground}"
                   Stretch="Fill" 
                   Stroke="{StaticResource ContentBackground}" 
                   StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"/>
+            <Path x:Name="OverlayCircle" 
+                  Width="40" 
+                  Height="40"
+                  Data="M387,457 L400,457 L400,457 L405,462.082328 L400,467 L387,467 C385.895431,467 385,466.104569 385,465 L385,459 C385,457.895431 385.895431,457 387,457 Z"
+                  Stretch="Fill" 
+                  Visibility="Collapsed"/>
         </Grid>
         <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="true">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource PrimaryDark}"/>
                 <Setter Property="Stroke" TargetName="grip" Value="{StaticResource PrimaryDark}"/>
+                <Setter Property="StrokeThickness" TargetName="grip" Value="{StaticResource MaterialDarkCustom.StrokeThickness2}"/>
             </Trigger>
             <Trigger Property="IsDragging" Value="true">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource PrimaryDarken}"/>
                 <Setter Property="Stroke" TargetName="grip" Value="{StaticResource PrimaryDarken}"/>
+                <Setter Property="StrokeThickness" TargetName="grip" Value="{StaticResource MaterialDarkCustom.StrokeThickness2}"/>
             </Trigger>
             <Trigger Property="IsEnabled" Value="false">
                 <Setter Property="Fill" TargetName="grip" Value="{StaticResource BorderAlt}"/>
@@ -369,26 +389,24 @@
         <Grid UseLayoutRounding="True" 
               HorizontalAlignment="Center"
               VerticalAlignment="Center">
-            <Border x:Name="gripBorder" 
-                    Width="20" 
-                    Height="20"
-                    BorderBrush="Transparent" 
-                    BorderThickness="1"
-                    Background="Transparent" 
-                    Visibility="Collapsed"
-                    UseLayoutRounding="True" 
-                    VerticalAlignment="Center"
-                    SnapsToDevicePixels="True"                              
-                    CornerRadius="100" />
-            
-            <Path x:Name="grip" 
-                  Width="12" 
-                  Height="12"
-                  Data="M16,0C24.837036,0 32,7.1629944 32,16 32,24.836975 24.837036,32 16,32 7.1630249,32 0,24.836975 0,16 0,7.1629944 7.1630249,0 16,0z" 
-                  Fill="{StaticResource PrimaryBackground}" 
-                  Stretch="Fill"
-                  StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
-                  Stroke="{StaticResource ContentBackground}"/>
+            <Ellipse x:Name="gripBorder" 
+                     Width="20" 
+                     Height="20"
+                     Stroke="Transparent" 
+                     StrokeThickness="1"
+                     Fill="Transparent" 
+                     Visibility="Collapsed" />
+            <Ellipse x:Name="grip" 
+                     Width="12" 
+                     Height="12"
+                     Fill="{StaticResource PrimaryBackground}" 
+                     Stretch="Fill"
+                     StrokeThickness="{StaticResource MaterialDarkCustom.StrokeThickness2}"
+                     Stroke="{StaticResource ContentBackground}"/>
+            <Ellipse x:Name="OverlayCircle"
+                     Height="40"
+                     Width="40"
+                     Visibility="Collapsed"/>
         </Grid>
         <ControlTemplate.Triggers>
             <Trigger Property="sfskin:SfSkinManager.SizeMode" Value="Touch">
@@ -425,30 +443,24 @@
                          Fill="{StaticResource BorderDark1}"
                          Placement="Left"
                          Visibility="Collapsed"
-                         Width="4">
-                    <TickBar.Margin>
-                        <Thickness>0,0,2,0</Thickness>
-                    </TickBar.Margin>
-                </TickBar>
+                         Width="4"
+                         Margin="0,0,2,0"/>
                 <TickBar x:Name="BottomTick" 
                          Grid.Column="2" 
                          Fill="{StaticResource BorderDark1}"
                          Placement="Right"
                          Visibility="Collapsed" 
-                         Width="4">
-                    <TickBar.Margin>
-                        <Thickness>2,0,0,0</Thickness>
-                    </TickBar.Margin>
-                </TickBar>
+                         Width="4"
+                         Margin="2,0,0,0"/>
                 <Border x:Name="TrackBackground"
                         Grid.Column="1" 
                         BorderBrush="{StaticResource BorderDark}" 
                         BorderThickness="1" 
                         Background="{StaticResource BorderDark}" 
                         HorizontalAlignment="center" 
-                        Margin="0,5"
+                        Margin="0,5,0,5"
                         CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
-                        Width="4.0">
+                        Width="2">
                     <Canvas  Margin="-1,-6">
                         <Rectangle x:Name="PART_SelectionRange" 
                                    Fill="{StaticResource PrimaryBackground}" 
@@ -459,7 +471,10 @@
                 <Track x:Name="PART_Track" Grid.Column="1">
                     <Track.DecreaseRepeatButton>
                         <RepeatButton Command="{x:Static Slider.DecreaseLarge}" 
-                                      Style="{StaticResource RepeatButtonTransparent}"/>
+                                      Style="{StaticResource RepeatButtonTransparent}"
+                                      Width="NaN"
+                                      Height="{TemplateBinding Height}"
+                                      Background="Transparent"/>
                     </Track.DecreaseRepeatButton>
                     <Track.IncreaseRepeatButton>
                         <RepeatButton Command="{x:Static Slider.IncreaseLarge}" 
@@ -470,6 +485,7 @@
                                Focusable="False"                           
                                Width="18" 
                                Height="12"
+                               Margin="0"
                                OverridesDefaultStyle="True" 
                                Template="{StaticResource SliderThumbVerticalDefault}" 
                                VerticalAlignment="Top"/>
@@ -486,12 +502,10 @@
             <Trigger Property="TickPlacement" Value="TopLeft">
                 <Setter Property="Visibility" TargetName="TopTick" Value="Visible"/>
                 <Setter Property="Template" TargetName="Thumb" Value="{StaticResource SliderThumbVerticalLeft}"/>
-                <Setter Property="Margin" TargetName="TrackBackground" Value="2,5,0,5"/>
             </Trigger>
             <Trigger Property="TickPlacement" Value="BottomRight">
                 <Setter Property="Visibility" TargetName="BottomTick" Value="Visible"/>
                 <Setter Property="Template" TargetName="Thumb" Value="{StaticResource SliderThumbVerticalRight}"/>
-                <Setter Property="Margin" TargetName="TrackBackground" Value="0,5,2,5"/>
             </Trigger>
             <Trigger Property="TickPlacement" Value="Both">
                 <Setter Property="Visibility" TargetName="TopTick" Value="Visible"/>

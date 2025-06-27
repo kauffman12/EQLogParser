@@ -15,7 +15,7 @@
         <sfskin:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <sfskin:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
     </ResourceDictionary.MergedDictionaries>
-
+    
     <BooleanToVisibilityConverter x:Key="BooleanVisibilityConverter" />
 
     <Style x:Key="ArrowButtonStyle" TargetType="Button">
@@ -49,7 +49,7 @@
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Fill="{StaticResource IconColor}"
-                        Stroke="transparent"
+                        Stroke="Transparent"
                         StrokeThickness="1"
                         Stretch="Fill" >
                 <Path.Data>

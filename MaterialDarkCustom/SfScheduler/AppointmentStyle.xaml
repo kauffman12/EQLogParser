@@ -6,8 +6,48 @@
     <ResourceDictionary.MergedDictionaries>
         <skinmanager:ResourceDictionaryProvider DictionaryName="Common" ThemeName="MaterialDarkCustom"/>
         <skinmanager:ResourceDictionaryProvider DictionaryName="Brushes" ThemeName="MaterialDarkCustom"/>
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/ToolTip.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
+    <DataTemplate x:Key="ToolTipTemplate">
+        <Border x:Name="PART_ToolTipBorder"
+                BorderBrush="{Binding BorderBrush}"
+                Background="{Binding Background}"
+                CornerRadius="{Binding CornerRadius}"
+                VerticalAlignment="Stretch"
+                HorizontalAlignment="Stretch"
+                BorderThickness="{Binding BorderThickness}"
+                Padding="5">
+            <StackPanel>
+                <TextBlock x:Name="PART_AppointmentTextBlock"
+                           Text="{Binding Subject}"
+                           FontSize="{Binding FontSize }"
+                           FontWeight="{Binding FontWeight}"
+                           FontFamily="{Binding FontFamily}"
+                           TextWrapping="Wrap"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock  FontSize="{Binding FontSize}"
+                            FontWeight="{Binding FontWeight }"
+                            FontFamily="{Binding FontFamily}"
+                            TextWrapping="Wrap"
+                            Margin="0,3,0,0"
+                            TextTrimming="CharacterEllipsis">
+                    <TextBlock.Text>
+                        <MultiBinding StringFormat="{}{0:MMM dd} - {1:MMM dd yyyy}">
+                            <Binding Path="StartTime" />
+                            <Binding Path="EndTime" />
+                        </MultiBinding>
+                    </TextBlock.Text>
+                </TextBlock>
+            </StackPanel>
+        </Border>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding Path=Subject}" Value="{x:Static system:String.Empty}">
+                <Setter TargetName="PART_AppointmentTextBlock" Property="TextBlock.Text" Value="{scheduler:SchedulerLocalizationResourceExtension ResourceName=EmptyAppointmentSubject}"/>
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+    
     <Style x:Key="SyncfusionAppointmentControlStyle" TargetType="scheduler:AppointmentControl">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="Background" Value="{StaticResource PrimaryBackground}" />
@@ -39,8 +79,12 @@
                                 CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant2}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}">
-
                         </Border>
+                        <Grid.ToolTip>
+                            <ToolTip x:Name="PART_ToolTip" 
+                                     ContentTemplate="{StaticResource ToolTipTemplate}"
+                                     Style="{StaticResource WPFToolTipStyle}"/>
+                        </Grid.ToolTip>
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>

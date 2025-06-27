@@ -11,6 +11,7 @@
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfRichTextBoxAdv/SfRichTextBoxCommon.xaml" />
         <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/PrimaryButton.xaml" />
+        <ResourceDictionary Source="/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/FlatPrimaryButton.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
     <Style TargetType="richtextboxadv:StylesDialog">
@@ -103,9 +104,9 @@
                         </Grid.Resources>
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="12"/>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="11"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="12"/>
@@ -240,6 +241,7 @@
                                 <Label Grid.Row="0"
                                        Grid.Column="0" 
                                        Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=StyleDialogFormattingHeader}" 
+                                       Padding="0 2 0 2"
                                        VerticalAlignment="Center" Foreground="{TemplateBinding Foreground}" 
                                        FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
                                        FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"/>
@@ -713,30 +715,39 @@
                                     <StackPanel   Orientation="Horizontal" 
                                                   HorizontalAlignment="Right"
                                                   Height="26">
-                                        <Button x:Name="PART_ApplyStyleFormatButton" 
-                                                Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxOk}" 
-                                        Width="52" 
-                                        IsDefault="True" 
-                                        Height="24"
-                                        Padding="12 2 12 2"
-                                        Margin="0 -5 6 0"
-                                        FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
-                                        FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
-                                        HorizontalAlignment="Right"
-                                        VerticalAlignment="Center"
-                                        TabIndex="10"
-                                        />
-                                        <Button x:Name="PART_CancelButton" 
-                                        Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxCancel}"
-                                        Width="69" 
-                                        Height="24"
-                                        Padding="12 2 12 2"
-                                        Margin="0 -4 6 0"
-                                        FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
-                                        FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
-                                        HorizontalAlignment="Right"
-                                        VerticalAlignment="Center"
-                                        TabIndex="11"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Button x:Name="PART_ApplyStyleFormatButton" 
+                                                Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxOk}"
+                                                Grid.Column="0"
+                                                Width="52" 
+                                                IsDefault="True" 
+                                                Height="24"
+                                                Padding="12 2 12 2"
+                                                Margin="0 -5 6 0"
+                                                FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
+                                                FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                TabIndex="10"
+                                                />
+                                            <Button x:Name="PART_CancelButton" 
+                                                 Content="{resources:RichTextBoxAdvLocalizationResourceExtension ResourceName=DialogBoxCancel}"
+                                                 Grid.Column="1"
+                                                 Width="69" 
+                                                 Height="24"
+                                                 Padding="12 2 12 2"
+                                                 Margin="0 -4 6 0"
+                                                 FontSize="{StaticResource MaterialDarkCustom.BodyTextStyle}"
+                                                 FontFamily="{StaticResource MaterialDarkCustom.ThemeFontFamily}"
+                                                 HorizontalAlignment="Right"
+                                                 VerticalAlignment="Center"
+                                                 TabIndex="11"
+                                                 />
+                                        </Grid>
                                     </StackPanel>
                                 </Grid>
                             </Border>
@@ -746,5 +757,4 @@
             </Setter.Value>
         </Setter>
     </Style>
-
 </ResourceDictionary>

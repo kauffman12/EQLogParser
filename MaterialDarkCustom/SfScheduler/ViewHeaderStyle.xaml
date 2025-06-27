@@ -303,5 +303,5 @@
         </Setter>
     </Style>
     <Style BasedOn="{StaticResource SyncfusionMonthViewHeaderStyle}" TargetType="scheduler:MonthViewHeader" />
-
+    
 </ResourceDictionary>

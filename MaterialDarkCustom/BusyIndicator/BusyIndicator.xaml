@@ -42,9 +42,12 @@
                     Margin="3"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Data="M1,1 L11,11 M1,11 L11,1"
                     Stroke="{StaticResource IconColor}"
-                    StrokeThickness="1" />
+                    StrokeThickness="1">
+                    <Path.Data>
+                        <PathGeometry>M1,1 L11,11 M1,11 L11,1</PathGeometry>
+                    </Path.Data>
+                </Path>
             </Setter.Value>
         </Setter>
     </Style>
@@ -74,7 +77,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{StaticResource MaterialDarkCustom.BorderThickness1}"
-                                CornerRadius="{StaticResource MaterialDarkCustom.ThemeCornerRadiusVariant1}"
+                                CornerRadius="1"
                                 Effect="{StaticResource Default.ShadowDepth3}"
                                 SnapsToDevicePixels="True">
 

@@ -668,7 +668,7 @@
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
                         SnapsToDevicePixels="True"
-                        CornerRadius="0 ">
+                        CornerRadius="0">
                         <DockPanel VerticalAlignment="{TemplateBinding VerticalAlignment}" LastChildFill="True">
                             <Button
                                 Name="btnClose"
@@ -935,7 +935,8 @@
                                     </tools_controls:DocumentHeader.ContextMenu>
                                 </tools_controls:DocumentHeader>
                                 <AdornerDecorator Name="WrapAdorner">
-                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" CornerRadius="0" >
+                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" 
+                                            CornerRadius="0" >
                                         <Grid Name="grid" Background="{TemplateBinding Background}">
                                             <ContentPresenter
                                                 Name="PART_ContentPresenter"
@@ -954,7 +955,7 @@
                         </Border>
                     </Grid>
                     <ControlTemplate.Triggers>
-                        <DataTrigger Binding="{Binding Path=IsInMDIMaximizedState, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:DocumentContainer}}}" Value="True">
+                        <DataTrigger Binding="{Binding Path=(tools_controls:MDIWindow.Content).(tools_controls:DocumentContainer.MDIWindowState), RelativeSource={RelativeSource Mode=Self}}" Value="Maximized">
                             <Setter Property="FontWeight" Value="SemiBold" />
                             <Setter Property="BorderThickness" Value="1" />
                             <Setter TargetName="PART_DocumentHeader" Property="Border.CornerRadius" Value="0" />
@@ -991,7 +992,7 @@
             </Trigger>
             <MultiDataTrigger>
                 <MultiDataTrigger.Conditions>
-                    <Condition Binding="{Binding Path=IsInMDIMaximizedState, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type tools_controls:DocumentContainer}}}" Value="True" />
+                    <Condition Binding="{Binding Path=(tools_controls:MDIWindow.Content).(tools_controls:DocumentContainer.MDIWindowState), RelativeSource={RelativeSource Mode=Self}}" Value="Maximized" />
                     <Condition Binding="{Binding Path=IsActive, RelativeSource={RelativeSource Mode=Self}}" Value="True" />
                 </MultiDataTrigger.Conditions>
                 <Setter Property="BorderBrush" Value="{StaticResource BorderAlt}" />

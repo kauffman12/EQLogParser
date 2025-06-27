@@ -180,6 +180,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
+                <!--The reason for handling collapse in tooltips is to restrict the appearance of the nose part between the mouse pointer and the tooltip popup-->
                 <Polygon Grid.Column="0"
                          
                          StrokeThickness="1"
@@ -262,7 +263,8 @@
             </StackPanel>
         </Border>
     </DataTemplate>
-
+   
+    <!--The reason for handing interor, In marker fill and stroke color should be same as per UX figma design.-->
     <DataTemplate x:Key="Cross">
         <Polyline Stretch="Fill"
                   Fill="{Binding Interior}"
@@ -273,6 +275,7 @@
                   Points="0,4, 4,0, 7.5,4, 11,0, 15,4, 11,7.5, 15,11, 11,15, 7.5,11, 4,15, 0,11, 4,7.5,0,4" />
     </DataTemplate>
 
+    <!--The reason for handing interor, In marker fill and stroke color should be same as per UX figma design.-->
     <DataTemplate x:Key="Circle">
         <Ellipse Stretch="Fill"
                  Fill="{Binding Interior}"
@@ -282,6 +285,7 @@
                  Height="{Binding Height}" />
     </DataTemplate>
 
+    <!--The reason for handing interor, In marker fill and stroke color should be same as per UX figma design.-->
     <DataTemplate x:Key="Triangle">
         <Path Stretch="Fill"
               Fill="{Binding Interior}"
@@ -302,6 +306,7 @@
         </Path>
     </DataTemplate>
 
+    <!--The reason for handing interor, In marker fill and stroke color should be same as per UX figma design.-->
     <DataTemplate x:Key="Rectangle">
         <Rectangle Stretch="Fill"
                    Fill="{Binding Interior}"
@@ -311,6 +316,7 @@
                    Height="{Binding Height}" />
     </DataTemplate>
 
+    <!--The reason for handing interor, In marker fill and stroke color should be same as per UX figma design.-->
     <DataTemplate x:Key="Diamond">
         <Polyline Stretch="Fill"
                   Fill="{Binding Interior}"
@@ -321,6 +327,7 @@
                   Points="7.5,0,15,7.5,7.5,15,0,7.5,7.5,0" />
     </DataTemplate>
 
+    <!--The reason for handing interor, In marker fill and stroke color should be same as per UX figma design.-->
     <DataTemplate x:Key="Pentagon">
         <Polyline Stretch="Fill"
                   Fill="{Binding Interior}"
@@ -331,6 +338,7 @@
                   Points="7.5,0,15,7,12,15,3,15,0,7,7.5,0" />
     </DataTemplate>
 
+    <!--The reason for handing interor, In marker fill and stroke color should be same as per UX figma design.-->
     <DataTemplate x:Key="Plus">
         <Path Stretch="Fill"
               Fill="{Binding Interior}"

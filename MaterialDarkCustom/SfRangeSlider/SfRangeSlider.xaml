@@ -18,6 +18,8 @@
 
     <!--  Theme Keys for SfRangeSlider  -->
 
+    <SolidColorBrush x:Key="RangeSlider.Thumb.Static.OuterBorder" Color="#E0E0E0" />
+
     <!--  Style for Thumb of SfRangeSlider  -->
     <Style x:Key="SyncfusionSfRangeSliderThumbStyle" TargetType="Thumb">
         <Setter Property="BorderThickness" Value="{StaticResource MaterialDarkCustom.BorderThickness1}" />
@@ -30,6 +32,8 @@
                         <Border
                             x:Name="ThumbOuterBorder"
                             
+                            
+                            
                             CornerRadius="10"
                             BorderThickness="0">
                             <Border
@@ -39,7 +43,8 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8" />  
+                                CornerRadius="8"
+                                />
                         </Border>
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -56,11 +61,13 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource PrimaryDark}" />
                             <Setter TargetName="ThumbBorder" Property="BorderBrush" Value="{StaticResource PrimaryDark}" />
+                            <Setter TargetName="ThumbOuterBorder" Property="Background" Value="Transparent"/>
                         </Trigger>
 
                         <Trigger Property="IsDragging" Value="True">
                             <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource PrimaryDarken}" />
                             <Setter TargetName="ThumbBorder" Property="BorderBrush" Value="{StaticResource PrimaryDarken}" />
+                            <Setter TargetName="ThumbOuterBorder" Property="Background" Value="Transparent"/>
                         </Trigger>
 
                     </ControlTemplate.Triggers>
@@ -102,10 +109,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ContentControl">
-                    <Grid Effect="{StaticResource Default.ShadowDepth2}">
-                        <Grid.Margin>
-                            <Thickness>0</Thickness>
-                        </Grid.Margin>
+                    <Grid Effect="{StaticResource Default.ShadowDepth2}"
+                          Margin="0">
                         <Path
                             x:Name="ToolTipPath"
                             Height="30"
@@ -141,10 +146,8 @@
                 <ControlTemplate TargetType="ContentControl">
                     <Grid 
                         Effect="{StaticResource Default.ShadowDepth2}"
-                        RenderTransformOrigin="0.5,0.5">
-                        <Grid.Margin>
-                            <Thickness>0</Thickness>
-                        </Grid.Margin>
+                        RenderTransformOrigin="0.5,0.5"
+                        Margin="0">
                         <Path
                             x:Name="ToolTipPath"
                             Height="30"
@@ -161,7 +164,7 @@
                             </Path.LayoutTransform>
                         </Path>
                         <TextBlock
-                            Margin="10 5 10 0"
+                            Margin="10,5,10,0"
                             HorizontalAlignment="Stretch"
                             VerticalAlignment="Center"
                             FontFamily="{TemplateBinding FontFamily}"
@@ -183,10 +186,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ContentControl">
-                    <Grid  Effect="{StaticResource Default.ShadowDepth2}" >
-                        <Grid.Margin>
-                            <Thickness>4</Thickness>
-                        </Grid.Margin>
+                    <Grid  Effect="{StaticResource Default.ShadowDepth2}" 
+                           Margin="4">
                         <Path
                             Width="32"
                             HorizontalAlignment="Stretch"
@@ -201,7 +202,7 @@
                             </Path.LayoutTransform>
                         </Path>
                         <TextBlock
-                                    Padding="16 6 8 7"
+                                    Padding="16,6,8,7"
                                     HorizontalAlignment="Stretch"
                                     VerticalAlignment="Center"
                                     Background="Transparent"
@@ -224,10 +225,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ContentControl">
-                    <Grid Effect="{StaticResource Default.ShadowDepth2}">
-                        <Grid.Margin>
-                            <Thickness>4</Thickness>
-                        </Grid.Margin>
+                    <Grid Effect="{StaticResource Default.ShadowDepth2}"
+                          Margin="4">
                         <Path
                     Width="32"
                     HorizontalAlignment="Stretch"
@@ -242,7 +241,7 @@
                             </Path.LayoutTransform>
                         </Path>
                         <TextBlock
-                                    Padding="8 5 16 7"
+                                    Padding="8,5,16,7"
                                     HorizontalAlignment="Stretch"
                                     VerticalAlignment="Center"
                                     Background="Transparent"
@@ -415,7 +414,7 @@
                 <Rectangle
                     x:Name="HorizontalDecreaseRectangle"
                     Grid.Row="1"
-                     
+                    
                     Grid.ColumnSpan="3"
                     Width="{TemplateBinding ActualWidth}"
                     RadiusX="0"
@@ -593,6 +592,7 @@
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Fill" TargetName="HorizontalDecreaseRectangle" Value="{StaticResource BorderAlt}"/>
+
                 <Setter Property="Fill" TargetName="HorizontalTrackRectangle" Value="{StaticResource BorderAlt}"/>
             </Trigger>
         </ControlTemplate.Triggers>

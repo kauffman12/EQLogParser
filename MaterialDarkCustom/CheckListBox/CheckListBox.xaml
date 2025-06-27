@@ -102,7 +102,7 @@
                                 </Grid.ColumnDefinitions>
                                 <CheckBox
                                     Name="PART_CheckBox"
-                                    Margin="1 1 5 1"
+                                    Margin="1, 1, 5, 1"
                                     VerticalAlignment="Center"
                                     Focusable="False"
                                     IsChecked="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=State.IsChecked}" />
@@ -197,7 +197,7 @@
                                 </Grid.ColumnDefinitions>
                                 <CheckBox
                                     Name="PART_CheckBox"
-                                    Margin="1 1 5 1"
+                                    Margin="1, 1, 5, 1"
                                     VerticalAlignment="Center"
                                     Focusable="False"
                                     IsChecked="{Binding IsChecked}" />
@@ -359,7 +359,7 @@
                                 <CheckBox
                                     Name="PART_CheckBox"
                                     Grid.Column="1"
-                                    Margin="1 1 5 1"
+                                    Margin="1, 1, 5, 1"
                                     VerticalAlignment="Center"
                                     Focusable="False"
                                     IsChecked="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=State.IsChecked}" />
