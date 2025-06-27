@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace EQLogParser
 {
@@ -35,6 +36,9 @@ namespace EQLogParser
     private void VolumeButtonClick(object sender, RoutedEventArgs e)
     {
       volumePopup.IsOpen = true;
+      // workaround to get labels to display
+      volumeSlider.LabelOrientation = Orientation.Vertical;
+      volumeSlider.LabelOrientation = Orientation.Horizontal;
     }
 
     private void ExportClicked(object sender, RoutedEventArgs e)

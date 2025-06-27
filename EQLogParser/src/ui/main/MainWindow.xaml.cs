@@ -144,6 +144,9 @@ namespace EQLogParser
       // Check for Updates
       checkUpdatesIcon.Visibility = ConfigUtil.IfSet("CheckUpdatesAtStartup") ? Visibility.Visible : Visibility.Hidden;
 
+      // Hardware Acceleration
+      hardwareAccelIcon.Visibility = ConfigUtil.IfSet("HardwareAcceleration") ? Visibility.Visible : Visibility.Hidden;
+
       // Enable EMU parsing
       IsEmuParsingEnabled = ConfigUtil.IfSet("EnableEmuParsing");
       emuParsingIcon.Visibility = IsEmuParsingEnabled ? Visibility.Visible : Visibility.Hidden;
@@ -635,6 +638,12 @@ namespace EQLogParser
     {
       ConfigUtil.SetSetting("CheckUpdatesAtStartup", checkUpdatesIcon.Visibility == Visibility.Hidden);
       checkUpdatesIcon.Visibility = checkUpdatesIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
+    }
+
+    private void ToggleHardwareAccelClick(object sender, RoutedEventArgs e)
+    {
+      ConfigUtil.SetSetting("HardwareAcceleration", hardwareAccelIcon.Visibility == Visibility.Hidden);
+      hardwareAccelIcon.Visibility = hardwareAccelIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
     }
 
     private void ToggleEmuParsingClick(object sender, RoutedEventArgs e)

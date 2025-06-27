@@ -25,7 +25,7 @@ namespace EQLogParser
 
     public App()
     {
-      SyncfusionLicenseProvider.RegisterLicense("LICENSE");
+      SyncfusionLicenseProvider.RegisterLicense("");
     }
 
     protected override void OnStartup(StartupEventArgs e)
@@ -52,6 +52,15 @@ namespace EQLogParser
         // Read app settings
         ConfigUtil.Init();
 
+        // hardware acceleration setting
+        var hardwareAccel = ConfigUtil.GetSetting("HardwareAcceleration");
+        if (hardwareAccel == null)
+        {
+          ConfigUtil.SetSetting("HardwareAcceleration", true);
+        }
+
+        RenderOptions.ProcessRenderMode = ConfigUtil.IfSet("HardwareAcceleration") ? RenderMode.Default : RenderMode.SoftwareOnly;
+
         if (!ConfigUtil.IfSet("HideSplashScreen"))
         {
           // show splash screen
@@ -65,8 +74,8 @@ namespace EQLogParser
         var osVersion = Environment.OSVersion;
         Log.Info($"Detected OS Version: {osVersion.VersionString}");
         var version = ResourceAssembly.GetName().Version!.ToString()[..^2];
-        Log.Info($"EQLogParser: {version}, DotNet: {Environment.Version}");
-        RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
+        Log.Info($"EQLogParser: {version}, DotNet: {Environment.Version}, RenderMode: {RenderOptions.ProcessRenderMode}");
+
         ShowMain();
       }
       catch (Exception ex)
