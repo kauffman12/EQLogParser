@@ -53,7 +53,6 @@
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            ShowRowHeader="True"
-                           UseDrawing="Default"
                            VerticalAlignment="Stretch">
       <syncfusion:SfDataGrid.SortColumnDescriptions>
         <syncfusion:SortColumnDescription ColumnName="Npc" SortDirection="Ascending" />

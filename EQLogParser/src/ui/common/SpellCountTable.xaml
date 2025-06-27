@@ -43,8 +43,7 @@
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            ScrollViewer.CanContentScroll="False"
                            ShowRowHeader="True"
-                           SelectionMode="Extended"
-                           UseDrawing="Default">
+                           SelectionMode="Extended">
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 

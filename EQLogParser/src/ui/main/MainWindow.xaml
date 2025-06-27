@@ -460,8 +460,7 @@
                                RowHeight="{DynamicResource EQTableRowHeight}"
                                ShowRowHeader="False"
                                GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
-                               SelectionMode="Extended"
-                               UseDrawing="Default">
+                               SelectionMode="Extended">
           <syncfusion:SfDataGrid.Columns>
             <syncfusion:GridComboBoxColumn x:Name="ownerList" Width="160" HeaderText="Owner" AllowEditing="True" IsReadOnly="False" MappingName="Owner" SelectedValuePath="Name" DisplayMemberPath="Name" />
             <syncfusion:GridTextColumn MappingName="Pet" HeaderText="Pet" IsReadOnly="True" AllowEditing="False"/>
@@ -485,8 +484,7 @@
                                RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
                                ShowRowHeader="True"
                                GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
-                               SelectionMode="Extended"
-                               UseDrawing="Default">
+                               SelectionMode="Extended">
           <syncfusion:SfDataGrid.Resources>
             <Style TargetType="syncfusion:GridRowHeaderCell">
               <Setter Property="Template">
@@ -521,8 +519,7 @@
                                RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
                                ShowRowHeader="True"
                                GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
-                               SelectionMode="Extended"
-                               UseDrawing="Default">
+                               SelectionMode="Extended">
           <syncfusion:SfDataGrid.Resources>
             <Style TargetType="syncfusion:GridRowHeaderCell">
               <Setter Property="Template">
