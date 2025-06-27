@@ -45,7 +45,8 @@
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            SelectionChanged="DataGridSelectionChanged"
-                           ShowRowHeader="True">
+                           ShowRowHeader="True"
+                           UseDrawing="Default">
       <syncfusion:SfDataGrid.Resources>
         <Style TargetType="syncfusion:GridRowHeaderCell">
           <Setter Property="Template">
