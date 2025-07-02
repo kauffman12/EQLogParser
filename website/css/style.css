@@ -1,0 +1,110 @@
+body {
+  font-family: 'Segoe UI', sans-serif;
+  margin: 0;
+  background: #f4f4f4;
+  color: #222;
+}
+
+.topbar {
+  background: #000;
+  color: #fff;
+  padding: 5px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.nav-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 2rem 0 1rem;
+}
+
+.badge {
+  color: white;
+  font-size: 20px;
+  padding: 0;
+}
+
+.version {
+  padding-left: 0.75em;
+}
+
+.icon {
+  height: 40px;
+}
+
+.center-section {
+  text-align: center;
+}
+
+.info-section {
+  width: 650px;
+  margin: 0 auto;
+  padding: 0rem;
+}
+
+.logo {
+  border: 2px solid black;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-links li a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nav-links li a:hover {
+  text-decoration: underline;
+}
+
+.container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding-top: 2rem;
+}
+
+.btn {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: #4588c0;
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  border-radius: 4px;
+}
+
+.desc {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.image-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 100%;
+  padding: 2rem 0;
+  gap: 1rem;
+}
+
+.thumbnail {
+  max-width: 100%;
+  border-radius: 6px;
+  border: 1px solid #aaa;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
