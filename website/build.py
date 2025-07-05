@@ -127,7 +127,7 @@ def main():
   print(f"✅ HTML generated: {index_html.resolve()}")
   
   ### GENERATE RTF Release Notes
-  convert_md_to_rtf("releasenotes.md", "dist/releasenotes.rtf")
+  convert_md_to_rtf("releasenotes.md", "../EQLogParser/data/releasenotes.rtf")
         
 if __name__ == "__main__":
   main()
