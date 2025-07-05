@@ -2,6 +2,7 @@ from pathlib import Path
 from bs4 import Tag
 from bs4 import BeautifulSoup
 import markdown
+import pypandoc  # needs exe installed
 import re
 
 header = f"""<nav class="topbar">
@@ -10,6 +11,7 @@ header = f"""<nav class="topbar">
     <li><a href="index.html">EQLogParser v2.3.0</a></li>
   </ul>
   <ul class="nav-links">
+    <li><a href="releasenotes.html">Release Notes</a></li>
     <li><a href="documentation.html">Docs</a></li>
     <li><a target="_blank" href="https://github.com/kauffman12/EQLogParser/discussions">Discussion</a></li>
     <li><a target="_blank" href="https://github.com/kauffman12/EQLogParser/issues">Issues</a></li>
@@ -25,7 +27,7 @@ def slugify(text):
   # Create a URL-safe ID from the header text
   return re.sub(r'\W+', '-', text.strip().lower()).strip('-')    
 
-def wrap_docs_html(toc_items: str, content: str) -> str:
+def wrap_docs_html(toc_title: str, toc_items: str, content: str) -> str:
   """Wraps the HTML content with the required full HTML structure and CSS."""
   return f"""<!DOCTYPE html>
 <html lang="en">
@@ -40,7 +42,7 @@ def wrap_docs_html(toc_items: str, content: str) -> str:
 <body>
   {header}
   <nav class="toc">
-    <h1>Contents</h1>
+    <h1>{toc_title}</h1>
     <ul>
       {toc_items}
     </ul>
@@ -53,13 +55,43 @@ def wrap_docs_html(toc_items: str, content: str) -> str:
 </body>
 </html>"""
 
-def main():
-  ### GENERATE DOCS
-  input_md = Path("documentation.md")
-  docs_html = Path("documentation.html")
+def convert_md_to_rtf(md_file, rtf_file):
+  output = pypandoc.convert_file(
+    md_file,
+    to='rtf',
+    format='md',
+    outputfile=rtf_file,
+    extra_args=['-s', '-V', 'mainfont=Segoe UI', '-V', 'fontsize=10pt']
+  )
+  print(f"Converted {md_file} → {rtf_file}")
 
-  md_text = input_md.read_text(encoding="utf-8")
-  html_content = convert_markdown_to_html(md_text)
+def main():
+  ### GENERATE RELEASE NOTES
+  notes_md = Path("releasenotes.md")
+  notes_html = Path("dist/releasenotes.html")
+  
+  notes_text = notes_md.read_text(encoding="utf-8")
+  html_content = convert_markdown_to_html(notes_text)
+  soup = BeautifulSoup(html_content, "html.parser")
+  toc_items = ''
+  
+  # add anchors to headings
+  for h1 in soup.find_all("h1"):
+    header_text = h1.get_text()
+    anchor_id = slugify(header_text)
+    h1['id'] = anchor_id
+    toc_items += f'<li><a href="#{anchor_id}">{header_text}</a></li>'
+    
+  final_html = wrap_docs_html('Versions', toc_items, str(soup))
+  notes_html.write_text(final_html, encoding="utf-8")
+  print(f"✅ HTML generated: {notes_html.resolve()}")    
+  
+  ### GENERATE DOCS
+  docs_md = Path("documentation.md")
+  docs_html = Path("dist/documentation.html")
+
+  docs_text = docs_md.read_text(encoding="utf-8")
+  html_content = convert_markdown_to_html(docs_text)
   soup = BeautifulSoup(html_content, "html.parser")
   toc_items = ''
     
@@ -75,14 +107,14 @@ def main():
     var_span.string = h2.text
     h2.clear()
     h2.append(var_span)
-  final_html = wrap_docs_html(toc_items, str(soup))
-
+  
+  final_html = wrap_docs_html('Contents', toc_items, str(soup))
   docs_html.write_text(final_html, encoding="utf-8")
   print(f"✅ HTML generated: {docs_html.resolve()}")
   
   ### GENERATE INDEX
   index_tmpl = Path("index.tmpl")
-  index_html = Path("index.html")
+  index_html = Path("dist/index.html")
   
   index_text = index_tmpl.read_text(encoding="utf-8")
   soup = BeautifulSoup(index_text, "html.parser")
@@ -93,6 +125,9 @@ def main():
       
   index_html.write_text(str(soup), encoding="utf-8")
   print(f"✅ HTML generated: {index_html.resolve()}")
+  
+  ### GENERATE RTF Release Notes
+  convert_md_to_rtf("releasenotes.md", "dist/releasenotes.rtf")
         
 if __name__ == "__main__":
   main()
