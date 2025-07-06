@@ -22,6 +22,11 @@ namespace EQLogParser
       classImage.Visibility = showClassIcon ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    internal void SetShowDamagePercent(bool show)
+    {
+      percent.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     internal void SetMiniBars(bool miniBars)
     {
       if (miniBars)
@@ -29,8 +34,9 @@ namespace EQLogParser
         progress.Margin = new Thickness(0, 16, 0, 0);
         classImage.Margin = new Thickness(0, 0, 0, 4);
         player.Margin = new Thickness(4, 1, 0, 2);
+        percent.Margin = new Thickness(0, 1, -13, 2);
         damage.Margin = new Thickness(0, 1, -12, 2);
-        dps.Margin = new Thickness(0, 1, -2, 2);
+        dps.Margin = new Thickness(0, 1, -6, 2);
         time.Margin = new Thickness(0, 1, 2, 2);
       }
       else
@@ -38,13 +44,14 @@ namespace EQLogParser
         progress.Margin = new Thickness(0, 0, 0, 0);
         classImage.Margin = new Thickness(0, 2, 0, 4);
         player.Margin = new Thickness(4, 0, 0, 1);
+        percent.Margin = new Thickness(0, 0, -13, 1);
         damage.Margin = new Thickness(0, 0, -12, 1);
-        dps.Margin = new Thickness(0, 0, -2, 1);
+        dps.Margin = new Thickness(0, 0, -6, 1);
         time.Margin = new Thickness(0, 0, 2, 1);
       }
     }
 
-    internal void Update(string origName, string playerName, string damageValue, string dpsValue,
+    internal void Update(string origName, string playerName, string percentValue, string damageValue, string dpsValue,
       string timeValue, double barPercent, string colorOverride = null)
     {
       if (colorOverride != null && _lastColor != colorOverride)
@@ -67,6 +74,7 @@ namespace EQLogParser
       player.Text = playerName;
       damage.Text = damageValue;
       dps.Text = dpsValue;
+      percent.Text = percentValue;
       time.Text = timeValue;
       progress.Progress = barPercent;
     }

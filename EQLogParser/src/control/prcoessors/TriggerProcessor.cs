@@ -407,16 +407,15 @@ namespace EQLogParser
 
             if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
             {
-              if (!isSound)
-              {
-                tts = ProcessTts(tts, lineData.Action, earlyMatches, timerData.PreviousMatches, timerData.OriginalMatches);
-              }
-
               _speakCollection.Add(new Speak
               {
                 Wrapper = wrapper,
                 TtsOrSound = tts,
                 IsSound = isSound,
+                Matches = earlyMatches,
+                Previous = timerData.PreviousMatches,
+                Original = timerData.OriginalMatches,
+                Action = lineData.Action
               });
             }
 
@@ -500,32 +499,18 @@ namespace EQLogParser
       var tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.SoundToPlay, wrapper.ModifiedSpeak, out var isSound);
       if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
       {
-        if (!isSound)
-        {
-          tts = ProcessTts(tts, lineData.Action, matches, previousMatches, null);
-        }
-
-        if (wrapper.HasRepeatedSpeak)
-        {
-          var repeatedCount = UpdateRepeatedTimes(_repeatedSpeakTimes, wrapper, tts, beginTicks);
-          tts = tts.Replace(RepeatedCode, repeatedCount.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
-        }
-
-        if (wrapper.HasCounterSpeak)
-        {
-          tts = tts.Replace(CounterCode, counterCount.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
-        }
-
-        if (wrapper.HasLogTimeSpeak)
-        {
-          tts = tts.Replace(LogTimeCode, DateUtil.FormatSimpleHms(lineData.BeginTime), StringComparison.OrdinalIgnoreCase);
-        }
-
         _speakCollection.Add(new Speak
         {
+          IsPrimary = true,
           Wrapper = wrapper,
           TtsOrSound = tts,
           IsSound = isSound,
+          Matches = matches,
+          Previous = previousMatches,
+          Action = lineData.Action,
+          CounterCount = counterCount,
+          BeginTicks = beginTicks,
+          BeginTime = lineData.BeginTime
         });
       }
 
@@ -649,16 +634,14 @@ namespace EQLogParser
             var tts = TriggerUtil.GetFromDecodedSoundOrText(trigger.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out var isSound);
             if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
             {
-              if (!isSound)
-              {
-                tts = ProcessTts(tts, lineData.Action, matches, previousMatches, null);
-              }
-
               _speakCollection.Add(new Speak
               {
                 Wrapper = wrapper,
                 TtsOrSound = tts,
                 IsSound = isSound,
+                Matches = matches,
+                Previous = previousMatches,
+                Action = lineData.Action,
               });
             }
 
@@ -775,16 +758,15 @@ namespace EQLogParser
           var tts = TriggerUtil.GetFromDecodedSoundOrText(trigger.EndSoundToPlay, wrapper.ModifiedEndSpeak, out var isSound);
           if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
           {
-            if (!isSound)
-            {
-              tts = ProcessTts(tts, lineData.Action, matches, data2.PreviousMatches, data2.OriginalMatches);
-            }
-
             _speakCollection.Add(new Speak
             {
               Wrapper = wrapper,
               TtsOrSound = tts,
               IsSound = isSound,
+              Matches = matches,
+              Previous = data2.PreviousMatches,
+              Original = data2.OriginalMatches,
+              Action = lineData.Action
             });
           }
 
@@ -827,7 +809,27 @@ namespace EQLogParser
         else
         {
           var lexicon = _lexicon;
-          var tts = speak.TtsOrSound;
+          var tts = ProcessTts(speak.TtsOrSound, speak.Action, speak.Matches, speak.Previous, speak.Original);
+
+          if (speak.IsPrimary)
+          {
+            if (speak.Wrapper.HasRepeatedSpeak && speak.BeginTicks > 0)
+            {
+              var repeatedCount = UpdateRepeatedTimes(_repeatedSpeakTimes, speak.Wrapper, tts, speak.BeginTicks);
+              tts = tts.Replace(RepeatedCode, repeatedCount.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (speak.Wrapper.HasCounterSpeak && speak.CounterCount > 0)
+            {
+              tts = tts.Replace(CounterCode, speak.CounterCount.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (speak.Wrapper.HasLogTimeSpeak && speak.BeginTime > 0)
+            {
+              tts = tts.Replace(LogTimeCode, DateUtil.FormatSimpleHms(speak.BeginTime), StringComparison.OrdinalIgnoreCase);
+            }
+          }
+
           if (!string.IsNullOrEmpty(tts) && lexicon != null)
           {
             foreach (var item in CollectionsMarshal.AsSpan(lexicon))
@@ -1342,9 +1344,17 @@ namespace EQLogParser
 
     private class Speak
     {
+      public bool IsPrimary { get; init; }
       public TriggerWrapper Wrapper { get; init; }
       public string TtsOrSound { get; init; }
       public bool IsSound { get; init; }
+      public string Action { get; init; }
+      public MatchCollection Matches { get; init; }
+      public MatchCollection Previous { get; init; }
+      public MatchCollection Original { get; init; }
+      public long CounterCount { get; init; }
+      public double BeginTime { get; init; }
+      public long BeginTicks { get; init; }
     }
 
     private class RepeatedData

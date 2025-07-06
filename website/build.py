@@ -31,7 +31,7 @@ def wrap_docs_html(header: str, toc_title: str, toc_items: str, content: str) ->
   <title>EQLogParser</title>
   <meta name="description" content="EQLogParser is is a real-time combat analyzer and damage parsing application built specifically for the EverQuest MMO. It monitors and processes in-game log files to provide detailed statistics as well as various utility functions">
   <meta name="robots" content="index, follow">
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=2" />
 </head>
 <body>
   {header}

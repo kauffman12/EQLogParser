@@ -37,6 +37,7 @@
         <StackPanel Orientation="Vertical">
           <StackPanel x:Name="controlPanel" Orientation="Vertical" Height="25" Visibility="Collapsed">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+              <TextBlock x:Name="titlePercent" Text="" FontFamily="Tahoma" FontSize="14" Foreground="White" />
               <TextBlock x:Name="titleDamage" Text="Damage" FontFamily="Tahoma" FontSize="14" Foreground="White" />
               <TextBlock x:Name="titleDPS" Text="DPS" FontFamily="Tahoma" FontSize="14" Foreground="White" />
               <TextBlock x:Name="titleTime" Text="Sec" FontFamily="Tahoma" FontSize="14" Foreground="White" />
@@ -116,9 +117,12 @@
 
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-          <CheckBox x:Name="miniBars" Content="Thin" Height="{DynamicResource EQTabHeaderHeight}" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Template="{StaticResource CustomDamageMeterCheckBoxTemplate}" ToolTip="Use thin Ranking Bars" Checked="MiniBarsChecked" Unchecked="MiniBarsChecked" />
-          <CheckBox x:Name="hideOthers" Content="Hide Others" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Template="{StaticResource CustomDamageMeterCheckBoxTemplate}" ToolTip="Hide the names of other Players." Checked="HideOthersChecked" Unchecked="HideOthersChecked" />
-          <CheckBox x:Name="streamer" Content="Streamer" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Template="{StaticResource CustomDamageMeterCheckBoxTemplate}" ToolTip="Streamer Mode. Allow DPS Meter to show up as its own Window to make it available in OBS." Checked="StreamerChecked" Unchecked="StreamerChecked" />
+          <CheckBox x:Name="miniBars" Content="Thin Bars" Height="{DynamicResource EQTabHeaderHeight}" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Template="{StaticResource CustomDamageMeterCheckBoxTemplate}" ToolTip="Use thin Ranking Bars" Checked="MiniBarsChecked" Unchecked="MiniBarsChecked" />
+          <CheckBox x:Name="hideOthers" Content="Hide Other Players" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Template="{StaticResource CustomDamageMeterCheckBoxTemplate}" ToolTip="Hide the names of other Players." Checked="HideOthersChecked" Unchecked="HideOthersChecked" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <CheckBox x:Name="showDamagePercent" Content="Show % Damage" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Template="{StaticResource CustomDamageMeterCheckBoxTemplate}" ToolTip="Show % of Damage done per Player." Checked="ShowPercentChecked" Unchecked="ShowPercentChecked" />
+          <CheckBox x:Name="streamer" Content="Streamer Mode" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Template="{StaticResource CustomDamageMeterCheckBoxTemplate}" ToolTip="Streamer Mode. Allow DPS Meter to show up as its own Window to make it available in OBS." Checked="StreamerChecked" Unchecked="StreamerChecked" />
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
           <Button x:Name="saveButton" Margin="2,4,0,0" Height="{DynamicResource EQTabHeaderHeight}" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Padding="4,2,4,2" VerticalAlignment="Top" IsEnabled="False" HorizontalAlignment="Left" Click="SaveClick">Save</Button>

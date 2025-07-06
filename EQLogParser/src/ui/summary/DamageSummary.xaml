@@ -199,6 +199,8 @@
         <syncfusion:TreeGridNumericColumn MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Hit" />
         <syncfusion:TreeGridNumericColumn MappingName="AvgCrit" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Crit" />
         <syncfusion:TreeGridNumericColumn MappingName="AvgLucky" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Lucky" />
+        <syncfusion:TreeGridTextColumn MappingName="MeleeAccRate" DisplayBinding="{Binding Path=MeleeAccRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeAccRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Acc" />
+        <syncfusion:TreeGridTextColumn MappingName="MeleeHitRate" DisplayBinding="{Binding Path=MeleeHitRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeHitRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Hit" />
         <syncfusion:TreeGridTextColumn MappingName="CritRate" DisplayBinding="{Binding Path=CritRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Crit" />
         <syncfusion:TreeGridTextColumn MappingName="LuckRate" DisplayBinding="{Binding Path=LuckRate, Converter={StaticResource ZeroConverter}}" TextAlignment="Right" HeaderText="% Lucky" />
         <syncfusion:TreeGridTextColumn MappingName="Special" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSpecialTemplateToolTip}" TextAlignment="Left" HeaderText="Special" />

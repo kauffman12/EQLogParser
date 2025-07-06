@@ -1,3 +1,10 @@
+# 2.3.1
+
+1. Perfomance improvements that should help with high usage of TTS.
+2. Added **% Acc** and **% Hit** to the Damage Summary
+3. Added **Show Damage Percent** to the Damage Meter. It's just the percent of damage the player has done compared to the total. Where it displays may change.
+4. Testing new build/release process.
+
 # 2.3.0
 
 1. Started 2.3.x and updated branding. New official site: **http://eqlogparser.kizant.net**
