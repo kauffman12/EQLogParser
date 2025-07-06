@@ -85,6 +85,8 @@ namespace EQLogParser
 
       InitializeComponent();
 
+      ConfigUtil.UpdateStatus($"RenderMode: {RenderOptions.ProcessRenderMode}");
+
       // set main / themes
       MainActions.SetMainWindow(this);
 
@@ -297,6 +299,12 @@ namespace EQLogParser
 
         // start save timer
         _saveTimer.Start();
+
+        // update status
+        if (WindowState == WindowState.Minimized)
+        {
+          ConfigUtil.UpdateStatus("Starting Minimized");
+        }
 
         await Task.Delay(100);
 
