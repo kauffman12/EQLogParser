@@ -9,12 +9,14 @@
 {\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 4.\tx360\tab Changed {\b \{counter\}} to work like GINA version. {\b \{repeated\}} remains unchanged.\par}
 {\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 5.\tx360\tab Fixed {\b \{repeated\}} when used with Alternate Timer Name. It was incorrectly counting when variables were used.\par}
 {\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 6.\tx360\tab Added {\b \{logtime\}} that can be specified in Text to Display, Text to Speak, Text to Send, and Alt Timer Name fields. It will display the time from the log that caused the trigger to fire in the hh:mm:ss format.\par}
-{\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 7.\tx360\tab Added Overlay {\b Font Weight} for Overlays to specify bold, thin, etc.\par}
-{\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 8.\tx360\tab Added Overlay {\b Horizontal Alignment} for Overlays but it only does anything for Text. Displays text to the Left, Center, or Right side.\par}
-{\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 9.\tx360\tab Changed Overlay {\b Fade Delay} to allow values up to 99999 seconds.\par}
-{\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 10.\tx360\tab \{EQLP:STOP\} is no longer case sensitive.\par}
-{\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 11.\tx360\tab Added {\b Start with Window Minimized} to the Options menu.\par}
-{\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 12.\tx360\tab Fixed parsing bug related to npcs names that contain the word hit. (again)\sa180\par}
+{\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 7.\tx360\tab Added {\b Font Weight} for Overlays to specify bold, thin, etc.\par}
+{\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 8.\tx360\tab Added {\b Horizontal Alignment} to Text Overlays. Display text on the Left, Center, or Right.\par}
+{\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 9.\tx360\tab Added {\b Close Pattern} to Text Overlays to allow a pattern from the log to close and clear the window. It is very simple and does not support any special variables like trigger patterns.\par}
+{\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 10.\tx360\tab Changed {\b Fade Delay} to Text Overlays to allow values up to 99999 seconds.\par}
+{\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 11.\tx360\tab Updated {\b Close Overlays} button to also clear Text Overlays.\par}
+{\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 12.\tx360\tab \{EQLP:STOP\} is no longer case sensitive.\par}
+{\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 13.\tx360\tab Added {\b Start with Window Minimized} to the Options menu.\par}
+{\pard \ql \f0 \fs20 \sa0 \li720 \fi-360 14.\tx360\tab Fixed parsing bug related to npcs names that contain the word hit. (again)\sa180\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs24 2.2.x\par}
 {\pard \ql \f0 \fs20 \sa180 \li720 \fi-360 \bullet \tx360\tab {\b Summary and Timelines.} Added a way to manually assign classes. In addition, if a persona change is seen in the log it will attempt to assign the class to the new persona. Timelines now support drag and drop, zooming with Control+ and mouse wheel. Export formats are also now consistent pretty much everywhere.\par}
 {\pard \ql \f0 \fs20 \sa180 \li720 \fi-360 \bullet \tx360\tab {\b Trigger Manager.} Overlays were re-worked to improve rendering performance and fix some bugs related to timers getting stuck. Many new trigger settings were added including timer icons, font color and active color overrides per trigger or per character, custom volume, matching against previous lines, and discord web hooks are now supported. Continued to improve support for importing from GINA. Implemented {\b Quick Share} for Overlays and {\b Trusted Player} list so that things can be auto-merged. Advanced mode now has a status to show if a log is active or missing. Implemented a search function so that you can find triggers based on the trigger name or pattern. Included support for mp3 files and older voices using the windows SAPI implementation may now be used.\par}

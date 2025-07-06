@@ -173,6 +173,15 @@ namespace EQLogParser
 
     private void TaskSchedulerUnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs ex)
     {
+      if (ex.Exception.InnerException is Exception { } inner)
+      {
+        if (inner.StackTrace?.Contains("EditControl") == true && inner.Message?.StartsWith("Index", StringComparison.OrdinalIgnoreCase) == true)
+        {
+          // Ignore EditControl index out of range exceptions
+          return;
+        }
+      }
+
       Log.Error($"TaskSchedulerUnobservedTaskException: {ex.Exception.Message}");
       LogDetails(ex.Exception);
       ex.SetObserved();

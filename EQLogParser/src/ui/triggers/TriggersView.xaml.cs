@@ -20,6 +20,7 @@ namespace EQLogParser
   {
     private readonly Dictionary<string, Window> _previewWindows = [];
     private TriggerConfig _theConfig;
+    private readonly PatternEditor _closePatternEditor;
     private readonly PatternEditor _patternEditor;
     private readonly PatternEditor _previousPatternEditor;
     private readonly PatternEditor _endEarlyPatternEditor;
@@ -79,6 +80,7 @@ namespace EQLogParser
       _heightEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Height");
       _leftEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Left");
       _widthEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Width");
+      _closePatternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "ClosePattern");
       _patternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "Pattern");
       _previousPatternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "PreviousPattern");
       _endEarlyPatternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "EndEarlyPattern");
@@ -550,6 +552,8 @@ namespace EQLogParser
         var textChange = true;
         var original = textOverlay.Node.OverlayData;
 
+        var isValid = TriggerUtil.TestRegexProperty(textOverlay.UseCloseRegex, textOverlay.ClosePattern, _closePatternEditor);
+
         if (args.Property.Name == overlayBrushItem.PropertyName)
         {
           textChange = textOverlay.OverlayBrush.Color.ToHexString() != original.OverlayColor;
@@ -576,12 +580,12 @@ namespace EQLogParser
           textChange = textOverlay.FontWeight != original.FontWeight;
           Application.Current.Resources["TextOverlayFontWeight-" + textOverlay.Node.Id] = UiElementUtil.GetFontWeightByName(textOverlay.FontWeight);
         }
-        else if (args.Property.Name == horizontalAlignment.PropertyName)
+        else if (args.Property.Name == horizontalAlignmentItem.PropertyName)
         {
           textChange = textOverlay.HorizontalAlignment != original.HorizontalAlignment;
           Application.Current.Resources["OverlayHorizontalAlignment-" + textOverlay.Node.Id] = (HorizontalAlignment)textOverlay.HorizontalAlignment;
         }
-        else if (args.Property.Name == verticalAlignment.PropertyName)
+        else if (args.Property.Name == verticalAlignmentItem.PropertyName)
         {
           textChange = textOverlay.VerticalAlignment != original.VerticalAlignment;
           Application.Current.Resources["OverlayVerticalAlignment-" + textOverlay.Node.Id] = (VerticalAlignment)textOverlay.VerticalAlignment;
@@ -589,7 +593,7 @@ namespace EQLogParser
 
         if (textChange)
         {
-          saveButton.IsEnabled = true;
+          saveButton.IsEnabled = isValid;
           cancelButton.IsEnabled = true;
         }
       }
@@ -659,13 +663,13 @@ namespace EQLogParser
           PropertyGridUtil.EnableCategories(thePropertyGrid,
             [new { Name = idleBrushItem.CategoryName, IsEnabled = (int)args.Property.Value == 1 }]);
         }
-        else if (args.Property.Name == horizontalAlignment.PropertyName)
+        else if (args.Property.Name == horizontalAlignmentItem.PropertyName)
         {
           // NOTE: not currently implement for Timers
           timerChange = timerOverlay.HorizontalAlignment != original.HorizontalAlignment;
           Application.Current.Resources["OverlayHorizontalAlignment-" + timerOverlay.Node.Id] = (HorizontalAlignment)timerOverlay.HorizontalAlignment;
         }
-        else if (args.Property.Name == verticalAlignment.PropertyName)
+        else if (args.Property.Name == verticalAlignmentItem.PropertyName)
         {
           timerChange = timerOverlay.VerticalAlignment != original.VerticalAlignment;
           Application.Current.Resources["OverlayVerticalAlignment-" + timerOverlay.Node.Id] = (VerticalAlignment)timerOverlay.VerticalAlignment;

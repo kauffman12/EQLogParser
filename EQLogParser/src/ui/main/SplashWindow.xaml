@@ -11,6 +11,7 @@
         BorderThickness="0"
         ShowInTaskbar="False"
         WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="True"
         ResizeMode="NoResize"
         Title="SplashWindow" Height="210" Width="400"
         Closing="SplashWindowOnClosing">

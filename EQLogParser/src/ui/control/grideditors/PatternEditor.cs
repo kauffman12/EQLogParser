@@ -41,6 +41,7 @@ namespace EQLogParser
         "PreviousPattern" => "PreviousUseRegex",
         "EndEarlyPattern" => "EndUseRegex",
         "EndEarlyPattern2" => "EndUseRegex2",
+        "ClosePattern" => "UseCloseRegex",
         _ => null
       };
 

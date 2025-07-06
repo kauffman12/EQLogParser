@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace EQLogParser
@@ -23,11 +24,42 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, OverlayWindowData> _textWindows = [];
     private readonly ConcurrentDictionary<string, OverlayWindowData> _timerWindows = [];
     private readonly ConcurrentDictionary<string, TriggerNode> _defaultOverlays = [];
+    private readonly ConcurrentDictionary<string, RegexData> _closeRegex = [];
 
     private TriggerOverlayManager()
     {
       TriggerStateManager.Instance.DeleteEvent += TriggerOverlayDeleteEvent;
       TriggerStateManager.Instance.TriggerUpdateEvent += TriggerOverlayUpdateEvent;
+    }
+
+    internal void CheckLine(string action)
+    {
+      if (!_closeRegex.IsEmpty && !string.IsNullOrEmpty(action))
+      {
+        foreach (var data in _closeRegex.Values.ToArray())
+        {
+          var doClose = false;
+          if (data.UseRegex)
+          {
+            doClose = data.Regex?.IsMatch(action) == true;
+          }
+          else if (!string.IsNullOrEmpty(data.ClosePattern))
+          {
+            doClose = action.Contains(data.ClosePattern, StringComparison.OrdinalIgnoreCase);
+          }
+
+          if (doClose)
+          {
+            _ = UiUtil.InvokeAsync(() =>
+            {
+              if (_textWindows.TryGetValue(data.Id, out var windowData) && windowData.TheWindow is TextOverlayWindow { } window)
+              {
+                window.Clear();
+              }
+            });
+          }
+        }
+      }
     }
 
     internal void HideOverlays()
@@ -38,7 +70,7 @@ namespace EQLogParser
         {
           if (value is OverlayWindowData windowData && windowData.TheWindow is TextOverlayWindow { } textWindow)
           {
-            textWindow.Visibility = System.Windows.Visibility.Collapsed;
+            textWindow.Clear();
           }
         }
 
@@ -84,7 +116,14 @@ namespace EQLogParser
             if (overlay == null)
             {
               RemoveWindow(overlayId);
+              _closeRegex.TryRemove(overlayId, out _);
               continue;
+            }
+
+            // update text overlay regex
+            if (overlay.OverlayData.IsTextOverlay)
+            {
+              UpdateCloseRegex(overlayId, overlay.OverlayData);
             }
 
             if (overlay.OverlayData.IsTextOverlay && !_textWindows.ContainsKey(overlayId))
@@ -105,6 +144,11 @@ namespace EQLogParser
 
       var defaultTextOverlay = _defaultOverlays.GetValueOrDefault(TEXT_OVERLAY);
       var defaultTimerOverlay = _defaultOverlays.GetValueOrDefault(TIMER_OVERLAY);
+
+      if (defaultTextOverlay != null)
+      {
+        UpdateCloseRegex(defaultTextOverlay.Id, defaultTextOverlay.OverlayData);
+      }
 
       await UiUtil.InvokeAsync(() =>
       {
@@ -232,15 +276,15 @@ namespace EQLogParser
 
     private async Task UpdateDefaultOverlaysAsync()
     {
-      var defTextOverlay = await TriggerStateManager.Instance.GetDefaultTextOverlay();
-      var defTimerOverlay = await TriggerStateManager.Instance.GetDefaultTimerOverlay();
-      _defaultOverlays[TEXT_OVERLAY] = defTextOverlay;
-      _defaultOverlays[TIMER_OVERLAY] = defTimerOverlay;
+      var defaultTextOverlay = await TriggerStateManager.Instance.GetDefaultTextOverlay();
+      var defaultTimerOverlay = await TriggerStateManager.Instance.GetDefaultTimerOverlay();
+      _defaultOverlays[TEXT_OVERLAY] = defaultTextOverlay;
+      _defaultOverlays[TIMER_OVERLAY] = defaultTimerOverlay;
 
       await UiUtil.InvokeAsync(() =>
       {
-        AddWindow(_textWindows, defTextOverlay);
-        AddWindow(_timerWindows, defTimerOverlay);
+        AddWindow(_textWindows, defaultTextOverlay);
+        AddWindow(_timerWindows, defaultTimerOverlay);
       });
     }
 
@@ -274,6 +318,40 @@ namespace EQLogParser
         timerWindow.TheWindow.Close();
         timerWindow.TheWindow = null;
       }
+    }
+
+    private void UpdateCloseRegex(string id, Overlay overlay)
+    {
+      if (!string.IsNullOrEmpty(id) && overlay != null)
+      {
+        if (!_closeRegex.TryGetValue(id, out var data))
+        {
+          data = new RegexData();
+          _closeRegex[id] = data;
+        }
+
+        data.Id = id;
+        data.ClosePattern = overlay.ClosePattern;
+        data.UseRegex = overlay.UseCloseRegex;
+
+        if (overlay.UseCloseRegex)
+        {
+          data.Regex = new Regex(overlay.ClosePattern, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
+          data.Regex.Match(""); // warm up the regex
+        }
+        else
+        {
+          data.Regex = null;
+        }
+      }
+    }
+
+    private class RegexData
+    {
+      public string ClosePattern { get; set; }
+      public Regex Regex { get; set; }
+      public bool UseRegex { get; set; }
+      public string Id { get; set; }
     }
   }
 }

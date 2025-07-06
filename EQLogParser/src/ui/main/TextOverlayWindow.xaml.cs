@@ -100,6 +100,20 @@ namespace EQLogParser
       }
     }
 
+    internal void Clear()
+    {
+      for (var last = content.Children.Count - 1; last >= 0; last--)
+      {
+        if (content.Children[last] is TextBlock { Tag: double end } block)
+        {
+          content.Children.RemoveAt(last);
+          block.Visibility = Visibility.Collapsed;
+        }
+      }
+
+      content.Visibility = Visibility.Collapsed;
+    }
+
     private async Task StartRenderingAsync()
     {
       while (_isRendering)

@@ -147,6 +147,8 @@ namespace EQLogParser
     public long Width { get; set; } = 300;
     public long Top { get; set; } = 200;
     public long Left { get; set; } = 100;
+    public string ClosePattern { get; set; }
+    public bool UseCloseRegex { get; set; }
   }
 
   internal class LegacyOverlay : Overlay

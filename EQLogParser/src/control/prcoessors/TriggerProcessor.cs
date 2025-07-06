@@ -260,6 +260,9 @@ namespace EQLogParser
 
       _previous = lineData;
 
+      // check overlays that need to close
+      TriggerOverlayManager.Instance.CheckLine(lineData.Action);
+
       if (!_chatCollection.IsCompleted)
       {
         _chatCollection.Add(lineData);
