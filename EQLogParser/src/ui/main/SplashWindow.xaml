@@ -12,7 +12,7 @@
         ShowInTaskbar="False"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
-        Title="SplashWindow" Height="210" Width="384"
+        Title="SplashWindow" Height="210" Width="400"
         Closing="SplashWindowOnClosing">
     <Grid Margin="0">
       <Image Source="../../../icons/loading.png" Margin="0"/>

@@ -52,11 +52,19 @@ namespace EQLogParser
         // Read app settings
         ConfigUtil.Init();
 
-        // hardware acceleration setting
-        var hardwareAccel = ConfigUtil.GetSetting("HardwareAcceleration");
-        if (hardwareAccel == null)
+        var wineLoader = Environment.GetEnvironmentVariable("WINELOADER");
+        if (!string.IsNullOrEmpty(wineLoader))
         {
-          ConfigUtil.SetSetting("HardwareAcceleration", true);
+          ConfigUtil.SetSetting("HardwareAcceleration", false);
+        }
+        else
+        {
+          // hardware acceleration setting
+          var hardwareAccel = ConfigUtil.GetSetting("HardwareAcceleration");
+          if (hardwareAccel == null)
+          {
+            ConfigUtil.SetSetting("HardwareAcceleration", true);
+          }
         }
 
         RenderOptions.ProcessRenderMode = ConfigUtil.IfSet("HardwareAcceleration") ? RenderMode.Default : RenderMode.SoftwareOnly;

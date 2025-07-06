@@ -222,6 +222,8 @@ namespace EQLogParser
 
       testBlock.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + _node.Id);
       testBlock.SetResourceReference(TextBlock.FontFamilyProperty, "TextOverlayFontFamily-" + _node.Id);
+      testBlock.SetResourceReference(TextBlock.FontWeightProperty, "TextOverlayFontWeight-" + _node.Id);
+      testBlock.SetResourceReference(TextBlock.HorizontalAlignmentProperty, "OverlayHorizontalAlignment-" + _node.Id);
       var blockSize = UiElementUtil.CalculateTextBoxHeight(testBlock.FontFamily, testBlock.FontSize, testBlock.Padding, new Thickness());
 
       // create cache of blocks needed to cover Overlay height
@@ -242,6 +244,8 @@ namespace EQLogParser
 
         block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + _node.Id);
         block.SetResourceReference(TextBlock.FontFamilyProperty, "TextOverlayFontFamily-" + _node.Id);
+        block.SetResourceReference(TextBlock.FontWeightProperty, "TextOverlayFontWeight-" + _node.Id);
+        block.SetResourceReference(TextBlock.HorizontalAlignmentProperty, "OverlayHorizontalAlignment-" + _node.Id);
         return block;
       }).ToList();
     }

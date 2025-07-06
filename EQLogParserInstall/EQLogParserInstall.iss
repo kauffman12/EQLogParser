@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "EQLogParser"
-#define MyAppVersion "2.2.86"
+#define MyAppVersion "2.3.0"
 #define MyAppPublisher "Kizant"
 #define MyAppURL "https://github.com/kauffman12/EQLogParser"
 #define MyAppExeName "EQLogParser.exe"
@@ -106,6 +106,11 @@ Source: "{#BackupUtilDir}\BackupUtil.deps.json"; DestDir: "{app}"; Flags: ignore
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+
+[InstallDelete]
+Type: files; Name: "{app}\data\releasenotes.pdf"
+Type: files; Name: "{app}\data\triggerVariables.pdf"
+Type: files; Name: "{app}\data\triggerVariables.rtf"
 
 [Code]
 // Delete old logs

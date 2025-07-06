@@ -1,35 +1,29 @@
 from pathlib import Path
-from bs4 import Tag
 from bs4 import BeautifulSoup
 import markdown
-import pypandoc  # needs exe installed
+import pypandoc  # Requires Pandoc installed
 import re
 
-header = f"""<nav class="topbar">
-<div class="nav-container">
-  <ul class="nav-links">
-    <li><a href="index.html">EQLogParser v2.3.0</a></li>
-  </ul>
-  <ul class="nav-links">
-    <li><a href="releasenotes.html">Release Notes</a></li>
-    <li><a href="documentation.html">Docs</a></li>
-    <li><a target="_blank" href="https://github.com/kauffman12/EQLogParser/discussions">Discussion</a></li>
-    <li><a target="_blank" href="https://github.com/kauffman12/EQLogParser/issues">Issues</a></li>
-  </ul>
-</div>
-</nav>"""
+# Constants
+INNO_FILE = Path('../EQLogParserInstall/EQLogParserInstall.iss')
+DIST_DIR = Path('dist')
+RTF_OUT = Path('../EQLogParser/data/releasenotes.rtf')
+
+def get_version_from_inno(file_path: Path) -> str:
+    content = file_path.read_text(encoding='utf-8')
+    match = re.search(r'#define\s+MyAppVersion\s+"([^"]+)"', content)
+    if not match:
+        raise ValueError("Version not found in Inno Setup file.")
+    return match.group(1)
+
+def slugify(text: str) -> str:
+    return re.sub(r'\W+', '-', text.strip().lower()).strip('-')
 
 def convert_markdown_to_html(md_text: str) -> str:
-  """Converts markdown text to HTML body content."""
-  return markdown.markdown(md_text, extensions=["extra"])
-    
-def slugify(text):
-  # Create a URL-safe ID from the header text
-  return re.sub(r'\W+', '-', text.strip().lower()).strip('-')    
+    return markdown.markdown(md_text, extensions=["extra"])
 
-def wrap_docs_html(toc_title: str, toc_items: str, content: str) -> str:
-  """Wraps the HTML content with the required full HTML structure and CSS."""
-  return f"""<!DOCTYPE html>
+def wrap_docs_html(header: str, toc_title: str, toc_items: str, content: str) -> str:
+    return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -43,91 +37,101 @@ def wrap_docs_html(toc_title: str, toc_items: str, content: str) -> str:
   {header}
   <nav class="toc">
     <h1>{toc_title}</h1>
-    <ul>
-      {toc_items}
-    </ul>
+    <ul>{toc_items}</ul>
   </nav>
   <main class="docs-container">
-    <section>
-      {content}
-    </section>
+    <section>{content}</section>
   </main>
 </body>
 </html>"""
 
-def convert_md_to_rtf(md_file, rtf_file):
-  output = pypandoc.convert_file(
-    md_file,
-    to='rtf',
-    format='md',
-    outputfile=rtf_file,
-    extra_args=['-s', '-V', 'mainfont=Segoe UI', '-V', 'fontsize=10pt']
-  )
-  print(f"Converted {md_file} → {rtf_file}")
+def build_nav_header(version: str) -> str:
+    return f"""<nav class="topbar">
+<div class="nav-container">
+<ul class="nav-links">
+  <li><a href="index.html">EQLogParser v{version}</a></li>
+</ul>
+<ul class="nav-links">
+  <li><a href="releasenotes.html">Release Notes</a></li>
+  <li><a href="documentation.html">Docs</a></li>
+  <li><a target="_blank" href="https://github.com/kauffman12/EQLogParser/discussions">Discussion</a></li>
+  <li><a target="_blank" href="https://github.com/kauffman12/EQLogParser/issues">Issues</a></li>
+</ul>
+</div>
+</nav>"""
+
+def process_markdown_to_html(input_path: Path, output_path: Path, toc_title: str, header: str, decorate_h2=False):
+    md_text = input_path.read_text(encoding='utf-8')
+    html_body = convert_markdown_to_html(md_text)
+    soup = BeautifulSoup(html_body, 'html.parser')
+
+    toc_items = ''
+    for h1 in soup.find_all('h1'):
+        anchor_id = slugify(h1.get_text())
+        h1['id'] = anchor_id
+        toc_items += f'<li><a href="#{anchor_id}">{h1.get_text()}</a></li>'
+
+    if decorate_h2:
+        for h2 in soup.find_all('h2'):
+            span = soup.new_tag('span', attrs={"class": 'var'})
+            span.string = h2.text
+            h2.clear()
+            h2.append(span)
+
+    final_html = wrap_docs_html(header, toc_title, toc_items, str(soup))
+    output_path.write_text(final_html, encoding='utf-8')
+    print(f'✅ HTML generated: {output_path.resolve()}')
+
+def convert_md_to_rtf(md_file: Path, rtf_file: Path):
+    pypandoc.convert_file(md_file, to='rtf', format='md', outputfile=str(rtf_file), extra_args=['-s'])
+    print(f"✅ RTF generated: {rtf_file.resolve()}")
+
+def patch_rtf_in_place(file_path: Path):
+    new_header = r'{\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Segoe UI;}{\f1\fnil Segoe UI;}}'
+    lines = file_path.read_text(encoding='cp1252').splitlines()
+
+    modified = []
+    for i, line in enumerate(lines):
+        if i == 0:
+            modified.append(new_header)
+            continue
+        if r'\fs36' in line:
+            line = line.replace(r'\fs36', r'\fs24')
+        elif r'\f0' in line and not re.search(r'\\fs\d+', line):
+            line = line.replace(r'\f0', r'\f0 \fs20', 1)
+            line = line.replace(r'\li720', r'\li1080', 1)
+            line = line.replace(r'\li360', r'\li720', 1)
+        modified.append(line)
+
+    file_path.write_text('\n'.join(modified), encoding='cp1252')
+    print(f"✅ RTF patched: {file_path.resolve()}")
+
+def update_index_html(index_path: Path, output_path: Path, header_html: str, url: str):
+    soup = BeautifulSoup(index_path.read_text(encoding='utf-8'), 'html.parser')
+    nav_bar = soup.find('nav', id='nav-bar')
+    if nav_bar:
+        nav_bar.clear()
+        nav_bar.append(BeautifulSoup(header_html, 'html.parser'))
+    download_link = soup.find('a', id='download-link')
+    if download_link:
+        download_link['href'] = url
+    output_path.write_text(str(soup), encoding='utf-8')
+    print(f"✅ HTML updated: {output_path.resolve()}")
 
 def main():
-  ### GENERATE RELEASE NOTES
-  notes_md = Path("releasenotes.md")
-  notes_html = Path("dist/releasenotes.html")
-  
-  notes_text = notes_md.read_text(encoding="utf-8")
-  html_content = convert_markdown_to_html(notes_text)
-  soup = BeautifulSoup(html_content, "html.parser")
-  toc_items = ''
-  
-  # add anchors to headings
-  for h1 in soup.find_all("h1"):
-    header_text = h1.get_text()
-    anchor_id = slugify(header_text)
-    h1['id'] = anchor_id
-    toc_items += f'<li><a href="#{anchor_id}">{header_text}</a></li>'
-    
-  final_html = wrap_docs_html('Versions', toc_items, str(soup))
-  notes_html.write_text(final_html, encoding="utf-8")
-  print(f"✅ HTML generated: {notes_html.resolve()}")    
-  
-  ### GENERATE DOCS
-  docs_md = Path("documentation.md")
-  docs_html = Path("dist/documentation.html")
+    version = get_version_from_inno(INNO_FILE)
+    header_html = build_nav_header(version)
+    url = f'https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-install-{version}.exe'
 
-  docs_text = docs_md.read_text(encoding="utf-8")
-  html_content = convert_markdown_to_html(docs_text)
-  soup = BeautifulSoup(html_content, "html.parser")
-  toc_items = ''
-    
-  # add anchors to headings
-  for h1 in soup.find_all("h1"):
-    header_text = h1.get_text()
-    anchor_id = slugify(header_text)
-    h1['id'] = anchor_id
-    toc_items += f'<li><a href="#{anchor_id}">{header_text}</a></li>'
+    DIST_DIR.mkdir(exist_ok=True)
 
-  for h2 in soup.find_all("h2"):
-    var_span = soup.new_tag("span", attrs={"class": "var"})
-    var_span.string = h2.text
-    h2.clear()
-    h2.append(var_span)
-  
-  final_html = wrap_docs_html('Contents', toc_items, str(soup))
-  docs_html.write_text(final_html, encoding="utf-8")
-  print(f"✅ HTML generated: {docs_html.resolve()}")
-  
-  ### GENERATE INDEX
-  index_tmpl = Path("index.tmpl")
-  index_html = Path("dist/index.html")
-  
-  index_text = index_tmpl.read_text(encoding="utf-8")
-  soup = BeautifulSoup(index_text, "html.parser")
-  nav_bar = soup.find("nav", id="nav-bar")
-  if nav_bar:
-    nav_bar.clear()
-    nav_bar.append(BeautifulSoup(header, "html.parser"))
-      
-  index_html.write_text(str(soup), encoding="utf-8")
-  print(f"✅ HTML generated: {index_html.resolve()}")
-  
-  ### GENERATE RTF Release Notes
-  convert_md_to_rtf("releasenotes.md", "../EQLogParser/data/releasenotes.rtf")
-        
+    process_markdown_to_html(Path('releasenotes.md'), DIST_DIR / 'releasenotes.html', 'Versions', header_html)
+    process_markdown_to_html(Path('documentation.md'), DIST_DIR / 'documentation.html', 'Contents', header_html, decorate_h2=True)
+
+    update_index_html(Path('index.tmpl'), DIST_DIR / 'index.html', header_html, url)
+
+    convert_md_to_rtf(Path('releasenotes.md'), RTF_OUT)
+    patch_rtf_in_place(RTF_OUT)
+
 if __name__ == "__main__":
-  main()
+    main()

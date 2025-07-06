@@ -758,12 +758,23 @@ namespace EQLogParser
 
     private static string GetDisplayName(TimerData timerData)
     {
+      var result = timerData.DisplayName;
       if (timerData.RepeatedCount > -1)
       {
-        return timerData.DisplayName.Replace("{repeated}", $"{timerData.RepeatedCount}", StringComparison.OrdinalIgnoreCase);
+        result = result.Replace(TriggerProcessor.RepeatedCode, $"{timerData.RepeatedCount}", StringComparison.OrdinalIgnoreCase);
       }
 
-      return timerData.DisplayName;
+      if (timerData.CounterCount > -1)
+      {
+        result = result.Replace(TriggerProcessor.CounterCode, $"{timerData.CounterCount}", StringComparison.OrdinalIgnoreCase);
+      }
+
+      if (!string.IsNullOrEmpty(timerData.LogTime))
+      {
+        result = result.Replace(TriggerProcessor.LogTimeCode, timerData.LogTime, StringComparison.OrdinalIgnoreCase);
+      }
+
+      return result;
     }
 
     private static void UpdateTimerBarState(TimerBar.State state, TimerData timerData, TimerBar timerBar)

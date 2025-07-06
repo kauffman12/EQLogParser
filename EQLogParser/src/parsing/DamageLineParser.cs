@@ -361,7 +361,12 @@ namespace EQLogParser
             default:
               if (slainIndex == -1 && i > 0 && i < stop && tryIndex == -1 && !foundType)
               {
-                if (HitMap.TryGetValue(split[i], out var sub))
+                if ((i + 3) < stop && split[i + 1] == "for" && split[i + 3] == "points")
+                {
+                  foundType = hitTypeIndex > -1;
+                  continue;
+                }
+                else if (HitMap.TryGetValue(split[i], out var sub))
                 {
                   hitTypeIndex = i;
                   subType = sub; // use plural

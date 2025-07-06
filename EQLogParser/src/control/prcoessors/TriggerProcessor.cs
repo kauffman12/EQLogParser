@@ -19,13 +19,19 @@ namespace EQLogParser
 {
   internal partial class TriggerProcessor : ILogProcessor
   {
+    public const string CounterCode = "{counter}";
+    public const string RepeatedCode = "{repeated}";
+    public const string LogTimeCode = "{logtime}";
+    public const string NullCode = "{null}";
     public readonly ObservableCollection<AlertEntry> AlertLog = [];
     public readonly string CurrentCharacterId;
     public readonly string CurrentProcessorName;
+
     private const long SixtyHours = 10 * 6 * 60 * 60 * 1000;
-    private readonly string _currentPlayer;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+    private readonly string _currentPlayer;
     private readonly object _collectionLock = new();
+    private readonly Dictionary<string, Dictionary<string, RepeatedData>> _counterTimes = [];
     private readonly Dictionary<string, Dictionary<string, RepeatedData>> _repeatedTextTimes = [];
     private readonly Dictionary<string, Dictionary<string, RepeatedData>> _repeatedTimerTimes = [];
     private readonly Dictionary<string, Dictionary<string, RepeatedData>> _repeatedSpeakTimes = [];
@@ -212,12 +218,9 @@ namespace EQLogParser
       });
     }
 
-    private static string ModLine(string text, string line) => !string.IsNullOrEmpty(text) ?
+    private static string ProcessLineCode(string text, string line) => !string.IsNullOrEmpty(text) ?
       text.Replace("{l}", line, StringComparison.OrdinalIgnoreCase) : text;
-    // replace GINA counted with repeated
-    private static string ModCounter(string text) => !string.IsNullOrEmpty(text) ?
-      text.Replace("{counter}", "{repeated}", StringComparison.OrdinalIgnoreCase) : text;
-    private string ModPlayer(string text) => !string.IsNullOrEmpty(text) ?
+    private string ProcessCharacterCode(string text) => !string.IsNullOrEmpty(text) ?
       text.Replace("{c}", _currentPlayer ?? string.Empty, StringComparison.OrdinalIgnoreCase) : text;
     private void LexiconUpdateEvent(List<LexiconItem> update) => _lexicon = update;
     private void TrustedPlayersUpdateEvent(List<TrustedPlayer> update) => _trustedPlayers = update;
@@ -399,17 +402,18 @@ namespace EQLogParser
             tts = string.IsNullOrEmpty(tts) ? TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound) : tts;
             var displayText = string.IsNullOrEmpty(wrapper.ModifiedEndEarlyDisplay) ? wrapper.ModifiedEndDisplay : wrapper.ModifiedEndEarlyDisplay;
 
-            if (!string.IsNullOrEmpty(tts) && !tts.Equals("{null}", StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
+            if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
             {
+              if (!isSound)
+              {
+                tts = ProcessTts(tts, lineData.Action, earlyMatches, timerData.PreviousMatches, timerData.OriginalMatches);
+              }
+
               _speakCollection.Add(new Speak
               {
                 Wrapper = wrapper,
                 TtsOrSound = tts,
                 IsSound = isSound,
-                Matches = earlyMatches,
-                OriginalMatches = timerData.OriginalMatches,
-                PreviousMatches = timerData.PreviousMatches,
-                Action = lineData.Action
               });
             }
 
@@ -467,28 +471,51 @@ namespace EQLogParser
         wrapper.TriggerData.LastTriggered = updatedTime;
       }
 
-      if (ProcessMatchesText(wrapper.ModifiedTimerName, matches) is { } displayName)
+      // GINA {counter} that is based on trigger firing regardless of whether the
+      // speak, text, or timer names are unique
+      var counterCount = -1L;
+      if (wrapper.HasCounterSpeak || wrapper.HasCounterText || wrapper.HasCounterTimer)
       {
-        displayName = ProcessMatchesText(displayName, previousMatches);
-        displayName = ModLine(displayName, lineData.Action);
+        counterCount = UpdateRepeatedTimes(_counterTimes, wrapper, "trigger-count", beginTicks);
+      }
+
+      if (ProcessMatchesText(wrapper.ModifiedTimerName, matches) is { } altTimerName)
+      {
+        altTimerName = ProcessMatchesText(altTimerName, previousMatches);
+        altTimerName = ProcessLineCode(altTimerName, lineData.Action);
         if (wrapper.HasRepeatedTimer)
         {
-          UpdateRepeatedTimes(_repeatedTimerTimes, wrapper, displayName, beginTicks);
+          UpdateRepeatedTimes(_repeatedTimerTimes, wrapper, altTimerName, beginTicks);
         }
 
         if (wrapper.TriggerData.TimerType > 0 && wrapper.TriggerData.DurationSeconds > 0)
         {
-          StartTimer(wrapper, displayName, beginTicks, lineData, matches, previousMatches, loopCount);
+          StartTimer(wrapper, altTimerName, beginTicks, lineData, matches, previousMatches, loopCount);
         }
       }
 
       var tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.SoundToPlay, wrapper.ModifiedSpeak, out var isSound);
-      if (!string.IsNullOrEmpty(tts) && !tts.Equals("{null}", StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
+      if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
       {
+        if (!isSound)
+        {
+          tts = ProcessTts(tts, lineData.Action, matches, previousMatches, null);
+        }
+
         if (wrapper.HasRepeatedSpeak)
         {
-          var currentCount = UpdateRepeatedTimes(_repeatedSpeakTimes, wrapper, tts, beginTicks);
-          tts = tts.Replace("{repeated}", currentCount.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
+          var repeatedCount = UpdateRepeatedTimes(_repeatedSpeakTimes, wrapper, tts, beginTicks);
+          tts = tts.Replace(RepeatedCode, repeatedCount.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (wrapper.HasCounterSpeak)
+        {
+          tts = tts.Replace(CounterCode, counterCount.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (wrapper.HasLogTimeSpeak)
+        {
+          tts = tts.Replace(LogTimeCode, DateUtil.FormatSimpleHms(lineData.BeginTime), StringComparison.OrdinalIgnoreCase);
         }
 
         _speakCollection.Add(new Speak
@@ -496,9 +523,6 @@ namespace EQLogParser
           Wrapper = wrapper,
           TtsOrSound = tts,
           IsSound = isSound,
-          Matches = matches,
-          PreviousMatches = previousMatches,
-          Action = lineData.Action
         });
       }
 
@@ -506,8 +530,18 @@ namespace EQLogParser
       {
         if (wrapper.HasRepeatedText)
         {
-          var currentCount = UpdateRepeatedTimes(_repeatedTextTimes, wrapper, updatedDisplayText, beginTicks);
-          updatedDisplayText = updatedDisplayText.Replace("{repeated}", currentCount.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
+          var repeatedCount = UpdateRepeatedTimes(_repeatedTextTimes, wrapper, updatedDisplayText, beginTicks);
+          updatedDisplayText = updatedDisplayText.Replace(RepeatedCode, repeatedCount.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (wrapper.HasCounterText)
+        {
+          updatedDisplayText = updatedDisplayText.Replace(CounterCode, counterCount.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (wrapper.HasLogTimeText)
+        {
+          updatedDisplayText = updatedDisplayText.Replace(LogTimeCode, DateUtil.FormatSimpleHms(lineData.BeginTime), StringComparison.OrdinalIgnoreCase);
         }
 
         TriggerOverlayManager.Instance.AddText(wrapper.TriggerData, updatedDisplayText, _fontColor);
@@ -528,6 +562,10 @@ namespace EQLogParser
         }
         else
         {
+          if (wrapper.HasLogTimeSendToChat)
+          {
+            updatedSendToChatText = updatedSendToChatText.Replace(LogTimeCode, DateUtil.FormatSimpleHms(lineData.BeginTime), StringComparison.OrdinalIgnoreCase);
+          }
           _ = MainActions.SendDiscordMessage(updatedSendToChatText, wrapper.TriggerData.ChatWebhook);
         }
       }
@@ -606,16 +644,18 @@ namespace EQLogParser
           if (proceed)
           {
             var tts = TriggerUtil.GetFromDecodedSoundOrText(trigger.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out var isSound);
-            if (!string.IsNullOrEmpty(tts) && !tts.Equals("{null}", StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
+            if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
             {
+              if (!isSound)
+              {
+                tts = ProcessTts(tts, lineData.Action, matches, previousMatches, null);
+              }
+
               _speakCollection.Add(new Speak
               {
                 Wrapper = wrapper,
                 TtsOrSound = tts,
                 IsSound = isSound,
-                Matches = matches,
-                PreviousMatches = previousMatches,
-                Action = lineData.Action
               });
             }
 
@@ -637,6 +677,16 @@ namespace EQLogParser
       if (wrapper.HasRepeatedTimer)
       {
         newTimerData.RepeatedCount = GetRepeatedCount(_repeatedTimerTimes, wrapper, displayName);
+      }
+
+      if (wrapper.HasCounterTimer)
+      {
+        newTimerData.CounterCount = GetRepeatedCount(_counterTimes, wrapper, "trigger-count");
+      }
+
+      if (wrapper.HasLogTimeTimer)
+      {
+        newTimerData.LogTime = DateUtil.FormatSimpleHms(lineData.BeginTime);
       }
 
       newTimerData.BeginTicks = beginTicks;
@@ -720,17 +770,18 @@ namespace EQLogParser
         if (proceed)
         {
           var tts = TriggerUtil.GetFromDecodedSoundOrText(trigger.EndSoundToPlay, wrapper.ModifiedEndSpeak, out var isSound);
-          if (!string.IsNullOrEmpty(tts) && !tts.Equals("{null}", StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
+          if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
           {
+            if (!isSound)
+            {
+              tts = ProcessTts(tts, lineData.Action, matches, data2.PreviousMatches, data2.OriginalMatches);
+            }
+
             _speakCollection.Add(new Speak
             {
               Wrapper = wrapper,
               TtsOrSound = tts,
               IsSound = isSound,
-              Matches = matches,
-              OriginalMatches = data2.OriginalMatches,
-              PreviousMatches = data2.PreviousMatches,
-              Action = lineData.Action
             });
           }
 
@@ -772,12 +823,8 @@ namespace EQLogParser
         }
         else
         {
-          var tts = ProcessMatchesText(speak.TtsOrSound, speak.OriginalMatches);
-          tts = ProcessMatchesText(tts, speak.Matches);
-          tts = ProcessMatchesText(tts, speak.PreviousMatches);
-          tts = ModLine(tts, speak.Action);
-
           var lexicon = _lexicon;
+          var tts = speak.TtsOrSound;
           if (!string.IsNullOrEmpty(tts) && lexicon != null)
           {
             foreach (var item in CollectionsMarshal.AsSpan(lexicon))
@@ -834,10 +881,11 @@ namespace EQLogParser
             triggerCount++;
             pattern = UpdatePattern(trigger.UseRegex, pattern, out var numberOptions);
             pattern = UpdateTimePattern(trigger.UseRegex, pattern);
-            var modifiedDisplay = ModCounter(ModPlayer(trigger.TextToDisplay));
-            var modifiedSpeak = ModCounter(ModPlayer(trigger.TextToSpeak));
+            var modifiedDisplay = ProcessCharacterCode(trigger.TextToDisplay);
+            var modifiedSpeak = ProcessCharacterCode(trigger.TextToSpeak);
             var timerName = string.IsNullOrEmpty(trigger.AltTimerName) ? enabled.Name : trigger.AltTimerName;
-            var modifiedTimerName = ModCounter(ModPlayer(timerName));
+            var modifiedTimerName = ProcessCharacterCode(timerName);
+            var modifiedSendToChat = ProcessCharacterCode(trigger.TextToSendToChat);
 
             var wrapper = new TriggerWrapper
             {
@@ -845,21 +893,28 @@ namespace EQLogParser
               Name = enabled.Name,
               TriggerData = trigger,
               ModifiedSpeak = modifiedSpeak,
-              ModifiedWarningSpeak = ModPlayer(trigger.WarningTextToSpeak),
-              ModifiedEndSpeak = ModPlayer(trigger.EndTextToSpeak),
-              ModifiedEndEarlySpeak = ModPlayer(trigger.EndEarlyTextToSpeak),
+              ModifiedWarningSpeak = ProcessCharacterCode(trigger.WarningTextToSpeak),
+              ModifiedEndSpeak = ProcessCharacterCode(trigger.EndTextToSpeak),
+              ModifiedEndEarlySpeak = ProcessCharacterCode(trigger.EndEarlyTextToSpeak),
               ModifiedDisplay = modifiedDisplay,
-              ModifiedShare = ModPlayer(trigger.TextToShare),
-              ModifiedSendToChat = ModPlayer(trigger.TextToSendToChat),
-              ModifiedWarningDisplay = ModPlayer(trigger.WarningTextToDisplay),
-              ModifiedEndDisplay = ModPlayer(trigger.EndTextToDisplay),
-              ModifiedEndEarlyDisplay = ModPlayer(trigger.EndEarlyTextToDisplay),
+              ModifiedShare = ProcessCharacterCode(trigger.TextToShare),
+              ModifiedSendToChat = modifiedSendToChat,
+              ModifiedWarningDisplay = ProcessCharacterCode(trigger.WarningTextToDisplay),
+              ModifiedEndDisplay = ProcessCharacterCode(trigger.EndTextToDisplay),
+              ModifiedEndEarlyDisplay = ProcessCharacterCode(trigger.EndEarlyTextToDisplay),
               ModifiedTimerName = string.IsNullOrEmpty(modifiedTimerName) ? "" : modifiedTimerName,
               ModifiedDurationSeconds = trigger.DurationSeconds,
               ModifiedPattern = !trigger.UseRegex ? pattern : null,
-              HasRepeatedSpeak = modifiedSpeak?.Contains("{repeated}", StringComparison.OrdinalIgnoreCase) == true,
-              HasRepeatedText = modifiedDisplay?.Contains("{repeated}", StringComparison.OrdinalIgnoreCase) == true,
-              HasRepeatedTimer = modifiedTimerName.Contains("{repeated}", StringComparison.OrdinalIgnoreCase) == true,
+              HasCounterSpeak = modifiedSpeak?.Contains(CounterCode, StringComparison.OrdinalIgnoreCase) == true,
+              HasCounterText = modifiedDisplay?.Contains(CounterCode, StringComparison.OrdinalIgnoreCase) == true,
+              HasCounterTimer = modifiedTimerName?.Contains(CounterCode, StringComparison.OrdinalIgnoreCase) == true,
+              HasRepeatedSpeak = modifiedSpeak?.Contains(RepeatedCode, StringComparison.OrdinalIgnoreCase) == true,
+              HasRepeatedText = modifiedDisplay?.Contains(RepeatedCode, StringComparison.OrdinalIgnoreCase) == true,
+              HasRepeatedTimer = modifiedTimerName?.Contains(RepeatedCode, StringComparison.OrdinalIgnoreCase) == true,
+              HasLogTimeSpeak = modifiedSpeak?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) == true,
+              HasLogTimeText = modifiedDisplay?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) == true,
+              HasLogTimeTimer = modifiedTimerName?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) == true,
+              HasLogTimeSendToChat = modifiedSendToChat?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) == true,
               TimerIcon = UiElementUtil.CreateBitmap(trigger.IconSource)
             };
 
@@ -990,15 +1045,15 @@ namespace EQLogParser
       return endEarly;
     }
 
-    private static string ProcessDisplayText(string text, string line, MatchCollection matches,
+    private static string ProcessDisplayText(string text, string action, MatchCollection matches,
       MatchCollection originalMatches, MatchCollection previousMatches)
     {
-      if (!string.IsNullOrEmpty(text) && !text.Equals("{null}", StringComparison.OrdinalIgnoreCase))
+      if (!string.IsNullOrEmpty(text) && !text.Equals(NullCode, StringComparison.OrdinalIgnoreCase))
       {
         text = ProcessMatchesText(text, originalMatches);
         text = ProcessMatchesText(text, matches);
         text = ProcessMatchesText(text, previousMatches);
-        text = ModLine(text, line);
+        text = ProcessLineCode(text, action);
         return text;
       }
       return null;
@@ -1026,6 +1081,15 @@ namespace EQLogParser
       return text;
     }
 
+    private static string ProcessTts(string tts, string action, MatchCollection matches, MatchCollection previous, MatchCollection original)
+    {
+      tts = ProcessMatchesText(tts, original);
+      tts = ProcessMatchesText(tts, matches);
+      tts = ProcessMatchesText(tts, previous);
+      tts = ProcessLineCode(tts, action);
+      return tts;
+    }
+
     private static long GetRepeatedCount(IReadOnlyDictionary<string, Dictionary<string, RepeatedData>> times, TriggerWrapper wrapper, string displayValue)
     {
       if (!string.IsNullOrEmpty(wrapper.Id) && times.TryGetValue(wrapper.Id, out var displayTimes))
@@ -1041,7 +1105,7 @@ namespace EQLogParser
     private static long UpdateRepeatedTimes(IDictionary<string, Dictionary<string, RepeatedData>> times, TriggerWrapper wrapper,
       string displayValue, long beginTicks)
     {
-      long currentCount = -1;
+      long repeatedCount = -1;
 
       if (!string.IsNullOrEmpty(wrapper.Id) && wrapper.TriggerData?.RepeatedResetTime >= 0)
       {
@@ -1060,12 +1124,12 @@ namespace EQLogParser
               repeatedData.Count++;
             }
 
-            currentCount = repeatedData.Count;
+            repeatedCount = repeatedData.Count;
           }
           else
           {
             displayTimes[displayValue] = new RepeatedData { Count = 1, CountTicks = beginTicks };
-            currentCount = 1;
+            repeatedCount = 1;
           }
         }
         else
@@ -1076,17 +1140,17 @@ namespace EQLogParser
           };
 
           times[wrapper.Id] = displayTimes;
-          currentCount = 1;
+          repeatedCount = 1;
         }
       }
 
-      return currentCount;
+      return repeatedCount;
     }
 
     private string UpdatePattern(bool useRegex, string pattern, out List<NumberOptions> numberOptions)
     {
       numberOptions = [];
-      pattern = ModPlayer(pattern);
+      pattern = ProcessCharacterCode(pattern);
 
       if (useRegex)
       {
@@ -1278,10 +1342,6 @@ namespace EQLogParser
       public TriggerWrapper Wrapper { get; init; }
       public string TtsOrSound { get; init; }
       public bool IsSound { get; init; }
-      public MatchCollection Matches { get; init; }
-      public MatchCollection OriginalMatches { get; init; }
-      public MatchCollection PreviousMatches { get; init; }
-      public string Action { get; init; }
     }
 
     private class RepeatedData
@@ -1306,9 +1366,16 @@ namespace EQLogParser
       public string ModifiedEndEarlyDisplay { get; init; }
       public string ModifiedWarningDisplay { get; init; }
       public string ModifiedTimerName { get; init; }
+      public bool HasCounterTimer { get; init; }
+      public bool HasCounterText { get; init; }
+      public bool HasCounterSpeak { get; init; }
       public bool HasRepeatedTimer { get; init; }
       public bool HasRepeatedText { get; init; }
       public bool HasRepeatedSpeak { get; init; }
+      public bool HasLogTimeTimer { get; init; }
+      public bool HasLogTimeText { get; init; }
+      public bool HasLogTimeSpeak { get; init; }
+      public bool HasLogTimeSendToChat { get; init; }
       public BitmapImage TimerIcon { get; init; }
       public Trigger TriggerData { get; init; }
       // only the main thread modifies these values
