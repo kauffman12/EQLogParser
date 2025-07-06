@@ -101,7 +101,9 @@ namespace EQLogParser
     public List<NumberOptions> EndEarlyRegex2NOptions { get; set; }
     public MatchCollection OriginalMatches { get; set; }
     public MatchCollection PreviousMatches { get; set; }
+    public long CounterCount { get; set; } = -1;
     public long RepeatedCount { get; set; } = -1;
+    public string LogTime { get; set; }
     public string ActiveColor { get; set; }
     public string FontColor { get; set; }
     public LineData RepeatingTimerLineData { get; set; }
@@ -120,7 +122,9 @@ namespace EQLogParser
   {
     public string OverlayComments { get; set; }
     public string FontSize { get; set; } = "12pt";
+    public string FontWeight { get; set; } = "Normal";
     public int SortBy { get; set; }
+    public int HorizontalAlignment { get; set; } = 1;
     public int VerticalAlignment { get; set; } = -1;
     public string FontColor { get; set; } = "#FFFFFFFF";
     public string FontFamily { get; set; } = "Segoe UI";

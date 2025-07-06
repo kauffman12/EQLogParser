@@ -250,11 +250,6 @@
               <fa:ImageAwesome x:Name="checkUpdatesIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="hardwareAccel" Header="Hardware Acceleration (Requires Restart)" Click="ToggleHardwareAccelClick">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="hardwareAccelIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
-            </MenuItem.Icon>
-          </MenuItem>
           <MenuItem x:Name="hideSplashScreen" Header="Hide _Splash Screen" Click="ToggleHideSplashScreenClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableHideSplashScreenIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
@@ -265,15 +260,25 @@
               <fa:ImageAwesome x:Name="enableHideOnMinimizeIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="enableMapSendtoEQ" Header="Send To _EQ With Ctrl+C" Click="ToggleMapSendToEqClick">
+          <MenuItem x:Name="startMinimized" Header="Start with Window Minimi_zed" Click="ToggleStartMinimizedClick">
             <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="enableMapSendToEQIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              <fa:ImageAwesome x:Name="enableStartMinimizedIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="emuParsing" Header="EMU Server _Parsing" Click="ToggleEmuParsingClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="emuParsingIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="hardwareAccel" Header="Hardware _Acceleration (Needs Restart)" Click="ToggleHardwareAccelClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="hardwareAccelIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="enableMapSendtoEQ" Header="Send To _EQ With Ctrl+C" Click="ToggleMapSendToEqClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="enableMapSendToEQIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />

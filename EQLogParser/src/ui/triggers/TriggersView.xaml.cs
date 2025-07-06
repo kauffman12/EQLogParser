@@ -89,8 +89,8 @@ namespace EQLogParser
       AddEditor<ExampleTimerBar>("TimerBarPreview");
       AddEditor<OptionalColorEditor>("TriggerActiveBrush", "TriggerFontBrush");
       AddEditor<OptionalIconEditor>("TriggerIconSource");
-      AddEditor<TriggerListsEditor>("TriggerAgainOption", "FontSize", "FontFamily", "SortBy", "TimerMode",
-        "TimerType", "VerticalAlignment", "Volume");
+      AddEditor<TriggerListsEditor>("TriggerAgainOption", "FontSize", "FontFamily", "FontWeight", "SortBy", "TimerMode",
+        "TimerType", "HorizontalAlignment", "VerticalAlignment", "Volume");
       AddEditor<WrapTextEditor>("EndEarlyTextToDisplay", "EndTextToDisplay", "TextToDisplay", "TextToShare",
         "WarningTextToDisplay", "Comments", "OverlayComments", "TextToSendToChat", "ChatWebhook");
       AddEditorInstance(new RangeEditor(typeof(double), 0.2, 2.0), "DurationSeconds");
@@ -104,7 +104,7 @@ namespace EQLogParser
       AddEditorInstance(new RangeEditor(typeof(double), 0, 99999), "RepeatedResetTime");
       AddEditorInstance(new RangeEditor(typeof(double), 0, 99999), "LockoutTime");
       AddEditorInstance(new DurationEditor(2), "DurationTimeSpan");
-      AddEditorInstance(new RangeEditor(typeof(long), 1, 60), "FadeDelay");
+      AddEditorInstance(new RangeEditor(typeof(long), 1, 99999), "FadeDelay");
 
       // don't disconnect these so tree stays in-sync if hidden
       TriggerStateManager.Instance.OverlayImportEvent += OverlayImportEvent;
@@ -571,9 +571,18 @@ namespace EQLogParser
           textChange = textOverlay.FontSize != original.FontSize;
           Application.Current.Resources["TextOverlayFontSize-" + textOverlay.Node.Id] = newFontSize;
         }
+        else if (args.Property.Name == fontWeightItem.PropertyName)
+        {
+          textChange = textOverlay.FontWeight != original.FontWeight;
+          Application.Current.Resources["TextOverlayFontWeight-" + textOverlay.Node.Id] = UiElementUtil.GetFontWeightByName(textOverlay.FontWeight);
+        }
+        else if (args.Property.Name == horizontalAlignment.PropertyName)
+        {
+          textChange = textOverlay.HorizontalAlignment != original.HorizontalAlignment;
+          Application.Current.Resources["OverlayHorizontalAlignment-" + textOverlay.Node.Id] = (HorizontalAlignment)textOverlay.HorizontalAlignment;
+        }
         else if (args.Property.Name == verticalAlignment.PropertyName)
         {
-          // not currently using vertical alignment for text overlays
           textChange = textOverlay.VerticalAlignment != original.VerticalAlignment;
           Application.Current.Resources["OverlayVerticalAlignment-" + textOverlay.Node.Id] = (VerticalAlignment)textOverlay.VerticalAlignment;
         }
@@ -624,21 +633,37 @@ namespace EQLogParser
           timerChange = timerOverlay.FontFamily != original.FontFamily;
           var family = new FontFamily(timerOverlay.FontFamily);
           Application.Current.Resources["TimerBarFontFamily-" + timerOverlay.Node.Id] = family;
-          var fontSize = TriggerUtil.ParseFontSize(timerOverlay.FontSize);
+          var fontSize = UiElementUtil.ParseFontSize(timerOverlay.FontSize);
           Application.Current.Resources["TimerBarHeight-" + timerOverlay.Node.Id] = TriggerUtil.CalculateTimerBarHeight(fontSize, family);
         }
         else if (args.Property.Name == fontSizeItem.PropertyName)
         {
-          var newFontSize = TriggerUtil.ParseFontSize(timerOverlay.FontSize);
+          var newFontSize = UiElementUtil.ParseFontSize(timerOverlay.FontSize);
           timerChange = timerOverlay.FontSize != original.FontSize;
           var family = !string.IsNullOrEmpty(timerOverlay.FontFamily) ? new FontFamily(timerOverlay.FontFamily) : null;
           Application.Current.Resources["TimerBarFontSize-" + timerOverlay.Node.Id] = newFontSize;
           Application.Current.Resources["TimerBarHeight-" + timerOverlay.Node.Id] = TriggerUtil.CalculateTimerBarHeight(newFontSize, family);
         }
+        else if (args.Property.Name == fontWeightItem.PropertyName)
+        {
+          timerChange = timerOverlay.FontWeight != original.FontWeight;
+          var weight = UiElementUtil.GetFontWeightByName(timerOverlay.FontWeight);
+          Application.Current.Resources["TimerBarFontWeight-" + timerOverlay.Node.Id] = weight;
+          // resize if needed?
+          var fontSize = UiElementUtil.ParseFontSize(timerOverlay.FontSize);
+          var family = new FontFamily(timerOverlay.FontFamily);
+          Application.Current.Resources["TimerBarHeight-" + timerOverlay.Node.Id] = TriggerUtil.CalculateTimerBarHeight(fontSize, family);
+        }
         else if (args.Property.Name == timerModeItem.PropertyName)
         {
           PropertyGridUtil.EnableCategories(thePropertyGrid,
             [new { Name = idleBrushItem.CategoryName, IsEnabled = (int)args.Property.Value == 1 }]);
+        }
+        else if (args.Property.Name == horizontalAlignment.PropertyName)
+        {
+          // NOTE: not currently implement for Timers
+          timerChange = timerOverlay.HorizontalAlignment != original.HorizontalAlignment;
+          Application.Current.Resources["OverlayHorizontalAlignment-" + timerOverlay.Node.Id] = (HorizontalAlignment)timerOverlay.HorizontalAlignment;
         }
         else if (args.Property.Name == verticalAlignment.PropertyName)
         {

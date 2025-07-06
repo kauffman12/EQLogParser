@@ -38,10 +38,12 @@ namespace EQLogParser
     internal static bool IsSlayUndeadDamageEnabled = true;
     internal static bool IsHideOnMinimizeEnabled;
     internal static bool IsHideSplashScreenEnabled;
+    internal static bool IsStartMinimizedEnabled;
     internal static bool IsMapSendToEqEnabled;
     internal static bool IsEmuParsingEnabled;
     internal const int ActionIndex = 27;
 
+    private const string ParserHome = "http://eqlogparser.kizant.net";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly double _defaultHeight = SystemParameters.PrimaryScreenHeight * 0.75;
     private readonly double _defaultWidth = SystemParameters.PrimaryScreenWidth * 0.85;
@@ -53,12 +55,17 @@ namespace EQLogParser
     private LogReader _eqLogReader;
     private readonly List<bool> _logWindows = [];
     private readonly List<string> _recentFiles = [];
+    private readonly string _releaseNotesUrl;
     private bool _isDamageOverlayOpen;
     private bool _resetWindowState;
     private bool _isLoading;
 
     public MainWindow()
     {
+      var version = Application.ResourceAssembly.GetName().Version!.ToString()[..^2];
+      version = version.Replace(".", "-");
+      _releaseNotesUrl = $"{ParserHome}/releasenotes.html#{version}";
+
       // DPI and sizing
       Height = ConfigUtil.GetSettingAsDouble("WindowHeight", _defaultHeight);
       Width = ConfigUtil.GetSettingAsDouble("WindowWidth", _defaultWidth);
@@ -75,12 +82,6 @@ namespace EQLogParser
       Left = left;
 
       Log.Info($"Window Pos ({Top}, {Left}) | Window Size ({Width}, {Height})");
-
-      WindowState = ConfigUtil.GetSetting("WindowState", "Normal") switch
-      {
-        "Maximized" => WindowState.Maximized,
-        _ => WindowState.Normal
-      };
 
       InitializeComponent();
 
@@ -130,6 +131,10 @@ namespace EQLogParser
       IsHideSplashScreenEnabled = ConfigUtil.IfSet("HideSplashScreen");
       enableHideSplashScreenIcon.Visibility = IsHideSplashScreenEnabled ? Visibility.Visible : Visibility.Hidden;
 
+      // Minimize at startup
+      IsStartMinimizedEnabled = ConfigUtil.IfSet("StartWithWindowMinimized");
+      enableStartMinimizedIcon.Visibility = IsStartMinimizedEnabled ? Visibility.Visible : Visibility.Hidden;
+
       // Allow Ctrl+C for SendToEQ
       IsMapSendToEqEnabled = ConfigUtil.IfSet("MapSendToEQAsCtrlC");
       enableMapSendToEQIcon.Visibility = IsMapSendToEqEnabled ? Visibility.Visible : Visibility.Hidden;
@@ -150,6 +155,21 @@ namespace EQLogParser
       // Enable EMU parsing
       IsEmuParsingEnabled = ConfigUtil.IfSet("EnableEmuParsing");
       emuParsingIcon.Visibility = IsEmuParsingEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      // start minimized if requested
+      if (IsStartMinimizedEnabled)
+      {
+        WindowState = WindowState.Minimized;
+      }
+      else
+      {
+        // else use last saved state
+        WindowState = ConfigUtil.GetSetting("WindowState", "Normal") switch
+        {
+          "Maximized" => WindowState.Maximized,
+          _ => WindowState.Normal
+        };
+      }
 
       // upgrade
       if (ConfigUtil.IfSet("TriggersWatchForGINA"))
@@ -206,6 +226,13 @@ namespace EQLogParser
 
     private async void MainWindowOnLoaded(object sender, RoutedEventArgs args)
     {
+      // update starting state if minimized
+      // needs to be called after show()
+      if (IsHideOnMinimizeEnabled && WindowState == WindowState.Minimized)
+      {
+        Hide();
+      }
+
       try
       {
         // make sure file exists
@@ -381,13 +408,13 @@ namespace EQLogParser
     internal void CopyToEqClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEqClick(type);
     internal FightTable GetFightTable() => npcWindow?.Content as FightTable;
     private void RestoreTableColumnsClick(object sender, RoutedEventArgs e) => DataGridUtil.RestoreAllTableColumns();
-    private void AboutClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/#readme");
+    private void AboutClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault($"{ParserHome}");
     private void RestoreClick(object sender, RoutedEventArgs e) => MainActions.Restore();
     private void OpenCreateWavClick(object sender, RoutedEventArgs e) => new WavCreatorWindow().ShowDialog();
     private void OpenSoundsFolderClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("\"" + @"data\sounds" + "\"");
     private void ReportProblemClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
-    private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(@"data\releasenotes.pdf");
-    private void TriggerVariablesHelpClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(@"data\triggerVariables.pdf");
+    private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(_releaseNotesUrl);
+    private void TriggerVariablesHelpClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault($"{ParserHome}/documentation.html#trigger-variables");
     private void OpenLogManager(object sender, RoutedEventArgs e) => new LogManagementWindow().ShowDialog();
     private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
     private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
@@ -603,6 +630,13 @@ namespace EQLogParser
       IsHideOnMinimizeEnabled = !IsHideOnMinimizeEnabled;
       ConfigUtil.SetSetting("HideWindowOnMinimize", IsHideOnMinimizeEnabled);
       enableHideOnMinimizeIcon.Visibility = IsHideOnMinimizeEnabled ? Visibility.Visible : Visibility.Hidden;
+    }
+
+    private void ToggleStartMinimizedClick(object sender, RoutedEventArgs e)
+    {
+      IsStartMinimizedEnabled = !IsStartMinimizedEnabled;
+      ConfigUtil.SetSetting("StartWithWindowMinimized", IsStartMinimizedEnabled);
+      enableStartMinimizedIcon.Visibility = IsStartMinimizedEnabled ? Visibility.Visible : Visibility.Hidden;
     }
 
     private void ToggleHideSplashScreenClick(object sender, RoutedEventArgs e)

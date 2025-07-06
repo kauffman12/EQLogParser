@@ -57,18 +57,6 @@ namespace EQLogParser
       return fontSize + 2;
     }
 
-    internal static double ParseFontSize(string fontSize)
-    {
-      if (!string.IsNullOrEmpty(fontSize) && fontSize.Split("pt") is { Length: 2 } split && double.TryParse(split[0], NumberStyles.Any,
-            CultureInfo.InvariantCulture, out var newFontSize))
-      {
-        return newFontSize;
-      }
-
-      // original default
-      return 12;
-    }
-
     internal static bool TestRegexProperty(bool useRegex, string pattern, PatternEditor editor)
     {
       var isValid = !useRegex || TextUtils.IsValidRegex(pattern);
@@ -183,6 +171,7 @@ namespace EQLogParser
         toOverlay.FontColor = fromOverlay.FontColor;
         toOverlay.FontFamily = fromOverlay.FontFamily;
         toOverlay.FontSize = fromOverlay.FontSize;
+        toOverlay.FontWeight = fromOverlay.FontWeight;
         toOverlay.Height = fromOverlay.Height;
         toOverlay.IdleColor = fromOverlay.IdleColor;
         toOverlay.IdleTimeoutSeconds = fromOverlay.IdleTimeoutSeconds;
@@ -201,6 +190,7 @@ namespace EQLogParser
         toOverlay.ShowIdle = fromOverlay.ShowIdle;
         toOverlay.ShowReset = fromOverlay.ShowReset;
         toOverlay.Width = fromOverlay.Width;
+        toOverlay.HorizontalAlignment = fromOverlay.HorizontalAlignment;
         toOverlay.VerticalAlignment = fromOverlay.VerticalAlignment;
 
         if (toOverlay is TimerOverlayPropertyModel toModel)
@@ -208,6 +198,8 @@ namespace EQLogParser
           toModel.IdleTimeoutTimeSpan = new TimeSpan(0, 0, (int)toModel.IdleTimeoutSeconds);
           Application.Current.Resources["OverlayText-" + toModel.Node.Id] = toModel.Node.Name;
 
+          // NOTE: not currently implement for Timers
+          Application.Current.Resources["OverlayHorizontalAlignment-" + toModel.Node.Id] = (HorizontalAlignment)toModel.HorizontalAlignment;
           // make sure old default data is no longer set (should be fixed during startup)
           Application.Current.Resources["OverlayVerticalAlignment-" + toModel.Node.Id] = (VerticalAlignment)toModel.VerticalAlignment;
 
@@ -226,8 +218,10 @@ namespace EQLogParser
             Application.Current.Resources["TimerBarFontFamily-" + toModel.Node.Id] = family;
           }
 
-          var fontSize = ParseFontSize(fromOverlay.FontSize);
+          var fontSize = UiElementUtil.ParseFontSize(fromOverlay.FontSize);
           Application.Current.Resources["TimerBarFontSize-" + toModel.Node.Id] = fontSize;
+          var fontWeight = UiElementUtil.GetFontWeightByName(fromOverlay.FontWeight);
+          Application.Current.Resources["TimerBarFontWeight-" + toModel.Node.Id] = fontWeight;
           Application.Current.Resources["TimerBarHeight-" + toModel.Node.Id] = CalculateTimerBarHeight(fontSize, family);
 
         }
@@ -245,6 +239,7 @@ namespace EQLogParser
         {
           Application.Current.Resources["OverlayText-" + toTextModel.Node.Id] = toTextModel.Node.Name;
 
+          Application.Current.Resources["OverlayHorizontalAlignment-" + toTextModel.Node.Id] = (HorizontalAlignment)toTextModel.HorizontalAlignment;
           // make sure old default data is no longer set (should be fixed during startup)
           Application.Current.Resources["OverlayVerticalAlignment-" + toTextModel.Node.Id] = (VerticalAlignment)toTextModel.VerticalAlignment;
 
@@ -261,6 +256,12 @@ namespace EQLogParser
             double.TryParse(split[0], NumberStyles.Any, CultureInfo.InvariantCulture, out var newFontSize))
           {
             Application.Current.Resources["TextOverlayFontSize-" + toTextModel.Node.Id] = newFontSize;
+          }
+
+          if (!string.IsNullOrEmpty(fromOverlay.FontWeight))
+          {
+            toTextModel.FontWeight = fromOverlay.FontWeight;
+            Application.Current.Resources["TextOverlayFontWeight-" + toTextModel.Node.Id] = UiElementUtil.GetFontWeightByName(toTextModel.FontWeight);
           }
         }
         else if (fromOverlay is TextOverlayPropertyModel fromTextModel)
@@ -589,7 +590,7 @@ namespace EQLogParser
 
       // handle stop command
       if (chatType.SenderIsYou && (chatType.TextStart - 27) is var s and > 0 && action.Length > s
-          && action.AsSpan()[s..].StartsWith("{EQLP:STOP}"))
+          && action.AsSpan()[s..].StartsWith("{EQLP:STOP}", StringComparison.OrdinalIgnoreCase))
       {
         await TriggerManager.Instance.StopTriggersAsync();
         return;

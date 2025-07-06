@@ -149,6 +149,7 @@ namespace EQLogParser
                     Height = 150,
                     Width = 450,
                     FontSize = "16pt",
+                    FontWeight = "Normal",
                     FontColor = "#FFE9C405"
                   }
                 };
@@ -1332,10 +1333,12 @@ namespace EQLogParser
         newNode.OverlayData.BackgroundColor = FixColor(newNode.OverlayData.BackgroundColor);
         newNode.OverlayData.IdleColor = FixColor(newNode.OverlayData.IdleColor);
         newNode.OverlayData.ResetColor = FixColor(newNode.OverlayData.ResetColor);
+
         if (old.OverlayData.Id != null)
         {
           overlayIds[old.OverlayData.Id] = newNode.Id;
         }
+
         SetVerticalAlignment(newNode);
       }
 

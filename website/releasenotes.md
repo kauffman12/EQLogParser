@@ -1,19 +1,23 @@
 # 2.3.0
 
-*	**Hardware Acceleration** is now always disabled under Linux/WINE as it makes WPF apps unstable. The WINELOADER environment variable is used to detect WINE.
-*	Changed **{counter}** to work like the GINA version. Any use of `{repeated}` remains the same as it has been. Also, fixed `{repeated}` when used within an `Alternate Timer Name`. It was incorrectly counting if other variables were in the name.
-*	Added **{logtime}** variable that can be specified in `Text to Display`, `Text to Speak`, `Text to Send (Discord)`, and `Alt Timer Name`. It will display the time from the log line that causes the trigger to fire in the `hh:mm:ss` format.
-*	Moved docs to the web so they can be updated without downloading a new installer.
-*	**{EQLP:STOP}** is no longer case sensitive.
-*	Fix parsing bug related to npcs names that contain hit. `(again)`
+1. Started 2.3.x and updated branding. New official site: **http://eqlogparser.kizant.net**
+2. Releaste Notes and Trigger Variable docs are now hosted on the new site.
+3. Hardware Acceleration is disabled under **Linux** as it unstable with WPF apps. Note that the WINELOADER environment variable is used to detect WINE.
+4. Changed **{counter}** to work like GINA version. **{repeated}** remains unchanged. 
+5. Fixed **{repeated}** when used with Alternate Timer Name. It was incorrectly counting when variables were used.
+6. Added **{logtime}** that can be specified in Text to Display, Text to Speak, Text to Send, and Alt Timer Name fields. It will display the time from the log that caused the trigger to fire in the hh:mm:ss format.
+7. Added Overlay **Font Weight** for Overlays to specify bold, thin, etc.
+8. Added Overlay **Horizontal Alignment** for Overlays but it only does anything for Text. Displays text to the Left, Center, or Right side.
+9. Changed Overlay **Fade Delay** to allow values up to 99999 seconds.
+10. {EQLP:STOP} is no longer case sensitive.
+11. Added **Start with Window Minimized** to the Options menu.
+12. Fixed parsing bug related to npcs names that contain the word hit. (again)
 
 # 2.2.x
 
 * **Summary and Timelines.** Added a way to manually assign classes. In addition, if a persona change is seen in the log it will attempt to assign the class to the new persona. Timelines now support drag and drop, zooming with Control+ and mouse wheel. Export formats are also now consistent pretty much everywhere.
 
-* **Trigger Manager.** Overlays were re-worked to improve rendering performance and fix some bugs related to timers getting stuck. Many new trigger settings were added including timer icons, font color and active color overrides per trigger or per character, custom volume, matching against previous lines, and discord web hooks are now supported. Continued to improve support for importing from GINA. Implemented **Quick Share** for Overlays and **Trusted Player** list so that things can be auto-merged.
-
-       * Advanced mode now has a status to show if a log is active or missing. Implemented a search function so that you can find triggers based on the trigger name or pattern. Included support for **mp3** files and older voices using the windows **SAPI** implementation may now be used.
+* **Trigger Manager.** Overlays were re-worked to improve rendering performance and fix some bugs related to timers getting stuck. Many new trigger settings were added including timer icons, font color and active color overrides per trigger or per character, custom volume, matching against previous lines, and discord web hooks are now supported. Continued to improve support for importing from GINA. Implemented **Quick Share** for Overlays and **Trusted Player** list so that things can be auto-merged. Advanced mode now has a status to show if a log is active or missing. Implemented a search function so that you can find triggers based on the trigger name or pattern. Included support for mp3 files and older voices using the windows SAPI implementation may now be used.
 
 * **New Features.** Added Create/Restore Backup so that settings may be saved and restored at a later time. This also includes a **BackupUtil.exe** in the EQLogParser directory so that a backup can be created from the command line. Impemented a **Wav Creator** so that you can generate text to speech using any of the configured voices and save the results to a file. Added a **Splash Screen** to show loading status as well as errors if they happen and a link to open the error log. Implemented better parsing support for **EMU** servers.
 

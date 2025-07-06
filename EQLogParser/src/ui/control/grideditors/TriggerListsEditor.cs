@@ -34,6 +34,8 @@ namespace EQLogParser
       { "TimerMode", ["Standard", "Cooldown"] },
       { "TimerType", ["No Timer", "Countdown", "Fast Countdown", "Progress", "Looping"] },
       { "FontFamily", UiElementUtil.GetSystemFontFamilies().Select(font => font.Source).ToList() },
+      { "FontWeight", UiElementUtil.GetFontWeights() },
+      { "HorizontalAlignment", ["Left", "Center", "Right"]},
       { "VerticalAlignment", ["Top", "Center", "Bottom"]},
       { "Volume", [
         "Increase by 80%", "Increase by 60%", "Increase by 40%", "Increase by 20%", "Default",
@@ -50,6 +52,8 @@ namespace EQLogParser
       { "TimerMode", Selector.SelectedIndexProperty },
       { "TimerType", Selector.SelectedIndexProperty },
       { "FontFamily", Selector.SelectedValueProperty },
+      { "FontWeight", Selector.SelectedValueProperty },
+      { "HorizontalAlignment", Selector.SelectedIndexProperty },
       { "VerticalAlignment", Selector.SelectedIndexProperty },
       { "Volume", Selector.SelectedIndexProperty }
     };

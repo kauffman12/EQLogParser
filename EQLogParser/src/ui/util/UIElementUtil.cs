@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -86,6 +87,23 @@ namespace EQLogParser
       }), TaskScheduler.Default);
     }
 
+    internal static List<string> GetFontWeights()
+    {
+      return [.. typeof(FontWeights).GetProperties(BindingFlags.Public | BindingFlags.Static).Where(p => p.PropertyType == typeof(FontWeight)).Select(p => p.Name)];
+    }
+
+    internal static FontWeight GetFontWeightByName(string name)
+    {
+      var property = typeof(FontWeights).GetProperty(name, BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
+
+      if (property != null && property.PropertyType == typeof(FontWeight))
+      {
+        return (FontWeight)property.GetValue(null);
+      }
+
+      return FontWeights.Normal;
+    }
+
     internal static ReadOnlyCollection<FontFamily> GetSystemFontFamilies()
     {
       var systemFontFamilies = new List<FontFamily>();
@@ -113,6 +131,18 @@ namespace EQLogParser
     {
       var common = (from fontFamily in GetSystemFontFamilies() where CommonFontFamilies.Contains(fontFamily.Source) select fontFamily.Source).ToList();
       return common.OrderBy(name => name).ToList().AsReadOnly();
+    }
+
+    internal static double ParseFontSize(string fontSize)
+    {
+      if (!string.IsNullOrEmpty(fontSize) && fontSize.Split("pt") is { Length: 2 } split && double.TryParse(split[0], NumberStyles.Any,
+            CultureInfo.InvariantCulture, out var newFontSize))
+      {
+        return newFontSize;
+      }
+
+      // original default
+      return 12;
     }
 
     internal static double GetDpi()
