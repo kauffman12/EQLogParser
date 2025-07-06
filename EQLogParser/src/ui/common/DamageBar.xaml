@@ -33,23 +33,30 @@
     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,4,0">
       <Grid>
         <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="{DynamicResource DamageOverlayDamageColDef2}" />
           <ColumnDefinition Width="{DynamicResource DamageOverlayDamageColDef1}" />
           <ColumnDefinition Width="{DynamicResource DamageOverlayDamageColDef1}" />
           <ColumnDefinition Width="{DynamicResource DamageOverlayDamageColDef2}" />
         </Grid.ColumnDefinitions>
-        <TextBlock x:Name="damage" Grid.Column="0" Text="200.2M" VerticalAlignment="Center" TextAlignment="Right" 
+        <TextBlock x:Name="percent" Grid.Column="0" Text="2.2%" VerticalAlignment="Center" TextAlignment="Right" 
           FontSize="{DynamicResource DamageOverlayFontSize}" FontFamily="Tahoma" Foreground="White" Margin="0,0,0,2">
           <TextBlock.Effect>
             <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.5" BlurRadius="3"/>
           </TextBlock.Effect>
         </TextBlock>
-        <TextBlock x:Name="dps" Grid.Column="1" Text="100.2K" VerticalAlignment="Center" TextAlignment="Right" 
+        <TextBlock x:Name="damage" Grid.Column="1" Text="200.2M" VerticalAlignment="Center" TextAlignment="Right" 
           FontSize="{DynamicResource DamageOverlayFontSize}" FontFamily="Tahoma" Foreground="White" Margin="0,0,0,2">
           <TextBlock.Effect>
             <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.5" BlurRadius="3"/>
           </TextBlock.Effect>
         </TextBlock>
-        <TextBlock x:Name="time" Grid.Column="2" Text="12456" VerticalAlignment="Center" TextAlignment="Right" 
+        <TextBlock x:Name="dps" Grid.Column="2" Text="100.2K" VerticalAlignment="Center" TextAlignment="Right" 
+          FontSize="{DynamicResource DamageOverlayFontSize}" FontFamily="Tahoma" Foreground="White" Margin="0,0,0,2">
+          <TextBlock.Effect>
+            <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.5" BlurRadius="3"/>
+          </TextBlock.Effect>
+        </TextBlock>
+        <TextBlock x:Name="time" Grid.Column="3" Text="12456" VerticalAlignment="Center" TextAlignment="Right" 
           FontSize="{DynamicResource DamageOverlayFontSize}" FontFamily="Tahoma" Foreground="White" Margin="0,0,0,2">
           <TextBlock.Effect>
             <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.5" BlurRadius="3"/>

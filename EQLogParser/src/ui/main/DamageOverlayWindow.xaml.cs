@@ -38,6 +38,7 @@ namespace EQLogParser
     private bool _currentHideOthers;
     private bool _savedHideOthers;
     private bool _savedMiniBars;
+    private bool _savedShowDamagePercent;
     private bool _savedStreamerMode;
     private bool _currentShowDps;
     private string _currentSelectedClass;
@@ -137,6 +138,10 @@ namespace EQLogParser
       // Mini bars
       _savedMiniBars = ConfigUtil.IfSet("OverlayMiniBars");
       UpdateMiniBars(_savedMiniBars);
+
+      // Damage Percent
+      _savedShowDamagePercent = ConfigUtil.IfSet("OverlayShowDamagePercent");
+      UpdateShowDamagePercent(_savedShowDamagePercent);
 
       UpdateMaxRows(_savedMaxRows);
 
@@ -347,7 +352,8 @@ namespace EQLogParser
             }
           }
 
-          damageBar?.Update(origName, name, StatsUtil.FormatTotals(stat.Total),
+          var percent = (float)Math.Round((float)stat.Total / localStats.RaidStats.Total * 100, 1);
+          damageBar?.Update(origName, name, $"{percent}%", StatsUtil.FormatTotals(stat.Total),
           StatsUtil.FormatTotals(stat.Dps, 1), stat.TotalSeconds.ToString(CultureInfo.InvariantCulture), barPercent, overrideColor);
 
           if (damageBar?.Visibility == Visibility.Collapsed)
@@ -359,14 +365,14 @@ namespace EQLogParser
         {
           if (damageBar?.Visibility == Visibility.Visible)
           {
-            damageBar.Update("", "", "", "", "", 0);
+            damageBar.Update("", "", "", "", "", "", 0);
             damageBar.Visibility = Visibility.Collapsed;
           }
         }
       }
 
       var titleBar = children[^1] as DamageBar;
-      titleBar?.Update("", localStats.TargetTitle, StatsUtil.FormatTotals(localStats.RaidStats.Total),
+      titleBar?.Update("", localStats.TargetTitle, "", StatsUtil.FormatTotals(localStats.RaidStats.Total),
         StatsUtil.FormatTotals(localStats.RaidStats.Dps, 1), localStats.RaidStats.TotalSeconds.ToString(CultureInfo.InvariantCulture), 0);
 
       if (titleBar?.Visibility == Visibility.Collapsed)
@@ -389,16 +395,16 @@ namespace EQLogParser
         {
           if (i == 0)
           {
-            bar.Update(ConfigUtil.PlayerName, "Your Player Name", "120.5M", "100.1K", "123", 120 - (i * 10), "DamageOverlayHighlightBrush");
+            bar.Update(ConfigUtil.PlayerName, "Your Player Name", "5.2%", "120.5M", "100.1K", "123", 120 - (i * 10), "DamageOverlayHighlightBrush");
           }
           else
           {
-            bar.Update(ConfigUtil.PlayerName, i + 1 + ". Example Player " + i, "120.5M", "100.1K", "123", 120 - (i * 10));
+            bar.Update(ConfigUtil.PlayerName, i + 1 + ". Example Player " + i, "3.1%", "120.5M", "100.1K", "123", 120 - (i * 10));
           }
         }
       }
 
-      (damageContent.Children[^1] as DamageBar)?.Update("", "Example NPC", "500.2M", "490.5K", "456", 0);
+      (damageContent.Children[^1] as DamageBar)?.Update("", "Example NPC", "", "500.2M", "490.5K", "456", 0);
     }
 
     private void CloseClick(object sender, RoutedEventArgs e) => MainActions.CloseDamageOverlay(false);
@@ -436,6 +442,9 @@ namespace EQLogParser
 
       ConfigUtil.SetSetting("OverlayMiniBars", miniBars.IsChecked == true);
       _savedMiniBars = miniBars.IsChecked == true;
+
+      ConfigUtil.SetSetting("OverlayShowDamagePercent", showDamagePercent.IsChecked == true);
+      _savedShowDamagePercent = showDamagePercent.IsChecked == true;
 
       ConfigUtil.SetSetting("OverlayStreamerMode", streamer.IsChecked == true);
       _savedStreamerMode = streamer.IsChecked == true;
@@ -480,6 +489,7 @@ namespace EQLogParser
 
       UpdateFontSize(_savedFontSize);
       UpdateMiniBars(_savedMiniBars);
+      UpdateShowDamagePercent(_savedShowDamagePercent);
       streamer.IsChecked = _savedStreamerMode;
 
       UpdateProgressBrush(_savedProgressColor);
@@ -578,6 +588,12 @@ namespace EQLogParser
       }
     }
 
+    private void ShowPercentChecked(object sender, RoutedEventArgs e)
+    {
+      UpdateShowDamagePercent(showDamagePercent.IsChecked == true);
+      DataChanged();
+    }
+
     private void StreamerChecked(object sender, RoutedEventArgs e)
     {
       DataChanged();
@@ -590,10 +606,34 @@ namespace EQLogParser
         if ((Application.Current.Resources["DamageOverlayBarHeight"]?.ToString() == "3" && miniBars.IsChecked == false) ||
           (Application.Current.Resources["DamageOverlayBarHeight"]?.ToString() != "3" && miniBars.IsChecked == true))
         {
-          UpdateMiniBars(miniBars.IsChecked.Value);
+          UpdateMiniBars(miniBars.IsChecked == true);
           DataChanged();
           AdjustHeight();
         }
+      }
+    }
+
+    private void UpdateShowDamagePercent(bool isChecked)
+    {
+      foreach (var child in damageContent.Children)
+      {
+        if (child is DamageBar damageBar)
+        {
+          damageBar.SetShowDamagePercent(isChecked);
+        }
+      }
+
+      foreach (var child in tankContent.Children)
+      {
+        if (child is DamageBar damageBar)
+        {
+          damageBar.SetShowDamagePercent(isChecked);
+        }
+      }
+
+      if (showDamagePercent.IsChecked != isChecked)
+      {
+        showDamagePercent.IsChecked = isChecked;
       }
     }
 
@@ -787,6 +827,7 @@ namespace EQLogParser
         maxRowsList.SelectedIndex = selectedIndex;
       }
 
+      UpdateShowDamagePercent(showDamagePercent.IsChecked == true);
       UpdateMiniBars(miniBars.IsChecked == true);
 
       if (_preview)
@@ -859,9 +900,11 @@ namespace EQLogParser
           Application.Current.Resources["DamageOverlayImageSize"] = 12.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(50.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(40.0);
-          titleDamage.Margin = new Thickness(0, 5, 20, 0);
+          titlePercent.Margin = new Thickness(0, 5, 20, 0);
+          titleDamage.Margin = new Thickness(0, 5, 18, 0);
           titleDPS.Margin = new Thickness(0, 5, 19, 0);
           titleTime.Margin = new Thickness(0, 5, 6, 0);
+          titlePercent.FontSize = 11;
           titleDamage.FontSize = 11;
           titleDPS.FontSize = 11;
           titleTime.FontSize = 11;
@@ -880,9 +923,11 @@ namespace EQLogParser
           Application.Current.Resources["DamageOverlayImageSize"] = 15.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(60.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(45.0);
-          titleDamage.Margin = new Thickness(0, 5, 27, 0);
+          titlePercent.Margin = new Thickness(0, 5, 22, 0);
+          titleDamage.Margin = new Thickness(0, 5, 25, 0);
           titleDPS.Margin = new Thickness(0, 5, 21, 0);
           titleTime.Margin = new Thickness(0, 5, 6, 0);
+          titlePercent.FontSize = 13;
           titleDamage.FontSize = 13;
           titleDPS.FontSize = 13;
           titleTime.FontSize = 13;
@@ -901,9 +946,11 @@ namespace EQLogParser
           Application.Current.Resources["DamageOverlayImageSize"] = 15.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(70.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(50.0);
-          titleDamage.Margin = new Thickness(0, 5, 35, 0);
+          titlePercent.Margin = new Thickness(0, 5, 28, 0);
+          titleDamage.Margin = new Thickness(0, 5, 33, 0);
           titleDPS.Margin = new Thickness(0, 5, 21, 0);
           titleTime.Margin = new Thickness(0, 5, 6, 0);
+          titlePercent.FontSize = 15;
           titleDamage.FontSize = 15;
           titleDPS.FontSize = 15;
           titleTime.FontSize = 15;
@@ -922,9 +969,11 @@ namespace EQLogParser
           Application.Current.Resources["DamageOverlayImageSize"] = 17.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(75.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(55.0);
-          titleDamage.Margin = new Thickness(0, 5, 34, 0);
+          titlePercent.Margin = new Thickness(0, 5, 28, 0);
+          titleDamage.Margin = new Thickness(0, 5, 32, 0);
           titleDPS.Margin = new Thickness(0, 5, 25, 0);
           titleTime.Margin = new Thickness(0, 5, 6, 0);
+          titlePercent.FontSize = 17;
           titleDamage.FontSize = 17;
           titleDPS.FontSize = 17;
           titleTime.FontSize = 17;
