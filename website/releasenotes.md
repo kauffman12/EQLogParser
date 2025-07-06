@@ -6,12 +6,14 @@
 4. Changed **{counter}** to work like GINA version. **{repeated}** remains unchanged. 
 5. Fixed **{repeated}** when used with Alternate Timer Name. It was incorrectly counting when variables were used.
 6. Added **{logtime}** that can be specified in Text to Display, Text to Speak, Text to Send, and Alt Timer Name fields. It will display the time from the log that caused the trigger to fire in the hh:mm:ss format.
-7. Added Overlay **Font Weight** for Overlays to specify bold, thin, etc.
-8. Added Overlay **Horizontal Alignment** for Overlays but it only does anything for Text. Displays text to the Left, Center, or Right side.
-9. Changed Overlay **Fade Delay** to allow values up to 99999 seconds.
-10. {EQLP:STOP} is no longer case sensitive.
-11. Added **Start with Window Minimized** to the Options menu.
-12. Fixed parsing bug related to npcs names that contain the word hit. (again)
+7. Added **Font Weight** for Overlays to specify bold, thin, etc.
+8. Added **Horizontal Alignment** to Text Overlays. Display text on the Left, Center, or Right.
+9. Added **Close Pattern** to Text Overlays to allow a pattern from the log to close and clear the window. It is very simple and does not support any special variables like trigger patterns.
+10. Changed **Fade Delay** to Text Overlays to allow values up to 99999 seconds.
+11. Updated **Close Overlays** button to also clear Text Overlays.
+12. {EQLP:STOP} is no longer case sensitive.
+13. Added **Start with Window Minimized** to the Options menu.
+14. Fixed parsing bug related to npcs names that contain the word hit. (again)
 
 # 2.2.x
 

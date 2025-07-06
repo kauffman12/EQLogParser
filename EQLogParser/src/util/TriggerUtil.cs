@@ -192,6 +192,8 @@ namespace EQLogParser
         toOverlay.Width = fromOverlay.Width;
         toOverlay.HorizontalAlignment = fromOverlay.HorizontalAlignment;
         toOverlay.VerticalAlignment = fromOverlay.VerticalAlignment;
+        toOverlay.ClosePattern = TextUtils.Trim(fromOverlay.ClosePattern);
+        toOverlay.UseCloseRegex = fromOverlay.UseCloseRegex;
 
         if (toOverlay is TimerOverlayPropertyModel toModel)
         {
