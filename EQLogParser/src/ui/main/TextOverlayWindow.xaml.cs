@@ -249,7 +249,6 @@ namespace EQLogParser
           TextAlignment = TextAlignment.Center,
           Padding = new Thickness(6, 0, 6, 2),
           Margin = new Thickness(0),
-          FontWeight = FontWeights.Bold,
           TextWrapping = TextWrapping.Wrap,
           Visibility = Visibility.Collapsed,
           Effect = new DropShadowEffect

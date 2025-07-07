@@ -279,6 +279,7 @@ namespace EQLogParser
     public bool IsEnabled { get; set; }
     public string Voice { get; set; }
     public int VoiceRate { get; set; }
+    public int CustomVolume { get; set; } = -1;
     public string ActiveColor { get; set; }
     public string FontColor { get; set; }
     [BsonIgnore] public bool? IsWaiting { get; set; } = true;
@@ -293,7 +294,6 @@ namespace EQLogParser
     public bool IsEnabled { get; set; }
     public string Voice { get; set; }
     public int VoiceRate { get; set; }
-    public int Volume { get; set; }
   }
 
   internal class ExportTriggerNode : TriggerNode

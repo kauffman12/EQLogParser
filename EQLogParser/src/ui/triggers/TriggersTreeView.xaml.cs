@@ -68,7 +68,7 @@ namespace EQLogParser
       }
       else if (config.Characters.FirstOrDefault(character => character.Id == _currentCharacterId) is { } found)
       {
-        AudioManager.Instance.TestSpeakTtsAsync(text, found.Voice, found.VoiceRate, volume);
+        AudioManager.Instance.TestSpeakTtsAsync(text, found.Voice, found.VoiceRate, volume, found.CustomVolume);
       }
       else
       {

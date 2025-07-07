@@ -49,6 +49,7 @@ namespace EQLogParser
     private volatile List<LexiconItem> _lexicon;
     private volatile List<TrustedPlayer> _trustedPlayers;
     private volatile int _voiceRate;
+    private volatile int _customVolume;
     private Task _alertTask;
     private Task _chatTask;
     private Task _mainTask;
@@ -59,7 +60,7 @@ namespace EQLogParser
     private bool _isTesting;
 
     internal TriggerProcessor(string id, string name, string playerName, string voice, int voiceRate,
-      string activeColor, string fontColor)
+      int customVolume, string activeColor, string fontColor)
     {
       CurrentCharacterId = id;
       CurrentProcessorName = name;
@@ -67,6 +68,7 @@ namespace EQLogParser
       _activeColor = activeColor;
       _fontColor = fontColor;
       _voiceRate = voiceRate;
+      _customVolume = customVolume;
       AudioManager.Instance.Add(CurrentCharacterId, voice);
       BindingOperations.EnableCollectionSynchronization(AlertLog, _collectionLock);
       TriggerStateManager.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
@@ -78,6 +80,7 @@ namespace EQLogParser
     internal List<string> GetEnabledTriggers() => [.. _enabledTriggers.Keys];
     internal void SetActiveColor(string color) => _activeColor = color;
     internal void SetFontColor(string color) => _fontColor = color;
+    internal void SetCustomVolume(int volume) => _customVolume = volume;
     internal void SetVoice(string voice) => AudioManager.Instance.SetVoice(CurrentCharacterId, voice);
     internal void SetVoiceRate(int rate) => _voiceRate = rate;
     internal void SetTesting(bool testing) => _isTesting = testing;
@@ -263,7 +266,7 @@ namespace EQLogParser
       // check overlays that need to close
       TriggerOverlayManager.Instance.CheckLine(lineData.Action);
 
-      if (!_chatCollection.IsCompleted)
+      if (!_isDisposed && _chatCollection.IsCompleted)
       {
         _chatCollection.Add(lineData);
       }
@@ -405,7 +408,7 @@ namespace EQLogParser
             tts = string.IsNullOrEmpty(tts) ? TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound) : tts;
             var displayText = string.IsNullOrEmpty(wrapper.ModifiedEndEarlyDisplay) ? wrapper.ModifiedEndDisplay : wrapper.ModifiedEndEarlyDisplay;
 
-            if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
+            if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_isDisposed && !_speakCollection.IsCompleted)
             {
               _speakCollection.Add(new Speak
               {
@@ -425,7 +428,7 @@ namespace EQLogParser
               TriggerOverlayManager.Instance.AddText(wrapper.TriggerData, updatedDisplayText, _fontColor);
             }
 
-            if (!_alertCollection.IsCompleted)
+            if (!_isDisposed && !_alertCollection.IsCompleted)
             {
               _alertCollection.Add((lineData, wrapper, "Timer End Early", 0));
             }
@@ -497,7 +500,7 @@ namespace EQLogParser
       }
 
       var tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.SoundToPlay, wrapper.ModifiedSpeak, out var isSound);
-      if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
+      if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_isDisposed && !_speakCollection.IsCompleted)
       {
         _speakCollection.Add(new Speak
         {
@@ -558,7 +561,7 @@ namespace EQLogParser
         }
       }
 
-      if (!_alertCollection.IsCompleted)
+      if (!_isDisposed && !_alertCollection.IsCompleted)
       {
         _alertCollection.Add((lineData, wrapper, "Initial Trigger", timing / 10));
       }
@@ -632,7 +635,7 @@ namespace EQLogParser
           if (proceed)
           {
             var tts = TriggerUtil.GetFromDecodedSoundOrText(trigger.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out var isSound);
-            if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
+            if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_isDisposed && !_speakCollection.IsCompleted)
             {
               _speakCollection.Add(new Speak
               {
@@ -650,7 +653,7 @@ namespace EQLogParser
               TriggerOverlayManager.Instance.AddText(trigger, updatedDisplayText, _fontColor);
             }
 
-            if (!_alertCollection.IsCompleted)
+            if (!_isDisposed && !_alertCollection.IsCompleted)
             {
               _alertCollection.Add((lineData, wrapper, "Timer Warning", 0));
             }
@@ -756,7 +759,7 @@ namespace EQLogParser
         if (proceed)
         {
           var tts = TriggerUtil.GetFromDecodedSoundOrText(trigger.EndSoundToPlay, wrapper.ModifiedEndSpeak, out var isSound);
-          if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_speakCollection.IsCompleted)
+          if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_isDisposed && !_speakCollection.IsCompleted)
           {
             _speakCollection.Add(new Speak
             {
@@ -775,7 +778,7 @@ namespace EQLogParser
             TriggerOverlayManager.Instance.AddText(trigger, updatedDisplayText, _fontColor);
           }
 
-          if (!_alertCollection.IsCompleted)
+          if (!_isDisposed && !_alertCollection.IsCompleted)
           {
             _alertCollection.Add((lineData, wrapper, "Timer End", 0));
           }
@@ -804,7 +807,7 @@ namespace EQLogParser
         if (speak.IsSound)
         {
           var theFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sounds", speak.TtsOrSound);
-          AudioManager.Instance.SpeakFileAsync(CurrentCharacterId, theFile, speak.Wrapper.TriggerData);
+          AudioManager.Instance.SpeakFileAsync(CurrentCharacterId, theFile, _customVolume, speak.Wrapper.TriggerData);
         }
         else
         {
@@ -843,7 +846,7 @@ namespace EQLogParser
             if (!string.IsNullOrEmpty(tts))
             {
               tts = ReplaceBadCharsRegex().Replace(tts, string.Empty);
-              AudioManager.Instance.SpeakTtsAsync(CurrentCharacterId, tts, _voiceRate, speak.Wrapper.TriggerData);
+              AudioManager.Instance.SpeakTtsAsync(CurrentCharacterId, tts, _voiceRate, _customVolume, speak.Wrapper.TriggerData);
             }
           }
         }

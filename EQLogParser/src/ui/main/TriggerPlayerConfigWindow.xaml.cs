@@ -1,4 +1,5 @@
 ﻿using Microsoft.WindowsAPICodePack.Dialogs;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows;
@@ -45,6 +46,19 @@ namespace EQLogParser
         }
 
         rateOption.SelectedIndex = _theCharacter.VoiceRate;
+
+        if (_theCharacter.CustomVolume > -1)
+        {
+          volumeBtn.IsEnabled = true;
+          volumeOption.SelectedIndex = 1;
+          volumeSlider.Value = _theCharacter.CustomVolume * 1.0f;
+        }
+        else
+        {
+          volumeBtn.IsEnabled = false;
+          volumeOption.SelectedIndex = 0;
+          volumeSlider.Value = 100.0f;
+        }
 
         if (_theCharacter.ActiveColor != null && UiUtil.GetBrush(_theCharacter.ActiveColor) is { } activeColor)
         {
@@ -102,16 +116,17 @@ namespace EQLogParser
     {
       var activeColor = activeColorPicker.Visibility == Visibility.Visible ? activeColorPicker?.Color.ToHexString() : null;
       var fontColor = fontColorPicker.Visibility == Visibility.Visible ? fontColorPicker?.Color.ToHexString() : null;
+      var customVolume = volumeOption.SelectedIndex == 1 ? (int)Math.Round(volumeSlider.Value) : -1;
 
       if (_theCharacter == null)
       {
         await TriggerStateManager.Instance.AddCharacter(characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(),
-          rateOption.SelectedIndex, activeColor, fontColor);
+          rateOption.SelectedIndex, customVolume, activeColor, fontColor);
       }
       else
       {
         await TriggerStateManager.Instance.UpdateCharacter(_theCharacter.Id, characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(),
-          rateOption.SelectedIndex, activeColor, fontColor);
+          rateOption.SelectedIndex, customVolume, activeColor, fontColor);
       }
 
       Close();
@@ -130,21 +145,55 @@ namespace EQLogParser
     {
       if (_ready)
       {
-        // default to rate
-        var tts = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex;
+        string tts = null;
         string voice = null;
+        var customVolume = -1;
+
         if (voices.SelectedItem is string name && !string.IsNullOrEmpty(name))
         {
           voice = name;
-          if (Equals(sender, voices))
-          {
-            tts = name;
-          }
         }
 
-        AudioManager.Instance.TestSpeakTtsAsync(tts, voice, rateOption.SelectedIndex);
+        if (Equals(sender, rateOption))
+        {
+          // default to rate
+          tts = rateOption.SelectedIndex == 0 ? "Default Voice Rate" : "Voice Rate " + rateOption.SelectedIndex;
+        }
+        else if (Equals(sender, voices))
+        {
+          tts = voice;
+        }
+        else if (Equals(sender, volumeOption))
+        {
+          volumeBtn.IsEnabled = volumeOption.SelectedIndex == 1;
+          tts = volumeOption.SelectedIndex == 0 ? "Using Default Volume" : "Using Custom Volume";
+        }
+        else if (Equals(sender, volumeSlider))
+        {
+          customVolume = (int)Math.Round(volumeSlider.Value);
+          tts = "Volume " + customVolume + " Percent";
+        }
+
+        if (!string.IsNullOrEmpty(tts) && !string.IsNullOrEmpty(voice))
+        {
+          AudioManager.Instance.TestSpeakTtsAsync(tts, voice, rateOption.SelectedIndex, 4, customVolume);
+        }
+
         EnableSave();
       }
+    }
+
+    private void VolumeSliderChanged(object sender, MouseButtonEventArgs mouseButtonEventArgs)
+    {
+      OptionsChanged(sender, null);
+    }
+
+    private void VolumeButtonClick(object sender, RoutedEventArgs e)
+    {
+      volumePopup.IsOpen = true;
+      // workaround to get labels to display
+      volumeSlider.LabelOrientation = Orientation.Vertical;
+      volumeSlider.LabelOrientation = Orientation.Horizontal;
     }
 
     private void ChooseFileClicked(object sender, RoutedEventArgs e)

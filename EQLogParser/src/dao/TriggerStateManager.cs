@@ -206,7 +206,7 @@ namespace EQLogParser
     internal Task<TriggerTreeViewNode> GetTriggerTreeView(string playerId) => GetTreeView(Triggers, playerId);
     internal async Task Dispose() => await _taskQueue.Stop();
 
-    internal async Task AddCharacter(string name, string filePath, string voice, int voiceRate, string activeColor, string fontColor)
+    internal async Task AddCharacter(string name, string filePath, string voice, int voiceRate, int customVolume, string activeColor, string fontColor)
     {
       if (await GetConfig() is { } config)
       {
@@ -214,6 +214,7 @@ namespace EQLogParser
         {
           Name = name,
           FilePath = filePath,
+          CustomVolume = customVolume,
           Voice = voice,
           VoiceRate = voiceRate,
           ActiveColor = activeColor,
@@ -698,12 +699,13 @@ namespace EQLogParser
       }
     }
 
-    internal async Task UpdateCharacter(string id, string name, string filePath, string voice, int voiceRate, string activeColor, string fontColor)
+    internal async Task UpdateCharacter(string id, string name, string filePath, string voice, int voiceRate, int customVolume, string activeColor, string fontColor)
     {
       if (await GetConfig() is { } config && config.Characters.FirstOrDefault(character => character.Id == id) is { } existing)
       {
         existing.Name = name;
         existing.FilePath = filePath;
+        existing.CustomVolume = customVolume;
         existing.Voice = voice;
         existing.VoiceRate = voiceRate;
         existing.ActiveColor = activeColor;
