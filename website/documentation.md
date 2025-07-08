@@ -83,6 +83,38 @@ Piper TTS is an Open Source `text-to-speech engine` and a custom build is provid
 4. Restart EQLogParser. Note that the log file should tell you that it's using piper-tts
 5. Test changing voices in the Trigger Manager window
 
+# F.A.Q
+
+## Why do spells like Gracious Gift of Mana not show up as a received spell in the spell counts table?
+1. Some spells do not have messages when they land players and do not appear in the log
+2. For `Gracious Gift of Mana`, it has a spell message but only you can see it in your log. These spells are hidden by default as the main purpose of the spell count table is to compare your spell counts with other players
+3. To view hidden spells, use the dropdown at the top as shown below:
+
+<div style="margin-left: 40px;">
+  <img src="img/show-spells.png" alt="Show All Spells">
+</div>
+
+## Why does an Unknown player or spell name sometimes show up in the DPS Summary?
+1. If a `DoT` is on an `NPC` and the player dies or zones it may stop reporting the player and say unknown instead
+    - Check the damage breakdown for the `Unkown` player to get a better idea of the cause
+    - Unknown is also included to make sure all damage is counted for the group or raid
+2. If a name of a spell is listed in the `DPS Summary` it may be for a similar reason
+    - Sometimes if the spell is a proc or other effect related to a DoT where the player has left the zone it may now create an older style entry in the log file where the spell name is in the position of where the player name usually is and the player name is absent. This case should be fairly rare
+
+## When using the Trigger Log, I would like a quick way to edit the Trigger related to the log entry.
+1. When you select a row in the `Trigger Log` it will select the trigger in the `Trigger Manager` as long as you have it open. If so, just switch back to that tab and check
+2. The second way to quickly find a trigger is to use the `Trigger Search` box above the folder tree where you create triggers. It searches by name and by the pattern fields
+3. You may also find it useful to `drag-and-drop` the `Trigger Log` or `Trigger Manager` tabs around so that you can see both at the same time as shown below:
+
+<a style="margin-left: 40px;" href="img/trigger-selection.gif" target="_blank">
+  <img src="img/trigger-selection.gif" alt="Select Trigger from Trigger Log" height="300">
+</a> 
+
+## Why does my Charm Pet or Merc not show up correctly in the DPS Summary or Healing Summary?
+1. The main reason for this is naming. The parser is not good at handling names that do not look like player names. Player names are all one word
+2. Charm pets are additionally difficult as there's no way to distinguish the pet from an npc and if you fight an npc with the same name it can't figure out what's going on
+3. The name problem can be improved upon but it is complicated and something will be worked on in the future
+
 # Feedback
 
 Please use the `Discussion` and `Issues` links at the top right of this page for submitting feedback. They will take you to the Github project for EQLogParser where everything is kept.
