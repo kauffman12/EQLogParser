@@ -2,7 +2,7 @@
 
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
 
-1. Enabled renaming of **Tabs** so you can organize multiple breakdowns easier. Restarting the app will reset the names.
+1. Enabled renaming of **Tabs** so you can organize multiple breakdowns easier. Restarting the app will reset the names. Double click on the tab to rename.
 2. Fix for receiving **Quick Shares** not working in some cases.
 
 # 2.3.2
