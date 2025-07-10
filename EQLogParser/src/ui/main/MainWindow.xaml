@@ -449,7 +449,7 @@
       <RowDefinition Height="*"></RowDefinition>
     </Grid.RowDefinitions>
     <syncfusion:DockingManager x:Name="dockSite" Grid.Row="0" Margin="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" UseDocumentContainer="True" DocumentCloseButtonType="Individual" CloseButtonClick="DockSiteCloseButtonClick"
-                               UseNativeFloatWindow="False" WindowClosing="DockSiteWindowClosing" CloseTabOnMiddleClick="True" PersistState="False">
+                              EnableDocumentTabHeaderEdit="True" UseNativeFloatWindow="False" WindowClosing="DockSiteWindowClosing" CloseTabOnMiddleClick="True" PersistState="False">
       <ContentControl x:Name="playerParseTextWindow" syncfusion:DockingManager.Header="Preview Parse" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
                       syncfusion:DockingManager.DesiredHeightInDockedMode="{DynamicResource EQParseWindowHeight}" syncfusion:DockingManager.CanDocument="False" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="{DynamicResource EQParseWindowHeight}">
         <local:ParsePreview />

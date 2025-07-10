@@ -1,6 +1,11 @@
-# 2.3.2
+# 2.3.3
 
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
+
+1. Enabled renaming of **Tabs** so you can organize multiple breakdowns easier. Restarting the app will reset the names.
+2. Fix for receiving **Quick Shares** not working in some cases.
+
+# 2.3.2
 
 1. Added **Custom Volume** to character configuration when using **Advanced Mode** in Trigger Manager. This value will override the global setting so each character can have their own volume. If triggers are modifying the volume as well the adjustment will be applied to the character volume.
 2. Fixed bug when turning on/off triggers while they're still being processed could give errors. (may still happen in rare cases)
