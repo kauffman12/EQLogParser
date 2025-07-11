@@ -75,7 +75,7 @@ EQLogParser has been officially supporting Linux since version 2.2.66 with only 
 ## Piper TTS
 Piper TTS is an Open Source `text-to-speech engine` and a custom build is provided for EQLogParser. It is hosted on google drive and may be subject to a limited number of downloads per day/month.
 
-1. Download the [PiperTTS](https://drive.google.com/file/d/1G2Ecg9sfOMxifRzrKwqySGwHoVV3tHUJ/view?usp=sharing) zip file
+1. Download the <a href="https://drive.google.com/file/d/1G2Ecg9sfOMxifRzrKwqySGwHoVV3tHUJ/view?usp=sharing" target="_blank">PiperTTS</a> zip file
 2. Unzip into ~/.wine/drive_c/Program Files/EQLogParser/piper-tts
 3. Verify it was unzipped properly
     - The piper-tts folder contains dlls and a voices folder
@@ -120,7 +120,7 @@ Piper TTS is an Open Source `text-to-speech engine` and a custom build is provid
 Please use the `Discussion` and `Issues` links at the top right of this page for submitting feedback. They will take you to the Github project for EQLogParser where everything is kept.
 
 ## Guidelines
-1. Create account on [Github](http://github.com) if you do not have one already
+1. Create account on <a href="http://github.com" target="_blank">Github</a> if you do not have one already
 2. Login and post a message in either the Issues or the Discussion section
     - Reading through the existing topics to see if your question has been answered before
 3. Bugs or feature requests should be created as an Issue

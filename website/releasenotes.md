@@ -1,6 +1,10 @@
-# 2.3.3
+# 2.3.4
 
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
+
+1. Added **Inline and List** options to Parse Preview. If you select **List** the selected parse will display with one player per line instead of one long string. This may be useful for pasting parses in Discord or other areas as it's easier to read. **Inline** is what it's always done.
+
+# 2.3.3
 
 1. Enabled renaming of **Tabs** so you can organize multiple breakdowns easier. Restarting the app will reset the names. Double click on the tab to rename.
 2. Fix for receiving **Quick Shares** not working in some cases.
