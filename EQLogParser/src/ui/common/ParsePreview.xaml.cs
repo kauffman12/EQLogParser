@@ -27,6 +27,10 @@ namespace EQLogParser
       parseList.ItemsSource = _availableParses;
       parseList.SelectedIndex = -1;
 
+      parseFormat.ItemsSource = new List<string>() { "Inline", "List" };
+      var format = ConfigUtil.GetSetting("PlayerParseFormat");
+      parseFormat.SelectedIndex = (string.IsNullOrEmpty(format) || format != "List") ? 0 : 1;
+
       playerParseTextDoPetLabel.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowPetLabel", true);
       playerParseTextDoDPS.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowDPS", true);
       playerParseTextDoRank.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowRank", true);
@@ -66,9 +70,9 @@ namespace EQLogParser
       Clipboard.SetDataObject(playerParseTextBox.Text);
     }
 
-    internal void AddParse(string type, ISummaryBuilder builder, CombinedStats combined, List<PlayerStats> selected = null, bool copy = false)
+    internal void AddParse(string type, CombinedStats combined, List<PlayerStats> selected = null, bool copy = false)
     {
-      _parses[type] = new ParseData { Builder = builder, CombinedStats = combined };
+      _parses[type] = new ParseData { CombinedStats = combined };
 
       if (selected != null)
       {
@@ -83,7 +87,7 @@ namespace EQLogParser
       TriggerParseUpdate(type, copy);
     }
 
-    internal void UpdateParse(PlayerStatsSelectionChangedEventArgs data, ISummaryBuilder builder, bool hasTopParse, string label, string topLabel)
+    internal void UpdateParse(PlayerStatsSelectionChangedEventArgs data, bool hasTopParse, string label, string topLabel)
     {
       // change the update order based on whats displayed
       if (parseList.SelectedItem?.ToString() == topLabel)
@@ -91,14 +95,14 @@ namespace EQLogParser
         UpdateParse(label, data.Selected);
         if (hasTopParse)
         {
-          AddParse(topLabel, builder, data.CurrentStats, data.Selected);
+          AddParse(topLabel, data.CurrentStats, data.Selected);
         }
       }
       else
       {
         if (hasTopParse)
         {
-          AddParse(topLabel, builder, data.CurrentStats, data.Selected);
+          AddParse(topLabel, data.CurrentStats, data.Selected);
         }
 
         UpdateParse(label, data.Selected);
@@ -107,9 +111,9 @@ namespace EQLogParser
 
     internal void UpdateParse(string type, List<PlayerStats> selected)
     {
-      if (_parses.ContainsKey(type))
+      if (_parses.TryGetValue(type, out var value))
       {
-        _parses[type].Selected.Clear();
+        value.Selected.Clear();
         if (selected != null)
         {
           _parses[type].Selected.AddRange(selected);
@@ -128,20 +132,19 @@ namespace EQLogParser
         case "COMPLETED":
         case "NONPC":
         case "NODATA":
-          AddParse(e.Type, e.Source, e.CombinedStats);
+          AddParse(e.Type, e.CombinedStats);
           break;
       }
     }
 
     private void SetParseTextByType(string type)
     {
-      if (_parses.ContainsKey(type))
+      if (_parses.TryGetValue(type, out var value))
       {
-        var combined = _parses[type].CombinedStats;
+        var combined = value.CombinedStats;
         var customTitle = customParseTitle.FontStyle == FontStyles.Italic ? null : customParseTitle.Text;
-        var summary = _parses[type].Builder?.BuildSummary(type, combined, _parses[type].Selected, playerParseTextDoPetLabel.IsChecked == true,
-          playerParseTextDoDPS.IsChecked == true, playerParseTextDoTotals.IsChecked == true, playerParseTextDoRank.IsChecked == true,
-          playerParseTextDoSpecials.IsChecked == true, playerParseTextDoTime.IsChecked == true, customTitle);
+        var opts = GetSummaryOptions();
+        var summary = SelectedParseBuilder.Build(type, combined, value.Selected, GetSummaryOptions(), customTitle);
 
         if (summary != null)
         {
@@ -150,6 +153,20 @@ namespace EQLogParser
 
         playerParseTextBox.SelectAll();
       }
+    }
+
+    private SummaryOptions GetSummaryOptions()
+    {
+      return new SummaryOptions
+      {
+        ListView = parseFormat.SelectedIndex == 1,
+        ShowPetLabel = playerParseTextDoPetLabel.IsChecked == true,
+        ShowDps = playerParseTextDoDPS.IsChecked == true,
+        ShowTotals = playerParseTextDoTotals.IsChecked == true,
+        ShowSpecial = playerParseTextDoSpecials.IsChecked == true,
+        ShowTime = playerParseTextDoTime.IsChecked == true,
+        RankPlayers = playerParseTextDoRank.IsChecked == true
+      };
     }
 
     private void TriggerParseUpdate(string type, bool copy = false)
@@ -229,6 +246,22 @@ namespace EQLogParser
       if (parseList.SelectedIndex > -1)
       {
         SetParseTextByType(parseList.SelectedItem as string);
+      }
+    }
+
+    private void ParseFormatSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (parseList.SelectedIndex > -1)
+      {
+        SetParseTextByType(parseList.SelectedItem as string);
+      }
+
+      if (_initialized)
+      {
+        if (parseFormat.SelectedIndex > -1)
+        {
+          ConfigUtil.SetSetting("PlayerParseFormat", parseFormat.SelectedValue.ToString());
+        }
       }
     }
 

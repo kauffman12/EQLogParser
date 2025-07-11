@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  internal class DamageStatsManager : ISummaryBuilder
+  internal class DamageStatsManager
   {
     internal static DamageStatsManager Instance = new();
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
@@ -216,8 +217,8 @@ namespace EQLogParser
         combined.TargetTitle = (fightCount > 1 ? "C(" + fightCount + "): " : "") + data.FightName;
 
         // these are here to support copy/paste of the parse
-        combined.TimeTitle = string.Format(StatsUtil.TimeFormat, combined.RaidStats.TotalSeconds);
-        combined.TotalTitle = string.Format(StatsUtil.TotalFormat, StatsUtil.FormatTotals(combined.RaidStats.Total),
+        combined.TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TimeFormat, combined.RaidStats.TotalSeconds);
+        combined.TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TotalFormat, StatsUtil.FormatTotals(combined.RaidStats.Total),
           dps ? " Damage " : " Tanking ", StatsUtil.FormatTotals(combined.RaidStats.Dps));
       }
 
@@ -600,8 +601,8 @@ namespace EQLogParser
             {
               RaidStats = _raidTotals,
               TargetTitle = (_selected.Count > 1 ? "Combined (" + _selected.Count + "): " : "") + _title,
-              TimeTitle = string.Format(StatsUtil.TimeFormat, _raidTotals.TotalSeconds),
-              TotalTitle = string.Format(StatsUtil.TotalFormat, StatsUtil.FormatTotals(_raidTotals.Total), " Damage ", StatsUtil.FormatTotals(_raidTotals.Dps))
+              TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TimeFormat, _raidTotals.TotalSeconds),
+              TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TotalFormat, StatsUtil.FormatTotals(_raidTotals.Total), " Damage ", StatsUtil.FormatTotals(_raidTotals.Dps))
             };
 
             combined.StatsList.AddRange(topLevelStats.Values.AsParallel().OrderByDescending(item => item.Total));
@@ -630,8 +631,7 @@ namespace EQLogParser
               Type = Labels.DamageParse,
               State = "COMPLETED",
               CombinedStats = combined,
-              Limited = damageValidator.IsDamageLimited(),
-              Source = this
+              Limited = damageValidator.IsDamageLimited()
             };
 
             genEvent.Groups.AddRange(_damageGroups);
@@ -679,13 +679,13 @@ namespace EQLogParser
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.DamageParse, State = "STARTED", Source = this });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.DamageParse, State = "STARTED" });
     }
 
     private void FireNoDataEvent(GenerateStatsOptions options, string state)
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.DamageParse, State = state, Source = this });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.DamageParse, State = state });
       FireChartEvent(options, "CLEAR");
     }
 
@@ -739,49 +739,6 @@ namespace EQLogParser
         mapping[damage.Attacker] = 1;
         _petToPlayer[damage.Attacker] = petName;
       }
-    }
-
-    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected,
-      bool showPetLabel, bool showDps, bool showTotals, bool rankPlayers, bool showSpecial, bool showTime, string customTitle)
-    {
-      var title = "";
-      var details = "";
-      var list = new List<string>();
-      if (currentStats != null && type == Labels.DamageParse)
-      {
-        if (selected?.Count > 0)
-        {
-          foreach (var stats in selected.OrderByDescending(item => item.Total))
-          {
-            var name = showPetLabel ? stats.Name : stats.Name.Replace(" +Pets", "");
-            var playerFormat = rankPlayers ? string.Format(StatsUtil.PlayerRankFormat, stats.Rank, name) : string.Format(StatsUtil.PlayerFormat, name);
-            var damageFormat = showDps ? string.Format(StatsUtil.TotalFormat, StatsUtil.FormatTotals(stats.Total), "", StatsUtil.FormatTotals(stats.Dps)) :
-              string.Format(StatsUtil.TotalOnlyFormat, StatsUtil.FormatTotals(stats.Total));
-            var timeFormat = string.Format(StatsUtil.TimeFormat, stats.TotalSeconds);
-
-            var dps = playerFormat + damageFormat;
-
-            if (showTime)
-            {
-              dps += " " + timeFormat;
-            }
-
-            if (showSpecial && !string.IsNullOrEmpty(stats.Special))
-            {
-              dps = string.Format(StatsUtil.SpecialFormat, dps, stats.Special);
-            }
-
-            list.Add(dps);
-          }
-        }
-
-        details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
-        var timeTitle = showTime ? currentStats.TimeTitle : "";
-        var totals = showDps ? currentStats.TotalTitle : currentStats.TotalTitle.Split([" @"], 2, StringSplitOptions.RemoveEmptyEntries)[0];
-        title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, showTotals ? totals : "");
-      }
-
-      return new StatsSummary { Title = title, RankedPlayers = details };
     }
 
     private class OverlayData

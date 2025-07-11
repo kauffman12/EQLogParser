@@ -4,17 +4,18 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace EQLogParser
 {
   internal static class StatsUtil
   {
-    internal const string TimeFormat = "in {0}s";
-    internal const string TotalFormat = "{0}{1}@{2}";
-    internal const string TotalOnlyFormat = "{0}";
-    internal const string PlayerFormat = "{0} = ";
-    internal const string PlayerRankFormat = "{0}. {1} = ";
-    internal const string SpecialFormat = "{0} {{{1}}}";
+    internal static readonly CompositeFormat TimeFormat = CompositeFormat.Parse("in {0}s");
+    internal static readonly CompositeFormat TotalFormat = CompositeFormat.Parse("{0}{1}@{2}");
+    internal static readonly CompositeFormat TotalOnlyFormat = CompositeFormat.Parse("{0}");
+    internal static readonly CompositeFormat PlayerFormat = CompositeFormat.Parse("{0} = ");
+    internal static readonly CompositeFormat PlayerRankFormat = CompositeFormat.Parse("{0}. {1} = ");
+    internal static readonly CompositeFormat SpecialFormat = CompositeFormat.Parse("{0} {{{1}}}");
     internal const int SpecialOffset = 15;
     internal const int DeathOffset = 15;
 
