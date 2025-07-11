@@ -3,6 +3,7 @@ using log4net;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  internal class TankingStatsManager : ISummaryBuilder
+  internal class TankingStatsManager
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
@@ -163,13 +164,13 @@ namespace EQLogParser
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.TankParse, State = "STARTED", Source = this });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.TankParse, State = "STARTED" });
     }
 
     private void FireNoDataEvent(GenerateStatsOptions options, string state)
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.TankParse, State = state, Source = this });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.TankParse, State = state });
       FireChartEvent(options, "CLEAR");
     }
 
@@ -232,8 +233,8 @@ namespace EQLogParser
             {
               RaidStats = _raidTotals,
               TargetTitle = (_selected.Count > 1 ? "Combined (" + _selected.Count + "): " : "") + _title,
-              TimeTitle = string.Format(StatsUtil.TimeFormat, _raidTotals.TotalSeconds),
-              TotalTitle = string.Format(StatsUtil.TotalFormat, StatsUtil.FormatTotals(_raidTotals.Total), " Tanked ", StatsUtil.FormatTotals(_raidTotals.Dps))
+              TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TimeFormat, _raidTotals.TotalSeconds),
+              TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TotalFormat, StatsUtil.FormatTotals(_raidTotals.Total), " Tanked ", StatsUtil.FormatTotals(_raidTotals.Dps))
             };
 
             combined.StatsList.AddRange(individualStats.Values.AsParallel().OrderByDescending(item => item.Total));
@@ -251,8 +252,7 @@ namespace EQLogParser
             {
               Type = Labels.TankParse,
               State = "COMPLETED",
-              CombinedStats = combined,
-              Source = this
+              CombinedStats = combined
             };
 
             genEvent.Groups.AddRange(_tankingGroups);
@@ -285,56 +285,6 @@ namespace EQLogParser
       _raidTotals = StatsUtil.CreatePlayerStats(Labels.RaidTotals);
       _selected = null;
       _title = "";
-    }
-
-    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool _, bool showDps, bool showTotals,
-      bool rankPlayers, bool __, bool showTime, string customTitle)
-    {
-      var title = "";
-      var details = "";
-      var list = new List<string>();
-      if (currentStats != null)
-      {
-        if (type == Labels.TankParse)
-        {
-          if (selected?.Count > 0)
-          {
-            foreach (var stats in selected.OrderByDescending(item => item.Total))
-            {
-              var playerFormat = rankPlayers ? string.Format(StatsUtil.PlayerRankFormat, stats.Rank, stats.Name) : string.Format(StatsUtil.PlayerFormat, stats.Name);
-              var damageFormat = string.Format(StatsUtil.TotalOnlyFormat, StatsUtil.FormatTotals(stats.Total));
-              list.Add(playerFormat + damageFormat);
-            }
-          }
-
-          details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
-          var timeTitle = showTime ? (" " + currentStats.TimeTitle) : "";
-          var totals = showDps ? currentStats.TotalTitle : currentStats.TotalTitle.Split([" @"], 2, StringSplitOptions.RemoveEmptyEntries)[0];
-          title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, showTotals ? totals : "");
-        }
-        else if (type == Labels.ReceivedHealParse)
-        {
-          if (selected?.Count == 1 && selected[0].MoreStats != null)
-          {
-            var rank = 1;
-            long totals = 0;
-            foreach (var stats in selected[0].MoreStats.SubStats2.OrderByDescending(stats => stats.Total).Take(10))
-            {
-              var playerFormat = rankPlayers ? string.Format(StatsUtil.PlayerRankFormat, rank++, stats.Name) : string.Format(StatsUtil.PlayerFormat, stats.Name);
-              var damageFormat = string.Format(StatsUtil.TotalOnlyFormat, StatsUtil.FormatTotals(stats.Total));
-              list.Add(playerFormat + damageFormat);
-              totals += stats.Total;
-            }
-
-            var totalTitle = showTotals ? (selected[0].Name + " Received " + StatsUtil.FormatTotals(totals) + " Healing") : (selected[0].Name + " Received Healing");
-            details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
-            var timeTitle = showTime ? currentStats.TimeTitle : "";
-            title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, totalTitle);
-          }
-        }
-      }
-
-      return new StatsSummary { Title = title, RankedPlayers = details, };
     }
   }
 }

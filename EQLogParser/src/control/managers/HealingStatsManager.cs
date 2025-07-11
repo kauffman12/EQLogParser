@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  internal class HealingStatsManager : ISummaryBuilder
+  internal class HealingStatsManager
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
@@ -311,13 +312,13 @@ namespace EQLogParser
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.HealParse, State = "STARTED", Source = this });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.HealParse, State = "STARTED" });
     }
 
     private void FireNoDataEvent(string state)
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.HealParse, State = state, Source = this });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.HealParse, State = state });
       FireChartEvent("CLEAR");
     }
 
@@ -374,8 +375,8 @@ namespace EQLogParser
             {
               RaidStats = _raidTotals,
               TargetTitle = (_selected.Count > 1 ? "Combined (" + _selected.Count + "): " : "") + _title,
-              TimeTitle = string.Format(StatsUtil.TimeFormat, _raidTotals.TotalSeconds),
-              TotalTitle = string.Format(StatsUtil.TotalFormat, StatsUtil.FormatTotals(_raidTotals.Total), " Heals ", StatsUtil.FormatTotals(_raidTotals.Dps))
+              TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TimeFormat, _raidTotals.TotalSeconds),
+              TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TotalFormat, StatsUtil.FormatTotals(_raidTotals.Total), " Heals ", StatsUtil.FormatTotals(_raidTotals.Dps))
             };
 
             combined.StatsList.AddRange(individualStats.Values.OrderByDescending(item => item.Total));
@@ -394,8 +395,7 @@ namespace EQLogParser
               Type = Labels.HealParse,
               State = "COMPLETED",
               CombinedStats = combined,
-              Limited = _isLimited,
-              Source = this
+              Limited = _isLimited
             };
 
             genEvent.Groups.AddRange(_healingGroups);
@@ -420,55 +420,6 @@ namespace EQLogParser
       _raidTotals = StatsUtil.CreatePlayerStats(Labels.RaidTotals);
       _selected = null;
       _title = "";
-    }
-
-    public StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool _, bool showDps, bool showTotals,
-      bool rankPlayers, bool __, bool showTime, string customTitle)
-    {
-      var title = "";
-      var details = "";
-      var list = new List<string>();
-      if (currentStats != null)
-      {
-        if (type == Labels.HealParse)
-        {
-          if (selected?.Count > 0)
-          {
-            foreach (var stats in selected.OrderByDescending(item => item.Total))
-            {
-              var playerFormat = rankPlayers ? string.Format(StatsUtil.PlayerRankFormat, stats.Rank, stats.Name) : string.Format(StatsUtil.PlayerFormat, stats.Name);
-              var healsFormat = string.Format(StatsUtil.TotalOnlyFormat, StatsUtil.FormatTotals(stats.Total));
-              list.Add(playerFormat + healsFormat);
-            }
-          }
-
-          details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
-          var timeTitle = showTime ? (" " + currentStats.TimeTitle) : "";
-          var totals = showDps ? currentStats.TotalTitle : currentStats.TotalTitle.Split(Separator, 2, StringSplitOptions.RemoveEmptyEntries)[0];
-          title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, showTotals ? totals : "");
-        }
-        else if (type == Labels.TopHealParse)
-        {
-          if (selected?.Count == 1 && selected[0].SubStats.Count > 0)
-          {
-            var rank = 1;
-            foreach (var stats in selected[0].SubStats.OrderByDescending(stats => stats.Total).Take(10))
-            {
-              var abbrv = DataManager.Instance.AbbreviateSpellName(stats.Name);
-              var playerFormat = rankPlayers ? string.Format(StatsUtil.PlayerRankFormat, rank++, abbrv) : string.Format(StatsUtil.PlayerFormat, abbrv);
-              var healsFormat = string.Format(StatsUtil.TotalOnlyFormat, StatsUtil.FormatTotals(stats.Total));
-              list.Add(playerFormat + healsFormat);
-            }
-
-            var totalTitle = selected[0].Name + "'s Top Heals";
-            details = list.Count > 0 ? ", " + string.Join(" | ", list) : "";
-            var timeTitle = showTime ? currentStats.TimeTitle : "";
-            title = StatsUtil.FormatTitle(customTitle ?? currentStats.TargetTitle, timeTitle, totalTitle);
-          }
-        }
-      }
-
-      return new StatsSummary { Title = title, RankedPlayers = details, };
     }
   }
 }

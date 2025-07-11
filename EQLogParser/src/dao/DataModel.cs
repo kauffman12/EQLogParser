@@ -28,12 +28,6 @@ namespace EQLogParser
     }
   }
 
-  internal interface ISummaryBuilder
-  {
-    StatsSummary BuildSummary(string type, CombinedStats currentStats, List<PlayerStats> selected, bool showPetLabel, bool showDps, bool showTotals,
-      bool rankPlayers, bool showSpecial, bool showTime, string customTitle);
-  }
-
   internal interface IDocumentContent
   {
     public void HideContent();
@@ -370,7 +364,6 @@ namespace EQLogParser
   internal class ParseData
   {
     public CombinedStats CombinedStats { get; set; }
-    public ISummaryBuilder Builder { get; set; }
     public List<PlayerStats> Selected { get; } = [];
   }
 
@@ -420,7 +413,6 @@ namespace EQLogParser
     public CombinedStats CombinedStats { get; set; }
     public List<List<ActionGroup>> Groups { get; } = [];
     public int UniqueGroupCount { get; set; }
-    public ISummaryBuilder Source { get; set; }
   }
 
   internal class ResistRecord : IAction
