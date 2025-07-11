@@ -27,8 +27,8 @@ By using our website, you consent to this Privacy Policy.
 
 We may update this Privacy Policy from time to time. We will post any changes on this page.
 
-## Contact Us
+# Contact Us
 
-If you have any questions about this Privacy Policy, please contact us at: [jksoftwarehelp@gmail.com](mailto:jksoftwarehelp@gmail.com)
+If you have any questions about the Privacy Policy or have business inquiries, please contact us at: [jksoftwarehelp@gmail.com](mailto:jksoftwarehelp@gmail.com)
 
 _Last updated: July 2025_

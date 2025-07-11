@@ -136,7 +136,7 @@ def main():
 
     process_markdown_to_html(Path('releasenotes.md'), DIST_DIR / 'releasenotes.html', 'Release Notes', 'Versions', header_html)
     process_markdown_to_html(Path('documentation.md'), DIST_DIR / 'documentation.html', 'Documentation', 'Contents', header_html, decorate_h2=True)
-    process_markdown_to_html(Path('policy.md'), DIST_DIR / 'policy.html', 'Privacy Policy', None, header_html)
+    process_markdown_to_html(Path('policy.md'), DIST_DIR / 'policy.html', 'Privacy Policy', 'Contents', header_html)
 
     update_index_html(Path('index.tmpl'), DIST_DIR / 'index.html', header_html, url)
 
