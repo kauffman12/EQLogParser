@@ -13,9 +13,6 @@ using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventA
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for DamageSummary.xaml
-  /// </summary>
   public partial class DamageSummary : IDocumentContent
   {
     private string _currentClass;
@@ -59,13 +56,7 @@ namespace EQLogParser
         else if (prog.Icon == EFontAwesomeIcon.Solid_HourglassEnd)
         {
           prog.Visibility = Visibility.Hidden;
-
-          if (minTimeChooser.Value < maxTimeChooser.Value)
-          {
-            var damageOptions = new GenerateStatsOptions { MaxSeconds = (long)maxTimeChooser.Value, MinSeconds = (long)minTimeChooser.Value };
-            Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(damageOptions));
-          }
-
+          EventsDamageSummaryOptionsChanged();
           _selectionTimer.Stop();
         }
       };
@@ -107,7 +98,7 @@ namespace EQLogParser
             menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.Unk && playerStats.OrigName != Labels.Rs &&
             !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
             selectedName = playerStats.OrigName;
-            menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X");
+            menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains('X');
           }
 
           EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats?.UniqueClasses);
@@ -289,7 +280,7 @@ namespace EQLogParser
             }
             else
             {
-              title.Content = CurrentStats.FullTitle;
+              // update min/max time
               maxTimeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
               if (maxTimeChooser.MaxValue > 0)
               {
@@ -298,6 +289,8 @@ namespace EQLogParser
               maxTimeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.TotalSeconds + CurrentStats.RaidStats.MinTime);
               minTimeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
               minTimeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.MinTime);
+
+              title.Content = CurrentStats.FullTitle;
               UpdateList();
             }
 
@@ -407,7 +400,7 @@ namespace EQLogParser
       if (name == "Damage")
       {
         var selected = GetSelectedStats();
-        DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "UPDATE", selected);
+        DamageStatsManager.Instance.FireChartEvent("UPDATE", selected);
       }
     }
 
@@ -433,6 +426,20 @@ namespace EQLogParser
       });
     }
 
+    private void EventsDamageSummaryOptionsChanged(string option = null)
+    {
+      var statOptions = new GenerateStatsOptions
+      {
+        MinSeconds = (long)minTimeChooser.Value,
+        MaxSeconds = ((long)maxTimeChooser.Value > 0) ? (long)maxTimeChooser.Value : -1
+      };
+
+      if (statOptions.MinSeconds < statOptions.MaxSeconds || statOptions.MaxSeconds == -1)
+      {
+        Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(statOptions));
+      }
+    }
+
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {
       if (VisualParent != null && !_ready)
@@ -440,11 +447,8 @@ namespace EQLogParser
         DamageStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
         DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
-        if (DamageStatsManager.Instance.GetGroupCount() > 0)
-        {
-          // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(new GenerateStatsOptions()));
-        }
+        MainActions.EventsDamageSummaryOptionsChanged += EventsDamageSummaryOptionsChanged;
+        EventsDamageSummaryOptionsChanged();
         _ready = true;
       }
     }
@@ -453,9 +457,10 @@ namespace EQLogParser
     {
       DamageStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      MainActions.EventsDamageSummaryOptionsChanged -= EventsDamageSummaryOptionsChanged;
       MainActions.EventsChartOpened -= EventsChartOpened;
       ClearData();
-      DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions { MaxSeconds = long.MinValue }, "UPDATE");
+      DamageStatsManager.Instance.FireChartEvent("UPDATE", null, true);
       _ready = false;
     }
   }

@@ -29,6 +29,7 @@ namespace EQLogParser
       TriggerStateManager.Instance.OverlayImportEvent += OverlayImportEvent;
       TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
       TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
+      TriggerStateManager.Instance.TriggerImportEvent += TriggerImportEvent;
     }
 
     private async void OverlayImportEvent(bool obj)
@@ -37,7 +38,13 @@ namespace EQLogParser
       await TriggerUtil.LoadOverlayStyles();
     }
 
-    private void TriggerUpdateEvent(TriggerNode obj)
+    private void TriggerImportEvent(bool _)
+    {
+      // in case of merge
+      TriggersUpdated();
+    }
+
+    private void TriggerUpdateEvent(TriggerNode _)
     {
       // in case of merge
       TriggersUpdated();

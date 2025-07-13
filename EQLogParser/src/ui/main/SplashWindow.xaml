@@ -20,13 +20,13 @@
       <Image Source="../../../icons/loading.png" Margin="0"/>
     </Border>
     <StackPanel x:Name="data" Margin="0,60,0,0" Height="42" Orientation="Vertical" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-        <TextBlock FontSize="12" FontStretch="Condensed" HorizontalAlignment="Center">Starting</TextBlock>
+        <TextBlock FontSize="13" FontStretch="Condensed" HorizontalAlignment="Center">Starting</TextBlock>
       </StackPanel>
       <StackPanel x:Name="error" Visibility="Collapsed" Margin="0,60,0,0" Height="40" Orientation="Vertical" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <TextBlock FontSize="14" Foreground="DarkRed" HorizontalAlignment="Center">Critical Error</TextBlock>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-          <Button Width="100" FontSize="12" Margin="0,0,10,0" Click="ViewLogButtonOnClick">View Log</Button>
-          <Button Width="100" FontSize="12" Margin="10,0,0,0" Click="CloseButtonOnClick">Close</Button>
+          <Button Width="100" FontSize="13" Margin="0,0,10,0" Click="ViewLogButtonOnClick">View Log</Button>
+          <Button Width="100" FontSize="13" Margin="10,0,0,0" Click="CloseButtonOnClick">Close</Button>
         </StackPanel>
       </StackPanel>
   </Grid>

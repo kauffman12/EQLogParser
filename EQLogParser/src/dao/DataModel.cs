@@ -825,6 +825,8 @@ namespace EQLogParser
     public string OrigName { get; set; }
     public double MaxTime { get; set; }
     public double MinTime { get; set; }
+    public double MaxBeginTime { get; set; }
+    public double MinBeginTime { get; set; }
   }
 
 }

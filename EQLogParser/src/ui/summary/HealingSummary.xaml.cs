@@ -1,4 +1,6 @@
-﻿using Syncfusion.UI.Xaml.Grid;
+﻿using FontAwesome5;
+using Syncfusion.UI.Xaml.Grid;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,6 +14,7 @@ namespace EQLogParser
   public partial class HealingSummary : IDocumentContent
   {
     private string _currentClass;
+    private readonly DispatcherTimer _selectionTimer;
     private bool _ready;
 
     public HealingSummary()
@@ -31,6 +34,25 @@ namespace EQLogParser
       // call after everything else is initialized
       InitSummaryTable(title, dataGrid, selectedColumns);
       dataGrid.GridCopyContent += DataGridCopyContent;
+
+      _selectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
+      _selectionTimer.Tick += (_, _) =>
+      {
+        if (prog.Icon == EFontAwesomeIcon.Solid_HourglassStart)
+        {
+          prog.Icon = EFontAwesomeIcon.Solid_HourglassHalf;
+        }
+        else if (prog.Icon == EFontAwesomeIcon.Solid_HourglassHalf)
+        {
+          prog.Icon = EFontAwesomeIcon.Solid_HourglassEnd;
+        }
+        else if (prog.Icon == EFontAwesomeIcon.Solid_HourglassEnd)
+        {
+          prog.Visibility = Visibility.Hidden;
+          EventsHealingSummaryOptionsChanged();
+          _selectionTimer.Stop();
+        }
+      };
     }
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
@@ -169,9 +191,21 @@ namespace EQLogParser
             if (CurrentStats == null)
             {
               title.Content = NodataTableLabel;
+              maxTimeChooser.MaxValue = 0;
+              minTimeChooser.MaxValue = 0;
             }
             else
             {
+              // update min/max time
+              maxTimeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
+              if (maxTimeChooser.MaxValue > 0)
+              {
+                maxTimeChooser.MinValue = 1;
+              }
+              maxTimeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.TotalSeconds + CurrentStats.RaidStats.MinTime);
+              minTimeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
+              minTimeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.MinTime);
+
               title.Content = CurrentStats.FullTitle;
               dataGrid.ItemsSource = CurrentStats.StatsList;
             }
@@ -186,11 +220,17 @@ namespace EQLogParser
           case "NONPC":
           case "NODATA":
             CurrentStats = null;
+            maxTimeChooser.MaxValue = 0;
+            minTimeChooser.MaxValue = 0;
             title.Content = e.State == "NONPC" ? DefaultTableLabel : NodataTableLabel;
             UpdateDataGridMenuItems();
             break;
         }
-      }, DispatcherPriority.Render);
+
+        // always stop
+        _selectionTimer.Stop();
+        prog.Visibility = Visibility.Hidden;
+      });
     }
 
     private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
@@ -221,6 +261,18 @@ namespace EQLogParser
       }
     }
 
+    private void TimeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+      if (dataGrid.ItemsSource != null)
+      {
+        _selectionTimer.Stop();
+        _selectionTimer.Start();
+
+        prog.Icon = EFontAwesomeIcon.Solid_HourglassStart;
+        prog.Visibility = Visibility.Visible;
+      }
+    }
+
     private void EventsChartOpened(string name)
     {
       if (name == "Healing")
@@ -241,6 +293,20 @@ namespace EQLogParser
       });
     }
 
+    private void EventsHealingSummaryOptionsChanged(string option = null)
+    {
+      var statOptions = new GenerateStatsOptions
+      {
+        MinSeconds = (long)minTimeChooser.Value,
+        MaxSeconds = ((long)maxTimeChooser.Value > 0) ? (long)maxTimeChooser.Value : -1
+      };
+
+      if (statOptions.MinSeconds < statOptions.MaxSeconds || statOptions.MaxSeconds == -1)
+      {
+        Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(statOptions));
+      }
+    }
+
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {
       if (VisualParent != null && !_ready)
@@ -248,11 +314,8 @@ namespace EQLogParser
         HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
         DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
-        if (HealingStatsManager.Instance.GetGroupCount() > 0)
-        {
-          // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats());
-        }
+        MainActions.EventsHealingSummaryOptionsChanged += EventsHealingSummaryOptionsChanged;
+        EventsHealingSummaryOptionsChanged();
         _ready = true;
       }
     }
@@ -263,7 +326,9 @@ namespace EQLogParser
       DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
       MainActions.EventsChartOpened -= EventsChartOpened;
       ClearData();
-      HealingStatsManager.Instance.FireChartEvent("UPDATE");
+
+      // healing always rebuilds and doesn't have a simple way to reset to all data
+      Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(new GenerateStatsOptions()));
       _ready = false;
     }
   }

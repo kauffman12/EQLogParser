@@ -40,6 +40,8 @@ namespace EQLogParser
     internal static event Action<string> EventsThemeChanged;
     internal static event Action<List<Fight>> EventsFightSelectionChanged;
     internal static event Action<string> EventsChartOpened;
+    internal static event Action<string> EventsDamageSummaryOptionsChanged;
+    internal static event Action<string> EventsHealingSummaryOptionsChanged;
     internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsDamageSelectionChanged;
     internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsHealingSelectionChanged;
     internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsTankingSelectionChanged;
@@ -662,12 +664,20 @@ namespace EQLogParser
       };
     }
 
+    // keep this on UI thread
     internal static void UpdateDamageOption(UIElement icon, bool enabled, string option)
     {
       ConfigUtil.SetSetting(option, enabled);
       icon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
-      var options = new GenerateStatsOptions();
-      Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(options));
+      EventsDamageSummaryOptionsChanged?.Invoke(option);
+    }
+
+    // keep this on UI thread
+    internal static void UpdateHealingOption(UIElement icon, bool enabled, string option)
+    {
+      ConfigUtil.SetSetting(option, enabled);
+      icon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
+      EventsHealingSummaryOptionsChanged?.Invoke(option);
     }
 
     internal static async Task CreateBackupAsync()
@@ -997,6 +1007,7 @@ namespace EQLogParser
       Application.Current.Resources["EQTitleSize"] = CurrentFontSize + 2;
       Application.Current.Resources["EQContentSize"] = CurrentFontSize;
       Application.Current.Resources["EQDescriptionSize"] = CurrentFontSize - 1;
+      Application.Current.Resources["EQSubDescriptionSize"] = CurrentFontSize - 2;
       Application.Current.Resources["EQButtonHeight"] = CurrentFontSize + 12 + (CurrentFontSize % 2 == 0 ? 1 : 0);
       Application.Current.Resources["EQTabHeaderHeight"] = CurrentFontSize + 12;
       Application.Current.Resources["EQTableHeaderRowHeight"] = CurrentFontSize + 14;
