@@ -21,15 +21,11 @@ namespace EQLogParser
     private readonly Dictionary<int, byte> _tankingGroupIds = [];
     private readonly ConcurrentDictionary<string, TimeRange> _playerTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _playerSubTimeRanges = new();
-    private readonly List<List<ActionGroup>> _tankingGroups = [];
+    private List<List<ActionGroup>> _allTankingGroups;
+    private List<List<ActionGroup>> _tankingGroups = [];
     private PlayerStats _raidTotals;
     private List<Fight> _selected;
     private string _title;
-
-    internal static bool IsMelee(DamageRecord record)
-    {
-      return record.Type is Labels.Melee or Labels.Miss or Labels.Parry or Labels.Dodge or Labels.Block or Labels.Invulnerable or Labels.Riposte;
-    }
 
     internal TankingStatsManager()
     {
@@ -39,14 +35,6 @@ namespace EQLogParser
         {
           Reset();
         };
-      }
-    }
-
-    internal int GetGroupCount()
-    {
-      lock (_tankingGroupIds)
-      {
-        return _tankingGroups.Count;
       }
     }
 
@@ -131,11 +119,11 @@ namespace EQLogParser
           }
           else if (_selected == null || _selected.Count == 0)
           {
-            FireNoDataEvent(options, "NONPC");
+            FireNoDataEvent("NONPC", options.DamageType);
           }
           else
           {
-            FireNoDataEvent(options, "NODATA");
+            FireNoDataEvent("NODATA", options.DamageType);
           }
         }
         catch (Exception ex)
@@ -145,12 +133,18 @@ namespace EQLogParser
       }
     }
 
-    internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null)
+    internal void FireChartEvent(string action, int damageType, List<PlayerStats> selected = null, bool reset = false)
     {
       lock (_tankingGroupIds)
       {
+        // this happens when summary window is hidden so reset any time interval
+        if (reset)
+        {
+          _tankingGroups = _allTankingGroups ?? [];
+        }
+
         // send update
-        var de = new DataPointEvent { Action = action, Iterator = new TankGroupCollection(_tankingGroups, options.DamageType) };
+        var de = new DataPointEvent { Action = action, Iterator = new TankGroupCollection(_tankingGroups, damageType) };
 
         if (selected != null)
         {
@@ -159,19 +153,6 @@ namespace EQLogParser
 
         EventsUpdateDataPoint?.Invoke(_tankingGroups, de);
       }
-    }
-
-    private void FireNewStatsEvent()
-    {
-      // generating new stats
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.TankParse, State = "STARTED" });
-    }
-
-    private void FireNoDataEvent(GenerateStatsOptions options, string state)
-    {
-      // nothing to do
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.TankParse, State = state });
-      FireChartEvent(options, "CLEAR");
     }
 
     private void ComputeTankingStats(GenerateStatsOptions options)
@@ -184,9 +165,47 @@ namespace EQLogParser
         {
           // always start over
           _raidTotals.Total = 0;
+          _raidTotals.MaxBeginTime = double.NaN;
+          _raidTotals.MinBeginTime = double.NaN;
+          var startTime = double.NaN;
+          var stopTime = double.NaN;
 
           try
           {
+            // dont do max/min check to raid totals like damage stats manager so changing damage type will work correctly
+            if ((options.MaxSeconds > -1 && options.MaxSeconds < _raidTotals.MaxTime) || (options.MinSeconds > 0 && options.MinSeconds <= _raidTotals.MaxTime))
+            {
+              StatsUtil.UpdateMinMaxTimes(_raidTotals, options, out startTime, out stopTime);
+
+              var filteredGroups = new List<List<ActionGroup>>();
+              foreach (var group in _allTankingGroups)
+              {
+                var filteredBlocks = new List<ActionGroup>();
+                group.ForEach(block =>
+                {
+                  if ((double.IsNaN(startTime) || block.BeginTime >= startTime) && (double.IsNaN(stopTime) || block.BeginTime <= stopTime))
+                  {
+                    filteredBlocks.Add(block);
+                  }
+                });
+
+                if (filteredBlocks.Count > 0)
+                {
+                  filteredGroups.Add(filteredBlocks);
+                }
+              }
+
+              _tankingGroups = filteredGroups;
+              _raidTotals.TotalSeconds = options.MaxSeconds - options.MinSeconds;
+              _raidTotals.MinTime = options.MinSeconds;
+            }
+            else
+            {
+              _tankingGroups = _allTankingGroups;
+              _raidTotals.MinTime = 0;
+              _raidTotals.TotalSeconds = _raidTotals.MaxTime;
+            }
+
             foreach (var group in CollectionsMarshal.AsSpan(_tankingGroups))
             {
               foreach (var block in CollectionsMarshal.AsSpan(group))
@@ -195,7 +214,7 @@ namespace EQLogParser
                 {
                   if (action is DamageRecord record)
                   {
-                    if (options.DamageType == 0 || (options.DamageType == 1 && IsMelee(record)) || (options.DamageType == 2 && !IsMelee(record)))
+                    if (options.DamageType == 0 || (options.DamageType == 1 && StatsUtil.IsMelee(record)) || (options.DamageType == 2 && !StatsUtil.IsMelee(record)))
                     {
                       _raidTotals.Total += record.Total;
                       var stats = StatsUtil.CreatePlayerStats(individualStats, record.Defender);
@@ -219,14 +238,25 @@ namespace EQLogParser
 
             _raidTotals.Dps = (long)Math.Round(_raidTotals.Total / _raidTotals.TotalSeconds, 2);
             StatsUtil.PopulateSpecials(_raidTotals);
+
             Parallel.ForEach(individualStats.Values, stats =>
             {
-              StatsUtil.UpdateAllStatsTimeRanges(stats, _playerTimeRanges, _playerSubTimeRanges);
+              StatsUtil.UpdateAllStatsTimeRanges(stats, _playerTimeRanges, _playerSubTimeRanges, startTime, stopTime);
               StatsUtil.UpdateCalculations(stats, _raidTotals);
+
               if (_raidTotals.Specials.TryGetValue(stats.OrigName, out var special2))
               {
                 stats.Special = special2;
               }
+
+              var timeRange = new TimeRange();
+              if (_playerTimeRanges.TryGetValue(stats.Name, out var range))
+              {
+                timeRange.Add(range.TimeSegments);
+              }
+
+              var filteredTimeRange = StatsUtil.FilterTimeRange(timeRange, startTime, stopTime);
+              stats.TotalSeconds = filteredTimeRange.GetTotal();
             });
 
             var combined = new CombinedStats
@@ -258,7 +288,7 @@ namespace EQLogParser
             genEvent.Groups.AddRange(_tankingGroups);
             genEvent.UniqueGroupCount = _tankingGroupIds.Count;
             EventsGenerationStatus?.Invoke(genEvent);
-            FireChartEvent(options, "UPDATE");
+            FireChartEvent("UPDATE", options.DamageType);
           }
           catch (Exception ex)
           {
@@ -276,13 +306,27 @@ namespace EQLogParser
       }
     }
 
+    private void FireNewStatsEvent()
+    {
+      // generating new stats
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.TankParse, State = "STARTED" });
+    }
+
+    private void FireNoDataEvent(string state, int damageType)
+    {
+      // nothing to do
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.TankParse, State = state });
+      FireChartEvent("CLEAR", damageType);
+    }
+
     private void Reset()
     {
-      _playerTimeRanges.Clear();
-      _playerSubTimeRanges.Clear();
+      _allTankingGroups = _tankingGroups;
       _tankingGroups.Clear();
       _tankingGroupIds.Clear();
       _raidTotals = StatsUtil.CreatePlayerStats(Labels.RaidTotals);
+      _playerTimeRanges.Clear();
+      _playerSubTimeRanges.Clear();
       _selected = null;
       _title = "";
     }

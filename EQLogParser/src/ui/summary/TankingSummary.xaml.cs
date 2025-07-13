@@ -1,10 +1,13 @@
-﻿using Syncfusion.UI.Xaml.Grid;
+﻿using FontAwesome5;
+using Syncfusion.UI.Xaml.Grid;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 
 namespace EQLogParser
@@ -17,6 +20,7 @@ namespace EQLogParser
     private string _currentClass;
     private bool _currentPetValue;
     private int _currentGroupCount;
+    private readonly DispatcherTimer _selectionTimer;
     private bool _ready;
 
     public TankingSummary()
@@ -52,6 +56,25 @@ namespace EQLogParser
       // call after everything else is initialized
       InitSummaryTable(title, dataGrid, selectedColumns);
       dataGrid.GridCopyContent += DataGridCopyContent;
+
+      _selectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
+      _selectionTimer.Tick += (_, _) =>
+      {
+        if (prog.Icon == EFontAwesomeIcon.Solid_HourglassStart)
+        {
+          prog.Icon = EFontAwesomeIcon.Solid_HourglassHalf;
+        }
+        else if (prog.Icon == EFontAwesomeIcon.Solid_HourglassHalf)
+        {
+          prog.Icon = EFontAwesomeIcon.Solid_HourglassEnd;
+        }
+        else if (prog.Icon == EFontAwesomeIcon.Solid_HourglassEnd)
+        {
+          prog.Visibility = Visibility.Hidden;
+          EventsTankingSummaryOptionsChanged();
+          _selectionTimer.Stop();
+        }
+      };
     }
 
     internal override void ShowBreakdown(List<PlayerStats> selected)
@@ -106,7 +129,7 @@ namespace EQLogParser
             menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.Unk && playerStats.OrigName != Labels.Rs &&
             !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
             selectedName = playerStats.OrigName;
-            menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X");
+            menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains('X');
           }
 
           EnableClassMenuItems(menuItemShowHealingBreakdown, dataGrid, CurrentStats?.UniqueClasses);
@@ -268,9 +291,21 @@ namespace EQLogParser
               if (CurrentStats == null)
               {
                 title.Content = NodataTableLabel;
+                maxTimeChooser.MaxValue = 0;
+                minTimeChooser.MaxValue = 0;
               }
               else
               {
+                // update min/max time
+                maxTimeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
+                if (maxTimeChooser.MaxValue > 0)
+                {
+                  maxTimeChooser.MinValue = 1;
+                }
+                maxTimeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.TotalSeconds + CurrentStats.RaidStats.MinTime);
+                minTimeChooser.MaxValue = Convert.ToInt64(CurrentStats.RaidStats.MaxTime);
+                minTimeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.MinTime);
+
                 title.Content = CurrentStats.FullTitle;
                 isHealingLimited = HealingStatsManager.Instance.PopulateHealing(CurrentStats);
                 dataGrid.ItemsSource = CurrentStats.StatsList;
@@ -287,11 +322,17 @@ namespace EQLogParser
             case "NONPC":
             case "NODATA":
               CurrentStats = null;
+              maxTimeChooser.MaxValue = 0;
+              minTimeChooser.MaxValue = 0;
               title.Content = e.State == "NONPC" ? DefaultTableLabel : NodataTableLabel;
               CreatePetOwnerMenu();
               UpdateDataGridMenuItems();
               break;
           }
+
+          // always stop
+          _selectionTimer.Stop();
+          prog.Visibility = Visibility.Hidden;
         }
       });
     }
@@ -334,6 +375,18 @@ namespace EQLogParser
       }
     }
 
+    private void TimeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+      if (dataGrid.ItemsSource != null)
+      {
+        _selectionTimer.Stop();
+        _selectionTimer.Start();
+
+        prog.Icon = EFontAwesomeIcon.Solid_HourglassStart;
+        prog.Visibility = Visibility.Visible;
+      }
+    }
+
     private void OptionsChanged(object sender, RoutedEventArgs e)
     {
       if (dataGrid?.View != null)
@@ -349,7 +402,7 @@ namespace EQLogParser
 
         if (needRequery)
         {
-          var tankingOptions = new GenerateStatsOptions { DamageType = DamageType };
+          var tankingOptions = new GenerateStatsOptions { DamageType = DamageType, MaxSeconds = (long)maxTimeChooser.Value, MinSeconds = (long)minTimeChooser.Value };
           Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
         }
       }
@@ -359,9 +412,8 @@ namespace EQLogParser
     {
       if (name == "Tanking")
       {
-        var tankingOptions = new GenerateStatsOptions { DamageType = DamageType };
         var selected = GetSelectedStats();
-        TankingStatsManager.Instance.FireChartEvent(tankingOptions, "UPDATE", selected);
+        TankingStatsManager.Instance.FireChartEvent("UPDATE", DamageType, selected);
       }
     }
 
@@ -376,6 +428,21 @@ namespace EQLogParser
       });
     }
 
+    private void EventsTankingSummaryOptionsChanged()
+    {
+      var statOptions = new GenerateStatsOptions
+      {
+        MinSeconds = (long)minTimeChooser.Value,
+        MaxSeconds = ((long)maxTimeChooser.Value > 0) ? (long)maxTimeChooser.Value : -1,
+        DamageType = DamageType
+      };
+
+      if (statOptions.MinSeconds < statOptions.MaxSeconds || statOptions.MaxSeconds == -1)
+      {
+        Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(statOptions));
+      }
+    }
+
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {
       if (VisualParent != null && !_ready)
@@ -384,14 +451,15 @@ namespace EQLogParser
         HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
         DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
-        if (TankingStatsManager.Instance.GetGroupCount() > 0)
-        {
-          // keep chart request until resize issue is fixed. resetting the series fixes it at a minimum
-          var tankingOptions = new GenerateStatsOptions { DamageType = DamageType };
-          Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
-        }
+        MainActions.EventsTankingSelectionChanged += EventsTankingSelectionChanged;
+        EventsTankingSummaryOptionsChanged();
         _ready = true;
       }
+    }
+
+    private void EventsTankingSelectionChanged(PlayerStatsSelectionChangedEventArgs data)
+    {
+      TankingStatsManager.Instance.FireChartEvent("SELECT", DamageType, data.Selected);
     }
 
     public void HideContent()
@@ -400,8 +468,11 @@ namespace EQLogParser
       HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
       DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
       MainActions.EventsChartOpened -= EventsChartOpened;
+      MainActions.EventsTankingSelectionChanged -= EventsTankingSelectionChanged;
       ClearData();
-      TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "UPDATE");
+
+      // window is close so reset
+      TankingStatsManager.Instance.FireChartEvent("UPDATE", DamageType, null, true);
       _ready = false;
     }
   }

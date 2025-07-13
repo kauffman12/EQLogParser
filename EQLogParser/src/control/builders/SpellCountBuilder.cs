@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace EQLogParser
@@ -49,15 +48,12 @@ namespace EQLogParser
     public static double QuerySpells(PlayerStats raidStats, HashSet<IAction> castsDuring,
       HashSet<IAction> receivedDuring, Dictionary<IAction, double> times = null)
     {
-      var maxTime = double.NaN;
-      var startTime = double.NaN;
+      var maxTime = raidStats.MaxBeginTime;
+      var minTime = raidStats.MinBeginTime;
       foreach (var segment in CollectionsMarshal.AsSpan(raidStats.AllRanges.TimeSegments))
       {
         var damageAfter = segment.BeginTime - DmgOffset;
         var damageBefore = segment.EndTime;
-
-        startTime = double.IsNaN(startTime) ? segment.BeginTime : Math.Min(startTime, segment.BeginTime);
-        maxTime = double.IsNaN(maxTime) ? segment.BeginTime + raidStats.TotalSeconds : maxTime;
 
         foreach (var (beginTime, spell) in RecordManager.Instance.GetSpellsDuring(segment.BeginTime - BuffOffset, segment.EndTime + HalfOffset))
         {
@@ -68,22 +64,22 @@ namespace EQLogParser
 
           if (spell is ReceivedSpell)
           {
-            AddSpell(raidStats, spell, beginTime, maxTime, receivedDuring, damageAfter, damageBefore);
+            AddSpell(raidStats, spell, beginTime, minTime, maxTime, receivedDuring, damageAfter, damageBefore);
           }
           else
           {
-            AddSpell(raidStats, spell, beginTime, maxTime, castsDuring, damageAfter, damageBefore);
+            AddSpell(raidStats, spell, beginTime, minTime, maxTime, castsDuring, damageAfter, damageBefore);
           }
         }
       }
 
-      return startTime;
+      return minTime;
     }
 
-    private static void AddSpell(PlayerStats raidStats, IAction action, double beginTime, double maxTime,
+    private static void AddSpell(PlayerStats raidStats, IAction action, double beginTime, double minTime, double maxTime,
       HashSet<IAction> actions, double damageAfter, double damageBefore)
     {
-      if (!raidStats.MaxTime.Equals(raidStats.TotalSeconds) && !(beginTime <= maxTime))
+      if ((!double.IsNaN(minTime) && beginTime < minTime) || (!double.IsNaN(maxTime) && beginTime > maxTime))
       {
         return;
       }
@@ -123,7 +119,7 @@ namespace EQLogParser
     {
       if (!playerCounts.TryGetValue(thePlayer, out var counts))
       {
-        counts = ([]);
+        counts = [];
         playerCounts[thePlayer] = counts;
       }
 
@@ -134,7 +130,7 @@ namespace EQLogParser
       {
         if (!interruptedCounts.TryGetValue(thePlayer, out var interrupts))
         {
-          interrupts = ([]);
+          interrupts = [];
           interruptedCounts[thePlayer] = interrupts;
         }
 

@@ -89,7 +89,7 @@ namespace EQLogParser
       var valid = false;
       if (wrapper.Record is DamageRecord damage)
       {
-        valid = _damageType == 0 || (_damageType == 1 && TankingStatsManager.IsMelee(damage)) || (_damageType == 2 && !TankingStatsManager.IsMelee(damage));
+        valid = _damageType == 0 || (_damageType == 1 && StatsUtil.IsMelee(damage)) || (_damageType == 2 && !StatsUtil.IsMelee(damage));
       }
       return valid;
     }

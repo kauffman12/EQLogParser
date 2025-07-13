@@ -286,14 +286,6 @@ namespace EQLogParser
       };
     }
 
-    internal int GetGroupCount()
-    {
-      lock (_damageGroupIds)
-      {
-        return _damageGroups.Count;
-      }
-    }
-
     internal void RebuildTotalStats(GenerateStatsOptions options)
     {
       lock (_damageGroupIds)
@@ -337,8 +329,7 @@ namespace EQLogParser
 
           if (damageBlocks.Count != 0)
           {
-            _raidTotals.TotalSeconds = _raidTotals.Ranges.GetTotal();
-            _raidTotals.MaxTime = _raidTotals.TotalSeconds;
+            _raidTotals.TotalSeconds = _raidTotals.MaxTime = _raidTotals.Ranges.GetTotal();
 
             var rangeIndex = 0;
             double lastTime = 0;
@@ -365,7 +356,7 @@ namespace EQLogParser
               }
               else
               {
-                newBlock.Last().Actions.AddRange(block.Actions);
+                newBlock.LastOrDefault()?.Actions.AddRange(block.Actions);
               }
 
               // update pet mapping
@@ -392,6 +383,27 @@ namespace EQLogParser
       }
     }
 
+    internal void FireChartEvent(string action, List<PlayerStats> selected = null, bool reset = false)
+    {
+      lock (_damageGroupIds)
+      {
+        if (reset)
+        {
+          _damageGroups = _allDamageGroups ?? [];
+        }
+
+        // send update
+        var de = new DataPointEvent { Action = action, Iterator = new DamageGroupCollection(_damageGroups) };
+
+        if (selected != null)
+        {
+          de.Selected.AddRange(selected);
+        }
+
+        EventsUpdateDataPoint?.Invoke(_damageGroups, de);
+      }
+    }
+
     private void ComputeDamageStats(GenerateStatsOptions options)
     {
       lock (_damageGroupIds)
@@ -405,6 +417,8 @@ namespace EQLogParser
 
           // always start over
           _raidTotals.Total = 0;
+          _raidTotals.MaxBeginTime = double.NaN;
+          _raidTotals.MinBeginTime = double.NaN;
           var startTime = double.NaN;
           var stopTime = double.NaN;
 
@@ -413,37 +427,7 @@ namespace EQLogParser
             if ((options.MaxSeconds > -1 && options.MaxSeconds < _raidTotals.MaxTime && !options.MaxSeconds.Equals((long)_raidTotals.TotalSeconds)) ||
               (options.MinSeconds > 0 && options.MinSeconds <= _raidTotals.MaxTime && !options.MinSeconds.Equals((long)_raidTotals.MinTime)))
             {
-              var removeFromEnd = _raidTotals.MaxTime - options.MaxSeconds;
-              if (removeFromEnd > 0)
-              {
-                var reverse = _raidTotals.Ranges.TimeSegments.ToList();
-                reverse.Reverse();
-                foreach (var range in reverse)
-                {
-                  if (range.Total >= removeFromEnd)
-                  {
-                    stopTime = range.EndTime - removeFromEnd;
-                    break;
-                  }
-
-                  removeFromEnd -= range.Total;
-                }
-              }
-
-              var removeFromStart = (double)options.MinSeconds;
-              if (removeFromStart > 0)
-              {
-                foreach (var range in _raidTotals.Ranges.TimeSegments)
-                {
-                  if (range.Total >= removeFromStart)
-                  {
-                    startTime = range.BeginTime + removeFromStart;
-                    break;
-                  }
-
-                  removeFromStart -= range.Total;
-                }
-              }
+              StatsUtil.UpdateMinMaxTimes(_raidTotals, options, out startTime, out stopTime);
 
               var filteredGroups = new List<List<ActionGroup>>();
               _allDamageGroups.ForEach(group =>
@@ -559,12 +543,13 @@ namespace EQLogParser
                   {
                     if (_playerTimeRanges.TryGetValue(child.Name, out var range))
                     {
-                      StatsUtil.UpdateAllStatsTimeRanges(child, _playerTimeRanges, _playerSubTimeRanges, startTime, stopTime);
                       timeRange.Add(range.TimeSegments);
                     }
 
                     expandedStats.Add(child);
                     _raidTotals.ResistCounts.TryGetValue(child.Name, out var childResists);
+
+                    StatsUtil.UpdateAllStatsTimeRanges(child, _playerTimeRanges, _playerSubTimeRanges, startTime, stopTime);
                     StatsUtil.UpdateCalculations(child, _raidTotals, childResists);
 
                     if (stats.Total > 0)
@@ -638,7 +623,7 @@ namespace EQLogParser
             genEvent.UniqueGroupCount = _damageGroupIds.Count;
             EventsGenerationStatus?.Invoke(genEvent);
 
-            FireChartEvent(options, "UPDATE");
+            FireChartEvent("UPDATE");
           }
           catch (Exception ex)
           {
@@ -686,29 +671,7 @@ namespace EQLogParser
     {
       // nothing to do
       EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.DamageParse, State = state });
-      FireChartEvent(options, "CLEAR");
-    }
-
-    internal void FireChartEvent(GenerateStatsOptions options, string action, List<PlayerStats> selected = null)
-    {
-      lock (_damageGroupIds)
-      {
-        // reset groups
-        if (options.MaxSeconds == long.MinValue && _allDamageGroups != null)
-        {
-          _damageGroups = _allDamageGroups;
-        }
-
-        // send update
-        var de = new DataPointEvent { Action = action, Iterator = new DamageGroupCollection(_damageGroups) };
-
-        if (selected != null)
-        {
-          de.Selected.AddRange(selected);
-        }
-
-        EventsUpdateDataPoint?.Invoke(_damageGroups, de);
-      }
+      FireChartEvent("CLEAR");
     }
 
     private void Reset()

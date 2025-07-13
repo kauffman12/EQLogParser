@@ -24,19 +24,24 @@ namespace EQLogParser
       { "Bites", 1 }, { "Claws", 1 }, { "Crushes", 1 }, { "Pierces", 1 }, { "Punches", 1 }, { "Slashes", 1 }
     });
 
+    internal static bool IsMelee(DamageRecord record)
+    {
+      return record.Type is Labels.Melee or Labels.Miss or Labels.Parry or Labels.Dodge or Labels.Block or Labels.Invulnerable or Labels.Riposte or Labels.Absorb;
+    }
+
     internal static PlayerStats CreatePlayerStats(Dictionary<string, PlayerStats> individualStats, string key, string origName = null)
     {
       PlayerStats stats;
       lock (individualStats)
       {
-        if (!individualStats.ContainsKey(key))
+        if (!individualStats.TryGetValue(key, out var value))
         {
           stats = CreatePlayerStats(key, origName);
           individualStats[key] = stats;
         }
         else
         {
-          stats = individualStats[key];
+          stats = value;
         }
       }
 
@@ -143,6 +148,46 @@ namespace EQLogParser
       }
 
       return y;
+    }
+
+    internal static void UpdateMinMaxTimes(PlayerStats raidTotals, GenerateStatsOptions options, out double startTime, out double stopTime)
+    {
+      startTime = double.NaN;
+      stopTime = double.NaN;
+
+      var removeFromEnd = raidTotals.MaxTime - options.MaxSeconds;
+      if (removeFromEnd > 0)
+      {
+        var reverse = raidTotals.Ranges.TimeSegments.ToList();
+        reverse.Reverse();
+        foreach (var range in reverse)
+        {
+          if (range.Total >= removeFromEnd)
+          {
+            stopTime = range.EndTime - removeFromEnd;
+            raidTotals.MaxBeginTime = stopTime;
+            break;
+          }
+
+          removeFromEnd -= range.Total;
+        }
+      }
+
+      var removeFromStart = (double)options.MinSeconds;
+      if (removeFromStart > 0)
+      {
+        foreach (var range in raidTotals.Ranges.TimeSegments)
+        {
+          if (range.Total >= removeFromStart)
+          {
+            startTime = range.BeginTime + removeFromStart;
+            raidTotals.MinBeginTime = startTime;
+            break;
+          }
+
+          removeFromStart -= range.Total;
+        }
+      }
     }
 
     internal static void UpdateRaidTimeRanges(Dictionary<string, TimeSegment> segments, Dictionary<string, Dictionary<string, TimeSegment>> subSegments,
@@ -553,7 +598,7 @@ namespace EQLogParser
       var resistStart = 0;
       var specialStart = 0;
       var deathStart = 0;
-      var allResists = includeResists ? RecordManager.Instance.GetAllResists().ToList() : new List<(double, ResistRecord)>();
+      var allResists = includeResists ? RecordManager.Instance.GetAllResists().ToList() : [];
       var allSpecials = RecordManager.Instance.GetAllSpecials().ToList();
       var allDeaths = RecordManager.Instance.GetAllDeaths().ToList();
       var temp = new HashSet<IAction>();

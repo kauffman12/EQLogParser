@@ -3,6 +3,12 @@
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
 
 1. Added **Inline and List** options to Parse Preview. If you select **List** the selected parse will display with one player per line instead of one long string. This may be useful for pasting parses in Discord or other areas as it's easier to read. **Inline** is what it's always done.
+2. Added **Time Interval** to Tanking Summary and Healing Summary similar to DPS Summary. Needed a good amount of re-work so **look out of any issues** when using this.
+3. Included **Specials** with Healing and Tanking parses if enabled.
+4. Updated **Non-Melee** Tanking Summary option to not count absorbed as non-melee hits.
+5. Fix for shared triggers not updating.
+6. Added note to character trigger config related to active and font color overrides.
+7. Cleaned up some UI issues with the splash screen.
 
 # 2.3.3
 
@@ -17,7 +23,7 @@
 # 2.3.1
 
 1. Perfomance improvements that should help with high usage of TTS.
-2. Added **% Acc** and **% Hit** to the Damage Summary
+2. Added **% Acc** and **% Hit** to the Damage Summary.
 3. Added **Show Damage Percent** to the Damage Meter. It's just the percent of damage the player has done compared to the total. Where it displays may change.
 4. Testing new build/release process.
 

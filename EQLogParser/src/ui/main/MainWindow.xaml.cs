@@ -262,9 +262,9 @@ namespace EQLogParser
         DamageStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(damageChartIcon.Tag as string, data));
         HealingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(healingChartIcon.Tag as string, data));
         TankingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(tankingChartIcon.Tag as string, data));
-        MainActions.EventsDamageSelectionChanged += DamageSummary_SelectionChanged;
-        MainActions.EventsHealingSelectionChanged += HealingSummary_SelectionChanged;
-        MainActions.EventsTankingSelectionChanged += TankingSummary_SelectionChanged;
+        MainActions.EventsDamageSelectionChanged += DamageSummarySelectionChanged;
+        MainActions.EventsHealingSelectionChanged += HealingSummarySelectionChanged;
+        MainActions.EventsTankingSelectionChanged += TankingSummarySelectionChanged;
 
         _computeStatsTimer = new DispatcherTimer(DispatcherPriority.Normal)
         {
@@ -657,17 +657,13 @@ namespace EQLogParser
     private void ToggleAoEHealingClick(object sender, RoutedEventArgs e)
     {
       IsAoEHealingEnabled = !IsAoEHealingEnabled;
-      ConfigUtil.SetSetting("IncludeAoEHealing", IsAoEHealingEnabled);
-      enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
-      Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats());
+      MainActions.UpdateHealingOption(enableAoEHealingIcon, IsAoEHealingEnabled, "IncludeAoEHealing");
     }
 
     private void ToggleHealingSwarmPetsClick(object sender, RoutedEventArgs e)
     {
       IsHealingSwarmPetsEnabled = !IsHealingSwarmPetsEnabled;
-      ConfigUtil.SetSetting("IncludeHealingSwarmPets", IsHealingSwarmPetsEnabled);
-      enableHealingSwarmPetsIcon.Visibility = IsHealingSwarmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
-      Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats());
+      MainActions.UpdateHealingOption(enableHealingSwarmPetsIcon, IsHealingSwarmPetsEnabled, "IncludeHealingSwarmPets");
     }
 
     private void ToggleAutoMonitorClick(object sender, RoutedEventArgs e)
@@ -791,14 +787,14 @@ namespace EQLogParser
       }
     }
 
-    private void DamageSummary_SelectionChanged(PlayerStatsSelectionChangedEventArgs data)
+    private void DamageSummarySelectionChanged(PlayerStatsSelectionChangedEventArgs data)
     {
-      DamageStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "SELECT", data.Selected);
+      DamageStatsManager.Instance.FireChartEvent("SELECT", data.Selected);
       var preview = playerParseTextWindow.Content as ParsePreview;
       preview?.UpdateParse(Labels.DamageParse, data.Selected);
     }
 
-    private void HealingSummary_SelectionChanged(PlayerStatsSelectionChangedEventArgs data)
+    private void HealingSummarySelectionChanged(PlayerStatsSelectionChangedEventArgs data)
     {
       HealingStatsManager.Instance.FireChartEvent("SELECT", data.Selected);
       var addTopParse = data.Selected?.Count == 1 && data.Selected[0].SubStats?.Count > 0;
@@ -806,9 +802,8 @@ namespace EQLogParser
       preview?.UpdateParse(data, addTopParse, Labels.HealParse, Labels.TopHealParse);
     }
 
-    private void TankingSummary_SelectionChanged(PlayerStatsSelectionChangedEventArgs data)
+    private void TankingSummarySelectionChanged(PlayerStatsSelectionChangedEventArgs data)
     {
-      TankingStatsManager.Instance.FireChartEvent(new GenerateStatsOptions(), "SELECT", data.Selected);
       var addReceiveParse = data.Selected?.Count == 1 && data.Selected[0].MoreStats != null;
       var preview = playerParseTextWindow.Content as ParsePreview;
       preview?.UpdateParse(data, addReceiveParse, Labels.TankParse, Labels.ReceivedHealParse);
