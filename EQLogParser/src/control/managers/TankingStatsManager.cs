@@ -108,7 +108,7 @@ namespace EQLogParser
               }
               else
               {
-                newBlock.LastOrDefault()?.Actions.AddRange(block.Actions);
+                newBlock.LastOrDefault()?.Actions?.AddRange(block.Actions);
               }
 
               lastTime = block.BeginTime;
@@ -241,6 +241,7 @@ namespace EQLogParser
 
             Parallel.ForEach(individualStats.Values, stats =>
             {
+              // update before using _playerTimeRanges
               StatsUtil.UpdateAllStatsTimeRanges(stats, _playerTimeRanges, _playerSubTimeRanges, startTime, stopTime);
               StatsUtil.UpdateCalculations(stats, _raidTotals);
 

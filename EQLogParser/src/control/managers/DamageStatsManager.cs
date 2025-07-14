@@ -356,7 +356,7 @@ namespace EQLogParser
               }
               else
               {
-                newBlock.LastOrDefault()?.Actions.AddRange(block.Actions);
+                newBlock.LastOrDefault()?.Actions?.AddRange(block.Actions);
               }
 
               // update pet mapping
@@ -541,6 +541,9 @@ namespace EQLogParser
                   var timeRange = new TimeRange();
                   foreach (var child in children.Values)
                   {
+                    // update before using _playerTimeRanges
+                    StatsUtil.UpdateAllStatsTimeRanges(child, _playerTimeRanges, _playerSubTimeRanges, startTime, stopTime);
+
                     if (_playerTimeRanges.TryGetValue(child.Name, out var range))
                     {
                       timeRange.Add(range.TimeSegments);
@@ -549,7 +552,6 @@ namespace EQLogParser
                     expandedStats.Add(child);
                     _raidTotals.ResistCounts.TryGetValue(child.Name, out var childResists);
 
-                    StatsUtil.UpdateAllStatsTimeRanges(child, _playerTimeRanges, _playerSubTimeRanges, startTime, stopTime);
                     StatsUtil.UpdateCalculations(child, _raidTotals, childResists);
 
                     if (stats.Total > 0)
