@@ -152,7 +152,7 @@ namespace EQLogParser
         {
           if (!string.IsNullOrEmpty(details))
           {
-            result += Environment.NewLine + ((details.Length > 1 && details[1] == '.') ? ("  " + details) : details);
+            result += Environment.NewLine + details;
           }
         }
         return result;

@@ -1,6 +1,11 @@
-# 2.3.4
+# 2.3.5
 
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
+
+1. Fix for **DPS Summary** loading incorrect times for some players on initial selection.
+2. Updated List option formatting for sending parses to work better with Discord.
+
+# 2.3.4
 
 1. Added **Inline and List** options to Parse Preview. If you select **List** the selected parse will display with one player per line instead of one long string. This may be useful for pasting parses in Discord or other areas as it's easier to read. **Inline** is what it's always done.
 2. Added **Time Interval** to Tanking Summary and Healing Summary similar to DPS Summary. Needed a good amount of re-work so **look out of any issues** when using this.

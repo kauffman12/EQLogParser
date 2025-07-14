@@ -537,16 +537,19 @@ namespace EQLogParser
         var damageStatsOptions = new GenerateStatsOptions();
         damageStatsOptions.Npcs.AddRange(filtered);
         damageStatsOptions.AllRanges = allRanges;
+        damageStatsOptions.MinSeconds = 0;
         Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(damageStatsOptions));
 
         var healingStatsOptions = new GenerateStatsOptions();
         healingStatsOptions.Npcs.AddRange(filtered);
         healingStatsOptions.AllRanges = allRanges;
+        healingStatsOptions.MinSeconds = 0;
         Task.Run(() => HealingStatsManager.Instance.BuildTotalStats(healingStatsOptions));
 
         var tankingStatsOptions = new GenerateStatsOptions();
         tankingStatsOptions.Npcs.AddRange(filtered);
         tankingStatsOptions.AllRanges = allRanges;
+        tankingStatsOptions.MinSeconds = 0;
         if (opened.TryGetValue((tankingSummaryIcon.Tag as string)!, out var control) && control != null)
         {
           tankingStatsOptions.DamageType = ((TankingSummary)control.Content).DamageType;
