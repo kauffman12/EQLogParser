@@ -90,7 +90,7 @@ namespace EQLogParser
         await processor.StopTriggersAsync();
       }
 
-      TriggerOverlayManager.Instance.HideOverlays();
+      TriggerOverlayManager.Instance.StopOverlays();
     }
 
     internal async Task<List<LogReader>> GetLogReadersAsync()

@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+             xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:local="clr-namespace:EQLogParser"
              Initialized="TriggersViewOnInitialized"
              Loaded="ContentLoaded"
@@ -17,9 +18,14 @@
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <CheckBox x:Name="basicCheckBox" Template="{StaticResource CustomCheckBoxTemplate}" Margin="6,0,-8,2" FontWeight="Normal" Unchecked="BasicChecked" Checked="BasicChecked" />
       <Label x:Name="titleLabel" Margin="4,0,0,2" VerticalContentAlignment="Center" Padding="0" Content="Check to Activate Triggers" Style="{DynamicResource EQTitleStyle}" Foreground="{DynamicResource EQStopForegroundBrush}"/>
+      <fa:ImageAwesome x:Name="stopBtn" Visibility="Collapsed" MouseLeftButtonDown="StopBtnClick"  Icon="Regular_StopCircle" Cursor="Hand" Height="16" Width="16" Margin="8,0,0,1" HorizontalAlignment="Center" Foreground="{DynamicResource EQStopForegroundBrush}" ToolTip="Stop all timers, speech, and closer Overlays similar to {EQLP:STOP}">
+        <fa:ImageAwesome.LayoutTransform>
+          <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+        </fa:ImageAwesome.LayoutTransform>
+      </fa:ImageAwesome>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <Grid Margin="0,0,20,8" PreviewMouseLeftButtonDown="ToggleAdvancedPreviewMouseDown">
+      <Grid Margin="0,0,12,8" PreviewMouseLeftButtonDown="ToggleAdvancedPreviewMouseDown">
         <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource EQWarnForegroundBrush}">
           <TextBlock x:Name="advancedText" Text="Switch to Advanced" Cursor="Hand" TextWrapping="Wrap" FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource EQWarnForegroundBrush}" VerticalAlignment="Bottom" Padding="0,0,0,1"/>
         </Border>

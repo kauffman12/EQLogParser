@@ -15,6 +15,7 @@
         BorderThickness="2"
         MinWidth="400"
         MinHeight="250"
+        LocationChanged="MainWindowSizeChanged"
         SizeChanged="MainWindowSizeChanged"
         TitleBarHeight="{DynamicResource EQTableHeaderRowHeight}"
         ShowTitle="False"

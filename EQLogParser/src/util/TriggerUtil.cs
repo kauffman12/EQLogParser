@@ -870,15 +870,16 @@ namespace EQLogParser
                   "New Folder", "Merge", characterIds.Count > 0);
                 msgDialog.ShowDialog();
 
+                var mergeIds = msgDialog.MergeOption ? characterIds : null;
                 if (msgDialog.IsYes2Clicked)
                 {
-                  await TriggerStateManager.Instance.ImportTriggers("", nodes, characterIds);
+                  await TriggerStateManager.Instance.ImportTriggers("", nodes, mergeIds);
                 }
                 if (msgDialog.IsYes1Clicked)
                 {
                   var folderName = (player == null) ? "New Folder" : "From " + player;
                   folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
-                  await TriggerStateManager.Instance.ImportTriggers(folderName, nodes, characterIds);
+                  await TriggerStateManager.Instance.ImportTriggers(folderName, nodes, mergeIds);
                 }
               }
               else

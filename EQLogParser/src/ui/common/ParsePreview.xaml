@@ -30,11 +30,12 @@
         <ComboBox Margin="0,0,8,2" x:Name="parseList" IsEnabled="True" SelectionChanged="ParseListSelectionChanged" />
         <ComboBox Margin="0,0,4,2" x:Name="parseFormat" IsEnabled="True" SelectionChanged="ParseFormatSelectionChanged" />
         <CheckBox x:Name="playerParseTextDoPetLabel" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,0,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Denote Pets"/>
-        <CheckBox x:Name="playerParseTextDoDPS" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,0,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Include DPS/HPS"/>
-        <CheckBox x:Name="playerParseTextDoTotals" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,0,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Include Raid Total"/>
-        <CheckBox x:Name="playerParseTextDoSpecials" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,0,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Include Specials"/>
-        <CheckBox x:Name="playerParseTextDoTime" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,0,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Include Time"/>
-        <CheckBox x:Name="playerParseTextDoRank" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,8,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Rank Players"/>
+        <CheckBox x:Name="playerParseTextDoDPS" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,0,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Player DPS"/>
+        <CheckBox x:Name="playerParseTextDoTime" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,0,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Player Time"/>
+        <CheckBox x:Name="playerParseTextDoRaidTime" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,0,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Raid Time"/>
+        <CheckBox x:Name="playerParseTextDoTotals" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,0,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Raid Totals"/>
+        <CheckBox x:Name="playerParseTextDoRank" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,0,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Rank"/>
+        <CheckBox x:Name="playerParseTextDoSpecials" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,8,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Specials"/>
       </StackPanel>
       <TextBox Grid.Column="1" Grid.Row="1" x:Name="playerParseTextBox" TextWrapping="Wrap" IsReadOnly="True" VerticalContentAlignment="Top" BorderThickness="0" FontSize="{DynamicResource EQTitleSize}" MouseEnter="PlayerParseTextMouseEnter" TextChanged="PlayerParseTextBoxTextChanged"/>
     </Grid>

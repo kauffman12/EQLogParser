@@ -28,7 +28,11 @@
       <TextBox x:Name="logSearch2" Margin="0,0,8,2" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" FontStyle="Italic" Width="175" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
       <ComboBox x:Name="logSearchTime" Margin="0,0,8,2" SelectedIndex="0" Width="100" VerticalContentAlignment="Center" />
       <CheckBox x:Name="useRegex" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="False" Margin="6,1,2,2" Content="Use Regex" ToolTip="Allow regex to be used as search terms." />
-      <fa:ImageAwesome x:Name="searchIcon" Rotation="0" Margin="2,4,0,4" VerticalAlignment="Center" Height="{DynamicResource EQIconButtonHeight}" Icon="Solid_Search" ToolTip="Start Searching" MouseLeftButtonDown="SearchClick" IsEnabledChanged="SearchIconIsEnabledChanged" />
+      <fa:ImageAwesome x:Name="searchIcon" Rotation="0" Margin="2,4,0,4" Cursor="Hand" VerticalAlignment="Center" Height="18" Width="18" Icon="Solid_Search" ToolTip="Start Searching" MouseLeftButtonDown="SearchClick" IsEnabledChanged="SearchIconIsEnabledChanged">
+        <fa:ImageAwesome.LayoutTransform>
+          <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+        </fa:ImageAwesome.LayoutTransform>
+      </fa:ImageAwesome>
       <Label x:Name="progress" Visibility="Hidden" FontStyle="Italic" />
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">

@@ -144,6 +144,34 @@ namespace EQLogParser
       }
     }
 
+    internal async void StopOverlay()
+    {
+      await _renderSemaphore.WaitAsync();
+
+      try
+      {
+        lock (_idleTimerList.SyncRoot)
+        {
+          _idleTimerList.Clear();
+        }
+
+        lock (_timerList.SyncRoot)
+        {
+          _timerList.Clear();
+        }
+
+        _newData = false;
+        _newShortTickData = false;
+
+        HideContentAsync();
+        Visibility = Visibility.Collapsed;
+      }
+      finally
+      {
+        _renderSemaphore.Release();
+      }
+    }
+
     internal async void ValidateTimers(HashSet<string> enabledTriggers)
     {
       await _renderSemaphore.WaitAsync();
