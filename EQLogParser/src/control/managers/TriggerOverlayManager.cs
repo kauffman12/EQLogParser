@@ -54,7 +54,7 @@ namespace EQLogParser
             {
               if (_textWindows.TryGetValue(data.Id, out var windowData) && windowData.TheWindow is TextOverlayWindow { } window)
               {
-                window.Clear();
+                window.StopOverlay();
               }
             });
           }
@@ -70,7 +70,7 @@ namespace EQLogParser
         {
           if (value is OverlayWindowData windowData && windowData.TheWindow is TextOverlayWindow { } textWindow)
           {
-            textWindow.Clear();
+            textWindow.HideOverlay();
           }
         }
 
@@ -79,6 +79,28 @@ namespace EQLogParser
           if (value is OverlayWindowData windowData && windowData.TheWindow is TimerOverlayWindow { } timerWindow)
           {
             timerWindow.HideOverlay();
+          }
+        }
+      });
+    }
+
+    internal void StopOverlays()
+    {
+      _ = UiUtil.InvokeAsync(() =>
+      {
+        foreach (var value in _textWindows.Values.ToArray())
+        {
+          if (value is OverlayWindowData windowData && windowData.TheWindow is TextOverlayWindow { } textWindow)
+          {
+            textWindow.StopOverlay();
+          }
+        }
+
+        foreach (var value in _timerWindows.Values.ToArray())
+        {
+          if (value is OverlayWindowData windowData && windowData.TheWindow is TimerOverlayWindow { } timerWindow)
+          {
+            timerWindow.StopOverlay();
           }
         }
       });

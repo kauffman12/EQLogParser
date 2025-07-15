@@ -727,7 +727,7 @@ namespace EQLogParser
     {
       if (searchIcon != null)
       {
-        var brush = searchIcon.IsEnabled ? "EQMenuIconBrush" : "ContentBackgroundAlt5";
+        var brush = searchIcon.IsEnabled ? "EQGoodForegroundBrush" : "ContentBackgroundAlt5";
         searchIcon.Foreground = Application.Current.Resources[brush] as SolidColorBrush;
       }
     }

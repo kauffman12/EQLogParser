@@ -531,7 +531,7 @@ namespace EQLogParser
     }
 
     // from GINA or Quick Share with custom Folder name
-    internal async Task ImportTriggers(string name, IEnumerable<ExportTriggerNode> imported, HashSet<string> characterIds)
+    internal async Task ImportTriggers(string name, IEnumerable<ExportTriggerNode> imported, HashSet<string> characterIds = null)
     {
       await _taskQueue.EnqueueTransaction(() =>
       {

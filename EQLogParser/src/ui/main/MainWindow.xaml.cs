@@ -55,6 +55,7 @@ namespace EQLogParser
     private LogReader _eqLogReader;
     private readonly List<bool> _logWindows = [];
     private readonly List<string> _recentFiles = [];
+    private readonly string _activeWindow;
     private readonly string _releaseNotesUrl;
     private bool _isDamageOverlayOpen;
     private bool _resetWindowState;
@@ -217,13 +218,20 @@ namespace EQLogParser
       // update theme
       MainActions.InitThemes(this);
       ConfigUtil.UpdateStatus("Themes Initialized");
-      MainActions.AddDocumentWindows(dockSite);
 
       // create menu items for deleting chat
       Dispatcher.InvokeAsync(UpdateDeleteChatMenu, DispatcherPriority.DataBind);
 
+      // listen for tab changes
+      dockSite.ActiveWindowChanged += DockSiteActiveWindowChanged;
+      dockSite.DockStateChanged += DockSiteDockStateChanged;
+
       // general events
       SystemEvents.PowerModeChanged += SystemEventsPowerModeChanged;
+
+      // save active window before adding
+      _activeWindow = ConfigUtil.GetSetting("ActiveWindow");
+      MainActions.AddDocumentWindows(dockSite);
     }
 
     private async void MainWindowOnLoaded(object sender, RoutedEventArgs args)
@@ -306,7 +314,13 @@ namespace EQLogParser
           ConfigUtil.UpdateStatus("Starting Minimized");
         }
 
-        await Task.Delay(100);
+        await Task.Delay(200);
+
+        // activate the saved window
+        if (!string.IsNullOrEmpty(_activeWindow))
+        {
+          dockSite.ActivateWindow(_activeWindow);
+        }
 
         // check need monitor
         var previousFile = ConfigUtil.GetSetting("LastOpenedFile");
@@ -1160,7 +1174,7 @@ namespace EQLogParser
       }
     }
 
-    private void MainWindowSizeChanged(object sender, SizeChangedEventArgs e)
+    private void MainWindowSizeChanged(object sender, EventArgs e)
     {
       if (WindowState == WindowState.Normal)
       {
@@ -1168,6 +1182,26 @@ namespace EQLogParser
         ConfigUtil.SetSetting("WindowTop", Top);
         ConfigUtil.SetSetting("WindowHeight", Height);
         ConfigUtil.SetSetting("WindowWidth", Width);
+      }
+    }
+
+    private void DockSiteActiveWindowChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+      // save active window
+      if (dockSite.ActiveWindow is ContentControl cc && !string.IsNullOrEmpty(cc.Name) &&
+        DockingManager.GetState(cc) == DockState.Document && DockingManager.GetCanDock(cc) == false)
+      {
+        ConfigUtil.SetSetting("ActiveWindow", cc.Name);
+      }
+    }
+
+    private void DockSiteDockStateChanged(FrameworkElement sender, DockStateEventArgs e)
+    {
+      // save active window
+      if (dockSite.ActiveWindow is ContentControl cc && !string.IsNullOrEmpty(cc.Name) &&
+        DockingManager.GetState(cc) == DockState.Document && DockingManager.GetCanDock(cc) == false)
+      {
+        ConfigUtil.SetSetting("ActiveWindow", cc.Name);
       }
     }
 

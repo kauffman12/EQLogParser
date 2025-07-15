@@ -33,10 +33,11 @@ namespace EQLogParser
 
       playerParseTextDoPetLabel.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowPetLabel", true);
       playerParseTextDoDPS.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowDPS", true);
-      playerParseTextDoRank.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowRank", true);
-      playerParseTextDoTotals.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowTotals", true);
-      playerParseTextDoSpecials.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowSpecials", true);
       playerParseTextDoTime.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowTime", true);
+      playerParseTextDoRaidTime.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowRaidTime", true);
+      playerParseTextDoTotals.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowTotals", true);
+      playerParseTextDoRank.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowRank", true);
+      playerParseTextDoSpecials.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowSpecials", true);
 
       // this window is either hidden or visible and doesn't need to implement dispose
       DamageStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
@@ -162,10 +163,11 @@ namespace EQLogParser
         ListView = parseFormat.SelectedIndex == 1,
         ShowPetLabel = playerParseTextDoPetLabel.IsChecked == true,
         ShowDps = playerParseTextDoDPS.IsChecked == true,
-        ShowTotals = playerParseTextDoTotals.IsChecked == true,
-        ShowSpecial = playerParseTextDoSpecials.IsChecked == true,
         ShowTime = playerParseTextDoTime.IsChecked == true,
-        RankPlayers = playerParseTextDoRank.IsChecked == true
+        ShowRaidTime = playerParseTextDoRaidTime.IsChecked == true,
+        ShowTotals = playerParseTextDoTotals.IsChecked == true,
+        RankPlayers = playerParseTextDoRank.IsChecked == true,
+        ShowSpecial = playerParseTextDoSpecials.IsChecked == true
       };
     }
 
@@ -234,10 +236,11 @@ namespace EQLogParser
       {
         ConfigUtil.SetSetting("PlayerParseShowPetLabel", playerParseTextDoPetLabel.IsChecked == true);
         ConfigUtil.SetSetting("PlayerParseShowDPS", playerParseTextDoDPS.IsChecked == true);
-        ConfigUtil.SetSetting("PlayerParseShowRank", playerParseTextDoRank.IsChecked == true);
-        ConfigUtil.SetSetting("PlayerParseShowTotals", playerParseTextDoTotals.IsChecked == true);
-        ConfigUtil.SetSetting("PlayerParseShowSpecials", playerParseTextDoSpecials.IsChecked == true);
         ConfigUtil.SetSetting("PlayerParseShowTime", playerParseTextDoTime.IsChecked == true);
+        ConfigUtil.SetSetting("PlayerParseShowRaidTime", playerParseTextDoRaidTime.IsChecked == true);
+        ConfigUtil.SetSetting("PlayerParseShowTotals", playerParseTextDoTotals.IsChecked == true);
+        ConfigUtil.SetSetting("PlayerParseShowRank", playerParseTextDoRank.IsChecked == true);
+        ConfigUtil.SetSetting("PlayerParseShowSpecials", playerParseTextDoSpecials.IsChecked == true);
       }
     }
 

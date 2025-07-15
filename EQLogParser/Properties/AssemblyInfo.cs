@@ -13,7 +13,7 @@ using System.Windows;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("EQLogParser")]
-[assembly: AssemblyCopyright("Copyright © 2023")]
+[assembly: AssemblyCopyright("Copyright © 2025")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: NeutralResourcesLanguage("en")]
@@ -53,7 +53,7 @@ using System.Windows;
 // You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("2.3.5")]
-[assembly: AssemblyFileVersion("2.3.5")]
+[assembly: AssemblyVersion("2.3.6")]
+[assembly: AssemblyFileVersion("2.3.6")]
 [assembly: XmlConfigurator(Watch = true)]
 [assembly: SupportedOSPlatform("windows10.0")]

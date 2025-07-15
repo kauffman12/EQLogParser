@@ -346,11 +346,13 @@ namespace EQLogParser
             updatedTitle = $"{updatedTitle}s";
           }
           titleLabel.Content = updatedTitle;
+          stopBtn.Visibility = Visibility.Visible;
         }
         else
         {
           titleLabel.SetResourceReference(ForegroundProperty, "EQStopForegroundBrush");
           titleLabel.Content = "No Triggers Enabled";
+          stopBtn.Visibility = Visibility.Collapsed;
         }
 
         advancedText.Text = "Switch to Basic";
@@ -372,11 +374,13 @@ namespace EQLogParser
         {
           titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
           titleLabel.Content = "Triggers Enabled";
+          stopBtn.Visibility = Visibility.Visible;
         }
         else
         {
           titleLabel.SetResourceReference(ForegroundProperty, "EQStopForegroundBrush");
           titleLabel.Content = "Check to Enable Triggers";
+          stopBtn.Visibility = Visibility.Collapsed;
         }
 
         advancedText.Text = "Switch to Advanced";
@@ -782,6 +786,11 @@ namespace EQLogParser
 
       thePropertyGrid?.RefreshPropertygrid();
       Dispatcher.Invoke(() => cancelButton.IsEnabled = saveButton.IsEnabled = false, DispatcherPriority.DataBind);
+    }
+
+    private async void StopBtnClick(object sender, MouseButtonEventArgs e)
+    {
+      await TriggerManager.Instance.StopTriggersAsync();
     }
 
     private void TriggerUpdateEvent(TriggerNode node)

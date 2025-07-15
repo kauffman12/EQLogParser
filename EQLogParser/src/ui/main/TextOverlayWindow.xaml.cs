@@ -100,7 +100,13 @@ namespace EQLogParser
       }
     }
 
-    internal void Clear()
+    internal void HideOverlay()
+    {
+      content.Visibility = Visibility.Collapsed;
+      Visibility = Visibility.Collapsed;
+    }
+
+    internal void StopOverlay()
     {
       for (var last = content.Children.Count - 1; last >= 0; last--)
       {

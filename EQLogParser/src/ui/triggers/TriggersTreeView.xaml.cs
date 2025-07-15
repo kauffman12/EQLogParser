@@ -149,7 +149,7 @@ namespace EQLogParser
       };
     }
 
-    private void CloseOverlaysClick(object sender, RoutedEventArgs e)
+    private void HideOverlaysClick(object sender, RoutedEventArgs e)
     {
       ClosePreviewOverlaysEvent?.Invoke(true);
       TriggerOverlayManager.Instance.HideOverlays();

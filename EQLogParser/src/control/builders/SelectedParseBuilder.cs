@@ -61,7 +61,7 @@ namespace EQLogParser
             });
 
             var totalTitle = $"{receivedHeals.Name} Received " + StatsUtil.FormatTotals(totals) + " Healing";
-            title = StatsUtil.FormatTitle(customTitle ?? stats.TargetTitle, opts.ShowTime ? stats.TimeTitle : "", totalTitle);
+            title = StatsUtil.FormatTitle(customTitle ?? stats.TargetTitle, opts.ShowRaidTime ? stats.TimeTitle : "", totalTitle);
           }
           break;
 
@@ -105,7 +105,7 @@ namespace EQLogParser
               });
 
             var totalTitle = $"{topHeals.Name}'s Top Heals";
-            title = StatsUtil.FormatTitle(customTitle ?? stats.TargetTitle, opts.ShowTime ? stats.TimeTitle : "", totalTitle);
+            title = StatsUtil.FormatTitle(customTitle ?? stats.TargetTitle, opts.ShowRaidTime ? stats.TimeTitle : "", totalTitle);
           }
           break;
 
@@ -165,11 +165,10 @@ namespace EQLogParser
 
     private static string FormatTitle(CombinedStats stats, SummaryOptions opts, string customTitle)
     {
-      var timePart = opts.ShowTime ? $"{stats.TimeTitle}" : "";
+      var timePart = opts.ShowRaidTime ? $"{stats.TimeTitle}" : "";
       if (opts.ShowTotals)
       {
-        var totalPart = opts.ShowDps ? stats.TotalTitle : stats.TotalTitle.Split(separator, 2, StringSplitOptions.RemoveEmptyEntries)[0];
-        return StatsUtil.FormatTitle(customTitle ?? stats.TargetTitle, timePart, totalPart);
+        return StatsUtil.FormatTitle(customTitle ?? stats.TargetTitle, timePart, stats.TotalTitle);
       }
       return StatsUtil.FormatTitle(customTitle ?? stats.TargetTitle, timePart);
     }
@@ -178,11 +177,12 @@ namespace EQLogParser
   internal class SummaryOptions
   {
     public bool ListView { get; set; }
+    public bool ShowPetLabel { get; set; }
     public bool ShowDps { get; set; }
+    public bool ShowTime { get; set; }
+    public bool ShowRaidTime { get; set; }
     public bool ShowTotals { get; set; }
     public bool RankPlayers { get; set; }
-    public bool ShowTime { get; set; }
-    public bool ShowPetLabel { get; set; }
     public bool ShowSpecial { get; set; }
   }
 }

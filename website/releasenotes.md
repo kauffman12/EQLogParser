@@ -1,6 +1,17 @@
-# 2.3.5
+# 2.3.6
 
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
+
+1. Updated to save active tab and try to switch to it at startup.
+2. Updated to save window position when the window is moved and not just resized.
+3. Added **Raid Time** to Parse Preview and cleaned up the options and labels.
+4. Added a stop button to Trigger Manager that works the same as sending {EQLP:STOP}.
+5. Fix for **{EQLP:STOP}** to fully remove active timers from all overlays.
+6. Renamed **Close Overlays** to **Hide Overlays** as it's only intended to hide them until new data comes in. It does not remove text or timers from your Overlays.
+7. Fix for the **Auto Enable** checkbox on the receive quick share dialog. If it is not checked then triggers will import as disabled.
+8. Updated the search icon on the **Log Search** window to have pointer on hover to make it more obvious that it is clickable and to have color that's not usually used for a label or title.
+
+# 2.3.5
 
 1. Fix for **DPS Summary** loading incorrect times for some players on initial selection.
 2. Updated List option formatting for sending parses to work better with Discord.
