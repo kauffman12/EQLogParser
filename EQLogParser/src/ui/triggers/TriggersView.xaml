@@ -18,7 +18,7 @@
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <CheckBox x:Name="basicCheckBox" Template="{StaticResource CustomCheckBoxTemplate}" Margin="6,0,-8,2" FontWeight="Normal" Unchecked="BasicChecked" Checked="BasicChecked" />
       <Label x:Name="titleLabel" Margin="4,0,0,2" VerticalContentAlignment="Center" Padding="0" Content="Check to Activate Triggers" Style="{DynamicResource EQTitleStyle}" Foreground="{DynamicResource EQStopForegroundBrush}"/>
-      <fa:ImageAwesome x:Name="stopBtn" Visibility="Collapsed" MouseLeftButtonDown="StopBtnClick"  Icon="Regular_StopCircle" Cursor="Hand" Height="16" Width="16" Margin="8,0,0,1" HorizontalAlignment="Center" Foreground="{DynamicResource EQStopForegroundBrush}" ToolTip="Stop all timers, speech, and closer Overlays similar to {EQLP:STOP}">
+      <fa:ImageAwesome x:Name="stopBtn" Visibility="Collapsed" MouseLeftButtonDown="StopBtnClick"  Icon="Regular_StopCircle" Cursor="Hand" Height="16" Width="16" Margin="8,0,0,1" HorizontalAlignment="Center" Foreground="{DynamicResource EQStopForegroundBrush}" ToolTip="Stop Everything. Removes all timers, speech, and overlays. Works the same as {EQLP:STOP}">
         <fa:ImageAwesome.LayoutTransform>
           <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
         </fa:ImageAwesome.LayoutTransform>
@@ -168,7 +168,8 @@
               <TextBlock Text="Edit Properties" Margin="0,1,20,0" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
               <Button x:Name="showButton" Visibility="Collapsed" Margin="0,0,4,3" Padding="16,0,16,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}" Click="ShowClick">Preview Overlay</Button>
               <Button x:Name="saveButton" Margin="0,0,4,3" Padding="10,0,10,0"  IsEnabled="False" Height="{DynamicResource EQButtonHeight}" Click="SaveClick">Save</Button>
-              <Button x:Name="cancelButton" Margin="0,0,0,3" Padding="10,0,10,0" IsEnabled="False" Height="{DynamicResource EQButtonHeight}" Click="CancelClick">Cancel</Button>
+              <Button x:Name="cancelButton" Margin="0,0,4,3" Padding="10,0,10,0" IsEnabled="False" Height="{DynamicResource EQButtonHeight}" Click="CancelClick">Cancel</Button>
+              <Button x:Name="regexButton" Margin="0,0,0,3" Padding="10,0,10,0" Height="{DynamicResource EQButtonHeight}" Click="RegexClick" ToolTip="Help with Regex and Trigger Variables">View Documentation</Button>
             </StackPanel>
           </Grid>
         </Border>

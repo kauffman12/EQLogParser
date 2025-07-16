@@ -15,7 +15,6 @@
         BorderThickness="2"
         MinWidth="400"
         MinHeight="250"
-        LocationChanged="MainWindowSizeChanged"
         SizeChanged="MainWindowSizeChanged"
         TitleBarHeight="{DynamicResource EQTableHeaderRowHeight}"
         ShowTitle="False"
@@ -410,12 +409,6 @@
           </MenuItem>
         </MenuItem>
         <MenuItem Header="_Help" Margin="4,0,0,0">
-          <MenuItem Header="_Using Trigger Variables" Click="TriggerVariablesHelpClick" IsEnabled="True">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Question" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <Separator />
           <MenuItem Header="_Report a Problem" Click="ReportProblemClick" IsEnabled="True">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Bug" />
@@ -552,6 +545,5 @@
         </syncfusion:SfDataGrid>
       </ContentControl>
     </syncfusion:DockingManager>
-    <syncfusion:NotifyIcon x:Name="notifyIcon" ShowInTaskBar="True" Header="NotifyIcon" Text="EQLogParser" Icon="EQLogParser.ico" Click="NotifyIconClick"/>
   </Grid>
 </syncfusion:ChromelessWindow>

@@ -766,6 +766,11 @@ namespace EQLogParser
       saveButton.IsEnabled = false;
     }
 
+    private void RegexClick(object sender, RoutedEventArgs e)
+    {
+      MainActions.OpenFileWithDefault($"{MainWindow.ParserHome}/documentation.html#regex-101");
+    }
+
     private async void CancelClick(object sender, RoutedEventArgs e)
     {
       var model = thePropertyGrid?.SelectedObject;
