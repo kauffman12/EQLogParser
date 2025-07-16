@@ -1,6 +1,14 @@
-# 2.3.6
+# 2.3.7
 
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
+
+1. Added right-click menu to the **EQLogParser icon** in the system tray for Exit, Minimize/Restore, and About.
+2. **Removed** the Trigger Variable section from the main Help menu and moved it to a button above where you define triggers so it's harder to miss.
+3. Added some basic Regex info to the online docs.
+4. Fixed bug where the parser would start very small instead of the last saved size.
+5. Fixed some tooltips in Trigger Manager.
+
+# 2.3.6
 
 1. Updated to save active tab and try to switch to it at startup.
 2. Updated to save window position when the window is moved and not just resized.

@@ -1,3 +1,74 @@
+# Regex 101
+
+## 🔹 **Basics**
+
+- **`.`** — Matches **any single character** (except new line)  
+  _Example: `a.c` matches "abc", "axc", "a-c", etc._
+- **`*`** — Means "**zero or more**" of the thing before it  
+  _Example: `a*` matches "", "a", "aa", "aaa", etc._
+- **`+`** — Means "**one or more**" of the thing before it  
+  _Example: `a+` matches "a", "aa", "aaa", but not "" (empty)_
+- **`?`** — Makes the thing before it **optional** (zero or one)  
+  _Example: `colou?r` matches "color" or "colour"_
+- **`[...]`** — Matches **one character** from inside the brackets  
+  _Example: `[abc]` matches "a", "b", or "c" (just one of them)_
+- **`[^...]`** — Matches **one character NOT** in the brackets  
+  _Example: `[^0-9]` matches any character that's NOT a number_
+
+## 🔹 **Anchors (Position Matchers)**
+
+- **`^`** — The **start** of the line/text  
+  _Example: `^Hello` matches only if "Hello" is at the very start_
+- **`$`** — The **end** of the line/text  
+  _Example: `bye$` matches only if "bye" is at the very end_
+
+## 🔹 **Shortcuts (Character Types)**
+
+- **`\d`** — Any **digit** (0 to 9)
+- **`\w`** — Any **word character** (letter, digit, or underscore)
+- **`\s`** — Any **whitespace** (space, tab, etc.)
+- **`\b`** — The **edge of a word** (word boundary)
+
+## 🔹 **Grouping and OR**
+
+- **`( ... )`** — Groups things together  
+  _Example: `(cat|dog)` matches "cat" or "dog"_
+- **`|`** — Means "**or**"  
+  _Example: `yes|no` matches "yes" or "no"_
+
+## 🔹 **Specials**
+
+- **`\`** — **Escapes** a special character so it’s treated as normal  
+  _Example: `\.` matches a real dot, not "any character"_
+- **Special Character List:** .   ^   $   *   +   ?   (   )   [   ]   {   }   \   |   /
+
+## 🔹 **Counts (Repetition)**
+
+- **`{n}`** — **Exactly** n times  
+  _Example: `a{3}` matches "aaa" only_
+- **`{n,}`** — **At least** n times  
+  _Example: `a{2,}` matches "aa", "aaa", "aaaa", etc._
+- **`{n,m}`** — **Between** n and m times  
+  _Example: `a{2,4}` matches "aa", "aaa", or "aaaa"_
+
+## ⚠️ **.NET Regex Syntax**
+
+- **No slashes needed:** Just type your pattern (don’t use `/like this/`)
+- **Case-sensitive by default:** "cat" doesn’t match "Cat"
+- **Spaces and punctuation:** They must match **exactly** as typed
+- **Named groups are supported:** You can name parts with `(?<name>...)`
+- **Don’t use `$1`, `$2`, etc.:** These are not used as Group references
+
+## 🚀 **Performance Tips**
+
+- **Keep patterns simple and specific** for fastest results.
+- **Avoid `.*` in the middle** of patterns; use only if necessary.
+- **Don’t nest lots of parentheses** or use complex patterns.
+- **Start with a specific word or phrase** (e.g., `^You take`) instead of wildcards.
+- **Don’t match entire blocks of text** or paragraphs.
+- **Avoid long runs of wildcards and optionals** (like `(.*a.*)*`).
+
+
 # Trigger Variables
 
 These are special variables or codes that can be used in trigger `Pattern` fields to capture values so that they can be displayed or spoken.

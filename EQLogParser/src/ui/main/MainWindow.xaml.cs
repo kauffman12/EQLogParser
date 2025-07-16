@@ -26,6 +26,8 @@ namespace EQLogParser
 {
   public partial class MainWindow
   {
+    internal const string ParserHome = "http://eqlogparser.kizant.net";
+
     // global settings
     internal static string CurrentLogFile;
     internal static bool IsAoEHealingEnabled = true;
@@ -43,7 +45,6 @@ namespace EQLogParser
     internal static bool IsEmuParsingEnabled;
     internal const int ActionIndex = 27;
 
-    private const string ParserHome = "http://eqlogparser.kizant.net";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly double _defaultHeight = SystemParameters.PrimaryScreenHeight * 0.75;
     private readonly double _defaultWidth = SystemParameters.PrimaryScreenWidth * 0.85;
@@ -57,6 +58,7 @@ namespace EQLogParser
     private readonly List<string> _recentFiles = [];
     private readonly string _activeWindow;
     private readonly string _releaseNotesUrl;
+    private readonly System.Windows.Forms.NotifyIcon _notifyIcon;
     private bool _isDamageOverlayOpen;
     private bool _resetWindowState;
     private bool _isLoading;
@@ -70,18 +72,8 @@ namespace EQLogParser
       // DPI and sizing
       Height = ConfigUtil.GetSettingAsDouble("WindowHeight", _defaultHeight);
       Width = ConfigUtil.GetSettingAsDouble("WindowWidth", _defaultWidth);
-      var top = ConfigUtil.GetSettingAsDouble("WindowTop", double.NaN);
-      var left = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN);
-
-      if ((!double.IsNaN(top) && top < 0) || (!double.IsNaN(left) && left < 0))
-      {
-        top = 0;
-        left = 0;
-      }
-
-      Top = top;
-      Left = left;
-
+      Top = ConfigUtil.GetSettingAsDouble("WindowTop", double.NaN);
+      Left = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN);
       Log.Info($"Window Pos ({Top}, {Left}) | Window Size ({Width}, {Height})");
 
       InitializeComponent();
@@ -170,6 +162,7 @@ namespace EQLogParser
         WindowState = ConfigUtil.GetSetting("WindowState", "Normal") switch
         {
           "Maximized" => WindowState.Maximized,
+          "Minimized" => WindowState.Minimized,
           _ => WindowState.Normal
         };
       }
@@ -232,6 +225,9 @@ namespace EQLogParser
       // save active window before adding
       _activeWindow = ConfigUtil.GetSetting("ActiveWindow");
       MainActions.AddDocumentWindows(dockSite);
+
+      // add notify icon
+      _notifyIcon = WinFormsUtil.CreateTrayIcon(this);
     }
 
     private async void MainWindowOnLoaded(object sender, RoutedEventArgs args)
@@ -345,6 +341,19 @@ namespace EQLogParser
       }
     }
 
+    internal void SaveWindowSize()
+    {
+      if (WindowState == WindowState.Normal)
+      {
+        ConfigUtil.SetSetting("WindowLeft", Left);
+        ConfigUtil.SetSetting("WindowTop", Top);
+        ConfigUtil.SetSetting("WindowHeight", Height);
+        ConfigUtil.SetSetting("WindowWidth", Width);
+      }
+    }
+
+    private void MainWindowSizeChanged(object sender, EventArgs e) => SaveWindowSize();
+
     private async void ConfigUtilEventsLoadingText(string text)
     {
       // cleanup downloads
@@ -436,7 +445,6 @@ namespace EQLogParser
     private void OpenSoundsFolderClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("\"" + @"data\sounds" + "\"");
     private void ReportProblemClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
     private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(_releaseNotesUrl);
-    private void TriggerVariablesHelpClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault($"{ParserHome}/documentation.html#trigger-variables");
     private void OpenLogManager(object sender, RoutedEventArgs e) => new LogManagementWindow().ShowDialog();
     private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
     private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
@@ -1138,20 +1146,6 @@ namespace EQLogParser
       }
     }
 
-    private void NotifyIconClick(object sender, EventArgs e)
-    {
-      if (Visibility == Visibility.Hidden)
-      {
-        Show();
-      }
-
-      Activate();
-      if (WindowState == WindowState.Minimized)
-      {
-        WindowState = WindowState.Normal;
-      }
-    }
-
     private void WindowStateChanged(object sender, EventArgs e)
     {
       if (WindowState == WindowState.Minimized)
@@ -1171,17 +1165,6 @@ namespace EQLogParser
         // workaround to bring window to front
         Topmost = true;
         Topmost = false;
-      }
-    }
-
-    private void MainWindowSizeChanged(object sender, EventArgs e)
-    {
-      if (WindowState == WindowState.Normal)
-      {
-        ConfigUtil.SetSetting("WindowLeft", Left);
-        ConfigUtil.SetSetting("WindowTop", Top);
-        ConfigUtil.SetSetting("WindowHeight", Height);
-        ConfigUtil.SetSetting("WindowWidth", Width);
       }
     }
 
