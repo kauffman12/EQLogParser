@@ -65,21 +65,23 @@
               <ContextMenu>
                 <MenuItem x:Name="copySettingsMenuItem" Header="Copy Settings To" Visibility="Collapsed" ToolTip="Copy Selected Trigger Settings to another Character" />
                 <MenuItem x:Name="setTriggerMenuItem" Header="Update Selected Triggers">
-                  <MenuItem x:Name="setTextOverlayMenuItem" Header="Text Overlays">
+                  <MenuItem x:Name="setTextOverlayMenuItem" Header="Change Text Overlays">
                     <MenuItem.Icon>
                       <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Font" />
                     </MenuItem.Icon>
                     <MenuItem x:Name="addTextOverlaysMenuItem" Header="Add" />
                     <MenuItem x:Name="removeTextOverlaysMenuItem" Header="Remove" />
+                    <MenuItem Header="Remove All" Click="RemoveAllTextOverlays"/>
                   </MenuItem>
-                  <MenuItem x:Name="setTimerOverlayMenuItem" Header="Timer Overlays">
+                  <MenuItem x:Name="setTimerOverlayMenuItem" Header="Change Timer Overlays">
                     <MenuItem.Icon>
                       <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Clock" />
                     </MenuItem.Icon>
                     <MenuItem x:Name="addTimerOverlaysMenuItem" Header="Add" />
                     <MenuItem x:Name="removeTimerOverlaysMenuItem" Header="Remove" />
+                    <MenuItem Header="Remove All" Click="RemoveAllTimerOverlays" />
                   </MenuItem>
-                  <MenuItem x:Name="setPriorityMenuItem" Header="Priority">
+                  <MenuItem x:Name="setPriorityMenuItem" Header="Set Priority As">
                     <MenuItem.Icon>
                       <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Exclamation" />
                     </MenuItem.Icon>

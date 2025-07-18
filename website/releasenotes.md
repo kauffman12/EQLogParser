@@ -1,6 +1,14 @@
-# 2.3.7
+# 2.3.8
 
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
+
+1. Added a **Repeated Threshold** to the trigger **Timer End Early Settings**. If you use `{repeated}` or `{counter}` to count the number of times a timer has been triggered, you can now end the timer early when the count reaches the specified value. When this happens, the count will also reset to zero even if the **Repeated Reset Time** hasn’t been reached.
+2. Added **Remove All** option for overlays under the **Update Selected Triggers** menu.
+3. Fixed a bug when using the **Update Selected Triggers** menu on a folder. It would often require two attempts to work and printed errors in the log file.
+4. Fix that should help with saving EQLP in a maximized state on a second monitor.
+5. Updated the description for each trigger property/field.
+
+# 2.3.7
 
 1. Added right-click menu to the **EQLogParser icon** in the system tray for Exit, Minimize/Restore, and About.
 2. **Removed** the Trigger Variable section from the main Help menu and moved it to a button above where you define triggers so it's harder to miss.

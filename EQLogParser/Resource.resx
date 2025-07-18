@@ -124,10 +124,10 @@
     <value>Application Settings</value>
   </data>
   <data name="ASSIGN_OVERLAY" xml:space="preserve">
-    <value>Update Overlay</value>
+    <value>Add Overlays</value>
   </data>
   <data name="ASSIGN_PRIORITY" xml:space="preserve">
-    <value>Set Priority</value>
+    <value>Set Priority on Selected Triggers</value>
   </data>
   <data name="BER" xml:space="preserve">
     <value>Berserker</value>
@@ -280,7 +280,7 @@
     <value>Trigger Search</value>
   </data>
   <data name="UNASSIGN_OVERLAY" xml:space="preserve">
-    <value>Unassign Overlay</value>
+    <value>Remove Overlays</value>
   </data>
   <data name="UNSAVED" xml:space="preserve">
     <value>Unsaved Changes</value>

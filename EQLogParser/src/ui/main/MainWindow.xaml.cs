@@ -151,22 +151,6 @@ namespace EQLogParser
       IsEmuParsingEnabled = ConfigUtil.IfSet("EnableEmuParsing");
       emuParsingIcon.Visibility = IsEmuParsingEnabled ? Visibility.Visible : Visibility.Hidden;
 
-      // start minimized if requested
-      if (IsStartMinimizedEnabled)
-      {
-        WindowState = WindowState.Minimized;
-      }
-      else
-      {
-        // else use last saved state
-        WindowState = ConfigUtil.GetSetting("WindowState", "Normal") switch
-        {
-          "Maximized" => WindowState.Maximized,
-          "Minimized" => WindowState.Minimized,
-          _ => WindowState.Normal
-        };
-      }
-
       // upgrade
       if (ConfigUtil.IfSet("TriggersWatchForGINA"))
       {
@@ -232,6 +216,22 @@ namespace EQLogParser
 
     private async void MainWindowOnLoaded(object sender, RoutedEventArgs args)
     {
+      // start minimized if requested
+      if (IsStartMinimizedEnabled)
+      {
+        WindowState = WindowState.Minimized;
+      }
+      else
+      {
+        // else use last saved state
+        WindowState = ConfigUtil.GetSetting("WindowState", "Normal") switch
+        {
+          "Maximized" => WindowState.Maximized,
+          "Minimized" => WindowState.Minimized,
+          _ => WindowState.Normal
+        };
+      }
+
       // update starting state if minimized
       // needs to be called after show()
       if (IsHideOnMinimizeEnabled && WindowState == WindowState.Minimized)

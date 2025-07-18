@@ -79,7 +79,7 @@ namespace EQLogParser {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Update Overlay.
+        ///   Looks up a localized string similar to Add Overlays.
         /// </summary>
         internal static string ASSIGN_OVERLAY {
             get {
@@ -88,7 +88,7 @@ namespace EQLogParser {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Set Priority.
+        ///   Looks up a localized string similar to Set Priority on Selected Triggers.
         /// </summary>
         internal static string ASSIGN_PRIORITY {
             get {
@@ -556,7 +556,7 @@ namespace EQLogParser {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Unassign Overlay.
+        ///   Looks up a localized string similar to Remove Overlays.
         /// </summary>
         internal static string UNASSIGN_OVERLAY {
             get {

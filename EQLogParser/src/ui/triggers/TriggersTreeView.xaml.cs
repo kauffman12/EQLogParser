@@ -330,6 +330,20 @@ namespace EQLogParser
       }
     }
 
+    private static void PopulateAllTriggerNodes(List<TriggerTreeViewNode> viewList, List<TriggerNode> nodes)
+    {
+      foreach (var viewNode in viewList)
+      {
+        if (viewNode.SerializedData.TriggerData != null && !viewNode.HasChildNodes)
+        {
+          nodes.Add(viewNode.SerializedData);
+        }
+        else if (viewNode.HasChildNodes)
+        {
+          PopulateAllTriggerNodes([.. viewNode.ChildNodes.Cast<TriggerTreeViewNode>()], nodes);
+        }
+      }
+    }
 
     private async void CreateNodeClick(object sender, RoutedEventArgs e)
     {
@@ -732,9 +746,10 @@ namespace EQLogParser
       {
         var selected = triggerTreeView.SelectedItems.Cast<TriggerTreeViewNode>().ToList();
         var anyFolders = selected.Any(node => node.IsDir());
+
         if (!anyFolders)
         {
-          await TriggerStateManager.Instance.AssignPriority(newPriority, selected.Select(treeView => treeView.SerializedData));
+          await TriggerStateManager.Instance.AssignPriority(newPriority, [.. selected.Select(treeView => treeView.SerializedData)]);
         }
         else
         {
@@ -743,7 +758,9 @@ namespace EQLogParser
           msgDialog.ShowDialog();
           if (msgDialog.IsYes1Clicked)
           {
-            await TriggerStateManager.Instance.AssignPriority(newPriority, selected.Select(treeView => treeView.SerializedData));
+            var nodes = new List<TriggerNode>();
+            PopulateAllTriggerNodes(selected, nodes);
+            await TriggerStateManager.Instance.AssignPriority(newPriority, nodes);
           }
         }
 
@@ -769,11 +786,11 @@ namespace EQLogParser
           {
             if (!remove)
             {
-              await TriggerStateManager.Instance.AssignOverlay(id, selected.Select(treeView => treeView.SerializedData));
+              await TriggerStateManager.Instance.AssignOverlay(id, [.. selected.Select(treeView => treeView.SerializedData)]);
             }
             else
             {
-              await TriggerStateManager.Instance.UnassignOverlay(id, selected.Select(treeView => treeView.SerializedData));
+              await TriggerStateManager.Instance.UnassignOverlay(id, [.. selected.Select(treeView => treeView.SerializedData)]);
             }
           }
           else
@@ -784,13 +801,16 @@ namespace EQLogParser
             msgDialog.ShowDialog();
             if (msgDialog.IsYes1Clicked)
             {
+              var nodes = new List<TriggerNode>();
+              PopulateAllTriggerNodes(selected, nodes);
+
               if (!remove)
               {
-                await TriggerStateManager.Instance.AssignOverlay(id, selected.Select(treeView => treeView.SerializedData));
+                await TriggerStateManager.Instance.AssignOverlay(id, nodes);
               }
               else
               {
-                await TriggerStateManager.Instance.UnassignOverlay(id, selected.Select(treeView => treeView.SerializedData));
+                await TriggerStateManager.Instance.UnassignOverlay(id, nodes);
               }
             }
           }
@@ -800,6 +820,62 @@ namespace EQLogParser
         await SelectionChanged(triggerTreeView.SelectedItem as TriggerTreeViewNode);
         TriggerManager.Instance.TriggersUpdated();
       }
+    }
+
+    private async void RemoveAllTextOverlays(object sender, RoutedEventArgs e)
+    {
+      var selected = triggerTreeView.SelectedItems.Cast<TriggerTreeViewNode>().ToList();
+      var anyFolders = selected.Any(node => node.IsDir());
+
+      if (!anyFolders)
+      {
+        await TriggerStateManager.Instance.UnassignAllTextOverlays([.. selected.Select(treeView => treeView.SerializedData)]);
+      }
+      else
+      {
+        var action = "Remove All Text Overlays";
+        var msgDialog = new MessageWindow($"Are you sure? This will {action} from all selected\nTriggers and those in all sub folders.",
+          Resource.UNASSIGN_OVERLAY, MessageWindow.IconType.Warn, "Yes");
+        msgDialog.ShowDialog();
+        if (msgDialog.IsYes1Clicked)
+        {
+          var nodes = new List<TriggerNode>();
+          PopulateAllTriggerNodes(selected, nodes);
+          await TriggerStateManager.Instance.UnassignAllTextOverlays(nodes);
+        }
+      }
+
+      await RefreshTriggerNode();
+      await SelectionChanged(triggerTreeView.SelectedItem as TriggerTreeViewNode);
+      TriggerManager.Instance.TriggersUpdated();
+    }
+
+    private async void RemoveAllTimerOverlays(object sender, RoutedEventArgs e)
+    {
+      var selected = triggerTreeView.SelectedItems.Cast<TriggerTreeViewNode>().ToList();
+      var anyFolders = selected.Any(node => node.IsDir());
+
+      if (!anyFolders)
+      {
+        await TriggerStateManager.Instance.UnassignAllTimerOverlays([.. selected.Select(treeView => treeView.SerializedData)]);
+      }
+      else
+      {
+        var action = "Remove All Timer Overlays";
+        var msgDialog = new MessageWindow($"Are you sure? This will {action} from all selected\nTriggers and those in all sub folders.",
+          Resource.UNASSIGN_OVERLAY, MessageWindow.IconType.Warn, "Yes");
+        msgDialog.ShowDialog();
+        if (msgDialog.IsYes1Clicked)
+        {
+          var nodes = new List<TriggerNode>();
+          PopulateAllTriggerNodes(selected, nodes);
+          await TriggerStateManager.Instance.UnassignAllTimerOverlays(nodes);
+        }
+      }
+
+      await RefreshTriggerNode();
+      await SelectionChanged(triggerTreeView.SelectedItem as TriggerTreeViewNode);
+      TriggerManager.Instance.TriggersUpdated();
     }
 
     private async void SelectionChanged(object sender, ItemSelectionChangedEventArgs e)

@@ -402,6 +402,20 @@ namespace EQLogParser
             endEarly = CheckEndEarly(timerData.EndEarlyRegex2, timerData.EndEarlyRegex2NOptions, timerData.EndEarlyPattern2, lineData.Action, out earlyMatches);
           }
 
+          // check repeated threshold
+          if (!endEarly && wrapper.TriggerData?.EndEarlyRepeatedCount > 0 && (wrapper.HasCounterTimer || wrapper.HasRepeatedTimer))
+          {
+            var stopCount = wrapper.TriggerData.EndEarlyRepeatedCount;
+            endEarly = (GetRepeatedCount(_repeatedTimerTimes, wrapper, timerData.DisplayName) >= stopCount) ||
+              (GetRepeatedCount(_counterTimes, wrapper, "trigger-count") >= stopCount);
+
+            if (endEarly)
+            {
+              RemoveRepeatedTimes(_repeatedTimerTimes, wrapper, timerData.DisplayName);
+              RemoveRepeatedTimes(_counterTimes, wrapper, "trigger-count");
+            }
+          }
+
           if (endEarly)
           {
             var tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out var isSound);
@@ -1110,12 +1124,24 @@ namespace EQLogParser
       return -1;
     }
 
+    private static void RemoveRepeatedTimes(IDictionary<string, Dictionary<string, RepeatedData>> times, TriggerWrapper wrapper,
+      string displayValue)
+    {
+      if (!string.IsNullOrEmpty(wrapper.Id) && !string.IsNullOrEmpty(displayValue))
+      {
+        if (times.TryGetValue(wrapper.Id, out var displayTimes))
+        {
+          displayTimes.Remove(displayValue);
+        }
+      }
+    }
+
     private static long UpdateRepeatedTimes(IDictionary<string, Dictionary<string, RepeatedData>> times, TriggerWrapper wrapper,
       string displayValue, long beginTicks)
     {
       long repeatedCount = -1;
 
-      if (!string.IsNullOrEmpty(wrapper.Id) && wrapper.TriggerData?.RepeatedResetTime >= 0)
+      if (!string.IsNullOrEmpty(wrapper.Id) && !string.IsNullOrEmpty(displayValue) && wrapper.TriggerData?.RepeatedResetTime >= 0)
       {
         if (times.TryGetValue(wrapper.Id, out var displayTimes))
         {

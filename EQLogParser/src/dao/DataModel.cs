@@ -171,6 +171,7 @@ namespace EQLogParser
     public string EndEarlyPattern2 { get; set; }
     public bool EndUseRegex { get; set; }
     public bool EndUseRegex2 { get; set; }
+    public long EndEarlyRepeatedCount { get; set; }
     public long WorstEvalTime { get; set; } = -1;
     public string Pattern { get; set; }
     public string PreviousPattern { get; set; }
