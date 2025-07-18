@@ -77,6 +77,7 @@ namespace EQLogParser
         toTrigger.EndEarlyPattern2 = TextUtils.Trim(fromTrigger.EndEarlyPattern2);
         toTrigger.EndUseRegex = fromTrigger.EndUseRegex;
         toTrigger.EndUseRegex2 = fromTrigger.EndUseRegex2;
+        toTrigger.EndEarlyRepeatedCount = fromTrigger.EndEarlyRepeatedCount;
         toTrigger.WorstEvalTime = fromTrigger.WorstEvalTime;
         toTrigger.ResetDurationSeconds = fromTrigger.ResetDurationSeconds;
         toTrigger.Priority = fromTrigger.Priority;

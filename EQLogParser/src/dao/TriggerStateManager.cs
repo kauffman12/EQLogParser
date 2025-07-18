@@ -228,24 +228,6 @@ namespace EQLogParser
       }
     }
 
-    internal async Task AssignOverlay(string id, IEnumerable<TriggerNode> nodes)
-    {
-      await _taskQueue.EnqueueTransaction(() =>
-      {
-        AssignOverlay(_db?.GetCollection<TriggerNode>(TreeCol), id, nodes);
-        return Task.CompletedTask;
-      });
-    }
-
-    internal async Task AssignPriority(int pri, IEnumerable<TriggerNode> nodes)
-    {
-      await _taskQueue.EnqueueTransaction(() =>
-      {
-        AssignPriority(_db?.GetCollection<TriggerNode>(TreeCol), pri, nodes);
-        return Task.CompletedTask;
-      });
-    }
-
     internal async Task Copy(TriggerNode src, TriggerNode dst)
     {
       await _taskQueue.EnqueueTransaction(() =>
@@ -650,11 +632,50 @@ namespace EQLogParser
       });
     }
 
-    internal async Task UnassignOverlay(string id, IEnumerable<TriggerNode> nodes)
+    internal async Task AssignOverlay(string id, List<TriggerNode> nodes)
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        UnassignOverlay(_db?.GetCollection<TriggerNode>(TreeCol), id, nodes);
+        AssignOverlay(_db?.GetCollection<TriggerNode>(TreeCol), id, nodes);
+        return Task.CompletedTask;
+      });
+    }
+
+    internal async Task AssignPriority(int pri, List<TriggerNode> nodes)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        AssignPriority(_db?.GetCollection<TriggerNode>(TreeCol), pri, nodes);
+        return Task.CompletedTask;
+      });
+    }
+
+    internal async Task UnassignOverlay(string id, List<TriggerNode> nodes)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        UnassignOverlays(_db?.GetCollection<TriggerNode>(TreeCol), [id], nodes);
+        return Task.CompletedTask;
+      });
+    }
+
+    internal async Task UnassignAllTextOverlays(List<TriggerNode> nodes)
+    {
+      var ids = (await GetAllOverlays()).Where(overlay => overlay.OverlayData.IsTextOverlay).Select(overlay => overlay.Id).ToList();
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        UnassignOverlays(_db?.GetCollection<TriggerNode>(TreeCol), ids, nodes);
+        return Task.CompletedTask;
+      });
+    }
+
+    internal async Task UnassignAllTimerOverlays(List<TriggerNode> nodes)
+    {
+      var ids = (await GetAllOverlays()).Where(overlay => overlay.OverlayData.IsTimerOverlay).Select(overlay => overlay.Id).ToList();
+      // one set of updates per transaction
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        UnassignOverlays(_db?.GetCollection<TriggerNode>(TreeCol), ids, nodes);
         return Task.CompletedTask;
       });
     }
@@ -742,45 +763,23 @@ namespace EQLogParser
       });
     }
 
-    private static void AssignOverlay(ILiteCollection<TriggerNode> tree, string id, IEnumerable<TriggerNode> nodes)
+    private static void AssignOverlay(ILiteCollection<TriggerNode> tree, string id, List<TriggerNode> nodes)
     {
-      if (tree == null || nodes == null) return;
+      if (tree == null || nodes == null || string.IsNullOrEmpty(id)) return;
 
       foreach (var node in nodes)
       {
-        if (node.TriggerData?.SelectedOverlays.Contains(id) == false)
+        if (node.TriggerData?.SelectedOverlays?.Contains(id) == false)
         {
           node.TriggerData.SelectedOverlays.Add(id);
           tree.Update(node);
         }
-        else if (node.TriggerData == null && node.OverlayData == null)
-        {
-          AssignOverlay(tree, id, tree.Find(n => n.Parent == node.Id));
-        }
       }
     }
 
-    private static void UnassignOverlay(ILiteCollection<TriggerNode> tree, string id, IEnumerable<TriggerNode> nodes)
+    private static void AssignPriority(ILiteCollection<TriggerNode> tree, int pri, List<TriggerNode> nodes)
     {
-      if (tree == null || nodes == null) return;
-
-      foreach (var node in nodes)
-      {
-        if (node.TriggerData?.SelectedOverlays.Contains(id) == true)
-        {
-          node.TriggerData.SelectedOverlays.Remove(id);
-          tree.Update(node);
-        }
-        else if (node.TriggerData == null && node.OverlayData == null)
-        {
-          UnassignOverlay(tree, id, tree.Find(n => n.Parent == node.Id));
-        }
-      }
-    }
-
-    private static void AssignPriority(ILiteCollection<TriggerNode> tree, int pri, IEnumerable<TriggerNode> nodes)
-    {
-      if (tree == null || nodes == null) return;
+      if (tree == null || nodes == null || pri < 1 || pri > 5) return;
 
       foreach (var node in nodes)
       {
@@ -789,9 +788,18 @@ namespace EQLogParser
           node.TriggerData.Priority = pri;
           tree.Update(node);
         }
-        else if (node.TriggerData == null && node.OverlayData == null)
+      }
+    }
+
+    private static void UnassignOverlays(ILiteCollection<TriggerNode> tree, List<string> ids, List<TriggerNode> nodes)
+    {
+      if (tree == null || nodes == null || ids.Count == 0) return;
+
+      foreach (var node in nodes)
+      {
+        if (node.TriggerData.SelectedOverlays.RemoveAll(ids.Contains) > 0)
         {
-          AssignPriority(tree, pri, tree.Find(n => n.Parent == node.Id));
+          tree.Update(node);
         }
       }
     }
