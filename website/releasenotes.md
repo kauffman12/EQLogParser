@@ -1,6 +1,13 @@
-# 2.3.8
+# 2.3.9
 
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
+
+1. Added **Export CSV with Formatted Values** to the Options menu. It is on by default and causes CSV exports from the summary windows to display numbers using your local format. For example, 4,334,220.30. If this option is turned off it will export without formatting: 4334220.30
+2. Fix for the **Create Backup** dialog not displaying properly.
+3. Fix for **Clear Chat Archive** not displaying players/servers if the server name was too short. Should only have been impacting some EMU servers.
+3. Made one last set of tweaks for restoring window position.
+
+# 2.3.8
 
 1. Added a **Repeated Threshold** to the trigger **Timer End Early Settings**. If you use `{repeated}` or `{counter}` to count the number of times a timer has been triggered, you can now end the timer early when the count reaches the specified value. When this happens, the count will also reset to zero even if the **Repeated Reset Time** hasn’t been reached.
 2. Added **Remove All** option for overlays under the **Update Selected Triggers** menu.
