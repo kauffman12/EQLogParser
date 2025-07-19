@@ -266,19 +266,24 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="emuParsing" Header="EMU Server _Parsing" Click="ToggleEmuParsingClick">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="emuParsingIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem x:Name="hardwareAccel" Header="Hardware _Acceleration (Needs Restart)" Click="ToggleHardwareAccelClick">
+          <MenuItem x:Name="hardwareAccel" Header="Enable GPU _Acceleration (Needs Restart)" Click="ToggleHardwareAccelClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="hardwareAccelIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="exportFormattedCsv" Header="Export CSV with Formatted Values" Click="ToggleExportFormattedCsvClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="exportFormattedCsvIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="enableMapSendtoEQ" Header="Send To _EQ With Ctrl+C" Click="ToggleMapSendToEqClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableMapSendToEQIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="emuParsing" Header="Use EMU Server _Parsing" Click="ToggleEmuParsingClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="emuParsingIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />

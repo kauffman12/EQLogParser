@@ -204,6 +204,14 @@ namespace EQLogParser
       }
     }
 
+    internal static bool ToggleSetting(string setting, ImageAwesome icon)
+    {
+      var enabled = icon.Visibility == Visibility.Hidden;
+      ConfigUtil.SetSetting(setting, enabled);
+      icon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
+      return enabled;
+    }
+
     internal static async Task CheckVersionAsync(TextBlock errorText)
     {
       var version = Application.ResourceAssembly.GetName().Version;
@@ -692,10 +700,11 @@ namespace EQLogParser
 
       if (saveFileDialog.ShowDialog() == true)
       {
-        var dialog = new MessageWindow($"Creating EQLogParser Backup", Resource.CREATE_BACKUP, MessageWindow.IconType.Save);
-        ChatManager.Instance.Stop();
+        var dialog = new MessageWindow($"Creating EQLogParser Backup", Resource.CREATE_BACKUP, MessageWindow.IconType.Save, null, null, false, true);
+        dialog.Show();
 
-        await Task.Delay(150);
+        ChatManager.Instance.Stop();
+        await Task.Delay(250);
 
         var accessError = false;
         var source = Environment.ExpandEnvironmentVariables(ConfigUtil.AppData);
@@ -731,8 +740,6 @@ namespace EQLogParser
             }
           });
         }
-
-        dialog.ShowDialog();
       }
     }
 

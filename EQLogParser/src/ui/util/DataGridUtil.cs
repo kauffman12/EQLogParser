@@ -135,7 +135,7 @@ namespace EQLogParser
           }
         }
 
-        records = dataGrid.View.Records.Select(record => record.Data).ToList();
+        records = [.. dataGrid.View.Records.Select(record => record.Data)];
       }
       else if (gridBase is SfTreeGrid treeGrid)
       {
@@ -149,11 +149,14 @@ namespace EQLogParser
           }
         }
 
-        records = treeGrid.View.Nodes.Select(node => node.Item).ToList();
+        records = [.. treeGrid.View.Nodes.Select(node => node.Item)];
       }
 
       if (records != null)
       {
+        // whether to use number formatting or not
+        var useFormatted = ConfigUtil.IfSetOrElse("ExportFormattedCsv", true);
+
         // Rank data is in the row header column not a regular column
         if (records.Count > 0 && records[0] is PlayerStats)
         {
@@ -167,7 +170,14 @@ namespace EQLogParser
           foreach (var key in CollectionsMarshal.AsSpan(headerKeys))
           {
             // regular object with properties
-            row.Add(props.GetFormattedValue(record, key) ?? "");
+            if (useFormatted)
+            {
+              row.Add(props.GetFormattedValue(record, key) ?? "");
+            }
+            else
+            {
+              row.Add(props.GetValue(record, key) ?? "");
+            }
           }
 
           data.Add(row);
