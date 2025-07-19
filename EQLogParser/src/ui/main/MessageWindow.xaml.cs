@@ -6,9 +6,6 @@ using System.Windows.Input;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for MessageWindow.xaml
-  /// </summary>
   public partial class MessageWindow
   {
     public bool IsYes2Clicked;

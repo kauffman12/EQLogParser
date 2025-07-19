@@ -158,7 +158,7 @@ namespace EQLogParser
           var name = Path.GetFileName(dir);
           var split = name.Split('.');
 
-          if (split.Length > 1 && split[1].Length > 3)
+          if (split.Length > 1 && split[1].Length > 2)
           {
             var found = false;
             foreach (var sub in Directory.GetDirectories(dir))
@@ -523,7 +523,7 @@ namespace EQLogParser
       {
         if (!_channelIndex.TryGetValue(entryKey, out var value))
         {
-          value = ([]);
+          value = [];
           _channelIndex.Add(entryKey, value);
         }
 

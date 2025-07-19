@@ -39,10 +39,9 @@ namespace EQLogParser
     internal static bool IsHeadshotDamageEnabled = true;
     internal static bool IsSlayUndeadDamageEnabled = true;
     internal static bool IsHideOnMinimizeEnabled;
-    internal static bool IsHideSplashScreenEnabled;
-    internal static bool IsStartMinimizedEnabled;
     internal static bool IsMapSendToEqEnabled;
     internal static bool IsEmuParsingEnabled;
+    internal static WindowState LastWindowState = WindowState.Normal;
     internal const int ActionIndex = 27;
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -75,7 +74,8 @@ namespace EQLogParser
       Top = ConfigUtil.GetSettingAsDouble("WindowTop", double.NaN);
       Left = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN);
       Log.Info($"Window Pos ({Top}, {Left}) | Window Size ({Width}, {Height})");
-
+      // start minimized
+      WindowState = WindowState.Minimized;
       InitializeComponent();
 
       ConfigUtil.UpdateStatus($"RenderMode: {RenderOptions.ProcessRenderMode}");
@@ -123,16 +123,17 @@ namespace EQLogParser
       enableHideOnMinimizeIcon.Visibility = IsHideOnMinimizeEnabled ? Visibility.Visible : Visibility.Hidden;
 
       // Hide splash screen
-      IsHideSplashScreenEnabled = ConfigUtil.IfSet("HideSplashScreen");
-      enableHideSplashScreenIcon.Visibility = IsHideSplashScreenEnabled ? Visibility.Visible : Visibility.Hidden;
+      enableHideSplashScreenIcon.Visibility = ConfigUtil.IfSet("HideSplashScreen") ? Visibility.Visible : Visibility.Hidden;
 
       // Minimize at startup
-      IsStartMinimizedEnabled = ConfigUtil.IfSet("StartWithWindowMinimized");
-      enableStartMinimizedIcon.Visibility = IsStartMinimizedEnabled ? Visibility.Visible : Visibility.Hidden;
+      enableStartMinimizedIcon.Visibility = ConfigUtil.IfSet("StartWithWindowMinimized") ? Visibility.Visible : Visibility.Hidden;
 
       // Allow Ctrl+C for SendToEQ
       IsMapSendToEqEnabled = ConfigUtil.IfSet("MapSendToEQAsCtrlC");
       enableMapSendToEQIcon.Visibility = IsMapSendToEqEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      // Export Formatted CSV (numbers with commas, etc)
+      exportFormattedCsvIcon.Visibility = ConfigUtil.IfSetOrElse("ExportFormattedCsv", true) ? Visibility.Visible : Visibility.Hidden;
 
       // Damage Overlay
       enableDamageOverlayIcon.Visibility = ConfigUtil.IfSet("IsDamageOverlayEnabled") ? Visibility.Visible : Visibility.Hidden;
@@ -216,29 +217,6 @@ namespace EQLogParser
 
     private async void MainWindowOnLoaded(object sender, RoutedEventArgs args)
     {
-      // start minimized if requested
-      if (IsStartMinimizedEnabled)
-      {
-        WindowState = WindowState.Minimized;
-      }
-      else
-      {
-        // else use last saved state
-        WindowState = ConfigUtil.GetSetting("WindowState", "Normal") switch
-        {
-          "Maximized" => WindowState.Maximized,
-          "Minimized" => WindowState.Minimized,
-          _ => WindowState.Normal
-        };
-      }
-
-      // update starting state if minimized
-      // needs to be called after show()
-      if (IsHideOnMinimizeEnabled && WindowState == WindowState.Minimized)
-      {
-        Hide();
-      }
-
       try
       {
         // make sure file exists
@@ -256,6 +234,28 @@ namespace EQLogParser
             Log.Debug("Error reading docSite.xml", ex);
             dockSite.ResetState();
           }
+        }
+
+        var savedState = ConfigUtil.GetSetting("WindowState", "Normal");
+
+        // if start minimized if requested do nothing but update the last state
+        if (enableStartMinimizedIcon.Visibility == Visibility.Visible)
+        {
+          LastWindowState = savedState switch
+          {
+            "Maximized" => WindowState.Maximized,
+            _ => WindowState.Normal
+          };
+        }
+        else
+        {
+          // use last saved state
+          WindowState = savedState switch
+          {
+            "Maximized" => WindowState.Maximized,
+            _ => WindowState.Normal
+          };
+
         }
 
         // compute stats gets triggered when pet owners is updated during startup
@@ -311,6 +311,13 @@ namespace EQLogParser
         }
 
         await Task.Delay(200);
+
+        // update starting state if minimized
+        // needs to be called after show() and delay
+        if (IsHideOnMinimizeEnabled && WindowState == WindowState.Minimized)
+        {
+          Hide();
+        }
 
         // activate the saved window
         if (!string.IsNullOrEmpty(_activeWindow))
@@ -451,6 +458,12 @@ namespace EQLogParser
     private void WindowClose(object sender, EventArgs e) => Close();
     private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e) => MainActions.ChangeTheme("MaterialDark");
     private void ToggleMaterialLightClick(object sender, RoutedEventArgs e) => MainActions.ChangeTheme("MaterialLight");
+    private void ToggleStartMinimizedClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("StartWithWindowMinimized", enableStartMinimizedIcon);
+    private void ToggleHideSplashScreenClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("HideSplashScreen", enableHideSplashScreenIcon);
+    private void ToggleAutoMonitorClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("AutoMonitor", enableAutoMonitorIcon);
+    private void ToggleCheckUpdatesClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("CheckUpdatesAtStartup", checkUpdatesIcon);
+    private void ToggleHardwareAccelClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("HardwareAcceleration", hardwareAccelIcon);
+    private void ToggleExportFormattedCsvClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("ExportFormattedCsv", exportFormattedCsvIcon);
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
@@ -460,11 +473,6 @@ namespace EQLogParser
     internal void AddAndCopyTankParse(CombinedStats combined, List<PlayerStats> selected)
     {
       (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.TankParse, combined, selected, true);
-    }
-
-    private void CreateBackupClick(object sender, RoutedEventArgs e)
-    {
-      _ = MainActions.CreateBackupAsync();
     }
 
     internal void ShowTriggersEnabled(bool active)
@@ -499,6 +507,36 @@ namespace EQLogParser
           _isDamageOverlayOpen = true;
         }
       }
+    }
+
+    private void ToggleHideOnMinimizeClick(object sender, RoutedEventArgs e)
+    {
+      IsHideOnMinimizeEnabled = MainActions.ToggleSetting("HideWindowOnMinimize", enableHideOnMinimizeIcon);
+    }
+
+    private void ToggleAoEHealingClick(object sender, RoutedEventArgs e)
+    {
+      IsAoEHealingEnabled = MainActions.ToggleSetting("IncludeAoEHealing", enableAoEHealingIcon);
+    }
+
+    private void ToggleHealingSwarmPetsClick(object sender, RoutedEventArgs e)
+    {
+      IsHealingSwarmPetsEnabled = MainActions.ToggleSetting("IncludeHealingSwarmPets", enableHealingSwarmPetsIcon);
+    }
+
+    private void ToggleEmuParsingClick(object sender, RoutedEventArgs e)
+    {
+      IsEmuParsingEnabled = MainActions.ToggleSetting("EnableEmuParsing", emuParsingIcon);
+    }
+
+    private void ToggleMapSendToEqClick(object sender, RoutedEventArgs e)
+    {
+      IsMapSendToEqEnabled = MainActions.ToggleSetting("MapSendToEQAsCtrlC", enableMapSendToEQIcon);
+    }
+
+    private async void CreateBackupClick(object sender, RoutedEventArgs e)
+    {
+      await MainActions.CreateBackupAsync();
     }
 
     private void HandleChartUpdate(string key, DataPointEvent e)
@@ -656,71 +694,6 @@ namespace EQLogParser
       {
         MainActions.OpenFileWithDefault("\"" + ((FileAppender)appender).File + "\"");
       }
-    }
-
-    private void ToggleHideOnMinimizeClick(object sender, RoutedEventArgs e)
-    {
-      IsHideOnMinimizeEnabled = !IsHideOnMinimizeEnabled;
-      ConfigUtil.SetSetting("HideWindowOnMinimize", IsHideOnMinimizeEnabled);
-      enableHideOnMinimizeIcon.Visibility = IsHideOnMinimizeEnabled ? Visibility.Visible : Visibility.Hidden;
-    }
-
-    private void ToggleStartMinimizedClick(object sender, RoutedEventArgs e)
-    {
-      IsStartMinimizedEnabled = !IsStartMinimizedEnabled;
-      ConfigUtil.SetSetting("StartWithWindowMinimized", IsStartMinimizedEnabled);
-      enableStartMinimizedIcon.Visibility = IsStartMinimizedEnabled ? Visibility.Visible : Visibility.Hidden;
-    }
-
-    private void ToggleHideSplashScreenClick(object sender, RoutedEventArgs e)
-    {
-      IsHideSplashScreenEnabled = !IsHideSplashScreenEnabled;
-      ConfigUtil.SetSetting("HideSplashScreen", IsHideSplashScreenEnabled);
-      enableHideSplashScreenIcon.Visibility = IsHideSplashScreenEnabled ? Visibility.Visible : Visibility.Hidden;
-    }
-
-    private void ToggleAoEHealingClick(object sender, RoutedEventArgs e)
-    {
-      IsAoEHealingEnabled = !IsAoEHealingEnabled;
-      MainActions.UpdateHealingOption(enableAoEHealingIcon, IsAoEHealingEnabled, "IncludeAoEHealing");
-    }
-
-    private void ToggleHealingSwarmPetsClick(object sender, RoutedEventArgs e)
-    {
-      IsHealingSwarmPetsEnabled = !IsHealingSwarmPetsEnabled;
-      MainActions.UpdateHealingOption(enableHealingSwarmPetsIcon, IsHealingSwarmPetsEnabled, "IncludeHealingSwarmPets");
-    }
-
-    private void ToggleAutoMonitorClick(object sender, RoutedEventArgs e)
-    {
-      ConfigUtil.SetSetting("AutoMonitor", enableAutoMonitorIcon.Visibility == Visibility.Hidden);
-      enableAutoMonitorIcon.Visibility = enableAutoMonitorIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
-    }
-
-    private void ToggleCheckUpdatesClick(object sender, RoutedEventArgs e)
-    {
-      ConfigUtil.SetSetting("CheckUpdatesAtStartup", checkUpdatesIcon.Visibility == Visibility.Hidden);
-      checkUpdatesIcon.Visibility = checkUpdatesIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
-    }
-
-    private void ToggleHardwareAccelClick(object sender, RoutedEventArgs e)
-    {
-      ConfigUtil.SetSetting("HardwareAcceleration", hardwareAccelIcon.Visibility == Visibility.Hidden);
-      hardwareAccelIcon.Visibility = hardwareAccelIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
-    }
-
-    private void ToggleEmuParsingClick(object sender, RoutedEventArgs e)
-    {
-      IsEmuParsingEnabled = !IsEmuParsingEnabled;
-      ConfigUtil.SetSetting("EnableEmuParsing", IsEmuParsingEnabled);
-      emuParsingIcon.Visibility = IsEmuParsingEnabled ? Visibility.Visible : Visibility.Hidden;
-    }
-
-    private void ToggleMapSendToEqClick(object sender, RoutedEventArgs e)
-    {
-      IsMapSendToEqEnabled = !IsMapSendToEqEnabled;
-      ConfigUtil.SetSetting("MapSendToEQAsCtrlC", enableMapSendToEQIcon.Visibility == Visibility.Hidden);
-      enableMapSendToEQIcon.Visibility = enableMapSendToEQIcon.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
     }
 
     private void ToggleDamageOverlayClick(object sender, RoutedEventArgs e)
@@ -1165,6 +1138,11 @@ namespace EQLogParser
         // workaround to bring window to front
         Topmost = true;
         Topmost = false;
+      }
+
+      if (WindowState != WindowState.Minimized)
+      {
+        LastWindowState = WindowState;
       }
     }
 

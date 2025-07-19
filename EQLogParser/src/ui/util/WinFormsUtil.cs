@@ -73,7 +73,7 @@ namespace EQLogParser
       main.Activate();
       if (main.WindowState == WindowState.Minimized)
       {
-        main.WindowState = WindowState.Normal;
+        main.WindowState = MainWindow.LastWindowState;
       }
 
       // reconnect
