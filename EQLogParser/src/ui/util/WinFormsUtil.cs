@@ -43,7 +43,7 @@ namespace EQLogParser
       minimizeItem.Visible = main.WindowState != WindowState.Minimized;
 
       var aboutItem = new ToolStripMenuItem("About");
-      aboutItem.Click += (s, e) => MainActions.OpenFileWithDefault($"{MainWindow.ParserHome}");
+      aboutItem.Click += (s, e) => MainActions.OpenFileWithDefault($"{App.ParserHome}");
       notifyIcon.ContextMenuStrip.Items.Add(aboutItem);
       notifyIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator());
 
@@ -73,7 +73,7 @@ namespace EQLogParser
       main.Activate();
       if (main.WindowState == WindowState.Minimized)
       {
-        main.WindowState = MainWindow.LastWindowState;
+        main.WindowState = App.LastWindowState;
       }
 
       // reconnect

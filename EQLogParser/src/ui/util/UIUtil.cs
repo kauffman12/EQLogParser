@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Dynamic;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -19,6 +21,8 @@ namespace EQLogParser
 
   internal static class UiUtil
   {
+    internal static readonly SortableNameComparer TheSortableNameComparer = new();
+    private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new();
     private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new();
 
     internal static DispatcherTimer CreateTimer(EventHandler tickHandler, int interval, DispatcherPriority priority = DispatcherPriority.Normal)
@@ -26,6 +30,42 @@ namespace EQLogParser
       var timer = new DispatcherTimer(priority) { Interval = TimeSpan.FromMilliseconds(interval) };
       timer.Tick += tickHandler;
       return timer;
+    }
+
+    internal static dynamic InsertNameIntoSortedList(string name, ObservableCollection<object> collection, bool isPlayer = false)
+    {
+      var entry = new ExpandoObject() as dynamic;
+      entry.Name = name;
+
+      var index = collection.ToList().BinarySearch(entry, TheSortableNameComparer);
+      if (index < 0)
+      {
+        collection.Insert(~index, entry);
+      }
+      else
+      {
+        entry = collection[index];
+      }
+
+      if (isPlayer)
+      {
+        entry.PlayerClass = PlayerManager.Instance.GetPlayerClass(name);
+      }
+
+      return entry;
+    }
+
+    internal static void InsertPetMappingIntoSortedList(PetMapping mapping, ObservableCollection<PetMapping> collection)
+    {
+      var index = collection.ToList().BinarySearch(mapping, TheSortablePetMappingComparer);
+      if (index < 0)
+      {
+        collection.Insert(~index, mapping);
+      }
+      else
+      {
+        collection.Insert(index, mapping);
+      }
     }
 
     internal static void UpdateObservable<T>(IEnumerable<T> source, ObservableCollection<T> dest)
@@ -102,6 +142,22 @@ namespace EQLogParser
             // ignore
           }
         }, priority);
+      }
+    }
+
+    private class SortablePetMappingComparer : IComparer<PetMapping>
+    {
+      public int Compare(PetMapping x, PetMapping y)
+      {
+        return string.CompareOrdinal(x?.Owner, y?.Owner);
+      }
+    }
+
+    internal class SortableNameComparer : IComparer<object>
+    {
+      public int Compare(object x, object y)
+      {
+        return string.CompareOrdinal(((dynamic)x)?.Name, ((dynamic)y)?.Name);
       }
     }
   }

@@ -769,7 +769,7 @@ namespace EQLogParser
 
     private void RegexClick(object sender, RoutedEventArgs e)
     {
-      MainActions.OpenFileWithDefault($"{MainWindow.ParserHome}/documentation.html#regex-101");
+      MainActions.OpenFileWithDefault($"{App.ParserHome}/documentation.html#regex-101");
     }
 
     private async void CancelClick(object sender, RoutedEventArgs e)
