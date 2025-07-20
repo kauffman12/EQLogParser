@@ -63,8 +63,6 @@ namespace EQLogParser
     private static readonly ObservableCollection<dynamic> VerifiedPlayersView = [];
     private static readonly ObservableCollection<dynamic> VerifiedPetsView = [];
     private static readonly ObservableCollection<PetMapping> PetPlayersView = [];
-    private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new();
-    private static readonly SortableNameComparer TheSortableNameComparer = new();
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly JsonSerializerOptions DiscordSerializationOptions = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
     private static MainWindow _mainWindow;
@@ -527,24 +525,6 @@ namespace EQLogParser
       DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
     }
 
-    internal static dynamic InsertNameIntoSortedList(string name, ObservableCollection<object> collection)
-    {
-      var entry = new ExpandoObject() as dynamic;
-      entry.Name = name;
-
-      var index = collection.ToList().BinarySearch(entry, TheSortableNameComparer);
-      if (index < 0)
-      {
-        collection.Insert(~index, entry);
-      }
-      else
-      {
-        entry = collection[index];
-      }
-
-      return entry;
-    }
-
     // should already run on the UI thread
     internal static void InitPetOwners(MainWindow main, SfDataGrid petMappingGrid, GridComboBoxColumn ownerList, ContentControl petMappingWindow)
     {
@@ -553,28 +533,9 @@ namespace EQLogParser
       ownerList.ItemsSource = VerifiedPlayersView;
       PlayerManager.Instance.EventsNewPetMapping += async (_, mapping) =>
       {
-        // ignore swarm pets
-        if (mapping.Pet?.EndsWith("`s pet", StringComparison.InvariantCulture) == true)
-        {
-          return;
-        }
-
         await UiUtil.InvokeAsync(() =>
         {
-          var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(mapping.Pet, StringComparison.OrdinalIgnoreCase));
-          if (existing != null)
-          {
-            if (existing.Owner != mapping.Owner)
-            {
-              PetPlayersView.Remove(existing);
-              InsertPetMappingIntoSortedList(mapping, PetPlayersView);
-            }
-          }
-          else
-          {
-            InsertPetMappingIntoSortedList(mapping, PetPlayersView);
-          }
-
+          InsertPetMapping(mapping);
           DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
         });
 
@@ -593,8 +554,7 @@ namespace EQLogParser
       {
         await UiUtil.InvokeAsync(() =>
         {
-          var entry = InsertNameIntoSortedList(name, VerifiedPlayersView);
-          entry.PlayerClass = PlayerManager.Instance.GetPlayerClass(name);
+          UiUtil.InsertNameIntoSortedList(name, VerifiedPlayersView, true);
           DockingManager.SetHeader(playersWindow, $"{PlayerListTitle} ({VerifiedPlayersView.Count})");
         });
       };
@@ -605,7 +565,7 @@ namespace EQLogParser
         {
           var entry = new ExpandoObject() as dynamic;
           entry.Name = name;
-          int index = VerifiedPlayersView.ToList().BinarySearch(entry, TheSortableNameComparer);
+          int index = VerifiedPlayersView.ToList().BinarySearch(entry, UiUtil.TheSortableNameComparer);
           if (index >= 0)
           {
             VerifiedPlayersView[index].PlayerClass = playerClass;
@@ -644,7 +604,7 @@ namespace EQLogParser
       {
         await UiUtil.InvokeAsync(() =>
         {
-          InsertNameIntoSortedList(name, VerifiedPetsView);
+          UiUtil.InsertNameIntoSortedList(name, VerifiedPetsView);
           DockingManager.SetHeader(petsWindow, $"{PetsListTitle} ({VerifiedPetsView.Count})");
         });
       });
@@ -670,6 +630,34 @@ namespace EQLogParser
           }
         });
       };
+    }
+
+    // keep this on UI thread
+    internal static void LoadVerified(ContentControl playersWindow, ContentControl petsWindow, List<string> players, List<string> pets)
+    {
+      UpdateWindow(VerifiedPlayersView, playersWindow, players, PlayerListTitle, true);
+      UpdateWindow(VerifiedPetsView, petsWindow, pets, PetsListTitle, false);
+
+      static void UpdateWindow(ObservableCollection<dynamic> view, ContentControl window, List<string> names, string title, bool isPlayer)
+      {
+        foreach (var name in names)
+        {
+          UiUtil.InsertNameIntoSortedList(name, view, isPlayer);
+        }
+
+        DockingManager.SetHeader(window, $"{title} ({view.Count})");
+      }
+    }
+
+    // keep this on UI thread
+    internal static void LoadPetOwners(ContentControl petMappingWindow, List<PetMapping> mappings)
+    {
+      foreach (var mapping in mappings)
+      {
+        InsertPetMapping(mapping);
+      }
+
+      DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
     }
 
     // keep this on UI thread
@@ -997,6 +985,23 @@ namespace EQLogParser
       }
     }
 
+    private static void InsertPetMapping(PetMapping mapping)
+    {
+      var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(mapping.Pet, StringComparison.OrdinalIgnoreCase));
+      if (existing != null)
+      {
+        if (existing.Owner != mapping.Owner)
+        {
+          PetPlayersView.Remove(existing);
+          UiUtil.InsertPetMappingIntoSortedList(mapping, PetPlayersView);
+        }
+      }
+      else
+      {
+        UiUtil.InsertPetMappingIntoSortedList(mapping, PetPlayersView);
+      }
+    }
+
     private static void SetThemeFontSizes()
     {
       CurrentNameWidth = (10.0 * CurrentFontSize) + 25;
@@ -1165,35 +1170,6 @@ namespace EQLogParser
       foreach (var key in dict.Keys)
       {
         Application.Current.Resources[key] = dict[key];
-      }
-    }
-
-    private static void InsertPetMappingIntoSortedList(PetMapping mapping, ObservableCollection<PetMapping> collection)
-    {
-      var index = collection.ToList().BinarySearch(mapping, TheSortablePetMappingComparer);
-      if (index < 0)
-      {
-        collection.Insert(~index, mapping);
-      }
-      else
-      {
-        collection.Insert(index, mapping);
-      }
-    }
-
-    private class SortablePetMappingComparer : IComparer<PetMapping>
-    {
-      public int Compare(PetMapping x, PetMapping y)
-      {
-        return string.CompareOrdinal(x?.Owner, y?.Owner);
-      }
-    }
-
-    private class SortableNameComparer : IComparer<object>
-    {
-      public int Compare(object x, object y)
-      {
-        return string.CompareOrdinal(((dynamic)x)?.Name, ((dynamic)y)?.Name);
       }
     }
 

@@ -674,10 +674,10 @@ namespace EQLogParser
     internal string Caster { get; set; }
   }
 
-  internal class PetMapping
+  internal class PetMapping(string pet, string owner)
   {
-    public string Owner { get; set; }
-    public string Pet { get; set; }
+    public string Owner { get; set; } = owner;
+    public string Pet { get; set; } = pet;
   }
 
   internal class ReceivedSpell : IAction

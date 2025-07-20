@@ -26,8 +26,6 @@ namespace EQLogParser
 {
   public partial class MainWindow
   {
-    internal const string ParserHome = "http://eqlogparser.kizant.net";
-
     // global settings
     internal static string CurrentLogFile;
     internal static bool IsAoEHealingEnabled = true;
@@ -41,12 +39,9 @@ namespace EQLogParser
     internal static bool IsHideOnMinimizeEnabled;
     internal static bool IsMapSendToEqEnabled;
     internal static bool IsEmuParsingEnabled;
-    internal static WindowState LastWindowState = WindowState.Normal;
     internal const int ActionIndex = 27;
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private readonly double _defaultHeight = SystemParameters.PrimaryScreenHeight * 0.75;
-    private readonly double _defaultWidth = SystemParameters.PrimaryScreenWidth * 0.85;
     private DateTime _startLoadTime;
     private DamageOverlayWindow _damageOverlay;
     private DispatcherTimer _computeStatsTimer;
@@ -56,7 +51,6 @@ namespace EQLogParser
     private readonly List<bool> _logWindows = [];
     private readonly List<string> _recentFiles = [];
     private readonly string _activeWindow;
-    private readonly string _releaseNotesUrl;
     private readonly System.Windows.Forms.NotifyIcon _notifyIcon;
     private bool _isDamageOverlayOpen;
     private bool _resetWindowState;
@@ -64,27 +58,13 @@ namespace EQLogParser
 
     public MainWindow()
     {
-      var version = Application.ResourceAssembly.GetName().Version!.ToString()[..^2];
-      version = version.Replace(".", "-");
-      _releaseNotesUrl = $"{ParserHome}/releasenotes.html#{version}";
-
-      // DPI and sizing
-      Height = ConfigUtil.GetSettingAsDouble("WindowHeight", _defaultHeight);
-      Width = ConfigUtil.GetSettingAsDouble("WindowWidth", _defaultWidth);
-      Top = ConfigUtil.GetSettingAsDouble("WindowTop", double.NaN);
-      Left = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN);
-      Log.Info($"Window Pos ({Top}, {Left}) | Window Size ({Width}, {Height})");
-      // start minimized
-      WindowState = WindowState.Minimized;
       InitializeComponent();
-
-      ConfigUtil.UpdateStatus($"RenderMode: {RenderOptions.ProcessRenderMode}");
 
       // set main / themes
       MainActions.SetMainWindow(this);
 
       // update titles
-      versionText.Text = "v" + Application.ResourceAssembly.GetName().Version!.ToString()[..^2];
+      versionText.Text = "v" + App.Version;
 
       // AoE healing
       IsAoEHealingEnabled = ConfigUtil.IfSetOrElse("IncludeAoEHealing", IsAoEHealingEnabled);
@@ -236,28 +216,6 @@ namespace EQLogParser
           }
         }
 
-        var savedState = ConfigUtil.GetSetting("WindowState", "Normal");
-
-        // if start minimized if requested do nothing but update the last state
-        if (enableStartMinimizedIcon.Visibility == Visibility.Visible)
-        {
-          LastWindowState = savedState switch
-          {
-            "Maximized" => WindowState.Maximized,
-            _ => WindowState.Normal
-          };
-        }
-        else
-        {
-          // use last saved state
-          WindowState = savedState switch
-          {
-            "Maximized" => WindowState.Maximized,
-            _ => WindowState.Normal
-          };
-
-        }
-
         // compute stats gets triggered when pet owners is updated during startup
         MainActions.InitPetOwners(this, petMappingGrid, ownerList, petMappingWindow);
         MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, classList, verifiedPlayersWindow, petMappingWindow);
@@ -304,20 +262,7 @@ namespace EQLogParser
         // start save timer
         _saveTimer.Start();
 
-        // update status
-        if (WindowState == WindowState.Minimized)
-        {
-          ConfigUtil.UpdateStatus("Starting Minimized");
-        }
-
-        await Task.Delay(200);
-
-        // update starting state if minimized
-        // needs to be called after show() and delay
-        if (IsHideOnMinimizeEnabled && WindowState == WindowState.Minimized)
-        {
-          Hide();
-        }
+        await Task.Delay(250);
 
         // activate the saved window
         if (!string.IsNullOrEmpty(_activeWindow))
@@ -333,12 +278,6 @@ namespace EQLogParser
           // OpenLogFile with update status
           OpenLogFile(previousFile, 0);
         }
-
-        _ = Dispatcher.InvokeAsync(CheckWindowPosition, DispatcherPriority.Background);
-
-        // send done in 5 more seconds if it hasn't been received yet
-        await Task.Delay(5000);
-        ConfigUtil.UpdateStatus("Done");
       }
       catch (Exception e)
       {
@@ -371,39 +310,6 @@ namespace EQLogParser
       {
         await Task.Delay(500);
         await MainActions.CheckVersionAsync(errorText);
-      }
-    }
-
-    private void CheckWindowPosition()
-    {
-      var isOffScreen = true;
-      var windowRect = new Rect(Left, Top, Width, Height);
-
-      foreach (var screen in System.Windows.Forms.Screen.AllScreens)
-      {
-        var screenRect = new Rect(
-          screen.WorkingArea.Left,
-          screen.WorkingArea.Top,
-          screen.WorkingArea.Width,
-          screen.WorkingArea.Height
-        );
-
-        if (screenRect.IntersectsWith(windowRect))
-        {
-          isOffScreen = false;
-          break;
-        }
-      }
-
-      if (isOffScreen)
-      {
-        // Move the window to the center of the primary screen
-        Width = _defaultWidth;
-        Height = _defaultHeight;
-        Left = 0;
-        Top = 0;
-        Log.Info($"Window is Offscreen. Changing Window Pos ({Top}, {Left})");
-        Log.Info($"Window is Offscreen. Changing Window Size ({Width}, {Height})");
       }
     }
 
@@ -446,12 +352,12 @@ namespace EQLogParser
     internal void CopyToEqClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEqClick(type);
     internal FightTable GetFightTable() => npcWindow?.Content as FightTable;
     private void RestoreTableColumnsClick(object sender, RoutedEventArgs e) => DataGridUtil.RestoreAllTableColumns();
-    private void AboutClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault($"{ParserHome}");
+    private void AboutClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault($"{App.ParserHome}");
     private void RestoreClick(object sender, RoutedEventArgs e) => MainActions.Restore();
     private void OpenCreateWavClick(object sender, RoutedEventArgs e) => new WavCreatorWindow().ShowDialog();
     private void OpenSoundsFolderClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("\"" + @"data\sounds" + "\"");
     private void ReportProblemClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
-    private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(_releaseNotesUrl);
+    private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(App.ReleaseNotesUrl);
     private void OpenLogManager(object sender, RoutedEventArgs e) => new LogManagementWindow().ShowDialog();
     private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
     private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
@@ -978,8 +884,6 @@ namespace EQLogParser
 
             if (changed)
             {
-              MainActions.Clear(verifiedPetsWindow, verifiedPlayersWindow, petMappingWindow);
-
               // save before switching
               if (!string.IsNullOrEmpty(ConfigUtil.ServerName))
               {
@@ -992,7 +896,12 @@ namespace EQLogParser
 
             if (changed)
             {
+              // update pet/player windows all at once
+              MainActions.Clear(verifiedPetsWindow, verifiedPlayersWindow, petMappingWindow);
               PlayerManager.Instance.Init();
+              MainActions.LoadVerified(verifiedPlayersWindow, verifiedPetsWindow, PlayerManager.Instance.GetVerifiedPlayers(),
+                PlayerManager.Instance.GetVerifiedPets());
+              MainActions.LoadPetOwners(petMappingWindow, PlayerManager.Instance.GetPetMappings());
             }
 
             _recentFiles.Remove(theFile);
@@ -1142,7 +1051,7 @@ namespace EQLogParser
 
       if (WindowState != WindowState.Minimized)
       {
-        LastWindowState = WindowState;
+        App.LastWindowState = WindowState;
       }
     }
 

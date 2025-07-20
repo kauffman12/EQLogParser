@@ -96,8 +96,11 @@ namespace EQLogParser
     internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || DataManager.Instance.IsPlayerSpell(name);
     internal List<string> GetClassList(bool withNull = false) => withNull ? [.. _sortedClassListWithNull] : [.. _sortedClassList];
     internal bool IsMerc(string name) => _mercs.TryGetValue(TextUtils.ToUpper(name), out _);
+    internal List<string> GetVerifiedPlayers() => [.. _verifiedPlayers.Keys];
+    internal List<string> GetVerifiedPets() => [.. _verifiedPets.Keys];
+    internal List<PetMapping> GetPetMappings() => [.. _petToPlayer.Select(kv => new PetMapping(kv.Key, kv.Value))];
 
-    internal void AddPetToPlayer(string pet, string player, bool initialLoad = false)
+    internal void AddPetToPlayer(string pet, string player, bool init = false)
     {
       if (!string.IsNullOrEmpty(pet) && !string.IsNullOrEmpty(player))
       {
@@ -106,10 +109,10 @@ namespace EQLogParser
           if ((!_petToPlayer.TryGetValue(pet, out var value) || value != player) && !IsVerifiedPlayer(pet))
           {
             _petToPlayer[pet] = player;
-            EventsNewPetMapping?.Invoke(this, new PetMapping { Pet = pet, Owner = player });
 
-            if (!initialLoad)
+            if (!init)
             {
+              EventsNewPetMapping?.Invoke(this, new PetMapping(pet, player));
               _petMappingUpdated = true;
             }
           }
@@ -126,7 +129,7 @@ namespace EQLogParser
       }
     }
 
-    internal void AddVerifiedPet(string name)
+    internal void AddVerifiedPet(string name, bool init = false)
     {
       if (!string.IsNullOrEmpty(name))
       {
@@ -142,14 +145,14 @@ namespace EQLogParser
 
             if (IsPossiblePlayerName(name) && !_petToPlayer.ContainsKey(name))
             {
-              AddPetToPlayer(name, Labels.Unassigned);
+              AddPetToPlayer(name, Labels.Unassigned, init);
             }
 
             _takenPetOrPlayerAction.TryRemove(name, out _);
 
             if (_verifiedPets.TryAdd(name, 1))
             {
-              EventsNewVerifiedPet?.Invoke(this, name);
+              if (!init) EventsNewVerifiedPet?.Invoke(this, name);
               _playersUpdated = true;
             }
           }
@@ -157,7 +160,7 @@ namespace EQLogParser
       }
     }
 
-    internal void AddVerifiedPlayer(string name, double playerTime)
+    internal void AddVerifiedPlayer(string name, double playerTime, bool init = false)
     {
       if (!string.IsNullOrEmpty(name))
       {
@@ -174,14 +177,14 @@ namespace EQLogParser
           else
           {
             _verifiedPlayers[name] = playerTime;
-            EventsNewVerifiedPlayer?.Invoke(this, name);
+            if (!init) EventsNewVerifiedPlayer?.Invoke(this, name);
           }
 
           _takenPetOrPlayerAction.TryRemove(name, out _);
           if (_verifiedPets.TryRemove(name, out _))
           {
             TryRemovePetMapping(name);
-            EventsRemoveVerifiedPet?.Invoke(this, name);
+            if (!init) EventsRemoveVerifiedPet?.Invoke(this, name);
           }
         }
       }
@@ -359,7 +362,7 @@ namespace EQLogParser
         _verifiedPlayers.Clear();
         _mercs.Clear();
 
-        AddVerifiedPlayer(ConfigUtil.PlayerName, DateUtil.ToDouble(DateTime.Now));
+        AddVerifiedPlayer(ConfigUtil.PlayerName, DateUtil.ToDouble(DateTime.Now), true);
 
         ConfigUtil.ReadPlayers().ForEach(player =>
         {
@@ -395,11 +398,11 @@ namespace EQLogParser
               name = player;
             }
 
-            AddVerifiedPlayer(name, parsed);
+            AddVerifiedPlayer(name, parsed, true);
 
             if (className != null)
             {
-              SetPlayerClass(name, className, reason);
+              SetPlayerClass(name, className, reason, true);
             }
           }
         });
@@ -409,10 +412,10 @@ namespace EQLogParser
         {
           if (!_verifiedPlayers.ContainsKey(mapping[key]))
           {
-            AddVerifiedPlayer(mapping[key], 0d);
+            AddVerifiedPlayer(mapping[key], 0d, true);
           }
 
-          AddVerifiedPet(key);
+          AddVerifiedPet(key, true);
           AddPetToPlayer(key, mapping[key], true);
         }
 
@@ -467,11 +470,11 @@ namespace EQLogParser
       }
     }
 
-    internal void SetPlayerClass(string player, string className, string reason)
+    internal void SetPlayerClass(string player, string className, string reason, bool init = false)
     {
       if (_classesByName.TryGetValue(className, out var value))
       {
-        SetPlayerClass(player, value, reason);
+        SetPlayerClass(player, value, reason, init);
       }
       else
       {
@@ -479,7 +482,7 @@ namespace EQLogParser
       }
     }
 
-    internal void SetPlayerClass(string player, SpellClass theClass, string reason)
+    internal void SetPlayerClass(string player, SpellClass theClass, string reason, bool init = false)
     {
       if (!_playerToClass.TryGetValue(player, out var counter))
       {
@@ -500,7 +503,7 @@ namespace EQLogParser
             counter.Reason = reason;
             counter.ClassCounts[theClass] = long.MaxValue;
             counter.CurrentMax = long.MaxValue;
-            EventsUpdatePlayerClass?.Invoke(player, _classNames[theClass]);
+            if (!init) EventsUpdatePlayerClass?.Invoke(player, _classNames[theClass]);
             Log.Debug("Assigning " + player + " as " + theClass + ". " + reason);
             _playersUpdated = true;
           }
