@@ -138,6 +138,7 @@ namespace EQLogParser
       {
         saveButton.IsEnabled = characterName?.FontStyle != FontStyles.Italic && txtFilePath?.FontStyle != FontStyles.Italic &&
           characterName?.Text.Length > 0 && txtFilePath?.Text.Length > 0;
+        cancelButton.Content = saveButton.IsEnabled ? "Cancel" : "Close";
       }
     }
 

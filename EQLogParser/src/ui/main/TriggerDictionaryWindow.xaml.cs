@@ -3,7 +3,6 @@ using Syncfusion.UI.Xaml.Grid.Helpers;
 using Syncfusion.UI.Xaml.ScrollAxis;
 using System;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Windows;
 
 namespace EQLogParser
@@ -32,13 +31,36 @@ namespace EQLogParser
             }
           });
         }
+
+        foreach (var item in _items)
+        {
+          item.PropertyChanged += (s, e) => EnableSave();
+        }
+
+        _items.CollectionChanged += (s, e) => EnableSave();
       });
 
       dataGrid.ItemsSource = _items;
       _treeView = view;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
     private void CloseClicked(object sender, RoutedEventArgs e) => Close();
+    private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
+
+    private void EnableSave()
+    {
+      saveButton.IsEnabled = true;
+      closeButton.Content = "Cancel";
+    }
+
+    private async void SaveClicked(object sender, RoutedEventArgs e)
+    {
+      CleanupTable();
+      await TriggerStateManager.Instance.SaveLexicon([.. _items]);
+      _treeView = null;
+      Close();
+    }
 
     private void CleanupTable()
     {
@@ -56,22 +78,6 @@ namespace EQLogParser
       if (dataGrid.SelectedItem is LexiconItem item)
       {
         _treeView?.PlayTts(item.Replace + " will be spoken as " + item.With);
-      }
-    }
-
-    private async void TriggerDictionaryWindowOnClosing(object sender, CancelEventArgs e)
-    {
-      CleanupTable();
-      await TriggerStateManager.Instance.SaveLexicon([.. _items]);
-      _treeView = null;
-
-      try
-      {
-        dataGrid?.Dispose();
-      }
-      catch (Exception)
-      {
-        // ignore
       }
     }
 
@@ -128,6 +134,20 @@ namespace EQLogParser
       else
       {
         testButton.IsEnabled = false;
+      }
+    }
+
+    private void TheWindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
+    {
+      MainActions.EventsThemeChanged -= EventsThemeChanged;
+
+      try
+      {
+        dataGrid?.Dispose();
+      }
+      catch (Exception)
+      {
+        // ignore
       }
     }
   }

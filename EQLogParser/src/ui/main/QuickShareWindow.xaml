@@ -14,7 +14,7 @@
    TitleFontSize="{DynamicResource EQContentSize}"
    TitleBarForeground="{DynamicResource PrimaryDarken}"
    TitleTextAlignment="Left"
-   Closing="QuickShareWindowOnClosing"
+   Closing="TheWindowClosing"
    UseLayoutRounding="True"
    WindowStartupLocation="CenterOwner"
    SizeToContent="WidthAndHeight"
@@ -128,7 +128,8 @@
       </syncfusion:SfDataGrid.ContextMenu>
     </syncfusion:SfDataGrid>
     <StackPanel Orientation="Horizontal" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Right" Margin="0,15,12,10">
-      <Button x:Name="closeButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}" FontSize="{DynamicResource EQContentSize}" Click="CloseClicked" Margin="2,0,4,0" Padding="20,0,20,0" Content="Close" />
+      <Button x:Name="saveButton" IsEnabled="False" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}" FontSize="{DynamicResource EQContentSize}" Click="SaveClicked" Margin="0,0,4,0" Padding="20,0,20,0" Content="Save" />
+      <Button x:Name="closeButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}" FontSize="{DynamicResource EQContentSize}" Click="CloseClicked" Margin="0,0,0,0" Padding="20,0,20,0" Content="Close" />
     </StackPanel>
   </Grid>
 </syncfusion:ChromelessWindow>
