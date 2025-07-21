@@ -46,29 +46,26 @@ namespace EQLogParser
       _ready = true;
     }
 
+    private void OptionsChanged(object sender, RoutedEventArgs e) => EnableSave();
     private void CloseClicked(object sender, RoutedEventArgs e) => Close();
 
-    private void OptionsChanged(object sender, RoutedEventArgs e)
+    private void EnableSave()
     {
       if (_ready)
       {
-        UpdateSettings();
+        closeButton.Content = "Cancel";
+        saveButton.IsEnabled = !(enableCheckBox.IsChecked == true && fileAges.SelectedIndex == 0 && fileSizes.SelectedIndex == 0);
       }
     }
 
-    private void UpdateSettings()
+    private void SaveClicked(object sender, RoutedEventArgs e)
     {
-      if (_ready)
+      ConfigUtil.SetSetting("LogManagementEnabled", enableCheckBox.IsChecked == true);
+      ConfigUtil.SetSetting("LogManagementArchiveFolder", txtFolderPath.Text);
+
+      // ignore invalid settings
+      if (fileAges.SelectedIndex != 0 || fileSizes.SelectedIndex != 0)
       {
-        ConfigUtil.SetSetting("LogManagementEnabled", enableCheckBox.IsChecked == true);
-        closeButton.IsEnabled = !(enableCheckBox.IsChecked == true && fileAges.SelectedIndex == 0 && fileSizes.SelectedIndex == 0);
-
-        // ignore invalid settings
-        if (fileAges.SelectedIndex == 0 && fileSizes.SelectedIndex == 0)
-        {
-          return;
-        }
-
         if (fileSizes.SelectedItem is ComboBoxItem item)
         {
           ConfigUtil.SetSetting("LogManagementMinFileSize", item.Content.ToString());
@@ -78,17 +75,19 @@ namespace EQLogParser
         {
           ConfigUtil.SetSetting("LogManagementMinFileAge", item2.Content.ToString());
         }
-
-        if (compress.SelectedItem is ComboBoxItem item3)
-        {
-          ConfigUtil.SetSetting("LogManagementCompressArchive", item3.Content.ToString());
-        }
-
-        if (organize.SelectedItem is ComboBoxItem item4)
-        {
-          ConfigUtil.SetSetting("LogManagementOrganize", item4.Content.ToString());
-        }
       }
+
+      if (compress.SelectedItem is ComboBoxItem item3)
+      {
+        ConfigUtil.SetSetting("LogManagementCompressArchive", item3.Content.ToString());
+      }
+
+      if (organize.SelectedItem is ComboBoxItem item4)
+      {
+        ConfigUtil.SetSetting("LogManagementOrganize", item4.Content.ToString());
+      }
+
+      Close();
     }
 
     private static void UpdateComboBox(ComboBox combo, string setting, string defaultValue)
@@ -120,7 +119,7 @@ namespace EQLogParser
       {
         txtFolderPath.FontStyle = FontStyles.Normal;
         txtFolderPath.Text = dialog.FileName;
-        ConfigUtil.SetSetting("LogManagementArchiveFolder", dialog.FileName);
+        EnableSave();
       }
     }
 
@@ -193,7 +192,11 @@ namespace EQLogParser
       fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = organize.IsEnabled = true;
       titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
       titleLabel.Content = "Log Management Active";
-      UpdateSettings();
+
+      if (!ConfigUtil.IfSet("LogManagementEnabled"))
+      {
+        EnableSave();
+      }
     }
 
     private void EnableCheckBoxOnUnchecked(object sender, RoutedEventArgs e)
@@ -201,7 +204,11 @@ namespace EQLogParser
       fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = organize.IsEnabled = false;
       titleLabel.SetResourceReference(ForegroundProperty, "EQStopForegroundBrush");
       titleLabel.Content = "Enable Log Management";
-      UpdateSettings();
+
+      if (ConfigUtil.IfSet("LogManagementEnabled"))
+      {
+        EnableSave();
+      }
     }
   }
 }

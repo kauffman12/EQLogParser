@@ -51,8 +51,13 @@ namespace EQLogParser
     }
 
     private void CloseClicked(object sender, RoutedEventArgs e) => Close();
-    private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
     private void TrustGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => CleanupTable();
+
+    private void EventsThemeChanged(string _)
+    {
+      DataGridUtil.RefreshTableColumns(dataGrid);
+      DataGridUtil.RefreshTableColumns(trustGrid);
+    }
 
     private void EnableSave()
     {
