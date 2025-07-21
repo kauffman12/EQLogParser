@@ -36,6 +36,13 @@ namespace EQLogParser
             }
           });
         }
+
+        foreach (var item in _items)
+        {
+          item.PropertyChanged += (s, e) => EnableSave();
+        }
+
+        _items.CollectionChanged += (s, e) => EnableSave();
       });
 
       trustGrid.ItemsSource = _items;
@@ -46,6 +53,20 @@ namespace EQLogParser
     private void CloseClicked(object sender, RoutedEventArgs e) => Close();
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
     private void TrustGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => CleanupTable();
+
+    private void EnableSave()
+    {
+      saveButton.IsEnabled = true;
+      closeButton.Content = "Cancel";
+    }
+
+    private async void SaveClicked(object sender, RoutedEventArgs e)
+    {
+      CleanupTable();
+      await TriggerStateManager.Instance.SaveTrustedPlayers([.. _items]);
+      ConfigUtil.SetSetting("TriggersWatchForQuickShare", watchQuickShare?.IsChecked == true);
+      Close();
+    }
 
     private void SendToEqClick(object sender, RoutedEventArgs e)
     {
@@ -80,10 +101,8 @@ namespace EQLogParser
       download.IsEnabled = dataGrid is { SelectedItem: QuickShareRecord };
     }
 
-    private async void QuickShareWindowOnClosing(object sender, CancelEventArgs e)
+    private void TheWindowClosing(object sender, CancelEventArgs e)
     {
-      CleanupTable();
-      await TriggerStateManager.Instance.SaveTrustedPlayers([.. _items]);
       MainActions.EventsThemeChanged -= EventsThemeChanged;
 
       try
@@ -101,16 +120,24 @@ namespace EQLogParser
     {
       titleLabel.Content = "Quick Shares Enabled";
       titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
-      ConfigUtil.SetSetting("TriggersWatchForQuickShare", true);
       trustGrid.IsEnabled = true;
+
+      if (!ConfigUtil.IfSet("TriggersWatchForQuickShare"))
+      {
+        EnableSave();
+      }
     }
 
     private void EnableCheckBoxOnUnchecked(object sender, RoutedEventArgs e)
     {
       titleLabel.Content = "Enable Quick Shares";
       titleLabel.SetResourceReference(ForegroundProperty, "EQStopForegroundBrush");
-      ConfigUtil.SetSetting("TriggersWatchForQuickShare", false);
       trustGrid.IsEnabled = false;
+
+      if (ConfigUtil.IfSet("TriggersWatchForQuickShare"))
+      {
+        EnableSave();
+      }
     }
 
     private void AutoGeneratingColumn(object sender, AutoGeneratingColumnArgs e)

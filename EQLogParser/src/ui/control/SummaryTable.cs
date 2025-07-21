@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -71,8 +72,8 @@ namespace EQLogParser
     internal void DataGridShowBreakdown2ByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown2(GetStatsByClass((sender as MenuItem)?.Header as string));
     internal void DataGridShowSpellCountsClick(object sender, RoutedEventArgs e) => ShowSpellCounts(GetSelectedStats());
     internal void DataGridSpellCountsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCounts(GetStatsByClass((sender as MenuItem)?.Header as string));
-    internal void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetSelectedStats());
-    internal void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCasts(GetStatsByClass((sender as MenuItem)?.Header as string));
+    internal async void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e) => await ShowSpellCasts(GetSelectedStats());
+    internal async void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => await ShowSpellCasts(GetStatsByClass((sender as MenuItem)?.Header as string));
     internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(TheColumnsCombo, TheDataGrid);
     internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
 
@@ -221,11 +222,12 @@ namespace EQLogParser
       UpdateDataGridMenuItems();
     }
 
-    internal void ShowSpellCasts(List<PlayerStats> selected)
+    internal async Task ShowSpellCasts(List<PlayerStats> selected)
     {
-      if (SyncFusionUtil.OpenWindow(out var spellTable, typeof(SpellCastTable), "spellCastsWindow", "Spell Cast Order"))
+      if (SyncFusionUtil.OpenWindow(out var spellTable, typeof(SpellCastTable), "spellCastsWindow", "Spell Cast Order")
+        && spellTable.Content is SpellCastTable table)
       {
-        (spellTable.Content as SpellCastTable)?.Init(selected, CurrentStats);
+        await table?.InitAsync(selected, CurrentStats);
       }
     }
 

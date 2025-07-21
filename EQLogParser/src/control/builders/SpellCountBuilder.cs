@@ -50,6 +50,7 @@ namespace EQLogParser
     {
       var maxTime = raidStats.MaxBeginTime;
       var minTime = raidStats.MinBeginTime;
+      var startTime = double.NaN;
       foreach (var segment in CollectionsMarshal.AsSpan(raidStats.AllRanges.TimeSegments))
       {
         var damageAfter = segment.BeginTime - DmgOffset;
@@ -62,26 +63,35 @@ namespace EQLogParser
             times[spell] = beginTime;
           }
 
+          var result = double.NaN;
           if (spell is ReceivedSpell)
           {
-            AddSpell(raidStats, spell, beginTime, minTime, maxTime, receivedDuring, damageAfter, damageBefore);
+            result = AddSpell(raidStats, spell, beginTime, minTime, maxTime, receivedDuring, damageAfter, damageBefore);
           }
           else
           {
-            AddSpell(raidStats, spell, beginTime, minTime, maxTime, castsDuring, damageAfter, damageBefore);
+            result = AddSpell(raidStats, spell, beginTime, minTime, maxTime, castsDuring, damageAfter, damageBefore);
+          }
+
+          if (!double.IsNaN(result))
+          {
+            if (double.IsNaN(startTime) || result < startTime)
+            {
+              startTime = result;
+            }
           }
         }
       }
 
-      return minTime;
+      return startTime;
     }
 
-    private static void AddSpell(PlayerStats raidStats, IAction action, double beginTime, double minTime, double maxTime,
+    private static double AddSpell(PlayerStats raidStats, IAction action, double beginTime, double minTime, double maxTime,
       HashSet<IAction> actions, double damageAfter, double damageBefore)
     {
       if ((!double.IsNaN(minTime) && beginTime < minTime) || (!double.IsNaN(maxTime) && beginTime > maxTime))
       {
-        return;
+        return double.NaN;
       }
 
       if (action is SpellCast cast)
@@ -102,7 +112,7 @@ namespace EQLogParser
         }
       }
 
-      return;
+      return beginTime;
 
       void Add(double theTime, SpellData spellData, IAction theAction)
       {

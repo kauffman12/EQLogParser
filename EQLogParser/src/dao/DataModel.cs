@@ -46,15 +46,58 @@ namespace EQLogParser
     public List<PiperVoice> Voices { get; set; }
   }
 
-  internal class LexiconItem
+  internal class LexiconItem : INotifyPropertyChanged
   {
-    public string Replace { get; set; }
-    public string With { get; set; }
+    public event PropertyChangedEventHandler PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string name = null)
+    {
+      PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    private string _replace;
+    public string Replace
+    {
+      get => _replace;
+      set
+      {
+        if (_replace == value) return;
+        _replace = value;
+        OnPropertyChanged();
+      }
+    }
+
+    private string _with;
+    public string With
+    {
+      get => _with;
+      set
+      {
+        if (_with == value) return;
+        _with = value;
+        OnPropertyChanged();
+      }
+    }
   }
 
-  internal class TrustedPlayer
+  internal class TrustedPlayer : INotifyPropertyChanged
   {
-    public string Name { get; set; }
+    public event PropertyChangedEventHandler PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string name = null)
+    {
+      PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    private string _name;
+    public string Name
+    {
+      get => _name;
+      set
+      {
+        if (_name == value) return;
+        _name = value;
+        OnPropertyChanged();
+      }
+    }
   }
 
   internal class ResistCount
