@@ -153,8 +153,7 @@ namespace EQLogParser
       dpsButton.Foreground = _currentShowDps ? ActiveBrush : InActiveBrush;
       tankButton.Foreground = !_currentShowDps ? ActiveBrush : InActiveBrush;
 
-      _updateTimer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
-      _updateTimer.Tick += UpdateTimerTick;
+      _updateTimer = UiUtil.CreateTimer(UpdateTimerTick, 1000, DispatcherPriority.DataBind);
       _ready = true;
 
       if (preview)

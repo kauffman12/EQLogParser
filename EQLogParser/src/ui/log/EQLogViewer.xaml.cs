@@ -411,8 +411,14 @@ namespace EQLogParser
                 start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 30);
                 break;
               case 7:
-                var fights = MainActions.GetSelectedFights().OrderBy(sel => sel.Id).ToList();
-                if (fights.Count > 0)
+                // get fights
+                List<Fight> fights = null;
+                UiUtil.InvokeNow(() =>
+                {
+                  fights = MainActions.GetFights(true).OrderBy(sel => sel.Id).ToList();
+                });
+
+                if (fights?.Count > 0)
                 {
                   start = fights[0].BeginTime - 15;
                   ranges = new TimeRange();

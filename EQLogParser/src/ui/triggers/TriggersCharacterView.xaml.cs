@@ -23,15 +23,23 @@ namespace EQLogParser
       InitializeComponent();
       _statusTimer = new DispatcherTimer(DispatcherPriority.Background)
       {
-        Interval = new TimeSpan(0, 0, 0, 0, 2000),
+        Interval = new TimeSpan(0, 0, 0, 2, 500),
       };
 
       _statusTimer.Tick += StatusTimerTick;
-      _statusTimer.Start();
       TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
     }
 
-    internal void SetConfig(TriggerConfig config) => dataGrid.ItemsSource = config.Characters;
+    internal void SetConfig(TriggerConfig config)
+    {
+      dataGrid.ItemsSource = config.Characters;
+
+      if (config.IsAdvanced)
+      {
+        _statusTimer.Start();
+      }
+    }
+
     internal TriggerCharacter GetSelectedCharacter() => dataGrid?.SelectedItem as TriggerCharacter;
     private void StatusTimerTick(object sender, EventArgs e) => UpdateStatus();
 
@@ -72,17 +80,28 @@ namespace EQLogParser
 
     private void TriggerConfigUpdateEvent(TriggerConfig config)
     {
-      if (dataGrid != null)
+      if (config.IsAdvanced)
       {
-        var updatedSource = TriggerUtil.UpdateCharacterList(dataGrid.ItemsSource as List<TriggerCharacter>, config);
-        if (updatedSource != null)
+        if (dataGrid?.ItemsSource is List<TriggerCharacter> list)
         {
-          dataGrid.ItemsSource = updatedSource;
+          if (TriggerUtil.UpdateCharacterList(list, config) is { } updatedSource)
+          {
+            dataGrid.ItemsSource = updatedSource;
+          }
+          else
+          {
+            RefreshData();
+          }
         }
-        else
+
+        if (!_statusTimer.IsEnabled)
         {
-          RefreshData();
+          _statusTimer.Start();
         }
+      }
+      else
+      {
+        _statusTimer.Stop();
       }
     }
 

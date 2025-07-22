@@ -24,10 +24,8 @@ namespace EQLogParser
       InitializeComponent();
       RandomData = [];
       DataContext = this;
-
       MainActions.EventsThemeChanged += EventsThemeChanged;
-      _reloadTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
-      _reloadTimer.Tick += ReloadTimerTick;
+      _reloadTimer = UiUtil.CreateTimer(ReloadTimerTick, 1500);
     }
 
     private void ReloadTimerTick(object sender, EventArgs e)

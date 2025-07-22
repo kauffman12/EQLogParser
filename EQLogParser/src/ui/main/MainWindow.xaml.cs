@@ -242,25 +242,12 @@ namespace EQLogParser
           }
         };
 
-        _saveTimer = new DispatcherTimer(DispatcherPriority.Background)
-        {
-          Interval = new TimeSpan(0, 0, 0, 30)
-        };
-
-        _saveTimer.Tick += (_, _) =>
-        {
-          if (!_isLoading)
-          {
-            ConfigUtil.Save();
-          }
-        };
+        _saveTimer = UiUtil.CreateTimer(SaveTimerTick, 30000, DispatcherPriority.Background);
+        _saveTimer.Start();
 
         // Init Trigger Manager
         await TriggerManager.Instance.StartAsync();
         ConfigUtil.UpdateStatus("Trigger Manager Started");
-
-        // start save timer
-        _saveTimer.Start();
 
         await Task.Delay(250);
 
@@ -287,6 +274,8 @@ namespace EQLogParser
       }
     }
 
+    internal bool IsDamageOverlayOpen() => _isDamageOverlayOpen;
+
     internal void SaveWindowSize()
     {
       if (WindowState == WindowState.Normal)
@@ -298,7 +287,112 @@ namespace EQLogParser
       }
     }
 
+    internal List<Fight> GetFights(bool selected = false)
+    {
+      if (npcWindow?.Content is FightTable table)
+      {
+        return selected ? table.GetSelectedFights() : table.GetFights();
+      }
+
+      return [];
+    }
+
+    internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.DamageParse, combined, selected, true);
+      });
+    }
+
+    internal void AddAndCopyTankParse(CombinedStats combined, List<PlayerStats> selected)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.TankParse, combined, selected, true);
+      });
+    }
+
+    internal void CopyToEqClick(string type)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        (playerParseTextWindow.Content as ParsePreview)?.CopyToEqClick(type);
+      });
+    }
+
+    internal void ShowTriggersEnabled(bool active)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        statusTriggersText.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
+      }, DispatcherPriority.Render);
+    }
+
+    internal void CloseDamageOverlay(bool reopen)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        _damageOverlay?.Close();
+        _damageOverlay = null;
+        _isDamageOverlayOpen = false;
+
+        if (reopen)
+        {
+          OpenDamageOverlayIfEnabled(false, true);
+        }
+      });
+    }
+
+    internal void OpenDamageOverlayIfEnabled(bool reset, bool configure)
+    {
+      if (configure)
+      {
+        _damageOverlay = new DamageOverlayWindow(true);
+        _damageOverlay.Show();
+      }
+      // delay opening overlay so group IDs get populated
+      else if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
+      {
+        if (DataManager.Instance.HasOverlayFights())
+        {
+          _damageOverlay?.Close();
+          _damageOverlay = new DamageOverlayWindow(false, reset);
+          _damageOverlay.Show();
+          _isDamageOverlayOpen = true;
+        }
+      }
+    }
+
+    private void ConfigureOverlayClick(object sender, RoutedEventArgs e) => CloseDamageOverlay(true);
     private void MainWindowSizeChanged(object sender, EventArgs e) => SaveWindowSize();
+    private void RestoreTableColumnsClick(object sender, RoutedEventArgs e) => DataGridUtil.RestoreAllTableColumns();
+    private void AboutClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault($"{App.ParserHome}");
+    private void RestoreClick(object sender, RoutedEventArgs e) => MainActions.Restore();
+    private void OpenCreateWavClick(object sender, RoutedEventArgs e) => new WavCreatorWindow().ShowDialog();
+    private void OpenSoundsFolderClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("\"" + @"data\sounds" + "\"");
+    private void ReportProblemClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
+    private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(App.ReleaseNotesUrl);
+    private void OpenLogManager(object sender, RoutedEventArgs e) => new LogManagementWindow().ShowDialog();
+    private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
+    private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
+    private void WindowClose(object sender, EventArgs e) => Close();
+    private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e) => MainActions.ChangeTheme("MaterialDark");
+    private void ToggleMaterialLightClick(object sender, RoutedEventArgs e) => MainActions.ChangeTheme("MaterialLight");
+    private void ToggleStartMinimizedClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("StartWithWindowMinimized", enableStartMinimizedIcon);
+    private void ToggleHideSplashScreenClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("HideSplashScreen", enableHideSplashScreenIcon);
+    private void ToggleAutoMonitorClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("AutoMonitor", enableAutoMonitorIcon);
+    private void ToggleCheckUpdatesClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("CheckUpdatesAtStartup", checkUpdatesIcon);
+    private void ToggleHardwareAccelClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("HardwareAcceleration", hardwareAccelIcon);
+    private void ToggleExportFormattedCsvClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("ExportFormattedCsv", exportFormattedCsvIcon);
+
+    private void SaveTimerTick(object sender, EventArgs e)
+    {
+      if (!_isLoading)
+      {
+        ConfigUtil.Save();
+      }
+    }
 
     private async void ConfigUtilEventsLoadingText(string text)
     {
@@ -322,7 +416,7 @@ namespace EQLogParser
           ConfigUtil.Save();
           await TriggerManager.Instance.StopAsync();
           DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
-          CloseDamageOverlay();
+          CloseDamageOverlay(false);
           break;
         case PowerModes.Resume:
           Log.Warn("Resume");
@@ -346,72 +440,6 @@ namespace EQLogParser
             OpenDamageOverlayIfEnabled(false, false);
           }
         });
-      }
-    }
-
-    internal void CopyToEqClick(string type) => (playerParseTextWindow.Content as ParsePreview)?.CopyToEqClick(type);
-    internal FightTable GetFightTable() => npcWindow?.Content as FightTable;
-    private void RestoreTableColumnsClick(object sender, RoutedEventArgs e) => DataGridUtil.RestoreAllTableColumns();
-    private void AboutClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault($"{App.ParserHome}");
-    private void RestoreClick(object sender, RoutedEventArgs e) => MainActions.Restore();
-    private void OpenCreateWavClick(object sender, RoutedEventArgs e) => new WavCreatorWindow().ShowDialog();
-    private void OpenSoundsFolderClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("\"" + @"data\sounds" + "\"");
-    private void ReportProblemClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
-    private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(App.ReleaseNotesUrl);
-    private void OpenLogManager(object sender, RoutedEventArgs e) => new LogManagementWindow().ShowDialog();
-    private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
-    private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
-    private void WindowClose(object sender, EventArgs e) => Close();
-    private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e) => MainActions.ChangeTheme("MaterialDark");
-    private void ToggleMaterialLightClick(object sender, RoutedEventArgs e) => MainActions.ChangeTheme("MaterialLight");
-    private void ToggleStartMinimizedClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("StartWithWindowMinimized", enableStartMinimizedIcon);
-    private void ToggleHideSplashScreenClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("HideSplashScreen", enableHideSplashScreenIcon);
-    private void ToggleAutoMonitorClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("AutoMonitor", enableAutoMonitorIcon);
-    private void ToggleCheckUpdatesClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("CheckUpdatesAtStartup", checkUpdatesIcon);
-    private void ToggleHardwareAccelClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("HardwareAcceleration", hardwareAccelIcon);
-    private void ToggleExportFormattedCsvClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("ExportFormattedCsv", exportFormattedCsvIcon);
-
-    internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
-    {
-      (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.DamageParse, combined, selected, true);
-    }
-
-    internal void AddAndCopyTankParse(CombinedStats combined, List<PlayerStats> selected)
-    {
-      (playerParseTextWindow.Content as ParsePreview)?.AddParse(Labels.TankParse, combined, selected, true);
-    }
-
-    internal void ShowTriggersEnabled(bool active)
-    {
-      Dispatcher.InvokeAsync(() => statusTriggersText.Visibility = active ? Visibility.Visible : Visibility.Collapsed);
-    }
-
-    internal void CloseDamageOverlay()
-    {
-      _damageOverlay?.Close();
-      _damageOverlay = null;
-      _isDamageOverlayOpen = false;
-    }
-
-    internal bool IsDamageOverlayOpen() => _isDamageOverlayOpen;
-
-    internal void OpenDamageOverlayIfEnabled(bool reset, bool configure)
-    {
-      if (configure)
-      {
-        _damageOverlay = new DamageOverlayWindow(true);
-        _damageOverlay.Show();
-      }
-      // delay opening overlay so group IDs get populated
-      else if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
-      {
-        if (DataManager.Instance.HasOverlayFights())
-        {
-          _damageOverlay?.Close();
-          _damageOverlay = new DamageOverlayWindow(false, reset);
-          _damageOverlay.Show();
-          _isDamageOverlayOpen = true;
-        }
       }
     }
 
@@ -493,11 +521,9 @@ namespace EQLogParser
 
     private void ComputeStats()
     {
-      var fights = MainActions.GetSelectedFights();
-      if (fights != null)
+      if (npcWindow?.Content is FightTable table && table.GetSelectedFights() is { } fights && table.GetAllRanges() is { } allRanges)
       {
         var filtered = fights.OrderBy(npc => npc.Id);
-        var allRanges = MainActions.GetAllRanges();
         var opened = SyncFusionUtil.GetOpenWindows(dockSite);
 
         var damageStatsOptions = new GenerateStatsOptions();
@@ -563,7 +589,7 @@ namespace EQLogParser
 
     private void MenuItemExportFightsClick(object sender, RoutedEventArgs e)
     {
-      var filtered = MainActions.GetSelectedFights().OrderBy(npc => npc.Id).ToList();
+      var filtered = GetFights(true).OrderBy(npc => npc.Id).ToList();
 
       if (string.IsNullOrEmpty(CurrentLogFile))
       {
@@ -616,15 +642,9 @@ namespace EQLogParser
       enableDamageOverlay.Header = enabled ? "Disable _Meter" : "Enable _Meter";
     }
 
-    private void ConfigureOverlayClick(object sender, RoutedEventArgs e)
-    {
-      CloseDamageOverlay();
-      OpenDamageOverlayIfEnabled(false, true);
-    }
-
     private void ResetOverlayClick(object sender, RoutedEventArgs e)
     {
-      CloseDamageOverlay();
+      CloseDamageOverlay(false);
       ConfigUtil.SetSetting("OverlayTop", "");
       ConfigUtil.SetSetting("OverlayLeft", "");
       OpenDamageOverlayIfEnabled(false, true);
@@ -910,7 +930,7 @@ namespace EQLogParser
             UpdateRecentFiles();
 
             DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
-            CloseDamageOverlay();
+            CloseDamageOverlay(false);
             DataManager.Instance.Clear();
             RecordManager.Instance.Clear();
             CurrentLogFile = theFile;
@@ -1100,6 +1120,8 @@ namespace EQLogParser
         PlayerManager.Instance?.Save();
       }
 
+      PlayerManager.Instance?.Stop();
+      _saveTimer?.Stop();
       _eqLogReader?.Dispose();
       petMappingGrid?.Dispose();
       verifiedPetsGrid?.Dispose();

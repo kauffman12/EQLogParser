@@ -13,9 +13,6 @@ using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventA
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for LootViewer.xaml
-  /// </summary>
   public partial class LootViewer : IDocumentContent
   {
     private const string AllNpcs = "All NPCs";
@@ -48,9 +45,7 @@ namespace EQLogParser
       RecordManager.Instance.RecordsUpdatedEvent += RecordsUpdatedEvent;
       MainActions.EventsThemeChanged += EventsThemeChanged;
       dataGrid.ItemsSource = _individualRecords;
-
-      _reloadTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
-      _reloadTimer.Tick += ReloadTimerTick;
+      _reloadTimer = UiUtil.CreateTimer(ReloadTimerTick, 1500);
     }
 
     private void ReloadTimerTick(object sender, EventArgs e) => Load();

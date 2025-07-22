@@ -50,7 +50,7 @@ namespace EQLogParser
       var death = _deaths[deathList.SelectedIndex];
       var end = death.BeginTime;
       var start = end - 20;
-      var allFights = MainActions.GetFights();
+      var allFights = MainActions.GetFights(false);
       var allHeals = RecordManager.Instance.GetHealsDuring(start, end + 1);
       var allSpells = RecordManager.Instance.GetSpellsDuring(start, end + 1);
       var damages = new Dictionary<double, List<string>>();

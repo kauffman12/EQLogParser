@@ -38,7 +38,7 @@ namespace EQLogParser
 
     private AudioManager()
     {
-      _updateTimer = new DispatcherTimer();
+      _updateTimer = new DispatcherTimer(DispatcherPriority.Loaded);
       _updateTimer.Tick += DoUpdateDeviceList;
       _updateTimer.Interval = new TimeSpan(0, 0, 0, 0, 500);
       InitAudio();
@@ -145,7 +145,15 @@ namespace EQLogParser
       var audio = new PlayerAudio();
       LoadVoice(id, voice, audio);
       _playerAudios.TryAdd(id, audio);
-      ProcessAsync(audio);
+
+    }
+
+    internal void Start(string id)
+    {
+      if (_playerAudios.TryGetValue(id, out var audio))
+      {
+        _ = ProcessAsync(audio);
+      }
     }
 
     internal void Stop(string id, bool remove = false)
@@ -605,12 +613,12 @@ namespace EQLogParser
       }
     }
 
-    private void ProcessAsync(PlayerAudio audio)
+    private async Task ProcessAsync(PlayerAudio audio)
     {
       var cancellationTokenSource = new CancellationTokenSource();
       audio.ProcessingToken = cancellationTokenSource;
 
-      _ = Task.Run(async () =>
+      await Task.Run(async () =>
       {
         RawSourceWaveStream stream = null;
         DirectSoundOut output = null;

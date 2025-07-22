@@ -1064,7 +1064,7 @@ namespace EQLogParser
               UiUtil.InvokeNow(() =>
               {
                 node.IsChecked = currentState == true;
-              }, DispatcherPriority.Render);
+              }, DispatcherPriority.DataBind);
             }
 
             UpdateChildState(state, node, currentState == true);
