@@ -49,9 +49,9 @@ namespace EQLogParser
       AudioManager.Instance.SetVolume(volume);
 
       // Update audio device list
-      var deviceInfo = AudioManager.GetDeviceList();
-      _deviceIdList = deviceInfo.idList;
-      _deviceNameList = deviceInfo.nameList;
+      var (idList, nameList) = AudioManager.GetDeviceList();
+      _deviceIdList = idList;
+      _deviceNameList = nameList;
       deviceList.ItemsSource = _deviceNameList;
 
       var savedDevice = ConfigUtil.GetSetting("DefaultAudioDevice");

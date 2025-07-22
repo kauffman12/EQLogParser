@@ -1,6 +1,13 @@
-# 2.3.9
+# 2.3.10
 
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
+
+1. **Performance** improvements during app startup, most noticeble when auto monitoring log files and loading large verified player lists.
+2. **Performance** Retuned UI thread activity to try and lower CPU usage and replaced busy indicators on Trigger Manager with simple animated gifs as they used way more CPU than a busy indicator should.
+2. Fix for **Spell Cast Order** not displaying seconds correctly.
+3. More **UI updates** to windows that have Save/Close options for consistency and hopefully make things less confusing.
+
+# 2.3.9
 
 1. Added **Export CSV with Formatted Values** to the Options menu. It is on by default and causes CSV exports from the summary windows to display numbers using your local format. For example, 4,334,220.30. If this option is turned off it will export without formatting: 4334220.30
 2. Fix for the **Create Backup** dialog not displaying properly.
