@@ -67,12 +67,19 @@ namespace EQLogParser
     private static readonly JsonSerializerOptions DiscordSerializationOptions = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
     private static MainWindow _mainWindow;
 
+    internal static void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected) => _mainWindow?.AddAndCopyDamageParse(combined, selected);
+    internal static void AddAndCopyTankParse(CombinedStats combined, List<PlayerStats> selected) => _mainWindow?.AddAndCopyTankParse(combined, selected);
+    internal static void CopyToEqClick(string label) => _mainWindow?.CopyToEqClick(label);
+    internal static void CloseDamageOverlay(bool reopen) => _mainWindow?.CloseDamageOverlay(reopen);
+    internal static List<Fight> GetFights(bool selected) => _mainWindow?.GetFights(selected);
+    internal static bool IsDamageOverlayOpen() => _mainWindow?.IsDamageOverlayOpen() == true;
     internal static void FireChartOpened(string name) => EventsChartOpened?.Invoke(name);
     internal static void FireDamageSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsDamageSelectionChanged?.Invoke(args);
     internal static void FireTankingSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsTankingSelectionChanged?.Invoke(args);
     internal static void FireHealingSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsHealingSelectionChanged?.Invoke(args);
     internal static void FireLoadingEvent(string log) => EventsLogLoadingComplete?.Invoke(log);
     internal static void FireFightSelectionChanged(List<Fight> fights) => EventsFightSelectionChanged?.Invoke(fights);
+    internal static void ShowTriggersEnabled(bool show) => _mainWindow?.ShowTriggersEnabled(show);
     internal static DockingManager GetDockSite() => _mainWindow.dockSite;
     internal static Window GetOwner() => _mainWindow;
 
@@ -115,73 +122,6 @@ namespace EQLogParser
       SyncFusionUtil.AddDocument(dockSite, typeof(SpellDamageStatsViewer), "spellDamageStatsWindow", "Spell Damage");
       SyncFusionUtil.AddDocument(dockSite, typeof(TauntStatsViewer), "tauntStatsWindow", "Taunt Usage");
       SyncFusionUtil.AddDocument(dockSite, typeof(DamageSummary), "damageSummaryWindow", "DPS Summary", true);
-    }
-
-    internal static void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
-    {
-      UiUtil.InvokeNow(() => _mainWindow?.AddAndCopyDamageParse(combined, selected));
-    }
-
-    internal static void AddAndCopyTankParse(CombinedStats combined, List<PlayerStats> selected)
-    {
-      UiUtil.InvokeNow(() => _mainWindow?.AddAndCopyTankParse(combined, selected));
-    }
-
-    internal static void CopyToEqClick(string label)
-    {
-      UiUtil.InvokeNow(() => _mainWindow?.CopyToEqClick(label));
-    }
-
-    internal static void ShowTriggersEnabled(bool show)
-    {
-      UiUtil.InvokeNow(() => _mainWindow?.ShowTriggersEnabled(show));
-    }
-
-    internal static void CloseDamageOverlay(bool reopen)
-    {
-      UiUtil.InvokeNow(() =>
-      {
-        _mainWindow?.CloseDamageOverlay();
-        if (reopen)
-        {
-          _mainWindow?.OpenDamageOverlayIfEnabled(false, true);
-        }
-      });
-    }
-
-    internal static bool IsDamageOverlayOpen() => _mainWindow.IsDamageOverlayOpen();
-
-    internal static TimeRange GetAllRanges()
-    {
-      TimeRange result = null;
-      UiUtil.InvokeNow(() =>
-      {
-        result = _mainWindow?.GetFightTable()?.GetAllRanges();
-      });
-
-      return result ?? new TimeRange();
-    }
-
-    internal static List<Fight> GetFights()
-    {
-      List<Fight> result = null;
-      UiUtil.InvokeNow(() =>
-      {
-        result = _mainWindow?.GetFightTable()?.GetFights();
-      });
-
-      return result;
-    }
-
-    internal static List<Fight> GetSelectedFights()
-    {
-      List<Fight> result = null;
-      UiUtil.InvokeNow(() =>
-      {
-        result = _mainWindow?.GetFightTable()?.GetSelectedFights();
-      });
-
-      return result;
     }
 
     internal static async Task SendDiscordMessage(string content, string webhookUrl)
@@ -277,7 +217,7 @@ namespace EQLogParser
             }
           }
 
-          await UiUtil.InvokeAsync(Action);
+          await UiUtil.InvokeAsync(Action, DispatcherPriority.Background);
         }
         else
         {
@@ -458,12 +398,12 @@ namespace EQLogParser
           ChangeTheme(_mainWindow);
           // set after change succeeds
           ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
-        }, DispatcherPriority.DataBind);
+        }, DispatcherPriority.Send);
 
         _ = UiUtil.InvokeAsync(() =>
         {
           EventsThemeChanged?.Invoke(CurrentTheme);
-        }, DispatcherPriority.Background);
+        }, DispatcherPriority.DataBind);
       }
     }
 
@@ -479,12 +419,12 @@ namespace EQLogParser
           // set after change succeeds
           ConfigUtil.SetSetting("ApplicationFontFamily", CurrentFontFamily);
           EventsThemeChanged?.Invoke(CurrentTheme);
-        }, DispatcherPriority.DataBind);
+        }, DispatcherPriority.Send);
 
         _ = UiUtil.InvokeAsync(() =>
         {
           EventsThemeChanged?.Invoke(CurrentTheme);
-        }, DispatcherPriority.Background);
+        }, DispatcherPriority.DataBind);
       }
     }
 
@@ -501,12 +441,12 @@ namespace EQLogParser
           // set after change succeeds
           ConfigUtil.SetSetting("ApplicationFontSize", CurrentFontSize);
           EventsThemeChanged?.Invoke(CurrentTheme);
-        }, DispatcherPriority.DataBind);
+        }, DispatcherPriority.Send);
 
         _ = UiUtil.InvokeAsync(() =>
         {
           EventsThemeChanged?.Invoke(CurrentTheme);
-        }, DispatcherPriority.Background);
+        }, DispatcherPriority.DataBind);
       }
     }
 
@@ -537,7 +477,7 @@ namespace EQLogParser
         {
           InsertPetMapping(mapping);
           DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
-        });
+        }, DispatcherPriority.DataBind);
 
         main.CheckComputeStats();
       };
@@ -556,7 +496,7 @@ namespace EQLogParser
         {
           UiUtil.InsertNameIntoSortedList(name, VerifiedPlayersView, true);
           DockingManager.SetHeader(playersWindow, $"{PlayerListTitle} ({VerifiedPlayersView.Count})");
-        });
+        }, DispatcherPriority.DataBind);
       };
 
       PlayerManager.Instance.EventsUpdatePlayerClass += async (name, playerClass) =>
@@ -570,7 +510,7 @@ namespace EQLogParser
           {
             VerifiedPlayersView[index].PlayerClass = playerClass;
           }
-        });
+        }, DispatcherPriority.DataBind);
       };
 
       PlayerManager.Instance.EventsRemoveVerifiedPlayer += async (_, name) =>
@@ -592,7 +532,7 @@ namespace EQLogParser
 
             main.CheckComputeStats();
           }
-        });
+        }, DispatcherPriority.DataBind);
       };
     }
 
@@ -606,7 +546,7 @@ namespace EQLogParser
         {
           UiUtil.InsertNameIntoSortedList(name, VerifiedPetsView);
           DockingManager.SetHeader(petsWindow, $"{PetsListTitle} ({VerifiedPetsView.Count})");
-        });
+        }, DispatcherPriority.DataBind);
       });
 
       PlayerManager.Instance.EventsRemoveVerifiedPet += async (_, name) =>
@@ -628,7 +568,7 @@ namespace EQLogParser
 
             main.CheckComputeStats();
           }
-        });
+        }, DispatcherPriority.DataBind);
       };
     }
 
@@ -758,7 +698,7 @@ namespace EQLogParser
 
             if (containsFolder)
             {
-              _mainWindow.Dispatcher.Invoke(() =>
+              UiUtil.InvokeNow(() =>
               {
                 new MessageWindow("Click OK to Restore and Restart.", Resource.RESTORE_FROM_BACKUP, MessageWindow.IconType.Info).ShowDialog();
               });
@@ -775,7 +715,7 @@ namespace EQLogParser
               worked = true;
 
               await Task.Delay(500);
-              _mainWindow.Dispatcher.Invoke(() =>
+              UiUtil.InvokeNow(() =>
               {
                 Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
                 _mainWindow.Close();
@@ -794,7 +734,7 @@ namespace EQLogParser
                 File.Delete(temp);
               }
 
-              _mainWindow.Dispatcher.Invoke(() =>
+              UiUtil.InvokeNow(() =>
               {
                 Application.Current.Shutdown();
               });

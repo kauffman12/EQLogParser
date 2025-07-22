@@ -120,6 +120,9 @@ namespace EQLogParser
 
     public void LinkTo(BlockingCollection<Tuple<string, double, bool>> collection)
     {
+      // delay start until log is ready
+      AudioManager.Instance.Start(CurrentCharacterId);
+
       _speakTask = Task.Run(() =>
       {
         try

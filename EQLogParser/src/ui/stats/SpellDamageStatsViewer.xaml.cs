@@ -72,7 +72,7 @@ namespace EQLogParser
       var playerProcTotals = new Dictionary<string, SpellDamageStats>();
       var uniqueSpells = new Dictionary<string, byte>();
       var uniquePlayers = new Dictionary<string, byte>();
-      var fights = fightOption.SelectedIndex == 0 ? MainActions.GetFights() : MainActions.GetSelectedFights();
+      var fights = MainActions.GetFights(fightOption.SelectedIndex != 0);
 
       foreach (var fight in fights)
       {

@@ -28,7 +28,7 @@ namespace EQLogParser
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
-      _updateTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+      _updateTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000) };
       _updateTimer.Tick += (_, _) =>
       {
         _updateTimer.Stop();
@@ -51,7 +51,7 @@ namespace EQLogParser
 
     private async void EventsProcessorsUpdated(bool _)
     {
-      _alertLogs = [.. (await TriggerManager.Instance.GetAlertLogs())];
+      _alertLogs = [.. await TriggerManager.Instance.GetAlertLogs()];
       if (logList != null)
       {
         var selected = logList.SelectedItem as string;

@@ -60,7 +60,7 @@ namespace EQLogParser
     {
       var totals = new Dictionary<string, TauntRow>();
       var childTotals = new Dictionary<string, TauntRow>();
-      var fights = fightOption.SelectedIndex == 0 ? MainActions.GetFights() : MainActions.GetSelectedFights();
+      var fights = MainActions.GetFights(fightOption.SelectedIndex != 0);
 
       foreach (var fight in CollectionsMarshal.AsSpan(fights))
       {

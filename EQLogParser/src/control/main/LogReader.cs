@@ -275,7 +275,7 @@ namespace EQLogParser
             return true;
           }
 
-          await Task.Delay(200, _cts.Token);
+          await Task.Delay(1000, _cts.Token);
         }
         catch (Exception ex) when (ex is TaskCanceledException or ObjectDisposedException)
         {

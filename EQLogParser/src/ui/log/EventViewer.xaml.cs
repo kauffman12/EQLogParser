@@ -12,9 +12,6 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for EventViewer.xaml
-  /// </summary>
   public partial class EventViewer : IDocumentContent
   {
     public ObservableCollection<EventRow> EventData { get; set; }

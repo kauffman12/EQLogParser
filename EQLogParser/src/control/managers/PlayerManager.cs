@@ -53,11 +53,12 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> _verifiedPets = new();
     private readonly ConcurrentDictionary<string, double> _verifiedPlayers = new();
     private readonly ConcurrentDictionary<string, byte> _mercs = new();
+    private readonly DispatcherTimer _saveTimer;
     private readonly List<string> _sortedClassList = [];
     private readonly List<string> _sortedClassListWithNull = [];
     private static readonly object LockObject = new();
-    private bool _petMappingUpdated;
-    private bool _playersUpdated;
+    private volatile bool _petMappingUpdated;
+    private volatile bool _playersUpdated;
 
     private PlayerManager()
     {
@@ -83,13 +84,10 @@ namespace EQLogParser
       // Populate generated pets
       ConfigUtil.ReadList(@"data\petnames.txt").ForEach(line => _gameGeneratedPets[line.TrimEnd()] = 1);
 
-      var saveTimer = new DispatcherTimer();
-      saveTimer.Tick += SaveTimer_Tick;
-      saveTimer.Interval = new TimeSpan(0, 0, 30);
-      saveTimer.Start();
+      _saveTimer = UiUtil.CreateTimer(SaveTimerTick, 30000, DispatcherPriority.Background);
+      _saveTimer.Start();
     }
 
-    private void SaveTimer_Tick(object sender, EventArgs e) => Save();
     internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.Unassigned || _secondPerson.ContainsKey(name)
       || _thirdPerson.ContainsKey(name) || _verifiedPlayers.ContainsKey(name));
     internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name));
@@ -99,6 +97,7 @@ namespace EQLogParser
     internal List<string> GetVerifiedPlayers() => [.. _verifiedPlayers.Keys];
     internal List<string> GetVerifiedPets() => [.. _verifiedPets.Keys];
     internal List<PetMapping> GetPetMappings() => [.. _petToPlayer.Select(kv => new PetMapping(kv.Key, kv.Value))];
+    internal void Stop() => _saveTimer?.Stop();
 
     internal void AddPetToPlayer(string pet, string player, bool init = false)
     {
@@ -468,6 +467,10 @@ namespace EQLogParser
 
         _playersUpdated = false;
       }
+
+      // if method is called manually then restart the timer
+      _saveTimer?.Stop();
+      _saveTimer.Start();
     }
 
     internal void SetPlayerClass(string player, string className, string reason, bool init = false)
@@ -618,6 +621,8 @@ namespace EQLogParser
     }
 
     internal static bool IsPossiblePlayerName(string part, int stop = -1) => FindPossiblePlayerName(part, out var _, 0, stop) > -1;
+
+    private void SaveTimerTick(object sender, EventArgs e) => Save();
 
     private static void AddMultiCase(IReadOnlyCollection<string> values, ConcurrentDictionary<string, byte> dict)
     {
