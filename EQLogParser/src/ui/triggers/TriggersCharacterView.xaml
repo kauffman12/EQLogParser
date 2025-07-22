@@ -3,10 +3,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+              xmlns:local="clr-namespace:EQLogParser"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+             xmlns:gif="http://wpfanimatedgif.codeplex.com"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
+  <Grid>
+    <Grid.Resources>
+      <local:BooleanToVisibilityConverter x:Key="VisConverter" />
+    </Grid.Resources>
     <Grid Grid.Column="0">
       <Grid.RowDefinitions>
         <RowDefinition Height="40" />
@@ -64,26 +69,23 @@
                       </TextBlock.Style>
                     </TextBlock>
                   </StackPanel>
-                  <syncfusion:SfBusyIndicator Width="50" ViewboxHeight="15" Height="{DynamicResource EQTableRowHeight}" AnimationType="Message" HorizontalAlignment="Right" Margin="0,0,15,0" IsBusy="{Binding IsEnabled, Mode=TwoWay}">
-                    <syncfusion:SfBusyIndicator.Style>
-                      <Style TargetType="syncfusion:SfBusyIndicator">
+                  <Image Height="{DynamicResource EQTitleSize}" HorizontalAlignment="Right" Margin="0,0,15,0" Visibility="{Binding IsEnabled, Converter={StaticResource VisConverter}}">
+                    <Image.Style>
+                      <Style TargetType="Image">
                         <Style.Triggers>
                           <DataTrigger Binding="{Binding IsWaiting}" Value="True">
-                            <Setter Property="Foreground" Value="{DynamicResource EQStopForegroundBrush}"/>
-                            <Setter Property="AnimationSpeed" Value="25"/>
+                            <Setter Property="gif:ImageBehavior.AnimatedSource" Value="/icons/waiting.gif"/>
                           </DataTrigger>
                           <DataTrigger Binding="{Binding IsWaiting}" Value="False">
-                            <Setter Property="Foreground" Value="{DynamicResource EQGoodForegroundBrush}"/>
-                            <Setter Property="AnimationSpeed" Value="100"/>
+                            <Setter Property="gif:ImageBehavior.AnimatedSource" Value="/icons/active.gif"/>
                           </DataTrigger>
                           <DataTrigger Binding="{Binding IsWaiting}" Value="{x:Null}">
-                            <Setter Property="Foreground" Value="{DynamicResource EQWarnForegroundBrush}"/>
-                            <Setter Property="AnimationSpeed" Value="50"/>
+                            <Setter Property="gif:ImageBehavior.AnimatedSource" Value="/icons/idle.gif"/>
                           </DataTrigger>
                         </Style.Triggers>
                       </Style>
-                    </syncfusion:SfBusyIndicator.Style>
-                  </syncfusion:SfBusyIndicator>
+                    </Image.Style>
+                  </Image>
                   <Label Foreground="Transparent" Background="Transparent" HorizontalAlignment="Right" Width="50" Margin="0,0,24,0">
                     <Label.Style>
                       <Style TargetType="Label">

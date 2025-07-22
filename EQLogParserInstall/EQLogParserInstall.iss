@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "EQLogParser"
-#define MyAppVersion "2.3.9"
+#define MyAppVersion "2.3.10"
 #define MyAppPublisher "Kizant"
 #define MyAppURL "https://github.com/kauffman12/EQLogParser"
 #define MyAppExeName "EQLogParser.exe"
@@ -95,6 +95,7 @@ Source: "{#MyReleaseDir}\System.Private.ServiceModel.dll"; DestDir: "{app}"; Fla
 Source: "{#MyReleaseDir}\System.ServiceModel.Primitives.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\System.Drawing.Common.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\WinRT.Runtime.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\WpfAnimatedGif.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\runtimes\win\lib\net8.0\System.Speech.dll"; DestDir: "{app}\runtimes\win\lib\net8.0"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#BackupUtilDir}\BackupUtil.exe"; DestDir: "{app}"; Flags: ignoreversion

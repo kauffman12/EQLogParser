@@ -10,8 +10,7 @@
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.Resources>
-        <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
-      <local:DateTimeConverter x:Key="dateTimeConverter" />
+      <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
       <Style TargetType="syncfusion:GridRowHeaderCell">
         <Setter Property="Template">
           <Setter.Value>

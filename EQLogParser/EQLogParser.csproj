@@ -134,6 +134,8 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="icons\active.gif" />
+    <Resource Include="icons\idle.gif" />
     <Resource Include="icons\loading.png" />
     <Resource Include="icons\Unk.png" />
     <Resource Include="icons\Mag.png" />
@@ -144,6 +146,7 @@
     <Resource Include="icons\Rog.png" />
     <Resource Include="icons\Shd.png" />
     <Resource Include="icons\Shm.png" />
+    <Resource Include="icons\waiting.gif" />
     <Resource Include="icons\War.png" />
     <Resource Include="icons\Dru.png" />
     <Resource Include="icons\Enc.png" />
@@ -161,7 +164,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Remove="..\Dependencies\Hardcodet.Wpf.TaskbarNotification.dll" />
+    <None Remove="icons\Active.gif" />
+    <None Remove="icons\idle.gif" />
     <None Remove="icons\loading.png" />
+    <None Remove="icons\waiting.gif" />
     <None Remove="src\control\managers\TriggerManager.cs.bak" />
   </ItemGroup>
   <ItemGroup>
@@ -198,6 +204,7 @@
     <PackageReference Include="Syncfusion.Tools.WPF" Version="29.1.33" />
     <PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="22.2.5" />
     <PackageReference Include="System.Formats.Asn1" Version="8.0.1" />
+    <PackageReference Include="WpfAnimatedGif" Version="2.0.2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MaterialDarkCustom\Syncfusion.Themes.MaterialDarkCustom.WPF.csproj" />

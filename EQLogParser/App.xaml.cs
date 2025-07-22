@@ -20,6 +20,12 @@ namespace EQLogParser
   public partial class App
   {
     internal static IMapper AutoMap;
+    internal const string ParserHome = "http://eqlogparser.kizant.net";
+    internal static double DefaultHeight = SystemParameters.PrimaryScreenHeight * 0.75;
+    internal static double DefaultWidth = SystemParameters.PrimaryScreenWidth * 0.85;
+    internal static string ReleaseNotesUrl = $"{ParserHome}/releasenotes.html";
+    internal static string Version = "";
+    internal static WindowState LastWindowState = WindowState.Normal;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private SplashWindow _splash;
 
@@ -81,8 +87,15 @@ namespace EQLogParser
         AutoMap = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
         var osVersion = Environment.OSVersion;
         Log.Info($"Detected OS Version: {osVersion.VersionString}");
-        var version = ResourceAssembly.GetName().Version!.ToString()[..^2];
-        Log.Info($"EQLogParser: {version}, DotNet: {Environment.Version}, RenderMode: {RenderOptions.ProcessRenderMode}");
+        Version = ResourceAssembly.GetName().Version!.ToString()[..^2];
+        Log.Info($"EQLogParser: {Version}, DotNet: {Environment.Version}, RenderMode: {RenderOptions.ProcessRenderMode}");
+
+        // update for release notes URL
+        var urlVersion = Version.Replace(".", "-");
+        ReleaseNotesUrl = $"{ParserHome}/releasenotes.html#{urlVersion}";
+
+        // show render mode
+        ConfigUtil.UpdateStatus($"RenderMode: {RenderOptions.ProcessRenderMode}");
 
         ShowMain();
       }
@@ -136,12 +149,58 @@ namespace EQLogParser
 
     private void ShowMain()
     {
-      var main = new MainWindow();
-      Task.Delay(500).ContinueWith(_ => Dispatcher.Invoke(() =>
+      var main = new MainWindow
+      {
+        // DPI and sizing
+        Height = ConfigUtil.GetSettingAsDouble("WindowHeight", DefaultHeight),
+        Width = ConfigUtil.GetSettingAsDouble("WindowWidth", DefaultWidth),
+        Top = ConfigUtil.GetSettingAsDouble("WindowTop", double.NaN),
+        Left = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN),
+        WindowState = WindowState.Minimized
+      };
+
+      Log.Info($"Window Pos ({main.Top}, {main.Left}) | Window Size ({main.Width}, {main.Height})");
+
+
+      Task.Delay(500).ContinueWith(_ => Dispatcher.Invoke(async () =>
       {
         try
         {
           main.Show();
+
+          var savedState = ConfigUtil.GetSetting("WindowState", "Normal");
+
+          // if start minimized if requested do nothing but update the last state
+          if (ConfigUtil.IfSet("StartWithWindowMinimized"))
+          {
+            LastWindowState = savedState switch
+            {
+              "Maximized" => WindowState.Maximized,
+              _ => WindowState.Normal
+            };
+          }
+          else
+          {
+            // use last saved state
+            main.WindowState = savedState switch
+            {
+              "Maximized" => WindowState.Maximized,
+              _ => WindowState.Normal
+            };
+          }
+
+          // update starting state if minimized
+          // needs to be called after show() and delay
+          if (ConfigUtil.IfSet("HideWindowOnMinimize") && main.WindowState == WindowState.Minimized)
+          {
+            main.Hide();
+          }
+
+          CheckWindowPosition(main);
+
+          // send done in 5 more seconds if it hasn't been received yet
+          await Task.Delay(5000);
+          ConfigUtil.UpdateStatus("Done");
         }
         catch (Exception ex)
         {
@@ -149,7 +208,40 @@ namespace EQLogParser
           LogDetails(ex);
           _splash?.SetErrorState();
         }
-      }, DispatcherPriority.Render));
+      }, DispatcherPriority.DataBind));
+    }
+
+    private static void CheckWindowPosition(MainWindow main)
+    {
+      var isOffScreen = true;
+      var windowRect = new Rect(main.Left, main.Top, main.Width, main.Height);
+
+      foreach (var screen in System.Windows.Forms.Screen.AllScreens)
+      {
+        var screenRect = new Rect(
+          screen.WorkingArea.Left,
+          screen.WorkingArea.Top,
+          screen.WorkingArea.Width,
+          screen.WorkingArea.Height
+        );
+
+        if (screenRect.IntersectsWith(windowRect))
+        {
+          isOffScreen = false;
+          break;
+        }
+      }
+
+      if (isOffScreen)
+      {
+        // Move the window to the center of the primary screen
+        main.Width = App.DefaultWidth;
+        main.Height = App.DefaultHeight;
+        main.Left = 0;
+        main.Top = 0;
+        Log.Info($"Window is Offscreen. Changing Window Pos ({main.Top}, {main.Left})");
+        Log.Info($"Window is Offscreen. Changing Window Size ({main.Width}, {main.Height})");
+      }
     }
 
     private void DomainUnhandledException(object sender, UnhandledExceptionEventArgs ex)

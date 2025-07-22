@@ -9,9 +9,6 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for TriggersCharacterView.xaml
-  /// </summary>
   public partial class TriggersCharacterView : IDisposable
   {
     internal event Action<List<TriggerCharacter>> SelectedCharacterEvent;
