@@ -36,7 +36,6 @@ namespace EQLogParser
     internal static bool IsFinishingBlowDamageEnabled = true;
     internal static bool IsHeadshotDamageEnabled = true;
     internal static bool IsSlayUndeadDamageEnabled = true;
-    internal static bool IsHideOnMinimizeEnabled;
     internal static bool IsMapSendToEqEnabled;
     internal static bool IsEmuParsingEnabled;
     internal const int ActionIndex = 27;
@@ -45,7 +44,7 @@ namespace EQLogParser
     private DateTime _startLoadTime;
     private DamageOverlayWindow _damageOverlay;
     private DispatcherTimer _computeStatsTimer;
-    private DispatcherTimer _saveTimer;
+    private readonly DispatcherTimer _saveTimer;
     private readonly NpcDamageManager _npcDamageManager = new();
     private LogReader _eqLogReader;
     private readonly List<bool> _logWindows = [];
@@ -99,8 +98,7 @@ namespace EQLogParser
       enableSlayUndeadDamageIcon.Visibility = IsSlayUndeadDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
       // Hide window when minimized
-      IsHideOnMinimizeEnabled = ConfigUtil.IfSet("HideWindowOnMinimize");
-      enableHideOnMinimizeIcon.Visibility = IsHideOnMinimizeEnabled ? Visibility.Visible : Visibility.Hidden;
+      enableHideOnMinimizeIcon.Visibility = ConfigUtil.IfSet("HideWindowOnMinimize") ? Visibility.Visible : Visibility.Hidden;
 
       // Hide splash screen
       enableHideSplashScreenIcon.Visibility = ConfigUtil.IfSet("HideSplashScreen") ? Visibility.Visible : Visibility.Hidden;
@@ -174,8 +172,8 @@ namespace EQLogParser
       ConfigUtil.EventsLoadingText += ConfigUtilEventsLoadingText;
 
       // update theme
+      ConfigUtil.UpdateStatus("Initialize Themes");
       MainActions.InitThemes(this);
-      ConfigUtil.UpdateStatus("Themes Initialized");
 
       // create menu items for deleting chat
       Dispatcher.InvokeAsync(UpdateDeleteChatMenu, DispatcherPriority.DataBind);
@@ -193,6 +191,21 @@ namespace EQLogParser
 
       // add notify icon
       _notifyIcon = WinFormsUtil.CreateTrayIcon(this);
+
+      MainActions.InitPetOwners(this, petMappingGrid, ownerList, petMappingWindow);
+      MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, classList, verifiedPlayersWindow, petMappingWindow);
+      MainActions.InitVerifiedPets(this, verifiedPetsGrid, verifiedPetsWindow, petMappingWindow);
+
+      _saveTimer = UiUtil.CreateTimer(SaveTimerTick, 30000, DispatcherPriority.Background);
+      _saveTimer.Start();
+
+      // check need monitor
+      var previousFile = ConfigUtil.GetSetting("LastOpenedFile");
+      if (enableAutoMonitorIcon.Visibility == Visibility.Visible && File.Exists(previousFile))
+      {
+        // OpenLogFile with update status
+        OpenLogFile(previousFile, 0);
+      }
     }
 
     private async void MainWindowOnLoaded(object sender, RoutedEventArgs args)
@@ -206,7 +219,6 @@ namespace EQLogParser
           {
             var reader = XmlReader.Create(ConfigUtil.ConfigDir + "/dockSite.xml");
             dockSite.LoadDockState(reader);
-            ConfigUtil.UpdateStatus("Layout Restored");
             reader.Close();
           }
           catch (Exception ex)
@@ -216,10 +228,6 @@ namespace EQLogParser
           }
         }
 
-        // compute stats gets triggered when pet owners is updated during startup
-        MainActions.InitPetOwners(this, petMappingGrid, ownerList, petMappingWindow);
-        MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, classList, verifiedPlayersWindow, petMappingWindow);
-        MainActions.InitVerifiedPets(this, verifiedPetsGrid, verifiedPetsWindow, petMappingWindow);
         MainActions.EventsFightSelectionChanged += (_) => ComputeStats();
         DamageStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(damageChartIcon.Tag as string, data));
         HealingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(healingChartIcon.Tag as string, data));
@@ -242,13 +250,6 @@ namespace EQLogParser
           }
         };
 
-        _saveTimer = UiUtil.CreateTimer(SaveTimerTick, 30000, DispatcherPriority.Background);
-        _saveTimer.Start();
-
-        // Init Trigger Manager
-        await TriggerManager.Instance.StartAsync();
-        ConfigUtil.UpdateStatus("Trigger Manager Started");
-
         await Task.Delay(250);
 
         // activate the saved window
@@ -256,20 +257,9 @@ namespace EQLogParser
         {
           dockSite.ActivateWindow(_activeWindow);
         }
-
-        // check need monitor
-        var previousFile = ConfigUtil.GetSetting("LastOpenedFile");
-        if (enableAutoMonitorIcon.Visibility == Visibility.Visible && File.Exists(previousFile))
-        {
-          ConfigUtil.UpdateStatus("Monitoring Last Log");
-          // OpenLogFile with update status
-          OpenLogFile(previousFile, 0);
-        }
       }
       catch (Exception e)
       {
-        // make sure splash screen goes away
-        ConfigUtil.UpdateStatus("Done");
         Log.Error(e);
       }
     }
@@ -385,6 +375,7 @@ namespace EQLogParser
     private void ToggleCheckUpdatesClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("CheckUpdatesAtStartup", checkUpdatesIcon);
     private void ToggleHardwareAccelClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("HardwareAcceleration", hardwareAccelIcon);
     private void ToggleExportFormattedCsvClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("ExportFormattedCsv", exportFormattedCsvIcon);
+    private void ToggleHideOnMinimizeClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("HideWindowOnMinimize", enableHideOnMinimizeIcon);
 
     private void SaveTimerTick(object sender, EventArgs e)
     {
@@ -441,11 +432,6 @@ namespace EQLogParser
           }
         });
       }
-    }
-
-    private void ToggleHideOnMinimizeClick(object sender, RoutedEventArgs e)
-    {
-      IsHideOnMinimizeEnabled = MainActions.ToggleSetting("HideWindowOnMinimize", enableHideOnMinimizeIcon);
     }
 
     private void ToggleAoEHealingClick(object sender, RoutedEventArgs e)
@@ -816,7 +802,7 @@ namespace EQLogParser
 
             ConfigUtil.SetSetting("LastOpenedFile", CurrentLogFile);
             Log.Info($"Finished Loading Log File in {seconds} seconds.");
-            ConfigUtil.UpdateStatus("Done");
+            ConfigUtil.UpdateStatus("Monitoring Active");
 
             await Task.Delay(1000);
             MainActions.FireLoadingEvent(CurrentLogFile);
@@ -1052,7 +1038,7 @@ namespace EQLogParser
     {
       if (WindowState == WindowState.Minimized)
       {
-        if (IsHideOnMinimizeEnabled && Visibility != Visibility.Hidden)
+        if (ConfigUtil.IfSet("HideWindowOnMinimize") && Visibility != Visibility.Hidden)
         {
           Hide();
         }
@@ -1073,6 +1059,8 @@ namespace EQLogParser
       {
         App.LastWindowState = WindowState;
       }
+
+      MainActions.FireWindowStateChanged(WindowState);
     }
 
     private void DockSiteActiveWindowChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -1123,6 +1111,7 @@ namespace EQLogParser
       PlayerManager.Instance?.Stop();
       _saveTimer?.Stop();
       _eqLogReader?.Dispose();
+      _notifyIcon?.Dispose();
       petMappingGrid?.Dispose();
       verifiedPetsGrid?.Dispose();
       verifiedPlayersGrid?.Dispose();

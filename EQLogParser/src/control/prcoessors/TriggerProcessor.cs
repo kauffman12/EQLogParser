@@ -904,6 +904,7 @@ namespace EQLogParser
             _enabledTriggers[enabled.Id] = true;
 
             triggerCount++;
+
             pattern = UpdatePattern(trigger.UseRegex, pattern, out var numberOptions);
             pattern = UpdateTimePattern(trigger.UseRegex, pattern);
             var modifiedDisplay = ProcessCharacterCode(trigger.TextToDisplay);

@@ -34,13 +34,13 @@ namespace EQLogParser
       var restoreItem = new ToolStripMenuItem("Restore");
       restoreItem.Click += (s, e) => RestoreWindow(main);
       notifyIcon.ContextMenuStrip.Items.Add(restoreItem);
-      restoreItem.Visible = main.WindowState == WindowState.Minimized;
+      restoreItem.Visible = true;
 
       var minimizeItem = new ToolStripMenuItem("Minimize");
       minimizeItem.Click += (s, e) => main.WindowState = WindowState.Minimized;
       notifyIcon.ContextMenuStrip.Items.Add(minimizeItem);
       notifyIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator());
-      minimizeItem.Visible = main.WindowState != WindowState.Minimized;
+      minimizeItem.Visible = false;
 
       var aboutItem = new ToolStripMenuItem("About");
       aboutItem.Click += (s, e) => MainActions.OpenFileWithDefault($"{App.ParserHome}");
@@ -65,12 +65,13 @@ namespace EQLogParser
       // disconnect to avoid saving location before it's fully restored
       main.LocationChanged -= MainLocationChanged;
 
-      if (main.Visibility == Visibility.Hidden)
+      if (main.Visibility != Visibility.Visible)
       {
         main.Show();
       }
 
       main.Activate();
+
       if (main.WindowState == WindowState.Minimized)
       {
         main.WindowState = App.LastWindowState;
