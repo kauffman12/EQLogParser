@@ -325,7 +325,7 @@ namespace EQLogParser
       if (_needRefresh && ((processList == null && dataGrid.ItemsSource == _fights) || (processNonTankingList == null && dataGrid.ItemsSource == _nonTankingFights)) &&
         (Keyboard.GetKeyStates(Key.LeftShift) & KeyStates.Down) == 0 && (Keyboard.GetKeyStates(Key.LeftCtrl) & KeyStates.Down) == 0)
       {
-        dataGrid.View.RefreshFilter();
+        dataGrid?.View?.RefreshFilter();
         _needRefresh = false;
       }
     }

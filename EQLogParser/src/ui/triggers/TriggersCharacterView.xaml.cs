@@ -13,6 +13,7 @@ namespace EQLogParser
   {
     internal event Action<List<TriggerCharacter>> SelectedCharacterEvent;
     private readonly DispatcherTimer _statusTimer;
+    private TriggerConfig _lastConfig;
 
     // public to be referenced from xaml?
     public TriggersCharacterView()
@@ -25,6 +26,7 @@ namespace EQLogParser
 
       _statusTimer.Tick += StatusTimerTick;
       TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+      MainActions.EventsWindowStateChanged += EventsWindowStateChanged;
     }
 
     internal void SetConfig(TriggerConfig config)
@@ -35,10 +37,37 @@ namespace EQLogParser
       {
         _statusTimer.Start();
       }
+
+      _lastConfig = config;
     }
 
     internal TriggerCharacter GetSelectedCharacter() => dataGrid?.SelectedItem as TriggerCharacter;
     private void StatusTimerTick(object sender, EventArgs e) => UpdateStatus();
+
+    private void EventsWindowStateChanged(WindowState newState)
+    {
+      if (newState == WindowState.Minimized)
+      {
+        _statusTimer?.Stop();
+
+        if (dataGrid != null)
+        {
+          dataGrid.Visibility = Visibility.Collapsed;
+        }
+      }
+      else
+      {
+        if (dataGrid != null)
+        {
+          dataGrid.Visibility = Visibility.Visible;
+        }
+
+        if (_lastConfig?.IsAdvanced == true && !_statusTimer.IsEnabled)
+        {
+          _statusTimer.Start();
+        }
+      }
+    }
 
     private async void UpdateStatus()
     {
@@ -100,6 +129,8 @@ namespace EQLogParser
       {
         _statusTimer.Stop();
       }
+
+      _lastConfig = config;
     }
 
     private void AddClick(object sender, RoutedEventArgs e)
@@ -189,6 +220,7 @@ namespace EQLogParser
         _statusTimer.Stop();
         _statusTimer.Tick -= StatusTimerTick;
         TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
+        MainActions.EventsWindowStateChanged -= EventsWindowStateChanged;
         _disposedValue = true;
         dataGrid?.Dispose();
       }

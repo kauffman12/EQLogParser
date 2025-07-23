@@ -42,6 +42,7 @@ namespace EQLogParser
     internal static event Action<string> EventsChartOpened;
     internal static event Action<string> EventsDamageSummaryOptionsChanged;
     internal static event Action<string> EventsHealingSummaryOptionsChanged;
+    internal static event Action<WindowState> EventsWindowStateChanged;
     internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsDamageSelectionChanged;
     internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsHealingSelectionChanged;
     internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsTankingSelectionChanged;
@@ -77,6 +78,7 @@ namespace EQLogParser
     internal static void FireDamageSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsDamageSelectionChanged?.Invoke(args);
     internal static void FireTankingSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsTankingSelectionChanged?.Invoke(args);
     internal static void FireHealingSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsHealingSelectionChanged?.Invoke(args);
+    internal static void FireWindowStateChanged(WindowState state) => EventsWindowStateChanged?.Invoke(state);
     internal static void FireLoadingEvent(string log) => EventsLogLoadingComplete?.Invoke(log);
     internal static void FireFightSelectionChanged(List<Fight> fights) => EventsFightSelectionChanged?.Invoke(fights);
     internal static void ShowTriggersEnabled(bool show) => _mainWindow?.ShowTriggersEnabled(show);

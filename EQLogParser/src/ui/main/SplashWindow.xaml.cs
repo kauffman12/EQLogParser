@@ -3,6 +3,7 @@ using log4net.Appender;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
@@ -41,7 +42,7 @@ namespace EQLogParser
 
     private void AddLoadingText(string text)
     {
-      Dispatcher.InvokeAsync(() =>
+      Dispatcher.InvokeAsync(async () =>
       {
         if (_isClosed)
         {
@@ -53,28 +54,33 @@ namespace EQLogParser
           _isClosed = true;
           ConfigUtil.EventsLoadingText -= ConfigUtilEventsLoadingText;
           MainActions.GetOwner().IsEnabled = true;
-          Dispatcher.InvokeAsync(Close, DispatcherPriority.Background);
+
+          CreateText("Ready");
+          await Task.Delay(500);
+          await Dispatcher.InvokeAsync(Close, DispatcherPriority.Background);
         }
         else
         {
-          Dispatcher.Invoke(() =>
-          {
-            var block = new TextBlock
-            {
-              HorizontalAlignment = HorizontalAlignment.Center,
-              FontSize = 10,
-              Text = text
-            };
-
-            data.Children.Add(block);
-
-            if (data.Children.Count > 3)
-            {
-              data.Children.RemoveAt(0);
-            }
-          });
+          CreateText(text);
         }
-      }, DispatcherPriority.Loaded);
+      });
+    }
+
+    private void CreateText(string text)
+    {
+      var block = new TextBlock
+      {
+        HorizontalAlignment = HorizontalAlignment.Center,
+        FontSize = 10,
+        Text = text
+      };
+
+      data.Children.Add(block);
+
+      if (data.Children.Count > 3)
+      {
+        data.Children.RemoveAt(0);
+      }
     }
 
     private void CloseButtonOnClick(object sender, RoutedEventArgs e)
