@@ -155,18 +155,21 @@ namespace EQLogParser
         Height = ConfigUtil.GetSettingAsDouble("WindowHeight", DefaultHeight),
         Width = ConfigUtil.GetSettingAsDouble("WindowWidth", DefaultWidth),
         Top = ConfigUtil.GetSettingAsDouble("WindowTop", double.NaN),
-        Left = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN),
-        WindowState = WindowState.Minimized
+        Left = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN)
       };
 
-      Log.Info($"Window Pos ({main.Top}, {main.Left}) | Window Size ({main.Width}, {main.Height})");
+      ConfigUtil.UpdateStatus("Validating Window Position");
+      CheckWindowPosition(main);
 
+      Log.Info($"Window Pos ({main.Top}, {main.Left}) | Window Size ({main.Width}, {main.Height})");
 
       Task.Delay(500).ContinueWith(_ => Dispatcher.Invoke(async () =>
       {
         try
         {
-          main.Show();
+          // Init Trigger Manager
+          ConfigUtil.UpdateStatus("Initialize Trigger Manager");
+          await TriggerManager.Instance.StartAsync();
 
           var savedState = ConfigUtil.GetSetting("WindowState", "Normal");
 
@@ -178,6 +181,8 @@ namespace EQLogParser
               "Maximized" => WindowState.Maximized,
               _ => WindowState.Normal
             };
+
+            main.WindowState = WindowState.Minimized;
           }
           else
           {
@@ -185,30 +190,28 @@ namespace EQLogParser
             main.WindowState = savedState switch
             {
               "Maximized" => WindowState.Maximized,
+              "Minimized" => WindowState.Minimized,
               _ => WindowState.Normal
             };
           }
 
-          // update starting state if minimized
-          // needs to be called after show() and delay
-          if (ConfigUtil.IfSet("HideWindowOnMinimize") && main.WindowState == WindowState.Minimized)
-          {
-            main.Hide();
-          }
+          MainActions.FireWindowStateChanged(main.WindowState);
+          await Task.Delay(250);
 
-          CheckWindowPosition(main);
-
-          // send done in 5 more seconds if it hasn't been received yet
-          await Task.Delay(5000);
           ConfigUtil.UpdateStatus("Done");
+          if (main.WindowState != WindowState.Minimized || !ConfigUtil.IfSet("HideWindowOnMinimize"))
+          {
+            main.Show();
+          }
         }
         catch (Exception ex)
         {
+          ConfigUtil.UpdateStatus("Done");
           Log.Error($"ShowAppError: {ex.Message}");
           LogDetails(ex);
           _splash?.SetErrorState();
         }
-      }, DispatcherPriority.DataBind));
+      }));
     }
 
     private static void CheckWindowPosition(MainWindow main)
