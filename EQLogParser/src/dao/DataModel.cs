@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows;
@@ -337,6 +338,7 @@ namespace EQLogParser
   internal class ExportTriggerNode : TriggerNode
   {
     public List<ExportTriggerNode> Nodes { get; set; } = [];
+    [JsonIgnore][BsonIgnore] public bool HasMissingMedia { get; set; }
   }
 
   internal class LegacyTriggerNode
@@ -356,6 +358,7 @@ namespace EQLogParser
     public bool IsOverlay() => SerializedData?.OverlayData != null;
     public bool IsDir() => !IsOverlay() && !IsTrigger();
     public bool IsRecentlyMerged { get; set; }
+    public bool HasMissingMedia { get; set; }
   }
 
   internal interface IAction;

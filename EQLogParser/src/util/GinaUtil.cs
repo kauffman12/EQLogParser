@@ -349,11 +349,17 @@ namespace EQLogParser
             {
               foreach (XmlNode triggerNode in triggersList.SelectNodes("Trigger"))
               {
+                var missingMedia = false;
                 var goodTrigger = false;
                 var trigger = new Trigger();
                 var triggerName = GetText(triggerNode, "Name");
                 trigger.Pattern = GetText(triggerNode, "TriggerText");
                 trigger.Comments = GetText(triggerNode, "Comments");
+
+                if (bool.TryParse(GetText(triggerNode, "PlayMediaFile"), out var playMedia) && playMedia)
+                {
+                  missingMedia = true;
+                }
 
                 var timerName = GetText(triggerNode, "TimerName");
                 if (!string.IsNullOrEmpty(timerName) && timerName != triggerName)
@@ -509,7 +515,7 @@ namespace EQLogParser
 
                 if (goodTrigger)
                 {
-                  triggers.Add(new ExportTriggerNode { Name = triggerName, TriggerData = trigger });
+                  triggers.Add(new ExportTriggerNode { Name = triggerName, TriggerData = trigger, HasMissingMedia = missingMedia });
                 }
               }
             }

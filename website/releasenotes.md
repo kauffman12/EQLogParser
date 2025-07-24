@@ -1,9 +1,19 @@
-# 2.3.10
+# 2.3.11
 
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
 
-1. **Performance** improvements during app startup, most noticeble when auto monitoring log files and loading large verified player lists.
-2. **Performance** Retuned UI thread activity to try and lower CPU usage and replaced busy indicators on Trigger Manager with simple animated gifs as they used way more CPU than a busy indicator should.
+1. Additional **Performance** improvements to lower overall CPU usage when changing tabs and moving around the parser windows.
+2. Added **Enable Chat Archive** to the Options menu. Uncheck this if you really don't want to use the archived chat feature.
+3. Modernized the chat archive process with updated timers and async processing to avoid potential performance problems.
+4. Updated Trigger and Overlay folder tree right-click menu to keep multiple items selected, closer to how it works in Windows, and prevented **Rename** from being enabled when mutliple items are selected.
+5. Added **Import Warning** as orange highlighting on Triggers in the folder tree when they come from GINA with missing wav files.
+6. Fix for Trigger Search failing in some cases.
+7. Updated to latest Syncfusion library version 30.1.41.
+
+# 2.3.10
+
+1. **Performance** made improvements during app startup, most noticeble when auto monitoring log files and loading large verified player lists.
+2. **Performance** updates to retune UI thread activity to try and lower CPU usage and replaced busy indicators on Trigger Manager with simple animated gifs as they used way more CPU than a busy indicator should.
 2. Fix for **Spell Cast Order** not displaying seconds correctly.
 3. More **UI updates** to windows that have Save/Close options for consistency and hopefully make things less confusing.
 
