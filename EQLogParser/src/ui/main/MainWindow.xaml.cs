@@ -1102,7 +1102,7 @@ namespace EQLogParser
         Topmost = false;
       }
 
-      BorderThickness = WindowState == WindowState.Maximized ? new Thickness(10) : new Thickness(2);
+      BorderThickness = WindowState == WindowState.Maximized ? new Thickness(8) : new Thickness(2);
       maxRestoreText.Text = WindowState == WindowState.Maximized ? "\uE923" : "\uE922"; ;
 
       if (WindowState != WindowState.Minimized)
