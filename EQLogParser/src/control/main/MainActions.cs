@@ -153,7 +153,7 @@ namespace EQLogParser
       return enabled;
     }
 
-    internal static async Task CheckVersionAsync(TextBlock errorText)
+    internal static async Task CheckVersionAsync()
     {
       var version = Application.ResourceAssembly.GetName().Version;
 
@@ -170,6 +170,13 @@ namespace EQLogParser
         {
           async void Action()
           {
+            var wasHidden = false;
+            if (_mainWindow?.Visibility != Visibility.Visible)
+            {
+              wasHidden = true;
+              _mainWindow?.Show();
+            }
+
             var msg = new MessageWindow($"Version {matches.Groups[1].Value} is Available. Download and Install?", Resource.CHECK_VERSION,
               MessageWindow.IconType.Question, "Yes");
             msg.ShowDialog();
@@ -205,10 +212,8 @@ namespace EQLogParser
                   var process = Process.Start(fullPath);
                   if (process is { HasExited: false })
                   {
-                    await Task.Delay(1000).ContinueWith(_ =>
-                    {
-                      _ = UiUtil.InvokeAsync(() => _mainWindow?.Close());
-                    });
+                    await Task.Delay(1000);
+                    await UiUtil.InvokeAsync(() => _mainWindow?.Close());
                   }
                 }
               }
@@ -217,6 +222,11 @@ namespace EQLogParser
                 new MessageWindow("Problem Installing Updates. Check Error Log for Details.", Resource.CHECK_VERSION).ShowDialog();
                 Log.Error("Error Installing Updates", ex2);
               }
+            }
+
+            if (wasHidden)
+            {
+              _mainWindow?.Hide();
             }
           }
 
@@ -231,7 +241,7 @@ namespace EQLogParser
       catch (Exception ex)
       {
         Log.Error($"Error Checking for Updates: {ex.Message}");
-        await UiUtil.InvokeAsync(() => errorText.Text = "Update Check Failed. Firewall?");
+        await UiUtil.InvokeAsync(() => _mainWindow?.SetErrorText("Update Check Failed. Firewall?"));
       }
     }
 
