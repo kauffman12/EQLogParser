@@ -1,14 +1,15 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  internal class ChatIterator : IEnumerable<ChatType>
+  internal class ChatIterator : IAsyncEnumerable<ChatType>
   {
     private static readonly ChatType EndResult = new();
 
@@ -47,43 +48,43 @@ namespace EQLogParser
       _currentArchive = null;
     }
 
-    public IEnumerator<ChatType> GetEnumerator()
+    public async IAsyncEnumerator<ChatType> GetEnumeratorAsync()
     {
-      while (GetNextChat() is { } line)
+      while (await GetNextChatAsync() is { } line)
       {
         yield return line;
       }
     }
 
-    IEnumerator IEnumerable.GetEnumerator()
+    public IAsyncEnumerator<ChatType> GetAsyncEnumerator(CancellationToken cancellationToken = default)
     {
-      return GetEnumerator();
+      return GetEnumeratorAsync();
     }
 
-    private ChatType GetNextChat()
+    private async Task<ChatType> GetNextChatAsync()
     {
       ChatType result = null;
 
       if (_currentArchive == null && _months != null && _currentMonth < _months.Count)
       {
-        _currentArchive = GetArchive();
+        _currentArchive = await GetArchiveAsync();
       }
       else if (_currentArchive == null && _months != null && _currentMonth >= _months.Count)
       {
         if (GetNextYear())
         {
-          return GetNextChat();
+          return await GetNextChatAsync();
         }
       }
 
       if (_currentArchive != null && _currentReader == null)
       {
-        _currentReader = GetNextReader();
+        _currentReader = await GetNextReaderAsync();
         if (_currentReader == null)
         {
           _currentMonth++;
           _currentArchive = null;
-          return GetNextChat();
+          return await GetNextChatAsync();
         }
       }
 
@@ -113,7 +114,7 @@ namespace EQLogParser
         {
           _currentReader.Close();
           _currentReader = null;
-          return GetNextChat();
+          return await GetNextChatAsync();
         }
       }
 
@@ -150,14 +151,14 @@ namespace EQLogParser
       return success;
     }
 
-    private StringReader GetNextReader()
+    private async Task<StringReader> GetNextReaderAsync()
     {
       StringReader result = null;
 
       _currentEntry++;
       if (_currentEntry < _entries.Count)
       {
-        var archive = ChatManager.OpenArchive(_months[_currentMonth], ZipArchiveMode.Read);
+        var archive = await ChatManager.OpenArchiveAsync(_months[_currentMonth], ZipArchiveMode.Read);
         if (archive != null)
         {
           var entry = archive.GetEntry(_entries[_currentEntry]);
@@ -174,7 +175,7 @@ namespace EQLogParser
       return result;
     }
 
-    private string GetArchive()
+    private async Task<string> GetArchiveAsync()
     {
       string result = null;
 
@@ -187,7 +188,7 @@ namespace EQLogParser
           var monthString = string.Concat(dir, "-", fileName.AsSpan(5, 2));
           if (DateTime.TryParseExact(monthString, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed) && _currentChatFilter.DuringMonth(parsed))
           {
-            var archive = ChatManager.OpenArchive(_months[_currentMonth], ZipArchiveMode.Read);
+            var archive = await ChatManager.OpenArchiveAsync(_months[_currentMonth], ZipArchiveMode.Read);
             if (archive != null)
             {
               _entries = archive.Entries.Where(entry =>
@@ -215,7 +216,7 @@ namespace EQLogParser
         if (result == null)
         {
           _currentMonth++;
-          return GetArchive();
+          return await GetArchiveAsync();
         }
       }
 

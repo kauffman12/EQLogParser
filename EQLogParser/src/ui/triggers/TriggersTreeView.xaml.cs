@@ -597,7 +597,7 @@ namespace EQLogParser
 
       if (node != null)
       {
-        renameTriggerMenuItem.IsEnabled = node.ParentNode != null;
+        renameTriggerMenuItem.IsEnabled = node.ParentNode != null && count == 1;
         deleteTriggerMenuItem.IsEnabled = node.ParentNode != null;
         importTriggerMenuItem.IsEnabled = node.IsDir() && count == 1;
         newTriggerMenuItem.IsEnabled = node.IsDir() && count == 1;
@@ -713,7 +713,7 @@ namespace EQLogParser
 
       if (node != null)
       {
-        renameOverlayMenuItem.IsEnabled = node.ParentNode != null;
+        renameOverlayMenuItem.IsEnabled = node.ParentNode != null && count == 1;
         deleteOverlayMenuItem.IsEnabled = node.ParentNode != null;
         importOverlayMenuItem.IsEnabled = node.IsDir() && count == 1;
         newOverlayMenuItem.IsEnabled = node.IsDir() && count == 1;
@@ -952,8 +952,15 @@ namespace EQLogParser
             return;
           }
 
-          treeView.SelectedItems?.Clear();
-          treeView.SelectedItem = node;
+          if (treeView.SelectedItems == null)
+          {
+            treeView.SelectedItem = node;
+          }
+          else if (!treeView.SelectedItems.Contains(node))
+          {
+            treeView.SelectedItems?.Clear();
+            treeView.SelectedItem = node;
+          }
         }
       }
     }

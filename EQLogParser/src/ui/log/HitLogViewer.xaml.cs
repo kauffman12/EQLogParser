@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -153,7 +152,7 @@ namespace EQLogParser
       _textColumns.Add(column);
     }
 
-    internal void Init(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionGroup>> groups, bool defending = false)
+    internal async Task InitAsync(CombinedStats currentStats, PlayerStats playerStats, List<List<ActionGroup>> groups, bool defending = false)
     {
       _currentGroups = groups;
       _defending = defending;
@@ -161,9 +160,9 @@ namespace EQLogParser
       _title = currentStats?.ShortTitle;
 
       IAction firstAction = null;
-      foreach (var group in CollectionsMarshal.AsSpan(groups))
+      foreach (var group in groups)
       {
-        foreach (var list in CollectionsMarshal.AsSpan(group))
+        foreach (var list in group)
         {
           foreach (var action in list.Actions)
           {
@@ -214,120 +213,119 @@ namespace EQLogParser
         showPets.Visibility = Visibility.Collapsed;
       }
 
-      Load();
+      await Load();
     }
 
-    private void Load()
+    private async Task Load()
     {
       _textColumns[6].IsHidden = _checkBoxColumns[6].IsHidden = !_currentGroupActionsFilter;
 
-      Task.Delay(100).ContinueWith(_ =>
+      await Task.Delay(100);
+
+      var uniqueDefenders = new ConcurrentDictionary<string, bool>();
+      var uniqueActions = new ConcurrentDictionary<string, bool>();
+      var uniqueTypes = new ConcurrentDictionary<string, bool>();
+      var list = new List<HitLogRow>();
+
+      if (_currentGroups != null)
       {
-        var uniqueDefenders = new ConcurrentDictionary<string, bool>();
-        var uniqueActions = new ConcurrentDictionary<string, bool>();
-        var uniqueTypes = new ConcurrentDictionary<string, bool>();
-        var list = new List<HitLogRow>();
-
-        if (_currentGroups != null)
+        foreach (var group in _currentGroups)
         {
-          foreach (var group in CollectionsMarshal.AsSpan(_currentGroups))
+          foreach (var block in group)
           {
-            foreach (var block in CollectionsMarshal.AsSpan(group))
+            var precise = 0.0;
+            var rowCache = new Dictionary<string, HitLogRow>();
+            foreach (var action in block.Actions.ToArray())
             {
-              var precise = 0.0;
-              var rowCache = new Dictionary<string, HitLogRow>();
-              foreach (var action in block.Actions.ToArray())
+              precise += 0.000001;
+              if (CreateRow(rowCache, _playerStats, action, block.BeginTime + precise, _defending) is { } row && !_currentGroupActionsFilter)
               {
-                precise += 0.000001;
-                if (CreateRow(rowCache, _playerStats, action, block.BeginTime + precise, _defending) is { } row && !_currentGroupActionsFilter)
+                lock (list)
                 {
-                  lock (list)
-                  {
-                    list.Add(row);
-                  }
-
-                  PopulateRow(row, uniqueActions, uniqueDefenders, uniqueTypes);
+                  list.Add(row);
                 }
+
+                PopulateRow(row, uniqueActions, uniqueDefenders, uniqueTypes);
               }
+            }
 
-              if (_currentGroupActionsFilter)
+            if (_currentGroupActionsFilter)
+            {
+              foreach (var row in rowCache.Values)
               {
-                foreach (var row in rowCache.Values)
+                lock (list)
                 {
-                  lock (list)
-                  {
-                    list.Add(row);
-                  }
-
-                  PopulateRow(row, uniqueActions, uniqueDefenders, uniqueTypes);
+                  list.Add(row);
                 }
+
+                PopulateRow(row, uniqueActions, uniqueDefenders, uniqueTypes);
               }
             }
           }
         }
+      }
 
-        var lastSeen = new Dictionary<string, double>();
-        foreach (var row in list.OrderBy(row => row.BeginTime))
+      var lastSeen = new Dictionary<string, double>();
+      foreach (var row in list.OrderBy(row => row.BeginTime))
+      {
+        if (lastSeen.TryGetValue(row.SubType, out var lastTime)) // 1 day
         {
-          if (lastSeen.TryGetValue(row.SubType, out var lastTime)) // 1 day
+          var diff = Math.Floor(row.BeginTime) - lastTime;
+          if (diff is > 0 and < 3600)
           {
-            var diff = Math.Floor(row.BeginTime) - lastTime;
-            if (diff is > 0 and < 3600)
-            {
-              var t = TimeSpan.FromSeconds(diff);
-              row.TimeSince = string.Format(CultureInfo.CurrentCulture, "{0:D2}:{1:D2}", t.Minutes, t.Seconds);
-            }
+            var t = TimeSpan.FromSeconds(diff);
+            row.TimeSince = string.Format(CultureInfo.CurrentCulture, "{0:D2}:{1:D2}", t.Minutes, t.Seconds);
           }
-
-          lastSeen[row.SubType] = Math.Floor(row.BeginTime);
         }
 
-        var actions = new List<string> { "All Actions" };
-        var acted = new List<string> { _actedOption };
-        var types = new List<string> { "All Types" };
-        actions.AddRange(uniqueActions.Keys.OrderBy(x => x));
-        acted.AddRange(uniqueDefenders.Keys.OrderBy(x => x));
-        types.AddRange(uniqueTypes.Keys.OrderBy(x => x));
+        lastSeen[row.SubType] = Math.Floor(row.BeginTime);
+      }
 
-        Dispatcher.InvokeAsync(() =>
+      var actions = new List<string> { "All Actions" };
+      var acted = new List<string> { _actedOption };
+      var types = new List<string> { "All Types" };
+      actions.AddRange(uniqueActions.Keys.OrderBy(x => x));
+      acted.AddRange(uniqueDefenders.Keys.OrderBy(x => x));
+      types.AddRange(uniqueTypes.Keys.OrderBy(x => x));
+
+      await Dispatcher.InvokeAsync(() =>
+      {
+        actedList.ItemsSource = acted;
+
+        if (_currentActedFilter == null)
         {
-          actedList.ItemsSource = acted;
+          actedList.SelectedIndex = 0;
+        }
+        else if (acted.IndexOf(_currentActedFilter) is var actedIndex and > -1)
+        {
+          actedList.SelectedIndex = actedIndex;
+        }
+        else
+        {
+          _currentActedFilter = null;
+          actedList.SelectedIndex = 0;
+        }
 
-          if (_currentActedFilter == null)
-          {
-            actedList.SelectedIndex = 0;
-          }
-          else if (acted.IndexOf(_currentActedFilter) is var actedIndex and > -1)
-          {
-            actedList.SelectedIndex = actedIndex;
-          }
-          else
-          {
-            _currentActedFilter = null;
-            actedList.SelectedIndex = 0;
-          }
+        dataGrid.SortColumnDescriptions.Clear();
+        if (_currentGroupActionsFilter)
+        {
+          dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "BeginTime", SortDirection = ListSortDirection.Ascending });
+          dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Total", SortDirection = ListSortDirection.Descending });
+        }
+        else
+        {
+          dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "BeginTime", SortDirection = ListSortDirection.Ascending });
+        }
 
-          dataGrid.SortColumnDescriptions.Clear();
-          if (_currentGroupActionsFilter)
-          {
-            dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "BeginTime", SortDirection = ListSortDirection.Ascending });
-            dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Total", SortDirection = ListSortDirection.Descending });
-          }
-          else
-          {
-            dataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "BeginTime", SortDirection = ListSortDirection.Ascending });
-          }
+        actionList.ItemsSource = actions;
+        typeList.ItemsSource = types;
+        actionList.SelectedIndex = 0;
+        typeList.SelectedIndex = 0;
 
-          actionList.ItemsSource = actions;
-          typeList.ItemsSource = types;
-          actionList.SelectedIndex = 0;
-          typeList.SelectedIndex = 0;
-
-          dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(list);
-          dataGrid.IsEnabled = true;
-          titleLabel.Content = _title;
-          UiElementUtil.SetEnabled(controlPanel.Children, true);
-        });
+        dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(list);
+        dataGrid.IsEnabled = true;
+        titleLabel.Content = _title;
+        UiElementUtil.SetEnabled(controlPanel.Children, true);
       });
     }
 
@@ -470,7 +468,7 @@ namespace EQLogParser
         }
         else
         {
-          Dispatcher.InvokeAsync(() =>
+          Dispatcher.InvokeAsync(async () =>
           {
             titleLabel.Content = "Loading...";
             dataGrid.ItemsSource = null;
@@ -485,7 +483,7 @@ namespace EQLogParser
               dataGrid.Columns = _checkBoxColumns;
             }
 
-            Load();
+            await Load();
           }, DispatcherPriority.Background);
         }
       }

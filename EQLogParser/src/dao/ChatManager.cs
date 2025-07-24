@@ -6,8 +6,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Threading;
+using System.Threading.Tasks;
+using System.Timers;
 
 namespace EQLogParser
 {
@@ -49,10 +49,17 @@ namespace EQLogParser
 
     internal void Init()
     {
+      // archive disable
+      if (!ConfigUtil.IfSetOrElse("ChatArchiveEnabled", true))
+      {
+        return;
+      }
+
       lock (LockObject)
       {
         try
         {
+          _archiveTimer?.Stop();
           _archiveTimer?.Dispose();
           _running = false;
           _currentArchive?.Dispose();
@@ -96,6 +103,7 @@ namespace EQLogParser
     {
       lock (LockObject)
       {
+        _archiveTimer?.Stop();
         _archiveTimer?.Dispose();
         _currentArchive?.Dispose();
       }
@@ -121,7 +129,7 @@ namespace EQLogParser
         }
       }
 
-      if (string.Compare(player, _currentPlayer, StringComparison.OrdinalIgnoreCase) == 0)
+      if (string.Equals(player, _currentPlayer, StringComparison.OrdinalIgnoreCase))
       {
         try
         {
@@ -199,7 +207,7 @@ namespace EQLogParser
       }
     }
 
-    internal static ZipArchive OpenArchive(string fileName, ZipArchiveMode mode)
+    internal static async Task<ZipArchive> OpenArchiveAsync(string fileName, ZipArchiveMode mode)
     {
       ZipArchive result = null;
       var tries = 10;
@@ -212,7 +220,7 @@ namespace EQLogParser
         catch (IOException)
         {
           // wait for file to be freed
-          Thread.Sleep(1000);
+          await Task.Delay(2000);
         }
         catch (InvalidDataException)
         {
@@ -246,6 +254,12 @@ namespace EQLogParser
 
     internal void Add(ChatType chatType)
     {
+      // make sure archive is enabled
+      if (!ConfigUtil.IfSetOrElse("ChatArchiveEnabled", true))
+      {
+        return;
+      }
+
       if (chatType != null)
       {
         lock (LockObject)
@@ -279,14 +293,17 @@ namespace EQLogParser
           }
 
           _chatTypes.Add(chatType);
-        }
 
-        if (!_running)
-        {
-          _running = true;
-          _archiveTimer?.Dispose();
-          _archiveTimer = new Timer(ArchiveChat);
-          _archiveTimer.Change(Timeout, System.Threading.Timeout.Infinite);
+          if (!_running)
+          {
+            _running = true;
+            _archiveTimer?.Stop();
+            _archiveTimer?.Dispose();
+            _archiveTimer = new Timer(Timeout);
+            _archiveTimer.Elapsed += ArchiveChat;
+            _archiveTimer.AutoReset = false;
+            _archiveTimer.Start();
+          }
         }
       }
     }
@@ -296,11 +313,17 @@ namespace EQLogParser
       var playerDir = ConfigUtil.GetArchiveDir() + playerAndServer;
       var file = playerDir + @"\" + ChannelsFile;
       var list = ConfigUtil.ReadList(file);
-      return list.ConvertAll(item => item.ToLower()).Distinct().OrderBy(item => item.ToLower()).ToList();
+      return [.. list.ConvertAll(item => item.ToLower(CultureInfo.CurrentCulture)).Distinct().OrderBy(item => item.ToLower(CultureInfo.CurrentCulture))];
     }
 
-    private void ArchiveChat(object state)
+    private async void ArchiveChat(object sender, object e)
     {
+      // timer can fire after stop was called so make sure archive is enabled
+      if (!ConfigUtil.IfSetOrElse("ChatArchiveEnabled", true))
+      {
+        return;
+      }
+
       try
       {
         List<ChatType> working;
@@ -313,7 +336,7 @@ namespace EQLogParser
 
         var lastTime = double.NaN;
         var increment = 0.0;
-        foreach (var t in CollectionsMarshal.AsSpan(working))
+        foreach (var t in working)
         {
           if (t != null)
           {
@@ -331,7 +354,7 @@ namespace EQLogParser
             var year = dateTime.ToString("yyyy", CultureInfo.CurrentCulture);
             var month = dateTime.ToString("MM", CultureInfo.CurrentCulture);
             var day = dateTime.ToString("dd", CultureInfo.CurrentCulture);
-            AddToArchive(year, month, day, chatLine, t);
+            await AddToArchiveAsync(year, month, day, chatLine, t);
             lastTime = t.BeginTime;
           }
         }
@@ -340,9 +363,12 @@ namespace EQLogParser
         {
           if (_chatTypes.Count > 0)
           {
+            _archiveTimer?.Stop();
             _archiveTimer?.Dispose();
-            _archiveTimer = new Timer(ArchiveChat);
-            _archiveTimer.Change(0, System.Threading.Timeout.Infinite);
+            _archiveTimer = new Timer(1);
+            _archiveTimer.Elapsed += ArchiveChat;
+            _archiveTimer.AutoReset = false;
+            _archiveTimer.Start();
           }
           else
           {
@@ -374,7 +400,7 @@ namespace EQLogParser
       }
     }
 
-    private void AddToArchive(string year, string month, string day, ChatLine chatLine, ChatType chatType)
+    private async Task AddToArchiveAsync(string year, string month, string day, ChatLine chatLine, ChatType chatType)
     {
       var archiveKey = year + "-" + month;
       if (_currentArchiveKey != archiveKey)
@@ -383,7 +409,7 @@ namespace EQLogParser
         var fileName = GetFileName(year, month);
         var mode = File.Exists(fileName) ? ZipArchiveMode.Update : ZipArchiveMode.Create;
 
-        _currentArchive = OpenArchive(fileName, mode);
+        _currentArchive = await OpenArchiveAsync(fileName, mode);
         _currentArchiveKey = archiveKey;
         LoadCache();
       }
@@ -472,7 +498,7 @@ namespace EQLogParser
               _channelIndex[temp[0]] = [];
               foreach (var channel in temp[1].Split(','))
               {
-                _channelIndex[temp[0]][channel.ToLower()] = 1;
+                _channelIndex[temp[0]][channel.ToLower(CultureInfo.CurrentCulture)] = 1;
                 UpdateChannelCache(channel); // in case main cache is out of sync with archive
               }
             }
@@ -582,7 +608,7 @@ namespace EQLogParser
       _currentListModified = false;
     }
 
-    private List<string> GetSelectedChannels(string playerAndServer)
+    private static List<string> GetSelectedChannels(string playerAndServer)
     {
       List<string> result = null; // throw null to check case where file has never existed vs empty content
       var playerDir = ConfigUtil.GetArchiveDir() + playerAndServer;

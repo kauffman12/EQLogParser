@@ -199,13 +199,13 @@ namespace EQLogParser
       }
     }
 
-    private void DataGridTankingLogClick(object sender, RoutedEventArgs e)
+    private async void DataGridTankingLogClick(object sender, RoutedEventArgs e)
     {
       if (dataGrid.SelectedItems?.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(out var log, typeof(HitLogViewer), "tankingLogWindow", "Tanking Log"))
+        if (SyncFusionUtil.OpenWindow(out var log, typeof(HitLogViewer), "tankingLogWindow", "Tanking Log") && log.Content is HitLogViewer { } viewer)
         {
-          (log.Content as HitLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups, true);
+          await viewer.InitAsync(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups, true);
         }
       }
     }
@@ -238,7 +238,7 @@ namespace EQLogParser
       {
         if (SyncFusionUtil.OpenWindow(out var timeline, typeof(Timeline), "defensiveTimeline", "Defensive Timeline"))
         {
-          ((Timeline)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 0);
+          ((Timeline)timeline.Content).Init(CurrentStats, [.. dataGrid.SelectedItems.Cast<PlayerStats>()], CurrentGroups, 0);
         }
       }
     }

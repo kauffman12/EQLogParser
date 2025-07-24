@@ -58,6 +58,7 @@ namespace EQLogParser
     internal static double CurrentShortWidth;
     internal static double CurrentMediumWidth;
 
+    private const string DefaultTheme = "MaterialDark";
     private const string PetsListTitle = "Verified Pets";
     private const string PlayerListTitle = "Verified Players";
     private const string PetOwnersTitle = "Pet Owners";
@@ -92,7 +93,7 @@ namespace EQLogParser
       // load theme and fonts
       CurrentFontFamily = ConfigUtil.GetSetting("ApplicationFontFamily", "Segoe UI");
       CurrentFontSize = ConfigUtil.GetSettingAsDouble("ApplicationFontSize", 12);
-      CurrentTheme = ConfigUtil.GetSetting("CurrentTheme", "MaterialDark");
+      CurrentTheme = ConfigUtil.GetSetting("CurrentTheme", DefaultTheme);
 
       if (UiElementUtil.GetSystemFontFamilies().FirstOrDefault(font => font.Source == CurrentFontFamily) == null)
       {
@@ -375,38 +376,28 @@ namespace EQLogParser
       Application.Current.Resources["DamageOverlayDamageBrush"] = new SolidColorBrush { Color = Colors.White };
       Application.Current.Resources["DamageOverlayProgressBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF1D397E")! };
 
-      // init of settings needs to block
       UiUtil.InvokeNow(() =>
       {
         SetThemeFontSizes();
         RegisterThemeSettings();
-        ChangeTheme(main);
+      }, DispatcherPriority.Send);
+    }
+
+    internal static void SetTheme(string theme = null)
+    {
+      CurrentTheme = theme ?? DefaultTheme;
+      _ = UiUtil.InvokeAsync(() =>
+      {
+        RegisterThemeSettings();
+        ChangeTheme(_mainWindow);
+        // set after change succeeds
+        ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
       }, DispatcherPriority.Send);
 
       _ = UiUtil.InvokeAsync(() =>
       {
         EventsThemeChanged?.Invoke(CurrentTheme);
       }, DispatcherPriority.DataBind);
-    }
-
-    internal static void ChangeTheme(string theme)
-    {
-      if (CurrentTheme != theme)
-      {
-        CurrentTheme = theme;
-        _ = UiUtil.InvokeAsync(() =>
-        {
-          RegisterThemeSettings();
-          ChangeTheme(_mainWindow);
-          // set after change succeeds
-          ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
-        }, DispatcherPriority.Send);
-
-        _ = UiUtil.InvokeAsync(() =>
-        {
-          EventsThemeChanged?.Invoke(CurrentTheme);
-        }, DispatcherPriority.DataBind);
-      }
     }
 
     internal static void ChangeThemeFontFamily(string family)
@@ -658,6 +649,7 @@ namespace EQLogParser
         }
         finally
         {
+          // init if enabled
           ChatManager.Instance.Init();
           await UiUtil.InvokeAsync(() =>
           {

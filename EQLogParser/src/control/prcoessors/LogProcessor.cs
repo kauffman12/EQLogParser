@@ -17,12 +17,13 @@ namespace EQLogParser
     internal LogProcessor(string fileName)
     {
       _fileName = fileName ?? string.Empty;
-      // setup the pre-processor block
-      ChatManager.Instance.Init();
     }
 
     public void LinkTo(BlockingCollection<Tuple<string, double, bool>> collection)
     {
+      // start archive if enabled
+      ChatManager.Instance.Init();
+
       _readTask = Task.Run(() =>
       {
         try
