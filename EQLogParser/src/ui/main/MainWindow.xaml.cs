@@ -178,9 +178,6 @@ namespace EQLogParser
       // load document state
       DockingManager.SetState(petMappingWindow, DockState.AutoHidden);
 
-      // listen for done event
-      ConfigUtil.EventsLoadingText += ConfigUtilEventsLoadingText;
-
       // create menu items for deleting chat
       Dispatcher.InvokeAsync(UpdateDeleteChatMenu, DispatcherPriority.DataBind);
 
@@ -279,6 +276,7 @@ namespace EQLogParser
     }
 
     internal bool IsDamageOverlayOpen() => _isDamageOverlayOpen;
+    internal void SetErrorText(string text) => errorText.Text = text;
 
     internal void SaveWindowSize()
     {
@@ -398,19 +396,6 @@ namespace EQLogParser
       if (!_isLoading)
       {
         ConfigUtil.Save();
-      }
-    }
-
-    private async void ConfigUtilEventsLoadingText(string text)
-    {
-      // cleanup downloads
-      MainActions.Cleanup();
-
-      // Actually start the check.
-      if (text == "Done" && checkUpdatesIcon.Visibility == Visibility.Visible)
-      {
-        await Task.Delay(500);
-        await MainActions.CheckVersionAsync(errorText);
       }
     }
 

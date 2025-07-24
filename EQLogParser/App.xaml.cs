@@ -203,6 +203,12 @@ namespace EQLogParser
           {
             main.Show();
           }
+
+          // cleanup downloads
+          MainActions.Cleanup();
+
+          await Task.Delay(2000);
+          await MainActions.CheckVersionAsync();
         }
         catch (Exception ex)
         {
