@@ -116,6 +116,7 @@ namespace EQLogParser
     private async void ClearRecentlyMergedClick(object sender, RoutedEventArgs e)
     {
       TriggerStateManager.Instance.RecentlyMerged.Clear();
+      TriggerStateManager.Instance.MissingMedia.Clear();
       await RefreshTriggers();
     }
 
@@ -616,7 +617,7 @@ namespace EQLogParser
         pasteTriggerItem.IsEnabled = false;
       }
 
-      clearRecentlyMergedMenuItem.IsEnabled = !TriggerStateManager.Instance.RecentlyMerged.IsEmpty;
+      clearRecentlyMergedMenuItem.IsEnabled = !TriggerStateManager.Instance.RecentlyMerged.IsEmpty || !TriggerStateManager.Instance.MissingMedia.IsEmpty;
       importTriggerMenuItem.Header = node != null && importTriggerMenuItem.IsEnabled ? $"Import to ({node.Content})" : "Import";
 
       UiElementUtil.ClearMenuEvents(copySettingsMenuItem.Items, CopySettingsClick);

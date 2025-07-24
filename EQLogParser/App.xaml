@@ -66,8 +66,18 @@
         FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryColor}" />
     </ToolTip>
 
+    <ToolTip x:Key="TriggerMissingMediaTipTemplate">
+      <TextBlock Text="This Trigger has been imported successfully but may be missing a related wav/media file"
+        FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryColor}" />
+    </ToolTip>
+
     <ToolTip x:Key="RecentFolderTipTemplate">
       <TextBlock Text="Triggers in this Folder have been recently updated via Import/Merge"
+        FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryColor}" />
+    </ToolTip>
+
+    <ToolTip x:Key="RecentFolderMissingMediaTipTemplate">
+      <TextBlock Text="Triggers in this Folder may have been imported without associated wav/media files"
         FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryColor}" />
     </ToolTip>
 
@@ -99,6 +109,10 @@
                   <DataTrigger Binding="{Binding IsRecentlyMerged}" Value="True">
                     <Setter Property="Foreground" Value="{DynamicResource EQGoodForegroundBrush}"/>
                     <Setter Property="ToolTip" Value="{StaticResource RecentTriggerTipTemplate}"/>
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding HasMissingMedia}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource EQWarnForegroundBrush}"/>
+                    <Setter Property="ToolTip" Value="{StaticResource TriggerMissingMediaTipTemplate}"/>
                   </DataTrigger>
                 </Style.Triggers>
               </Style>
@@ -140,6 +154,10 @@
                   <DataTrigger Binding="{Binding IsRecentlyMerged}" Value="True">
                     <Setter Property="Foreground" Value="{DynamicResource EQGoodForegroundBrush}"/>
                     <Setter Property="ToolTip" Value="{StaticResource RecentFolderTipTemplate}"/>
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding HasMissingMedia}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource EQWarnForegroundBrush}"/>
+                    <Setter Property="ToolTip" Value="{StaticResource RecentFolderMissingMediaTipTemplate}"/>
                   </DataTrigger>
                 </Style.Triggers>
               </Style>

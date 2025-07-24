@@ -28,6 +28,7 @@ namespace EQLogParser
     internal const string Overlays = "Overlays";
     internal const string Triggers = "Triggers";
     internal readonly ConcurrentDictionary<string, bool> RecentlyMerged = new();
+    internal readonly ConcurrentDictionary<string, bool> MissingMedia = new();
 
     private const string LegacyOverlayFile = "triggerOverlays.json";
     private const string LegacyTriggersFile = "triggers.json";
@@ -926,9 +927,10 @@ namespace EQLogParser
       }
     }
 
-    private void Import(ILiteCollection<TriggerNode> tree, string parentId,
+    private bool Import(ILiteCollection<TriggerNode> tree, string parentId,
       IEnumerable<ExportTriggerNode> imported, string type, List<TriggerState> characterStates)
     {
+      var hasMissingMedia = false;
       var triggers = type == Triggers;
       string enableId = null;
 
@@ -956,19 +958,31 @@ namespace EQLogParser
           {
             var index = GetNextIndex(tree, parentId);
 
-            // new trigger
-            if (newNode.TriggerData != null)
+            // new trigger and replace the exported version
+            if (newNode.TriggerData != null && App.AutoMap.Map(newNode, new TriggerNode()) is { } node)
             {
-              newNode.TriggerData.SelectedOverlays = ValidateOverlays(newNode.TriggerData.SelectedOverlays);
-              Insert(newNode, index);
-              enableId = newNode.Id;
-            }
-            // make sure it's a new directory
-            else if (newNode.OverlayData == null && newNode.TriggerData == null && App.AutoMap.Map(newNode, new TriggerNode()) is { } node)
-            {
+              node.TriggerData.SelectedOverlays = ValidateOverlays(newNode.TriggerData.SelectedOverlays);
               Insert(node, index);
-              Import(tree, node.Id, newNode.Nodes, type, characterStates);
               enableId = node.Id;
+
+              if (newNode.HasMissingMedia)
+              {
+                MissingMedia[node.Id] = true;
+                hasMissingMedia = true;
+              }
+            }
+            // make sure it's a new directory and replace the exported version
+            else if (newNode.OverlayData == null && newNode.TriggerData == null && App.AutoMap.Map(newNode, new TriggerNode()) is { } node2)
+            {
+              Insert(node2, index);
+
+              if (Import(tree, node2.Id, newNode.Nodes, type, characterStates))
+              {
+                MissingMedia[node2.Id] = true;
+                hasMissingMedia = true;
+              }
+
+              enableId = node2.Id;
             }
           }
         }
@@ -1016,6 +1030,7 @@ namespace EQLogParser
         if (enableId != null)
         {
           RecentlyMerged[enableId] = true;
+
           if (characterStates != null && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
           {
             foreach (var state in characterStates)
@@ -1027,7 +1042,7 @@ namespace EQLogParser
         }
       }
 
-      return;
+      return hasMissingMedia;
 
       void Insert(TriggerNode node, int index, string overrideId = null)
       {
@@ -1132,7 +1147,8 @@ namespace EQLogParser
         Content = node.Name,
         IsExpanded = node.IsExpanded,
         SerializedData = node,
-        IsRecentlyMerged = RecentlyMerged.ContainsKey(node.Id)
+        IsRecentlyMerged = RecentlyMerged.ContainsKey(node.Id) && !MissingMedia.ContainsKey(node.Id),
+        HasMissingMedia = MissingMedia.ContainsKey(node.Id)
       };
 
       if (node.OverlayData == null && state != null)
