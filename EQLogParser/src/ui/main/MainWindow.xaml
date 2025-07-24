@@ -1,4 +1,4 @@
-﻿<syncfusion:ChromelessWindow
+﻿<Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:fa="http://schemas.fontawesome.com/icons/"
@@ -7,27 +7,32 @@
         xmlns:listCollection="clr-namespace:System.Collections;assembly=mscorlib"
         x:Class="EQLogParser.MainWindow"
         Icon="EQLogParser.ico"
-        ShowIcon="False"
         Title="EQLogParser"
         Closing="WindowClosing"
         ResizeMode="CanResize"
-        IsEnabled="False"
+        BorderBrush="{DynamicResource ContentBackgroundAlt3}"
         BorderThickness="2"
         MinWidth="400"
         MinHeight="250"
         SizeChanged="MainWindowSizeChanged"
-        TitleBarHeight="{DynamicResource EQTableHeaderRowHeight}"
-        ShowTitle="False"
-        UseNativeChrome="True"
         UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Display"
         Loaded="MainWindowOnLoaded"
         WindowStartupLocation="Manual"
+        WindowStyle="None"
+        AllowsTransparency="False"
         StateChanged="WindowStateChanged">
-  <syncfusion:ChromelessWindow.LeftHeaderItemsSource>
-    <listCollection:ArrayList>
-      <Image Height="{DynamicResource EQIconButtonHeight}" Source="EQLogParser.ico" Margin="6,3,4,0"/>
-      <Menu x:Name="theMenu" Margin="0" Padding="0" VerticalAlignment="Bottom">
+  <WindowChrome.WindowChrome>
+    <WindowChrome CaptionHeight="{DynamicResource EQWindowTitleHeight}" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0"/>
+  </WindowChrome.WindowChrome>
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="{DynamicResource EQGridWindowTitleHeight}"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+    <DockPanel VerticalAlignment="Center" Background="{DynamicResource ContentBackgroundAlt2}">
+      <Image Height="{DynamicResource EQIconButtonHeight}" Source="EQLogParser.ico" Margin="5,0,4,0"/>
+      <Menu x:Name="theMenu" WindowChrome.IsHitTestVisibleInChrome="True" Height="{DynamicResource EQWindowTitleHeight}" Margin="0,2,0,0" Padding="0" VerticalAlignment="Center">
         <MenuItem Header="_File">
           <MenuItem x:Name="fileOpenMenu" Header="Open and Monitor _Log File" ToolTip="Open Log File, Archive Chat and Start Monitoring">
             <MenuItem.Icon>
@@ -55,7 +60,7 @@
               <MenuItem.Icon>
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_File" />
               </MenuItem.Icon>
-            </MenuItem>            
+            </MenuItem>
           </MenuItem>
           <Separator/>
           <MenuItem Header="E_xit" Click="WindowClose" InputGestureText="Alt+F4" />
@@ -203,7 +208,7 @@
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="tauntStatsIcon" Tag="tauntStatsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
-            </MenuItem>            
+            </MenuItem>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="windowList" Header="_Windows">
@@ -431,35 +436,40 @@
           </MenuItem>
         </MenuItem>
       </Menu>
-      <TextBlock x:Name="initialText" Margin="100,0,0,0" Visibility="Hidden" Text="" VerticalAlignment="Center" IsHitTestVisible="False" Foreground="{DynamicResource EQGoodForegroundBrush}"/>
-      <TextBlock x:Name="statusTriggersText" Margin="0,0,4,0" Visibility="Collapsed" VerticalAlignment="Center" IsHitTestVisible="False"  Text="Triggers Active " Foreground="{DynamicResource EQGoodForegroundBrush}"/>
-      <TextBlock x:Name="statusText" Margin="0,0,4,0" VerticalAlignment="Center" IsHitTestVisible="False" />
-      <TextBlock x:Name="fileText" Margin="1,0,4,0" VerticalAlignment="Center" IsHitTestVisible="False" Foreground="{DynamicResource ContentForegroundAlt}"/>
-    </listCollection:ArrayList>
-  </syncfusion:ChromelessWindow.LeftHeaderItemsSource>
-  <syncfusion:ChromelessWindow.RightHeaderItemsSource>
-    <listCollection:ArrayList>
-      <TextBlock x:Name="errorText" Margin="0,0,8,0" VerticalAlignment="Center" IsHitTestVisible="False" FontStyle="Italic" Foreground="{DynamicResource EQWarnForegroundBrush}"/>
-      <TextBlock x:Name="versionText" VerticalAlignment="Center" Margin="0,0,10,0" IsHitTestVisible="False" Foreground="{DynamicResource ContentForeground}" FontStyle="Italic" Text="v1.0.0.0" HorizontalAlignment="Right"/>
-    </listCollection:ArrayList>
-  </syncfusion:ChromelessWindow.RightHeaderItemsSource>
-  <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="*"></RowDefinition>
-    </Grid.RowDefinitions>
-    <syncfusion:DockingManager x:Name="dockSite" Grid.Row="0" Margin="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" UseDocumentContainer="True" DocumentCloseButtonType="Individual" CloseButtonClick="DockSiteCloseButtonClick"
+      <TextBlock x:Name="initialText" Margin="100,0,0,2" Visibility="Hidden" Text="" VerticalAlignment="Center" IsHitTestVisible="False" Foreground="{DynamicResource EQGoodForegroundBrush}"/>
+      <TextBlock x:Name="statusTriggersText" Margin="0,0,4,2" Visibility="Collapsed" VerticalAlignment="Center" IsHitTestVisible="False"  Text="Triggers Active " Foreground="{DynamicResource EQGoodForegroundBrush}"/>
+      <TextBlock x:Name="statusText" Margin="0,0,4,2" VerticalAlignment="Center" IsHitTestVisible="False" />
+      <TextBlock x:Name="fileText" Margin="1,0,4,2" VerticalAlignment="Center" IsHitTestVisible="False" Foreground="{DynamicResource ContentForegroundAlt}"/>
+
+      <!-- Spacer -->
+      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+        <TextBlock x:Name="errorText" Margin="0,0,20,2" VerticalAlignment="Center" IsHitTestVisible="False" FontStyle="Italic" Foreground="{DynamicResource EQWarnForegroundBrush}"/>
+        <TextBlock x:Name="versionText" VerticalAlignment="Center" Margin="0,0,20,2" IsHitTestVisible="False" Foreground="{DynamicResource ContentForeground}" FontStyle="Italic" Text="v1.0.0.0" HorizontalAlignment="Right"/>
+        <Border Width="{DynamicResource EQWindowButtonWidth}" Height="{DynamicResource EQWindowTitleHeight}" Margin="0" WindowChrome.IsHitTestVisibleInChrome="True" Background="Transparent" CornerRadius="3" Cursor="Hand" MouseLeftButtonUp="MinimizeButtonUp" MouseEnter="ButtonBorderMouseEnter" MouseLeave="ButtonBorderMouseLeave">
+          <TextBlock Text="&#xE921;" FontSize="{DynamicResource EQWindowButtonTextSize1}" FontFamily="Segoe MDL2 Assets" Margin="0,0,0,1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <Border Width="{DynamicResource EQWindowButtonWidth}" Height="{DynamicResource EQWindowTitleHeight}" Margin="0" WindowChrome.IsHitTestVisibleInChrome="True" Background="Transparent" CornerRadius="3" Cursor="Hand" MouseLeftButtonUp="RestoreButtonUp" MouseEnter="ButtonBorderMouseEnter" MouseLeave="ButtonBorderMouseLeave">
+          <TextBlock x:Name="maxRestoreText" Text="&#xE922;" FontSize="{DynamicResource EQWindowButtonTextSize1}" FontFamily="Segoe MDL2 Assets" Margin="0,0,0,2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <Border Width="{DynamicResource EQWindowButtonWidth}" Height="{DynamicResource EQWindowTitleHeight}" Margin="0" WindowChrome.IsHitTestVisibleInChrome="True" Background="Transparent" CornerRadius="3" Cursor="Hand" MouseLeftButtonUp="CloseButtonUp" MouseEnter="ButtonBorderMouseEnterRed" MouseLeave="ButtonBorderMouseLeave">
+          <TextBlock Text="&#xE711;" FontSize="{DynamicResource EQWindowButtonTextSize3}" FontFamily="Segoe MDL2 Assets" Margin="0,0,0,2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+      </StackPanel>
+    </DockPanel>
+    <Grid Grid.Row="1" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0">
+      <syncfusion:DockingManager x:Name="dockSite" Margin="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" UseDocumentContainer="True" DocumentCloseButtonType="Individual" CloseButtonClick="DockSiteCloseButtonClick"
                               EnableDocumentTabHeaderEdit="True" UseNativeFloatWindow="False" WindowClosing="DockSiteWindowClosing" CloseTabOnMiddleClick="True" PersistState="False">
-      <ContentControl x:Name="playerParseTextWindow" syncfusion:DockingManager.Header="Preview Parse" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
+        <ContentControl x:Name="playerParseTextWindow" syncfusion:DockingManager.Header="Preview Parse" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
                       syncfusion:DockingManager.DesiredHeightInDockedMode="{DynamicResource EQParseWindowHeight}" syncfusion:DockingManager.CanDocument="False" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="{DynamicResource EQParseWindowHeight}">
-        <local:ParsePreview />
-      </ContentControl>
-      <ContentControl x:Name="npcWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Fight List" syncfusion:DockingManager.State="Dock" 
+          <local:ParsePreview />
+        </ContentControl>
+        <ContentControl x:Name="npcWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Fight List" syncfusion:DockingManager.State="Dock" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.CanDocument="False">
-        <local:FightTable />
-      </ContentControl>
-      <ContentControl x:Name="petMappingWindow" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="Dock" syncfusion:DockingManager.SideInDockedMode="Right" 
+          <local:FightTable />
+        </ContentControl>
+        <ContentControl x:Name="petMappingWindow" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="Dock" syncfusion:DockingManager.SideInDockedMode="Right" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQPetMappingWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQPetMappingWindowWidth}" syncfusion:DockingManager.CanDocument="False">
-        <syncfusion:SfDataGrid x:Name="petMappingGrid"
+          <syncfusion:SfDataGrid x:Name="petMappingGrid"
                                AllowResizingColumns="False"
                                AutoGenerateColumns="False"
                                ColumnSizer="AutoLastColumnFill"
@@ -470,16 +480,16 @@
                                ShowRowHeader="False"
                                GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                                SelectionMode="Extended">
-          <syncfusion:SfDataGrid.Columns>
-            <syncfusion:GridComboBoxColumn x:Name="ownerList" Width="160" HeaderText="Owner" AllowEditing="True" IsReadOnly="False" MappingName="Owner" SelectedValuePath="Name" DisplayMemberPath="Name" />
-            <syncfusion:GridTextColumn MappingName="Pet" HeaderText="Pet" IsReadOnly="True" AllowEditing="False"/>
-          </syncfusion:SfDataGrid.Columns>
-        </syncfusion:SfDataGrid>
-      </ContentControl>
-      <ContentControl x:Name="verifiedPlayersWindow" syncfusion:DockingManager.Header="Verified Players" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Tabbed" 
+            <syncfusion:SfDataGrid.Columns>
+              <syncfusion:GridComboBoxColumn x:Name="ownerList" Width="160" HeaderText="Owner" AllowEditing="True" IsReadOnly="False" MappingName="Owner" SelectedValuePath="Name" DisplayMemberPath="Name" />
+              <syncfusion:GridTextColumn MappingName="Pet" HeaderText="Pet" IsReadOnly="True" AllowEditing="False"/>
+            </syncfusion:SfDataGrid.Columns>
+          </syncfusion:SfDataGrid>
+        </ContentControl>
+        <ContentControl x:Name="verifiedPlayersWindow" syncfusion:DockingManager.Header="Verified Players" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Tabbed" 
                       syncfusion:DockingManager.TargetNameInDockedMode="verifiedPetsWindow" syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQPlayersWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQPlayersWindowWidth}"
                       syncfusion:DockingManager.CanDocument="False">
-        <syncfusion:SfDataGrid x:Name="verifiedPlayersGrid"
+          <syncfusion:SfDataGrid x:Name="verifiedPlayersGrid"
                                AllowResizingColumns="False"
                                AutoGenerateColumns="False"
                                CellToolTipOpening="PlayerCellToolTipOpening"
@@ -494,30 +504,30 @@
                                ShowRowHeader="True"
                                GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                                SelectionMode="Extended">
-          <syncfusion:SfDataGrid.Resources>
-            <Style TargetType="syncfusion:GridRowHeaderCell">
-              <Setter Property="Template">
-                <Setter.Value>
-                  <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
-                    <Border PreviewMouseDown="RemovePlayerMouseDown" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
-                      <Grid>
-                        <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Times" />
-                      </Grid>
-                    </Border>
-                  </ControlTemplate>
-                </Setter.Value>
-              </Setter>
-            </Style>
-          </syncfusion:SfDataGrid.Resources>
-          <syncfusion:SfDataGrid.Columns>
-            <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name"/>
-            <syncfusion:GridComboBoxColumn x:Name="classList" HeaderText="Class" AllowEditing="True" ShowToolTip="True" IsReadOnly="False" MappingName="PlayerClass" />
-          </syncfusion:SfDataGrid.Columns>
-        </syncfusion:SfDataGrid>
-      </ContentControl>
-      <ContentControl x:Name="verifiedPetsWindow" syncfusion:DockingManager.Header="Verified Pets" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Right" 
+            <syncfusion:SfDataGrid.Resources>
+              <Style TargetType="syncfusion:GridRowHeaderCell">
+                <Setter Property="Template">
+                  <Setter.Value>
+                    <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+                      <Border PreviewMouseDown="RemovePlayerMouseDown" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                        <Grid>
+                          <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Times" />
+                        </Grid>
+                      </Border>
+                    </ControlTemplate>
+                  </Setter.Value>
+                </Setter>
+              </Style>
+            </syncfusion:SfDataGrid.Resources>
+            <syncfusion:SfDataGrid.Columns>
+              <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name"/>
+              <syncfusion:GridComboBoxColumn x:Name="classList" HeaderText="Class" AllowEditing="True" ShowToolTip="True" IsReadOnly="False" MappingName="PlayerClass" />
+            </syncfusion:SfDataGrid.Columns>
+          </syncfusion:SfDataGrid>
+        </ContentControl>
+        <ContentControl x:Name="verifiedPetsWindow" syncfusion:DockingManager.Header="Verified Pets" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Right" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="270" syncfusion:DockingManager.DesiredWidthInFloatingMode="270" syncfusion:DockingManager.CanDocument="False">
-        <syncfusion:SfDataGrid x:Name="verifiedPetsGrid" 
+          <syncfusion:SfDataGrid x:Name="verifiedPetsGrid" 
                                AllowResizingColumns="False"
                                AutoGenerateColumns="False"
                                ColumnSizer="AutoLastColumnFill"
@@ -529,26 +539,27 @@
                                ShowRowHeader="True"
                                GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                                SelectionMode="Extended">
-          <syncfusion:SfDataGrid.Resources>
-            <Style TargetType="syncfusion:GridRowHeaderCell">
-              <Setter Property="Template">
-                <Setter.Value>
-                  <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
-                    <Border PreviewMouseDown="RemovePetMouseDown" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
-                      <Grid>
-                        <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Times" />
-                      </Grid>
-                    </Border>
-                  </ControlTemplate>
-                </Setter.Value>
-              </Setter>
-            </Style>
-          </syncfusion:SfDataGrid.Resources>
-          <syncfusion:SfDataGrid.Columns>
-            <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name"/>
-          </syncfusion:SfDataGrid.Columns>
-        </syncfusion:SfDataGrid>
-      </ContentControl>
-    </syncfusion:DockingManager>
+            <syncfusion:SfDataGrid.Resources>
+              <Style TargetType="syncfusion:GridRowHeaderCell">
+                <Setter Property="Template">
+                  <Setter.Value>
+                    <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+                      <Border PreviewMouseDown="RemovePetMouseDown" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                        <Grid>
+                          <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Times" />
+                        </Grid>
+                      </Border>
+                    </ControlTemplate>
+                  </Setter.Value>
+                </Setter>
+              </Style>
+            </syncfusion:SfDataGrid.Resources>
+            <syncfusion:SfDataGrid.Columns>
+              <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name"/>
+            </syncfusion:SfDataGrid.Columns>
+          </syncfusion:SfDataGrid>
+        </ContentControl>
+      </syncfusion:DockingManager>
+    </Grid>
   </Grid>
-</syncfusion:ChromelessWindow>
+</Window>

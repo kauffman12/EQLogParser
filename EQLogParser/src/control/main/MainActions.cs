@@ -957,8 +957,14 @@ namespace EQLogParser
       Application.Current.Resources["EQGridFooterHeight"] = new GridLength(10 + CurrentFontSize);
       Application.Current.Resources["EQFightGridTitleHeight"] = new GridLength(21 + CurrentFontSize);
       Application.Current.Resources["EQTriggerCharacterList"] = new GridLength(180 + (CurrentFontSize * 4));
+      Application.Current.Resources["EQGridWindowTitleHeight"] = new GridLength(14 + CurrentFontSize);
+      Application.Current.Resources["EQWindowTitleHeight"] = 14 + CurrentFontSize;
       Application.Current.Resources["EQAlertIconSize"] = CurrentFontSize + 18;
       Application.Current.Resources["EQTitleSize"] = CurrentFontSize + 2;
+      Application.Current.Resources["EQWindowButtonWidth"] = 20 + CurrentFontSize;
+      Application.Current.Resources["EQWindowButtonTextSize1"] = CurrentFontSize - 2;
+      Application.Current.Resources["EQWindowButtonTextSize3"] = CurrentFontSize + 1;
+      Application.Current.Resources["EQWindowButtonTextSize"] = CurrentFontSize + 1;
       Application.Current.Resources["EQContentSize"] = CurrentFontSize;
       Application.Current.Resources["EQDescriptionSize"] = CurrentFontSize - 1;
       Application.Current.Resources["EQSubDescriptionSize"] = CurrentFontSize - 2;
@@ -1033,7 +1039,6 @@ namespace EQLogParser
         LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/SfDataGrid/SfDataGrid.xaml");
         LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/Common/Brushes.xaml");
         LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/DockingManager/DockingManager.xaml");
-        main.BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
 
         if (!string.IsNullOrEmpty(main.statusText?.Text))
         {
@@ -1053,7 +1058,6 @@ namespace EQLogParser
         LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfDataGrid/SfDataGrid.xaml");
         LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/Brushes.xaml");
         LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/DockingManager/DockingManager.xaml");
-        main.BorderBrush = Application.Current.Resources["ContentBackgroundAlt2"] as SolidColorBrush;
 
         if (!string.IsNullOrEmpty(main.statusText?.Text))
         {
