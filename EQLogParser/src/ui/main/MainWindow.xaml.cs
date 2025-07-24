@@ -51,6 +51,8 @@ namespace EQLogParser
     private readonly List<string> _recentFiles = [];
     private readonly string _activeWindow;
     private readonly System.Windows.Forms.NotifyIcon _notifyIcon;
+    private readonly SolidColorBrush _hoverBrush;
+    private readonly SolidColorBrush _redHoverBrush;
     private bool _isDamageOverlayOpen;
     private bool _resetWindowState;
     private bool _isLoading;
@@ -64,6 +66,11 @@ namespace EQLogParser
 
       // update titles
       versionText.Text = "v" + App.Version;
+
+      _hoverBrush = new SolidColorBrush(Color.FromRgb(80, 80, 80));
+      _hoverBrush.Freeze();
+      _redHoverBrush = new SolidColorBrush(Color.FromRgb(232, 17, 35));
+      _redHoverBrush.Freeze();
 
       // AoE healing
       IsAoEHealingEnabled = ConfigUtil.IfSetOrElse("IncludeAoEHealing", IsAoEHealingEnabled);
@@ -354,6 +361,8 @@ namespace EQLogParser
       }
     }
 
+    private void CloseButtonUp(object sender, MouseButtonEventArgs e) => Close();
+    private void MinimizeButtonUp(object sender, MouseButtonEventArgs e) => WindowState = WindowState.Minimized;
     private void ConfigureOverlayClick(object sender, RoutedEventArgs e) => CloseDamageOverlay(true);
     private void MainWindowSizeChanged(object sender, EventArgs e) => SaveWindowSize();
     private void RestoreTableColumnsClick(object sender, RoutedEventArgs e) => DataGridUtil.RestoreAllTableColumns();
@@ -533,6 +542,44 @@ namespace EQLogParser
           tankingStatsOptions.DamageType = ((TankingSummary)control.Content).DamageType;
         }
         Task.Run(() => TankingStatsManager.Instance.BuildTotalStats(tankingStatsOptions));
+      }
+    }
+
+    private void RestoreButtonUp(object sender, MouseButtonEventArgs e)
+    {
+      if (WindowState == WindowState.Maximized)
+      {
+        WindowState = WindowState.Normal;
+        maxRestoreText.Text = "\uE922";
+      }
+      else
+      {
+        WindowState = WindowState.Maximized;
+        maxRestoreText.Text = "\uE923";
+      }
+    }
+
+    private void ButtonBorderMouseEnterRed(object sender, MouseEventArgs e)
+    {
+      if (sender is Border { } border)
+      {
+        border.Background = _redHoverBrush;
+      }
+    }
+
+    private void ButtonBorderMouseEnter(object sender, MouseEventArgs e)
+    {
+      if (sender is Border { } border)
+      {
+        border.Background = _hoverBrush;
+      }
+    }
+
+    private void ButtonBorderMouseLeave(object sender, MouseEventArgs e)
+    {
+      if (sender is Border { } border)
+      {
+        border.Background = Brushes.Transparent;
       }
     }
 
@@ -1054,6 +1101,9 @@ namespace EQLogParser
         Topmost = true;
         Topmost = false;
       }
+
+      BorderThickness = WindowState == WindowState.Maximized ? new Thickness(10) : new Thickness(2);
+      maxRestoreText.Text = WindowState == WindowState.Maximized ? "\uE923" : "\uE922"; ;
 
       if (WindowState != WindowState.Minimized)
       {

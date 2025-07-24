@@ -53,8 +53,6 @@ namespace EQLogParser
         {
           _isClosed = true;
           ConfigUtil.EventsLoadingText -= ConfigUtilEventsLoadingText;
-          MainActions.GetOwner().IsEnabled = true;
-
           CreateText("Ready");
           await Task.Delay(500);
           await Dispatcher.InvokeAsync(Close, DispatcherPriority.Background);
