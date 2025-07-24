@@ -14,9 +14,6 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for ChatViewer.xaml
-  /// </summary>
   public partial class ChatViewer : IDocumentContent
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -67,17 +64,17 @@ namespace EQLogParser
 
       UpdateCurrentTextColor();
       _filterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
-      _filterTimer.Tick += (_, _) =>
+      _filterTimer.Tick += async (_, _) =>
       {
         _filterTimer.Stop();
-        ChangeSearch();
+        await ChangeSearchAsync();
       };
 
       MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
     private void EventsThemeChanged(string _) => UpdateCurrentTextColor();
-    private void RefreshClick(object sender, RoutedEventArgs e) => ChangeSearch(true);
+    private async void RefreshClick(object sender, RoutedEventArgs e) => await ChangeSearchAsync(true);
     private void ChatManagerEventsUpdatePlayer(string player) => LoadPlayers(player);
     private void ToFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(toFilter, Resource.CHAT_TO_FILTER);
     private void FromFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(fromFilter, Resource.CHAT_FROM_FILTER);
@@ -88,7 +85,7 @@ namespace EQLogParser
     private void ToFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(toFilter, Resource.CHAT_TO_FILTER);
     private void FromFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(fromFilter, Resource.CHAT_FROM_FILTER);
     private void TextFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(textFilter, Resource.CHAT_TEXT_FILTER);
-    private void SelectedDatesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ChangeSearch();
+    private async void SelectedDatesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => await ChangeSearchAsync();
     private long GetEndDate() => (endDate.DateTime != null) ? endDate.DateTime.Value.Ticks / TimeSpan.TicksPerSecond : 0;
     private long GetStartDate() => (startDate.DateTime != null) ? startDate.DateTime.Value.Ticks / TimeSpan.TicksPerSecond : 0;
 
@@ -118,9 +115,23 @@ namespace EQLogParser
         }, DispatcherPriority.DataBind);
     }
 
-    private void DisplayPage(int count)
+    private async Task DisplayPageAsync(int count)
     {
-      var chatList = _currentIterator.Take(count).Select(chat => chat.Text).ToList();
+      var taken = 0;
+      List<string> chatList = [];
+      await foreach (var chat in _currentIterator)
+      {
+        if (!string.IsNullOrEmpty(chat?.Text))
+        {
+          chatList.Add(chat.Text);
+
+          if (taken++ == count)
+          {
+            break;
+          }
+        }
+      }
+
       chatList.Reverse();
 
       if (chatList.Count > 0)
@@ -215,7 +226,7 @@ namespace EQLogParser
       return selected;
     }
 
-    private void ChangeSearch(bool force = false)
+    private async Task ChangeSearchAsync(bool force = false)
     {
       try
       {
@@ -247,7 +258,7 @@ namespace EQLogParser
 
             chatBox.Text = "";
             _lastFocused = Keyboard.FocusedElement;
-            DisplayPage(PageSize);
+            await DisplayPageAsync(PageSize);
           }
         }
       }
@@ -257,7 +268,7 @@ namespace EQLogParser
       }
     }
 
-    private void ChatScrollChanged(object sender, ScrollChangedEventArgs e)
+    private async void ChatScrollChanged(object sender, ScrollChangedEventArgs e)
     {
       if (e.OriginalSource is ScrollViewer viewer)
       {
@@ -265,7 +276,7 @@ namespace EQLogParser
         {
           if (_ready)
           {
-            DisplayPage(PageSize);
+            await DisplayPageAsync(PageSize);
           }
         }
         else if (e.VerticalChange == 0 && chatBox?.Text != null && chatBox.Lines.Count > PageSize && e.VerticalOffset < 800)
@@ -389,7 +400,7 @@ namespace EQLogParser
       }
     }
 
-    private void ChannelsDropDownClosed(object sender, EventArgs e)
+    private async void ChannelsDropDownClosed(object sender, EventArgs e)
     {
       if (channels?.Items.Count > 0)
       {
@@ -407,7 +418,7 @@ namespace EQLogParser
 
       if (_ready)
       {
-        ChangeSearch();
+        await ChangeSearchAsync();
       }
     }
 
@@ -417,7 +428,7 @@ namespace EQLogParser
       {
         chatBox.Foreground = new SolidColorBrush(colorPicker.Color);
         var colorSetting = "ChatFontFgColor" + MainActions.CurrentTheme;
-        ConfigUtil.SetSetting(colorSetting, colorPicker.Color.ToString());
+        ConfigUtil.SetSetting(colorSetting, colorPicker.Color.ToString(null));
       }
     }
 
@@ -496,7 +507,7 @@ namespace EQLogParser
       }
     }
 
-    private void PlayerChanged(object sender, SelectionChangedEventArgs e)
+    private async void PlayerChanged(object sender, SelectionChangedEventArgs e)
     {
       if (players.SelectedItem is string { Length: > 0 } name && !name.StartsWith("No ", StringComparison.Ordinal))
       {
@@ -506,19 +517,19 @@ namespace EQLogParser
 
         if (_ready)
         {
-          ChangeSearch();
+          await ChangeSearchAsync();
         }
       }
     }
 
-    private void ChatViewerLoaded(object sender, RoutedEventArgs e)
+    private async void ChatViewerLoaded(object sender, RoutedEventArgs e)
     {
       if (VisualParent != null && !_ready)
       {
         ChatManager.Instance.EventsUpdatePlayer += ChatManagerEventsUpdatePlayer;
         ChatManager.Instance.EventsNewChannels += ChatManagerEventsNewChannels;
         LoadPlayers();
-        ChangeSearch();
+        await ChangeSearchAsync();
         _ready = true;
       }
     }

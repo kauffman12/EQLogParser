@@ -17,6 +17,7 @@
         SizeChanged="MainWindowSizeChanged"
         UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Display"
+        FontSize="{DynamicResource EQContentSize}"
         Loaded="MainWindowOnLoaded"
         WindowStartupLocation="Manual"
         WindowStyle="None"
@@ -276,14 +277,20 @@
               <fa:ImageAwesome x:Name="hardwareAccelIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="exportFormattedCsv" Header="Export CSV with Formatted Values" Click="ToggleExportFormattedCsvClick">
-            <MenuItem.Icon>
-              <fa:ImageAwesome x:Name="exportFormattedCsvIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
-            </MenuItem.Icon>
-          </MenuItem>
           <MenuItem x:Name="enableMapSendtoEQ" Header="Send To _EQ With Ctrl+C" Click="ToggleMapSendToEqClick">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="enableMapSendToEQIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
+          <MenuItem x:Name="enableChatArchive" Header="Enable Chat Archive" Click="ToggleChatArchiveClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="enableChatArchiveIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="exportFormattedCsv" Header="Export CSV with Formatted Values" Click="ToggleExportFormattedCsvClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="exportFormattedCsvIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
           <MenuItem x:Name="emuParsing" Header="Use EMU Server _Parsing" Click="ToggleEmuParsingClick">
@@ -452,12 +459,12 @@
           <TextBlock x:Name="maxRestoreText" Text="&#xE922;" FontSize="{DynamicResource EQWindowButtonTextSize1}" FontFamily="Segoe MDL2 Assets" Margin="0,0,0,2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
         <Border Width="{DynamicResource EQWindowButtonWidth}" Height="{DynamicResource EQWindowTitleHeight}" Margin="0" WindowChrome.IsHitTestVisibleInChrome="True" Background="Transparent" CornerRadius="3" Cursor="Hand" MouseLeftButtonUp="CloseButtonUp" MouseEnter="ButtonBorderMouseEnterRed" MouseLeave="ButtonBorderMouseLeave">
-          <TextBlock Text="&#xE711;" FontSize="{DynamicResource EQWindowButtonTextSize3}" FontFamily="Segoe MDL2 Assets" Margin="0,0,0,2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          <TextBlock Text="&#xE711;" FontSize="{DynamicResource EQWindowButtonTextSize3}" FontFamily="Segoe MDL2 Assets" Margin="0,0,1,2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
       </StackPanel>
     </DockPanel>
-    <Grid Grid.Row="1" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0">
-      <syncfusion:DockingManager x:Name="dockSite" Margin="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" UseDocumentContainer="True" DocumentCloseButtonType="Individual" CloseButtonClick="DockSiteCloseButtonClick"
+    <Grid Grid.Row="1">
+      <syncfusion:DockingManager x:Name="dockSite" Margin="0" UseDocumentContainer="True" DocumentCloseButtonType="Individual" CloseButtonClick="DockSiteCloseButtonClick"
                               EnableDocumentTabHeaderEdit="True" UseNativeFloatWindow="False" WindowClosing="DockSiteWindowClosing" CloseTabOnMiddleClick="True" PersistState="False">
         <ContentControl x:Name="playerParseTextWindow" syncfusion:DockingManager.Header="Preview Parse" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
                       syncfusion:DockingManager.DesiredHeightInDockedMode="{DynamicResource EQParseWindowHeight}" syncfusion:DockingManager.CanDocument="False" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="{DynamicResource EQParseWindowHeight}">

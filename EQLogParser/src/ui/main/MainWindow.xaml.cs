@@ -117,6 +117,9 @@ namespace EQLogParser
       IsMapSendToEqEnabled = ConfigUtil.IfSet("MapSendToEQAsCtrlC");
       enableMapSendToEQIcon.Visibility = IsMapSendToEqEnabled ? Visibility.Visible : Visibility.Hidden;
 
+      // Chat Archive on/off
+      enableChatArchiveIcon.Visibility = ConfigUtil.IfSetOrElse("ChatArchiveEnabled", true) ? Visibility.Visible : Visibility.Hidden;
+
       // Export Formatted CSV (numbers with commas, etc)
       exportFormattedCsvIcon.Visibility = ConfigUtil.IfSetOrElse("ExportFormattedCsv", true) ? Visibility.Visible : Visibility.Hidden;
 
@@ -178,10 +181,6 @@ namespace EQLogParser
       // listen for done event
       ConfigUtil.EventsLoadingText += ConfigUtilEventsLoadingText;
 
-      // update theme
-      ConfigUtil.UpdateStatus("Initialize Themes");
-      MainActions.InitThemes(this);
-
       // create menu items for deleting chat
       Dispatcher.InvokeAsync(UpdateDeleteChatMenu, DispatcherPriority.DataBind);
 
@@ -191,6 +190,10 @@ namespace EQLogParser
 
       // general events
       SystemEvents.PowerModeChanged += SystemEventsPowerModeChanged;
+
+      // init theme before loading docs
+      ConfigUtil.UpdateStatus("Initialize Themes");
+      MainActions.InitThemes(this);
 
       // save active window before adding
       _activeWindow = ConfigUtil.GetSetting("ActiveWindow");
@@ -213,6 +216,10 @@ namespace EQLogParser
         // OpenLogFile with update status
         OpenLogFile(previousFile, 0);
       }
+
+      // workaround to set initial theme properly
+      ConfigUtil.UpdateStatus("Setting " + MainActions.CurrentTheme);
+      MainActions.SetTheme();
     }
 
     private async void MainWindowOnLoaded(object sender, RoutedEventArgs args)
@@ -376,8 +383,8 @@ namespace EQLogParser
     private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
     private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
     private void WindowClose(object sender, EventArgs e) => Close();
-    private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e) => MainActions.ChangeTheme("MaterialDark");
-    private void ToggleMaterialLightClick(object sender, RoutedEventArgs e) => MainActions.ChangeTheme("MaterialLight");
+    private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e) => MainActions.SetTheme("MaterialDark");
+    private void ToggleMaterialLightClick(object sender, RoutedEventArgs e) => MainActions.SetTheme("MaterialLight");
     private void ToggleStartMinimizedClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("StartWithWindowMinimized", enableStartMinimizedIcon);
     private void ToggleHideSplashScreenClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("HideSplashScreen", enableHideSplashScreenIcon);
     private void ToggleAutoMonitorClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("AutoMonitor", enableAutoMonitorIcon);
@@ -440,6 +447,19 @@ namespace EQLogParser
             OpenDamageOverlayIfEnabled(false, false);
           }
         });
+      }
+    }
+
+    private void ToggleChatArchiveClick(object sender, RoutedEventArgs e)
+    {
+      var enabled = MainActions.ToggleSetting("ChatArchiveEnabled", enableChatArchiveIcon);
+      if (enabled)
+      {
+        ChatManager.Instance.Init();
+      }
+      else
+      {
+        ChatManager.Instance.Stop();
       }
     }
 

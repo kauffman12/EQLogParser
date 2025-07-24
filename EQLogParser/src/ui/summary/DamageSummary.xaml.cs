@@ -204,13 +204,13 @@ namespace EQLogParser
       }
     }
 
-    private void DataGridDamageLogClick(object sender, RoutedEventArgs e)
+    private async void DataGridDamageLogClick(object sender, RoutedEventArgs e)
     {
       if (dataGrid.SelectedItems?.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(out var log, typeof(HitLogViewer), "damageLogWindow", "DPS Log"))
+        if (SyncFusionUtil.OpenWindow(out var log, typeof(HitLogViewer), "damageLogWindow", "DPS Log") && log.Content is HitLogViewer { } viewer)
         {
-          (log.Content as HitLogViewer)?.Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
+          await viewer.InitAsync(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().First(), CurrentGroups);
         }
       }
     }
@@ -243,7 +243,7 @@ namespace EQLogParser
       {
         if (SyncFusionUtil.OpenWindow(out var timeline, typeof(Timeline), "adpsTimeline", "ADPS Timeline"))
         {
-          ((Timeline)timeline.Content).Init(CurrentStats, dataGrid.SelectedItems.Cast<PlayerStats>().ToList(), CurrentGroups, 1);
+          ((Timeline)timeline.Content).Init(CurrentStats, [.. dataGrid.SelectedItems.Cast<PlayerStats>()], CurrentGroups, 1);
         }
       }
     }

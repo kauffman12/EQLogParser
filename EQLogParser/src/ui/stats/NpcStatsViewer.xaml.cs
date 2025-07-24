@@ -190,7 +190,7 @@ namespace EQLogParser
       {
         e.Column.Width = MainActions.CurrentNpcWidth;
       }
-      else if (!e.Column.MappingName.EndsWith("Text"))
+      else if (e.Column.MappingName?.EndsWith("Text", StringComparison.OrdinalIgnoreCase) != true)
       {
         e.Cancel = true;
       }
@@ -200,7 +200,7 @@ namespace EQLogParser
         {
           e.Column.HeaderText = "Reflected %";
         }
-        else
+        else if (e.Column.MappingName?.Length >= 4)
         {
           e.Column.HeaderText = e.Column.MappingName[..^4] + " Resist %";
         }
