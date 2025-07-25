@@ -50,18 +50,17 @@ def build_toc(toc_title: str, toc_items: str) -> str:
 <ul>{toc_items}</ul>
 </nav>"""
 
-def build_nav_header(version: str) -> str:
+def build_nav_header() -> str:
     return f"""<nav class="topbar">
 <div class="nav-container">
 <ul class="nav-links">
-  <li><a href="index.html">EQLogParser v{version}</a></li>
-</ul>
-<ul class="nav-links">
-  <li><a href="releasenotes.html">Release Notes</a></li>
+  <li><a href="index.html">Home</a></li>
   <li><a href="documentation.html">Docs</a></li>
+  <li><a href="releasenotes.html">Release Notes</a></li>
+  <li><a href="policy.html">Privacy</a></li>
+  <li>|</li>
   <li><a target="_blank" href="https://github.com/kauffman12/EQLogParser/discussions">Discussion</a></li>
   <li><a target="_blank" href="https://github.com/kauffman12/EQLogParser/issues">Issues</a></li>
-  <li><a href="policy.html">Privacy</a></li>
 </ul>
 </div>
 </nav>"""
@@ -116,12 +115,15 @@ def patch_rtf_in_place(file_path: Path):
     file_path.write_text('\n'.join(modified), encoding='cp1252')
     print(f"✅ RTF patched: {file_path.resolve()}")
 
-def update_index_html(index_path: Path, output_path: Path, header_html: str, url: str):
+def update_index_html(index_path: Path, output_path: Path, header_html: str, version: str, url: str):
     soup = BeautifulSoup(index_path.read_text(encoding='utf-8'), 'html.parser')
     nav_bar = soup.find('nav', id='nav-bar')
     if nav_bar:
         nav_bar.clear()
         nav_bar.append(BeautifulSoup(header_html, 'html.parser'))
+    version_text = soup.find('span', id='version-text')
+    if version_text:
+        version_text.string = 'v' + version
     download_link = soup.find('a', id='download-link')
     if download_link:
         download_link['href'] = url
@@ -130,7 +132,7 @@ def update_index_html(index_path: Path, output_path: Path, header_html: str, url
 
 def main():
     version = get_version_from_inno(INNO_FILE)
-    header_html = build_nav_header(version)
+    header_html = build_nav_header()
     url = f'https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-install-{version}.exe'
 
     DIST_DIR.mkdir(exist_ok=True)
@@ -139,7 +141,7 @@ def main():
     process_markdown_to_html(Path('documentation.md'), DIST_DIR / 'documentation.html', 'Documentation', 'Contents', header_html, decorate_h2=True)
     process_markdown_to_html(Path('policy.md'), DIST_DIR / 'policy.html', 'Privacy Policy', 'Contents', header_html)
 
-    update_index_html(Path('index.tmpl'), DIST_DIR / 'index.html', header_html, url)
+    update_index_html(Path('index.tmpl'), DIST_DIR / 'index.html', header_html, version, url)
 
     convert_md_to_rtf(Path('releasenotes.md'), RTF_OUT)
     patch_rtf_in_place(RTF_OUT)

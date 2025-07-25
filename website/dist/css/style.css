@@ -34,10 +34,14 @@ code {
   text-align: center;
 }
 
+.center-section h3 {
+  margin: 0
+}
+
 .container {
   max-width: 1100px;
   margin: 2rem auto;
-  padding-top: 2rem;
+  padding-top: 1.6rem;
 }
 
 .docs-container {
@@ -63,7 +67,7 @@ code {
   justify-content: space-between;
   align-items: center;
   max-width: 100%;
-  padding: 2rem 0;
+  padding: 1.2rem 0;
   gap: 1rem;
 }
 
@@ -73,6 +77,14 @@ code {
   padding: 0rem;
 }
 
+.info-section h2 {
+  margin: 0.2em 0 0 0
+}
+
+.info-section ul, p {
+  margin: 0.5rem 0 0 0
+}
+
 .logo {
   border: 2px solid black;
 }
@@ -80,7 +92,7 @@ code {
 .nav-container {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: right;
   margin: 0.15em 2rem 0 1rem;
 }
 
