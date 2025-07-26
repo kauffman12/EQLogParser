@@ -289,6 +289,12 @@ namespace EQLogParser
       }
     }
 
+    internal void UpdateWindowBorder()
+    {
+      BorderThickness = WindowState == WindowState.Maximized ? new Thickness(8) : new Thickness(2);
+      maxRestoreText.Text = WindowState == WindowState.Maximized ? "\uE923" : "\uE922"; ;
+    }
+
     internal List<Fight> GetFights(bool selected = false)
     {
       if (npcWindow?.Content is FightTable table)
@@ -1107,14 +1113,12 @@ namespace EQLogParser
         Topmost = false;
       }
 
-      BorderThickness = WindowState == WindowState.Maximized ? new Thickness(8) : new Thickness(2);
-      maxRestoreText.Text = WindowState == WindowState.Maximized ? "\uE923" : "\uE922"; ;
-
       if (WindowState != WindowState.Minimized)
       {
         App.LastWindowState = WindowState;
       }
 
+      UpdateWindowBorder();
       MainActions.FireWindowStateChanged(WindowState);
     }
 
