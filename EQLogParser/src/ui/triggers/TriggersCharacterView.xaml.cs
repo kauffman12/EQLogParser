@@ -44,29 +44,32 @@ namespace EQLogParser
     internal TriggerCharacter GetSelectedCharacter() => dataGrid?.SelectedItem as TriggerCharacter;
     private void StatusTimerTick(object sender, EventArgs e) => UpdateStatus();
 
-    private void EventsWindowStateChanged(WindowState newState)
+    private async void EventsWindowStateChanged(WindowState newState)
     {
-      if (newState == WindowState.Minimized)
+      await Dispatcher.InvokeAsync(() =>
       {
-        _statusTimer?.Stop();
+        if (newState == WindowState.Minimized)
+        {
+          _statusTimer?.Stop();
 
-        if (dataGrid != null)
-        {
-          dataGrid.Visibility = Visibility.Collapsed;
+          if (dataGrid != null)
+          {
+            dataGrid.Visibility = Visibility.Collapsed;
+          }
         }
-      }
-      else
-      {
-        if (dataGrid != null)
+        else
         {
-          dataGrid.Visibility = Visibility.Visible;
-        }
+          if (dataGrid != null)
+          {
+            dataGrid.Visibility = Visibility.Visible;
+          }
 
-        if (_lastConfig?.IsAdvanced == true && !_statusTimer.IsEnabled)
-        {
-          _statusTimer.Start();
+          if (_lastConfig?.IsAdvanced == true && !_statusTimer.IsEnabled)
+          {
+            _statusTimer.Start();
+          }
         }
-      }
+      });
     }
 
     private async void UpdateStatus()
