@@ -1,6 +1,14 @@
-# 2.3.11
+# 2.3.12
 
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
+
+1. Improved caching of audio files when played by triggers.
+2. **Performance** updates for log search.
+3. Updated log search to allow searching of configured characters from Trigger Manager if advanced mode is enabled.
+4. Log search also now attempts to use **Regex** automatically based on what you type into the search box.
+5. Updated installer to cleanup unused old files and to reference the most recent version of .Net 8.
+
+# 2.3.11
 
 1. Additional **Performance** improvements to lower overall CPU usage when changing tabs and moving around the parser windows.
 2. Added **Enable Chat Archive** to the Options menu. Uncheck this if you really don't want to use the archived chat feature.

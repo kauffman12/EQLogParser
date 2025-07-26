@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "EQLogParser"
-#define MyAppVersion "2.3.11"
+#define MyAppVersion "2.3.12"
 #define MyAppPublisher "Kizant"
 #define MyAppURL "https://github.com/kauffman12/EQLogParser"
 #define MyAppExeName "EQLogParser.exe"
@@ -62,6 +62,17 @@ Source: "{#MyReleaseDir}\log4net.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Microsoft.WindowsAPICodePack.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Microsoft.WindowsAPICodePack.Shell.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Microsoft.Windows.SDK.NET.dll"; DestDir: "{app}"; Flags: ignoreversion
+
+; .NET Memory Caching and Dependency Injection
+Source: "{#MyReleaseDir}\Microsoft.Extensions.Caching.Abstractions.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\Microsoft.Extensions.Caching.Memory.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\Microsoft.Extensions.DependencyInjection.Abstractions.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\Microsoft.Extensions.Logging.Abstractions.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\Microsoft.Extensions.ObjectPool.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\Microsoft.Extensions.Options.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\Microsoft.Extensions.Primitives.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\System.Diagnostics.DiagnosticSource.dll"; DestDir: "{app}"; Flags: ignoreversion
+
 Source: "{#MyReleaseDir}\NAudio.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\NAudio.Core.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\NAudio.Wasapi.dll"; DestDir: "{app}"; Flags: ignoreversion
@@ -82,7 +93,6 @@ Source: "{#MyReleaseDir}\Syncfusion.SfGrid.WPF.dll"; DestDir: "{app}"; Flags: ig
 Source: "{#MyReleaseDir}\Syncfusion.SfGridCommon.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.SfInput.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.SfProgressBar.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyReleaseDir}\Syncfusion.SfRichTextBoxAdv.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.SfSkinManager.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.SfTreeView.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.Shared.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
@@ -109,6 +119,7 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [InstallDelete]
+Type: files; Name: "{app}\Syncfusion.SfRichTextBoxAdv.WPF.dll"
 Type: files; Name: "{app}\data\releasenotes.pdf"
 Type: files; Name: "{app}\data\triggerVariables.pdf"
 Type: files; Name: "{app}\data\triggerVariables.rtf"
@@ -150,7 +161,7 @@ procedure LabelLinkClick(Sender: TObject);
 var
   ErrorCode: Integer;
 begin
-  ShellExec('open', 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.11-windows-x64-installer', '', '', SW_SHOW, ewNoWait, ErrorCode);
+  ShellExec('open', 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.18-windows-x64-installer', '', '', SW_SHOW, ewNoWait, ErrorCode);
 end;
 
 function ShowDotNetDownloadPage: Boolean;
@@ -182,7 +193,7 @@ begin
   // Create a clickable label for the link
   LabelLink := TMemo.Create(Form);
   LabelLink.Parent := Form;
-  LabelLink.Text := 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.11-windows-x64-installer';
+  LabelLink.Text := 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.18-windows-x64-installer';
   LabelLink.Font.Style := [fsUnderline];
   LabelLink.Font.Color := clBlue;
   LabelLink.Font.Size := 8;

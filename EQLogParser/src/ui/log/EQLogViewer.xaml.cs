@@ -483,8 +483,8 @@ namespace EQLogParser
 
         if (!string.IsNullOrEmpty(_currentFile) && File.Exists(_currentFile))
         {
-          await Task.Delay(50);
           var theFile = _currentFile;
+          await Task.Delay(50);
 
           await Task.Run(async () =>
           {

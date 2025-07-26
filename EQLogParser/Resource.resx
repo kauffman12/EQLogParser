@@ -208,7 +208,7 @@
     <value>Results Filter</value>
   </data>
   <data name="LOG_SEARCH_TEXT" xml:space="preserve">
-    <value>Search Term</value>
+    <value>Search Term or Regex</value>
   </data>
   <data name="MAG" xml:space="preserve">
     <value>Magician</value>

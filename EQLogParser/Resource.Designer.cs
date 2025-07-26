@@ -340,7 +340,7 @@ namespace EQLogParser {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Search Term.
+        ///   Looks up a localized string similar to Search Term or Regex.
         /// </summary>
         internal static string LOG_SEARCH_TEXT {
             get {
