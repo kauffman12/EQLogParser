@@ -491,7 +491,7 @@ namespace EQLogParser
         {
           LoadSounds(fileList);
           watcher = new FileSystemWatcher("data/sounds");
-          watcher.Created += (_, _) => OnWatcherUpdated(fileList);
+          watcher.Created += (_, _) => OnWatcherUpdated(fileList, true);
           watcher.Deleted += (_, _) => OnWatcherUpdated(fileList);
           watcher.Changed += (_, _) => OnWatcherUpdated(fileList);
           watcher.EnableRaisingEvents = true;
@@ -504,8 +504,20 @@ namespace EQLogParser
 
       return watcher;
 
-      static void OnWatcherUpdated(ObservableCollection<string> soundFiles)
+      static void OnWatcherUpdated(ObservableCollection<string> soundFiles, bool create = false)
       {
+        if (!create)
+        {
+          // clear cache for audio files
+          foreach (var key in App.AppCache.Keys)
+          {
+            if (key is string { Length: > 0 } skey && skey.StartsWith(AudioManager.AudioCacheKey, StringComparison.OrdinalIgnoreCase))
+            {
+              App.AppCache.Remove(key);
+            }
+          }
+        }
+
         LoadSounds(soundFiles);
       }
     }

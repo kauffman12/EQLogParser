@@ -1,4 +1,5 @@
 ﻿using log4net;
+using Microsoft.Extensions.Caching.Memory;
 using NAudio.CoreAudioApi;
 using NAudio.CoreAudioApi.Interfaces;
 using NAudio.Wave;
@@ -19,12 +20,14 @@ namespace EQLogParser
 {
   internal partial class AudioManager : IDisposable
   {
+    public const string AudioCacheKey = "audio-cache:";
     internal event Action<bool> DeviceListChanged;
+    internal static AudioManager Instance => Lazy.Value;
+
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<AudioManager> Lazy = new(() => new AudioManager());
-    internal static AudioManager Instance => Lazy.Value;
     private const int LATENCY = 72;
-    private readonly ConcurrentDictionary<string, PlayerAudio> _playerAudios = new();
+    private readonly ConcurrentDictionary<string, PlayerAudio> _playerAudios = [];
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly AudioDeviceNotificationClient _notificationClient = new();
     private readonly DispatcherTimer _updateTimer;
@@ -200,7 +203,7 @@ namespace EQLogParser
 
     internal async void TestSpeakFileAsync(string filePath, int adjustedVolume = 4)
     {
-      var reader = new AudioFileReader(filePath);
+      await using var reader = new AudioFileReader(filePath);
       if (!string.IsNullOrEmpty(filePath) && await ReadFileToByteArrayAsync(reader) is { Length: > 0 } data)
       {
         if (!PlayAudioData(data, reader.WaveFormat, GetDevice(), _appVolume, 0, adjustedVolume))
@@ -330,7 +333,7 @@ namespace EQLogParser
             catch (Exception ex)
             {
               Log.Error("Error Exporting WAV", ex);
-              new MessageWindow("Failed to Export WAV file. Check the Error Log for Details.", Resource.EXPORT_ERROR).ShowDialog();
+              new MessageWindow("Failed to Export wav file. Check the Error Log for Details.", Resource.EXPORT_ERROR).ShowDialog();
             }
             finally
             {
@@ -347,15 +350,33 @@ namespace EQLogParser
       {
         try
         {
-          var reader = new AudioFileReader(filePath);
-          if (await ReadFileToByteArrayAsync(reader) is { Length: > 0 } data)
+          var cacheKey = $"{AudioCacheKey}{Path.GetFullPath(filePath).ToLowerInvariant()}";
+          var cachedAudio = await App.AppCache.GetOrCreateAsync(cacheKey, async entry =>
           {
-            SpeakAsync(id, data, reader.WaveFormat, 0, customVolume, trigger.Priority, trigger.Volume, reader.TotalTime.TotalSeconds);
+            await using var reader = new AudioFileReader(filePath);
+            if (await ReadFileToByteArrayAsync(reader) is { Length: > 0 } data)
+            {
+              entry.SetSlidingExpiration(TimeSpan.FromMinutes(60));
+              entry.SetSize(data.Length);
+              return new CachedAudio
+              {
+                Data = data,
+                Seconds = reader.TotalTime.TotalSeconds,
+                WaveFormat = reader.WaveFormat
+              };
+            }
+            entry.AbsoluteExpiration = DateTimeOffset.MinValue;
+            return null;
+          });
+
+          if (cachedAudio != null)
+          {
+            SpeakAsync(id, cachedAudio.Data, cachedAudio.WaveFormat, 0, customVolume, trigger.Priority, trigger.Volume, cachedAudio.Seconds);
           }
         }
         catch (Exception ex)
         {
-          Log.Debug($"Error while playing wav file: {filePath}", ex);
+          Log.Debug($"Error while playing file: {filePath}", ex);
         }
       }
     }
@@ -994,6 +1015,13 @@ namespace EQLogParser
       }
 
       _disposed = true;
+    }
+
+    private class CachedAudio
+    {
+      internal byte[] Data { get; init; }
+      internal WaveFormat WaveFormat { get; init; }
+      internal double Seconds { get; init; }
     }
 
     private class PlayerAudio
