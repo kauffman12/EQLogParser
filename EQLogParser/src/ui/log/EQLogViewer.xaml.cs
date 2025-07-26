@@ -27,10 +27,12 @@ namespace EQLogParser
     private const string Nocat = "Uncategorized";
     private const string Otherchat = "Other Chat";
     private static readonly List<double> FontSizeList = [10, 12, 14, 16, 18, 20, 22, 24];
+    private static readonly List<string> Places = [
+      "Monitored Log", "Selected Fights"
+    ];
     private static readonly List<string> Times =
     [
-      "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 2 Days", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Selected Fights",
-      "Everything"
+      "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 2 Days", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Any Time"
     ];
     private static bool _complete = true;
     private static bool _running;
@@ -40,15 +42,17 @@ namespace EQLogParser
     private readonly Dictionary<long, long> _linePositions = [];
     private readonly int _lineTypeCount;
     private readonly bool _ready;
+    private TriggerConfig _config;
     private string _currentFile;
 
     public EqLogViewer()
     {
       InitializeComponent();
       _filterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1500) };
-      MainActions.EventsThemeChanged += EventsThemeChanged;
 
       logSearchTime.ItemsSource = Times;
+
+      TriggerStateManager.Instance.GetConfig().ContinueWith(task => LoadPlaces(task.Result));
 
       var allFonts = UiElementUtil.GetSystemFontFamilies();
       fontFamily.ItemsSource = allFonts;
@@ -103,11 +107,41 @@ namespace EQLogParser
         UpdateUi();
       };
 
+      MainActions.EventsThemeChanged += EventsThemeChanged;
+      TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+
       _ready = true;
     }
 
     private void EventsThemeChanged(string _) => UpdateCurrentTextColor();
+    private void TriggerConfigUpdateEvent(TriggerConfig config) => LoadPlaces(config);
     private void SelectLineTypes(object sender, EventArgs e) => UpdateUi();
+
+    private void LoadPlaces(TriggerConfig config)
+    {
+      _config = config;
+
+      Dispatcher.InvokeAsync(() =>
+      {
+        List<string> placeList;
+        var lastIndex = logSearchPlace.SelectedIndex;
+        if (config.IsAdvanced && config.Characters?.Count > 0)
+        {
+          placeList = [.. Places, .. config.Characters.Select(character => character.Name).OrderBy(name => name)];
+        }
+        else
+        {
+          placeList = Places;
+        }
+
+        logSearchPlace.ItemsSource = placeList;
+
+        if (lastIndex >= placeList.Count)
+        {
+          logSearchPlace.SelectedIndex = 0;
+        }
+      });
+    }
 
     private void UpdateCurrentTextColor()
     {
@@ -116,7 +150,7 @@ namespace EQLogParser
       try
       {
         var colorSetting = "EQLogViewerFontFgColor" + MainActions.CurrentTheme;
-        var fgColor = ConfigUtil.GetSetting(colorSetting, defaultColor.ToString());
+        var fgColor = ConfigUtil.GetSetting(colorSetting, defaultColor.ToString(null));
         colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor)!;
       }
       catch (FormatException)
@@ -242,108 +276,107 @@ namespace EQLogParser
       }
     }
 
-    private void LoadContext(long pos, string text)
+    private async Task LoadContextAsync(string theFile, long pos, string text)
     {
-      Task.Delay(50).ContinueWith(_ =>
+      await Task.Delay(100);
+
+      try
       {
-        try
+        var list = new List<string>();
+        var foundLines = new List<int>();
+        using var f = File.OpenRead(theFile);
+        var isGzip = f.Name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase);
+
+        if (!isGzip)
         {
-          var list = new List<string>();
-          var foundLines = new List<int>();
-          using var f = File.OpenRead(_currentFile);
-          var isGzip = f.Name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase);
+          f.Seek(Math.Max(0, pos - Context), SeekOrigin.Begin);
+          var s = FileUtil.GetStreamReader(f);
 
-          if (!isGzip)
+          if (!s.EndOfStream)
           {
-            f.Seek(Math.Max(0, pos - Context), SeekOrigin.Begin);
-            var s = FileUtil.GetStreamReader(f);
-
-            if (!s.EndOfStream)
-            {
-              // since position is not the start of a line just read one as junk
-              s.ReadLine();
-            }
-
-            while (!s.EndOfStream)
-            {
-              if (s.ReadLine() is { } line)
-              {
-                list.Add(line);
-                if (line.StartsWith(text, StringComparison.OrdinalIgnoreCase))
-                {
-                  foundLines.Add(list.Count);
-                }
-
-                if (f.Position >= (pos + Context))
-                {
-                  break;
-                }
-              }
-            }
-
-            s.Close();
-            s.Dispose();
-          }
-          else
-          {
-            var firstFound = false;
-            var queue = new Queue<string>();
-            var s = FileUtil.GetStreamReader(f);
-
-            while (!s.EndOfStream)
-            {
-              if (s.ReadLine() is { } line)
-              {
-                queue.Enqueue(line);
-                if (line.StartsWith(text, StringComparison.OrdinalIgnoreCase))
-                {
-                  firstFound = true;
-                  foundLines.Add(queue.Count);
-                }
-
-                // grab += 1000 lines
-                // not really sure how many the non-gz is doing tbh
-                if (!firstFound && queue.Count > 1000)
-                {
-                  queue.Dequeue();
-                }
-
-                if (firstFound && queue.Count == 2000)
-                {
-                  break;
-                }
-              }
-            }
-
-            list.AddRange([.. queue]);
-            s.Close();
-            s.Dispose();
+            // since position is not the start of a line just read one as junk
+            s.ReadLine();
           }
 
-          var allText = string.Join(Environment.NewLine, list);
-          Dispatcher.InvokeAsync(() =>
+          while (!s.EndOfStream)
           {
-            var highlight = Application.Current.Resources["EQSearchBackgroundBrush"] as SolidColorBrush;
-            contextBox.Text = allText;
-            contextTab.Visibility = Visibility.Visible;
-            foundLines.ForEach(line => contextBox.SetLineBackground(line, true, highlight));
-            tabControl.SelectedItem = contextTab;
-            UpdateStatusCount(contextBox.Lines.Count);
-
-            if (foundLines.Count > 0)
+            if (s.ReadLine() is { } line)
             {
-              GoToLine(contextBox, foundLines[0] + 3);
-            }
-          });
+              list.Add(line);
+              if (line.StartsWith(text, StringComparison.OrdinalIgnoreCase))
+              {
+                foundLines.Add(list.Count);
+              }
 
-          f.Close();
-          f.Dispose();
+              if (f.Position >= (pos + Context))
+              {
+                break;
+              }
+            }
+          }
+
+          s.Close();
+          s.Dispose();
         }
-        catch (Exception ex)
+        else
         {
-          Log.Error("Error Loading Context", ex);
+          var firstFound = false;
+          var queue = new Queue<string>();
+          var s = FileUtil.GetStreamReader(f);
+
+          while (!s.EndOfStream)
+          {
+            if (s.ReadLine() is { } line)
+            {
+              queue.Enqueue(line);
+              if (line.StartsWith(text, StringComparison.OrdinalIgnoreCase))
+              {
+                firstFound = true;
+                foundLines.Add(queue.Count);
+              }
+
+              // grab += 1000 lines
+              // not really sure how many the non-gz is doing tbh
+              if (!firstFound && queue.Count > 1000)
+              {
+                queue.Dequeue();
+              }
+
+              if (firstFound && queue.Count == 2000)
+              {
+                break;
+              }
+            }
+          }
+
+          list.AddRange([.. queue]);
+          s.Close();
+          s.Dispose();
         }
-      }, TaskScheduler.Default);
+
+        var allText = string.Join(Environment.NewLine, list);
+        await Dispatcher.InvokeAsync(() =>
+        {
+          var highlight = Application.Current.Resources["EQSearchBackgroundBrush"] as SolidColorBrush;
+          contextBox.Text = allText;
+          contextTab.Visibility = Visibility.Visible;
+          foundLines.ForEach(line => contextBox.SetLineBackground(line, true, highlight));
+          tabControl.SelectedItem = contextTab;
+          UpdateStatusCount(contextBox.Lines.Count);
+
+          if (foundLines.Count > 0)
+          {
+            GoToLine(contextBox, foundLines[0] + 3);
+          }
+        });
+
+        f.Close();
+        f.Dispose();
+      }
+      catch (Exception ex)
+      {
+        Log.Error("Error Loading Context", ex);
+      }
     }
 
     private void GoToLine(EditControl control, int line)
@@ -362,7 +395,7 @@ namespace EQLogParser
       }));
     }
 
-    private void SearchClick(object sender, MouseButtonEventArgs e)
+    private async void SearchClick(object sender, MouseButtonEventArgs e)
     {
       if (!_running && _complete)
       {
@@ -375,61 +408,87 @@ namespace EQLogParser
         var logSearchText = logSearch.Text;
         var logSearchText2 = logSearch2.Text;
         var modifierIndex = logSearchModifier.SelectedIndex;
+        var logPlaceIndex = logSearchPlace.SelectedIndex;
         var logTimeIndex = logSearchTime.SelectedIndex;
-        var regexEnabled = useRegex.IsChecked == true;
+        var regexEnabled = IsUseRegex(logSearchText) || IsUseRegex(logSearchText2);
         _linePositions.Clear();
+        _unFiltered = [];
 
-        if (MainWindow.CurrentLogFile is { } currentFile)
+        double start = -1;
+        TimeRange ranges = null;
+
+        // use selected fights
+        if (logPlaceIndex == 1)
         {
-          _currentFile = currentFile;
-          Task.Delay(75).ContinueWith(_ =>
+          // get fights
+          List<Fight> fights = [.. MainActions.GetFights(true).OrderBy(sel => sel.Id)];
+
+          if (fights?.Count > 0)
           {
-            using var f = File.OpenRead(_currentFile);
-            double start = -1;
-            TimeRange ranges = null;
-            switch (logTimeIndex)
+            start = fights[0].BeginTime - 15;
+            ranges = new TimeRange();
+            fights.ForEach(fight => ranges.Add(new TimeSegment(fight.BeginTime - 15, fight.LastTime)));
+          }
+        }
+        else
+        {
+          switch (logTimeIndex)
+          {
+            case 0:
+              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60);
+              break;
+            case 1:
+              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 8);
+              break;
+            case 2:
+              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24);
+              break;
+            case 3:
+              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 2);
+              break;
+            case 4:
+              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 7);
+              break;
+            case 5:
+              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 14);
+              break;
+            case 6:
+              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 30);
+              break;
+            case 7:
+              start = 0;
+              break;
+          }
+        }
+
+        _currentFile = null;
+        if (logPlaceIndex < 2)
+        {
+          if (MainWindow.CurrentLogFile is { } current)
+          {
+            _currentFile = current;
+          }
+        }
+        else
+        {
+          if (_config?.Characters?.Count > 0)
+          {
+            var character = _config.Characters.Where(character => character.Name == (logSearchPlace.SelectedItem as string)).FirstOrDefault();
+            if (character?.FilePath != null)
             {
-              case 0:
-                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60);
-                break;
-              case 1:
-                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 8);
-                break;
-              case 2:
-                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24);
-                break;
-              case 3:
-                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 2);
-                break;
-              case 4:
-                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 7);
-                break;
-              case 5:
-                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 14);
-                break;
-              case 6:
-                start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 30);
-                break;
-              case 7:
-                // get fights
-                List<Fight> fights = null;
-                UiUtil.InvokeNow(() =>
-                {
-                  fights = MainActions.GetFights(true).OrderBy(sel => sel.Id).ToList();
-                });
-
-                if (fights?.Count > 0)
-                {
-                  start = fights[0].BeginTime - 15;
-                  ranges = new TimeRange();
-                  fights.ForEach(fight => ranges.Add(new TimeSegment(fight.BeginTime - 15, fight.LastTime)));
-                }
-                break;
-              case 8:
-                start = 0;
-                break;
+              _currentFile = character.FilePath;
             }
+          }
+        }
 
+        if (!string.IsNullOrEmpty(_currentFile) && File.Exists(_currentFile))
+        {
+          await Task.Delay(50);
+          var theFile = _currentFile;
+
+          await Task.Run(async () =>
+          {
+            using var f = File.OpenRead(theFile);
             var s = FileUtil.GetStreamReader(f, start);
 
             if (!s.EndOfStream)
@@ -499,7 +558,7 @@ namespace EQLogParser
               if (percent % 5 == 0 && percent != lastPercent)
               {
                 lastPercent = percent;
-                Dispatcher.InvokeAsync(() =>
+                await Dispatcher.InvokeAsync(() =>
                 {
                   progress.Content = "Searching (" + percent + "% Complete)";
                 }, DispatcherPriority.Background);
@@ -511,12 +570,13 @@ namespace EQLogParser
               }
             }
 
-            _unFiltered = list.Take(MaxRows).ToList();
-            var allData = string.Join(Environment.NewLine, _unFiltered);
+            List<string> unFiltered = [.. list.Take(MaxRows)];
+            var allData = string.Join(Environment.NewLine, unFiltered);
             // adding extra new line to be away from scrollbar
 
-            Dispatcher.InvokeAsync(() =>
+            await Dispatcher.InvokeAsync(() =>
             {
+              _unFiltered = unFiltered;
               if (!string.IsNullOrEmpty(allData))
               {
                 logBox.Text = allData;
@@ -535,24 +595,51 @@ namespace EQLogParser
             });
 
             f.Close();
-
-            Dispatcher.InvokeAsync(() =>
-            {
-              searchIcon.IsEnabled = true;
-              searchIcon.Icon = EFontAwesomeIcon.Solid_Search;
-              progress.Visibility = Visibility.Hidden;
-              _running = false;
-              _complete = true;
-              UpdateUi();
-            });
-          }, TaskScheduler.Default);
+          });
         }
+        else
+        {
+          // show progress briefly
+          await Task.Delay(500);
+        }
+
+        await Dispatcher.InvokeAsync(() =>
+        {
+          searchIcon.IsEnabled = true;
+          searchIcon.Icon = EFontAwesomeIcon.Solid_Search;
+          progress.Visibility = Visibility.Hidden;
+          _running = false;
+          _complete = true;
+          UpdateUi();
+        });
       }
       else
       {
         searchIcon.IsEnabled = false;
         _running = false;
       }
+    }
+
+    private static bool IsUseRegex(string pattern)
+    {
+      // Heuristic: looks like it has regex features
+      var looksLikeRegex = Regex.IsMatch(pattern, @"[\[\]\(\)\.\*\+\?\|\^\$\{\}\\]");
+
+      if (looksLikeRegex)
+      {
+        try
+        {
+          _ = new Regex(pattern);
+          return true;
+        }
+        catch
+        {
+          // invalid regex, fallback to Contains
+          return false;
+        }
+      }
+
+      return false;
     }
 
     private static int DoSearch(string line, string text, Regex searchRegex, bool regexEnabled)
@@ -719,13 +806,22 @@ namespace EQLogParser
       }
     }
 
-    private void SelectedContext(object sender, RoutedEventArgs e)
+    private void LogPlaceChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (logBox?.LineNumber > 0)
+      if (_ready)
+      {
+        logSearchTime.IsEnabled = logSearchPlace.SelectedIndex != 1;
+      }
+    }
+
+    private async void SelectedContext(object sender, RoutedEventArgs e)
+    {
+      if (logBox?.LineNumber > 0 && !string.IsNullOrEmpty(_currentFile) && File.Exists(_currentFile))
       {
         var line = logBox.LineNumber - 1;
         var start = _filteredLinePositionMap.TryGetValue(line, out var value) ? value : _linePositions[line];
-        LoadContext(start, logBox.Lines[line].Text);
+        var text = logBox.Lines[line].Text;
+        await LoadContextAsync(_currentFile, start, text);
       }
     }
 
@@ -783,7 +879,9 @@ namespace EQLogParser
     {
       if (!_disposedValue)
       {
+        _config = null;
         MainActions.EventsThemeChanged -= EventsThemeChanged;
+        TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
         logBox.Dispose();
         contextBox.Dispose();
         tabControl.Dispose();

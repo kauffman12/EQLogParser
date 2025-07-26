@@ -850,11 +850,11 @@ namespace EQLogParser
           if (filePercent >= 100)
           {
             statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
-            statusText.Text = "Monitoring Active";
+            statusText.Text = "Monitoring Log";
 
             ConfigUtil.SetSetting("LastOpenedFile", CurrentLogFile);
             Log.Info($"Finished Loading Log File in {seconds} seconds.");
-            ConfigUtil.UpdateStatus("Monitoring Active");
+            ConfigUtil.UpdateStatus("Monitoring Last Log");
 
             await Task.Delay(1000);
             MainActions.FireLoadingEvent(CurrentLogFile);
@@ -1138,7 +1138,7 @@ namespace EQLogParser
       }
     }
 
-    private async void WindowClosing(object sender, EventArgs e)
+    private void WindowClosing(object sender, EventArgs e)
     {
       // restore from backup will use explicit mode
       if (Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)
@@ -1172,9 +1172,6 @@ namespace EQLogParser
       verifiedPlayersGrid?.Dispose();
       RecordManager.Instance.Stop();
       ChatManager.Instance.Stop();
-      await TriggerManager.Instance.StopAsync();
-      await TriggerStateManager.Instance.Dispose();
-      AudioManager.Instance.Dispose();
 
       // restore from backup will use explicit mode
       if (Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)

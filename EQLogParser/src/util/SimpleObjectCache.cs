@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace EQLogParser
 {
-  public class ObjectCache<T>
+  public class SimpleObjectCache<T>
   {
     private readonly Dictionary<int, object> _cache = [];
 
@@ -33,9 +33,12 @@ namespace EQLogParser
 
       // There's already a list of objects with this hash code.
       var list = (List<T>)value;
-      foreach (var item in list.Where(item => item.Equals(obj)))
+      foreach (var item in CollectionsMarshal.AsSpan(list))
       {
-        return item;  // Return the existing object if it's equal.
+        if (item.Equals(obj))
+        {
+          return item;  // Return the existing object if it's equal.
+        }
       }
 
       list.Add(obj);  // Add the new object to the list.

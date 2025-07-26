@@ -5,6 +5,7 @@ using log4net.Config;
 using log4net.Core;
 using log4net.Layout;
 using log4net.Repository.Hierarchy;
+using Microsoft.Extensions.Caching.Memory;
 using Syncfusion.Licensing;
 using System;
 using System.IO;
@@ -19,6 +20,10 @@ namespace EQLogParser
 {
   public partial class App
   {
+    internal static MemoryCache AppCache = new(new MemoryCacheOptions
+    {
+      SizeLimit = 1024 * 1024 * 100 // 50 MB
+    });
     internal static IMapper AutoMap;
     internal const string ParserHome = "http://eqlogparser.kizant.net";
     internal static double DefaultHeight = SystemParameters.PrimaryScreenHeight * 0.75;
@@ -104,6 +109,16 @@ namespace EQLogParser
         Log.Error("CreateAppError", ex);
         _splash?.SetErrorState();
       }
+    }
+
+    protected override async void OnExit(ExitEventArgs e)
+    {
+      await TriggerManager.Instance.StopAsync();
+      await TriggerStateManager.Instance.Dispose();
+
+      AudioManager.Instance.Dispose();
+      AppCache.Dispose();
+      base.OnExit(e);
     }
 
     private static void InitializeLogging()

@@ -10,7 +10,7 @@ namespace EQLogParser
     private int _currentNpcId = 1;
     private static readonly Dictionary<string, bool> RecentSpellCache = [];
     private readonly Dictionary<string, bool> _validCombo = [];
-    private readonly ObjectCache<DamageRecord> _damageCache = new();
+    private readonly SimpleObjectCache<DamageRecord> _damageCache = new();
     private const int RecentSpellTime = 300;
 
     private readonly List<Defender> _defenders = [];
