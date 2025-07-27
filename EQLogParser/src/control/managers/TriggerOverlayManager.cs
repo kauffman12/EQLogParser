@@ -36,23 +36,23 @@ namespace EQLogParser
     {
       if (!_closeRegex.IsEmpty && !string.IsNullOrEmpty(action))
       {
-        foreach (var data in _closeRegex.Values.ToArray())
+        foreach (var kv in _closeRegex)
         {
           var doClose = false;
-          if (data.UseRegex)
+          if (kv.Value.UseRegex)
           {
-            doClose = data.Regex?.IsMatch(action) == true;
+            doClose = kv.Value.Regex?.IsMatch(action) == true;
           }
-          else if (!string.IsNullOrEmpty(data.ClosePattern))
+          else if (!string.IsNullOrEmpty(kv.Value.ClosePattern))
           {
-            doClose = action.Contains(data.ClosePattern, StringComparison.OrdinalIgnoreCase);
+            doClose = action.Contains(kv.Value.ClosePattern, StringComparison.OrdinalIgnoreCase);
           }
 
           if (doClose)
           {
             _ = UiUtil.InvokeAsync(() =>
             {
-              if (_textWindows.TryGetValue(data.Id, out var windowData) && windowData.TheWindow is TextOverlayWindow { } window)
+              if (_textWindows.TryGetValue(kv.Value.Id, out var windowData) && windowData.TheWindow is TextOverlayWindow { } window)
               {
                 window.StopOverlay();
               }
@@ -66,17 +66,17 @@ namespace EQLogParser
     {
       _ = UiUtil.InvokeAsync(() =>
       {
-        foreach (var value in _textWindows.Values.ToArray())
+        foreach (var kv in _textWindows)
         {
-          if (value is OverlayWindowData windowData && windowData.TheWindow is TextOverlayWindow { } textWindow)
+          if (kv.Value is OverlayWindowData windowData && windowData.TheWindow is TextOverlayWindow { } textWindow)
           {
             textWindow.HideOverlay();
           }
         }
 
-        foreach (var value in _timerWindows.Values.ToArray())
+        foreach (var kv in _timerWindows)
         {
-          if (value is OverlayWindowData windowData && windowData.TheWindow is TimerOverlayWindow { } timerWindow)
+          if (kv.Value is OverlayWindowData windowData && windowData.TheWindow is TimerOverlayWindow { } timerWindow)
           {
             timerWindow.HideOverlay();
           }
@@ -88,17 +88,17 @@ namespace EQLogParser
     {
       _ = UiUtil.InvokeAsync(() =>
       {
-        foreach (var value in _textWindows.Values.ToArray())
+        foreach (var kv in _textWindows)
         {
-          if (value is OverlayWindowData windowData && windowData.TheWindow is TextOverlayWindow { } textWindow)
+          if (kv.Value is OverlayWindowData windowData && windowData.TheWindow is TextOverlayWindow { } textWindow)
           {
             textWindow.StopOverlay();
           }
         }
 
-        foreach (var value in _timerWindows.Values.ToArray())
+        foreach (var kv in _timerWindows)
         {
-          if (value is OverlayWindowData windowData && windowData.TheWindow is TimerOverlayWindow { } timerWindow)
+          if (kv.Value is OverlayWindowData windowData && windowData.TheWindow is TimerOverlayWindow { } timerWindow)
           {
             timerWindow.StopOverlay();
           }
@@ -110,14 +110,14 @@ namespace EQLogParser
     {
       await UiUtil.InvokeAsync(() =>
       {
-        foreach (var key in _textWindows.Keys.ToArray())
+        foreach (var kv in _textWindows)
         {
-          RemoveWindow(key);
+          RemoveWindow(kv.Key);
         }
 
-        foreach (var key in _timerWindows.Keys.ToArray())
+        foreach (var kv in _timerWindows)
         {
-          RemoveWindow(key);
+          RemoveWindow(kv.Key);
         }
       });
     }
@@ -184,9 +184,9 @@ namespace EQLogParser
       });
 
       // validate timers
-      foreach (var windowData in _timerWindows.Values.ToArray())
+      foreach (var kv in _timerWindows)
       {
-        if (windowData.TheWindow is TimerOverlayWindow { } timerWindow)
+        if (kv.Value.TheWindow is TimerOverlayWindow { } timerWindow)
         {
           timerWindow.ValidateTimers(enabledTriggers);
         }
