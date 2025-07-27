@@ -88,7 +88,7 @@ namespace EQLogParser
             }
             else
             {
-              var diff = DateTime.UtcNow.Ticks - processor.GetActivityLastTicks();
+              var diff = DateTime.Now.Ticks - processor.GetActivityLastTicks();
               update = (diff / TimeSpan.TicksPerSecond > 120) ? null : false;
             }
 

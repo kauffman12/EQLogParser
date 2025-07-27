@@ -233,13 +233,14 @@ namespace EQLogParser
 
     private async Task DoProcessAsync(string line, double dateTime)
     {
+      var beginTime = DateTime.Now;
       // ignore anything older than 120 seconds in case a log file is replaced/reloaded but allow for bad lag
-      if (!_isTesting && DateUtil.ToDouble(DateTime.Now) - dateTime > 120)
+      if (!_isTesting && DateUtil.ToDouble(beginTime) - dateTime > 120)
       {
         return;
       }
 
-      Interlocked.Exchange(ref _activityLastTicks, DateTime.UtcNow.Ticks);
+      Interlocked.Exchange(ref _activityLastTicks, beginTime.Ticks);
       var lineData = new LineData { Action = line[27..], BeginTime = dateTime };
 
       if (_isDisposed) return;
@@ -249,11 +250,11 @@ namespace EQLogParser
       {
         foreach (var wrapper in _activeTriggers)
         {
-          if (CheckLine(wrapper, lineData, out var matches, out var timing) &&
+          if (CheckLine(wrapper, lineData, out var matches, out var timing, out var beginTicks) &&
               CheckPreviousLine(wrapper, _previous, out var previousMatches, out var previousTiming))
           {
             timing += previousTiming;
-            HandleTrigger(wrapper, lineData, matches, previousMatches, timing);
+            HandleTrigger(wrapper, lineData, matches, previousMatches, timing, beginTicks);
           }
 
           CheckTimers(wrapper, lineData);
@@ -275,9 +276,9 @@ namespace EQLogParser
       }
     }
 
-    private static bool CheckLine(TriggerWrapper wrapper, LineData lineData, out MatchCollection matches, out long timing)
+    private static bool CheckLine(TriggerWrapper wrapper, LineData lineData, out MatchCollection matches, out long timing, out long beginTicks)
     {
-      var beginTicks = DateTime.UtcNow.Ticks;
+      beginTicks = DateTime.UtcNow.Ticks;
       var found = false;
       matches = null;
 
@@ -330,7 +331,9 @@ namespace EQLogParser
         found = lineData.Action.Contains(wrapper.ModifiedPattern, StringComparison.OrdinalIgnoreCase);
       }
 
-      timing = DateTime.UtcNow.Ticks - beginTicks;
+      var nowTicks = DateTime.UtcNow.Ticks;
+      timing = nowTicks - beginTicks;
+      beginTicks = nowTicks;
       return found;
     }
 
@@ -466,11 +469,10 @@ namespace EQLogParser
     }
 
     private void HandleTrigger(TriggerWrapper wrapper, LineData lineData, MatchCollection matches,
-      MatchCollection previousMatches, long timing, int loopCount = 0)
+      MatchCollection previousMatches, long timing, long beginTicks, int loopCount = 0)
     {
       if (!_ready) return;
 
-      var beginTicks = DateTime.UtcNow.Ticks;
       if (loopCount == 0 && wrapper.TriggerData.LockoutTime > 0)
       {
         if (wrapper.LockedOutTicks > 0 && beginTicks <= wrapper.LockedOutTicks)
@@ -804,9 +806,9 @@ namespace EQLogParser
           if (wrapper.TriggerData.TimerType == 4 && wrapper.TriggerData.TimesToLoop > data2.TimesToLoopCount)
           {
             // repeat normal process
-            if (CheckLine(wrapper, data2.RepeatingTimerLineData, out var matchAgain, out var timing))
+            if (CheckLine(wrapper, data2.RepeatingTimerLineData, out var matchAgain, out var timing, out var beginTicks))
             {
-              HandleTrigger(wrapper, data2.RepeatingTimerLineData, matchAgain, null, timing, data2.TimesToLoopCount + 1);
+              HandleTrigger(wrapper, data2.RepeatingTimerLineData, matchAgain, null, timing, beginTicks, data2.TimesToLoopCount + 1);
             }
 
             CheckTimers(wrapper, lineData);
