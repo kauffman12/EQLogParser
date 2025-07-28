@@ -50,12 +50,13 @@ def build_toc(toc_title: str, toc_items: str) -> str:
 <ul>{toc_items}</ul>
 </nav>"""
 
-def build_nav_header() -> str:
-    return f"""<nav class="topbar">
+def build_nav_header(home_page: bool = False) -> str:
+    nav = f"""<nav class="topbar">
 <div class="nav-container">
 <ul class="nav-links">
-  <li><a href="index.html">Home</a></li>
-  <li><a href="documentation.html">Docs</a></li>
+"""
+    home = f"""<li><a href="index.html">Home</a></li>"""
+    rest = f"""<li><a href="documentation.html">Docs</a></li>
   <li><a href="releasenotes.html">Release Notes</a></li>
   <li><a href="policy.html">Privacy</a></li>
   <li>|</li>
@@ -64,6 +65,9 @@ def build_nav_header() -> str:
 </ul>
 </div>
 </nav>"""
+    if home_page:
+        return nav + rest
+    return nav + home + rest
 
 def process_markdown_to_html(input_path: Path, output_path: Path, title: str, toc_title: str, header: str, decorate_h2=False):
     md_text = input_path.read_text(encoding='utf-8')
@@ -132,6 +136,7 @@ def update_index_html(index_path: Path, output_path: Path, header_html: str, ver
 
 def main():
     version = get_version_from_inno(INNO_FILE)
+    home_header_html = build_nav_header(True)
     header_html = build_nav_header()
     url = f'https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-install-{version}.exe'
 
@@ -141,7 +146,7 @@ def main():
     process_markdown_to_html(Path('documentation.md'), DIST_DIR / 'documentation.html', 'Documentation', 'Contents', header_html, decorate_h2=True)
     process_markdown_to_html(Path('policy.md'), DIST_DIR / 'policy.html', 'Privacy Policy', 'Contents', header_html)
 
-    update_index_html(Path('index.tmpl'), DIST_DIR / 'index.html', header_html, version, url)
+    update_index_html(Path('index.tmpl'), DIST_DIR / 'index.html', home_header_html, version, url)
 
     convert_md_to_rtf(Path('releasenotes.md'), RTF_OUT)
     patch_rtf_in_place(RTF_OUT)
