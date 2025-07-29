@@ -12,8 +12,8 @@
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <syncfusion:SfRangeSlider x:Name="pageSlider" Margin="0,2,20,0" Width="266" Padding="4" ShowValueLabels="False"
-                                FocusVisualStyle="{x:Null}" ValueChanged="PageSliderValueChanged" SmallChange="1" LargeChange="10">
+      <syncfusion:SfRangeSlider x:Name="pageSlider" Margin="0,2,20,0" Width="250" ThumbToolTipPlacement="None" HorizontalAlignment="Center" ShowValueLabels="False"
+                                FocusVisualStyle="{x:Null}" ValueChanged="PageSliderValueChanged" SmallChange="1" LargeChange="10" ToolTip="Scroll through data">
         <syncfusion:SfRangeSlider.LayoutTransform>
           <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
         </syncfusion:SfRangeSlider.LayoutTransform>
@@ -23,7 +23,7 @@
       <ComboBox Margin="0,0,8,2" x:Name="hitTypeList" SelectionChanged="ListSelectionChanged" />
       <ComboBox Margin="0,0,8,2" x:Name="minFreqList" SelectionChanged="ListSelectionChanged" />
     </StackPanel>
-    <syncfusion:SfChart Grid.Row="1" x:Name="sfChart" Margin="0,-2,0,0" AreaBorderThickness="2" BorderThickness="0" PreviewMouseWheel="sfChart_PreviewMouseWheel" SizeChanged="sfChart_SizeChanged">
+    <syncfusion:SfChart Grid.Row="1" x:Name="sfChart" Margin="0,-2,0,0" AreaBorderThickness="2" BorderThickness="0" PreviewMouseWheel="ChartPreviewMouseWheel" SizeChanged="ChartSizeChanged">
       <syncfusion:SfChart.ContextMenu>
         <ContextMenu>
           <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
