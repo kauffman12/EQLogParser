@@ -22,6 +22,7 @@ namespace EQLogParser
     private const string NonCritHittype = "Non-Critical";
     private Dictionary<string, List<HitFreqChartData>> _playerData;
     private readonly List<string> _minFreqs = ["Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5"];
+    private readonly ChartAdornmentInfo _adornment;
     private int _pageSize = 9;
     private readonly List<ColumnData> _columns = [];
 
@@ -30,6 +31,17 @@ namespace EQLogParser
       InitializeComponent();
       minFreqList.ItemsSource = _minFreqs;
       minFreqList.SelectedIndex = 0;
+
+      _adornment = new ChartAdornmentInfo
+      {
+        ShowLabel = true,
+        ShowMarker = false,
+        LabelPosition = AdornmentsLabelPosition.Outer,
+        FontSize = MainActions.CurrentFontSize + 4,
+        Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush,
+        Background = new SolidColorBrush(Colors.Transparent)
+      };
+
       MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
@@ -40,6 +52,10 @@ namespace EQLogParser
       playerList.ItemsSource = players;
       playerList.SelectedIndex = 0; // triggers event
     }
+
+    private void CreateImageClick(object sender, RoutedEventArgs e) => UiElementUtil.CreateImage(Dispatcher, sfChart);
+    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e) => UserSelectionChanged();
+    private void PageSliderValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) => DisplayPage();
 
     private void CopyCsvClick(object sender, RoutedEventArgs e)
     {
@@ -60,8 +76,6 @@ namespace EQLogParser
         Log.Error(ex);
       }
     }
-
-    private void CreateImageClick(object sender, RoutedEventArgs e) => UiElementUtil.CreateImage(Dispatcher, sfChart);
 
     private void EventsThemeChanged(string _)
     {
@@ -156,21 +170,16 @@ namespace EQLogParser
         }
 
         var collection = new ChartSeriesCollection();
-        var series = new FastColumnBitmapSeries { XBindingPath = "X", YBindingPath = "Y", ItemsSource = onePage };
-
-        var adornment = new ChartAdornmentInfo
+        var series = new FastColumnBitmapSeries
         {
-          ShowLabel = true,
-          ShowMarker = false,
-          LabelPosition = AdornmentsLabelPosition.Outer,
-          FontSize = MainActions.CurrentFontSize + 4,
-          Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush,
-          Background = new SolidColorBrush(Colors.Transparent)
+          XBindingPath = "X",
+          YBindingPath = "Y",
+          ItemsSource = onePage
         };
 
         catLabel.FontSize = MainActions.CurrentFontSize;
         numLabel.FontSize = MainActions.CurrentFontSize;
-        series.AdornmentsInfo = adornment;
+        series.AdornmentsInfo = _adornment;
         ChartSeriesBase.SetSpacing(series, 0.5);
         collection.Add(series);
         sfChart.Series = collection;
@@ -197,8 +206,6 @@ namespace EQLogParser
         }
       }
     }
-
-    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e) => UserSelectionChanged();
 
     private void CritTypeListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -264,18 +271,13 @@ namespace EQLogParser
       }
     }
 
-    private void PageSliderValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-      DisplayPage();
-    }
-
-    private void sfChart_SizeChanged(object sender, SizeChangedEventArgs e)
+    private void ChartSizeChanged(object sender, SizeChangedEventArgs e)
     {
       UpdatePageSize();
       DisplayPage();
     }
 
-    private void sfChart_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    private void ChartPreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
       if (e.Delta < 0 && pageSlider.Value < pageSlider.Maximum)
       {
