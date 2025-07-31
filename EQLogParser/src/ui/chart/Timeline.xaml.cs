@@ -171,12 +171,42 @@ namespace EQLogParser
 
     private void Display()
     {
-      headerCanvas.Children.Clear();
-      labelStackPanel.Children.Clear();
-      mainStackPanel.Children.Clear();
-      DrawTimeLinesAndLabels();
-      labelStackPanel.Children.Add(CreateHorizontalLine("EQTimelineLeftPaneWidth"));
-      mainStackPanel.Children.Add(CreateHorizontalLine("EQTimelineContentWidth"));
+      var position = 0d;
+      var fontSize = (double)Application.Current.Resources["EQContentSize"]!;
+      var iconWidth = (double)Application.Current.Resources["EQContentSize"]!;
+      var minus90Label = CreateTextBlock("Buffs (T-90)");
+      minus90Label.Margin = Margin = new Thickness(0, 2, 0, 2);
+      Canvas.SetLeft(minus90Label, position - fontSize - iconWidth);
+      Canvas.SetBottom(minus90Label, 2);
+
+      List<UIElement> elements = [minus90Label];
+
+      // Now handle the labels from 0m onwards
+      for (double time = 0; time <= _fightLength; time += 60)
+      {
+        position = (StartTimeOffset * _pixelsPerSecond) + (time * _pixelsPerSecond);
+        var labelText = time == 0 ? "0m" : $"{time / 60}m";
+        var timeLabel = CreateTextBlock(labelText);
+        timeLabel.Margin = Margin = new Thickness(0, 2, 0, 2);
+        Canvas.SetLeft(timeLabel, position - 6);
+        Canvas.SetBottom(timeLabel, 2);
+        elements.Add(timeLabel);
+      }
+
+      using (Dispatcher.CurrentDispatcher.DisableProcessing())
+      {
+        headerCanvas.Children.Clear();
+        labelStackPanel.Children.Clear();
+        mainStackPanel.Children.Clear();
+
+        foreach (var element in elements)
+        {
+          headerCanvas.Children.Add(element);
+        }
+
+        labelStackPanel.Children.Add(CreateHorizontalLine("EQTimelineLeftPaneWidth"));
+        mainStackPanel.Children.Add(CreateHorizontalLine("EQTimelineContentWidth"));
+      }
 
       var maxLength = 150.0;
       SpellRange deathRanges = null;
@@ -224,13 +254,13 @@ namespace EQLogParser
               {
                 foreach (var range in deathRanges.TopRanges)
                 {
-                  var position = (StartTimeOffset * _pixelsPerSecond) + ((range.BeginSeconds + (range.Duration / 2.0)) * _pixelsPerSecond);
-                  canvas.Children.Add(CreateVerticalLine(position, "EQStopForegroundBrush", 1.0));
+                  var topPosition = (StartTimeOffset * _pixelsPerSecond) + ((range.BeginSeconds + (range.Duration / 2.0)) * _pixelsPerSecond);
+                  canvas.Children.Add(CreateVerticalLine(topPosition, "EQStopForegroundBrush", 1.0));
                 }
                 foreach (var range in deathRanges.BottomRanges)
                 {
-                  var position = (StartTimeOffset * _pixelsPerSecond) + ((range.BeginSeconds + (range.Duration / 2.0)) * _pixelsPerSecond);
-                  canvas.Children.Add(CreateVerticalLine(position, "EQStopForegroundBrush", 1.0));
+                  var bottomPosition = (StartTimeOffset * _pixelsPerSecond) + ((range.BeginSeconds + (range.Duration / 2.0)) * _pixelsPerSecond);
+                  canvas.Children.Add(CreateVerticalLine(bottomPosition, "EQStopForegroundBrush", 1.0));
                 }
               }
             }
@@ -391,30 +421,6 @@ namespace EQLogParser
              (_timelineType == 2 && (data.Adps & HealingAdps) != 0);
     }
 
-    private void DrawTimeLinesAndLabels()
-    {
-      var position = 0d;
-      var fontSize = (double)Application.Current.Resources["EQContentSize"]!;
-      var iconWidth = (double)Application.Current.Resources["EQContentSize"]!;
-      var minus90Label = CreateTextBlock("Buffs (T-90)");
-      minus90Label.Margin = Margin = new Thickness(0, 2, 0, 2);
-      Canvas.SetLeft(minus90Label, position - fontSize - iconWidth);
-      Canvas.SetBottom(minus90Label, 2);
-      headerCanvas.Children.Add(minus90Label);
-
-      // Now handle the labels from 0m onwards
-      for (double time = 0; time <= _fightLength; time += 60)
-      {
-        position = (StartTimeOffset * _pixelsPerSecond) + (time * _pixelsPerSecond);
-        var labelText = time == 0 ? "0m" : $"{time / 60}m";
-        var timeLabel = CreateTextBlock(labelText);
-        timeLabel.Margin = Margin = new Thickness(0, 2, 0, 2);
-        Canvas.SetLeft(timeLabel, position - 6);
-        Canvas.SetBottom(timeLabel, 2);
-        headerCanvas.Children.Add(timeLabel);
-      }
-    }
-
     private void AddRowToContent(string labelText, List<TimeRange> topRanges, List<TimeRange> bottomRanges)
     {
       var leftPanel = new StackPanel
@@ -526,18 +532,26 @@ namespace EQLogParser
     private void DrawVerticalLinesInContent(Canvas canvas)
     {
       // buff time
-      canvas.Children.Add(CreateVerticalLine(0));
+      List<UIElement> elements = [CreateVerticalLine(0)];
 
       // Draw vertical lines in content canvas similar to the header
       for (var time = 0; time <= _fightLength; time += 60)
       {
         var position = (StartTimeOffset * _pixelsPerSecond) + (time * _pixelsPerSecond);
-        canvas.Children.Add(CreateVerticalLine(position));
+        elements.Add(CreateVerticalLine(position));
       }
 
       // end
       var end = (StartTimeOffset * _pixelsPerSecond) + (_fightLength * _pixelsPerSecond);
-      canvas.Children.Add(CreateVerticalLine(end));
+      elements.Add(CreateVerticalLine(end));
+
+      using (Dispatcher.CurrentDispatcher.DisableProcessing())
+      {
+        foreach (var element in elements)
+        {
+          canvas.Children.Add(element);
+        }
+      }
     }
 
     private void DrawTaskRectangles(Canvas canvas, string text, List<TimeRange> topRanges, List<TimeRange> bottomRanges)

@@ -806,19 +806,35 @@ namespace EQLogParser
 
     private void UpdateMaxRows(int maxRows)
     {
-      damageContent.Children.Clear();
-      tankContent.Children.Clear();
+      List<UIElement> damage = [];
+      List<UIElement> tank = [];
 
       // damage bars
       for (var i = 0; i < maxRows; i++)
       {
-        damageContent.Children.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", true));
-        tankContent.Children.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", true));
+        damage.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", true));
+        tank.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", true));
       }
 
       // title bar
-      damageContent.Children.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", false));
-      tankContent.Children.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", false));
+      damage.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", false));
+      tank.Add(new DamageBar("DamageOverlayDamageBrush", "DamageOverlayProgressBrush", false));
+
+      using (Dispatcher.CurrentDispatcher.DisableProcessing())
+      {
+        damageContent.Children.Clear();
+        tankContent.Children.Clear();
+
+        foreach (var element in damage)
+        {
+          damageContent.Children.Add(element);
+        }
+
+        foreach (var element in tank)
+        {
+          tankContent.Children.Add(element);
+        }
+      }
 
       var selectedIndex = maxRows - 1;
       if (maxRowsList.SelectedIndex != selectedIndex)
