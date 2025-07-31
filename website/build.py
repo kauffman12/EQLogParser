@@ -34,6 +34,7 @@ def wrap_docs_html(title: str, header: str, toc: str, content: str) -> str:
   <meta name="google-adsense-account" content="ca-pub-4428145487599357">
   <link rel="shortcut icon" href="/favicon.ico">
   <link rel="stylesheet" href="css/style.css?v=2" />
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4428145487599357" crossorigin="anonymous"></script>
 </head>
 <body>
   {header}
