@@ -244,7 +244,7 @@ namespace EQLogParser
       testBlock.SetResourceReference(TextBlock.FontFamilyProperty, "TextOverlayFontFamily-" + _node.Id);
       testBlock.SetResourceReference(TextBlock.FontWeightProperty, "TextOverlayFontWeight-" + _node.Id);
       testBlock.SetResourceReference(TextBlock.HorizontalAlignmentProperty, "OverlayHorizontalAlignment-" + _node.Id);
-      var blockSize = UiElementUtil.CalculateTextBoxHeight(testBlock.FontFamily, testBlock.FontSize, testBlock.Padding, new Thickness());
+      var blockSize = UiElementUtil.CalculateTextBlockHeight(testBlock, this);
 
       // create cache of blocks needed to cover Overlay height
       var max = (Height / blockSize) + 1;

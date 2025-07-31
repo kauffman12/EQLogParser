@@ -1,6 +1,6 @@
-﻿
-using FontAwesome5;
+﻿using FontAwesome5;
 using log4net;
+using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -20,7 +20,7 @@ using Application = System.Windows.Application;
 
 namespace EQLogParser
 {
-  public partial class Timeline
+  public partial class Timeline : IDisposable
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private const ushort CasterAdps = 1;
@@ -815,19 +815,6 @@ namespace EQLogParser
       }
     }
 
-    private class SpellRange
-    {
-      public List<TimeRange> TopRanges { get; } = [];
-      public List<TimeRange> BottomRanges { get; } = [];
-      public ushort Adps { get; init; }
-    }
-
-    private class TimeRange(int begin, int end)
-    {
-      public int BeginSeconds { get; } = begin;
-      public int Duration { get; set; } = end;
-    }
-
     private void ScrollViewerOnScrollChanged(object sender, ScrollChangedEventArgs e)
     {
       headerCanvas.Margin = new Thickness(-e.HorizontalOffset, 0, 0, 0);
@@ -965,7 +952,7 @@ namespace EQLogParser
             rectTopLeft.Y + (rectangle.ActualHeight / 2));
 
           // Calculate the distance from the mouse to the center of the rectangle
-          var distance = GetDistance(mousePosition, rectCenter);
+          var distance = MathUtil.GetDistance(mousePosition, rectCenter);
 
           // Check if this is the closest rectangle so far
           if (distance < closestDistance)
@@ -979,10 +966,40 @@ namespace EQLogParser
       return closestRectangle;
     }
 
-    // Helper method to calculate the distance between two points
-    private static double GetDistance(Point p1, Point p2)
+    #region IDisposable Support
+    private bool _disposedValue; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
     {
-      return Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
+      if (!_disposedValue)
+      {
+        MainActions.EventsThemeChanged -= EventsThemeChanged;
+        _selectedStats = null;
+        _disposedValue = true;
+      }
+    }
+
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
+    {
+      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+      Dispose(true);
+      // TODO: uncomment the following line if the finalizer is overridden above.
+      GC.SuppressFinalize(this);
+    }
+    #endregion
+
+    private class SpellRange
+    {
+      public List<TimeRange> TopRanges { get; } = [];
+      public List<TimeRange> BottomRanges { get; } = [];
+      public ushort Adps { get; init; }
+    }
+
+    private class TimeRange(int begin, int end)
+    {
+      public int BeginSeconds { get; } = begin;
+      public int Duration { get; set; } = end;
     }
   }
 }

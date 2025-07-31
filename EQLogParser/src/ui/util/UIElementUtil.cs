@@ -184,7 +184,7 @@ namespace EQLogParser
         }
 
         var total = hasSelectAll ? columns.Items.Count - 2 : columns.Items.Count;
-        var countString = total == count ? "All" : count.ToString();
+        var countString = total == count ? "All" : count.ToString(CultureInfo.InvariantCulture);
         var text = countString + " " + value + ((total == count) ? "" : " Selected");
         if (text[0] == '0')
         {
@@ -211,26 +211,66 @@ namespace EQLogParser
       }
     }
 
-    internal static double CalculateTextBoxHeight(FontFamily fontFamily, double fontSize, Thickness padding, Thickness borderThickness)
+    internal static double CalculateTextBoxHeight(TextBox textBox, Window context = null)
+    {
+      var dpi = VisualTreeHelper.GetDpi(context ?? MainActions.GetOwner()).PixelsPerDip;
+      return CalculateTextHeight(dpi, textBox.FontFamily, textBox.FontSize, textBox.Padding, textBox.BorderThickness);
+    }
+
+    internal static double CalculateTextBlockHeight(TextBlock textBlock, Window context = null)
+    {
+      var dpi = VisualTreeHelper.GetDpi(context ?? MainActions.GetOwner()).PixelsPerDip;
+      return CalculateTextHeight(dpi, textBlock.FontFamily, textBlock.FontSize, textBlock.Padding);
+    }
+
+    internal static double CalculateTextHeight(double dpi, FontFamily fontFamily, double fontSize, Thickness? padding = null, Thickness? borderThickness = null)
     {
       // Create the FormattedText object
       var formattedText = new FormattedText(
         "test",
-        System.Globalization.CultureInfo.CurrentCulture,
+        CultureInfo.CurrentCulture,
         FlowDirection.LeftToRight,
         new Typeface(fontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal),
         fontSize,
         Brushes.Black, // The brush doesn't affect size calculation
-        VisualTreeHelper.GetDpi(new Window()).PixelsPerDip // This ensures the text size is scaled correctly for the display DPI
+        dpi
       );
 
       // Calculate the height required for the text
       var textHeight = formattedText.Height;
 
       // Add padding and border thickness to the height
-      var totalHeight = textHeight + padding.Top + padding.Bottom + borderThickness.Top + borderThickness.Bottom;
+      var totalHeight = textHeight + (padding?.Top ?? 0) + (padding?.Bottom ?? 0) + (borderThickness?.Top ?? 0) + (borderThickness?.Bottom ?? 0);
 
       return Math.Round(totalHeight);
+    }
+
+    internal static double CalculateTextBlockWidth(TextBlock textBlock, Window context = null)
+    {
+      var dpi = VisualTreeHelper.GetDpi(context ?? MainActions.GetOwner()).PixelsPerDip;
+      return CalculateTextWidth(dpi, textBlock.FontFamily, textBlock.FontSize, textBlock.Text, textBlock.Padding);
+    }
+
+    internal static double CalculateTextWidth(double dpi, FontFamily fontFamily, double fontSize, string value, Thickness? padding = null, Thickness? borderThickness = null)
+    {
+      // Create the FormattedText object
+      var formattedText = new FormattedText(
+        value,
+        CultureInfo.CurrentCulture,
+        FlowDirection.LeftToRight,
+        new Typeface(fontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal),
+        fontSize,
+        Brushes.Black, // The brush doesn't affect size calculation
+        dpi
+      );
+
+      // Calculate the width required for the text
+      var textWidth = formattedText.Width;
+
+      // Add padding and border thickness to the width
+      var totalWidth = textWidth + (padding?.Left ?? 0) + (padding?.Right ?? 0) + (borderThickness?.Left ?? 0) + (borderThickness?.Right ?? 0);
+
+      return Math.Round(totalWidth);
     }
 
     internal static Style CloneStyle(Style originalStyle)

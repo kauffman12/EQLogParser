@@ -71,14 +71,19 @@
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="damageViewIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Meteor" />
             </MenuItem.Icon>
-            <MenuItem x:Name="damageChartMenuItem" Click="MenuItemWindowClick" Header="DPS _Chart">
+            <MenuItem x:Name="damageBarChartMenuItem" Click="MenuItemWindowClick" Header="_Player Benchmark">
               <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="damageChartIcon" Tag="damageChartWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+                <fa:ImageAwesome x:Name="damageBarChartIcon" Tag="damageBarChartWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="damageSummaryMenuItem" Click="MenuItemWindowClick" Header="DPS _Summary">
+            <MenuItem x:Name="damageSummaryMenuItem" Click="MenuItemWindowClick" Header="_Summary Table">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="damageSummaryIcon" Tag="damageSummaryWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem x:Name="damageChartMenuItem" Click="MenuItemWindowClick" Header="_Trends Chart">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="damageChartIcon" Tag="damageChartWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
@@ -86,12 +91,12 @@
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="healingViewIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Heart" />
             </MenuItem.Icon>
-            <MenuItem x:Name="healingChartMenuItem" Click="MenuItemWindowClick" Header="Healing _Chart">
+            <MenuItem x:Name="healingChartMenuItem" Click="MenuItemWindowClick" Header="_Trends Chart">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="healingChartIcon" Tag="healingChartWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="healingSummaryMenuItem" Click="MenuItemWindowClick" Header="Healing _Summary">
+            <MenuItem x:Name="healingSummaryMenuItem" Click="MenuItemWindowClick" Header="_Summary Table">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="healingSummaryIcon" Tag="healingSummaryWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
@@ -101,12 +106,12 @@
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="tankingViewIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_ShieldAlt" />
             </MenuItem.Icon>
-            <MenuItem x:Name="tankingChartMenuItem" Click="MenuItemWindowClick" Header="Tanking _Chart">
+            <MenuItem x:Name="tankingChartMenuItem" Click="MenuItemWindowClick" Header="_Trends Chart">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="tankingChartIcon" Tag="tankingChartWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem x:Name="tankingSummaryMenuItem" Click="MenuItemWindowClick" Header="Tanking _Summary">
+            <MenuItem x:Name="tankingSummaryMenuItem" Click="MenuItemWindowClick" Header="_Summary Table">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="tankingSummaryIcon" Tag="tankingSummaryWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
@@ -464,8 +469,8 @@
       </StackPanel>
     </DockPanel>
     <Grid Grid.Row="1">
-      <syncfusion:DockingManager x:Name="dockSite" Margin="0" UseDocumentContainer="True" DocumentCloseButtonType="Individual" CloseButtonClick="DockSiteCloseButtonClick"
-                              EnableDocumentTabHeaderEdit="True" UseNativeFloatWindow="False" WindowClosing="DockSiteWindowClosing" CloseTabOnMiddleClick="True" PersistState="False">
+      <syncfusion:DockingManager x:Name="dockSite" Margin="0" DockStateChanging="DockSiteDockStateChanging" UseDocumentContainer="True" DocumentCloseButtonType="Individual" CloseButtonClick="DockSiteCloseButtonClick"
+                              EnableDocumentTabHeaderEdit="True" UseNativeFloatWindow="True" WindowClosing="DockSiteWindowClosing" CloseTabOnMiddleClick="True" PersistState="False">
         <ContentControl x:Name="playerParseTextWindow" syncfusion:DockingManager.Header="Preview Parse" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Bottom"
                       syncfusion:DockingManager.DesiredHeightInDockedMode="{DynamicResource EQParseWindowHeight}" syncfusion:DockingManager.CanDocument="False" syncfusion:DockingManager.DesiredMinHeightInFloatingMode="{DynamicResource EQParseWindowHeight}">
           <local:ParsePreview />
@@ -474,7 +479,7 @@
                       syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.CanDocument="False">
           <local:FightTable />
         </ContentControl>
-        <ContentControl x:Name="petMappingWindow" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="Dock" syncfusion:DockingManager.SideInDockedMode="Right" 
+        <ContentControl x:Name="petMappingWindow" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Right" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQPetMappingWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQPetMappingWindowWidth}" syncfusion:DockingManager.CanDocument="False">
           <syncfusion:SfDataGrid x:Name="petMappingGrid"
                                AllowResizingColumns="False"

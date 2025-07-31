@@ -12,9 +12,6 @@ using System.Windows.Media;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for HitFreqChart.xaml
-  /// </summary>
   public partial class HitFreqChart : UserControl, IDisposable
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -39,7 +36,7 @@ namespace EQLogParser
         LabelPosition = AdornmentsLabelPosition.Outer,
         FontSize = MainActions.CurrentFontSize + 4,
         Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush,
-        Background = new SolidColorBrush(Colors.Transparent)
+        Background = UiUtil.GetBrush(Colors.Transparent)
       };
 
       MainActions.EventsThemeChanged += EventsThemeChanged;

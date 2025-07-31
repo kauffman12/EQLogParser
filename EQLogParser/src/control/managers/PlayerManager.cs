@@ -6,6 +6,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
@@ -42,6 +43,7 @@ namespace EQLogParser
     internal static readonly BitmapImage WizIcon = new(new Uri(@"pack://application:,,,/icons/Wiz.png"));
 
     // static data
+    private readonly ConcurrentDictionary<string, SolidColorBrush> _classBrushes = new();
     private readonly ConcurrentDictionary<SpellClass, string> _classNames = new();
     private readonly ConcurrentDictionary<string, SpellClass> _classesByName = new();
     private readonly ConcurrentDictionary<string, byte> _gameGeneratedPets = new();
@@ -68,11 +70,27 @@ namespace EQLogParser
       // populate ClassNames from SpellClass enum and resource table
       foreach (var item in Enum.GetValues<SpellClass>())
       {
-        var name = Resource.ResourceManager.GetString(Enum.GetName(item)?.ToUpperInvariant() ?? string.Empty, CultureInfo.InvariantCulture);
-        if (name != null)
+        if (Enum.GetName(item)?.ToUpperInvariant() is string { } resourceName)
         {
-          _classNames[item] = name;
-          _classesByName[name] = item;
+          var name = Resource.ResourceManager.GetString(resourceName, CultureInfo.InvariantCulture);
+          if (!string.IsNullOrEmpty(name))
+          {
+            _classNames[item] = name;
+            _classesByName[name] = item;
+          }
+
+          var color = Resource.ResourceManager.GetString($"{resourceName}_COLOR", CultureInfo.InvariantCulture);
+          if (!string.IsNullOrEmpty(color))
+          {
+            try
+            {
+              _classBrushes[name] = UiUtil.GetBrush(color);
+            }
+            catch (FormatException ex)
+            {
+              Log.Error($"Failed to parse color for class {item}: {ex.Message}");
+            }
+          }
         }
       }
 
@@ -83,9 +101,7 @@ namespace EQLogParser
 
       // Populate generated pets
       ConfigUtil.ReadList(@"data\petnames.txt").ForEach(line => _gameGeneratedPets[line.TrimEnd()] = 1);
-
-      _saveTimer = UiUtil.CreateTimer(SaveTimerTick, 30000, DispatcherPriority.Background);
-      _saveTimer.Start();
+      _saveTimer = UiUtil.CreateTimer(SaveTimerTick, 30000, true, DispatcherPriority.Background);
     }
 
     internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.Unassigned || _secondPerson.ContainsKey(name)
@@ -187,6 +203,15 @@ namespace EQLogParser
           }
         }
       }
+    }
+
+    internal SolidColorBrush GetClassBrush(string className)
+    {
+      if (!string.IsNullOrEmpty(className) && _classBrushes.TryGetValue(className, out var brush))
+      {
+        return brush;
+      }
+      return UiUtil.DefaultBrush;
     }
 
     internal string GetPlayerClass(string name)

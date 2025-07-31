@@ -249,7 +249,7 @@ namespace EQLogParser
     {
       CurrentStats = null;
       dataGrid.ItemsSource = NoResultsList;
-      title.Content = DefaultTableLabel;
+      title.Content = Labels.NoNpcs;
     }
 
     private void EventsGenerationStatus(StatsGenerationEvent e)
@@ -290,7 +290,7 @@ namespace EQLogParser
               var isHealingLimited = false;
               if (CurrentStats == null)
               {
-                title.Content = NodataTableLabel;
+                title.Content = Labels.NoData;
                 maxTimeChooser.MaxValue = 0;
                 minTimeChooser.MaxValue = 0;
               }
@@ -324,7 +324,7 @@ namespace EQLogParser
               CurrentStats = null;
               maxTimeChooser.MaxValue = 0;
               minTimeChooser.MaxValue = 0;
-              title.Content = e.State == "NONPC" ? DefaultTableLabel : NodataTableLabel;
+              title.Content = e.State == "NONPC" ? Labels.NoNpcs : Labels.NoData;
               CreatePetOwnerMenu();
               UpdateDataGridMenuItems();
               break;

@@ -45,7 +45,7 @@ namespace EQLogParser
       RecordManager.Instance.RecordsUpdatedEvent += RecordsUpdatedEvent;
       MainActions.EventsThemeChanged += EventsThemeChanged;
       dataGrid.ItemsSource = _individualRecords;
-      _reloadTimer = UiUtil.CreateTimer(ReloadTimerTick, 1500);
+      _reloadTimer = UiUtil.CreateTimer(ReloadTimerTick, 1500, false);
     }
 
     private void ReloadTimerTick(object sender, EventArgs e) => Load();

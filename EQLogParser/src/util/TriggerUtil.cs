@@ -51,7 +51,8 @@ namespace EQLogParser
     {
       if (family != null)
       {
-        return UiElementUtil.CalculateTextBoxHeight(family, fontSize, new Thickness(), new Thickness());
+        var dpi = VisualTreeHelper.GetDpi(MainActions.GetOwner()).PixelsPerDip;
+        return UiElementUtil.CalculateTextHeight(dpi, family, fontSize);
       }
 
       return fontSize + 2;
@@ -109,8 +110,8 @@ namespace EQLogParser
 
         if (toTrigger is TriggerPropertyModel toModel)
         {
-          toModel.TriggerActiveBrush = UiUtil.GetBrush(fromTrigger.ActiveColor);
-          toModel.TriggerFontBrush = UiUtil.GetBrush(fromTrigger.FontColor);
+          toModel.TriggerActiveBrush = UiUtil.GetBrush(fromTrigger.ActiveColor, false);
+          toModel.TriggerFontBrush = UiUtil.GetBrush(fromTrigger.FontColor, false);
           toModel.TriggerIconSource = UiElementUtil.CreateBitmap(fromTrigger.IconSource);
 
           var (textItems, timerItems) = await GetOverlayItems(toModel.SelectedOverlays);
@@ -304,7 +305,7 @@ namespace EQLogParser
       var colorValue = (string)fromOverlay.GetType().GetProperty(colorProperty)?.GetValue(fromOverlay);
       if (!string.IsNullOrEmpty(colorValue))
       {
-        var brush = UiUtil.GetBrush(colorValue);
+        var brush = UiUtil.GetBrush(colorValue, false);
         toModel.GetType().GetProperty(brushProperty)?.SetValue(toModel, brush);
         Application.Current.Resources[$"{prefix}-{toModel.Node.Id}"] = brush;
       }

@@ -14,8 +14,6 @@ namespace EQLogParser
 {
   public class SummaryTable : UserControl
   {
-    internal const string DefaultTableLabel = "No NPCs Selected";
-    internal const string NodataTableLabel = Labels.NoData;
     internal readonly List<PlayerStats> NoResultsList = [];
 
     internal dynamic TheDataGrid;
@@ -31,7 +29,7 @@ namespace EQLogParser
       TheColumnsCombo = columnsCombo;
       TheDataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Total", SortDirection = ListSortDirection.Descending });
       TheTitle = title;
-      TheTitle.Content = DefaultTableLabel;
+      TheTitle.Content = Labels.NoNpcs;
 
       // default these columns to descending
       var desc = new[] { "PercentOfRaid", "Total", "Extra", "Potential", "DPS", "SDPS", "TotalSeconds", "Hits", "Max",
@@ -105,7 +103,7 @@ namespace EQLogParser
 
     internal void Clear()
     {
-      TheTitle.Content = DefaultTableLabel;
+      TheTitle.Content = Labels.NoNpcs;
       TheDataGrid.ItemsSource = null;
     }
 

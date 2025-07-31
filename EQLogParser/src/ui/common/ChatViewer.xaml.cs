@@ -426,7 +426,7 @@ namespace EQLogParser
     {
       if (chatBox != null)
       {
-        chatBox.Foreground = new SolidColorBrush(colorPicker.Color);
+        chatBox.Foreground = UiUtil.GetBrush(colorPicker.Color);
         var colorSetting = "ChatFontFgColor" + MainActions.CurrentTheme;
         ConfigUtil.SetSetting(colorSetting, colorPicker.Color.ToString(null));
       }

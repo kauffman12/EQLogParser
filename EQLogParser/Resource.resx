@@ -300,4 +300,52 @@
   <data name="AUDIO_ERROR" xml:space="preserve">
     <value>Audio Playback Failed</value>
   </data>
+  <data name="BER_COLOR" xml:space="preserve">
+    <value>#A00020</value>
+  </data>
+  <data name="BST_COLOR" xml:space="preserve">
+    <value>#D0B040</value>
+  </data>
+  <data name="BRD_COLOR" xml:space="preserve">
+    <value>#C080C0</value>
+  </data>
+  <data name="ENC_COLOR" xml:space="preserve">
+    <value>#C0A0E0</value>
+  </data>
+  <data name="CLR_COLOR" xml:space="preserve">
+    <value>#80C0FF</value>
+  </data>
+  <data name="MAG_COLOR" xml:space="preserve">
+    <value>#FFC040</value>
+  </data>
+  <data name="WIZ_COLOR" xml:space="preserve">
+    <value>#4080C0</value>
+  </data>
+  <data name="NEC_COLOR" xml:space="preserve">
+    <value>#404040</value>
+  </data>
+  <data name="SHM_COLOR" xml:space="preserve">
+    <value>#40C0C0</value>
+  </data>
+  <data name="ROG_COLOR" xml:space="preserve">
+    <value>#fd4c46</value>
+  </data>
+  <data name="MNK_COLOR" xml:space="preserve">
+    <value>#FFA040</value>
+  </data>
+  <data name="DRU_COLOR" xml:space="preserve">
+    <value>#A0A040</value>
+  </data>
+  <data name="SHD_COLOR" xml:space="preserve">
+    <value>#604080</value>
+  </data>
+  <data name="RNG_COLOR" xml:space="preserve">
+    <value>#40A040</value>
+  </data>
+  <data name="PAL_COLOR" xml:space="preserve">
+    <value>#dbb35c</value>
+  </data>
+  <data name="WAR_COLOR" xml:space="preserve">
+    <value>#C04040</value>
+  </data>
 </root>

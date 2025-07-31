@@ -217,7 +217,7 @@ namespace EQLogParser
       {
         if (_textWindows.TryGetValue(id, out var windowData) && windowData.TheWindow is TextOverlayWindow { } window)
         {
-          var brush = UiUtil.GetBrush(theFontColor);
+          var brush = UiUtil.GetBrush(theFontColor, false);
 
           try
           {

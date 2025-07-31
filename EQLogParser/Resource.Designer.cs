@@ -115,6 +115,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to #A00020.
+        /// </summary>
+        internal static string BER_COLOR {
+            get {
+                return ResourceManager.GetString("BER_COLOR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Bard.
         /// </summary>
         internal static string BRD {
@@ -124,11 +133,29 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to #C080C0.
+        /// </summary>
+        internal static string BRD_COLOR {
+            get {
+                return ResourceManager.GetString("BRD_COLOR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Beastlord.
         /// </summary>
         internal static string BST {
             get {
                 return ResourceManager.GetString("BST", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to #D0B040.
+        /// </summary>
+        internal static string BST_COLOR {
+            get {
+                return ResourceManager.GetString("BST_COLOR", resourceCulture);
             }
         }
         
@@ -196,6 +223,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to #80C0FF.
+        /// </summary>
+        internal static string CLR_COLOR {
+            get {
+                return ResourceManager.GetString("CLR_COLOR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Columns.
         /// </summary>
         internal static string COLUMNS_SELECTED {
@@ -241,11 +277,29 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to #A0A040.
+        /// </summary>
+        internal static string DRU_COLOR {
+            get {
+                return ResourceManager.GetString("DRU_COLOR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Enchanter.
         /// </summary>
         internal static string ENC {
             get {
                 return ResourceManager.GetString("ENC", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to #C0A0E0.
+        /// </summary>
+        internal static string ENC_COLOR {
+            get {
+                return ResourceManager.GetString("ENC_COLOR", resourceCulture);
             }
         }
         
@@ -358,6 +412,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to #FFC040.
+        /// </summary>
+        internal static string MAG_COLOR {
+            get {
+                return ResourceManager.GetString("MAG_COLOR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Monk.
         /// </summary>
         internal static string MNK {
@@ -367,11 +430,29 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to #FFA040.
+        /// </summary>
+        internal static string MNK_COLOR {
+            get {
+                return ResourceManager.GetString("MNK_COLOR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Necromancer.
         /// </summary>
         internal static string NEC {
             get {
                 return ResourceManager.GetString("NEC", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to #404040.
+        /// </summary>
+        internal static string NEC_COLOR {
+            get {
+                return ResourceManager.GetString("NEC_COLOR", resourceCulture);
             }
         }
         
@@ -390,6 +471,15 @@ namespace EQLogParser {
         internal static string PAL {
             get {
                 return ResourceManager.GetString("PAL", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to #dbb35c.
+        /// </summary>
+        internal static string PAL_COLOR {
+            get {
+                return ResourceManager.GetString("PAL_COLOR", resourceCulture);
             }
         }
         
@@ -457,11 +547,29 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to #40A040.
+        /// </summary>
+        internal static string RNG_COLOR {
+            get {
+                return ResourceManager.GetString("RNG_COLOR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Rogue.
         /// </summary>
         internal static string ROG {
             get {
                 return ResourceManager.GetString("ROG", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to #fd4c46.
+        /// </summary>
+        internal static string ROG_COLOR {
+            get {
+                return ResourceManager.GetString("ROG_COLOR", resourceCulture);
             }
         }
         
@@ -520,11 +628,29 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to #604080.
+        /// </summary>
+        internal static string SHD_COLOR {
+            get {
+                return ResourceManager.GetString("SHD_COLOR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Shaman.
         /// </summary>
         internal static string SHM {
             get {
                 return ResourceManager.GetString("SHM", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to #40C0C0.
+        /// </summary>
+        internal static string SHM_COLOR {
+            get {
+                return ResourceManager.GetString("SHM_COLOR", resourceCulture);
             }
         }
         
@@ -592,6 +718,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to #C04040.
+        /// </summary>
+        internal static string WAR_COLOR {
+            get {
+                return ResourceManager.GetString("WAR_COLOR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Warning.
         /// </summary>
         internal static string Warning {
@@ -606,6 +741,15 @@ namespace EQLogParser {
         internal static string WIZ {
             get {
                 return ResourceManager.GetString("WIZ", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to #4080C0.
+        /// </summary>
+        internal static string WIZ_COLOR {
+            get {
+                return ResourceManager.GetString("WIZ_COLOR", resourceCulture);
             }
         }
     }

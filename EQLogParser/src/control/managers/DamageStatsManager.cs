@@ -26,6 +26,7 @@ namespace EQLogParser
     private List<List<ActionGroup>> _damageGroups = [];
     private PlayerStats _raidTotals;
     private List<Fight> _selected;
+    private StatsGenerationEvent _lastStatsEvent;
     private string _title;
 
     private static readonly OverlayData OverlayDamageData = new();
@@ -286,14 +287,30 @@ namespace EQLogParser
       };
     }
 
-    internal void RebuildTotalStats(GenerateStatsOptions options)
+    internal StatsGenerationEvent GetLastStats()
     {
       lock (_damageGroupIds)
       {
-        if (_damageGroups.Count > 0)
+        return _lastStatsEvent;
+      }
+    }
+
+    internal void RebuildTotalStats(GenerateStatsOptions options, bool reset = false)
+    {
+      if (EventsGenerationStatus?.GetInvocationList().Length > 0)
+      {
+        lock (_damageGroupIds)
         {
-          FireNewStatsEvent();
-          ComputeDamageStats(options);
+          if (reset)
+          {
+            _damageGroups = _allDamageGroups ?? [];
+          }
+
+          if (_damageGroups.Count > 0)
+          {
+            FireNewStatsEvent();
+            ComputeDamageStats(options);
+          }
         }
       }
     }
@@ -307,6 +324,7 @@ namespace EQLogParser
           FireNewStatsEvent();
           Reset();
 
+          _lastStatsEvent = null;
           _selected = [.. options.Npcs.OrderBy(sel => sel.Id)];
           _title = options.Npcs?.FirstOrDefault()?.Name;
           var damageBlocks = new List<ActionGroup>();
@@ -383,15 +401,10 @@ namespace EQLogParser
       }
     }
 
-    internal void FireChartEvent(string action, List<PlayerStats> selected = null, bool reset = false)
+    internal void FireChartEvent(string action, List<PlayerStats> selected = null)
     {
       lock (_damageGroupIds)
       {
-        if (reset)
-        {
-          _damageGroups = _allDamageGroups ?? [];
-        }
-
         // send update
         var de = new DataPointEvent { Action = action, Iterator = new DamageGroupCollection(_damageGroups) };
 
@@ -408,6 +421,7 @@ namespace EQLogParser
     {
       lock (_damageGroupIds)
       {
+        _lastStatsEvent = null;
         if (_raidTotals != null)
         {
           var childrenStats = new ConcurrentDictionary<string, Dictionary<string, PlayerStats>>();
@@ -624,6 +638,7 @@ namespace EQLogParser
             genEvent.Groups.AddRange(_damageGroups);
             genEvent.UniqueGroupCount = _damageGroupIds.Count;
             EventsGenerationStatus?.Invoke(genEvent);
+            _lastStatsEvent = genEvent;
 
             FireChartEvent("UPDATE");
           }

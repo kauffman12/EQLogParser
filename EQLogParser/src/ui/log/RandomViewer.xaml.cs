@@ -25,7 +25,7 @@ namespace EQLogParser
       RandomData = [];
       DataContext = this;
       MainActions.EventsThemeChanged += EventsThemeChanged;
-      _reloadTimer = UiUtil.CreateTimer(ReloadTimerTick, 1500);
+      _reloadTimer = UiUtil.CreateTimer(ReloadTimerTick, 1500, false);
     }
 
     private void ReloadTimerTick(object sender, EventArgs e)

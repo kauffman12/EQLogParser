@@ -18,16 +18,18 @@ namespace EQLogParser
       {
         Name = name,
         HorizontalAlignment = HorizontalAlignment.Stretch,
-        VerticalContentAlignment = VerticalAlignment.Stretch
+        VerticalContentAlignment = VerticalAlignment.Stretch,
       };
 
+      var instance = Activator.CreateInstance(type);
+      control.Content = instance;
       DockingManager.SetHeader(control, title);
       DockingManager.SetState(control, DockState.Document);
       DockingManager.SetSideInDockedMode(control, DockSide.Tabbed);
       DockingManager.SetCanDock(control, false);
-
-      var instance = Activator.CreateInstance(type);
-      control.Content = instance;
+      DockingManager.SetCanResizeHeightInFloatState(control, true);
+      DockingManager.SetCanResizeWidthInFloatState(control, true);
+      DockingManager.SetCanResizeInFloatState(control, true);
       dockSite.Children.Add(control);
 
       if (!show)
@@ -102,6 +104,32 @@ namespace EQLogParser
       }
     }
 
+    // This is where closing summary tables and line charts will get disposed
+    internal static void CloseTab(DockingManager dockSite, ContentControl window, List<bool> logWindows)
+    {
+      if (window.Content is EqLogViewer)
+      {
+        if (DockingManager.GetHeader(window) is string title)
+        {
+          var last = title.LastIndexOf(' ');
+          if (last > -1)
+          {
+            var value = title[last..];
+            if (int.TryParse(value, out var result) && result > 0 && logWindows.Count >= result)
+            {
+              logWindows[result - 1] = false;
+            }
+          }
+        }
+
+        (window.Content as IDisposable)?.Dispose();
+      }
+      else
+      {
+        CloseWindow(dockSite, window);
+      }
+    }
+
     internal static void CloseWindow(DockingManager dockSite, ContentControl window)
     {
       // don't really remove the window unless it is disposable and not just a simple Grid like in MainWindow.xaml
@@ -138,6 +166,16 @@ namespace EQLogParser
       {
         doc.HideContent();
         DockingManager.SetState(window, DockState.Hidden);
+      }
+    }
+
+    internal static void DockSiteSaveActiveWindow(DockingManager dockSite)
+    {
+      // save active window
+      if (dockSite.ActiveWindow is ContentControl cc && !string.IsNullOrEmpty(cc.Name) &&
+        DockingManager.GetState(cc) == DockState.Document && DockingManager.GetCanDock(cc) == false)
+      {
+        ConfigUtil.SetSetting("ActiveWindow", cc.Name);
       }
     }
 
