@@ -38,6 +38,7 @@ namespace EQLogParser
     internal static bool IsSlayUndeadDamageEnabled = true;
     internal static bool IsMapSendToEqEnabled;
     internal static bool IsEmuParsingEnabled;
+    internal static bool IsDamageOverlayOpen;
     internal const int ActionIndex = 27;
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -51,11 +52,11 @@ namespace EQLogParser
     private readonly List<string> _recentFiles = [];
     private readonly string _activeWindow;
     private readonly System.Windows.Forms.NotifyIcon _notifyIcon;
-    private readonly SolidColorBrush _hoverBrush;
-    private readonly SolidColorBrush _redHoverBrush;
-    private bool _isDamageOverlayOpen;
+    private readonly SolidColorBrush _hoverBrush = UiUtil.GetBrush("#505050");
+    private readonly SolidColorBrush _redHoverBrush = UiUtil.GetBrush("#E81123");
     private bool _resetWindowState;
-    private bool _isLoading;
+    private bool _isStarting;
+    private bool _appLoadingComplete;
 
     public MainWindow()
     {
@@ -65,12 +66,7 @@ namespace EQLogParser
       MainActions.SetMainWindow(this);
 
       // update titles
-      versionText.Text = "v" + App.Version;
-
-      _hoverBrush = new SolidColorBrush(Color.FromRgb(80, 80, 80));
-      _hoverBrush.Freeze();
-      _redHoverBrush = new SolidColorBrush(Color.FromRgb(232, 17, 35));
-      _redHoverBrush.Freeze();
+      versionText.Text = $"v{App.Version}";
 
       // AoE healing
       IsAoEHealingEnabled = ConfigUtil.IfSetOrElse("IncludeAoEHealing", IsAoEHealingEnabled);
@@ -166,6 +162,9 @@ namespace EQLogParser
       // create menu items for reading log files
       MainActions.CreateOpenLogMenuItems(fileOpenMenu, MenuItemSelectLogFileClick);
 
+      // delete chat menu
+      MainActions.UpdateDeleteChatMenu(deleteChat);
+
       // create font families menu items
       MainActions.CreateFontFamiliesMenuItems(appFontFamilies, MenuItemFontFamilyClicked);
 
@@ -175,19 +174,6 @@ namespace EQLogParser
       // add tabs to the right
       ((DocumentContainer)dockSite.DocContainer).AddTabDocumentAtLast = true;
 
-      // load document state
-      DockingManager.SetState(petMappingWindow, DockState.AutoHidden);
-
-      // create menu items for deleting chat
-      Dispatcher.InvokeAsync(UpdateDeleteChatMenu, DispatcherPriority.DataBind);
-
-      // listen for tab changes
-      dockSite.ActiveWindowChanged += DockSiteActiveWindowChanged;
-      dockSite.DockStateChanged += DockSiteDockStateChanged;
-
-      // general events
-      SystemEvents.PowerModeChanged += SystemEventsPowerModeChanged;
-
       // init theme before loading docs
       ConfigUtil.UpdateStatus("Initialize Themes");
       MainActions.InitThemes(this);
@@ -196,15 +182,19 @@ namespace EQLogParser
       _activeWindow = ConfigUtil.GetSetting("ActiveWindow");
       MainActions.AddDocumentWindows(dockSite);
 
-      // add notify icon
-      _notifyIcon = WinFormsUtil.CreateTrayIcon(this);
-
+      // populate windows that need data
       MainActions.InitPetOwners(this, petMappingGrid, ownerList, petMappingWindow);
       MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, classList, verifiedPlayersWindow, petMappingWindow);
       MainActions.InitVerifiedPets(this, verifiedPetsGrid, verifiedPetsWindow, petMappingWindow);
 
-      _saveTimer = UiUtil.CreateTimer(SaveTimerTick, 30000, DispatcherPriority.Background);
-      _saveTimer.Start();
+      // add notify icon
+      // this attaches to state change events so do toward the end
+      _notifyIcon = WinFormsUtil.CreateTrayIcon(this);
+
+      // general events
+      SystemEvents.PowerModeChanged += SystemEventsPowerModeChanged;
+
+      _saveTimer = UiUtil.CreateTimer(SaveTimerTick, 30000, true, DispatcherPriority.Background);
 
       // check need monitor
       var previousFile = ConfigUtil.GetSetting("LastOpenedFile");
@@ -223,44 +213,30 @@ namespace EQLogParser
     {
       try
       {
-        // make sure file exists
-        if (File.Exists(ConfigUtil.ConfigDir + "/dockSite.xml"))
+        if (File.Exists(Path.Combine(ConfigUtil.ConfigDir, "dockSite.xml")))
         {
           try
           {
-            var reader = XmlReader.Create(ConfigUtil.ConfigDir + "/dockSite.xml");
+            using var reader = XmlReader.Create(Path.Combine(ConfigUtil.ConfigDir, "dockSite.xml"));
             dockSite.LoadDockState(reader);
-            reader.Close();
           }
           catch (Exception ex)
           {
-            Log.Debug("Error reading docSite.xml", ex);
+            Log.Debug("Error reading dockSite.xml", ex);
             dockSite.ResetState();
           }
         }
 
-        MainActions.EventsFightSelectionChanged += (_) => ComputeStats();
         DamageStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(damageChartIcon.Tag as string, data));
         HealingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(healingChartIcon.Tag as string, data));
         TankingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(tankingChartIcon.Tag as string, data));
         MainActions.EventsDamageSelectionChanged += DamageSummarySelectionChanged;
         MainActions.EventsHealingSelectionChanged += HealingSummarySelectionChanged;
         MainActions.EventsTankingSelectionChanged += TankingSummarySelectionChanged;
+        MainActions.EventsFightSelectionChanged += (_) => ComputeStats();
+        _computeStatsTimer = UiUtil.CreateTimer(ComputeStatsTick, 500, false);
 
-        _computeStatsTimer = new DispatcherTimer(DispatcherPriority.Normal)
-        {
-          Interval = new TimeSpan(0, 0, 0, 0, 500)
-        };
-
-        _computeStatsTimer.Tick += (_, _) =>
-        {
-          if (!_isLoading)
-          {
-            ComputeStats();
-            _computeStatsTimer.Stop();
-          }
-        };
-
+        // give some time for dock state to load
         await Task.Delay(250);
 
         // activate the saved window
@@ -268,14 +244,21 @@ namespace EQLogParser
         {
           dockSite.ActivateWindow(_activeWindow);
         }
+
+        // listen for tab changes
+        dockSite.ActiveWindowChanged += (_, _) => SyncFusionUtil.DockSiteSaveActiveWindow(dockSite);
+        dockSite.DockStateChanged += (_, _) => SyncFusionUtil.DockSiteSaveActiveWindow(dockSite);
       }
       catch (Exception e)
       {
         Log.Error(e);
       }
+      finally
+      {
+        _appLoadingComplete = true;
+      }
     }
 
-    internal bool IsDamageOverlayOpen() => _isDamageOverlayOpen;
     internal void SetErrorText(string text) => errorText.Text = text;
 
     internal void SaveWindowSize()
@@ -343,7 +326,7 @@ namespace EQLogParser
       {
         _damageOverlay?.Close();
         _damageOverlay = null;
-        _isDamageOverlayOpen = false;
+        IsDamageOverlayOpen = false;
 
         if (reopen)
         {
@@ -367,7 +350,7 @@ namespace EQLogParser
           _damageOverlay?.Close();
           _damageOverlay = new DamageOverlayWindow(false, reset);
           _damageOverlay.Show();
-          _isDamageOverlayOpen = true;
+          IsDamageOverlayOpen = true;
         }
       }
     }
@@ -384,8 +367,8 @@ namespace EQLogParser
     private void ReportProblemClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
     private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(App.ReleaseNotesUrl);
     private void OpenLogManager(object sender, RoutedEventArgs e) => new LogManagementWindow().ShowDialog();
-    private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => CloseTab(e.TargetItem as ContentControl);
-    private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => CloseTab(e.TargetItem as ContentControl);
+    private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => SyncFusionUtil.CloseTab(dockSite, e.TargetItem as ContentControl, _logWindows);
+    private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => SyncFusionUtil.CloseTab(dockSite, e.TargetItem as ContentControl, _logWindows);
     private void WindowClose(object sender, EventArgs e) => Close();
     private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e) => MainActions.SetTheme("MaterialDark");
     private void ToggleMaterialLightClick(object sender, RoutedEventArgs e) => MainActions.SetTheme("MaterialLight");
@@ -399,9 +382,19 @@ namespace EQLogParser
 
     private void SaveTimerTick(object sender, EventArgs e)
     {
-      if (!_isLoading)
+      // save once loaded but also if backup isnt trying to shutdown
+      if (!_isStarting && Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)
       {
         ConfigUtil.Save();
+      }
+    }
+
+    private void ComputeStatsTick(object sender, EventArgs e)
+    {
+      if (!_isStarting)
+      {
+        ComputeStats();
+        _computeStatsTimer.Stop();
       }
     }
 
@@ -411,6 +404,7 @@ namespace EQLogParser
       {
         case PowerModes.Suspend:
           Log.Warn("Suspending");
+          _saveTimer?.Stop();
           ConfigUtil.Save();
           await TriggerManager.Instance.StopAsync();
           DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
@@ -418,6 +412,7 @@ namespace EQLogParser
           break;
         case PowerModes.Resume:
           Log.Warn("Resume");
+          _saveTimer?.Start();
           await TriggerManager.Instance.StartAsync();
           DataManager.Instance.ResetOverlayFights(true);
           OpenDamageOverlayIfEnabled(true, false);
@@ -429,7 +424,7 @@ namespace EQLogParser
     private void EventsNewOverlayFight(object sender, Fight e)
     {
       // another lazy optimization to avoid extra dispatches
-      if (_damageOverlay == null)
+      if (_damageOverlay == null && ConfigUtil.IfSet("IsDamageOverlayEnabled"))
       {
         Dispatcher.InvokeAsync(() =>
         {
@@ -488,34 +483,6 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateDeleteChatMenu()
-    {
-      deleteChat.Items.Clear();
-      ChatManager.GetArchivedPlayers().ForEach(player =>
-      {
-        var item = new MenuItem { IsEnabled = true, Header = player };
-        deleteChat.Items.Add(item);
-
-        item.Click += (_, _) =>
-        {
-          var msgDialog = new MessageWindow($"Clear Chat Archive for {player}?", Resource.CLEAR_CHAT,
-            MessageWindow.IconType.Warn, "Yes");
-          msgDialog.ShowDialog();
-
-          if (msgDialog.IsYes1Clicked)
-          {
-            if (!ChatManager.Instance.DeleteArchivedPlayer(player))
-            {
-              deleteChat.Items.Remove(item);
-              deleteChat.IsEnabled = deleteChat.Items.Count > 0;
-            }
-          }
-        };
-      });
-
-      deleteChat.IsEnabled = deleteChat.Items.Count > 0;
-    }
-
     internal void CheckComputeStats()
     {
       if (_computeStatsTimer != null)
@@ -532,26 +499,28 @@ namespace EQLogParser
         var filtered = fights.OrderBy(npc => npc.Id);
         var opened = SyncFusionUtil.GetOpenWindows(dockSite);
 
-        var damageStatsOptions = new GenerateStatsOptions();
+        GenerateStatsOptions damageStatsOptions = new();
         damageStatsOptions.Npcs.AddRange(filtered);
         damageStatsOptions.AllRanges = allRanges;
         damageStatsOptions.MinSeconds = 0;
         Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(damageStatsOptions));
 
-        var healingStatsOptions = new GenerateStatsOptions();
+        GenerateStatsOptions healingStatsOptions = new();
         healingStatsOptions.Npcs.AddRange(filtered);
         healingStatsOptions.AllRanges = allRanges;
         healingStatsOptions.MinSeconds = 0;
         Task.Run(() => HealingStatsManager.Instance.BuildTotalStats(healingStatsOptions));
 
-        var tankingStatsOptions = new GenerateStatsOptions();
+        GenerateStatsOptions tankingStatsOptions = new();
         tankingStatsOptions.Npcs.AddRange(filtered);
         tankingStatsOptions.AllRanges = allRanges;
         tankingStatsOptions.MinSeconds = 0;
+
         if (opened.TryGetValue((tankingSummaryIcon.Tag as string)!, out var control) && control != null)
         {
           tankingStatsOptions.DamageType = ((TankingSummary)control.Content).DamageType;
         }
+
         Task.Run(() => TankingStatsManager.Instance.BuildTotalStats(tankingStatsOptions));
       }
     }
@@ -653,7 +622,7 @@ namespace EQLogParser
     {
       try
       {
-        dockSite.DeleteDockState(ConfigUtil.ConfigDir + "/dockSite.xml");
+        dockSite.DeleteDockState(Path.Combine(ConfigUtil.ConfigDir, "dockSite.xml"));
       }
       catch (Exception)
       {
@@ -666,9 +635,10 @@ namespace EQLogParser
 
     private void ViewErrorLogClick(object sender, RoutedEventArgs e)
     {
-      if (Log.Logger.Repository.GetAppenders().FirstOrDefault() is { } appender)
+      var appender = Log.Logger.Repository.GetAppenders().FirstOrDefault();
+      if (appender is FileAppender fileAppender)
       {
-        MainActions.OpenFileWithDefault("\"" + ((FileAppender)appender).File + "\"");
+        MainActions.OpenFileWithDefault("\"" + fileAppender.File + "\"");
       }
     }
 
@@ -847,7 +817,7 @@ namespace EQLogParser
       {
         if (_eqLogReader != null)
         {
-          _isLoading = true;
+          _isStarting = true;
           var seconds = Math.Round((DateTime.Now - _startLoadTime).TotalSeconds);
           var filePercent = Math.Round(_eqLogReader.GetProgress());
           statusText.Text = filePercent < 100.0 ? $"Reading Log.. {filePercent}% in {seconds} seconds" : $"Additional Processing... {seconds} seconds";
@@ -862,9 +832,9 @@ namespace EQLogParser
             Log.Info($"Finished Loading Log File in {seconds} seconds.");
             ConfigUtil.UpdateStatus("Monitoring Last Log");
 
-            await Task.Delay(1000);
+            await Task.Delay(500);
             MainActions.FireLoadingEvent(CurrentLogFile);
-            _isLoading = false;
+            _isStarting = false;
             await Dispatcher.InvokeAsync(() =>
             {
               DataManager.Instance.ResetOverlayFights(true);
@@ -878,7 +848,7 @@ namespace EQLogParser
             UpdateLoadingProgress();
           }
         }
-      }, DispatcherPriority.Render);
+      }, DispatcherPriority.DataBind);
     }
 
     private void PlayerClassDropDownSelectionChanged(object sender, CurrentCellDropDownSelectionChangedEventArgs e)
@@ -931,7 +901,7 @@ namespace EQLogParser
 
         if (!string.IsNullOrEmpty(theFile))
         {
-          Log.Info("Selected Log File: " + theFile);
+          Log.Info($"Selected Log File: {theFile}");
           FileUtil.ParseFileName(theFile, out var name, out var server);
           var changed = ConfigUtil.ServerName != server;
 
@@ -1092,6 +1062,19 @@ namespace EQLogParser
       }
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "It's a callback function")]
+    private void DockSiteDockStateChanging(FrameworkElement sender, DockStateChangingEventArgs e)
+    {
+      // Somehow this fixes the problem where trying to dock a floating window to a document state
+      // would cause a second drop area to be created
+      // note that the issue only happens when using native floating windows
+      // without native floating windows you can't resize the width
+      if (e.PresentState == DockState.Float && e.TargetState == DockState.Document)
+      {
+        e.Cancel = true;
+      }
+    }
+
     private void WindowStateChanged(object sender, EventArgs e)
     {
       if (WindowState == WindowState.Minimized)
@@ -1122,40 +1105,19 @@ namespace EQLogParser
       MainActions.FireWindowStateChanged(WindowState);
     }
 
-    private void DockSiteActiveWindowChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-      // save active window
-      if (dockSite.ActiveWindow is ContentControl cc && !string.IsNullOrEmpty(cc.Name) &&
-        DockingManager.GetState(cc) == DockState.Document && DockingManager.GetCanDock(cc) == false)
-      {
-        ConfigUtil.SetSetting("ActiveWindow", cc.Name);
-      }
-    }
-
-    private void DockSiteDockStateChanged(FrameworkElement sender, DockStateEventArgs e)
-    {
-      // save active window
-      if (dockSite.ActiveWindow is ContentControl cc && !string.IsNullOrEmpty(cc.Name) &&
-        DockingManager.GetState(cc) == DockState.Document && DockingManager.GetCanDock(cc) == false)
-      {
-        ConfigUtil.SetSetting("ActiveWindow", cc.Name);
-      }
-    }
-
     private void WindowClosing(object sender, EventArgs e)
     {
       // restore from backup will use explicit mode
       if (Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)
       {
-        ConfigUtil.SetSetting("WindowState", WindowState.ToString());
-
-        if (!_resetWindowState && Directory.Exists(ConfigUtil.ConfigDir))
+        // dont save if app was minimized the entire time and the state was never loaded
+        // or during reset
+        if (_appLoadingComplete && !_resetWindowState && Directory.Exists(ConfigUtil.ConfigDir))
         {
           try
           {
-            var writer = XmlWriter.Create(ConfigUtil.ConfigDir + "/dockSite.xml");
+            using var writer = XmlWriter.Create(Path.Combine(ConfigUtil.ConfigDir, "dockSite.xml"));
             dockSite.SaveDockState(writer);
-            writer.Close();
           }
           catch (Exception)
           {
@@ -1163,6 +1125,7 @@ namespace EQLogParser
           }
         }
 
+        ConfigUtil.SetSetting("WindowState", WindowState.ToString());
         ConfigUtil.Save();
         PlayerManager.Instance?.Save();
       }
@@ -1181,32 +1144,6 @@ namespace EQLogParser
       if (Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)
       {
         Application.Current.Shutdown();
-      }
-    }
-
-    // This is where closing summary tables and line charts will get disposed
-    private void CloseTab(ContentControl window)
-    {
-      if (window.Content is EqLogViewer)
-      {
-        if (DockingManager.GetHeader(window) is string title)
-        {
-          var last = title.LastIndexOf(' ');
-          if (last > -1)
-          {
-            var value = title[last..];
-            if (int.TryParse(value, out var result) && result > 0 && _logWindows.Count >= result)
-            {
-              _logWindows[result - 1] = false;
-            }
-          }
-        }
-
-        (window.Content as IDisposable)?.Dispose();
-      }
-      else
-      {
-        SyncFusionUtil.CloseWindow(dockSite, window);
       }
     }
 

@@ -254,7 +254,7 @@ namespace EQLogParser
     {
       CurrentStats = null;
       dataGrid.ItemsSource = NoResultsList;
-      title.Content = DefaultTableLabel;
+      title.Content = Labels.NoNpcs;
     }
 
     private void EventsGenerationStatus(StatsGenerationEvent e)
@@ -274,7 +274,7 @@ namespace EQLogParser
 
             if (CurrentStats == null)
             {
-              title.Content = NodataTableLabel;
+              title.Content = Labels.NoData;
               maxTimeChooser.MaxValue = 0;
               minTimeChooser.MaxValue = 0;
             }
@@ -307,7 +307,7 @@ namespace EQLogParser
             CurrentStats = null;
             maxTimeChooser.MaxValue = 0;
             minTimeChooser.MaxValue = 0;
-            title.Content = e.State == "NONPC" ? DefaultTableLabel : NodataTableLabel;
+            title.Content = e.State == "NONPC" ? Labels.NoNpcs : Labels.NoData;
             CreatePetOwnerMenu();
             UpdateDataGridMenuItems();
             break;
@@ -448,7 +448,16 @@ namespace EQLogParser
         DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
         MainActions.EventsDamageSummaryOptionsChanged += EventsDamageSummaryOptionsChanged;
-        EventsDamageSummaryOptionsChanged();
+
+        if (DamageStatsManager.Instance.GetLastStats() is { } stats)
+        {
+          EventsGenerationStatus(stats);
+        }
+        else
+        {
+          EventsDamageSummaryOptionsChanged();
+        }
+
         _ready = true;
       }
     }
@@ -459,8 +468,14 @@ namespace EQLogParser
       DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
       MainActions.EventsDamageSummaryOptionsChanged -= EventsDamageSummaryOptionsChanged;
       MainActions.EventsChartOpened -= EventsChartOpened;
+
       ClearData();
-      DamageStatsManager.Instance.FireChartEvent("UPDATE", null, true);
+
+      if ((long)minTimeChooser.Value != 0 || (long)maxTimeChooser.Value != (long)maxTimeChooser.MaxValue)
+      {
+        DamageStatsManager.Instance.RebuildTotalStats(new GenerateStatsOptions(), true);
+      }
+
       _ready = false;
     }
   }

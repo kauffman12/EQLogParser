@@ -143,8 +143,7 @@ namespace EQLogParser
     {
       if (_theImage != null && _theTextBox != null)
       {
-        var height = UiElementUtil.CalculateTextBoxHeight(_theTextBox.FontFamily, _theTextBox.FontSize,
-          _theTextBox.Padding, _theTextBox.BorderThickness);
+        var height = UiElementUtil.CalculateTextBoxHeight(_theTextBox);
         _theImage.Height = height + 2;
         _theImage.Width = double.NaN;
         _theTextBox.Visibility = Visibility.Collapsed;

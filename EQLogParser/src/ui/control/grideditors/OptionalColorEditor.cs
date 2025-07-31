@@ -111,7 +111,7 @@ namespace EQLogParser
       {
         _theTextBox.Visibility = Visibility.Collapsed;
         _theColorPicker.Visibility = Visibility.Visible;
-        _theColorPicker.Brush ??= new SolidColorBrush { Color = Colors.White };
+        _theColorPicker.Brush ??= UiUtil.GetBrush(Colors.White);
       }
     }
 

@@ -745,10 +745,10 @@ namespace EQLogParser
     {
       if (logBox != null && contextBox != null)
       {
-        logBox.Foreground = new SolidColorBrush(colorPicker.Color);
-        contextBox.Foreground = new SolidColorBrush(colorPicker.Color);
+        logBox.Foreground = UiUtil.GetBrush(colorPicker.Color);
+        contextBox.Foreground = UiUtil.GetBrush(colorPicker.Color);
         var colorSetting = "EQLogViewerFontFgColor" + MainActions.CurrentTheme;
-        ConfigUtil.SetSetting(colorSetting, colorPicker.Color.ToString());
+        ConfigUtil.SetSetting(colorSetting, colorPicker.Color.ToString(null));
       }
     }
 

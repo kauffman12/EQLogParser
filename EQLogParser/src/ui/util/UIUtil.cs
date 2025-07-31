@@ -21,11 +21,17 @@ namespace EQLogParser
 
   internal static class UiUtil
   {
+    internal static readonly SolidColorBrush DefaultBrush = new(Colors.Gray);
     internal static readonly SortableNameComparer TheSortableNameComparer = new();
     private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new();
     private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new();
 
-    internal static DispatcherTimer CreateTimer(EventHandler tickHandler, int interval, DispatcherPriority priority = DispatcherPriority.Normal)
+    static UiUtil()
+    {
+      DefaultBrush.Freeze();
+    }
+
+    internal static DispatcherTimer CreateTimer(EventHandler tickHandler, int interval, bool start, DispatcherPriority priority = DispatcherPriority.Normal)
     {
       var timer = new DispatcherTimer(priority) { Interval = TimeSpan.FromMilliseconds(interval) };
       timer.Tick += tickHandler;
@@ -91,16 +97,37 @@ namespace EQLogParser
       }
     }
 
+    internal static SolidColorBrush GetBrush(Color color)
+    {
+      var hex = color.ToHexString();
+      return GetBrush(hex);
+    }
+
     // return a static brush for the given color
-    internal static SolidColorBrush GetBrush(string color)
+    internal static SolidColorBrush GetBrush(string color, bool useDefault = true)
     {
       SolidColorBrush brush = null;
-      if (!string.IsNullOrEmpty(color) && !BrushCache.TryGetValue(color, out brush))
+
+      try
       {
-        brush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(color)! };
-        BrushCache[color] = brush;
-        brush.Freeze();
+        if (!string.IsNullOrEmpty(color) && !BrushCache.TryGetValue(color, out brush))
+        {
+
+          brush = (SolidColorBrush)new BrushConverter().ConvertFromString(color)!;
+          BrushCache[color] = brush;
+          brush.Freeze();
+        }
       }
+      catch (Exception)
+      {
+        // ignore errors in brush conversion
+      }
+
+      if (brush == null && useDefault)
+      {
+        brush = DefaultBrush;
+      }
+
       return brush;
     }
 

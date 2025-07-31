@@ -17,8 +17,8 @@ namespace EQLogParser
     private const double DamageModeZeroTimeout = TimeSpan.TicksPerSecond * 7; // with 3 second slain queue delay
     private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
     private static readonly object StatsLock = new();
-    private static readonly SolidColorBrush ActiveBrush = new(Color.FromRgb(254, 156, 30));
-    private static readonly SolidColorBrush InActiveBrush = new(Colors.White);
+    private static readonly SolidColorBrush ActiveBrush = UiUtil.GetBrush("#FE9C1E");
+    private static readonly SolidColorBrush InActiveBrush = UiUtil.GetBrush("#FFF");
     private static DamageOverlayStats _stats;
     private readonly DispatcherTimer _updateTimer;
     private readonly bool _preview;
@@ -153,7 +153,7 @@ namespace EQLogParser
       dpsButton.Foreground = _currentShowDps ? ActiveBrush : InActiveBrush;
       tankButton.Foreground = !_currentShowDps ? ActiveBrush : InActiveBrush;
 
-      _updateTimer = UiUtil.CreateTimer(UpdateTimerTick, 1000, DispatcherPriority.DataBind);
+      _updateTimer = UiUtil.CreateTimer(UpdateTimerTick, 1000, false, DispatcherPriority.DataBind);
       _ready = true;
 
       if (preview)
@@ -768,11 +768,11 @@ namespace EQLogParser
     {
       if (progressBrush.Color.ToString(CultureInfo.InvariantCulture) != colorString)
       {
-        progressBrush.Brush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(colorString)! };
+        progressBrush.Brush = UiUtil.GetBrush(colorString);
         progressBrush.Color = (Color)ColorConverter.ConvertFromString(colorString)!;
       }
 
-      Application.Current.Resources["DamageOverlayProgressBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(colorString)! };
+      Application.Current.Resources["DamageOverlayProgressBrush"] = UiUtil.GetBrush(colorString);
     }
 
     private void SelectedProgressBrush(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -788,11 +788,11 @@ namespace EQLogParser
     {
       if (highlightBrush.Color.ToString(CultureInfo.InvariantCulture) != colorString)
       {
-        highlightBrush.Brush = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(colorString)! };
+        highlightBrush.Brush = UiUtil.GetBrush(colorString);
         highlightBrush.Color = (Color)ColorConverter.ConvertFromString(colorString)!;
       }
 
-      Application.Current.Resources["DamageOverlayHighlightBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString(colorString)! };
+      Application.Current.Resources["DamageOverlayHighlightBrush"] = UiUtil.GetBrush(colorString);
     }
 
     private void SelectedHighlightBrush(DependencyObject d, DependencyPropertyChangedEventArgs e)

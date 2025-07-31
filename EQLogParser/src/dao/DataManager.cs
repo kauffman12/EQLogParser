@@ -41,6 +41,7 @@ namespace EQLogParser
     public const string Melee = "Melee";
     public const string SelfHeal = "Melee Heal";
     public const string NoData = "No Data Available";
+    public const string NoNpcs = "No NPCs Selected";
     public const string PetPlayerOption = "Players +Pets";
     public const string PlayerOption = "Players";
     public const string PetOption = "Pets";
@@ -346,17 +347,17 @@ namespace EQLogParser
     internal void CheckExpireFights(double currentTime)
     {
       var removeActiveKeys = new List<string>();
-      foreach (var fight in _activeFights.Values)
+      foreach (var kv in _activeFights)
       {
-        var diff = currentTime - fight.LastTime;
-        if (diff > MaxTimeout || (diff > FightTimeout && fight.DamageBlocks.Count > 0))
+        var diff = currentTime - kv.Value.LastTime;
+        if (diff > MaxTimeout || (diff > FightTimeout && kv.Value.DamageBlocks.Count > 0))
         {
-          removeActiveKeys.Add(fight.CorrectMapKey);
+          removeActiveKeys.Add(kv.Value.CorrectMapKey);
 
           // cleanup overlay data if overlay isn't actually open
-          if (!MainActions.IsDamageOverlayOpen())
+          if (!MainWindow.IsDamageOverlayOpen)
           {
-            RemoveOverlayFight(fight.Id);
+            RemoveOverlayFight(kv.Value.Id);
           }
         }
       }

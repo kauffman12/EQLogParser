@@ -24,8 +24,8 @@ namespace EQLogParser
 
     public TriggerManager()
     {
-      _configUpdateTimer = UiUtil.CreateTimer(ConfigDoUpdate, 500);
-      _triggerUpdateTimer = UiUtil.CreateTimer(TriggersDoUpdate, 1000);
+      _configUpdateTimer = UiUtil.CreateTimer(ConfigDoUpdate, 500, false);
+      _triggerUpdateTimer = UiUtil.CreateTimer(TriggersDoUpdate, 1000, false);
       TriggerStateManager.Instance.OverlayImportEvent += OverlayImportEvent;
       TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
       TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;

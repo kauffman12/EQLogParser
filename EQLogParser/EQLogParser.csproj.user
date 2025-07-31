@@ -19,6 +19,9 @@
     <StartAction>Project</StartAction>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Update="src\ui\chart\BarChart.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="src\ui\common\DamageBar.xaml.cs">
       <SubType>Code</SubType>
     </Compile>

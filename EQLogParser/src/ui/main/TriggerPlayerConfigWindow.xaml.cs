@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 
 namespace EQLogParser
 {
@@ -60,14 +61,14 @@ namespace EQLogParser
           volumeSlider.Value = 100.0f;
         }
 
-        if (_theCharacter.ActiveColor != null && UiUtil.GetBrush(_theCharacter.ActiveColor) is { } activeColor)
+        if (_theCharacter.ActiveColor != null && UiUtil.GetBrush(_theCharacter.ActiveColor, false) is { } activeColor)
         {
           activeColorPicker.Color = activeColor.Color;
           activeColorPicker.Visibility = Visibility.Visible;
           activeSelectText.Visibility = Visibility.Collapsed;
         }
 
-        if (_theCharacter.FontColor != null && UiUtil.GetBrush(_theCharacter.FontColor) is { } fontColor)
+        if (_theCharacter.FontColor != null && UiUtil.GetBrush(_theCharacter.FontColor, false) is { } fontColor)
         {
           fontColorPicker.Color = fontColor.Color;
           fontColorPicker.Visibility = Visibility.Visible;
@@ -229,6 +230,7 @@ namespace EQLogParser
 
     private void SelectActiveColorClick(object sender, MouseButtonEventArgs e)
     {
+      activeColorPicker.Color = Colors.White;
       activeColorPicker.Visibility = Visibility.Visible;
       activeSelectText.Visibility = Visibility.Collapsed;
       EnableSave();
@@ -243,6 +245,7 @@ namespace EQLogParser
 
     private void SelectFontColorClick(object sender, MouseButtonEventArgs e)
     {
+      fontColorPicker.Color = Colors.White;
       fontColorPicker.Visibility = Visibility.Visible;
       fontSelectText.Visibility = Visibility.Collapsed;
       EnableSave();

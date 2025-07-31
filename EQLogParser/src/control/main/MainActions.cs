@@ -28,8 +28,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
-using Color = System.Windows.Media.Color;
-using ColorConverter = System.Windows.Media.ColorConverter;
 using FontFamily = System.Windows.Media.FontFamily;
 
 namespace EQLogParser
@@ -74,7 +72,6 @@ namespace EQLogParser
     internal static void CopyToEqClick(string label) => _mainWindow?.CopyToEqClick(label);
     internal static void CloseDamageOverlay(bool reopen) => _mainWindow?.CloseDamageOverlay(reopen);
     internal static List<Fight> GetFights(bool selected) => _mainWindow?.GetFights(selected);
-    internal static bool IsDamageOverlayOpen() => _mainWindow?.IsDamageOverlayOpen() == true;
     internal static void FireChartOpened(string name) => EventsChartOpened?.Invoke(name);
     internal static void FireDamageSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsDamageSelectionChanged?.Invoke(args);
     internal static void FireTankingSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsTankingSelectionChanged?.Invoke(args);
@@ -113,9 +110,10 @@ namespace EQLogParser
       SyncFusionUtil.AddDocument(dockSite, typeof(TriggersLogView), "triggerLogWindow", "Trigger Log");
       SyncFusionUtil.AddDocument(dockSite, typeof(HealingSummary), "healingSummaryWindow", "Healing Summary");
       SyncFusionUtil.AddDocument(dockSite, typeof(TankingSummary), "tankingSummaryWindow", "Tanking Summary");
-      SyncFusionUtil.AddDocument(dockSite, typeof(DamageChart), "damageChartWindow", "DPS Chart");
-      SyncFusionUtil.AddDocument(dockSite, typeof(HealingChart), "healingChartWindow", "Healing Chart");
-      SyncFusionUtil.AddDocument(dockSite, typeof(TankingChart), "tankingChartWindow", "Tanking Chart");
+      SyncFusionUtil.AddDocument(dockSite, typeof(DamageChart), "damageChartWindow", "DPS Trends");
+      SyncFusionUtil.AddDocument(dockSite, typeof(BarChart), "damageBarChartWindow", "DPS Benchmark");
+      SyncFusionUtil.AddDocument(dockSite, typeof(HealingChart), "healingChartWindow", "Healing Trends");
+      SyncFusionUtil.AddDocument(dockSite, typeof(TankingChart), "tankingChartWindow", "Tanking Trends");
       SyncFusionUtil.AddDocument(dockSite, typeof(ChatViewer), "chatWindow", "Chat Archive");
       SyncFusionUtil.AddDocument(dockSite, typeof(EventViewer), "specialEventsWindow", "Misc Events");
       SyncFusionUtil.AddDocument(dockSite, typeof(RandomViewer), "randomsWindow", "Random Rolls");
@@ -381,10 +379,10 @@ namespace EQLogParser
     internal static void InitThemes(MainWindow main)
     {
       // constant for all themes
-      Application.Current.Resources["PreviewBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#BB000000")! };
-      Application.Current.Resources["DamageOverlayBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#99000000")! };
-      Application.Current.Resources["DamageOverlayDamageBrush"] = new SolidColorBrush { Color = Colors.White };
-      Application.Current.Resources["DamageOverlayProgressBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF1D397E")! };
+      Application.Current.Resources["PreviewBackgroundBrush"] = UiUtil.GetBrush("#BB000000");
+      Application.Current.Resources["DamageOverlayBackgroundBrush"] = UiUtil.GetBrush("#99000000");
+      Application.Current.Resources["DamageOverlayDamageBrush"] = UiUtil.GetBrush("#FFF");
+      Application.Current.Resources["DamageOverlayProgressBrush"] = UiUtil.GetBrush("#FF1D397E");
 
       UiUtil.InvokeNow(() =>
       {
@@ -617,6 +615,34 @@ namespace EQLogParser
       ConfigUtil.SetSetting(option, enabled);
       icon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
       EventsHealingSummaryOptionsChanged?.Invoke(option);
+    }
+
+    internal static void UpdateDeleteChatMenu(MenuItem deleteChat)
+    {
+      deleteChat.Items.Clear();
+      ChatManager.GetArchivedPlayers().ForEach(player =>
+      {
+        var item = new MenuItem { IsEnabled = true, Header = player };
+        deleteChat.Items.Add(item);
+
+        item.Click += (_, _) =>
+        {
+          var msgDialog = new MessageWindow($"Clear Chat Archive for {player}?", Resource.CLEAR_CHAT,
+            MessageWindow.IconType.Warn, "Yes");
+          msgDialog.ShowDialog();
+
+          if (msgDialog.IsYes1Clicked)
+          {
+            if (!ChatManager.Instance.DeleteArchivedPlayer(player))
+            {
+              deleteChat.Items.Remove(item);
+              deleteChat.IsEnabled = deleteChat.Items.Count > 0;
+            }
+          }
+        };
+      });
+
+      deleteChat.IsEnabled = deleteChat.Items.Count > 0;
     }
 
     internal static async Task CreateBackupAsync()
@@ -994,7 +1020,7 @@ namespace EQLogParser
       {
         var themeSettings = new MaterialLightThemeSettings
         {
-          PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF343434")! },
+          PrimaryBackground = UiUtil.GetBrush("#FF343434"),
           FontFamily = new FontFamily(CurrentFontFamily),
           BodyAltFontSize = CurrentFontSize - 2,
           BodyFontSize = CurrentFontSize,
@@ -1010,7 +1036,7 @@ namespace EQLogParser
       {
         var themeSettings = new MaterialDarkCustomThemeSettings
         {
-          PrimaryBackground = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFE1E1E1")! },
+          PrimaryBackground = UiUtil.GetBrush("#FFE1E1E1"),
           FontFamily = new FontFamily(CurrentFontFamily),
           BodyAltFontSize = CurrentFontSize - 2,
           BodyFontSize = CurrentFontSize,
@@ -1030,13 +1056,13 @@ namespace EQLogParser
     {
       if (CurrentTheme == "MaterialLight")
       {
-        Application.Current.Resources["EQGoodForegroundBrush"] = new SolidColorBrush { Color = Colors.DarkGreen };
-        Application.Current.Resources["EQMenuIconBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF3d7baf")! };
-        Application.Current.Resources["EQSearchBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFa7baab")! };
-        Application.Current.Resources["EQWarnBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFeaa6ac")! };
-        Application.Current.Resources["EQWarnForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF946e00")! };
-        Application.Current.Resources["EQStopForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFcc434d")! };
-        Application.Current.Resources["EQDisabledBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#88000000")! };
+        Application.Current.Resources["EQGoodForegroundBrush"] = UiUtil.GetBrush(Colors.DarkGreen);
+        Application.Current.Resources["EQMenuIconBrush"] = UiUtil.GetBrush("#FF3d7baf");
+        Application.Current.Resources["EQSearchBackgroundBrush"] = UiUtil.GetBrush("#FFa7baab");
+        Application.Current.Resources["EQWarnBackgroundBrush"] = UiUtil.GetBrush("#FFeaa6ac");
+        Application.Current.Resources["EQWarnForegroundBrush"] = UiUtil.GetBrush("#FF946e00");
+        Application.Current.Resources["EQStopForegroundBrush"] = UiUtil.GetBrush("#FFcc434d");
+        Application.Current.Resources["EQDisabledBrush"] = UiUtil.GetBrush("#88000000");
         LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/MSControl/CheckBox.xaml");
         LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/SfDataGrid/SfDataGrid.xaml");
         LoadDictionary("/Syncfusion.Themes.MaterialLight.WPF;component/Common/Brushes.xaml");
@@ -1049,13 +1075,13 @@ namespace EQLogParser
       }
       else
       {
-        Application.Current.Resources["EQGoodForegroundBrush"] = new SolidColorBrush { Color = Colors.LightGreen };
-        Application.Current.Resources["EQMenuIconBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF4F9FE2")! };
-        Application.Current.Resources["EQSearchBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF314435")! };
-        Application.Current.Resources["EQWarnBackgroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FF96410d")! };
-        Application.Current.Resources["EQWarnForegroundBrush"] = new SolidColorBrush { Color = Colors.Orange };
-        Application.Current.Resources["EQStopForegroundBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#FFcc434d")! };
-        Application.Current.Resources["EQDisabledBrush"] = new SolidColorBrush { Color = (Color)ColorConverter.ConvertFromString("#88FFFFFF")! };
+        Application.Current.Resources["EQGoodForegroundBrush"] = UiUtil.GetBrush(Colors.LightGreen);
+        Application.Current.Resources["EQMenuIconBrush"] = UiUtil.GetBrush("#FF4F9FE2");
+        Application.Current.Resources["EQSearchBackgroundBrush"] = UiUtil.GetBrush("#FF314435");
+        Application.Current.Resources["EQWarnBackgroundBrush"] = UiUtil.GetBrush("#FF96410d");
+        Application.Current.Resources["EQWarnForegroundBrush"] = UiUtil.GetBrush("Orange");
+        Application.Current.Resources["EQStopForegroundBrush"] = UiUtil.GetBrush("#FFcc434d");
+        Application.Current.Resources["EQDisabledBrush"] = UiUtil.GetBrush("#88FFFFFF");
         LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/MSControl/CheckBox.xaml");
         LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/SfDataGrid/SfDataGrid.xaml");
         LoadDictionary("/Syncfusion.Themes.MaterialDarkCustom.WPF;component/Common/Brushes.xaml");
