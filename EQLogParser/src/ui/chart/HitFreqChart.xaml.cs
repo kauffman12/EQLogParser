@@ -50,7 +50,7 @@ namespace EQLogParser
       playerList.SelectedIndex = 0; // triggers event
     }
 
-    private void CreateImageClick(object sender, RoutedEventArgs e) => UiElementUtil.CreateImage(Dispatcher, sfChart);
+    private async void CreateImageClick(object sender, RoutedEventArgs e) => await UiElementUtil.CreateImage(Dispatcher, sfChart);
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e) => UserSelectionChanged();
     private void PageSliderValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) => DisplayPage();
 

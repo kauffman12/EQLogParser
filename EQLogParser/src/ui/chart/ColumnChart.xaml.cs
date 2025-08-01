@@ -13,14 +13,14 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  public partial class BarChart : IDocumentContent
+  public partial class ColumnChart : IDocumentContent
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly List<ColumnData> _columns = [];
     private readonly DispatcherTimer _refresh;
     private bool _ready;
 
-    public BarChart()
+    public ColumnChart()
     {
       InitializeComponent();
       titleLabel.Content = Labels.NoData;
@@ -32,6 +32,7 @@ namespace EQLogParser
 
     private void RefreshTimerTick(object sender, EventArgs e) => DisplayPage();
     private void EventsClearedActiveData(bool cleared) => Reset();
+    private async void CreateImageClick(object sender, RoutedEventArgs e) => await UiElementUtil.CreateImage(Dispatcher, mainGrid, titleLabel);
 
     private void EventsThemeChanged(string _)
     {
@@ -305,11 +306,6 @@ namespace EQLogParser
       {
         Log.Error(ex);
       }
-    }
-
-    private void CreateImageClick(object sender, RoutedEventArgs e)
-    {
-      UiElementUtil.CreateImage(Dispatcher, mainGrid, titleLabel);
     }
 
     private void ContentLoaded(object sender, System.Windows.RoutedEventArgs e)
