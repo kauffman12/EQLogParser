@@ -158,11 +158,11 @@ namespace EQLogParser
       };
 
       var count = 0;
-      ChatManager.Instance.GetChannels(playerAndServer).ForEach(chan =>
+      foreach (var channel in ChatManager.Instance.GetChannels(playerAndServer))
       {
-        count += chan.IsChecked ? 1 : 0;
-        items.Add(chan);
-      });
+        count += channel.IsChecked ? 1 : 0;
+        items.Add(channel);
+      }
 
       channels.ItemsSource = items;
       UiElementUtil.SetComboBoxTitle(channels, count, Resource.CHANNELS_SELECTED, true);

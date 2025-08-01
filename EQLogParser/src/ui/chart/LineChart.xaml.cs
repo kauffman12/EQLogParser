@@ -360,7 +360,7 @@ namespace EQLogParser
       return collection;
     }
 
-    private void CreateImageClick(object sender, RoutedEventArgs e) => UiElementUtil.CreateImage(Dispatcher, sfLineChart, titleLabel);
+    private async void CreateImageClick(object sender, RoutedEventArgs e) => await UiElementUtil.CreateImage(Dispatcher, sfLineChart, titleLabel);
 
     private void PlotSelected(List<PlayerStats> selected)
     {

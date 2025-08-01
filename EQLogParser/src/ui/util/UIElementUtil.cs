@@ -38,9 +38,11 @@ namespace EQLogParser
       return null;
     }
 
-    internal static void CreateImage(Dispatcher dispatcher, FrameworkElement content, Label titleLabel = null)
+    internal static async Task CreateImage(Dispatcher dispatcher, FrameworkElement content, Label titleLabel = null)
     {
-      Task.Delay(100).ContinueWith(_ => dispatcher.InvokeAsync(() =>
+      await Task.Delay(150);
+
+      await dispatcher.InvokeAsync(() =>
       {
         var wasHidden = content.Visibility != Visibility.Visible;
         content.Visibility = Visibility.Visible;
@@ -84,7 +86,7 @@ namespace EQLogParser
         {
           content.Visibility = Visibility.Hidden;
         }
-      }), TaskScheduler.Default);
+      });
     }
 
     internal static List<string> GetFontWeights()
