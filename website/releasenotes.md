@@ -1,12 +1,24 @@
-# 2.3.12
+# 2.3.13
 
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
+
+1. **Renamed** windows under the **DPS/Healing/Tanking Menus** and added **Player Benchmark**. It is a new column chart for comparing players and is a work in-progress.
+2. Updated layout serialization to try and avoid saving the layout if the app never leaves a minimized state. This should prevent the correct saved state from being lost.
+3. Changed the default **Custom Active** and **Font** colors to white in the Trigger Manager character configuration. This is to help avoid accidentally hiding overlay text.
+4. Implemented workaround to allow floating windows to be resized.
+5. Updated option to disable the Damage Meter to also clear all data.
+6. Fix for missing window border when starting maximized.
+7. Fix for **Hit Frequency** chart range slider being partially hidden.
+8. Moved software update check to its own thread to improve startup speed.
+9. More code cleanup and small performance related improvements.
+
+# 2.3.12
 
 1. Improved caching of audio files when played by triggers.
 2. **Performance** updates for log search.
 3. Updated log search to allow searching of configured characters from Trigger Manager if advanced mode is enabled.
-4. Log search also now attempts to use **Regex** automatically based on what you type into the search box.
-5. Updated installer to cleanup unused old files and to reference the most recent version of .Net 8.
+4. Log search will now use **Regex** automatically based on what is typed into the search box.
+5. Updated the installer to cleanup unused/old files and to reference the most recent version of the .Net 8 Desktop run-time.
 
 # 2.3.11
 
