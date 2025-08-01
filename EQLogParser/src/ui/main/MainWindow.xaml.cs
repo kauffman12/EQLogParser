@@ -176,7 +176,7 @@ namespace EQLogParser
 
       // init theme before loading docs
       ConfigUtil.UpdateStatus("Initialize Themes");
-      MainActions.InitThemes(this);
+      MainActions.InitThemes();
 
       // save active window before adding
       _activeWindow = ConfigUtil.GetSetting("ActiveWindow");
