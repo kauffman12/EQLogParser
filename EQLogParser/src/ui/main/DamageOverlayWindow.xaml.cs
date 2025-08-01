@@ -19,6 +19,7 @@ namespace EQLogParser
     private static readonly object StatsLock = new();
     private static readonly SolidColorBrush ActiveBrush = UiUtil.GetBrush("#FE9C1E");
     private static readonly SolidColorBrush InActiveBrush = UiUtil.GetBrush("#FFF");
+    private static DamageOverlayStatsBuilder _statsBuilder = new();
     private static DamageOverlayStats _stats;
     private readonly DispatcherTimer _updateTimer;
     private readonly bool _preview;
@@ -56,10 +57,8 @@ namespace EQLogParser
 
       if (reset)
       {
-        lock (StatsLock)
-        {
-          _stats = null;
-        }
+        _stats = null;
+        _statsBuilder = new();
       }
 
       // dimensions
@@ -204,7 +203,7 @@ namespace EQLogParser
           lock (StatsLock)
           {
             damageOverlayStats = _stats;
-            var update = DamageStatsManager.ComputeOverlayStats(_stats == null, _currentDamageMode, maxRows, _currentSelectedClass);
+            var update = _statsBuilder.Build(_stats == null, _currentDamageMode, maxRows, _currentSelectedClass);
 
             if (update == null)
             {
@@ -1056,11 +1055,12 @@ namespace EQLogParser
       UpdateTimerTick(null, null);
     }
 
-    private void ResetClick(object sender, RoutedEventArgs e)
+    private void FullResetClick(object sender, RoutedEventArgs e)
     {
       lock (StatsLock)
       {
         _stats = null;
+        _statsBuilder = new();
         DataManager.Instance.ResetOverlayFights();
       }
     }

@@ -653,7 +653,13 @@ namespace EQLogParser
 
       if (enabled)
       {
-        OpenDamageOverlayIfEnabled(false, false);
+        OpenDamageOverlayIfEnabled(true, false);
+      }
+      else
+      {
+        // close and clear old data
+        CloseDamageOverlay(false);
+        DataManager.Instance.ResetOverlayFights();
       }
 
       enableDamageOverlay.Header = enabled ? "Disable _Meter" : "Enable _Meter";
