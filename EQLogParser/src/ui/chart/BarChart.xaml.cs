@@ -26,12 +26,18 @@ namespace EQLogParser
       titleLabel.Content = Labels.NoData;
       Loaded += ContentLoaded;
       _refresh = UiUtil.CreateTimer(RefreshTimerTick, 250, false);
+      UpdateYAxisMargin();
       DisplayPage();
     }
 
     private void RefreshTimerTick(object sender, EventArgs e) => DisplayPage();
-    private void EventsThemeChanged(string _) => DisplayPage();
     private void EventsClearedActiveData(bool cleared) => Reset();
+
+    private void EventsThemeChanged(string _)
+    {
+      UpdateYAxisMargin();
+      DisplayPage();
+    }
 
     private void ContentSizeChanged(object sender, SizeChangedEventArgs e)
     {
@@ -52,7 +58,7 @@ namespace EQLogParser
             if (e.CombinedStats != null)
             {
               await LoadDataAsync(e.CombinedStats.StatsList);
-              titleLabel.Content = "Players vs Top Performer (Percent Total Damage)";
+              titleLabel.Content = "Players vs Top Performer (Percent of Total Damage)";
             }
             else
             {
@@ -148,10 +154,12 @@ namespace EQLogParser
       var largeFontSize = MainActions.CurrentFontSize + 10;
       var columnWidth = 40.0 + ((MainActions.CurrentFontSize - 10) * 5);
       var columnSpacing = 20 + ((MainActions.CurrentFontSize - 10) * 1);
+      // markers are placed center within each row so subtract half the top row height
+      var halfRowHeight = yAxisGrid.RowDefinitions[0].ActualHeight / 2;
+      var yAxisHeight = yAxisRectangle.ActualHeight - halfRowHeight;
       var startX = 10.0;
       foreach (var column in _columns)
       {
-        var yAxisHeight = yAxisRectangle.ActualHeight + 2;
         var columnHeight = yAxisHeight * (column.Y / 100.0);
 
         // column
@@ -179,7 +187,7 @@ namespace EQLogParser
 
         var lWidth = UiElementUtil.CalculateTextBlockWidth(labelBlock);
         var lOffset = (lWidth - columnWidth) / 2;
-        labelBlock.Margin = new Thickness(startX - lOffset, yAxisHeight - columnHeight, 0, 0);
+        labelBlock.Margin = new Thickness(startX - lOffset, yAxisHeight - columnHeight + halfRowHeight, 0, 0);
         Grid.SetRow(labelBlock, 0);
         elements.Add(labelBlock);
 
@@ -258,24 +266,50 @@ namespace EQLogParser
       }
     }
 
+    private void UpdateYAxisMargin()
+    {
+      foreach (var child in yAxisGrid.Children)
+      {
+        if (child is TextBlock textBlock)
+        {
+          if (Grid.GetRow(textBlock) == 0)
+          {
+            var right = 8 + ((MainActions.CurrentFontSize - 10) * 2);
+            textBlock.Margin = new Thickness(0, -2, right, 0);
+          }
+          else
+          {
+            var right = 8 + (MainActions.CurrentFontSize - 10);
+            textBlock.Margin = new Thickness(0, -1, right, 0);
+          }
+        }
+      }
+    }
+
     private void CopyCsvClick(object sender, RoutedEventArgs e)
     {
       try
       {
-        var header = new List<string> { "Hit Value", "Frequency", "Difference" };
+        var header = new List<string> { "Class", "Percent", "Name" };
 
         var data = new List<List<object>>();
         foreach (var column in CollectionsMarshal.AsSpan(_columns))
         {
-          // data.Add([column.XLongValue, column.Y, column.Diff]);
+          var name = column.HasPets ? $"{column.X} +Pets" : column.X;
+          data.Add([column.ClassName, column.Y, name]);
         }
 
-        Clipboard.SetDataObject(TextUtils.BuildCsv(header, data));
+        Clipboard.SetDataObject(TextUtils.BuildCsv(header, data, titleLabel.Content as string));
       }
       catch (ExternalException ex)
       {
         Log.Error(ex);
       }
+    }
+
+    private void CreateImageClick(object sender, RoutedEventArgs e)
+    {
+      UiElementUtil.CreateImage(Dispatcher, mainGrid, titleLabel);
     }
 
     private void ContentLoaded(object sender, System.Windows.RoutedEventArgs e)
