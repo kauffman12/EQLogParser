@@ -91,16 +91,18 @@ namespace EQLogParser
 
     private void UpdateCurrentTextColor()
     {
-      var defaultColor = (Color)Application.Current.Resources["ContentForeground.Color"]!;
-      try
+      if (Application.Current.Resources["ContentForeground.Color"] is Color defaultColor)
       {
-        var colorSetting = "ChatFontFgColor" + MainActions.CurrentTheme;
-        var fgColor = ConfigUtil.GetSetting(colorSetting, defaultColor.ToString());
-        colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor)!;
-      }
-      catch (FormatException)
-      {
-        colorPicker.Color = defaultColor;
+        try
+        {
+          var colorSetting = "ChatFontFgColor" + MainActions.CurrentTheme;
+          var fgColor = ConfigUtil.GetSetting(colorSetting, defaultColor.ToString());
+          colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor)!;
+        }
+        catch (FormatException)
+        {
+          colorPicker.Color = defaultColor;
+        }
       }
     }
 

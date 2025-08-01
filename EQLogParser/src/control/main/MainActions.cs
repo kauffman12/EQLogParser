@@ -376,7 +376,7 @@ namespace EQLogParser
       }
     }
 
-    internal static void InitThemes(MainWindow main)
+    internal static void InitThemes()
     {
       // constant for all themes
       Application.Current.Resources["PreviewBackgroundBrush"] = UiUtil.GetBrush("#BB000000");
@@ -1118,7 +1118,7 @@ namespace EQLogParser
 
     private static void ChangeTheme(MainWindow main)
     {
-      var theme = CurrentTheme == "MaterialLight" ? new Theme("MaterialLight") : new Theme("MaterialDarkCustom");
+      var theme = CurrentTheme == "MaterialLight" ? new Theme("MaterialLight") : new Theme("MaterialDarkCustom;MaterialDark");
       SfSkinManager.SetTheme(main, theme);
 
       // workaround for DM
