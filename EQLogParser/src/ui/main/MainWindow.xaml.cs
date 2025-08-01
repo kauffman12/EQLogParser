@@ -260,10 +260,12 @@ namespace EQLogParser
     }
 
     internal void SetErrorText(string text) => errorText.Text = text;
+    internal void ConnectLocationChanged() => LocationChanged += LocationChangedEvent;
+    internal void DisconnectLocationChanged() => LocationChanged -= LocationChangedEvent;
 
     internal void SaveWindowSize()
     {
-      if (WindowState == WindowState.Normal)
+      if (_appLoadingComplete == true && WindowState == WindowState.Normal)
       {
         ConfigUtil.SetSetting("WindowLeft", Left);
         ConfigUtil.SetSetting("WindowTop", Top);
@@ -379,6 +381,7 @@ namespace EQLogParser
     private void ToggleHardwareAccelClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("HardwareAcceleration", hardwareAccelIcon);
     private void ToggleExportFormattedCsvClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("ExportFormattedCsv", exportFormattedCsvIcon);
     private void ToggleHideOnMinimizeClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("HideWindowOnMinimize", enableHideOnMinimizeIcon);
+    private void LocationChangedEvent(object sender, EventArgs e) => SaveWindowSize();
 
     private void SaveTimerTick(object sender, EventArgs e)
     {
@@ -1110,22 +1113,25 @@ namespace EQLogParser
       // restore from backup will use explicit mode
       if (Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)
       {
-        // dont save if app was minimized the entire time and the state was never loaded
-        // or during reset
-        if (_appLoadingComplete && !_resetWindowState && Directory.Exists(ConfigUtil.ConfigDir))
+        // avoid saving window related settings if app never fully loaded
+        if (_appLoadingComplete)
         {
-          try
+          if (!_resetWindowState && Directory.Exists(ConfigUtil.ConfigDir))
           {
-            using var writer = XmlWriter.Create(Path.Combine(ConfigUtil.ConfigDir, "dockSite.xml"));
-            dockSite.SaveDockState(writer);
+            try
+            {
+              using var writer = XmlWriter.Create(Path.Combine(ConfigUtil.ConfigDir, "dockSite.xml"));
+              dockSite.SaveDockState(writer);
+            }
+            catch (Exception)
+            {
+              // ignore
+            }
           }
-          catch (Exception)
-          {
-            // ignore
-          }
+
+          ConfigUtil.SetSetting("WindowState", App.LastWindowState.ToString());
         }
 
-        ConfigUtil.SetSetting("WindowState", WindowState.ToString());
         ConfigUtil.Save();
         PlayerManager.Instance?.Save();
       }

@@ -8,8 +8,6 @@ namespace EQLogParser
   {
     internal static NotifyIcon CreateTrayIcon(MainWindow main)
     {
-      // also connect location change event
-      main.LocationChanged += MainLocationChanged;
       var notifyIcon = new NotifyIcon
       {
         Visible = true,
@@ -63,7 +61,7 @@ namespace EQLogParser
     private static void RestoreWindow(MainWindow main)
     {
       // disconnect to avoid saving location before it's fully restored
-      main.LocationChanged -= MainLocationChanged;
+      main.DisconnectLocationChanged();
 
       if (main.Visibility != Visibility.Visible)
       {
@@ -80,16 +78,8 @@ namespace EQLogParser
       // reconnect
       main.Dispatcher.Invoke(() =>
       {
-        main.LocationChanged += MainLocationChanged;
+        main.ConnectLocationChanged();
       }, System.Windows.Threading.DispatcherPriority.Background);
-    }
-
-    private static void MainLocationChanged(object sender, EventArgs e)
-    {
-      if (sender is MainWindow main)
-      {
-        main.SaveWindowSize();
-      }
     }
   }
 }

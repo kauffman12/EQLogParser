@@ -39,7 +39,7 @@ namespace EQLogParser
       SyncfusionLicenseProvider.RegisterLicense("");
     }
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
       base.OnStartup(e);
 
@@ -102,7 +102,7 @@ namespace EQLogParser
         // show render mode
         ConfigUtil.UpdateStatus($"RenderMode: {RenderOptions.ProcessRenderMode}");
 
-        ShowMain();
+        await ShowMain();
       }
       catch (Exception ex)
       {
@@ -162,7 +162,7 @@ namespace EQLogParser
       ((Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
     }
 
-    private void ShowMain()
+    private async Task ShowMain()
     {
       var main = new MainWindow
       {
@@ -178,61 +178,69 @@ namespace EQLogParser
 
       Log.Info($"Window Pos ({main.Top}, {main.Left}) | Window Size ({main.Width}, {main.Height})");
 
-      Task.Delay(500).ContinueWith(_ => Dispatcher.Invoke(async () =>
+      // allow time fow window creation
+      await Task.Delay(500);
+
+      try
       {
-        try
+        // Init Trigger Manager
+        ConfigUtil.UpdateStatus("Initialize Trigger Manager");
+        await TriggerManager.Instance.StartAsync();
+
+        var savedState = ConfigUtil.GetSetting("WindowState", "Normal") switch
         {
-          // Init Trigger Manager
-          ConfigUtil.UpdateStatus("Initialize Trigger Manager");
-          await TriggerManager.Instance.StartAsync();
+          "Maximized" => WindowState.Maximized,
+          "Minimized" => WindowState.Minimized,
+          _ => WindowState.Normal
+        };
 
-          var savedState = ConfigUtil.GetSetting("WindowState", "Normal");
+        if (savedState != WindowState.Minimized || !ConfigUtil.IfSet("HideWindowOnMinimize"))
+        {
+          main.Show();
+        }
 
-          // if start minimized if requested do nothing but update the last state
-          if (ConfigUtil.IfSet("StartWithWindowMinimized"))
+        // if start minimized if requested do nothing but update the last state
+        if (ConfigUtil.IfSet("StartWithWindowMinimized"))
+        {
+          if (savedState != WindowState.Minimized)
           {
-            LastWindowState = savedState switch
-            {
-              "Maximized" => WindowState.Maximized,
-              _ => WindowState.Normal
-            };
-
-            main.WindowState = WindowState.Minimized;
-          }
-          else
-          {
-            // use last saved state
-            main.WindowState = savedState switch
-            {
-              "Maximized" => WindowState.Maximized,
-              "Minimized" => WindowState.Minimized,
-              _ => WindowState.Normal
-            };
+            LastWindowState = savedState;
           }
 
-          MainActions.FireWindowStateChanged(main.WindowState);
-          await Task.Delay(250);
+          main.WindowState = WindowState.Minimized;
+        }
+        else
+        {
+          // use last saved state
+          main.WindowState = savedState;
+        }
 
-          ConfigUtil.UpdateStatus("Done");
-          if (main.WindowState != WindowState.Minimized || !ConfigUtil.IfSet("HideWindowOnMinimize"))
-          {
-            main.Show();
-          }
+        // window state change event may or may not be
+        // received in main window at this point
+        main.UpdateWindowBorder();
 
+        // allow time for state change
+        await Task.Delay(500);
+        MainActions.FireWindowStateChanged(main.WindowState);
+        main.ConnectLocationChanged();
+        ConfigUtil.UpdateStatus("Done");
+
+        // complete rest in a new thread
+        await Task.Run(async () =>
+        {
           // cleanup downloads
           MainActions.Cleanup();
 
-          await Task.Delay(2000);
           await MainActions.CheckVersionAsync();
-        }
-        catch (Exception ex)
-        {
-          ConfigUtil.UpdateStatus("Done");
-          Log.Error($"ShowAppError: {ex.Message}");
-          LogDetails(ex);
-          _splash?.SetErrorState();
-        }
-      }));
+        });
+      }
+      catch (Exception ex)
+      {
+        ConfigUtil.UpdateStatus("Done");
+        Log.Error($"ShowAppError: {ex.Message}");
+        LogDetails(ex);
+        _splash?.SetErrorState();
+      }
     }
 
     private static void CheckWindowPosition(MainWindow main)

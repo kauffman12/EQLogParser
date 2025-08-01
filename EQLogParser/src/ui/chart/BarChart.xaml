@@ -14,52 +14,72 @@
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
-    <Grid Grid.Row="1">
+    <Grid x:Name="mainGrid" Grid.Row="1">
+      <Grid.ContextMenu>
+        <ContextMenu>
+          <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
+            </MenuItem.Icon>
+            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Table" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Image" />
+              </MenuItem.Icon>
+            </MenuItem>
+          </MenuItem>
+        </ContextMenu>
+      </Grid.ContextMenu>
       <Grid.RowDefinitions>
         <RowDefinition Height="20" />
         <RowDefinition Height="*" />
       </Grid.RowDefinitions>
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="40" />
+        <ColumnDefinition Width="60" />
         <ColumnDefinition Width="*" />
         <ColumnDefinition Width="10" />
       </Grid.ColumnDefinitions>
-      <Grid Grid.Column="0" Grid.Row="1">
+      <Grid x:Name="yAxisGrid" Grid.Column="0" Grid.Row="1">
         <Grid.RowDefinitions>
-          <RowDefinition Height="1*" />
-          <RowDefinition Height="1*" />
-          <RowDefinition Height="1*" />
-          <RowDefinition Height="1*" />
-          <RowDefinition Height="1*" />
-          <RowDefinition Height="1*" />
-          <RowDefinition Height="1*" />
-          <RowDefinition Height="1*" />
-          <RowDefinition Height="1*" />
+          <RowDefinition Height="2*" />
+          <RowDefinition Height="2*" />
+          <RowDefinition Height="2*" />
+          <RowDefinition Height="2*" />
+          <RowDefinition Height="2*" />
+          <RowDefinition Height="2*" />
+          <RowDefinition Height="2*" />
+          <RowDefinition Height="2*" />
+          <RowDefinition Height="2*" />
+          <RowDefinition Height="2*" />
           <RowDefinition Height="1*" />
           <RowDefinition Height="68" />
         </Grid.RowDefinitions>
-        <Rectangle x:Name="yAxisRectangle" Grid.Row="0" Grid.RowSpan="10" Fill="{DynamicResource ContentForeground}"
-          Margin="25,0,0,0" HorizontalAlignment="Center" Width="1" />
-        <Rectangle Grid.Row="0" Width="10" VerticalAlignment="Top" Fill="{DynamicResource ContentForeground}" Margin="25,0,0,0" Height="1" />
-        <TextBlock Grid.Row="0" Text="100" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-6,15,10" />
-        <Rectangle Grid.Row="1" Width="10" VerticalAlignment="Top" Fill="{DynamicResource ContentForeground}" Margin="25,0,0,0" Height="1" />
-        <TextBlock Grid.Row="1" Text="90" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-6,10,10" />
-        <Rectangle Grid.Row="2" Width="10" VerticalAlignment="Top" Fill="{DynamicResource ContentForeground}" Margin="25,0,0,0" Height="1" />
-        <TextBlock Grid.Row="2" Text="80" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-6,10,10" />
-        <Rectangle Grid.Row="3" Width="10" VerticalAlignment="Top" Fill="{DynamicResource ContentForeground}" Margin="25,0,0,0" Height="1" />
-        <TextBlock Grid.Row="3" Text="70" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-6,10,10" />
-        <Rectangle Grid.Row="4" Width="10" VerticalAlignment="Top" Fill="{DynamicResource ContentForeground}" Margin="25,0,0,0" Height="1" />
-        <TextBlock Grid.Row="4" Text="60" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-6,10,10" />
-        <Rectangle Grid.Row="5" Width="10" VerticalAlignment="Top" Fill="{DynamicResource ContentForeground}" Margin="25,0,0,0" Height="1" />
-        <TextBlock Grid.Row="5" Text="50" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-6,10,10" />
-        <Rectangle Grid.Row="6" Width="10" VerticalAlignment="Top" Fill="{DynamicResource ContentForeground}" Margin="25,0,0,0" Height="1" />
-        <TextBlock Grid.Row="6" Text="40" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-6,10,10" />
-        <Rectangle Grid.Row="7" Width="10" VerticalAlignment="Top" Fill="{DynamicResource ContentForeground}" Margin="25,0,0,0" Height="1" />
-        <TextBlock Grid.Row="7" Text="30" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-6,10,10" />
-        <Rectangle Grid.Row="8" Width="10" VerticalAlignment="Top" Fill="{DynamicResource ContentForeground}" Margin="25,0,0,0" Height="1" />
-        <TextBlock Grid.Row="8" Text="20" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-6,10,10" />
-        <Rectangle Grid.Row="9" Width="10" VerticalAlignment="Top" Fill="{DynamicResource ContentForeground}" Margin="25,0,0,0" Height="1" />
-        <TextBlock Grid.Row="9" Text="10" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-6,10,10" />
+        <Rectangle x:Name="yAxisRectangle" Grid.Row="0" Grid.RowSpan="11" Fill="{DynamicResource ContentForeground}"
+          Margin="30,0,0,0" HorizontalAlignment="Center" Width="1" />
+        <Rectangle Grid.Row="0" Width="10" VerticalAlignment="Center" Fill="{DynamicResource ContentForeground}" Margin="30,0,0,0" Height="1" />
+        <TextBlock Grid.Row="0" Text="100" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-2,20,0" />
+        <Rectangle Grid.Row="1" Width="10" VerticalAlignment="Center" Fill="{DynamicResource ContentForeground}" Margin="30,0,0,0" Height="1" />
+        <TextBlock Grid.Row="1" Text="90" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,12,0" />
+        <Rectangle Grid.Row="2" Width="10" VerticalAlignment="Center" Fill="{DynamicResource ContentForeground}" Margin="30,0,0,0" Height="1" />
+        <TextBlock Grid.Row="2" Text="80" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,12,0" />
+        <Rectangle Grid.Row="3" Width="10" VerticalAlignment="Center" Fill="{DynamicResource ContentForeground}" Margin="30,0,0,0" Height="1" />
+        <TextBlock Grid.Row="3" Text="70" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,12,0" />
+        <Rectangle Grid.Row="4" Width="10" VerticalAlignment="Center" Fill="{DynamicResource ContentForeground}" Margin="30,0,0,0" Height="1" />
+        <TextBlock Grid.Row="4" Text="60" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,12,0" />
+        <Rectangle Grid.Row="5" Width="10" VerticalAlignment="Center" Fill="{DynamicResource ContentForeground}" Margin="30,0,0,0" Height="1" />
+        <TextBlock Grid.Row="5" Text="50" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,12,0" />
+        <Rectangle Grid.Row="6" Width="10" VerticalAlignment="Center" Fill="{DynamicResource ContentForeground}" Margin="30,0,0,0" Height="1" />
+        <TextBlock Grid.Row="6" Text="40" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,12,0" />
+        <Rectangle Grid.Row="7" Width="10" VerticalAlignment="Center" Fill="{DynamicResource ContentForeground}" Margin="30,0,0,0" Height="1" />
+        <TextBlock Grid.Row="7" Text="30" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,12,0" />
+        <Rectangle Grid.Row="8" Width="10" VerticalAlignment="Center" Fill="{DynamicResource ContentForeground}" Margin="30,0,0,0" Height="1" />
+        <TextBlock Grid.Row="8" Text="20" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,12,0" />
+        <Rectangle Grid.Row="9" Width="10" VerticalAlignment="Center" Fill="{DynamicResource ContentForeground}" Margin="30,0,0,0" Height="1" />
+        <TextBlock Grid.Row="9" Text="10" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,12,0" />
       </Grid>
       <ScrollViewer Grid.Column="1" Grid.RowSpan="2" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Disabled">
         <Grid x:Name="content">
