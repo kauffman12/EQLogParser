@@ -161,8 +161,9 @@ namespace EQLogParser
                 running.Show();
               });
 
-              await Task.Delay(500);
-              FileUtil.ArchiveNow(logFiles);
+              // need time to display message
+              await Task.Delay(1000);
+              await FileUtil.ArchiveNowAsync(logFiles);
 
               _ = Dispatcher.InvokeAsync(() =>
               {
