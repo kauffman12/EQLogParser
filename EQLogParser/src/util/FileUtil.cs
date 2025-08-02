@@ -47,7 +47,7 @@ namespace EQLogParser
       { "1 month", 28 }
     };
 
-    internal static void ArchiveFile(LogReader logReader)
+    internal static async void QueueFileArchiveAsync(LogReader logReader)
     {
       var file = Path.GetFileName(logReader.FileName);
       if (string.IsNullOrEmpty(file) || !ArchiveFileNameRegex.IsMatch(file) || !ConfigUtil.IfSet("LogManagementEnabled"))
@@ -55,6 +55,7 @@ namespace EQLogParser
         return;
       }
 
+      var startArchive = false;
       lock (LockObject)
       {
         if (ArchiveQueue.Any(item => item.FileName == logReader.FileName))
@@ -65,29 +66,34 @@ namespace EQLogParser
         ArchiveQueue.Add(logReader);
         if (ArchiveQueue.Count == 1)
         {
-          ScheduleArchive(1000);
+          startArchive = true;
         }
+      }
+
+      if (startArchive)
+      {
+        await Task.Delay(1000);
+        await Task.Run(ArchiveProcessAsync);
       }
     }
 
-    internal static void ArchiveNow(HashSet<string> files)
+    internal static async Task ArchiveNowAsync(HashSet<string> files)
     {
       lock (LockObject)
       {
         ArchiveQueue.Clear();
-        foreach (var file in files)
+      }
+
+      foreach (var file in files)
+      {
+        if (File.Exists(file))
         {
-          if (File.Exists(file))
-          {
-            DoArchive(file);
-          }
+          await DoArchiveAsync(file);
         }
       }
     }
 
-    private static void ScheduleArchive(int timeout) => Task.Delay(timeout).ContinueWith(_ => ArchiveProcess());
-
-    private static void ArchiveProcess()
+    private static async Task ArchiveProcessAsync()
     {
       bool remaining;
       List<string> readyList = [];
@@ -108,7 +114,7 @@ namespace EQLogParser
           }
         }
 
-        remaining = ArchiveQueue.Any();
+        remaining = ArchiveQueue.Count != 0;
       }
 
       foreach (var path in readyList)
@@ -126,7 +132,7 @@ namespace EQLogParser
           continue;
         }
 
-        savedFileSize = savedFileSize.ToLower();
+        savedFileSize = savedFileSize.ToLower(null);
         if (!ArchiveFileSizes.ContainsKey(savedFileSize))
         {
           continue;
@@ -138,7 +144,7 @@ namespace EQLogParser
           continue;
         }
 
-        savedFileAge = savedFileAge.ToLower();
+        savedFileAge = savedFileAge.ToLower(null);
         if (!ArchiveFileAges.ContainsKey(savedFileAge))
         {
           continue;
@@ -159,7 +165,7 @@ namespace EQLogParser
 
         try
         {
-          DoArchive(path);
+          await DoArchiveAsync(path);
         }
         catch (Exception e)
         {
@@ -170,11 +176,12 @@ namespace EQLogParser
       // try again
       if (remaining)
       {
-        ScheduleArchive(3000);
+        await Task.Delay(5000);
+        await Task.Run(ArchiveProcessAsync);
       }
     }
 
-    private static void DoArchive(string path)
+    private static async Task DoArchiveAsync(string path)
     {
       var fileInfo = new FileInfo(path);
       var creationTime = fileInfo.CreationTimeUtc;
@@ -227,34 +234,29 @@ namespace EQLogParser
       // compress if specified
       if (LogManagementWindow.CompressYes.Equals(compress, StringComparison.OrdinalIgnoreCase))
       {
-        CompressFile(destination);
+        var compressedFilePath = $"{destination}.gz";
+        var originalFileStream = File.OpenRead(destination);
+        var compressedFileStream = File.Create(compressedFilePath);
+        var compressionStream = new GZipStream(compressedFileStream, CompressionMode.Compress);
+        await originalFileStream.CopyToAsync(compressionStream);
+        await compressionStream.DisposeAsync();
+        await compressedFileStream.DisposeAsync();
+        await originalFileStream.DisposeAsync();
+
+        try
+        {
+          File.Delete(destination);
+        }
+        catch (Exception)
+        {
+          // ignore delete errors
+        }
       }
 
       Log.Info($"Archived File (Originally Created {creationTime.ToLocalTime().ToString(CultureInfo.InvariantCulture)}): {path}");
 
       // pause before archiving each file
-      Task.Delay(100);
-    }
-
-    private static async void CompressFile(string filePath)
-    {
-      var compressedFilePath = $"{filePath}.gz";
-      var originalFileStream = File.OpenRead(filePath);
-      var compressedFileStream = File.Create(compressedFilePath);
-      var compressionStream = new GZipStream(compressedFileStream, CompressionMode.Compress);
-      await originalFileStream.CopyToAsync(compressionStream);
-      await compressionStream.DisposeAsync();
-      await compressedFileStream.DisposeAsync();
-      await originalFileStream.DisposeAsync();
-
-      try
-      {
-        File.Delete(filePath);
-      }
-      catch (Exception)
-      {
-        // ignore delete errors
-      }
+      await Task.Delay(100);
     }
 
     internal static bool ParseFileName(string theFile, out string name, out string server)

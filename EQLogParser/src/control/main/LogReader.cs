@@ -38,7 +38,7 @@ namespace EQLogParser
       if (await WhenFileExists())
       {
         logProcessor.LinkTo(_lines);
-        FileUtil.ArchiveFile(this);
+        FileUtil.QueueFileArchiveAsync(this);
       }
 
       try
@@ -227,7 +227,7 @@ namespace EQLogParser
         // if zoning during monitor try to archive
         if (monitor && lineSpan[27..].StartsWith("LOADING, PLEASE WAIT..."))
         {
-          FileUtil.ArchiveFile(this);
+          FileUtil.QueueFileArchiveAsync(this);
         }
 
         _lines.Add(Tuple.Create(theLine, _lastParsedTime, monitor), _cts.Token);

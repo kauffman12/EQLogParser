@@ -415,7 +415,7 @@ namespace EQLogParser
         _unFiltered = [];
 
         double start = -1;
-        TimeRange ranges = null;
+        TimeRange range = null;
 
         // use selected fights
         if (logPlaceIndex == 1)
@@ -426,8 +426,8 @@ namespace EQLogParser
           if (fights?.Count > 0)
           {
             start = fights[0].BeginTime - 15;
-            ranges = new TimeRange();
-            fights.ForEach(fight => ranges.Add(new TimeSegment(fight.BeginTime - 15, fight.LastTime)));
+            range = new TimeRange();
+            fights.ForEach(fight => range.Add(new TimeSegment(fight.BeginTime - 15, fight.LastTime)));
           }
         }
         else
@@ -515,7 +515,7 @@ namespace EQLogParser
             while (!s.EndOfStream && _running)
             {
               var line = s.ReadLine();
-              if (TimeRange.TimeCheck(line, start, ranges, out var exceeds))
+              if (TimeRange.TimeCheck(line, start, range, out var exceeds))
               {
                 var match = true;
                 var firstIndex = -2;
