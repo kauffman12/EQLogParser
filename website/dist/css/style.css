@@ -118,6 +118,14 @@ code {
   cursor: pointer;
 }
 
+.rightad {
+  position: fixed;
+  right: 0;
+  top: 50px;
+  z-index: 9999;
+  background: transparent;  
+}
+
 @media (max-width: 1050px) {
   .toc {
     display: none;
