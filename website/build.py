@@ -41,11 +41,9 @@ def wrap_docs_html(title: str, header: str, toc: str, content: str) -> str:
   <nav class="rightad">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4428145487599357" crossorigin="anonymous"></script>
     <ins class="adsbygoogle"
-      style="display:inline-block; width:200px; height:600px"
+      style="display:inline-block; width:160px; height:600px"
       data-ad-client="ca-pub-4428145487599357"
-      data-ad-slot="9757256233"
-      data-ad-format="auto"
-      data-full-width-responsive="true"></ins>
+      data-ad-slot="9757256233"></ins>
     <script>(adsbygoogle = window.adsbygoogle || []).push({{}});</script>     
   </nav>
   <main class="docs-container">
