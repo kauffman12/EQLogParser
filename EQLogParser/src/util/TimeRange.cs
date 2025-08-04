@@ -169,8 +169,15 @@ namespace EQLogParser
 
     internal static bool TimeCheck(string line, double start, TimeRange range, out bool exceeds)
     {
-      var pass = false;
       exceeds = false;
+
+      // this is any time?
+      if (start == 0)
+      {
+        return true;
+      }
+
+      var pass = false;
       if (!string.IsNullOrEmpty(line) && line.Length > 24)
       {
         var logTime = DateUtil.StandardDateToDouble(line);

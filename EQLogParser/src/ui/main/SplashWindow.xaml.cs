@@ -69,7 +69,8 @@ namespace EQLogParser
       var block = new TextBlock
       {
         HorizontalAlignment = HorizontalAlignment.Center,
-        FontSize = 10,
+        FontSize = 11,
+        FontWeight = FontWeights.SemiBold,
         Text = text
       };
 

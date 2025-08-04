@@ -39,9 +39,9 @@ namespace EQLogParser
     private readonly DispatcherTimer _filterTimer;
     private List<string> _unFiltered = [];
     private readonly Dictionary<long, long> _filteredLinePositionMap = [];
-    private readonly Dictionary<long, long> _linePositions = [];
     private readonly int _lineTypeCount;
     private readonly bool _ready;
+    private Dictionary<long, long> _linePositions;
     private TriggerConfig _config;
     private string _currentFile;
 
@@ -226,7 +226,7 @@ namespace EQLogParser
                 chatType = ChatLineParser.ParseChatType(action);
                 if (chatType != null)
                 {
-                  bool ignore;
+                  var ignore = false;
                   switch (chatType.Channel)
                   {
                     case ChatChannels.Fellowship:
@@ -411,7 +411,6 @@ namespace EQLogParser
         var logPlaceIndex = logSearchPlace.SelectedIndex;
         var logTimeIndex = logSearchTime.SelectedIndex;
         var regexEnabled = IsUseRegex(logSearchText) || IsUseRegex(logSearchText2);
-        _linePositions.Clear();
         _unFiltered = [];
 
         double start = -1;
@@ -484,118 +483,89 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(_currentFile) && File.Exists(_currentFile))
         {
           var theFile = _currentFile;
-          await Task.Delay(50);
 
-          await Task.Run(async () =>
+          Regex searchRegex = null;
+          if (logSearchText != Resource.LOG_SEARCH_TEXT && logSearchText.Length > 1)
           {
-            using var f = File.OpenRead(theFile);
-            var s = FileUtil.GetStreamReader(f, start);
+            searchRegex = new Regex(logSearchText, RegexOptions.IgnoreCase);
+          }
 
-            if (!s.EndOfStream)
+          Regex searchRegex2 = null;
+          if (logSearchText2 != Resource.LOG_SEARCH_TEXT && logSearchText2.Length > 1)
+          {
+            searchRegex2 = new Regex(logSearchText2, RegexOptions.IgnoreCase);
+          }
+
+          var searcher = new FileSearcher<string>();
+          searcher.ProgressUpdated += percent =>
+          {
+            Dispatcher.Invoke(() =>
             {
-              // since position is not the start of a line just read one as junk
-              s.ReadLine();
+              progress.Content = $"Searching ({percent}% Complete)";
+            }, DispatcherPriority.Background);
+          };
+
+          var results = await searcher.SearchAsync(theFile, start, range, line =>
+          {
+            var match = true;
+            var firstIndex = -2;
+            var secondIndex = -2;
+
+            if (searchRegex != null)
+            {
+              firstIndex = DoSearch(line, logSearchText, searchRegex, regexEnabled);
             }
 
-            var list = new List<string>();
-            var lastPercent = -1;
-
-            Regex searchRegex = null;
-            if (logSearchText != Resource.LOG_SEARCH_TEXT && logSearchText.Length > 1)
+            if (searchRegex2 != null)
             {
-              searchRegex = new Regex(logSearchText, RegexOptions.IgnoreCase);
+              secondIndex = DoSearch(line, logSearchText2, searchRegex2, regexEnabled);
             }
 
-            Regex searchRegex2 = null;
-            if (logSearchText2 != Resource.LOG_SEARCH_TEXT && logSearchText2.Length > 1)
+            // AND
+            if (modifierIndex == 0 && (firstIndex == -1 || secondIndex == -1))
             {
-              searchRegex2 = new Regex(logSearchText2, RegexOptions.IgnoreCase);
+              match = false;
+            }
+            // OR
+            else if (modifierIndex == 1 && firstIndex < 0 && secondIndex < 0)
+            {
+              match = false;
+            }
+            // Excluding
+            else if (modifierIndex == 2 && (firstIndex == -1 || secondIndex > -1))
+            {
+              match = false;
             }
 
-            while (!s.EndOfStream && _running)
+            if (match)
             {
-              var line = s.ReadLine();
-              if (TimeRange.TimeCheck(line, start, range, out var exceeds))
-              {
-                var match = true;
-                var firstIndex = -2;
-                var secondIndex = -2;
-
-                if (searchRegex != null)
-                {
-                  firstIndex = DoSearch(line, logSearchText, searchRegex, regexEnabled);
-                }
-
-                if (searchRegex2 != null)
-                {
-                  secondIndex = DoSearch(line, logSearchText2, searchRegex2, regexEnabled);
-                }
-
-                // AND
-                if (modifierIndex == 0 && (firstIndex == -1 || secondIndex == -1))
-                {
-                  match = false;
-                }
-                // OR
-                else if (modifierIndex == 1 && firstIndex < 0 && secondIndex < 0)
-                {
-                  match = false;
-                }
-                // Excluding
-                else if (modifierIndex == 2 && (firstIndex == -1 || secondIndex > -1))
-                {
-                  match = false;
-                }
-
-                if (match)
-                {
-                  _linePositions[list.Count] = f.Position;
-                  list.Add(line);
-                }
-              }
-
-              var percent = Math.Min(Convert.ToInt32((double)f.Position / f.Length * 100), 100);
-              if (percent % 5 == 0 && percent != lastPercent)
-              {
-                lastPercent = percent;
-                await Dispatcher.InvokeAsync(() =>
-                {
-                  progress.Content = "Searching (" + percent + "% Complete)";
-                }, DispatcherPriority.Background);
-              }
-
-              if (exceeds)
-              {
-                break;
-              }
+              return line;
             }
 
-            List<string> unFiltered = [.. list.Take(MaxRows)];
-            var allData = string.Join(Environment.NewLine, unFiltered);
-            // adding extra new line to be away from scrollbar
-
-            await Dispatcher.InvokeAsync(() =>
-            {
-              _unFiltered = unFiltered;
-              if (!string.IsNullOrEmpty(allData))
-              {
-                logBox.Text = allData;
-                selectedContext.IsEnabled = true;
-              }
-
-              // reset filter
-              tabControl.SelectedItem = resultsTab;
-              logFilter.Text = Resource.LOG_FILTER_TEXT;
-              logFilter.FontStyle = FontStyles.Italic;
-              UpdateStatusCount(_unFiltered.Count);
-              if (logBox.Lines is { Count: > 0 })
-              {
-                GoToLine(logBox, logBox.Lines.Count);
-              }
-            });
-
-            f.Close();
+            return null;
           });
+
+          _linePositions = results.LinePositions;
+          List<string> unFiltered = [.. results.Lines.Take(MaxRows)];
+          var allData = string.Join(Environment.NewLine, unFiltered);
+          // adding extra new line to be away from scrollbar
+
+          _unFiltered = unFiltered;
+          if (!string.IsNullOrEmpty(allData))
+          {
+            logBox.Text = allData;
+            selectedContext.IsEnabled = true;
+          }
+
+          // reset filter
+          tabControl.SelectedItem = resultsTab;
+          logFilter.Text = Resource.LOG_FILTER_TEXT;
+          logFilter.FontStyle = FontStyles.Italic;
+          UpdateStatusCount(_unFiltered.Count);
+          if (logBox.Lines is { Count: > 0 })
+          {
+            GoToLine(logBox, logBox.Lines.Count);
+          }
         }
         else
         {
@@ -603,15 +573,12 @@ namespace EQLogParser
           await Task.Delay(500);
         }
 
-        await Dispatcher.InvokeAsync(() =>
-        {
-          searchIcon.IsEnabled = true;
-          searchIcon.Icon = EFontAwesomeIcon.Solid_Search;
-          progress.Visibility = Visibility.Hidden;
-          _running = false;
-          _complete = true;
-          UpdateUi();
-        });
+        searchIcon.IsEnabled = true;
+        searchIcon.Icon = EFontAwesomeIcon.Solid_Search;
+        progress.Visibility = Visibility.Hidden;
+        _running = false;
+        _complete = true;
+        UpdateUi();
       }
       else
       {

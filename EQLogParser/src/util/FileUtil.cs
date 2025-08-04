@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace EQLogParser
@@ -358,5 +359,76 @@ namespace EQLogParser
 
     [GeneratedRegex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.(txt|log)(?:\.gz)?$", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
     private static partial Regex TheServerFileNameRegex();
+  }
+
+  internal class FileSearcher<T>
+  {
+    internal event Action<int> ProgressUpdated;
+
+    public Task<SearchResult<T>> SearchAsync(
+        string filePath,
+        double start,
+        TimeRange maxRange,
+        Func<string, T> processor,
+        CancellationToken cancellationToken = default)
+    {
+      return Task.Run(async () =>
+      {
+        var lastPercent = -1;
+        var results = new SearchResult<T>();
+
+        try
+        {
+          using var f = File.OpenRead(filePath);
+          using var reader = FileUtil.GetStreamReader(f, start);
+
+          if (start > 0 && !reader.EndOfStream)
+          {
+            // since position is not the start of a line just read one as junk
+            reader.ReadLine();
+          }
+
+          string line = null;
+          while ((line = await reader.ReadLineAsync()) != null)
+          {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var percent = Math.Min(Convert.ToInt32((double)f.Position / f.Length * 100), 100);
+            if (percent % 5 == 0 && percent != lastPercent)
+            {
+              ProgressUpdated?.Invoke(percent);
+              lastPercent = percent;
+            }
+
+            if (TimeRange.TimeCheck(line, start, maxRange, out var exceeds))
+            {
+              if (processor(line) is { } found)
+              {
+                results.LinePositions[results.Lines.Count] = f.Position;
+                results.Lines.Add(found);
+              }
+            }
+
+            if (exceeds)
+            {
+              break;
+            }
+          }
+        }
+        catch (Exception)
+        {
+          // ignore
+        }
+
+        ProgressUpdated?.Invoke(100);
+        return results;
+      }, cancellationToken);
+    }
+
+    internal class SearchResult<U>
+    {
+      internal Dictionary<long, long> LinePositions = [];
+      internal List<U> Lines = [];
+    }
   }
 }

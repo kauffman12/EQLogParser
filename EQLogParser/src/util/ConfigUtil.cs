@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Security;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -49,8 +50,6 @@ namespace EQLogParser
       Directory.CreateDirectory(ConfigDir);
       // create logs dir if it doesn't exist
       Directory.CreateDirectory(LogsDir);
-
-      UpdateStatus("Reading Settings");
       LoadProperties(ApplicationSettings, ReadList(_settingsFile));
     }
 
@@ -65,6 +64,9 @@ namespace EQLogParser
       {
         _isDone = true;
       }
+
+      // allow splash screen to update
+      Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.Background);
     }
 
     internal static bool IfSet(string setting, bool callByDefault = false)

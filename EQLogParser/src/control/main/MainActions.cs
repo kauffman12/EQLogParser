@@ -396,7 +396,11 @@ namespace EQLogParser
       CurrentTheme = theme ?? DefaultTheme;
       _ = UiUtil.InvokeAsync(() =>
       {
-        RegisterThemeSettings();
+        if (theme != null)
+        {
+          RegisterThemeSettings();
+        }
+
         ChangeTheme(_mainWindow);
         // set after change succeeds
         ConfigUtil.SetSetting("CurrentTheme", CurrentTheme);
@@ -1141,10 +1145,7 @@ namespace EQLogParser
         Source = new Uri(path, UriKind.RelativeOrAbsolute)
       };
 
-      foreach (var key in dict.Keys)
-      {
-        Application.Current.Resources[key] = dict[key];
-      }
+      Application.Current.Resources.MergedDictionaries.Add(dict);
     }
 
     [GeneratedRegex(@"EQLogParser-install-((\d)\.(\d)\.(\d?\d?\d))\.exe")]

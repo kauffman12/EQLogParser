@@ -175,7 +175,7 @@ namespace EQLogParser
       ((DocumentContainer)dockSite.DocContainer).AddTabDocumentAtLast = true;
 
       // init theme before loading docs
-      ConfigUtil.UpdateStatus("Initialize Themes");
+      ConfigUtil.UpdateStatus("Loading Themes");
       MainActions.InitThemes();
 
       // save active window before adding
