@@ -7,8 +7,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,7 +22,7 @@ namespace EQLogParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private const int Context = 30000;
-    private const int MaxRows = 250000;
+    private const int MaxRows = 500000;
     private const string Damageavoided = "Damage Avoided";
     private const string Nocat = "Uncategorized";
     private const string Otherchat = "Other Chat";
@@ -32,18 +32,18 @@ namespace EQLogParser
     ];
     private static readonly List<string> Times =
     [
-      "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 2 Days", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Any Time"
+      "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 2 Days", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Last 90 Days", "Any Time"
     ];
     private static bool _complete = true;
     private static bool _running;
     private readonly DispatcherTimer _filterTimer;
-    private List<string> _unFiltered = [];
-    private readonly Dictionary<long, long> _filteredLinePositionMap = [];
+    private readonly List<string> _unFiltered = [];
+    private readonly List<FileSearcher<string>.LinePosition> _linePositions = [];
+    private readonly List<FileSearcher<string>.LinePosition> _filteredLinePositions = [];
     private readonly int _lineTypeCount;
     private readonly bool _ready;
-    private Dictionary<long, long> _linePositions;
+    private CancellationTokenSource _cts;
     private TriggerConfig _config;
-    private string _currentFile;
 
     public EqLogViewer()
     {
@@ -101,10 +101,10 @@ namespace EQLogParser
       lineTypes.ItemsSource = list;
       UiElementUtil.SetComboBoxTitle(lineTypes, list.Count, Resource.LINE_TYPES_SELECTED);
 
-      _filterTimer.Tick += (_, _) =>
+      _filterTimer.Tick += async (_, _) =>
       {
         _filterTimer.Stop();
-        UpdateUi();
+        await UpdateUiAsync();
       };
 
       MainActions.EventsThemeChanged += EventsThemeChanged;
@@ -115,7 +115,7 @@ namespace EQLogParser
 
     private void EventsThemeChanged(string _) => UpdateCurrentTextColor();
     private void TriggerConfigUpdateEvent(TriggerConfig config) => LoadPlaces(config);
-    private void SelectLineTypes(object sender, EventArgs e) => UpdateUi();
+    private async void SelectLineTypes(object sender, EventArgs e) => await UpdateUiAsync();
 
     private void LoadPlaces(TriggerConfig config)
     {
@@ -159,13 +159,13 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateUi()
+    private async Task UpdateUiAsync()
     {
       if (_ready && logBox?.Lines != null)
       {
         logFilter.IsEnabled = false;
         lineTypes.IsEnabled = false;
-        _filteredLinePositionMap.Clear();
+        _filteredLinePositions.Clear();
 
         var types = (lineTypes.ItemsSource as List<ComboBoxItemDetails>)!.Where(item => item.IsChecked).ToDictionary(item => item.Value, _ => true);
         UiElementUtil.SetComboBoxTitle(lineTypes, types.Count, Resource.LINE_TYPES_SELECTED);
@@ -176,14 +176,14 @@ namespace EQLogParser
           UpdateStatusCount(_unFiltered.Count);
           if (logBox.Lines.Count > 0)
           {
-            GoToLine(logBox, logBox.Lines.Count);
+            await GoToLine(logBox, logBox.Lines.Count);
           }
         }
         else if ((logFilter.FontStyle != FontStyles.Italic && logFilter.Text.Length > 1) || types.Count < _lineTypeCount)
         {
           var filtered = new List<string>();
           var lineCount = -1;
-          foreach (var line in CollectionsMarshal.AsSpan(_unFiltered))
+          foreach (var line in _unFiltered)
           {
             lineCount++;
 
@@ -258,8 +258,8 @@ namespace EQLogParser
               (logFilterModifier.SelectedIndex == 0 && line.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) > -1) ||
                (logFilterModifier.SelectedIndex == 1 && line.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) < 0))
             {
-              _filteredLinePositionMap[filtered.Count] = _linePositions[lineCount];
               filtered.Add(line);
+              _filteredLinePositions.Add(_linePositions[lineCount]);
             }
           }
 
@@ -267,7 +267,7 @@ namespace EQLogParser
           UpdateStatusCount(filtered.Count);
           if (logBox.Lines is { Count: > 0 })
           {
-            GoToLine(logBox, logBox.Lines.Count);
+            await GoToLine(logBox, logBox.Lines.Count);
           }
         }
 
@@ -280,119 +280,116 @@ namespace EQLogParser
     {
       await Task.Delay(100);
 
-      try
-      {
-        var list = new List<string>();
-        var foundLines = new List<int>();
-        using var f = File.OpenRead(theFile);
-        var isGzip = f.Name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase);
-
-        if (!isGzip)
-        {
-          f.Seek(Math.Max(0, pos - Context), SeekOrigin.Begin);
-          var s = FileUtil.GetStreamReader(f);
-
-          if (!s.EndOfStream)
-          {
-            // since position is not the start of a line just read one as junk
-            s.ReadLine();
-          }
-
-          while (!s.EndOfStream)
-          {
-            if (s.ReadLine() is { } line)
-            {
-              list.Add(line);
-              if (line.StartsWith(text, StringComparison.OrdinalIgnoreCase))
-              {
-                foundLines.Add(list.Count);
-              }
-
-              if (f.Position >= (pos + Context))
-              {
-                break;
-              }
-            }
-          }
-
-          s.Close();
-          s.Dispose();
-        }
-        else
-        {
-          var firstFound = false;
-          var queue = new Queue<string>();
-          var s = FileUtil.GetStreamReader(f);
-
-          while (!s.EndOfStream)
-          {
-            if (s.ReadLine() is { } line)
-            {
-              queue.Enqueue(line);
-              if (line.StartsWith(text, StringComparison.OrdinalIgnoreCase))
-              {
-                firstFound = true;
-                foundLines.Add(queue.Count);
-              }
-
-              // grab += 1000 lines
-              // not really sure how many the non-gz is doing tbh
-              if (!firstFound && queue.Count > 1000)
-              {
-                queue.Dequeue();
-              }
-
-              if (firstFound && queue.Count == 2000)
-              {
-                break;
-              }
-            }
-          }
-
-          list.AddRange([.. queue]);
-          s.Close();
-          s.Dispose();
-        }
-
-        var allText = string.Join(Environment.NewLine, list);
-        await Dispatcher.InvokeAsync(() =>
-        {
-          var highlight = Application.Current.Resources["EQSearchBackgroundBrush"] as SolidColorBrush;
-          contextBox.Text = allText;
-          contextTab.Visibility = Visibility.Visible;
-          foundLines.ForEach(line => contextBox.SetLineBackground(line, true, highlight));
-          tabControl.SelectedItem = contextTab;
-          UpdateStatusCount(contextBox.Lines.Count);
-
-          if (foundLines.Count > 0)
-          {
-            GoToLine(contextBox, foundLines[0] + 3);
-          }
-        });
-
-        f.Close();
-        f.Dispose();
-      }
-      catch (Exception ex)
-      {
-        Log.Error("Error Loading Context", ex);
-      }
-    }
-
-    private void GoToLine(EditControl control, int line)
-    {
-      // GoToLine just doesn't work until UI is fully rendered
-      Task.Delay(250).ContinueWith(_ => Dispatcher.Invoke(() =>
+      await Task.Run(() =>
       {
         try
         {
-          control.GoToLine(Math.Min(line, control.Lines.Count));
-        }
-        catch (NullReferenceException)
-        {
+          if (!string.IsNullOrEmpty(theFile) && File.Exists(theFile))
+          {
+            var list = new List<string>();
+            var foundLines = new List<int>();
+            using var f = File.OpenRead(theFile);
+            var isGzip = Path.GetExtension(theFile).Equals(".gz", StringComparison.OrdinalIgnoreCase);
 
+            if (!isGzip)
+            {
+              f.Seek(Math.Max(0, pos - Context), SeekOrigin.Begin);
+              using var s = FileUtil.GetStreamReader(f);
+
+              if (!s.EndOfStream)
+              {
+                // since position is not the start of a line just read one as junk
+                s.ReadLine();
+              }
+
+              while (!s.EndOfStream)
+              {
+                if (s.ReadLine() is { } line)
+                {
+                  list.Add(line);
+                  if (line.StartsWith(text, StringComparison.OrdinalIgnoreCase))
+                  {
+                    foundLines.Add(list.Count);
+                  }
+
+                  if (f.Position >= (pos + Context))
+                  {
+                    break;
+                  }
+                }
+              }
+            }
+            else
+            {
+              var firstFound = false;
+              var queue = new Queue<string>();
+              using var s = FileUtil.GetStreamReader(f);
+
+              while (!s.EndOfStream)
+              {
+                if (s.ReadLine() is { } line)
+                {
+                  queue.Enqueue(line);
+                  if (line.StartsWith(text, StringComparison.OrdinalIgnoreCase))
+                  {
+                    firstFound = true;
+                    foundLines.Add(queue.Count);
+                  }
+
+                  // grab += 1000 lines
+                  // not really sure how many the non-gz is doing tbh
+                  if (!firstFound && queue.Count > 1000)
+                  {
+                    queue.Dequeue();
+                  }
+
+                  if (firstFound && queue.Count == 2000)
+                  {
+                    break;
+                  }
+                }
+              }
+
+              list.AddRange([.. queue]);
+            }
+
+            var allText = string.Join(Environment.NewLine, list);
+            Dispatcher.InvokeAsync(async () =>
+            {
+              var highlight = Application.Current.Resources["EQSearchBackgroundBrush"] as SolidColorBrush;
+              contextBox.Text = allText;
+              contextTab.Visibility = Visibility.Visible;
+              foundLines.ForEach(line => contextBox.SetLineBackground(line, true, highlight));
+              tabControl.SelectedItem = contextTab;
+              UpdateStatusCount(contextBox.Lines.Count);
+
+              if (foundLines.Count > 0)
+              {
+                await GoToLine(contextBox, foundLines[0] + 3);
+              }
+            }, DispatcherPriority.Background);
+          }
         }
-      }));
+        catch (Exception ex)
+        {
+          Log.Error("Error Loading Context", ex);
+        }
+      });
+    }
+
+    private static async Task GoToLine(EditControl control, int line)
+    {
+      // GoToLine just doesn't work until UI is fully rendered
+      await Task.Delay(300);
+
+      try
+      {
+        control.GoToLine(Math.Min(line, control.Lines.Count));
+      }
+      catch (NullReferenceException)
+      {
+        // ignore
+      }
     }
 
     private async void SearchClick(object sender, MouseButtonEventArgs e)
@@ -404,14 +401,20 @@ namespace EQLogParser
         progress.Visibility = Visibility.Visible;
         progress.Content = "Searching";
         searchIcon.Icon = EFontAwesomeIcon.Solid_TimesCircle;
-        logBox.ClearAllText();
+        searchIcon.Foreground = Application.Current.Resources["EQStopForegroundBrush"] as SolidColorBrush;
+        logBox.Text = "";
+        contextTab.Visibility = Visibility.Collapsed;
+        contextBox.Text = "";
+        UpdateStatusCount(0);
         var logSearchText = logSearch.Text;
         var logSearchText2 = logSearch2.Text;
         var modifierIndex = logSearchModifier.SelectedIndex;
         var logPlaceIndex = logSearchPlace.SelectedIndex;
         var logTimeIndex = logSearchTime.SelectedIndex;
         var regexEnabled = IsUseRegex(logSearchText) || IsUseRegex(logSearchText2);
-        _unFiltered = [];
+        _unFiltered.Clear();
+        _linePositions.Clear();
+        _filteredLinePositions.Clear();
 
         double start = -1;
         TimeRange range = null;
@@ -455,17 +458,25 @@ namespace EQLogParser
               start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 30);
               break;
             case 7:
+              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 90);
+              break;
+            case 8:
               start = 0;
               break;
           }
         }
 
-        _currentFile = null;
+        var fileList = new List<string>();
         if (logPlaceIndex < 2)
         {
           if (MainWindow.CurrentLogFile is { } current)
           {
-            _currentFile = current;
+            fileList.Add(current);
+
+            if (includeArchive.IsChecked == true && FileUtil.FindArchivedLogFiles(ConfigUtil.PlayerName, ConfigUtil.ServerName, start) is { } archiveFiles)
+            {
+              fileList.AddRange(archiveFiles);
+            }
           }
         }
         else
@@ -475,15 +486,19 @@ namespace EQLogParser
             var character = _config.Characters.Where(character => character.Name == (logSearchPlace.SelectedItem as string)).FirstOrDefault();
             if (character?.FilePath != null)
             {
-              _currentFile = character.FilePath;
+              fileList.Add(character.FilePath);
+
+              if (includeArchive.IsChecked == true && FileUtil.ParseFileName(character.FilePath, out var player, out var server) &&
+                FileUtil.FindArchivedLogFiles(player, server, start) is { } archiveFiles)
+              {
+                fileList.AddRange(archiveFiles);
+              }
             }
           }
         }
 
-        if (!string.IsNullOrEmpty(_currentFile) && File.Exists(_currentFile))
+        if (fileList.Count > 0)
         {
-          var theFile = _currentFile;
-
           Regex searchRegex = null;
           if (logSearchText != Resource.LOG_SEARCH_TEXT && logSearchText.Length > 1)
           {
@@ -496,7 +511,7 @@ namespace EQLogParser
             searchRegex2 = new Regex(logSearchText2, RegexOptions.IgnoreCase);
           }
 
-          var searcher = new FileSearcher<string>();
+          var searcher = new FileSearcher<string>(fileList);
           searcher.ProgressUpdated += percent =>
           {
             Dispatcher.Invoke(() =>
@@ -505,67 +520,94 @@ namespace EQLogParser
             }, DispatcherPriority.Background);
           };
 
-          var results = await searcher.SearchAsync(theFile, start, range, line =>
+          searcher.ResultsReady += (lines, positions) =>
           {
-            var match = true;
-            var firstIndex = -2;
-            var secondIndex = -2;
+            _unFiltered.InsertRange(0, lines);
+            _linePositions.InsertRange(0, positions);
 
-            if (searchRegex != null)
+            if (_unFiltered.Count >= MaxRows)
             {
-              firstIndex = DoSearch(line, logSearchText, searchRegex, regexEnabled);
+              _unFiltered.Clear();
+              _unFiltered.AddRange(_unFiltered.Take(MaxRows));
+              _linePositions.Clear();
+              _linePositions.AddRange(_linePositions.Take(MaxRows));
+              _cts?.Cancel();
             }
 
-            if (searchRegex2 != null)
+            Dispatcher.InvokeAsync(async () =>
             {
-              secondIndex = DoSearch(line, logSearchText2, searchRegex2, regexEnabled);
-            }
+              if (_unFiltered.Count > 0)
+              {
+                logBox.Text = string.Join(Environment.NewLine, _unFiltered);
 
-            // AND
-            if (modifierIndex == 0 && (firstIndex == -1 || secondIndex == -1))
-            {
-              match = false;
-            }
-            // OR
-            else if (modifierIndex == 1 && firstIndex < 0 && secondIndex < 0)
-            {
-              match = false;
-            }
-            // Excluding
-            else if (modifierIndex == 2 && (firstIndex == -1 || secondIndex > -1))
-            {
-              match = false;
-            }
+                UpdateStatusCount(_unFiltered.Count);
+                if (logBox.Lines is { Count: > 0 })
+                {
+                  await GoToLine(logBox, logBox.Lines.Count);
+                }
+              }
+            }, DispatcherPriority.Background);
+          };
 
-            if (match)
-            {
-              return line;
-            }
+          _cts = new CancellationTokenSource();
 
-            return null;
-          });
-
-          _linePositions = results.LinePositions;
-          List<string> unFiltered = [.. results.Lines.Take(MaxRows)];
-          var allData = string.Join(Environment.NewLine, unFiltered);
-          // adding extra new line to be away from scrollbar
-
-          _unFiltered = unFiltered;
-          if (!string.IsNullOrEmpty(allData))
+          try
           {
-            logBox.Text = allData;
-            selectedContext.IsEnabled = true;
+            await searcher.SearchLogsAsync(start, range, line =>
+            {
+              var match = true;
+              var firstIndex = -2;
+              var secondIndex = -2;
+
+              if (searchRegex != null)
+              {
+                firstIndex = CheckLine(line, logSearchText, searchRegex, regexEnabled);
+              }
+
+              if (searchRegex2 != null)
+              {
+                secondIndex = CheckLine(line, logSearchText2, searchRegex2, regexEnabled);
+              }
+
+              // AND
+              if (modifierIndex == 0 && (firstIndex == -1 || secondIndex == -1))
+              {
+                match = false;
+              }
+              // OR
+              else if (modifierIndex == 1 && firstIndex < 0 && secondIndex < 0)
+              {
+                match = false;
+              }
+              // Excluding
+              else if (modifierIndex == 2 && (firstIndex == -1 || secondIndex > -1))
+              {
+                match = false;
+              }
+
+              if (match)
+              {
+                return line;
+              }
+
+              return null;
+            }, 2, _cts.Token);
+          }
+          catch (Exception)
+          {
+            // user cancel or error
+          }
+          finally
+          {
+            _cts?.Dispose();
+            _cts = null;
           }
 
           // reset filter
           tabControl.SelectedItem = resultsTab;
           logFilter.Text = Resource.LOG_FILTER_TEXT;
           logFilter.FontStyle = FontStyles.Italic;
-          UpdateStatusCount(_unFiltered.Count);
-          if (logBox.Lines is { Count: > 0 })
-          {
-            GoToLine(logBox, logBox.Lines.Count);
-          }
+          selectedContext.IsEnabled = true;
         }
         else
         {
@@ -575,15 +617,18 @@ namespace EQLogParser
 
         searchIcon.IsEnabled = true;
         searchIcon.Icon = EFontAwesomeIcon.Solid_Search;
+        searchIcon.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
         progress.Visibility = Visibility.Hidden;
         _running = false;
         _complete = true;
-        UpdateUi();
+        await UpdateUiAsync();
       }
       else
       {
         searchIcon.IsEnabled = false;
         _running = false;
+        _complete = true;
+        _cts?.Cancel();
       }
     }
 
@@ -609,7 +654,7 @@ namespace EQLogParser
       return false;
     }
 
-    private static int DoSearch(string line, string text, Regex searchRegex, bool regexEnabled)
+    private static int CheckLine(string line, string text, Regex searchRegex, bool regexEnabled)
     {
       if (regexEnabled)
       {
@@ -783,12 +828,12 @@ namespace EQLogParser
 
     private async void SelectedContext(object sender, RoutedEventArgs e)
     {
-      if (logBox?.LineNumber > 0 && !string.IsNullOrEmpty(_currentFile) && File.Exists(_currentFile))
+      if (logBox?.LineNumber > 0)
       {
-        var line = logBox.LineNumber - 1;
-        var start = _filteredLinePositionMap.TryGetValue(line, out var value) ? value : _linePositions[line];
-        var text = logBox.Lines[line].Text;
-        await LoadContextAsync(_currentFile, start, text);
+        var index = logBox.LineNumber - 1;
+        var linePos = _filteredLinePositions.Count > index ? _filteredLinePositions[index] : _linePositions[index];
+        var text = logBox.Lines[index].Text;
+        await LoadContextAsync(linePos.File, linePos.Position, text);
       }
     }
 
@@ -837,7 +882,7 @@ namespace EQLogParser
       }
     }
 
-    private void OptionsChange(object sender, EventArgs e) => UpdateUi();
+    private async void OptionsChange(object sender, EventArgs e) => await UpdateUiAsync();
 
     #region IDisposable Support
     private bool _disposedValue; // To detect redundant calls
