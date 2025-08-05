@@ -12,6 +12,7 @@
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="{DynamicResource EQGridTitleHeight}" />
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}" />
       <RowDefinition Height="300*" />
       <RowDefinition Height="{DynamicResource EQGridFooterHeight}" />
     </Grid.RowDefinitions>
@@ -19,15 +20,13 @@
       <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
     </Grid.Resources>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <TextBox x:Name="logSearch" Margin="8,0,8,2" ToolTip="Minimum of 2 Characters" FontStyle="Italic" Width="160" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
+      <TextBox x:Name="logSearch" Margin="8,0,8,2" Width="180" ToolTip="Minimum of 2 Characters" FontStyle="Italic" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
       <ComboBox x:Name="logSearchModifier" Margin="0,0,8,2" SelectedIndex="0" Padding="5,0,10,0" VerticalContentAlignment="Center">
         <ComboBoxItem>And</ComboBoxItem>
         <ComboBoxItem>Or</ComboBoxItem>
-        <ComboBoxItem>Exclude</ComboBoxItem>
+        <ComboBoxItem>Exclude</ComboBoxItem>  
       </ComboBox>
-      <TextBox x:Name="logSearch2" Margin="0,0,8,2" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" FontStyle="Italic" Width="160" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
-      <ComboBox x:Name="logSearchPlace" Margin="0,0,8,2" SelectedIndex="0" Padding="5,0,10,0" VerticalContentAlignment="Center" SelectionChanged="LogPlaceChanged" />
-      <ComboBox x:Name="logSearchTime" Margin="0,0,8,2" SelectedIndex="0" Padding="5,0,10,0" VerticalContentAlignment="Center" />
+      <TextBox x:Name="logSearch2" Margin="0,0,8,2" Width="180" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" FontStyle="Italic" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
       <fa:ImageAwesome x:Name="searchIcon" Rotation="0" Margin="2,4,0,4" Cursor="Hand" VerticalAlignment="Center" Height="18" Width="18" Icon="Solid_Search" ToolTip="Start Searching" MouseLeftButtonDown="SearchClick" IsEnabledChanged="SearchIconIsEnabledChanged">
         <fa:ImageAwesome.LayoutTransform>
           <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
@@ -41,9 +40,14 @@
         <ComboBoxItem>Exclude</ComboBoxItem>
       </ComboBox>
       <TextBox x:Name="logFilter" Margin="0,0,8,2" FontStyle="Italic" Width="160" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged"/>
-      <ComboBox x:Name="lineTypes" Width="135" Margin="0,0,8,2" DropDownClosed="SelectLineTypes" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
+      <ComboBox x:Name="lineTypes" Margin="0,0,8,2" DropDownClosed="SelectLineTypes" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
     </StackPanel>
-    <syncfusion:TabControlExt x:Name="tabControl" TabClosed="TabClosed" PreviewSelectedItemChangedEvent="PreviewSelectedItemChangedEvent" Grid.Row="1" AllowDragDrop="False" EnableLabelEdit="False" CloseMode="Hide" TabStripPlacement="Top" CloseButtonType="Individual" ShowTabItemContextMenu="False" TabListContextMenuOptions="None">
+    <StackPanel Grid.Row="1" Orientation="Horizontal">
+      <ComboBox x:Name="logSearchPlace" Margin="8,0,8,2" SelectedIndex="0" Padding="5,0,10,0" VerticalContentAlignment="Center" SelectionChanged="LogPlaceChanged" />
+      <ComboBox x:Name="logSearchTime" Margin="0,0,8,2" SelectedIndex="0" Padding="5,0,10,0" VerticalContentAlignment="Center" />
+      <CheckBox x:Name="includeArchive" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="False" Margin="0,0,8,1" Content="Search Archive"/>
+    </StackPanel>
+    <syncfusion:TabControlExt x:Name="tabControl" Grid.Row="2" Margin="0,4,0,0" TabClosed="TabClosed" PreviewSelectedItemChangedEvent="PreviewSelectedItemChangedEvent" AllowDragDrop="False" EnableLabelEdit="False" CloseMode="Hide" TabStripPlacement="Top" CloseButtonType="Individual" ShowTabItemContextMenu="False" TabListContextMenuOptions="None">
       <syncfusion:TabItemExt x:Name="resultsTab" Background="{DynamicResource ContentBackgroundAlt2}" Header="Search Results" FontSize="{DynamicResource EQTitleSize}" CloseButtonState="Hidden" CanClose="False">
         <syncfusion:EditControl x:Name="logBox" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontFamily="{DynamicResource EQLogFontFamily}" FontSize="{DynamicResource EQLogFontSize}" Margin="0,0,0,15" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
       DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
@@ -58,7 +62,7 @@
           </syncfusion:EditControl.ContextMenu>
         </syncfusion:EditControl>
       </syncfusion:TabItemExt>
-      <syncfusion:TabItemExt x:Name="contextTab" Header="Context" CanClose="True" FontSize="{DynamicResource EQTitleSize}" Visibility="Hidden">
+      <syncfusion:TabItemExt x:Name="contextTab" Header="Context" CanClose="True" FontSize="{DynamicResource EQTitleSize}" Visibility="Collapsed">
         <syncfusion:EditControl x:Name="contextBox" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontFamily="{DynamicResource EQLogFontFamily}" FontSize="{DynamicResource EQLogFontSize}" Margin="0" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
       DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
           <syncfusion:EditControl.ContextMenu>
@@ -71,10 +75,10 @@
         </syncfusion:EditControl>
       </syncfusion:TabItemExt>      
     </syncfusion:TabControlExt>
-    <StatusBar Grid.Row="2" FontSize="{DynamicResource EQContentSize}">
+    <StatusBar Grid.Row="3" FontSize="{DynamicResource EQContentSize}">
       <TextBlock x:Name="statusCount">0 Lines</TextBlock>
     </StatusBar>
-    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
+    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
       <syncfusion:ComboBoxAdv x:Name="fontFamily" BorderThickness="0" FontSize="{DynamicResource EQContentSize}" Width="120" SelectionChanged="FontFamilyChanged" />
       <syncfusion:ComboBoxAdv x:Name="fontSize" BorderThickness="0" FontSize="{DynamicResource EQContentSize}" SelectionChanged="FontSizeChanged" />
       <syncfusion:ColorPicker x:Name="colorPicker" Padding="0,2,0,0"  VerticalAlignment="Center" VerticalContentAlignment="Center" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False" BorderThickness="0,0,0,1" ColorChanged="FontFgColorChanged" />

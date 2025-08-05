@@ -8,7 +8,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace EQLogParser
@@ -17,7 +16,8 @@ namespace EQLogParser
   {
     private const long M = 1000000;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly Regex ArchiveFileNameRegex = TheArchiveFileNameRegex();
+    private static readonly Regex ArchivedFileNameRegex = TheArchivedFileNameRegex();
+    private static readonly Regex FileNameToArchiveRegex = TheFileNameToArchiveRegex();
     private static readonly Regex ServerFileNameRegex = TheServerFileNameRegex();
     private static readonly object LockObject = new();
     private static readonly HashSet<LogReader> ArchiveQueue = [];
@@ -48,10 +48,43 @@ namespace EQLogParser
       { "1 month", 28 }
     };
 
+    internal static List<string> FindArchivedLogFiles(string player, string server, double start)
+    {
+      var matchingFiles = new List<(string filePath, DateTime date)>();
+
+      var archiveFolder = ConfigUtil.GetSetting("LogManagementArchiveFolder");
+      if (string.IsNullOrEmpty(archiveFolder) || Path.GetDirectoryName(archiveFolder) == null)
+      {
+        return [];
+      }
+
+      var formats = new[] { "yyyyMMddHHmm", "yyyyMMdd" };
+
+      foreach (var file in Directory.EnumerateFiles(archiveFolder, "*.*", SearchOption.AllDirectories))
+      {
+        var fileName = Path.GetFileName(file);
+        var match = ArchivedFileNameRegex.Match(fileName);
+
+        if (match.Success &&
+            string.Equals(match.Groups["player"].Value, player, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(match.Groups["server"].Value, server, StringComparison.OrdinalIgnoreCase) &&
+            DateTime.TryParseExact(match.Groups["datetime"].Value, formats, CultureInfo.InvariantCulture,
+                DateTimeStyles.None, out var fileDate))
+        {
+          if (start == 0 || DateUtil.ToDouble(fileDate) >= start)
+          {
+            matchingFiles.Add((file, fileDate));
+          }
+        }
+      }
+
+      return [.. matchingFiles.OrderByDescending(f => f.date).Select(f => f.filePath)];
+    }
+
     internal static async void QueueFileArchiveAsync(LogReader logReader)
     {
       var file = Path.GetFileName(logReader.FileName);
-      if (string.IsNullOrEmpty(file) || !ArchiveFileNameRegex.IsMatch(file) || !ConfigUtil.IfSet("LogManagementEnabled"))
+      if (string.IsNullOrEmpty(file) || !FileNameToArchiveRegex.IsMatch(file) || !ConfigUtil.IfSet("LogManagementEnabled"))
       {
         return;
       }
@@ -355,80 +388,12 @@ namespace EQLogParser
     }
 
     [GeneratedRegex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+)(?!.*\d).*\.txt$", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
-    private static partial Regex TheArchiveFileNameRegex();
+    private static partial Regex TheFileNameToArchiveRegex();
 
     [GeneratedRegex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.(txt|log)(?:\.gz)?$", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
     private static partial Regex TheServerFileNameRegex();
-  }
 
-  internal class FileSearcher<T>
-  {
-    internal event Action<int> ProgressUpdated;
-
-    public Task<SearchResult<T>> SearchAsync(
-        string filePath,
-        double start,
-        TimeRange maxRange,
-        Func<string, T> processor,
-        CancellationToken cancellationToken = default)
-    {
-      return Task.Run(async () =>
-      {
-        var lastPercent = -1;
-        var results = new SearchResult<T>();
-
-        try
-        {
-          using var f = File.OpenRead(filePath);
-          using var reader = FileUtil.GetStreamReader(f, start);
-
-          if (start > 0 && !reader.EndOfStream)
-          {
-            // since position is not the start of a line just read one as junk
-            reader.ReadLine();
-          }
-
-          string line = null;
-          while ((line = await reader.ReadLineAsync()) != null)
-          {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var percent = Math.Min(Convert.ToInt32((double)f.Position / f.Length * 100), 100);
-            if (percent % 5 == 0 && percent != lastPercent)
-            {
-              ProgressUpdated?.Invoke(percent);
-              lastPercent = percent;
-            }
-
-            if (TimeRange.TimeCheck(line, start, maxRange, out var exceeds))
-            {
-              if (processor(line) is { } found)
-              {
-                results.LinePositions[results.Lines.Count] = f.Position;
-                results.Lines.Add(found);
-              }
-            }
-
-            if (exceeds)
-            {
-              break;
-            }
-          }
-        }
-        catch (Exception)
-        {
-          // ignore
-        }
-
-        ProgressUpdated?.Invoke(100);
-        return results;
-      }, cancellationToken);
-    }
-
-    internal class SearchResult<U>
-    {
-      internal Dictionary<long, long> LinePositions = [];
-      internal List<U> Lines = [];
-    }
+    [GeneratedRegex(@"^eqlog_(?<player>[^_]+)_(?<server>[^_]+)_(?<datetime>\d{8}(?:\d{4})?)_\d+\.txt(?:\.gz)?$", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    private static partial Regex TheArchivedFileNameRegex();
   }
 }
