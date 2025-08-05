@@ -1,9 +1,11 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -23,12 +25,31 @@ namespace EQLogParser
   {
     internal static readonly SolidColorBrush DefaultBrush = new(Colors.Gray);
     internal static readonly SortableNameComparer TheSortableNameComparer = new();
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new();
     private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new();
 
     static UiUtil()
     {
       DefaultBrush.Freeze();
+    }
+
+    internal static void SetClipboardText(string text)
+    {
+      if (text != null)
+      {
+        _ = InvokeAsync(() =>
+        {
+          try
+          {
+            Clipboard.SetText(text);
+          }
+          catch (Exception ex)
+          {
+            Log.Error($"Failed to set Clipboard Text: {ex.Message}");
+          }
+        }, DispatcherPriority.DataBind);
+      }
     }
 
     internal static DispatcherTimer CreateTimer(EventHandler tickHandler, int interval, bool start, DispatcherPriority priority = DispatcherPriority.Normal)

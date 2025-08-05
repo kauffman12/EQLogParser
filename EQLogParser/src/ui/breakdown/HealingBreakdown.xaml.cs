@@ -1,69 +1,108 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Windows.Controls;
+﻿using Syncfusion.UI.Xaml.TreeGrid;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for HealTable.xaml
-  /// </summary>
   public partial class HealBreakdown
   {
-    private bool _currentShowSpellsChoice = true;
-    private List<PlayerStats> _playerStats;
-    private string _title;
-    private string _setting;
-
     private readonly List<string> _choicesList = ["Breakdown By Spell", "Breakdown By Healed"];
     private readonly List<string> _receivedChoicesList = ["Breakdown By Spell", "Breakdown By Healer"];
+    private readonly List<string> _topSpellsList = ["Showing Top 3 Spells", "Showing Top 5 Spells", "Showing Top 10 Spells", "Showing All Spells"];
+    private readonly List<string> _topHealedList = ["Showing Top 3 Healed", "Showing Top 5 Healed", "Showing Top 10 Healed", "Showing All Healed"];
+    private readonly List<string> _topHealerList = ["Showing Top 3 Healers", "Showing Top 5 Healers", "Showing Top 10 Healers", "Showing All Healers"];
+
+    private bool _received;
+    private bool _currentShowSpellsChoice = true;
+    private int _currentShowTop;
+    private List<PlayerStats> _playerStats;
+    private string _setting;
+    private string _title;
 
     public HealBreakdown()
     {
       InitializeComponent();
-      dataGrid.IsEnabled = false;
-      UiElementUtil.SetEnabled(controlPanel.Children, false);
       InitBreakdownTable(titleLabel, dataGrid, selectedColumns);
     }
 
     internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats, bool received = false)
     {
-      _title = currentStats?.ShortTitle;
+      _received = received;
       _playerStats = selectedStats;
+      _title = currentStats?.ShortTitle;
       _setting = (received ? "Received" : "") + "HealingBreakdownShowSpells";
       _currentShowSpellsChoice = ConfigUtil.IfSet(_setting);
       choicesList.ItemsSource = received ? _receivedChoicesList : _choicesList;
       choicesList.SelectedIndex = _currentShowSpellsChoice ? 0 : 1;
-      Display();
+      UpdateOptionsList();
     }
 
-    private void Display()
+    private void ListSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
-      Task.Delay(100).ContinueWith(_ =>
-      {
-        Dispatcher.InvokeAsync(() =>
-        {
-          dataGrid.ChildPropertyName = _currentShowSpellsChoice ? "SubStats" : "SubStats2";
-          titleLabel.Content = _title;
-          dataGrid.IsEnabled = true;
-          UiElementUtil.SetEnabled(controlPanel.Children, true);
-          dataGrid.ItemsSource = null;
-          dataGrid.ItemsSource = _playerStats;
-        });
-      });
-    }
-
-    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      if (_playerStats != null)
+      if (_playerStats != null && dataGrid?.View != null)
       {
         _currentShowSpellsChoice = choicesList.SelectedIndex == 0;
         titleLabel.Content = "Loading...";
-        dataGrid.ItemsSource = null;
-        dataGrid.IsEnabled = false;
-        UiElementUtil.SetEnabled(controlPanel.Children, false);
         ConfigUtil.SetSetting(_setting, _currentShowSpellsChoice);
-        Display();
+        UpdateOptionsList();
+        dataGrid.View.Refresh();
+        dataGrid.ExpandAllNodes();
+        dataGrid.SortColumnDescriptions.Clear();
+        titleLabel.Content = _title;
       }
+    }
+
+    private void DataGridRequestTreeItems(object sender, TreeGridRequestTreeItemsEventArgs e)
+    {
+      if (e.ParentItem == null)
+      {
+        e.ChildItems = _playerStats;
+      }
+      else if (e.ParentItem is PlayerStats { } stats)
+      {
+        var list = _currentShowSpellsChoice ? stats.SubStats : stats.SubStats2;
+        if (_currentShowTop == 0)
+        {
+          list = [.. list.Take(3)];
+        }
+        else if (_currentShowTop == 1)
+        {
+          list = [.. list.Take(5)];
+        }
+        else if (_currentShowTop == 2)
+        {
+          list = [.. list.Take(10)];
+        }
+
+        e.ChildItems = list.OrderByDescending(stats => stats.Total);
+      }
+      else
+      {
+        e.ChildItems = new List<PlayerStats>();
+      }
+    }
+
+    private void UpdateOptionsList()
+    {
+      List<string> options = null;
+      var previousIndex = optionsList.SelectedIndex >= 0 ? optionsList.SelectedIndex : 0;
+
+      if (_received)
+      {
+        options = _currentShowSpellsChoice ? _topSpellsList : _topHealerList;
+      }
+      else
+      {
+        options = _currentShowSpellsChoice ? _topSpellsList : _topHealedList;
+      }
+
+      if (options != null && options != optionsList.ItemsSource)
+      {
+        optionsList.ItemsSource = options;
+        optionsList.SelectedIndex = previousIndex;
+      }
+
+      _currentShowTop = optionsList.SelectedIndex;
     }
   }
 }

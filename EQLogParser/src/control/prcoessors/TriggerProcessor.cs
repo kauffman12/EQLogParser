@@ -11,7 +11,6 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media.Imaging;
 
@@ -559,7 +558,7 @@ namespace EQLogParser
 
       if (ProcessDisplayText(wrapper.ModifiedShare, lineData.Action, matches, null, previousMatches) is { } updatedShareText)
       {
-        _ = UiUtil.InvokeAsync(() => Clipboard.SetText(updatedShareText));
+        UiUtil.SetClipboardText(updatedShareText);
       }
 
       if (ProcessDisplayText(wrapper.ModifiedSendToChat, lineData.Action, matches, null, previousMatches) is { } updatedSendToChatText)

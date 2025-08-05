@@ -77,7 +77,7 @@ namespace EQLogParser
     {
       if (dataGrid?.SelectedItem is QuickShareRecord record)
       {
-        Clipboard.SetText(record.Key);
+        UiUtil.SetClipboardText(record.Key);
       }
     }
 

@@ -59,9 +59,9 @@ namespace EQLogParser
     {
       if (selected?.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(out var breakdown, typeof(HealBreakdown), "healingBreakdownWindow", "Healing Breakdown"))
+        if (SyncFusionUtil.OpenWindow(out var window, typeof(HealBreakdown), "healingBreakdownWindow", "Healing Breakdown") && window.Content is HealBreakdown { } breakdown)
         {
-          (breakdown.Content as HealBreakdown)?.Init(CurrentStats, selected);
+          breakdown.Init(CurrentStats, selected);
         }
       }
     }

@@ -20,13 +20,13 @@
       <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
     </Grid.Resources>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <TextBox x:Name="logSearch" Margin="8,0,8,2" Width="180" ToolTip="Minimum of 2 Characters" FontStyle="Italic" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
+      <TextBox x:Name="logSearch" Margin="8,0,8,2" MinWidth="180" Padding="3,0,10,0" ToolTip="Minimum of 2 Characters" FontStyle="Italic" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
       <ComboBox x:Name="logSearchModifier" Margin="0,0,8,2" SelectedIndex="0" Padding="5,0,10,0" VerticalContentAlignment="Center">
         <ComboBoxItem>And</ComboBoxItem>
         <ComboBoxItem>Or</ComboBoxItem>
         <ComboBoxItem>Exclude</ComboBoxItem>  
       </ComboBox>
-      <TextBox x:Name="logSearch2" Margin="0,0,8,2" Width="180" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" FontStyle="Italic" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
+      <TextBox x:Name="logSearch2" Margin="0,0,8,2" MinWidth="180" Padding="3,0,10,0" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" FontStyle="Italic" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
       <fa:ImageAwesome x:Name="searchIcon" Rotation="0" Margin="2,4,0,4" Cursor="Hand" VerticalAlignment="Center" Height="18" Width="18" Icon="Solid_Search" ToolTip="Start Searching" MouseLeftButtonDown="SearchClick" IsEnabledChanged="SearchIconIsEnabledChanged">
         <fa:ImageAwesome.LayoutTransform>
           <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
@@ -35,17 +35,17 @@
       <Label x:Name="progress" Visibility="Hidden" FontStyle="Italic" />
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox x:Name="logFilterModifier" Margin="0,0,8,2" Padding="5,0,5,0" SelectedIndex="0" VerticalContentAlignment="Center" DropDownClosed="OptionsChange">
+      <ComboBox x:Name="logFilterModifier" Margin="0,0,8,2" Padding="5,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center" DropDownClosed="OptionsChange">
         <ComboBoxItem>Include</ComboBoxItem>
         <ComboBoxItem>Exclude</ComboBoxItem>
       </ComboBox>
-      <TextBox x:Name="logFilter" Margin="0,0,8,2" FontStyle="Italic" Width="160" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged"/>
-      <ComboBox x:Name="lineTypes" Margin="0,0,8,2" DropDownClosed="SelectLineTypes" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
+      <TextBox x:Name="logFilter" Margin="0,0,8,2" FontStyle="Italic" Padding="3,0,10,0" MinWidth="160" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged"/>
+      <ComboBox x:Name="lineTypes" Margin="0,0,8,2" Padding="5,0,10,0" DropDownClosed="SelectLineTypes" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
     </StackPanel>
     <StackPanel Grid.Row="1" Orientation="Horizontal">
-      <ComboBox x:Name="logSearchPlace" Margin="8,0,8,2" SelectedIndex="0" Padding="5,0,10,0" VerticalContentAlignment="Center" SelectionChanged="LogPlaceChanged" />
-      <ComboBox x:Name="logSearchTime" Margin="0,0,8,2" SelectedIndex="0" Padding="5,0,10,0" VerticalContentAlignment="Center" />
-      <CheckBox x:Name="includeArchive" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="False" Margin="0,0,8,1" Content="Search Archive"/>
+      <ComboBox x:Name="logSearchPlace" Margin="8,0,8,2" SelectedIndex="0" MinWidth="150" Padding="5,0,10,0" VerticalContentAlignment="Center" SelectionChanged="LogPlaceChanged" />
+      <ComboBox x:Name="logSearchTime" Margin="0,0,8,2" SelectedIndex="0" MinWidth="120" Padding="5,0,10,0" VerticalContentAlignment="Center" />
+      <CheckBox x:Name="includeArchive" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="False" Margin="0,0,8,1" Content="Include Archive"/>
     </StackPanel>
     <syncfusion:TabControlExt x:Name="tabControl" Grid.Row="2" Margin="0,4,0,0" TabClosed="TabClosed" PreviewSelectedItemChangedEvent="PreviewSelectedItemChangedEvent" AllowDragDrop="False" EnableLabelEdit="False" CloseMode="Hide" TabStripPlacement="Top" CloseButtonType="Individual" ShowTabItemContextMenu="False" TabListContextMenuOptions="None">
       <syncfusion:TabItemExt x:Name="resultsTab" Background="{DynamicResource ContentBackgroundAlt2}" Header="Search Results" FontSize="{DynamicResource EQTitleSize}" CloseButtonState="Hidden" CanClose="False">
