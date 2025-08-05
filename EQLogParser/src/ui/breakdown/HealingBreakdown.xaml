@@ -21,7 +21,8 @@
       <Label x:Name="titleLabel" Content="Loading..." Style="{StaticResource EQTitleStyle}" />
     </StackPanel>
     <StackPanel x:Name="controlPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox Margin="0,0,0,2" x:Name="choicesList" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="choicesList" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="optionsList" SelectionChanged="ListSelectionChanged" />
       <ComboBox x:Name="selectedColumns" Tag="HealingBreakdownColumns" Margin="0,0,8,2" 
                 DropDownClosed="SelectDataGridColumns" ItemTemplateSelector="{StaticResource ComboBoxSelector}"/>
     </StackPanel>
@@ -34,7 +35,6 @@
                            AutoExpandMode="AllNodesExpanded"
                            AutoGenerateColumns="False"
                            ColumnSizer="Auto"
-                           ChildPropertyName="SubStats"
                            CurrentCellBorderThickness="0"
                            ExpanderCellStyle="{DynamicResource EQExpanderCellStyle}"
                            FrozenColumnCount="1"
@@ -44,6 +44,7 @@
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
                            PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
+                           RequestTreeItems="DataGridRequestTreeItems"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            ShowRowHeader="False">

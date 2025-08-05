@@ -1,6 +1,7 @@
 ﻿using FontAwesome5;
 using System;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 
@@ -18,7 +19,7 @@ namespace EQLogParser
     {
       _copyData = copyData;
       copyLink.Visibility = Visibility.Visible;
-      Clipboard.SetText(copyData);
+      UiUtil.SetClipboardText(copyData);
     }
 
     public MessageWindow(string text, string caption, IconType type = IconType.Warn, string yes1 = null, string yes2 = null, bool extra = false, bool noButtons = false)
@@ -83,9 +84,16 @@ namespace EQLogParser
       iconImage.Icon = image;
     }
 
-    private void ButtonCancelClick(object sender, RoutedEventArgs e)
+    private void ButtonCancelClick(object sender, RoutedEventArgs e) => Close();
+
+    private async void CopyLinkPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-      Close();
+      UiUtil.SetClipboardText(_copyData);
+
+      // show some feedback to the user
+      copyLink.Cursor = Cursors.Arrow;
+      await Task.Delay(250);
+      copyLink.Cursor = Cursors.Hand;
     }
 
     private void ButtonYes1Click(object sender, RoutedEventArgs e)
@@ -100,14 +108,6 @@ namespace EQLogParser
       MergeOption = mergeOption.IsChecked == true;
       IsYes2Clicked = true;
       Close();
-    }
-
-    private void CopyLinkPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-      if (_copyData != null)
-      {
-        Clipboard.SetText(_copyData);
-      }
     }
 
     private const int GwlExstyle = -20;

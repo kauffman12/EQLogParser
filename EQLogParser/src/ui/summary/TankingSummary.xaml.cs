@@ -81,9 +81,10 @@ namespace EQLogParser
     {
       if (selected?.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(out var breakdown, typeof(TankingBreakdown), "tankingBreakdownWindow", "Tanking Breakdown"))
+        if (SyncFusionUtil.OpenWindow(out var window, typeof(TankingBreakdown), "tankingBreakdownWindow", "Tanking Breakdown")
+          && window.Content is TankingBreakdown { } breakdown)
         {
-          (breakdown.Content as TankingBreakdown)?.Init(CurrentStats, selected);
+          breakdown.Init(CurrentStats, selected);
         }
       }
     }
@@ -92,12 +93,13 @@ namespace EQLogParser
     {
       if (selected?.Count > 0)
       {
-        if (SyncFusionUtil.OpenWindow(out var breakdown, typeof(HealBreakdown), "receivedHealingWindow", "Received Healing Breakdown"))
+        if (SyncFusionUtil.OpenWindow(out var window, typeof(HealBreakdown), "receivedHealingWindow", "Received Healing Breakdown")
+          && window.Content is HealBreakdown { } breakdown)
         {
           // healing stats on the tank is stored in MoreStats property
           // it's like another player stat based around healing
           var selectedHealing = selected.Where(stats => stats.MoreStats != null).Select(stats => stats.MoreStats).ToList();
-          (breakdown.Content as HealBreakdown)?.Init(CurrentStats, selectedHealing, true);
+          breakdown.Init(CurrentStats, selectedHealing, true);
         }
       }
     }

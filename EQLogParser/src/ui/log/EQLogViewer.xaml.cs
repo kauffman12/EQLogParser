@@ -163,8 +163,14 @@ namespace EQLogParser
     {
       if (_ready && logBox?.Lines != null)
       {
-        logFilter.IsEnabled = false;
-        lineTypes.IsEnabled = false;
+        // only prevent changes if there is a lot of data
+        if (logBox.Lines.Count > 100)
+        {
+          logFilter.IsEnabled = false;
+          lineTypes.IsEnabled = false;
+          logFilterModifier.IsEnabled = false;
+        }
+
         _filteredLinePositions.Clear();
 
         var types = (lineTypes.ItemsSource as List<ComboBoxItemDetails>)!.Where(item => item.IsChecked).ToDictionary(item => item.Value, _ => true);
@@ -273,6 +279,7 @@ namespace EQLogParser
 
         logFilter.IsEnabled = true;
         lineTypes.IsEnabled = true;
+        logFilterModifier.IsEnabled = true;
       }
     }
 
@@ -823,6 +830,7 @@ namespace EQLogParser
       if (_ready)
       {
         logSearchTime.IsEnabled = logSearchPlace.SelectedIndex != 1;
+        includeArchive.IsEnabled = logSearchPlace.SelectedIndex != 1;
       }
     }
 
