@@ -192,7 +192,7 @@ namespace EQLogParser
           try
           {
             if ((options.MaxSeconds > -1 && options.MaxSeconds < _raidTotals.MaxTime && !options.MaxSeconds.Equals((long)_raidTotals.TotalSeconds)) ||
-              (options.MinSeconds > 0 && options.MinSeconds <= _raidTotals.MaxTime && !options.MinSeconds.Equals((long)_raidTotals.MinTime)))
+              (options.MinSeconds > 0 && options.MinSeconds < _raidTotals.MaxTime))
             {
               StatsUtil.UpdateMinMaxTimes(_raidTotals, options, out startTime, out stopTime);
 

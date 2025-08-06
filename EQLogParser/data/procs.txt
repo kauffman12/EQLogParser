@@ -979,6 +979,9 @@ Fintar's Retort Effect III
 Galvos' Retort Effect
 Galvos' Retort Effect II
 Galvos' Retort Effect III
+Hazuri's Retort Effect
+Hazuri's Retort Effect II
+Hazuri's Retort Effect III
 Jorlleag's Retort Effect
 Jorlleag's Retort Effect II
 Jorlleag's Retort Effect III
@@ -3756,6 +3759,17 @@ Mental Wretchedness Strike III
 Remorselessness
 Remorselessness Rk. II
 
+# SK Spite of Ronak
+KraDu's Spite
+KraDu's Spite II
+Kra`Du's Spite III
+Mirenilla's Spite
+Mirenilla's Spite II
+Mirenilla's Spite III
+Ronak's Spite
+Ronak's Spite II
+Ronak's Spite III
+
 # SK Rigor Mortis
 Rigid Body
 Rigid Body II
@@ -5166,6 +5180,7 @@ Strike of Flames XIV
 Strike of Flames XV
 Strike of Ice
 Strike of Ice I
+Strike of Ice II
 Strike of Ice III
 Strike of Ice IV
 Strike of Ice V

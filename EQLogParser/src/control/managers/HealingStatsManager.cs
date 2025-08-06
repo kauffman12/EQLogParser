@@ -87,7 +87,7 @@ namespace EQLogParser
 
             var startTime = double.NaN;
             var stopTime = double.NaN;
-            if ((options.MaxSeconds > -1 && options.MaxSeconds < _raidTotals.MaxTime) || (options.MinSeconds > 0 && options.MinSeconds <= _raidTotals.MaxTime))
+            if ((options.MaxSeconds > -1 && options.MaxSeconds < _raidTotals.MaxTime) || (options.MinSeconds > 0 && options.MinSeconds < _raidTotals.MaxTime))
             {
               StatsUtil.UpdateMinMaxTimes(_raidTotals, options, out startTime, out stopTime);
               _raidTotals.TotalSeconds = options.MaxSeconds - options.MinSeconds;

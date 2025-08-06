@@ -1,6 +1,16 @@
-# 2.3.13
+# 2.3.14
 
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
+
+1. Added the ability to search the **Log Archive** from Log Search based on the selected player or current file and made some small UI improvements. Note that if you point the log archive configuration at a GINA archive folder it will search those existing files even if you don't use the EQLP archive feature.
+2. Added better error handling for copying things to the clipboard. Hopefully, Quick shares should work now even if access is denied.
+3. Added option to **Healing Breakdown** to limit players/spells shown.
+4. Further reduced app start up time and improved splash screen updates.
+5. Fixed bug where changing healing options didn't auto refresh the summary.
+6. Fixed bug for **Not All Damage Opts Chosen** not showing for damage shields.
+7. Updated the proc list with some missing spells.
+
+# 2.3.13
 
 1. **Renamed** windows under the **DPS/Healing/Tanking Menus** and added **Player Benchmark**. It is a new column chart for comparing players and is a work in-progress.
 2. Updated layout serialization to try and avoid saving the layout if the app never leaves a minimized state. This should prevent the correct saved state from being lost.

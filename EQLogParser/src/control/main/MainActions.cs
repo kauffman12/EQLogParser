@@ -606,19 +606,19 @@ namespace EQLogParser
     }
 
     // keep this on UI thread
-    internal static void UpdateDamageOption(UIElement icon, bool enabled, string option)
+    internal static bool UpdateDamageOption(ImageAwesome icon, string option)
     {
-      ConfigUtil.SetSetting(option, enabled);
-      icon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
+      var update = ToggleSetting(option, icon);
       EventsDamageSummaryOptionsChanged?.Invoke(option);
+      return update;
     }
 
     // keep this on UI thread
-    internal static void UpdateHealingOption(UIElement icon, bool enabled, string option)
+    internal static bool UpdateHealingOption(ImageAwesome icon, string option)
     {
-      ConfigUtil.SetSetting(option, enabled);
-      icon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
+      var update = ToggleSetting(option, icon);
       EventsHealingSummaryOptionsChanged?.Invoke(option);
+      return update;
     }
 
     internal static void UpdateDeleteChatMenu(MenuItem deleteChat)
