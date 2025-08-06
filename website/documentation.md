@@ -181,6 +181,11 @@ Piper TTS is an Open Source `text-to-speech engine` and a custom build is provid
   <img src="img/trigger-selection.gif" alt="Select Trigger from Trigger Log" height="300">
 </a> 
 
+## When using Copy As CSV, Copy As Image or when sending a Quick Share. Nothing gets copied.
+1. Check the error log for the message below. If you see it then your anti-virus software is blocking access. You'll need to figure out how to add an exception for EQLogParser.exe. This seems to be common with ESET and you may want to look for the HIPS settings and see if you can add the exception there.
+    - **ERROR EQLogParser.UiUtil - Failed to set Clipboard Text: OpenClipboard Failed (0x800401D0 (CLIPBRD_E_CANT_OPEN))**
+2. If you do not see an error and it is only happening with Send Parse to EQ. Keep in mind that Everquest has a limit on how many characters you can paste. If you open the Preview Parse window you'll see a count and warning if you copy too much.
+
 ## Why does my Charm Pet or Merc not show up correctly in the DPS Summary or Healing Summary?
 1. The main reason for this is naming. The parser is not good at handling names that do not look like player names. Player names are all one word
 2. Charm pets are additionally difficult as there's no way to distinguish the pet from an npc and if you fight an npc with the same name it can't figure out what's going on
