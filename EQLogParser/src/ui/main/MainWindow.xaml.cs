@@ -452,16 +452,6 @@ namespace EQLogParser
       }
     }
 
-    private void ToggleAoEHealingClick(object sender, RoutedEventArgs e)
-    {
-      IsAoEHealingEnabled = MainActions.ToggleSetting("IncludeAoEHealing", enableAoEHealingIcon);
-    }
-
-    private void ToggleHealingSwarmPetsClick(object sender, RoutedEventArgs e)
-    {
-      IsHealingSwarmPetsEnabled = MainActions.ToggleSetting("IncludeHealingSwarmPets", enableHealingSwarmPetsIcon);
-    }
-
     private void ToggleEmuParsingClick(object sender, RoutedEventArgs e)
     {
       IsEmuParsingEnabled = MainActions.ToggleSetting("EnableEmuParsing", emuParsingIcon);
@@ -675,38 +665,42 @@ namespace EQLogParser
 
     private void ToggleAssassinateDamageClick(object sender, RoutedEventArgs e)
     {
-      IsAssassinateDamageEnabled = !IsAssassinateDamageEnabled;
-      MainActions.UpdateDamageOption(enableAssassinateDamageIcon, IsAssassinateDamageEnabled, "IncludeAssassinateDamage");
+      IsAssassinateDamageEnabled = MainActions.UpdateDamageOption(enableAssassinateDamageIcon, "IncludeAssassinateDamage");
     }
 
     private void ToggleBaneDamageClick(object sender, RoutedEventArgs e)
     {
-      IsBaneDamageEnabled = !IsBaneDamageEnabled;
-      MainActions.UpdateDamageOption(enableBaneDamageIcon, IsBaneDamageEnabled, "IncludeBaneDamage");
+      IsBaneDamageEnabled = MainActions.UpdateDamageOption(enableBaneDamageIcon, "IncludeBaneDamage");
     }
 
     private void ToggleDamageShieldDamageClick(object sender, RoutedEventArgs e)
     {
-      IsDamageShieldDamageEnabled = !IsDamageShieldDamageEnabled;
-      MainActions.UpdateDamageOption(enableDamageShieldDamageIcon, IsDamageShieldDamageEnabled, "IncludeDamageShieldDamage");
+      IsDamageShieldDamageEnabled = MainActions.UpdateDamageOption(enableDamageShieldDamageIcon, "IncludeDamageShieldDamage");
     }
 
     private void ToggleFinishingBlowDamageClick(object sender, RoutedEventArgs e)
     {
-      IsFinishingBlowDamageEnabled = !IsFinishingBlowDamageEnabled;
-      MainActions.UpdateDamageOption(enableFinishingBlowDamageIcon, IsFinishingBlowDamageEnabled, "IncludeFinishingBlowDamage");
+      IsFinishingBlowDamageEnabled = MainActions.UpdateDamageOption(enableFinishingBlowDamageIcon, "IncludeFinishingBlowDamage");
     }
 
     private void ToggleHeadshotDamageClick(object sender, RoutedEventArgs e)
     {
-      IsHeadshotDamageEnabled = !IsHeadshotDamageEnabled;
-      MainActions.UpdateDamageOption(enableHeadshotDamageIcon, IsHeadshotDamageEnabled, "IncludeHeadshotDamage");
+      IsHeadshotDamageEnabled = MainActions.UpdateDamageOption(enableHeadshotDamageIcon, "IncludeHeadshotDamage");
     }
 
     private void ToggleSlayUndeadDamageClick(object sender, RoutedEventArgs e)
     {
-      IsSlayUndeadDamageEnabled = !IsSlayUndeadDamageEnabled;
-      MainActions.UpdateDamageOption(enableSlayUndeadDamageIcon, IsSlayUndeadDamageEnabled, "IncludeSlayUndeadDamage");
+      IsSlayUndeadDamageEnabled = MainActions.UpdateDamageOption(enableSlayUndeadDamageIcon, "IncludeSlayUndeadDamage");
+    }
+
+    private void ToggleAoEHealingClick(object sender, RoutedEventArgs e)
+    {
+      IsAoEHealingEnabled = MainActions.UpdateHealingOption(enableAoEHealingIcon, "IncludeAoEHealing");
+    }
+
+    private void ToggleHealingSwarmPetsClick(object sender, RoutedEventArgs e)
+    {
+      IsHealingSwarmPetsEnabled = MainActions.UpdateHealingOption(enableHealingSwarmPetsIcon, "IncludeHealingSwarmPets");
     }
 
     // Main Menu

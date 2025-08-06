@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "EQLogParser"
-#define MyAppVersion "2.3.13"
+#define MyAppVersion "2.3.14"
 #define MyAppPublisher "Kizant"
 #define MyAppURL "https://github.com/kauffman12/EQLogParser"
 #define MyAppExeName "EQLogParser.exe"
@@ -119,7 +119,15 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [InstallDelete]
+Type: files; Name: "{app}\ActiproSoftware.DataGrid.Contrib.Wpf.dll"
+Type: files; Name: "{app}\ActiproSoftware.Docking.Wpf.dll"
+Type: files; Name: "{app}\ActiproSoftware.Shared.Wpf.dll"
+Type: files; Name: "{app}\Hardcodet.Wpf.TaskbarNotification.dll"
+Type: files; Name: "{app}\LiveCharts.dll"
+Type: files; Name: "{app}\LiveCharts.Wpf.dll"
+Type: files; Name: "{app}\NumericUpDownLib.dll"
 Type: files; Name: "{app}\Syncfusion.SfRichTextBoxAdv.WPF.dll"
+Type: files; Name: "{app}\WPFTextBoxAutoComplete.dll"
 Type: files; Name: "{app}\data\releasenotes.pdf"
 Type: files; Name: "{app}\data\triggerVariables.pdf"
 Type: files; Name: "{app}\data\triggerVariables.rtf"

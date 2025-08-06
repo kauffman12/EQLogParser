@@ -45,9 +45,6 @@ namespace EQLogParser
 
       try
       {
-        // Load splashscreen
-        _splash = new SplashWindow();
-
         // Setup unhandled exception handlers
         DispatcherUnhandledException += AppDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += DomainUnhandledException;
@@ -59,6 +56,9 @@ namespace EQLogParser
         {
           Log.Warn("Windows 10 (build 10240) or newer is required. Make sure you have Windows Compatibility mode turned OFF.");
         }
+
+        // Load splashscreen
+        _splash = new SplashWindow();
 
         // Read app settings
         ConfigUtil.Init();
@@ -173,18 +173,18 @@ namespace EQLogParser
         Left = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN)
       };
 
-      ConfigUtil.UpdateStatus("Validating Window Position");
+      ConfigUtil.UpdateStatus("Checking Window Position");
       CheckWindowPosition(main);
 
       Log.Info($"Window Pos ({main.Top}, {main.Left}) | Window Size ({main.Width}, {main.Height})");
 
       // allow time fow window creation
-      await Task.Delay(500);
+      await Task.Delay(350);
 
       try
       {
         // Init Trigger Manager
-        ConfigUtil.UpdateStatus("Initialize Trigger Manager");
+        ConfigUtil.UpdateStatus("Starting Trigger Manager");
         await TriggerManager.Instance.StartAsync();
 
         var savedState = ConfigUtil.GetSetting("WindowState", "Normal") switch
@@ -220,7 +220,7 @@ namespace EQLogParser
         main.UpdateWindowBorder();
 
         // allow time for state change
-        await Task.Delay(500);
+        await Task.Delay(350);
         MainActions.FireWindowStateChanged(main.WindowState);
         main.ConnectLocationChanged();
         ConfigUtil.UpdateStatus("Done");

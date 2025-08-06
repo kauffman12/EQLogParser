@@ -173,7 +173,7 @@ namespace EQLogParser
           try
           {
             // dont do max/min check to raid totals like damage stats manager so changing damage type will work correctly
-            if ((options.MaxSeconds > -1 && options.MaxSeconds < _raidTotals.MaxTime) || (options.MinSeconds > 0 && options.MinSeconds <= _raidTotals.MaxTime))
+            if ((options.MaxSeconds > -1 && options.MaxSeconds < _raidTotals.MaxTime) || (options.MinSeconds > 0 && options.MinSeconds < _raidTotals.MaxTime))
             {
               StatsUtil.UpdateMinMaxTimes(_raidTotals, options, out startTime, out stopTime);
 
