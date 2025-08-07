@@ -1,6 +1,11 @@
-# 2.3.14
+# 2.3.15
 
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
+
+1. Fixed some window sizing problems when maximized. The app should no longer go under the task bar and won't have weird padding around the window when maximized.
+2. **Note** This may be the last update for a little while.
+
+# 2.3.14
 
 1. Added the ability to search the **Log Archive** from Log Search based on the selected player or current file and made some small UI improvements. Note that if you point the log archive configuration at a GINA archive folder it will search those existing files even if you don't use the EQLP archive feature.
 2. Added better error handling for copying things to the clipboard. Hopefully, Quick shares should work now even if access is denied.
