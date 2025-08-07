@@ -276,7 +276,6 @@ namespace EQLogParser
 
     internal void UpdateWindowBorder()
     {
-      BorderThickness = WindowState == WindowState.Maximized ? new Thickness(8) : new Thickness(2);
       maxRestoreText.Text = WindowState == WindowState.Maximized ? "\uE923" : "\uE922"; ;
     }
 
@@ -1157,11 +1156,15 @@ namespace EQLogParser
     protected override void OnSourceInitialized(EventArgs e)
     {
       base.OnSourceInitialized(e);
+
+      // grab the one HwndSource for this window
       var source = (HwndSource)PresentationSource.FromVisual(this)!;
       if (source != null)
       {
-        source.AddHook(NativeMethods.BandAidHook); // Make sure this is hooked first. That ensures it runs last
+        // hook in order
+        source.AddHook(NativeMethods.BandAidHook);
         source.AddHook(NativeMethods.ProblemHook);
+        source.AddHook(NativeMethods.MaximizeHook);
       }
     }
   }
