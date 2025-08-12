@@ -1165,6 +1165,7 @@ namespace EQLogParser
         source.AddHook(NativeMethods.BandAidHook);
         source.AddHook(NativeMethods.ProblemHook);
         source.AddHook(NativeMethods.MaximizeHook);
+        source.AddHook(NativeMethods.WindowPosHook);
       }
     }
   }
