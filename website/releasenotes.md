@@ -1,11 +1,11 @@
-# 2.3.15
+# 2.3.15 | 08/07/25
 
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
 
 1. Fixed some window sizing problems when maximized. The app should no longer go under the task bar and won't have weird padding around the window when maximized.
 2. **Note** This may be the last update for a little while.
 
-# 2.3.14
+# 2.3.14 | 08/05/25
 
 1. Added the ability to search the **Log Archive** from Log Search based on the selected player or current file and made some small UI improvements. Note that if you point the log archive configuration at a GINA archive folder it will search those existing files even if you don't use the EQLP archive feature.
 2. Added better error handling for copying things to the clipboard. Hopefully, Quick shares should work now even if access is denied.
@@ -15,7 +15,7 @@
 6. Fixed bug for **Not All Damage Opts Chosen** not showing for damage shields.
 7. Updated the proc list with some missing spells.
 
-# 2.3.13
+# 2.3.13 | 08/01/25
 
 1. **Renamed** windows under the **DPS/Healing/Tanking Menus** and added **Player Benchmark**. It is a new column chart for comparing players and is a work in-progress.
 2. Updated layout serialization to try and avoid saving the layout if the app never leaves a minimized state. This should prevent the correct saved state from being lost.
@@ -27,7 +27,7 @@
 8. Moved software update check to its own thread to improve startup speed.
 9. More code cleanup and small performance related improvements.
 
-# 2.3.12
+# 2.3.12 | 07/26/25
 
 1. Improved caching of audio files when played by triggers.
 2. **Performance** updates for log search.
@@ -35,7 +35,7 @@
 4. Log search will now use **Regex** automatically based on what is typed into the search box.
 5. Updated the installer to cleanup unused/old files and to reference the most recent version of the .Net 8 Desktop run-time.
 
-# 2.3.11
+# 2.3.11 | 07/24/25
 
 1. Additional **Performance** improvements to lower overall CPU usage when changing tabs and moving around the parser windows.
 2. Added **Enable Chat Archive** to the Options menu. Uncheck this if you really don't want to use the archived chat feature.
@@ -45,21 +45,21 @@
 6. Fix for Trigger Search failing in some cases.
 7. Updated to latest Syncfusion library version 30.1.41.
 
-# 2.3.10
+# 2.3.10 | 07/22/25
 
 1. **Performance** made improvements during app startup, most noticeble when auto monitoring log files and loading large verified player lists.
 2. **Performance** updates to retune UI thread activity to try and lower CPU usage and replaced busy indicators on Trigger Manager with simple animated gifs as they used way more CPU than a busy indicator should.
 2. Fix for **Spell Cast Order** not displaying seconds correctly.
 3. More **UI updates** to windows that have Save/Close options for consistency and hopefully make things less confusing.
 
-# 2.3.9
+# 2.3.9 | 07/19/25
 
 1. Added **Export CSV with Formatted Values** to the Options menu. It is on by default and causes CSV exports from the summary windows to display numbers using your local format. For example, 4,334,220.30. If this option is turned off it will export without formatting: 4334220.30
 2. Fix for the **Create Backup** dialog not displaying properly.
 3. Fix for **Clear Chat Archive** not displaying players/servers if the server name was too short. Should only have been impacting some EMU servers.
 3. Made one last set of tweaks for restoring window position.
 
-# 2.3.8
+# 2.3.8 | 07/18/25
 
 1. Added a **Repeated Threshold** to the trigger **Timer End Early Settings**. If you use `{repeated}` or `{counter}` to count the number of times a timer has been triggered, you can now end the timer early when the count reaches the specified value. When this happens, the count will also reset to zero even if the **Repeated Reset Time** hasn’t been reached.
 2. Added **Remove All** option for overlays under the **Update Selected Triggers** menu.
@@ -67,7 +67,7 @@
 4. Fix that should help with saving EQLP in a maximized state on a second monitor.
 5. Updated the description for each trigger property/field.
 
-# 2.3.7
+# 2.3.7 | 07/16/25
 
 1. Added right-click menu to the **EQLogParser icon** in the system tray for Exit, Minimize/Restore, and About.
 2. **Removed** the Trigger Variable section from the main Help menu and moved it to a button above where you define triggers so it's harder to miss.
@@ -75,7 +75,7 @@
 4. Fixed bug where the parser would start very small instead of the last saved size.
 5. Fixed some tooltips in Trigger Manager.
 
-# 2.3.6
+# 2.3.6 | 07/15/25
 
 1. Updated to save active tab and try to switch to it at startup.
 2. Updated to save window position when the window is moved and not just resized.
@@ -86,12 +86,12 @@
 7. Fix for the **Auto Enable** checkbox on the receive quick share dialog. If it is not checked then triggers will import as disabled.
 8. Updated the search icon on the **Log Search** window to have pointer on hover to make it more obvious that it is clickable and to have color that's not usually used for a label or title.
 
-# 2.3.5
+# 2.3.5 | 07/13/25
 
 1. Fix for **DPS Summary** loading incorrect times for some players on initial selection.
 2. Updated List option formatting for sending parses to work better with Discord.
 
-# 2.3.4
+# 2.3.4 | 07/13/25
 
 1. Added **Inline and List** options to Parse Preview. If you select **List** the selected parse will display with one player per line instead of one long string. This may be useful for pasting parses in Discord or other areas as it's easier to read. **Inline** is what it's always done.
 2. Added **Time Interval** to Tanking Summary and Healing Summary similar to DPS Summary. Needed a good amount of re-work so **look out of any issues** when using this.
@@ -101,24 +101,24 @@
 6. Added note to character trigger config related to active and font color overrides.
 7. Cleaned up some UI issues with the splash screen.
 
-# 2.3.3
+# 2.3.3 | 07/09/25
 
 1. Enabled renaming of **Tabs** so you can organize multiple breakdowns easier. Restarting the app will reset the names. Double click on the tab to rename.
 2. Fix for receiving **Quick Shares** not working in some cases.
 
-# 2.3.2
+# 2.3.2 | 07/06/25
 
 1. Added **Custom Volume** to character configuration when using **Advanced Mode** in Trigger Manager. This value will override the global setting so each character can have their own volume. If triggers are modifying the volume as well the adjustment will be applied to the character volume.
 2. Fixed bug when turning on/off triggers while they're still being processed could give errors. (may still happen in rare cases)
 
-# 2.3.1
+# 2.3.1 | 07/06/25
 
 1. Perfomance improvements that should help with high usage of TTS.
 2. Added **% Acc** and **% Hit** to the Damage Summary.
 3. Added **Show Damage Percent** to the Damage Meter. It's just the percent of damage the player has done compared to the total. Where it displays may change.
 4. Testing new build/release process.
 
-# 2.3.0
+# 2.3.0 | 07/06/25
 
 1. Started 2.3.x and updated branding. New official site: **http://eqlogparser.kizant.net**
 2. Releaste Notes and Trigger Variable docs are now hosted on the new site.
