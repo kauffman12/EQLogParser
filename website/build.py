@@ -22,17 +22,18 @@ def slugify(text: str) -> str:
 def convert_markdown_to_html(md_text: str) -> str:
     return markdown.markdown(md_text, extensions=["extra"])
 
-def wrap_docs_html(title: str, header: str, toc: str, content: str) -> str:
+def wrap_docs_html(version: str, title: str, header: str, toc: str, content: str) -> str:
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EQLogParser - {title}</title>
-  <meta name="description" content="EQLogParser is is a real-time combat analyzer and damage parsing application built specifically for the EverQuest MMO. It monitors and processes in-game log files to provide detailed statistics as well as various utility functions">
-  <meta name="robots" content="index, follow">
-  <meta name="google-adsense-account" content="ca-pub-4428145487599357">
-  <link rel="shortcut icon" href="/favicon.ico">
+  <meta name="description" content="EQLogParser is is a real-time combat analyzer and damage parsing application built specifically for the EverQuest MMO. It monitors and processes in-game log files to provide detailed statistics as well as various utility functions" />
+  <meta name="robots" content="index, follow" />
+  <meta name="google-adsense-account" content="ca-pub-4428145487599357" />
+  <meta name="latest-version" content="{version}" />
+  <link rel="shortcut icon" href="/favicon.ico" />
   <link rel="stylesheet" href="css/style.css?v=7" />
 </head>
 <body>
@@ -79,7 +80,7 @@ def build_nav_header(home_page: bool = False) -> str:
         return nav + rest
     return nav + home + rest
 
-def process_markdown_to_html(input_path: Path, output_path: Path, title: str, toc_title: str, header: str, decorate_h2=False):
+def process_markdown_to_html(version: str, input_path: Path, output_path: Path, title: str, toc_title: str, header: str, decorate_h2=False):
     md_text = input_path.read_text(encoding='utf-8')
     html_body = convert_markdown_to_html(md_text)
     soup = BeautifulSoup(html_body, 'html.parser')
@@ -102,7 +103,7 @@ def process_markdown_to_html(input_path: Path, output_path: Path, title: str, to
     if toc_title != None and toc_items != '':
       toc = build_toc(toc_title, toc_items)
 
-    final_html = wrap_docs_html(title, header, toc, str(soup))
+    final_html = wrap_docs_html(version, title, header, toc, str(soup))
     output_path.write_text(final_html, encoding='utf-8')
     print(f'✅ HTML generated: {output_path.resolve()}')
 
@@ -130,8 +131,11 @@ def patch_rtf_in_place(file_path: Path):
     file_path.write_text('\n'.join(modified), encoding='cp1252')
     print(f"✅ RTF patched: {file_path.resolve()}")
 
-def update_index_html(index_path: Path, output_path: Path, header_html: str, version: str, url: str):
+def update_index_html(version: str, index_path: Path, output_path: Path, header_html: str, url: str):
     soup = BeautifulSoup(index_path.read_text(encoding='utf-8'), 'html.parser')
+    latest = soup.find("meta", attrs={"name": "latest-version"})
+    if latest:
+        latest["content"] = version
     nav_bar = soup.find('nav', id='nav-bar')
     if nav_bar:
         nav_bar.clear()
@@ -153,11 +157,11 @@ def main():
 
     DIST_DIR.mkdir(exist_ok=True)
 
-    process_markdown_to_html(Path('releasenotes.md'), DIST_DIR / 'releasenotes.html', 'Release Notes', 'Versions', header_html)
-    process_markdown_to_html(Path('documentation.md'), DIST_DIR / 'documentation.html', 'Documentation', 'Contents', header_html, decorate_h2=True)
-    process_markdown_to_html(Path('policy.md'), DIST_DIR / 'policy.html', 'Privacy Policy', 'Contents', header_html)
+    process_markdown_to_html(version, Path('releasenotes.md'), DIST_DIR / 'releasenotes.html', 'Release Notes', 'Versions', header_html)
+    process_markdown_to_html(version, Path('documentation.md'), DIST_DIR / 'documentation.html', 'Documentation', 'Contents', header_html, decorate_h2=True)
+    process_markdown_to_html(version, Path('policy.md'), DIST_DIR / 'policy.html', 'Privacy Policy', 'Contents', header_html)
 
-    update_index_html(Path('index.tmpl'), DIST_DIR / 'index.html', home_header_html, version, url)
+    update_index_html(version, Path('index.tmpl'), DIST_DIR / 'index.html', home_header_html, url)
 
     convert_md_to_rtf(Path('releasenotes.md'), RTF_OUT)
     patch_rtf_in_place(RTF_OUT)

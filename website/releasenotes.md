@@ -1,3 +1,8 @@
+<!--
+  1. Fix EQLP from preventing bringing up the auto hidden task bar
+  2. Fix loot viewer when multiple items of the same name are assigned. the first one looted would set them all to looted.
+-->
+
 # 2.3.15 | 08/07/25
 
 **!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
