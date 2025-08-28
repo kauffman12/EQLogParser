@@ -1,6 +1,7 @@
 <!--
   1. Fix EQLP from preventing bringing up the auto hidden task bar
   2. Fix loot viewer when multiple items of the same name are assigned. the first one looted would set them all to looted.
+  3. Fix healing breakdown top 3/10 and sorting
 -->
 
 # 2.3.15 | 08/07/25
