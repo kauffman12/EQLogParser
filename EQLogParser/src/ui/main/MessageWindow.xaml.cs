@@ -123,7 +123,7 @@ namespace EQLogParser
     {
       var helper = new System.Windows.Interop.WindowInteropHelper(this);
       var exStyle = GetWindowLong(helper.Handle, GwlExstyle);
-      SetWindowLong(helper.Handle, GwlExstyle, exStyle | WsExNoactivate);
+      _ = SetWindowLong(helper.Handle, GwlExstyle, exStyle | WsExNoactivate);
     }
 
     private void MessageWindowLoaded(object sender, RoutedEventArgs e)

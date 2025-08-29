@@ -20,7 +20,7 @@ namespace EQLogParser
       { "sliced", 1 }, { "stabbed", 1 }, { "surrounded", 1 }, { "struck", 1 }, { "stunned", 1 }, { "targeted", 1 }, { "withered", 1 }
     };
 
-    private static string _randomPlayer = null;
+    private static string _randomPlayer;
     private static long _lastLine = -1;
 
     public static bool Process(LineData lineData)
@@ -40,6 +40,7 @@ namespace EQLogParser
           // [Tue Jul 25 11:34:22 2023] You receive 112 platinum, 5 gold and 5 silver from the corpse
           // [Fri Feb 07 22:01:20 2020] --Kizant has looted a Lesser Engraved Velium Rune from Velden Dragonbane's corpse.--
           // [Sat Feb 08 01:20:26 2020] --Proximoe has looted a Velium Infused Spider Silk from a restless devourer's corpse.--
+          // [Sun Aug 17 19:18:27 2025] --Aldryn left an Energized Minor Engram on a weathered chest .--
           // [Sat Feb 08 21:21:36 2020] --You have looted a Cold-Forged Cudgel from Queen Dracnia's corpse.--
           // [Mon Apr 27 22:32:04 2020] Restless Tijoely resisted your Stormjolt Vortex Effect!
           // [Fri Oct 27 17:29:29 2023] Test Ten resisted Xartik's Arcane Harmony Strike II!
@@ -51,6 +52,7 @@ namespace EQLogParser
 
           string looter = null;
           var awakenedIndex = -1;
+          var leftIndex = -1;
           var lootedIndex = -1;
           var masterLootIndex = -1;
           var receiveIndex = -1;
@@ -155,6 +157,9 @@ namespace EQLogParser
                 case "is":
                   isIndex = i;
                   break;
+                case "left":
+                  leftIndex = i;
+                  break;
                 case "looted":
                   lootedIndex = i;
                   break;
@@ -244,8 +249,20 @@ namespace EQLogParser
                     return false;
                   }
                   break;
+                case "on":
+                  if (!string.IsNullOrEmpty(looter) && leftIndex == 1 && split.Length > 4)
+                  {
+                    // covers "a" or "an"
+                    var item = string.Join(" ", split, 3, i - 3);
+                    var npc = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd(LootedFromTrim).Trim().Replace("'s corpse", "");
+                    npc = TextUtils.ToUpper(npc);
+                    var record = new LootRecord { Item = item, Player = looter, Quantity = 0, IsCurrency = false, Npc = $"{npc} (Left on Chest)" };
+                    RecordManager.Instance.Add(record, lineData.BeginTime);
+                    handled = true;
+                  }
+                  break;
                 case "from":
-                  if (masterLootIndex > -1 && lootedIndex > masterLootIndex && split.Length > lootedIndex + 1 && split.Length > 3)
+                  if (masterLootIndex > -1 && lootedIndex > masterLootIndex && split.Length > lootedIndex + 1 && split.Length > 5)
                   {
                     var name = split[3].TrimEnd(',');
                     // if master looter is empty then it was the current player who looted
@@ -267,7 +284,7 @@ namespace EQLogParser
                     // covers "a" or "an"
                     var count = split[3][0] == 'a' ? 1 : StatsUtil.ParseUInt(split[3]);
                     var item = string.Join(" ", split, 4, i - 4);
-                    var npc = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd(LootedFromTrim).Replace("'s corpse", "");
+                    var npc = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd(LootedFromTrim).Trim().Replace("'s corpse", "");
                     npc = TextUtils.ToUpper(npc);
 
                     if (count > 0 && count != ushort.MaxValue)

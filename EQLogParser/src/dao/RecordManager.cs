@@ -102,28 +102,40 @@ namespace EQLogParser
       {
         lock (toAssign)
         {
-          // may need to remove more than one so search all
+          // remove old records first
+          toAssign.RemoveAll(r => (beginTime - r.BeginTime) > 1800);
+
           var toAssignCopy = toAssign.ToArray();
           for (var i = toAssignCopy.Length - 1; i >= 0; i--)
           {
-            var recordsCopy = toAssignCopy[i].Records.ToArray();
-            foreach (var found in recordsCopy.Cast<LootRecord>().Where(r => r.Player == record.Player && r.Item == record.Item))
+            FindItem(i, toAssign, toAssignCopy, LootedQuery);
+            FindItem(i, toAssign, toAssignCopy, LeftQuery);
+          }
+        }
+      }
+
+      void FindItem(int i, List<RecordList> toAssign, RecordList[] toAssignCopy, Func<LootRecord, bool> query)
+      {
+        var recordsCopy = toAssignCopy[i].Records.ToArray();
+        if (recordsCopy.Cast<LootRecord>().FirstOrDefault(query) is { } found)
+        {
+          Remove(toAssign, toAssignCopy[i], found);
+          if (_recordDictionaries.TryGetValue(LootRecords, out var looted) && looted.FirstOrDefault(r => r.BeginTime.Equals(toAssignCopy[i].BeginTime)) is { } orig)
+          {
+            lock (looted)
             {
-              Remove(toAssign, toAssignCopy[i], found);
-              if (_recordDictionaries.TryGetValue(LootRecords, out var looted) && looted.FirstOrDefault(r => r.BeginTime.Equals(toAssignCopy[i].BeginTime)) is { } orig)
+              if (orig.Records.Cast<LootRecord>().FirstOrDefault(query) is { } found2)
               {
-                lock (looted)
-                {
-                  if (orig.Records.Cast<LootRecord>().FirstOrDefault(r => r.Player == record.Player && r.Item == record.Item) is { } found2)
-                  {
-                    Remove(looted, orig, found2);
-                  }
-                }
+                Remove(looted, orig, found2);
               }
             }
           }
         }
       }
+
+      bool LootedQuery(LootRecord r) => r.Npc?.StartsWith("Won Roll", StringComparison.OrdinalIgnoreCase) == true && r.Player == record.Player && r.Item == record.Item;
+      bool LeftQuery(LootRecord r) => r.Npc?.EndsWith("(Left on Chest)", StringComparison.OrdinalIgnoreCase) == true &&
+        r.Item == record.Item && r.Npc?.StartsWith(record.Npc, StringComparison.OrdinalIgnoreCase) == true;
     }
 
     internal void Add(SpellCast spell, double beginTime)
@@ -158,6 +170,8 @@ namespace EQLogParser
       {
         _recordDictionaries[type].Clear();
       }
+
+      _recordNeedsEvent.Clear();
 
       lock (_playerAmbiguityCastCache)
       {
@@ -225,7 +239,7 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(npc))
       {
         NpcResistStats npcStats;
-        npc = npc.ToLower();
+        npc = npc.ToLower(null);
 
         lock (_npcSpellStatsDict)
         {
