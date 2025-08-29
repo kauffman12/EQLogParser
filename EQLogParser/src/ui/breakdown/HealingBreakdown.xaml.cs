@@ -61,20 +61,24 @@ namespace EQLogParser
       else if (e.ParentItem is PlayerStats { } stats)
       {
         var list = _currentShowSpellsChoice ? stats.SubStats : stats.SubStats2;
+        var sorted = list.OrderByDescending(stats => stats.Total);
+
         if (_currentShowTop == 0)
         {
-          list = [.. list.Take(3)];
+          e.ChildItems = sorted.Take(3);
         }
         else if (_currentShowTop == 1)
         {
-          list = [.. list.Take(5)];
+          e.ChildItems = sorted.Take(5);
         }
         else if (_currentShowTop == 2)
         {
-          list = [.. list.Take(10)];
+          e.ChildItems = sorted.Take(10);
         }
-
-        e.ChildItems = list.OrderByDescending(stats => stats.Total);
+        else
+        {
+          e.ChildItems = sorted;
+        }
       }
       else
       {
@@ -84,7 +88,7 @@ namespace EQLogParser
 
     private void UpdateOptionsList()
     {
-      List<string> options = null;
+      List<string> options;
       var previousIndex = optionsList.SelectedIndex >= 0 ? optionsList.SelectedIndex : 0;
 
       if (_received)
