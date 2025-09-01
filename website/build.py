@@ -166,6 +166,7 @@ def main():
     process_markdown_to_html(version, url, Path('policy.md'), DIST_DIR / 'policy.html', 'Privacy Policy', 'Contents', header_html)
 
     update_index_html(version, url, Path('index.tmpl'), DIST_DIR / 'index.html', home_header_html)
+    update_index_html(version, url, Path('status.tmpl'), DIST_DIR / 'status.html', header_html)
 
     convert_md_to_rtf(Path('releasenotes.md'), RTF_OUT)
     patch_rtf_in_place(RTF_OUT)

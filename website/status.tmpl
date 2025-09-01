@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EQLogParser</title>
+  <meta name="description" content="EQLogParser is is a real-time combat analyzer and damage parsing application built specifically for the EverQuest MMO. It monitors and processes in-game log files to provide detailed statistics as well as various utility functions. Download link below." />
+  <meta name="robots" content="index, follow" />
+  <meta name="google-adsense-account" content="ca-pub-4428145487599357" />
+  <meta name="version" />
+  <meta name="download" />
+  <link rel="shortcut icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="css/style.css?v=7" />
+  <link rel="stylesheet" href="assets/mermaid.min.css" />
+  <script src="assets/gridjs.umd.js" defer></script>
+  <style>
+    .row-highlight td { background: #fff7cc; }
+    .muted { color:#6b7280; font: 14px system-ui, sans-serif; }
+  </style>  
+</head>
+<body>
+  <nav id="nav-bar" class="topbar" />
+  <div class="layout">
+    <nav class="toc" />
+    <main class="container">
+      <div id="status-table"></div>
+      <div id="status-note" class="muted"></div>
+    </main>
+    <script defer>
+    (() => {
+      const API_BASE   = 'https://share.kizant.net';
+      const REFRESH_MS = 5000;
+
+      const mount = document.getElementById('status-table');
+      const note  = document.getElementById('status-note');
+
+      const params      = new URLSearchParams(location.search);
+      const keys        = params.getAll('k').slice(0, 50);
+      const selectedKey = params.get('select') || '';
+
+      if (!keys.length) { mount.textContent = 'No keys provided.'; return; }
+
+      const buildURL = () => {
+        const qs = new URLSearchParams();
+        keys.forEach(k => qs.append('k', k));
+        return `${API_BASE}/status?` + qs.toString();
+      };
+
+      async function fetchRows() {
+        const res = await fetch(buildURL(), { credentials: 'omit' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();               // [{key, count}, ...]
+        return data.map(r => [String(r.key), r.count ?? 0]); // rows [Key, Count]
+      }
+
+      // DOM-based highlighter that survives re-renders & sorts
+      function applyHighlight() {
+        if (!selectedKey) return;
+        const tbody = mount.querySelector('tbody');
+        if (!tbody) return;
+        // clear any old
+        tbody.querySelectorAll('tr.row-highlight').forEach(tr => tr.classList.remove('row-highlight'));
+        // find & mark
+        for (const tr of tbody.querySelectorAll('tr')) {
+          const firstCell = tr.querySelector('td');
+          if (firstCell && firstCell.textContent.trim() === selectedKey) {
+            tr.classList.add('row-highlight');
+            break;
+          }
+        }
+      }
+
+      let grid;
+      let inFlight = false;
+
+      async function initialRender() {
+        const rows = await fetchRows();
+        grid = new gridjs.Grid({
+          columns: [
+            { name: 'Quick Share',   width: '70%' },
+            { name: 'Downloads', width: '30%' }
+          ],
+          data: rows,
+          sort: true,
+          search: false,
+          pagination: false,
+          autoWidth: true
+        });
+        grid.render(mount);           // synchronous in Grid.js UMD
+        requestAnimationFrame(applyHighlight);
+        note.textContent = 'Last updated: ' + new Date().toLocaleTimeString() + ' (refresh every 5s)';
+      }
+
+      async function refresh() {
+        if (inFlight || document.hidden) return;
+        inFlight = true;
+        try {
+          const rows = await fetchRows();
+          grid.updateConfig({
+            columns: [
+              { name: 'Quick Share',   width: '70%' },
+              { name: 'Downloads', width: '30%' }
+            ],
+            data: rows
+          }).forceRender(); // no await
+          requestAnimationFrame(applyHighlight);
+          note.textContent = 'Last updated: ' + new Date().toLocaleTimeString() + ' (refresh every 5s)';
+        } catch (e) {
+          console.error('Status refresh failed:', e);
+          note.textContent = 'Failed to refresh (will retry)…';
+        } finally {
+          inFlight = false;
+        }
+      }
+
+      // Re-apply highlight after any DOM churn (e.g., user clicks to sort)
+      const obs = new MutationObserver(() => applyHighlight());
+      obs.observe(mount, { childList: true, subtree: true });
+
+      // Kick off
+      initialRender().then(() => {
+        let timer = setInterval(refresh, REFRESH_MS);
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) { clearInterval(timer); }
+          else { timer = setInterval(refresh, REFRESH_MS); refresh(); }
+        });
+      }).catch(err => {
+        console.error(err);
+        mount.textContent = 'Failed to load status.';
+      });
+    })();
+    </script>
+    <nav class="rightad">
+      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4428145487599357" crossorigin="anonymous"></script>
+      <ins class="adsbygoogle"
+        style="display:inline-block; width:160px; height:600px"
+        data-ad-client="ca-pub-4428145487599357"
+        data-ad-slot="9757256233"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>     
+    </nav>
+</body>
+</html>
