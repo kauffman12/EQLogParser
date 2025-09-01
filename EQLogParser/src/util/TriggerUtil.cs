@@ -612,8 +612,7 @@ namespace EQLogParser
         return;
       }
 
-      var match = ShareRegex.Match(action);
-      if (!match.Success && match.Groups.Count != 3)
+      if (MatchQuickShare(action) is not { } match)
       {
         return;
       }
@@ -664,8 +663,7 @@ namespace EQLogParser
 
     internal static void ImportQuickShare(string shareKey, string from)
     {
-      var match = ShareRegex.Match(shareKey);
-      if (!match.Success && match.Groups.Count != 3)
+      if (MatchQuickShare(shareKey) is not { } match)
       {
         return;
       }
@@ -738,7 +736,9 @@ namespace EQLogParser
               };
 
               RecordManager.Instance.Add(record);
-              new MessageWindow($"Share Key: {withKey}", Resource.SHARE_MESSAGE, withKey).ShowDialog();
+
+              Task action() => OpenQuickShareStatusAsync(shareLink);
+              new MessageWindow($"Share Key: {withKey}", Resource.SHARE_MESSAGE, withKey, "View Quick Share Stats", action).ShowDialog();
             }
           }
           else
@@ -760,6 +760,38 @@ namespace EQLogParser
           Log.Error(ex);
         }
       }
+    }
+
+    internal static async Task OpenQuickShareStatusAsync(string selected)
+    {
+      List<string> keys = [];
+      foreach (var share in RecordManager.Instance.AllQuickShareRecords)
+      {
+        if (MatchQuickShare(share.Key) is { } match)
+        {
+          keys.Add(match.Groups[2].Value.Trim());
+        }
+      }
+
+      var kvps = keys.Select(k => new KeyValuePair<string, string>("k", k));
+      var queryString = await new FormUrlEncodedContent(kvps).ReadAsStringAsync();
+
+      if (!string.IsNullOrEmpty(selected))
+      {
+        queryString = $"select={selected}&{queryString}";
+      }
+
+      MainActions.OpenFileWithDefault($"{App.ParserHome}/status.html?{queryString}");
+    }
+
+    private static Match MatchQuickShare(string text)
+    {
+      var match = ShareRegex.Match(text);
+      if (match.Success && match.Groups.Count == 3)
+      {
+        return match;
+      }
+      return null;
     }
 
     private static void NextQuickShareTask(string quickShareKey)

@@ -429,8 +429,8 @@ namespace EQLogParser
                     }
                     else
                     {
-                      // short duration timer <= 2s
-                      trigger.TimerType = (trigger.DurationSeconds < 2.0) ? 2 : 1;
+                      // countdown
+                      trigger.TimerType = 1;
                     }
                   }
 
