@@ -4,8 +4,9 @@
 
 1. Added new **View Quick Share Stats** to the Quick Share window as well as the new Quick Share dialog. When clicked you'll be taken to a web page that displays the Quick Shares your parser currently knows about along with the number of times each key has been used or **Downloaded**. This may help during a raid to see if people have actually merged your new shares.
 2. Changed **GINA** timer import to no longer select Fast Countdown.
-3. Fix for being unable to show a hidden windows task bar when maximized.
-4. Fix for the top 3 and top 10 options in the **Healing Breakdown** not always showing the correct results.
+3. Improvements to how looted items are recorded.
+4. Fix for being unable to show a hidden windows task bar when maximized.
+5. Fix for the top 3 and top 10 options in the **Healing Breakdown** not always showing the correct results.
 
 # 2.3.15 | 08/07/25
 
