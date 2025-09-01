@@ -4,6 +4,7 @@ using Syncfusion.UI.Xaml.Grid.Helpers;
 using Syncfusion.UI.Xaml.ScrollAxis;
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Data;
@@ -22,6 +23,7 @@ namespace EQLogParser
       InitializeComponent();
       Owner = MainActions.GetOwner();
       QuickShareData = RecordManager.Instance.AllQuickShareRecords;
+      QuickShareData.CollectionChanged += EnableStats;
       DataContext = this;
 
       TriggerStateManager.Instance.GetTrustedPlayers().ContinueWith(task =>
@@ -45,13 +47,17 @@ namespace EQLogParser
         _items.CollectionChanged += (s, e) => EnableSave();
       });
 
+      // enable stats
+      EnableStats(null, null);
       trustGrid.ItemsSource = _items;
       MainActions.EventsThemeChanged += EventsThemeChanged;
       watchQuickShare.IsChecked = ConfigUtil.IfSet("TriggersWatchForQuickShare");
     }
 
     private void CloseClicked(object sender, RoutedEventArgs e) => Close();
+    private void EnableStats(object sender, NotifyCollectionChangedEventArgs e) => statsButton.IsEnabled = QuickShareData.Count > 0;
     private void TrustGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => CleanupTable();
+    private async void StatsClicked(object sender, RoutedEventArgs e) => await TriggerUtil.OpenQuickShareStatusAsync(null);
 
     private void EventsThemeChanged(string _)
     {
@@ -108,6 +114,7 @@ namespace EQLogParser
 
     private void TheWindowClosing(object sender, CancelEventArgs e)
     {
+      QuickShareData.CollectionChanged -= EnableStats;
       MainActions.EventsThemeChanged -= EventsThemeChanged;
 
       try

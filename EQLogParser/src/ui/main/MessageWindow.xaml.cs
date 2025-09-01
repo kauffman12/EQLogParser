@@ -14,15 +14,19 @@ namespace EQLogParser
     public bool MergeOption;
     public enum IconType { Question, Save, Warn, Info }
     private readonly string _copyData;
+    private readonly Func<Task> _yes1Callback;
 
-    public MessageWindow(string text, string caption, string copyData) : this(text, caption, IconType.Info)
+    public MessageWindow(string text, string caption, string copyData, string yes1, Func<Task> yes1Callback) : this(text, caption, IconType.Info, yes1)
     {
       _copyData = copyData;
+      _yes1Callback = yes1Callback;
       copyLink.Visibility = Visibility.Visible;
+      cancelButton.Content = "Ok";
       UiUtil.SetClipboardText(copyData);
     }
 
-    public MessageWindow(string text, string caption, IconType type = IconType.Warn, string yes1 = null, string yes2 = null, bool extra = false, bool noButtons = false)
+    public MessageWindow(string text, string caption, IconType type = IconType.Warn, string yes1 = null, string yes2 = null,
+      bool extra = false, bool noButtons = false)
     {
       MainActions.SetCurrentTheme(this);
       InitializeComponent();
@@ -98,9 +102,17 @@ namespace EQLogParser
 
     private void ButtonYes1Click(object sender, RoutedEventArgs e)
     {
-      MergeOption = mergeOption.IsChecked == true;
-      IsYes1Clicked = true;
-      Close();
+      // if custom callback the click isnt a close operation
+      if (_yes1Callback != null)
+      {
+        _yes1Callback();
+      }
+      else
+      {
+        MergeOption = mergeOption.IsChecked == true;
+        IsYes1Clicked = true;
+        Close();
+      }
     }
 
     private void ButtonYes2Click(object sender, RoutedEventArgs e)
