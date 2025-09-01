@@ -49,7 +49,14 @@
       };
 
       async function fetchRows() {
-        const res = await fetch(buildURL(), { credentials: 'omit' });
+        const res = await fetch(buildURL(), {
+          method: 'GET',
+          credentials: 'omit', // don't send cookies
+          headers: {
+            'EQLogParser': 'kizant-1',
+            'Accept': 'application/json'
+          }
+        });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();               // [{key, count}, ...]
         return data.map(r => [String(r.key), r.count ?? 0]); // rows [Key, Count]
