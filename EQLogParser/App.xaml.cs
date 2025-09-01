@@ -25,7 +25,7 @@ namespace EQLogParser
       SizeLimit = 1024 * 1024 * 100 // 50 MB
     });
     internal static IMapper AutoMap;
-    internal const string ParserHome = "http://eqlogparser.kizant.net";
+    internal const string ParserHome = "https://eqlogparser.kizant.net";
     internal static double DefaultHeight = SystemParameters.PrimaryScreenHeight * 0.75;
     internal static double DefaultWidth = SystemParameters.PrimaryScreenWidth * 0.85;
     internal static string ReleaseNotesUrl = $"{ParserHome}/releasenotes.html";

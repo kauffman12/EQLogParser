@@ -1,12 +1,13 @@
-<!--
-  1. Fix EQLP from preventing bringing up the auto hidden task bar
-  2. Fix loot viewer when multiple items of the same name are assigned. the first one looted would set them all to looted.
-  3. Fix healing breakdown top 3/10 and sorting
--->
+# 2.3.16 | 09/01/25
+
+**!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
+
+1. Added new **View Quick Share Stats** to the Quick Share window as well as the new Quick Share dialog. When clicked you'll be taken to a web page that displays the Quick Shares your parser currently knows about along with the number of times each key has been used or **Downloaded**. This may help during a raid to see if people have actually merged your new shares.
+2. Changed **GINA** timer import to no longer select Fast Countdown.
+3. Fix for being unable to show a hidden windows taske bar when maximized.
+4. Fix for the top 3 and top 10 options in the **Healing Breakdown** not always showing the correct results.
 
 # 2.3.15 | 08/07/25
-
-**!!NOTICE!!** Text Overlays were changed to default to **Normal** Font Weight in version 2.3.0. You may want to switch yours to **Bold** if you prefer how it used to work.
 
 1. Fixed some window sizing problems when maximized. The app should no longer go under the task bar and won't have weird padding around the window when maximized.
 2. **Note** This may be the last update for a little while.
