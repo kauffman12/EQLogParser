@@ -236,7 +236,7 @@ namespace EQLogParser
           }
 
           var found = (_currentSelectedItem == AllItems || (row.Record.IsCurrency && _currentSelectedItem == OnlyCurrency) ||
-            (!row.Record.IsCurrency && _currentSelectedItem == OnlyItems) ||
+            (!row.Record.IsCurrency && _currentSelectedItem == OnlyItems && row.Record.Quantity != 0) ||
             (_currentSelectedItem == OnlyAssigned && !row.Record.IsCurrency && row.Record.Quantity == 0) || _currentSelectedItem == row.Record.Item) &&
             (_currentSelectedPlayer == AllPlayers || row.Record.Player == _currentSelectedPlayer);
           return found && (_currentSelectedNpc == AllNpcs || row.Record.Npc == _currentSelectedNpc);
