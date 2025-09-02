@@ -133,7 +133,8 @@ namespace EQLogParser
         }
       }
 
-      bool LootedQuery(LootRecord r) => r.Npc?.StartsWith("Won Roll", StringComparison.OrdinalIgnoreCase) == true && r.Player == record.Player && r.Item == record.Item;
+      bool LootedQuery(LootRecord r) => (r.Npc?.StartsWith("Given (", StringComparison.OrdinalIgnoreCase) == true || r.Npc?.StartsWith("Won Roll", StringComparison.OrdinalIgnoreCase) == true) &&
+        r.Player == record.Player && r.Item == record.Item;
       bool LeftQuery(LootRecord r) => r.Npc?.EndsWith("(Left on Chest)", StringComparison.OrdinalIgnoreCase) == true &&
         r.Item == record.Item && r.Npc?.StartsWith(record.Npc, StringComparison.OrdinalIgnoreCase) == true;
     }

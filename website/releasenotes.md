@@ -1,6 +1,9 @@
-# 2.3.16 | 09/01/25
-
+# 2.3.17 | 09/02/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
+
+1. More fixes for looted items view.
+
+# 2.3.16 | 09/01/25
 
 1. Added new **View Quick Share Stats** to the Quick Share window as well as the new Quick Share dialog. When clicked you'll be taken to a web page that displays the Quick Shares your parser currently knows about along with the number of times each key has been used or **Downloaded**. This may help during a raid to see if people have actually merged your new shares.
 2. Changed **GINA** timer import to no longer select Fast Countdown.
