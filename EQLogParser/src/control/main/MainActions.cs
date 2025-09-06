@@ -12,7 +12,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Dynamic;
-using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -652,12 +651,11 @@ namespace EQLogParser
     internal static async Task CreateBackupAsync()
     {
       var saveFileDialog = new SaveFileDialog();
-      var dateTime = DateTime.Now.ToString("yyyyMMdd-ssfff", CultureInfo.InvariantCulture);
-      var version = Application.ResourceAssembly.GetName().Version?.ToString();
-      version = string.IsNullOrEmpty(version) ? "unknown" : version[..^2];
-      var fileName = $"EQLogParser_backup_{version}_{dateTime}.zip";
+
+      // get file name
+      var filename = FileUtil.BuildBackupFilename();
       saveFileDialog.Filter = "EQLogParser Backup Files (*.zip)|*.zip";
-      saveFileDialog.FileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()));
+      saveFileDialog.FileName = string.Join("", filename.Split(Path.GetInvalidFileNameChars()));
 
       if (saveFileDialog.ShowDialog() == true)
       {
