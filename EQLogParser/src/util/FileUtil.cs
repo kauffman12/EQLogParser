@@ -9,10 +9,11 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace EQLogParser
 {
-  internal static partial class FileUtil
+  public static partial class FileUtil
   {
     private const long M = 1000000;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -47,6 +48,16 @@ namespace EQLogParser
       { "3 weeks", 21 },
       { "1 month", 28 }
     };
+
+    // public so backup util can use
+    public static string BuildBackupFilename()
+    {
+      // get file name
+      var version = Application.ResourceAssembly.GetName().Version?.ToString();
+      var dateTime = DateTime.Now.ToString("yyyyMMdd-ssfff", CultureInfo.InvariantCulture);
+      version = string.IsNullOrEmpty(version) ? "unknown" : version[..^2];
+      return $"EQLogParser_backup_{version}_{dateTime}.zip";
+    }
 
     internal static List<string> FindArchivedLogFiles(string player, string server, double start)
     {
