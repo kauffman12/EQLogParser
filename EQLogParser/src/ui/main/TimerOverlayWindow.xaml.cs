@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -37,6 +38,7 @@ namespace EQLogParser
     private volatile bool _newData;
     private volatile bool _newShortTickData;
     private volatile bool _useStandardTime;
+    private volatile bool _hideDupes;
     private volatile int _sortBy;
     private volatile int _timerMode;
     private volatile int _idleTimeoutSeconds;
@@ -444,6 +446,35 @@ namespace EQLogParser
       // order things by idle -> active -> reset
       models.AddRange(idleModels);
       models.AddRange(resetModels);
+
+      if (_hideDupes)
+      {
+        var dont = false;
+        var collapsed = new List<TimerBarModel>(models.Count);
+        foreach (ref var model in CollectionsMarshal.AsSpan(models))
+        {
+          dont = false;
+          foreach (var col in collapsed)
+          {
+            if (model.TimerData.TriggerId == col.TimerData.TriggerId && model.TimerData.CharacterId != col.TimerData.CharacterId &&
+              model.State == col.State && string.Equals(model.DisplayName, col.DisplayName, StringComparison.OrdinalIgnoreCase))
+            {
+              if (!double.IsNaN(model.Progress) && !double.IsNaN(col.Progress) && Math.Abs(model.Progress - col.Progress) < 5.0)
+              {
+                dont = true;
+                break;
+              }
+            }
+          }
+
+          if (!dont)
+          {
+            collapsed.Add(model);
+          }
+        }
+        return collapsed;
+      }
+
       return models;
     }
 
@@ -744,6 +775,7 @@ namespace EQLogParser
       Top = _node.OverlayData.Top;
       Left = _node.OverlayData.Left;
 
+      _hideDupes = _node.OverlayData.HideDuplicates;
       _useStandardTime = _node.OverlayData.UseStandardTime;
       _sortBy = _node.OverlayData.SortBy;
       _timerMode = _node.OverlayData.TimerMode;

@@ -39,7 +39,7 @@
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Name:" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" />
-            <TextBox Grid.Column="1" Name="characterName" FontStyle="Italic" TextChanged="TextChanged" PreviewKeyDown="NamePreviewKeyDown" GotFocus="NameGotFocus" LostFocus="NameLostFocus" FontSize="{DynamicResource EQContentSize}" Width="300"/>
+            <TextBox Grid.Column="1" Name="characterName" FontStyle="Italic" TextChanged="TextChanged" PreviewKeyDown="NamePreviewKeyDown" GotFocus="NameGotFocus" LostFocus="NameLostFocus" FontSize="{DynamicResource EQContentSize}" Width="340"/>
           </Grid>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
@@ -49,7 +49,7 @@
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Button Grid.Column="0" Content="Select Log" FontSize="{DynamicResource EQContentSize}" HorizontalAlignment="Left" Padding="10,6,12,6" Click="ChooseFileClicked"/>
-            <TextBox Grid.Column="1" Name="txtFilePath" FontStyle="Italic" Text="Select Log File" TextChanged="TextChanged" FontSize="{DynamicResource EQContentSize}" IsReadOnly="True" Width="300"/>
+            <TextBox Grid.Column="1" Name="txtFilePath" FontStyle="Italic" Text="Select Log File" TextChanged="TextChanged" FontSize="{DynamicResource EQContentSize}" IsReadOnly="True" Width="340"/>
           </Grid>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
@@ -59,7 +59,7 @@
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Voice:" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" />
-            <ComboBox Grid.Column="1" x:Name="voices" SelectedIndex="0" Width="300" SelectionChanged="OptionsChanged"/>
+            <ComboBox Grid.Column="1" x:Name="voices" SelectedIndex="0" Width="340" SelectionChanged="OptionsChanged"/>
           </Grid>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
@@ -69,7 +69,7 @@
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Voice Rate:" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" />
-            <ComboBox Grid.Column="1" x:Name="rateOption" SelectedIndex="0" Width="300" SelectionChanged="OptionsChanged">
+            <ComboBox Grid.Column="1" x:Name="rateOption" SelectedIndex="0" Width="340" SelectionChanged="OptionsChanged">
               <ComboBoxItem>Default Voice Rate</ComboBoxItem>
               <ComboBoxItem>Increased Rate 1</ComboBoxItem>
               <ComboBoxItem>Increased Rate 2</ComboBoxItem>
@@ -89,7 +89,7 @@
             <Label Grid.Column="0" Content="Volume:" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" />
             <Grid Grid.Column="1">
               <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="240" />
+                <ColumnDefinition Width="280" />
                 <ColumnDefinition Width="70*" />
               </Grid.ColumnDefinitions>
               <ComboBox Grid.Column="0" x:Name="volumeOption" SelectedIndex="0" SelectionChanged="OptionsChanged" Margin="0,0,10,0">
@@ -117,7 +117,7 @@
             </StackPanel>
             <Grid Grid.Column="1">
               <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="240" />
+                <ColumnDefinition Width="280" />
                 <ColumnDefinition Width="70*" />
               </Grid.ColumnDefinitions>
               <TextBox x:Name="activeSelectText" Grid.Column="0" IsReadOnly="True" PreviewMouseLeftButtonDown="SelectActiveColorClick" Text="Click to Select Color" FontStyle="Italic" Cursor="Hand" FontSize="{DynamicResource EQContentSize}" BorderThickness="0" Padding="4,10,0,4" Margin="0"></TextBox>
@@ -137,7 +137,7 @@
               <Label Content="*Overrides overlay setting" FontWeight="Thin" Foreground="{DynamicResource EQWarnForegroundBrush}" FontSize="{DynamicResource EQDescriptionSize}" Padding="0" Margin="14,0,0,-10"/>
             </StackPanel>            <Grid Grid.Column="1">
               <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="240" />
+                <ColumnDefinition Width="280" />
                 <ColumnDefinition Width="70*" />
               </Grid.ColumnDefinitions>
               <TextBox x:Name="fontSelectText" Grid.Column="0" IsReadOnly="True" PreviewMouseLeftButtonDown="SelectFontColorClick" Text="Click to Select Color" FontStyle="Italic" Cursor="Hand" FontSize="{DynamicResource EQContentSize}" BorderThickness="0" Padding="4,10,0,4" Margin="0"></TextBox>

@@ -113,6 +113,7 @@ namespace EQLogParser
       TriggerStateManager.Instance.OverlayImportEvent += OverlayImportEvent;
       TriggerStateManager.Instance.TriggerImportEvent += TriggerImportEvent;
       AudioManager.Instance.DeviceListChanged += AudioDeviceListChanged;
+      MainActions.EventsThemeChanged += EventsThemeChanged;
       return;
 
       ITypeEditor AddEditorInstance(ITypeEditor typeEditor, string propName)
@@ -158,6 +159,11 @@ namespace EQLogParser
           deviceList.SelectedIndex = 0;
         }
       });
+    }
+
+    private void EventsThemeChanged(string _)
+    {
+      thePropertyGrid.PropertyNameColumnDefinition = new GridLength(200 + ((MainActions.CurrentFontSize - 12) * 10));
     }
 
     private async void TriggersViewOnInitialized(object sender, EventArgs e)
@@ -208,7 +214,7 @@ namespace EQLogParser
       await theTreeView.RefreshTriggers();
     }
 
-    private void EventsSelectTrigger(AlertEntry entry)
+    private void EventsSelectTrigger(TriggerLogEntry entry)
     {
       Dispatcher.InvokeAsync(() =>
       {

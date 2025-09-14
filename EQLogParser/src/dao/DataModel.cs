@@ -116,6 +116,7 @@ namespace EQLogParser
 
   internal class TimerData
   {
+    public string CharacterId { get; init; }
     public CancellationTokenSource CancelSource { get; set; }
     public CancellationTokenSource WarningSource { get; set; }
     public bool Canceled { get; set; }
@@ -180,6 +181,7 @@ namespace EQLogParser
     public bool ShowActive { get; set; } = true;
     public bool ShowIdle { get; set; } = true;
     public bool ShowReset { get; set; } = true;
+    public bool HideDuplicates { get; set; }
     public int TimerMode { get; set; }
     public long Height { get; set; } = 400;
     public long Width { get; set; } = 300;
@@ -359,6 +361,19 @@ namespace EQLogParser
     public bool IsDir() => !IsOverlay() && !IsTrigger();
     public bool IsRecentlyMerged { get; set; }
     public bool HasMissingMedia { get; set; }
+  }
+
+  internal class TriggerLogEntry
+  {
+    public double BeginTime { get; set; }
+    public string Name { get; set; }
+    public string Type { get; set; }
+    public long Priority { get; set; }
+    public long Eval { get; set; }
+    public double LogTime { get; set; }
+    public string Line { get; set; }
+    public string NodeId { get; set; }
+    public string CharacterId { get; set; }
   }
 
   internal interface IAction;

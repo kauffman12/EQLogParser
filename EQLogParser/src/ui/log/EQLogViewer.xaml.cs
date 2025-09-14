@@ -415,10 +415,13 @@ namespace EQLogParser
         UpdateStatusCount(0);
         var logSearchText = logSearch.Text;
         var logSearchText2 = logSearch2.Text;
+        var doSearchText = logSearch.FontStyle != FontStyles.Italic && logSearchText.Length > 1;
+        var doSearchText2 = logSearch2.FontStyle != FontStyles.Italic && logSearchText2.Length > 1;
         var modifierIndex = logSearchModifier.SelectedIndex;
         var logPlaceIndex = logSearchPlace.SelectedIndex;
         var logTimeIndex = logSearchTime.SelectedIndex;
-        var regexEnabled = IsUseRegex(logSearchText) || IsUseRegex(logSearchText2);
+        var regexEnabled = doSearchText && IsUseRegex(logSearchText);
+        var regex2Enabled = doSearchText2 && IsUseRegex(logSearchText2);
         _unFiltered.Clear();
         _linePositions.Clear();
         _filteredLinePositions.Clear();
@@ -507,15 +510,15 @@ namespace EQLogParser
         if (fileList.Count > 0)
         {
           Regex searchRegex = null;
-          if (logSearchText != Resource.LOG_SEARCH_TEXT && logSearchText.Length > 1)
+          if (regexEnabled)
           {
-            searchRegex = new Regex(logSearchText, RegexOptions.IgnoreCase);
+            searchRegex = new Regex(logSearchText, RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
           }
 
           Regex searchRegex2 = null;
-          if (logSearchText2 != Resource.LOG_SEARCH_TEXT && logSearchText2.Length > 1)
+          if (regex2Enabled)
           {
-            searchRegex2 = new Regex(logSearchText2, RegexOptions.IgnoreCase);
+            searchRegex2 = new Regex(logSearchText2, RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
           }
 
           var searcher = new FileSearcher<string>(fileList);
@@ -566,14 +569,14 @@ namespace EQLogParser
               var firstIndex = -2;
               var secondIndex = -2;
 
-              if (searchRegex != null)
+              if (doSearchText)
               {
-                firstIndex = CheckLine(line, logSearchText, searchRegex, regexEnabled);
+                firstIndex = CheckLine(line, logSearchText, searchRegex);
               }
 
-              if (searchRegex2 != null)
+              if (doSearchText2)
               {
-                secondIndex = CheckLine(line, logSearchText2, searchRegex2, regexEnabled);
+                secondIndex = CheckLine(line, logSearchText2, searchRegex2);
               }
 
               // AND
@@ -661,9 +664,9 @@ namespace EQLogParser
       return false;
     }
 
-    private static int CheckLine(string line, string text, Regex searchRegex, bool regexEnabled)
+    private static int CheckLine(string line, string text, Regex searchRegex)
     {
-      if (regexEnabled)
+      if (searchRegex != null)
       {
         return searchRegex.IsMatch(line) ? 1 : -1;
       }
@@ -718,8 +721,8 @@ namespace EQLogParser
     {
       if (searchIcon != null)
       {
-        searchIcon.IsEnabled = (logSearch.Text != Resource.LOG_SEARCH_TEXT && (logSearch.Text.Length > 1)) ||
-          (logSearch2.Text != Resource.LOG_SEARCH_TEXT && logSearch2.Text.Length > 1);
+        searchIcon.IsEnabled = (logSearch.FontStyle != FontStyles.Italic && (logSearch.Text.Length > 1)) ||
+          (logSearch2.FontStyle != FontStyles.Italic && logSearch2.Text.Length > 1);
       }
     }
 

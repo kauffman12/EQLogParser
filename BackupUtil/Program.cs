@@ -1,4 +1,5 @@
-﻿using LiteDB;
+﻿using EQLogParser;
+using LiteDB;
 using System.IO.Compression;
 using System.Reflection;
 
@@ -77,11 +78,11 @@ void HandlePath(string path)
     {
       // Load the assembly by name
       var assembly = Assembly.Load("EQLogParser");
-      var version = assembly.GetName().Version?.ToString();
-      var dateTime = DateTime.Now.ToString("yyyyMMdd-ssfff");
-      version = string.IsNullOrEmpty(version) ? "unknown" : version[..^2];
-      var backupFile = $"EQLogParser_backup_{version}_{dateTime}.zip";
-      var fullPath = Path.Combine(trimmed, backupFile);
+
+      // get file name
+      var filename = FileUtil.BuildBackupFilename();
+      Console.WriteLine($@"Creating Backup: {filename}");
+      var fullPath = Path.Combine(trimmed, filename);
       var source = Environment.ExpandEnvironmentVariables(@"%AppData%\EQLogParser");
 
       if (File.Exists(fullPath))

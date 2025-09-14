@@ -34,7 +34,8 @@ namespace EQLogParser
     private static readonly ConcurrentDictionary<string, CharacterData> QuickShareCache = new();
     private static readonly JsonSerializerOptions SerializationOptions = new JsonSerializerOptions { IncludeFields = true };
     private static readonly Size OriginalResolution = new(1920, 1080); // Hard-coded original screen resolution
-    private static readonly Regex ShareRegex = new(@"\{(" + ShareTrigger + "|" + ShareOverlay + @"):([^\{\}]+)\}", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex ShareRegex = new(@"\{(" + ShareTrigger + "|" + ShareOverlay + @"):([^\{\}]+)\}", RegexOptions.Compiled |
+      RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     internal static Point CalculateDefaultTextOverlayPosition()
     {
@@ -188,6 +189,7 @@ namespace EQLogParser
         toOverlay.TimerMode = fromOverlay.TimerMode;
         toOverlay.Top = fromOverlay.Top;
         toOverlay.UseStandardTime = fromOverlay.UseStandardTime;
+        toOverlay.HideDuplicates = fromOverlay.HideDuplicates;
         toOverlay.ShowActive = fromOverlay.ShowActive;
         toOverlay.ShowIdle = fromOverlay.ShowIdle;
         toOverlay.ShowReset = fromOverlay.ShowReset;
@@ -1071,13 +1073,13 @@ namespace EQLogParser
       }
     }
 
-    [GeneratedRegex(@"<<(.*\.(wav|mp3))>>$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"<<(.*\.(wav|mp3))>>$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex SoundFileTextRegex();
 
-    [GeneratedRegex(@"\.(wav|mp3)$", RegexOptions.IgnoreCase, "en-US")]
+    [GeneratedRegex(@"\.(wav|mp3)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex SoundFileRegex();
 
-    [GeneratedRegex(@"\{(TS|[sn](?:\s*[0-9]+\s*|\s*[><]=?\s*[0-9]+\s*|=\s*[0-9]+\s*)?)\}", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\{(TS|[sn](?:\s*[0-9]+\s*|\s*[><]=?\s*[0-9]+\s*|=\s*[0-9]+\s*)?)\}", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex TestRegex();
   }
 

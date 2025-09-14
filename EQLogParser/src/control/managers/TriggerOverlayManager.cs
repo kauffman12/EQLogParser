@@ -41,7 +41,14 @@ namespace EQLogParser
           var doClose = false;
           if (kv.Value.UseRegex)
           {
-            doClose = kv.Value.Regex?.IsMatch(action) == true;
+            try
+            {
+              doClose = kv.Value.Regex?.IsMatch(action) == true;
+            }
+            catch (Exception)
+            {
+              // ignore timeout
+            }
           }
           else if (!string.IsNullOrEmpty(kv.Value.ClosePattern))
           {
@@ -358,7 +365,7 @@ namespace EQLogParser
 
         if (overlay.UseCloseRegex)
         {
-          data.Regex = new Regex(overlay.ClosePattern, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
+          data.Regex = new Regex(overlay.ClosePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
           data.Regex.Match(""); // warm up the regex
         }
         else

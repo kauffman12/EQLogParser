@@ -13,7 +13,7 @@ namespace EQLogParser
   public partial class TriggersTester : IDocumentContent
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private BlockingCollection<Tuple<string, double, bool>> _buffer;
+    private BlockingCollection<LogReaderItem> _buffer;
     private TriggerConfig _theConfig;
     private bool _ready;
 
@@ -112,7 +112,7 @@ namespace EQLogParser
 
               if (_theConfig != null)
               {
-                _buffer = new BlockingCollection<Tuple<string, double, bool>>(new ConcurrentQueue<Tuple<string, double, bool>>());
+                _buffer = new BlockingCollection<LogReaderItem>(new ConcurrentQueue<LogReaderItem>());
                 await TriggerManager.Instance.SetTestProcessor(_theConfig, _buffer);
               }
             }
@@ -128,7 +128,7 @@ namespace EQLogParser
                   await TriggerManager.Instance.StopTestProcessor();
                 }
 
-                _buffer = new BlockingCollection<Tuple<string, double, bool>>(new ConcurrentQueue<Tuple<string, double, bool>>());
+                _buffer = new BlockingCollection<LogReaderItem>(new ConcurrentQueue<LogReaderItem>());
                 await TriggerManager.Instance.SetTestProcessor(character, _buffer);
               }
               else
@@ -172,7 +172,7 @@ namespace EQLogParser
             if (dateTime != DateTime.MinValue)
             {
               var beginTime = DateUtil.ToDouble(dateTime);
-              _buffer?.Add(Tuple.Create(line, beginTime, true));
+              _buffer?.Add(new(line, beginTime, true));
             }
           }
         }
@@ -282,7 +282,7 @@ namespace EQLogParser
                         {
                           if (!stop)
                           {
-                            _buffer?.Add(Tuple.Create(line, nowTime, true));
+                            _buffer?.Add(new(line, nowTime, true));
                           }
                         }
 

@@ -19,7 +19,7 @@ namespace EQLogParser
       _fileName = fileName ?? string.Empty;
     }
 
-    public void LinkTo(BlockingCollection<Tuple<string, double, bool>> collection)
+    public void LinkTo(BlockingCollection<LogReaderItem> collection)
     {
       // start archive if enabled
       ChatManager.Instance.Init();
@@ -32,7 +32,7 @@ namespace EQLogParser
           {
             if (!_isDisposed)
             {
-              DoPreProcess(data.Item1, data.Item2, data.Item3);
+              DoPreProcess(data.Line, data.Ts, data.IsMonitor);
             }
           }
         }

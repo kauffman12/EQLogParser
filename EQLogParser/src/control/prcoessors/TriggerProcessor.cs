@@ -11,7 +11,6 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Data;
 using System.Windows.Media.Imaging;
 
 namespace EQLogParser
@@ -22,19 +21,18 @@ namespace EQLogParser
     public const string RepeatedCode = "{repeated}";
     public const string LogTimeCode = "{logtime}";
     public const string NullCode = "{null}";
-    public readonly ObservableCollection<AlertEntry> AlertLog = [];
+    public readonly TriggerLogStore TriggerLog;
     public readonly string CurrentCharacterId;
     public readonly string CurrentProcessorName;
 
     private const long SixtyHours = 10 * 6 * 60 * 60 * 1000;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly string _currentPlayer;
-    private readonly object _collectionLock = new();
     private readonly Dictionary<string, Dictionary<string, RepeatedData>> _counterTimes = [];
     private readonly Dictionary<string, Dictionary<string, RepeatedData>> _repeatedTextTimes = [];
     private readonly Dictionary<string, Dictionary<string, RepeatedData>> _repeatedTimerTimes = [];
     private readonly Dictionary<string, Dictionary<string, RepeatedData>> _repeatedSpeakTimes = [];
-    private readonly BlockingCollection<(LineData, TriggerWrapper, string, long)> _alertCollection = [];
+    private readonly BlockingCollection<TriggerLogItem> _triggerLogCollection = [];
     private readonly BlockingCollection<LineData> _chatCollection = [];
     private readonly BlockingCollection<Speak> _speakCollection = [];
     private readonly SemaphoreSlim _activeTriggerSemaphore = new(1, 1);
@@ -49,7 +47,7 @@ namespace EQLogParser
     private volatile List<TrustedPlayer> _trustedPlayers;
     private volatile int _voiceRate;
     private volatile int _customVolume;
-    private Task _alertTask;
+    private Task _triggerLogTask;
     private Task _chatTask;
     private Task _mainTask;
     private Task _speakTask;
@@ -63,13 +61,13 @@ namespace EQLogParser
     {
       CurrentCharacterId = id;
       CurrentProcessorName = name;
+      TriggerLog = new TriggerLogStore(name);
       _currentPlayer = playerName;
       _activeColor = activeColor;
       _fontColor = fontColor;
       _voiceRate = voiceRate;
       _customVolume = customVolume;
       AudioManager.Instance.Add(CurrentCharacterId, voice);
-      BindingOperations.EnableCollectionSynchronization(AlertLog, _collectionLock);
       TriggerStateManager.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
       TriggerStateManager.Instance.TrustedPlayersUpdateEvent += TrustedPlayersUpdateEvent;
     }
@@ -117,12 +115,58 @@ namespace EQLogParser
       AudioManager.Instance.Stop(CurrentCharacterId);
     }
 
-    public void LinkTo(BlockingCollection<Tuple<string, double, bool>> collection)
+    public void LinkTo(BlockingCollection<LogReaderItem> collection)
     {
       // delay start until log is ready
       AudioManager.Instance.Start(CurrentCharacterId);
 
-      _speakTask = Task.Run(() =>
+      _chatTask = Task.Run(() =>
+      {
+        try
+        {
+          foreach (var data in _chatCollection.GetConsumingEnumerable())
+          {
+            if (_isDisposed) continue;
+            try
+            {
+              HandleChat(data);
+            }
+            catch (Exception)
+            {
+              // ignore
+            }
+          }
+        }
+        catch (Exception)
+        {
+          // ignore (should only be cancel requests)
+        }
+      });
+
+      _triggerLogTask = Task.Run(() =>
+      {
+        try
+        {
+          foreach (var data in _triggerLogCollection.GetConsumingEnumerable())
+          {
+            if (_isDisposed) continue;
+            try
+            {
+              HandleLog(data.LineData, data.Wrapper, data.Type, data.Eval);
+            }
+            catch (Exception)
+            {
+              // ignore
+            }
+          }
+        }
+        catch (Exception)
+        {
+          // ignore (should only be cancel requests)
+        }
+      });
+
+      _speakTask = Task.Factory.StartNew(() =>
       {
         try
         {
@@ -147,55 +191,9 @@ namespace EQLogParser
         {
           AudioManager.Instance.Stop(CurrentCharacterId, true);
         }
-      });
+      }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
-      _chatTask = Task.Run(() =>
-       {
-         try
-         {
-           foreach (var data in _chatCollection.GetConsumingEnumerable())
-           {
-             if (_isDisposed) continue;
-             try
-             {
-               HandleChat(data);
-             }
-             catch (Exception)
-             {
-               // ignore
-             }
-           }
-         }
-         catch (Exception)
-         {
-           // ignore (should only be cancel requests)
-         }
-       });
-
-      _alertTask = Task.Run(() =>
-      {
-        try
-        {
-          foreach (var data in _alertCollection.GetConsumingEnumerable())
-          {
-            if (_isDisposed) continue;
-            try
-            {
-              HandleAlert(data.Item1, data.Item2, data.Item3, data.Item4);
-            }
-            catch (Exception)
-            {
-              // ignore
-            }
-          }
-        }
-        catch (Exception)
-        {
-          // ignore (should only be cancel requests)
-        }
-      });
-
-      _mainTask = Task.Run(async () =>
+      _mainTask = Task.Factory.StartNew(() =>
       {
         try
         {
@@ -204,7 +202,7 @@ namespace EQLogParser
             if (_isDisposed) continue;
             try
             {
-              await DoProcessAsync(data.Item1, data.Item2);
+              DoProcessAsync(data.Line, data.Ts).ConfigureAwait(false).GetAwaiter().GetResult();
             }
             catch (Exception)
             {
@@ -220,7 +218,7 @@ namespace EQLogParser
         {
           collection?.Dispose();
         }
-      });
+      }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
     }
 
     private static string ProcessLineCode(string text, string line) => !string.IsNullOrEmpty(text) ?
@@ -265,9 +263,6 @@ namespace EQLogParser
       }
 
       _previous = lineData;
-
-      // check overlays that need to close
-      TriggerOverlayManager.Instance.CheckLine(lineData.Action);
 
       if (!_isDisposed && !_chatCollection.IsCompleted)
       {
@@ -447,9 +442,9 @@ namespace EQLogParser
               TriggerOverlayManager.Instance.AddText(wrapper.TriggerData, updatedDisplayText, _fontColor);
             }
 
-            if (!_isDisposed && !_alertCollection.IsCompleted)
+            if (!_isDisposed && !_triggerLogCollection.IsCompleted)
             {
-              _alertCollection.Add((lineData, wrapper, "Timer End Early", 0));
+              _triggerLogCollection.Add(new(lineData, wrapper, "Timer End Early", 0));
             }
 
             // lazy initialize a list as it most often won't be needed
@@ -579,9 +574,9 @@ namespace EQLogParser
         }
       }
 
-      if (!_isDisposed && !_alertCollection.IsCompleted)
+      if (!_isDisposed && !_triggerLogCollection.IsCompleted)
       {
-        _alertCollection.Add((lineData, wrapper, "Initial Trigger", timing / 10));
+        _triggerLogCollection.Add(new(lineData, wrapper, "Initial Trigger", timing / 10));
       }
     }
 
@@ -639,7 +634,7 @@ namespace EQLogParser
       TimerData newTimerData = null;
       if (trigger.WarningSeconds > 0 && wrapper.ModifiedDurationSeconds - trigger.WarningSeconds is var diff and > 0)
       {
-        newTimerData = new TimerData { DisplayName = displayName, WarningSource = new CancellationTokenSource() };
+        newTimerData = new TimerData { CharacterId = CurrentCharacterId, DisplayName = displayName, WarningSource = new CancellationTokenSource() };
 
         var data = newTimerData;
         Task.Delay((int)diff * 1000).ContinueWith(_ =>
@@ -671,15 +666,15 @@ namespace EQLogParser
               TriggerOverlayManager.Instance.AddText(trigger, updatedDisplayText, _fontColor);
             }
 
-            if (!_isDisposed && !_alertCollection.IsCompleted)
+            if (!_isDisposed && !_triggerLogCollection.IsCompleted)
             {
-              _alertCollection.Add((lineData, wrapper, "Timer Warning", 0));
+              _triggerLogCollection.Add(new(lineData, wrapper, "Timer Warning", 0));
             }
           }
         }, data.WarningSource.Token);
       }
 
-      newTimerData ??= new TimerData { DisplayName = displayName };
+      newTimerData ??= new TimerData { CharacterId = CurrentCharacterId, DisplayName = displayName };
 
       if (wrapper.HasRepeatedTimer)
       {
@@ -729,7 +724,7 @@ namespace EQLogParser
 
         if (trigger.EndUseRegex)
         {
-          newTimerData.EndEarlyRegex = new Regex(endEarlyPattern, RegexOptions.IgnoreCase);
+          newTimerData.EndEarlyRegex = new Regex(endEarlyPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
           newTimerData.EndEarlyRegexNOptions = numberOptions2;
         }
         else
@@ -746,7 +741,7 @@ namespace EQLogParser
 
         if (trigger.EndUseRegex2)
         {
-          newTimerData.EndEarlyRegex2 = new Regex(endEarlyPattern2, RegexOptions.IgnoreCase);
+          newTimerData.EndEarlyRegex2 = new Regex(endEarlyPattern2, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
           newTimerData.EndEarlyRegex2NOptions = numberOptions3;
         }
         else
@@ -796,9 +791,9 @@ namespace EQLogParser
             TriggerOverlayManager.Instance.AddText(trigger, updatedDisplayText, _fontColor);
           }
 
-          if (!_isDisposed && !_alertCollection.IsCompleted)
+          if (!_isDisposed && !_triggerLogCollection.IsCompleted)
           {
-            _alertCollection.Add((lineData, wrapper, "Timer End", 0));
+            _triggerLogCollection.Add(new(lineData, wrapper, "Timer End", 0));
           }
 
           // repeating
@@ -874,6 +869,11 @@ namespace EQLogParser
     private void HandleChat(LineData lineData)
     {
       if (!_ready) return;
+
+      // check overlays that need to close
+      // this prob only happens outside of active raid time so can be
+      // delayed a bit
+      TriggerOverlayManager.Instance.CheckLine(lineData.Action);
 
       // look for quick shares after triggers have been processed
       var chatType = ChatLineParser.ParseChatType(lineData.Action);
@@ -954,7 +954,7 @@ namespace EQLogParser
             // main pattern
             if (trigger.UseRegex)
             {
-              wrapper.Regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
+              wrapper.Regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
               // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
               wrapper.Regex.Match(""); // warm up the regex
               wrapper.RegexNOptions = numberOptions;
@@ -989,7 +989,7 @@ namespace EQLogParser
 
               if (trigger.PreviousUseRegex)
               {
-                wrapper.PreviousRegex = new Regex(previousPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
+                wrapper.PreviousRegex = new Regex(previousPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
                 // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
                 wrapper.PreviousRegex.Match(""); // warm up the regex
                 wrapper.PreviousRegexNOptions = previousNumberOptions;
@@ -1245,10 +1245,10 @@ namespace EQLogParser
       return pattern;
     }
 
-    private void HandleAlert(LineData lineData, TriggerWrapper wrapper, string type, long eval = 0)
+    private void HandleLog(LineData lineData, TriggerWrapper wrapper, string type, long eval = 0)
     {
       // update log
-      var log = new AlertEntry
+      var log = new TriggerLogEntry
       {
         BeginTime = DateUtil.ToDouble(DateTime.Now),
         LogTime = lineData?.BeginTime ?? double.NaN,
@@ -1261,14 +1261,7 @@ namespace EQLogParser
         CharacterId = CurrentCharacterId
       };
 
-      lock (_collectionLock)
-      {
-        AlertLog.Insert(0, log);
-        if (AlertLog.Count > 5000)
-        {
-          AlertLog.RemoveAt(AlertLog.Count - 1);
-        }
-      }
+      TriggerLog.Add(log);
     }
 
     // make sure each call is from within lock of TimerList
@@ -1352,13 +1345,13 @@ namespace EQLogParser
 
         TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
         TriggerStateManager.Instance.TrustedPlayersUpdateEvent -= TrustedPlayersUpdateEvent;
-        _alertCollection.CompleteAdding();
+        _triggerLogCollection.CompleteAdding();
         _chatCollection.CompleteAdding();
         _speakCollection.CompleteAdding();
 
         try
         {
-          foreach (var task in new Task[] { _speakTask, _chatTask, _alertTask, _mainTask })
+          foreach (var task in new Task[] { _speakTask, _chatTask, _triggerLogTask, _mainTask })
           {
             if (task != null)
             {
@@ -1368,13 +1361,15 @@ namespace EQLogParser
         }
         finally
         {
-          _alertCollection.Dispose();
+          _triggerLogCollection.Dispose();
           _chatCollection.Dispose();
           _speakCollection.Dispose();
           _activeTriggerSemaphore.Dispose();
         }
       }
     }
+
+    private readonly record struct TriggerLogItem(LineData LineData, TriggerWrapper Wrapper, string Type, long Eval);
 
     private class Speak
     {
@@ -1442,13 +1437,13 @@ namespace EQLogParser
       public List<TimerData> TimerList { get; } = [];
     }
 
-    [GeneratedRegex(@"{(s\d?)}", RegexOptions.IgnoreCase, "en-US")]
+    [GeneratedRegex(@"{(s\d?)}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ReplaceStringRegex();
-    [GeneratedRegex(@"{(n\d?)(<=|>=|>|<|=|==)?(\d+)?}", RegexOptions.IgnoreCase, "en-US")]
+    [GeneratedRegex(@"{(n\d?)(<=|>=|>|<|=|==)?(\d+)?}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ReplaceNumberRegex();
-    [GeneratedRegex(@"{(ts)}", RegexOptions.IgnoreCase, "en-US")]
+    [GeneratedRegex(@"{(ts)}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ReplaceTsRegex();
-    [GeneratedRegex(@"[^a-zA-Z0-9 .,!?;:'""-()]", RegexOptions.IgnoreCase, "en-US")]
+    [GeneratedRegex(@"[^a-zA-Z0-9 .,!?;:'""-()]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ReplaceBadCharsRegex();
   }
 }
