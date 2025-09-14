@@ -104,7 +104,7 @@ namespace EQLogParser
 
         // load audio voices before window is created
         ConfigUtil.UpdateStatus("Validating Installed Voices");
-        await AudioManager.Instance.LoadValidVoicesAsync();
+        await LoadVoicesSafe();
 
         await ShowMain();
       }
@@ -123,6 +123,18 @@ namespace EQLogParser
       AudioManager.Instance.Dispose();
       AppCache.Dispose();
       base.OnExit(e);
+    }
+
+    private static async Task LoadVoicesSafe()
+    {
+      try
+      {
+        await AudioManager.Instance.LoadValidVoicesAsync();
+      }
+      catch
+      {
+        // nothing
+      }
     }
 
     private static void InitializeLogging()

@@ -1,6 +1,9 @@
-# 2.3.18 | 09/14/25
+# 2.3.19 | 09/14/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
 
+1. Small update to loading voices during startup.
+
+# 2.3.18 | 09/14/25
 1. Added new option for **Timer Overlays** called **Hide Dupes**. This tries to hide duplicate timers when you have multiple characters configured to respond to the same exact thing. **Warning** This could potentially slow things down if used during a raid so use with caution. For any timer that has this problem have them go to a special overlay configured with this setting and try to limit the number of timers if possible.
 2. Added a **Clear Logs** button to the Trigger Log.
 3. EQLP now hides **Windows TTS Voices** that aren't working on your system.
