@@ -102,6 +102,10 @@ namespace EQLogParser
         // show render mode
         ConfigUtil.UpdateStatus($"RenderMode: {RenderOptions.ProcessRenderMode}");
 
+        // load audio voices before window is created
+        ConfigUtil.UpdateStatus("Validating Installed Voices");
+        await AudioManager.Instance.LoadValidVoicesAsync();
+
         await ShowMain();
       }
       catch (Exception ex)

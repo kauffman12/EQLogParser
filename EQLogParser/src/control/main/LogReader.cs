@@ -12,7 +12,7 @@ namespace EQLogParser
   internal class LogReader(ILogProcessor logProcessor, string fileName, int minBack = 0)
     : IDisposable
   {
-    private readonly BlockingCollection<Tuple<string, double, bool>> _lines = new(new ConcurrentQueue<Tuple<string, double, bool>>(), 100000);
+    private readonly BlockingCollection<LogReaderItem> _lines = new(new ConcurrentQueue<LogReaderItem>(), 100000);
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private const int BufferSize = 147456;
     private CancellationTokenSource _cts = new();
@@ -33,7 +33,7 @@ namespace EQLogParser
     public bool IsWaiting() => _waiting;
     public bool IsInValid() => _invalid;
 
-    public async void Start()
+    public async Task StartAsync()
     {
       if (await WhenFileExists())
       {
@@ -90,7 +90,17 @@ namespace EQLogParser
 
       try
       {
-        _fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, BufferSize);
+        _fs = new FileStream(
+          path: FileName,
+          options: new FileStreamOptions
+          {
+            Mode = FileMode.Open,
+            Access = FileAccess.Read,
+            Share = FileShare.ReadWrite | FileShare.Delete,
+            BufferSize = BufferSize,
+            Options = FileOptions.Asynchronous | FileOptions.SequentialScan
+          });
+
         _initSize = _fs.Length;
         _nextUpdateThreshold = _initSize / 50;
 
@@ -230,7 +240,7 @@ namespace EQLogParser
           FileUtil.QueueFileArchiveAsync(this);
         }
 
-        _lines.Add(Tuple.Create(theLine, _lastParsedTime, monitor), _cts.Token);
+        _lines.Add(new(theLine, _lastParsedTime, monitor), _cts.Token);
         previous = theLine;
       }
     }
@@ -291,7 +301,16 @@ namespace EQLogParser
       if (exists)
       {
         _fileDeleted = false;
-        _fs = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, BufferSize);
+        _fs = new FileStream(
+          path: FileName,
+          options: new FileStreamOptions
+          {
+            Mode = FileMode.Open,
+            Access = FileAccess.Read,
+            Share = FileShare.ReadWrite | FileShare.Delete,
+            BufferSize = BufferSize,
+            Options = FileOptions.Asynchronous | FileOptions.SequentialScan
+          });
         _fs.Seek(0, SeekOrigin.End);
         _reader = FileUtil.GetStreamReader(_fs);
       }
@@ -348,8 +367,10 @@ namespace EQLogParser
     #endregion
   }
 
+  public readonly record struct LogReaderItem(string Line, double Ts, bool IsMonitor);
+
   internal interface ILogProcessor : IDisposable
   {
-    public void LinkTo(BlockingCollection<Tuple<string, double, bool>> collection);
+    public void LinkTo(BlockingCollection<LogReaderItem> collection);
   }
 }

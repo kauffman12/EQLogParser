@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +11,7 @@ namespace EQLogParser
   internal class TriggerManager
   {
     internal event Action<bool> EventsProcessorsUpdated;
-    internal event Action<AlertEntry> EventsSelectTrigger;
+    internal event Action<TriggerLogEntry> EventsSelectTrigger;
     internal static TriggerManager Instance => Lazy.Value;
 
     private static readonly Lazy<TriggerManager> Lazy = new(() => new TriggerManager());
@@ -50,7 +49,7 @@ namespace EQLogParser
       TriggersUpdated();
     }
 
-    internal void Select(AlertEntry entry) => EventsSelectTrigger?.Invoke(entry);
+    internal void Select(TriggerLogEntry entry) => EventsSelectTrigger?.Invoke(entry);
 
     internal void TriggersUpdated()
     {
@@ -107,13 +106,13 @@ namespace EQLogParser
       }
     }
 
-    internal async Task SetTestProcessor(TriggerConfig config, BlockingCollection<Tuple<string, double, bool>> collection)
+    internal async Task SetTestProcessor(TriggerConfig config, BlockingCollection<LogReaderItem> collection)
     {
       await InitTestProcessor(TriggerStateManager.DefaultUser, $"Trigger Tester ({TriggerStateManager.DefaultUser})", ConfigUtil.PlayerName,
         config.Voice, config.VoiceRate, -1, null, null, collection);
     }
 
-    internal async Task SetTestProcessor(TriggerCharacter character, BlockingCollection<Tuple<string, double, bool>> collection)
+    internal async Task SetTestProcessor(TriggerCharacter character, BlockingCollection<LogReaderItem> collection)
     {
       var playerName = !FileUtil.ParseFileName(character.FilePath, out var parsedPlayerName, out _) ? character.Name : parsedPlayerName;
       await InitTestProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, character.Voice,
@@ -121,7 +120,7 @@ namespace EQLogParser
     }
 
     private async Task InitTestProcessor(string id, string name, string playerName, string voice, int voiceRate,
-      int customVolume, string activeColor, string fontColor, BlockingCollection<Tuple<string, double, bool>> collection)
+      int customVolume, string activeColor, string fontColor, BlockingCollection<LogReaderItem> collection)
     {
       _testProcessor?.Dispose();
       _testProcessor =
@@ -139,10 +138,10 @@ namespace EQLogParser
       return Task.CompletedTask;
     }
 
-    internal async Task<List<Tuple<string, ObservableCollection<AlertEntry>>>> GetAlertLogs()
+    internal async Task<List<TriggerLogStore>> GetTriggerLogs()
     {
       var processors = await GetProcessorsAsync();
-      return processors.Select(p => Tuple.Create(p.CurrentProcessorName, p.AlertLog)).ToList();
+      return [.. processors.Select(p => p.TriggerLog)];
     }
 
     private async void TriggerManagerEventsLogLoadingComplete(string _)
@@ -235,7 +234,7 @@ namespace EQLogParser
             await processor.StartAsync();
             var reader = new LogReader(processor, character.FilePath);
             _logReaders.Add(reader);
-            await Task.Run(() => reader.Start());
+            _ = reader.StartAsync();
           }
         }).ToList();
 
@@ -273,7 +272,7 @@ namespace EQLogParser
           await processor.StartAsync();
           var reader = new LogReader(processor, currentFile);
           _logReaders.Add(reader);
-          await Task.Run(() => reader.Start());
+          _ = reader.StartAsync();
           MainActions.ShowTriggersEnabled(true);
         }
         else

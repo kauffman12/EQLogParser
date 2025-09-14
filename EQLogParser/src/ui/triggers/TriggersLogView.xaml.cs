@@ -2,7 +2,6 @@
 using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
@@ -10,13 +9,12 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
-using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 
 namespace EQLogParser
 {
   public partial class TriggersLogView : IDocumentContent
   {
-    private List<Tuple<string, ObservableCollection<AlertEntry>>> _alertLogs;
+    private List<TriggerLogStore> _triggerLogs;
     private readonly DispatcherTimer _updateTimer;
 
     public TriggersLogView()
@@ -51,17 +49,17 @@ namespace EQLogParser
 
     private async void EventsProcessorsUpdated(bool _)
     {
-      _alertLogs = [.. await TriggerManager.Instance.GetAlertLogs()];
+      _triggerLogs = [.. await TriggerManager.Instance.GetTriggerLogs()];
       if (logList != null)
       {
         var selected = logList.SelectedItem as string;
-        var list = _alertLogs.Select(log => log.Item1).ToList();
+        var list = _triggerLogs.Select(log => log.Name).ToList();
 
         logList.ItemsSource = list;
         // not sure why
         logList.SelectedIndex = -1;
 
-        if (_alertLogs.Count > 0)
+        if (_triggerLogs.Count > 0)
         {
           if (selected != null && list.IndexOf(selected) is var found and > -1)
           {
@@ -75,13 +73,13 @@ namespace EQLogParser
       }
     }
 
-    private void SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
       if (sender is ComboBox combo && dataGrid != null)
       {
         var sorting = dataGrid.SortColumnDescriptions.ToList();
         dataGrid.SortColumnDescriptions.Clear();
-        var collection = combo.SelectedIndex >= 0 ? _alertLogs[combo.SelectedIndex].Item2 : null;
+        var collection = combo.SelectedIndex >= 0 ? _triggerLogs[combo.SelectedIndex].Entries : null;
         dataGrid.ItemsSource = collection;
         sorting.ForEach(item => dataGrid.SortColumnDescriptions.Add(item));
 
@@ -101,6 +99,14 @@ namespace EQLogParser
       }
     }
 
+    private void ClearClick(object sender, RoutedEventArgs e)
+    {
+      if (_triggerLogs?.Count > 0)
+      {
+        _triggerLogs.ForEach(l => l.Clear());
+      }
+    }
+
     private new void PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
       if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
@@ -109,7 +115,7 @@ namespace EQLogParser
       }
 
       // case where click happened but selection event doesn't fire
-      if (e.OriginalSource is FrameworkElement { DataContext: AlertEntry entry })
+      if (e.OriginalSource is FrameworkElement { DataContext: TriggerLogEntry entry })
       {
         if (dataGrid.SelectedItem != entry)
         {
@@ -182,18 +188,5 @@ namespace EQLogParser
         e.Cancel = true;
       }
     }
-  }
-
-  public class AlertEntry
-  {
-    public double BeginTime { get; set; }
-    public string Name { get; set; }
-    public string Type { get; set; }
-    public long Priority { get; set; }
-    public long Eval { get; set; }
-    public double LogTime { get; set; }
-    public string Line { get; set; }
-    public string NodeId { get; set; }
-    public string CharacterId { get; set; }
   }
 }

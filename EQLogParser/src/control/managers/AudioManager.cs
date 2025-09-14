@@ -32,10 +32,11 @@ namespace EQLogParser
     private readonly AudioDeviceNotificationClient _notificationClient = new();
     private readonly DispatcherTimer _updateTimer;
     private readonly object _deviceLock = new();
+    private readonly bool _usePiper;
+    private readonly List<VoiceInformation> _validVoices = [];
     private MMDeviceEnumerator _deviceEnumerator;
     private Guid _selectedDeviceGuid = Guid.Empty;
     private bool _disposed;
-    private readonly bool _usePiper;
     private volatile float _appVolume = 1.0f;
     private volatile bool _initialized;
 
@@ -56,19 +57,46 @@ namespace EQLogParser
     internal int GetVolume() => (int)(_appVolume * 100.0f);
     internal void SetVolume(int volume) => _appVolume = volume / 100.0f;
 
+    internal async Task LoadValidVoicesAsync()
+    {
+      if (!PiperTts.Initialize() && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) && _validVoices.Count == 0)
+      {
+        var synth = new SpeechSynthesizer();
+        foreach (var voice in SpeechSynthesizer.AllVoices)
+        {
+          synth.Voice = voice;
+          try
+          {
+            await synth.SynthesizeTextToStreamAsync("test");
+            if (SpeechSynthesizer.DefaultVoice?.Id == voice?.Id)
+            {
+              _validVoices.Insert(0, voice);
+            }
+            else
+            {
+              _validVoices.Add(voice);
+            }
+          }
+          catch (Exception)
+          {
+            // bad voice
+          }
+        }
+      }
+    }
+
     internal List<string> GetVoiceList()
     {
       if (_usePiper) return PiperTts.GetVoiceList();
-
       var list = new List<string>();
 
       try
       {
         if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
         {
-          foreach (var voice in SpeechSynthesizer.AllVoices)
+          foreach (var voice in _validVoices)
           {
-            if (voice is not null && voice.DisplayName is string name)
+            if (voice?.DisplayName is string name)
             {
               list.Add(name);
             }
@@ -104,23 +132,6 @@ namespace EQLogParser
       }
 
       return string.Empty;
-    }
-
-    internal static (List<string> idList, List<string> nameList) GetDeviceList()
-    {
-      List<string> idList = [Guid.Empty.ToString()];
-      List<string> nameList = ["Default Audio"];
-
-      foreach (var device in DirectSoundOut.Devices.ToList())
-      {
-        if (device.Guid != Guid.Empty)
-        {
-          idList.Add(device.Guid.ToString());
-          nameList.Add(device.Description);
-        }
-      }
-
-      return (idList, nameList);
     }
 
     internal void SelectDevice(string id)
@@ -217,38 +228,7 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(tts))
       {
-        byte[] audio = null;
-        var sample = 16000;
-
-        if (_usePiper)
-        {
-          const string testSpeaker = "testSpeaker";
-          if (PiperTts.LoadVoice(testSpeaker, voice, out var voiceData))
-          {
-            audio = PiperTts.SynthesizeText(testSpeaker, tts);
-            sample = voiceData.Sample;
-            PiperTts.RemoveVoice(testSpeaker);
-          }
-        }
-        else
-        {
-          if (IsLegacyVoice(voice))
-          {
-            if (CreateSapiSpeechSynthesizer(voice) is { } synth && SynthesizeTextToByteArray(tts, synth, out sample) is { Length: > 0 } data)
-            {
-              audio = data;
-              synth.Dispose();
-            }
-          }
-          else
-          {
-            if (CreateSpeechSynthesizer(voice) is { } synth && await SynthesizeTextToByteArrayAsync(tts, synth) is { Length: > 0 } data)
-            {
-              audio = data;
-              if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240)) synth.Dispose();
-            }
-          }
-        }
+        (var audio, var sample) = await SynthesizeTextAsync(voice, tts);
 
         if (audio?.Length > 0)
         {
@@ -266,38 +246,7 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(tts))
       {
-        byte[] audio = null;
-        var sample = 16000;
-
-        if (_usePiper)
-        {
-          const string testSpeaker = "testSpeaker";
-          if (PiperTts.LoadVoice(testSpeaker, voice, out var voiceData))
-          {
-            audio = PiperTts.SynthesizeText(testSpeaker, tts);
-            sample = voiceData.Sample;
-            PiperTts.RemoveVoice(testSpeaker);
-          }
-        }
-        else
-        {
-          if (IsLegacyVoice(voice))
-          {
-            if (CreateSapiSpeechSynthesizer(voice) is { } synth && SynthesizeTextToByteArray(tts, synth, out sample) is { Length: > 0 } data)
-            {
-              audio = data;
-              synth.Dispose();
-            }
-          }
-          else
-          {
-            if (CreateSpeechSynthesizer(voice) is { } synth && await SynthesizeTextToByteArrayAsync(tts, synth) is { Length: > 0 } data)
-            {
-              audio = data;
-              if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240)) synth.Dispose();
-            }
-          }
-        }
+        (var audio, var sample) = await SynthesizeTextAsync(voice, tts);
 
         if (audio?.Length > 0)
         {
@@ -434,6 +383,23 @@ namespace EQLogParser
           SpeakAsync(id, audio, waveFormat, rate, customVolume, trigger.Priority, trigger.Volume);
         }
       }
+    }
+
+    internal static (List<string> idList, List<string> nameList) GetDeviceList()
+    {
+      List<string> idList = [Guid.Empty.ToString()];
+      List<string> nameList = ["Default Audio"];
+
+      foreach (var device in DirectSoundOut.Devices.ToList())
+      {
+        if (device.Guid != Guid.Empty)
+        {
+          idList.Add(device.Guid.ToString());
+          nameList.Add(device.Description);
+        }
+      }
+
+      return (idList, nameList);
     }
 
     private void DoUpdateDeviceList(object sender, EventArgs e)
@@ -747,15 +713,53 @@ namespace EQLogParser
       }, cancellationTokenSource.Token);
     }
 
-    private Guid GetDevice()
+    private async Task<(byte[], int)> SynthesizeTextAsync(string voice, string tts)
     {
-      lock (_deviceLock)
+      byte[] audio = null;
+      var sample = 16000;
+
+      if (_usePiper)
       {
-        return _selectedDeviceGuid;
+        const string testSpeaker = "testSpeaker";
+        if (PiperTts.LoadVoice(testSpeaker, voice, out var voiceData))
+        {
+          audio = PiperTts.SynthesizeText(testSpeaker, tts);
+          sample = voiceData.Sample;
+          PiperTts.RemoveVoice(testSpeaker);
+        }
       }
+      else
+      {
+        if (IsLegacyVoice(voice))
+        {
+          if (CreateSapiSpeechSynthesizer(voice) is { } synth)
+          {
+            if (SynthesizeTextToByteArray(tts, synth, out sample) is { Length: > 0 } data)
+            {
+              audio = data;
+            }
+
+            synth.Dispose();
+          }
+        }
+        else
+        {
+          if (CreateSpeechSynthesizer(voice) is { } synth)
+          {
+            if (await SynthesizeTextToByteArrayAsync(tts, synth) is { Length: > 0 } data)
+            {
+              audio = data;
+            }
+
+            if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240)) synth.Dispose();
+          }
+        }
+      }
+
+      return (audio, sample);
     }
 
-    private static SpeechSynthesizer CreateSpeechSynthesizer(string voice)
+    private SpeechSynthesizer CreateSpeechSynthesizer(string voice)
     {
       SpeechSynthesizer synth = null;
 
@@ -776,6 +780,30 @@ namespace EQLogParser
       }
 
       return synth;
+    }
+
+    private VoiceInformation GetVoiceInfo(string name)
+    {
+      if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) || _validVoices.Count == 0) return null;
+      if (name == null) return _validVoices[0];
+
+      foreach (var voice in _validVoices)
+      {
+        if (voice.DisplayName == name || name.StartsWith(voice.DisplayName, StringComparison.OrdinalIgnoreCase))
+        {
+          return voice;
+        }
+      }
+
+      return _validVoices[0];
+    }
+
+    private Guid GetDevice()
+    {
+      lock (_deviceLock)
+      {
+        return _selectedDeviceGuid;
+      }
     }
 
     private static System.Speech.Synthesis.SpeechSynthesizer CreateSapiSpeechSynthesizer(string voice)
@@ -838,38 +866,6 @@ namespace EQLogParser
       return foundGuid;
     }
 
-    private static VoiceInformation GetVoiceInfo(string name)
-    {
-      if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
-      {
-        return null;
-      }
-
-      VoiceInformation voiceInfo = null;
-
-      try
-      {
-        voiceInfo = SpeechSynthesizer.DefaultVoice;
-        if (!string.IsNullOrEmpty(name))
-        {
-          foreach (var voice in SpeechSynthesizer.AllVoices)
-          {
-            if (voice.DisplayName == name || name.StartsWith(voice.DisplayName, StringComparison.OrdinalIgnoreCase))
-            {
-              voiceInfo = voice;
-              break;
-            }
-          }
-        }
-      }
-      catch (Exception)
-      {
-        // not supported
-      }
-
-      return voiceInfo;
-    }
-
     private static System.Speech.Synthesis.VoiceInfo GetSapiVoiceInfo(string name)
     {
       System.Speech.Synthesis.VoiceInfo voiceInfo = null;
@@ -880,6 +876,7 @@ namespace EQLogParser
         voiceInfo = synth.Voice;
         if (!string.IsNullOrEmpty(name))
         {
+          // do not pass null for culture
           foreach (var voice in synth.GetInstalledVoices())
           {
             if (!string.IsNullOrEmpty(name) && name.Contains(voice.VoiceInfo.Name, StringComparison.OrdinalIgnoreCase))

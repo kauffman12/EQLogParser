@@ -16,6 +16,7 @@
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <Label Content="Available Logs: " Style="{StaticResource EQTitleStyle}" />
       <ComboBox x:Name="logList" SelectionChanged="SelectionChanged" />
+      <Button x:Name="clearButton" Margin="8,0,0,1" Height="{DynamicResource EQButtonHeight}" Padding="12,0,12,0" Click="ClearClick">Clear Logs</Button>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
