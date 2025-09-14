@@ -15,6 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using Windows.Media.SpeechSynthesis;
+using Windows.Storage.Streams;
 
 namespace EQLogParser
 {
@@ -59,15 +60,46 @@ namespace EQLogParser
 
     internal async Task LoadValidVoicesAsync()
     {
+      // keep your original gate
       if (!PiperTts.Initialize() && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) && _validVoices.Count == 0)
       {
-        var synth = new SpeechSynthesizer();
-        foreach (var voice in SpeechSynthesizer.AllVoices)
+        SpeechSynthesizer synth = null;
+        IReadOnlyList<VoiceInformation> voices;
+
+        try
         {
-          synth.Voice = voice;
-          try
+          synth = new SpeechSynthesizer();
+          voices = SpeechSynthesizer.AllVoices; // this can also throw on some machines
+        }
+        catch
+        {
+          synth?.Dispose();
+          return;
+        }
+
+        try
+        {
+          foreach (var voice in voices)
           {
-            await synth.SynthesizeTextToStreamAsync("test");
+            try
+            {
+              synth.Voice = voice;
+            }
+            catch
+            {
+              continue;
+            }
+
+            try
+            {
+              using IRandomAccessStream stream = await synth.SynthesizeTextToStreamAsync("test");
+            }
+            catch
+            {
+              continue;
+            }
+
+            // prefer default first
             if (SpeechSynthesizer.DefaultVoice?.Id == voice?.Id)
             {
               _validVoices.Insert(0, voice);
@@ -77,10 +109,10 @@ namespace EQLogParser
               _validVoices.Add(voice);
             }
           }
-          catch (Exception)
-          {
-            // bad voice
-          }
+        }
+        finally
+        {
+          synth.Dispose();
         }
       }
     }
