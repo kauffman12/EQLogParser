@@ -60,7 +60,6 @@ namespace EQLogParser
 
     internal async Task LoadValidVoicesAsync()
     {
-      // keep your original gate
       if (!PiperTts.Initialize() && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) && _validVoices.Count == 0)
       {
         SpeechSynthesizer synth = null;
@@ -84,14 +83,6 @@ namespace EQLogParser
             try
             {
               synth.Voice = voice;
-            }
-            catch
-            {
-              continue;
-            }
-
-            try
-            {
               using IRandomAccessStream stream = await synth.SynthesizeTextToStreamAsync("test");
             }
             catch
