@@ -141,13 +141,17 @@ namespace EQLogParser
 
     private async void AudioDeviceListChanged(bool _)
     {
+      var (idList, nameList) = AudioManager.GetDeviceList();
+      if (idList.SequenceEqual(_deviceIdList))
+      {
+        return;
+      }
+
       await UiUtil.InvokeAsync(() =>
       {
         var id = deviceList.SelectedIndex > -1 ? _deviceIdList[deviceList.SelectedIndex] : Guid.Empty.ToString();
-
-        var deviceInfo = AudioManager.GetDeviceList();
-        _deviceIdList = deviceInfo.idList;
-        _deviceNameList = deviceInfo.nameList;
+        _deviceIdList = idList;
+        _deviceNameList = nameList;
         deviceList.ItemsSource = _deviceNameList;
 
         if (_deviceIdList.FindIndex(item => item == id) is var index && index > -1)

@@ -348,4 +348,7 @@
   <data name="WAR_COLOR" xml:space="preserve">
     <value>#C04040</value>
   </data>
+  <data name="CLASSES_SELECTED" xml:space="preserve">
+    <value>Classes</value>
+  </data>
 </root>

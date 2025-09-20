@@ -44,7 +44,7 @@ namespace EQLogParser
       };
 
       selectedOptions.ItemsSource = list;
-      UiElementUtil.SetComboBoxTitle(selectedOptions, list.Sum(item => item.IsChecked ? 1 : 0), Resource.SPELL_TYPES_SELECTED);
+      UiElementUtil.SetComboBoxTitle(selectedOptions, Resource.SPELL_TYPES_SELECTED);
 
       list =
       [
@@ -130,7 +130,7 @@ namespace EQLogParser
         }
       }
 
-      UiElementUtil.SetComboBoxTitle(selected, count, Resource.SPELL_TYPES_SELECTED);
+      UiElementUtil.SetComboBoxTitle(selected, Resource.SPELL_TYPES_SELECTED);
       return changed;
     }
 

@@ -952,7 +952,7 @@ namespace EQLogParser
             CurrentLogFile = theFile;
             _npcDamageManager.Reset();
             _eqLogReader = new LogReader(new LogProcessor(theFile), theFile, lastMins);
-            _eqLogReader.StartAsync();
+            _ = _eqLogReader.StartAsync();
             UpdateLoadingProgress();
           }, DispatcherPriority.Render);
         }

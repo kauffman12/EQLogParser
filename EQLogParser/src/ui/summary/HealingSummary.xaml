@@ -45,7 +45,14 @@
           <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
         </syncfusion:UpDown.NumberFormatInfo>
       </syncfusion:UpDown>
-      <ComboBox Margin="0,0,8,2" x:Name="classesList" SelectionChanged="ClassSelectionChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="classesList" 
+                DropDownClosed="ClassSelectionChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}">
+        <ComboBox.ItemContainerStyle>
+          <Style>
+            <EventSetter Event="ComboBoxItem.PreviewMouseDown" Handler="ClassPreviewMouseDown"/>
+          </Style>
+        </ComboBox.ItemContainerStyle>
+      </ComboBox>
       <ComboBox x:Name="selectedColumns" Tag="HealingSummaryColumns" Margin="0,0,8,2" 
                 DropDownClosed="SelectDataGridColumns" ItemTemplateSelector="{StaticResource ComboBoxSelector}"/>
     </StackPanel>

@@ -403,6 +403,25 @@ namespace EQLogParser
       }
     }
 
+    internal static void RefreshTableView(SfGridBase gridBase)
+    {
+      try
+      {
+        if (gridBase is SfDataGrid { ItemsSource: not null } dataGrid)
+        {
+          dataGrid?.View?.RefreshFilter();
+        }
+        else if (gridBase is SfTreeGrid { ItemsSource: not null } treeGrid)
+        {
+          treeGrid?.View?.RefreshFilter();
+        }
+      }
+      catch (Exception ex)
+      {
+        Log.Debug(ex);
+      }
+    }
+
     internal static double CalculateMinGridHeaderWidth(string value)
     {
       const string defaultValue = "123456789";
@@ -623,7 +642,7 @@ namespace EQLogParser
       }
 
       columnCombo.ItemsSource = list;
-      UiElementUtil.SetComboBoxTitle(columnCombo, selectedCount, Resource.COLUMNS_SELECTED);
+      UiElementUtil.SetComboBoxTitle(columnCombo, Resource.COLUMNS_SELECTED);
     }
 
     private static double GetColumnWidth(string mappingName, string text)
@@ -749,7 +768,7 @@ namespace EQLogParser
           }
         }
 
-        UiElementUtil.SetComboBoxTitle(columnCombo, visible.Count, Resource.COLUMNS_SELECTED);
+        UiElementUtil.SetComboBoxTitle(columnCombo, Resource.COLUMNS_SELECTED);
 
         if (gridBase is SfDataGrid grid)
         {

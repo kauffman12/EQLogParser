@@ -15,21 +15,14 @@ namespace EQLogParser
 {
   public partial class DamageSummary : IDocumentContent
   {
-    private string _currentClass;
+    private readonly DispatcherTimer _selectionTimer;
     private int _currentGroupCount;
     private int _currentPetOrPlayerOption;
-    private readonly DispatcherTimer _selectionTimer;
     private bool _ready;
 
     public DamageSummary()
     {
       InitializeComponent();
-
-      var list = PlayerManager.Instance.GetClassList();
-      list.Insert(0, Resource.ANY_CLASS);
-      classesList.ItemsSource = list;
-      classesList.SelectedIndex = 0;
-
       petOrPlayerList.ItemsSource = new List<string> { Labels.PetPlayerOption, Labels.PlayerOption, Labels.PetOption, Labels.AllOption };
       petOrPlayerList.SelectedIndex = 0;
 
@@ -39,7 +32,7 @@ namespace EQLogParser
       CreateClassMenuItems(menuItemSetPlayerClass, DataGridSetPlayerClassClick, true);
 
       // call after everything else is initialized
-      InitSummaryTable(title, dataGrid, selectedColumns);
+      InitSummaryTable(title, dataGrid, selectedColumns, classesList);
       dataGrid.CopyContent += DataGridCopyContent;
 
       _selectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
@@ -121,19 +114,6 @@ namespace EQLogParser
     private void CopyToEqClick(object sender, RoutedEventArgs e) => MainActions.CopyToEqClick(Labels.DamageParse);
     internal override bool IsPetsCombined() => _currentPetOrPlayerOption == 0;
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
-
-    private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      var update = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
-      var needUpdate = _currentClass != update;
-      _currentClass = update;
-
-      if (needUpdate)
-      {
-        dataGrid.SelectedItems.Clear();
-        dataGrid.View?.RefreshFilter();
-      }
-    }
 
     private void CreatePetOwnerMenu()
     {
@@ -341,7 +321,7 @@ namespace EQLogParser
           bool result;
           if (_currentPetOrPlayerOption == 1)
           {
-            result = !PlayerManager.Instance.IsVerifiedPet(name) && (string.IsNullOrEmpty(_currentClass) || _currentClass == className);
+            result = !PlayerManager.Instance.IsVerifiedPet(name) && (SelectedClasses.Count == 16 || SelectedClasses.Contains(className));
           }
           else if (_currentPetOrPlayerOption == 2)
           {
@@ -349,7 +329,7 @@ namespace EQLogParser
           }
           else
           {
-            result = string.IsNullOrEmpty(_currentClass) || _currentClass == className;
+            result = SelectedClasses.Count == 16 || SelectedClasses.Contains(className);
           }
 
           return result;

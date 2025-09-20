@@ -8,7 +8,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
-using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 
 namespace EQLogParser
 {
@@ -17,7 +16,6 @@ namespace EQLogParser
     // Made property since it's used outside this class
     public int DamageType { get; set; }
 
-    private string _currentClass;
     private bool _currentPetValue;
     private int _currentGroupCount;
     private readonly DispatcherTimer _selectionTimer;
@@ -54,7 +52,7 @@ namespace EQLogParser
       CreateClassMenuItems(menuItemSetPlayerClass, DataGridSetPlayerClassClick, true);
 
       // call after everything else is initialized
-      InitSummaryTable(title, dataGrid, selectedColumns);
+      InitSummaryTable(title, dataGrid, selectedColumns, classesList);
       dataGrid.GridCopyContent += DataGridCopyContent;
 
       _selectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
@@ -155,19 +153,6 @@ namespace EQLogParser
     private void CopyToEqClick(object sender, RoutedEventArgs e) => MainActions.CopyToEqClick(Labels.TankParse);
     private void CopyReceivedHealingToEqClick(object sender, RoutedEventArgs e) => MainActions.CopyToEqClick(Labels.ReceivedHealParse);
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
-
-    private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      var update = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
-      var needUpdate = _currentClass != update;
-      _currentClass = update;
-
-      if (needUpdate)
-      {
-        dataGrid.SelectedItems.Clear();
-        dataGrid.View?.RefreshFilter();
-      }
-    }
 
     private void CreatePetOwnerMenu()
     {
@@ -365,7 +350,7 @@ namespace EQLogParser
             return false;
           }
 
-          return string.IsNullOrEmpty(_currentClass) || (!string.IsNullOrEmpty(name) && _currentClass == className);
+          return SelectedClasses.Count == 16 || SelectedClasses.Contains(className);
         };
 
         if (dataGrid.SelectedItems.Count > 0)

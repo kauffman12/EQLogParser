@@ -172,7 +172,7 @@ namespace EQLogParser
       }
     }
 
-    internal static void SetComboBoxTitle(ComboBox columns, int count, string value, bool hasSelectAll = false)
+    internal static void SetComboBoxTitle(ComboBox columns, string value, bool hasSelectAll = false)
     {
       if (columns.Items.Count == 0)
       {
@@ -182,7 +182,17 @@ namespace EQLogParser
       {
         if (columns.SelectedItem is not ComboBoxItemDetails selected)
         {
-          selected = hasSelectAll ? columns.Items[2] as ComboBoxItemDetails : columns.Items[0] as ComboBoxItemDetails;
+          selected = columns.Items[0] as ComboBoxItemDetails;
+        }
+
+        var start = hasSelectAll ? 2 : 0;
+        var count = 0;
+        for (var i = start; i < columns.Items.Count; i++)
+        {
+          if (columns.Items[i] is ComboBoxItemDetails details && details.IsChecked == true)
+          {
+            count++;
+          }
         }
 
         var total = hasSelectAll ? columns.Items.Count - 2 : columns.Items.Count;
@@ -199,6 +209,93 @@ namespace EQLogParser
           columns.SelectedIndex = -1;
           columns.SelectedItem = selected;
         }
+      }
+    }
+
+    internal static void PreviewSelectAllComboBox(ComboBox combo, ComboBoxItemDetails updated, int total)
+    {
+      if (updated.Text == "Unselect All")
+      {
+        if (updated.IsChecked == false) Toggle("Unselect All", false);
+      }
+      else if (updated.Text == "Select All")
+      {
+        if (updated.IsChecked == false) Toggle("Unselect All", true);
+      }
+      else
+      {
+        if (updated.IsChecked == true && combo.Items[0] is ComboBoxItemDetails { } selectAll && selectAll.IsChecked == true)
+        {
+          selectAll.IsChecked = false;
+          updated.IsChecked = !updated.IsChecked;
+          combo.Items.Refresh();
+        }
+        else if (updated.IsChecked == false && combo.Items[1] is ComboBoxItemDetails { } unselectAll && unselectAll.IsChecked == true)
+        {
+          unselectAll.IsChecked = false;
+          updated.IsChecked = !updated.IsChecked;
+          combo.Items.Refresh();
+        }
+        else
+        {
+          var count = 0;
+          for (var i = 2; i < combo.Items.Count; i++)
+          {
+            if (combo.Items[i] is ComboBoxItemDetails { } classItem)
+            {
+              if (updated != classItem)
+              {
+                if (classItem.IsChecked == true)
+                {
+                  count++;
+                }
+              }
+              else if (updated.IsChecked == false)
+              {
+                count++;
+              }
+            }
+          }
+
+          if (count == 0)
+          {
+            if (combo.Items[1] is ComboBoxItemDetails { } unselectAll2 && unselectAll2.IsChecked == false)
+            {
+              unselectAll2.IsChecked = true;
+              updated.IsChecked = !updated.IsChecked;
+              combo.Items.Refresh();
+            }
+          }
+          else if (count == total)
+          {
+            if (combo.Items[0] is ComboBoxItemDetails { } selectAll2 && selectAll2.IsChecked == false)
+            {
+              selectAll2.IsChecked = true;
+              updated.IsChecked = !updated.IsChecked;
+              combo.Items.Refresh();
+            }
+          }
+        }
+      }
+
+      void Toggle(string current, bool value)
+      {
+        foreach (var item in combo.Items)
+        {
+          if (item is ComboBoxItemDetails { } classItem)
+          {
+            if (!classItem.Text.Equals(current, StringComparison.OrdinalIgnoreCase))
+            {
+              classItem.IsChecked = value;
+            }
+            else
+            {
+              classItem.IsChecked = !value;
+            }
+          }
+        }
+
+        combo.Items.Refresh();
       }
     }
 
