@@ -7,13 +7,11 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
-using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 
 namespace EQLogParser
 {
   public partial class HealingSummary : IDocumentContent
   {
-    private string _currentClass;
     private readonly DispatcherTimer _selectionTimer;
     private bool _ready;
 
@@ -32,7 +30,7 @@ namespace EQLogParser
       CreateClassMenuItems(menuItemSetPlayerClass, DataGridSetPlayerClassClick, true);
 
       // call after everything else is initialized
-      InitSummaryTable(title, dataGrid, selectedColumns);
+      InitSummaryTable(title, dataGrid, selectedColumns, classesList);
       dataGrid.GridCopyContent += DataGridCopyContent;
 
       _selectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
@@ -109,19 +107,6 @@ namespace EQLogParser
     private void CopyToEqClick(object sender, RoutedEventArgs e) => MainActions.CopyToEqClick(Labels.HealParse);
     private void CopyTopHealsToEqClick(object sender, RoutedEventArgs e) => MainActions.CopyToEqClick(Labels.TopHealParse);
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
-
-    private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      var update = classesList.SelectedIndex <= 0 ? null : classesList.SelectedValue.ToString();
-      var needUpdate = _currentClass != update;
-      _currentClass = update;
-
-      if (needUpdate)
-      {
-        dataGrid.SelectedItems.Clear();
-        dataGrid.View?.RefreshFilter();
-      }
-    }
 
     private void DataGridCopyContent(object sender, GridCopyPasteEventArgs e)
     {
@@ -249,7 +234,7 @@ namespace EQLogParser
             className = PlayerManager.Instance.GetPlayerClass(name);
           }
 
-          return string.IsNullOrEmpty(_currentClass) || _currentClass == className;
+          return SelectedClasses.Count == 16 || SelectedClasses.Contains(className);
         };
 
         if (dataGrid.SelectedItems.Count > 0)

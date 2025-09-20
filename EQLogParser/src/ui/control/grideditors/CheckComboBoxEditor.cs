@@ -67,7 +67,7 @@ namespace EQLogParser
           if (comboBox.DataContext is PropertyItem propertyItem)
           {
             var label = propertyItem.Name == "SelectedTextOverlays" ? "Text Overlays" : "Timer Overlays";
-            UiElementUtil.SetComboBoxTitle(comboBox, count, label);
+            UiElementUtil.SetComboBoxTitle(comboBox, label);
           }
         }
 

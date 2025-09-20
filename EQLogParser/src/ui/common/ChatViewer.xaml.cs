@@ -167,7 +167,7 @@ namespace EQLogParser
       }
 
       channels.ItemsSource = items;
-      UiElementUtil.SetComboBoxTitle(channels, count, Resource.CHANNELS_SELECTED, true);
+      UiElementUtil.SetComboBoxTitle(channels, Resource.CHANNELS_SELECTED, true);
     }
 
     private void LoadPlayers(string updatedPlayer = null)
@@ -415,7 +415,7 @@ namespace EQLogParser
           }
         }
 
-        UiElementUtil.SetComboBoxTitle(channels, count, Resource.CHANNELS_SELECTED, true);
+        UiElementUtil.SetComboBoxTitle(channels, Resource.CHANNELS_SELECTED, true);
       }
 
       if (_ready)

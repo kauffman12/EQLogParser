@@ -1,6 +1,11 @@
-# 2.3.19 | 09/14/25
+# 2.3.20 | 09/20/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
 
+1. Updated **Classes** dropdowns on Summary Tables to allow multi-select.
+2. Improved handling of audio devices being added/removed at runtime.
+3. Fixed bug with TTS playback where audio could sometimes be corrupted.
+
+# 2.3.19 | 09/14/25
 1. Small update to loading voices during startup.
 
 # 2.3.18 | 09/14/25

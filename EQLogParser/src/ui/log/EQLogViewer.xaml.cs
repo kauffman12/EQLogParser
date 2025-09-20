@@ -99,7 +99,7 @@ namespace EQLogParser
       _lineTypeCount = list.Count;
 
       lineTypes.ItemsSource = list;
-      UiElementUtil.SetComboBoxTitle(lineTypes, list.Count, Resource.LINE_TYPES_SELECTED);
+      UiElementUtil.SetComboBoxTitle(lineTypes, Resource.LINE_TYPES_SELECTED);
 
       _filterTimer.Tick += async (_, _) =>
       {
@@ -174,7 +174,7 @@ namespace EQLogParser
         _filteredLinePositions.Clear();
 
         var types = (lineTypes.ItemsSource as List<ComboBoxItemDetails>)!.Where(item => item.IsChecked).ToDictionary(item => item.Value, _ => true);
-        UiElementUtil.SetComboBoxTitle(lineTypes, types.Count, Resource.LINE_TYPES_SELECTED);
+        UiElementUtil.SetComboBoxTitle(lineTypes, Resource.LINE_TYPES_SELECTED);
 
         if (logFilter.FontStyle == FontStyles.Italic && types.Count == _lineTypeCount)
         {

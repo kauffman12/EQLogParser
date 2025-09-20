@@ -17,16 +17,19 @@ namespace EQLogParser
     internal readonly List<PlayerStats> NoResultsList = [];
 
     internal dynamic TheDataGrid;
+    internal ComboBox TheClassesCombo;
     internal ComboBox TheColumnsCombo;
     internal Label TheTitle;
     internal CombinedStats CurrentStats;
     internal List<List<ActionGroup>> CurrentGroups;
+    internal readonly List<string> SelectedClasses = [];
     private static readonly string[] Item = ["Rank", "Rank"];
 
-    internal void InitSummaryTable(Label title, SfGridBase gridBase, ComboBox columnsCombo)
+    internal void InitSummaryTable(Label title, SfGridBase gridBase, ComboBox columnsCombo, ComboBox classesCombo)
     {
       TheDataGrid = gridBase;
       TheColumnsCombo = columnsCombo;
+      TheClassesCombo = classesCombo;
       TheDataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Total", SortDirection = ListSortDirection.Descending });
       TheTitle = title;
       TheTitle.Content = Labels.NoNpcs;
@@ -45,6 +48,15 @@ namespace EQLogParser
         dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
         dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       }
+
+      // classes combo
+      var classList = PlayerManager.Instance.GetClassList();
+      SelectedClasses.AddRange(classList);
+      var comboList = classList.Select(name => new ComboBoxItemDetails { IsChecked = true, Text = name }).ToList();
+      comboList.Insert(0, new ComboBoxItemDetails { IsChecked = false, Text = "Unselect All" });
+      comboList.Insert(0, new ComboBoxItemDetails { IsChecked = true, Text = "Select All" });
+      TheClassesCombo.ItemsSource = comboList;
+      UiElementUtil.SetComboBoxTitle(TheClassesCombo, Resource.CLASSES_SELECTED, true);
 
       DataGridUtil.RefreshTableColumns(TheDataGrid);
       DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
@@ -105,6 +117,33 @@ namespace EQLogParser
     {
       TheTitle.Content = Labels.NoNpcs;
       TheDataGrid.ItemsSource = null;
+    }
+
+    internal void ClassSelectionChanged(object sender, EventArgs e)
+    {
+      if (TheClassesCombo?.Items.Count > 0)
+      {
+        SelectedClasses.Clear();
+        for (var i = 2; i < TheClassesCombo.Items.Count; i++)
+        {
+          if (TheClassesCombo.Items[i] is ComboBoxItemDetails { } classItem && classItem.IsChecked == true)
+          {
+            SelectedClasses.Add(classItem.Text);
+          }
+        }
+
+        UiElementUtil.SetComboBoxTitle(TheClassesCombo, Resource.CLASSES_SELECTED, true);
+        TheDataGrid.SelectedItems.Clear();
+        DataGridUtil.RefreshTableView(TheDataGrid);
+      }
+    }
+
+    internal void ClassPreviewMouseDown(object sender, EventArgs e)
+    {
+      if (sender is ComboBoxItem { Content: ComboBoxItemDetails details })
+      {
+        UiElementUtil.PreviewSelectAllComboBox(TheClassesCombo, details, PlayerManager.Instance.GetClassList().Count);
+      }
     }
 
     internal void DataGridSetPlayerClassClick(object sender, RoutedEventArgs e)

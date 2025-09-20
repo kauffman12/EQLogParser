@@ -205,6 +205,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Classes.
+        /// </summary>
+        internal static string CLASSES_SELECTED {
+            get {
+                return ResourceManager.GetString("CLASSES_SELECTED", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Clear Chat Archive.
         /// </summary>
         internal static string CLEAR_CHAT {

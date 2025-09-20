@@ -48,7 +48,7 @@ namespace EQLogParser
       };
 
       selectedOptions.ItemsSource = list;
-      UiElementUtil.SetComboBoxTitle(selectedOptions, list.Count, Resource.EVENT_TYPES_SELECTED);
+      UiElementUtil.SetComboBoxTitle(selectedOptions, Resource.EVENT_TYPES_SELECTED);
       MainActions.EventsThemeChanged += EventsThemeChanged;
 
       eventFilter.Text = Resource.EVENT_FILTER_TEXT;
@@ -194,7 +194,7 @@ namespace EQLogParser
           }
         }
 
-        UiElementUtil.SetComboBoxTitle(selectedOptions, count, Resource.EVENT_TYPES_SELECTED);
+        UiElementUtil.SetComboBoxTitle(selectedOptions, Resource.EVENT_TYPES_SELECTED);
         Refresh();
       }
     }
