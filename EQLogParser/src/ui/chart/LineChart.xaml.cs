@@ -10,9 +10,6 @@ using System.Windows.Controls;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for LineChart.xaml
-  /// </summary>
   public partial class LineChart
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -22,6 +19,7 @@ namespace EQLogParser
       { Labels.Block, true } ,
       { Labels.Dodge, true },
       { Labels.Parry, true },
+      { Labels.Riposte, true },
       { Labels.Invulnerable, true },
       { Labels.Miss, true }
     };

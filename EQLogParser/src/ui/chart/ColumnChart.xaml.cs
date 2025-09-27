@@ -17,6 +17,7 @@ namespace EQLogParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly List<ColumnData> _columns = [];
+    private readonly List<string> _selectedClasses = [];
     private readonly DispatcherTimer _refresh;
     private bool _ready;
 
@@ -24,6 +25,10 @@ namespace EQLogParser
     {
       InitializeComponent();
       titleLabel.Content = Labels.NoData;
+
+      // classes combo
+      SharedControls.PopulateClassesList(classesList, _selectedClasses);
+
       Loaded += ContentLoaded;
       _refresh = UiUtil.CreateTimer(RefreshTimerTick, 250, false);
       UpdateYAxisMargin();
@@ -33,6 +38,7 @@ namespace EQLogParser
     private void RefreshTimerTick(object sender, EventArgs e) => DisplayPage();
     private void EventsClearedActiveData(bool cleared) => Reset();
     private async void CreateImageClick(object sender, RoutedEventArgs e) => await UiElementUtil.CreateImage(Dispatcher, mainGrid, titleLabel);
+    private void ClassPreviewMouseDown(object sender, EventArgs e) => SharedControls.ClassPreviewMouseDown(classesList, sender);
 
     private void EventsThemeChanged(string _)
     {
@@ -46,6 +52,14 @@ namespace EQLogParser
       {
         _refresh?.Stop();
         _refresh?.Start();
+      }
+    }
+
+    private async void ClassSelectionChanged(object sender, EventArgs e)
+    {
+      if (SharedControls.ClassesListSelectedChanged(classesList, _selectedClasses))
+      {
+        await Dispatcher.InvokeAsync(() => DisplayPage());
       }
     }
 
@@ -114,6 +128,7 @@ namespace EQLogParser
             {
               Y = (int)(stats.Total / (double)baseTotal * 100),
               X = name,
+              TotalString = StatsUtil.FormatTotals(stats.Total, 1),
               ClassName = theClass,
               ColorBrush = PlayerManager.Instance.GetClassBrush(theClass),
               IsFirst = isFirst,
@@ -153,14 +168,17 @@ namespace EQLogParser
 
       var fontSize = MainActions.CurrentFontSize;
       var largeFontSize = MainActions.CurrentFontSize + 10;
-      var columnWidth = 40.0 + ((MainActions.CurrentFontSize - 10) * 5);
+      var columnWidth = 50.0 + ((MainActions.CurrentFontSize - 10) * 5);
       var columnSpacing = 20 + ((MainActions.CurrentFontSize - 10) * 1);
+      var yOffset = MainActions.CurrentFontSize - 12;
       // markers are placed center within each row so subtract half the top row height
       var halfRowHeight = yAxisGrid.RowDefinitions[0].ActualHeight / 2;
       var yAxisHeight = yAxisRectangle.ActualHeight - halfRowHeight;
       var startX = 10.0;
       foreach (var column in _columns)
       {
+        if (!_selectedClasses.Contains(column.ClassName)) continue;
+
         var columnHeight = yAxisHeight * (column.Y / 100.0);
 
         // column
@@ -180,7 +198,7 @@ namespace EQLogParser
         // value label
         var labelBlock = new TextBlock
         {
-          Text = $"{column.Y}",
+          Text = $"{column.Y}% ({column.TotalString})",
           FontSize = fontSize,
           HorizontalAlignment = HorizontalAlignment.Left,
           VerticalAlignment = VerticalAlignment.Top,
@@ -188,7 +206,7 @@ namespace EQLogParser
 
         var lWidth = UiElementUtil.CalculateTextBlockWidth(labelBlock);
         var lOffset = (lWidth - columnWidth) / 2;
-        labelBlock.Margin = new Thickness(startX - lOffset, yAxisHeight - columnHeight + halfRowHeight, 0, 0);
+        labelBlock.Margin = new Thickness(startX - lOffset, yAxisHeight - columnHeight + halfRowHeight - yOffset, 0, 0);
         Grid.SetRow(labelBlock, 0);
         elements.Add(labelBlock);
 
@@ -344,6 +362,7 @@ namespace EQLogParser
     {
       public string X { get; set; }
       public int Y { get; init; }
+      public string TotalString { get; init; }
       public string ClassName { get; init; }
       public Brush ColorBrush { get; init; }
       public bool IsFirst { get; init; }
