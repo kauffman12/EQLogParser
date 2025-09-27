@@ -3,16 +3,30 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:EQLogParser"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
+    <Grid.Resources>
+      <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
+    </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="{DynamicResource EQGridTitleHeight}"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <Label x:Name="titleLabel" Style="{StaticResource EQTitleStyle}"/>
+    </StackPanel>
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+      <ComboBox Margin="0,0,8,2" x:Name="classesList" 
+                DropDownClosed="ClassSelectionChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}">
+        <ComboBox.ItemContainerStyle>
+          <Style>
+            <EventSetter Event="ComboBoxItem.PreviewMouseDown" Handler="ClassPreviewMouseDown"/>
+          </Style>
+        </ComboBox.ItemContainerStyle>
+      </ComboBox>
     </StackPanel>
     <Grid x:Name="mainGrid" Grid.Row="1">
       <Grid.ContextMenu>

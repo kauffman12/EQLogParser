@@ -50,13 +50,7 @@ namespace EQLogParser
       }
 
       // classes combo
-      var classList = PlayerManager.Instance.GetClassList();
-      SelectedClasses.AddRange(classList);
-      var comboList = classList.Select(name => new ComboBoxItemDetails { IsChecked = true, Text = name }).ToList();
-      comboList.Insert(0, new ComboBoxItemDetails { IsChecked = false, Text = "Unselect All" });
-      comboList.Insert(0, new ComboBoxItemDetails { IsChecked = true, Text = "Select All" });
-      TheClassesCombo.ItemsSource = comboList;
-      UiElementUtil.SetComboBoxTitle(TheClassesCombo, Resource.CLASSES_SELECTED, true);
+      SharedControls.PopulateClassesList(TheClassesCombo, SelectedClasses);
 
       DataGridUtil.RefreshTableColumns(TheDataGrid);
       DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
@@ -86,6 +80,7 @@ namespace EQLogParser
     internal async void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => await ShowSpellCasts(GetStatsByClass((sender as MenuItem)?.Header as string));
     internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(TheColumnsCombo, TheDataGrid);
     internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
+    internal void ClassPreviewMouseDown(object sender, EventArgs e) => SharedControls.ClassPreviewMouseDown(TheClassesCombo, sender);
 
     internal static void CreateClassMenuItems(MenuItem parent, Action<object, RoutedEventArgs> classHandler, bool enabled, Action<object, RoutedEventArgs> selectedHandler = null)
     {
@@ -121,28 +116,10 @@ namespace EQLogParser
 
     internal void ClassSelectionChanged(object sender, EventArgs e)
     {
-      if (TheClassesCombo?.Items.Count > 0)
+      if (SharedControls.ClassesListSelectedChanged(TheClassesCombo, SelectedClasses))
       {
-        SelectedClasses.Clear();
-        for (var i = 2; i < TheClassesCombo.Items.Count; i++)
-        {
-          if (TheClassesCombo.Items[i] is ComboBoxItemDetails { } classItem && classItem.IsChecked == true)
-          {
-            SelectedClasses.Add(classItem.Text);
-          }
-        }
-
-        UiElementUtil.SetComboBoxTitle(TheClassesCombo, Resource.CLASSES_SELECTED, true);
         TheDataGrid.SelectedItems.Clear();
         DataGridUtil.RefreshTableView(TheDataGrid);
-      }
-    }
-
-    internal void ClassPreviewMouseDown(object sender, EventArgs e)
-    {
-      if (sender is ComboBoxItem { Content: ComboBoxItemDetails details })
-      {
-        UiElementUtil.PreviewSelectAllComboBox(TheClassesCombo, details, PlayerManager.Instance.GetClassList().Count);
       }
     }
 
