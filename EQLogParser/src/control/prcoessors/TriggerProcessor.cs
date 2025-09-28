@@ -17,10 +17,12 @@ namespace EQLogParser
 {
   internal partial class TriggerProcessor : ILogProcessor
   {
+    public const string CharacterCode = "{c}";
     public const string CounterCode = "{counter}";
     public const string RepeatedCode = "{repeated}";
     public const string LogTimeCode = "{logtime}";
     public const string NullCode = "{null}";
+    public const string TimerWarnTimeCode = "{timer-warn-time-value}";
     public readonly TriggerLogStore TriggerLog;
     public readonly string CurrentCharacterId;
     public readonly string CurrentProcessorName;
@@ -223,8 +225,6 @@ namespace EQLogParser
 
     private static string ProcessLineCode(string text, string line) => !string.IsNullOrEmpty(text) ?
       text.Replace("{l}", line, StringComparison.OrdinalIgnoreCase) : text;
-    private string ProcessCharacterCode(string text) => !string.IsNullOrEmpty(text) ?
-      text.Replace("{c}", _currentPlayer ?? string.Empty, StringComparison.OrdinalIgnoreCase) : text;
     private void LexiconUpdateEvent(List<LexiconItem> update) => _lexicon = update;
     private void TrustedPlayersUpdateEvent(List<TrustedPlayer> update) => _trustedPlayers = update;
 
@@ -716,9 +716,9 @@ namespace EQLogParser
         newTimerData.RepeatingTimerLineData = lineData;
       }
 
-      if (!string.IsNullOrEmpty(trigger.EndEarlyPattern))
+      if (!string.IsNullOrEmpty(wrapper.ModifiedEndEarlyPattern))
       {
-        var endEarlyPattern = ProcessMatchesText(trigger.EndEarlyPattern, matches);
+        var endEarlyPattern = ProcessMatchesText(wrapper.ModifiedEndEarlyPattern, matches);
         endEarlyPattern = ProcessMatchesText(endEarlyPattern, previousMatches);
         endEarlyPattern = UpdatePattern(trigger.EndUseRegex, endEarlyPattern, out var numberOptions2);
 
@@ -733,9 +733,9 @@ namespace EQLogParser
         }
       }
 
-      if (!string.IsNullOrEmpty(trigger.EndEarlyPattern2))
+      if (!string.IsNullOrEmpty(wrapper.ModifiedEndEarlyPattern2))
       {
-        var endEarlyPattern2 = ProcessMatchesText(trigger.EndEarlyPattern2, matches);
+        var endEarlyPattern2 = ProcessMatchesText(wrapper.ModifiedEndEarlyPattern2, matches);
         endEarlyPattern2 = ProcessMatchesText(endEarlyPattern2, previousMatches);
         endEarlyPattern2 = UpdatePattern(trigger.EndUseRegex2, endEarlyPattern2, out var numberOptions3);
 
@@ -907,12 +907,13 @@ namespace EQLogParser
             triggerCount++;
 
             pattern = UpdatePattern(trigger.UseRegex, pattern, out var numberOptions);
+            pattern = PreProcessCodes(pattern, trigger);
             pattern = UpdateTimePattern(trigger.UseRegex, pattern);
-            var modifiedDisplay = ProcessCharacterCode(trigger.TextToDisplay);
-            var modifiedSpeak = ProcessCharacterCode(trigger.TextToSpeak);
+            var modifiedDisplay = PreProcessCodes(trigger.TextToDisplay, trigger);
+            var modifiedSpeak = PreProcessCodes(trigger.TextToSpeak, trigger);
             var timerName = string.IsNullOrEmpty(trigger.AltTimerName) ? enabled.Name : trigger.AltTimerName;
-            var modifiedTimerName = ProcessCharacterCode(timerName);
-            var modifiedSendToChat = ProcessCharacterCode(trigger.TextToSendToChat);
+            var modifiedTimerName = PreProcessCodes(timerName, trigger);
+            var modifiedSendToChat = PreProcessCodes(trigger.TextToSendToChat, trigger);
 
             var wrapper = new TriggerWrapper
             {
@@ -920,17 +921,19 @@ namespace EQLogParser
               Name = enabled.Name,
               TriggerData = trigger,
               ModifiedSpeak = modifiedSpeak,
-              ModifiedWarningSpeak = ProcessCharacterCode(trigger.WarningTextToSpeak),
-              ModifiedEndSpeak = ProcessCharacterCode(trigger.EndTextToSpeak),
-              ModifiedEndEarlySpeak = ProcessCharacterCode(trigger.EndEarlyTextToSpeak),
+              ModifiedWarningSpeak = PreProcessCodes(trigger.WarningTextToSpeak, trigger),
+              ModifiedEndSpeak = PreProcessCodes(trigger.EndTextToSpeak, trigger),
+              ModifiedEndEarlySpeak = PreProcessCodes(trigger.EndEarlyTextToSpeak, trigger),
               ModifiedDisplay = modifiedDisplay,
-              ModifiedShare = ProcessCharacterCode(trigger.TextToShare),
+              ModifiedShare = PreProcessCodes(trigger.TextToShare, trigger),
               ModifiedSendToChat = modifiedSendToChat,
-              ModifiedWarningDisplay = ProcessCharacterCode(trigger.WarningTextToDisplay),
-              ModifiedEndDisplay = ProcessCharacterCode(trigger.EndTextToDisplay),
-              ModifiedEndEarlyDisplay = ProcessCharacterCode(trigger.EndEarlyTextToDisplay),
+              ModifiedWarningDisplay = PreProcessCodes(trigger.WarningTextToDisplay, trigger),
+              ModifiedEndDisplay = PreProcessCodes(trigger.EndTextToDisplay, trigger),
+              ModifiedEndEarlyDisplay = PreProcessCodes(trigger.EndEarlyTextToDisplay, trigger),
               ModifiedTimerName = string.IsNullOrEmpty(modifiedTimerName) ? "" : modifiedTimerName,
               ModifiedDurationSeconds = trigger.DurationSeconds,
+              ModifiedEndEarlyPattern = PreProcessCodes(trigger.EndEarlyPattern, trigger),
+              ModifiedEndEarlyPattern2 = PreProcessCodes(trigger.EndEarlyPattern2, trigger),
               ModifiedPattern = !trigger.UseRegex ? pattern : null,
               HasCounterSpeak = modifiedSpeak?.Contains(CounterCode, StringComparison.OrdinalIgnoreCase) == true,
               HasCounterText = modifiedDisplay?.Contains(CounterCode, StringComparison.OrdinalIgnoreCase) == true,
@@ -985,6 +988,7 @@ namespace EQLogParser
             if (trigger.PreviousPattern is { } previousPattern && !string.IsNullOrEmpty(previousPattern))
             {
               previousPattern = UpdatePattern(trigger.PreviousUseRegex, previousPattern, out var previousNumberOptions);
+              previousPattern = PreProcessCodes(previousPattern, trigger);
               previousPattern = UpdateTimePattern(trigger.PreviousUseRegex, previousPattern);
 
               if (trigger.PreviousUseRegex)
@@ -1186,10 +1190,9 @@ namespace EQLogParser
       return repeatedCount;
     }
 
-    private string UpdatePattern(bool useRegex, string pattern, out List<NumberOptions> numberOptions)
+    private static string UpdatePattern(bool useRegex, string pattern, out List<NumberOptions> numberOptions)
     {
       numberOptions = [];
-      pattern = ProcessCharacterCode(pattern);
 
       if (useRegex)
       {
@@ -1222,6 +1225,21 @@ namespace EQLogParser
       }
 
       return pattern;
+    }
+
+    private string PreProcessCodes(string text, Trigger trigger)
+    {
+      if (string.IsNullOrEmpty(text))
+      {
+        return text;
+      }
+
+      // character name
+      text = text.Replace(CharacterCode, _currentPlayer ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+
+      // warning time
+      text = text.Replace(TimerWarnTimeCode, $"{trigger.WarningSeconds}", StringComparison.OrdinalIgnoreCase);
+      return text;
     }
 
     private static string UpdateTimePattern(bool useRegex, string pattern)
@@ -1396,6 +1414,8 @@ namespace EQLogParser
     {
       public string Id { get; init; }
       public string Name { get; init; }
+      public string ModifiedEndEarlyPattern { get; init; }
+      public string ModifiedEndEarlyPattern2 { get; init; }
       public string ModifiedPattern { get; init; }
       public string ModifiedSpeak { get; init; }
       public string ModifiedEndSpeak { get; init; }
