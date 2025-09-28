@@ -962,6 +962,11 @@ namespace EQLogParser
       {
         foreach (var viewNode in viewNodes)
         {
+          if (hidePrivateTriggers && viewNode?.SerializedData?.TriggerData?.Private == true)
+          {
+            continue;
+          }
+
           var node = Create(viewNode);
           var top = BuildUpTree(viewNode.ParentNode as TriggerTreeViewNode, node);
           BuildDownTree(viewNode, node, hidePrivateTriggers);
