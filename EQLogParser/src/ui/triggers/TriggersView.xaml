@@ -93,6 +93,7 @@
             <GridLength>200</GridLength>
           </syncfusion:PropertyGrid.PropertyNameColumnDefinition>
           <syncfusion:PropertyGrid.Items>
+            <syncfusion:PropertyGridItem CategoryName="General" PropertyName="Private" DisplayName="Private" Description="Prevents Trigger from being shared via Quick Share."/>
             <syncfusion:PropertyGridItem CategoryName="General" PropertyName="ChatWebhook" DisplayName="Webhook (Discord)" Description="Webhook/URL for sending messages to a Chat service. Discord is the only supported API at this time."/>
             <syncfusion:PropertyGridItem CategoryName="General" x:Name="triggerVolumeItem" PropertyName="Volume" DisplayName="Volume" Description="Modifies the Volume used for this Trigger. Note that the increase can not go above the max 100% volume level. For this to be useful your Default Volume needs to be below 100% or above 0%."/>
             <syncfusion:PropertyGridItem CategoryName="Overlays" PropertyName="SelectedTextOverlays" DisplayName="Assigned Text" Visibility="Collapsed" Description="Overlays used to display spoken Text associated with this Trigger."/>

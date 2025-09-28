@@ -206,6 +206,7 @@ namespace EQLogParser
 
   internal class Trigger
   {
+    public bool Private { get; set; }
     public double LastTriggered { get; set; }
     public string AltTimerName { get; set; }
     public string Comments { get; set; }
