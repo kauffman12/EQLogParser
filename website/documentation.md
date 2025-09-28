@@ -99,10 +99,6 @@ Replaced by the line that triggered the event minus the date/time segment. Usefu
 
 Replaced by the time from the line that triggered the event in the `hh:mm:ss` format. Useful if you want to know the time the trigger was fired. Available only in the `Text to Display`, `Text to Speak`, `Text to Send`, and `Alternate Timer Name` fields.
 
-## `{TS}`
-
-Like `{S}` but used to capture a timestamp in the format `hh:mm:ss` or any number which will be counted as seconds. Requires `Regex` to be enabled. Used only to dynamically set the `Timer Duration`.
-
 ## `{REPEATED}`
 
 This variable is replaced with the number of times the trigger has been repeated and has captured the same values that have been used to display or speak information. Available only in `Text to Display`, `Text to Speak`, and `Alternate Timer Name`. Example Text to Display: `{s1} {repeated}`. This will print the count of how many times the trigger is fired with the same value caputed by `{s1}`. The count resets after `750ms` and this reset time can be configured by setting the `Repeated Reset Time` of the trigger.
@@ -111,9 +107,17 @@ This variable is replaced with the number of times the trigger has been repeated
 
 Similar to `{REPEATED}` but it counts the number of times the trigger has fired regardless of the variables captured and used in the display or speak information fields. This variable also uses the `Repeated Reset Time` field to specify the delay used to restart the count.
 
+## `{TS}`
+
+Like `{S}` but used to capture a timestamp in the format `hh:mm:ss` or any number which will be counted as seconds. Requires `Regex` to be enabled. Used only to dynamically set the `Timer Duration`.
+
 ## `{NULL}`
 
 Used in any field that displays, speaks, or shares information to suppress the message entirely. Useful when overriding `Timer End Early` behavior. If `{NULL}` is set then nothing will be displayed or spoken.
+
+## `{TIMER-WARN-TIME-VALUE}`
+
+Replaced by the `Timer` setting for `Warn With Time Remaining`. This allows your Display/Speak messages to reference this `Trigger` configuration value if needed. More variables like this could be added in the future where configuration settings are made available when triggers run.
 
 ## `{EQLP:STOP}`
 

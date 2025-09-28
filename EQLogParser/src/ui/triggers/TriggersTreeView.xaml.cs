@@ -595,7 +595,6 @@ namespace EQLogParser
       var node = triggerTreeView.SelectedItem as TriggerTreeViewNode;
       var count = triggerTreeView.SelectedItems?.Count ?? 0;
 
-
       if (node != null)
       {
         renameTriggerMenuItem.IsEnabled = node.ParentNode != null && count == 1;
@@ -619,6 +618,7 @@ namespace EQLogParser
 
       clearRecentlyMergedMenuItem.IsEnabled = !TriggerStateManager.Instance.RecentlyMerged.IsEmpty || !TriggerStateManager.Instance.MissingMedia.IsEmpty;
       importTriggerMenuItem.Header = node != null && importTriggerMenuItem.IsEnabled ? $"Import to ({node.Content})" : "Import";
+      shareTriggerMenuItem.IsEnabled = count != 1 || node?.SerializedData?.TriggerData?.Private != true;
 
       UiElementUtil.ClearMenuEvents(copySettingsMenuItem.Items, CopySettingsClick);
       copySettingsMenuItem.Items.Clear();

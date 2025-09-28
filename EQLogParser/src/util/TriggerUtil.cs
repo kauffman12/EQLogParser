@@ -70,6 +70,7 @@ namespace EQLogParser
     {
       if (to is Trigger toTrigger && from is Trigger fromTrigger)
       {
+        toTrigger.Private = fromTrigger.Private;
         toTrigger.AltTimerName = TextUtils.Trim(fromTrigger.AltTimerName);
         toTrigger.Comments = TextUtils.Trim(fromTrigger.Comments);
         toTrigger.DurationSeconds = fromTrigger.DurationSeconds;
@@ -564,7 +565,7 @@ namespace EQLogParser
 
     internal static void Export(IEnumerable<TriggerTreeViewNode> viewNodes)
     {
-      if (BuildExportList(viewNodes) is { } exportList)
+      if (BuildExportList(viewNodes, false) is { } exportList)
       {
         try
         {
@@ -691,7 +692,7 @@ namespace EQLogParser
 
     internal static async Task ShareAsync(List<TriggerTreeViewNode> viewNodes, bool isTrigger)
     {
-      if (BuildExportList(viewNodes) is { Count: > 0 } exportList)
+      if (BuildExportList(viewNodes, true) is { Count: > 0 } exportList)
       {
         try
         {
@@ -954,7 +955,7 @@ namespace EQLogParser
       }
     }
 
-    private static List<ExportTriggerNode> BuildExportList(IEnumerable<TriggerTreeViewNode> viewNodes)
+    private static List<ExportTriggerNode> BuildExportList(IEnumerable<TriggerTreeViewNode> viewNodes, bool hidePrivateTriggers)
     {
       var exportList = new List<ExportTriggerNode>();
       if (viewNodes != null)
@@ -963,7 +964,7 @@ namespace EQLogParser
         {
           var node = Create(viewNode);
           var top = BuildUpTree(viewNode.ParentNode as TriggerTreeViewNode, node);
-          BuildDownTree(viewNode, node);
+          BuildDownTree(viewNode, node, hidePrivateTriggers);
           exportList.Add(top);
         }
       }
@@ -1060,15 +1061,20 @@ namespace EQLogParser
       return child;
     }
 
-    private static void BuildDownTree(TriggerTreeViewNode viewNode, ExportTriggerNode node)
+    private static void BuildDownTree(TriggerTreeViewNode viewNode, ExportTriggerNode node, bool hidePrivateTriggers)
     {
       if (viewNode.HasChildNodes)
       {
         foreach (var childView in viewNode.ChildNodes.Cast<TriggerTreeViewNode>())
         {
+          if (hidePrivateTriggers && childView?.SerializedData?.TriggerData?.Private == true)
+          {
+            continue;
+          }
+
           var child = Create(childView);
           node.Nodes.Add(child);
-          BuildDownTree(childView, child);
+          BuildDownTree(childView, child, hidePrivateTriggers);
         }
       }
     }
