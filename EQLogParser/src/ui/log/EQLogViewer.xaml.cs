@@ -32,7 +32,7 @@ namespace EQLogParser
     ];
     private static readonly List<string> Times =
     [
-      "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 2 Days", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Last 90 Days", "Any Time"
+      "Last Hour", "Last 8 Hours", "Last 24 Hours", "Last 2 Days", "Last 7 Days", "Last 14 Days", "Last 30 Days", "Last 3 Months", "Last 6 Months", "Last Year", "Any Time"
     ];
     private static bool _complete = true;
     private static bool _running;
@@ -471,6 +471,12 @@ namespace EQLogParser
               start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 90);
               break;
             case 8:
+              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 180);
+              break;
+            case 9:
+              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 365);
+              break;
+            case 10:
               start = 0;
               break;
           }
