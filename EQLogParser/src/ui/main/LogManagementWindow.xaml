@@ -19,7 +19,7 @@
   SizeToContent="WidthAndHeight"
   MinHeight="135"
   Title="Configure Log Management" 
-  Height="180">
+  Height="500">
   <Grid>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="1*" />
@@ -37,7 +37,7 @@
         <Label x:Name="titleLabel" Margin="-2,0,20,0" VerticalContentAlignment="Center" Padding="0,0,0,2" Content="Enable Log Management" Style="{DynamicResource EQTitleStyle}" Foreground="{DynamicResource EQStopForegroundBrush}"/>
       </StackPanel>
       <StackPanel Orientation="Vertical" Margin="12,5,5,0">
-        <TextBlock Margin="0,0,0,0" TextWrapping="WrapWithOverflow" FontSize="{DynamicResource EQContentSize}" Width="270" FontStyle="Italic" Text="The archived logs will only be created when a file is first opened or when zoning."></TextBlock>
+        <TextBlock x:Name="helpText" Margin="0,0,0,0" TextWrapping="WrapWithOverflow" FontSize="{DynamicResource EQContentSize}" Width="270" FontStyle="Italic"></TextBlock>
       </StackPanel>
     </StackPanel>
     <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.ColumnSpan="3">
@@ -58,8 +58,58 @@
               <ColumnDefinition Width="210" />
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
+            <Label Grid.Column="0" Content="Archive Based On  > " HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Archive on Activity or based on a Schedule." />
+            <StackPanel Grid.Column="1" Orientation="Vertical" Margin="8,0,0,0" Width="320">
+              <ComboBox x:Name="type" SelectedIndex="0" SelectionChanged="OptionsChanged" Padding="5">
+                <ComboBoxItem Content="{x:Static local:LogManagementWindow.TypeActivity}" />
+                <ComboBoxItem Content="{x:Static local:LogManagementWindow.TypeSchedule}" />
+              </ComboBox>
+              <StackPanel x:Name="dayPicker" Grid.Column="1" Orientation="Horizontal" Margin="15,8,0,0" Visibility="Collapsed">
+                <ComboBox x:Name="day" Margin="0,0,4,0" Padding="5" SelectedIndex="0" SelectionChanged="OptionsChanged">
+                  <ComboBoxItem>Sunday</ComboBoxItem>
+                  <ComboBoxItem>Monday</ComboBoxItem>
+                  <ComboBoxItem>Tuesday</ComboBoxItem>
+                  <ComboBoxItem>Wednesday</ComboBoxItem>
+                  <ComboBoxItem>Thursday</ComboBoxItem>
+                  <ComboBoxItem>Friday</ComboBoxItem>
+                  <ComboBoxItem>Saturday</ComboBoxItem>
+                </ComboBox>
+                <ComboBox x:Name="hour" Margin="0,0,4,0" Padding="5" SelectedIndex="0" SelectionChanged="OptionsChanged">
+                  <ComboBoxItem>01</ComboBoxItem>
+                  <ComboBoxItem>02</ComboBoxItem>
+                  <ComboBoxItem>03</ComboBoxItem>
+                  <ComboBoxItem>04</ComboBoxItem>
+                  <ComboBoxItem>05</ComboBoxItem>
+                  <ComboBoxItem>06</ComboBoxItem>
+                  <ComboBoxItem>07</ComboBoxItem>
+                  <ComboBoxItem>08</ComboBoxItem>
+                  <ComboBoxItem>09</ComboBoxItem>
+                  <ComboBoxItem>10</ComboBoxItem>
+                  <ComboBoxItem>11</ComboBoxItem>
+                  <ComboBoxItem>12</ComboBoxItem>
+                </ComboBox>
+                <ComboBox x:Name="min" Margin="0,0,4,0" Padding="5" SelectedIndex="0" SelectionChanged="OptionsChanged">
+                  <ComboBoxItem>00</ComboBoxItem>
+                  <ComboBoxItem>15</ComboBoxItem>
+                  <ComboBoxItem>30</ComboBoxItem>
+                  <ComboBoxItem>45</ComboBoxItem>
+                </ComboBox>
+                <ComboBox x:Name="ampm" Margin="0,0,4,0" Padding="5" SelectedIndex="0" SelectionChanged="OptionsChanged">
+                  <ComboBoxItem>AM</ComboBoxItem>
+                  <ComboBoxItem>PM</ComboBoxItem>
+                </ComboBox>
+              </StackPanel>
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="210" />
+              <ColumnDefinition Width="70*" />
+            </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Archive If File Size  > " HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only archive Log File if it is larger than the selected size." />
-            <ComboBox Grid.Column="1" x:Name="fileSizes" SelectedIndex="0" Margin="8,0,0,0" Width="320" SelectionChanged="OptionsChanged">
+            <ComboBox Grid.Column="1" x:Name="fileSizes" SelectedIndex="0" Padding="5" Margin="8,0,0,0" Width="320" SelectionChanged="OptionsChanged">
               <ComboBoxItem>Any Size</ComboBoxItem>
               <ComboBoxItem>25M</ComboBoxItem>
               <ComboBoxItem>50M</ComboBoxItem>
@@ -81,7 +131,7 @@
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Archive If File Age  >" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only archive Log File if it was created prior to the selected time range."/>
-            <ComboBox Grid.Column="1" x:Name="fileAges" SelectedIndex="0" Margin="8,0,0,0" Width="320" SelectionChanged="OptionsChanged">
+            <ComboBox Grid.Column="1" x:Name="fileAges" SelectedIndex="0" Margin="8,0,0,0" Padding="5" Width="320" SelectionChanged="OptionsChanged">
               <ComboBoxItem>Any Age</ComboBoxItem>
               <ComboBoxItem>1 Day</ComboBoxItem>
               <ComboBoxItem>3 Days</ComboBoxItem>
@@ -99,7 +149,7 @@
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Compress Archive" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="Only archive Log File if it was created prior to the selected time range."/>
-            <ComboBox Grid.Column="1" x:Name="compress" SelectedIndex="0" Margin="8,0,0,0" Width="320" SelectionChanged="OptionsChanged">
+            <ComboBox Grid.Column="1" x:Name="compress" SelectedIndex="0" Margin="8,0,0,0" Padding="5" Width="320" SelectionChanged="OptionsChanged">
               <ComboBoxItem Content="{x:Static local:LogManagementWindow.CompressYes}" />
               <ComboBoxItem Content="{x:Static local:LogManagementWindow.CompressNo}" />
             </ComboBox>
@@ -112,7 +162,7 @@
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Organize By" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" ToolTip="How to Organize the Archive Folder."/>
-            <ComboBox Grid.Column="1" x:Name="organize" SelectedIndex="0" Margin="8,0,0,0" Width="320" SelectionChanged="OptionsChanged">
+            <ComboBox Grid.Column="1" x:Name="organize" SelectedIndex="0" Margin="8,0,0,0" Padding="5" Width="320" SelectionChanged="OptionsChanged">
               <ComboBoxItem Content="{x:Static local:LogManagementWindow.OrganizeInFiles}" />
               <ComboBoxItem Content="{x:Static local:LogManagementWindow.OrganizeInFolders}" />
             </ComboBox>

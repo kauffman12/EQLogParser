@@ -1,6 +1,11 @@
-# 2.3.21 | 09/28/25
+# 2.3.22 | 10/09/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
 
+1. Added options to **Log Search** for 6 months and 1 year back.
+2. Updated **Log Management** to allow archiving on a specific day of the week.
+3. Included updated spells from AAs and procs from beta.
+
+# 2.3.21 | 09/28/25
 1. Added **{timer-warn-time-value}** as a new Trigger variable. When specified it will be replaced with the configured timer **warning time** setting in any Display Text/Speak field where it is used.
 2. Added **Private** setting to Triggers. Prevents accidental sharing via **Quick Share**.
 3. Added multi-select **Classes** dropdown to **Player Benchmark**.
