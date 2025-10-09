@@ -239,6 +239,8 @@ namespace EQLogParser
         await Task.Delay(350);
         MainActions.FireWindowStateChanged(main.WindowState);
         main.ConnectLocationChanged();
+        // start archive schedule if configured
+        FileUtil.SetArchiveSchedule();
         ConfigUtil.UpdateStatus("Done");
 
         // complete rest in a new thread

@@ -1,8 +1,6 @@
 ﻿using Microsoft.WindowsAPICodePack.Dialogs;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -10,13 +8,12 @@ using System.Windows.Interop;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for LogManagementWindow.xaml
-  /// </summary>
   public partial class LogManagementWindow
   {
     public static string CompressNo => "No";
     public static string CompressYes => "Yes";
+    public static string TypeActivity => "Activity";
+    public static string TypeSchedule => "Selected Day/Time";
     public static string OrganizeInFiles => "Individual Files";
     public static string OrganizeInFolders => "Server and Character Folders";
     private readonly bool _ready;
@@ -28,8 +25,8 @@ namespace EQLogParser
       Owner = MainActions.GetOwner();
 
       enableCheckBox.IsChecked = ConfigUtil.IfSet("LogManagementEnabled");
-      fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled =
-        organize.IsEnabled = enableCheckBox.IsChecked == true;
+      type.IsEnabled = day.IsEnabled = hour.IsEnabled = min.IsEnabled = ampm.IsEnabled = fileSizes.IsEnabled =
+        fileAges.IsEnabled = compress.IsEnabled = organize.IsEnabled = enableCheckBox.IsChecked == true;
 
       // read archive folder
       var savedFolder = ConfigUtil.GetSetting("LogManagementArchiveFolder");
@@ -43,6 +40,13 @@ namespace EQLogParser
       UpdateComboBox(fileAges, "LogManagementMinFileAge", "1 Week");
       UpdateComboBox(compress, "LogManagementCompressArchive", CompressYes);
       UpdateComboBox(organize, "LogManagementOrganize", OrganizeInFiles);
+      UpdateComboBox(type, "LogManagementType", TypeActivity);
+      UpdateComboBox(day, "LogManagementScheduleDay", "Sunday");
+      UpdateComboBox(hour, "LogManagementScheduleHour", "12");
+      UpdateComboBox(min, "LogManagementScheduleMinute", "00");
+      UpdateComboBox(ampm, "LogManagementScheduleAMPM", "AM");
+
+      ActivityChanged();
       _ready = true;
     }
 
@@ -53,8 +57,23 @@ namespace EQLogParser
     {
       if (_ready)
       {
+        ActivityChanged();
         closeButton.Content = "Cancel";
-        saveButton.IsEnabled = !(enableCheckBox.IsChecked == true && fileAges.SelectedIndex == 0 && fileSizes.SelectedIndex == 0);
+        saveButton.IsEnabled = !(enableCheckBox.IsChecked == true && fileAges.SelectedIndex == 0 && fileSizes.SelectedIndex == 0 && type.SelectedIndex == 0);
+      }
+    }
+
+    private void ActivityChanged()
+    {
+      dayPicker.Visibility = (type.SelectedIndex == 0) ? Visibility.Collapsed : Visibility.Visible;
+
+      if (type.SelectedIndex == 0)
+      {
+        helpText.Text = "When Archiving based on Activity, the archived logs will be created when a file is first opened or when zoning.";
+      }
+      else
+      {
+        helpText.Text = "When Archiving based on a Selected Day/Time, the archived logs will be created if EQLP is running during that time.";
       }
     }
 
@@ -87,6 +106,32 @@ namespace EQLogParser
         ConfigUtil.SetSetting("LogManagementOrganize", item4.Content.ToString());
       }
 
+      if (day.SelectedItem is ComboBoxItem item5)
+      {
+        ConfigUtil.SetSetting("LogManagementScheduleDay", item5.Content.ToString());
+      }
+
+      if (hour.SelectedItem is ComboBoxItem item6)
+      {
+        ConfigUtil.SetSetting("LogManagementScheduleHour", item6.Content.ToString());
+      }
+
+      if (min.SelectedItem is ComboBoxItem item7)
+      {
+        ConfigUtil.SetSetting("LogManagementScheduleMinute", item7.Content.ToString());
+      }
+
+      if (ampm.SelectedItem is ComboBoxItem item8)
+      {
+        ConfigUtil.SetSetting("LogManagementScheduleAMPM", item8.Content.ToString());
+      }
+
+      if (type.SelectedItem is ComboBoxItem item9)
+      {
+        ConfigUtil.SetSetting("LogManagementType", item9.Content.ToString());
+      }
+
+      FileUtil.SetArchiveSchedule();
       Close();
     }
 
@@ -96,7 +141,7 @@ namespace EQLogParser
       var saved = ConfigUtil.GetSetting(setting, defaultValue);
       for (var i = 0; i < combo.Items.Count; i++)
       {
-        if (combo.Items[i] is ComboBoxItem item && saved.Equals(item.Content.ToString(), StringComparison.CurrentCulture))
+        if (combo.Items[i] is ComboBoxItem item && saved.Equals(item.Content.ToString(), StringComparison.Ordinal))
         {
           index = i;
           break;
@@ -132,65 +177,51 @@ namespace EQLogParser
         return;
       }
 
-      if (await TriggerStateManager.Instance.GetConfig() is var config)
+      var logFiles = await FileUtil.GetOpenLogFilesAsync();
+
+      if (logFiles.Count > 0)
       {
-        var logFiles = new HashSet<string>();
-        if (MainWindow.CurrentLogFile is { } currentFile)
+        await Task.Run(async () =>
         {
-          logFiles.Add(currentFile);
-        }
-
-        if (config.IsAdvanced)
-        {
-          foreach (var file in config.Characters.Select(character => character.FilePath))
+          MessageWindow running = null;
+          try
           {
-            logFiles.Add(file);
+            await Dispatcher.InvokeAsync(() =>
+            {
+              running = new MessageWindow($"Running Archive Process for {logFiles.Count} Files.", "Archive Now", MessageWindow.IconType.Info, null, null, false, true);
+              running.Show();
+            });
+
+            // need time to display message
+            await Task.Delay(1000);
+            await FileUtil.ArchiveNowAsync(logFiles);
+
+            _ = Dispatcher.InvokeAsync(() =>
+            {
+              running?.Close();
+              new MessageWindow($"Archiving Complete.", "Archive Now", MessageWindow.IconType.Info).ShowDialog();
+            });
           }
-        }
-
-        if (logFiles.Count > 0)
-        {
-          await Task.Run(async () =>
+          catch (Exception)
           {
-            MessageWindow running = null;
-            try
+            _ = Dispatcher.InvokeAsync(() =>
             {
-              await Dispatcher.InvokeAsync(() =>
-              {
-                running = new MessageWindow($"Running Archive Process for {logFiles.Count} Files.", "Archive Now", MessageWindow.IconType.Info, null, null, false, true);
-                running.Show();
-              });
-
-              // need time to display message
-              await Task.Delay(1000);
-              await FileUtil.ArchiveNowAsync(logFiles);
-
-              _ = Dispatcher.InvokeAsync(() =>
-              {
-                running?.Close();
-                new MessageWindow($"Archiving Complete.", "Archive Now", MessageWindow.IconType.Info).ShowDialog();
-              });
-            }
-            catch (Exception)
-            {
-              _ = Dispatcher.InvokeAsync(() =>
-              {
-                running?.Close();
-                new MessageWindow("Archive Process Failed. Check the Error Log for Details.", "Archive Now").ShowDialog();
-              });
-            }
-          });
-        }
-        else
-        {
-          new MessageWindow("No Open or Configured Files to Archive.", "Archive Now").ShowDialog();
-        }
+              running?.Close();
+              new MessageWindow("Archive Process Failed. Check the Error Log for Details.", "Archive Now").ShowDialog();
+            });
+          }
+        });
+      }
+      else
+      {
+        new MessageWindow("No Open or Configured Files to Archive.", "Archive Now").ShowDialog();
       }
     }
 
     private void EnableCheckBoxOnChecked(object sender, RoutedEventArgs e)
     {
-      fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = organize.IsEnabled = true;
+      type.IsEnabled = day.IsEnabled = hour.IsEnabled = min.IsEnabled = ampm.IsEnabled = fileSizes.IsEnabled =
+        fileAges.IsEnabled = compress.IsEnabled = organize.IsEnabled = true;
       titleLabel.SetResourceReference(ForegroundProperty, "EQGoodForegroundBrush");
       titleLabel.Content = "Log Management Active";
 
@@ -202,7 +233,8 @@ namespace EQLogParser
 
     private void EnableCheckBoxOnUnchecked(object sender, RoutedEventArgs e)
     {
-      fileSizes.IsEnabled = fileAges.IsEnabled = compress.IsEnabled = organize.IsEnabled = false;
+      type.IsEnabled = day.IsEnabled = hour.IsEnabled = min.IsEnabled = ampm.IsEnabled = fileSizes.IsEnabled =
+        fileAges.IsEnabled = compress.IsEnabled = organize.IsEnabled = false;
       titleLabel.SetResourceReference(ForegroundProperty, "EQStopForegroundBrush");
       titleLabel.Content = "Enable Log Management";
 

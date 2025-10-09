@@ -22,6 +22,7 @@ namespace EQLogParser
     private static readonly Regex ServerFileNameRegex = TheServerFileNameRegex();
     private static readonly object LockObject = new();
     private static readonly HashSet<LogReader> ArchiveQueue = [];
+    private static ArchiveScheduler Scheduler;
 
     private static readonly Dictionary<string, long> ArchiveFileSizes = new()
     {
@@ -59,6 +60,27 @@ namespace EQLogParser
       return $"EQLogParser_backup_{version}_{dateTime}.zip";
     }
 
+    internal static async Task<HashSet<string>> GetOpenLogFilesAsync()
+    {
+      var logFiles = new HashSet<string>();
+      if (await TriggerStateManager.Instance.GetConfig() is var config)
+      {
+        if (MainWindow.CurrentLogFile is { } currentFile)
+        {
+          logFiles.Add(currentFile);
+        }
+
+        if (config.IsAdvanced)
+        {
+          foreach (var file in config.Characters.Select(character => character.FilePath))
+          {
+            logFiles.Add(file);
+          }
+        }
+      }
+      return logFiles;
+    }
+
     internal static List<string> FindArchivedLogFiles(string player, string server, double start)
     {
       var matchingFiles = new List<(string filePath, DateTime date)>();
@@ -92,10 +114,28 @@ namespace EQLogParser
       return [.. matchingFiles.OrderByDescending(f => f.date).Select(f => f.filePath)];
     }
 
+    internal static void SetArchiveSchedule()
+    {
+      // turn off
+      Scheduler?.Dispose();
+      Scheduler = null;
+
+      // if enabled
+      if (ConfigUtil.IfSet("LogManagementEnabled") && LogManagementWindow.TypeSchedule.Equals(ConfigUtil.GetSetting("LogManagementType"), StringComparison.OrdinalIgnoreCase))
+      {
+        var day = ConfigUtil.GetSetting("LogManagementScheduleDay", "Sunday");
+        var hour = ConfigUtil.GetSettingAsInteger("LogManagementScheduleHour", 12);
+        var minute = ConfigUtil.GetSettingAsInteger("LogManagementScheduleMinute", 0);
+        var ampm = ConfigUtil.GetSetting("LogManagementScheduleAMPM", "AM");
+        Scheduler = new ArchiveScheduler(day, hour, minute, ampm);
+      }
+    }
+
     internal static async void QueueFileArchiveAsync(LogReader logReader)
     {
       var file = Path.GetFileName(logReader.FileName);
-      if (string.IsNullOrEmpty(file) || !FileNameToArchiveRegex.IsMatch(file) || !ConfigUtil.IfSet("LogManagementEnabled"))
+      if (string.IsNullOrEmpty(file) || !FileNameToArchiveRegex.IsMatch(file) || !ConfigUtil.IfSet("LogManagementEnabled") ||
+        !LogManagementWindow.TypeActivity.Equals(ConfigUtil.GetSetting("LogManagementType"), StringComparison.OrdinalIgnoreCase))
       {
         return;
       }
