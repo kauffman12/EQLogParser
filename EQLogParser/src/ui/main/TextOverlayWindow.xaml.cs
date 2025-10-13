@@ -110,9 +110,11 @@ namespace EQLogParser
     {
       for (var last = content.Children.Count - 1; last >= 0; last--)
       {
-        if (content.Children[last] is TextBlock { Tag: double end } block)
+        if (content.Children[last] is TextBlock { Tag: long } block)
         {
           content.Children.RemoveAt(last);
+          block.Text = string.Empty;
+          block.Tag = 0;
           block.Visibility = Visibility.Collapsed;
         }
       }
@@ -173,7 +175,7 @@ namespace EQLogParser
       }
     }
 
-    private void RenderText(string text, double beginTicks, Brush brush)
+    private void RenderText(string text, long beginTicks, Brush brush)
     {
       TextBlock block;
       if (content.Children.Count > 0 && content.Children.Count == _blockCache.Count)
@@ -216,11 +218,13 @@ namespace EQLogParser
 
       for (var last = content.Children.Count - 1; last >= 0; last--)
       {
-        if (content.Children[last] is TextBlock { Tag: double end } block)
+        if (content.Children[last] is TextBlock { Tag: long end } block)
         {
           if (end < currentTicks)
           {
             content.Children.RemoveAt(last);
+            block.Text = string.Empty;
+            block.Tag = 0;
             block.Visibility = Visibility.Collapsed;
           }
         }

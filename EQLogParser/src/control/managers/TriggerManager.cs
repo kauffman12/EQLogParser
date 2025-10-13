@@ -208,6 +208,7 @@ namespace EQLogParser
           {
             reader.Dispose();
             toRemove.Add(reader);
+            processor.Dispose();
           }
           else
           {

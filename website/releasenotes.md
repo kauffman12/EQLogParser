@@ -1,6 +1,12 @@
-# 2.3.22 | 10/09/25
+# 2.3.23 | 10/13/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
 
+1. Fix **Trigger Manager** tree sometimes disappearing after trigger import.
+2. Fix for timers not stopping when turning off a single character.
+3. Fixed error while changing default overlay while things are active.
+4. Possible fix for triggers getting stuck/replayed.
+
+# 2.3.22 | 10/09/25
 1. Added options to **Log Search** for 6 months and 1 year back.
 2. Updated **Log Management** to allow archiving on a specific day of the week.
 3. Included updated spells from AAs and procs from beta.

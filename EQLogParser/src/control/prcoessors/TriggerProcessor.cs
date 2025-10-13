@@ -386,6 +386,8 @@ namespace EQLogParser
 
     private void CheckTimers(TriggerWrapper wrapper, LineData lineData)
     {
+      if (wrapper.IsRemoved) return;
+
       lock (wrapper.TimerList)
       {
         if (wrapper.TimerList.Count == 0) return;
@@ -642,7 +644,7 @@ namespace EQLogParser
           var proceed = false;
           lock (wrapper.TimerList)
           {
-            proceed = !data.Warned;
+            proceed = !wrapper.IsRemoved && !data.Warned;
           }
 
           if (proceed)
@@ -765,7 +767,7 @@ namespace EQLogParser
         var proceed = false;
         lock (wrapper.TimerList)
         {
-          proceed = !data2.Canceled;
+          proceed = !wrapper.IsRemoved && !data2.Canceled;
           CleanupTimer(wrapper, data2);
         }
 
@@ -1293,10 +1295,15 @@ namespace EQLogParser
       timerData.WarningSource?.Dispose();
       timerData.WarningSource = null;
       timerData.Warned = true;
-      wrapper.TimerList.Remove(timerData);
 
-      // stop timer
-      TriggerOverlayManager.Instance.UpdateTimer(wrapper.TriggerData, timerData, TriggerOverlayManager.TimerStateChange.Stop);
+      // prevent stop from being called more than needed?
+      if (wrapper.TimerList.Contains(timerData))
+      {
+        // stop timer
+        TriggerOverlayManager.Instance.UpdateTimer(wrapper.TriggerData, timerData, TriggerOverlayManager.TimerStateChange.Stop);
+      }
+
+      wrapper.TimerList.Remove(timerData);
       if (wrapper.TimerList.Count == 0)
       {
         _activeTimerLists.TryRemove(wrapper.Id, out _);
@@ -1329,6 +1336,7 @@ namespace EQLogParser
 
         foreach (var old in cleanup)
         {
+          old.IsRemoved = true;
           if (_activeTimerLists.ContainsKey(old.Id))
           {
             if (_activeTriggers.Find(wrapper => wrapper.Id == old.Id) is TriggerWrapper { } wrapper)
@@ -1341,6 +1349,8 @@ namespace EQLogParser
               }
             }
           }
+
+          CleanupWrapper(old);
         }
       }
       finally
@@ -1348,18 +1358,16 @@ namespace EQLogParser
         if (!_isDisposed) _activeTriggerSemaphore.Release();
       }
 
-      cleanup?.ForEach(CleanupWrapper);
+      AudioManager.Instance.Stop(CurrentCharacterId);
     }
 
     public async void Dispose()
     {
       if (!_isDisposed)
       {
+        await StopTriggersAsync();
         _isDisposed = true;
         _ready = false;
-
-        // cleanup on process exit
-        await SetActiveTriggersAsync();
 
         TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
         TriggerStateManager.Instance.TrustedPlayersUpdateEvent -= TrustedPlayersUpdateEvent;
@@ -1448,6 +1456,7 @@ namespace EQLogParser
       public List<NumberOptions> RegexNOptions { get; set; }
       public List<NumberOptions> PreviousRegexNOptions { get; set; }
       public bool IsDisabled { get; set; }
+      public bool IsRemoved { get; set; }
       public string ContainsText { get; set; }
       public string PreviousContainsText { get; set; }
       public string StartText { get; set; }

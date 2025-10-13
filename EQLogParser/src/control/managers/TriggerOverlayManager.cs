@@ -183,7 +183,7 @@ namespace EQLogParser
       {
         foreach (var allId in allOverlayIds)
         {
-          if (!overlayIds.Contains(allId) && allId != defaultTextOverlay?.Id && allId != defaultTimerOverlay.Id)
+          if (!overlayIds.Contains(allId) && allId != defaultTextOverlay?.Id && allId != defaultTimerOverlay?.Id)
           {
             RemoveWindow(allId);
           }

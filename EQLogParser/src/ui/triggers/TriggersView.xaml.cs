@@ -208,19 +208,25 @@ namespace EQLogParser
 
     private async void OverlayImportEvent(bool _)
     {
-      thePropertyGrid.SelectedObject = null;
-      await theTreeView.RefreshOverlays();
+      await Dispatcher.InvokeAsync(async () =>
+      {
+        thePropertyGrid.SelectedObject = null;
+        await theTreeView.RefreshOverlays();
+      });
     }
 
     private async void TriggerImportEvent(bool _)
     {
-      thePropertyGrid.SelectedObject = null;
-      await theTreeView.RefreshTriggers();
+      await Dispatcher.InvokeAsync(async () =>
+      {
+        thePropertyGrid.SelectedObject = null;
+        await theTreeView.RefreshTriggers();
+      });
     }
 
-    private void EventsSelectTrigger(TriggerLogEntry entry)
+    private async void EventsSelectTrigger(TriggerLogEntry entry)
     {
-      Dispatcher.InvokeAsync(() =>
+      await Dispatcher.InvokeAsync(() =>
       {
         if (characterView?.Visibility == Visibility.Visible)
         {
@@ -287,6 +293,7 @@ namespace EQLogParser
       if (_ready && sender is CheckBox checkBox)
       {
         _theConfig.IsEnabled = checkBox.IsChecked == true;
+        await TriggerManager.Instance.StopTriggersAsync();
         await TriggerStateManager.Instance.UpdateConfig(_theConfig);
       }
     }
