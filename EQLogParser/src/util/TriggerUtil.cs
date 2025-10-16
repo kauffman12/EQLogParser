@@ -194,6 +194,7 @@ namespace EQLogParser
         toOverlay.ShowActive = fromOverlay.ShowActive;
         toOverlay.ShowIdle = fromOverlay.ShowIdle;
         toOverlay.ShowReset = fromOverlay.ShowReset;
+        toOverlay.StreamerMode = fromOverlay.StreamerMode;
         toOverlay.Width = fromOverlay.Width;
         toOverlay.HorizontalAlignment = fromOverlay.HorizontalAlignment;
         toOverlay.VerticalAlignment = fromOverlay.VerticalAlignment;

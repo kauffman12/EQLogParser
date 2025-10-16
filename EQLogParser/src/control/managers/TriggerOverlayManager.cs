@@ -129,6 +129,27 @@ namespace EQLogParser
       });
     }
 
+    internal async Task RestartOverlayAsync(string overlayId)
+    {
+      if (!string.IsNullOrEmpty(overlayId))
+      {
+        await UiUtil.InvokeAsync(async () =>
+        {
+          RemoveWindow(overlayId);
+
+          var overlay = await TriggerStateManager.Instance.GetOverlayById(overlayId);
+          if (overlay.OverlayData.IsTextOverlay && !_textWindows.ContainsKey(overlayId))
+          {
+            AddWindow(_textWindows, overlay);
+          }
+          else if (overlay.OverlayData.IsTimerOverlay && !_timerWindows.ContainsKey(overlayId))
+          {
+            AddWindow(_timerWindows, overlay);
+          }
+        });
+      }
+    }
+
     internal async Task UpdateOverlayInfoAsync(HashSet<string> overlayIds, HashSet<string> enabledTriggers)
     {
       await UpdateDefaultOverlaysAsync();
@@ -338,12 +359,22 @@ namespace EQLogParser
     {
       if (_textWindows.Remove(id, out var textWindow))
       {
+        if (textWindow.TheWindow is TextOverlayWindow { } window)
+        {
+          window.StopOverlay();
+        }
+
         textWindow.TheWindow.Close();
         textWindow.TheWindow = null;
       }
 
       if (_timerWindows.Remove(id, out var timerWindow))
       {
+        if (timerWindow.TheWindow is TimerOverlayWindow { } window)
+        {
+          window.StopOverlay();
+        }
+
         timerWindow.TheWindow.Close();
         timerWindow.TheWindow = null;
       }
