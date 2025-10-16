@@ -1,6 +1,14 @@
-# 2.3.23 | 10/13/25
+# 2.3.24 | 10/16/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
 
+1. Added the following modifiers that can be used with **Trigger Variables**: number, upper, lower, and capitalize. Number is used to format a number based on the local region (adds commas in the U.S.) and the others should be obvious. **Example Usage: {n1.number} or {s.capitalize}**
+2. Added **Streamer Mode** to Overlays so they show up in OBS. This requires using the Windows 10 Capture Mode setting.
+3. Reworked **Trigger Processing** to improve performance.
+4. Fixed log reader to better handle files being renamed.
+5. Fixed problem where repeating timers could not be turned off.
+6. Included some spell updates from beta.
+
+# 2.3.23 | 10/13/25
 1. Fix **Trigger Manager** tree sometimes disappearing after trigger import.
 2. Fix for timers not stopping when turning off a single character.
 3. Fixed error while changing default overlay while things are active.
