@@ -30,17 +30,18 @@ namespace EQLogParser
     private const long SixtyHours = 10 * 6 * 60 * 60 * 1000;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly string _currentPlayer;
-    private readonly Dictionary<string, Dictionary<string, RepeatedData>> _counterTimes = [];
-    private readonly Dictionary<string, Dictionary<string, RepeatedData>> _repeatedTextTimes = [];
-    private readonly Dictionary<string, Dictionary<string, RepeatedData>> _repeatedTimerTimes = [];
-    private readonly Dictionary<string, Dictionary<string, RepeatedData>> _repeatedSpeakTimes = [];
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> _counterTimes = [];
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> _repeatedTextTimes = [];
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> _repeatedTimerTimes = [];
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> _repeatedSpeakTimes = [];
+    private readonly ConcurrentDictionary<string, List<TimerData>> _timerLists = new();
     private readonly BlockingCollection<TriggerLogItem> _triggerLogCollection = [];
     private readonly BlockingCollection<LineData> _chatCollection = [];
     private readonly BlockingCollection<Speak> _speakCollection = [];
     private readonly SemaphoreSlim _activeTriggerSemaphore = new(1, 1);
-    private readonly ConcurrentDictionary<string, bool> _activeTimerLists = [];
     private readonly ConcurrentDictionary<string, bool> _enabledTriggers = [];
     private readonly ConcurrentDictionary<string, bool> _requiredOverlays = [];
+    private readonly object _repeatedLock = new();
     private volatile string _activeColor;
     private volatile string _fontColor;
     private volatile bool _isDisposed;
@@ -102,7 +103,8 @@ namespace EQLogParser
 
         foreach (var wrapper in _activeTriggers)
         {
-          CleanupWrapper(wrapper);
+          CleanupTimers(wrapper);
+          _timerLists.TryRemove(wrapper.Id, out _);
         }
       }
       finally
@@ -199,16 +201,18 @@ namespace EQLogParser
       {
         try
         {
-          foreach (var data in collection.GetConsumingEnumerable())
+          while (!_isDisposed)
           {
-            if (_isDisposed) continue;
-            try
+            if (collection.TryTake(out var data, 250))
             {
-              DoProcessAsync(data.Line, data.Ts).ConfigureAwait(false).GetAwaiter().GetResult();
-            }
-            catch (Exception)
-            {
-              // ignore
+              try
+              {
+                DoProcessAsync(data.Line, data.Ts).GetAwaiter().GetResult();
+              }
+              catch
+              {
+                // ignore
+              }
             }
           }
         }
@@ -225,8 +229,9 @@ namespace EQLogParser
 
     private static string ProcessLineCode(string text, string line) => !string.IsNullOrEmpty(text) ?
       text.Replace("{l}", line, StringComparison.OrdinalIgnoreCase) : text;
-    private void LexiconUpdateEvent(List<LexiconItem> update) => _lexicon = update;
-    private void TrustedPlayersUpdateEvent(List<TrustedPlayer> update) => _trustedPlayers = update;
+    private void LexiconUpdateEvent(List<LexiconItem> update) => _lexicon = update?.ToList();
+    private void TrustedPlayersUpdateEvent(List<TrustedPlayer> update) => _trustedPlayers = update?.ToList();
+    private List<TimerData> GetTimerList(TriggerWrapper wrapper) => _timerLists.GetOrAdd(wrapper.Id, _ => new List<TimerData>());
 
     private async Task DoProcessAsync(string line, double dateTime)
     {
@@ -259,18 +264,24 @@ namespace EQLogParser
       }
       finally
       {
+        _previous = lineData;
         if (!_isDisposed) _activeTriggerSemaphore.Release();
       }
 
-      _previous = lineData;
-
       if (!_isDisposed && !_chatCollection.IsCompleted)
       {
-        _chatCollection.Add(lineData);
+        try
+        {
+          _chatCollection.Add(lineData);
+        }
+        catch (InvalidOperationException)
+        {
+          // ignore
+        }
       }
     }
 
-    private static bool CheckLine(TriggerWrapper wrapper, LineData lineData, out MatchCollection matches, out long timing, out long beginTicks)
+    private static bool CheckLine(TriggerWrapper wrapper, LineData lineData, out List<MatchSnapshot> matches, out long timing, out long beginTicks)
     {
       beginTicks = DateTime.UtcNow.Ticks;
       var found = false;
@@ -285,25 +296,26 @@ namespace EQLogParser
       var dynamicDuration = double.NaN;
       if (wrapper.Regex != null)
       {
+        var success = false;
         try
         {
           if (!string.IsNullOrEmpty(wrapper.StartText))
           {
             if (lineData.Action.StartsWith(wrapper.StartText, StringComparison.OrdinalIgnoreCase))
             {
-              matches = wrapper.Regex.Matches(lineData.Action);
+              success = TextUtils.SnapshotMatches(wrapper.Regex.Matches(lineData.Action), out matches);
             }
           }
           else if (!string.IsNullOrEmpty(wrapper.ContainsText))
           {
             if (lineData.Action.Contains(wrapper.ContainsText, StringComparison.OrdinalIgnoreCase))
             {
-              matches = wrapper.Regex.Matches(lineData.Action);
+              success = TextUtils.SnapshotMatches(wrapper.Regex.Matches(lineData.Action), out matches);
             }
           }
           else
           {
-            matches = wrapper.Regex.Matches(lineData.Action);
+            success = TextUtils.SnapshotMatches(wrapper.Regex.Matches(lineData.Action), out matches);
           }
         }
         catch (RegexMatchTimeoutException)
@@ -314,7 +326,7 @@ namespace EQLogParser
           return false;
         }
 
-        found = matches?.Count > 0 && TriggerUtil.CheckOptions(wrapper.RegexNOptions, matches, out dynamicDuration);
+        found = success && TriggerUtil.CheckOptions(wrapper.RegexNOptions, matches, out dynamicDuration);
         if (!double.IsNaN(dynamicDuration) && wrapper.TriggerData.TimerType is 1 or 3) // countdown or progress
         {
           wrapper.ModifiedDurationSeconds = dynamicDuration;
@@ -331,7 +343,7 @@ namespace EQLogParser
       return found;
     }
 
-    private static bool CheckPreviousLine(TriggerWrapper wrapper, LineData lineData, out MatchCollection matches, out long timing)
+    private static bool CheckPreviousLine(TriggerWrapper wrapper, LineData lineData, out List<MatchSnapshot> matches, out long timing)
     {
       timing = 0;
       matches = null;
@@ -342,25 +354,26 @@ namespace EQLogParser
         var beginTicks = DateTime.UtcNow.Ticks;
         if (wrapper.PreviousRegex != null)
         {
+          var success = false;
           try
           {
             if (!string.IsNullOrEmpty(wrapper.PreviousStartText))
             {
               if (lineData.Action.StartsWith(wrapper.PreviousStartText, StringComparison.OrdinalIgnoreCase))
               {
-                matches = wrapper.PreviousRegex.Matches(lineData.Action);
+                success = TextUtils.SnapshotMatches(wrapper.PreviousRegex.Matches(lineData.Action), out matches);
               }
             }
             else if (!string.IsNullOrEmpty(wrapper.PreviousContainsText))
             {
               if (lineData.Action.Contains(wrapper.PreviousContainsText, StringComparison.OrdinalIgnoreCase))
               {
-                matches = wrapper.PreviousRegex.Matches(lineData.Action);
+                success = TextUtils.SnapshotMatches(wrapper.PreviousRegex.Matches(lineData.Action), out matches);
               }
             }
             else
             {
-              matches = wrapper.PreviousRegex.Matches(lineData.Action);
+              success = TextUtils.SnapshotMatches(wrapper.PreviousRegex.Matches(lineData.Action), out matches);
             }
           }
           catch (RegexMatchTimeoutException)
@@ -371,7 +384,7 @@ namespace EQLogParser
             return false;
           }
 
-          found = matches?.Count > 0 && TriggerUtil.CheckOptions(wrapper.PreviousRegexNOptions, matches, out _);
+          found = success && TriggerUtil.CheckOptions(wrapper.PreviousRegexNOptions, matches, out _);
         }
         else if (!string.IsNullOrEmpty(wrapper.ModifiedPreviousPattern))
         {
@@ -386,86 +399,100 @@ namespace EQLogParser
 
     private void CheckTimers(TriggerWrapper wrapper, LineData lineData)
     {
-      if (wrapper.IsRemoved) return;
-
-      lock (wrapper.TimerList)
+      if (_timerLists.TryGetValue(wrapper.Id, out var timerList))
       {
-        if (wrapper.TimerList.Count == 0) return;
-
-        List<TimerData> cleanup = null;
-        foreach (var timerData in wrapper.TimerList.ToArray())
+        lock (timerList)
         {
-          var endEarly = CheckEndEarly(timerData.EndEarlyRegex, timerData.EndEarlyRegexNOptions, timerData.EndEarlyPattern,
-            lineData.Action, out var earlyMatches);
-
-          // try 2nd
-          if (!endEarly)
+          List<TimerData> cleanup = null;
+          // dont need toArray while cleanup dont afterwards
+          foreach (var timerData in timerList)
           {
-            endEarly = CheckEndEarly(timerData.EndEarlyRegex2, timerData.EndEarlyRegex2NOptions, timerData.EndEarlyPattern2, lineData.Action, out earlyMatches);
-          }
+            var endEarly = CheckEndEarly(timerData.EndEarlyRegex, timerData.EndEarlyRegexNOptions, timerData.EndEarlyPattern,
+              lineData.Action, out var earlyMatches);
 
-          // check repeated threshold
-          if (!endEarly && wrapper.TriggerData?.EndEarlyRepeatedCount > 0 && (wrapper.HasCounterTimer || wrapper.HasRepeatedTimer))
-          {
-            var stopCount = wrapper.TriggerData.EndEarlyRepeatedCount;
-            endEarly = (GetRepeatedCount(_repeatedTimerTimes, wrapper, timerData.DisplayName) >= stopCount) ||
-              (GetRepeatedCount(_counterTimes, wrapper, "trigger-count") >= stopCount);
+            // try 2nd
+            if (!endEarly)
+            {
+              endEarly = CheckEndEarly(timerData.EndEarlyRegex2, timerData.EndEarlyRegex2NOptions, timerData.EndEarlyPattern2, lineData.Action, out earlyMatches);
+            }
+
+            // check repeated threshold
+            if (!endEarly && wrapper.TriggerData?.EndEarlyRepeatedCount > 0 && (wrapper.HasCounterTimer || wrapper.HasRepeatedTimer))
+            {
+              var stopCount = wrapper.TriggerData.EndEarlyRepeatedCount;
+              endEarly = (GetRepeatedCount(_repeatedTimerTimes, wrapper, timerData.DisplayName) >= stopCount) ||
+                (GetRepeatedCount(_counterTimes, wrapper, "trigger-count") >= stopCount);
+
+              if (endEarly)
+              {
+                RemoveRepeatedTimes(_repeatedTimerTimes, wrapper, timerData.DisplayName);
+                RemoveRepeatedTimes(_counterTimes, wrapper, "trigger-count");
+              }
+            }
 
             if (endEarly)
             {
-              RemoveRepeatedTimes(_repeatedTimerTimes, wrapper, timerData.DisplayName);
-              RemoveRepeatedTimes(_counterTimes, wrapper, "trigger-count");
-            }
-          }
+              var tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out var isSound);
+              tts = string.IsNullOrEmpty(tts) ? TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound) : tts;
+              var displayText = string.IsNullOrEmpty(wrapper.ModifiedEndEarlyDisplay) ? wrapper.ModifiedEndDisplay : wrapper.ModifiedEndEarlyDisplay;
 
-          if (endEarly)
-          {
-            var tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out var isSound);
-            tts = string.IsNullOrEmpty(tts) ? TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound) : tts;
-            var displayText = string.IsNullOrEmpty(wrapper.ModifiedEndEarlyDisplay) ? wrapper.ModifiedEndDisplay : wrapper.ModifiedEndEarlyDisplay;
-
-            if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_isDisposed && !_speakCollection.IsCompleted)
-            {
-              _speakCollection.Add(new Speak
+              if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_isDisposed && !_speakCollection.IsCompleted)
               {
-                Wrapper = wrapper,
-                TtsOrSound = tts,
-                IsSound = isSound,
-                Matches = earlyMatches,
-                Previous = timerData.PreviousMatches,
-                Original = timerData.OriginalMatches,
-                Action = lineData.Action
-              });
-            }
+                try
+                {
+                  _speakCollection.Add(new Speak
+                  {
+                    Wrapper = wrapper,
+                    TtsOrSound = tts,
+                    IsSound = isSound,
+                    Matches = earlyMatches,
+                    Previous = timerData.PreviousMatches,
+                    Original = timerData.OriginalMatches,
+                    Action = lineData.Action
+                  });
+                }
+                catch (InvalidOperationException)
+                {
+                  // ignore
+                }
+              }
 
-            if (ProcessDisplayText(displayText, lineData.Action, earlyMatches, timerData.OriginalMatches,
-              timerData.PreviousMatches) is { } updatedDisplayText)
-            {
-              TriggerOverlayManager.Instance.AddText(wrapper.TriggerData, updatedDisplayText, _fontColor);
-            }
+              if (ProcessDisplayText(displayText, lineData.Action, earlyMatches, timerData.OriginalMatches,
+                timerData.PreviousMatches) is { } updatedDisplayText)
+              {
+                TriggerOverlayManager.Instance.AddText(wrapper.TriggerData, updatedDisplayText, _fontColor);
+              }
 
-            if (!_isDisposed && !_triggerLogCollection.IsCompleted)
-            {
-              _triggerLogCollection.Add(new(lineData, wrapper, "Timer End Early", 0));
-            }
+              if (!_isDisposed && !_triggerLogCollection.IsCompleted)
+              {
+                try
+                {
+                  _triggerLogCollection.Add(new(lineData, wrapper, "Timer End Early", 0));
+                }
+                catch (InvalidOperationException)
+                {
+                  // ignore
+                }
+              }
 
-            // lazy initialize a list as it most often won't be needed
-            if (cleanup == null)
-            {
-              cleanup = [];
-            }
+              // lazy initialize a list as it most often won't be needed
+              if (cleanup == null)
+              {
+                cleanup = [];
+              }
 
-            cleanup.Add(timerData);
+              cleanup.Add(timerData);
+            }
           }
-        }
 
-        // cleanup timers after we've finished iterating over the list
-        cleanup?.ForEach(timerData => CleanupTimer(wrapper, timerData));
+          // cleanup timers after we've finished iterating over the list
+          cleanup?.ForEach(timerData => CleanupTimer(timerList, wrapper.TriggerData, timerData));
+        }
       }
     }
 
-    private void HandleTrigger(TriggerWrapper wrapper, LineData lineData, MatchCollection matches,
-      MatchCollection previousMatches, long timing, long beginTicks, int loopCount = 0)
+    private void HandleTrigger(TriggerWrapper wrapper, LineData lineData, List<MatchSnapshot> matches,
+      List<MatchSnapshot> previousMatches, long timing, long beginTicks, int loopCount = 0)
     {
       if (!_ready) return;
 
@@ -517,19 +544,26 @@ namespace EQLogParser
       var tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.SoundToPlay, wrapper.ModifiedSpeak, out var isSound);
       if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_isDisposed && !_speakCollection.IsCompleted)
       {
-        _speakCollection.Add(new Speak
+        try
         {
-          IsPrimary = true,
-          Wrapper = wrapper,
-          TtsOrSound = tts,
-          IsSound = isSound,
-          Matches = matches,
-          Previous = previousMatches,
-          Action = lineData.Action,
-          CounterCount = counterCount,
-          BeginTicks = beginTicks,
-          BeginTime = lineData.BeginTime
-        });
+          _speakCollection.Add(new Speak
+          {
+            IsPrimary = true,
+            Wrapper = wrapper,
+            TtsOrSound = tts,
+            IsSound = isSound,
+            Matches = matches,
+            Previous = previousMatches,
+            Action = lineData.Action,
+            CounterCount = counterCount,
+            BeginTicks = beginTicks,
+            BeginTime = lineData.BeginTime
+          });
+        }
+        catch (InvalidOperationException)
+        {
+          // ignore
+        }
       }
 
       if (ProcessDisplayText(wrapper.ModifiedDisplay, lineData.Action, matches, null, previousMatches) is { } updatedDisplayText)
@@ -578,31 +612,39 @@ namespace EQLogParser
 
       if (!_isDisposed && !_triggerLogCollection.IsCompleted)
       {
-        _triggerLogCollection.Add(new(lineData, wrapper, "Initial Trigger", timing / 10));
+        try
+        {
+          _triggerLogCollection.Add(new(lineData, wrapper, "Initial Trigger", timing / 10));
+        }
+        catch (InvalidOperationException)
+        {
+          // ignore
+        }
       }
     }
 
     private void StartTimer(TriggerWrapper wrapper, string displayName, long beginTicks, LineData lineData,
-      MatchCollection matches, MatchCollection previousMatches, int loopCount = 0)
+      List<MatchSnapshot> matches, List<MatchSnapshot> previousMatches, int loopCount = 0)
     {
       var trigger = wrapper.TriggerData;
+      var timerList = GetTimerList(wrapper);
+
       switch (trigger.TriggerAgainOption)
       {
         // Restart Timer Option so clear out everything
         case 1:
           {
-            CleanupWrapper(wrapper);
+            CleanupTimers(wrapper);
           }
           break;
         // Restart Timer only if it is already running
         case 2:
           {
-            lock (wrapper.TimerList)
+            lock (timerList)
             {
-              if (wrapper.TimerList.FirstOrDefault(data => displayName.Equals(data?.DisplayName, StringComparison.OrdinalIgnoreCase))
-                is { } timerData)
+              if (FindTimerDataByDisplayName(timerList, displayName) is { } timerData)
               {
-                CleanupTimer(wrapper, timerData);
+                CleanupTimer(timerList, wrapper.TriggerData, timerData);
               }
             }
           }
@@ -610,9 +652,9 @@ namespace EQLogParser
         // Do nothing if any exist
         case 3:
           {
-            lock (wrapper.TimerList)
+            lock (timerList)
             {
-              if (wrapper.TimerList.Count != 0)
+              if (timerList.Count != 0)
               {
                 return;
               }
@@ -622,9 +664,9 @@ namespace EQLogParser
         // Do nothing only if a timer with this name is already running
         case 4:
           {
-            lock (wrapper.TimerList)
+            lock (timerList)
             {
-              if (wrapper.TimerList.FirstOrDefault(data => displayName.Equals(data?.DisplayName, StringComparison.OrdinalIgnoreCase)) is not null)
+              if (FindTimerDataByDisplayName(timerList, displayName) is not null)
               {
                 return;
               }
@@ -637,20 +679,34 @@ namespace EQLogParser
       if (trigger.WarningSeconds > 0 && wrapper.ModifiedDurationSeconds - trigger.WarningSeconds is var diff and > 0)
       {
         newTimerData = new TimerData { CharacterId = CurrentCharacterId, DisplayName = displayName, WarningSource = new CancellationTokenSource() };
-
         var data = newTimerData;
-        Task.Delay((int)diff * 1000).ContinueWith(_ =>
+        var warningToken = data.WarningSource.Token;
+
+        _ = Task.Run(async () =>
         {
-          var proceed = false;
-          lock (wrapper.TimerList)
+          try
           {
-            proceed = !wrapper.IsRemoved && !data.Warned;
+            await Task.Delay((int)diff * 1000, warningToken);
+          }
+          catch (OperationCanceledException)
+          {
+            return;
           }
 
-          if (proceed)
+          if (_isDisposed) return;
+
+          lock (timerList)
           {
-            var tts = TriggerUtil.GetFromDecodedSoundOrText(trigger.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out var isSound);
-            if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_isDisposed && !_speakCollection.IsCompleted)
+            if (data.Warned)
+            {
+              return;
+            }
+          }
+
+          var tts = TriggerUtil.GetFromDecodedSoundOrText(trigger.WarningSoundToPlay, wrapper.ModifiedWarningSpeak, out var isSound);
+          if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_isDisposed && !_speakCollection.IsCompleted)
+          {
+            try
             {
               _speakCollection.Add(new Speak
               {
@@ -662,18 +718,29 @@ namespace EQLogParser
                 Action = lineData.Action,
               });
             }
-
-            if (ProcessDisplayText(wrapper.ModifiedWarningDisplay, lineData.Action, matches, null, previousMatches) is { } updatedDisplayText)
+            catch (InvalidOperationException)
             {
-              TriggerOverlayManager.Instance.AddText(trigger, updatedDisplayText, _fontColor);
+              // ignore
             }
+          }
 
-            if (!_isDisposed && !_triggerLogCollection.IsCompleted)
+          if (ProcessDisplayText(wrapper.ModifiedWarningDisplay, lineData.Action, matches, null, previousMatches) is { } updatedDisplayText)
+          {
+            TriggerOverlayManager.Instance.AddText(trigger, updatedDisplayText, _fontColor);
+          }
+
+          if (!_isDisposed && !_triggerLogCollection.IsCompleted)
+          {
+            try
             {
               _triggerLogCollection.Add(new(lineData, wrapper, "Timer Warning", 0));
             }
+            catch (InvalidOperationException)
+            {
+              // ignore
+            }
           }
-        }, data.WarningSource.Token);
+        });
       }
 
       newTimerData ??= new TimerData { CharacterId = CurrentCharacterId, DisplayName = displayName };
@@ -752,23 +819,35 @@ namespace EQLogParser
         }
       }
 
-      lock (wrapper.TimerList)
+      lock (timerList)
       {
-        wrapper.TimerList.Add(newTimerData);
+        timerList.Add(newTimerData);
         // true for add
         TriggerOverlayManager.Instance.UpdateTimer(trigger, newTimerData, TriggerOverlayManager.TimerStateChange.Start);
-        // save for later
-        _activeTimerLists[wrapper.Id] = true;
       }
 
+      var duration = (int)(wrapper.ModifiedDurationSeconds * 1000);
       var data2 = newTimerData;
-      Task.Delay((int)(wrapper.ModifiedDurationSeconds * 1000)).ContinueWith(_ =>
+      var token = data2.CancelSource.Token;
+
+      _ = Task.Run(async () =>
       {
-        var proceed = false;
-        lock (wrapper.TimerList)
+        try
         {
-          proceed = !wrapper.IsRemoved && !data2.Canceled;
-          CleanupTimer(wrapper, data2);
+          await Task.Delay(duration, token);
+        }
+        catch (OperationCanceledException)
+        {
+          return;
+        }
+
+        if (_isDisposed) return;
+
+        bool proceed;
+        lock (timerList)
+        {
+          proceed = !data2.Canceled;
+          CleanupTimer(timerList, wrapper.TriggerData, data2);
         }
 
         if (proceed)
@@ -776,16 +855,23 @@ namespace EQLogParser
           var tts = TriggerUtil.GetFromDecodedSoundOrText(trigger.EndSoundToPlay, wrapper.ModifiedEndSpeak, out var isSound);
           if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_isDisposed && !_speakCollection.IsCompleted)
           {
-            _speakCollection.Add(new Speak
+            try
             {
-              Wrapper = wrapper,
-              TtsOrSound = tts,
-              IsSound = isSound,
-              Matches = matches,
-              Previous = data2.PreviousMatches,
-              Original = data2.OriginalMatches,
-              Action = lineData.Action
-            });
+              _speakCollection.Add(new Speak
+              {
+                Wrapper = wrapper,
+                TtsOrSound = tts,
+                IsSound = isSound,
+                Matches = matches,
+                Previous = data2.PreviousMatches,
+                Original = data2.OriginalMatches,
+                Action = lineData.Action
+              });
+            }
+            catch (InvalidOperationException)
+            {
+              // ignore
+            }
           }
 
           if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, data2.OriginalMatches, data2.PreviousMatches) is { } updatedDisplayText)
@@ -795,22 +881,39 @@ namespace EQLogParser
 
           if (!_isDisposed && !_triggerLogCollection.IsCompleted)
           {
-            _triggerLogCollection.Add(new(lineData, wrapper, "Timer End", 0));
+            try
+            {
+              _triggerLogCollection.Add(new(lineData, wrapper, "Timer End", 0));
+            }
+            catch (InvalidOperationException)
+            {
+              // ignore
+            }
           }
 
           // repeating
           if (wrapper.TriggerData.TimerType == 4 && wrapper.TriggerData.TimesToLoop > data2.TimesToLoopCount)
           {
-            // repeat normal process
-            if (CheckLine(wrapper, data2.RepeatingTimerLineData, out var matchAgain, out var timing, out var beginTicks))
-            {
-              HandleTrigger(wrapper, data2.RepeatingTimerLineData, matchAgain, null, timing, beginTicks, data2.TimesToLoopCount + 1);
-            }
+            if (!_enabledTriggers.ContainsKey(wrapper.Id) || _isDisposed) return;
+            await _activeTriggerSemaphore.WaitAsync();
 
-            CheckTimers(wrapper, lineData);
+            try
+            {
+              // repeat normal process
+              if (CheckLine(wrapper, data2.RepeatingTimerLineData, out var matchAgain, out var timing, out var beginTicks))
+              {
+                HandleTrigger(wrapper, data2.RepeatingTimerLineData, matchAgain, null, timing, beginTicks, data2.TimesToLoopCount + 1);
+              }
+
+              CheckTimers(wrapper, lineData);
+            }
+            finally
+            {
+              if (!_isDisposed) _activeTriggerSemaphore.Release();
+            }
           }
         }
-      }, data2.CancelSource.Token);
+      });
     }
 
     private void HandleSpeech(Speak speak)
@@ -890,9 +993,9 @@ namespace EQLogParser
     private async Task GetActiveTriggersAsync()
     {
       _ready = false;
-      _requiredOverlays.Clear();
-      _enabledTriggers.Clear();
 
+      var enabledIds = new HashSet<string>(StringComparer.Ordinal);
+      var requiredOverlayIds = new HashSet<string>(StringComparer.Ordinal);
       var activeTriggers = new List<TriggerWrapper>();
       var enabledTriggers = await TriggerStateManager.Instance.GetEnabledTriggers(CurrentCharacterId);
       long triggerCount = 0;
@@ -904,7 +1007,7 @@ namespace EQLogParser
           try
           {
             // keep track of everything enabled
-            _enabledTriggers[enabled.Id] = true;
+            enabledIds.Add(enabled.Id);
 
             triggerCount++;
 
@@ -1031,7 +1134,7 @@ namespace EQLogParser
             {
               if (!string.IsNullOrEmpty(overlayId))
               {
-                _requiredOverlays[overlayId] = true;
+                requiredOverlayIds.Add(overlayId);
               }
             }
 
@@ -1049,20 +1152,19 @@ namespace EQLogParser
         Log.Warn($"Over {triggerCount} triggers active for one character. To improve performance consider turning off old triggers.");
       }
 
-      await SetActiveTriggersAsync(activeTriggers);
+      await SetActiveTriggersAsync(activeTriggers, enabledIds, requiredOverlayIds);
       _ready = true;
     }
 
     private static bool CheckEndEarly(Regex endEarlyRegex, List<NumberOptions> options, string endEarlyPattern,
-      string action, out MatchCollection earlyMatches)
+      string action, out List<MatchSnapshot> earlyMatches)
     {
       earlyMatches = null;
       var endEarly = false;
 
       if (endEarlyRegex != null)
       {
-        earlyMatches = endEarlyRegex.Matches(action);
-        if (earlyMatches is { Count: > 0 } && TriggerUtil.CheckOptions(options, earlyMatches, out _))
+        if (TextUtils.SnapshotMatches(endEarlyRegex.Matches(action), out earlyMatches) && TriggerUtil.CheckOptions(options, earlyMatches, out _))
         {
           endEarly = true;
         }
@@ -1078,8 +1180,8 @@ namespace EQLogParser
       return endEarly;
     }
 
-    private static string ProcessDisplayText(string text, string action, MatchCollection matches,
-      MatchCollection originalMatches, MatchCollection previousMatches)
+    private static string ProcessDisplayText(string text, string action, List<MatchSnapshot> matches,
+      List<MatchSnapshot> originalMatches, List<MatchSnapshot> previousMatches)
     {
       if (!string.IsNullOrEmpty(text) && !text.Equals(NullCode, StringComparison.OrdinalIgnoreCase))
       {
@@ -1092,29 +1194,26 @@ namespace EQLogParser
       return null;
     }
 
-    private static string ProcessMatchesText(string text, MatchCollection matches)
+    private static string ProcessMatchesText(string text, List<MatchSnapshot> matches)
     {
       if (matches == null || string.IsNullOrEmpty(text))
       {
         return text;
       }
 
-      foreach (var match in matches.Cast<Match>())
+      foreach (var match in matches)
       {
-        for (var i = 1; i < match.Groups.Count; i++)
+        if (!string.IsNullOrEmpty(match.Name))
         {
-          if (!string.IsNullOrEmpty(match.Groups[i].Name))
-          {
-            text = text.Replace("${" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
-            text = text.Replace("{" + match.Groups[i].Name + "}", match.Groups[i].Value, StringComparison.OrdinalIgnoreCase);
-          }
+          text = text.Replace("${" + match.Name + "}", match.Value, StringComparison.OrdinalIgnoreCase);
+          text = text.Replace("{" + match.Name + "}", match.Value, StringComparison.OrdinalIgnoreCase);
         }
       }
 
       return text;
     }
 
-    private static string ProcessTts(string tts, string action, MatchCollection matches, MatchCollection previous, MatchCollection original)
+    private static string ProcessTts(string tts, string action, List<MatchSnapshot> matches, List<MatchSnapshot> previous, List<MatchSnapshot> original)
     {
       tts = ProcessMatchesText(tts, original);
       tts = ProcessMatchesText(tts, matches);
@@ -1123,69 +1222,78 @@ namespace EQLogParser
       return tts;
     }
 
-    private static long GetRepeatedCount(IReadOnlyDictionary<string, Dictionary<string, RepeatedData>> times, TriggerWrapper wrapper, string displayValue)
+    private long GetRepeatedCount(ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> times, TriggerWrapper wrapper, string displayValue)
     {
-      if (!string.IsNullOrEmpty(wrapper.Id) && times.TryGetValue(wrapper.Id, out var displayTimes))
+      if (!string.IsNullOrEmpty(wrapper.Id))
       {
-        if (displayTimes.TryGetValue(displayValue, out var repeatedData))
+        lock (_repeatedLock)
         {
-          return repeatedData.Count;
+          if (times.TryGetValue(wrapper.Id, out var displayTimes))
+          {
+            if (displayTimes.TryGetValue(displayValue, out var repeatedData))
+            {
+              return repeatedData.Count;
+            }
+          }
         }
       }
       return -1;
     }
 
-    private static void RemoveRepeatedTimes(IDictionary<string, Dictionary<string, RepeatedData>> times, TriggerWrapper wrapper,
+    private void RemoveRepeatedTimes(ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> times, TriggerWrapper wrapper,
       string displayValue)
     {
       if (!string.IsNullOrEmpty(wrapper.Id) && !string.IsNullOrEmpty(displayValue))
       {
-        if (times.TryGetValue(wrapper.Id, out var displayTimes))
+        lock (_repeatedLock)
         {
-          displayTimes.Remove(displayValue);
+          if (times.TryGetValue(wrapper.Id, out var displayTimes))
+          {
+            displayTimes.TryRemove(displayValue, out _);
+          }
         }
       }
     }
 
-    private static long UpdateRepeatedTimes(IDictionary<string, Dictionary<string, RepeatedData>> times, TriggerWrapper wrapper,
+    private long UpdateRepeatedTimes(ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> times, TriggerWrapper wrapper,
       string displayValue, long beginTicks)
     {
       long repeatedCount = -1;
 
       if (!string.IsNullOrEmpty(wrapper.Id) && !string.IsNullOrEmpty(displayValue) && wrapper.TriggerData?.RepeatedResetTime >= 0)
       {
-        if (times.TryGetValue(wrapper.Id, out var displayTimes))
+        lock (_repeatedLock)
         {
-          if (displayTimes.TryGetValue(displayValue, out var repeatedData))
+          if (times.TryGetValue(wrapper.Id, out var displayTimes))
           {
-            var diff = (beginTicks - repeatedData.CountTicks) / TimeSpan.TicksPerSecond;
-            if (diff > wrapper.TriggerData.RepeatedResetTime)
+            if (displayTimes.TryGetValue(displayValue, out var repeatedData))
             {
-              repeatedData.Count = 1;
-              repeatedData.CountTicks = beginTicks;
+              var diff = (beginTicks - repeatedData.CountTicks) / TimeSpan.TicksPerSecond;
+              if (diff > wrapper.TriggerData.RepeatedResetTime)
+              {
+                repeatedData.Count = 1;
+                repeatedData.CountTicks = beginTicks;
+              }
+              else
+              {
+                repeatedData.Count++;
+              }
+
+              repeatedCount = repeatedData.Count;
             }
             else
             {
-              repeatedData.Count++;
+              displayTimes[displayValue] = new RepeatedData { Count = 1, CountTicks = beginTicks };
+              repeatedCount = 1;
             }
-
-            repeatedCount = repeatedData.Count;
           }
           else
           {
+            displayTimes = new ConcurrentDictionary<string, RepeatedData>();
             displayTimes[displayValue] = new RepeatedData { Count = 1, CountTicks = beginTicks };
+            times[wrapper.Id] = displayTimes;
             repeatedCount = 1;
           }
-        }
-        else
-        {
-          displayTimes = new Dictionary<string, RepeatedData>
-          {
-            { displayValue, new RepeatedData { Count = 1, CountTicks = beginTicks } }
-          };
-
-          times[wrapper.Id] = displayTimes;
-          repeatedCount = 1;
         }
       }
 
@@ -1285,8 +1393,11 @@ namespace EQLogParser
     }
 
     // make sure each call is from within lock of TimerList
-    private void CleanupTimer(TriggerWrapper wrapper, TimerData timerData)
+    private static void CleanupTimer(List<TimerData> timerList, Trigger trigger, TimerData timerData)
     {
+      // remove from list
+      timerList.Remove(timerData);
+
       timerData.CancelSource?.Cancel();
       timerData.CancelSource?.Dispose();
       timerData.CancelSource = null;
@@ -1296,69 +1407,81 @@ namespace EQLogParser
       timerData.WarningSource = null;
       timerData.Warned = true;
 
-      // prevent stop from being called more than needed?
-      if (wrapper.TimerList.Contains(timerData))
-      {
-        // stop timer
-        TriggerOverlayManager.Instance.UpdateTimer(wrapper.TriggerData, timerData, TriggerOverlayManager.TimerStateChange.Stop);
-      }
-
-      wrapper.TimerList.Remove(timerData);
-      if (wrapper.TimerList.Count == 0)
-      {
-        _activeTimerLists.TryRemove(wrapper.Id, out _);
-      }
+      // stop timer
+      TriggerOverlayManager.Instance.UpdateTimer(trigger, timerData, TriggerOverlayManager.TimerStateChange.Stop);
     }
 
-    private void CleanupWrapper(TriggerWrapper wrapper)
+    private void CleanupTimers(TriggerWrapper wrapper)
     {
-      lock (wrapper.TimerList)
+      if (_timerLists.TryGetValue(wrapper.Id, out var list))
       {
-        foreach (var timerData in wrapper.TimerList.ToArray())
+        lock (list)
         {
-          CleanupTimer(wrapper, timerData);
+          foreach (var timerData in list.ToArray())
+          {
+            CleanupTimer(list, wrapper.TriggerData, timerData);
+          }
         }
       }
     }
 
-    private async Task SetActiveTriggersAsync(List<TriggerWrapper> newActive = null)
+    private async Task SetActiveTriggersAsync(List<TriggerWrapper> newActive, HashSet<string> enabledIds, HashSet<string> requiredOverlayIds)
     {
-      // cleanup on process exit
-      List<TriggerWrapper> cleanup = null;
-
       if (_isDisposed) return;
       await _activeTriggerSemaphore.WaitAsync();
 
       try
       {
-        cleanup = [.. _activeTriggers];
-        _activeTriggers = newActive ?? [];
-
-        foreach (var old in cleanup)
+        foreach (var old in _activeTriggers)
         {
-          old.IsRemoved = true;
-          if (_activeTimerLists.ContainsKey(old.Id))
+          // if timerlist exists and the trigger is no longer active then cleanup
+          if (old.Id != null && _timerLists.ContainsKey(old.Id) && !enabledIds.Contains(old.Id))
           {
-            if (_activeTriggers.Find(wrapper => wrapper.Id == old.Id) is TriggerWrapper { } wrapper)
-            {
-              // old lists can still change during this process (end early case)
-              lock (old.TimerList)
-              {
-                wrapper.TimerList.AddRange(old.TimerList);
-                old.TimerList.Clear();
-              }
-            }
-          }
+            CleanupTimers(old);
+            _timerLists.TryRemove(old.Id, out _);
 
-          CleanupWrapper(old);
+            // purge repeated counters for this trigger id
+            _counterTimes.TryRemove(old.Id, out _);
+            _repeatedTextTimes.TryRemove(old.Id, out _);
+            _repeatedTimerTimes.TryRemove(old.Id, out _);
+            _repeatedSpeakTimes.TryRemove(old.Id, out _);
+          }
         }
       }
       finally
       {
+        _activeTriggers = newActive ?? [];
+
+        _enabledTriggers.Clear();
+        foreach (var id in enabledIds)
+        {
+          _enabledTriggers[id] = true;
+        }
+
+        _requiredOverlays.Clear();
+        foreach (var id in requiredOverlayIds)
+        {
+          _requiredOverlays[id] = true;
+        }
+
         if (!_isDisposed) _activeTriggerSemaphore.Release();
       }
 
       AudioManager.Instance.Stop(CurrentCharacterId);
+    }
+
+    // avoid LINQ for performance
+    private static TimerData FindTimerDataByDisplayName(List<TimerData> list, string name)
+    {
+      for (var i = 0; i < list.Count; i++)
+      {
+        if (string.Equals(list[i].DisplayName, name, StringComparison.OrdinalIgnoreCase))
+        {
+          return list[i];
+        }
+      }
+
+      return null;
     }
 
     public async void Dispose()
@@ -1379,10 +1502,7 @@ namespace EQLogParser
         {
           foreach (var task in new Task[] { _speakTask, _chatTask, _triggerLogTask, _mainTask })
           {
-            if (task != null)
-            {
-              task.Wait();
-            }
+            task?.Wait();
           }
         }
         finally
@@ -1404,9 +1524,9 @@ namespace EQLogParser
       public string TtsOrSound { get; init; }
       public bool IsSound { get; init; }
       public string Action { get; init; }
-      public MatchCollection Matches { get; init; }
-      public MatchCollection Previous { get; init; }
-      public MatchCollection Original { get; init; }
+      public List<MatchSnapshot> Matches { get; init; }
+      public List<MatchSnapshot> Previous { get; init; }
+      public List<MatchSnapshot> Original { get; init; }
       public long CounterCount { get; init; }
       public double BeginTime { get; init; }
       public long BeginTicks { get; init; }
@@ -1456,14 +1576,11 @@ namespace EQLogParser
       public List<NumberOptions> RegexNOptions { get; set; }
       public List<NumberOptions> PreviousRegexNOptions { get; set; }
       public bool IsDisabled { get; set; }
-      public bool IsRemoved { get; set; }
       public string ContainsText { get; set; }
       public string PreviousContainsText { get; set; }
       public string StartText { get; set; }
       public string PreviousStartText { get; set; }
       public double LockedOutTicks { get; set; }
-      // need to synchronize when working with timer list or even timer data
-      public List<TimerData> TimerList { get; } = [];
     }
 
     [GeneratedRegex(@"{(s\d?)}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]

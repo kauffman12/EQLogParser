@@ -263,5 +263,31 @@ namespace EQLogParser
 
       return pass;
     }
+
+    internal static bool SnapshotMatches(MatchCollection mc, out List<MatchSnapshot> list)
+    {
+      list = null;
+
+      if (mc == null)
+      {
+        return false;
+      }
+
+      var success = mc.Count > 0;
+      list = success ? [] : null;
+
+      foreach (Match m in mc)
+      {
+        if (m.Success)
+        {
+          for (var i = 1; i < m.Groups.Count; i++)
+          {
+            list.Add(new MatchSnapshot { Name = m.Groups[i].Name, Value = m.Groups[i].Value });
+          }
+        }
+      }
+
+      return success;
+    }
   }
 }

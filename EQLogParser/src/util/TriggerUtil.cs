@@ -378,66 +378,63 @@ namespace EQLogParser
       return success;
     }
 
-    internal static bool CheckOptions(List<NumberOptions> options, MatchCollection matches, out double duration)
+    internal static bool CheckOptions(List<NumberOptions> options, List<MatchSnapshot> matches, out double duration)
     {
       duration = double.NaN;
 
-      foreach (var match in matches.Cast<Match>())
+      if (matches == null)
       {
-        if (!match.Success)
-        {
-          continue;
-        }
+        return true;
+      }
 
-        for (var i = 0; i < match.Groups.Count; i++)
-        {
-          var groupName = match.Groups[i].Name;
-          var groupValue = match.Groups[i].Value;
+      foreach (var match in matches)
+      {
+        var groupName = match.Name;
+        var groupValue = match.Value;
 
-          if ("TS".Equals(groupName, StringComparison.OrdinalIgnoreCase) && DateUtil.SimpleTimeToSeconds(groupValue) is var sec)
+        if ("TS".Equals(groupName, StringComparison.OrdinalIgnoreCase) && DateUtil.SimpleTimeToSeconds(groupValue) is var sec)
+        {
+          if (sec > 0)
           {
-            if (sec > 0)
-            {
-              duration = sec;
-            }
-            else
-            {
-              return false;
-            }
+            duration = sec;
           }
           else
           {
-            var passed = true;
-            foreach (var option in options)
+            return false;
+          }
+        }
+        else
+        {
+          var passed = true;
+          foreach (var option in options)
+          {
+            if (groupName == option.Key && !string.IsNullOrEmpty(option.Op))
             {
-              if (groupName == option.Key && !string.IsNullOrEmpty(option.Op))
+              if (StatsUtil.ParseUInt(groupValue) is var value && value != uint.MaxValue)
               {
-                if (StatsUtil.ParseUInt(groupValue) is var value && value != uint.MaxValue)
+                switch (option.Op)
                 {
-                  switch (option.Op)
-                  {
-                    case ">":
-                      passed = value > option.Value;
-                      break;
-                    case ">=":
-                      passed = value >= option.Value;
-                      break;
-                    case "<":
-                      passed = value < option.Value;
-                      break;
-                    case "<=":
-                      passed = value <= option.Value;
-                      break;
-                    case "=":
-                    case "==":
-                      passed = value == option.Value;
-                      break;
-                  }
+                  case ">":
+                    passed = value > option.Value;
+                    break;
+                  case ">=":
+                    passed = value >= option.Value;
+                    break;
+                  case "<":
+                    passed = value < option.Value;
+                    break;
+                  case "<=":
+                    passed = value <= option.Value;
+                    break;
+                  case "=":
+                  case "==":
+                    passed = value == option.Value;
+                    break;
+                }
 
-                  if (!passed)
-                  {
-                    return false;
-                  }
+                if (!passed)
+                {
+                  return false;
                 }
               }
             }
