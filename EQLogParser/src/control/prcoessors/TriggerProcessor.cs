@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,6 +27,7 @@ namespace EQLogParser
     public readonly TriggerLogStore TriggerLog;
     public readonly string CurrentCharacterId;
     public readonly string CurrentProcessorName;
+    private static readonly Regex TokenRegex = MatchesTokenRegex();
 
     private const long SixtyHours = 10 * 6 * 60 * 60 * 1000;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -1201,16 +1203,65 @@ namespace EQLogParser
         return text;
       }
 
-      foreach (var match in matches)
+      // Estimate capacity to reduce reallocations
+      var sb = new StringBuilder(text.Length);
+      var lastIndex = 0;
+
+      foreach (Match m in TokenRegex.Matches(text))
       {
-        if (!string.IsNullOrEmpty(match.Name))
+        sb.Append(text, lastIndex, m.Index - lastIndex);
+        lastIndex = m.Index + m.Length;
+
+        // pick whichever group matched
+        var name = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[3].Value;
+        var modifier = m.Groups[2].Success ? m.Groups[2].Value :
+                       (m.Groups[4].Success ? m.Groups[4].Value : null);
+
+        string value = null;
+        foreach (var match in matches)
         {
-          text = text.Replace("${" + match.Name + "}", match.Value, StringComparison.OrdinalIgnoreCase);
-          text = text.Replace("{" + match.Name + "}", match.Value, StringComparison.OrdinalIgnoreCase);
+          if (match.Name != null && match.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+          {
+            value = match.Value;
+            break;
+          }
         }
+
+        if (value == null)
+        {
+          sb.Append(m.Value);
+          continue;
+        }
+
+        if (modifier != null)
+        {
+          switch (modifier.ToLowerInvariant())
+          {
+            case "number":
+              if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var num))
+                value = num.ToString("N0", CultureInfo.CurrentCulture);
+              break;
+            case "upper":
+              value = value.ToUpper(CultureInfo.CurrentCulture);
+              break;
+            case "lower":
+              value = value.ToLower(CultureInfo.CurrentCulture);
+              break;
+            case "capitalize":
+              value = TextUtils.ToUpper(value, CultureInfo.CurrentCulture);
+              break;
+          }
+        }
+
+        sb.Append(value);
       }
 
-      return text;
+      if (lastIndex < text.Length)
+      {
+        sb.Append(text, lastIndex, text.Length - lastIndex);
+      }
+
+      return sb.ToString();
     }
 
     private static string ProcessTts(string tts, string action, List<MatchSnapshot> matches, List<MatchSnapshot> previous, List<MatchSnapshot> original)
@@ -1591,5 +1642,7 @@ namespace EQLogParser
     private static partial Regex ReplaceTsRegex();
     [GeneratedRegex(@"[^a-zA-Z0-9 .,!?;:'""-()]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ReplaceBadCharsRegex();
+    [GeneratedRegex(@"\$\{([a-zA-Z0-9_]+)(?:\.([a-zA-Z0-9_]+))?\}|\{([a-zA-Z0-9_]+)(?:\.([a-zA-Z0-9_]+))?\}", RegexOptions.Compiled)]
+    private static partial Regex MatchesTokenRegex();
   }
 }
