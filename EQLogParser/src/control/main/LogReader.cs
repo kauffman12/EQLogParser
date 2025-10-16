@@ -165,9 +165,17 @@ namespace EQLogParser
       if (Path.GetDirectoryName(FileName) is { } directory)
       {
         _watcher = new FileSystemWatcher(directory);
-        _watcher.Deleted += (_, fileArgs) =>
+        _watcher.Deleted += (_, args) =>
         {
-          if (fileArgs?.FullPath == FileName)
+          if (args?.FullPath == FileName)
+          {
+            _fileDeleted = true;
+          }
+        };
+
+        _watcher.Renamed += (_, args) =>
+        {
+          if (args?.OldFullPath == FileName || args?.FullPath == FileName)
           {
             _fileDeleted = true;
           }
@@ -183,9 +191,12 @@ namespace EQLogParser
 
         try
         {
-          if (_fileDeleted)
+          // if deleted or truncated
+          if (_fileDeleted || _fs.Length < _currentPos)
           {
+            _fileDeleted = false;
             await ReOpen();
+            continue;
           }
 
           if (_cts == null || _cts.IsCancellationRequested)
@@ -297,6 +308,7 @@ namespace EQLogParser
     private async Task ReOpen()
     {
       CleanupStreams();
+      await Task.Delay(100);
       var exists = await WhenFileExists();
       if (exists)
       {
@@ -312,6 +324,7 @@ namespace EQLogParser
             Options = FileOptions.Asynchronous | FileOptions.SequentialScan
           });
         _fs.Seek(0, SeekOrigin.End);
+        _currentPos = _fs.Position;
         _reader = FileUtil.GetStreamReader(_fs);
       }
     }
