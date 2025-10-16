@@ -34,6 +34,7 @@ namespace EQLogParser
     private nint _windowHndl;
     private volatile bool _isRendering;
     private volatile bool _isClosed;
+    private readonly bool _streamerMode;
     private bool _disposed;
 
     internal TextOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
@@ -45,11 +46,8 @@ namespace EQLogParser
       _previewWindows = previews;
       title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + _node.Id);
       content.SetResourceReference(VerticalAlignmentProperty, "OverlayVerticalAlignment-" + _node.Id);
-
-      Height = _node.OverlayData.Height;
-      Width = _node.OverlayData.Width;
-      Top = _node.OverlayData.Top;
-      Left = _node.OverlayData.Left;
+      _streamerMode = _node.OverlayData.StreamerMode;
+      UpdateFields(true);
 
       // cache of text blocks
       CreateBlockCache();
@@ -331,13 +329,24 @@ namespace EQLogParser
           _node = node;
         }
 
-        Height = _node.OverlayData.Height;
-        Width = _node.OverlayData.Width;
-        Top = _node.OverlayData.Top;
-        Left = _node.OverlayData.Left;
+        UpdateFields();
         saveButton.IsEnabled = false;
         cancelButton.IsEnabled = false;
         closeButton.IsEnabled = true;
+      }
+    }
+
+    private void UpdateFields(bool init = false)
+    {
+      Height = _node.OverlayData.Height;
+      Width = _node.OverlayData.Width;
+      Top = _node.OverlayData.Top;
+      Left = _node.OverlayData.Left;
+      Title = _node.Name;
+
+      if (_streamerMode != _node.OverlayData.StreamerMode && !_preview)
+      {
+        _ = TriggerOverlayManager.Instance.RestartOverlayAsync(_node.Id);
       }
     }
 
@@ -414,15 +423,19 @@ namespace EQLogParser
           if (!_preview)
           {
             // Get current extended styles
-            var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
+            var exStyle = (int)NativeMethods.GetWindowLongPtr(_windowHndl, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
 
             // Add transparency and layered styles
             exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExLayered | (int)NativeMethods.ExtendedWindowStyles.WsExTransparent;
-            // tool window to not show up in alt-tab
-            exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow | (int)NativeMethods.ExtendedWindowStyles.WsExNoActive;
+
+            if (!_streamerMode)
+            {
+              // tool window to not show up in alt-tab
+              exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow | (int)NativeMethods.ExtendedWindowStyles.WsExNoActive;
+            }
 
             // Apply the new extended styles
-            NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, new IntPtr(exStyle));
+            NativeMethods.SetWindowLong(_windowHndl, (int)NativeMethods.GetWindowLongFields.GwlExstyle, new IntPtr(exStyle));
           }
         }
       }

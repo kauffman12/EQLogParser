@@ -45,6 +45,7 @@ namespace EQLogParser
     private volatile bool _showActive;
     private volatile bool _showIdle;
     private volatile bool _showReset;
+    private readonly bool _streamerMode;
 
     internal TimerOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
     {
@@ -56,6 +57,7 @@ namespace EQLogParser
       title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + _node.Id);
       mainPanel.SetResourceReference(VerticalAlignmentProperty, "OverlayVerticalAlignment-" + _node.Id);
 
+      _streamerMode = _node.OverlayData.StreamerMode;
       UpdateFields();
 
       if (_preview)
@@ -775,6 +777,7 @@ namespace EQLogParser
       Top = _node.OverlayData.Top;
       Left = _node.OverlayData.Left;
 
+      Title = _node.Name;
       _hideDupes = _node.OverlayData.HideDuplicates;
       _useStandardTime = _node.OverlayData.UseStandardTime;
       _sortBy = _node.OverlayData.SortBy;
@@ -783,6 +786,11 @@ namespace EQLogParser
       _showActive = _node.OverlayData.ShowActive;
       _showIdle = _node.OverlayData.ShowIdle;
       _showReset = _node.OverlayData.ShowReset;
+
+      if (_streamerMode != _node.OverlayData.StreamerMode && !_preview)
+      {
+        _ = TriggerOverlayManager.Instance.RestartOverlayAsync(_node.Id);
+      }
     }
 
     private async void WindowClosing(object sender, CancelEventArgs e)
@@ -890,15 +898,19 @@ namespace EQLogParser
           if (!_preview)
           {
             // Get current extended styles
-            var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
+            var exStyle = (int)NativeMethods.GetWindowLongPtr(_windowHndl, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
 
             // Add transparency and layered styles
             exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExLayered | (int)NativeMethods.ExtendedWindowStyles.WsExTransparent;
-            // tool window to not show up in alt-tab
-            exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow | (int)NativeMethods.ExtendedWindowStyles.WsExNoActive;
+
+            if (!_streamerMode)
+            {
+              // tool window to not show up in alt-tab
+              exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow | (int)NativeMethods.ExtendedWindowStyles.WsExNoActive;
+            }
 
             // Apply the new extended styles
-            NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, new IntPtr(exStyle));
+            NativeMethods.SetWindowLong(_windowHndl, (int)NativeMethods.GetWindowLongFields.GwlExstyle, new IntPtr(exStyle));
           }
         }
       }
