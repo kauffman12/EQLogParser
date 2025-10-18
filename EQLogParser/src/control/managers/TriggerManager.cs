@@ -31,24 +31,6 @@ namespace EQLogParser
       TriggerStateManager.Instance.TriggerImportEvent += TriggerImportEvent;
     }
 
-    private async void OverlayImportEvent(bool obj)
-    {
-      // refresh styles
-      await TriggerUtil.LoadOverlayStyles();
-    }
-
-    private void TriggerImportEvent(bool _)
-    {
-      // in case of merge
-      TriggersUpdated();
-    }
-
-    private void TriggerUpdateEvent(TriggerNode _)
-    {
-      // in case of merge
-      TriggersUpdated();
-    }
-
     internal void Select(TriggerLogEntry entry) => EventsSelectTrigger?.Invoke(entry);
 
     internal void TriggersUpdated()
@@ -94,7 +76,7 @@ namespace EQLogParser
 
     internal async Task<List<LogReader>> GetLogReadersAsync()
     {
-      await _logReadersSemaphore.WaitAsync();
+      await _logReadersSemaphore.WaitAsync().ConfigureAwait(false);
 
       try
       {
@@ -119,18 +101,6 @@ namespace EQLogParser
         character.VoiceRate, character.CustomVolume, character.ActiveColor, character.FontColor, collection);
     }
 
-    private async Task InitTestProcessor(string id, string name, string playerName, string voice, int voiceRate,
-      int customVolume, string activeColor, string fontColor, BlockingCollection<LogReaderItem> collection)
-    {
-      _testProcessor?.Dispose();
-      _testProcessor =
-        new TriggerProcessor(id, name, playerName, voice, voiceRate, customVolume, activeColor, fontColor);
-      _testProcessor.SetTesting(true);
-      await _testProcessor.StartAsync();
-      _testProcessor.LinkTo(collection);
-      await FireEventsProcessorsUpdatedAsync();
-    }
-
     internal Task StopTestProcessor()
     {
       _testProcessor?.Dispose();
@@ -144,6 +114,12 @@ namespace EQLogParser
       return [.. processors.Select(p => p.TriggerLog)];
     }
 
+    // refresh styles
+    private async void OverlayImportEvent(bool obj) => await TriggerUtil.LoadOverlayStyles();
+    // in case of merge
+    private void TriggerImportEvent(bool _) => TriggersUpdated();
+    private void TriggerUpdateEvent(TriggerNode _) => TriggersUpdated();
+
     private async void TriggerManagerEventsLogLoadingComplete(string _)
     {
       if (await TriggerStateManager.Instance.GetConfig() is { IsAdvanced: false })
@@ -156,6 +132,17 @@ namespace EQLogParser
     {
       _configUpdateTimer.Stop();
       _configUpdateTimer.Start();
+    }
+
+    private async Task InitTestProcessor(string id, string name, string playerName, string voice, int voiceRate,
+      int customVolume, string activeColor, string fontColor, BlockingCollection<LogReaderItem> collection)
+    {
+      _testProcessor?.Dispose();
+      _testProcessor = new TriggerProcessor(id, name, playerName, voice, voiceRate, customVolume, activeColor, fontColor);
+      _testProcessor.SetTesting(true);
+      await _testProcessor.StartAsync();
+      _testProcessor.LinkTo(collection);
+      await FireEventsProcessorsUpdatedAsync();
     }
 
     private async void ConfigDoUpdate(object sender, EventArgs e)
@@ -317,7 +304,7 @@ namespace EQLogParser
           idSet.Add(id);
         }
 
-        foreach (var id in processor.GetEnabledTriggers())
+        foreach (var id in await processor.GetEnabledTriggersAsync())
         {
           triggerSet.Add(id);
         }

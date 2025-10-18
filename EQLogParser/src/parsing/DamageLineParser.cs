@@ -20,7 +20,7 @@ namespace EQLogParser
     private static readonly List<string> SlainQueue = [];
     private static double _slainTime = double.NaN;
     private static string _previousAction;
-    private static DelayRecord _delayRecord;
+    private static DelayRecord _delayCritRecord;
 
     private static readonly Dictionary<string, string> HitMap = new()
     {
@@ -793,7 +793,7 @@ namespace EQLogParser
             damageRecord.ModifiersMask = LineModifiersParser.Crit;
           }
 
-          _delayRecord = new DelayRecord { Record = damageRecord, BeginTime = lineData.BeginTime };
+          _delayCritRecord = new DelayRecord { Record = damageRecord, BeginTime = lineData.BeginTime };
         }
       }
       // [Fri Mar 04 21:28:19 2022] A failed reclaimer tries to punch YOU, but YOUR magical skin absorbs the blow!
@@ -956,13 +956,14 @@ namespace EQLogParser
 
       if (record != null)
       {
-        if (_delayRecord != null && (lineData.BeginTime - _delayRecord.BeginTime) <= 1 &&
-          string.Equals(record.Attacker, _delayRecord.Record.Attacker, StringComparison.OrdinalIgnoreCase))
+        if (_delayCritRecord != null && (lineData.BeginTime - _delayCritRecord.BeginTime) <= 1 &&
+          string.Equals(record.Attacker, _delayCritRecord.Record.Attacker, StringComparison.OrdinalIgnoreCase))
         {
-          _delayRecord.Record.Defender = record.Defender;
-          _delayRecord.Record.SubType = record.SubType;
-          EventsDamageProcessed?.Invoke(new DamageProcessedEvent { Record = _delayRecord.Record, BeginTime = _delayRecord.BeginTime });
-          _delayRecord = null;
+          record.ModifiersMask = _delayCritRecord.Record.ModifiersMask;
+          //_delayCritRecord.Record.Defender = record.Defender;
+          //_delayCritRecord.Record.SubType = record.SubType;
+          //EventsDamageProcessed?.Invoke(new DamageProcessedEvent { Record = _delayCritRecord.Record, BeginTime = _delayCritRecord.BeginTime });
+          _delayCritRecord = null;
         }
 
         if (!checkLineType && !InIgnoreList(defender))

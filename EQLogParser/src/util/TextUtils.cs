@@ -269,9 +269,9 @@ namespace EQLogParser
       return pass;
     }
 
-    internal static bool SnapshotMatches(MatchCollection mc, out List<MatchSnapshot> list)
+    internal static bool SnapshotMatches(MatchCollection mc, out Dictionary<string, string> matches)
     {
-      list = null;
+      matches = null;
 
       if (mc == null)
       {
@@ -279,7 +279,7 @@ namespace EQLogParser
       }
 
       var success = mc.Count > 0;
-      list = success ? [] : null;
+      matches = success ? [] : null;
 
       foreach (Match m in mc)
       {
@@ -287,7 +287,7 @@ namespace EQLogParser
         {
           for (var i = 1; i < m.Groups.Count; i++)
           {
-            list.Add(new MatchSnapshot { Name = m.Groups[i].Name, Value = m.Groups[i].Value });
+            matches[m.Groups[i].Name] = m.Groups[i].Value;
           }
         }
       }

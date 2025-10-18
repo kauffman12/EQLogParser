@@ -256,7 +256,7 @@ namespace EQLogParser
                       break;
                     }
 
-                    Dispatcher.InvokeAsync(() =>
+                    Dispatcher.InvokeAsync(async () =>
                     {
                       var content = testButton.Content;
                       if (content.ToString() == "Stopping Test")
@@ -265,7 +265,7 @@ namespace EQLogParser
                         // buffer disposed by the processor
                         _buffer.CompleteAdding();
                         _buffer = null;
-                        TriggerManager.Instance.StopTestProcessor();
+                        await TriggerManager.Instance.StopTestProcessor();
                       }
                     });
 

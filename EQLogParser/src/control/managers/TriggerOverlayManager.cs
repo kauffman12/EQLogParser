@@ -57,9 +57,10 @@ namespace EQLogParser
 
           if (doClose)
           {
+            var id = kv.Value.Id;
             _ = UiUtil.InvokeAsync(() =>
             {
-              if (_textWindows.TryGetValue(kv.Value.Id, out var windowData) && windowData.TheWindow is TextOverlayWindow { } window)
+              if (_textWindows.TryGetValue(id, out var windowData) && windowData.TheWindow is TextOverlayWindow { } window)
               {
                 window.StopOverlay();
               }
