@@ -1,6 +1,13 @@
-# 2.3.24 | 10/16/25
+# 2.3.25 | 10/18/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
 
+1. Updated so audio will finish playing while you're changing trigger settings. Use the stop button or EQLP:STOP or uncheck your character if you need to stop audio.
+2. Fix for **Quick Shares** not loading when opening a file for parse.
+3. Fix crash when receiving Quick Share with the QS window open.
+4. Many more **Trigger Processing** improvements.
+5. Hopefully a fix for EMU crit parsing.
+
+# 2.3.24 | 10/16/25
 1. Added the following modifiers that can be used with **Trigger Variables**: number, upper, lower, and capitalize. Number is used to format a number based on the local region (adds commas in the U.S.) and the others should be obvious. **Example Usage: {n1.number} or {s.capitalize}**
 2. Added **Streamer Mode** to Overlays so they show up in OBS. This requires using the Windows 10 Capture Mode setting.
 3. Reworked **Trigger Processing** to improve performance.

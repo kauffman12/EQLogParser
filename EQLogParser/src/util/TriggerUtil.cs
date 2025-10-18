@@ -379,7 +379,7 @@ namespace EQLogParser
       return success;
     }
 
-    internal static bool CheckOptions(List<NumberOptions> options, List<MatchSnapshot> matches, out double duration)
+    internal static bool CheckOptions(List<NumberOptions> options, Dictionary<string, string> matches, out double duration)
     {
       duration = double.NaN;
 
@@ -388,10 +388,10 @@ namespace EQLogParser
         return true;
       }
 
-      foreach (var match in matches)
+      foreach (var kv in matches)
       {
-        var groupName = match.Name;
-        var groupValue = match.Value;
+        var groupName = kv.Key;
+        var groupValue = kv.Value;
 
         if ("TS".Equals(groupName, StringComparison.OrdinalIgnoreCase) && DateUtil.SimpleTimeToSeconds(groupValue) is var sec)
         {
@@ -598,7 +598,7 @@ namespace EQLogParser
       }
     }
 
-    internal static async void CheckQuickShare(List<TrustedPlayer> trust, ChatType chatType, string action, double dateTime, string characterId, string processorName)
+    internal static async void CheckForStop(ChatType chatType, string action)
     {
       if (chatType.Sender == null || action == null)
       {
@@ -610,6 +610,14 @@ namespace EQLogParser
           && action.AsSpan()[s..].StartsWith("{EQLP:STOP}", StringComparison.OrdinalIgnoreCase))
       {
         await TriggerManager.Instance.StopTriggersAsync();
+      }
+    }
+
+    internal static void CheckQuickShare(ChatType chatType, string action, double dateTime, bool doImport, string characterId,
+      string processorName = null, List<TrustedPlayer> trust = null)
+    {
+      if (chatType.Sender == null || action == null)
+      {
         return;
       }
 
@@ -635,28 +643,31 @@ namespace EQLogParser
 
       RecordManager.Instance.Add(record);
 
-      // don't handle immediately unless enabled
-      if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild or
-            ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") && !RecordManager.Instance.IsQuickShareMine(fullKey))
+      if (doImport)
       {
-        // ignore if we're still processing a bunch
-        if (QuickShareCache.Count > 5)
+        // don't handle immediately unless enabled
+        if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild or
+              ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") && !RecordManager.Instance.IsQuickShareMine(fullKey))
         {
-          return;
-        }
-
-        lock (QuickShareCache)
-        {
-          if (!QuickShareCache.TryGetValue(quickShareKey, out var value))
+          // ignore if we're still processing a bunch
+          if (QuickShareCache.Count > 5)
           {
-            var autoMerge = chatType.Channel != ChatChannels.Tell && trust.Any(tp => tp.Name.Equals(chatType.Sender, StringComparison.OrdinalIgnoreCase));
-            QuickShareCache[quickShareKey] = new CharacterData { Sender = chatType.Sender, AutoMerge = autoMerge, IsTrigger = type == ShareTrigger };
-            QuickShareCache[quickShareKey].CharacterIds.Add(characterId);
-            _ = RunQuickShareTaskAsync(quickShareKey, autoMerge);
+            return;
           }
-          else
+
+          lock (QuickShareCache)
           {
-            value.CharacterIds.Add(characterId);
+            if (!QuickShareCache.TryGetValue(quickShareKey, out var value))
+            {
+              var autoMerge = chatType.Channel != ChatChannels.Tell && trust?.Any(tp => tp.Name.Equals(chatType.Sender, StringComparison.OrdinalIgnoreCase)) == true;
+              QuickShareCache[quickShareKey] = new CharacterData { Sender = chatType.Sender, AutoMerge = autoMerge, IsTrigger = type == ShareTrigger };
+              QuickShareCache[quickShareKey].CharacterIds.Add(characterId);
+              _ = RunQuickShareTaskAsync(quickShareKey, autoMerge);
+            }
+            else
+            {
+              value.CharacterIds.Add(characterId);
+            }
           }
         }
       }

@@ -138,8 +138,8 @@ namespace EQLogParser
     public Regex EndEarlyRegex2 { get; set; }
     public List<NumberOptions> EndEarlyRegexNOptions { get; set; }
     public List<NumberOptions> EndEarlyRegex2NOptions { get; set; }
-    public List<MatchSnapshot> OriginalMatches { get; set; }
-    public List<MatchSnapshot> PreviousMatches { get; set; }
+    public Dictionary<string, string> OriginalMatches { get; set; }
+    public Dictionary<string, string> PreviousMatches { get; set; }
     public long CounterCount { get; set; } = -1;
     public long RepeatedCount { get; set; } = -1;
     public string LogTime { get; set; }
@@ -148,12 +148,6 @@ namespace EQLogParser
     public LineData RepeatingTimerLineData { get; set; }
     public int TimesToLoopCount { get; set; }
     public BitmapImage TimerIcon { get; set; }
-  }
-
-  internal class MatchSnapshot
-  {
-    public string Name;
-    public string Value;
   }
 
   internal class NumberOptions
@@ -377,7 +371,7 @@ namespace EQLogParser
     public string Name { get; set; }
     public string Type { get; set; }
     public long Priority { get; set; }
-    public long Eval { get; set; }
+    public double Eval { get; set; }
     public double LogTime { get; set; }
     public string Line { get; set; }
     public string NodeId { get; set; }

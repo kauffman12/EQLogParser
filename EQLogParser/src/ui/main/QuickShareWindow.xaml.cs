@@ -55,9 +55,17 @@ namespace EQLogParser
     }
 
     private void CloseClicked(object sender, RoutedEventArgs e) => Close();
-    private void EnableStats(object sender, NotifyCollectionChangedEventArgs e) => statsButton.IsEnabled = QuickShareData.Count > 0;
     private void TrustGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => CleanupTable();
     private async void StatsClicked(object sender, RoutedEventArgs e) => await TriggerUtil.OpenQuickShareStatusAsync(null);
+
+    private void EnableStats(object sender, NotifyCollectionChangedEventArgs e)
+    {
+      // collection updated in RecordManager often from trigger processing Task
+      Dispatcher.Invoke(() =>
+      {
+        statsButton.IsEnabled = QuickShareData.Count > 0;
+      });
+    }
 
     private void EventsThemeChanged(string _)
     {

@@ -30,10 +30,8 @@ namespace EQLogParser
         {
           foreach (var data in collection.GetConsumingEnumerable())
           {
-            if (!_isDisposed)
-            {
-              DoPreProcess(data.Line, data.Ts, data.IsMonitor);
-            }
+            if (_isDisposed) break;
+            DoPreProcess(data.Line, data.Ts, data.IsMonitor);
           }
         }
         catch (Exception ex)
@@ -57,6 +55,11 @@ namespace EQLogParser
         chatType.BeginTime = lineData.BeginTime;
         chatType.Text = line; // workaround for now?
         ChatManager.Instance.Add(chatType);
+
+        if (!monitor)
+        {
+          TriggerUtil.CheckQuickShare(chatType, lineData.Action, lineData.BeginTime, false, TriggerStateManager.DefaultUser);
+        }
       }
       else
       {
