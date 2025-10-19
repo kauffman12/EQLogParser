@@ -122,6 +122,7 @@ namespace EQLogParser
     public bool Canceled { get; set; }
     public bool Warned { get; set; }
     public string DisplayName { get; set; }
+    public double DurationSeconds { get; set; }
     public long BeginTicks { get; set; }
     public long EndTicks { get; set; }
     public long ResetTicks { get; set; }

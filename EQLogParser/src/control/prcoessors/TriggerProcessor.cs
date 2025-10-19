@@ -269,11 +269,11 @@ namespace EQLogParser
         var beginTicks = DateTime.UtcNow.Ticks;
         foreach (var wrapper in _activeTriggersById.Values)
         {
-          if (CheckLine(wrapper, lineData, out var matches, out var swTime) &&
+          if (CheckLine(wrapper, lineData, out var matches, out var dynamicDuration, out var swTime) &&
               CheckPreviousLine(wrapper, _previous, out var previousMatches, out var previousSwTime))
           {
             swTime += previousSwTime;
-            HandleTrigger(wrapper, lineData, matches, previousMatches, swTime, beginTicks);
+            HandleTrigger(wrapper, lineData, matches, previousMatches, dynamicDuration, swTime, beginTicks);
           }
         }
 
@@ -311,9 +311,10 @@ namespace EQLogParser
       }
     }
 
-    private static bool CheckLine(TriggerWrapper wrapper, LineData lineData, out Dictionary<string, string> matches, out long swTime)
+    private static bool CheckLine(TriggerWrapper wrapper, LineData lineData, out Dictionary<string, string> matches, out double dynamicDuration, out long swTime)
     {
       var found = false;
+      dynamicDuration = double.NaN;
       swTime = 0;
       matches = null;
 
@@ -324,7 +325,6 @@ namespace EQLogParser
       }
 
       long ts0;
-      var dynamicDuration = double.NaN;
       if (wrapper.Regex != null)
       {
         ts0 = Stopwatch.GetTimestamp();
@@ -358,10 +358,6 @@ namespace EQLogParser
         }
 
         found = success && TriggerUtil.CheckOptions(wrapper.RegexNOptions, matches, out dynamicDuration);
-        if (!double.IsNaN(dynamicDuration) && wrapper.TriggerData.TimerType is 1 or 3) // countdown or progress
-        {
-          wrapper.ModifiedDurationSeconds = dynamicDuration;
-        }
 
         // no need to count failures the user doesn't see
         if (found) swTime = Stopwatch.GetTimestamp() - ts0;
@@ -484,6 +480,14 @@ namespace EQLogParser
 
           // --- Defer: Speak enqueue ---
           var tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndEarlySoundToPlay, wrapper.ModifiedEndEarlySpeak, out var isSound);
+
+          // ✅ FALLBACK: if EndEarly is blank, use normal End sound/speak instead
+          if (string.IsNullOrEmpty(tts))
+          {
+            // re-call the helper to determine proper isSound flag for the fallback
+            tts = TriggerUtil.GetFromDecodedSoundOrText(wrapper.TriggerData.EndSoundToPlay, wrapper.ModifiedEndSpeak, out isSound);
+          }
+
           if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase))
           {
             speaksToAdd ??= new List<Speak>(2);
@@ -595,7 +599,7 @@ namespace EQLogParser
     }
 
     private void HandleTrigger(TriggerWrapper wrapper, LineData lineData, Dictionary<string, string> matches,
-      Dictionary<string, string> previousMatches, long swTime, long beginTicks, int loopCount = 0)
+      Dictionary<string, string> previousMatches, double dynamicDuration, long swTime, long beginTicks, int loopCount = 0)
     {
       if (!_ready) return;
 
@@ -628,9 +632,10 @@ namespace EQLogParser
           UpdateRepeatedTimes(_repeatedTimerTimes, wrapper, altTimerName, beginTicks);
         }
 
-        if (wrapper.TriggerData.TimerType > 0 && wrapper.TriggerData.DurationSeconds > 0)
+        if (wrapper.TriggerData.TimerType > 0 && (wrapper.TriggerData.DurationSeconds > 0 ||
+             (wrapper.TriggerData.TimerType is 1 or 3 && !double.IsNaN(dynamicDuration) && dynamicDuration > 0)))
         {
-          StartTimer(wrapper, altTimerName, beginTicks, lineData, matches, previousMatches, loopCount);
+          StartTimer(wrapper, altTimerName, beginTicks, dynamicDuration, lineData, matches, previousMatches, loopCount);
         }
       }
 
@@ -716,7 +721,7 @@ namespace EQLogParser
       }
     }
 
-    private void StartTimer(TriggerWrapper wrapper, string displayName, long beginTicks, LineData lineData,
+    private void StartTimer(TriggerWrapper wrapper, string displayName, long beginTicks, double dynamicDuration, LineData lineData,
       Dictionary<string, string> matches, Dictionary<string, string> previousMatches, int loopCount = 0)
     {
       var trigger = wrapper.TriggerData;
@@ -796,7 +801,13 @@ namespace EQLogParser
         TriggerAgainOption = trigger.TriggerAgainOption,
       };
 
-      newTimerData.EndTicks = beginTicks + (long)(TimeSpan.TicksPerSecond * wrapper.ModifiedDurationSeconds);
+      newTimerData.DurationSeconds = trigger.DurationSeconds;
+      if (wrapper.TriggerData.TimerType is 1 or 3 && !double.IsNaN(dynamicDuration) && dynamicDuration > 0)
+      {
+        newTimerData.DurationSeconds = dynamicDuration;
+      }
+
+      newTimerData.EndTicks = beginTicks + (long)(TimeSpan.TicksPerSecond * newTimerData.DurationSeconds);
       newTimerData.DurationTicks = newTimerData.EndTicks - beginTicks;
       newTimerData.ResetTicks = trigger.ResetDurationSeconds > 0 ? beginTicks + (long)(TimeSpan.TicksPerSecond * trigger.ResetDurationSeconds) : 0;
       newTimerData.ResetDurationTicks = newTimerData.ResetTicks - beginTicks;
@@ -822,7 +833,7 @@ namespace EQLogParser
         newTimerData.RepeatingTimerLineData = lineData;
       }
 
-      if (trigger.WarningSeconds > 0 && wrapper.ModifiedDurationSeconds - trigger.WarningSeconds is var diff and > 0)
+      if (trigger.WarningSeconds > 0 && newTimerData.DurationSeconds - trigger.WarningSeconds is var diff and > 0)
       {
         newTimerData.WarningSource = new CancellationTokenSource();
         var data = newTimerData;
@@ -933,7 +944,6 @@ namespace EQLogParser
       // true for add
       TriggerOverlayManager.Instance.UpdateTimer(trigger, newTimerData, TriggerOverlayManager.TimerStateChange.Start);
 
-      var duration = (int)(wrapper.ModifiedDurationSeconds * 1000);
       var data2 = newTimerData;
       var token = data2.CancelSource.Token;
 
@@ -941,7 +951,7 @@ namespace EQLogParser
       {
         try
         {
-          await Task.Delay(duration, token);
+          await Task.Delay((int)(data2.DurationSeconds * 1000), token);
         }
         catch (OperationCanceledException)
         {
@@ -1013,7 +1023,8 @@ namespace EQLogParser
             {
               if (!_activeTriggersById.ContainsKey(wrapper.Id)) return;
               // repeat 
-              HandleTrigger(wrapper, data2.RepeatingTimerLineData, data2.OriginalMatches, data2.PreviousMatches, 0, DateTime.UtcNow.Ticks, data2.TimesToLoopCount + 1);
+              HandleTrigger(wrapper, data2.RepeatingTimerLineData, data2.OriginalMatches, data2.PreviousMatches, dynamicDuration,
+                0, DateTime.UtcNow.Ticks, data2.TimesToLoopCount + 1);
               CheckTimers(wrapper, timerList, lineData);
             }
             finally
@@ -1139,7 +1150,6 @@ namespace EQLogParser
               ModifiedEndDisplay = PreProcessCodes(trigger.EndTextToDisplay, trigger),
               ModifiedEndEarlyDisplay = PreProcessCodes(trigger.EndEarlyTextToDisplay, trigger),
               ModifiedTimerName = string.IsNullOrEmpty(modifiedTimerName) ? "" : modifiedTimerName,
-              ModifiedDurationSeconds = trigger.DurationSeconds,
               ModifiedEndEarlyPattern = PreProcessCodes(trigger.EndEarlyPattern, trigger),
               ModifiedEndEarlyPattern2 = PreProcessCodes(trigger.EndEarlyPattern2, trigger),
               ModifiedPattern = !trigger.UseRegex ? pattern : null,
@@ -1727,7 +1737,6 @@ namespace EQLogParser
       public Trigger TriggerData { get; init; }
       // only the main thread modifies these values
       public string ModifiedPreviousPattern { get; set; }
-      public double ModifiedDurationSeconds { get; set; }
       public Regex Regex { get; set; }
       public Regex PreviousRegex { get; set; }
       public List<NumberOptions> RegexNOptions { get; set; }
