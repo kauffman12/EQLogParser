@@ -279,7 +279,7 @@ namespace EQLogParser
       }
 
       var success = mc.Count > 0;
-      matches = success ? [] : null;
+      matches = success ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) : null;
 
       foreach (Match m in mc)
       {
