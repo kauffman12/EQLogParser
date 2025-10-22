@@ -23,6 +23,7 @@
           <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
         </fa:ImageAwesome.LayoutTransform>
       </fa:ImageAwesome>
+      <Label x:Name="triggerStatus" Margin="40,0,0,2" Padding="0" Visibility="Collapsed" VerticalAlignment="Center" Content="Cache Update Pending..." Style="{DynamicResource EQStatusStyle}" />
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <Grid Margin="0,0,12,8" PreviewMouseLeftButtonDown="ToggleAdvancedPreviewMouseDown">

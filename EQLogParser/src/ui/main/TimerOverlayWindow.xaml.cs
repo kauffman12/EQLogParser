@@ -182,7 +182,7 @@ namespace EQLogParser
 
       try
       {
-        lock (_idleTimerList)
+        lock (_idleTimerList.SyncRoot)
         {
           foreach (var idle in _idleTimerList.ToArray())
           {
@@ -193,7 +193,7 @@ namespace EQLogParser
           }
         }
 
-        lock (_timerList)
+        lock (_timerList.SyncRoot)
         {
           foreach (var timerData in _timerList.ToArray())
           {

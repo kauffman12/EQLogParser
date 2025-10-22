@@ -155,43 +155,45 @@ namespace EQLogParser
     {
       await UpdateDefaultOverlaysAsync();
 
-      await UiUtil.InvokeAsync(async () =>
+      var ids = overlayIds.Where(id => !string.IsNullOrEmpty(id)).ToList();
+      var overlays = await Task.WhenAll(ids.Select(TriggerStateManager.Instance.GetOverlayById));
+
+      List<string> allOverlayIds = null;
+      await UiUtil.InvokeAsync(() =>
       {
-        foreach (var overlayId in overlayIds)
+        for (var i = 0; i < ids.Count; i++)
         {
-          if (!string.IsNullOrEmpty(overlayId))
+          var overlayId = ids[i];
+          var overlay = overlays[i];
+
+          // if not found make sure there's no window
+          if (overlay == null)
           {
-            var overlay = await TriggerStateManager.Instance.GetOverlayById(overlayId);
+            RemoveWindow(overlayId);
+            _closeRegex.TryRemove(overlayId, out _);
+            continue;
+          }
 
-            // if not found make sure there's no window
-            if (overlay == null)
-            {
-              RemoveWindow(overlayId);
-              _closeRegex.TryRemove(overlayId, out _);
-              continue;
-            }
+          // update text overlay regex
+          if (overlay.OverlayData.IsTextOverlay)
+          {
+            UpdateCloseRegex(overlayId, overlay.OverlayData);
+          }
 
-            // update text overlay regex
-            if (overlay.OverlayData.IsTextOverlay)
-            {
-              UpdateCloseRegex(overlayId, overlay.OverlayData);
-            }
-
-            if (overlay.OverlayData.IsTextOverlay && !_textWindows.ContainsKey(overlayId))
-            {
-              AddWindow(_textWindows, overlay);
-            }
-            else if (overlay.OverlayData.IsTimerOverlay && !_timerWindows.ContainsKey(overlayId))
-            {
-              AddWindow(_timerWindows, overlay);
-            }
+          if (overlay.OverlayData.IsTextOverlay && !_textWindows.ContainsKey(overlayId))
+          {
+            AddWindow(_textWindows, overlay);
+          }
+          else if (overlay.OverlayData.IsTimerOverlay && !_timerWindows.ContainsKey(overlayId))
+          {
+            AddWindow(_timerWindows, overlay);
           }
         }
-      });
 
-      // remove windows that aren't needed anymore
-      var allOverlayIds = _textWindows.Keys.ToList();
-      allOverlayIds.AddRange([.. _timerWindows.Keys]);
+        // remove windows that aren't needed anymore
+        allOverlayIds = [.. _textWindows.Keys];
+        allOverlayIds.AddRange([.. _timerWindows.Keys]);
+      });
 
       var defaultTextOverlay = _defaultOverlays.GetValueOrDefault(TEXT_OVERLAY);
       var defaultTimerOverlay = _defaultOverlays.GetValueOrDefault(TIMER_OVERLAY);
@@ -201,16 +203,19 @@ namespace EQLogParser
         UpdateCloseRegex(defaultTextOverlay.Id, defaultTextOverlay.OverlayData);
       }
 
-      await UiUtil.InvokeAsync(() =>
+      if (allOverlayIds?.Count > 0)
       {
-        foreach (var allId in allOverlayIds)
+        await UiUtil.InvokeAsync(() =>
         {
-          if (!overlayIds.Contains(allId) && allId != defaultTextOverlay?.Id && allId != defaultTimerOverlay?.Id)
+          foreach (var allId in allOverlayIds)
           {
-            RemoveWindow(allId);
+            if (!overlayIds.Contains(allId) && allId != defaultTextOverlay?.Id && allId != defaultTimerOverlay?.Id)
+            {
+              RemoveWindow(allId);
+            }
           }
-        }
-      });
+        });
+      }
 
       // validate timers
       foreach (var kv in _timerWindows)

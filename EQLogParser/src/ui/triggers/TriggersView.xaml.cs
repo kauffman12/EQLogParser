@@ -244,6 +244,14 @@ namespace EQLogParser
       });
     }
 
+    private void EventsUpdatingTriggers(bool updating)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        triggerStatus.Visibility = updating ? Visibility.Visible : Visibility.Collapsed;
+      });
+    }
+
     internal bool IsCancelSelection()
     {
       var model = thePropertyGrid?.SelectedObject;
@@ -743,12 +751,6 @@ namespace EQLogParser
       {
         await TriggerUtil.Copy(triggerModel.Node.TriggerData, model);
         await TriggerStateManager.Instance.Update(triggerModel.Node);
-
-        // reload triggers if current one is enabled by anyone
-        if (await TriggerStateManager.Instance.IsAnyEnabled(triggerModel.Node.Id))
-        {
-          TriggerManager.Instance.TriggersUpdated();
-        }
       }
       else
       {
@@ -884,6 +886,7 @@ namespace EQLogParser
         TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
         TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
         TriggerManager.Instance.EventsSelectTrigger += EventsSelectTrigger;
+        TriggerManager.Instance.EventsUpdatingTriggers += EventsUpdatingTriggers;
         characterView.SelectedCharacterEvent += CharacterSelectedCharacterEvent;
         theTreeView.TreeSelectionChangedEvent += TreeSelectionChangedEvent;
         theTreeView.ClosePreviewOverlaysEvent += ClosePreviewOverlaysEvent;
@@ -899,6 +902,7 @@ namespace EQLogParser
       TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
       TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
       TriggerManager.Instance.EventsSelectTrigger -= EventsSelectTrigger;
+      TriggerManager.Instance.EventsUpdatingTriggers -= EventsUpdatingTriggers;
       characterView.SelectedCharacterEvent -= CharacterSelectedCharacterEvent;
       theTreeView.TreeSelectionChangedEvent -= TreeSelectionChangedEvent;
       theTreeView.ClosePreviewOverlaysEvent -= ClosePreviewOverlaysEvent;
