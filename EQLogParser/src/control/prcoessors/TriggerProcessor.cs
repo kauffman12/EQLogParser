@@ -1116,7 +1116,8 @@ namespace EQLogParser
       var activeTriggersById = new Dictionary<string, TriggerWrapper>();
       var enabledTriggers = await TriggerStateManager.Instance.GetEnabledTriggers(CurrentCharacterId);
       long triggerCount = 0;
-      foreach (var enabled in enabledTriggers.ToArray())
+
+      foreach (var enabled in enabledTriggers)
       {
         var trigger = enabled.Trigger;
         if (trigger.Pattern is { } pattern && !string.IsNullOrEmpty(pattern))
@@ -1261,7 +1262,7 @@ namespace EQLogParser
         }
       }
 
-      if (triggerCount > 500 && CurrentProcessorName?.Contains("Trigger Tester") == false)
+      if (triggerCount > 750 && CurrentProcessorName?.Contains("Trigger Tester") == false)
       {
         Log.Warn($"Over {triggerCount} triggers active for one character. To improve performance consider turning off old triggers.");
       }
@@ -1333,8 +1334,7 @@ namespace EQLogParser
 
         // pick whichever group matched
         var name = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[3].Value;
-        var modifier = m.Groups[2].Success ? m.Groups[2].Value :
-                       (m.Groups[4].Success ? m.Groups[4].Value : null);
+        var modifier = m.Groups[2].Success ? m.Groups[2].Value : (m.Groups[4].Success ? m.Groups[4].Value : null);
 
         if (!matches.TryGetValue(name, out var value))
         {
@@ -1402,8 +1402,7 @@ namespace EQLogParser
       return -1;
     }
 
-    private void RemoveRepeatedTimes(ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> times, TriggerWrapper wrapper,
-      string displayValue)
+    private void RemoveRepeatedTimes(ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> times, TriggerWrapper wrapper, string displayValue)
     {
       if (!string.IsNullOrEmpty(wrapper.Id) && !string.IsNullOrEmpty(displayValue))
       {

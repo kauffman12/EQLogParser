@@ -450,7 +450,7 @@ namespace EQLogParser
       });
     }
 
-    internal async Task<IEnumerable<OtData>> GetEnabledTriggers(string playerId)
+    internal async Task<List<OtData>> GetEnabledTriggers(string playerId)
     {
       return await _taskQueue.EnqueueTransaction(() =>
       {
@@ -462,7 +462,9 @@ namespace EQLogParser
           {
             if (node.Id is { } id && state.Enabled.TryGetValue(id, out var value) && value == true)
             {
-              result.Add(new OtData { Id = node.Id, Name = node.Name, Trigger = node.TriggerData, OverlayData = node.OverlayData });
+              var trigCopy = App.AutoMap.Map(node.TriggerData, new Trigger());
+              var ovlCopy = node.OverlayData != null ? App.AutoMap.Map(node.OverlayData, new Overlay()) : null;
+              result.Add(new OtData { Id = node.Id, Name = node.Name, Trigger = trigCopy, OverlayData = ovlCopy });
             }
           }
         }

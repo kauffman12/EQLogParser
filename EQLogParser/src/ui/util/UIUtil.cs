@@ -179,17 +179,9 @@ namespace EQLogParser
     {
       if (Application.Current?.Dispatcher is { } dispatcher)
       {
-        await dispatcher.InvokeAsync(async () =>
-        {
-          try
-          {
-            await asyncAction();
-          }
-          catch (Exception)
-          {
-            // ignore
-          }
-        }, priority);
+        // Use the TResult overload so we get DispatcherOperation<Task>, then unwrap
+        var inner = await dispatcher.InvokeAsync(asyncAction, priority); // DispatcherOperation<Task>
+        await inner;                                                     // unwrap & await actual work
       }
     }
 

@@ -11,6 +11,7 @@ namespace EQLogParser
   internal class TriggerManager
   {
     internal event Action<bool> EventsProcessorsUpdated;
+    internal event Action<bool> EventsUpdatingTriggers;
     internal event Action<TriggerLogEntry> EventsSelectTrigger;
     internal static TriggerManager Instance => Lazy.Value;
 
@@ -35,6 +36,7 @@ namespace EQLogParser
 
     internal void TriggersUpdated()
     {
+      EventsUpdatingTriggers?.Invoke(true);
       _triggerUpdateTimer.Stop();
       _triggerUpdateTimer.Start();
     }
@@ -118,7 +120,15 @@ namespace EQLogParser
     private async void OverlayImportEvent(bool obj) => await TriggerUtil.LoadOverlayStyles();
     // in case of merge
     private void TriggerImportEvent(bool _) => TriggersUpdated();
-    private void TriggerUpdateEvent(TriggerNode _) => TriggersUpdated();
+
+    private async void TriggerUpdateEvent(TriggerNode node)
+    {
+      // reload triggers if current one is enabled by anyone
+      if (await TriggerStateManager.Instance.IsAnyEnabled(node.Id))
+      {
+        TriggersUpdated();
+      }
+    }
 
     private async void TriggerManagerEventsLogLoadingComplete(string _)
     {
@@ -278,6 +288,7 @@ namespace EQLogParser
     private async void TriggersDoUpdate(object sender, EventArgs e)
     {
       _triggerUpdateTimer.Stop();
+
       var processors = await GetProcessorsAsync();
       foreach (var processor in processors)
       {
@@ -285,6 +296,7 @@ namespace EQLogParser
       }
 
       await UpdateOverlayInfo();
+      EventsUpdatingTriggers?.Invoke(false);
     }
 
     private async Task FireEventsProcessorsUpdatedAsync()
