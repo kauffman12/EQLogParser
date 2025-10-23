@@ -19,6 +19,15 @@
       <Setter Property="Margin" Value="0,0,0,0" />
     </Style>
 
+    <Style x:Key="EQStatusStyle" TargetType="Label">
+      <Setter Property="Background" Value="{x:Null}" />
+      <Setter Property="Foreground" Value="{DynamicResource ContentForeground}" />
+      <Setter Property="FontSize" Value="{DynamicResource EQContentSize}" />
+      <Setter Property="FontWeight" Value="DemiBold" />
+      <Setter Property="FontStyle" Value="Italic" />
+      <Setter Property="Margin" Value="0,0,0,0" />
+    </Style>
+
     <Style x:Key="EQExpanderCellStyle" TargetType="syncfusion:TreeGridExpanderCell">
       <Setter Property="FontSize" Value="{DynamicResource EQContentSize}" />
       <Setter Property="CurrentCellBorderThickness" Value="0" />

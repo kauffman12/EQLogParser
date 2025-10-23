@@ -1,6 +1,12 @@
-# 2.3.26 | 10/19/25
+# 2.3.27 | 10/23/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
 
+1. Added indicator in **Trigger Manager** to show triggers reload.
+2. Fix for dictionary replacing parts of words not just whole words.
+3. More cleanup in timer and text overlay windows.
+4. Update NPC list from beta.
+
+# 2.3.26 | 10/19/25
 1. Fixes for recent **Trigger Processing** cleanup.
 2. Fix for dynamic timer duration being inconsistent when timer repeated quickly.
 
