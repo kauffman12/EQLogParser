@@ -294,5 +294,54 @@ namespace EQLogParser
 
       return success;
     }
+
+    internal static string ReplaceWholeWords(string input, IReadOnlyDictionary<string, string> replacements)
+    {
+      if (string.IsNullOrEmpty(input) || replacements == null || replacements.Count == 0)
+      {
+        return input;
+      }
+
+      var sb = new StringBuilder(input.Length);
+      var word = new StringBuilder();
+
+      foreach (var c in input)
+      {
+        if (char.IsLetterOrDigit(c))
+        {
+          // Build up a word
+          word.Append(c);
+        }
+        else
+        {
+          // Non-word boundary reached → flush word if any
+          if (word.Length > 0)
+          {
+            var w = word.ToString();
+            if (replacements.TryGetValue(w, out var replacement))
+              sb.Append(replacement);
+            else
+              sb.Append(w);
+
+            word.Clear();
+          }
+
+          // Keep punctuation/whitespace as-is
+          sb.Append(c);
+        }
+      }
+
+      // Flush last word (if string ended with one)
+      if (word.Length > 0)
+      {
+        var w = word.ToString();
+        if (replacements.TryGetValue(w, out var replacement))
+          sb.Append(replacement);
+        else
+          sb.Append(w);
+      }
+
+      return sb.ToString();
+    }
   }
 }

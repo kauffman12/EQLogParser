@@ -796,6 +796,22 @@ namespace EQLogParser
       MainActions.OpenFileWithDefault($"{App.ParserHome}/status.html?{queryString}");
     }
 
+    internal static IReadOnlyDictionary<string, string> ToLexiconDictionary(this List<LexiconItem> lexicon)
+    {
+      if (lexicon == null || lexicon.Count == 0)
+        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+      return lexicon
+          .Where(item =>
+              !string.IsNullOrEmpty(item?.Replace) &&
+              !string.IsNullOrEmpty(item?.With))
+          .GroupBy(item => item.Replace, StringComparer.OrdinalIgnoreCase)
+          .ToDictionary(
+              g => g.Key,
+              g => g.First().With,
+              StringComparer.OrdinalIgnoreCase);
+    }
+
     private static Match MatchQuickShare(string text)
     {
       var match = ShareRegex.Match(text);
