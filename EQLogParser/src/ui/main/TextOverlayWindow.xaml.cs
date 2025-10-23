@@ -142,7 +142,7 @@ namespace EQLogParser
           isComplete = Tick();
         });
 
-        await Task.Delay(250);
+        await Task.Delay(150);
 
         if (_isClosed)
         {
@@ -220,10 +220,10 @@ namespace EQLogParser
         {
           if (end < currentTicks)
           {
-            content.Children.RemoveAt(last);
             block.Text = string.Empty;
             block.Tag = 0;
             block.Visibility = Visibility.Collapsed;
+            content.Children.RemoveAt(last);
           }
         }
       }
