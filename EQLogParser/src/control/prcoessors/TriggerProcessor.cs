@@ -8,7 +8,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -30,7 +29,6 @@ namespace EQLogParser
     public readonly string CurrentProcessorName;
     private static readonly Regex TokenRegex = MatchesTokenRegex();
 
-    private const long SixtyHours = 10 * 6 * 60 * 60 * 1000;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly string _currentPlayer;
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> _counterTimes = [];
@@ -45,7 +43,7 @@ namespace EQLogParser
     private readonly Dictionary<string, TriggerWrapper> _activeTriggersById = [];
     private readonly SemaphoreSlim _activeTriggerSemaphore = new(1, 1);
     private readonly object _repeatedLock = new();
-    private List<LexiconItem> _lexicon;
+    private IReadOnlyDictionary<string, string> _lexicon;
     private List<TrustedPlayer> _trustedPlayers;
     private volatile string _activeColor;
     private volatile string _fontColor;
@@ -89,7 +87,7 @@ namespace EQLogParser
     internal async Task StartAsync()
     {
       await GetActiveTriggersAsync();
-      _lexicon = [.. await TriggerStateManager.Instance.GetLexicon()];
+      _lexicon = TriggerUtil.ToLexiconDictionary(await TriggerStateManager.Instance.GetLexicon());
       _trustedPlayers = [.. await TriggerStateManager.Instance.GetTrustedPlayers()];
     }
 
@@ -245,7 +243,7 @@ namespace EQLogParser
 
     private static string ProcessLineCode(string text, string line) => !string.IsNullOrEmpty(text) ?
       text.Replace("{l}", line, StringComparison.OrdinalIgnoreCase) : text;
-    private void LexiconUpdateEvent(List<LexiconItem> update) => _lexicon = update?.ToList();
+    private void LexiconUpdateEvent(List<LexiconItem> update) => _lexicon = TriggerUtil.ToLexiconDictionary(update);
     private void TrustedPlayersUpdateEvent(List<TrustedPlayer> update) => _trustedPlayers = update?.ToList();
     private List<TimerData> GetTimerList(TriggerWrapper w) => _timerLists.GetOrAdd(w.Id, _ => new List<TimerData>(2));
 
@@ -1073,13 +1071,7 @@ namespace EQLogParser
 
           if (!string.IsNullOrEmpty(tts) && lexicon != null)
           {
-            foreach (var item in CollectionsMarshal.AsSpan(lexicon))
-            {
-              if (item != null && !string.IsNullOrEmpty(item.Replace) && !string.IsNullOrEmpty(item.With))
-              {
-                tts = tts.Replace(item.Replace, item.With, StringComparison.OrdinalIgnoreCase);
-              }
-            }
+            tts = TextUtils.ReplaceWholeWords(tts, lexicon);
 
             if (!string.IsNullOrEmpty(tts))
             {

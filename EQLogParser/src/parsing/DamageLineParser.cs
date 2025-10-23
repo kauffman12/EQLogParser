@@ -1209,7 +1209,9 @@ namespace EQLogParser
       var ignore = name.EndsWith("`s Mount", StringComparison.OrdinalIgnoreCase) || ChestTypes.FindIndex(type => name.EndsWith(type, StringComparison.OrdinalIgnoreCase)) >= 0;
       if (!ignore && CheckEyeRegex.IsMatch(name))
       {
-        ignore = !name.EndsWith("Veeshan", StringComparison.OrdinalIgnoreCase) && !name.EndsWith("Despair", StringComparison.OrdinalIgnoreCase);
+        ignore = !name.EndsWith("Veeshan", StringComparison.OrdinalIgnoreCase)
+          && !name.EndsWith("Despair", StringComparison.OrdinalIgnoreCase) &&
+          !name.EndsWith("Mother", StringComparison.OrdinalIgnoreCase);
       }
       return ignore;
     }
