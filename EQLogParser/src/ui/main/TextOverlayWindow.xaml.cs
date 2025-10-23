@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,6 +12,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -22,7 +22,7 @@ namespace EQLogParser
     private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
     private readonly bool _preview;
     private readonly ConcurrentQueue<TextData> _queue;
-    private readonly SemaphoreSlim _renderSemaphore = new(1, 1);
+    private readonly DispatcherTimer _timer;
     private List<TextBlock> _blockCache;
     private TriggerNode _node;
     private Dictionary<string, Window> _previewWindows;
@@ -32,10 +32,8 @@ namespace EQLogParser
     private long _savedTop = long.MaxValue;
     private long _savedLeft = long.MaxValue;
     private nint _windowHndl;
-    private volatile bool _isRendering;
     private volatile bool _isClosed;
     private readonly bool _streamerMode;
-    private bool _disposed;
 
     internal TextOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
     {
@@ -68,33 +66,31 @@ namespace EQLogParser
       else
       {
         content.SetResourceReference(Panel.BackgroundProperty, "OverlayBrushColor-" + _node.Id);
+        _timer = UiUtil.CreateTimer(DoTick, 150, false);
       }
 
       TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
     }
 
-    internal async void AddTextAsync(string text, long beginTicks, Brush brush)
+    internal void AddText(string text, long beginTicks, Brush brush)
     {
       if (_isClosed)
       {
         return;
       }
 
-      await _renderSemaphore.WaitAsync();
+      _queue.Enqueue(new TextData { Text = text, BeginTicks = beginTicks, FontColorBrush = brush });
 
-      try
+      // Ensure the timer is running (UI thread)
+      if (_timer != null && !_timer.IsEnabled)
       {
-        _queue.Enqueue(new TextData { Text = text, BeginTicks = beginTicks, FontColorBrush = brush });
-
-        if (!_isRendering)
+        Dispatcher.InvokeAsync(() =>
         {
-          _isRendering = true;
-          _ = StartRenderingAsync();
-        }
-      }
-      finally
-      {
-        _renderSemaphore.Release();
+          if (!_timer.IsEnabled)
+          {
+            _timer.Start();
+          }
+        });
       }
     }
 
@@ -106,6 +102,8 @@ namespace EQLogParser
 
     internal void StopOverlay()
     {
+      _timer?.Stop();
+
       for (var last = content.Children.Count - 1; last >= 0; last--)
       {
         if (content.Children[last] is TextBlock { Tag: long } block)
@@ -120,56 +118,23 @@ namespace EQLogParser
       content.Visibility = Visibility.Collapsed;
     }
 
-    private async Task StartRenderingAsync()
+    private void DoTick(object sender, EventArgs e)
     {
-      while (_isRendering)
+      // 1) Drain new items on UI thread
+      while (_queue.TryDequeue(out var td))
       {
-        var isComplete = false;
-        await Dispatcher.InvokeAsync(() =>
-        {
-          while (_queue.TryDequeue(out var textData))
-          {
-            RenderText(textData.Text, textData.BeginTicks, textData.FontColorBrush);
-            Visibility = Visibility.Visible;
-          }
+        RenderText(td.Text, td.BeginTicks, td.FontColorBrush);
+        Visibility = Visibility.Visible;
+      }
 
-          if (Visibility != Visibility.Visible)
-          {
-            return;
-          }
+      if (Visibility != Visibility.Visible) return;
 
-          // true if complete
-          isComplete = Tick();
-        });
+      var done = Tick();
 
-        await Task.Delay(150);
-
-        if (_isClosed)
-        {
-          return;
-        }
-
-        if (isComplete)
-        {
-          await _renderSemaphore.WaitAsync();
-
-          try
-          {
-            if (_queue.IsEmpty)
-            {
-              _isRendering = false;
-
-              Dispatcher.Invoke(() =>
-              {
-                Visibility = Visibility.Collapsed;
-              });
-            }
-          }
-          finally
-          {
-            _renderSemaphore.Release();
-          }
-        }
+      if (done && _queue.IsEmpty)
+      {
+        Visibility = Visibility.Collapsed;
+        _timer.Stop();
       }
     }
 
@@ -373,7 +338,7 @@ namespace EQLogParser
       try
       {
         _isClosed = true;
-        _isRendering = false;
+        _timer?.Stop();
         TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
         _previewWindows?.Remove(_node.Id);
         _previewWindows = null;
@@ -389,20 +354,7 @@ namespace EQLogParser
 
     public void Dispose()
     {
-      Dispose(true);
       GC.SuppressFinalize(this);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-      if (_disposed) return;
-
-      if (disposing)
-      {
-        _renderSemaphore?.Dispose();
-      }
-
-      _disposed = true;
     }
 
     // Possible workaround for data area passed to system call is too small

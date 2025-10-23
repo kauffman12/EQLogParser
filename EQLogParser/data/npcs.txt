@@ -179,6 +179,7 @@ a beetle bot
 a beetle den
 a beetle nest
 a beetlework, model lxxx
+a beewax fish
 a befouled flesheater
 a beggar
 a beguiler
@@ -333,6 +334,7 @@ a blackguard
 a blackhand guardian
 a blackhand lieutenant
 a blackhand veteran
+a blackheart fish
 a blackroot spider
 a blacksail assassin
 a blacksail boatswain
@@ -440,6 +442,7 @@ a blighted jin master
 a blighted prowler
 a blighted rat
 a blighted scarecrow
+a blighted singer
 a blighted skeleton
 a blighted venomfang
 a blightfire never rest
@@ -496,6 +499,7 @@ a blood wolf
 a blood-blackened steamwork
 a blood-crusted gravebone
 a blood-drenched bonewalker
+a blood-soaked chest
 a blood-spattered chest
 a blood-stained chest
 a blood-stained stalker
@@ -658,6 +662,7 @@ a blue fungus patch
 a blue imp
 a blue orb
 a blue puppet organ
+a blue waxwork fish
 a bluefin slasher
 a bluesky stonegrabber
 a bluff golem
@@ -834,6 +839,7 @@ a bridge minder
 a bridge protector
 a bridge watcher
 a brigand
+a bright energist
 a bright warden
 a brightshell s`ripla
 a brilliant coalescence of light
@@ -857,6 +863,7 @@ a broken golem
 a broken music box
 a broken prisoner
 a broken ritesdancer
+a broken skill cenobite
 a broken skull acolyte
 a broken skull adherent
 a broken skull advocate
@@ -968,6 +975,7 @@ a bruiser minotaur
 a brume armor
 a brumebreeze armor
 a brumeflight armor
+a brutal cultist
 a brutal skeletal reaver
 a brutal skeletal sailor
 a brutal turtle
@@ -977,6 +985,7 @@ a brutalized zombie
 a brutalizer
 a brutalizer of alsa thelara
 a brute
+a brutish galasaur grunt
 a brutish manservant
 a bubbling accursed mass
 a bubbling clod of flesh
@@ -1051,9 +1060,11 @@ a burning crystal
 a burning dead
 a burning desire
 a burning elemental
+a burning evocationalist
 a burning fragment of solusek
 a burning goo
 a burning guardian
+a burning herald
 a burning lava ooze
 a burning mephit
 a burning mire
@@ -1066,6 +1077,7 @@ a burning tome dervish
 a burning tome dervish pet
 a burning tome whirlwind
 a burning treant
+a burning warcaster
 a burnt bones
 a burnt guardian
 a burnt protector
@@ -1142,7 +1154,15 @@ a camouflaged assassin
 a campfire
 a candied bunny
 a candied horror
+a candle master brute
+a candle master coercer
+a candle master leader
+a candle master slinger
 a candleflame elemental
+a candlefolk flame worshipper
+a candlefolk illuminator
+a candlefolk sprout
+a candlefolk wax soldier
 a candy hoarder
 a canine animist
 a cannibal cook
@@ -1336,6 +1356,7 @@ a chaos gouzah
 a chaos healer of flame
 a chaos scorpion
 a chaotic clay guardian
+a chaotic earth pile
 a chaotic vortex
 a chapel guard
 a chaplain
@@ -1343,6 +1364,8 @@ a chaplain of fire
 a charbane skeleton
 a chardok gnomeslaver
 a chardoki golem
+a charged battlemage
+a charged sentinel
 a charging minotar image
 a charging scrykin
 a charismatic guardian
@@ -1411,6 +1434,7 @@ a chill vas ren guardian
 a chillclaw wyvern
 a chilled carcass
 a chilled ooze
+a chilling breath
 a chilling nettling wraith
 a chimeric trophyguard
 a chirugeon
@@ -1635,10 +1659,12 @@ a clockwork brewmaster
 a clockwork cache
 a clockwork captain
 a clockwork chef
+a clockwork clunker
 a clockwork cobbler
 a clockwork companion
 a clockwork defender
 a clockwork device
+a clockwork engineer
 a clockwork fletcher
 a clockwork golem
 a clockwork grocer
@@ -1667,6 +1693,7 @@ a clockwork spurter
 a clockwork surgeon
 a clockwork tailor
 a clockwork tanner
+a clockwork tinker
 a clockwork torturer
 a clockwork weaponsmith
 a clockwork whirlygig
@@ -1723,6 +1750,7 @@ a cold screamer
 a cold shade
 a cold skeleton
 a cold spectre
+a cold spiritlight
 a cold steel chest
 a coldain blacksmith
 a coldain brewer
@@ -1812,6 +1840,7 @@ a compact initiate
 a compact renewer
 a companion chimera
 a companion feran
+a compassionate healer
 a compelling vision
 a compendium of lore
 a complacent zombie
@@ -1913,8 +1942,10 @@ a contemplative druid
 a contemplative froglok
 a contemplative thifling
 a contemplative verdantguardian
+a contemptuous husk
 a contemptuous master crafter
 a contemptuous mystic
+a contemptuous vessel
 a content black bear
 a controlled earth churner
 a convergence of sea
@@ -1965,6 +1996,7 @@ a corpse
 a corpse caller
 a corpse desecrator
 a corpse eating beetle
+a corpse golem
 a corpse hacker
 a corpse hider
 a corpse hulk
@@ -1992,6 +2024,7 @@ a corrupt paladin
 a corrupt pusling
 a corrupt scholar
 a corrupt spiritualist
+a corrupt spirtualist
 a corrupt warlock
 a corrupted akhevan
 a corrupted akhevan scout
@@ -2053,6 +2086,7 @@ a corrupted revenant
 a corrupted sapling
 a corrupted scorpion
 a corrupted scout
+a corrupted scrykin
 a corrupted scuttler
 a corrupted sentinel
 a corrupted snake
@@ -2094,6 +2128,7 @@ a coterie soldier
 a coterie swordsman
 a coterie trooper
 a coterie veteran
+a cotton veilwing
 a council advisor
 a council dissident
 a council historian
@@ -2204,11 +2239,13 @@ a crazed bubonian berserker
 a crazed candy hoarder
 a crazed chelaki
 a crazed digger
+a crazed flesh horror
 a crazed ghoul
 a crazed goblin
 a crazed halfling
 a crazed holgresh
 a crazed iksar slave
+a crazed knight
 a crazed mephit
 a crazed mercenary
 a crazed miner
@@ -2217,6 +2254,9 @@ a crazed prisoner
 a crazed scarecrow
 a crazed scrykin
 a crazed slasher
+a crazed sorcerer
+a crazed soulbinder
+a crazed spiritlight
 a crazed white jester
 a crazed zelniak
 a creaky treant
@@ -2270,6 +2310,7 @@ a crownshell carapace
 a cruel carnifex
 a cruel magic squall
 a cruel racnar
+a cruel rat
 a cruel spellbinder
 a cruel torturer
 a cruel wurmling
@@ -2440,9 +2481,11 @@ a cursed bloodwing minion
 a cursed bloodwing scout
 a cursed bloodwing watcher
 a cursed burrower
+a cursed combatant
 a cursed conscript
 a cursed convoker
 a cursed crow
+a cursed deathspeaker
 a cursed dervish
 a cursed dissenter
 a cursed drachnid arcanist
@@ -2458,6 +2501,7 @@ a cursed guardian pet
 a cursed guktan
 a cursed hand
 a cursed human
+a cursed knight
 a cursed korta adventurer
 a cursed korta research
 a cursed korta researcher
@@ -2472,9 +2516,12 @@ a cursed spectral shaper
 a cursed spellweaver
 a cursed stalker
 a cursed sun revenant
+a cursed swindler
+a cursed tinkerer
 a cursed treant
 a cursed venomfang
 a cursed vicar
+a cursed warrior
 a cursed whelp
 a cursed willow
 a cursed yunta bonereader
@@ -2495,11 +2542,13 @@ a dalgortha
 a damaged accursed bloodwing
 a damaged crate
 a damaged cursed guardian
+a damaged forest golem
 a damaged gnomelike sparkler
 a damaged gnomelike worker
 a damaged iron legion admirer
 a damaged iron legion friend
 a damaged iron legion helper
+a damaged thicket golem
 a damp crate
 a dancer
 a dancing flame
@@ -2517,6 +2566,7 @@ a dark anglerfish
 a dark ass`t librarian
 a dark assailant
 a dark assassin
+a dark automaton
 a dark beast
 a dark believer
 a dark cavern spider
@@ -2541,6 +2591,7 @@ a dark elf resident
 a dark elf royal
 a dark elf slave
 a dark elf veteran
+a dark energist
 a dark essencegazer
 a dark guardian
 a dark guardian of the warlord
@@ -2685,6 +2736,7 @@ a darkwater piranha
 a darkwater snapjaw
 a darkweed snake
 a darkwing bat
+a darting spiritlight
 a dastardly rascal
 a dastardly scoundrel
 a dawnbane serpent
@@ -3044,6 +3096,7 @@ a devastated prisoner
 a developer`s meddling hand
 a devious guardian jokester
 a devious scout
+a devious scrykin
 a devious wrangler
 a devious wrangler pet
 a devistating pooka
@@ -3592,6 +3645,7 @@ a dracholiche
 a dracolich
 a dracoliche
 a dracoliche pet
+a dragon cannon
 a dragon construct
 a dragon egg
 a dragon whelp
@@ -3728,9 +3782,11 @@ a dread light
 a dread locust
 a dread thought leech
 a dread widow
+a dread wolf
 a dread zelniak
 a dreadfrost drake
 a dreadful bat
+a dreadful blade
 a dreadful bone golem
 a dreadful harbinger
 a dreadful scorpikis
@@ -3940,6 +3996,8 @@ a faint drolvarg
 a fair maiden
 a fairy guard
 a fairy shrine
+a faitful defender
+a faitful protector
 a faithblind hulk
 a faithful citizen
 a faithful farmer
@@ -3970,6 +4028,7 @@ a fallen iksar
 a fallen iksar master
 a fallen knight
 a fallen krithgor warrior
+a fallen maiden
 a fallen monk
 a fallen myrmidon
 a fallen necromancer
@@ -4209,15 +4268,18 @@ a fiery aggressor
 a fiery blast
 a fiery darkshard guardian
 a fiery drake
+a fiery emberfang
 a fiery golem
 a fiery guardian
 a fiery lavaspinner
 a fiery mepheeka
 a fiery orb
+a fiery scrykin
 a fiery skeleton
 a fiery skeleton statue
 a fiery skirmisher
 a fiery sorcerer
+a fiery spellbinder
 a fiery spirit equine
 a fiery spirit equine lord
 a fiery spirit steed
@@ -4530,6 +4592,7 @@ a forest giant madcutter
 a forest giant militant
 a forest giant sapling
 a forest giant verdant
+a forest golem
 a forest greenfang
 a forest guardian
 a forest protector
@@ -4567,6 +4630,7 @@ a forgotten shopkeeper
 a forgotten slave
 a forgotten soul
 a forgotten spirit
+a forgotten spiritlight
 a forgotten strongbox
 a forgotten traveller
 a forgotten vanguard
@@ -4590,6 +4654,7 @@ a forsaken banshee
 a forsaken believer
 a forsaken coordinator
 a forsaken hand
+a forsaken knight
 a forsaken lightcrawler
 a forsaken misbeliever
 a forsaken overseer
@@ -4985,8 +5050,14 @@ a fuming mine supervisor
 a fuming shade
 a functionary
 a fungal aberrant
+a fungal enchanter
 a fungal fiend
+a fungal footman
+a fungal head cap
+a fungal mage
+a fungal stabber
 a fungal watcher
+a fungal witch doctor
 a fungi shroom
 a fungible tyrant
 a fungling
@@ -5044,6 +5115,8 @@ a fyr jen keeper
 a fyr jen sentinel
 a gaduladian widemouth
 a gal`saris recruit
+a galasaur flarefin
+a galasaur slitherflurry
 a gale
 a gale envoy
 a gale liege
@@ -5354,6 +5427,8 @@ a gleaming sphere of light
 a gleaming stonewalker
 a gleeful citizen
 a gleeful miscreant
+a glided guardian
+a glided mystic
 a glimmer drake
 a glimmer of light
 a glimmering drake
@@ -5448,6 +5523,7 @@ a gnoll henchman
 a gnoll high shaman
 a gnoll hunter
 a gnoll laborer
+a gnoll leader
 a gnoll lookout
 a gnoll noble
 a gnoll oracle
@@ -5463,6 +5539,7 @@ a gnoll shaman
 a gnoll slave
 a gnoll soothsayer
 a gnoll tactician
+a gnoll thug
 a gnoll watcher
 a gnollish creation
 a gnollish zealot
@@ -5822,6 +5899,7 @@ a gossamer spinner
 a gossiping guest
 a gothic watcher
 a gouzah rabbit
+a governess of spite
 a government official
 a grallok appraisor
 a grallok crusader
@@ -5836,6 +5914,7 @@ a grallok priest
 a grallok protector
 a grallok seeker
 a grand djinn
+a grand manipulator
 a grand overseer
 a grand sessiloid
 a grand tome of history
@@ -5941,6 +6020,7 @@ a greater spirit
 a greater spurbone
 a greater swordfish
 a greater tanglefoot
+a greater war boned skeleton
 a greater water elemental
 a greater windstorm
 a greater wisp
@@ -6142,6 +6222,7 @@ a grimling warlord
 a grimling warmaster
 a grimling warrior
 a grimp
+a grimy chest
 a grimy ooze
 a grimy owlbear cub
 a grimy turepta
@@ -6233,15 +6314,21 @@ a groundskeeper
 a groundswell elemental
 a groundswell of nature
 a grove braxi
+a grove cleric
 a grove goral
 a grove guardian
 a grove hare
 a grove hopper
+a grove scout
 a grove selyrah
+a grove sentinel
+a grove sentinel corpse
 a grove serpent
 a grove snake
 a grove stalker
+a grove tender
 a grove tiger
+a grove warden
 a grovewalker
 a growler raider
 a grown fearling
@@ -6343,6 +6430,7 @@ a gypsy ambassador
 a gypsy dancer
 a gypsy musician
 a gypsy supply barrel
+a gyrating goo
 a gyrating mass
 a gyro defender
 a gyrowork crasher
@@ -6452,15 +6540,19 @@ a hastily built barricade
 a hatchery coordinator
 a hatchling
 a hatchling tender
+a hate drinker
 a hatebone broodlord
 a hatebone drake
 a hatebringer initiate
 a hatebringer of innoruuk
+a hateful chaplain
 a hateful doomscale wrathforged
+a hateful executioner
 a hateful fire elemental
 a hateful oppressor
 a hateful reaver
 a hateful revenant
+a hateful spiter
 a hatestorm dervish
 a hauler
 a haunt
@@ -6792,6 +6884,7 @@ a hungry brute
 a hungry cannibal
 a hungry chef
 a hungry cube
+a hungry drachnid
 a hungry fear blossom
 a hungry ghoul
 a hungry goblin
@@ -6820,6 +6913,7 @@ a hungry skirth
 a hungry spider
 a hungry spiderling
 a hungry spirit
+a hungry spiritlight
 a hungry stonemite
 a hungry terrorwing
 a hungry thief
@@ -6857,6 +6951,10 @@ a hypothermic ghoul
 a indagator materia salus
 a jack o lantern
 a jackal
+a jade civilian
+a jade criminal
+a jade soldier
+a jade spiritist
 a jaded vicarum vitai
 a jagged bone dervish
 a jagged dervish
@@ -6865,6 +6963,9 @@ a jagged steamwork
 a jaguar
 a jaundiced sea turtle
 a jawsnapper
+a jealous escort
+a jealous husk
+a jealous vessel
 a jeering gargoyle
 a jewel encrusted chest
 a jeweled defender
@@ -7068,6 +7169,7 @@ a knife stealer
 a knight of air
 a knight of hate
 a knight of innoruuk
+a knight of loathing
 a knight of zek
 a koalindl
 a kobold
@@ -7097,6 +7199,7 @@ a kobold missionary
 a kobold noble
 a kobold noble pet
 a kobold outcast
+a kobold pack leader
 a kobold pit fighter
 a kobold priest
 a kobold prisoner
@@ -7104,7 +7207,10 @@ a kobold protector
 a kobold royal
 a kobold ruffian
 a kobold runt
+a kobold scavenger
 a kobold scout
+a kobold scrapper
+a kobold seer
 a kobold sentinel
 a kobold sentry
 a kobold shaman
@@ -7115,6 +7221,8 @@ a kobold stoneforger
 a kobold wanderer
 a kobold warder
 a kobold watcher
+a kobold whisperer
+a kobold zealot
 a kodiak
 a kodiak bear
 a koka`vor advisor
@@ -7525,6 +7633,9 @@ a light sonic wolf
 a light stonegrabber
 a light unto your path
 a light vessel
+a lightbearer defender
+a lightbearer protector
+a lightbearer warden
 a lightcrawler
 a lightcrawler defiler
 a lightcrawler drone
@@ -7561,6 +7672,7 @@ a limb remover
 a limping slave
 a lindwyrm
 a line cook
+a linen songspinner
 a lingering bonewalker
 a lingering doomchanter
 a lingering dryad
@@ -7576,6 +7688,7 @@ a lion patriarch
 a lioness
 a lioness matriarch
 a liquefied test subject
+a liquid wax pool
 a listless centurion
 a listless compact keeper
 a listless gladiator
@@ -7658,6 +7771,7 @@ a loathesome stormclaw
 a loathing lich
 a loathling lich
 a loathsome ape
+a loathsome blade
 a loathsome creeper
 a loathsome ghoul
 a loathsome oil ooze
@@ -7729,6 +7843,7 @@ a lost polar bear
 a lost pustulant
 a lost rotwood
 a lost scout
+a lost scrykin
 a lost scrykin attendant
 a lost scrykin retainer
 a lost scrykin servant
@@ -7832,6 +7947,7 @@ a luminii crawler
 a luminous crawler
 a luminous sprite
 a luminous stonewalker
+a lump of spite
 a lunar stonegrabber
 a lunatic rotowork
 a lupine spirit
@@ -7863,6 +7979,7 @@ a maddened mushroom man
 a madman
 a mage apprentice
 a mage master
+a mage of loathing
 a maggot
 a maggot-ridden guardian
 a maggot-ridden zombie
@@ -7903,6 +8020,7 @@ a magma rocklord
 a magma shade
 a magma shatterer
 a magma slime
+a magma snail
 a magma war drake
 a magmatic spiderling
 a magmatic tyro
@@ -7960,15 +8078,19 @@ a malgrinnorian archeologist
 a malgrinnorian excavator
 a malgrinnorian rancor
 a malgrinnorian treasure hunter
+a malicious husk
 a malicious lava drake
 a malicious trusik
+a malicious vessel
 a malifigaunt
 a malign lightcrawler
 a malignant dread knight
+a malignant knight
 a malignant reaver
 a malignant revenant
 a malignant shadow
 a malignant student
+a malignant thief
 a malleable spiderling
 a malleable worker
 a malodorous skunk
@@ -8134,6 +8256,9 @@ a mechanic
 a mechanical bomb
 a mechanical contraption
 a mechanized crawler
+a mechanized hexaclaw
+a mechanized sentry
+a mechanized tidebot
 a mechano steam sentinel
 a mechano steam warder
 a mechano-steam sentry
@@ -8220,6 +8345,7 @@ a mighty rockhopper
 a mighty underbulk
 a mighty zelniak
 a militant vineweaver
+a military chest
 a militia enforcer
 a militia guard
 a militia skeleton
@@ -8229,6 +8355,7 @@ a millworker
 a mimic
 a mind burrower
 a mind leech
+a mind melder
 a mind worm
 a mind-controlled slurper
 a mindbender
@@ -8377,6 +8504,7 @@ a mole tamer
 a mole tamer pet
 a molten lavaspinner
 a molten magmin
+a molten slug
 a molten soul
 a molten spirit
 a molten steel mound
@@ -8605,6 +8733,7 @@ a mystical snow griffin
 a naeya plainshound
 a naeya scavenger
 a naeya syr`vitral
+a nameless husk
 a napaea maiden
 a napaea maiden pet
 a napaea protector
@@ -8708,6 +8837,7 @@ a netherbian warrior
 a netherbian yoyo master
 a nettling extractor
 a nettling wraith
+a neural core
 a neuralgic huntress
 a nevafeer attacker
 a nevafeer hitter
@@ -9061,6 +9191,7 @@ a pestilent shrieker
 a pestilent skirmisher
 a pestilent troll zombie
 a pestilent warrior
+a pesty automaton
 a pet snow panther
 a petal blower
 a petitioner
@@ -9069,6 +9200,7 @@ a petrified colossal tree
 a petrified green tree
 a petrified naturespirit
 a petrified observer
+a petrified partygoer
 a petrified ser thal
 a petrified stonegrabber
 a petrifier cockatrice
@@ -9263,6 +9395,7 @@ a plunderer pet
 a poacher
 a poison assistant
 a poison connoisseur
+a poison polyp
 a poison trader
 a poisoned hendin image
 a poisoned kobold
@@ -9840,6 +9973,7 @@ a rampaging ulthork
 a rampaging wyvern
 a rampaging wyvern whelp
 a rampant monstrosity
+a rancorous bat
 a rancorous ghast
 a random piece
 a ranger
@@ -10132,6 +10266,7 @@ a reliquary guardian
 a relocated citizen
 a relocated wyvern
 a reluctant gnome guard
+a remnant
 a remnant of the curse
 a renegade succulent
 a repressed vampyre
@@ -10612,6 +10747,7 @@ a rusty old chest
 a rusty rat
 a rusty spiderling
 a ruthless archon
+a ruthless cultist
 a ruthless grinder
 a ruthless lightcrawler
 a ruthless overseer
@@ -10818,6 +10954,7 @@ a sarnak revenant
 a sarnak sage
 a sarnak scavenger
 a sarnak shadowknight
+a sarnak skeleton
 a sarnak slavedriver
 a sarnak slavemaster
 a sarnak spy
@@ -10832,6 +10969,7 @@ a sarnak whipcracker
 a sarnak whipmaster
 a sarnak youth
 a sarnak zealot
+a satin monarch
 a saucier
 a saurek claw beast
 a saurek darkclaw
@@ -10843,6 +10981,7 @@ a savage aviak
 a savage caiman
 a savage cave kodiak
 a savage chokidai
+a savage cultist
 a savage dire wolf
 a savage drogan spider
 a savage drogmor
@@ -10888,15 +11027,19 @@ a scalewrought airguard
 a scalewrought artificer
 a scalewrought assailant
 a scalewrought attacker
+a scalewrought bearer
 a scalewrought beholder
 a scalewrought bruiser
+a scalewrought cannoneer
 a scalewrought caregiver
+a scalewrought cavalry
 a scalewrought cloudguard
 a scalewrought cloudguardian
 a scalewrought courier
 a scalewrought craftsman
 a scalewrought curator
 a scalewrought deliverer
+a scalewrought drudge
 a scalewrought earthstriker
 a scalewrought ethermancer
 a scalewrought farmhand
@@ -10914,15 +11057,18 @@ a scalewrought manastriker
 a scalewrought manipulator
 a scalewrought maniupulator
 a scalewrought mender
+a scalewrought minion
 a scalewrought mintstriker
 a scalewrought mountstriker
 a scalewrought observer
+a scalewrought peon
 a scalewrought perceiver
 a scalewrought pounder
 a scalewrought raider
 a scalewrought repairer
 a scalewrought sentinel
 a scalewrought sentry
+a scalewrought serf
 a scalewrought shuttle
 a scalewrought skydefender
 a scalewrought skyguard
@@ -10939,6 +11085,8 @@ a scalewrought striker
 a scalewrought supervisor
 a scalewrought terrastriker
 a scalewrought transport
+a scalewrought vassal
+a scalewrought war scout
 a scalewrought worker
 a scallywag
 a scallywag diabolist
@@ -11061,6 +11209,7 @@ a scoria golem
 a scoriae dauber
 a scoriae hornet
 a scorn banshee
+a scorn drinker
 a scorn spectre
 a scorned diabolist
 a scorned element
@@ -11202,6 +11351,7 @@ a security bot
 a security drone
 a security enforcer
 a security flyer
+a security golem
 a security officer
 a sediment delver
 a sedimentary muddite
@@ -11278,6 +11428,7 @@ a serene forest spirit
 a serene griffawn
 a serene mist drake
 a sergeant
+a series of holes
 a serpent
 a servant
 a servant manatee
@@ -11886,8 +12037,10 @@ a silent huntsman
 a silent monolith
 a silent shadow
 a silent shadowcaster
+a silent watcher
 a silent worshipper
 a silentsong worshipper
+a silkwhisper attendant
 a silly puppet
 a silver chest
 a silver crappie
@@ -11902,6 +12055,7 @@ a silverflank shiverback
 a silverfur rat
 a silverfur wolf
 a silvermist wolf
+a silvertail fish
 a silvery sunflower
 a silvery wolf
 a simple chest
@@ -12049,6 +12203,7 @@ a skittering pest
 a skittering srathbone spider
 a skittering thief
 a skittish filly
+a skittish vulture
 a skulking brute
 a skulking brutling
 a skulking gnoll
@@ -12218,6 +12373,7 @@ a sneaky goblin image
 a sneaky honey slurper
 a sneaky worker
 a sneering gargoyle
+a snide ratman
 a snoring bloodmoon orc
 a snorting warboar
 a snow bunny
@@ -12278,9 +12434,14 @@ a soldier of zek
 a solemn guard
 a solid chest
 a solstice horror
+a solusek devout
+a solusek foot soldier
 a solusek goblin fighter
 a solusek goblin priest
 a solusek goblin sage
+a solusek knight
+a solusek mage
+a solusek ro guard
 a somber vision
 a songful soul
 a sonic bat
@@ -12426,6 +12587,7 @@ a spined rock burrower
 a spineless worm
 a spinereef seahorse
 a spiny cryptstealer
+a spire soldier
 a spireward
 a spirit
 a spirit caller
@@ -12474,6 +12636,7 @@ a spiritforged warrior
 a spiritforged wizard
 a spiritish ancille
 a spiritleech bonewalker
+a spiritless rat
 a spiritlinked familiar
 a spiritslaver
 a spiritslayer raider
@@ -12502,13 +12665,16 @@ a spiroc watcher
 a spite captain
 a spite golem
 a spite knight
+a spitebone fish
 a spiteful banshee
+a spiteful drachnid
 a spiteful harbinger
 a spiteful lich
 a spiteful shade
 a spiteful specter
 a spiteful spirit
 a spiteful succulent
+a spiter queen
 a splash of illdaera
 a splendorous sentry stone
 a splineguide
@@ -12863,6 +13029,8 @@ a stoic shadowcaster
 a stoic sustainer
 a stoic sustainer pet
 a stoic ward
+a stolen golem
+a stomping unbreaker
 a stone abomination
 a stone beast
 a stone caller
@@ -12970,6 +13138,8 @@ a storm of light and darkness
 a storm totem
 a storm watcher
 a storm worn armantis
+a storm-battered corpse
+a storm-touched wolf
 a stormbreaker
 a stormcaller ridge drake
 a stormguard knight
@@ -13015,6 +13185,7 @@ a stringy anglerfish
 a stringy dancer
 a stringy plant
 a striped deathfang
+a stroking lifeweaver
 a strong monitor
 a strong sentinel
 a stubborn magmite
@@ -13045,8 +13216,10 @@ a sublime tricrystal
 a subordinate fey
 a subservient convert
 a subservient goblin
+a subterranean digger
 a subterranean goral
 a subterranean kraken
+a subterranean pincer
 a subterranean selyrah
 a subterrestrial kraken
 a subverted miner
@@ -13166,6 +13339,7 @@ a swifttail
 a swinetor summoner
 a swinetor youth
 a swintetor youth
+a swiping tidebinder
 a swirl of disturbed crust
 a swirling black mass
 a swirling dervish
@@ -13177,6 +13351,7 @@ a swirling smoke
 a swirling tornado
 a swirling voice
 a swirlspine seahorse
+a swishing warpod
 a swollen pulsing
 a swollen pusling
 a swooping bat
@@ -13481,6 +13656,7 @@ a tentacle terror
 a tentacle tormentor
 a tentacled tormentor
 a tenured mentor
+a terrastriker cannoneer
 a terrible crystal shard
 a terrible monster
 a terrible pest
@@ -13488,6 +13664,7 @@ a terrible raptor
 a terrified alchemist
 a terrified halfling
 a terrified slave
+a terrified trickster
 a terrifying nightmare
 a terrifying raptor
 a terris thule apostle
@@ -13559,8 +13736,11 @@ a thelasa of tides
 a therium clockwork
 a thespian
 a thick-shelled crab
+a thicket bear
+a thicket golem
 a thickhide crocodile
 a thief
+a thief of loathing
 a thieving acolyte
 a thifling chanter
 a thifling focuser
@@ -13581,6 +13761,7 @@ a thought bleeder
 a thought corrupter
 a thought corruptor
 a thought defiler
+a thought drinker
 a thought horror
 a thought horror evoker
 a thought horror pet
@@ -13634,6 +13815,7 @@ a tick tock
 a ticking device
 a ticking treasure box
 a tidal construct
+a tidal djinn
 a tidal monstrosity
 a tidal serpent
 a tide creeper
@@ -13764,6 +13946,7 @@ a tortured abomination
 a tortured banshee
 a tortured hynid
 a tortured iksar miner
+a tortured natureguard
 a tortured prayerlord
 a tortured prisoner
 a tortured revenant
@@ -13970,6 +14153,7 @@ a troll tunneler
 a trollish bone spirit
 a trooper
 a tropical crab
+a tropicaura vulture
 a troubled seer
 a troubleshooter
 a troublesome apparition
@@ -14273,6 +14457,7 @@ a venomous spider
 a venomous spider pet
 a venomous stonemite
 a venomous swarmer
+a venomous thrall
 a venomous viper
 a venomscale spitter
 a venomshell pest
@@ -14361,6 +14546,7 @@ a vicious trooper
 a vicious turepta
 a vicious vegetation
 a vicious werebat
+a vicious whirlwind
 a vicious worg
 a vicious wrangler
 a vicious wyvern
@@ -14382,10 +14568,12 @@ a vile believer
 a vile bone crafter
 a vile defender
 a vile digester
+a vile ghast
 a vile ooze
 a vile priest
 a vile rat
 a vile reega
+a vile scrykin
 a vile stonemite
 a vile tormentor
 a vilefang scavenger
@@ -14440,6 +14628,7 @@ a vociferous element
 a voice mimic
 a voiceless temptress
 a void conger
+a voidburned skyguard
 a voidspawn bonefiend
 a voidspawn golem
 a volatile chemist
@@ -14528,6 +14717,7 @@ a war advisor
 a war beast
 a war boar
 a war bone overlord
+a war caller
 a war chest
 a war crow
 a war mage
@@ -14549,6 +14739,8 @@ a warblood runner
 a warboar of suffering
 a warbone monk
 a warbone spearman
+a warbound sentry
+a warbringer
 a ward of ro
 a warded drone
 a warden
@@ -14560,6 +14752,8 @@ a warleader follower
 a warlock of hate
 a warlord of hate
 a warm light
+a warmonger
+a warmonger corpse
 a warped sending
 a warpriestess
 a warren protector
@@ -14632,6 +14826,8 @@ a watery servant
 a wattled bat
 a wave construct
 a wave warden
+a waxwork colossus
+a waxwork golem
 a wayard nightmare
 a wayfarer
 a wayfarers brotherhood guard
@@ -14754,6 +14950,7 @@ a whorl of natural energy
 a whorling wildfire
 a wicked anglerfish
 a wicked believer
+a wicked galasaur ripper
 a wicked grendlaen
 a wicked performer
 a wicked thornfrog
@@ -14986,6 +15183,7 @@ a wraithish ancille
 a wrapped soul
 a wrathforged juggernaut
 a wrathful sahtebi
+a wretched abomination
 a wretched gatherer
 a wretched hunter
 a wretched nettling wraith
@@ -15150,6 +15348,7 @@ a young plains lioness
 a young puma
 a young queen
 a young raptor
+a young rat
 a young red dragon
 a young regrua
 a young rockhopper
@@ -15167,6 +15366,7 @@ a young shell
 a young shissar
 a young slashclaw
 a young soldier
+a young spiter
 a young terrorspinner
 a young thought leech
 a young tortoise
@@ -15341,6 +15541,7 @@ admiral tylix
 admiral tylix pet
 adnia pashdi
 adon mcmarrin
+adralydia stormraven
 adrania fireyese
 adren tholos
 adrian
@@ -15479,6 +15680,7 @@ alanury stormhammer
 alary biitan
 alassh the cannibal
 alassin
+alaston dianthus
 alaurin
 albain tinderbrand
 albarok
@@ -15687,6 +15889,7 @@ an abandoned settler
 an abandoned sludgeworker
 an abandoned wanderer
 an abandoned worker
+an abberant
 an aberrant
 an aberrant blossom
 an aberrant defender
@@ -15900,6 +16103,10 @@ an alsa thelara wind archer
 an alsa thelara wind tamer
 an alsa thelara worker
 an altar attendant
+an altered artificer
+an altered overseer
+an altered skyguard
+an altered striker
 an alto
 an amalgam of the drowned
 an amazing chest
@@ -16381,6 +16588,7 @@ an ash hornet
 an ash spider
 an ash trunk
 an ash wind
+an ashborn drake
 an ashen aggregator
 an ashen chest
 an ashen cutter
@@ -16610,6 +16818,7 @@ an egg sac
 an egg sack
 an egg tender
 an eggtender drone
+an elaborate chest
 an elddar archer
 an elddar defender
 an elddar druid
@@ -17132,6 +17341,8 @@ an envenomed rockhopper
 an envenomed scorpion
 an envenomed spiritist
 an envenomed thrall
+an envious husk
+an envious vessel
 an environmental specialist
 an envoy
 an equipment case
@@ -17568,6 +17779,7 @@ an imprisoned hero
 an imprisoned shade
 an imprisoned soul
 an impulsive scrykin
+an inactive sentinel
 an inanimatum vicarum spiritus
 an inanimatum vicarum vitai
 an incantator of malevolence
@@ -17694,6 +17906,7 @@ an injured wet river hive bixie
 an injured wolf
 an injured worker
 an inner demon
+an innoruuk war banner
 an inquisitor
 an insane black jester
 an insane noble
@@ -17766,6 +17979,7 @@ an iron protector
 an iron sentinel
 an iron sentinel of the arisen
 an iron smith
+an iron spiritualist
 an iron tomekeeper
 an iron warder
 an iron watcher
@@ -17849,6 +18063,8 @@ an mechtech rat digger
 an mechtech rat scavenger
 an oaken chest
 an oaken treant
+an oakward ancient
+an oakward defender
 an oashim
 an oashim breeder
 an oashim hoarder
@@ -18110,13 +18326,19 @@ an outpost guardian
 an outraged guard
 an outraged thug
 an outraged trapper
+an outworld provision chest
+an overburdened squire
+an overcharged octodrone
+an overcharged orb
 an overfiend
 an overgrown mound
 an overgrown nematode
 an overgrown tasselvine
 an overly protective foreman
 an overseer
+an overseer gunner
 an overseer minotaur
+an overwhelmed druid
 an overworked functionary
 an overworked slave
 an overzealous fanatic
@@ -18185,6 +18407,7 @@ an unbalanced kromzek
 an unblemished shard
 an unbound guardian
 an unbreakable edifice
+an unbreakable guardian
 an unbridled polar bear
 an unchaste cleric of marr
 an unconscious halfling
@@ -18345,6 +18568,7 @@ an unliving hulk
 an unliving spiritist
 an unmasked changeling
 an unmasked riftseeker
+an unmodified experiment
 an unmotivated zombie
 an unmounted harrier
 an unpleasant bureaucrat
@@ -18357,6 +18581,7 @@ an unrelenting minion
 an unrestful acolyte
 an unrestful soul
 an unrestrained scrykin
+an unripe experiment
 an unruly nightmare
 an unruly stoneservant
 an unsanctified korta priest
@@ -18492,6 +18717,7 @@ animated decorin blade
 animated lava
 animated rubble
 animated scrap
+animated statue
 animist gazin
 animist imotmeh
 animist khalan
@@ -18647,6 +18873,7 @@ architect mutze
 architect vaukin
 archivist dominic moore
 archivist herrdar
+archivist kavros
 archmage gorraferg
 archmage of relic
 archmage varren
@@ -18666,6 +18893,7 @@ archon xalvir
 archon xenavia eries
 archpriest del`maque
 archpriest yakan
+archsage feish
 arcron thaumaturge osellik
 arcstone miner golem
 arcstone ore vein
@@ -18745,6 +18973,7 @@ armsman khaigesh
 armsmaster vohlen
 army of light hq
 army of obliteration hq
+arnbeb
 arnie gaslow
 arnis mclish
 arreken skyward
@@ -18807,9 +19036,11 @@ ash c`luzz
 ash gargoyle
 ash golem
 ash guardian tolemak
+ash harbinger
 ash hurricane
 ash n`mar
 ash wrathful
+ashbark
 ashen remains
 ashen wandering horizon
 ashenback
@@ -18905,6 +19136,7 @@ asupi muksap
 asyln c`luzz
 asza do`saraken
 atathus the red lord
+atathus, the red lord
 atbius
 atdehim sqonci
 aten ha ra
@@ -18955,6 +19187,7 @@ aurdred
 aurelia
 aurelia pet
 aurelia portrowel
+aurora carver
 aurueen stillwater
 autarkic lord sfarosh
 automated banking unit iii
@@ -19045,6 +19278,7 @@ azkin
 azobian the darklord
 azomnius
 azureake
+azureflutter
 azurestrike
 azzar habbib
 babeliyna
@@ -19572,6 +19806,7 @@ bjrakor the cold
 black blart, pirate legend
 black dire
 black fang
+black jay
 black scar
 black spot
 blackblade lorkis
@@ -19786,6 +20021,7 @@ bokon stuppa
 bolace
 bolcen tendag
 boldger bristlebeard
+boldven
 bole bricktop
 bolete
 bollbaru the witch
@@ -19821,6 +20057,7 @@ bonemaw
 bonemeal
 bones
 bonescale
+bonesplinter
 bonlarg
 bonn mcmarrin
 bony remnants
@@ -20051,9 +20288,11 @@ brogdog
 brogg
 brognot
 brohan ironforge
+broj the devourer
 brok karkenthugg
 broken amalgam
 broken construct
+broken down drone
 broken portal
 broken skull armsmaster
 brokenclaw
@@ -20075,6 +20314,7 @@ bronlor lightblade
 bronto thudfoot
 bronus
 broo, the defender of solitude
+brood architect hazuri
 brood drone
 brood hatchling
 brood mother visziaj
@@ -20366,6 +20606,7 @@ captain deidre harath
 captain diros
 captain dunstan coldheart
 captain flang
+captain foley
 captain fyreflyte
 captain gearmost
 captain gearwell
@@ -20879,6 +21120,7 @@ chief librarian la`frere pet
 chief librarian lars
 chief machinist bildarol
 chief maeder
+chief mechanic
 chief mechanic clankwrench
 chief official pyntara
 chief recruiter joceil
@@ -21277,6 +21519,7 @@ commander p`dral
 commander p`dral`s corpse
 commander prezul
 commander ralinor
+commander roknik
 commander rygaz
 commander shockmore
 commander shockmost
@@ -21365,6 +21608,7 @@ construct of zeixshi-kar
 consul of cooperation
 containers, misc items
 contralto
+control tendon
 controlled earthmover
 controlled spirithunter
 convergence of ash
@@ -21388,6 +21632,7 @@ coraline
 coralitus
 coraln seagazer
 coralyn kelpmaiden
+corax the nethercharged
 corbin
 corbin blackwell
 cordagan boulderfist
@@ -21463,6 +21708,7 @@ corrupter of life
 corruption
 corruptor hex
 cort landerson
+cortnia stonebreaker
 corudoth
 corumdium
 corun finisc
@@ -22041,6 +22287,7 @@ death`s hand regiment
 deathbone archmagus
 deathbone magus
 deathbringer blackheart
+deathbringer colossus
 deathbringer rianit
 deathbringer skullsmash
 deathcaller vyzol
@@ -22129,6 +22376,7 @@ defender erotans
 defender faeloritar
 defender feorlso
 defender filorou
+defender food stores
 defender galson
 defender geresk
 defender gerlinson
@@ -22177,9 +22425,12 @@ defender siltan
 defender siman
 defender sintion
 defender stavros
+defender supply cache
 defender taglorns
 defender tamalre
 defender teerlals
+defender tiggle
+defender tovani
 defender traul
 defender tyleth
 defender tyothil
@@ -22491,6 +22742,7 @@ disciple keriuso
 disciple of earth
 disciple of fire
 disciple of focus
+disciple of istle arnbeb
 disciple of metal
 disciple of moon
 disciple of rodcet
@@ -22794,6 +23046,7 @@ drashuven kor`va
 draton`ra, master of the void
 draues xean xirau
 dravel axethrasher
+dravok the rootbinder
 drawna opimsor
 draxiz n`ryt
 draxiz zexus
@@ -22871,6 +23124,7 @@ drentik the mad
 drenz
 drethall
 drevlon knacknabber
+drew xiomar
 drexel
 drez fato
 driana poxsbourne
@@ -23660,6 +23914,7 @@ evay smit
 eve marsinger
 evelynn
 event coordinator baublie diggs
+everburning candle master
 everliving growth
 everna delestrod
 evia n`cizai
@@ -24117,6 +24372,7 @@ fienne silverleaf
 fierce abomination
 fiercewind
 fiery spirit equine overlord
+fiflip hopemender
 fifth avatar of saunk
 fifth disciple of rhag
 figles steeltread
@@ -24197,6 +24453,7 @@ firelash
 firemage omor
 firemane
 firemarshal unit iv
+firemaw
 firesting
 firetongue ethantis
 firewatch kargan
@@ -24277,6 +24534,8 @@ flamefist
 flamegore
 flameguard
 flamescale overlord takarious
+flameseeker onkrin
+flameshaper severyn
 flametail
 flametop
 flamewarden zev`ran
@@ -24408,6 +24667,7 @@ forgotten bones
 forgotten martyr
 forgotten sandweaver
 forley
+forlien the abyss speaker
 forlorn relic devotee
 forlus
 former head scientist bozle
@@ -24663,6 +24923,7 @@ furious lightning elemental
 furious phantasm
 furious sentry
 furious windstorm
+furok the firestarter
 furtog ogrebane
 fury of oseka
 fussy amalgam
@@ -24894,6 +25155,7 @@ gelidran conjurer
 gelidran frostformer
 gelidran icekeeper
 gelidran trophy
+gelikin
 geller mickwiggum
 gelliza toadsen
 gellmana sunara
@@ -24959,6 +25221,7 @@ general terasal
 general tro`lir
 general tyronith
 general urgund
+general usira
 general v`deers
 general v`deers pet
 general v`deers, the arisen
@@ -25682,6 +25945,7 @@ grodnis
 groethar
 groflah steadirt
 grogald elderhammer
+grogg harpyr
 grohlok the tyrant
 groi gutblade
 groi gutblade pet
@@ -25714,6 +25978,8 @@ grots
 groundskeeper areut
 groundskeeper cotongle
 groundskeeper seamus
+grovekeeper phidus
+grovespeaker lydora
 grozzmel
 grubbonion
 grublus
@@ -25736,6 +26002,7 @@ grummus
 grunak
 grundehl
 grundlebrew
+grung xv max
 grungol the eclipse
 grunk the wicked
 grunkuck the beast
@@ -26517,6 +26784,7 @@ gwan
 gweddon tinkertasker
 gwelian wyn
 gwizilwerkz cogswin
+gwork
 gwynn marthank
 gwynora armista
 gygin enforcer
@@ -26702,6 +26970,7 @@ havan kallir
 havik the faithful
 havrin
 haze
+hazuri replicant
 head administrator grigano
 head attendant haestus
 head boiler akett
@@ -26775,6 +27044,7 @@ helias
 helinya limerick
 helix jeson
 helmard lasswain
+heloise alston
 hemae twinebraid
 hemia skemner
 hemik pyus
@@ -26816,6 +27086,7 @@ herald of oratory
 herald of oseka
 herald of ragan
 herald of reverie
+herald of the outer brood
 heratius grolden
 heratius grolden, why the wings?
 hereia gealsina
@@ -26828,6 +27099,7 @@ herkila lenson
 herlsoakian
 herm ancil
 herman simple
+hermit of xalgoz
 hern bearjumper
 hero goxnok
 hero shrine guardian
@@ -26981,6 +27253,7 @@ high priest utok
 high priest vyers rinad
 high priest wersin
 high priest xalziks
+high priest yaran
 high priest zaharn
 high priestess alexandria
 high priestess kal`vius
@@ -27295,6 +27568,7 @@ iguanidae enrager
 iico the wanderer
 iilaria
 iilivina
+ik`drun
 ikaav dominator
 ikaav dreamweaver
 ikaav firecaller
@@ -27337,6 +27611,7 @@ ilana sunmire
 ilanic`s skeleton
 ilanon untitia
 ilenarn ghaeaus
+ilia forgor
 ilishu julque
 ilisiv gantrau
 illdaeras escort
@@ -27364,6 +27639,7 @@ image of the elements
 image of the wild
 image of tierna morganna
 imildu woodstreak
+immature transport
 immug lashtail
 imp defender
 imp guardian
@@ -27385,6 +27661,7 @@ imprisoned gnome
 imxil t`brow
 imxil tbrow
 inactive clockwork
+inactive clockwork hulk
 inactive manashard guardian
 incantator cawrolis
 incantator elza dilsm
@@ -27546,6 +27823,7 @@ interrogator of ry`gorr
 interrogator silth
 intimidating sand burrower
 inudul dumirgun
+invader siege equipment
 inventor biddlebokk
 inventor krang
 investigator drolmer
@@ -27561,9 +27839,11 @@ iqthinxa karnkvi pet
 irak altil
 iramai sacredsoul
 irarae
+irdrath the withered
 ireblind imp
 iremaw
 irena pereira
+iridesca
 irin lunis
 irionu bastun
 iris gloomflow
@@ -27673,6 +27953,8 @@ jacum c`luzz
 jacyll
 jadaria opat
 jade
+jade guardian
+jade idol
 jadewing
 jae hunol
 jaecen oel
@@ -28390,6 +28672,7 @@ kerdelb
 keref spiritspear
 keres mclander
 kergag, the mountain
+kerina, lost soul
 kerkinic the enforcer
 kerlen havenswar
 kerosek
@@ -28531,6 +28814,7 @@ king vigdos
 king xorbb
 king zarq
 kingdom of the crystalline men
+kingsnake
 kinliat bloodwalker
 kinlo strongarm
 kinloc flamepaw
@@ -28741,6 +29025,7 @@ korvik the cursed
 korzak stonehammer
 koth the lobe-gorged
 kotul
+kotunm
 koxiux the imperceptible
 krack
 krag
@@ -28988,6 +29273,7 @@ lanika shadestepper
 lanis herion
 lanivon baxer
 lanken rjarn
+lanm zidas
 lann dabldrin
 lannal
 lannal the beast tamer
@@ -29272,7 +29558,9 @@ lieutenant leafstalker
 lieutenant lihad
 lieutenant llrenii
 lieutenant lorhjorn
+lieutenant lunk
 lieutenant midraim
+lieutenant norb's corpse
 lieutenant noton jurnnes
 lieutenant nvellor
 lieutenant peldiyrem
@@ -29382,6 +29670,7 @@ living phylactery
 living sap
 living shard
 living steel
+living stone
 living vomit
 liza slasher
 lizard man broodling
@@ -29407,9 +29696,11 @@ lodizal
 lodrand dindlenod
 loensa esorlinal
 loeryn bloomtender
+log bark crocodile
 logar jax
 lokar to`biath
 lokar tobiath pet
+loken the rabid
 lokin the wise
 lokrok gigglegibber
 lokta ancient giddib
@@ -29712,6 +30003,7 @@ magmaraug
 magmatic stone
 magmaton
 magmeran
+magmus flame eater
 magnite ordinator bammor
 magnus boran
 magnus selleck
@@ -29795,6 +30087,7 @@ mandla klolp
 mandrikai
 mangler
 maniacal slave
+maniadry
 manic deathcaller
 manic deathcaller pet
 manic mushroom
@@ -29836,6 +30129,7 @@ marie fay
 marik clubthorn
 marin pointear
 marinda flockwings
+marith the fireborn
 marius carver
 marius lenn
 mariz ixtaz
@@ -29860,6 +30154,7 @@ marsa folor
 marsha stonepenner
 marshal anrey
 marshal ghobber
+marshal gulpin
 marshal histent
 marshal lanena
 marshall galeron
@@ -29987,6 +30282,7 @@ mastruq champion
 mastruq commander gorlakt
 mastruq utk hykat
 masurt dok
+mata muram effigy
 mate rominald
 mater
 math wintersong
@@ -30076,6 +30372,7 @@ meikona the keeper
 melaara tenwinds
 melalafen
 melanaie marcynn
+melandi sturdyboot
 melchior bergo
 meldikor the windchaser
 meldrath the malignant
@@ -30095,6 +30392,7 @@ melnax
 melody the singer of great deeds
 melretia relward
 melsilla
+melted monstrosity
 menace
 menace`s true form
 mengalor
@@ -30185,6 +30483,9 @@ merta longshadow
 mertitt phentilly
 mespha tevalian
 messenger erison
+messenger of faith
+messenger of health
+messenger of vengeance
 messenger xhuxutuzh
 messmerrr
 mestle
@@ -30374,6 +30675,7 @@ misty storyswapper
 misty tekcihta
 misty valefriend
 mith wintersong
+mithaniel marr
 mithious scratch
 mithril guardian
 mitius, herald of change
@@ -30427,6 +30729,8 @@ monala
 monarch deathwing
 monarch nene
 monarch widow
+mongrop xv alpha
+mongrop xv beta
 monita o`donner
 monita weaver
 monolith the unstoppable
@@ -30692,6 +30996,7 @@ neelo leafwind
 neemzaq
 neerda stoneguard
 neerin
+neetor ikadiff
 neezzee
 neffiken, lord of kelek`vor
 nefori
@@ -30936,6 +31241,7 @@ nsat egne
 nubs blackgranite
 nuien
 nul aleswiller
+nul`kul
 nulbar
 nulian the stormwarden
 nulima opalis
@@ -30986,6 +31292,7 @@ obsidian undefeated shield
 obsidian war spider
 obsidian wyvern
 occisor primorus
+occultist of istle arnbeb
 ocean mage rettun
 octa the collector
 octave sforzando
@@ -31180,6 +31487,7 @@ ortallius
 oruff the seer
 orumot uluntar
 orut egne
+orvain the mooncaller
 orwin flintmaker
 osalur
 osargen
@@ -31354,6 +31662,7 @@ peltin funter
 pelzia the crazed
 pemawen vorana
 pemwenia dagor
+penance
 pendle dashinger
 pendrik verdantleaf
 pendubk the turbulent
@@ -31394,6 +31703,7 @@ petula bloodwave
 petunia the doll
 pezripisid
 pfaaxle
+pfath of the wind
 phaeril nightshire
 phalanea
 phalcoa neldarin
@@ -31872,6 +32182,7 @@ puntar sandfisher
 purchin oddsbot
 pure flame elemental
 pure royal pabulum
+purification
 purity stone
 purveyor eilos berenzaltek
 purveyor f`devax
@@ -32046,6 +32357,7 @@ rage biter
 ragepaw commander ironfur
 ragepaw commander stonebite
 ragewing
+raggather
 raging belten
 raging bile
 raging pit hound
@@ -32199,6 +32511,7 @@ ravenous war bone skeleton
 raving goblinmaster
 raving jinta explorer
 raving rock thrower
+raw meat
 raxtki the skitterer render
 raxtor darkpaw
 ray and the moldy chandelier
@@ -32252,6 +32565,7 @@ record keeper buorin
 record keeper talantia
 recreated holgresh
 recruiter p'mark
+rector of the skies
 red dogwood treant
 red flame
 red gravity orb
@@ -32266,6 +32580,7 @@ reebo leafsway
 reefmaw
 reeking iggy slasher
 reeking skunk
+reeks
 reena kedson
 reese the rhinopocalypse
 reff truewood
@@ -33084,6 +33399,7 @@ scout xii leader
 scout zerak
 scout zialdiruun
 scout zryan
+scragen the vicious
 screaming tormentor
 screecher
 screeching spirit
@@ -33143,6 +33459,8 @@ security console six
 security console three
 security console two
 security officer fizzlebing
+security terminal one
+security terminal zero
 sedona raines
 seed of battle
 seedspitter
@@ -33206,6 +33524,7 @@ seneschal amat
 seneschal bargangle tinkerson
 seneschal radiant propensity
 senina jolik
+senior apprentice mage sarcrynn
 senior guard grelden
 senior guard jenkins
 senior guard thompkins
@@ -33450,6 +33769,7 @@ severilous pet
 seveth dinallin
 sewage slime
 seyan ebonlocke
+sezzic moldgrinder
 sfisithik the light devourer
 sfisithik`s shadowy chest
 sghrene
@@ -33575,6 +33895,7 @@ sharp claw
 sharpeye
 sharuleth
 sharvyn oresinger
+shattered debris
 shattered skeleton
 shatterskull, a pirates life
 shatterstyr
@@ -33896,6 +34217,7 @@ skurza slicekutt
 sky blade
 sky orchid understanding
 skycore
+skyguard commander
 skymane
 skynate
 skynate golem
@@ -34519,6 +34841,7 @@ stormrock
 stormscape crusader
 stormscape high priest
 stormscape warder
+stormstomper
 stormwheel
 stormy
 storn trueblade
@@ -34923,6 +35246,7 @@ telnor d`unnar
 teloa
 telor beteria
 teltet, highkeeper of crypts
+telthel the wretched
 telvina
 temariel xi tetoracu
 temblor
@@ -34933,6 +35257,7 @@ tempest of vyskudra
 tempest reaver
 tempia lauley
 tempko
+templar davrin
 templar gemma
 templar j`rosix
 templar of saryrn
@@ -34971,6 +35296,7 @@ teriling
 terlok of earth
 terra the sea witch
 terrance the admired
+terrastriker commander
 terren starwatcher
 terri woodshape
 terris thule
@@ -35155,6 +35481,7 @@ the crypt wurm
 the curator
 the cursed keeper
 the cursed spore
+the custodian
 the daevan
 the dark lady
 the darkseer
@@ -35625,6 +35952,7 @@ the grand gardener
 the great oowomp
 the great saprophyte
 the great sentinel
+the great shell
 the great summoning
 the grinnuch
 the groundskeeper
@@ -35950,6 +36278,7 @@ thrack
 thrackin griften
 three
 threshrock
+thress
 throatripper
 throkkok
 thruke
@@ -36000,6 +36329,7 @@ tijoely
 tika shockstep
 tikesh
 tiknonmanin
+tilahn the messenger
 tilda grintwisdom
 tiljin of the deep
 tilminos farondi
@@ -36148,6 +36478,7 @@ torodrane frompwaddle
 torpex rockspeaker
 torrence ire
 torrent steel behemoth
+torrentclaw
 torrg elfsmasher
 torrid elemental
 torstien stoneskin
@@ -36480,6 +36811,7 @@ trueborn vitae hoarder
 trug
 trug pet
 trullica
+trung
 trunk of creation
 trunt
 trusk
@@ -36569,6 +36901,7 @@ tyrin f`linz
 tyrinam
 tyriss
 tyron porrindal
+tyrwin
 tyzen
 tzanso s`tai
 tzi`ik underbulk
@@ -36775,6 +37108,7 @@ valia, the great bear spirit
 valik the cruel
 valinion viz`daron
 vall stonewisp
+vallina
 vallon
 vallon zek
 valorian guardian breiok
@@ -36822,6 +37156,7 @@ vasile jahnir
 vasser fayeil
 vasyryx teken`tlar
 vault of the dark soul
+vault security terminal
 vaurien sticklebush
 vaxxim t`quoren
 vaxztn the putrifier
@@ -36851,6 +37186,7 @@ veli greenwhisper
 velious scion
 velishan
 velishan, the deceitful
+velith the cinderfang
 velitorkin
 velketor the fabled sorcerer
 velketor the sorcerer
@@ -36990,6 +37326,7 @@ vile sap
 vile wasp
 vileak the fang
 vilefang
+vileor wilkern
 vileplume
 vilissia
 vilk mclanis
@@ -37090,6 +37427,7 @@ vorovelze
 vorshar the despised
 vorskahn
 vortix
+vosk the terrakin
 vrabbit xloren
 vrago
 vrald
@@ -37182,6 +37520,7 @@ wandering soul
 wandering spring soul
 wanidor
 war baron eator
+war bone overlord
 war boned skeleton
 war caller kaavi
 war captain rockfist
@@ -37196,6 +37535,7 @@ war leader`s guard
 war master brutak
 war shapen emissary
 war trainer bellona
+war trainer prime
 waradern skymoor
 warbeast of saryrn
 warblood sindrig
@@ -37805,10 +38145,12 @@ zebeker, a necromancer`s pet
 zebexiban
 zebuxoruk
 zech terrun
+zed growlinggut
 zed sticklebush
 zeek
 zeffan holdsman
 zeflmin werlikanin
+zeivan
 zeixshi-kar
 zeixshi`kar
 zeixshi`kar the ancient

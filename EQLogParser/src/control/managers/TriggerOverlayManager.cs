@@ -255,7 +255,7 @@ namespace EQLogParser
 
           try
           {
-            window.AddTextAsync(theText, beginTicks, brush);
+            window.AddText(theText, beginTicks, brush);
           }
           catch (Exception ex)
           {
