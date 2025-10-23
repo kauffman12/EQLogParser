@@ -30,25 +30,81 @@ namespace EQLogParser
 
     internal static BitmapImage CreateBitmap(string path)
     {
-      if (!string.IsNullOrEmpty(path))
-      {
-        if (!File.Exists(path)) return BrokenIcon;
+      if (string.IsNullOrEmpty(path)) return null;
 
-        try
+      // support custom eqsprite format: eqsprite|<sheetPath>|<col>|<row>
+      try
+      {
+        if (path.StartsWith("eqsprite|", StringComparison.OrdinalIgnoreCase))
         {
-          var bitmap = new BitmapImage();
-          bitmap.BeginInit();
-          bitmap.UriSource = new Uri(path, UriKind.Absolute);
-          bitmap.EndInit();
-          return bitmap;
-        }
-        catch (Exception)
-        {
-          // broken image
+          var parts = path.Split('|');
+          if (parts.Length == 4)
+          {
+            var sheet = parts[1];
+            if (int.TryParse(parts[2], out var col) && int.TryParse(parts[3], out var row))
+            {
+              BitmapSource sheetBmp = null;
+              if (sheet.EndsWith(".tga", StringComparison.OrdinalIgnoreCase))
+              {
+                sheetBmp = TgaLoader.Load(sheet);
+              }
+              else
+              {
+                sheetBmp = new BitmapImage(new Uri(sheet, UriKind.Absolute));
+              }
+
+              if (sheetBmp != null)
+              {
+                var rect = new Int32Rect(col * 40, row * 40, 40, 40);
+                try
+                {
+                  var cropped = new CroppedBitmap(sheetBmp, rect);
+                  // convert to BitmapImage via encoder
+                  var encoder = new PngBitmapEncoder();
+                  encoder.Frames.Add(BitmapFrame.Create(cropped));
+                  using var ms = new MemoryStream();
+                  encoder.Save(ms);
+                  ms.Seek(0, SeekOrigin.Begin);
+                  var bmp = new BitmapImage();
+                  bmp.BeginInit();
+                  bmp.CacheOption = BitmapCacheOption.OnLoad;
+                  bmp.StreamSource = ms;
+                  // store the original eqsprite string as the UriSource so higher layers can persist it
+                  try
+                  {
+                    bmp.SetValue(BitmapImage.UriSourceProperty, new Uri(path, UriKind.RelativeOrAbsolute));
+                  }
+                  catch { }
+                  bmp.EndInit();
+                  bmp.Freeze();
+                  return bmp;
+                }
+                catch
+                {
+                  // fallthrough to try normal loading
+                }
+              }
+            }
+          }
         }
       }
+      catch { }
 
-      return null;
+      // Regular file path - with broken icon fallback
+      if (!File.Exists(path)) return BrokenIcon;
+
+      try
+      {
+        var bitmap = new BitmapImage();
+        bitmap.BeginInit();
+        bitmap.UriSource = new Uri(path, UriKind.Absolute);
+        bitmap.EndInit();
+        return bitmap;
+      }
+      catch (Exception)
+      {
+        return BrokenIcon;
+      }
     }
 
     internal static async Task CreateImage(Dispatcher dispatcher, FrameworkElement content, Label titleLabel = null)

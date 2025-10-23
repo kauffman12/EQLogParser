@@ -67,6 +67,7 @@ namespace EQLogParser
       var grid = new Grid();
       grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
       grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(65, GridUnitType.Auto) });
+  grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(85, GridUnitType.Auto) });
 
       _theTextBox = new TextBox
       {
@@ -94,6 +95,15 @@ namespace EQLogParser
       _theButton.SetValue(Grid.ColumnProperty, 1);
       _theButton.Click += TheButton_Click;
 
+      var spriteBtn = new Button
+      {
+        Content = "EQ Sprites",
+        Padding = new Thickness(8, 2, 8, 2),
+        Margin = new Thickness(2, 1, 2, 1)
+      };
+      spriteBtn.SetValue(Grid.ColumnProperty, 2);
+      spriteBtn.Click += SpriteBtn_Click;
+
       _theImage = new Image
       {
         Visibility = Visibility.Collapsed,
@@ -109,6 +119,7 @@ namespace EQLogParser
       grid.Children.Add(_theImage);
       grid.Children.Add(_theTextBox);
       grid.Children.Add(_theButton);
+      grid.Children.Add(spriteBtn);
       return grid;
     }
 
@@ -153,6 +164,18 @@ namespace EQLogParser
     {
       ShowImage();
       SelectImage();
+    }
+
+    private void SpriteBtn_Click(object sender, RoutedEventArgs e)
+    {
+      var picker = new SpritePickerWindow();
+      var ownerHandle = new System.Windows.Interop.WindowInteropHelper(MainActions.GetOwner()).Handle;
+      picker.Owner = MainActions.GetOwner();
+      if (picker.ShowDialog() == true)
+      {
+        // picker.SelectedValue is eqsprite|sheet|col|row
+        _theImage.Source = UiElementUtil.CreateBitmap(picker.SelectedValue);
+      }
     }
 
     private void HideImage()
