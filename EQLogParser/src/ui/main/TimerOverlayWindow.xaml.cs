@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -14,14 +13,14 @@ using System.Windows.Interop;
 
 namespace EQLogParser
 {
-  public partial class TimerOverlayWindow : IDisposable
+  public partial class TimerOverlayWindow
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
     private readonly bool _preview;
     private readonly SemaphoreSlim _renderSemaphore = new(1, 1);
-    private readonly SynchronizedCollection<TimerData> _timerList = [];
-    private readonly SynchronizedCollection<TimerData> _idleTimerList = [];
+    private readonly List<TimerData> _timerList = [];
+    private readonly List<TimerData> _idleTimerList = [];
     private Dictionary<string, Window> _previewWindows;
     private TriggerNode _node;
     private long _savedHeight;
@@ -32,7 +31,6 @@ namespace EQLogParser
     private long _lastTopTicks = long.MinValue;
     private int _tickCounter;
     private nint _windowHndl;
-    private bool _disposed;
     private volatile bool _isClosed;
     private volatile bool _isRendering;
     private volatile bool _newData;
@@ -79,15 +77,12 @@ namespace EQLogParser
       TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
     }
 
-    internal async void StartTimerAsync(TimerData timerData)
+    internal async Task StartTimerAsync(TimerData timerData)
     {
-      if (_isClosed)
-      {
-        return;
-      }
+      if (_isClosed) return;
 
-      await _renderSemaphore.WaitAsync();
-
+      var startLoop = false;
+      await _renderSemaphore.WaitAsync().ConfigureAwait(false);
       try
       {
         _timerList.Add(timerData);
@@ -101,16 +96,22 @@ namespace EQLogParser
         if (!_isRendering)
         {
           _isRendering = true;
-          _ = StartRenderingAsync();
+          startLoop = true; // decide under the lock
         }
       }
       finally
       {
         _renderSemaphore.Release();
       }
+
+      if (startLoop)
+      {
+        // start the loop *after* releasing the semaphore
+        _ = StartRenderingAsync();
+      }
     }
 
-    internal async void StopTimer(TimerData timerData)
+    internal async Task StopTimerAsync(TimerData timerData)
     {
       await _renderSemaphore.WaitAsync();
 
@@ -128,61 +129,56 @@ namespace EQLogParser
       }
     }
 
-    internal async void HideOverlay()
+    // Keep on UI thread
+    internal async Task HideOverlayAsync()
     {
-      await _renderSemaphore.WaitAsync();
-
-      try
+      await Task.Run(async () =>
       {
-        lock (_idleTimerList.SyncRoot)
+        await _renderSemaphore.WaitAsync();
+
+        try
         {
           _idleTimerList.Clear();
         }
+        finally
+        {
+          _renderSemaphore.Release();
+        }
+      });
 
-        HideContentAsync();
-        Visibility = Visibility.Collapsed;
-      }
-      finally
-      {
-        _renderSemaphore.Release();
-      }
+      HideContent();
     }
 
-    internal async void StopOverlay()
+    // Keep on UI thread
+    internal async Task StopOverlayAsync()
     {
-      await _renderSemaphore.WaitAsync();
-
-      try
+      await Task.Run(async () =>
       {
-        lock (_idleTimerList.SyncRoot)
+        await _renderSemaphore.WaitAsync();
+
+        try
         {
           _idleTimerList.Clear();
-        }
-
-        lock (_timerList.SyncRoot)
-        {
           _timerList.Clear();
+          _newData = false;
+          _newShortTickData = false;
         }
+        finally
+        {
+          _renderSemaphore.Release();
+        }
+      });
 
-        _newData = false;
-        _newShortTickData = false;
-
-        HideContentAsync();
-        Visibility = Visibility.Collapsed;
-      }
-      finally
-      {
-        _renderSemaphore.Release();
-      }
+      HideContent();
     }
 
-    internal async void ValidateTimers(HashSet<string> enabledTriggers)
+    internal void ValidateTimers(HashSet<string> enabledTriggers)
     {
-      await _renderSemaphore.WaitAsync();
-
-      try
+      _ = Task.Run(async () =>
       {
-        lock (_idleTimerList.SyncRoot)
+        await _renderSemaphore.WaitAsync();
+
+        try
         {
           foreach (var idle in _idleTimerList.ToArray())
           {
@@ -191,10 +187,7 @@ namespace EQLogParser
               _idleTimerList.Remove(idle);
             }
           }
-        }
 
-        lock (_timerList.SyncRoot)
-        {
           foreach (var timerData in _timerList.ToArray())
           {
             if (!enabledTriggers.Contains(timerData.TriggerId))
@@ -203,11 +196,11 @@ namespace EQLogParser
             }
           }
         }
-      }
-      finally
-      {
-        _renderSemaphore.Release();
-      }
+        finally
+        {
+          _renderSemaphore.Release();
+        }
+      });
     }
 
     internal void CreatePreviewTimer(string displayName, string timeText, double progress)
@@ -233,15 +226,25 @@ namespace EQLogParser
             _tickCounter = 1;
           }
 
-          var models = GenerateTimerBarModels();
+          var models = await GenerateTimerBarModelsAsync();
           await RenderTimerBarsAsync(models);
 
-          // Remove expired non-cooldown timers
-          lock (_timerList.SyncRoot)
+          var removeList = models.Where(m => m.IsRemoved && !m.IsCooldown).ToList();
+          if (removeList.Count > 0)
           {
-            foreach (var model in models.Where(m => m.IsRemoved && !m.IsCooldown))
+            await _renderSemaphore.WaitAsync();
+
+            try
             {
-              _timerList.Remove(model.TimerData);
+              // Remove expired non-cooldown timers
+              foreach (var model in removeList)
+              {
+                _timerList.Remove(model.TimerData);
+              }
+            }
+            finally
+            {
+              _renderSemaphore.Release();
             }
           }
         }
@@ -260,6 +263,7 @@ namespace EQLogParser
           return;
         }
 
+        var needHide = false;
         await _renderSemaphore.WaitAsync();
 
         try
@@ -278,13 +282,8 @@ namespace EQLogParser
                   // remove data
                   _isRendering = false;
                   _tickCounter = 0;
-
-                  lock (_idleTimerList.SyncRoot)
-                  {
-                    _idleTimerList.Clear();
-                  }
-
-                  HideContentAsync();
+                  _idleTimerList.Clear();
+                  needHide = true;
                 }
               }
             }
@@ -292,7 +291,7 @@ namespace EQLogParser
             {
               _isRendering = false;
               _tickCounter = 0;
-              HideContentAsync();
+              needHide = true;
             }
           }
         }
@@ -301,47 +300,58 @@ namespace EQLogParser
           _renderSemaphore.Release();
         }
 
+        if (needHide)
+        {
+          HideContent();
+        }
+
         await Task.Delay(75); // Adjust delay as needed
       }
     }
 
-    private List<TimerBarModel> GenerateTimerBarModels()
+    private async Task<List<TimerBarModel>> GenerateTimerBarModelsAsync()
     {
       var currentTicks = DateTime.UtcNow.Ticks;
+      List<TimerData> tempTimerList;
+      TimerData[] tempIdleList;
 
-      // Lock the timer list to copy
-      List<TimerData> tempList;
-      lock (_timerList.SyncRoot)
-      {
-        tempList = [.. _timerList];
-      }
+      await _renderSemaphore.WaitAsync();
 
-      // add idle timers
-      lock (_idleTimerList.SyncRoot)
+      try
       {
+        // Lock the timer list to copy
+        tempTimerList = [.. _timerList];
+
+        // add idle timers
         if (_idleTimerList.Count > 0)
         {
           foreach (var idle in _idleTimerList.ToArray())
           {
             // if latest timerData contains the previously idle timer then remove it
-            if (tempList.Find(timerData => timerData.Key == idle.Key) != null)
+            if (tempTimerList.Find(timerData => timerData.Key == idle.Key) != null)
             {
               _idleTimerList.Remove(idle);
             }
             else
             {
-              tempList.Add(idle);
+              tempTimerList.Add(idle);
             }
           }
         }
+
+        tempIdleList = [.. _idleTimerList];
+      }
+      finally
+      {
+        _renderSemaphore.Release();
       }
 
       // Determine maxDurationTicks based on the current state of timers
       var maxDurationTicks = long.MinValue;
 
-      if (_useStandardTime && tempList.Count > 0)
+      if (_useStandardTime && tempTimerList.Count > 0)
       {
-        maxDurationTicks = tempList.Select(timer => timer.DurationTicks).Max();
+        maxDurationTicks = tempTimerList.Select(timer => timer.DurationTicks).Max();
       }
 
       var models = new List<TimerBarModel>();
@@ -349,7 +359,7 @@ namespace EQLogParser
       var resetModels = new List<TimerBarModel>();
 
       // Process timers
-      foreach (var timerData in tempList)
+      foreach (var timerData in tempTimerList)
       {
         var type = timerData.TimerType;
         var remainingTicks = timerData.EndTicks - currentTicks;
@@ -357,12 +367,9 @@ namespace EQLogParser
         if (_timerMode == 1 && timerData.ResetTicks > 0)
         {
           var isInIdleList = false;
-          if (_idleTimerList.Count > 0)
+          if (tempIdleList.Length > 0)
           {
-            lock (_idleTimerList.SyncRoot)
-            {
-              isInIdleList = _idleTimerList.Contains(timerData);
-            }
+            isInIdleList = tempIdleList.Contains(timerData);
           }
 
           if (remainingTicks > 0 && !isInIdleList)
@@ -453,7 +460,7 @@ namespace EQLogParser
       {
         var dont = false;
         var collapsed = new List<TimerBarModel>(models.Count);
-        foreach (ref var model in CollectionsMarshal.AsSpan(models))
+        foreach (var model in models)
         {
           dont = false;
           foreach (var col in collapsed)
@@ -578,6 +585,18 @@ namespace EQLogParser
     private async Task ShortTickAsync()
     {
       var currentTicks = DateTime.UtcNow.Ticks;
+      TimerData[] tempIdleList;
+
+      await _renderSemaphore.WaitAsync();
+
+      try
+      {
+        tempIdleList = [.. _idleTimerList];
+      }
+      finally
+      {
+        _renderSemaphore.Release();
+      }
 
       await Dispatcher.InvokeAsync(() =>
       {
@@ -600,16 +619,7 @@ namespace EQLogParser
 
             if (_timerMode == 1 && timerData.ResetTicks > 0)
             {
-              var isInIdleList = false;
-              if (_idleTimerList.Count > 0)
-              {
-                lock (_idleTimerList.SyncRoot)
-                {
-                  isInIdleList = _idleTimerList.Contains(timerData);
-                }
-              }
-
-              if (remainingTicks > 0 && !isInIdleList)
+              if (remainingTicks > 0 && !tempIdleList.Contains(timerData))
               {
                 // Update the TimerBar based on its state
                 UpdateTimerBarState(TimerBar.State.Active, timerData, timerBar);
@@ -721,35 +731,25 @@ namespace EQLogParser
       }
     }
 
-    private void HideContentAsync()
+    // Keep on UI thread
+    private void HideContent()
     {
-      Dispatcher.Invoke(async () =>
+      // sometimes called from main render thread
+      if (!Dispatcher.CheckAccess())
       {
-        foreach (var child in content.Children)
-        {
-          if (child is TimerBar { } bar && bar.Visibility != Visibility.Collapsed)
-          {
-            bar.Visibility = Visibility.Collapsed;
-          }
-        }
+        Dispatcher.Invoke(HideContent);
+        return;
+      }
 
-        await Task.Delay(50);
-
-        // the previous Delay causes an unlock
-        await _renderSemaphore.WaitAsync();
-
-        try
+      foreach (var child in content.Children)
+      {
+        if (child is TimerBar { } bar && bar.Visibility != Visibility.Collapsed)
         {
-          if (_timerList.Count == 0)
-          {
-            Visibility = Visibility.Collapsed;
-          }
+          bar.Visibility = Visibility.Collapsed;
         }
-        finally
-        {
-          _renderSemaphore.Release();
-        }
-      });
+      }
+
+      Visibility = Visibility.Collapsed;
     }
 
     private void WindowSizeChanged(object sender, SizeChangedEventArgs e)
@@ -789,7 +789,10 @@ namespace EQLogParser
 
       if (_streamerMode != _node.OverlayData.StreamerMode && !_preview)
       {
-        _ = TriggerOverlayManager.Instance.RestartOverlayAsync(_node.Id);
+        _ = Task.Run(async () =>
+        {
+          await TriggerOverlayManager.Instance.RestartOverlayAsync(_node.Id);
+        });
       }
     }
 
@@ -805,7 +808,6 @@ namespace EQLogParser
         _previewWindows?.Remove(_node.Id);
         _previewWindows = null;
         await Task.Delay(750);
-        Dispose();
       }
       catch (Exception)
       {
@@ -813,15 +815,17 @@ namespace EQLogParser
       }
     }
 
-    private static double CalcProgress(int type, long durationTicks, long remainingTicks, long maxDurationTicks)
+    private static double CalcProgress(int type, long duration, long remaining, long max)
     {
-      var progress = (double)remainingTicks / (long.MinValue == maxDurationTicks ? durationTicks : maxDurationTicks) * 100.0;
-      // to allow count up timers to start from 0
-      if (type == 3 && maxDurationTicks != long.MinValue)
-      {
-        progress += (1 - ((double)durationTicks / maxDurationTicks)) * 100.0;
-      }
-      return progress;
+      var denom = max == long.MinValue ? duration : max;
+      if (denom <= 0) return 0.0;
+
+      var p = (double)remaining / denom * 100.0;
+      if (type == 3 && max != long.MinValue && duration > 0)
+        p += (1 - ((double)duration / max)) * 100.0;
+
+      if (double.IsNaN(p) || double.IsInfinity(p)) return 0.0;
+      return Math.Clamp(p, 0.0, 100.0);
     }
 
     private static string GetDisplayName(TimerData timerData)
@@ -860,24 +864,6 @@ namespace EQLogParser
           timerBar.SetIdle();
           break;
       }
-    }
-
-    public void Dispose()
-    {
-      Dispose(true);
-      GC.SuppressFinalize(this);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-      if (_disposed) return;
-
-      if (disposing)
-      {
-        _renderSemaphore?.Dispose();
-      }
-
-      _disposed = true;
     }
 
     // Possible workaround for data area passed to system call is too small

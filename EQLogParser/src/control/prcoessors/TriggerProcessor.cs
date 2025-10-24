@@ -101,7 +101,7 @@ namespace EQLogParser
       }
       finally
       {
-        if (!_isDisposed) _activeTriggerSemaphore.Release();
+        _activeTriggerSemaphore.Release();
       }
     }
 
@@ -118,13 +118,13 @@ namespace EQLogParser
         {
           if (_activeTriggersById.TryGetValue(kv.Key, out var wrapper))
           {
-            CleanupTimers(kv.Value, wrapper);
+            await CleanupTimersAsync(kv.Value, wrapper);
           }
         }
       }
       finally
       {
-        if (!_isDisposed) _activeTriggerSemaphore.Release();
+        _activeTriggerSemaphore.Release();
       }
     }
 
@@ -271,7 +271,7 @@ namespace EQLogParser
               CheckPreviousLine(wrapper, _previous, out var previousMatches, out var previousSwTime))
           {
             swTime += previousSwTime;
-            HandleTrigger(wrapper, lineData, matches, previousMatches, dynamicDuration, swTime, beginTicks);
+            await HandleTriggerAsync(wrapper, lineData, matches, previousMatches, dynamicDuration, swTime, beginTicks);
           }
         }
 
@@ -279,7 +279,7 @@ namespace EQLogParser
         {
           if (kv.Value.Count > 0 && _activeTriggersById.TryGetValue(kv.Key, out var wrapper))
           {
-            CheckTimers(wrapper, kv.Value, lineData);
+            await CheckTimersAsync(wrapper, kv.Value, lineData);
           }
         }
 
@@ -289,7 +289,7 @@ namespace EQLogParser
       finally
       {
         _previous = lineData;
-        if (!_isDisposed) _activeTriggerSemaphore.Release();
+        _activeTriggerSemaphore.Release();
       }
 
       // check only if line might be a quickshare or stop commands
@@ -435,7 +435,7 @@ namespace EQLogParser
       return found;
     }
 
-    private void CheckTimers(TriggerWrapper wrapper, List<TimerData> timerList, LineData lineData)
+    private async Task CheckTimersAsync(TriggerWrapper wrapper, List<TimerData> timerList, LineData lineData)
     {
       // Collect side effects to run after releasing lock(timerList)
       List<Speak> speaksToAdd = null;
@@ -550,7 +550,7 @@ namespace EQLogParser
       {
         for (var i = 0; i < timersToStopUi.Count; i++)
         {
-          TriggerOverlayManager.Instance.UpdateTimer(wrapper.TriggerData, timersToStopUi[i], TriggerOverlayManager.TimerStateChange.Stop);
+          await TriggerOverlayManager.Instance.UpdateTimerAsync(wrapper.TriggerData, timersToStopUi[i], TriggerOverlayManager.TimerStateChange.Stop);
         }
       }
 
@@ -559,7 +559,7 @@ namespace EQLogParser
       {
         for (var i = 0; i < overlayTexts.Count; i++)
         {
-          TriggerOverlayManager.Instance.AddText(overlayTriggers[i], overlayTexts[i], _fontColor);
+          await TriggerOverlayManager.Instance.AddTextAsync(overlayTriggers[i], overlayTexts[i], _fontColor);
         }
       }
 
@@ -596,7 +596,7 @@ namespace EQLogParser
       }
     }
 
-    private void HandleTrigger(TriggerWrapper wrapper, LineData lineData, Dictionary<string, string> matches,
+    private async Task HandleTriggerAsync(TriggerWrapper wrapper, LineData lineData, Dictionary<string, string> matches,
       Dictionary<string, string> previousMatches, double dynamicDuration, long swTime, long beginTicks, int loopCount = 0)
     {
       if (!_ready) return;
@@ -633,7 +633,7 @@ namespace EQLogParser
         if (wrapper.TriggerData.TimerType > 0 && (wrapper.TriggerData.DurationSeconds > 0 ||
              (wrapper.TriggerData.TimerType is 1 or 3 && !double.IsNaN(dynamicDuration) && dynamicDuration > 0)))
         {
-          StartTimer(wrapper, altTimerName, beginTicks, dynamicDuration, lineData, matches, previousMatches, loopCount);
+          await StartTimerAsync(wrapper, altTimerName, beginTicks, dynamicDuration, lineData, matches, previousMatches, loopCount);
         }
       }
 
@@ -680,7 +680,7 @@ namespace EQLogParser
           updatedDisplayText = updatedDisplayText.Replace(LogTimeCode, DateUtil.FormatSimpleHms(lineData.BeginTime), StringComparison.OrdinalIgnoreCase);
         }
 
-        TriggerOverlayManager.Instance.AddText(wrapper.TriggerData, updatedDisplayText, _fontColor);
+        await TriggerOverlayManager.Instance.AddTextAsync(wrapper.TriggerData, updatedDisplayText, _fontColor);
       }
 
       if (ProcessDisplayText(wrapper.ModifiedShare, lineData.Action, matches, null, previousMatches) is { } updatedShareText)
@@ -719,7 +719,7 @@ namespace EQLogParser
       }
     }
 
-    private void StartTimer(TriggerWrapper wrapper, string displayName, long beginTicks, double dynamicDuration, LineData lineData,
+    private async Task StartTimerAsync(TriggerWrapper wrapper, string displayName, long beginTicks, double dynamicDuration, LineData lineData,
       Dictionary<string, string> matches, Dictionary<string, string> previousMatches, int loopCount = 0)
     {
       var trigger = wrapper.TriggerData;
@@ -730,7 +730,7 @@ namespace EQLogParser
         // Restart Timer Option so clear out everything
         case 1:
           {
-            CleanupTimers(timerList, wrapper);
+            await CleanupTimersAsync(timerList, wrapper);
           }
           break;
         // Restart Timer only if it is already running
@@ -750,7 +750,7 @@ namespace EQLogParser
 
             if (removed != null)
             {
-              TriggerOverlayManager.Instance.UpdateTimer(trigger, removed, TriggerOverlayManager.TimerStateChange.Stop);
+              await TriggerOverlayManager.Instance.UpdateTimerAsync(trigger, removed, TriggerOverlayManager.TimerStateChange.Stop);
             }
           }
           break;
@@ -881,7 +881,7 @@ namespace EQLogParser
 
           if (ProcessDisplayText(wrapper.ModifiedWarningDisplay, lineData.Action, matches, null, previousMatches) is { } updatedDisplayText)
           {
-            TriggerOverlayManager.Instance.AddText(trigger, updatedDisplayText, _fontColor);
+            await TriggerOverlayManager.Instance.AddTextAsync(trigger, updatedDisplayText, _fontColor);
           }
 
           if (!_isDisposed && !_triggerLogCollection.IsCompleted)
@@ -940,7 +940,7 @@ namespace EQLogParser
       }
 
       // true for add
-      TriggerOverlayManager.Instance.UpdateTimer(trigger, newTimerData, TriggerOverlayManager.TimerStateChange.Start);
+      await TriggerOverlayManager.Instance.UpdateTimerAsync(trigger, newTimerData, TriggerOverlayManager.TimerStateChange.Start);
 
       var data2 = newTimerData;
       var token = data2.CancelSource.Token;
@@ -969,7 +969,7 @@ namespace EQLogParser
         if (proceed)
         {
           // stop timer
-          TriggerOverlayManager.Instance.UpdateTimer(trigger, data2, TriggerOverlayManager.TimerStateChange.Stop);
+          await TriggerOverlayManager.Instance.UpdateTimerAsync(trigger, data2, TriggerOverlayManager.TimerStateChange.Stop);
 
           var tts = TriggerUtil.GetFromDecodedSoundOrText(trigger.EndSoundToPlay, wrapper.ModifiedEndSpeak, out var isSound);
           if (!string.IsNullOrEmpty(tts) && !tts.Equals(NullCode, StringComparison.OrdinalIgnoreCase) && !_isDisposed && !_speakCollection.IsCompleted)
@@ -995,7 +995,7 @@ namespace EQLogParser
 
           if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, data2.OriginalMatches, data2.PreviousMatches) is { } updatedDisplayText)
           {
-            TriggerOverlayManager.Instance.AddText(trigger, updatedDisplayText, _fontColor);
+            await TriggerOverlayManager.Instance.AddTextAsync(trigger, updatedDisplayText, _fontColor);
           }
 
           if (!_isDisposed && !_triggerLogCollection.IsCompleted)
@@ -1021,13 +1021,13 @@ namespace EQLogParser
             {
               if (!_activeTriggersById.ContainsKey(wrapper.Id)) return;
               // repeat 
-              HandleTrigger(wrapper, data2.RepeatingTimerLineData, data2.OriginalMatches, data2.PreviousMatches, dynamicDuration,
+              await HandleTriggerAsync(wrapper, data2.RepeatingTimerLineData, data2.OriginalMatches, data2.PreviousMatches, dynamicDuration,
                 0, DateTime.UtcNow.Ticks, data2.TimesToLoopCount + 1);
-              CheckTimers(wrapper, timerList, lineData);
+              await CheckTimersAsync(wrapper, timerList, lineData);
             }
             finally
             {
-              if (!_isDisposed) _activeTriggerSemaphore.Release();
+              _activeTriggerSemaphore.Release();
             }
           }
         }
@@ -1559,7 +1559,7 @@ namespace EQLogParser
     }
 
     // make sure each call is from within lock of TimerList
-    private static void CleanupTimers(List<TimerData> timerList, TriggerWrapper wrapper)
+    private static async Task CleanupTimersAsync(List<TimerData> timerList, TriggerWrapper wrapper)
     {
       if (timerList.Count == 0)
       {
@@ -1582,7 +1582,7 @@ namespace EQLogParser
       // stop timer
       foreach (var timerData in toRemove)
       {
-        TriggerOverlayManager.Instance.UpdateTimer(wrapper.TriggerData, timerData, TriggerOverlayManager.TimerStateChange.Stop);
+        await TriggerOverlayManager.Instance.UpdateTimerAsync(wrapper.TriggerData, timerData, TriggerOverlayManager.TimerStateChange.Stop);
       }
     }
 
@@ -1598,7 +1598,7 @@ namespace EQLogParser
           // if timerlist exists and the trigger is no longer active then cleanup
           if (old.Id != null && _timerLists.TryGetValue(old.Id, out var timerList) && !activeTriggersById.ContainsKey(old.Id))
           {
-            CleanupTimers(timerList, old);
+            await CleanupTimersAsync(timerList, old);
             _timerLists.TryRemove(old.Id, out _);
 
             // purge repeated counters for this trigger id
@@ -1624,7 +1624,7 @@ namespace EQLogParser
           _requiredOverlays[id] = true;
         }
 
-        if (!_isDisposed) _activeTriggerSemaphore.Release();
+        _activeTriggerSemaphore.Release();
       }
     }
 
@@ -1668,7 +1668,6 @@ namespace EQLogParser
           _triggerLogCollection.Dispose();
           _chatCollection.Dispose();
           _speakCollection.Dispose();
-          _activeTriggerSemaphore.Dispose();
         }
       }
     }

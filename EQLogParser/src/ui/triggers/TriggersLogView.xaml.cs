@@ -47,30 +47,33 @@ namespace EQLogParser
 
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
 
-    private async void EventsProcessorsUpdated(bool _)
+    private void EventsProcessorsUpdated(List<TriggerLogStore> updatedLogs)
     {
-      _triggerLogs = [.. await TriggerManager.Instance.GetTriggerLogs()];
-      if (logList != null)
+      _triggerLogs = updatedLogs;
+
+      Dispatcher.InvokeAsync(() =>
       {
-        var selected = logList.SelectedItem as string;
-        var list = _triggerLogs.Select(log => log.Name).ToList();
-
-        logList.ItemsSource = list;
-        // not sure why
-        logList.SelectedIndex = -1;
-
-        if (_triggerLogs.Count > 0)
+        if (logList != null)
         {
-          if (selected != null && list.IndexOf(selected) is var found and > -1)
+          var list = _triggerLogs.Select(log => log.Name).ToList();
+
+          logList.ItemsSource = list;
+          // not sure why
+          logList.SelectedIndex = -1;
+
+          if (_triggerLogs.Count > 0)
           {
-            logList.SelectedIndex = found;
-          }
-          else
-          {
-            logList.SelectedIndex = 0;
+            if (logList.SelectedItem is string selected && list.IndexOf(selected) is var found and > -1)
+            {
+              logList.SelectedIndex = found;
+            }
+            else
+            {
+              logList.SelectedIndex = 0;
+            }
           }
         }
-      }
+      });
     }
 
     private void SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
