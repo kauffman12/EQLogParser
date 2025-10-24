@@ -93,8 +93,7 @@ namespace EQLogParser
                 // Store the eqsprite URI in attached property for persistence
                 // We can't use UriSource because WPF will try to load from it and fail (custom scheme)
                 SetOriginalIconSource(bmp, path);
-                // Don't freeze - frozen bitmaps don't trigger PropertyChanged in bindings properly
-                // bmp.Freeze();
+                bmp.Freeze();
                 return bmp;
               }
             }
