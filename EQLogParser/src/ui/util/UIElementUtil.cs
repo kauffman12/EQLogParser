@@ -28,20 +28,42 @@ namespace EQLogParser
 
     internal static readonly BitmapImage BrokenIcon = new(new Uri(@"pack://application:,,,/icons/broken.png"));
 
+    // Attached property to store the original icon source string (including eqsprite:// URIs)
+    // This is needed because WPF can't load from custom URI schemes, so we store the original
+    // URI string here and use it to recreate the bitmap when needed.
+    public static readonly DependencyProperty OriginalIconSourceProperty =
+      DependencyProperty.RegisterAttached("OriginalIconSource", typeof(string), typeof(UiElementUtil), new PropertyMetadata(null));
+
+    public static string GetOriginalIconSource(DependencyObject obj) => (string)obj.GetValue(OriginalIconSourceProperty);
+    public static void SetOriginalIconSource(DependencyObject obj, string value) => obj.SetValue(OriginalIconSourceProperty, value);
+
     internal static BitmapImage CreateBitmap(string path)
     {
       if (string.IsNullOrEmpty(path)) return null;
 
-      // support custom eqsprite format: eqsprite|<sheetPath>|<col>|<row>
-      try
+      // Support custom eqsprite URI format: eqsprite://path/to/sheet.tga/col/row
+      // This uses standard URI format but we parse it manually since WPF doesn't support custom URI schemes.
+      // The format allows us to store sprite references in BitmapImage.UriSource for persistence.
+      if (path.StartsWith("eqsprite://", StringComparison.OrdinalIgnoreCase))
       {
-        if (path.StartsWith("eqsprite|", StringComparison.OrdinalIgnoreCase))
+        try
         {
-          var parts = path.Split('|');
-          if (parts.Length == 4)
+          // Remove the scheme prefix and split on forward slashes
+          var pathWithoutScheme = path.Substring("eqsprite://".Length);
+          var parts = pathWithoutScheme.Split('/');
+          
+          // Format: eqsprite://C:/path/to/sheet.tga/col/row
+          // We need at least 3 parts: [...path segments..., col, row]
+          if (parts.Length >= 3)
           {
-            var sheet = parts[1];
-            if (int.TryParse(parts[2], out var col) && int.TryParse(parts[3], out var row))
+            // Last two parts are col and row
+            var colStr = parts[^2];
+            var rowStr = parts[^1];
+            
+            // Everything before the last two parts is the sheet path
+            var sheet = string.Join("/", parts[0..^2]);
+            
+            if (int.TryParse(colStr, out var col) && int.TryParse(rowStr, out var row))
             {
               BitmapSource sheetBmp = null;
               if (sheet.EndsWith(".tga", StringComparison.OrdinalIgnoreCase))
@@ -56,41 +78,38 @@ namespace EQLogParser
               if (sheetBmp != null)
               {
                 var rect = new Int32Rect(col * 40, row * 40, 40, 40);
-                try
-                {
-                  var cropped = new CroppedBitmap(sheetBmp, rect);
-                  // convert to BitmapImage via encoder
-                  var encoder = new PngBitmapEncoder();
-                  encoder.Frames.Add(BitmapFrame.Create(cropped));
-                  using var ms = new MemoryStream();
-                  encoder.Save(ms);
-                  ms.Seek(0, SeekOrigin.Begin);
-                  var bmp = new BitmapImage();
-                  bmp.BeginInit();
-                  bmp.CacheOption = BitmapCacheOption.OnLoad;
-                  bmp.StreamSource = ms;
-                  // store the original eqsprite string as the UriSource so higher layers can persist it
-                  try
-                  {
-                    bmp.SetValue(BitmapImage.UriSourceProperty, new Uri(path, UriKind.RelativeOrAbsolute));
-                  }
-                  catch { }
-                  bmp.EndInit();
-                  bmp.Freeze();
-                  return bmp;
-                }
-                catch
-                {
-                  // fallthrough to try normal loading
-                }
+                var cropped = new CroppedBitmap(sheetBmp, rect);
+                // convert to BitmapImage via encoder
+                var encoder = new PngBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(cropped));
+                using var ms = new MemoryStream();
+                encoder.Save(ms);
+                ms.Seek(0, SeekOrigin.Begin);
+                var bmp = new BitmapImage();
+                bmp.BeginInit();
+                bmp.CacheOption = BitmapCacheOption.OnLoad;
+                bmp.StreamSource = ms;
+                bmp.EndInit();
+                // Store the eqsprite URI in attached property for persistence
+                // We can't use UriSource because WPF will try to load from it and fail (custom scheme)
+                SetOriginalIconSource(bmp, path);
+                // Don't freeze - frozen bitmaps don't trigger PropertyChanged in bindings properly
+                // bmp.Freeze();
+                return bmp;
               }
             }
           }
         }
+        catch (Exception ex)
+        {
+          Log.Error($"Error processing eqsprite URI: {path}", ex);
+        }
+        
+        // if eqsprite URI format failed, return null
+        return null;
       }
-      catch { }
 
-      // Regular file path - with broken icon fallback
+      // Regular file path - with broken icon fallback and attached property
       if (!File.Exists(path)) return BrokenIcon;
 
       try
@@ -99,10 +118,13 @@ namespace EQLogParser
         bitmap.BeginInit();
         bitmap.UriSource = new Uri(path, UriKind.Absolute);
         bitmap.EndInit();
+        // Also store the file path in attached property for consistency
+        SetOriginalIconSource(bitmap, path);
         return bitmap;
       }
-      catch (Exception)
+      catch (Exception ex)
       {
+        Log.Error($"Error creating bitmap from path: {path}", ex);
         return BrokenIcon;
       }
     }

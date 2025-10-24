@@ -8,27 +8,37 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
+using log4net;
 
 namespace EQLogParser
 {
   internal class OptionalIconEditor : BaseTypeEditor
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private TextBox _theTextBox;
     private Button _theButton;
     private Image _theImage;
     private DependencyPropertyDescriptor _theImageDpd;
+    private PropertyItem _propertyItem;
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
     {
+      _propertyItem = info;
+      Console.WriteLine($"OptionalIconEditor.Attach: Property={property?.Name}, CanWrite={info.CanWrite}");
+      Log.Debug($"OptionalIconEditor.Attach: Property={property?.Name}, CanWrite={info.CanWrite}");
+      
       var binding = new Binding("Value")
       {
         Mode = info.CanWrite ? BindingMode.TwoWay : BindingMode.OneWay,
         Source = info,
+        UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged,
         ValidatesOnExceptions = true,
         ValidatesOnDataErrors = true
       };
 
       BindingOperations.SetBinding(_theImage, Image.SourceProperty, binding);
+      Console.WriteLine($"OptionalIconEditor.Attach: Binding set with UpdateSourceTrigger.PropertyChanged");
+      Log.Debug($"OptionalIconEditor.Attach: Binding set with UpdateSourceTrigger.PropertyChanged");
     }
 
     public override object Create(PropertyInfo propertyInfo) => Create();
@@ -97,7 +107,7 @@ namespace EQLogParser
 
       var spriteBtn = new Button
       {
-        Content = "EQ Sprites",
+        Content = "EQ Icons",
         Padding = new Thickness(8, 2, 8, 2),
         Margin = new Thickness(2, 1, 2, 1)
       };
@@ -137,6 +147,8 @@ namespace EQLogParser
 
     private void SelectImage()
     {
+      Console.WriteLine("SelectImage: Opening file dialog");
+      Log.Debug("SelectImage: Opening file dialog");
       var dialog = new CommonOpenFileDialog
       {
         // Set to false because we're opening a file, not selecting a folder
@@ -151,8 +163,13 @@ namespace EQLogParser
       var handle = new WindowInteropHelper(MainActions.GetOwner()).Handle;
       if (dialog.ShowDialog(handle) == CommonFileDialogResult.Ok)
       {
-        var file = dialog.FileName; // Get the selected file name
-        _theImage.Source = UiElementUtil.CreateBitmap(file);
+        var file = dialog.FileName;
+        var bitmap = UiElementUtil.CreateBitmap(file);
+        
+        if (bitmap != null && _theImage != null)
+        {
+          _theImage.Source = bitmap;
+        }
       }
       else if (_theImage.Source == null)
       {
@@ -162,19 +179,25 @@ namespace EQLogParser
 
     private void TheTextBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+      Log.Debug("TheTextBox_PreviewMouseLeftButtonDown: Opening file dialog");
       ShowImage();
       SelectImage();
     }
 
     private void SpriteBtn_Click(object sender, RoutedEventArgs e)
     {
+      ShowImage();
       var picker = new SpritePickerWindow();
-      var ownerHandle = new System.Windows.Interop.WindowInteropHelper(MainActions.GetOwner()).Handle;
       picker.Owner = MainActions.GetOwner();
       if (picker.ShowDialog() == true)
       {
-        // picker.SelectedValue is eqsprite|sheet|col|row
-        _theImage.Source = UiElementUtil.CreateBitmap(picker.SelectedValue);
+        var bitmap = UiElementUtil.CreateBitmap(picker.SelectedValue);
+        if (bitmap != null && _theImage != null)
+        {
+          // Force binding update by clearing first (same as Reset does)
+          _theImage.Source = null;
+          _theImage.Source = bitmap;
+        }
       }
     }
 
