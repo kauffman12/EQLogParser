@@ -21,9 +21,9 @@ namespace EQLogParser
     private static readonly Lazy<TriggerOverlayManager> Lazy = new(() => new TriggerOverlayManager());
     private const string TEXT_OVERLAY = "text-overlay";
     private const string TIMER_OVERLAY = "timer-overlay";
-    private readonly ConcurrentDictionary<string, OverlayWindowData> _textWindows = [];
-    private readonly ConcurrentDictionary<string, OverlayWindowData> _timerWindows = [];
-    private readonly ConcurrentDictionary<string, TriggerNode> _defaultOverlays = [];
+    private readonly Dictionary<string, OverlayWindowData> _textWindows = [];
+    private readonly Dictionary<string, OverlayWindowData> _timerWindows = [];
+    private readonly Dictionary<string, TriggerNode> _defaultOverlays = [];
     private readonly ConcurrentDictionary<string, RegexData> _closeRegex = [];
 
     private TriggerOverlayManager()
@@ -36,6 +36,7 @@ namespace EQLogParser
     {
       if (!_closeRegex.IsEmpty && !string.IsNullOrEmpty(action))
       {
+        List<string> closeIds = null;
         foreach (var kv in _closeRegex)
         {
           var doClose = false;
@@ -55,24 +56,33 @@ namespace EQLogParser
             doClose = action.Contains(kv.Value.ClosePattern, StringComparison.OrdinalIgnoreCase);
           }
 
-          if (doClose)
+          if (doClose && !string.IsNullOrEmpty(kv.Value.Id))
           {
-            var id = kv.Value.Id;
-            _ = UiUtil.InvokeAsync(() =>
+            closeIds ??= new List<string>(2);
+            closeIds.Add(kv.Value.Id);
+          }
+        }
+
+        if (closeIds?.Count > 0)
+        {
+          _ = UiUtil.InvokeAsync(() =>
+          {
+            foreach (var id in closeIds)
             {
               if (_textWindows.TryGetValue(id, out var windowData) && windowData.TheWindow is TextOverlayWindow { } window)
               {
+                // stop and clear but don't remove
                 window.StopOverlay();
               }
-            });
-          }
+            }
+          });
         }
       }
     }
 
     internal void HideOverlays()
     {
-      _ = UiUtil.InvokeAsync(() =>
+      _ = UiUtil.InvokeAsync(async () =>
       {
         foreach (var kv in _textWindows)
         {
@@ -86,7 +96,7 @@ namespace EQLogParser
         {
           if (kv.Value is OverlayWindowData windowData && windowData.TheWindow is TimerOverlayWindow { } timerWindow)
           {
-            timerWindow.HideOverlay();
+            await timerWindow.HideOverlayAsync();
           }
         }
       });
@@ -94,7 +104,7 @@ namespace EQLogParser
 
     internal void StopOverlays()
     {
-      _ = UiUtil.InvokeAsync(() =>
+      _ = UiUtil.InvokeAsync(async () =>
       {
         foreach (var kv in _textWindows)
         {
@@ -108,24 +118,24 @@ namespace EQLogParser
         {
           if (kv.Value is OverlayWindowData windowData && windowData.TheWindow is TimerOverlayWindow { } timerWindow)
           {
-            timerWindow.StopOverlay();
+            await timerWindow.StopOverlayAsync();
           }
         }
       });
     }
 
-    internal async Task StopAsync()
+    internal async Task RemoveAllAsync()
     {
-      await UiUtil.InvokeAsync(() =>
+      await UiUtil.InvokeAsync(async () =>
       {
         foreach (var kv in _textWindows)
         {
-          RemoveWindow(kv.Key);
+          await RemoveWindowAsync(kv.Key);
         }
 
         foreach (var kv in _timerWindows)
         {
-          RemoveWindow(kv.Key);
+          await RemoveWindowAsync(kv.Key);
         }
       });
     }
@@ -134,23 +144,27 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(overlayId))
       {
-        await UiUtil.InvokeAsync(async () =>
+        var overlay = await TriggerStateManager.Instance.GetOverlayById(overlayId);
+        if (overlay != null)
         {
-          RemoveWindow(overlayId);
+          await UiUtil.InvokeAsync(async () =>
+          {
+            await RemoveWindowAsync(overlayId);
 
-          var overlay = await TriggerStateManager.Instance.GetOverlayById(overlayId);
-          if (overlay.OverlayData.IsTextOverlay && !_textWindows.ContainsKey(overlayId))
-          {
-            AddWindow(_textWindows, overlay);
-          }
-          else if (overlay.OverlayData.IsTimerOverlay && !_timerWindows.ContainsKey(overlayId))
-          {
-            AddWindow(_timerWindows, overlay);
-          }
-        });
+            if (overlay.OverlayData.IsTextOverlay && !_textWindows.ContainsKey(overlayId))
+            {
+              AddWindow(_textWindows, overlay);
+            }
+            else if (overlay.OverlayData.IsTimerOverlay && !_timerWindows.ContainsKey(overlayId))
+            {
+              AddWindow(_timerWindows, overlay);
+            }
+          });
+        }
       }
     }
 
+    // Started from Task.Run
     internal async Task UpdateOverlayInfoAsync(HashSet<string> overlayIds, HashSet<string> enabledTriggers)
     {
       await UpdateDefaultOverlaysAsync();
@@ -158,8 +172,11 @@ namespace EQLogParser
       var ids = overlayIds.Where(id => !string.IsNullOrEmpty(id)).ToList();
       var overlays = await Task.WhenAll(ids.Select(TriggerStateManager.Instance.GetOverlayById));
 
-      List<string> allOverlayIds = null;
-      await UiUtil.InvokeAsync(() =>
+      Dictionary<string, TriggerNode> needRegexUpdate = null;
+      TriggerNode defaultTextOverlay = null;
+      TriggerNode defaultTimerOverlay = null;
+
+      await UiUtil.InvokeAsync(async () =>
       {
         for (var i = 0; i < ids.Count; i++)
         {
@@ -169,7 +186,7 @@ namespace EQLogParser
           // if not found make sure there's no window
           if (overlay == null)
           {
-            RemoveWindow(overlayId);
+            await RemoveWindowAsync(overlayId);
             _closeRegex.TryRemove(overlayId, out _);
             continue;
           }
@@ -177,7 +194,8 @@ namespace EQLogParser
           // update text overlay regex
           if (overlay.OverlayData.IsTextOverlay)
           {
-            UpdateCloseRegex(overlayId, overlay.OverlayData);
+            needRegexUpdate ??= [];
+            needRegexUpdate[overlayId] = overlay;
           }
 
           if (overlay.OverlayData.IsTextOverlay && !_textWindows.ContainsKey(overlayId))
@@ -190,125 +208,146 @@ namespace EQLogParser
           }
         }
 
-        // remove windows that aren't needed anymore
-        allOverlayIds = [.. _textWindows.Keys];
-        allOverlayIds.AddRange([.. _timerWindows.Keys]);
+        defaultTextOverlay = _defaultOverlays.GetValueOrDefault(TEXT_OVERLAY);
+        defaultTimerOverlay = _defaultOverlays.GetValueOrDefault(TIMER_OVERLAY);
+
+        if (!string.IsNullOrEmpty(defaultTextOverlay?.Id))
+        {
+          needRegexUpdate ??= [];
+          needRegexUpdate[defaultTextOverlay.Id] = defaultTextOverlay;
+        }
+
+        // validate timers
+        foreach (var kv in _timerWindows)
+        {
+          if (kv.Value.TheWindow is TimerOverlayWindow { } timerWindow)
+          {
+            timerWindow.ValidateTimers(enabledTriggers);
+          }
+        }
+
+        foreach (var id in ids)
+        {
+          if (!_textWindows.ContainsKey(id) && !_timerWindows.ContainsKey(id) &&
+            !string.Equals(id, defaultTextOverlay?.Id, StringComparison.Ordinal) &&
+            !string.Equals(id, defaultTimerOverlay?.Id, StringComparison.Ordinal))
+          {
+            // remove any windows not in use
+            await RemoveWindowAsync(id);
+          }
+        }
       });
 
-      var defaultTextOverlay = _defaultOverlays.GetValueOrDefault(TEXT_OVERLAY);
-      var defaultTimerOverlay = _defaultOverlays.GetValueOrDefault(TIMER_OVERLAY);
-
-      if (defaultTextOverlay != null)
+      if (needRegexUpdate != null)
       {
-        UpdateCloseRegex(defaultTextOverlay.Id, defaultTextOverlay.OverlayData);
-      }
-
-      if (allOverlayIds?.Count > 0)
-      {
-        await UiUtil.InvokeAsync(() =>
+        foreach (var kv in needRegexUpdate)
         {
-          foreach (var allId in allOverlayIds)
-          {
-            if (!overlayIds.Contains(allId) && allId != defaultTextOverlay?.Id && allId != defaultTimerOverlay?.Id)
-            {
-              RemoveWindow(allId);
-            }
-          }
-        });
-      }
-
-      // validate timers
-      foreach (var kv in _timerWindows)
-      {
-        if (kv.Value.TheWindow is TimerOverlayWindow { } timerWindow)
-        {
-          timerWindow.ValidateTimers(enabledTriggers);
+          _closeRegex[kv.Key] = CreateCloseRegex(kv.Key, kv.Value.OverlayData);
         }
       }
     }
 
-    internal void AddText(Trigger trigger, string text, string fontColor)
+    // Not called on UI thread
+    internal async Task AddTextAsync(Trigger trigger, string text, string fontColor)
     {
       fontColor ??= trigger.FontColor;
       var beginTicks = DateTime.UtcNow.Ticks;
 
-      var added = false;
-      foreach (var overlayId in trigger.SelectedOverlays)
+      var windowsToAdd = new List<TextOverlayWindow>(1);
+      await UiUtil.InvokeAsync(() =>
       {
-        if (AddToWindow(beginTicks, overlayId, text, fontColor))
+        var added = false;
+        foreach (var overlayId in trigger.SelectedOverlays)
         {
-          added = true;
-        }
-      }
-
-      // try default overlay if not added
-      if (!added && _defaultOverlays.TryGetValue(TEXT_OVERLAY, out var overlay) && overlay?.Id != null)
-      {
-        AddToWindow(beginTicks, overlay.Id, text, fontColor);
-      }
-
-      bool AddToWindow(long beginTicks, string id, string theText, string theFontColor)
-      {
-        if (_textWindows.TryGetValue(id, out var windowData) && windowData.TheWindow is TextOverlayWindow { } window)
-        {
-          var brush = UiUtil.GetBrush(theFontColor, false);
-
-          try
+          if (_textWindows.TryGetValue(overlayId, out var windowData) && windowData.TheWindow is TextOverlayWindow { } window)
           {
-            window.AddText(theText, beginTicks, brush);
+            windowsToAdd.Add(window);
+            added = true;
           }
-          catch (Exception ex)
-          {
-            Log.Debug("Error Adding Text", ex);
-          }
-
-          return true;
         }
 
-        return false;
+        if (!added && _defaultOverlays.TryGetValue(TEXT_OVERLAY, out var overlay) && !string.IsNullOrEmpty(overlay?.Id) &&
+          _textWindows.TryGetValue(overlay.Id, out var defaultWindowData) && defaultWindowData.TheWindow is TextOverlayWindow { } defaultWindow)
+        {
+          windowsToAdd.Add(defaultWindow);
+        }
+      });
+
+      foreach (var window in windowsToAdd)
+      {
+        try
+        {
+          window.AddText(text, beginTicks, fontColor);
+        }
+        catch (Exception ex)
+        {
+          Log.Debug("Error Adding Text", ex);
+        }
       }
     }
 
-    internal void UpdateTimer(Trigger trigger, TimerData timerData, TimerStateChange state)
+    internal async Task UpdateTimerAsync(Trigger trigger, TimerData timerData, TimerStateChange state)
     {
-      var added = false;
-      foreach (var overlayId in trigger.SelectedOverlays)
-      {
-        if (AddToWindow(overlayId, timerData, state))
-        {
-          added = true;
-        }
-      }
+      var windowsToStart = new List<TimerOverlayWindow>(2);
+      var windowsToStop = new List<TimerOverlayWindow>(2);
 
-      // try default overlay if not added
-      if (!added && _defaultOverlays.TryGetValue(TIMER_OVERLAY, out var overlay) && overlay?.Id != null)
+      await UiUtil.InvokeAsync(() =>
       {
-        AddToWindow(overlay.Id, timerData, state);
-      }
-
-      bool AddToWindow(string id, TimerData theTimerData, TimerStateChange newState)
-      {
-        if (_timerWindows.TryGetValue(id, out var windowData) && windowData.TheWindow is TimerOverlayWindow { } window)
+        var started = false;
+        var stopped = false;
+        foreach (var overlayId in trigger.SelectedOverlays)
         {
-          try
+          if (_timerWindows.TryGetValue(overlayId, out var windowData) && windowData.TheWindow is TimerOverlayWindow { } window)
           {
-            if (newState == TimerStateChange.Start)
+            if (state == TimerStateChange.Start)
             {
-              window.StartTimerAsync(theTimerData);
+              windowsToStart.Add(window);
+              started = true;
             }
-            else if (newState == TimerStateChange.Stop)
+            else if (state == TimerStateChange.Stop)
             {
-              window.StopTimer(theTimerData);
+              windowsToStop.Add(window);
+              stopped = true;
             }
-            return true;
-          }
-          catch (Exception ex)
-          {
-            Log.Debug("Error Updating Timer", ex);
           }
         }
 
-        return false;
+        if (state == TimerStateChange.Start && !started &&
+          _defaultOverlays.TryGetValue(TIMER_OVERLAY, out var overlay) && !string.IsNullOrEmpty(overlay?.Id) &&
+          _timerWindows.TryGetValue(overlay.Id, out var defaultWindowData) && defaultWindowData.TheWindow is TimerOverlayWindow { } defaultWindow)
+        {
+          windowsToStart.Add(defaultWindow);
+        }
+        else if (state == TimerStateChange.Stop && !stopped &&
+          _defaultOverlays.TryGetValue(TIMER_OVERLAY, out var overlay2) && !string.IsNullOrEmpty(overlay2?.Id) &&
+          _timerWindows.TryGetValue(overlay2.Id, out var defaultWindowData2) && defaultWindowData2.TheWindow is TimerOverlayWindow { } defaultWindow2)
+        {
+          windowsToStop.Add(defaultWindow2);
+        }
+      });
+
+      foreach (var startWindow in windowsToStart)
+      {
+        try
+        {
+          _ = startWindow.StartTimerAsync(timerData);
+        }
+        catch (Exception ex)
+        {
+          Log.Debug("Error Starting Timer", ex);
+        }
+      }
+
+      foreach (var stopWindow in windowsToStop)
+      {
+        try
+        {
+          _ = stopWindow.StopTimerAsync(timerData);
+        }
+        catch (Exception ex)
+        {
+          Log.Debug("Error Stopping Timer", ex);
+        }
       }
     }
 
@@ -316,7 +355,7 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(id))
       {
-        await UiUtil.InvokeAsync(() => RemoveWindow(id));
+        await UiUtil.InvokeAsync(() => RemoveWindowAsync(id));
         await UpdateDefaultOverlaysAsync();
       }
     }
@@ -334,18 +373,18 @@ namespace EQLogParser
     {
       var defaultTextOverlay = await TriggerStateManager.Instance.GetDefaultTextOverlay();
       var defaultTimerOverlay = await TriggerStateManager.Instance.GetDefaultTimerOverlay();
-      _defaultOverlays[TEXT_OVERLAY] = defaultTextOverlay;
-      _defaultOverlays[TIMER_OVERLAY] = defaultTimerOverlay;
 
       await UiUtil.InvokeAsync(() =>
       {
+        _defaultOverlays[TEXT_OVERLAY] = defaultTextOverlay;
+        _defaultOverlays[TIMER_OVERLAY] = defaultTimerOverlay;
         AddWindow(_textWindows, defaultTextOverlay);
         AddWindow(_timerWindows, defaultTimerOverlay);
       });
     }
 
     // only run this from UI thread
-    private void AddWindow(ConcurrentDictionary<string, OverlayWindowData> theWindows, TriggerNode overlay)
+    private void AddWindow(Dictionary<string, OverlayWindowData> theWindows, TriggerNode overlay)
     {
       if (overlay != null && !theWindows.ContainsKey(overlay.Id))
       {
@@ -361,7 +400,7 @@ namespace EQLogParser
     }
 
     // only run this from UI thread
-    private void RemoveWindow(string id)
+    private async Task RemoveWindowAsync(string id)
     {
       if (_textWindows.Remove(id, out var textWindow))
       {
@@ -378,7 +417,7 @@ namespace EQLogParser
       {
         if (timerWindow.TheWindow is TimerOverlayWindow { } window)
         {
-          window.StopOverlay();
+          await window.StopOverlayAsync();
         }
 
         timerWindow.TheWindow.Close();
@@ -386,30 +425,24 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateCloseRegex(string id, Overlay overlay)
+    private static RegexData CreateCloseRegex(string id, Overlay overlay)
     {
       if (!string.IsNullOrEmpty(id) && overlay != null)
       {
-        if (!_closeRegex.TryGetValue(id, out var data))
-        {
-          data = new RegexData();
-          _closeRegex[id] = data;
-        }
+        var regex = overlay.UseCloseRegex ? new Regex(overlay.ClosePattern, RegexOptions.IgnoreCase |
+          RegexOptions.CultureInvariant | RegexOptions.Compiled, TimeSpan.FromMilliseconds(50)) : null;
+        regex?.Match(""); // warm up the regex
 
-        data.Id = id;
-        data.ClosePattern = overlay.ClosePattern;
-        data.UseRegex = overlay.UseCloseRegex;
-
-        if (overlay.UseCloseRegex)
+        return new RegexData
         {
-          data.Regex = new Regex(overlay.ClosePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
-          data.Regex.Match(""); // warm up the regex
-        }
-        else
-        {
-          data.Regex = null;
-        }
+          Id = id,
+          ClosePattern = overlay.ClosePattern,
+          UseRegex = overlay.UseCloseRegex,
+          Regex = regex
+        };
       }
+
+      return null;
     }
 
     private class RegexData

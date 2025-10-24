@@ -10,7 +10,7 @@ namespace EQLogParser
 {
   internal class TriggerManager
   {
-    internal event Action<bool> EventsProcessorsUpdated;
+    internal event Action<List<TriggerLogStore>> EventsProcessorsUpdated;
     internal event Action<bool> EventsUpdatingTriggers;
     internal event Action<TriggerLogEntry> EventsSelectTrigger;
     internal static TriggerManager Instance => Lazy.Value;
@@ -57,7 +57,7 @@ namespace EQLogParser
       {
         _logReaders.ForEach(reader => reader.Dispose());
         _logReaders.Clear();
-        await TriggerOverlayManager.Instance.StopAsync();
+        await TriggerOverlayManager.Instance.RemoveAllAsync();
       }
       finally
       {
@@ -108,12 +108,6 @@ namespace EQLogParser
       _testProcessor?.Dispose();
       _testProcessor = null;
       return Task.CompletedTask;
-    }
-
-    internal async Task<List<TriggerLogStore>> GetTriggerLogs()
-    {
-      var processors = await GetProcessorsAsync();
-      return [.. processors.Select(p => p.TriggerLog)];
     }
 
     // refresh styles
@@ -289,40 +283,53 @@ namespace EQLogParser
     {
       _triggerUpdateTimer.Stop();
 
-      var processors = await GetProcessorsAsync();
-      foreach (var processor in processors)
+      await Task.Run(async () =>
       {
-        await processor.UpdateActiveTriggers();
-      }
+        var idSet = new HashSet<string>();
+        var triggerSet = new HashSet<string>();
+        foreach (var processor in await GetProcessorsAsync())
+        {
+          await processor.UpdateActiveTriggers();
+          foreach (var id in processor.GetRequiredOverlayIds())
+          {
+            idSet.Add(id);
+          }
 
-      await UpdateOverlayInfo();
-      EventsUpdatingTriggers?.Invoke(false);
+          foreach (var id in await processor.GetEnabledTriggersAsync())
+          {
+            triggerSet.Add(id);
+          }
+        }
+
+        await TriggerOverlayManager.Instance.UpdateOverlayInfoAsync(idSet, triggerSet);
+        EventsUpdatingTriggers?.Invoke(false);
+      });
     }
 
     private async Task FireEventsProcessorsUpdatedAsync()
     {
-      await UpdateOverlayInfo();
-      await UiUtil.InvokeAsync(() => EventsProcessorsUpdated?.Invoke(true));
-    }
-
-    private async Task UpdateOverlayInfo()
-    {
-      var idSet = new HashSet<string>();
-      var triggerSet = new HashSet<string>();
-      foreach (var processor in await GetProcessorsAsync())
+      await Task.Run(async () =>
       {
-        foreach (var id in processor.GetRequiredOverlayIds())
+        var idSet = new HashSet<string>();
+        var triggerSet = new HashSet<string>();
+        var triggerLogs = new List<TriggerLogStore>();
+        foreach (var processor in await GetProcessorsAsync())
         {
-          idSet.Add(id);
+          triggerLogs.Add(processor.TriggerLog);
+          foreach (var id in processor.GetRequiredOverlayIds())
+          {
+            idSet.Add(id);
+          }
+
+          foreach (var id in await processor.GetEnabledTriggersAsync())
+          {
+            triggerSet.Add(id);
+          }
         }
 
-        foreach (var id in await processor.GetEnabledTriggersAsync())
-        {
-          triggerSet.Add(id);
-        }
-      }
-
-      await TriggerOverlayManager.Instance.UpdateOverlayInfoAsync(idSet, triggerSet);
+        await TriggerOverlayManager.Instance.UpdateOverlayInfoAsync(idSet, triggerSet);
+        EventsProcessorsUpdated?.Invoke(triggerLogs);
+      });
     }
 
     private async Task<List<TriggerProcessor>> GetProcessorsAsync()

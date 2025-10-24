@@ -16,7 +16,7 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  public partial class TextOverlayWindow : IDisposable
+  public partial class TextOverlayWindow
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
@@ -72,14 +72,14 @@ namespace EQLogParser
       TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
     }
 
-    internal void AddText(string text, long beginTicks, Brush brush)
+    internal void AddText(string text, long beginTicks, string fontColor)
     {
       if (_isClosed)
       {
         return;
       }
 
-      _queue.Enqueue(new TextData { Text = text, BeginTicks = beginTicks, FontColorBrush = brush });
+      _queue.Enqueue(new TextData { Text = text, BeginTicks = beginTicks, FontColor = fontColor });
 
       // Ensure the timer is running (UI thread)
       if (_timer != null && !_timer.IsEnabled)
@@ -94,12 +94,14 @@ namespace EQLogParser
       }
     }
 
+    // Keep on UI thread
     internal void HideOverlay()
     {
       content.Visibility = Visibility.Collapsed;
       Visibility = Visibility.Collapsed;
     }
 
+    // Keep on UI thread
     internal void StopOverlay()
     {
       _timer?.Stop();
@@ -116,6 +118,7 @@ namespace EQLogParser
       }
 
       content.Visibility = Visibility.Collapsed;
+      Visibility = Visibility.Collapsed;
     }
 
     private void DoTick(object sender, EventArgs e)
@@ -123,7 +126,7 @@ namespace EQLogParser
       // 1) Drain new items on UI thread
       while (_queue.TryDequeue(out var td))
       {
-        RenderText(td.Text, td.BeginTicks, td.FontColorBrush);
+        RenderText(td.Text, td.BeginTicks, UiUtil.GetBrush(td.FontColor, false));
         Visibility = Visibility.Visible;
       }
 
@@ -311,7 +314,10 @@ namespace EQLogParser
 
       if (_streamerMode != _node.OverlayData.StreamerMode && !_preview)
       {
-        _ = TriggerOverlayManager.Instance.RestartOverlayAsync(_node.Id);
+        _ = Task.Run(async () =>
+        {
+          await TriggerOverlayManager.Instance.RestartOverlayAsync(_node.Id);
+        });
       }
     }
 
@@ -344,17 +350,11 @@ namespace EQLogParser
         _previewWindows = null;
         _queue.Clear();
         await Task.Delay(750);
-        Dispose();
       }
       catch (Exception)
       {
         // do nothing
       }
-    }
-
-    public void Dispose()
-    {
-      GC.SuppressFinalize(this);
     }
 
     // Possible workaround for data area passed to system call is too small
@@ -401,7 +401,7 @@ namespace EQLogParser
     {
       public long BeginTicks { get; init; }
       public string Text { get; init; }
-      public Brush FontColorBrush { get; init; }
+      public string FontColor { get; init; }
     }
   }
 }

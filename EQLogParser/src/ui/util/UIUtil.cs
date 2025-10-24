@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -167,22 +168,46 @@ namespace EQLogParser
       }
     }
 
-    internal static async Task InvokeAsync(Action action, DispatcherPriority priority = DispatcherPriority.Normal)
+    // Action (no result)
+    internal static Task InvokeAsync(Action action, DispatcherPriority priority = DispatcherPriority.Normal, CancellationToken ct = default)
     {
-      if (Application.Current?.Dispatcher is { } dispatcher)
+      var dispatcher = Application.Current?.Dispatcher;
+      if (dispatcher == null || dispatcher.CheckAccess())
       {
-        await dispatcher.InvokeAsync(action, priority);
+        action();
+        return Task.CompletedTask;
       }
+
+      return dispatcher.InvokeAsync(action, priority, ct).Task;
     }
 
-    internal static async Task InvokeAsync(Func<Task> asyncAction, DispatcherPriority priority = DispatcherPriority.Normal)
+    // Func<T> (sync result)
+    internal static Task<T> InvokeAsync<T>(Func<T> func, DispatcherPriority priority = DispatcherPriority.Normal, CancellationToken ct = default)
     {
-      if (Application.Current?.Dispatcher is { } dispatcher)
+      var dispatcher = Application.Current?.Dispatcher;
+      if (dispatcher == null || dispatcher.CheckAccess())
       {
-        // Use the TResult overload so we get DispatcherOperation<Task>, then unwrap
-        var inner = await dispatcher.InvokeAsync(asyncAction, priority); // DispatcherOperation<Task>
-        await inner;                                                     // unwrap & await actual work
+        return Task.FromResult(func());
       }
+
+      return dispatcher.InvokeAsync(func, priority, ct).Task;
+    }
+
+    // Func<Task> (async work)
+    internal static Task InvokeAsync(Func<Task> asyncAction, DispatcherPriority priority = DispatcherPriority.Normal, CancellationToken ct = default)
+    {
+      var dispatcher = Application.Current?.Dispatcher;
+      if (dispatcher == null || dispatcher.CheckAccess())
+      {
+        // Already on UI (or no dispatcher) — just run it here
+        return asyncAction();
+      }
+
+      // Hop to UI to *start* the async action, then unwrap/await it
+      return dispatcher.InvokeAsync(async () =>
+      {
+        await asyncAction().ConfigureAwait(false);
+      }, priority, ct).Task;
     }
 
     private class SortablePetMappingComparer : IComparer<PetMapping>
