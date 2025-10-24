@@ -1126,6 +1126,7 @@ namespace EQLogParser
             var timerName = string.IsNullOrEmpty(trigger.AltTimerName) ? enabled.Name : trigger.AltTimerName;
             var modifiedTimerName = PreProcessCodes(timerName, trigger);
             var modifiedSendToChat = PreProcessCodes(trigger.TextToSendToChat, trigger);
+            var icon = UiElementUtil.CreateBitmap(trigger.IconSource);
 
             var wrapper = new TriggerWrapper
             {
@@ -1156,7 +1157,7 @@ namespace EQLogParser
               HasLogTimeText = modifiedDisplay?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) == true,
               HasLogTimeTimer = modifiedTimerName?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) == true,
               HasLogTimeSendToChat = modifiedSendToChat?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) == true,
-              TimerIcon = UiElementUtil.CreateBitmap(trigger.IconSource)
+              TimerIcon = icon != UiElementUtil.BrokenIcon ? icon : null
             };
 
             // temp

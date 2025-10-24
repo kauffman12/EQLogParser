@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -18,21 +19,33 @@ namespace EQLogParser
   internal static class UiElementUtil
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
     private static readonly string[] CommonFontFamilies =
     [
       "Arial", "Calibri", "Cambria", "Century Gothic", "Georgia", "Helvetica", "Lucida Sans",
       "Open Sans", "Segoe UI", "Roboto", "Tahoma", "Times New Roman", "Trebuchet MS", "Verdana"
     ];
 
+    internal static readonly BitmapImage BrokenIcon = new(new Uri(@"pack://application:,,,/icons/broken.png"));
+
     internal static BitmapImage CreateBitmap(string path)
     {
       if (!string.IsNullOrEmpty(path))
       {
-        var bitmap = new BitmapImage();
-        bitmap.BeginInit();
-        bitmap.UriSource = new Uri(path, UriKind.Absolute);
-        bitmap.EndInit();
-        return bitmap;
+        if (!File.Exists(path)) return BrokenIcon;
+
+        try
+        {
+          var bitmap = new BitmapImage();
+          bitmap.BeginInit();
+          bitmap.UriSource = new Uri(path, UriKind.Absolute);
+          bitmap.EndInit();
+          return bitmap;
+        }
+        catch (Exception)
+        {
+          // broken image
+        }
       }
 
       return null;

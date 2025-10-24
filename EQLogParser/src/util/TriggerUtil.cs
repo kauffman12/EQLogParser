@@ -361,6 +361,16 @@ namespace EQLogParser
       return text;
     }
 
+    internal static bool SoundFileExists(string text)
+    {
+      if (string.IsNullOrEmpty(text))
+      {
+        return false;
+      }
+
+      return File.Exists(@"data/sounds/" + text);
+    }
+
     internal static bool MatchSoundFile(string text, out string file, out string notFile)
     {
       file = null;
