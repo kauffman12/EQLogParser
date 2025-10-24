@@ -555,9 +555,14 @@ namespace EQLogParser
           }
           else
           {
+            // Check attached property first (for eqsprite:// URIs), then fallback to UriSource for regular files
+            var currentIconSource = trigger.TriggerIconSource != null
+              ? (UiElementUtil.GetOriginalIconSource(trigger.TriggerIconSource) ?? trigger.TriggerIconSource.UriSource?.OriginalString)
+              : null;
+            
             triggerChange = (trigger.TriggerIconSource == null && original.IconSource != null) ||
              (trigger.TriggerIconSource != null && original.IconSource == null) ||
-             (trigger.TriggerIconSource?.UriSource.OriginalString != original.IconSource);
+             (currentIconSource != original.IconSource);
           }
         }
         else if (args.Property.Name == "DurationTimeSpan" && timerDurationItem.Visibility == Visibility.Collapsed)

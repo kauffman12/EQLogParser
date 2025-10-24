@@ -141,7 +141,10 @@ namespace EQLogParser
         {
           toTrigger.ActiveColor = fromModel.TriggerActiveBrush?.Color.ToHexString();
           toTrigger.FontColor = fromModel.TriggerFontBrush?.Color.ToHexString();
-          toTrigger.IconSource = fromModel.TriggerIconSource?.UriSource?.OriginalString;
+          // Check attached property first (for eqsprite:// URIs), then fallback to UriSource for regular files
+          toTrigger.IconSource = fromModel.TriggerIconSource != null 
+            ? (UiElementUtil.GetOriginalIconSource(fromModel.TriggerIconSource) ?? fromModel.TriggerIconSource.UriSource?.OriginalString)
+            : null;
           var selectedOverlays = fromModel.SelectedTextOverlays.Where(item => item.IsChecked).Select(item => item.Value).ToList();
           selectedOverlays.AddRange(fromModel.SelectedTimerOverlays.Where(item => item.IsChecked).Select(item => item.Value));
           toTrigger.SelectedOverlays = selectedOverlays;
