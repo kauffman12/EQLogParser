@@ -2085,6 +2085,9 @@ Flamebrand IV
 Flamebrand V
 Flamebrand VI
 Flamebrand VII
+Flamebrand VIII
+Flamebrand IX
+Flamebrand X
 Flamelick
 Frenzying Blow
 Frenzying Burst
@@ -2094,6 +2097,9 @@ Frenzying Burst IV
 Frenzying Burst V
 Frenzying Burst VI
 Frenzying Burst VII
+Frenzying Burst VIII
+Frenzying Burst IX
+Frenzying Burst X
 Frostchill
 Frostchill II
 Frostchill III
@@ -2101,6 +2107,9 @@ Frostchill IV
 Frostchill V
 Frostchill VI
 Frostchill VII
+Frostchill VIII
+Frostchill IX
+Frostchill X
 Icesnap
 Jolting Burst
 Jolting Burst II
@@ -2109,6 +2118,9 @@ Jolting Burst IV
 Jolting Burst V
 Jolting Burst VI
 Jolting Burst VII
+Jolting Burst VIII
+Jolting Burst IX
+Jolting Burst X
 Jolting Strike
 Windgust
 Windgust II
@@ -2117,6 +2129,9 @@ Windgust IV
 Windgust V
 Windgust VI
 Windgust VII
+Windgust VIII
+Windgust IX
+Windgust X
 Windstrike
 
 # Mage Robe
