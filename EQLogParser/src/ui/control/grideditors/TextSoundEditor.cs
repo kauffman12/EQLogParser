@@ -1,5 +1,4 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
-using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -127,8 +126,7 @@ namespace EQLogParser
           {
             if (_theSoundCombo.SelectedValue is string selected && !string.IsNullOrEmpty(selected))
             {
-              var theFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sounds", selected);
-              AudioManager.Instance.TestSpeakFileAsync(theFile, model.Volume);
+              AudioManager.Instance.TestSpeakFileAsync(@"data/sounds/" + selected, model.Volume);
             }
           }
         }
@@ -212,7 +210,8 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(selected))
         {
           // change from real text box being modified
-          if (combo.Tag == null && File.Exists(@"data/sounds/" + selected))
+          var path = @"data/sounds/" + selected;
+          if (combo.Tag == null && File.Exists(path))
           {
             var codedName = "<<" + selected + ">>";
             if (_theRealTextBox.Text != codedName)
@@ -220,8 +219,7 @@ namespace EQLogParser
               _theRealTextBox.Text = codedName;
             }
 
-            var theFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sounds", selected);
-            AudioManager.Instance.TestSpeakFileAsync(theFile);
+            AudioManager.Instance.TestSpeakFileAsync(path);
           }
           combo.Tag = null;
         }

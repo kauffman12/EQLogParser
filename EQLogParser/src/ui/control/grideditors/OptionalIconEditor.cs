@@ -33,6 +33,34 @@ namespace EQLogParser
 
     public override object Create(PropertyInfo propertyInfo) => Create();
     public override object Create(PropertyDescriptor descriotor) => Create();
+    public override bool ShouldPropertyGridTryToHandleKeyDown(Key key) => false;
+
+    public override void Detach(PropertyViewItem property)
+    {
+      if (_theTextBox != null)
+      {
+        _theTextBox.PreviewMouseLeftButtonDown -= TheTextBox_PreviewMouseLeftButtonDown;
+        BindingOperations.ClearAllBindings(_theTextBox);
+        _theTextBox = null;
+      }
+
+      if (_theButton != null)
+      {
+        BindingOperations.ClearAllBindings(_theButton);
+        _theButton = null;
+      }
+
+      if (_theImage != null)
+      {
+        BindingOperations.ClearAllBindings(_theImage);
+        _theImageDpd.RemoveValueChanged(_theImage, TheImage_SourceChanged);
+        _theImage.PreviewMouseLeftButtonDown -= TheImage_PreviewMouseLeftButtonDown;
+        _theImage = null;
+      }
+    }
+
+    private void TheImage_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => SelectImage();
+    private void TheButton_Click(object sender, RoutedEventArgs e) => HideImage();
 
     private object Create()
     {
@@ -96,11 +124,6 @@ namespace EQLogParser
       }
     }
 
-    private void TheImage_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-      SelectImage();
-    }
-
     private void SelectImage()
     {
       var dialog = new CommonOpenFileDialog
@@ -120,9 +143,12 @@ namespace EQLogParser
         var file = dialog.FileName; // Get the selected file name
         _theImage.Source = UiElementUtil.CreateBitmap(file);
       }
+      else if (_theImage.Source == null)
+      {
+        HideImage();
+      }
     }
 
-    private void TheButton_Click(object sender, RoutedEventArgs e) => HideImage();
     private void TheTextBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
       ShowImage();
@@ -148,35 +174,6 @@ namespace EQLogParser
         _theImage.Width = double.NaN;
         _theTextBox.Visibility = Visibility.Collapsed;
         _theImage.Visibility = Visibility.Visible;
-      }
-    }
-
-    public override bool ShouldPropertyGridTryToHandleKeyDown(Key key)
-    {
-      return false;
-    }
-
-    public override void Detach(PropertyViewItem property)
-    {
-      if (_theTextBox != null)
-      {
-        _theTextBox.PreviewMouseLeftButtonDown -= TheTextBox_PreviewMouseLeftButtonDown;
-        BindingOperations.ClearAllBindings(_theTextBox);
-        _theTextBox = null;
-      }
-
-      if (_theButton != null)
-      {
-        BindingOperations.ClearAllBindings(_theButton);
-        _theButton = null;
-      }
-
-      if (_theImage != null)
-      {
-        BindingOperations.ClearAllBindings(_theImage);
-        _theImageDpd.RemoveValueChanged(_theImage, TheImage_SourceChanged);
-        _theImage.PreviewMouseLeftButtonDown -= TheImage_PreviewMouseLeftButtonDown;
-        _theImage = null;
       }
     }
   }

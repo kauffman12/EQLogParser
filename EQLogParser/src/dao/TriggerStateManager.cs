@@ -948,11 +948,17 @@ namespace EQLogParser
               foundTrigger.TriggerData = newNode.TriggerData;
               tree.Update(foundTrigger);
               enableId = foundTrigger.Id;
+              hasMissingMedia = CheckMissingMedia(newNode, foundTrigger.Id);
             }
             // directory but make sure it is one
             else if (foundTrigger.OverlayData == null && foundTrigger.TriggerData == null && newNode.Nodes?.Count > 0)
             {
-              Import(tree, foundTrigger.Id, newNode.Nodes, type, characterStates);
+              if (Import(tree, foundTrigger.Id, newNode.Nodes, type, characterStates))
+              {
+                MissingMedia[foundTrigger.Id] = true;
+                hasMissingMedia = true;
+              }
+
               enableId = foundTrigger.Id;
             }
           }
@@ -966,12 +972,7 @@ namespace EQLogParser
               node.TriggerData.SelectedOverlays = ValidateOverlays(newNode.TriggerData.SelectedOverlays);
               Insert(node, index);
               enableId = node.Id;
-
-              if (newNode.HasMissingMedia)
-              {
-                MissingMedia[node.Id] = true;
-                hasMissingMedia = true;
-              }
+              hasMissingMedia = CheckMissingMedia(newNode, node.Id);
             }
             // make sure it's a new directory and replace the exported version
             else if (newNode.OverlayData == null && newNode.TriggerData == null && App.AutoMap.Map(newNode, new TriggerNode()) is { } node2)
@@ -1054,6 +1055,30 @@ namespace EQLogParser
         node.IsExpanded = false;
         tree.Insert(node);
       }
+    }
+
+    private bool CheckMissingMedia(ExportTriggerNode node, string id)
+    {
+      if (!string.IsNullOrEmpty(id) && Check(node))
+      {
+        MissingMedia[id] = true;
+        return true;
+      }
+
+      static bool Check(ExportTriggerNode newNode)
+      {
+        // set by gina import
+        if (newNode.HasMissingMedia) return true;
+        // check any sound file or icon
+        if (!string.IsNullOrEmpty(newNode.TriggerData.IconSource) && !File.Exists(newNode.TriggerData.IconSource)) return true;
+        if (!string.IsNullOrEmpty(newNode.TriggerData.SoundToPlay) && !TriggerUtil.SoundFileExists(newNode.TriggerData.SoundToPlay)) return true;
+        if (!string.IsNullOrEmpty(newNode.TriggerData.EndSoundToPlay) && !TriggerUtil.SoundFileExists(newNode.TriggerData.EndSoundToPlay)) return true;
+        if (!string.IsNullOrEmpty(newNode.TriggerData.EndEarlySoundToPlay) && !TriggerUtil.SoundFileExists(newNode.TriggerData.EndEarlySoundToPlay)) return true;
+        if (!string.IsNullOrEmpty(newNode.TriggerData.WarningSoundToPlay) && !TriggerUtil.SoundFileExists(newNode.TriggerData.WarningSoundToPlay)) return true;
+        return false;
+      }
+
+      return false;
     }
 
     private static void UpdateChildState(TriggerState state, TriggerTreeViewNode node, bool? isEnabled)
