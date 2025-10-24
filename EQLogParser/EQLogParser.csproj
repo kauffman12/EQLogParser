@@ -135,6 +135,7 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="icons\active.gif" />
+    <Resource Include="icons\broken.png" />
     <Resource Include="icons\idle.gif" />
     <Resource Include="icons\loading.png" />
     <Resource Include="icons\Unk.png" />
@@ -165,6 +166,7 @@
   <ItemGroup>
     <None Remove="..\Dependencies\Hardcodet.Wpf.TaskbarNotification.dll" />
     <None Remove="icons\Active.gif" />
+    <None Remove="icons\broken.png" />
     <None Remove="icons\idle.gif" />
     <None Remove="icons\loading.png" />
     <None Remove="icons\waiting.gif" />
