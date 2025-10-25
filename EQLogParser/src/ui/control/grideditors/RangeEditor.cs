@@ -3,6 +3,7 @@ using Syncfusion.Windows.Shared;
 using System;
 using System.ComponentModel;
 using System.Reflection;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 
@@ -60,7 +61,12 @@ namespace EQLogParser
       object result;
       if (_type == typeof(long))
       {
-        var intTextBox = new IntegerTextBox { ApplyZeroColor = false, ShowSpinButton = true };
+        var intTextBox = new IntegerTextBox
+        {
+          ApplyZeroColor = false,
+          ShowSpinButton = true,
+          BorderThickness = new Thickness(0)
+        };
 
         if (!_min.Equals(_max))
         {

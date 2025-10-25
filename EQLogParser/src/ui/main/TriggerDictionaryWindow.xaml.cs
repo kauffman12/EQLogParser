@@ -101,6 +101,7 @@ namespace EQLogParser
 
     private void DataGridLostKeyboardFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs e)
     {
+      if (dataGrid?.View == null) return;
       var cellManager = dataGrid?.SelectionController?.CurrentCellManager;
       if (dataGrid.View.IsAddingNew && cellManager != null && cellManager.HasCurrentCell && cellManager.CurrentCell.IsEditing &&
         cellManager.CurrentCell.Element.DataContext is LexiconItem item && !string.IsNullOrEmpty(item.Replace) && !string.IsNullOrEmpty(item.With))

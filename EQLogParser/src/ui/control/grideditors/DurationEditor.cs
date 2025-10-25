@@ -48,7 +48,8 @@ namespace EQLogParser
         MinValue = new TimeSpan(0, 0, _min),
         MaxValue = new TimeSpan(23, 59, 59),
         Format = "hh : mm : ss",
-        Margin = new Thickness(0, 2, 0, 2)
+        Margin = new Thickness(0, 2, 0, 2),
+        BorderThickness = new Thickness(0)
       };
 
       _theTimeSpan = timeSpan;

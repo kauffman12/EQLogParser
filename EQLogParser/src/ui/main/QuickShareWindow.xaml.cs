@@ -204,6 +204,7 @@ namespace EQLogParser
 
     private void TrustGridLostKeyboardFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs e)
     {
+      if (trustGrid?.View == null) return;
       var cellManager = trustGrid.SelectionController.CurrentCellManager;
       if (trustGrid.View.IsAddingNew && cellManager != null && cellManager.HasCurrentCell && cellManager.CurrentCell.IsEditing &&
         cellManager.CurrentCell.Element.DataContext is TrustedPlayer tp && !string.IsNullOrEmpty(tp.Name))

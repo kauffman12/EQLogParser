@@ -1,6 +1,5 @@
 ﻿using Microsoft.WindowsAPICodePack.Dialogs;
 using Syncfusion.Windows.PropertyGrid;
-using System;
 using System.ComponentModel;
 using System.Reflection;
 using System.Windows;
@@ -13,10 +12,10 @@ namespace EQLogParser
 {
   internal class OptionalIconEditor : BaseTypeEditor
   {
+    private TextBox _theImagePath;
     private TextBox _theTextBox;
     private Button _theButton;
     private Image _theImage;
-    private DependencyPropertyDescriptor _theImageDpd;
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
     {
@@ -25,10 +24,11 @@ namespace EQLogParser
         Mode = info.CanWrite ? BindingMode.TwoWay : BindingMode.OneWay,
         Source = info,
         ValidatesOnExceptions = true,
-        ValidatesOnDataErrors = true
+        ValidatesOnDataErrors = true,
+        UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
       };
 
-      BindingOperations.SetBinding(_theImage, Image.SourceProperty, binding);
+      BindingOperations.SetBinding(_theImagePath, TextBox.TextProperty, binding);
     }
 
     public override object Create(PropertyInfo propertyInfo) => Create();
@@ -39,7 +39,7 @@ namespace EQLogParser
     {
       if (_theTextBox != null)
       {
-        _theTextBox.PreviewMouseLeftButtonDown -= TheTextBox_PreviewMouseLeftButtonDown;
+        _theTextBox.PreviewMouseLeftButtonDown -= TheTextBoxPreviewMouseLeftButtonDown;
         BindingOperations.ClearAllBindings(_theTextBox);
         _theTextBox = null;
       }
@@ -53,14 +53,20 @@ namespace EQLogParser
       if (_theImage != null)
       {
         BindingOperations.ClearAllBindings(_theImage);
-        _theImageDpd.RemoveValueChanged(_theImage, TheImage_SourceChanged);
-        _theImage.PreviewMouseLeftButtonDown -= TheImage_PreviewMouseLeftButtonDown;
+        _theImage.PreviewMouseLeftButtonDown -= TheImagePreviewMouseLeftButtonDown;
         _theImage = null;
+      }
+
+      if (_theImagePath != null)
+      {
+        BindingOperations.ClearAllBindings(_theImagePath);
+        _theImagePath.TextChanged -= TheImagePathTextChanged;
+        _theImagePath = null;
       }
     }
 
-    private void TheImage_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => SelectImage();
-    private void TheButton_Click(object sender, RoutedEventArgs e) => HideImage();
+    private void TheImagePreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => SelectImage();
+    private void TheButtonClick(object sender, RoutedEventArgs e) => ShowDefaultText();
 
     private object Create()
     {
@@ -75,15 +81,12 @@ namespace EQLogParser
         Padding = new Thickness(0, 2, 0, 2),
         TextWrapping = TextWrapping.Wrap,
         VerticalContentAlignment = VerticalAlignment.Center,
-        BorderThickness = new Thickness(0, 0, 0, 0),
+        BorderThickness = new Thickness(0),
         Text = "Click to Select Timer Bar Icon",
         IsReadOnly = true,
         FontStyle = FontStyles.Italic,
         Cursor = Cursors.Hand
       };
-
-      _theTextBox.SetValue(Grid.ColumnProperty, 0);
-      _theTextBox.PreviewMouseLeftButtonDown += TheTextBox_PreviewMouseLeftButtonDown;
 
       _theButton = new Button
       {
@@ -91,8 +94,6 @@ namespace EQLogParser
         Padding = new Thickness(8, 2, 8, 2),
         Margin = new Thickness(2, 1, 2, 1)
       };
-      _theButton.SetValue(Grid.ColumnProperty, 1);
-      _theButton.Click += TheButton_Click;
 
       _theImage = new Image
       {
@@ -101,27 +102,35 @@ namespace EQLogParser
         Margin = new Thickness(4, 2, 0, 2)
       };
 
+      _theImagePath = new TextBox
+      {
+        Visibility = Visibility.Collapsed,
+        HorizontalAlignment = HorizontalAlignment.Stretch,
+        HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+        Padding = new Thickness(0, 2, 0, 2),
+        TextWrapping = TextWrapping.Wrap,
+        VerticalContentAlignment = VerticalAlignment.Center,
+        BorderThickness = new Thickness(0),
+        IsReadOnly = true,
+        Cursor = Cursors.Arrow,
+      };
+
+      _theTextBox.SetValue(Grid.ColumnProperty, 0);
       _theImage.SetValue(Grid.ColumnProperty, 0);
-      _theImage.PreviewMouseLeftButtonDown += TheImage_PreviewMouseLeftButtonDown;
-      _theImageDpd = DependencyPropertyDescriptor.FromProperty(Image.SourceProperty, typeof(Image));
-      _theImageDpd?.AddValueChanged(_theImage, TheImage_SourceChanged);
+      _theImagePath.SetValue(Grid.ColumnProperty, 0);
+      _theButton.SetValue(Grid.ColumnProperty, 1);
+
+      _theButton.Click += TheButtonClick;
+      _theTextBox.PreviewMouseLeftButtonDown += TheTextBoxPreviewMouseLeftButtonDown;
+      _theImage.PreviewMouseLeftButtonDown += TheImagePreviewMouseLeftButtonDown;
+      _theImagePath.SetResourceReference(TextBox.ForegroundProperty, "EQWarnForegroundBrush");
+      _theImagePath.TextChanged += TheImagePathTextChanged;
 
       grid.Children.Add(_theImage);
       grid.Children.Add(_theTextBox);
+      grid.Children.Add(_theImagePath);
       grid.Children.Add(_theButton);
       return grid;
-    }
-
-    private void TheImage_SourceChanged(object sender, EventArgs e)
-    {
-      if (_theImage?.Source != null)
-      {
-        ShowImage();
-      }
-      else
-      {
-        HideImage();
-      }
     }
 
     private void SelectImage()
@@ -141,39 +150,79 @@ namespace EQLogParser
       if (dialog.ShowDialog(handle) == CommonFileDialogResult.Ok)
       {
         var file = dialog.FileName; // Get the selected file name
-        _theImage.Source = UiElementUtil.CreateBitmap(file);
+        _theImagePath.Text = file;
       }
       else if (_theImage.Source == null)
       {
-        HideImage();
+        ShowDefaultText();
       }
     }
 
-    private void TheTextBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void TheImagePathTextChanged(object sender, TextChangedEventArgs e)
+    {
+      if (_theImage != null)
+      {
+        var path = _theImagePath.Text;
+        _theImage.Source = UiElementUtil.CreateBitmap(path);
+
+        // error case
+        if (!string.IsNullOrEmpty(path) && _theImage.Source == null)
+        {
+          ShowImagePath();
+        }
+        else if (_theImage.Source != null)
+        {
+          ShowImage();
+        }
+        else
+        {
+          ShowDefaultText();
+        }
+      }
+    }
+
+    private void TheTextBoxPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
       ShowImage();
       SelectImage();
     }
 
-    private void HideImage()
+    private void ShowDefaultText()
     {
-      if (_theImage != null && _theTextBox != null && _theTextBox.Visibility != Visibility.Visible)
+      if (_theImagePath != null && _theImage != null && _theTextBox != null)
       {
         _theTextBox.Visibility = Visibility.Visible;
         _theImage.Visibility = Visibility.Collapsed;
-        _theImage.Source = null;
+        _theImagePath.Visibility = Visibility.Collapsed;
+
+        if (!string.IsNullOrEmpty(_theImagePath.Text))
+        {
+          _theImagePath.Text = null;
+          _theImage.Source = null;
+        }
       }
     }
 
     private void ShowImage()
     {
-      if (_theImage != null && _theTextBox != null)
+      if (_theImagePath != null && _theImage != null && _theTextBox != null)
       {
         var height = UiElementUtil.CalculateTextBoxHeight(_theTextBox);
         _theImage.Height = height + 2;
         _theImage.Width = double.NaN;
         _theTextBox.Visibility = Visibility.Collapsed;
         _theImage.Visibility = Visibility.Visible;
+        _theImagePath.Visibility = Visibility.Collapsed;
+      }
+    }
+
+    private void ShowImagePath()
+    {
+      if (_theImagePath != null && _theImage != null && _theTextBox != null)
+      {
+        _theTextBox.Visibility = Visibility.Collapsed;
+        _theImage.Visibility = Visibility.Collapsed;
+        _theImagePath.Visibility = Visibility.Visible;
       }
     }
   }
