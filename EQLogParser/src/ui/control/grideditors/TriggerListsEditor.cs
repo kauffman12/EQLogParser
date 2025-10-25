@@ -80,7 +80,12 @@ namespace EQLogParser
 
     private object Create(string name)
     {
-      var comboBox = new ComboBox { Padding = new Thickness(0), Margin = new Thickness(2, 0, 0, 0) };
+      var comboBox = new ComboBox
+      {
+        Padding = new Thickness(0),
+        BorderThickness = new Thickness(0),
+        Margin = new Thickness(2, 0, 0, 0)
+      };
 
       if (Options.TryGetValue(name, out var option))
       {

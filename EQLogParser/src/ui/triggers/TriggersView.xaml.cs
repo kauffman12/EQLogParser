@@ -90,7 +90,7 @@ namespace EQLogParser
       AddEditor<DurationEditor>("ResetDurationTimeSpan", "IdleTimeoutTimeSpan");
       AddEditor<ExampleTimerBar>("TimerBarPreview");
       AddEditor<OptionalColorEditor>("TriggerActiveBrush", "TriggerFontBrush");
-      AddEditor<OptionalIconEditor>("TriggerIconSource");
+      AddEditor<OptionalIconEditor>("IconSource");
       AddEditor<TriggerListsEditor>("TriggerAgainOption", "FontSize", "FontFamily", "FontWeight", "SortBy", "TimerMode",
         "TimerType", "HorizontalAlignment", "VerticalAlignment", "Volume");
       AddEditor<WrapTextEditor>("EndEarlyTextToDisplay", "EndTextToDisplay", "TextToDisplay", "TextToShare",
@@ -544,20 +544,6 @@ namespace EQLogParser
             triggerChange = (trigger.TriggerFontBrush == null && original.FontColor != null) ||
               (trigger.TriggerFontBrush != null && original.FontColor == null) ||
               (trigger.TriggerFontBrush?.Color.ToHexString() != original.FontColor);
-          }
-        }
-        else if (args.Property.Name == triggerIconSourceItem.PropertyName)
-        {
-          var original = trigger.Node.TriggerData;
-          if (trigger.TriggerIconSource == null && original.IconSource == null)
-          {
-            triggerChange = false;
-          }
-          else
-          {
-            triggerChange = (trigger.TriggerIconSource == null && original.IconSource != null) ||
-             (trigger.TriggerIconSource != null && original.IconSource == null) ||
-             (trigger.TriggerIconSource?.UriSource.OriginalString != original.IconSource);
           }
         }
         else if (args.Property.Name == "DurationTimeSpan" && timerDurationItem.Visibility == Visibility.Collapsed)

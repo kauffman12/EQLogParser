@@ -26,20 +26,18 @@ namespace EQLogParser
       "Open Sans", "Segoe UI", "Roboto", "Tahoma", "Times New Roman", "Trebuchet MS", "Verdana"
     ];
 
-    internal static readonly BitmapImage BrokenIcon = new(new Uri(@"pack://application:,,,/icons/broken.png"));
-
     internal static BitmapImage CreateBitmap(string path)
     {
-      if (!string.IsNullOrEmpty(path))
+      if (File.Exists(path))
       {
-        if (!File.Exists(path)) return BrokenIcon;
-
         try
         {
           var bitmap = new BitmapImage();
           bitmap.BeginInit();
+          bitmap.CacheOption = BitmapCacheOption.OnLoad;
           bitmap.UriSource = new Uri(path, UriKind.Absolute);
           bitmap.EndInit();
+          bitmap.Freeze();
           return bitmap;
         }
         catch (Exception)

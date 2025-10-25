@@ -63,7 +63,8 @@ namespace EQLogParser
       _theOptionsCombo = new ComboBox
       {
         ItemsSource = new List<string> { "Text to Speak", "Play Sound" },
-        SelectedIndex = 0
+        SelectedIndex = 0,
+        BorderThickness = new Thickness(0)
       };
 
       _testButton = new Button
@@ -79,6 +80,14 @@ namespace EQLogParser
       _buttonContainer.Children.Add(_theOptionsCombo);
       _buttonContainer.Children.Add(_testButton);
 
+      _theSoundCombo = new ComboBox
+      {
+        Name = "SoundCombo",
+        Visibility = Visibility.Collapsed,
+        Tag = true,
+        BorderThickness = new Thickness(0)
+      };
+
       _theFakeTextBox = new TextBox
       {
         HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -90,7 +99,6 @@ namespace EQLogParser
       };
 
       _theFakeTextBox.SetValue(Grid.ColumnProperty, 0);
-      _theSoundCombo = new ComboBox { Name = "SoundCombo", Visibility = Visibility.Collapsed, Tag = true };
       _theSoundCombo.SetValue(Grid.ColumnProperty, 0);
       _theSoundCombo.SelectedIndex = -1;
       _theRealTextBox = new TextBox { Name = "Real", Visibility = Visibility.Collapsed };

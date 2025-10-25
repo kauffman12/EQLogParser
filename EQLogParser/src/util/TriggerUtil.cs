@@ -108,13 +108,13 @@ namespace EQLogParser
         toTrigger.EndEarlySoundToPlay = TextUtils.Trim(fromTrigger.EndEarlySoundToPlay);
         toTrigger.EndSoundToPlay = TextUtils.Trim(fromTrigger.EndSoundToPlay);
         toTrigger.WarningSoundToPlay = TextUtils.Trim(fromTrigger.WarningSoundToPlay);
+        toTrigger.IconSource = fromTrigger.IconSource;
         toTrigger.Volume = fromTrigger.Volume;
 
         if (toTrigger is TriggerPropertyModel toModel)
         {
           toModel.TriggerActiveBrush = UiUtil.GetBrush(fromTrigger.ActiveColor, false);
           toModel.TriggerFontBrush = UiUtil.GetBrush(fromTrigger.FontColor, false);
-          toModel.TriggerIconSource = UiElementUtil.CreateBitmap(fromTrigger.IconSource);
 
           var (textItems, timerItems) = await GetOverlayItems(toModel.SelectedOverlays);
           toModel.SelectedTextOverlays = textItems;
@@ -141,7 +141,6 @@ namespace EQLogParser
         {
           toTrigger.ActiveColor = fromModel.TriggerActiveBrush?.Color.ToHexString();
           toTrigger.FontColor = fromModel.TriggerFontBrush?.Color.ToHexString();
-          toTrigger.IconSource = fromModel.TriggerIconSource?.UriSource?.OriginalString;
           var selectedOverlays = fromModel.SelectedTextOverlays.Where(item => item.IsChecked).Select(item => item.Value).ToList();
           selectedOverlays.AddRange(fromModel.SelectedTimerOverlays.Where(item => item.IsChecked).Select(item => item.Value));
           toTrigger.SelectedOverlays = selectedOverlays;
