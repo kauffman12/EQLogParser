@@ -41,7 +41,6 @@ namespace EQLogParser
       InitializeComponent();
 
       _characterViewWidth = mainGrid.ColumnDefinitions[0].Width;
-
       voices.ItemsSource = AudioManager.Instance.GetVoiceList();
 
       // Update volume

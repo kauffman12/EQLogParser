@@ -91,9 +91,8 @@ namespace EQLogParser
 
         AutoMap = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
         var osVersion = Environment.OSVersion;
-        Log.Info($"Detected OS Version: {osVersion.VersionString}");
         Version = ResourceAssembly.GetName().Version!.ToString()[..^2];
-        Log.Info($"EQLogParser: {Version}, DotNet: {Environment.Version}, RenderMode: {RenderOptions.ProcessRenderMode}");
+        Log.Info($"EQLogParser: {Version}, OS: {osVersion.VersionString}, DotNet: {Environment.Version}, RenderMode: {RenderOptions.ProcessRenderMode}");
 
         // update for release notes URL
         var urlVersion = Version.Replace(".", "-");

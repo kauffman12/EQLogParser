@@ -80,7 +80,13 @@ namespace EQLogParser
       }
       else
       {
-        var doubleTextBox = new DoubleTextBox { ApplyZeroColor = false, ShowSpinButton = true, ScrollInterval = 0.1 };
+        var doubleTextBox = new DoubleTextBox
+        {
+          ApplyZeroColor = false,
+          ShowSpinButton = true,
+          ScrollInterval = 0.1,
+          BorderThickness = new Thickness(0)
+        };
 
         if (!_min.Equals(_max))
         {

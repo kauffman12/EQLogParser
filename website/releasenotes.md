@@ -1,6 +1,17 @@
-# 2.3.27 | 10/23/25
+# 2.3.28 | 10/25/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
 
+1. Additional rework of **Timer Overlay** windows and processing improvements. May want to do some extra testing/check for bugs...
+2. Updated **Trigger** properties to show invalid bar icons and audio.
+3. Updated **Trigger Manager** to highlight invalid bar icons on import.
+4. Removed borders from all trigger property controls for consistency.
+5. Fix for not being able to edit an invalid timer bar icon.
+6. Fix wav dropdown so it will update when files are renamed.
+7. Fix for loot window dropdowns not resetting when data changes.
+8. Misc bug fixes with quick share and dictionary windows.
+9. Updated spells and proc lists from beta.
+
+# 2.3.27 | 10/23/25
 1. Added indicator in **Trigger Manager** to show triggers reload.
 2. Fix for dictionary replacing parts of words not just whole words.
 3. More cleanup in timer and text overlay windows.

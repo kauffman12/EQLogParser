@@ -505,6 +505,7 @@ namespace EQLogParser
           watcher.Created += (_, _) => OnWatcherUpdated(fileList, true);
           watcher.Deleted += (_, _) => OnWatcherUpdated(fileList);
           watcher.Changed += (_, _) => OnWatcherUpdated(fileList);
+          watcher.Renamed += (_, _) => OnWatcherUpdated(fileList);
           watcher.EnableRaisingEvents = true;
         }
       }
