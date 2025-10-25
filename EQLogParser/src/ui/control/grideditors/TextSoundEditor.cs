@@ -16,8 +16,9 @@ namespace EQLogParser
     private readonly ObservableCollection<string> _fileList;
     private ComboBox _theOptionsCombo;
     private ComboBox _theSoundCombo;
-    private TextBox _theFakeTextBox;
+    private TextBox _theTtsBox;
     private TextBox _theRealTextBox;
+    private TextBox _theErrorTextBox;
     private Button _testButton;
     private StackPanel _buttonContainer;
     private Grid _grid;
@@ -58,13 +59,12 @@ namespace EQLogParser
         HorizontalAlignment = HorizontalAlignment.Stretch
       };
 
-      _buttonContainer.SetValue(Grid.ColumnProperty, 1);
-
       _theOptionsCombo = new ComboBox
       {
         ItemsSource = new List<string> { "Text to Speak", "Play Sound" },
         SelectedIndex = 0,
-        BorderThickness = new Thickness(0)
+        BorderThickness = new Thickness(0),
+        IsReadOnly = true
       };
 
       _testButton = new Button
@@ -75,11 +75,6 @@ namespace EQLogParser
         IsEnabled = false
       };
 
-      _testButton.Click += TestButtonOnClick;
-
-      _buttonContainer.Children.Add(_theOptionsCombo);
-      _buttonContainer.Children.Add(_testButton);
-
       _theSoundCombo = new ComboBox
       {
         Name = "SoundCombo",
@@ -88,7 +83,7 @@ namespace EQLogParser
         BorderThickness = new Thickness(0)
       };
 
-      _theFakeTextBox = new TextBox
+      _theTtsBox = new TextBox
       {
         HorizontalAlignment = HorizontalAlignment.Stretch,
         HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
@@ -98,19 +93,42 @@ namespace EQLogParser
         BorderThickness = new Thickness(0, 0, 0, 0)
       };
 
-      _theFakeTextBox.SetValue(Grid.ColumnProperty, 0);
-      _theSoundCombo.SetValue(Grid.ColumnProperty, 0);
+      _theErrorTextBox = new TextBox
+      {
+        HorizontalAlignment = HorizontalAlignment.Stretch,
+        HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+        Padding = new Thickness(0, 2, 0, 2),
+        TextWrapping = TextWrapping.Wrap,
+        VerticalContentAlignment = VerticalAlignment.Center,
+        BorderThickness = new Thickness(0, 0, 0, 0),
+        Visibility = Visibility.Collapsed
+      };
+
+      _theRealTextBox = new TextBox
+      {
+        Name = "Real",
+        Visibility = Visibility.Collapsed
+      };
+
+      _buttonContainer.Children.Add(_theOptionsCombo);
+      _buttonContainer.Children.Add(_testButton);
       _theSoundCombo.SelectedIndex = -1;
-      _theRealTextBox = new TextBox { Name = "Real", Visibility = Visibility.Collapsed };
-      _theRealTextBox.TextChanged += RealTextBoxTextChanged;
       _theSoundCombo.ItemsSource = _fileList;
+      _theRealTextBox.TextChanged += RealTextBoxTextChanged;
+      _theErrorTextBox.SetResourceReference(TextBox.ForegroundProperty, "EQWarnForegroundBrush");
 
+      _theTtsBox.SetValue(Grid.ColumnProperty, 0);
+      _theErrorTextBox.SetValue(Grid.ColumnProperty, 0);
+      _theSoundCombo.SetValue(Grid.ColumnProperty, 0);
+      _buttonContainer.SetValue(Grid.ColumnProperty, 1);
       _grid.Children.Add(_theRealTextBox);
-      _grid.Children.Add(_buttonContainer);
-      _grid.Children.Add(_theFakeTextBox);
+      _grid.Children.Add(_theTtsBox);
+      _grid.Children.Add(_theErrorTextBox);
       _grid.Children.Add(_theSoundCombo);
+      _grid.Children.Add(_buttonContainer);
 
-      _theFakeTextBox.TextChanged += TextBoxTextChanged;
+      _testButton.Click += TestButtonOnClick;
+      _theTtsBox.TextChanged += TextBoxTextChanged;
       _theSoundCombo.SelectionChanged += SoundComboSelectionChanged;
       _theOptionsCombo.SelectionChanged += TypeComboBoxSelectionChanged;
 
@@ -123,19 +141,13 @@ namespace EQLogParser
       {
         if (model.DataContext is TriggersTreeView view)
         {
-          if (_theSoundCombo.Visibility == Visibility.Collapsed)
+          if (_theOptionsCombo.SelectedIndex == 1 && !string.IsNullOrEmpty(_theRealTextBox.Text))
           {
-            if (!string.IsNullOrEmpty(_theRealTextBox.Text))
-            {
-              await view.PlayTts(_theRealTextBox.Text, model.Volume);
-            }
+            await view.PlayTts(_theRealTextBox.Text, model.Volume);
           }
-          else
+          else if (_theOptionsCombo.SelectedIndex == 0 && _theSoundCombo.SelectedValue is string selected && !string.IsNullOrEmpty(selected))
           {
-            if (_theSoundCombo.SelectedValue is string selected && !string.IsNullOrEmpty(selected))
-            {
-              AudioManager.Instance.TestSpeakFileAsync(@"data/sounds/" + selected, model.Volume);
-            }
+            AudioManager.Instance.TestSpeakFileAsync(@"data/sounds/" + selected, model.Volume);
           }
         }
       }
@@ -145,39 +157,46 @@ namespace EQLogParser
     {
       if (sender is TextBox textBox)
       {
-        var hideText = TriggerUtil.MatchSoundFile(textBox.Text, out var soundFile, out _);
+        var isSound = TriggerUtil.MatchSoundFile(textBox.Text, out var soundFile, out _);
+        var soundExists = isSound && File.Exists(@"data/sounds/" + soundFile);
 
-        if (hideText)
+        if (isSound)
         {
-          if (!File.Exists(@"data/sounds/" + soundFile))
+          if (soundExists)
           {
-            hideText = false;
-            textBox.Text = "";
+            _theOptionsCombo.SelectedIndex = 1;
+            _theOptionsCombo.IsEditable = false;
+            _theErrorTextBox.Visibility = Visibility.Collapsed;
+            _theTtsBox.Visibility = Visibility.Collapsed;
+            _theSoundCombo.Visibility = Visibility.Visible;
+          }
+          else
+          {
+            _theOptionsCombo.SelectedIndex = -1;
+            _theOptionsCombo.Text = "Available Options";
+            _theOptionsCombo.IsEditable = true;
+            _theErrorTextBox.Text = soundFile;
+            _theTtsBox.Visibility = Visibility.Collapsed;
+            _theSoundCombo.Visibility = Visibility.Collapsed;
+            _theErrorTextBox.Visibility = Visibility.Visible;
+          }
+        }
+        else
+        {
+          _theOptionsCombo.SelectedIndex = 0;
+          _theOptionsCombo.IsEditable = false;
+          _theErrorTextBox.Visibility = Visibility.Collapsed;
+          _theSoundCombo.Visibility = Visibility.Collapsed;
+          _theTtsBox.Visibility = Visibility.Visible;
+
+          if (_theTtsBox.Text != textBox.Text)
+          {
+            _theTtsBox.Text = textBox.Text;
           }
         }
 
-        _theOptionsCombo.SelectedIndex = hideText ? 1 : 0;
-        _theFakeTextBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;
-        _theSoundCombo.Visibility = hideText ? Visibility.Visible : Visibility.Collapsed;
-
-        if (hideText)
-        {
-          if (_theSoundCombo != null && _theSoundCombo.SelectedValue?.ToString() != soundFile)
-          {
-            _theSoundCombo.Tag = true;
-            _theSoundCombo.SelectedValue = soundFile;
-          }
-        }
-
-        if (!hideText)
-        {
-          if (_theFakeTextBox.Text != textBox.Text)
-          {
-            _theFakeTextBox.Text = textBox.Text;
-          }
-        }
-
-        _testButton.IsEnabled = _theOptionsCombo.SelectedIndex == 1 || !string.IsNullOrEmpty(textBox.Text);
+        _testButton.IsEnabled = _theOptionsCombo.SelectedIndex == 1 ||
+          (_theOptionsCombo.SelectedIndex == 0 && !string.IsNullOrEmpty(textBox.Text));
       }
     }
 
@@ -186,14 +205,15 @@ namespace EQLogParser
       if (sender is ComboBox { SelectedIndex: > -1 } combo)
       {
         var hideText = combo.SelectedIndex != 0;
-        _theFakeTextBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;
+        _theTtsBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;
         _theSoundCombo.Visibility = hideText ? Visibility.Visible : Visibility.Collapsed;
+        _theErrorTextBox.Visibility = Visibility.Collapsed;
 
         if (!hideText)
         {
-          var previous = _theFakeTextBox.Text;
-          _theFakeTextBox.Text = previous + " ";
-          _theFakeTextBox.Text = previous;
+          var previous = _theTtsBox.Text;
+          _theTtsBox.Text = previous + " ";
+          _theTtsBox.Text = previous;
         }
         else
         {
@@ -270,11 +290,17 @@ namespace EQLogParser
         _theRealTextBox = null;
       }
 
-      if (_theFakeTextBox != null)
+      if (_theTtsBox != null)
       {
-        _theFakeTextBox.TextChanged -= TextBoxTextChanged;
-        BindingOperations.ClearAllBindings(_theFakeTextBox);
-        _theFakeTextBox = null;
+        _theTtsBox.TextChanged -= TextBoxTextChanged;
+        BindingOperations.ClearAllBindings(_theTtsBox);
+        _theTtsBox = null;
+      }
+
+      if (_theErrorTextBox != null)
+      {
+        BindingOperations.ClearAllBindings(_theErrorTextBox);
+        _theErrorTextBox = null;
       }
 
       if (_testButton != null)

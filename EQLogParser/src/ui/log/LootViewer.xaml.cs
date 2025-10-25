@@ -167,20 +167,20 @@ namespace EQLogParser
         _totalRecords.RemoveAt(j);
       }
 
-      UpdateItems(itemsList, itemNames, _currentSelectedItem);
-      UpdateItems(playersList, players, _currentSelectedPlayer);
-      UpdateItems(npcsList, npcs, _currentSelectedNpc);
+      UpdateItems(itemsList, itemNames, _currentSelectedItem, AllItems);
+      UpdateItems(playersList, players, _currentSelectedPlayer, AllPlayers);
+      UpdateItems(npcsList, npcs, _currentSelectedNpc, AllNpcs);
       dataGrid?.View?.Refresh();
       UpdateTitle();
       _reloadTimer.Stop();
     }
 
-    private static void UpdateItems(ComboBox combo, List<string> items, string selected)
+    private static void UpdateItems(ComboBox combo, List<string> items, string selected, string original)
     {
       if (combo.ItemsSource is not List<string> current || !current.SequenceEqual(items))
       {
         combo.ItemsSource = items;
-        combo.SelectedItem = selected;
+        combo.SelectedItem = items.Contains(selected) ? selected : original;
       }
     }
 
