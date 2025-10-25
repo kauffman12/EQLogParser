@@ -30,360 +30,45 @@ UNIQUE_YOU = dict()
 UNIQUE_OTHER = dict()
 MAX_HITS = dict()
 
-# bard
-ADPS_EXT_DUR[4516] = 1    # Improved Deftdance Disc
-ADPS_EXT_DUR[8030] = 2    # Improved Thousand Blades Disc
-# beast
-ADPS_EXT_DUR[4671] = 1    # Improved Protective Spirit Disc
-# berserker
-ADPS_EXT_DUR[8003] = 90   # Extended Havoc
-ADPS_EXT_DUR[36556] = 90
-ADPS_EXT_DUR[36557] = 90
-ADPS_EXT_DUR[36558] = 90
-ADPS_EXT_DUR[5041] = 5    # Improved Berserking Disc
-ADPS_EXT_DUR[10923] = 5 
-ADPS_EXT_DUR[10924] = 5 
-ADPS_EXT_DUR[10925] = 5 
-ADPS_EXT_DUR[14189] = 5
-ADPS_EXT_DUR[14190] = 5
-ADPS_EXT_DUR[14191] = 5
-ADPS_EXT_DUR[30463] = 5
-ADPS_EXT_DUR[30464] = 5
-ADPS_EXT_DUR[30465] = 5
-ADPS_EXT_DUR[36529] = 5
-ADPS_EXT_DUR[36530] = 5
-ADPS_EXT_DUR[36531] = 5
-ADPS_EXT_DUR[27257] = 2   # Improved Cleaving Acrimony Disc
-ADPS_EXT_DUR[27258] = 2
-ADPS_EXT_DUR[27259] = 2
-#ranger
-ADPS_EXT_DUR[4506] = 20   # Improved Trueshot Disc
-ADPS_EXT_DUR[15091] = 20
-ADPS_EXT_DUR[15092] = 20
-ADPS_EXT_DUR[15093] = 20
-ADPS_EXT_DUR[19223] = 20
-ADPS_EXT_DUR[19224] = 20
-ADPS_EXT_DUR[19225] = 20
-ADPS_EXT_DUR[25525] = 20
-ADPS_EXT_DUR[25526] = 20
-ADPS_EXT_DUR[25527] = 20
-ADPS_EXT_DUR[40123] = 20
-ADPS_EXT_DUR[40124] = 20
-ADPS_EXT_DUR[40125] = 20
-# rogue
-ADPS_EXT_DUR[35333] = 7   # Extended Aspbleeder Disc
-ADPS_EXT_DUR[35334] = 7 
-ADPS_EXT_DUR[35335] = 7 
-ADPS_EXT_DUR[44169] = 7 
-ADPS_EXT_DUR[44170] = 7
-ADPS_EXT_DUR[44171] = 7
-ADPS_EXT_DUR[56321] = 7
-ADPS_EXT_DUR[56322] = 7
-ADPS_EXT_DUR[56323] = 7
-ADPS_EXT_DUR[59643] = 7
-ADPS_EXT_DUR[59644] = 7
-ADPS_EXT_DUR[59645] = 7
-ADPS_EXT_DUR[63150] = 7
-ADPS_EXT_DUR[63151] = 7
-ADPS_EXT_DUR[63152] = 7
-ADPS_EXT_DUR[67110] = 7
-ADPS_EXT_DUR[67111] = 7
-ADPS_EXT_DUR[67112] = 7
-ADPS_EXT_DUR[35327] = 15  # Improved Fatal Aim Disc
-ADPS_EXT_DUR[35328] = 15
-ADPS_EXT_DUR[35329] = 15
-ADPS_EXT_DUR[56288] = 15 
-ADPS_EXT_DUR[56289] = 15
-ADPS_EXT_DUR[56290] = 15
-ADPS_EXT_DUR[63114] = 15
-ADPS_EXT_DUR[63115] = 15
-ADPS_EXT_DUR[63116] = 15
-ADPS_EXT_DUR[6197] = 2    # Improved Frenzied Stabbing Disc
-ADPS_EXT_DUR[8001] = 90   # Improved Thief's Eyes
-ADPS_EXT_DUR[40294] = 90
-ADPS_EXT_DUR[40295] = 90
-ADPS_EXT_DUR[40296] = 90
-ADPS_EXT_DUR[65357] = 90
-ADPS_EXT_DUR[65358] = 90
-ADPS_EXT_DUR[65359] = 90
-ADPS_EXT_DUR[4695] = 5    # Improved Twisted Chance Disc
-# monk
-ADPS_EXT_DUR[14820] = 3   # Improved Crystalpalm Discipline 
-ADPS_EXT_DUR[14821] = 3
-ADPS_EXT_DUR[14822] = 3
-ADPS_EXT_DUR[18925] = 3
-ADPS_EXT_DUR[18926] = 3
-ADPS_EXT_DUR[18927] = 3
-ADPS_EXT_DUR[29030] = 3
-ADPS_EXT_DUR[29031] = 3
-ADPS_EXT_DUR[29032] = 3
-ADPS_EXT_DUR[35071] = 3
-ADPS_EXT_DUR[35072] = 3
-ADPS_EXT_DUR[35073] = 3
-ADPS_EXT_DUR[8473] = 3    # Improved Heel of Kanji Disc
-ADPS_EXT_DUR[25941] = 3
-ADPS_EXT_DUR[25942] = 3
-ADPS_EXT_DUR[25943] = 3
-ADPS_EXT_DUR[29048] = 3
-ADPS_EXT_DUR[29049] = 3
-ADPS_EXT_DUR[29050] = 3
-ADPS_EXT_DUR[35086] = 3
-ADPS_EXT_DUR[35087] = 3
-ADPS_EXT_DUR[35088] = 3
-ADPS_EXT_DUR[10938] = 5   # Extended Impenetrable Disc
-ADPS_EXT_DUR[10939] = 5 
-ADPS_EXT_DUR[10940] = 5
-ADPS_EXT_DUR[10941] = 5
-ADPS_EXT_DUR[10942] = 5
-ADPS_EXT_DUR[10943] = 5
-ADPS_EXT_DUR[4690] = 5
-ADPS_EXT_DUR[35089] = 5
-ADPS_EXT_DUR[35090] = 5
-ADPS_EXT_DUR[35091] = 5
-ADPS_EXT_DUR[11922] = 2   # Improved Scaledfist Disc
-ADPS_EXT_DUR[11923] = 2
-ADPS_EXT_DUR[11924] = 2
-ADPS_EXT_DUR[25923] = 2
-ADPS_EXT_DUR[25924] = 2
-ADPS_EXT_DUR[25925] = 2
-ADPS_EXT_DUR[4691] = 3    # Improved Speed Focus Disc
-# sk/paladin
-ADPS_EXT_DUR[19134] = 5  # Enduring Reproval
-ADPS_EXT_DUR[19135] = 5 
-ADPS_EXT_DUR[19136] = 5
-ADPS_EXT_DUR[25267] = 5
-ADPS_EXT_DUR[25268] = 5
-ADPS_EXT_DUR[25269] = 5
-ADPS_EXT_DUR[28311] = 5
-ADPS_EXT_DUR[28312] = 5
-ADPS_EXT_DUR[28313] = 5
-ADPS_EXT_DUR[34317] = 5
-ADPS_EXT_DUR[34318] = 5
-ADPS_EXT_DUR[34319] = 5
-ADPS_EXT_DUR[43286] = 5
-ADPS_EXT_DUR[43287] = 5
-ADPS_EXT_DUR[43288] = 5
-ADPS_EXT_DUR[55317] = 5
-ADPS_EXT_DUR[55318] = 5
-ADPS_EXT_DUR[55319] = 5
-ADPS_EXT_DUR[58778] = 5
-ADPS_EXT_DUR[58779] = 5
-ADPS_EXT_DUR[58780] = 5
-ADPS_EXT_DUR[58780] = 5
-ADPS_EXT_DUR[62290] = 5
-ADPS_EXT_DUR[62291] = 5
-ADPS_EXT_DUR[62292] = 5
-ADPS_EXT_DUR[66338] = 5
-ADPS_EXT_DUR[66339] = 5
-ADPS_EXT_DUR[66340] = 5
-ADPS_EXT_DUR[28754] = 20 # Extended Decrepit Skin
-ADPS_EXT_DUR[28755] = 20
-ADPS_EXT_DUR[28756] = 20
-ADPS_EXT_DUR[34769] = 20
-ADPS_EXT_DUR[34770] = 20
-ADPS_EXT_DUR[34771] = 20
-ADPS_EXT_DUR[43695] = 20
-ADPS_EXT_DUR[43696] = 20
-ADPS_EXT_DUR[43697] = 20
-ADPS_EXT_DUR[55798] = 20
-ADPS_EXT_DUR[55799] = 20
-ADPS_EXT_DUR[55800] = 20
-ADPS_EXT_DUR[59214] = 20 
-ADPS_EXT_DUR[59215] = 20
-ADPS_EXT_DUR[59216] = 20
-ADPS_EXT_DUR[62713] = 20
-ADPS_EXT_DUR[62714] = 20
-ADPS_EXT_DUR[62715] = 20
-ADPS_EXT_DUR[66625] = 20
-ADPS_EXT_DUR[66626] = 20
-ADPS_EXT_DUR[66627] = 20
-ADPS_EXT_DUR[19137] = 35  # Extended Steely Stance
-ADPS_EXT_DUR[19138] = 35
-ADPS_EXT_DUR[19139] = 35
-ADPS_EXT_DUR[25270] = 35
-ADPS_EXT_DUR[25271] = 35
-ADPS_EXT_DUR[25272] = 35
-ADPS_EXT_DUR[28314] = 35
-ADPS_EXT_DUR[28315] = 35
-ADPS_EXT_DUR[28316] = 35
-ADPS_EXT_DUR[34321] = 35
-ADPS_EXT_DUR[34322] = 35
-ADPS_EXT_DUR[34320] = 35
-ADPS_EXT_DUR[34321] = 35
-ADPS_EXT_DUR[34322] = 35
-ADPS_EXT_DUR[43289] = 35
-ADPS_EXT_DUR[43290] = 35
-ADPS_EXT_DUR[43291] = 35
-ADPS_EXT_DUR[55320] = 35
-ADPS_EXT_DUR[55321] = 35
-ADPS_EXT_DUR[55322] = 35
-ADPS_EXT_DUR[58781] = 35
-ADPS_EXT_DUR[58782] = 35 
-ADPS_EXT_DUR[58783] = 35
-ADPS_EXT_DUR[62293] = 35
-ADPS_EXT_DUR[62294] = 35
-ADPS_EXT_DUR[62295] = 35
-ADPS_EXT_DUR[66341] = 35
-ADPS_EXT_DUR[66342] = 35
-ADPS_EXT_DUR[66343] = 35
-ADPS_EXT_DUR[19110] = 30 # Extended Preservation of Marr
-ADPS_EXT_DUR[19111] = 30
-ADPS_EXT_DUR[19112] = 30
-ADPS_EXT_DUR[25384] = 30
-ADPS_EXT_DUR[25385] = 30
-ADPS_EXT_DUR[25386] = 30
-ADPS_EXT_DUR[28455] = 30
-ADPS_EXT_DUR[28456] = 30
-ADPS_EXT_DUR[28457] = 30
-ADPS_EXT_DUR[34461] = 30
-ADPS_EXT_DUR[34462] = 30
-ADPS_EXT_DUR[34463] = 30
-ADPS_EXT_DUR[55458] = 30
-ADPS_EXT_DUR[55459] = 30
-ADPS_EXT_DUR[55460] = 30
-ADPS_EXT_DUR[58898] = 30
-ADPS_EXT_DUR[58899] = 30
-ADPS_EXT_DUR[58900] = 30
-ADPS_EXT_DUR[62431] = 30
-ADPS_EXT_DUR[62432] = 30
-ADPS_EXT_DUR[62433] = 30
-ADPS_EXT_DUR[66320] = 30
-ADPS_EXT_DUR[66321] = 30
-ADPS_EXT_DUR[66322] = 30
-# war
-ADPS_EXT_DUR[22556] = 108  # Extended Bracing Defense
-ADPS_EXT_DUR[22557] = 108
-ADPS_EXT_DUR[22558] = 108
-ADPS_EXT_DUR[25051] = 108
-ADPS_EXT_DUR[25052] = 108
-ADPS_EXT_DUR[25053] = 108
-ADPS_EXT_DUR[28066] = 108
-ADPS_EXT_DUR[28067] = 108
-ADPS_EXT_DUR[28068] = 108
-ADPS_EXT_DUR[34042] = 108
-ADPS_EXT_DUR[34043] = 108
-ADPS_EXT_DUR[34044] = 108
-ADPS_EXT_DUR[43060] = 108
-ADPS_EXT_DUR[43061] = 108
-ADPS_EXT_DUR[43062] = 108
-ADPS_EXT_DUR[55057] = 108
-ADPS_EXT_DUR[55058] = 108
-ADPS_EXT_DUR[55059] = 108
-ADPS_EXT_DUR[58557] = 108
-ADPS_EXT_DUR[58558] = 108
-ADPS_EXT_DUR[58559] = 108
-ADPS_EXT_DUR[62060] = 108
-ADPS_EXT_DUR[62061] = 108
-ADPS_EXT_DUR[62062] = 108
-ADPS_EXT_DUR[66033] = 108
-ADPS_EXT_DUR[66034] = 108
-ADPS_EXT_DUR[66035] = 108
-ADPS_EXT_DUR[8000] = 90  # ExtendedCommanding Voice
-ADPS_EXT_DUR[19917] = 114 # Extended Field Armorer
-ADPS_EXT_DUR[19918] = 114
-ADPS_EXT_DUR[19919] = 114
-ADPS_EXT_DUR[25036] = 114
-ADPS_EXT_DUR[25037] = 114
-ADPS_EXT_DUR[25038] = 114
-ADPS_EXT_DUR[28051] = 114
-ADPS_EXT_DUR[28052] = 114
-ADPS_EXT_DUR[28053] = 114
-ADPS_EXT_DUR[34036] = 114
-ADPS_EXT_DUR[34037] = 114
-ADPS_EXT_DUR[34038] = 114
-ADPS_EXT_DUR[43057] = 114
-ADPS_EXT_DUR[43058] = 114
-ADPS_EXT_DUR[43059] = 114
-ADPS_EXT_DUR[55054] = 114
-ADPS_EXT_DUR[55055] = 114
-ADPS_EXT_DUR[55056] = 114
-ADPS_EXT_DUR[58554] = 114
-ADPS_EXT_DUR[58555] = 114
-ADPS_EXT_DUR[58556] = 114
-ADPS_EXT_DUR[62057] = 114
-ADPS_EXT_DUR[62058] = 114
-ADPS_EXT_DUR[62059] = 114
-ADPS_EXT_DUR[66030] = 114
-ADPS_EXT_DUR[66031] = 114
-ADPS_EXT_DUR[66032] = 114
-ADPS_EXT_DUR[15369] = 1  # Extended Shield Reflect
-ADPS_EXT_DUR[15370] = 1
-ADPS_EXT_DUR[15371] = 1
+# bard SoR
+ADPS_EXT_DUR[4516] = 1       # Improved Deftdance Disc
+ADPS_EXT_DUR[8030] = 2       # Improved Thousand Blades Disc
+# beast SoR
+ADPS_EXT_DUR[4671] = 1       # Improved Protective Spirit Disc
+# berserker SoR
+ADPS_EXT_DUR[100160210] = 90 # Extended Havoc 
+ADPS_EXT_DUR[100160170] = 5  # Improved Berserking Disc
+ADPS_EXT_DUR[100160110] = 2  # Improved Cleaving Acrimony Disc
+#ranger SoR
+ADPS_EXT_DUR[100040210] = 20 # Improved Trueshot Disc
+# rogue SoR
+ADPS_EXT_DUR[100090250] = 8  # Extended Aspbleeder Disc
+ADPS_EXT_DUR[100090240] = 15 # Improved Fatal Aim Disc
+ADPS_EXT_DUR[6197] = 2       # Improved Frenzied Stabbing Disc
+ADPS_EXT_DUR[100090260] = 90 # Improved Thief's Eyes
+ADPS_EXT_DUR[4695] = 5       # Improved Twisted Chance Disc
+# monk SoR
+ADPS_EXT_DUR[100070090] = 3  # Improved Crystalpalm Discipline 
+ADPS_EXT_DUR[100070160] = 3  # Improved Heel of Kanji Disc
+ADPS_EXT_DUR[100070340] = 5  # Extended Impenetrable Disc
+ADPS_EXT_DUR[100070200] = 5  # Extended Impenetrable Disc
+ADPS_EXT_DUR[100070140] = 2  # Improved Scaledfist Disc
+ADPS_EXT_DUR[4691] = 3       # Improved Speed Focus Disc
+# sk/paladin SoR
+ADPS_EXT_DUR[100030230] = 5   # Enduring Reproval
+ADPS_EXT_DUR[100050180] = 20  # Extended Decrepit Skin
+ADPS_EXT_DUR[100030240] = 25  # Extended Steely Stance
+ADPS_EXT_DUR[100030180] = 18  # Extended Preservation of Marr
+# war SoR
+ADPS_EXT_DUR[100010190] = 108 # Extended Bracing Defense
+ADPS_EXT_DUR[8000] = 90       # Extended Commanding Voice
+ADPS_EXT_DUR[100010180] = 114 # Extended Field Armorer
+ADPS_EXT_DUR[100010120] = 1   # Extended Shield Reflect
 
-# sk/paladin
-MAX_HITS[19134] = 9  # Enduring Reproval
-MAX_HITS[19135] = 9 
-MAX_HITS[19136] = 9
-MAX_HITS[25267] = 9
-MAX_HITS[25268] = 9
-MAX_HITS[25269] = 9
-MAX_HITS[28311] = 9
-MAX_HITS[28312] = 9
-MAX_HITS[28313] = 9
-MAX_HITS[34317] = 9
-MAX_HITS[34318] = 9
-MAX_HITS[34319] = 9
-MAX_HITS[43286] = 9
-MAX_HITS[43287] = 9
-MAX_HITS[43288] = 9
-MAX_HITS[55317] = 9
-MAX_HITS[55318] = 9
-MAX_HITS[55319] = 9
-MAX_HITS[58778] = 9
-MAX_HITS[58779] = 9
-MAX_HITS[58780] = 9
-MAX_HITS[58780] = 9
-MAX_HITS[62290] = 9
-MAX_HITS[62291] = 9
-MAX_HITS[62292] = 9
-MAX_HITS[66338] = 9
-MAX_HITS[66339] = 9
-MAX_HITS[66340] = 9
-MAX_HITS[28754] = 74 # Extended Decrepit Skin
-MAX_HITS[28755] = 74
-MAX_HITS[28756] = 74
-MAX_HITS[34769] = 74
-MAX_HITS[34770] = 74
-MAX_HITS[34771] = 74
-MAX_HITS[43695] = 74
-MAX_HITS[43696] = 74
-MAX_HITS[43697] = 74
-MAX_HITS[55798] = 74
-MAX_HITS[55799] = 74
-MAX_HITS[55800] = 74
-MAX_HITS[59214] = 74 
-MAX_HITS[59215] = 74
-MAX_HITS[59216] = 74
-MAX_HITS[62713] = 74
-MAX_HITS[62714] = 74
-MAX_HITS[62715] = 74
-MAX_HITS[66625] = 74
-MAX_HITS[66626] = 74
-MAX_HITS[66627] = 74
-MAX_HITS[19110] = 98 # Extended Preservation of Marr
-MAX_HITS[19111] = 98
-MAX_HITS[19112] = 98
-MAX_HITS[83384] = 98
-MAX_HITS[83385] = 98
-MAX_HITS[83386] = 98
-MAX_HITS[28455] = 98
-MAX_HITS[28456] = 98
-MAX_HITS[28457] = 98
-MAX_HITS[34461] = 98
-MAX_HITS[34462] = 98
-MAX_HITS[34463] = 98
-MAX_HITS[55458] = 98
-MAX_HITS[55459] = 98
-MAX_HITS[55460] = 98
-MAX_HITS[58898] = 98
-MAX_HITS[58899] = 98
-MAX_HITS[58900] = 98
-MAX_HITS[62431] = 98
-MAX_HITS[62432] = 98
-MAX_HITS[62433] = 98
-MAX_HITS[66318] = 98
-MAX_HITS[66319] = 98
-MAX_HITS[66320] = 98
+# sk/paladin SoR
+MAX_HITS[100030230] = 9       # Enduring Reproval
+MAX_HITS[100050180] = 80      # Extended Decrepit Skin
+MAX_HITS[100030180] = 70      # Extended Preservation of Marr
 
 def abbreviate(name):
   result = name
@@ -531,13 +216,25 @@ if os.path.isfile(DBSpellsFile):
     focusable = int(data[122]) # focusable
     blockable = int(data[130])
     rank = int(data[133]) # AA rank
+    maxTargets = int(data[142])
     origDuration = maxDuration
+
+    spellLine = 0
+    if data[164].isdigit():
+      spellLine = int(data[164])
 
     if isTargetRing(name):
       spellTarget = 45  
 
-    # add focus AAs for additional hits
-    if intId in MAX_HITS:
+    #if spellTarget == 8 and maxTargets > 5:
+    #  print("%s has targets %d" % (name, maxTargets))
+
+    # add focus AAs for additional hits based on line
+    if spellLine > 0 and spellLine in MAX_HITS:
+      maxHits = maxHits + MAX_HITS[spellLine]
+
+    # add focus AAs for additional hits based on spell ID
+    if intId > 0 and intId in MAX_HITS:
       maxHits = maxHits + MAX_HITS[intId]
     
     # ignore long term beneficial buffs like FIRE DAMAGE
@@ -573,7 +270,7 @@ if os.path.isfile(DBSpellsFile):
     damaging = 0
     charm = False
     requireDet = None
-    
+
     # process in reverse order
     slots = data[-1].split('$')
     slots.reverse()
@@ -591,49 +288,53 @@ if os.path.isfile(DBSpellsFile):
           requireDet = (base1 == '0')
 
         if spa == 0 or spa == 79 or spa == 100:
-          if int(base1) > 0:
+          if int(float(base1)) > 0:
             damaging = -1
           else:
             damaging = 1
-          if int(base1) <= -50000000:
+          if int(float(base1)) <= -50000000:
             damaging = 2 # BANE
             
         if spa in ADPS_LIST:
           if spa in ADPS_B1_MIN:
-            if int(base1) >= ADPS_B1_MIN[spa]:
+            if int(float(base1)) >= ADPS_B1_MIN[spa]:
               adps = getAdpsValueFromSpa(adps, spa, requireDet)
           elif spa in ADPS_B1_MAX:
-            if int(base1) < ADPS_B1_MAX[spa]:
+            if int(float(base1)) < ADPS_B1_MAX[spa]:
               adps = getAdpsValueFromSpa(adps, spa, requireDet)
-          elif int(base1) >= 0:
+          elif int(float(base1)) >= 0:
             adps = getAdpsValueFromSpa(adps, spa, requireDet)
             
-        if spa == 339 and int(base2) > 0:
+        if spa == 339 and int(float(base2)) > 0:
           spa339s[base2] = id
           procs.append(base2)
-        elif spa == 340 and int(base2) > 0:
+        elif spa == 340 and int(float(base2)) > 0:
           spa340s[base2] = id
           procs.append(base2)
-        elif spa == 373 and int(base2) > 0:
+        elif spa == 373 and int(float(base2)) > 0:
           spa373s[base1] = id 
           procs.append(base1)
-        elif spa == 374 and int(base2) > 0:
+        elif spa == 374 and int(float(base2)) > 0:
           spa374s[base2] = id 
           procs.append(base2)
-        elif spa == 406 and int(base1) > 0:
+        elif spa == 406 and int(float(base1)) > 0:
           spa406s[base1] = id
           procs.append(base1)
         elif spa == 411 and classMask == 0:
-          classMask = (int(base1) >> 1)
+          classMask = (int(float(base1)) >> 1)
 		  
     # apply 100% buff extension
     if beneficial != 0 and focusable == 0 and combatSkill == 0 and maxDuration > 1:
       maxDuration = maxDuration * 2
 
-    # add focus AAs that extend duration
-    if intId in ADPS_EXT_DUR:
+    # add focus AAs that extend duration based on line
+    if spellLine > 0 and spellLine in ADPS_EXT_DUR:
+      maxDuration = maxDuration + ADPS_EXT_DUR[spellLine]
+      
+    # add focus AAs that extend duration based on spell ID
+    if intId > 0 and intId in ADPS_EXT_DUR:
       maxDuration = maxDuration + ADPS_EXT_DUR[intId]
-	  
+  
     info = dict()
     if int(recourse) > 0:
       recourses[recourse] = id
