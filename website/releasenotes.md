@@ -1,6 +1,9 @@
-# 2.3.28 | 10/25/25
+# 2.3.29 | 10/26/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
 
+1. Bug fixes from previous re-work.
+
+# 2.3.28 | 10/25/25
 1. Additional rework of **Timer Overlay** windows and processing improvements. May want to do some extra testing/check for bugs...
 2. Updated **Trigger** properties to show invalid bar icons and audio.
 3. Updated **Trigger Manager** to highlight invalid bar icons on import.
