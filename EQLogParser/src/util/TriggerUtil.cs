@@ -141,6 +141,7 @@ namespace EQLogParser
         {
           toTrigger.ActiveColor = fromModel.TriggerActiveBrush?.Color.ToHexString();
           toTrigger.FontColor = fromModel.TriggerFontBrush?.Color.ToHexString();
+
           var selectedOverlays = fromModel.SelectedTextOverlays.Where(item => item.IsChecked).Select(item => item.Value).ToList();
           selectedOverlays.AddRange(fromModel.SelectedTimerOverlays.Where(item => item.IsChecked).Select(item => item.Value));
           toTrigger.SelectedOverlays = selectedOverlays;

@@ -103,8 +103,10 @@ namespace EQLogParser
     {
       if (dataGrid?.View == null) return;
       var cellManager = dataGrid?.SelectionController?.CurrentCellManager;
+
       if (dataGrid.View.IsAddingNew && cellManager != null && cellManager.HasCurrentCell && cellManager.CurrentCell.IsEditing &&
-        cellManager.CurrentCell.Element.DataContext is LexiconItem item && !string.IsNullOrEmpty(item.Replace) && !string.IsNullOrEmpty(item.With))
+        cellManager.CurrentCell.Element != null && cellManager.CurrentCell.Element.DataContext is LexiconItem item &&
+        !string.IsNullOrEmpty(item.Replace) && !string.IsNullOrEmpty(item.With))
       {
         if (dataGrid.View.IsEditingItem)
         {
