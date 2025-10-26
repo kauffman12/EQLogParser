@@ -19,13 +19,14 @@ namespace EQLogParser
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
     {
+
       var binding = new Binding("Value")
       {
         Mode = info.CanWrite ? BindingMode.TwoWay : BindingMode.OneWay,
         Source = info,
+        UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged,
         ValidatesOnExceptions = true,
-        ValidatesOnDataErrors = true,
-        UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
+        ValidatesOnDataErrors = true
       };
 
       BindingOperations.SetBinding(_theImagePath, TextBox.TextProperty, binding);
@@ -73,6 +74,7 @@ namespace EQLogParser
       var grid = new Grid();
       grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
       grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(65, GridUnitType.Auto) });
+      grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(85, GridUnitType.Auto) });
 
       _theTextBox = new TextBox
       {
@@ -94,6 +96,15 @@ namespace EQLogParser
         Padding = new Thickness(8, 2, 8, 2),
         Margin = new Thickness(2, 1, 2, 1)
       };
+
+      var spriteBtn = new Button
+      {
+        Content = "EQ Icons",
+        Padding = new Thickness(8, 2, 8, 2),
+        Margin = new Thickness(2, 1, 2, 1)
+      };
+      spriteBtn.SetValue(Grid.ColumnProperty, 2);
+      spriteBtn.Click += SpriteBtnClick;
 
       _theImage = new Image
       {
@@ -130,6 +141,7 @@ namespace EQLogParser
       grid.Children.Add(_theTextBox);
       grid.Children.Add(_theImagePath);
       grid.Children.Add(_theButton);
+      grid.Children.Add(spriteBtn);
       return grid;
     }
 
@@ -177,6 +189,23 @@ namespace EQLogParser
         else
         {
           ShowDefaultText();
+        }
+      }
+    }
+
+    private void SpriteBtnClick(object sender, RoutedEventArgs e)
+    {
+      ShowImage();
+      var picker = new SpritePickerWindow();
+      picker.Owner = MainActions.GetOwner();
+      if (picker.ShowDialog() == true)
+      {
+        var bitmap = UiElementUtil.CreateBitmap(picker.SelectedValue);
+        if (bitmap != null && _theImage != null)
+        {
+          // Force binding update by clearing first (same as Reset does)
+          _theImage.Source = null;
+          _theImage.Source = bitmap;
         }
       }
     }
