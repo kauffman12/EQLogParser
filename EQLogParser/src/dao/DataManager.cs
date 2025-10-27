@@ -113,8 +113,15 @@ namespace EQLogParser
       var spellList = new List<SpellData>();
 
       // build ranks cache
-      Enumerable.Range(1, 9).ToList().ForEach(r => _ranksCache[r.ToString(CultureInfo.CurrentCulture)] = "");
-      Enumerable.Range(1, 200).ToList().ForEach(r => _ranksCache[TextUtils.IntToRoman(r)] = "");
+      foreach (var r in Enumerable.Range(1, 9))
+      {
+        _ranksCache[r.ToString(CultureInfo.InvariantCulture)] = "";
+      }
+      foreach (var r in Enumerable.Range(1, 200))
+      {
+        _ranksCache[TextUtils.IntToRoman(r)] = "";
+      }
+
       _ranksCache["Third"] = "Root";
       _ranksCache["Fifth"] = "Root";
       _ranksCache["Octave"] = "Root";
@@ -137,9 +144,13 @@ namespace EQLogParser
       ConfigUtil.ReadList(@"data\oldspells.txt").ForEach(line => _oldSpellNamesDb[line] = true);
 
       var procCache = new Dictionary<string, bool>();
-      ConfigUtil.ReadList(@"data\procs.txt").Where(line => line.Length > 0 && line[0] != '#').ToList().ForEach(line => procCache[line] = true);
+      foreach (var line in ConfigUtil.ReadList(@"data\procs.txt").Where(line => line.Length > 0 && line[0] != '#'))
+      {
+        procCache[line] = true;
+        procCache[$"New {line}"] = true;
+      }
 
-      ConfigUtil.ReadList(@"data\spells.txt").ForEach(line =>
+      foreach (ref var line in CollectionsMarshal.AsSpan(ConfigUtil.ReadList(@"data\spells.txt")))
       {
         try
         {
@@ -161,7 +172,7 @@ namespace EQLogParser
             if (_spellsAbbrvDb.TryAdd(spellData.NameAbbrv, spellData))
             {
             }
-            else if (string.Compare(_spellsAbbrvDb[spellData.NameAbbrv].Name, spellData.Name, true, CultureInfo.InvariantCulture) < 0)
+            else if (string.Compare(_spellsAbbrvDb[spellData.NameAbbrv].Name, spellData.Name, StringComparison.OrdinalIgnoreCase) < 0)
             {
               // try to keep the newest version
               _spellsAbbrvDb[spellData.NameAbbrv] = spellData;
@@ -188,12 +199,12 @@ namespace EQLogParser
         {
           Log.Error("Error reading spell data", ex);
         }
-      });
+      }
 
       var keepOut = new Dictionary<string, byte>();
       var classEnums = Enum.GetValues(typeof(SpellClass)).Cast<SpellClass>().ToList();
 
-      spellList.ForEach(spell =>
+      foreach (ref var spell in CollectionsMarshal.AsSpan(spellList))
       {
         _allSpellData.Add(spell);
         // exact match meaning class-only spell that are of certain target types
@@ -220,10 +231,16 @@ namespace EQLogParser
             }
           }
         }
-      });
+      }
 
       // load NPCs
-      ConfigUtil.ReadList(@"data\npcs.txt").ForEach(line => _allNpcs[line.Trim()] = 1);
+      foreach (ref var line in CollectionsMarshal.AsSpan(ConfigUtil.ReadList(@"data\npcs.txt")))
+      {
+        if (line?.Trim() is string trimmed && trimmed.Length > 0)
+        {
+          _allNpcs[trimmed] = 1;
+        }
+      }
 
       // Load Adps
       _adpsKeys.ForEach(adpsKey => _adpsActive[adpsKey] = []);
