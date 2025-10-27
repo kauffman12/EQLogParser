@@ -141,11 +141,11 @@ namespace EQLogParser
       {
         if (model.DataContext is TriggersTreeView view)
         {
-          if (_theOptionsCombo.SelectedIndex == 1 && !string.IsNullOrEmpty(_theRealTextBox.Text))
+          if (_theOptionsCombo.SelectedIndex == 0 && !string.IsNullOrEmpty(_theRealTextBox.Text))
           {
             await view.PlayTts(_theRealTextBox.Text, model.Volume);
           }
-          else if (_theOptionsCombo.SelectedIndex == 0 && _theSoundCombo.SelectedValue is string selected && !string.IsNullOrEmpty(selected))
+          else if (_theOptionsCombo.SelectedIndex == 1 && _theSoundCombo.SelectedValue is string selected && !string.IsNullOrEmpty(selected))
           {
             AudioManager.Instance.TestSpeakFileAsync(@"data/sounds/" + selected, model.Volume);
           }
