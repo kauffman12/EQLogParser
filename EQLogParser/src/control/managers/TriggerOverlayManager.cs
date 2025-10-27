@@ -393,8 +393,8 @@ namespace EQLogParser
           TheWindow = (theWindows == _textWindows) ? new TextOverlayWindow(overlay) : new TimerOverlayWindow(overlay)
         };
 
-        windowData.TheWindow.Show();
         windowData.TheWindow.Visibility = System.Windows.Visibility.Collapsed;
+        windowData.TheWindow.Show();
         theWindows[overlay.Id] = windowData;
       }
     }
