@@ -19,14 +19,14 @@ namespace EQLogParser
   public partial class TextOverlayWindow
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
+    private static readonly long TopIntervalTimeStamp = MonoTime.SecondsToTicks(2); // 2s in Stopwatch ticks
     private readonly bool _preview;
     private readonly ConcurrentQueue<TextData> _queue;
     private readonly DispatcherTimer _timer;
     private List<TextBlock> _blockCache;
     private TriggerNode _node;
     private Dictionary<string, Window> _previewWindows;
-    private long _lastTopTicks = long.MinValue;
+    private long _lastTopTimeStamp;
     private long _savedHeight;
     private long _savedWidth;
     private long _savedTop = long.MaxValue;
@@ -44,6 +44,7 @@ namespace EQLogParser
       _previewWindows = previews;
       title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + _node.Id);
       content.SetResourceReference(VerticalAlignmentProperty, "OverlayVerticalAlignment-" + _node.Id);
+      _lastTopTimeStamp = MonoTime.NowStamp();
       _streamerMode = _node.OverlayData.StreamerMode;
       UpdateFields(true);
 
@@ -60,7 +61,7 @@ namespace EQLogParser
         buttonsPanel.Visibility = Visibility.Visible;
 
         // test data
-        RenderText("test overlay message", DateTime.UtcNow.Ticks, null);
+        RenderText("test overlay message", MonoTime.NowStamp(), null);
         Dispatcher.InvokeAsync(Tick);
       }
       else
@@ -72,14 +73,15 @@ namespace EQLogParser
       TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
     }
 
-    internal void AddText(string text, long beginTicks, string fontColor)
+    internal void AddText(string text, long now, string fontColor)
     {
       if (_isClosed)
       {
         return;
       }
 
-      _queue.Enqueue(new TextData { Text = text, BeginTicks = beginTicks, FontColor = fontColor });
+      var fadeTs = now + MonoTime.SecondsToTicks(_node.OverlayData.FadeDelay);
+      _queue.Enqueue(new TextData { Text = text, FadeTimeStamp = fadeTs, FontColor = fontColor });
 
       // Ensure the timer is running (UI thread)
       if (_timer != null && !_timer.IsEnabled)
@@ -126,7 +128,7 @@ namespace EQLogParser
       // 1) Drain new items on UI thread
       while (_queue.TryDequeue(out var td))
       {
-        RenderText(td.Text, td.BeginTicks, UiUtil.GetBrush(td.FontColor, false));
+        RenderText(td.Text, td.FadeTimeStamp, UiUtil.GetBrush(td.FontColor, false));
         Visibility = Visibility.Visible;
       }
 
@@ -141,7 +143,7 @@ namespace EQLogParser
       }
     }
 
-    private void RenderText(string text, long beginTicks, Brush brush)
+    private void RenderText(string text, long fadeTs, Brush brush)
     {
       TextBlock block;
       if (content.Children.Count > 0 && content.Children.Count == _blockCache.Count)
@@ -156,7 +158,7 @@ namespace EQLogParser
 
       if (block != null)
       {
-        block.Tag = beginTicks + (_node.OverlayData.FadeDelay * TimeSpan.TicksPerSecond);
+        block.Tag = fadeTs;
         block.Text = text;
 
         if (brush != null)
@@ -175,18 +177,18 @@ namespace EQLogParser
 
     private bool Tick()
     {
-      var currentTicks = DateTime.UtcNow.Ticks;
-      if (_windowHndl != 0 && (_lastTopTicks == long.MinValue || (currentTicks - _lastTopTicks) > TopTimeout))
+      var now = MonoTime.NowStamp();
+      if (Visibility == Visibility.Visible && _windowHndl != 0 && (now - _lastTopTimeStamp) >= TopIntervalTimeStamp)
       {
         NativeMethods.SetWindowTopMost(_windowHndl);
-        _lastTopTicks = currentTicks;
+        _lastTopTimeStamp = now;
       }
 
       for (var last = content.Children.Count - 1; last >= 0; last--)
       {
-        if (content.Children[last] is TextBlock { Tag: long end } block)
+        if (content.Children[last] is TextBlock { Tag: long fadeTs } block)
         {
-          if (end < currentTicks)
+          if (now >= fadeTs)
           {
             block.Text = string.Empty;
             block.Tag = 0;
@@ -399,7 +401,7 @@ namespace EQLogParser
 
     private class TextData
     {
-      public long BeginTicks { get; init; }
+      public long FadeTimeStamp { get; init; }
       public string Text { get; init; }
       public string FontColor { get; init; }
     }

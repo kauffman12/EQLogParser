@@ -251,7 +251,7 @@ namespace EQLogParser
     internal async Task AddTextAsync(Trigger trigger, string text, string fontColor)
     {
       fontColor ??= trigger.FontColor;
-      var beginTicks = DateTime.UtcNow.Ticks;
+      var now = MonoTime.NowStamp();
 
       var windowsToAdd = new List<TextOverlayWindow>(1);
       await UiUtil.InvokeAsync(() =>
@@ -277,7 +277,7 @@ namespace EQLogParser
       {
         try
         {
-          window.AddText(text, beginTicks, fontColor);
+          window.AddText(text, now, fontColor);
         }
         catch (Exception ex)
         {
