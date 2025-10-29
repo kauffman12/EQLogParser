@@ -1,9 +1,7 @@
 ﻿using log4net;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
@@ -21,9 +19,11 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly long TopIntervalTimeStamp = MonoTime.SecondsToTicks(2); // 2s in Stopwatch ticks
     private readonly bool _preview;
-    private readonly ConcurrentQueue<TextData> _queue;
+    private readonly RingBuffer<TextData> _buffer;
     private readonly DispatcherTimer _timer;
-    private List<TextBlock> _blockCache;
+    private readonly List<TextBlock> _blockList;
+    private readonly object _bufferLock = new();
+    private readonly bool _streamerMode;
     private TriggerNode _node;
     private Dictionary<string, Window> _previewWindows;
     private long _lastTopTimeStamp;
@@ -33,23 +33,21 @@ namespace EQLogParser
     private long _savedLeft = long.MaxValue;
     private nint _windowHndl;
     private volatile bool _isClosed;
-    private readonly bool _streamerMode;
 
     internal TextOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
     {
       InitializeComponent();
-      _queue = [];
       _node = node;
       _preview = previews != null;
       _previewWindows = previews;
       title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + _node.Id);
       content.SetResourceReference(VerticalAlignmentProperty, "OverlayVerticalAlignment-" + _node.Id);
-      _lastTopTimeStamp = MonoTime.NowStamp();
       _streamerMode = _node.OverlayData.StreamerMode;
-      UpdateFields(true);
+      UpdateFields();
 
       // cache of text blocks
-      CreateBlockCache();
+      _blockList = CreateBlocks();
+      _buffer = new RingBuffer<TextData>(_blockList.Count);
 
       if (_preview)
       {
@@ -61,8 +59,9 @@ namespace EQLogParser
         buttonsPanel.Visibility = Visibility.Visible;
 
         // test data
-        RenderText("test overlay message", MonoTime.NowStamp(), null);
-        Dispatcher.InvokeAsync(Tick);
+        var now = MonoTime.NowStamp();
+        _buffer.Add(new TextData { Text = "test overlay message", FadeTimeStamp = now + MonoTime.SecondsToTicks(2) });
+        Render(now);
       }
       else
       {
@@ -73,6 +72,9 @@ namespace EQLogParser
       TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
     }
 
+    // Keep on UI thread
+    internal void HideOverlay() => EnsureVisible(false);
+
     internal void AddText(string text, long now, string fontColor)
     {
       if (_isClosed)
@@ -81,7 +83,8 @@ namespace EQLogParser
       }
 
       var fadeTs = now + MonoTime.SecondsToTicks(_node.OverlayData.FadeDelay);
-      _queue.Enqueue(new TextData { Text = text, FadeTimeStamp = fadeTs, FontColor = fontColor });
+      var newText = new TextData { Text = text, FadeTimeStamp = fadeTs, FontColor = fontColor };
+      lock (_bufferLock) _buffer.Add(newText);
 
       // Ensure the timer is running (UI thread)
       if (_timer != null && !_timer.IsEnabled)
@@ -97,85 +100,17 @@ namespace EQLogParser
     }
 
     // Keep on UI thread
-    internal void HideOverlay()
-    {
-      content.Visibility = Visibility.Collapsed;
-      Visibility = Visibility.Collapsed;
-    }
-
-    // Keep on UI thread
     internal void StopOverlay()
     {
-      _timer?.Stop();
-
-      for (var last = content.Children.Count - 1; last >= 0; last--)
+      lock (_bufferLock)
       {
-        if (content.Children[last] is TextBlock { Tag: long } block)
-        {
-          content.Children.RemoveAt(last);
-          block.Text = string.Empty;
-          block.Tag = 0;
-          block.Visibility = Visibility.Collapsed;
-        }
+        StopOverlayUnsafe();
       }
-
-      content.Visibility = Visibility.Collapsed;
-      Visibility = Visibility.Collapsed;
     }
+
+    private void CloseClick(object sender, RoutedEventArgs e) => Close();
 
     private void DoTick(object sender, EventArgs e)
-    {
-      // 1) Drain new items on UI thread
-      while (_queue.TryDequeue(out var td))
-      {
-        RenderText(td.Text, td.FadeTimeStamp, UiUtil.GetBrush(td.FontColor, false));
-        Visibility = Visibility.Visible;
-      }
-
-      if (Visibility != Visibility.Visible) return;
-
-      var done = Tick();
-
-      if (done && _queue.IsEmpty)
-      {
-        Visibility = Visibility.Collapsed;
-        _timer.Stop();
-      }
-    }
-
-    private void RenderText(string text, long fadeTs, Brush brush)
-    {
-      TextBlock block;
-      if (content.Children.Count > 0 && content.Children.Count == _blockCache.Count)
-      {
-        block = (TextBlock)content.Children[0];
-        content.Children.RemoveAt(0);
-      }
-      else
-      {
-        block = _blockCache.FirstOrDefault(b => b.Visibility == Visibility.Collapsed);
-      }
-
-      if (block != null)
-      {
-        block.Tag = fadeTs;
-        block.Text = text;
-
-        if (brush != null)
-        {
-          block.Foreground = brush;
-        }
-        else
-        {
-          block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + _node.Id);
-        }
-
-        content.Children.Add(block);
-        block.Visibility = Visibility.Visible;
-      }
-    }
-
-    private bool Tick()
     {
       var now = MonoTime.NowStamp();
       if (Visibility == Visibility.Visible && _windowHndl != 0 && (now - _lastTopTimeStamp) >= TopIntervalTimeStamp)
@@ -184,64 +119,139 @@ namespace EQLogParser
         _lastTopTimeStamp = now;
       }
 
-      for (var last = content.Children.Count - 1; last >= 0; last--)
-      {
-        if (content.Children[last] is TextBlock { Tag: long fadeTs } block)
-        {
-          if (now >= fadeTs)
-          {
-            block.Text = string.Empty;
-            block.Tag = 0;
-            block.Visibility = Visibility.Collapsed;
-            content.Children.RemoveAt(last);
-          }
-        }
-      }
-
-      // Set visibility only once after all updates
-      content.Visibility = content.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-      // return true if done
-      return content.Children.Count == 0;
+      Render(now);
     }
 
-    private void CreateBlockCache()
+    private void Render(long now)
+    {
+      lock (_bufferLock)
+      {
+        if (_buffer.Count == 0)
+        {
+          // nothing to show
+          StopOverlayUnsafe();
+          return;
+        }
+
+        var visibleCount = Math.Min(_buffer.Count, _blockList.Count);
+        for (var i = 0; i < visibleCount; i++)
+        {
+          var blockIndex = _blockList.Count - 1 - i;
+          var block = _blockList[blockIndex];
+
+          if (_buffer.GetFromNewest(i) is { } td)
+          {
+            if (now >= td.FadeTimeStamp)
+            {
+              // cleanup this item and everything older than it
+              for (var j = _buffer.Count - 1; j >= i; j--)
+              {
+                blockIndex = _blockList.Count - 1 - j;
+                ClearBlock(blockIndex);
+                _buffer.TryRemoveOldest(out _);
+              }
+
+              break;
+            }
+            else
+            {
+              EnsureVisible(true);
+
+              if (block.Text != td.Text)
+              {
+                block.Text = td.Text;
+              }
+
+              var brush = !string.IsNullOrEmpty(td.FontColor) ? UiUtil.GetBrush(td.FontColor, false) : null;
+              if (string.IsNullOrEmpty(td.FontColor) || brush == null)
+              {
+                // restore resource binding if a local value exists
+                if (block.ReadLocalValue(TextBlock.ForegroundProperty) != DependencyProperty.UnsetValue)
+                {
+                  block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + _node.Id);
+                }
+              }
+              else if (!Equals(block.Foreground, brush))
+              {
+                block.Foreground = brush;
+              }
+
+              if (block.Visibility != Visibility.Visible)
+              {
+                block.Visibility = Visibility.Visible;
+              }
+            }
+          }
+        }
+
+        // clear remaining blocks
+        for (var i = _blockList.Count - visibleCount - 1; i >= 0; i--)
+        {
+          ClearBlock(i);
+        }
+      }
+    }
+
+    private void ClearBlock(int blockIndex)
+    {
+      if (blockIndex >= 0 && blockIndex < _blockList.Count)
+      {
+        var block = _blockList[blockIndex];
+        if (block.Text != string.Empty)
+        {
+          block.Text = string.Empty;
+          block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + _node.Id);
+          block.Visibility = Visibility.Collapsed;
+        }
+      }
+    }
+
+    private List<TextBlock> CreateBlocks()
     {
       // figure out how big a block will be
-      var testBlock = new TextBlock
-      {
-        Text = "test"
-      };
-
-      testBlock.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + _node.Id);
-      testBlock.SetResourceReference(TextBlock.FontFamilyProperty, "TextOverlayFontFamily-" + _node.Id);
-      testBlock.SetResourceReference(TextBlock.FontWeightProperty, "TextOverlayFontWeight-" + _node.Id);
-      testBlock.SetResourceReference(TextBlock.HorizontalAlignmentProperty, "OverlayHorizontalAlignment-" + _node.Id);
+      var testBlock = CreateBlock("Test");
       var blockSize = UiElementUtil.CalculateTextBlockHeight(testBlock, this);
 
       // create cache of blocks needed to cover Overlay height
-      var max = (Height / blockSize) + 1;
-      _blockCache = Enumerable.Range(0, (int)max).Select(_ =>
+      var size = Math.Max(1, (int)Math.Floor(Height / blockSize));
+      var blocks = new List<TextBlock>(size);
+      for (var i = 0; i < size; i++)
       {
-        var block = new TextBlock
-        {
-          TextAlignment = TextAlignment.Center,
-          Padding = new Thickness(6, 0, 6, 2),
-          Margin = new Thickness(0),
-          TextWrapping = TextWrapping.Wrap,
-          Visibility = Visibility.Collapsed,
-          Effect = new DropShadowEffect
-          { ShadowDepth = 2, Direction = 330, Color = Colors.Black, Opacity = 0.7, BlurRadius = 0 },
-        };
+        var block = CreateBlock();
+        blocks.Add(block);
+        content.Children.Add(block);
+      }
 
-        block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + _node.Id);
-        block.SetResourceReference(TextBlock.FontFamilyProperty, "TextOverlayFontFamily-" + _node.Id);
-        block.SetResourceReference(TextBlock.FontWeightProperty, "TextOverlayFontWeight-" + _node.Id);
-        block.SetResourceReference(TextBlock.HorizontalAlignmentProperty, "OverlayHorizontalAlignment-" + _node.Id);
-        return block;
-      }).ToList();
+      return blocks;
     }
 
-    private void CloseClick(object sender, RoutedEventArgs e) => Close();
+    private void EnsureVisible(bool visible)
+    {
+      if (visible)
+      {
+        if (Visibility != Visibility.Visible) Visibility = Visibility.Visible;
+        if (content.Visibility != Visibility.Visible) content.Visibility = Visibility.Visible;
+      }
+      else
+      {
+        if (content.Visibility != Visibility.Collapsed) content.Visibility = Visibility.Collapsed;
+        if (Visibility != Visibility.Collapsed) Visibility = Visibility.Collapsed;
+      }
+    }
+
+    // Keep on UI thread and lock
+    private void StopOverlayUnsafe()
+    {
+      for (var i = 0; i < _blockList.Count; i++)
+      {
+        ClearBlock(i);
+      }
+
+      _buffer.Clear();
+      EnsureVisible(false);
+      _timer.Stop();
+      _lastTopTimeStamp = MonoTime.NowStamp();
+    }
 
     private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)
     {
@@ -306,7 +316,7 @@ namespace EQLogParser
       }
     }
 
-    private void UpdateFields(bool init = false)
+    private void UpdateFields()
     {
       Height = _node.OverlayData.Height;
       Width = _node.OverlayData.Width;
@@ -341,6 +351,27 @@ namespace EQLogParser
       }
     }
 
+    private TextBlock CreateBlock(string text = "")
+    {
+      var block = new TextBlock
+      {
+        TextAlignment = TextAlignment.Center,
+        Padding = new Thickness(6, 0, 6, 2),
+        Margin = new Thickness(0),
+        Text = text,
+        TextWrapping = TextWrapping.Wrap,
+        Visibility = Visibility.Collapsed,
+        Effect = new DropShadowEffect { ShadowDepth = 2, Direction = 330, Color = Colors.Black, Opacity = 0.7, BlurRadius = 0 },
+      };
+
+      block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + _node.Id);
+      block.SetResourceReference(TextBlock.FontSizeProperty, "TextOverlayFontSize-" + _node.Id);
+      block.SetResourceReference(TextBlock.FontFamilyProperty, "TextOverlayFontFamily-" + _node.Id);
+      block.SetResourceReference(TextBlock.FontWeightProperty, "TextOverlayFontWeight-" + _node.Id);
+      block.SetResourceReference(TextBlock.HorizontalAlignmentProperty, "OverlayHorizontalAlignment-" + _node.Id);
+      return block;
+    }
+
     private async void WindowClosing(object sender, CancelEventArgs e)
     {
       try
@@ -350,7 +381,6 @@ namespace EQLogParser
         TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
         _previewWindows?.Remove(_node.Id);
         _previewWindows = null;
-        _queue.Clear();
         await Task.Delay(750);
       }
       catch (Exception)
@@ -402,7 +432,7 @@ namespace EQLogParser
     private class TextData
     {
       public long FadeTimeStamp { get; init; }
-      public string Text { get; init; }
+      public string Text { get; init; } = string.Empty;
       public string FontColor { get; init; }
     }
   }

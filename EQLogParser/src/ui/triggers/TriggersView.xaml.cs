@@ -248,7 +248,7 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         triggerStatus.Visibility = updating ? Visibility.Visible : Visibility.Collapsed;
-      }, DispatcherPriority.Render);
+      });
     }
 
     internal bool IsCancelSelection()
