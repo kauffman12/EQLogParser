@@ -1310,23 +1310,21 @@ namespace EQLogParser
 
     private static string ProcessMatchesText(string text, Dictionary<string, string> matches)
     {
-      if (matches == null || string.IsNullOrEmpty(text))
-      {
-        return text;
-      }
+      if (matches == null || string.IsNullOrEmpty(text)) return text;
 
-      // Estimate capacity to reduce reallocations
-      var sb = new StringBuilder(text.Length);
+      var matchCollection = TokenRegex.Matches(text);
+      if (matchCollection.Count == 0) return text;
+
       var lastIndex = 0;
-
-      foreach (Match m in TokenRegex.Matches(text))
+      var sb = new StringBuilder(text.Length);
+      foreach (Match m in matchCollection)
       {
         sb.Append(text, lastIndex, m.Index - lastIndex);
         lastIndex = m.Index + m.Length;
 
-        // pick whichever group matched
         var name = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[3].Value;
-        var modifier = m.Groups[2].Success ? m.Groups[2].Value : (m.Groups[4].Success ? m.Groups[4].Value : null);
+        var modifier = m.Groups[2].Success ? m.Groups[2].Value :
+                       (m.Groups[4].Success ? m.Groups[4].Value : null);
 
         if (!matches.TryGetValue(name, out var value))
         {
@@ -1340,9 +1338,7 @@ namespace EQLogParser
           {
             case "number":
               if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var num))
-              {
                 value = num.ToString("N0", CultureInfo.CurrentCulture);
-              }
               break;
             case "upper":
               value = value.ToUpper(CultureInfo.CurrentCulture);
@@ -1366,6 +1362,7 @@ namespace EQLogParser
 
       return sb.ToString();
     }
+
 
     private static string ProcessTts(string tts, string action, Dictionary<string, string> matches, Dictionary<string, string> previous, Dictionary<string, string> original)
     {

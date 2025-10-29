@@ -1,6 +1,11 @@
-# 2.3.29 | 10/26/25
+# 2.3.30 | 10/29/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
 
+1. Updated to better handle 'new' spell procs.
+2. Another round of improving **Text Overlays**.
+3. Cleanup/small performance updates for trigger processing.
+
+# 2.3.29 | 10/26/25
 1. Bug fixes from previous re-work.
 
 # 2.3.28 | 10/25/25
