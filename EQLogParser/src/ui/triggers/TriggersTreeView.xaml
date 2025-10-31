@@ -15,18 +15,18 @@
     </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="70*" />
-      <RowDefinition Height="4" />
+      <RowDefinition Height="3" />
       <RowDefinition Height="30*" />
     </Grid.RowDefinitions>
     <Grid Grid.Row="0">
       <Grid>
         <Grid.RowDefinitions>
-          <RowDefinition Height="40" />
+          <RowDefinition Height="44" />
           <RowDefinition Height="100*" />
         </Grid.RowDefinitions>
-        <Border Grid.Row="0" Padding="8,2,0,0" Background="{DynamicResource ContentBackgroundAlt2}" BorderThickness="0">
-          <DockPanel>
-            <TextBlock Text="Manage Triggers" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
+        <Border Grid.Row="0" Padding="2" Background="{DynamicResource ContentBackgroundAlt3}" BorderThickness="1">
+          <DockPanel Background="{DynamicResource ContentBackgroundAlt2}">
+            <TextBlock Text="Manage Triggers" Margin="8,1,20,0" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
             <TextBox x:Name="findTrigger" DockPanel.Dock="Right" HorizontalAlignment="Right" Margin="0,0,8,4" Height="{DynamicResource EQButtonHeight}" ToolTip="Search Triggers by Name and Pattern" FontStyle="Italic" Width="140" LostFocus="FindLostFocus" GotFocus="FindGotFocus" PreviewKeyDown="FindKeyDown" TextChanged="FindTextChanged" />
           </DockPanel>
         </Border>
@@ -153,13 +153,13 @@
     <GridSplitter Grid.Row="1" ResizeDirection="Rows" HorizontalAlignment="Stretch"/>
     <Grid Grid.Row="2">
       <Grid.RowDefinitions>
-        <RowDefinition Height="40" />
+        <RowDefinition Height="44" />
         <RowDefinition Height="100*" />
       </Grid.RowDefinitions>
-      <Border Grid.Row="0" Padding="8,1,0,0" Background="{DynamicResource ContentBackgroundAlt2}">
-        <DockPanel>
-          <TextBlock Text="Manage Overlays" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
-          <Button DockPanel.Dock="Right" Padding="6,0,6,0"  HorizontalAlignment="Right" Margin="0,0,8,4" Height="{DynamicResource EQButtonHeight}" Content="Hide Overlays" Click="HideOverlaysClick" ToolTip="Hide all Overlays until they receive new data. This does not remove existing text or timers." />
+      <Border Grid.Row="0" Padding="2" Background="{DynamicResource ContentBackgroundAlt3}" BorderThickness="1">
+        <DockPanel Background="{DynamicResource ContentBackgroundAlt2}">
+          <TextBlock Text="Manage Overlays" Margin="8,1,20,0" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
+          <Button DockPanel.Dock="Right" Padding="8,0,8,0"  HorizontalAlignment="Right" Margin="0,2,8,4" Height="{DynamicResource EQButtonHeight}" Content="Hide Overlays" Click="HideOverlaysClick" ToolTip="Hide all Overlays until they receive new data. This does not remove existing text or timers." />
         </DockPanel>
       </Border>
       <syncfusion:SfTreeView

@@ -1,46 +1,26 @@
-using Microsoft.WindowsAPICodePack.Dialogs;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace EQLogParser
 {
-  public partial class SpritePickerWindow : Window
+  public partial class SpritePickerWindow
   {
     public string SelectedValue { get; private set; }
-    private List<string> _allSheets = new List<string>();
-    private int _currentPage = 0;
-
-    // Windows API for dark title bar
-    [DllImport("dwmapi.dll", PreserveSig = true)]
-    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
-
-    private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+    private List<string> _allSheets = [];
+    private int _currentPage;
 
     public SpritePickerWindow()
     {
+      MainActions.SetCurrentTheme(this);
       InitializeComponent();
       Owner = MainActions.GetOwner();
-      
-      // Enable dark title bar
-      Loaded += (s, e) =>
-      {
-        var helper = new WindowInteropHelper(this);
-        if (helper.Handle != IntPtr.Zero)
-        {
-          int darkMode = 1;
-          DwmSetWindowAttribute(helper.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkMode, sizeof(int));
-        }
-      };
-      
+
       LoadDefaultSheets();
     }
 
@@ -52,30 +32,28 @@ namespace EQLogParser
       {
         var files = Directory.EnumerateFiles(eqDir, "spells*.tga").Concat(Directory.EnumerateFiles(eqDir, "spells*.png"));
         _allSheets = files.ToList();
-        
+
         // Display friendly names instead of full paths
         var displayNames = _allSheets.Select(f => GetFriendlyName(f)).ToList();
         sheetsList.ItemsSource = displayNames;
-        
+
         UpdatePagination();
       }
     }
 
-    private string GetFriendlyName(string filePath)
+    private static string GetFriendlyName(string filePath)
     {
       // Convert "spells01.tga" to "Spells 01"
       var fileName = Path.GetFileNameWithoutExtension(filePath);
       if (fileName.StartsWith("spells", StringComparison.OrdinalIgnoreCase) && fileName.Length > 6)
       {
-        var number = fileName.Substring(6);
+        var number = fileName[6..];
         return $"Spells {number.PadLeft(2, '0')}";
       }
       return fileName;
     }
 
-
-
-    private void SheetsList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void SheetsListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       if (sheetsList.SelectedIndex >= 0 && sheetsList.SelectedIndex < _allSheets.Count)
       {
@@ -89,7 +67,7 @@ namespace EQLogParser
       }
     }
 
-    private void PrevPage_Click(object sender, RoutedEventArgs e)
+    private void PrevPageClick(object sender, RoutedEventArgs e)
     {
       if (_currentPage > 0)
       {
@@ -98,7 +76,7 @@ namespace EQLogParser
       }
     }
 
-    private void NextPage_Click(object sender, RoutedEventArgs e)
+    private void NextPageClick(object sender, RoutedEventArgs e)
     {
       if (_currentPage < _allSheets.Count - 1)
       {
@@ -109,9 +87,9 @@ namespace EQLogParser
 
     private void UpdatePagination()
     {
-      int totalPages = _allSheets.Count;
-      int currentPageDisplay = _currentPage + 1;
-      
+      var totalPages = _allSheets.Count;
+      var currentPageDisplay = _currentPage + 1;
+
       pageText.Text = totalPages > 0 ? $"Page {currentPageDisplay} of {totalPages}" : "Page 0 of 0";
       prevButton.IsEnabled = _currentPage > 0;
       nextButton.IsEnabled = _currentPage < totalPages - 1;
@@ -130,14 +108,14 @@ namespace EQLogParser
         {
           sheet = new BitmapImage(new Uri(path, UriKind.Absolute));
         }
-        
+
         // Build grid of 6x6 cells of 40x40 with styled buttons
         gridPanel.Children.Clear();
         gridPanel.Columns = 6;
-        
-        for (int row = 0; row < 6; row++)
+
+        for (var row = 0; row < 6; row++)
         {
-          for (int col = 0; col < 6; col++)
+          for (var col = 0; col < 6; col++)
           {
             var button = new Button
             {
@@ -145,18 +123,17 @@ namespace EQLogParser
               Tag = new { path, col, row }
             };
 
-            var img = new System.Windows.Controls.Image
+            var img = new Image
             {
-              Width = 40,
-              Height = 40,
-              Stretch = System.Windows.Media.Stretch.None
+              Stretch = Stretch.None
             };
 
             var rect = new Int32Rect(col * 40, row * 40, 40, 40);
             try
             {
               var cropped = new CroppedBitmap(sheet, rect);
-              img.Source = cropped;
+              var scaled = new TransformedBitmap(cropped, new ScaleTransform(1.25, 1.25));
+              img.Source = scaled;
             }
             catch { }
 
