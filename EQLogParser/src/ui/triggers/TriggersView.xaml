@@ -70,7 +70,7 @@
       <GridSplitter Grid.Column="3" ResizeDirection="Columns" HorizontalAlignment="Stretch" />
       <Grid Grid.Column="4">
         <Grid.RowDefinitions>
-          <RowDefinition Height="40"></RowDefinition>
+          <RowDefinition Height="44"></RowDefinition>
           <RowDefinition Height="100*"></RowDefinition>
         </Grid.RowDefinitions>
         <syncfusion:PropertyGrid
@@ -164,20 +164,22 @@
             <syncfusion:PropertyGridItem CategoryName="Cooldown Overlay" PropertyName="ShowReset" DisplayName="Show Reset" Visibility="Collapsed" Description="Show Cooldown Timer when in Reset state." />
           </syncfusion:PropertyGrid.Items>
         </syncfusion:PropertyGrid>
-        <Border Grid.Row="0" Padding="10,1,0,0" Background="{DynamicResource ContentBackgroundAlt2}" BorderThickness="0">
           <Grid>
             <Grid.RowDefinitions>
-              <RowDefinition Height="40" />
+              <RowDefinition Height="44" />
             </Grid.RowDefinitions>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-              <TextBlock Text="Edit Properties" Margin="0,1,20,0" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
-              <Button x:Name="showButton" Visibility="Collapsed" Margin="0,0,4,3" Padding="16,0,16,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}" Click="ShowClick">Preview Overlay</Button>
-              <Button x:Name="saveButton" Margin="0,0,4,3" Padding="10,0,10,0"  IsEnabled="False" Height="{DynamicResource EQButtonHeight}" Click="SaveClick">Save</Button>
-              <Button x:Name="cancelButton" Margin="0,0,4,3" Padding="10,0,10,0" IsEnabled="False" Height="{DynamicResource EQButtonHeight}" Click="CancelClick">Cancel</Button>
-              <Button x:Name="regexButton" Margin="0,0,0,3" Padding="10,0,10,0" Height="{DynamicResource EQButtonHeight}" Click="RegexClick" ToolTip="Help with Regex and Trigger Variables">View Documentation</Button>
-            </StackPanel>
-          </Grid>
-        </Border>
+          <Border Grid.Row="0" Padding="2" Background="{DynamicResource ContentBackgroundAlt3}" BorderThickness="1">
+            <DockPanel Background="{DynamicResource ContentBackgroundAlt2}">
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <TextBlock Text="Edit Properties" Margin="8,1,20,0" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
+                <Button x:Name="showButton" Visibility="Collapsed" Margin="0,0,4,1" Padding="16,0,16,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}" Click="ShowClick">Preview Overlay</Button>
+                <Button x:Name="saveButton" Margin="0,0,4,1" Padding="10,0,10,0"  IsEnabled="False" Height="{DynamicResource EQButtonHeight}" Click="SaveClick">Save</Button>
+                <Button x:Name="cancelButton" Margin="0,0,4,1" Padding="10,0,10,0" IsEnabled="False" Height="{DynamicResource EQButtonHeight}" Click="CancelClick">Cancel</Button>
+                <Button x:Name="regexButton" Margin="0,0,0,1" Padding="10,0,10,0" Height="{DynamicResource EQButtonHeight}" Click="RegexClick" ToolTip="Help with Regex and Trigger Variables">View Documentation</Button>
+              </StackPanel>
+            </DockPanel>          
+          </Border>
+        </Grid>
       </Grid>
     </Grid>
   </Grid>
