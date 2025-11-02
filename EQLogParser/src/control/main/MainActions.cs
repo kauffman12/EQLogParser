@@ -185,8 +185,7 @@ namespace EQLogParser
               try
               {
                 await using var download = await TheHttpClient.GetStreamAsync(url);
-                var path = NativeMethods.GetDownloadsFolderPath();
-                if (!Directory.Exists(path))
+                if (!NativeMethods.TryGetDownloadsFolderPath(out var path) || !Directory.Exists(path))
                 {
                   new MessageWindow("Unable to Access Downloads Folder. Can Not Download Update.", Resource.CHECK_VERSION).ShowDialog();
                   return;
@@ -246,11 +245,7 @@ namespace EQLogParser
     {
       try
       {
-        var path = NativeMethods.GetDownloadsFolderPath();
-        if (!Directory.Exists(path))
-        {
-          return;
-        }
+        if (!NativeMethods.TryGetDownloadsFolderPath(out var path) || !Directory.Exists(path)) return;
 
         path += "\\AutoUpdateEQLogParser";
         if (Directory.Exists(path))
@@ -995,6 +990,7 @@ namespace EQLogParser
       Application.Current.Resources["EQWindowButtonTextSize1"] = CurrentFontSize - 2;
       Application.Current.Resources["EQWindowButtonTextSize3"] = CurrentFontSize + 1;
       Application.Current.Resources["EQWindowButtonTextSize"] = CurrentFontSize + 1;
+      Application.Current.Resources["EQContentSizePlus"] = CurrentFontSize + 1;
       Application.Current.Resources["EQContentSize"] = CurrentFontSize;
       Application.Current.Resources["EQDescriptionSize"] = CurrentFontSize - 1;
       Application.Current.Resources["EQSubDescriptionSize"] = CurrentFontSize - 2;

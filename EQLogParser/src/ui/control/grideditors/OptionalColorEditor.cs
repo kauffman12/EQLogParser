@@ -48,7 +48,7 @@ namespace EQLogParser
         BorderThickness = new Thickness(0, 0, 0, 0),
         Text = "Click to Select Custom Color",
         IsReadOnly = true,
-        FontStyle = FontStyles.Italic,
+        Opacity = 0.5,
         Cursor = Cursors.Hand
       };
 
@@ -62,7 +62,8 @@ namespace EQLogParser
         Margin = new Thickness(2, 1, 2, 1)
       };
       _theButton.SetValue(Grid.ColumnProperty, 1);
-      _theButton.Click += TheButton_Click;
+      _theButton.Click += TheButtonClick;
+      _theButton.SetResourceReference(Button.HeightProperty, "EQButtonHeight");
 
       _theColorPicker = new ColorPicker
       {
@@ -92,7 +93,7 @@ namespace EQLogParser
       }
     }
 
-    private void TheButton_Click(object sender, RoutedEventArgs e) => HideColorPicker();
+    private void TheButtonClick(object sender, RoutedEventArgs e) => HideColorPicker();
     private void TheTextBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => ShowColorPicker();
 
     private void HideColorPicker()

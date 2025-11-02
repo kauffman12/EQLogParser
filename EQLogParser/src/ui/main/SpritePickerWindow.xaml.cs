@@ -1,9 +1,13 @@
+using log4net;
+using Microsoft.WindowsAPICodePack.Dialogs;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -12,45 +16,63 @@ namespace EQLogParser
   public partial class SpritePickerWindow
   {
     public string SelectedValue { get; private set; }
+
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private List<string> _allSheets = [];
     private int _currentPage;
 
-    public SpritePickerWindow()
+    internal SpritePickerWindow(string eqUiFolder)
     {
       MainActions.SetCurrentTheme(this);
       InitializeComponent();
       Owner = MainActions.GetOwner();
 
-      LoadDefaultSheets();
-    }
-
-    private void LoadDefaultSheets()
-    {
-      // attempt to find EQ UI folder from default character if any
-      var eqDir = EqUtil.GetEqUiFolder();
-      if (!string.IsNullOrEmpty(eqDir) && Directory.Exists(eqDir))
+      if (Directory.Exists(eqUiFolder) || EqUtil.TryGetEqUiFolder(out eqUiFolder))
       {
-        var files = Directory.EnumerateFiles(eqDir, "spells*.tga").Concat(Directory.EnumerateFiles(eqDir, "spells*.png"));
-        _allSheets = files.ToList();
-
-        // Display friendly names instead of full paths
-        var displayNames = _allSheets.Select(f => GetFriendlyName(f)).ToList();
-        sheetsList.ItemsSource = displayNames;
-
-        UpdatePagination();
+        LoadDefaultSheets(eqUiFolder);
       }
     }
 
-    private static string GetFriendlyName(string filePath)
+    private void CancelClick(object sender, RoutedEventArgs e) => Close();
+
+    private void LoadDefaultSheets(string eqUiFolder = "")
     {
+      txtFolderPath.Text = eqUiFolder;
+      txtFolderPath.FontStyle = FontStyles.Normal;
+      var files = Directory.EnumerateFiles(eqUiFolder, "spells*.tga").Concat(Directory.EnumerateFiles(eqUiFolder, "spells*.png"));
+      _allSheets = [.. files];
+
+      if (_allSheets.Count > 0)
+      {
+        // remember last successful folder
+        ConfigUtil.SetSetting("EqUiFolder", eqUiFolder);
+      }
+
+      gridPanel.Children.Clear();
+      // Display items with friendly names instead of full paths
+      sheetsList.ItemsSource = _allSheets.Select(f => GetListeItem(f));
+      sheetsList.SelectedIndex = _allSheets.Count > 0 ? 0 : -1;
+
+      UpdatePagination();
+    }
+
+    private static ListBoxItem GetListeItem(string filePath)
+    {
+      var listBoxItem = new ListBoxItem();
+
       // Convert "spells01.tga" to "Spells 01"
       var fileName = Path.GetFileNameWithoutExtension(filePath);
       if (fileName.StartsWith("spells", StringComparison.OrdinalIgnoreCase) && fileName.Length > 6)
       {
         var number = fileName[6..];
-        return $"Spells {number.PadLeft(2, '0')}";
+        listBoxItem.Content = $"Spells {number.PadLeft(2, '0')}";
       }
-      return fileName;
+      else
+      {
+        listBoxItem.Content = fileName;
+      }
+
+      return listBoxItem;
     }
 
     private void SheetsListSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -132,24 +154,25 @@ namespace EQLogParser
             try
             {
               var cropped = new CroppedBitmap(sheet, rect);
-              var scaled = new TransformedBitmap(cropped, new ScaleTransform(1.25, 1.25));
+              var scaled = new TransformedBitmap(cropped, new ScaleTransform(1.45, 1.45));
               img.Source = scaled;
             }
             catch { }
 
             button.Content = img;
-            button.Click += IconButton_Click;
+            button.Click += IconButtonClick;
             gridPanel.Children.Add(button);
           }
         }
       }
       catch (Exception ex)
       {
-        MessageBox.Show("Error loading sprite sheet: " + ex.Message);
+        new MessageWindow("Could not load Sprite Sheet. Check Error Log for Details.", "EQ Icon Picker").ShowDialog();
+        Log.Error("Failed to load sprite sheet.", ex);
       }
     }
 
-    private void IconButton_Click(object sender, RoutedEventArgs e)
+    private void IconButtonClick(object sender, RoutedEventArgs e)
     {
       if (sender is Button button && button.Tag is object tag)
       {
@@ -158,6 +181,22 @@ namespace EQLogParser
         SelectedValue = $"eqsprite://{dynamicTag.path}/{dynamicTag.col}/{dynamicTag.row}";
         DialogResult = true;
         Close();
+      }
+    }
+
+    private void OpenUiFilesClick(object sender, RoutedEventArgs e)
+    {
+      var dialog = new CommonOpenFileDialog
+      {
+        IsFolderPicker = true,
+        // Set the initial directory
+        InitialDirectory = txtFolderPath.Text,
+      };
+
+      var handle = new WindowInteropHelper(MainActions.GetOwner()).Handle;
+      if (dialog.ShowDialog(handle) == CommonFileDialogResult.Ok)
+      {
+        LoadDefaultSheets(dialog.FileName);
       }
     }
   }

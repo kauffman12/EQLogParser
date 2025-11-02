@@ -13,7 +13,6 @@
    TitleBarForeground="{DynamicResource PrimaryDarken}"
    TitleTextAlignment="Left"
    Icon="EQLogParser.ico"
-   Topmost="True"
    UseLayoutRounding="True"
    WindowStartupLocation="CenterOwner"
    Closing="TheWindowClosing"

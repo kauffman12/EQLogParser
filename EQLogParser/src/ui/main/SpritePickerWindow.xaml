@@ -3,6 +3,7 @@
    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+   xmlns:fa="http://schemas.fontawesome.com/icons/"
    xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
    mc:Ignorable="d"
    ResizeMode="NoResize"
@@ -13,9 +14,8 @@
    TitleTextAlignment="Left"
    Title="EQ Icon Picker"
    Icon="EQLogParser.ico"
-   Topmost="True"
    Height="600"
-   Width="800"
+   Width="850"
    UseLayoutRounding="True"
    WindowStartupLocation="CenterOwner">
   <syncfusion:ChromelessWindow.Resources>
@@ -50,69 +50,56 @@
         </Setter.Value>
       </Setter>
     </Style>
-
-    <!-- EQ-themed nav button style -->
-    <Style x:Key="NavButtonStyle" TargetType="Button">
-      <Setter Property="Width" Value="30"/>
-      <Setter Property="Height" Value="26"/>
-      <Setter Property="Background" Value="#3B3530"/>
-      <Setter Property="Foreground" Value="{DynamicResource ContentForeground}"/>
-      <Setter Property="BorderBrush" Value="#5A5247"/>
-      <Setter Property="BorderThickness" Value="2"/>
-      <Setter Property="FontWeight" Value="Bold"/>
-      <Setter Property="Cursor" Value="Hand"/>
-      <Style.Triggers>
-        <Trigger Property="IsMouseOver" Value="True">
-          <Setter Property="Background" Value="#4B4540"/>
-          <Setter Property="Foreground" Value="{DynamicResource ContentForeground}"/>
-        </Trigger>
-        <Trigger Property="IsEnabled" Value="False">
-          <Setter Property="Foreground" Value="#5A5247"/>
-          <Setter Property="Background" Value="#2B2520"/>
-        </Trigger>
-      </Style.Triggers>
-    </Style>
   </syncfusion:ChromelessWindow.Resources>
 
-  <Grid Margin="10">
+  <Grid Margin="6">
     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"></RowDefinition>
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="180"/>
+      <ColumnDefinition Width="210"/>
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
 
     <!-- Title Bar -->
-    <Border Grid.Row="0" Grid.ColumnSpan="2" Background="#3B3530" BorderBrush="#5A5247" BorderThickness="2" Margin="0,0,0,12" Padding="8,6">
-      <TextBlock Text="EQ Icon Picker" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource ContentForeground}" HorizontalAlignment="Center"/>
-    </Border>
+    <Grid Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,6">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+      <TextBox Grid.Column="0" Name="txtFolderPath" FontStyle="Italic" FontStretch="SemiCondensed" Padding="2" Margin="4,0,10,0" Text="Click Open and Select a uifiles folder (Example: Everquest/uifiles/default)"
+        FontSize="{DynamicResource EQContentSizePlus}" IsReadOnly="True" />
+      <Button Grid.Column="1" Content="Open uifiles" FontSize="{DynamicResource EQContentSize}" HorizontalAlignment="Right"
+        Click="OpenUiFilesClick" Margin="0,0,4,0" Padding="10,6,10,6" ToolTip="Select EQ uifiles folder (uifiles/default, uifiles/custom, etc)" />
+    </Grid>
 
     <!-- Left Panel: File Browser (compact) -->
-    <Border Grid.Row="1" Grid.Column="0" Background="#1A1612" BorderBrush="#4A4237" BorderThickness="2" Margin="0,0,8,0">
-      <Border BorderBrush="#2A2520" BorderThickness="1" Margin="1">
-        <StackPanel Margin="8">
-          <TextBlock Text="Sprite Sheets" FontSize="11" Foreground="#8A7A67" Margin="0,0,0,6"/>
-          <ListBox x:Name="sheetsList" SelectionChanged="SheetsListSelectionChanged" Background="#0A0608" Foreground="#C9B896" BorderBrush="#5A5247"
-            BorderThickness="2" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Height="375"/>
-        </StackPanel>
-      </Border>
+    <Border Grid.Row="1" Grid.Column="0" Background="{DynamicResource ContentBackgroundAlt2}" BorderBrush="{DynamicResource ContentBackgroundAlt3}"
+      BorderThickness="2" Margin="0,0,4,0">
+      <StackPanel Margin="4">
+        <TextBlock Text="Sprite Sheets" Margin="0,0,0,4" FontSize="{DynamicResource EQContentSizePlus}" FontWeight="SemiBold"/>
+        <ListBox x:Name="sheetsList" SelectionChanged="SheetsListSelectionChanged" Background="{DynamicResource ContentBackground}"
+          BorderBrush="{DynamicResource ContentBackground}" BorderThickness="2" Margin="0,7,0,0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Height="420">
+        </ListBox>
+      </StackPanel>
     </Border>
 
     <!-- Right Panel: Icon Grid -->
-    <Border Grid.Row="1" Grid.Column="1" Background="#1A1612" BorderBrush="#4A4237" BorderThickness="0">
-      <Border BorderBrush="#5A5247" BorderThickness="2" Margin="2">
+    <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource ContentBackgroundAlt2}" BorderBrush="{DynamicResource ContentBackgroundAlt3}" 
+      BorderThickness="2" Margin="0">
+      <Border BorderBrush="{DynamicResource ContentBackgroundAlt2}" Padding="2" BorderThickness="8" Margin="0">
         <!-- Icon Grid -->
-        <Border Background="#0A0608" Margin="0">
+        <Border Background="{DynamicResource ContentBackground}" Margin="0">
           <UniformGrid x:Name="gridPanel" Rows="6" Columns="6" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
       </Border>
     </Border>
 
     <!-- Bottom Panel: Pagination and Info -->
-    <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Background="#3B3530" BorderBrush="#5A5247" BorderThickness="2" Margin="0,12,0,0" Padding="12,8">
+    <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Background="{DynamicResource ContentBackgroundAlt2}"
+      BorderBrush="{DynamicResource ContentBackgroundAlt3}" BorderThickness="2" Margin="0,4,0,0" Padding="0,8,0,8">
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*"/>
@@ -120,21 +107,30 @@
           <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Left: Info -->
-        <TextBlock Grid.Column="0" Text="36 per page" Foreground="#8A7A67" FontSize="11" VerticalAlignment="Center"/>
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="4,0,0,0">
+          <Label FontSize="{DynamicResource EQTitleSize}" FontStyle="Italic">Click Icon to Select</Label>
+        </StackPanel>
+
 
         <!-- Center: Pagination -->
         <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
-          <Button x:Name="prevButton" Content="&lt;" Style="{StaticResource NavButtonStyle}" Click="PrevPageClick" Margin="0,0,8,0"/>
-          <Border Background="#1A1612" BorderBrush="#5A5247" BorderThickness="2" Padding="16,4" MinWidth="100">
-            <TextBlock x:Name="pageText" Text="Page 1 of 1" Foreground="{DynamicResource ContentForeground}" FontSize="12" FontWeight="Bold"
-              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          <Button x:Name="prevButton" Click="PrevPageClick" Margin="0,0,4,1" Padding="10,0,10,0" Height="{DynamicResource EQButtonHeight}">
+            <fa:ImageAwesome Icon="Solid_ArrowLeft" Margin="6" Foreground="{DynamicResource ContentForeground}"/>
+          </Button>
+          <Border Background="{DynamicResource ContentBackground}" BorderBrush="{DynamicResource ContentBackgroundAlt3}" BorderThickness="2" MinWidth="120">
+            <TextBlock x:Name="pageText" Text="Page 1 of 1" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSizePlus}"
+             HorizontalAlignment="Center" VerticalAlignment="Center" Background="{DynamicResource ContentBackground}" Margin="0" Padding="4" />
           </Border>
-          <Button x:Name="nextButton" Content="&gt;" Style="{StaticResource NavButtonStyle}" Click="NextPageClick" Margin="8,0,0,0"/>
+          <Button x:Name="nextButton" Click="NextPageClick" Margin="4,0,0,1" Padding="10,0,10,0" Height="{DynamicResource EQButtonHeight}">
+            <fa:ImageAwesome Icon="Solid_ArrowRight" Margin="6" Foreground="{DynamicResource ContentForeground}"/>
+          </Button>
         </StackPanel>
 
         <!-- Right: Empty for balance -->
-        <Grid Grid.Column="2"/>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,8,0">
+          <Button Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}" Click="CancelClick"
+            FontSize="{DynamicResource EQContentSize}" Margin="0" Padding="20,0,20,0" Content="Cancel" />
+        </StackPanel>
       </Grid>
     </Border>
   </Grid>

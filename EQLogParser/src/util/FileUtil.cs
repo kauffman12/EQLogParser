@@ -60,6 +60,27 @@ namespace EQLogParser
       return $"EQLogParser_backup_{version}_{dateTime}.zip";
     }
 
+    internal static string GetDirFromPath(string path)
+    {
+      if (!string.IsNullOrEmpty(path))
+      {
+        try
+        {
+          var name = Path.GetDirectoryName(path);
+          if (Directory.Exists(name))
+          {
+            return name;
+          }
+        }
+        catch (Exception)
+        {
+          // ignore
+        }
+      }
+
+      return null;
+    }
+
     internal static async Task<HashSet<string>> GetOpenLogFilesAsync()
     {
       var logFiles = new HashSet<string>();
