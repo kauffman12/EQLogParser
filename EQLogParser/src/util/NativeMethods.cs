@@ -6,6 +6,15 @@ namespace EQLogParser
 {
   internal static class NativeMethods
   {
+    private const int MONITOR_DEFAULTTONEAREST = 0x00000002;
+    private const int HWND_TOPMOST = -1;
+    private const uint SWP_NOSIZE = 0x0001;
+    private const uint SWP_NOMOVE = 0x0002;
+    private const uint SWP_NOACTIVATE = 0x0010;
+    private const int WM_WINDOWPOSCHANGING = 0x0046;
+    private const int GWL_STYLE = -16;
+    private const int WS_MAXIMIZE = 0x01000000;
+
     #region Hooks
 
     /// <summary>
@@ -164,21 +173,42 @@ namespace EQLogParser
       return result;
     }
 
-    internal static string GetDownloadsFolderPath()
+    internal static bool TryGetDownloadsFolderPath(out string path)
+    {
+      path = GetFolderPath(new Guid("374DE290-123F-4565-9164-39C4925E467B"));
+      return !string.IsNullOrEmpty(path);
+    }
+
+    internal static bool TryGetPublicFolderPath(out string path)
+    {
+      path = GetFolderPath(new Guid("DFDF76A2-C82A-4D63-906A-5644AC457385"));
+      return !string.IsNullOrEmpty(path);
+    }
+
+    private static string GetFolderPath(Guid folderId)
     {
       var pathPtr = IntPtr.Zero;
-      var folderId = new Guid("374DE290-123F-4565-9164-39C4925E467B");
+
       try
       {
         var hr = SHGetKnownFolderPath(ref folderId, 0, IntPtr.Zero, out pathPtr);
         if (hr != 0)
+        {
           throw Marshal.GetExceptionForHR(hr)!;
+        }
+
         return Marshal.PtrToStringUni(pathPtr)!;
+      }
+      catch (Exception)
+      {
+        return string.Empty;
       }
       finally
       {
         if (pathPtr != IntPtr.Zero)
+        {
           Marshal.FreeCoTaskMem(pathPtr);
+        }
       }
     }
 
@@ -212,18 +242,6 @@ namespace EQLogParser
       if (tb.Right >= mon.Right && tb.Left >= mon.Right - 10) return 2; // right
       return 3; // default bottom
     }
-
-    private const int MONITOR_DEFAULTTONEAREST = 0x00000002;
-    private const int HWND_TOPMOST = -1;
-    private const uint SWP_NOSIZE = 0x0001;
-    private const uint SWP_NOMOVE = 0x0002;
-    private const uint SWP_NOACTIVATE = 0x0010;
-    private const int WM_WINDOWPOSCHANGING = 0x0046;
-    private const int GWL_STYLE = -16;
-    private const int WS_MAXIMIZE = 0x01000000;
-    private const int SM_CXSIZEFRAME = 32;
-    private const int SM_CYSIZEFRAME = 33;
-    private const int SM_CXPADDEDBORDER = 92;
 
     [Flags]
     private enum LayeredWindowAttributesFlags

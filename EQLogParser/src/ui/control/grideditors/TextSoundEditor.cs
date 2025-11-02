@@ -1,4 +1,5 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
+using Syncfusion.Windows.Tools.Controls;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -14,7 +15,7 @@ namespace EQLogParser
   internal class TextSoundEditor : BaseTypeEditor
   {
     private readonly ObservableCollection<string> _fileList;
-    private ComboBox _theOptionsCombo;
+    private ComboBoxAdv _theOptionsCombo;
     private ComboBox _theSoundCombo;
     private TextBox _theTtsBox;
     private TextBox _theRealTextBox;
@@ -59,7 +60,7 @@ namespace EQLogParser
         HorizontalAlignment = HorizontalAlignment.Stretch
       };
 
-      _theOptionsCombo = new ComboBox
+      _theOptionsCombo = new ComboBoxAdv
       {
         ItemsSource = new List<string> { "Text to Speak", "Play Sound" },
         SelectedIndex = 0,
@@ -116,6 +117,7 @@ namespace EQLogParser
       _theSoundCombo.ItemsSource = _fileList;
       _theRealTextBox.TextChanged += RealTextBoxTextChanged;
       _theErrorTextBox.SetResourceReference(TextBox.ForegroundProperty, "EQWarnForegroundBrush");
+      _testButton.SetResourceReference(Button.HeightProperty, "EQButtonHeight");
 
       _theTtsBox.SetValue(Grid.ColumnProperty, 0);
       _theErrorTextBox.SetValue(Grid.ColumnProperty, 0);
@@ -165,7 +167,6 @@ namespace EQLogParser
           if (soundExists)
           {
             _theOptionsCombo.SelectedIndex = 1;
-            _theOptionsCombo.IsEditable = false;
             _theErrorTextBox.Visibility = Visibility.Collapsed;
             _theTtsBox.Visibility = Visibility.Collapsed;
             _theSoundCombo.Visibility = Visibility.Visible;
@@ -173,8 +174,7 @@ namespace EQLogParser
           else
           {
             _theOptionsCombo.SelectedIndex = -1;
-            _theOptionsCombo.Text = "Available Options";
-            _theOptionsCombo.IsEditable = true;
+            _theOptionsCombo.DefaultText = "Click for Options";
             _theErrorTextBox.Text = soundFile;
             _theTtsBox.Visibility = Visibility.Collapsed;
             _theSoundCombo.Visibility = Visibility.Collapsed;
@@ -184,7 +184,6 @@ namespace EQLogParser
         else
         {
           _theOptionsCombo.SelectedIndex = 0;
-          _theOptionsCombo.IsEditable = false;
           _theErrorTextBox.Visibility = Visibility.Collapsed;
           _theSoundCombo.Visibility = Visibility.Collapsed;
           _theTtsBox.Visibility = Visibility.Visible;
@@ -202,7 +201,7 @@ namespace EQLogParser
 
     private void TypeComboBoxSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (sender is ComboBox { SelectedIndex: > -1 } combo)
+      if (sender is ComboBoxAdv { SelectedIndex: > -1 } combo)
       {
         var hideText = combo.SelectedIndex != 0;
         _theTtsBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;

@@ -49,7 +49,7 @@
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Button Grid.Column="0" Content="Select Archive Folder" FontSize="{DynamicResource EQContentSize}" HorizontalAlignment="Left" Padding="10,6,12,6" Click="ChooseFolderClicked" ToolTip="Folder where Log File Archives are kept."/>
-            <TextBox Grid.Column="1" Name="txtFolderPath" FontStyle="Italic" Margin="8,0,0,0" Text="Select Archive Folder" FontSize="{DynamicResource EQContentSize}" IsReadOnly="True" Width="320"/>
+            <TextBox Grid.Column="1" Name="txtFolderPath" FontStyle="Italic" FontStretch="SemiCondensed" Margin="8,0,0,0" Text="Select Archive Folder" FontSize="{DynamicResource EQContentSize}" IsReadOnly="True" Width="320"/>
           </Grid>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Margin="0,18,0,0">

@@ -1069,8 +1069,12 @@ namespace EQLogParser
       {
         // set by gina import
         if (newNode.HasMissingMedia) return true;
-        // check any sound file or icon
-        if (!string.IsNullOrEmpty(newNode.TriggerData.IconSource) && !File.Exists(newNode.TriggerData.IconSource)) return true;
+        // check icon loads
+        if (!string.IsNullOrEmpty(newNode.TriggerData.IconSource))
+        {
+          return UiElementUtil.CreateBitmap(newNode.TriggerData.IconSource) == null;
+        }
+        // check sound files
         if (!string.IsNullOrEmpty(newNode.TriggerData.SoundToPlay) && !TriggerUtil.SoundFileExists(newNode.TriggerData.SoundToPlay)) return true;
         if (!string.IsNullOrEmpty(newNode.TriggerData.EndSoundToPlay) && !TriggerUtil.SoundFileExists(newNode.TriggerData.EndSoundToPlay)) return true;
         if (!string.IsNullOrEmpty(newNode.TriggerData.EndEarlySoundToPlay) && !TriggerUtil.SoundFileExists(newNode.TriggerData.EndEarlySoundToPlay)) return true;
