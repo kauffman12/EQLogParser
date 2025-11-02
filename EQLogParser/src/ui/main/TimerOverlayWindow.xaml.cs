@@ -79,7 +79,8 @@ namespace EQLogParser
 
     internal async Task StartTimerAsync(TimerData timerData)
     {
-      if (_isClosed) return;
+      if (_isClosed)
+        return;
 
       var startLoop = false;
       await _renderSemaphore.WaitAsync().ConfigureAwait(false);
