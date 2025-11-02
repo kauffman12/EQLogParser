@@ -1,9 +1,10 @@
-# 2.3.31 | 11/02/25
+# 2.3.32 | 11/02/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
 
 1. Added **EQ Icon Picker**. This new feature was provided by **Herbivour** on Github. The **EQ Icon Picker** allows you to choose EQ Icons from your default or custom UI files and display them with **Timers**. Use `Click to Select Timer Bar Icon` and you'll be presented with an option for using the EQ Icon Picker.
 2. Added app icon to all windows and cleaned up the Trigger Manager UI.
 3. Update spells from beta.
+4. Fix for hide text overlay not working.
 
 # 2.3.30 | 10/29/25
 1. Updated to better handle 'new' spell procs.

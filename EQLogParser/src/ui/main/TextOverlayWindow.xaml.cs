@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -20,7 +21,7 @@ namespace EQLogParser
     private static readonly long TopIntervalTimeStamp = MonoTime.SecondsToTicks(2); // 2s in Stopwatch ticks
     private readonly bool _preview;
     private readonly RingBuffer<TextData> _buffer;
-    private readonly DispatcherTimer _timer;
+    private readonly Timer _timer;
     private readonly List<TextBlock> _blockList;
     private readonly object _bufferLock = new();
     private readonly bool _streamerMode;
@@ -32,7 +33,9 @@ namespace EQLogParser
     private long _savedTop = long.MaxValue;
     private long _savedLeft = long.MaxValue;
     private nint _windowHndl;
+    private volatile int _isTicking;
     private volatile bool _isClosed;
+    private volatile bool _newData;
 
     internal TextOverlayWindow(TriggerNode node, Dictionary<string, Window> previews = null)
     {
@@ -66,7 +69,7 @@ namespace EQLogParser
       else
       {
         content.SetResourceReference(Panel.BackgroundProperty, "OverlayBrushColor-" + _node.Id);
-        _timer = UiUtil.CreateTimer(DoTick, 150, false);
+        _timer = new Timer(DoTick, null, Timeout.Infinite, 150);
       }
 
       TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
@@ -78,25 +81,19 @@ namespace EQLogParser
     internal void AddText(string text, long now, string fontColor)
     {
       if (_isClosed)
-      {
         return;
-      }
 
       var fadeTs = now + MonoTime.SecondsToTicks(_node.OverlayData.FadeDelay);
       var newText = new TextData { Text = text, FadeTimeStamp = fadeTs, FontColor = fontColor };
-      lock (_bufferLock) _buffer.Add(newText);
 
-      // Ensure the timer is running (UI thread)
-      if (_timer != null && !_timer.IsEnabled)
+      lock (_bufferLock)
       {
-        Dispatcher.InvokeAsync(() =>
-        {
-          if (!_timer.IsEnabled)
-          {
-            _timer.Start();
-          }
-        });
+        _buffer.Add(newText);
+        _newData = true;
       }
+
+      // ensure timer is running
+      _timer?.Change(0, 150);
     }
 
     // Keep on UI thread
@@ -104,25 +101,58 @@ namespace EQLogParser
     {
       lock (_bufferLock)
       {
-        StopOverlayUnsafe();
+        // stop on next render
+        _buffer.Clear();
       }
     }
 
     private void CloseClick(object sender, RoutedEventArgs e) => Close();
 
-    private void DoTick(object sender, EventArgs e)
+    private void DoTick(object state)
     {
-      var now = MonoTime.NowStamp();
-      if (Visibility == Visibility.Visible && _windowHndl != 0 && (now - _lastTopTimeStamp) >= TopIntervalTimeStamp)
-      {
-        NativeMethods.SetWindowTopMost(_windowHndl);
-        _lastTopTimeStamp = now;
-      }
+      if (Interlocked.Exchange(ref _isTicking, 1) == 1)
+        return;
 
-      Render(now);
+      Dispatcher.InvokeAsync(() =>
+      {
+        try
+        {
+          var now = MonoTime.NowStamp();
+          if (Visibility == Visibility.Visible && _windowHndl != 0 && (now - _lastTopTimeStamp) >= TopIntervalTimeStamp)
+          {
+            NativeMethods.SetWindowTopMost(_windowHndl);
+            _lastTopTimeStamp = now;
+          }
+
+          // if nothing rendered then stop and hide window
+          if (Render(now) == false)
+          {
+            // defer visibility change so layout can settle
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+            {
+              var doHide = false;
+              lock (_bufferLock)
+              {
+                doHide = _buffer.Count == 0;
+              }
+
+              // check if still empty
+              if (doHide)
+              {
+                EnsureVisible(false);
+                content.UpdateLayout();
+              }
+            }));
+          }
+        }
+        finally
+        {
+          Interlocked.Exchange(ref _isTicking, 0);
+        }
+      });
     }
 
-    private void Render(long now)
+    private bool Render(long now)
     {
       lock (_bufferLock)
       {
@@ -130,7 +160,7 @@ namespace EQLogParser
         {
           // nothing to show
           StopOverlayUnsafe();
-          return;
+          return false;
         }
 
         var visibleCount = Math.Min(_buffer.Count, _blockList.Count);
@@ -155,7 +185,12 @@ namespace EQLogParser
             }
             else
             {
-              EnsureVisible(true);
+              // allow hide to work
+              if (_newData)
+              {
+                EnsureVisible(true);
+                _newData = false;
+              }
 
               if (block.Text != td.Text)
               {
@@ -190,6 +225,8 @@ namespace EQLogParser
           ClearBlock(i);
         }
       }
+
+      return true;
     }
 
     private void ClearBlock(int blockIndex)
@@ -248,8 +285,8 @@ namespace EQLogParser
       }
 
       _buffer.Clear();
-      EnsureVisible(false);
-      _timer.Stop();
+      _newData = false;
+      _timer?.Change(Timeout.Infinite, Timeout.Infinite);
       _lastTopTimeStamp = MonoTime.NowStamp();
     }
 
@@ -377,7 +414,7 @@ namespace EQLogParser
       try
       {
         _isClosed = true;
-        _timer?.Stop();
+        _timer?.Dispose();
         TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
         _previewWindows?.Remove(_node.Id);
         _previewWindows = null;
