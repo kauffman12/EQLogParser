@@ -68,6 +68,8 @@ namespace EQLogParser
       }
       else
       {
+        IsHitTestVisible = false;
+        content.IsHitTestVisible = false;
         content.SetResourceReference(Panel.BackgroundProperty, "OverlayBrushColor-" + _node.Id);
         _timer = new Timer(DoTick, null, Timeout.Infinite, 150);
       }
@@ -398,6 +400,7 @@ namespace EQLogParser
         Text = text,
         TextWrapping = TextWrapping.Wrap,
         Visibility = Visibility.Collapsed,
+        IsHitTestVisible = false,
         Effect = new DropShadowEffect { ShadowDepth = 2, Direction = 330, Color = Colors.Black, Opacity = 0.7, BlurRadius = 0 },
       };
 
@@ -438,6 +441,7 @@ namespace EQLogParser
         {
           source.AddHook(NativeMethods.BandAidHook); // Make sure this is hooked first. That ensures it runs last
           source.AddHook(NativeMethods.ProblemHook);
+
           NativeMethods.SetWindowTopMost(source.Handle);
           _windowHndl = source.Handle;
 

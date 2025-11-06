@@ -1,6 +1,10 @@
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace EQLogParser
 {
@@ -9,6 +13,40 @@ namespace EQLogParser
     // EQ Registry Entry
     private const string EqUninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\DGC-EverQuest";
 
+    // Validate a sprite file path. Used during importing to a new system which may have EQ installed someplace else
+    internal static string ValidateSpritePath(TriggerConfig config, string spritePath)
+    {
+      if (TryParseEqSpritePath(spritePath, out var parts))
+      {
+        // sprite path missing
+        if (File.Exists(parts[0]))
+        {
+          return spritePath;
+        }
+        else
+        {
+          // search for similar icon file
+          if (Path.GetFileName(parts[0]) is { } iconFile && Directory.GetParent(parts[0]) is { } custom &&
+            Directory.GetParent(custom.FullName) is { } uifiles && "uifiles".Equals(uifiles.Name, StringComparison.OrdinalIgnoreCase))
+          {
+            var imagePath = $"{uifiles.Name}\\{custom.Name}\\{iconFile}";
+            foreach (var eqFolder in GetEqFolders(config))
+            {
+              var newPath = $"{eqFolder}\\{imagePath}";
+              if (File.Exists(newPath))
+              {
+                // found similar so use this one
+                return $"eqsprite://{newPath}/{parts[1]}/{parts[2]}";
+              }
+            }
+          }
+        }
+      }
+
+      return null;
+    }
+
+    // Parses the folder containing the sprites (uifiles/default)
     internal static string GetUiFolderFromSpritePath(string spritePath)
     {
       if (TryParseEqSpritePath(spritePath, out var parts))
@@ -17,9 +55,7 @@ namespace EQLogParser
         {
           var eqUiFolder = Path.GetDirectoryName(parts[0]);
           if (Directory.Exists(eqUiFolder))
-          {
             return eqUiFolder;
-          }
         }
         catch (Exception)
         {
@@ -30,6 +66,7 @@ namespace EQLogParser
       return null;
     }
 
+    // Parses the sprite path itself for the sprite file and params
     internal static bool TryParseEqSpritePath(string path, out string[] parts)
     {
       parts = null;
@@ -59,77 +96,173 @@ namespace EQLogParser
       return false;
     }
 
-    // Attempts to find the EverQuest UI "uifiles/default" folder
-    internal static bool TryGetEqUiFolder(out string path)
+    // Attempts to find an EverQuest UI "uifiles/default" folder
+    internal static async Task<string> GetEqUiFolderAsync(string id)
     {
-      path = null;
-
       try
       {
         // try saved setting first
         var eqUiFolderSetting = ConfigUtil.GetSetting("EqUiFolder");
         if (Directory.Exists(eqUiFolderSetting))
+          return eqUiFolderSetting;
+
+        // try all known folders
+        foreach (var eqFolder in await GetEqFoldersAsync(id))
         {
-          path = eqUiFolderSetting;
-          return true;
+          if (TryGetDefaultUiFolder(eqFolder, out var path))
+            return path;
         }
-
-        // try registry
-        if (TryGetEqFolderFromRegistry(out var eqFolderRegistry) && TryGetDefaultUiFolder(eqFolderRegistry, out path))
-          return true;
-
-        // try common paths
-        if (TryGetEqFolderFromCommonPaths(out var eqFolderCommon) && TryGetDefaultUiFolder(eqFolderCommon, out path))
-          return true;
       }
       catch (Exception)
       {
         // can not find folder, may need to prompt
       }
 
-      return false;
+      return null;
     }
 
-    private static bool TryGetDefaultUiFolder(string eqFolder, out string path)
+    // Returns unique list of all known EQ folders
+    private static List<string> GetEqFolders(TriggerConfig config)
     {
-      path = null;
-      if (string.IsNullOrEmpty(eqFolder))
-        return false;
-
-      var uiFolder = Path.Combine(eqFolder, "uifiles", "default");
-      if (Directory.Exists(uiFolder))
+      return App.AppCache.GetOrCreate($"eqfolder-cache-all", entry =>
       {
-        path = uiFolder;
-        return true;
-      }
+        // cache results for a few minutes. mainly for quickshare/import
+        entry.SetSlidingExpiration(TimeSpan.FromMinutes(5));
 
-      return false;
+        // add paths associated with characters
+        var eqFolderList = new List<string>();
+        PopulateEqFoldersFromAllCharacters(eqFolderList, config);
+
+        // add standard paths from common places and registry settings
+        PopulateStandardEqFolderPaths(eqFolderList);
+        var unique = eqFolderList.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        entry.SetSize(unique.Select(path => path.Length).Sum());
+        return unique;
+      });
     }
 
-    private static bool TryGetEqFolderFromCommonPaths(out string path)
+    // Returns unique list of EQ folders for a specific character
+    private static async Task<List<string>> GetEqFoldersAsync(string id)
     {
-      path = null;
+      if (string.IsNullOrEmpty(id))
+        return await Task.FromResult<List<string>>([]);
 
+      return await App.AppCache.GetOrCreateAsync($"eqfolder-cache-all", async entry =>
+      {
+        // cache results for a few minutes. mainly for quickshare/import
+        entry.SetSlidingExpiration(TimeSpan.FromMinutes(5));
+
+        // add paths associated with characters
+        var eqFolderList = new List<string>();
+        await PopulateEqFoldersFromCharacterAsync(eqFolderList, id);
+
+        // add standard paths from common places and registry settings
+        PopulateStandardEqFolderPaths(eqFolderList);
+        var unique = eqFolderList.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        entry.SetSize(unique.Select(path => path.Length).Sum());
+        return unique;
+      });
+    }
+
+    // Finds EQ Folders associated with all characters configured in Trigger Manager
+    private static void PopulateEqFoldersFromAllCharacters(List<string> eqFolderList, TriggerConfig config)
+    {
+      try
+      {
+        // basic mode uses current file
+        if (GetEqFolderFromPath(MainWindow.CurrentLogFile) is { } currentFolder)
+        {
+          eqFolderList?.Add(currentFolder);
+        }
+
+        // all advanced mode characters
+        if (config != null)
+        {
+          foreach (var character in config.Characters)
+          {
+            if (GetEqFolderFromPath(character.FilePath) is { } characterFolder)
+            {
+              eqFolderList?.Add(characterFolder);
+            }
+          }
+        }
+      }
+      catch (Exception)
+      {
+        // ignore
+      }
+    }
+
+    // Finds EQ Folders associated with a specific character in Trigger Manager
+    private static async Task PopulateEqFoldersFromCharacterAsync(List<string> eqFolderList, string id)
+    {
+      try
+      {
+        // basic mode uses current file
+        if (id == TriggerStateManager.DefaultUser && GetEqFolderFromPath(MainWindow.CurrentLogFile) is { } currentFolder)
+        {
+          eqFolderList?.Add(currentFolder);
+          return;
+        }
+
+        // all advanced mode characters
+        var config = await TriggerStateManager.Instance.GetConfig();
+        foreach (var character in config?.Characters ?? [])
+        {
+          if (character.Id == id && GetEqFolderFromPath(character.FilePath) is { } characterFolder)
+          {
+            eqFolderList?.Add(characterFolder);
+          }
+        }
+      }
+      catch (Exception)
+      {
+        // ignore
+      }
+    }
+
+    // Returns cached list of system defined paths for EQ folders
+    private static void PopulateStandardEqFolderPaths(List<string> eqFolderList)
+    {
+      try
+      {
+        // add each common path found
+        foreach (var common in GetEqFolderFromCommonPaths())
+          eqFolderList?.Add(common);
+
+        // add path from registry
+        if (TryGetEqFolderFromRegistry(out var regPath))
+          eqFolderList?.Add(regPath);
+      }
+      catch (Exception)
+      {
+        // ignore
+      }
+    }
+
+    // Returns list of EQ folders found where the game is typically installed
+    private static List<string> GetEqFolderFromCommonPaths()
+    {
+      var paths = new List<string>(2);
       if (NativeMethods.TryGetPublicFolderPath(out var publicFolder))
       {
         var daybreak = Path.Combine(publicFolder, "Daybreak Game Company", "Installed Games", "EverQuest");
         if (Directory.Exists(daybreak))
         {
-          path = daybreak;
-          return true;
+          paths.Add(daybreak);
         }
 
         var sony = Path.Combine(publicFolder, "Sony Online Entertainment", "Installed Games", "EverQuest");
         if (Directory.Exists(sony))
         {
-          path = sony;
-          return true;
+          paths.Add(sony);
         }
       }
 
-      return false;
+      return paths;
     }
 
+    // Try to query the EQ folder based on registry settings
     private static bool TryGetEqFolderFromRegistry(out string path)
     {
       // Try HKCU and HLM, 64-bit view first
@@ -176,6 +309,44 @@ namespace EQLogParser
           result = path;
           return true;
         }
+      }
+
+      return false;
+    }
+
+    private static string GetEqFolderFromPath(string path)
+    {
+      if (!string.IsNullOrEmpty(path))
+      {
+        try
+        {
+          // check that it looks like a valid EQ folder
+          if (Directory.GetParent(path) is { } parent && "Logs".Equals(parent.Name, StringComparison.OrdinalIgnoreCase) && parent.Parent is { } root &&
+            TryGetDefaultUiFolder(root.FullName, out _))
+          {
+            return root.FullName;
+          }
+        }
+        catch (Exception)
+        {
+          // ignore
+        }
+      }
+
+      return null;
+    }
+
+    private static bool TryGetDefaultUiFolder(string eqFolder, out string path)
+    {
+      path = null;
+      if (string.IsNullOrEmpty(eqFolder))
+        return false;
+
+      var uiFolder = Path.Combine(eqFolder, "uifiles", "default");
+      if (Directory.Exists(uiFolder))
+      {
+        path = uiFolder;
+        return true;
       }
 
       return false;

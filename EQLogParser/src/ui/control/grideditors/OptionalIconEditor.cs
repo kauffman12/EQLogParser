@@ -110,7 +110,7 @@ namespace EQLogParser
         TextWrapping = TextWrapping.Wrap,
         VerticalContentAlignment = VerticalAlignment.Center,
         BorderThickness = new Thickness(0),
-        IsReadOnly = true,
+        IsReadOnly = false,
         Cursor = Cursors.Arrow,
       };
 
@@ -138,18 +138,19 @@ namespace EQLogParser
     {
       if (_theImagePath?.Text?.StartsWith("eqsprite://", System.StringComparison.OrdinalIgnoreCase) == true)
       {
-        SelectSprite();
-        return;
+        SelectSprite(GetCharacterId(sender));
       }
-
-      SelectImageFile();
+      else
+      {
+        SelectImageFile();
+      }
     }
 
     private void ImageTypeBoxSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       if (_theImageTypeBox?.SelectedIndex == 0)
       {
-        SelectSprite();
+        SelectSprite(GetCharacterId(sender));
       }
       else if (_theImageTypeBox?.SelectedIndex == 1)
       {
@@ -183,12 +184,13 @@ namespace EQLogParser
       }
     }
 
-    private void SelectSprite()
+    private void SelectSprite(string characterId)
     {
       ShowImage();
 
       // use folder of existing sprite if possible
-      var picker = new SpritePickerWindow(EqUtil.GetUiFolderFromSpritePath(_theImagePath.Text));
+      var picker = new SpritePickerWindow(characterId, EqUtil.GetUiFolderFromSpritePath(_theImagePath.Text));
+
       if (picker.ShowDialog() == true)
       {
         _theImagePath.Text = picker.SelectedValue;
@@ -260,6 +262,20 @@ namespace EQLogParser
         _theImage.Visibility = Visibility.Collapsed;
         _theImagePath.Visibility = Visibility.Visible;
       }
+    }
+
+    private static string GetCharacterId(object sender)
+    {
+      dynamic control = sender;
+      if (control.DataContext is PropertyItem { SelectedObject: TriggerPropertyModel model })
+      {
+        if (model.DataContext is TriggersTreeView view)
+        {
+          return view.CurrentCharacterId;
+        }
+      }
+
+      return TriggerStateManager.DefaultUser;
     }
   }
 }

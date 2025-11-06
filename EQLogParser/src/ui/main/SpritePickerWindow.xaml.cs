@@ -21,15 +21,24 @@ namespace EQLogParser
     private List<string> _allSheets = [];
     private int _currentPage;
 
-    internal SpritePickerWindow(string eqUiFolder)
+    internal SpritePickerWindow(string characterId, string currentEqUiFolder)
     {
       MainActions.SetCurrentTheme(this);
       InitializeComponent();
       Owner = MainActions.GetOwner();
 
-      if (Directory.Exists(eqUiFolder) || EqUtil.TryGetEqUiFolder(out eqUiFolder))
+      // use one currently being used to display an icon
+      if (Directory.Exists(currentEqUiFolder))
       {
-        LoadDefaultSheets(eqUiFolder);
+        LoadDefaultSheets(currentEqUiFolder);
+      }
+      else
+      {
+        // else find uifiles to use
+        EqUtil.GetEqUiFolderAsync(characterId).ContinueWith(t =>
+        {
+          Dispatcher.InvokeAsync(() => LoadDefaultSheets(t.Result));
+        });
       }
     }
 

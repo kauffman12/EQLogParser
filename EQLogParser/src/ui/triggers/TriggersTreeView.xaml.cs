@@ -17,6 +17,7 @@ namespace EQLogParser
   {
     internal event Action<bool> ClosePreviewOverlaysEvent;
     internal event Action<Tuple<TriggerTreeViewNode, object>> TreeSelectionChangedEvent;
+    internal string CurrentCharacterId;
     private const string LabelNewTextOverlay = "New Text Overlay";
     private const string LabelNewTimerOverlay = "New Timer Overlay";
     private const string LabelNewTrigger = "New Trigger";
@@ -26,7 +27,6 @@ namespace EQLogParser
     private TriggerTreeViewNode _overlayCopiedNode;
     private bool _triggerCutNode;
     private bool _overlayCutNode;
-    private string _currentCharacterId;
     private Func<bool> _isCancelSelection;
     private TriggerConfig _theConfig;
     private List<TriggerCharacter> _selectedCharacters;
@@ -57,7 +57,7 @@ namespace EQLogParser
     internal async Task RefreshOverlays() => await RefreshOverlayNode();
     internal async Task RefreshTriggers() => await RefreshTriggerNode();
     internal void SetConfig(TriggerConfig config) => _theConfig = config;
-    internal async Task SelectNode(string id) => await SelectNode(triggerTreeView, id);
+    internal async Task SelectNode(string id) => await SelectNodeAsync(triggerTreeView, id);
 
     internal async Task PlayTts(string text, int volume = 4)
     {
@@ -66,7 +66,7 @@ namespace EQLogParser
       {
         AudioManager.Instance.TestSpeakTtsAsync(text, config.Voice, config.VoiceRate, volume);
       }
-      else if (config.Characters.FirstOrDefault(character => character.Id == _currentCharacterId) is { } found)
+      else if (config.Characters.FirstOrDefault(character => character.Id == CurrentCharacterId) is { } found)
       {
         AudioManager.Instance.TestSpeakTtsAsync(text, found.Voice, found.VoiceRate, volume, found.CustomVolume);
       }
@@ -86,9 +86,9 @@ namespace EQLogParser
 
     internal async Task EnableAndRefreshTriggers(bool enable, string characterId, List<TriggerCharacter> characters = null)
     {
-      var needRefresh = _currentCharacterId != characterId;
+      var needRefresh = CurrentCharacterId != characterId;
       _selectedCharacters = characters;
-      _currentCharacterId = characterId;
+      CurrentCharacterId = characterId;
       triggerTreeView.IsEnabled = enable;
 
       if (enable && noCharacterSelected.Visibility == Visibility.Visible)
@@ -126,9 +126,7 @@ namespace EQLogParser
       {
         var node = _findTriggerEnumerator.Current;
         triggerTreeView.ExpandNode(node?.IsTrigger() == true ? node.ParentNode : node);
-        triggerTreeView.SelectedItems?.Clear();
-        triggerTreeView.SelectedItem = node;
-        await SelectionChanged(node);
+        await SelectNodeAsync(triggerTreeView, node);
       }
       else if (triggerTreeView?.Nodes.Count > 0 && triggerTreeView?.Nodes[0] is TriggerTreeViewNode node)
       {
@@ -217,7 +215,7 @@ namespace EQLogParser
     {
       if (e.Node is TriggerTreeViewNode viewNode)
       {
-        var ids = _selectedCharacters?.Select(x => x.Id).ToList() ?? [_currentCharacterId];
+        var ids = _selectedCharacters?.Select(x => x.Id).ToList() ?? [CurrentCharacterId];
         await TriggerStateManager.Instance.SetState(ids, viewNode);
         TriggerManager.Instance.TriggersUpdated();
       }
@@ -262,7 +260,7 @@ namespace EQLogParser
     private async Task RefreshTriggerNode()
     {
       triggerTreeView?.Nodes?.Clear();
-      var nodes = await TriggerStateManager.Instance.GetTriggerTreeView(_currentCharacterId);
+      var nodes = await TriggerStateManager.Instance.GetTriggerTreeView(CurrentCharacterId);
       triggerTreeView?.Nodes?.Add(nodes);
     }
 
@@ -276,20 +274,36 @@ namespace EQLogParser
       }
     }
 
-    private async Task SelectNode(SfTreeView treeView, string id)
+    private async Task SelectNodeAsync(SfTreeView treeView, string id)
     {
       if (id != null && _isCancelSelection != null && !_isCancelSelection())
       {
-        if (treeView?.Nodes.Count > 0 && treeView.Nodes[0] is TriggerTreeViewNode node)
+        // stay on UI thread if possible
+        await UiUtil.InvokeAsync(async () =>
         {
-          if (FindAndExpandNodeById(treeView, node, id) is { } found)
+          if (treeView?.Nodes.Count > 0 && treeView.Nodes[0] is TriggerTreeViewNode node)
           {
-            treeView.SelectedItems?.Clear();
-            treeView.SelectedItem = found;
-            await SelectionChanged(found);
+            if (FindAndExpandNodeById(treeView, node, id) is { } found)
+            {
+              await SelectNodeAsync(treeView, found);
+            }
           }
-        }
+        });
       }
+    }
+
+    private async Task SelectNodeAsync(SfTreeView treeView, TriggerTreeViewNode node)
+    {
+      treeView.EndEdit(treeView.SelectedItem as TriggerTreeViewNode);
+      treeView.SelectedItems?.Clear();
+
+      // delay between clear and set
+      await UiUtil.InvokeAsync(() =>
+      {
+        treeView.SelectedItem = node;
+      });
+
+      await SelectionChanged(node);
     }
 
     private static TriggerTreeViewNode FindAndExpandNodeById(SfTreeView treeView, TriggerTreeViewNode node, string id)
@@ -350,8 +364,12 @@ namespace EQLogParser
     {
       if (GetTreeViewFromMenu(sender) is { SelectedItem: TriggerTreeViewNode { SerializedData.Id: { } id } parent })
       {
-        var newNode = await TriggerStateManager.Instance.CreateFolder(id, LabelNewFolder, _currentCharacterId);
-        parent.ChildNodes.Add(newNode);
+        if (await TriggerStateManager.Instance.CreateFolder(id, LabelNewFolder, CurrentCharacterId) is { } newNode)
+        {
+          parent.ChildNodes.Add(newNode);
+          await SelectNodeAsync(triggerTreeView, newNode.SerializedData.Id);
+          triggerTreeView.BringIntoView(newNode);
+        }
       }
     }
 
@@ -362,8 +380,12 @@ namespace EQLogParser
         var label = isTextOverlay ? LabelNewTextOverlay : LabelNewTimerOverlay;
         if (await TriggerStateManager.Instance.CreateOverlay(parent.SerializedData.Id, label, isTextOverlay) is { } newNode)
         {
-          parent.ChildNodes.Add(newNode);
-          await SelectNode(overlayTreeView, newNode.SerializedData.Id);
+          await Dispatcher.InvokeAsync(async () =>
+          {
+            parent.ChildNodes.Add(newNode);
+            await SelectNodeAsync(overlayTreeView, newNode.SerializedData.Id);
+            overlayTreeView.BringIntoView(newNode);
+          });
         }
       }
     }
@@ -372,10 +394,14 @@ namespace EQLogParser
     {
       if (triggerTreeView.SelectedItem is TriggerTreeViewNode parent)
       {
-        if (await TriggerStateManager.Instance.CreateTrigger(parent.SerializedData.Id, LabelNewTrigger, _currentCharacterId) is { } newNode)
+        if (await TriggerStateManager.Instance.CreateTrigger(parent.SerializedData.Id, LabelNewTrigger, CurrentCharacterId) is { } newNode)
         {
-          parent.ChildNodes.Add(newNode);
-          await SelectNode(triggerTreeView, newNode.SerializedData.Id);
+          await Dispatcher.InvokeAsync(async () =>
+          {
+            parent.ChildNodes.Add(newNode);
+            await SelectNodeAsync(triggerTreeView, newNode.SerializedData.Id);
+            triggerTreeView.BringIntoView(newNode);
+          });
         }
       }
     }
@@ -546,7 +572,7 @@ namespace EQLogParser
 
               if (_shiftDown)
               {
-                await TriggerStateManager.Instance.SetStateFromParent(node.SerializedData.Parent, _currentCharacterId, node);
+                await TriggerStateManager.Instance.SetStateFromParent(node.SerializedData.Parent, CurrentCharacterId, node);
               }
 
               needRefresh = true;
@@ -629,7 +655,7 @@ namespace EQLogParser
         if (_theConfig.Characters.Count > 1 && triggerTreeView.SelectedItems?.Count == 1)
         {
           copySettingsMenuItem.IsEnabled = true;
-          foreach (var character in _theConfig.Characters.Where(c => c.Id != _currentCharacterId))
+          foreach (var character in _theConfig.Characters.Where(c => c.Id != CurrentCharacterId))
           {
             var menuItem = new MenuItem { Header = character.Name, Tag = character.Id };
             menuItem.Click += CopySettingsClick;
@@ -737,7 +763,7 @@ namespace EQLogParser
     {
       if (sender is MenuItem { Tag: string id })
       {
-        await TriggerStateManager.Instance.CopyState((TriggerTreeViewNode)triggerTreeView.SelectedItem, _currentCharacterId, id);
+        await TriggerStateManager.Instance.CopyState((TriggerTreeViewNode)triggerTreeView.SelectedItem, CurrentCharacterId, id);
       }
     }
 
@@ -941,27 +967,20 @@ namespace EQLogParser
       return null;
     }
 
-    private void TreeViewPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    private async void TreeViewPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
       if (sender is SfTreeView treeView)
       {
         if (e.OriginalSource is FrameworkElement { DataContext: TriggerTreeViewNode node })
         {
           if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl) ||
-            Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
+            Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift) ||
+            treeView.SelectedItems?.Count > 1)
           {
             return;
           }
 
-          if (treeView.SelectedItems == null)
-          {
-            treeView.SelectedItem = node;
-          }
-          else if (!treeView.SelectedItems.Contains(node))
-          {
-            treeView.SelectedItems?.Clear();
-            treeView.SelectedItem = node;
-          }
+          await SelectNodeAsync(treeView, node);
         }
       }
     }

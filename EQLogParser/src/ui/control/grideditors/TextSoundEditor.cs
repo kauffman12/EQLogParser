@@ -133,7 +133,6 @@ namespace EQLogParser
       _theTtsBox.TextChanged += TextBoxTextChanged;
       _theSoundCombo.SelectionChanged += SoundComboSelectionChanged;
       _theOptionsCombo.SelectionChanged += TypeComboBoxSelectionChanged;
-
       return _grid;
     }
 
