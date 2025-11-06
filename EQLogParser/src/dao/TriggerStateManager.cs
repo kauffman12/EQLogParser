@@ -948,7 +948,7 @@ namespace EQLogParser
               foundTrigger.TriggerData = newNode.TriggerData;
               tree.Update(foundTrigger);
               enableId = foundTrigger.Id;
-              hasMissingMedia = CheckMissingMedia(newNode, foundTrigger.Id);
+              hasMissingMedia = CheckMissingMedia(tree, newNode, foundTrigger);
             }
             // directory but make sure it is one
             else if (foundTrigger.OverlayData == null && foundTrigger.TriggerData == null && newNode.Nodes?.Count > 0)
@@ -972,7 +972,7 @@ namespace EQLogParser
               node.TriggerData.SelectedOverlays = ValidateOverlays(newNode.TriggerData.SelectedOverlays);
               Insert(node, index);
               enableId = node.Id;
-              hasMissingMedia = CheckMissingMedia(newNode, node.Id);
+              hasMissingMedia = CheckMissingMedia(tree, newNode, node);
             }
             // make sure it's a new directory and replace the exported version
             else if (newNode.OverlayData == null && newNode.TriggerData == null && App.AutoMap.Map(newNode, new TriggerNode()) is { } node2)
@@ -1057,28 +1057,52 @@ namespace EQLogParser
       }
     }
 
-    private bool CheckMissingMedia(ExportTriggerNode node, string id)
+    private bool CheckMissingMedia(ILiteCollection<TriggerNode> tree, ExportTriggerNode imported, TriggerNode stored)
     {
-      if (!string.IsNullOrEmpty(id) && Check(node))
+      if (!string.IsNullOrEmpty(stored.Id) && Check(imported, stored))
       {
-        MissingMedia[id] = true;
+        MissingMedia[stored.Id] = true;
         return true;
       }
 
-      static bool Check(ExportTriggerNode newNode)
+      bool Check(ExportTriggerNode node, TriggerNode storedNode)
       {
         // set by gina import
-        if (newNode.HasMissingMedia) return true;
+        if (node.HasMissingMedia) return true;
         // check icon loads
-        if (!string.IsNullOrEmpty(newNode.TriggerData.IconSource))
+        if (!string.IsNullOrEmpty(storedNode.TriggerData.IconSource))
         {
-          return UiElementUtil.CreateBitmap(newNode.TriggerData.IconSource) == null;
+          // get direct config reference as we are within a transaction
+          TriggerConfig config = null;
+          if (_db?.GetCollection<TriggerConfig>(ConfigCol) is { } configs)
+          {
+            config = configs.FindAll().FirstOrDefault();
+          }
+
+          // validate path/replace value if similar sprite path found in a different EQ folder
+          var updated = false;
+          var updatedPath = EqUtil.ValidateSpritePath(config, storedNode.TriggerData.IconSource);
+          if (updatedPath != null && !Equals(updatedPath, storedNode.TriggerData.IconSource))
+          {
+            storedNode.TriggerData.IconSource = updatedPath;
+            updated = true;
+          }
+
+          // make sure it actually works
+          var valid = UiElementUtil.CreateBitmap(storedNode.TriggerData.IconSource) != null;
+          if (valid && updated)
+          {
+            tree.Update(storedNode);
+          }
+
+          return !valid;
         }
+
         // check sound files
-        if (!string.IsNullOrEmpty(newNode.TriggerData.SoundToPlay) && !TriggerUtil.SoundFileExists(newNode.TriggerData.SoundToPlay)) return true;
-        if (!string.IsNullOrEmpty(newNode.TriggerData.EndSoundToPlay) && !TriggerUtil.SoundFileExists(newNode.TriggerData.EndSoundToPlay)) return true;
-        if (!string.IsNullOrEmpty(newNode.TriggerData.EndEarlySoundToPlay) && !TriggerUtil.SoundFileExists(newNode.TriggerData.EndEarlySoundToPlay)) return true;
-        if (!string.IsNullOrEmpty(newNode.TriggerData.WarningSoundToPlay) && !TriggerUtil.SoundFileExists(newNode.TriggerData.WarningSoundToPlay)) return true;
+        if (!string.IsNullOrEmpty(storedNode.TriggerData.SoundToPlay) && !TriggerUtil.SoundFileExists(storedNode.TriggerData.SoundToPlay)) return true;
+        if (!string.IsNullOrEmpty(storedNode.TriggerData.EndSoundToPlay) && !TriggerUtil.SoundFileExists(storedNode.TriggerData.EndSoundToPlay)) return true;
+        if (!string.IsNullOrEmpty(storedNode.TriggerData.EndEarlySoundToPlay) && !TriggerUtil.SoundFileExists(storedNode.TriggerData.EndEarlySoundToPlay)) return true;
+        if (!string.IsNullOrEmpty(storedNode.TriggerData.WarningSoundToPlay) && !TriggerUtil.SoundFileExists(storedNode.TriggerData.WarningSoundToPlay)) return true;
         return false;
       }
 

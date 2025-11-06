@@ -62,7 +62,7 @@ namespace EQLogParser
       }
 
       // dimensions
-      var width = ConfigUtil.GetSettingAsDouble("OverlayWidth", SystemParameters.VirtualScreenWidth / 4);
+      var width = ConfigUtil.GetSettingAsDouble("OverlayWidth", 400);
       var height = ConfigUtil.GetSettingAsDouble("OverlayHeight", int.MaxValue);
       var top = ConfigUtil.GetSettingAsDouble("OverlayTop", 20);
       var left = ConfigUtil.GetSettingAsDouble("OverlayLeft", 100);
@@ -516,7 +516,6 @@ namespace EQLogParser
 
     private double GetOverlayHeight()
     {
-      var barHeight = (double)Application.Current.Resources["DamageOverlayBarHeight"]!;
       var pos = heightRectangle.TransformToAncestor(this).Transform(new Point(0, 0));
       return pos.Y - 2;
     }
@@ -531,7 +530,7 @@ namespace EQLogParser
       }
     }
 
-    private void WindowLoaded(object sender, RoutedEventArgs e)
+    private void WindowContentRendered(object sender, EventArgs e)
     {
       // delay to avoid WindowSize event from saving new values
       _savedHeight = Height;
@@ -542,29 +541,31 @@ namespace EQLogParser
 
     private void SetWindowSizes(double height, double width, double top, double left)
     {
-      if (width >= 0 && width <= SystemParameters.VirtualScreenWidth)
-      {
+      // Size guards (keep your existing rules)
+      if (width > 0 && width <= SystemParameters.VirtualScreenWidth)
         Width = width;
-      }
 
-      if (height >= 0 && height <= SystemParameters.VirtualScreenHeight)
-      {
+      if (height > 0 && height <= SystemParameters.VirtualScreenHeight)
         Height = height;
-      }
-      else
-      {
-        // workaround for GetOverlayHeight needing to be called after init
-        _ = Dispatcher.InvokeAsync(() => Height = _savedHeight = GetOverlayHeight());
-      }
 
-      if (top < int.MaxValue && top < SystemParameters.VirtualScreenHeight)
-      {
-        Top = top;
-      }
+      // Virtual desktop bounds (multi-monitor aware)
+      var vLeft = SystemParameters.VirtualScreenLeft;
+      var vTop = SystemParameters.VirtualScreenTop;
+      var overlapsH = Overlaps(left, width, vLeft, SystemParameters.VirtualScreenWidth);
+      var overlapsV = Overlaps(top, height, vTop, SystemParameters.VirtualScreenHeight);
 
-      if (left < int.MaxValue && left >= SystemParameters.VirtualScreenLeft && left < SystemParameters.VirtualScreenWidth)
+      // Apply positions:
+      // - Allow negative (or > right/bottom) if there's any overlap.
+      // - If completely offscreen on that axis, snap to 0 (your preference).
+      Left = overlapsH ? left : 0;
+      Top = overlapsV ? top : 0;
+
+      // Helper: does the proposed rect overlap the virtual screen at all?
+      static bool Overlaps(double aStart, double aLen, double bStart, double bLen)
       {
-        Left = left;
+        var aEnd = aStart + aLen;
+        var bEnd = bStart + bLen;
+        return aLen > 0 && bLen > 0 && aStart < bEnd && aEnd > bStart; // strict overlap
       }
     }
 

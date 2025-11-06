@@ -22,7 +22,7 @@
         MinWidth="250"
         MouseLeftButtonDown="OverlayMouseLeftDown"
         SizeChanged="WindowSizeChanged"
-        Loaded="WindowLoaded"
+        ContentRendered="WindowContentRendered"
         UseLayoutRounding="True"
         Closing="WindowClosing"
         Style="{x:Null}"
