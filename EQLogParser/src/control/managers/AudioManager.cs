@@ -282,14 +282,15 @@ namespace EQLogParser
       await using var reader = new AudioFileReader(filePath);
       if (!string.IsNullOrEmpty(filePath) && await ReadFileToByteArrayAsync(reader) is { Length: > 0 } data)
       {
-        if (!PlayAudioData(data, reader.WaveFormat, GetDevice(), _appVolume, 0, adjustedVolume))
+        var volume = ConvertVolume(_appVolume, adjustedVolume);
+        if (!PlayAudioData(data, reader.WaveFormat, GetDevice(), volume, 0))
         {
           new MessageWindow("Unable to Play sound. No audio device?", Resource.AUDIO_ERROR).ShowDialog();
         }
       }
     }
 
-    internal async void TestSpeakTtsAsync(string tts, string voice = null, int rate = 0, int adjustedVolume = 4, int customVolume = -1)
+    internal async void TestSpeakTtsAsync(string tts, string voice = null, int rate = 0, int playerVolume = -1, int adjustedVolume = 4)
     {
       if (!string.IsNullOrEmpty(tts))
       {
@@ -298,8 +299,9 @@ namespace EQLogParser
         if (audio?.Length > 0)
         {
           var waveFormat = new WaveFormat(sample, 16, 1);
-          var realVolume = customVolume > -1 ? customVolume / 100.0f : _appVolume;
-          if (!PlayAudioData(audio, waveFormat, GetDevice(), realVolume, rate, adjustedVolume))
+          var appVolume = playerVolume > -1 ? playerVolume / 100.0f : _appVolume;
+          var volume = ConvertVolume(appVolume, adjustedVolume);
+          if (!PlayAudioData(audio, waveFormat, GetDevice(), volume, rate))
           {
             new MessageWindow("Unable to Play sound. No audio device?", Resource.AUDIO_ERROR).ShowDialog();
           }
@@ -307,7 +309,7 @@ namespace EQLogParser
       }
     }
 
-    internal async void SpeakOrSaveTtsAsync(string tts, string voice, string id, float realVolume, int rate, string fileName = null)
+    internal async void SpeakOrSaveTtsAsync(string tts, string voice, string id, float specificVolume, int rate, string fileName = null)
     {
       if (!string.IsNullOrEmpty(tts))
       {
@@ -320,7 +322,7 @@ namespace EQLogParser
           if (string.IsNullOrEmpty(fileName))
           {
             var device = GetDeviceOrDefault(id);
-            if (!PlayAudioData(audio, waveFormat, device, realVolume, rate))
+            if (!PlayAudioData(audio, waveFormat, device, specificVolume, rate))
             {
               new MessageWindow("Unable to Play sound. No audio device?", Resource.AUDIO_ERROR).ShowDialog();
             }
@@ -332,7 +334,8 @@ namespace EQLogParser
             try
             {
               stream = new RawSourceWaveStream(audio, 0, audio.Length, waveFormat);
-              var volumeProvider = CreateVolumeProvider(realVolume, stream, rate, 4);
+              var volume = ConvertVolume(specificVolume, 4);
+              var volumeProvider = CreateVolumeProvider(volume, stream, rate);
               if (volumeProvider != null)
               {
                 var provider = volumeProvider.ToWaveProvider16();
@@ -371,7 +374,7 @@ namespace EQLogParser
       }
     }
 
-    internal async void SpeakFileAsync(string id, string filePath, int customVolume, Trigger trigger)
+    internal async void SpeakFileAsync(string id, string filePath, long priority, int playerVolume, int adjustedVolume = 4)
     {
       if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(filePath) && File.Exists(filePath))
       {
@@ -398,7 +401,7 @@ namespace EQLogParser
 
           if (cachedAudio != null)
           {
-            SpeakAsync(id, cachedAudio.Data, cachedAudio.WaveFormat, 0, customVolume, trigger.Priority, trigger.Volume, cachedAudio.Seconds);
+            SpeakAsync(id, cachedAudio.Data, cachedAudio.WaveFormat, 0, priority, playerVolume, adjustedVolume, cachedAudio.Seconds);
           }
         }
         catch (Exception ex)
@@ -408,7 +411,7 @@ namespace EQLogParser
       }
     }
 
-    internal async void SpeakTtsAsync(string id, string tts, int rate, int customVolume, Trigger trigger)
+    internal async void SpeakTtsAsync(string id, string tts, long priority, int rate, int playerVolume, int adjustedVolume)
     {
       if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(tts))
       {
@@ -458,7 +461,7 @@ namespace EQLogParser
         if (audio is { Length: > 0 })
         {
           var waveFormat = new WaveFormat(sample, 16, 1);
-          SpeakAsync(id, audio, waveFormat, rate, customVolume, trigger.Priority, trigger.Volume);
+          SpeakAsync(id, audio, waveFormat, rate, priority, playerVolume, adjustedVolume);
         }
       }
     }
@@ -581,36 +584,37 @@ namespace EQLogParser
       }
     }
 
-    private void SpeakAsync(string id, byte[] audioData, WaveFormat waveFormat, int rate = 0, int customVolume = -1,
-      long priority = 5, int adjustedVolume = 4, double seconds = -1)
+    private void SpeakAsync(string id, byte[] audioData, WaveFormat waveFormat, int rate = 0, long priority = 5,
+      int playerVolume = -1, int adjustedVolume = 4, double seconds = -1)
     {
       if (_playerAudios.TryGetValue(id, out var playerAudio))
       {
         lock (playerAudio)
         {
+          var appVolume = playerVolume > -1 ? playerVolume / 100.0f : _appVolume;
           playerAudio.Events = [.. playerAudio.Events.Where(pa => pa.Priority <= priority)];
+
           playerAudio.Events.Add(new PlaybackEvent
           {
             AudioData = audioData,
             WaveFormat = waveFormat,
             Priority = priority,
             Rate = rate,
-            AdjustedVolume = adjustedVolume,
-            RealVolume = customVolume > -1 ? customVolume / 100.0f : _appVolume,
+            Volume = ConvertVolume(appVolume, adjustedVolume),
             Seconds = seconds
           });
         }
       }
     }
 
-    private static bool PlayAudioData(byte[] data, WaveFormat waveFormat, Guid device, float appVolume, int rate = 0, int adjustedVolume = 4)
+    private static bool PlayAudioData(byte[] data, WaveFormat waveFormat, Guid device, float volume, int rate = 0)
     {
       RawSourceWaveStream stream = null;
       DirectSoundOut output = null;
       try
       {
         stream = new RawSourceWaveStream(data, 0, data.Length, waveFormat);
-        output = CreateDirectSoundOut(device, appVolume, stream, rate, adjustedVolume);
+        output = CreateDirectSoundOut(device, volume, stream, rate);
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         output.PlaybackStopped += (_, _) => tcs.TrySetResult();
         output.Play();
@@ -638,7 +642,7 @@ namespace EQLogParser
       return true;
     }
 
-    private static VolumeSampleProvider CreateVolumeProvider(float appVolume, RawSourceWaveStream stream, int rate, int volume)
+    private static VolumeSampleProvider CreateVolumeProvider(float volume, RawSourceWaveStream stream, int rate)
     {
       try
       {
@@ -654,7 +658,7 @@ namespace EQLogParser
 
         var volumeProvider = new VolumeSampleProvider(soundTouchProvider.ToSampleProvider())
         {
-          Volume = ConvertVolume(appVolume, volume)
+          Volume = volume
         };
 
         return volumeProvider;
@@ -796,9 +800,8 @@ namespace EQLogParser
                 }
 
                 byte[] data = null;
-                var adjusted = 0;
                 var rate = 0;
-                float realVolume = 0;
+                float volume = 0;
                 WaveFormat format = null;
                 lock (playerAudio)
                 {
@@ -810,9 +813,8 @@ namespace EQLogParser
                     if (playerAudio.CurrentEvent?.AudioData?.Length > 0)
                     {
                       data = playerAudio.CurrentEvent.AudioData;
-                      adjusted = playerAudio.CurrentEvent.AdjustedVolume;
                       rate = playerAudio.CurrentEvent.Rate;
-                      realVolume = playerAudio.CurrentEvent.RealVolume;
+                      volume = playerAudio.CurrentEvent.Volume;
                       format = playerAudio.CurrentEvent.WaveFormat;
                     }
                   }
@@ -825,7 +827,7 @@ namespace EQLogParser
                   // make sure audio is still valid
                   try
                   {
-                    output = CreateDirectSoundOut(GetDevice(), realVolume, stream, rate, adjusted);
+                    output = CreateDirectSoundOut(GetDevice(), volume, stream, rate);
                     output.Play();
                   }
                   catch (Exception)
@@ -1043,13 +1045,13 @@ namespace EQLogParser
       return synth;
     }
 
-    private static DirectSoundOut CreateDirectSoundOut(Guid device, float appVolume, RawSourceWaveStream stream, int rate, int adjustedVolume)
+    private static DirectSoundOut CreateDirectSoundOut(Guid device, float volume, RawSourceWaveStream stream, int rate)
     {
       // short sounds need a shorter latency but don't go below 10 as it may break entirely
       var latencyCalc = (int)Math.Min(Math.Max(stream.TotalTime.TotalMilliseconds - 5, 30), LATENCY);
       var output = new DirectSoundOut(device, latencyCalc);
 
-      var provider = CreateVolumeProvider(appVolume, stream, rate, adjustedVolume);
+      var provider = CreateVolumeProvider(volume, stream, rate);
       if (provider != null)
       {
         output.Init(provider);
@@ -1309,8 +1311,7 @@ namespace EQLogParser
     {
       internal long Priority { get; init; } = -1;
       internal int Rate { get; init; }
-      internal int AdjustedVolume { get; init; } = 4;
-      internal float RealVolume { get; init; } = -1;
+      internal float Volume { get; init; } = -1;
       internal byte[] AudioData { get; init; }
       internal WaveFormat WaveFormat { get; init; }
       internal double Seconds { get; init; }

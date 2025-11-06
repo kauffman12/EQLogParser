@@ -50,7 +50,7 @@ namespace EQLogParser
     private volatile bool _isDisposed;
     private volatile bool _ready;
     private volatile int _voiceRate;
-    private volatile int _customVolume;
+    private volatile int _playerVolume;
     private Task _triggerLogTask;
     private Task _chatTask;
     private Task _mainTask;
@@ -60,7 +60,7 @@ namespace EQLogParser
     private bool _isTesting;
 
     internal TriggerProcessor(string id, string name, string playerName, string voice, int voiceRate,
-      int customVolume, string activeColor, string fontColor)
+      int playerVolume, string activeColor, string fontColor)
     {
       CurrentCharacterId = id;
       CurrentProcessorName = name;
@@ -69,7 +69,7 @@ namespace EQLogParser
       _activeColor = activeColor;
       _fontColor = fontColor;
       _voiceRate = voiceRate;
-      _customVolume = customVolume;
+      _playerVolume = playerVolume;
       AudioManager.Instance.Add(CurrentCharacterId, voice);
       TriggerStateManager.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
       TriggerStateManager.Instance.TrustedPlayersUpdateEvent += TrustedPlayersUpdateEvent;
@@ -79,7 +79,7 @@ namespace EQLogParser
     internal List<string> GetRequiredOverlayIds() => [.. _requiredOverlays.Keys];
     internal void SetActiveColor(string color) => _activeColor = color;
     internal void SetFontColor(string color) => _fontColor = color;
-    internal void SetCustomVolume(int volume) => _customVolume = volume;
+    internal void SetPlayerVolume(int volume) => _playerVolume = volume;
     internal void SetVoice(string voice) => AudioManager.Instance.SetVoice(CurrentCharacterId, voice);
     internal void SetVoiceRate(int rate) => _voiceRate = rate;
     internal void SetTesting(bool testing) => _isTesting = testing;
@@ -1040,10 +1040,11 @@ namespace EQLogParser
 
       if (!string.IsNullOrEmpty(speak.TtsOrSound))
       {
+        var data = speak.Wrapper.TriggerData;
         if (speak.IsSound)
         {
           var theFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sounds", speak.TtsOrSound);
-          AudioManager.Instance.SpeakFileAsync(CurrentCharacterId, theFile, _customVolume, speak.Wrapper.TriggerData);
+          AudioManager.Instance.SpeakFileAsync(CurrentCharacterId, theFile, _playerVolume, data.Volume);
         }
         else
         {
@@ -1076,7 +1077,9 @@ namespace EQLogParser
             if (!string.IsNullOrEmpty(tts))
             {
               tts = ReplaceBadCharsRegex().Replace(tts, string.Empty);
-              AudioManager.Instance.SpeakTtsAsync(CurrentCharacterId, tts, _voiceRate, _customVolume, speak.Wrapper.TriggerData);
+              // trigger voice rate uses 0 for system setting. 1 for default rate, etc
+              var rate = data.VoiceRate > 0 ? data.VoiceRate - 1 : _voiceRate;
+              AudioManager.Instance.SpeakTtsAsync(CurrentCharacterId, tts, data.Priority, rate, _playerVolume, data.Volume);
             }
           }
         }

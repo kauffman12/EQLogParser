@@ -1,6 +1,13 @@
-# 2.3.32 | 11/02/25
+# 2.3.33 | 11/06/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
 
+1. Updated sharing of **Timer Bar Icons**. If the icon can not be found on the receiving system, it will allow you to edit the path manually in the **Trigger** settings. If the icon is a **EQ Icon** it will also attempt to find the file in one of the installed EQ folders and update the **Trigger** to use it automatically.
+2. Added Trigger setting for **Voice Rate**.
+3. Fix for damage meter not handling certain off-screen positions.
+4. Fixed multiple issues involving the **Trigger Manager** folder tree.
+5. Fix for character specific volume changes not always taking effect.
+
+# 2.3.32 | 11/02/25
 1. Added **EQ Icon Picker**. This new feature was provided by **Herbivour** on Github. The **EQ Icon Picker** allows you to choose EQ Icons from your default or custom UI files and display them with **Timers**. Use `Click to Select Timer Bar Icon` and you'll be presented with an option for using the EQ Icon Picker.
 2. Added app icon to all windows and cleaned up the Trigger Manager UI.
 3. Update spells from beta.

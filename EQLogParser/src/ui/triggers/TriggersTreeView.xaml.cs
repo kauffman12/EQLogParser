@@ -59,21 +59,29 @@ namespace EQLogParser
     internal void SetConfig(TriggerConfig config) => _theConfig = config;
     internal async Task SelectNode(string id) => await SelectNodeAsync(triggerTreeView, id);
 
-    internal async Task PlayTts(string text, int volume = 4)
+    internal void PlayTts(string text, int triggerVoiceRate = 0, int adjustedVolume = 4)
     {
-      var config = await TriggerStateManager.Instance.GetConfig();
-      if (!config.IsAdvanced)
+      string voice = null;
+      // trigger setting used 0 for system rate. 1 for voice rate 0, etc.
+      var rate = triggerVoiceRate > 0 ? triggerVoiceRate - 1 : 0;
+      var systemVolume = -1;
+
+      if (_theConfig != null)
       {
-        AudioManager.Instance.TestSpeakTtsAsync(text, config.Voice, config.VoiceRate, volume);
+        if (!_theConfig.IsAdvanced)
+        {
+          voice = _theConfig.Voice;
+          rate = triggerVoiceRate > 0 ? triggerVoiceRate - 1 : _theConfig.VoiceRate;
+        }
+        else if (_theConfig.Characters.FirstOrDefault(character => character.Id == CurrentCharacterId) is { } found)
+        {
+          voice = found.Voice;
+          rate = triggerVoiceRate > 0 ? triggerVoiceRate - 1 : found.VoiceRate;
+          systemVolume = found.CustomVolume;
+        }
       }
-      else if (config.Characters.FirstOrDefault(character => character.Id == CurrentCharacterId) is { } found)
-      {
-        AudioManager.Instance.TestSpeakTtsAsync(text, found.Voice, found.VoiceRate, volume, found.CustomVolume);
-      }
-      else
-      {
-        AudioManager.Instance.TestSpeakTtsAsync(text);
-      }
+
+      AudioManager.Instance.TestSpeakTtsAsync(text, voice, rate, systemVolume, adjustedVolume);
     }
 
     internal async Task Init(string characterId, Func<bool> isCanceled, bool enable)

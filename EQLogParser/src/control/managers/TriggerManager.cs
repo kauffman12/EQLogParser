@@ -207,6 +207,7 @@ namespace EQLogParser
             processor.SetFontColor(found.FontColor);
             processor.SetVoice(found.Voice);
             processor.SetVoiceRate(found.VoiceRate);
+            processor.SetPlayerVolume(found.CustomVolume);
             alreadyRunning.Add(found.Id);
           }
         }

@@ -37,8 +37,13 @@ namespace EQLogParser
       { "FontWeight", UiElementUtil.GetFontWeights() },
       { "HorizontalAlignment", ["Left", "Center", "Right"]},
       { "VerticalAlignment", ["Top", "Center", "Bottom"]},
+      { "VoiceRate", [
+        "Use Trigger Manager Settings", "Default Voice Rate", "Increased Rate 1", "Increased Rate 2", "Increased Rate 3",
+        "Increased Rate 4", "Increased Rate 5", "Increased Rate 6"
+        ]
+      },
       { "Volume", [
-        "Increase by 80%", "Increase by 60%", "Increase by 40%", "Increase by 20%", "Default",
+        "Increase by 80%", "Increase by 60%", "Increase by 40%", "Increase by 20%", "Use Trigger Manager Settings",
         "Decrease by 20%", "Decrease by 40%", "Decrease by 60%", "Decrease by 80%"
         ]
       }
@@ -55,6 +60,7 @@ namespace EQLogParser
       { "FontWeight", Selector.SelectedValueProperty },
       { "HorizontalAlignment", Selector.SelectedIndexProperty },
       { "VerticalAlignment", Selector.SelectedIndexProperty },
+      { "VoiceRate", Selector.SelectedIndexProperty },
       { "Volume", Selector.SelectedIndexProperty }
     };
 
