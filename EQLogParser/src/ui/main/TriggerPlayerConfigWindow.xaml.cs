@@ -149,7 +149,7 @@ namespace EQLogParser
       {
         string tts = null;
         string voice = null;
-        var customVolume = -1;
+        var playerVolume = -1;
 
         if (voices.SelectedItem is string name && !string.IsNullOrEmpty(name))
         {
@@ -172,13 +172,13 @@ namespace EQLogParser
         }
         else if (Equals(sender, volumeSlider))
         {
-          customVolume = (int)Math.Round(volumeSlider.Value);
-          tts = "Volume " + customVolume + " Percent";
+          playerVolume = (int)Math.Round(volumeSlider.Value);
+          tts = "Volume " + playerVolume + " Percent";
         }
 
         if (!string.IsNullOrEmpty(tts) && !string.IsNullOrEmpty(voice))
         {
-          AudioManager.Instance.TestSpeakTtsAsync(tts, voice, rateOption.SelectedIndex, 4, customVolume);
+          AudioManager.Instance.TestSpeakTtsAsync(tts, voice, rateOption.SelectedIndex, playerVolume, 4);
         }
 
         EnableSave();

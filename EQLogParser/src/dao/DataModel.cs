@@ -251,6 +251,7 @@ namespace EQLogParser
     public string TextToShare { get; set; }
     public long TimesToLoop { get; set; }
     public double LockoutTime { get; set; }
+    public int VoiceRate { get; set; }  // 0 for system setting
     public int Volume { get; set; } = 4; // no increase
   }
 

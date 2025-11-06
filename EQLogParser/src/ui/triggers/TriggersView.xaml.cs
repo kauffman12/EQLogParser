@@ -91,7 +91,7 @@ namespace EQLogParser
       AddEditor<OptionalColorEditor>("TriggerActiveBrush", "TriggerFontBrush");
       AddEditor<OptionalIconEditor>("IconSource");
       AddEditor<TriggerListsEditor>("TriggerAgainOption", "FontSize", "FontFamily", "FontWeight", "SortBy", "TimerMode",
-        "TimerType", "HorizontalAlignment", "VerticalAlignment", "Volume");
+        "TimerType", "HorizontalAlignment", "VerticalAlignment", "VoiceRate", "Volume");
       AddEditor<WrapTextEditor>("EndEarlyTextToDisplay", "EndTextToDisplay", "TextToDisplay", "TextToShare",
         "WarningTextToDisplay", "Comments", "OverlayComments", "TextToSendToChat", "ChatWebhook");
       AddEditorInstance(new RangeEditor(typeof(double), 0.2, 2.0), "DurationSeconds");
@@ -312,8 +312,10 @@ namespace EQLogParser
         if (_currentCharacterId != null)
         {
           _currentCharacterId = null;
+          var current = thePropertyGrid.SelectedObject;
           thePropertyGrid.SelectedObject = null;
           await theTreeView.EnableAndRefreshTriggers(false, _currentCharacterId);
+          thePropertyGrid.SelectedObject = current;
         }
       }
       else
@@ -321,8 +323,10 @@ namespace EQLogParser
         if (characters.Count > 0)
         {
           _currentCharacterId = characters[0].Id;
+          var current = thePropertyGrid.SelectedObject;
           thePropertyGrid.SelectedObject = null;
           await theTreeView.EnableAndRefreshTriggers(true, _currentCharacterId, characters);
+          thePropertyGrid.SelectedObject = current;
         }
       }
     }

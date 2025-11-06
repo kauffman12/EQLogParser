@@ -136,7 +136,7 @@ namespace EQLogParser
       return _grid;
     }
 
-    private async void TestButtonOnClick(object sender, RoutedEventArgs e)
+    private void TestButtonOnClick(object sender, RoutedEventArgs e)
     {
       if (sender is Button { DataContext: PropertyItem { SelectedObject: TriggerPropertyModel model } })
       {
@@ -144,7 +144,7 @@ namespace EQLogParser
         {
           if (_theOptionsCombo.SelectedIndex == 0 && !string.IsNullOrEmpty(_theRealTextBox.Text))
           {
-            await view.PlayTts(_theRealTextBox.Text, model.Volume);
+            view.PlayTts(_theRealTextBox.Text, model.VoiceRate, model.Volume);
           }
           else if (_theOptionsCombo.SelectedIndex == 1 && _theSoundCombo.SelectedValue is string selected && !string.IsNullOrEmpty(selected))
           {

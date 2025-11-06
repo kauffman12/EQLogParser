@@ -49,8 +49,8 @@ namespace EQLogParser
       if (IsValid() && saveFileDialog.ShowDialog() == true)
       {
         var volume = (int)Math.Round(volumeSlider.Value) / 100.0f;
-        AudioManager.Instance.SpeakOrSaveTtsAsync(tts.Text, voices.SelectedValue as string, _deviceIdList[deviceList.SelectedIndex], volume,
-          rateOption.SelectedIndex, saveFileDialog.FileName);
+        AudioManager.Instance.SpeakOrSaveTtsAsync(tts.Text, voices.SelectedValue as string, _deviceIdList[deviceList.SelectedIndex],
+          volume, rateOption.SelectedIndex, saveFileDialog.FileName);
       }
     }
 
@@ -59,7 +59,8 @@ namespace EQLogParser
       if (IsValid())
       {
         var volume = (int)Math.Round(volumeSlider.Value) / 100.0f;
-        AudioManager.Instance.SpeakOrSaveTtsAsync(tts.Text, voices.SelectedValue as string, _deviceIdList[deviceList.SelectedIndex], volume, rateOption.SelectedIndex);
+        AudioManager.Instance.SpeakOrSaveTtsAsync(tts.Text, voices.SelectedValue as string, _deviceIdList[deviceList.SelectedIndex],
+          volume, rateOption.SelectedIndex);
       }
     }
 

@@ -22,8 +22,9 @@ namespace EQLogParser
   {
     internal static MemoryCache AppCache = new(new MemoryCacheOptions
     {
-      SizeLimit = 1024 * 1024 * 100 // 50 MB
+      SizeLimit = 1024 * 1024 * 100 // 100 MB
     });
+
     internal static IMapper AutoMap;
     internal const string ParserHome = "https://eqlogparser.kizant.net";
     internal static double DefaultHeight = SystemParameters.PrimaryScreenHeight * 0.75;

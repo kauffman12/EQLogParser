@@ -109,6 +109,7 @@ namespace EQLogParser
         toTrigger.EndSoundToPlay = TextUtils.Trim(fromTrigger.EndSoundToPlay);
         toTrigger.WarningSoundToPlay = TextUtils.Trim(fromTrigger.WarningSoundToPlay);
         toTrigger.IconSource = fromTrigger.IconSource;
+        toTrigger.VoiceRate = fromTrigger.VoiceRate;
         toTrigger.Volume = fromTrigger.Volume;
 
         if (toTrigger is TriggerPropertyModel toModel)
