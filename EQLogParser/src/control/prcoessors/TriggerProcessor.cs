@@ -1044,7 +1044,7 @@ namespace EQLogParser
         if (speak.IsSound)
         {
           var theFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sounds", speak.TtsOrSound);
-          AudioManager.Instance.SpeakFileAsync(CurrentCharacterId, theFile, _playerVolume, data.Volume);
+          AudioManager.Instance.SpeakFileAsync(CurrentCharacterId, theFile, data.Priority, _playerVolume, data.Volume);
         }
         else
         {

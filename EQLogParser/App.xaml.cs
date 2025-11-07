@@ -37,7 +37,10 @@ namespace EQLogParser
 
     public App()
     {
-      SyncfusionLicenseProvider.RegisterLicense("");
+      // 30.x
+      //SyncfusionLicenseProvider.RegisterLicense("Mzk2NDI3MEAzMzMwMmUzMDJlMzAzYjMzMzAzYkpROWp2Zmh6RkNsazEyc2picm9oM1prRGQ0UHExU0FqZkNPaGx2SXM0T3M9");
+      // 31.x
+      SyncfusionLicenseProvider.RegisterLicense("Ngo9BigBOggjHTQxAR8/V1JFaF5cXGRCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdmWXZcd3ZVRGlYVUZ2W0FWYEg=");
     }
 
     protected override async void OnStartup(StartupEventArgs e)
