@@ -28,18 +28,19 @@
         Style="{x:Null}"
         Width="300"
         WindowStyle="None"
+        Visibility="Collapsed"
         ShowInTaskbar="False">
   <Grid x:Name="theGrid">
     <Grid.RowDefinitions>
       <RowDefinition Height="200*"></RowDefinition>
     </Grid.RowDefinitions>
-    <Viewbox StretchDirection="Both" Stretch="Fill">
-      <TextBlock x:Name="title" Visibility="Collapsed" Margin="0,0,0,0" Text="Overlay Title"
+    <Viewbox x:Name="titleViewbox" StretchDirection="Both" Stretch="Fill" Visibility="Collapsed" IsHitTestVisible="False">
+      <TextBlock x:Name="title" Margin="0,0,0,0" Text="Overlay Title" IsHitTestVisible="False"
       Foreground="#33FFFFFF" Background="#33000000" TextWrapping="WrapWithOverflow" Padding="3,5,3,20" />
     </Viewbox>
-    <StackPanel Grid.Row="0" x:Name="content" Orientation="Vertical" HorizontalAlignment="Stretch"/>
-    <StackPanel Grid.Row="0" Margin="0,0,0,0" Orientation="Vertical" VerticalAlignment="Center" HorizontalAlignment="Stretch">
-      <StackPanel x:Name="buttonsPanel" Visibility="Collapsed" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,4" Opacity="0.9">
+    <StackPanel Grid.Row="0" x:Name="content" Orientation="Vertical" HorizontalAlignment="Stretch" Visibility="Collapsed" IsHitTestVisible="False" />
+    <StackPanel x:Name="buttonContent" Grid.Row="0" Margin="0,0,0,0" Orientation="Vertical" VerticalAlignment="Center" HorizontalAlignment="Stretch" Visibility="Collapsed">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,4" Opacity="0.9">
         <Button x:Name="saveButton" Margin="2,4,0,0" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Padding="4,2,4,2" VerticalAlignment="Top" IsEnabled="False" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
         <Button x:Name="cancelButton" Margin="2,4,0,0" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Padding="4,2,4,2" VerticalAlignment="Top" IsEnabled="False" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
         <Button x:Name="closeButton" Margin="2,4,0,0" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" Padding="4,2,4,2" VerticalAlignment="Top" IsEnabled="True" HorizontalAlignment="Left" Click="CloseClick">Close</Button>

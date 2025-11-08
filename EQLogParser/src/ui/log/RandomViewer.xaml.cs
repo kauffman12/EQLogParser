@@ -90,7 +90,7 @@ namespace EQLogParser
     internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private async void CreateImageClick(object sender, RoutedEventArgs e) => await DataGridUtil.CreateImageAsync(dataGrid, titleLabel);
-    private void LogLoadingComplete(string _) => Load();
+    private void LogLoadingComplete(string file, bool open) => Load();
     private void EventsThemeChanged(string _)
     {
       if (dataGrid?.View != null)

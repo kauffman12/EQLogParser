@@ -233,7 +233,7 @@ namespace EQLogParser
       _filterTimer?.Start();
     }
 
-    private void EventsLogLoadingComplete(string _) => Load();
+    private void EventsLogLoadingComplete(string file, bool open) => Load();
 
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {

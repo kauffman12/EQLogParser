@@ -64,14 +64,19 @@ namespace EQLogParser
         ResizeMode = ResizeMode.CanResizeWithGrip;
         SetResourceReference(BorderBrushProperty, "PreviewBackgroundBrush");
         SetResourceReference(BackgroundProperty, "OverlayBrushColor-" + _node.Id);
-        title.Visibility = Visibility.Visible;
-        buttonsPanel.Visibility = Visibility.Visible;
+        titleViewbox.Visibility = Visibility.Visible;
+        buttonContent.Visibility = Visibility.Visible;
+        mainPanel.Visibility = Visibility.Visible;
+        contentBorder.Visibility = Visibility.Visible;
+        mainPanel.IsHitTestVisible = true;
+        buttonContent.IsHitTestVisible = true;
         CreatePreviewTimer("Example Trigger Name", "03:00", 90.0);
         CreatePreviewTimer("Example Trigger Name #2", "01:00", 30.0);
       }
       else
       {
-        border.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + _node.Id);
+        contentBorder.SetResourceReference(Border.BackgroundProperty, "OverlayBrushColor-" + _node.Id);
+        IsHitTestVisible = false;
       }
 
       TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
@@ -306,7 +311,7 @@ namespace EQLogParser
           HideContent();
         }
 
-        await Task.Delay(75); // Adjust delay as needed
+        await Task.Delay(75);
       }
     }
 
@@ -550,10 +555,16 @@ namespace EQLogParser
           if (timerBar.Visibility != Visibility.Visible)
           {
             timerBar.Visibility = Visibility.Visible;
-            if (content.Visibility != Visibility.Visible)
-            {
-              content.Visibility = Visibility.Visible;
-            }
+          }
+
+          if (contentBorder.Visibility != Visibility.Visible)
+          {
+            contentBorder.Visibility = Visibility.Visible;
+          }
+
+          if (mainPanel.Visibility != Visibility.Visible)
+          {
+            mainPanel.Visibility = Visibility.Visible;
           }
 
           // Store the associated TimerBarModel in the Tag field
@@ -751,6 +762,8 @@ namespace EQLogParser
       }
 
       Visibility = Visibility.Collapsed;
+      contentBorder.Visibility = Visibility.Collapsed;
+      mainPanel.Visibility = Visibility.Collapsed;
     }
 
     private void WindowSizeChanged(object sender, SizeChangedEventArgs e)

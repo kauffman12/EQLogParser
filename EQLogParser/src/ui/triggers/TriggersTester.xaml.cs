@@ -22,7 +22,7 @@ namespace EQLogParser
       InitializeComponent();
     }
 
-    private void EventsLogLoadingComplete(string obj)
+    private void EventsLogLoadingComplete(string file, bool open)
     {
       theBasicLabel.Content = $"Current Player {{C}} " + (string.IsNullOrEmpty(ConfigUtil.PlayerName) ? "is not set" : "set to " + ConfigUtil.PlayerName);
     }

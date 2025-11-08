@@ -124,7 +124,7 @@ namespace EQLogParser
       }
     }
 
-    private async void TriggerManagerEventsLogLoadingComplete(string _)
+    private async void TriggerManagerEventsLogLoadingComplete(string file, bool open)
     {
       if (await TriggerStateManager.Instance.GetConfig() is { IsAdvanced: false })
       {
