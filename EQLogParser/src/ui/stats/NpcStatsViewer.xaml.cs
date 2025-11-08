@@ -164,7 +164,7 @@ namespace EQLogParser
     private async void CreateImageClick(object sender, RoutedEventArgs e) => await DataGridUtil.CreateImageAsync(dataGrid, titleLabel);
     private async void CreateLargeImageClick(object sender, RoutedEventArgs e) => await DataGridUtil.CreateImageAsync(dataGrid, titleLabel, true);
     private void RefreshClick(object sender, RoutedEventArgs e) => Load();
-    private void EventsLogLoadingComplete(string _) => Load();
+    private void EventsLogLoadingComplete(string file, bool open) => Load();
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
 
     private void ContentLoaded(object sender, RoutedEventArgs e)

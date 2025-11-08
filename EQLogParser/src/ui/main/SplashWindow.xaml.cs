@@ -10,9 +10,6 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Interaction logic for SplashWindow.xaml
-  /// </summary>
   public partial class SplashWindow
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -70,7 +67,7 @@ namespace EQLogParser
       {
         HorizontalAlignment = HorizontalAlignment.Center,
         FontSize = 11,
-        FontWeight = FontWeights.SemiBold,
+        FontWeight = FontWeights.Normal,
         Text = text
       };
 

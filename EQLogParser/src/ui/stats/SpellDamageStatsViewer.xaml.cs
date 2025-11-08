@@ -43,7 +43,7 @@ namespace EQLogParser
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private async void CreateImageClick(object sender, RoutedEventArgs e) => await DataGridUtil.CreateImageAsync(dataGrid, titleLabel);
-    private void LogLoadingComplete(string _) => Load();
+    private void LogLoadingComplete(string file, bool open) => Load();
     private void RefreshClick(object sender, RoutedEventArgs e) => Load();
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
     private void UpdateTitle() => titleLabel.Content = SpellDamageData.Count == 0 ? "No Spell Data Found" : SpellDamageData.Count + " Spell Entries Found";

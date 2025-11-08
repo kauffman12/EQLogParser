@@ -33,7 +33,7 @@ namespace EQLogParser
 {
   internal static partial class MainActions
   {
-    internal static event Action<string> EventsLogLoadingComplete;
+    internal static event Action<string, bool> EventsLogLoadingComplete;
     internal static event Action<string> EventsThemeChanged;
     internal static event Action<List<Fight>> EventsFightSelectionChanged;
     internal static event Action<string> EventsChartOpened;
@@ -76,7 +76,7 @@ namespace EQLogParser
     internal static void FireTankingSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsTankingSelectionChanged?.Invoke(args);
     internal static void FireHealingSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsHealingSelectionChanged?.Invoke(args);
     internal static void FireWindowStateChanged(WindowState state) => EventsWindowStateChanged?.Invoke(state);
-    internal static void FireLoadingEvent(string log) => EventsLogLoadingComplete?.Invoke(log);
+    internal static void FireLogLoadingEvent(string log, bool open) => EventsLogLoadingComplete?.Invoke(log, open);
     internal static void FireFightSelectionChanged(List<Fight> fights) => EventsFightSelectionChanged?.Invoke(fights);
     internal static void ShowTriggersEnabled(bool show) => _mainWindow?.ShowTriggersEnabled(show);
     internal static DockingManager GetDockSite() => _mainWindow.dockSite;
@@ -987,9 +987,8 @@ namespace EQLogParser
       Application.Current.Resources["EQAlertIconSize"] = CurrentFontSize + 18;
       Application.Current.Resources["EQTitleSize"] = CurrentFontSize + 2;
       Application.Current.Resources["EQWindowButtonWidth"] = 20 + CurrentFontSize;
-      Application.Current.Resources["EQWindowButtonTextSize1"] = CurrentFontSize - 2;
-      Application.Current.Resources["EQWindowButtonTextSize3"] = CurrentFontSize + 1;
-      Application.Current.Resources["EQWindowButtonTextSize"] = CurrentFontSize + 1;
+      Application.Current.Resources["EQWindowButtonTextSize"] = CurrentFontSize + 2;
+      Application.Current.Resources["EQWindowButtonTextSize1"] = CurrentFontSize + 3;
       Application.Current.Resources["EQContentSizePlus"] = CurrentFontSize + 1;
       Application.Current.Resources["EQContentSize"] = CurrentFontSize;
       Application.Current.Resources["EQDescriptionSize"] = CurrentFontSize - 1;

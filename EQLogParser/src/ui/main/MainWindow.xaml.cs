@@ -276,7 +276,15 @@ namespace EQLogParser
 
     internal void UpdateWindowBorder()
     {
-      maxRestoreText.Text = WindowState == WindowState.Maximized ? "\uE923" : "\uE922"; ;
+      //maxRestoreText.Text = WindowState == WindowState.Maximized ? "🗗" : "🗖"; // restore/maximize
+      if (WindowState == WindowState.Maximized)
+      {
+        maxRestorePath.Data = Geometry.Parse("M3,4 L9,4 L9,10 L3,10 Z M5,2 L11,2 L11,8 L9,8 L9,4 L5,4 Z");
+      }
+      else
+      {
+        maxRestorePath.Data = Geometry.Parse("M3,3 L11,3 L11,11 L3,11 Z");
+      }
     }
 
     internal List<Fight> GetFights(bool selected = false)
@@ -381,6 +389,7 @@ namespace EQLogParser
     private void ToggleExportFormattedCsvClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("ExportFormattedCsv", exportFormattedCsvIcon);
     private void ToggleHideOnMinimizeClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("HideWindowOnMinimize", enableHideOnMinimizeIcon);
     private void LocationChangedEvent(object sender, EventArgs e) => SaveWindowSize();
+    private void CloseLogClick(object sender, EventArgs e) => CloseLogFile(true);
 
     private void SaveTimerTick(object sender, EventArgs e)
     {
@@ -522,12 +531,12 @@ namespace EQLogParser
       if (WindowState == WindowState.Maximized)
       {
         WindowState = WindowState.Normal;
-        maxRestoreText.Text = "\uE922";
+        maxRestorePath.Data = Geometry.Parse("M3,3 L11,3 L11,11 L3,11 Z");
       }
       else
       {
         WindowState = WindowState.Maximized;
-        maxRestoreText.Text = "\uE923";
+        maxRestorePath.Data = Geometry.Parse("M3,4 L9,4 L9,10 L3,10 Z M5,2 L11,2 L11,8 L9,8 L9,4 L5,4 Z");
       }
     }
 
@@ -835,10 +844,12 @@ namespace EQLogParser
             ConfigUtil.UpdateStatus("Monitoring Last Log");
 
             await Task.Delay(500);
-            MainActions.FireLoadingEvent(CurrentLogFile);
+            MainActions.FireLogLoadingEvent(CurrentLogFile, true);
             _isStarting = false;
             await Dispatcher.InvokeAsync(() =>
             {
+              closeLogFile.IsEnabled = true;
+              saveLogFile.IsEnabled = true;
               DataManager.Instance.ResetOverlayFights(true);
               OpenDamageOverlayIfEnabled(true, false);
               DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
@@ -914,26 +925,15 @@ namespace EQLogParser
               DockingManager.SetState(npcWindow, DockState.Dock);
             }
 
-            _eqLogReader?.Dispose();
+            CloseLogFile(changed);
             fileText.Text = $"-- {theFile}";
             _startLoadTime = DateTime.Now;
-
-            if (changed)
-            {
-              // save before switching
-              if (!string.IsNullOrEmpty(ConfigUtil.ServerName))
-              {
-                PlayerManager.Instance.Save();
-              }
-            }
-
             ConfigUtil.ServerName = server;
             ConfigUtil.PlayerName = name;
 
             if (changed)
             {
               // update pet/player windows all at once
-              MainActions.Clear(verifiedPetsWindow, verifiedPlayersWindow, petMappingWindow);
               PlayerManager.Instance.Init();
               MainActions.LoadVerified(verifiedPlayersWindow, verifiedPetsWindow, PlayerManager.Instance.GetVerifiedPlayers(),
                 PlayerManager.Instance.GetVerifiedPets());
@@ -944,13 +944,7 @@ namespace EQLogParser
             _recentFiles.Insert(0, theFile);
             ConfigUtil.SetSetting("RecentFiles", string.Join(",", _recentFiles));
             UpdateRecentFiles();
-
-            DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
-            CloseDamageOverlay(false);
-            DataManager.Instance.Clear();
-            RecordManager.Instance.Clear();
             CurrentLogFile = theFile;
-            _npcDamageManager.Reset();
             _eqLogReader = new LogReader(new LogProcessor(theFile), theFile, lastMins);
             _ = _eqLogReader.StartAsync();
             UpdateLoadingProgress();
@@ -965,6 +959,43 @@ namespace EQLogParser
         }
 
         Log.Error("Problem During Initialization", e);
+      }
+    }
+
+    private void CloseLogFile(bool changed)
+    {
+      try
+      {
+        if (changed)
+        {
+          if (!string.IsNullOrEmpty(ConfigUtil.ServerName))
+          {
+            PlayerManager.Instance.Save();
+          }
+
+          MainActions.Clear(verifiedPetsWindow, verifiedPlayersWindow, petMappingWindow);
+        }
+
+        var closedFile = CurrentLogFile;
+        CurrentLogFile = null;
+        statusText.Text = string.Empty;
+        _eqLogReader?.Dispose();
+        _eqLogReader = null;
+        fileText.Text = string.Empty;
+        ConfigUtil.ServerName = null;
+        ConfigUtil.PlayerName = null;
+        DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
+        CloseDamageOverlay(false);
+        DataManager.Instance.Clear();
+        RecordManager.Instance.Clear();
+        _npcDamageManager.Reset();
+        closeLogFile.IsEnabled = false;
+        saveLogFile.IsEnabled = false;
+        MainActions.FireLogLoadingEvent(closedFile, false);
+      }
+      catch (Exception)
+      {
+        // ignore
       }
     }
 

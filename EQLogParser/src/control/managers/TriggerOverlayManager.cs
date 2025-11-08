@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace EQLogParser
 {
@@ -393,8 +394,14 @@ namespace EQLogParser
           TheWindow = (theWindows == _textWindows) ? new TextOverlayWindow(overlay) : new TimerOverlayWindow(overlay)
         };
 
-        windowData.TheWindow.Visibility = System.Windows.Visibility.Collapsed;
+        // workaround for running under wine so input isn't captured
+        // during startup/creation
+        windowData.TheWindow.Visibility = Visibility.Visible;
+        windowData.TheWindow.Opacity = 0;
         windowData.TheWindow.Show();
+        windowData.TheWindow.UpdateLayout();
+        windowData.TheWindow.Visibility = Visibility.Collapsed;
+        windowData.TheWindow.Opacity = 1.0;
         theWindows[overlay.Id] = windowData;
       }
     }

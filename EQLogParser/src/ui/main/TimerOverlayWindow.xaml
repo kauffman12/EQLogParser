@@ -26,25 +26,28 @@
         Loaded="WindowLoaded"
         Closing="WindowClosing"
         Style="{x:Null}"
+        Visibility="Collapsed"
         Width="300"
         WindowStyle="None"
         ShowInTaskbar="False">
   <Grid>
     <Grid.RowDefinitions>
-      <RowDefinition Height="200*"></RowDefinition>
+      <RowDefinition Height="100*"></RowDefinition>
     </Grid.RowDefinitions>
-    <Viewbox StretchDirection="Both" Stretch="Fill">
-      <TextBlock x:Name="title" Visibility="Collapsed" Margin="0,0,0,0" Text="Overlay Title"
+    <Viewbox x:Name="titleViewbox" Grid.Row="0" Visibility="Collapsed" StretchDirection="Both" Stretch="Fill" IsHitTestVisible="False">
+      <TextBlock x:Name="title" Margin="0,0,0,0" Text="Overlay Title" IsHitTestVisible="False"
       Foreground="#33FFFFFF" Background="#33000000" TextWrapping="WrapWithOverflow" FontFamily="Consolas" Padding="3,10,3,5" />
     </Viewbox>
-    <StackPanel Grid.Row="0" x:Name="mainPanel" Orientation="Vertical">
-      <Border x:Name="border" CornerRadius="5">
-        <StackPanel x:Name="content" Orientation="Vertical" />
+    <StackPanel x:Name="mainPanel" Grid.Row="0" Orientation="Vertical" Visibility="Collapsed" IsHitTestVisible="False">
+      <Border x:Name="contentBorder" CornerRadius="5" Visibility="Collapsed" IsHitTestVisible="False">
+        <StackPanel x:Name="content" Orientation="Vertical" IsHitTestVisible="False" />
       </Border>
-      <StackPanel x:Name="buttonsPanel" Visibility="Collapsed" Orientation="Horizontal" HorizontalAlignment="Left">
-        <Button x:Name="saveButton" Margin="2,4,0,0" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Top" IsEnabled="False" Padding="4,2,4,2" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
-        <Button x:Name="cancelButton" Margin="2,4,0,0" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Top" IsEnabled="False" Padding="4,2,4,2" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
-        <Button x:Name="closeButton" Margin="2,4,0,0" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Top" IsEnabled="True" Padding="4,2,4,2" HorizontalAlignment="Left" Click="CloseClick">Close</Button>
+      <StackPanel x:Name="buttonContent" Orientation="Vertical" VerticalAlignment="Bottom" Visibility="Collapsed" IsHitTestVisible="False" Margin="4,0,0,8">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Opacity="0.9">
+          <Button x:Name="saveButton" Margin="2,4,0,0" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Top" IsEnabled="False" Padding="4,2,4,2" HorizontalAlignment="Left" Click="SaveClick">Save</Button>
+          <Button x:Name="cancelButton" Margin="2,4,0,0" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Top" IsEnabled="False" Padding="4,2,4,2" HorizontalAlignment="Left" Click="CancelClick">Cancel</Button>
+          <Button x:Name="closeButton" Margin="2,4,0,0" FontFamily="Roboto" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Top" IsEnabled="True" Padding="4,2,4,2" HorizontalAlignment="Left" Click="CloseClick">Close</Button>
+        </StackPanel>
       </StackPanel>
     </StackPanel>
   </Grid>

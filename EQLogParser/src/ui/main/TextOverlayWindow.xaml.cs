@@ -58,8 +58,9 @@ namespace EQLogParser
         ResizeMode = ResizeMode.CanResizeWithGrip;
         SetResourceReference(BorderBrushProperty, "PreviewBackgroundBrush");
         SetResourceReference(BackgroundProperty, "OverlayBrushColor-" + _node.Id);
-        title.Visibility = Visibility.Visible;
-        buttonsPanel.Visibility = Visibility.Visible;
+        titleViewbox.Visibility = Visibility.Visible;
+        buttonContent.Visibility = Visibility.Visible;
+        content.Visibility = Visibility.Visible;
 
         // test data
         var now = MonoTime.NowStamp();
@@ -69,7 +70,6 @@ namespace EQLogParser
       else
       {
         IsHitTestVisible = false;
-        content.IsHitTestVisible = false;
         content.SetResourceReference(Panel.BackgroundProperty, "OverlayBrushColor-" + _node.Id);
         _timer = new Timer(DoTick, null, Timeout.Infinite, 150);
       }

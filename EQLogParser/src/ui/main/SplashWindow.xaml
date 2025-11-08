@@ -9,6 +9,7 @@
         Style="{x:Null}"
         BorderBrush="{x:Null}"
         BorderThickness="0"
+        FontFamily="Arial"
         ShowInTaskbar="False"
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
@@ -19,8 +20,8 @@
     <Border BorderThickness="1" Background="#222" BorderBrush="#222" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
       <Image Source="../../../icons/loading.png" Margin="0"/>
     </Border>
-    <StackPanel x:Name="data" Margin="0,60,0,0" Height="44" Orientation="Vertical" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-        <TextBlock FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center">Starting</TextBlock>
+    <StackPanel x:Name="data" Margin="0,64,0,0" Height="44" Orientation="Vertical" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <TextBlock FontSize="11" FontWeight="Normal" HorizontalAlignment="Center">Starting</TextBlock>
     </StackPanel>
       <StackPanel x:Name="error" Visibility="Collapsed" Margin="0,60,0,0" Height="40" Orientation="Vertical" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <TextBlock FontSize="14" Foreground="DarkRed" HorizontalAlignment="Center">Critical Error</TextBlock>
