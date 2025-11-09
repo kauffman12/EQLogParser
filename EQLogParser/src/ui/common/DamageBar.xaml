@@ -24,7 +24,7 @@
     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="4,0,0,0">
       <Image x:Name="classImage" Height="{DynamicResource DamageOverlayImageSize}" Source="pack://application:,,,/icons/Wiz.png" Margin="0,0,0,0">
         <Image.RenderTransform>
-          <TranslateTransform Y="0.2" />
+          <TranslateTransform Y="0.5" />
         </Image.RenderTransform>
       </Image>
       <TextBlock x:Name="player" Text="Kizant" VerticalAlignment="Center" FontFamily="Tahoma" FontSize="{DynamicResource DamageOverlayFontSize}"

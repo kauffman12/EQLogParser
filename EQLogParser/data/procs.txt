@@ -2142,6 +2142,9 @@ Companion's Assault XXXIII
 Companion's Assault XXXIV
 Companion's Assault XXXV
 Companion's Assault XXXVI
+Companion's Assault XXXVII
+Companion's Assault XXXVIII
+Companion's Assault XXXIX
 
 # Monk Alliance
 Doomwalker's Soulstrike

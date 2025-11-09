@@ -408,7 +408,6 @@ namespace EQLogParser
 
       // Add padding and border thickness to the height
       var totalHeight = textHeight + (padding?.Top ?? 0) + (padding?.Bottom ?? 0) + (borderThickness?.Top ?? 0) + (borderThickness?.Bottom ?? 0);
-
       return Math.Round(totalHeight);
     }
 

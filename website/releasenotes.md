@@ -1,5 +1,15 @@
-# 2.3.34 | 11/06/25
+# 2.3.35 | 11/08/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
+
+1. Added option to disable **Text Drop Shadow** in Overlays.
+2. Added **Close** menu to clear data and stop monitoring the open log file.
+3. Fixed Text Overlays not using the full window after saving font changes.
+4. Fixed Overlays capturing input before first display under Linux.
+5. Changed minimize/maximize and damage meter button to support Linux.
+6. Cleanup of damage meter UI.
+7. Included spell and proc updates from beta.
+
+# 2.3.34 | 11/06/25
 
 1. Updated sharing of **Timer Bar Icons**. If the icon can not be found on the receiving system, it will allow you to edit the path manually in the **Trigger** settings. If the icon is a **EQ Icon** it will also attempt to find the file in one of the installed EQ folders and update the **Trigger** to use it automatically.
 2. Added Trigger setting for **Voice Rate**.
