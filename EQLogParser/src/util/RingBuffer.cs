@@ -5,7 +5,7 @@ namespace EQLogParser
   // not thread-safe
   internal class RingBuffer<T>
   {
-    private readonly T[] _buf;
+    private T[] _buf;
     private int _head;  // next write index
     private int _count;
 
@@ -37,15 +37,10 @@ namespace EQLogParser
     internal T GetFromNewest(int k)
     {
       if (k < 0 || k >= _count) throw new ArgumentOutOfRangeException(nameof(k));
-      // newest index is (_head - 1 + Capacity) % Capacity
-      var idx = _head - 1 - k;
-      if (idx < 0) idx += _buf.Length * ((-idx / _buf.Length) + 1);
-      idx %= _buf.Length;
+      var idx = (_head - 1 - k + _buf.Length) % _buf.Length;
       return _buf[idx];
     }
 
-    // Removes the oldest element (the one added earliest).
-    // Returns false if the buffer is empty.
     internal bool TryRemoveOldest(out T value)
     {
       if (_count == 0)
@@ -54,14 +49,36 @@ namespace EQLogParser
         return false;
       }
 
-      // Oldest is (_head - _count + Capacity) % Capacity
-      var oldest = _head - _count;
-      if (oldest < 0) oldest += _buf.Length; // normalize once (since |oldest| < Capacity)
-
+      var oldest = (_head - _count + _buf.Length) % _buf.Length;
       value = _buf[oldest];
       _buf[oldest] = default!;
       _count--;
       return true;
+    }
+
+    // ✅ Resize the buffer (preserves order, trims oldest if shrinking)
+    internal void Resize(int newCapacity)
+    {
+      ArgumentOutOfRangeException.ThrowIfNegativeOrZero(newCapacity);
+
+      if (newCapacity == _buf.Length)
+        return; // nothing to do
+
+      // number of items to preserve
+      var newCount = Math.Min(_count, newCapacity);
+      var newBuf = new T[newCapacity];
+
+      // copy from oldest to newest
+      var oldest = (_head - _count + _buf.Length) % _buf.Length;
+      for (var i = 0; i < newCount; i++)
+      {
+        var oldIndex = (oldest + (_count - newCount) + i) % _buf.Length;
+        newBuf[i] = _buf[oldIndex];
+      }
+
+      _buf = newBuf;
+      _count = newCount;
+      _head = newCount % newCapacity;
     }
   }
 }

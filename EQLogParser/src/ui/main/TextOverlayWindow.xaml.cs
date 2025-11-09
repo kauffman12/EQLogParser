@@ -152,6 +152,7 @@ namespace EQLogParser
       });
     }
 
+    // Keep on UI thread
     private bool Render(long now)
     {
       lock (_bufferLock)
@@ -245,12 +246,8 @@ namespace EQLogParser
 
     private List<TextBlock> CreateBlocks()
     {
-      // figure out how big a block will be
-      var testBlock = CreateBlock("Test");
-      var blockSize = UiElementUtil.CalculateTextBlockHeight(testBlock, this);
-
       // create cache of blocks needed to cover Overlay height
-      var size = Math.Max(1, (int)Math.Floor(Height / blockSize));
+      var size = GetNeedeBlockSize();
       var blocks = new List<TextBlock>(size);
       for (var i = 0; i < size; i++)
       {
@@ -258,8 +255,15 @@ namespace EQLogParser
         blocks.Add(block);
         content.Children.Add(block);
       }
-
       return blocks;
+    }
+
+    private int GetNeedeBlockSize()
+    {
+      // figure out how big a block will be
+      var testBlock = CreateBlock("Test");
+      var blockSize = UiElementUtil.CalculateTextBlockHeight(testBlock, this);
+      return Math.Max(1, (int)Math.Floor(Height / blockSize));
     }
 
     private void EnsureVisible(bool visible)
@@ -341,15 +345,60 @@ namespace EQLogParser
     {
       if (_node != null && _node.Id == node.Id)
       {
-        if (!_node.Equals(node))
+        UiUtil.InvokeNow(() =>
         {
-          _node = node;
-        }
+          if (!_node.Equals(node))
+          {
+            _node = node;
+          }
 
-        UpdateFields();
-        saveButton.IsEnabled = false;
-        cancelButton.IsEnabled = false;
-        closeButton.IsEnabled = true;
+          var size = GetNeedeBlockSize();
+
+          lock (_bufferLock)
+          {
+            EnsureOverlayCapacity(size);
+          }
+
+          UpdateFields();
+          saveButton.IsEnabled = false;
+          cancelButton.IsEnabled = false;
+          closeButton.IsEnabled = true;
+        });
+      }
+    }
+
+    private void EnsureOverlayCapacity(int desiredSize)
+    {
+      if (desiredSize <= 0)
+        return;
+
+      // Step 1: Resize the data buffer if needed
+      if (_buffer.Capacity != desiredSize)
+      {
+        _buffer.Resize(desiredSize);
+      }
+
+      // Step 2: Adjust the number of TextBlocks and UI children
+      var current = _blockList.Count;
+
+      if (desiredSize > current)
+      {
+        // Add new blocks
+        for (var i = current; i < desiredSize; i++)
+        {
+          var block = CreateBlock();
+          _blockList.Add(block);
+          content.Children.Add(block);
+        }
+      }
+      else if (desiredSize < current)
+      {
+        // Remove extra blocks (from the bottom, oldest)
+        for (var i = current - 1; i >= desiredSize; i--)
+        {
+          content.Children.Remove(_blockList[i]);
+          _blockList.RemoveAt(i);
+        }
       }
     }
 
@@ -393,7 +442,7 @@ namespace EQLogParser
       var block = new TextBlock
       {
         TextAlignment = TextAlignment.Center,
-        Padding = new Thickness(6, 0, 6, 2),
+        Padding = new Thickness(6, 0, 6, 0),
         Margin = new Thickness(0),
         Text = text,
         TextWrapping = TextWrapping.Wrap,

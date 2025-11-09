@@ -919,7 +919,7 @@ namespace EQLogParser
       switch (fontSize)
       {
         case 10:
-          Application.Current.Resources["DamageOverlayImageSize"] = 14.0;
+          Application.Current.Resources["DamageOverlayImageSize"] = 13.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(50.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(40.0);
           titlePercent.Margin = new Thickness(0, 5, 20, 0);
@@ -932,17 +932,17 @@ namespace EQLogParser
           titleTime.FontSize = 11;
           dpsButton.FontSize = 11;
           tankButton.FontSize = 11;
-          configButton.FontSize = 9;
-          copyButton.FontSize = 9;
-          resetButton.FontSize = 11;
-          exitButton.FontSize = 9;
+          configImage.Height = 11;
+          copyImage.Height = 11;
+          resetImage.Height = 11;
+          closeImage.Height = 10;
           controlPanel.Height = 27;
           thePopup.Height = 25;
           rect1.Height = 12;
           rect2.Height = 12;
           break;
         case 12:
-          Application.Current.Resources["DamageOverlayImageSize"] = 16.0;
+          Application.Current.Resources["DamageOverlayImageSize"] = 14.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(60.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(45.0);
           titlePercent.Margin = new Thickness(0, 5, 22, 0);
@@ -955,17 +955,17 @@ namespace EQLogParser
           titleTime.FontSize = 13;
           dpsButton.FontSize = 13;
           tankButton.FontSize = 13;
-          configButton.FontSize = 11;
-          copyButton.FontSize = 11;
-          resetButton.FontSize = 13;
-          exitButton.FontSize = 10;
+          configImage.Height = 13;
+          copyImage.Height = 12;
+          resetImage.Height = 12;
+          closeImage.Height = 11;
           controlPanel.Height = 27;
           thePopup.Height = 27;
           rect1.Height = 14;
           rect2.Height = 14;
           break;
         case 14:
-          Application.Current.Resources["DamageOverlayImageSize"] = 18.0;
+          Application.Current.Resources["DamageOverlayImageSize"] = 15.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(70.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(50.0);
           titlePercent.Margin = new Thickness(0, 5, 28, 0);
@@ -978,17 +978,17 @@ namespace EQLogParser
           titleTime.FontSize = 15;
           dpsButton.FontSize = 15;
           tankButton.FontSize = 15;
-          configButton.FontSize = 13;
-          copyButton.FontSize = 13;
-          resetButton.FontSize = 15;
-          exitButton.FontSize = 11;
+          configImage.Height = 14;
+          copyImage.Height = 13;
+          resetImage.Height = 13;
+          closeImage.Height = 12;
           controlPanel.Height = 29;
           thePopup.Height = 29;
           rect1.Height = 16;
           rect2.Height = 16;
           break;
         case 16:
-          Application.Current.Resources["DamageOverlayImageSize"] = 20.0;
+          Application.Current.Resources["DamageOverlayImageSize"] = 16.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(75.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(55.0);
           titlePercent.Margin = new Thickness(0, 5, 28, 0);
@@ -1001,10 +1001,10 @@ namespace EQLogParser
           titleTime.FontSize = 17;
           dpsButton.FontSize = 17;
           tankButton.FontSize = 17;
-          configButton.FontSize = 15;
-          copyButton.FontSize = 15;
-          resetButton.FontSize = 16;
-          exitButton.FontSize = 13;
+          configImage.Height = 15;
+          copyImage.Height = 14;
+          resetImage.Height = 14;
+          closeImage.Height = 13;
           controlPanel.Height = 31;
           thePopup.Height = 31;
           rect1.Height = 18;
