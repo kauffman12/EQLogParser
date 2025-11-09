@@ -36,6 +36,8 @@ namespace EQLogParser
       title.SetResourceReference(TextBlock.FontFamilyProperty, "TimerBarFontFamily-" + _overlayId);
       time.SetResourceReference(TextBlock.FontWeightProperty, "TimerBarFontWeight-" + _overlayId);
       title.SetResourceReference(TextBlock.FontWeightProperty, "TimerBarFontWeight-" + _overlayId);
+      time.SetResourceReference(TextBlock.EffectProperty, "OverlayTextEffect-" + _overlayId);
+      title.SetResourceReference(TextBlock.EffectProperty, "OverlayTextEffect-" + _overlayId);
     }
 
     internal State GetState() => _theState;

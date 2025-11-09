@@ -358,7 +358,10 @@ namespace EQLogParser
         {
           _damageOverlay?.Close();
           _damageOverlay = new DamageOverlayWindow(false, reset);
+          _damageOverlay.Opacity = 0;
           _damageOverlay.Show();
+          _damageOverlay.UpdateLayout();
+          _damageOverlay.Opacity = 1.0;
           IsDamageOverlayOpen = true;
         }
       }

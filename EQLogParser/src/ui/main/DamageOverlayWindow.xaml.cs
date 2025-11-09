@@ -166,6 +166,7 @@ namespace EQLogParser
         border.Background = null;
         damageContent.Visibility = Visibility.Visible;
         controlPanel.Visibility = Visibility.Visible;
+        Visibility = Visibility.Visible;
         SetMinHeight(true);
       }
       else
@@ -246,6 +247,11 @@ namespace EQLogParser
           LoadStats(tankContent.Children, damageOverlayStats.TankStats);
         }
 
+        if (Visibility != Visibility.Visible)
+        {
+          Visibility = Visibility.Visible;
+        }
+
         if (_currentShowDps)
         {
           if (tankContent.Visibility != Visibility.Collapsed)
@@ -292,6 +298,7 @@ namespace EQLogParser
         damageContent.Visibility = Visibility.Collapsed;
         tankContent.Visibility = Visibility.Collapsed;
         controlPanel.Visibility = Visibility.Collapsed;
+        Visibility = Visibility.Collapsed;
         thePopup.IsOpen = false;
 
         if (!DataManager.Instance.HasOverlayFights())
@@ -912,7 +919,7 @@ namespace EQLogParser
       switch (fontSize)
       {
         case 10:
-          Application.Current.Resources["DamageOverlayImageSize"] = 12.0;
+          Application.Current.Resources["DamageOverlayImageSize"] = 14.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(50.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(40.0);
           titlePercent.Margin = new Thickness(0, 5, 20, 0);
@@ -935,7 +942,7 @@ namespace EQLogParser
           rect2.Height = 12;
           break;
         case 12:
-          Application.Current.Resources["DamageOverlayImageSize"] = 15.0;
+          Application.Current.Resources["DamageOverlayImageSize"] = 16.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(60.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(45.0);
           titlePercent.Margin = new Thickness(0, 5, 22, 0);
@@ -958,7 +965,7 @@ namespace EQLogParser
           rect2.Height = 14;
           break;
         case 14:
-          Application.Current.Resources["DamageOverlayImageSize"] = 15.0;
+          Application.Current.Resources["DamageOverlayImageSize"] = 18.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(70.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(50.0);
           titlePercent.Margin = new Thickness(0, 5, 28, 0);
@@ -981,7 +988,7 @@ namespace EQLogParser
           rect2.Height = 16;
           break;
         case 16:
-          Application.Current.Resources["DamageOverlayImageSize"] = 17.0;
+          Application.Current.Resources["DamageOverlayImageSize"] = 20.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(75.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(55.0);
           titlePercent.Margin = new Thickness(0, 5, 28, 0);

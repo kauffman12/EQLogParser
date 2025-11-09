@@ -22,11 +22,15 @@
       </syncfusion:SfLinearProgressBar.Effect>
     </syncfusion:SfLinearProgressBar>
     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="4,0,0,0">
-      <Image x:Name="classImage" Height="{DynamicResource DamageOverlayImageSize}" Source="pack://application:,,,/icons/Wiz.png" Margin="0,2,0,4"/>
+      <Image x:Name="classImage" Height="{DynamicResource DamageOverlayImageSize}" Source="pack://application:,,,/icons/Wiz.png" Margin="0,0,0,0">
+        <Image.RenderTransform>
+          <TranslateTransform Y="0.2" />
+        </Image.RenderTransform>
+      </Image>
       <TextBlock x:Name="player" Text="Kizant" VerticalAlignment="Center" FontFamily="Tahoma" FontSize="{DynamicResource DamageOverlayFontSize}"
         Foreground="White" Margin="4,0,0,2" >
         <TextBlock.Effect>
-          <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.5" BlurRadius="3"/>
+          <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.75" BlurRadius="2"/>
         </TextBlock.Effect>
       </TextBlock>
     </StackPanel>
@@ -41,25 +45,25 @@
         <TextBlock x:Name="percent" Grid.Column="0" Text="2.2%" VerticalAlignment="Center" TextAlignment="Right" 
           FontSize="{DynamicResource DamageOverlayFontSize}" FontFamily="Tahoma" Foreground="White" Margin="0,0,0,2">
           <TextBlock.Effect>
-            <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.5" BlurRadius="3"/>
+            <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.75" BlurRadius="2"/>
           </TextBlock.Effect>
         </TextBlock>
         <TextBlock x:Name="damage" Grid.Column="1" Text="200.2M" VerticalAlignment="Center" TextAlignment="Right" 
           FontSize="{DynamicResource DamageOverlayFontSize}" FontFamily="Tahoma" Foreground="White" Margin="0,0,0,2">
           <TextBlock.Effect>
-            <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.5" BlurRadius="3"/>
+            <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.75" BlurRadius="2"/>
           </TextBlock.Effect>
         </TextBlock>
         <TextBlock x:Name="dps" Grid.Column="2" Text="100.2K" VerticalAlignment="Center" TextAlignment="Right" 
           FontSize="{DynamicResource DamageOverlayFontSize}" FontFamily="Tahoma" Foreground="White" Margin="0,0,0,2">
           <TextBlock.Effect>
-            <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.5" BlurRadius="3"/>
+            <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.75" BlurRadius="2"/>
           </TextBlock.Effect>
         </TextBlock>
         <TextBlock x:Name="time" Grid.Column="3" Text="12456" VerticalAlignment="Center" TextAlignment="Right" 
           FontSize="{DynamicResource DamageOverlayFontSize}" FontFamily="Tahoma" Foreground="White" Margin="0,0,0,2">
           <TextBlock.Effect>
-            <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.5" BlurRadius="3"/>
+            <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.75" BlurRadius="2"/>
           </TextBlock.Effect>
         </TextBlock>
       </Grid>

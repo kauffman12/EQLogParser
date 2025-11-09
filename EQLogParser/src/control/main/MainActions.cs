@@ -26,6 +26,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using System.Windows.Threading;
 using FontFamily = System.Windows.Media.FontFamily;
 
@@ -54,6 +55,7 @@ namespace EQLogParser
     internal static double CurrentSpellWidth;
     internal static double CurrentShortWidth;
     internal static double CurrentMediumWidth;
+    internal static DropShadowEffect OverlayTextEffect;
 
     private const string DefaultTheme = "MaterialDark";
     private const string PetsListTitle = "Verified Pets";
@@ -90,6 +92,7 @@ namespace EQLogParser
       CurrentFontFamily = ConfigUtil.GetSetting("ApplicationFontFamily", "Segoe UI");
       CurrentFontSize = ConfigUtil.GetSettingAsDouble("ApplicationFontSize", 12);
       CurrentTheme = ConfigUtil.GetSetting("CurrentTheme", DefaultTheme);
+      OverlayTextEffect = new DropShadowEffect { ShadowDepth = 2, Direction = 330, Color = Colors.Black, Opacity = 0.75, BlurRadius = 2 };
 
       if (UiElementUtil.GetSystemFontFamilies().FirstOrDefault(font => font.Source == CurrentFontFamily) == null)
       {

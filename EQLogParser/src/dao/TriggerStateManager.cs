@@ -151,7 +151,8 @@ namespace EQLogParser
                     Width = 450,
                     FontSize = "16pt",
                     FontWeight = "Normal",
-                    FontColor = "#FFE9C405"
+                    FontColor = "#FFE9C405",
+                    UseTextDropShadow = true
                   }
                 };
 
