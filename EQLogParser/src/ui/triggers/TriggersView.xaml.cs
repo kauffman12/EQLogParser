@@ -609,6 +609,11 @@ namespace EQLogParser
           textChange = textOverlay.VerticalAlignment != original.VerticalAlignment;
           Application.Current.Resources["OverlayVerticalAlignment-" + textOverlay.Node.Id] = (VerticalAlignment)textOverlay.VerticalAlignment;
         }
+        else if (args.Property.Name == textDropShadowItem.PropertyName)
+        {
+          textChange = textOverlay.UseTextDropShadow != original.UseTextDropShadow;
+          Application.Current.Resources["OverlayTextEffect-" + textOverlay.Node.Id] = textOverlay.UseTextDropShadow ? MainActions.OverlayTextEffect : null;
+        }
 
         if (textChange)
         {
@@ -692,6 +697,11 @@ namespace EQLogParser
         {
           timerChange = timerOverlay.VerticalAlignment != original.VerticalAlignment;
           Application.Current.Resources["OverlayVerticalAlignment-" + timerOverlay.Node.Id] = (VerticalAlignment)timerOverlay.VerticalAlignment;
+        }
+        else if (args.Property.Name == textDropShadowItem.PropertyName)
+        {
+          timerChange = timerOverlay.UseTextDropShadow != original.UseTextDropShadow;
+          Application.Current.Resources["OverlayTextEffect-" + timerOverlay.Node.Id] = timerOverlay.UseTextDropShadow ? MainActions.OverlayTextEffect : null;
         }
 
         if (timerChange)

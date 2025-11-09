@@ -9,8 +9,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
-using System.Windows.Media;
-using System.Windows.Media.Effects;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -400,8 +398,7 @@ namespace EQLogParser
         Text = text,
         TextWrapping = TextWrapping.Wrap,
         Visibility = Visibility.Collapsed,
-        IsHitTestVisible = false,
-        Effect = new DropShadowEffect { ShadowDepth = 2, Direction = 330, Color = Colors.Black, Opacity = 0.7, BlurRadius = 0 },
+        IsHitTestVisible = false
       };
 
       block.SetResourceReference(TextBlock.ForegroundProperty, "TextOverlayFontColor-" + _node.Id);
@@ -409,6 +406,7 @@ namespace EQLogParser
       block.SetResourceReference(TextBlock.FontFamilyProperty, "TextOverlayFontFamily-" + _node.Id);
       block.SetResourceReference(TextBlock.FontWeightProperty, "TextOverlayFontWeight-" + _node.Id);
       block.SetResourceReference(TextBlock.HorizontalAlignmentProperty, "OverlayHorizontalAlignment-" + _node.Id);
+      block.SetResourceReference(TextBlock.EffectProperty, "OverlayTextEffect-" + _node.Id);
       return block;
     }
 

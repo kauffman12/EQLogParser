@@ -196,6 +196,7 @@ namespace EQLogParser
         toOverlay.ShowIdle = fromOverlay.ShowIdle;
         toOverlay.ShowReset = fromOverlay.ShowReset;
         toOverlay.StreamerMode = fromOverlay.StreamerMode;
+        toOverlay.UseTextDropShadow = fromOverlay.UseTextDropShadow;
         toOverlay.Width = fromOverlay.Width;
         toOverlay.HorizontalAlignment = fromOverlay.HorizontalAlignment;
         toOverlay.VerticalAlignment = fromOverlay.VerticalAlignment;
@@ -206,18 +207,18 @@ namespace EQLogParser
         {
           toModel.IdleTimeoutTimeSpan = new TimeSpan(0, 0, (int)toModel.IdleTimeoutSeconds);
           Application.Current.Resources["OverlayText-" + toModel.Node.Id] = toModel.Node.Name;
-
           // NOTE: not currently implement for Timers
           Application.Current.Resources["OverlayHorizontalAlignment-" + toModel.Node.Id] = (HorizontalAlignment)toModel.HorizontalAlignment;
           // make sure old default data is no longer set (should be fixed during startup)
           Application.Current.Resources["OverlayVerticalAlignment-" + toModel.Node.Id] = (VerticalAlignment)toModel.VerticalAlignment;
+          Application.Current.Resources["OverlayTextEffect-" + toModel.Node.Id] = toModel.UseTextDropShadow ? MainActions.OverlayTextEffect : null;
 
-          AssignResource(toModel, fromOverlay, "OverlayColor", "OverlayBrush", "OverlayBrushColor");
-          AssignResource(toModel, fromOverlay, "FontColor", "FontBrush", "TimerBarFontColor");
-          AssignResource(toModel, fromOverlay, "ActiveColor", "ActiveBrush", "TimerBarActiveColor");
-          AssignResource(toModel, fromOverlay, "IdleColor", "IdleBrush", "TimerBarIdleColor");
-          AssignResource(toModel, fromOverlay, "ResetColor", "ResetBrush", "TimerBarResetColor");
-          AssignResource(toModel, fromOverlay, "BackgroundColor", "BackgroundBrush", "TimerBarTrackColor");
+          AssignBrushResource(toModel, fromOverlay, "OverlayColor", "OverlayBrush", "OverlayBrushColor");
+          AssignBrushResource(toModel, fromOverlay, "FontColor", "FontBrush", "TimerBarFontColor");
+          AssignBrushResource(toModel, fromOverlay, "ActiveColor", "ActiveBrush", "TimerBarActiveColor");
+          AssignBrushResource(toModel, fromOverlay, "IdleColor", "IdleBrush", "TimerBarIdleColor");
+          AssignBrushResource(toModel, fromOverlay, "ResetColor", "ResetBrush", "TimerBarResetColor");
+          AssignBrushResource(toModel, fromOverlay, "BackgroundColor", "BackgroundBrush", "TimerBarTrackColor");
 
           FontFamily family = null;
           if (!string.IsNullOrEmpty(fromOverlay.FontFamily))
@@ -232,7 +233,6 @@ namespace EQLogParser
           var fontWeight = UiElementUtil.GetFontWeightByName(fromOverlay.FontWeight);
           Application.Current.Resources["TimerBarFontWeight-" + toModel.Node.Id] = fontWeight;
           Application.Current.Resources["TimerBarHeight-" + toModel.Node.Id] = CalculateTimerBarHeight(fontSize, family);
-
         }
         else if (fromOverlay is TimerOverlayPropertyModel fromModel)
         {
@@ -247,13 +247,13 @@ namespace EQLogParser
         else if (toOverlay is TextOverlayPropertyModel toTextModel)
         {
           Application.Current.Resources["OverlayText-" + toTextModel.Node.Id] = toTextModel.Node.Name;
-
           Application.Current.Resources["OverlayHorizontalAlignment-" + toTextModel.Node.Id] = (HorizontalAlignment)toTextModel.HorizontalAlignment;
           // make sure old default data is no longer set (should be fixed during startup)
           Application.Current.Resources["OverlayVerticalAlignment-" + toTextModel.Node.Id] = (VerticalAlignment)toTextModel.VerticalAlignment;
+          Application.Current.Resources["OverlayTextEffect-" + toTextModel.Node.Id] = toTextModel.UseTextDropShadow ? MainActions.OverlayTextEffect : null;
 
-          AssignResource(toTextModel, fromOverlay, "OverlayColor", "OverlayBrush", "OverlayBrushColor");
-          AssignResource(toTextModel, fromOverlay, "FontColor", "FontBrush", "TextOverlayFontColor");
+          AssignBrushResource(toTextModel, fromOverlay, "OverlayColor", "OverlayBrush", "OverlayBrushColor");
+          AssignBrushResource(toTextModel, fromOverlay, "FontColor", "FontBrush", "TextOverlayFontColor");
 
           if (!string.IsNullOrEmpty(fromOverlay.FontFamily))
           {
@@ -305,7 +305,7 @@ namespace EQLogParser
       }
     }
 
-    private static void AssignResource(dynamic toModel, object fromOverlay, string colorProperty, string brushProperty, string prefix)
+    private static void AssignBrushResource(dynamic toModel, object fromOverlay, string colorProperty, string brushProperty, string prefix)
     {
       var colorValue = (string)fromOverlay.GetType().GetProperty(colorProperty)?.GetValue(fromOverlay);
       if (!string.IsNullOrEmpty(colorValue))

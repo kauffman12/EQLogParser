@@ -184,6 +184,7 @@ namespace EQLogParser
     public bool ShowReset { get; set; } = true;
     public bool StreamerMode { get; set; }
     public bool HideDuplicates { get; set; }
+    public bool UseTextDropShadow { get; set; } = true;
     public int TimerMode { get; set; }
     public long Height { get; set; } = 400;
     public long Width { get; set; } = 300;
