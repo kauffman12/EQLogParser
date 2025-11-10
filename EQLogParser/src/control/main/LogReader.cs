@@ -14,6 +14,8 @@ namespace EQLogParser
   {
     private readonly BlockingCollection<LogReaderItem> _lines = new(new ConcurrentQueue<LogReaderItem>(), 100000);
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+    private static ReadOnlySpan<char> LoadingMsg => "LOADING, PLEASE WAIT...";
+    private static ReadOnlySpan<char> WelcomeMsg => "Welcome to EverQuest!";
     private const int BufferSize = 147456;
     private CancellationTokenSource _cts = new();
     private StreamReader _reader;
@@ -47,7 +49,7 @@ namespace EQLogParser
       }
       catch (Exception ex)
       {
-        Log.Error($"Error Loading File: ${FileName}. Re-open or toggle Triggers to try again.", ex);
+        Log.Error($"Error Loading File: {FileName}. Re-open or toggle Triggers to try again.", ex);
       }
       finally
       {
@@ -144,6 +146,10 @@ namespace EQLogParser
           {
             _currentPos = _fs.Position;
           }
+          else if (_fs.Position == _fs.Length)
+          {
+            _currentPos = _fs.Position;
+          }
 
           HandleLine(line, ref previous);
         }
@@ -154,11 +160,11 @@ namespace EQLogParser
       }
       catch (FileNotFoundException)
       {
-        Log.Warn($"File Not Available: ${FileName}");
+        Log.Warn($"File Not Available: {FileName}");
       }
       catch (Exception ex)
       {
-        Log.Error($"Error Loading File: ${FileName}. Re-open or toggle Triggers to try again.", ex);
+        Log.Error($"Error Loading File: {FileName}. Re-open or toggle Triggers to try again.", ex);
         return;
       }
 
@@ -246,9 +252,14 @@ namespace EQLogParser
         }
 
         // if zoning during monitor try to archive
-        if (monitor && lineSpan[27..].StartsWith("LOADING, PLEASE WAIT..."))
+        if (monitor && lineSpan.Length > 27)
         {
-          FileUtil.QueueFileArchiveAsync(this);
+          var rest = lineSpan[27..];
+          if (rest.StartsWith(LoadingMsg, StringComparison.OrdinalIgnoreCase) ||
+              rest.StartsWith(WelcomeMsg, StringComparison.OrdinalIgnoreCase))
+          {
+            FileUtil.QueueFileArchiveAsync(this);
+          }
         }
 
         _lines.Add(new(theLine, _lastParsedTime, monitor), _cts.Token);
@@ -309,8 +320,8 @@ namespace EQLogParser
     {
       CleanupStreams();
       await Task.Delay(100);
-      var exists = await WhenFileExists();
-      if (exists)
+
+      if (await WhenFileExists())
       {
         _fileDeleted = false;
         _fs = new FileStream(
@@ -323,6 +334,7 @@ namespace EQLogParser
             BufferSize = BufferSize,
             Options = FileOptions.Asynchronous | FileOptions.SequentialScan
           });
+
         _fs.Seek(0, SeekOrigin.End);
         _currentPos = _fs.Position;
         _reader = FileUtil.GetStreamReader(_fs);

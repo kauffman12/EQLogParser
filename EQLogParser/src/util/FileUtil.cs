@@ -1,5 +1,6 @@
 ﻿using log4net;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -22,6 +23,7 @@ namespace EQLogParser
     private static readonly Regex ServerFileNameRegex = TheServerFileNameRegex();
     private static readonly object LockObject = new();
     private static readonly HashSet<LogReader> ArchiveQueue = [];
+    private static readonly ConcurrentDictionary<string, bool> Archiving = [];
     private static ArchiveScheduler Scheduler;
 
     private static readonly Dictionary<string, long> ArchiveFileSizes = new()
@@ -142,7 +144,8 @@ namespace EQLogParser
       Scheduler = null;
 
       // if enabled
-      if (ConfigUtil.IfSet("LogManagementEnabled") && LogManagementWindow.TypeSchedule.Equals(ConfigUtil.GetSetting("LogManagementType"), StringComparison.OrdinalIgnoreCase))
+      var type = ConfigUtil.GetSetting("LogManagementType", "Activity");
+      if (ConfigUtil.IfSet("LogManagementEnabled") && LogManagementWindow.TypeSchedule.Equals(type, StringComparison.OrdinalIgnoreCase))
       {
         var day = ConfigUtil.GetSetting("LogManagementScheduleDay", "Sunday");
         var hour = ConfigUtil.GetSettingAsInteger("LogManagementScheduleHour", 12);
@@ -155,8 +158,9 @@ namespace EQLogParser
     internal static async void QueueFileArchiveAsync(LogReader logReader)
     {
       var file = Path.GetFileName(logReader.FileName);
+      var type = ConfigUtil.GetSetting("LogManagementType", "Activity");
       if (string.IsNullOrEmpty(file) || !FileNameToArchiveRegex.IsMatch(file) || !ConfigUtil.IfSet("LogManagementEnabled") ||
-        !LogManagementWindow.TypeActivity.Equals(ConfigUtil.GetSetting("LogManagementType"), StringComparison.OrdinalIgnoreCase))
+        !LogManagementWindow.TypeActivity.Equals(type, StringComparison.OrdinalIgnoreCase))
       {
         return;
       }
@@ -213,7 +217,7 @@ namespace EQLogParser
             ArchiveQueue.Remove(reader);
           }
 
-          if (reader.GetProgress() >= 100.0)
+          if (reader.GetProgress() >= 99.9)
           {
             readyList.Add(reader.FileName);
             ArchiveQueue.Remove(reader);
@@ -269,20 +273,29 @@ namespace EQLogParser
           continue;
         }
 
-        try
+        // make sure another thread isn't in the middle of an archive
+        if (Archiving.TryAdd(path, true))
         {
-          await DoArchiveAsync(path);
-        }
-        catch (Exception e)
-        {
-          Log.Error(e);
+          try
+          {
+            await DoArchiveAsync(path);
+          }
+          catch (Exception e)
+          {
+            Log.Error($"Could not archive log file: {path}", e);
+          }
+          finally
+          {
+            // no longer processing
+            Archiving.TryRemove(path, out _);
+          }
         }
       }
 
       // try again
       if (remaining)
       {
-        await Task.Delay(5000);
+        await Task.Delay(3000);
         await Task.Run(ArchiveProcessAsync);
       }
     }
@@ -311,7 +324,6 @@ namespace EQLogParser
       Directory.CreateDirectory(archivePath);
       var formatted = DateTime.Now.ToString("_yyyyMMddHHmm_ssfff", CultureInfo.InvariantCulture) + ".txt";
       var destination = archivePath + Path.DirectorySeparatorChar + fileInfo.Name.Replace(".txt", formatted);
-
       File.Move(path, destination);
 
       try

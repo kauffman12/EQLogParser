@@ -45,8 +45,8 @@ namespace EQLogParser
     private readonly object _repeatedLock = new();
     private IReadOnlyDictionary<string, string> _lexicon;
     private List<TrustedPlayer> _trustedPlayers;
-    private volatile string _activeColor;
-    private volatile string _fontColor;
+    private volatile string _characterActiveColor;
+    private volatile string _characterFontColor;
     private volatile bool _isDisposed;
     private volatile bool _ready;
     private volatile int _voiceRate;
@@ -66,8 +66,8 @@ namespace EQLogParser
       CurrentProcessorName = name;
       TriggerLog = new TriggerLogStore(name);
       _currentPlayer = playerName;
-      _activeColor = activeColor;
-      _fontColor = fontColor;
+      _characterActiveColor = activeColor;
+      _characterFontColor = fontColor;
       _voiceRate = voiceRate;
       _playerVolume = playerVolume;
       AudioManager.Instance.Add(CurrentCharacterId, voice);
@@ -77,8 +77,8 @@ namespace EQLogParser
 
     internal long GetActivityLastTicks() => Interlocked.Read(ref _activityLastTicks);
     internal List<string> GetRequiredOverlayIds() => [.. _requiredOverlays.Keys];
-    internal void SetActiveColor(string color) => _activeColor = color;
-    internal void SetFontColor(string color) => _fontColor = color;
+    internal void SetActiveColor(string color) => _characterActiveColor = color;
+    internal void SetFontColor(string color) => _characterFontColor = color;
     internal void SetPlayerVolume(int volume) => _playerVolume = volume;
     internal void SetVoice(string voice) => AudioManager.Instance.SetVoice(CurrentCharacterId, voice);
     internal void SetVoiceRate(int rate) => _voiceRate = rate;
@@ -559,7 +559,7 @@ namespace EQLogParser
       {
         for (var i = 0; i < overlayTexts.Count; i++)
         {
-          await TriggerOverlayManager.Instance.AddTextAsync(overlayTriggers[i], overlayTexts[i], _fontColor);
+          await AddTextAsync(overlayTriggers[i], overlayTexts[i]);
         }
       }
 
@@ -680,7 +680,7 @@ namespace EQLogParser
           updatedDisplayText = updatedDisplayText.Replace(LogTimeCode, DateUtil.FormatSimpleHms(lineData.BeginTime), StringComparison.OrdinalIgnoreCase);
         }
 
-        await TriggerOverlayManager.Instance.AddTextAsync(wrapper.TriggerData, updatedDisplayText, _fontColor);
+        await AddTextAsync(wrapper.TriggerData, updatedDisplayText);
       }
 
       if (ProcessDisplayText(wrapper.ModifiedShare, lineData.Action, matches, null, previousMatches) is { } updatedShareText)
@@ -782,12 +782,12 @@ namespace EQLogParser
 
       var newTimerData = new TimerData
       {
-        ActiveColor = _activeColor ?? trigger.ActiveColor,
+        ActiveColor = _characterActiveColor ?? trigger.ActiveColor,
         BeginTicks = beginTicks,
         CancelSource = new CancellationTokenSource(),
         CharacterId = CurrentCharacterId,
         DisplayName = displayName,
-        FontColor = _fontColor ?? trigger.FontColor,
+        FontColor = _characterFontColor ?? trigger.FontColor,
         Key = wrapper.Id + "-" + displayName,
         OriginalMatches = matches,
         PreviousMatches = previousMatches,
@@ -881,7 +881,7 @@ namespace EQLogParser
 
           if (ProcessDisplayText(wrapper.ModifiedWarningDisplay, lineData.Action, matches, null, previousMatches) is { } updatedDisplayText)
           {
-            await TriggerOverlayManager.Instance.AddTextAsync(trigger, updatedDisplayText, _fontColor);
+            await AddTextAsync(trigger, updatedDisplayText);
           }
 
           if (!_isDisposed && !_triggerLogCollection.IsCompleted)
@@ -995,7 +995,7 @@ namespace EQLogParser
 
           if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, data2.OriginalMatches, data2.PreviousMatches) is { } updatedDisplayText)
           {
-            await TriggerOverlayManager.Instance.AddTextAsync(trigger, updatedDisplayText, _fontColor);
+            await AddTextAsync(trigger, updatedDisplayText);
           }
 
           if (!_isDisposed && !_triggerLogCollection.IsCompleted)
@@ -1032,6 +1032,12 @@ namespace EQLogParser
           }
         }
       });
+    }
+
+    private async Task AddTextAsync(Trigger trigger, string text)
+    {
+      var fontColor = _characterFontColor ?? trigger.FontColor;
+      await TriggerOverlayManager.Instance.AddTextAsync(trigger, text, fontColor);
     }
 
     private void HandleSpeech(Speak speak)
@@ -1365,7 +1371,6 @@ namespace EQLogParser
 
       return sb.ToString();
     }
-
 
     private static string ProcessTts(string tts, string action, Dictionary<string, string> matches, Dictionary<string, string> previous, Dictionary<string, string> original)
     {
