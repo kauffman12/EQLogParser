@@ -1,6 +1,11 @@
-# 2.3.35 | 11/08/25
+# 2.3.36 | 11/10/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
 
+1. Update **Log Archive** basedon activity to check for login messages.
+2. Fix for log archive also not running if you never changed settings after scheduling was implemented. It would think logging was turned off.
+3. Added additional error logging.
+
+# 2.3.35 | 11/08/25
 1. Added option to disable **Text Drop Shadow** in Overlays.
 2. Added **Close** menu to clear data and stop monitoring the open log file.
 3. Fixed Text Overlays not using the full window after saving font changes.

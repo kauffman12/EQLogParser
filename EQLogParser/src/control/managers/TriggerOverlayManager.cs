@@ -249,9 +249,8 @@ namespace EQLogParser
     }
 
     // Not called on UI thread
-    internal async Task AddTextAsync(Trigger trigger, string text, string fontColor)
+    internal async Task AddTextAsync(Trigger trigger, string text, string customFontColor)
     {
-      fontColor ??= trigger.FontColor;
       var now = MonoTime.NowStamp();
 
       var windowsToAdd = new List<TextOverlayWindow>(1);
@@ -278,7 +277,7 @@ namespace EQLogParser
       {
         try
         {
-          window.AddText(text, now, fontColor);
+          window.AddText(text, now, customFontColor);
         }
         catch (Exception ex)
         {
