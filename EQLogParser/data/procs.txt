@@ -15,6 +15,7 @@ Dismantle Destruction
 Eradicate Destruction
 Exterminate Destruction
 Extirpate Destruction
+Expunge Destruction
 Obliterate Destruction
 Repudiate Destruction
 Unmend Destruction
@@ -310,6 +311,9 @@ Forecasted Aid VI Caza
 Forecasted Aid VII Azia
 Forecasted Aid VII Beza
 Forecasted Aid VII Caza
+Forecasted Aid VIII Azia
+Forecasted Aid VIII Beza
+Forecasted Aid VIII Caza
 
 # Beastlord Gelid Claw
 Gelid Claw I
@@ -933,6 +937,12 @@ Frothing Rage Reprisal Rk. III
 Frothing Rage Strike
 Frothing Rage Strike II
 Frothing Rage Strike III
+Festering Rage Reprisal VII Azia
+Festering Rage Reprisal VII Beza
+Festering Rage Reprisal VII Caza
+Festering Rage Strike VII Azia
+Festering Rage Strike VII Beza
+Festering Rage Strike VII Caza
 Increase Damage Effect
 Roiling Rage Strike
 Roiling Rage Strike II
@@ -1029,6 +1039,9 @@ Anticipated Healing IV Caza
 Anticipated Healing V Azia
 Anticipated Healing V Beza
 Anticipated Healing V Caza
+Anticipated Healing VI Azia
+Anticipated Healing VI Beza
+Anticipated Healing VI Caza
 
 # Cleric Infusion
 Avowed Infusion
@@ -1037,6 +1050,9 @@ Avowed Infusion Rk. III
 Devout Infusion
 Devout Infusion Rk. II
 Devout Infusion Rk. III
+Holy Infusion Heal VII Azia
+Holy Infusion Heal VII Beza
+Holy Infusion Heal VII Caza
 Faithful Infusion
 Faithful Infusion II
 Faithful Infusion III
@@ -1152,6 +1168,9 @@ Crippling Glare VI Caza
 Crippling Glare VII Azia
 Crippling Glare VII Beza
 Crippling Glare VII Caza
+Crippling Glare VIII Azia
+Crippling Glare VIII Beza
+Crippling Glare VIII Caza
 
 # Cleric Turn Undead
 Infusion of Holy Light I
@@ -1267,6 +1286,9 @@ Vitriolic Strike Recourse II
 Vitriolic Strike Recourse III
 Vitriolic Strike Rk. II
 Vitriolic Strike Rk. III
+Vitriolic Strike XI Azia
+Vitriolic Strike XI Beza
+Vitriolic Strike XI Caza
 Vituperative Strike
 Vituperative Strike II
 Vituperative Strike III
@@ -1335,6 +1357,9 @@ Adrenaline Spate Effect
 Adrenaline Spate Effect II
 Adrenaline Spate Effect III
 Adrenaline Surge Effect
+Adrenaline Surge Effect XII Azia
+Adrenaline Surge Effect XII Beza
+Adrenaline Surge Effect XII Caza
 Adrenaline Swell Effect
 Adrenaline Torrent Effect
 Adrenaline Torrent Effect II
@@ -1350,6 +1375,9 @@ Frostcloak Strike III
 Frostfell Strike
 Frostfell Strike II
 Frostfell Strike III
+Frostfell Strike IX Azia
+Frostfell Strike IX Beza
+Frostfell Strike IX Caza
 Frostone Strike
 Frostone Strike II
 Frostone Strike III
@@ -1376,6 +1404,7 @@ Wildspark Aura Strike II
 Wildspark Aura Strike III
 
 # Druid Fernspurs
+Wild Barkspurs XIII
 Wild Daggerthorns
 Wild Duskthorns
 Wild Fernspikes
@@ -1409,6 +1438,9 @@ Mending Heal III
 Mending Mystery
 Mending Mystery II
 Mending Mystery III
+Mending Mystery VI Azia
+Mending Mystery VI Beza
+Mending Mystery VI Caza
 
 # Druid Oaken Guard
 Beastsnag Guard Parry
@@ -2188,6 +2220,9 @@ Dragon's Poised Strike III
 Eagle's Poised Strike
 Eagle's Poised Strike II
 Eagle's Poised Strike III
+Eagle's Symmetry Strike
+Eagle's Symmetry Strike II
+Eagle's Symmetry Strike III
 Tiger's Poised Strike
 Tiger's Poised Strike II
 Tiger's Poised Strike III
@@ -2199,6 +2234,9 @@ Tiger's Symmetry Strike III
 Contraforce Effect
 Contraforce Effect II
 Contraforce Effect III
+Counterforce Discipline Effect V Azia
+Counterforce Discipline Effect V Beza
+Counterforce Discipline Effect V Caza
 Counterblow Discipline Effect
 Counterblow Discipline Effect II
 Counterblow Discipline Effect III
@@ -2221,6 +2259,9 @@ Curse of Sixteen Shadows
 Curse of Sixteen Shadows I
 Curse of Sixteen Shadows II
 Curse of Sixteen Shadows III
+Curse of Seventeen Facets I
+Curse of Seventeen Facets II
+Curse of Seventeen Facets III
 Doom of Fifteen Strikes I
 Doom of Fifteen Strikes II
 Doom of Fifteen Strikes III
@@ -2233,6 +2274,9 @@ Doom of the Thirteen Fingers III
 Doom of Sixteen Shadows I
 Doom of Sixteen Shadows II
 Doom of Sixteen Shadows III
+Doom of Seventeen Facets I
+Doom of Seventeen Facets II
+Doom of Seventeen Facets III
 
 # Monk Distant Strike
 Distant Strike I
@@ -2244,12 +2288,18 @@ Drunken Monkey Eagle Strike Boost III
 Drunken Monkey Flying Kick Boost
 Drunken Monkey Flying Kick Boost II
 Drunken Monkey Flying Kick Boost III
+Drunken Monkey HTH Boost
+Drunken Monkey HTH Boost II
+Drunken Monkey HTH Boost III
 Drunken Monkey Kick Boost
 Drunken Monkey Kick Boost II
 Drunken Monkey Kick Boost III
 Drunken Monkey Tiger Claw Boost
 Drunken Monkey Tiger Claw Boost II
 Drunken Monkey Tiger Claw Boost III
+Drunken Monkey Weapon Boost
+Drunken Monkey Weapon Boost II
+Drunken Monkey Weapon Boost III
 
 # Monk Divine Surge of Battle
 Divine Surge of Battle I
@@ -2270,8 +2320,8 @@ Divine Surge of Battle XV
 Divine Surge of Battle XVI
 Divine Surge of Battle XVII
 Divine Surge of Battle XVIII
-Divine Surge of Battle XVIV
-Divine Surge of Battle XVV
+Divine Surge of Battle XIX
+Divine Surge of Battle XX
 
 # Monk Epic
 Peace of the Disciple Strike
@@ -2320,6 +2370,9 @@ Eye Gouge XL
 Eye Gouge XLI
 Eye Gouge XLII
 Eye Gouge XLIII
+Eye Gouge XLIV
+Eye Gouge XLV
+Eye Gouge XLVI
 
 # Monk Fists of Steel
 Fists of Fury I
@@ -2385,6 +2438,9 @@ Storied Reflexes Block III
 Swift Reflexes Block
 Swift Reflexes Block II
 Swift Reflexes Block III
+Swift Reflexes Block VII Azia
+Swift Reflexes Block VII Beza
+Swift Reflexes Block VII Caza
 
 # Monk Resonant Kick
 Resonant Kick I
@@ -2491,9 +2547,12 @@ Resonant Strike XLV
 Resonant Strike XLVI
 Resonant Strike XLVII
 Resonant Strike XLVIII
-Resonant Strike XLVIX
-Resonant Strike XLVV
-Resonant Strike XLV
+Resonant Strike XLIX
+Resonant Strike L
+Resonant Strike LI
+Resonant Strike LII
+Resonant Strike LIII
+Resonant Strike LIV
 
 # Monk Robe (Seven Chakras Heel Technique)
 Demon Crusher
@@ -2508,6 +2567,9 @@ Technique of the Crimson Fist Strike III
 Technique of the Lunar Fist Strike
 Technique of the Lunar Fist Strike II
 Technique of the Lunar Fist Strike III
+Technique of the Shattering Fist Strike
+Technique of the Shattering Fist Strike II
+Technique of the Shattering Fist Strike III
 
 # Monk Thunderfoot
 Thunderfoot I
@@ -2586,6 +2648,9 @@ Companion's Necromantic Bite IV
 Bestow Rot Strike
 Bestow Rot Strike II
 Bestow Rot Strike III
+Bestow Ruin Strike
+Bestow Ruin Strike II
+Bestow Ruin Strike III
 Bestow Unlife Strike
 Bestow Unlife Strike II
 Bestow Unlife Strike III
@@ -2604,6 +2669,9 @@ Bestowed Mortality Strike III
 Bestowed Relife Strike
 Bestowed Relife Strike II
 Bestowed Relife Strike III
+Bestow Undeath Strike X Azia
+Bestow Undeath Strike X Beza
+Bestow Undeath Strike X Caza
 Burning Poison
 Burning Poison II
 Burning Poison III
@@ -2657,6 +2725,9 @@ Inspired Lifeclaw III
 Instilled Lifeclaw
 Instilled Lifeclaw II
 Instilled Lifeclaw III
+Necrotized Lifeclaw X Azia
+Necrotized Lifeclaw X Beza
+Necrotized Lifeclaw X Caza
 Sanctioned Lifeclaw
 Sanctioned Lifeclaw II
 Sanctioned Lifeclaw III
@@ -2718,7 +2789,7 @@ Blessing of Life XXXVI
 Blessing of Life XXXVII
 Blessing of Life XXXVIII
 Blessing of Life XXXIX
-Blessing of Life XL
+Blessing of Life XLV
 Blessing of Life XLI
 Blessing of Life XLII
 Blessing of Life XLIII
@@ -2735,6 +2806,9 @@ Blessed Guardian Heal III
 Holy Guardian Heal
 Holy Guardian Heal II
 Holy Guardian Heal III
+Holy Guardian Heal IV Azia
+Holy Guardian Heal IV Beza
+Holy Guardian Heal IV Caza
 Revered Guardian Heal
 Revered Guardian Heal II
 Revered Guardian Heal III
@@ -2752,6 +2826,9 @@ Confluent Illumination III
 Harmonious Illumination
 Harmonious Illumination II
 Harmonious Illumination III
+Paradoxical Illumination
+Paradoxical Illumination II
+Paradoxical Illumination III
 Penumbral Illumination
 Penumbral Illumination II
 Penumbral Illumination III
@@ -2808,6 +2885,9 @@ Benediction Trigger III
 Burial Rites Trigger
 Burial Rites Trigger II
 Burial Rites Trigger III
+Committal Trigger
+Committal Trigger II
+Committal Trigger III
 Consecration Trigger
 Consecration Trigger
 Consecration Trigger II
@@ -2851,6 +2931,9 @@ Penitent Mending IV Caza
 Penitent Mending V Azia
 Penitent Mending V Beza
 Penitent Mending V Caza
+Penitent Mending VI Azia
+Penitent Mending VI Beza
+Penitent Mending VI Caza
 Penitent Reward
 Penitent Reward II
 Penitent Reward III
@@ -2863,6 +2946,9 @@ Penitent Reward IV Caza
 Penitent Reward V Azia
 Penitent Reward V Beza
 Penitent Reward V Caza
+Penitent Reward VI Azia
+Penitent Reward VI Beza
+itent Reward VI Caza
 
 # Paladin Oathbound
 Oathbound Bulwark I
@@ -2895,6 +2981,9 @@ Steely Renewal III
 Steely Restoration
 Steely Restoration II
 Steely Restoration III
+Steely Restoration VII Azia
+Steely Restoration VII Beza
+Steely Restoration VII Caza
 
 # Paladin Strike
 Antipathetic Strike
@@ -2915,6 +3004,9 @@ Armor of Avowal Strike III
 Armor of Courage Strike
 Armor of Courage Strike II
 Armor of Courage Strike III
+Armor of Eminence Strike
+Armor of Eminence Strike II
+Armor of Eminence Strike III
 Armor of Mercy Strike
 Armor of Mercy Strike II
 Armor of Mercy Strike III
@@ -2946,6 +3038,9 @@ Disdained Strike III
 Earnest Fury Strike
 Earnest Fury Strike II
 Earnest Fury Strike III
+Eminent Fury Strike
+Eminent Fury Strike II
+Eminent Fury Strike III
 Holy Order Strike
 Indignant Strike
 Indignant Strike II
@@ -2959,6 +3054,9 @@ Reverent Fury Strike
 Reverent Fury Strike II
 Reverent Fury Strike III
 Righteous Fury Strike
+Righteous Indignation Strike VIII Azia
+Righteous Indignation Strike VIII Beza
+Righteous Indignation Strike VIII Caza
 Silvered Fury Strike
 Sincere Fury Strike
 Sincere Fury Strike II
@@ -2984,6 +3082,9 @@ Preservation of Marr Effect III
 Preservation of Oseka Effect
 Preservation of Oseka Effect II
 Preservation of Oseka Effect III
+Preservation of Quellious Effect
+Preservation of Quellious Effect Rk. II
+Preservation of Quellious Effect Rk. III
 Preservation of Rodcet Effect
 Preservation of Rodcet Effect II
 Preservation of Rodcet Effect III
@@ -3103,6 +3204,9 @@ Devastating Barrage Strike III
 Devastating Blades Strike
 Devastating Blades Strike Rk. II
 Devastating Blades Strike Rk. III
+Devastating Blades Strike XII Azia
+Devastating Blades Strike XII Beza
+Devastating Blades Strike XII Caza
 Devastating Edges Strike
 Devastating Edges Strike II
 Devastating Edges Strike III
@@ -3145,6 +3249,9 @@ Vociferous Blades Strike III
 
 # Ranger Consumed by the Hunt
 Consumed Effect
+Consumed Effect X Azia
+Consumed Effect X Beza
+Consumed Effect X Caza
 Energized Effect
 Energized Effect II
 Energized Effect III
@@ -3186,6 +3293,9 @@ Outrider's Ever-Burning Gaze III
 Ro's Burning Gaze
 Ro's Burning Gaze II
 Ro's Burning Gaze III
+Ro's Burning Gaze VI Azia
+Ro's Burning Gaze VI Beza
+Ro's Burning Gaze VI Caza
 Shalowain's Crucible Gaze
 Shalowain's Crucible Gaze II
 Shalowain's Crucible Gaze III
@@ -3341,6 +3451,9 @@ Baleful Aim Effect III
 Fatal Aim Effect
 Fatal Aim Effect II
 Fatal Aim Effect III
+Fatal Aim Effect IV Azia
+Fatal Aim Effect IV Beza
+Fatal Aim Effect IV Caza
 Lethal Aim Effect
 Lethal Aim Effect II
 Lethal Aim Effect III
@@ -3359,6 +3472,9 @@ Hidden Blade Stab III
 Holdout Blade Stab
 Holdout Blade Stab II
 Holdout Blade Stab III
+Holdout Blade Stab VII Azia
+Holdout Blade Stab VII Beza
+Holdout Blade Stab VII Caza
 Obfuscated Blade Stab
 Obfuscated Blade Stab II
 Obfuscated Blade Stab III
@@ -3388,6 +3504,9 @@ Skorpikis Blade Strike III
 Toxic Blade Strike
 Toxic Blade Strike II
 Toxic Blade Strike III
+Toxic Blade Strike VIII Azia
+Toxic Blade Strike VIII Beza
+Toxic Blade Strike VIII Caza
 Venomous Blade Strike
 Venomous Blade Strike II
 Venomous Blade Strike III
@@ -3397,6 +3516,9 @@ Imperceptible Calming
 Indiscernible Effect
 Indiscernible Effect II
 Indiscernible Effect III
+Indiscernible Effect IV Azia
+Indiscernible Effect IV Beza
+Indiscernible Effect IV Caza
 Undetectable Effect
 Undetectable Effect II
 Undetectable Effect III
@@ -3542,11 +3664,13 @@ Blackguard's Synergy Strike VIII
 Blackguard's Synergy Strike IX
 
 # Shaman Chaotic
+Ander's Bite Chance
 Direfang's Bite Chance
 Fleshrot's Spear of Venom Chance
 Mawmun's Bite Chance
 Narandi's Spear of Venom Chance
 Nexona's Spear of Venom Chance
+Oka's Bite Chance
 Reefmaw's Bite Chance
 Serisaria's Spear of Venom Chance
 
@@ -3696,6 +3820,9 @@ Call the Pack Caza VIII
 Call the Pack IX Azia
 Call the Pack IX Beza
 Call the Pack IX Caza
+Call the Pack X Azia
+Call the Pack X Beza
+Call the Pack X Caza
 
 # Shaman Responsive Spirit
 Spiritual Restitution
@@ -3707,6 +3834,9 @@ Spiritual Restitution II Caza
 Spiritual Restitution III Azia
 Spiritual Restitution III Beza
 Spiritual Restitution III Caza
+Spiritual Restitution IV Azia
+Spiritual Restitution IV Beza
+Spiritual Restitution IV Caza
 
 # Shaman Spirit
 Cougar Maw
@@ -3841,6 +3971,9 @@ Cursed Guardian Lifetap III
 Unholy Guardian Lifetap
 Unholy Guardian Lifetap II
 Unholy Guardian Lifetap III
+Unholy Guardian Discipline Lifetap IV Azia
+Unholy Guardian Discipline Lifetap IV Beza
+Unholy Guardian Discipline Lifetap IV Caza
 
 # SK Decrepit Skin
 Decrepit Skin Parry
@@ -3867,6 +4000,9 @@ Precise Disruption III Caza
 Precise Disruption IV Azia
 Precise Disruption IV Beza
 Precise Disruption IV Caza
+Precise Disruption V Azia
+Precise Disruption V Beza
+Precise Disruption V Caza
 
 # SK Focused Bites
 Ragged Bite of Agony I
@@ -3893,6 +4029,9 @@ Grelleth's Lifedraw III
 Kanghammer's Lifedraw
 Kanghammer's Lifedraw II
 Kanghammer's Lifedraw III
+Soul Carapace Lifedraw XV Azia
+Soul Carapace Lifedraw XV Beza
+Soul Carapace Lifedraw XV Caza
 Sholothian Lifedraw
 Sholothian Lifedraw II
 Sholothian Lifedraw III
@@ -3931,6 +4070,12 @@ Grelleth's Horror Recourse III
 Grelleth's Horror Strike
 Grelleth's Horror Strike II
 Grelleth's Horror Strike III
+Husk Devourer's Horror Recourse
+Husk Devourer's Horror Recourse II
+Husk Devourer's Horror Recourse III
+Husk Devourer's Horror Strike
+Husk Devourer's Horror Strike II
+Husk Devourer's Horror Strike III
 Marrowthirst Horror Recourse
 Marrowthirst Horror Strike
 Mental Horror Recourse
@@ -4001,12 +4146,33 @@ Impudent Influence Heal III
 Impudent Reward
 Impudent Reward II
 Impudent Reward III
+Incensive Agitation
+Incensive Agitation II
+Incensive Agitation III
+Incensive Influence Heal
+Incensive Influence Heal II
+Incensive Influence Heal III
+Incensive Reward
+Incensive Reward II
+Incensive Reward III
 Insolent Agitation I
 Insolent Agitation II
 Insolent Agitation III
 Insolent Reward
 Insolent Reward II
 Insolent Reward III
+
+# SK Kill Shot procs Face of Impenitence
+Impenitence
+Impenitence II
+Impenitence III
+Impenitence Rk. II
+Impenitence Rk. III
+Remorselessness
+Remorselessness Rk. II
+Ruthlessness
+Ruthlessness II
+Ruthlessness III
 
 # SK Last Breath
 Foul Breath
@@ -4029,6 +4195,9 @@ Mental Fright Strike
 Mental Fright Strike II
 Mental Fright Strike III
 Mental Horror Strike
+Mental Horror Strike VIII Azia
+Mental Horror Strike VIII Beza
+Mental Horror Strike VIII Caza
 Mental Terror Strike
 Mental Terror Strike II
 Mental Terror Strike III
@@ -4199,6 +4368,9 @@ Malarian Skin Effect III
 Sholothian Skin Effect
 Sholothian Skin Effect II
 Sholothian Skin Effect III
+Spitetangle's Skin Effect
+Spitetangle's Skin Effect II
+Spitetangle's Skin Effect III
 Tylix's Skin Effect
 Tylix's Skin Effect II
 Tylix's Skin Effect III
@@ -4223,9 +4395,13 @@ Chaotic Power VII
 Chaotic Power VIII
 Chaotic Power IX
 Chaotic Power X
+Chaotic Power XI
+Chaotic Power XII
 Chaotic Weakness
 Chaotic Weakness IX
 Chaotic Weakness X
+Chaotic Weakness XI
+Chaotic Weakness XII
 
 # Necro Vampiric Embrace
 Vampiric Embrace
@@ -4257,6 +4433,9 @@ Expansive Discord III Caza
 Expansive Discord IV Azia
 Expansive Discord IV Beza
 Expansive Discord IV Caza
+Expansive Discord V Azia
+Expansive Discord V Beza
+Expansive Discord V Caza
 Expansive Disharmony
 Expansive Disharmony II
 Expansive Disharmony III
@@ -4280,6 +4459,9 @@ Precise Discord III Caza
 Precise Discord IV Azia
 Precise Discord IV Beza
 Precise Discord IV Caza
+Precise Discord V Azia
+Precise Discord V Beza
+Precise Discord V Caza
 Precise Disharmony
 Precise Disharmony II
 Precise Disharmony III
@@ -4455,6 +4637,9 @@ Climactic Stand Effect III
 Culminating Stand Effect
 Culminating Stand Effect II
 Culminating Stand Effect III
+Final Stand Effect VI Azia
+Final Stand Effect VI Beza
+Final Stand Effect VI Caza
 Last Stand Effect
 Last Stand Effect II
 Last Stand Effect III
@@ -4483,80 +4668,127 @@ Arcane Fusion IX
 Arcane Fusion X
 Arcane Fusion XI
 Arcane Fusion XII
+Arcane Fusion XIII
 
 # Wizard Claw
 Blazing Infiltration
 Blazing Infiltration IX
 Blazing Infiltration X
 Blazing Infiltration XI
+Blazing Infiltration XII
 Icy Infiltration
 Icy Infiltration IX
 Icy Infiltration X
 Icy Infiltration XI
+Icy Infiltration XII
 Magical Infiltration
 Magical Infiltration IX
 Magical Infiltration X
 Magical Infiltration XI
+Magical Infiltration XII
 Syllable of Angerwarding
 Syllable of Angerwarding IX
 Syllable of Angerwarding X
 Syllable of Angerwarding XI
-Syllable of Convalescence
-Syllable of Convalescence Rk. II
-Syllable of Convalescence Rk. III
+Syllable of Angerwarding XII
 Syllable of Fire
 Syllable of Fire II
 Syllable of Fire III
-Syllable of Fire Azia IX
-Syllable of Fire Azia X
-Syllable of Fire Beza IX
-Syllable of Fire Beza X
-Syllable of Fire Caza IX
-Syllable of Fire Caza X
+Syllable of Fire IX Azia
+Syllable of Fire IX Beza
+Syllable of Fire IX Caza
+Syllable of Fire X Azia
+Syllable of Fire X Beza
+Syllable of Fire X Caza
+Syllable of Fire XI Azia
+Syllable of Fire XI Beza
+Syllable of Fire XI Caza
+Syllable of Fire XII Azia
+Syllable of Fire XII Beza
+Syllable of Fire XII Caza
+Syllable of Fire XIII Azia
+Syllable of Fire XIII Beza
+Syllable of Fire XIII Caza
 Syllable of Fire Rk. II
 Syllable of Fire Rk. III
 Syllable of Ice
 Syllable of Ice II
 Syllable of Ice III
-Syllable of Ice Azia IX
-Syllable of Ice Azia X
-Syllable of Ice Beza IX
-Syllable of Ice Beza X
-Syllable of Ice Caza IX
-Syllable of Ice Caza X
+Syllable of Ice IX Azia
+Syllable of Ice IX Beza
+Syllable of Ice IX Caza
+Syllable of Ice X Azia
+Syllable of Ice X Beza
+Syllable of Ice X Caza
+Syllable of Ice XI Azia
+Syllable of Ice XI Beza
+Syllable of Ice XI Caza
+Syllable of Ice XII Azia
+Syllable of Ice XII Beza
+Syllable of Ice XII Caza
+Syllable of Ice XIII Azia
+Syllable of Ice XIII Beza
+Syllable of Ice XIII Caza
 Syllable of Ice Rk. 2
 Syllable of Ice Rk. 3
 Syllable of Magic
 Syllable of Magic II
 Syllable of Magic III
-Syllable of Magic Azia IX
-Syllable of Magic Azia X
-Syllable of Magic Beza IX
-Syllable of Magic Beza X
-Syllable of Magic Caza IX
-Syllable of Magic Caza X
+Syllable of Magic IX Azia
+Syllable of Magic IX Beza
+Syllable of Magic IX Caza
+Syllable of Magic X Azia
+Syllable of Magic X Beza
+Syllable of Magic X Caza
+Syllable of Magic XI Azia
+Syllable of Magic XI Beza
+Syllable of Magic XI Caza
+Syllable of Magic XII Azia
+Syllable of Magic XII Beza
+Syllable of Magic XII Caza
+Syllable of Magic XIII Azia
+Syllable of Magic XIII Beza
+Syllable of Magic XIII Caza
 Syllable of Magic Rk. II
 Syllable of Magic Rk. III
 Syllable of Mana Boost
 Syllable of Mana Boost II
 Syllable of Mana Boost III
-Syllable of Mana Boost Azia IX
-Syllable of Mana Boost Azia X
-Syllable of Mana Boost Beza IX
-Syllable of Mana Boost Beza X
-Syllable of Mana Boost Caza IX
-Syllable of Mana Boost Caza X
+Syllable of Mana Boost IX Azia
+Syllable of Mana Boost IX Beza
+Syllable of Mana Boost IX Caza
+Syllable of Mana Boost X Azia
+Syllable of Mana Boost X Beza
+Syllable of Mana Boost X Caza
+Syllable of Mana Boost XI Azia
+Syllable of Mana Boost XI Beza
+Syllable of Mana Boost XI Caza
+Syllable of Mana Boost XII Azia
+Syllable of Mana Boost XII Beza
+Syllable of Mana Boost XII Caza
+Syllable of Mana Boost XIII Azia
+Syllable of Mana Boost XIII Beza
+Syllable of Mana Boost XIII Caza
 Syllable of Mana Boost Rk. II
 Syllable of Mana Boost Rk. III
 Syllable of Mastery
 Syllable of Mastery II
 Syllable of Mastery III
-Syllable of Mastery Azia IX
-Syllable of Mastery Azia X
-Syllable of Mastery Beza IX
-Syllable of Mastery Beza X
-Syllable of Mastery Caza IX
-Syllable of Mastery Caza X
+Syllable of Mastery IX Azia
+Syllable of Mastery IX Beza
+Syllable of Mastery IX Caza
+Syllable of Mastery X Azia
+Syllable of Mastery X Beza
+Syllable of Mastery X Caza
+Syllable of Mastery XI Azia
+Syllable of Mastery XI Beza
+Syllable of Mastery XI Caza
+Syllable of Mastery XII Azia
+Syllable of Mastery XII Beza
+Syllable of Mastery XII Caza
+Syllable of Mastery XIII Azia
+Syllable of Mastery XIII Beza
+Syllable of Mastery XIII Caza
 Syllable of Mastery Rk. II
 Syllable of Mastery Rk. III
 Syllable of Mending Rk. II
@@ -4565,13 +4797,6 @@ Syllable of Refreshment
 Syllable of Refreshment IX
 Syllable of Refreshment X
 Syllable of Refreshment XI
-Syllable of Renewal
-Syllable of Renewal Rk. II
-Syllable of Renewal Rk. III
-Syllable of Soothing
-Syllable of Soothing Rk. II
-Syllable of Soothing Rk. III
-yllable of Mending
 
 # Wizard Concussion
 Concussive Chill
@@ -4587,6 +4812,19 @@ Concussive Chill X
 Concussive Chill XI
 Concussive Chill XII
 Concussive Chill XIII
+Concussive Flame
+Concussive Flame II
+Concussive Flame III
+Concussive Flame IV
+Concussive Flame V
+Concussive Flame VI
+Concussive Flame VII
+Concussive Flame VIII
+Concussive Flame IX
+Concussive Flame X
+Concussive Flame XI
+Concussive Flame XII
+Concussive Flame XIII
 Concussive Magic
 Concussive Magic II
 Concussive Magic III
@@ -4600,7 +4838,6 @@ Concussive Magic X
 Concussive Magic XI
 Concussive Magic XII
 Concussive Magic XIII
-Concussive Flames
 
 # Wizard Mana Weave
 Thricewoven Power I
@@ -4628,8 +4865,7 @@ Gift of Arcana V
 Gift of Arcana VI
 Gift of Arcana VII
 Gift of Arcana VIII
-Gift of Arcana VIV
-Gift of Arcana VV
+Gift of Arcana IX
 Gift of Fire I
 Gift of Fire II
 Gift of Fire III
@@ -4638,8 +4874,7 @@ Gift of Fire V
 Gift of Fire VI
 Gift of Fire VII
 Gift of Fire VIII
-Gift of Fire VIV
-Gift of Fire VV
+Gift of Fire IX
 Gift of Ice I
 Gift of Ice II
 Gift of Ice III
@@ -4648,8 +4883,7 @@ Gift of Ice V
 Gift of Ice VI
 Gift of Ice VII
 Gift of Ice VIII
-Gift of Ice VIV
-Gift of Ice VV
+Gift of Ice IX
 
 # Wizard Synergy
 Evoker's Synergy Strike I
@@ -4800,15 +5034,6 @@ Pyromancy XLIII
 # Melee
 Draconic Rage Strike
 
-# Kill Shot procs Face of Impenitence
-Impenitence
-Impenitence II
-Impenitence III
-Impenitence Rk. II
-Impenitence Rk. III
-Remorselessness
-Remorselessness Rk. II
-
 # AnyoneAlleviating Burst I
 Alleviating Burst I
 Alleviating Burst II
@@ -4904,6 +5129,7 @@ Arms of Holy Wrath X Recourse
 Arms of Holy Wrath XI Recourse
 Arms of Holy Wrath XII Recourse
 Arms of Holy Wrath XIII Recourse
+
 # Old parsing of banestrike
 Banestrike
 Banestrike I
@@ -4937,6 +5163,7 @@ Banestrike XXVIII
 Banestrike XXIX
 Banestrike XXX
 Banestrike XXXI
+
 Bite of the Shissar Poison Strike
 Bite of the Shissar Poison Strike I
 Bite of the Shissar Poison Strike II
