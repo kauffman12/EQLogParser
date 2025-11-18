@@ -21,6 +21,12 @@ Repudiate Destruction
 Unmend Destruction
 
 # Bard Arcane Aria
+Arcane Aria Effect XII Azia
+Arcane Aria Effect XII Beza
+Arcane Aria Effect XII Caza
+Arcane Aria Strike XII Azia
+Arcane Aria Strike XII Beza
+Arcane Aria Strike XII Caza
 Arcane Address Effect
 Arcane Address Effect II
 Arcane Address Effect III
@@ -81,6 +87,9 @@ Arcane Symphony Strike II
 Arcane Symphony Strike III
 
 # Bard Autarchian
+Rumbling Barrier Stun XI Azia
+Rumbling Barrier Stun XI Beza
+Rumbling Barrier Stun XI Caza
 Autarchian Shrilling
 Autarchian Shrilling II
 Autarchian Shrilling III
@@ -172,6 +181,9 @@ Kaficus' Spite III
 Lyrin's Spite
 Lyrin's Spite II
 Lyrin's Spite III
+Matriarch's Spite
+Matriarch's Spite II
+Matriarch's Spite III
 Omorden's Spite
 Omorden's Spite II
 Omorden's Spite III
@@ -186,6 +198,9 @@ Von Deek's Spite II
 Von Deek's Spite III
 
 # Bard Suffering Strike
+Sorrowful Strike IX Azia
+Sorrowful Strike IX Beza
+Sorrowful Strike IX Caza
 Fjilnauk's Strike
 Fjilnauk's Strike II
 Fjilnauk's Strike III
@@ -593,6 +608,7 @@ Withering Strike II
 Withering Strike III
 
 # Beastlord Swarm
+Bark at the Moon Call XII
 Bark at the Moon Call
 Bark at the Moon Call Rk. II
 Bark at the Moon Call Rk. III
@@ -1642,6 +1658,9 @@ Mana Recursion Strike
 Mana Recursion Strike I
 Mana Recursion Strike II
 Mana Recursion Strike III
+Mana Recursion Strike XI Azia
+Mana Recursion Strike XI Beza
+Mana Recursion Strike XI Caza
 Mana Reiterate Strike
 Mana Reiterate Strike II
 Mana Reiterate Strike III
@@ -1693,6 +1712,9 @@ Night's Perpetual Terror Rk. III
 Trickster's Torment
 
 # Enchanter Pet Proc
+Empowered Clash IV Azia
+Empowered Clash IV Beza
+Empowered Clash IV Caza
 Empowered Clash
 Empowered Clash II
 Empowered Clash III
@@ -1704,6 +1726,9 @@ Infused Pulse II
 Infused Pulse III
 
 # Enchanter PB Mez
+Perilous Disorientation Chance VII Azia
+Perilous Disorientation Chance VII Beza
+Perilous Disorientation Chance VII Caza
 Confusion Relapse II
 Confusion Relapse III
 Disorientation Relapse II
@@ -1783,8 +1808,12 @@ Tenebrous Shadows III
 Twilight Shadows
 Twilight Shadows II
 Twilight Shadows III
+Vortex Shadows
+Vortex Shadows II
+Vortex Shadows III
 
 # Enchanter Target Ring Mez
+Hypnotic Stare Mindwipe X
 Anodyne Stare Mindwipe
 Deceiving Stare Mindwipe
 Entrancing Stare Mindwipe
@@ -1796,6 +1825,9 @@ Soporific Stare Mindwipe
 Transfixing Stare Mindwipe
 
 # Enchanter Ward
+Bedazzlement Effect XII Azia
+Bedazzlement Effect XII Beza
+Bedazzlement Effect XII Caza
 Arctending Effect
 Arctending Effect II
 Arctending Effect III
@@ -2789,7 +2821,7 @@ Blessing of Life XXXVI
 Blessing of Life XXXVII
 Blessing of Life XXXVIII
 Blessing of Life XXXIX
-Blessing of Life XLV
+Blessing of Life XL
 Blessing of Life XLI
 Blessing of Life XLII
 Blessing of Life XLIII
@@ -2948,7 +2980,7 @@ Penitent Reward V Beza
 Penitent Reward V Caza
 Penitent Reward VI Azia
 Penitent Reward VI Beza
-itent Reward VI Caza
+Penitent Reward VI Caza
 
 # Paladin Oathbound
 Oathbound Bulwark I

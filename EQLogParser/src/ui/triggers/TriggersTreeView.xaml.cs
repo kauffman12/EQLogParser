@@ -244,7 +244,16 @@ namespace EQLogParser
         _triggerCutNode = false;
         _triggerCopiedNode = null;
         var list = treeView.SelectedItems?.Cast<TriggerTreeViewNode>().ToList();
-        await Delete(list);
+        var name = list.Count == 1 ? $"{list[0].SerializedData.Name}" : "the selected items";
+
+        var msgDialog = new MessageWindow($"Are you sure you want to delete {name}?", Resource.FOLDER_DELETE,
+          MessageWindow.IconType.Question, "Delete");
+        msgDialog.ShowDialog();
+
+        if (msgDialog.IsYes1Clicked)
+        {
+          await Delete(list);
+        }
       }
     }
 
