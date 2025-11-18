@@ -83,6 +83,7 @@ namespace EQLogParser
 
     private static readonly SpellAbbrvComparer AbbrvComparer = new();
     private readonly List<string> _adpsKeys = ["#DoTCritRate", "#NukeCritRate"];
+    private readonly object _adpsLock = new object();
     private readonly HashSet<SpellData> _allSpellData = [];
     private readonly Dictionary<string, Dictionary<string, uint>> _adpsActive = [];
     private readonly Dictionary<string, Dictionary<string, uint>> _adpsValues = [];
@@ -477,7 +478,7 @@ namespace EQLogParser
     internal void UpdateAdps(SpellData spellData)
     {
       var updated = false;
-      lock (_adpsKeys)
+      lock (_adpsLock)
       {
         foreach (var key in CollectionsMarshal.AsSpan(_adpsKeys))
         {
@@ -504,7 +505,7 @@ namespace EQLogParser
       if (found.SpellData.Count > 0 && found.DataIndex > -1)
       {
         player = string.Join(" ", [.. split], 0, found.DataIndex + 1);
-        if (player.EndsWith("'s"))
+        if (player.EndsWith("'s", StringComparison.OrdinalIgnoreCase))
         {
           // if string is only 2 then it must be invalid
           player = (player.Length > 2) ? player[..^2] : null;
@@ -535,7 +536,7 @@ namespace EQLogParser
           if (spellData != null)
           {
             var updated = false;
-            lock (_adpsKeys)
+            lock (_adpsLock)
             {
               foreach (var key in CollectionsMarshal.AsSpan(_adpsKeys))
               {
@@ -572,15 +573,21 @@ namespace EQLogParser
           var spellData = spellDataSet.First();
           var updated = false;
 
-          lock (_adpsKeys)
+          lock (_adpsLock)
           {
             foreach (var key in CollectionsMarshal.AsSpan(_adpsKeys))
             {
-              if (_adpsValues[key].TryGetValue(spellData.NameAbbrv, out _))
+              var dict = _adpsValues[key];
+              if (dict.ContainsKey(spellData.NameAbbrv))
               {
-                var msg = string.IsNullOrEmpty(spellData.LandsOnYou) ? spellData.Name : spellData.LandsOnYou;
-                _adpsActive[key].Remove(msg);
-                updated = true;
+                var activeDict = _adpsActive[key];
+                var msg = string.IsNullOrEmpty(spellData.LandsOnYou) ? spellData.NameAbbrv : spellData.LandsOnYou;
+                var foundKey = activeDict.Keys.FirstOrDefault(k => k.Contains(msg, StringComparison.OrdinalIgnoreCase));
+                if (foundKey != null)
+                {
+                  activeDict.Remove(foundKey);
+                  updated = true;
+                }
               }
             }
           }
@@ -598,7 +605,7 @@ namespace EQLogParser
     internal void ZoneChanged()
     {
       var updated = false;
-      lock (_adpsKeys)
+      lock (_adpsLock)
       {
         foreach (var active in _adpsActive)
         {
@@ -662,7 +669,7 @@ namespace EQLogParser
             Damaging = short.Parse(data[8], CultureInfo.InvariantCulture),
             //CombatSkill = uint.Parse(data[9], CultureInfo.InvariantCulture),
             Resist = (SpellResist)int.Parse(data[10], CultureInfo.InvariantCulture),
-            SongWindow = data[11] == "1",
+            SongWindow = data[11] == "1" || data[11] == "-1",
             Adps = byte.Parse(data[12], CultureInfo.InvariantCulture),
             Mgb = data[13] == "1",
             Rank = byte.Parse(data[14], CultureInfo.InvariantCulture),
@@ -679,7 +686,7 @@ namespace EQLogParser
 
     private void RecalculateAdps()
     {
-      lock (_adpsKeys)
+      lock (_adpsLock)
       {
         MyDoTCritRateMod = (uint)_adpsActive[_adpsKeys[0]].Sum(kv => kv.Value);
         MyNukeCritRateMod = (uint)_adpsActive[_adpsKeys[1]].Sum(kv => kv.Value);
@@ -814,7 +821,7 @@ namespace EQLogParser
 
     internal void ClearActiveAdps()
     {
-      lock (_adpsKeys)
+      lock (_adpsLock)
       {
         _adpsKeys.ForEach(key => _adpsActive[key].Clear());
         MyDoTCritRateMod = 0;

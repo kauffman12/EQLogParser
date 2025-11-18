@@ -168,6 +168,13 @@ namespace EQLogParser
             _theOptionsCombo.SelectedIndex = 1;
             _theErrorTextBox.Visibility = Visibility.Collapsed;
             _theTtsBox.Visibility = Visibility.Collapsed;
+
+            if (!Equals(_theSoundCombo.SelectedItem, soundFile) && _theSoundCombo.Items.Contains(soundFile))
+            {
+              _theSoundCombo.Tag = true;
+              _theSoundCombo.SelectedItem = soundFile;
+            }
+
             _theSoundCombo.Visibility = Visibility.Visible;
           }
           else
