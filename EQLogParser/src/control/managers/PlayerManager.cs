@@ -472,7 +472,7 @@ namespace EQLogParser
           {
             if (!string.IsNullOrEmpty(kv.Key) && IsPossiblePlayerName(kv.Key))
             {
-              if (kv.Value != 0 && (now - DateUtil.FromDouble(kv.Value)).TotalDays < 300)
+              if (kv.Value != 0 && (now - DateUtil.FromDouble(kv.Value)).TotalDays < 200)
               {
                 var output = kv.Key + "=" + Math.Round(kv.Value);
                 if (_playerToClass.TryGetValue(kv.Key, out var value) && value.CurrentMax == long.MaxValue &&
@@ -523,7 +523,7 @@ namespace EQLogParser
 
       lock (counter)
       {
-        if (!theClass.Equals(counter.CurrentClass) || counter.CurrentMax != long.MaxValue || string.IsNullOrEmpty(counter.Reason))
+        if (!theClass.Equals(counter.CurrentClass) || counter.CurrentMax != long.MaxValue || !string.Equals(reason, counter.Reason, StringComparison.OrdinalIgnoreCase))
         {
           lock (LockObject)
           {

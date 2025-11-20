@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 
 namespace EQLogParser
 {
@@ -105,27 +106,21 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, Fight> _activeFights = new();
     private readonly ConcurrentDictionary<string, byte> _lifetimeFights = new();
     private readonly ConcurrentDictionary<string, string> _spellAbbrvCache = new();
-    private readonly ConcurrentDictionary<string, string> _ranksCache = new();
     private readonly ConcurrentDictionary<string, List<SpellData>> _spellsNameDb = new();
     private readonly ConcurrentDictionary<string, SpellData> _unknownSpellDb = new();
+
+    // rank abbreviation
+    private readonly HashSet<string> RankWords;
+    private readonly Regex RomanRegex = new("^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$", RegexOptions.Compiled);
 
     private DataManager()
     {
       var spellList = new List<SpellData>();
 
-      // build ranks cache
-      foreach (var r in Enumerable.Range(1, 9))
+      RankWords = new(StringComparer.OrdinalIgnoreCase)
       {
-        _ranksCache[r.ToString(CultureInfo.InvariantCulture)] = "";
-      }
-      foreach (var r in Enumerable.Range(1, 200))
-      {
-        _ranksCache[TextUtils.IntToRoman(r)] = "";
-      }
-
-      _ranksCache["Third"] = "Root";
-      _ranksCache["Fifth"] = "Root";
-      _ranksCache["Octave"] = "Root";
+        "Azia", "Beza", "Caza", "Third", "Fifth", "Octave"
+      };
 
       // Player title mapping for /who queries
       ConfigUtil.ReadList(@"data\titles.txt").ForEach(line =>
@@ -317,32 +312,67 @@ namespace EQLogParser
 
     internal string AbbreviateSpellName(string spell)
     {
-      if (!_spellAbbrvCache.TryGetValue(spell, out var result))
+      if (_spellAbbrvCache.TryGetValue(spell, out var cached))
+        return cached;
+
+      // Handle "Rk. II"
+      var rkIndex = spell.IndexOf(" Rk. ", StringComparison.Ordinal);
+      if (rkIndex > -1)
       {
-        result = spell;
-        int index;
-        if ((index = spell.IndexOf(" Rk. ", StringComparison.Ordinal)) > -1)
-        {
-          result = spell[..index];
-        }
-        else if ((index = spell.LastIndexOf(" ", StringComparison.Ordinal)) > -1)
-        {
-          var lastWord = spell[(index + 1)..];
-
-          if (_ranksCache.TryGetValue(lastWord, out var root))
-          {
-            result = spell[..index];
-            if (!string.IsNullOrEmpty(root))
-            {
-              result += " " + root;
-            }
-          }
-        }
-
-        _spellAbbrvCache[spell] = result;
+        var res = spell[..rkIndex];
+        _spellAbbrvCache[spell] = res;
+        return string.Intern(res);
       }
 
-      return string.Intern(result);
+      // Split once into words
+      var parts = spell.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+      var end = parts.Length;
+
+      // Walk backwards removing:
+      //  Roman
+      //  Azia / Beza / Caza
+      while (end > 0)
+      {
+        var last = parts[end - 1];
+
+        if (RankWords.Contains(last))
+        {
+          end--;
+          continue;
+        }
+
+        if (IsRoman(last))
+        {
+          end--;
+          continue;
+        }
+
+        break; // reached base name
+      }
+
+      // If nothing removed → return original
+      if (end == parts.Length)
+      {
+        _spellAbbrvCache[spell] = spell;
+        return string.Intern(spell);
+      }
+
+      // Rebuild without the suffix
+      var baseName = string.Join(" ", parts, 0, end);
+
+      // Handle Third, Fifth, Octave → "Root"
+      if (end < parts.Length &&
+          (parts[end] == "Third" ||
+           parts[end] == "Fifth" ||
+           parts[end] == "Octave"))
+      {
+        baseName += " Root";
+      }
+
+      _spellAbbrvCache[spell] = baseName;
+      return string.Intern(baseName);
+
+      bool IsRoman(string s) => RomanRegex.IsMatch(s);
     }
 
     internal SpellData AddUnknownSpell(string spellName)

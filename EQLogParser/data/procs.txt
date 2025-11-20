@@ -329,6 +329,9 @@ Forecasted Aid VII Caza
 Forecasted Aid VIII Azia
 Forecasted Aid VIII Beza
 Forecasted Aid VIII Caza
+Forecasted Aid IV Azia
+Forecasted Aid IV Beza
+Forecasted Aid IV Caza
 
 # Beastlord Gelid Claw
 Gelid Claw I
@@ -527,6 +530,12 @@ Fatiguing Bite III
 Fatiguing Bite Recourse
 Fatiguing Bite Recourse II
 Fatiguing Bite Recourse III
+Fatiguing Bite VI Azia
+Fatiguing Bite VI Beza
+Fatiguing Bite VI Caza
+Fatiguing Bite Recourse VI Azia
+Fatiguing Bite Recourse VI Beza
+Fatiguing Bite Recourse VI Caza
 Friendly Pet Heal
 Friendly Pet Heal II
 Friendly Pet Heal III
@@ -883,6 +892,9 @@ Distracting Strike LIII
 Distracting Strike LIV
 
 # Berserker Frenzy Strike
+Augmented Frenzy Strike VII Azia
+Augmented Frenzy Strike VII Beza
+Augmented Frenzy Strike VII Caza
 Amplified Frenzy Strike
 Amplified Frenzy Strike II
 Amplified Frenzy Strike III
@@ -1175,6 +1187,18 @@ Crippling Glare Caza VII
 Crippling Glare VIII Azia
 Crippling Glare VIII Beza
 Crippling Glare VIII Caza
+Crippling Glare II Azia
+Crippling Glare II Beza
+Crippling Glare II Caza
+Crippling Glare III Azia
+Crippling Glare III Beza
+Crippling Glare III Caza
+Crippling Glare IV Azia
+Crippling Glare IV Beza
+Crippling Glare IV Caza
+Crippling Glare IX Azia
+Crippling Glare IX Beza
+Crippling Glare IX Caza
 Crippling Glare V Azia
 Crippling Glare V Beza
 Crippling Glare V Caza
@@ -1243,7 +1267,13 @@ Valiant Strike Recourse
 Valiant Strike Rk. II
 Valiant Strike Rk. III
 Valorous Strike
+Valorous Strike XI Azia
+Valorous Strike XI Beza
+Valorous Strike XI Caza
 Valorous Strike Recourse
+Valorous Strike Recourse XI Azia
+Valorous Strike Recourse XI Beza
+Valorous Strike Recourse XI Caza
 Valorous Strike Rk. II
 Valorous Strike Rk. III
 Vanquishing Strike
@@ -1305,6 +1335,9 @@ Vitriolic Strike Rk. III
 Vitriolic Strike XI Azia
 Vitriolic Strike XI Beza
 Vitriolic Strike XI Caza
+Vitriolic Strike Recourse XI Azia
+Vitriolic Strike Recourse XI Beza
+Vitriolic Strike Recourse XI Caza
 Vituperative Strike
 Vituperative Strike II
 Vituperative Strike III
@@ -1498,6 +1531,9 @@ Shell of the Reptile Trigger
 Shell of the Reptile Trigger II
 Shell of the Reptile Trigger III
 Skin of the Reptile Trigger
+Skin of the Reptile Trigger XII Azia
+Skin of the Reptile Trigger XII Beza
+Skin of the Reptile Trigger XII Caza
 
 # Enchanter Dicho
 Composite Reinforced Strike 1
@@ -1543,6 +1579,9 @@ Mana Re-Re-Re-Re-Reciprocation
 Mana Re-Re-Re-Re-Reciprocation II
 Mana Re-Re-Re-Re-Reciprocation III
 Mana Re-Re-Re-Re-Recursion
+Mana Re-Re-Re-Re-Recursion XI Azia
+Mana Re-Re-Re-Re-Recursion XI Beza
+Mana Re-Re-Re-Re-Recursion XI Caza
 Mana Re-Re-Re-Re-Reiterate
 Mana Re-Re-Re-Re-Reiteration
 Mana Re-Re-Re-Re-Reiteration II
@@ -1571,6 +1610,9 @@ Mana Re-Re-Re-Reciprocation
 Mana Re-Re-Re-Reciprocation II
 Mana Re-Re-Re-Reciprocation III
 Mana Re-Re-Re-Recursion
+Mana Re-Re-Re-Recursion XI Azia
+Mana Re-Re-Re-Recursion XI Beza
+Mana Re-Re-Re-Recursion XI Caza
 Mana Re-Re-Re-Reiterate
 Mana Re-Re-Re-Reiteration
 Mana Re-Re-Re-Reiteration II
@@ -1599,6 +1641,9 @@ Mana Re-Re-Reciprocation
 Mana Re-Re-Reciprocation II
 Mana Re-Re-Reciprocation III
 Mana Re-Re-Recursion
+Mana Re-Re-Recursion XI Azia
+Mana Re-Re-Recursion XI Beza
+Mana Re-Re-Recursion XI Caza
 Mana Re-Re-Reiterate
 Mana Re-Re-Reiteration
 Mana Re-Re-Reiteration II
@@ -1627,6 +1672,9 @@ Mana Re-Reciprocation
 Mana Re-Reciprocation II
 Mana Re-Reciprocation III
 Mana Re-Recursion
+Mana Re-Recursion XI Azia
+Mana Re-Recursion XI Beza
+Mana Re-Recursion XI Caza
 Mana Re-Reiterate
 Mana Re-Reiteration
 Mana Re-Reiteration II
@@ -1726,6 +1774,8 @@ Infused Pulse II
 Infused Pulse III
 
 # Enchanter PB Mez
+Perilous Disorientation Chance II
+Perilous Disorientation Chance III
 Perilous Disorientation Chance VII Azia
 Perilous Disorientation Chance VII Beza
 Perilous Disorientation Chance VII Caza
@@ -1887,11 +1937,13 @@ Summon Bodyguard
 Tellurian Bodyguard
 Tellurian Bodyguard II
 Tellurian Bodyguard III
+Tellurian Bodyguard IX
 
 # Mage Burning Vengeance
 Burning Lash
 Burning Lash II
 Burning Lash III
+Burning Lash X
 Burning Retaliation
 Burning Retaliation II
 Burning Retaliation III
@@ -1921,7 +1973,9 @@ Volcanic Lash III
 Chaotic Calamity Jolt
 Chaotic Calamity Refreshment
 Chaotic Fire Jolt
+Chaotic Fire Jolt VI
 Chaotic Fire Refreshment
+Chaotic Fire Refreshment VI
 Chaotic Inferno Jolt
 Chaotic Inferno Refreshment
 Chaotic Magma Jolt
@@ -1980,6 +2034,18 @@ Flames of Power III Caza
 Flames of Power IV Azia
 Flames of Power IV Beza
 Flames of Power IV Caza
+Flames of Power V Azia
+Flames of Power V Beza
+Flames of Power V Caza
+Flames of Power VI Azia
+Flames of Power VI Beza
+Flames of Power VI Caza
+Flames of Power VII Azia
+Flames of Power VII Beza
+Flames of Power VII Caza
+Flames of Power VIII Azia
+Flames of Power VIII Beza
+Flames of Power VIII Caza
 Flames of Power Azia X
 Flames of Power Beza X
 Flames of Power Caza X
@@ -2060,6 +2126,21 @@ Minion Strike Beza VI
 Minion Strike Caza IV
 Minion Strike Caza V
 Minion Strike Caza VI
+Minion Strike IV Azia
+Minion Strike IV Beza
+Minion Strike IV Caza
+Minion Strike V Azia
+Minion Strike V Beza
+Minion Strike V Caza
+Minion Strike VI Azia
+Minion Strike VI Beza
+Minion Strike VI Caza
+Minion Strike VII Azia
+Minion Strike VII Beza
+Minion Strike VII Caza
+Minion Strike VIII Azia
+Minion Strike VIII Beza
+Minion Strike VIII Caza
 
 # Mage Pet Proc
 Iceflame Strike
@@ -2074,6 +2155,21 @@ Iceflame Strike Beza X
 Iceflame Strike Caza VIII
 Iceflame Strike Caza IX
 Iceflame Strike Caza X
+Iceflame Strike IX Azia
+Iceflame Strike IX Beza
+Iceflame Strike IX Caza
+Iceflame Strike VIII Azia
+Iceflame Strike VIII Beza
+Iceflame Strike VIII Caza
+Iceflame Strike X Azia
+Iceflame Strike X Beza
+Iceflame Strike X Caza
+Iceflame Strike XI Azia
+Iceflame Strike XI Beza
+Iceflame Strike XI Caza
+Iceflame Strike XII Azia
+Iceflame Strike XII Beza
+Iceflame Strike XII Caza
 
 # Mage Pet Proc AA/Spire
 Air Elemental Strike I
@@ -3790,6 +3886,9 @@ Languid Health
 Languid Health Chance
 Languor Trigger
 Lassitude Trigger
+Lassitude Trigger XIII Azia
+Lassitude Trigger XIII Beza
+Lassitude Trigger XIII Caza
 Lassitudinal Health
 Lassitudinal Health Chance
 Lethargic Health
@@ -3826,29 +3925,29 @@ Sluggishness Trigger III
 
 # Shaman Pack of Aina
 Call the Pack Azia
-Call the Pack Azia II
-Call the Pack Azia III
-Call the Pack Azia IV
-Call the Pack Azia V
-Call the Pack Azia VI
-Call the Pack Azia VII
-Call the Pack Azia VIII
 Call the Pack Beza
-Call the Pack Beza II
-Call the Pack Beza III
-Call the Pack Beza IV
-Call the Pack Beza V
-Call the Pack Beza VI
-Call the Pack Beza VII
-Call the Pack Beza VIII
 Call the Pack Caza
-Call the Pack Caza II
-Call the Pack Caza III
-Call the Pack Caza IV
-Call the Pack Caza V
-Call the Pack Caza VI
-Call the Pack Caza VII
-Call the Pack Caza VIII
+Call the Pack II Azia
+Call the Pack II Beza
+Call the Pack II Caza
+Call the Pack III Azia
+Call the Pack III Beza
+Call the Pack III Caza
+Call the Pack IV Azia
+Call the Pack IV Beza
+Call the Pack IV Caza
+Call the Pack V Azia
+Call the Pack V Beza
+Call the Pack V Caza
+Call the Pack VI Azia
+Call the Pack VI Beza
+Call the Pack VI Caza
+Call the Pack VII Azia
+Call the Pack VII Beza
+Call the Pack VII Caza
+Call the Pack VIII Azia
+Call the Pack VIII Beza
+Call the Pack VIII Caza
 Call the Pack IX Azia
 Call the Pack IX Beza
 Call the Pack IX Caza
@@ -4017,12 +4116,24 @@ Disruptive Recourse III
 Disruptive Recourse III Azia
 Disruptive Recourse III Beza
 Disruptive Recourse III Caza
+Disruptive Recourse IV Azia
+Disruptive Recourse IV Beza
+Disruptive Recourse IV Caza
+Disruptive Recourse V Azia
+Disruptive Recourse V Beza
+Disruptive Recourse V Caza
 Expansive Distraction
 Expansive Distraction II
 Expansive Distraction III
 Expansive Distraction III Azia
 Expansive Distraction III Beza
 Expansive Distraction III Caza
+Expansive Distraction IV Azia
+Expansive Distraction IV Beza
+Expansive Distraction IV Caza
+Expansive Distraction V Azia
+Expansive Distraction V Beza
+Expansive Distraction V Caza
 Precise Disruption
 Precise Disruption II
 Precise Disruption III
@@ -5741,6 +5852,8 @@ Scorpion's Agony Poison Strike XVII
 Scorpion's Agony Poison Strike XVIII
 Scorpion's Agony Poison Strike XIX
 Scorpion's Agony Poison Strike XX
+Scorpion's Agony Poison Strike XXI
+Scorpion's Agony Poison Strike XXII
 Servant Strike
 Servant Strike II
 Servant Strike III
@@ -5753,6 +5866,21 @@ Servant Strike Beza VI
 Servant Strike Caza IV
 Servant Strike Caza V
 Servant Strike Caza VI
+Servant Strike IV Azia
+Servant Strike IV Beza
+Servant Strike IV Caza
+Servant Strike V Azia
+Servant Strike V Beza
+Servant Strike V Caza
+Servant Strike VI Azia
+Servant Strike VI Beza
+Servant Strike VI Caza
+Servant Strike VII Azia
+Servant Strike VII Beza
+Servant Strike VII Caza
+Servant Strike VIII Azia
+Servant Strike VIII Beza
+Servant Strike VIII Caza
 Soothing V
 Soothing VI
 Soothing VII
@@ -5769,6 +5897,8 @@ Soothing Strike VII
 Soothing Strike VIII
 Soothing Strike IX
 Soothing Strike X
+Soothing Strike XI
+Soothing Strike XII
 Soothing Wave
 Spectral Strike
 Spider's Bite Poison Strike I
@@ -5789,6 +5919,7 @@ Spider's Bite Poison Strike XV
 Spider's Bite Poison Strike XVI
 Spider's Bite Poison Strike XVII
 Spider's Bite Poison Strike XVIII
+Spider's Bite Poison Strike XIX
 Spike of Anger
 Spike of Anger I
 Spike of Anger II
@@ -5798,6 +5929,7 @@ Spike of Anger V
 Spike of Anger VI
 Spike of Anger VII
 Spike of Anger VIII
+Spike of Anger IX
 Spike of Corruption
 Spike of Corruption I
 Spike of Corruption II
@@ -5807,6 +5939,7 @@ Spike of Corruption V
 Spike of Corruption VI
 Spike of Corruption VII
 Spike of Corruption VIII
+Spike of Corruption IX
 Spike of Ice
 Spike of Ice I
 Spike of Ice II
@@ -5816,6 +5949,7 @@ Spike of Ice V
 Spike of Ice VI
 Spike of Ice VII
 Spike of Ice VIII
+Spike of Ice IX
 Spike of Magic
 Spike of Magic I
 Spike of Magic II
@@ -5825,6 +5959,7 @@ Spike of Magic V
 Spike of Magic VI
 Spike of Magic VII
 Spike of Magic VIII
+Spike of Magic IX
 Spirit Strike
 Strike of Corruption I
 Strike of Corruption II
@@ -5836,6 +5971,8 @@ Strike of Corruption VII
 Strike of Corruption VIII
 Strike of Corruption IX
 Strike of Corruption X
+Strike of Corruption XI
+Strike of Corruption XII
 Strike of Disease I
 Strike of Disease II
 Strike of Disease III
@@ -5851,6 +5988,8 @@ Strike of Disease XII
 Strike of Disease XIII
 Strike of Disease XIV
 Strike of Disease XV
+Strike of Disease XVI
+Strike of Disease XVII
 Strike of Fire I
 Strike of Fire II
 Strike of Fire III
@@ -5861,6 +6000,8 @@ Strike of Fire VII
 Strike of Fire VIII
 Strike of Fire IX
 Strike of Fire X
+Strike of Fire XI
+Strike of Fire XII
 Strike of Flames I
 Strike of Flames II
 Strike of Flames III
@@ -5876,6 +6017,8 @@ Strike of Flames XII
 Strike of Flames XIII
 Strike of Flames XIV
 Strike of Flames XV
+Strike of Flames XVI
+Strike of Flames XVII
 Strike of Ice
 Strike of Ice I
 Strike of Ice II
@@ -5887,6 +6030,8 @@ Strike of Ice VII
 Strike of Ice VIII
 Strike of Ice IX
 Strike of Ice X
+Strike of Ice XI
+Strike of Ice XII
 Strike of Magic
 Strike of Magic I
 Strike of Magic II
@@ -5898,6 +6043,8 @@ Strike of Magic VII
 Strike of Magic VIII
 Strike of Magic IX
 Strike of Magic X
+Strike of Magic XI
+Strike of Magic XII
 Strike of Poison I
 Strike of Poison II
 Strike of Poison III
@@ -5908,6 +6055,8 @@ Strike of Poison VII
 Strike of Poison VIII
 Strike of Poison IX
 Strike of Poison X
+Strike of Poison XI
+Strike of Poison XII
 Strike of Sickness I
 Strike of Sickness II
 Strike of Sickness III
@@ -5918,6 +6067,8 @@ Strike of Sickness VII
 Strike of Sickness VIII
 Strike of Sickness IX
 Strike of Sickness X
+Strike of Sickness XI
+Strike of Sickness XII
 Strike of Venom I
 Strike of Venom II
 Strike of Venom III
@@ -5933,6 +6084,8 @@ Strike of Venom XII
 Strike of Venom XIII
 Strike of Venom XIV
 Strike of Venom XV
+Strike of Venom XVI
+Strike of Venom XVII
 Strike of the Shissar Poison Strike I
 Strike of the Shissar Poison Strike II
 Strike of the Shissar Poison Strike III
@@ -5951,6 +6104,7 @@ Strike of the Shissar Poison Strike XV
 Strike of the Shissar Poison Strike XVI
 Strike of the Shissar Poison Strike XVII
 Strike of the Shissar Poison Strike XVIII
+Strike of the Shissar Poison Strike XVIX
 Surge of Cold I
 Surge of Cold II
 Surge of Cold III
@@ -5961,6 +6115,8 @@ Surge of Cold VII
 Surge of Cold VIII
 Surge of Cold IX
 Surge of Cold X
+Surge of Cold XI
+Surge of Cold XII
 Surge of Corruption I
 Surge of Corruption II
 Surge of Corruption III
@@ -5976,6 +6132,8 @@ Surge of Corruption XII
 Surge of Corruption XIII
 Surge of Corruption XIV
 Surge of Corruption XV
+Surge of Corruption XVI
+Surge of Corruption XVII
 Surge of Ice
 Surge of Ice I
 Surge of Ice II
@@ -5992,6 +6150,8 @@ Surge of Ice XII
 Surge of Ice XIII
 Surge of Ice XIV
 Surge of Ice XV
+Surge of Ice XVI
+Surge of Ice XVII
 Surge of Magic I
 Surge of Magic II
 Surge of Magic III
@@ -6007,6 +6167,8 @@ Surge of Magic XII
 Surge of Magic XIII
 Surge of Magic XIV
 Surge of Magic XV
+Surge of Magic XVI
+Surge of Magic XVII
 Toxic Force V
 Toxic Force VI
 Toxic Force VII
@@ -6014,11 +6176,13 @@ Toxic Force VIII
 Toxic Force IX
 Toxic Force X
 Toxic Force XI
+Toxic Force XII
 Toxin V
 Toxin VI
 Toxin VII
 Toxin VIII
 Toxin IX
+Toxin X
 Vampiric Consumption
 Vampiric Consumption I
 Vampiric Consumption II
@@ -6028,6 +6192,7 @@ Vampiric Consumption V
 Vampiric Consumption VI
 Vampiric Consumption VII
 Vampiric Consumption VIII
+Vampiric Consumption IX
 Vampiric Draw
 Vampiric Draw I
 Vampiric Draw II
@@ -6037,6 +6202,7 @@ Vampiric Draw V
 Vampiric Draw VI
 Vampiric Draw VII
 Vampiric Draw VIII
+Vampiric Draw VIX
 Vampiric Strike I
 Vampiric Strike II
 Vampiric Strike III
@@ -6052,6 +6218,8 @@ Vampiric Strike XII
 Vampiric Strike XIII
 Vampiric Strike XIV
 Vampiric Strike XV
+Vampiric Strike XVI
+Vampiric Strike XVII
 Vampiric Touch I
 Vampiric Touch II
 Vampiric Touch III
@@ -6062,6 +6230,8 @@ Vampiric Touch VII
 Vampiric Touch VIII
 Vampiric Touch IX
 Vampiric Touch X
+Vampiric Touch XI
+Vampiric Touch XII
 Vector of Health
 Vector of Health I
 Vector of Health II
@@ -6071,6 +6241,7 @@ Vector of Health V
 Vector of Health VI
 Vector of Health VII
 Vector of Health VIII
+Vector of Health IX
 Vector of Sickness
 Vector of Sickness I
 Vector of Sickness II
@@ -6080,6 +6251,7 @@ Vector of Sickness V
 Vector of Sickness VI
 Vector of Sickness VII
 Vector of Sickness VIII
+Vector of Sickness IX
 Wave of Anger
 Wave of Anger I
 Wave of Anger II
@@ -6089,6 +6261,7 @@ Wave of Anger V
 Wave of Anger VI
 Wave of Anger VII
 Wave of Anger VIII
+Wave of Anger IX
 Wave of Corruption
 Wave of Corruption I
 Wave of Corruption II
@@ -6098,6 +6271,7 @@ Wave of Corruption V
 Wave of Corruption VI
 Wave of Corruption VII
 Wave of Corruption VIII
+Wave of Corruption IX
 Wave of Poison
 Wave of Poison I
 Wave of Poison II
@@ -6107,3 +6281,4 @@ Wave of Poison V
 Wave of Poison VI
 Wave of Poison VII
 Wave of Poison VIII
+Wave of Poison VIX
