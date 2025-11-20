@@ -1,6 +1,10 @@
-# 2.3.38 | 11/18/25
+# 2.3.39 | 11/20/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
 
+1. More spells from beta.
+2. Small update to how player class is saved.
+
+# 2.3.38 | 11/18/25
 1. Added prompt before deleting from trigger folder tree.
 2. Fix for wrong audio file being displayed in trigger settings.
 3. Updated how damage meter crit rate values are checked.
