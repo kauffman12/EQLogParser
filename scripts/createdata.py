@@ -1,5 +1,6 @@
 # Used to generate the spell data included with the parser
 
+import re
 import os.path
 
 DBSpellsFile = 'spells_us.txt'
@@ -21,8 +22,14 @@ ADPS_BEN_DET = [ 399 ]
 IGNORE = [ 'Test Shield', 'SKU', 'SummonTest', ' Test', 'test atk', 'PvPS', 'BetaTestSpell', 'AA_SPELL_PH', 'test speed', ' test', 'Beta ', 'GM ', 'BetaAcrylia', 'NA ', 'MRC -', '- RESERVED', 'N/A', 'SKU27', 'Placeholder', 'Type3', 'Type 3', 'AVCReserved', ' ID Focus ', 'Use Ability', 'Beta Fish' ]
 IS_TARGETRING = [ 'Issuance' ]
 
-RANKS = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Third', 'Fifth', 'Octave', 'Azia', 'Beza', 'Caza' ]
-ROMAN = [ (400, 'CD'), (100, 'C'), (90, 'XC'), (50, 'L'), (40, 'XL'), (10, 'X'), (9, 'IX'), (5, 'V'), (4, 'IV'), (1, 'I') ]
+ROMAN_REGEX = re.compile(r"""
+    ^M{0,3}              # thousands
+    (CM|CD|D?C{0,3})     # hundreds
+    (XC|XL|L?X{0,3})     # tens
+    (IX|IV|V?I{0,3})$    # ones
+""", re.VERBOSE)
+
+RANK_WORDS = {"Azia", "Beza", "Caza", "Third", "Fifth", "Octave"}
 
 ADPS_EXT_DUR = dict()
 DBSTRINGS = dict()
@@ -70,24 +77,29 @@ MAX_HITS[100030230] = 9       # Enduring Reproval
 MAX_HITS[100050180] = 80      # Extended Decrepit Skin
 MAX_HITS[100030180] = 70      # Extended Preservation of Marr
 
+def is_roman(word):
+    return bool(ROMAN_REGEX.match(word))
+
 def abbreviate(name):
-  result = name
-  rankIndex = name.find(' Rk.')
-  if rankIndex > -1:
-    result = name[0:rankIndex]
-  else:
-    lastSpace = name.rfind(' ')
-    if lastSpace > -1:
-      hasRank = True
-      test = name[lastSpace+1:]
-      if test not in RANKS:
-        hasRank = False
-      if hasRank:
-        result = name[0:lastSpace]
-        if test in ['Octave', 'Fifth', 'Third']:
-          result = result + ' Root' 
-  return result
-  
+    parts = name.split()
+
+    # Handle "Rk. II"
+    if len(parts) >= 3 and parts[-2] == "Rk." and is_roman(parts[-1]):
+        return " ".join(parts[:-2])
+
+    # Otherwise strip trailing rank indicators
+    while parts:
+        last = parts[-1]
+
+        if last in RANK_WORDS:
+            parts.pop()
+            continue
+        if is_roman(last):
+            parts.pop()
+            continue
+        break
+    return " ".join(parts)
+
 def getAdpsValueFromSpa(current, spa, requireDet):
   if current == ADPS_ALL_VALUE:
     return current
@@ -128,10 +140,6 @@ def intToRoman(number):
     (factor, number) = divmod(number, arabic)
     result += roman * factor
   return result
-
-# load RANKS
-for number in range(1, 200):
-  RANKS.append(intToRoman(number))  
 
 # DB strings for lands on messages
 if os.path.isfile(DBSpellsStrFile):
@@ -215,6 +223,7 @@ if os.path.isfile(DBSpellsFile):
     dispellable = int(data[111])
     focusable = int(data[122]) # focusable
     blockable = int(data[130])
+    groupId = int(data[132])
     rank = int(data[133]) # AA rank
     maxTargets = int(data[142])
     origDuration = maxDuration
@@ -270,6 +279,12 @@ if os.path.isfile(DBSpellsFile):
     damaging = 0
     charm = False
     requireDet = None
+
+    #if groupId in [126120010, 126120330, 126120480]:
+    #if 'New Beam' in name or groupId in [126130220]:
+    #  print(name)
+    #  print(spellLine)
+    #  print(groupId)
 
     # process in reverse order
     slots = data[-1].split('$')
