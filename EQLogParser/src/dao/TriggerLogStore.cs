@@ -1,15 +1,14 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Generic;
 using System.Windows.Data;
 
 namespace EQLogParser
 {
   internal class TriggerLogStore
   {
-    internal object SyncRoot => _lock;
     internal string Name => _name;
-    internal ObservableCollection<TriggerLogEntry> Entries => _entries;
+    internal BulkObservableCollection<TriggerLogEntry> Entries => _entries;
     private readonly object _lock = new();
-    private readonly ObservableCollection<TriggerLogEntry> _entries = [];
+    private readonly BulkObservableCollection<TriggerLogEntry> _entries = new(5000);
     private readonly string _name;
 
     internal TriggerLogStore(string name)
@@ -18,15 +17,11 @@ namespace EQLogParser
       BindingOperations.EnableCollectionSynchronization(_entries, _lock);
     }
 
-    internal void Add(TriggerLogEntry entry)
+    internal void AddRange(List<TriggerLogEntry> newEntries)
     {
       lock (_lock)
       {
-        _entries.Insert(0, entry);
-        if (_entries.Count > 5000)
-        {
-          _entries.RemoveAt(_entries.Count - 1);
-        }
+        _entries.AddRange(newEntries);
       }
     }
 

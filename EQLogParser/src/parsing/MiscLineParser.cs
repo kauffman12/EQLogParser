@@ -10,7 +10,7 @@ namespace EQLogParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly List<string> Currency = ["Platinum", "Gold", "Silver", "Copper"];
-    private static readonly Dictionary<char, uint> Rates = new() { { 'p', 1000 }, { 'g', 100 }, { 's', 10 }, { 'c', 1 } };
+    private static readonly Dictionary<string, uint> Rates = new(StringComparer.OrdinalIgnoreCase) { { "p", 1000 }, { "g", 100 }, { "s", 10 }, { "c", 1 } };
     private static readonly char[] LootedFromTrim = ['-', '.'];
     private static readonly Dictionary<string, byte> StruckByTypes = new()
     {
@@ -405,7 +405,10 @@ namespace EQLogParser
         if (StatsUtil.ParseUInt(pieces[i]) is var value && Currency.FirstOrDefault(curr => pieces[i + 1].StartsWith(curr, StringComparison.OrdinalIgnoreCase)) is { } type)
         {
           tmp.Add(pieces[i] + " " + type);
-          count += value * Rates[pieces[i + 1][0]];
+          if (Rates.TryGetValue($"{pieces[i + 1][0]}", out var rate))
+          {
+            count += value * rate;
+          }
         }
         else
         {

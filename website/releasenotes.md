@@ -1,6 +1,11 @@
-# 2.3.39 | 11/20/25
+# 2.3.40 | 12/11/25
 **!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
 
+1. Performance improvements for **Trigger Log**.
+2. Updated spells and procs from live.
+3. Possible fix for loading currency in older EMU log files.
+
+# 2.3.39 | 11/20/25
 1. More spells from beta.
 2. Small update to how player class is saved.
 
