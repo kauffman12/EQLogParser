@@ -527,9 +527,15 @@ Exhausting Bite Recourse III
 Fatiguing Bite
 Fatiguing Bite II
 Fatiguing Bite III
+Fatiguing Bite IV
+Fatiguing Bite V
+Fatiguing Bite VI
 Fatiguing Bite Recourse
 Fatiguing Bite Recourse II
 Fatiguing Bite Recourse III
+Fatiguing Bite Recourse IV
+Fatiguing Bite Recourse V
+Fatiguing Bite Recourse VI
 Fatiguing Bite VI Azia
 Fatiguing Bite VI Beza
 Fatiguing Bite VI Caza
@@ -5338,6 +5344,10 @@ Blaze of Fire V
 Blaze of Fire VI
 Blaze of Fire VII
 Blaze of Fire VIII
+Blazing Strike I
+Blazing Strike II
+Blazing Strike III
+Blazing Strike IV
 Brell's Blessed Aloe Balm
 Brell's Blessed Barrier
 Brell's Blessed Bastion
@@ -5475,6 +5485,10 @@ Fiery Strike VIII
 Fiery Strike IX
 Fire Strike
 Flame Strike
+Frigid Strike I
+Frigid Strike II
+Frigid Strike III
+Frigid Strike IV
 Focused Apothic Healing
 Focused Sarnak's Strike
 Force of Corruption I
@@ -6169,6 +6183,10 @@ Surge of Magic XIV
 Surge of Magic XV
 Surge of Magic XVI
 Surge of Magic XVII
+Temporal Strike I
+Temporal Strike II
+Temporal Strike III
+Temporal Strike IV
 Toxic Force V
 Toxic Force VI
 Toxic Force VII

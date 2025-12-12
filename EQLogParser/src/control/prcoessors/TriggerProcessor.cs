@@ -27,8 +27,9 @@ namespace EQLogParser
     public readonly TriggerLogStore TriggerLog;
     public readonly string CurrentCharacterId;
     public readonly string CurrentProcessorName;
+    private const int TRIGGER_LOG_DELAY = 750;
+    private const int TRIGGER_LOG_BUFFER_SIZE = 25;
     private static readonly Regex TokenRegex = MatchesTokenRegex();
-
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly string _currentPlayer;
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> _counterTimes = [];
@@ -43,6 +44,7 @@ namespace EQLogParser
     private readonly Dictionary<string, TriggerWrapper> _activeTriggersById = [];
     private readonly SemaphoreSlim _activeTriggerSemaphore = new(1, 1);
     private readonly object _repeatedLock = new();
+    private readonly List<TriggerLogItem> _triggerLogBuffer = [];
     private IReadOnlyDictionary<string, string> _lexicon;
     private List<TrustedPlayer> _trustedPlayers;
     private volatile string _characterActiveColor;
@@ -168,9 +170,27 @@ namespace EQLogParser
           foreach (var data in _triggerLogCollection.GetConsumingEnumerable())
           {
             if (_isDisposed) break;
+
             try
             {
-              HandleLog(data.LineData, data.Wrapper, data.Type, data.Eval);
+              _triggerLogBuffer.Clear();
+              _triggerLogBuffer.Add(data);
+
+              // Phase 1: drain immediately available items
+              while (_triggerLogBuffer.Count < TRIGGER_LOG_BUFFER_SIZE && _triggerLogCollection.TryTake(out var more))
+              {
+                _triggerLogBuffer.Add(more);
+              }
+
+              // Phase 2:  handle stragglers with timeout
+              var sw = Stopwatch.StartNew();
+              while (_triggerLogBuffer.Count < TRIGGER_LOG_BUFFER_SIZE && sw.ElapsedMilliseconds < TRIGGER_LOG_DELAY &&
+                     _triggerLogCollection.TryTake(out var delayed, 50))
+              {
+                _triggerLogBuffer.Add(delayed);
+              }
+
+              HandleLog([.. _triggerLogBuffer]);
             }
             catch (Exception)
             {
@@ -1531,24 +1551,34 @@ namespace EQLogParser
       return pattern;
     }
 
-    private void HandleLog(LineData lineData, TriggerWrapper wrapper, string type, double eval = 0)
+    private void HandleLog(List<TriggerLogItem> items)
     {
-      // update log
-      var log = new TriggerLogEntry
-      {
-        BeginTime = FastTime.Now().Seconds,
-        LogTime = lineData?.BeginTime ?? double.NaN,
-        Line = lineData?.Action ?? "",
-        Name = wrapper.Name,
-        Type = type,
-        Eval = eval,
-        NodeId = wrapper.Id,
-        Priority = wrapper.TriggerData.Priority,
-        CharacterId = CurrentCharacterId
-      };
+      // Convert to a concrete list of entries once
+      var entries = new List<TriggerLogEntry>(items.Count);
 
-      TriggerLog.Add(log);
+      var beginTime = FastTime.Now().Seconds;
+
+      for (var i = 0; i < items.Count; i++)
+      {
+        var item = items[i];
+
+        entries.Add(new TriggerLogEntry
+        {
+          BeginTime = beginTime,
+          LogTime = item.LineData?.BeginTime ?? double.NaN,
+          Line = item.LineData?.Action ?? "",
+          Name = item.Wrapper.Name,
+          Type = item.Type,
+          Eval = item.Eval,
+          NodeId = item.Wrapper.Id,
+          Priority = item.Wrapper.TriggerData.Priority,
+          CharacterId = CurrentCharacterId
+        });
+      }
+
+      TriggerLog.AddRange(entries);
     }
+
 
     // make sure each call is from within lock of TimerList
     private static void CleanupTimerData(TimerData timerData)

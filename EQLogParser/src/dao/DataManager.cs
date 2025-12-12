@@ -725,11 +725,12 @@ namespace EQLogParser
 
     private static SpellData FindPreviousCast(string player, IEnumerable<SpellData> output, bool isAdps = false)
     {
-      var filtered = output.Where(value => !isAdps || value.Adps > 0).ToArray();
+      SpellData[] filtered = null;
       foreach (var (_, cast) in RecordManager.Instance.GetSpellsLast(8))
       {
         if (!cast.Interrupted)
         {
+          filtered ??= [.. output.Where(value => !isAdps || value.Adps > 0)];
           foreach (var value in filtered)
           {
             if ((value.Target != (int)SpellTarget.Self || cast.Caster == player) && value.Name == cast.Spell)
@@ -739,7 +740,6 @@ namespace EQLogParser
           }
         }
       }
-
       return null;
     }
 
