@@ -37,10 +37,7 @@ namespace EQLogParser
 
     public App()
     {
-      // 30.x
-      //SyncfusionLicenseProvider.RegisterLicense("Mzk2NDI3MEAzMzMwMmUzMDJlMzAzYjMzMzAzYkpROWp2Zmh6RkNsazEyc2picm9oM1prRGQ0UHExU0FqZkNPaGx2SXM0T3M9");
-      // 31.x
-      SyncfusionLicenseProvider.RegisterLicense("Ngo9BigBOggjHTQxAR8/V1JFaF5cXGRCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdmWXZcd3ZVRGlYVUZ2W0FWYEg=");
+      SyncfusionLicenseProvider.RegisterLicense("");
     }
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -266,8 +263,20 @@ namespace EQLogParser
 
     private static void CheckWindowPosition(MainWindow main)
     {
-      var isOffScreen = true;
-      var windowRect = new Rect(main.Left, main.Top, main.Width, main.Height);
+      // Allow small drift due to DPI rounding / taskbar / monitor changes
+      const double wiggle = 20; // pixels
+
+      // Require at least this much of the window to be visible
+      const double minVisiblePercent = 0.25; // 25% of window area
+
+      var windowRect = new Rect(
+        main.Left - wiggle,
+        main.Top - wiggle,
+        main.Width + (wiggle * 2),
+        main.Height + (wiggle * 2)
+      );
+
+      var windowArea = Math.Max(1, windowRect.Width * windowRect.Height);
 
       foreach (var screen in System.Windows.Forms.Screen.AllScreens)
       {
@@ -278,24 +287,33 @@ namespace EQLogParser
           screen.WorkingArea.Height
         );
 
-        if (screenRect.IntersectsWith(windowRect))
+        var intersection = Rect.Intersect(screenRect, windowRect);
+
+        if (!intersection.IsEmpty)
         {
-          isOffScreen = false;
-          break;
+          var visibleArea = intersection.Width * intersection.Height;
+          var visiblePercent = visibleArea / windowArea;
+
+          if (visiblePercent >= minVisiblePercent)
+          {
+            // Enough of the window is visible — do NOT reset
+            return;
+          }
         }
       }
 
-      if (isOffScreen)
-      {
-        // Move the window to the center of the primary screen
-        main.Width = App.DefaultWidth;
-        main.Height = App.DefaultHeight;
-        main.Left = 0;
-        main.Top = 0;
-        Log.Info($"Window is Offscreen. Changing Window Pos ({main.Top}, {main.Left})");
-        Log.Info($"Window is Offscreen. Changing Window Size ({main.Width}, {main.Height})");
-      }
+      // If we get here, the window is effectively off-screen
+      Log.Info("Window is mostly off-screen? Resetting position and size.");
+
+      main.Width = App.DefaultWidth;
+      main.Height = App.DefaultHeight;
+
+      // Center on primary screen's working area
+      var primary = System.Windows.Forms.Screen.PrimaryScreen.WorkingArea;
+      main.Left = primary.Left + ((primary.Width - main.Width) / 2);
+      main.Top = primary.Top + ((primary.Height - main.Height) / 2);
     }
+
 
     private void DomainUnhandledException(object sender, UnhandledExceptionEventArgs ex)
     {
