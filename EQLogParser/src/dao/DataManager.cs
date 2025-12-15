@@ -111,7 +111,8 @@ namespace EQLogParser
 
     // rank abbreviation
     private readonly HashSet<string> RankWords;
-    private readonly Regex RomanRegex = new("^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$", RegexOptions.Compiled);
+    private readonly Regex RomanRegex = new(@"^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$", RegexOptions.IgnoreCase | RegexOptions.Compiled
+);
 
     private DataManager()
     {
@@ -315,35 +316,38 @@ namespace EQLogParser
       if (_spellAbbrvCache.TryGetValue(spell, out var cached))
         return cached;
 
-      // Handle "Rk. II"
-      var rkIndex = spell.IndexOf(" Rk. ", StringComparison.Ordinal);
-      if (rkIndex > -1)
+      // Split once into tokens
+      var parts = spell.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+      var count = parts.Length;
+
+      // --- Handle "<name> Rk. I|II|III|..."
+      if (count >= 3 &&
+          parts[count - 2].Equals("Rk.", StringComparison.OrdinalIgnoreCase) &&
+          IsRoman(parts[count - 1]))
       {
-        var res = spell[..rkIndex];
-        _spellAbbrvCache[spell] = res;
-        return string.Intern(res);
+        count -= 2;
       }
 
-      // Split once into words
-      var parts = spell.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-      var end = parts.Length;
-
-      // Walk backwards removing:
-      //  Roman
-      //  Azia / Beza / Caza
-      while (end > 0)
+      // --- Strip other trailing rank indicators
+      while (count > 0)
       {
-        var last = parts[end - 1];
+        var last = parts[count - 1];
 
         if (RankWords.Contains(last))
         {
-          end--;
+          count--;
           continue;
         }
 
         if (IsRoman(last))
         {
-          end--;
+          count--;
+          continue;
+        }
+
+        if (int.TryParse(last, out _))
+        {
+          count--;
           continue;
         }
 
@@ -351,29 +355,21 @@ namespace EQLogParser
       }
 
       // If nothing removed → return original
-      if (end == parts.Length)
+      if (count == parts.Length)
       {
         _spellAbbrvCache[spell] = spell;
         return string.Intern(spell);
       }
 
-      // Rebuild without the suffix
-      var baseName = string.Join(" ", parts, 0, end);
+      // Rebuild abbreviated name
+      var result = string.Join(" ", parts, 0, count);
 
-      // Handle Third, Fifth, Octave → "Root"
-      if (end < parts.Length &&
-          (parts[end] == "Third" ||
-           parts[end] == "Fifth" ||
-           parts[end] == "Octave"))
-      {
-        baseName += " Root";
-      }
-
-      _spellAbbrvCache[spell] = baseName;
-      return string.Intern(baseName);
+      _spellAbbrvCache[spell] = result;
+      return string.Intern(result);
 
       bool IsRoman(string s) => RomanRegex.IsMatch(s);
     }
+
 
     internal SpellData AddUnknownSpell(string spellName)
     {
@@ -384,7 +380,7 @@ namespace EQLogParser
         {
           Id = string.Intern(spellName),
           Name = string.Intern(spellName),
-          NameAbbrv = string.Intern(DataManager.Instance.AbbreviateSpellName(spellName))
+          NameAbbrv = string.Intern(AbbreviateSpellName(spellName))
         };
         _unknownSpellDb[spellName] = spellData;
         result = spellData;
@@ -685,12 +681,14 @@ namespace EQLogParser
             duration = 0;
           }
 
+          var level = byte.Parse(data[2], CultureInfo.InvariantCulture);
+
           spellData = new SpellData
           {
             Id = string.Intern(data[0]),
             Name = string.Intern(data[1]),
             NameAbbrv = string.Intern(AbbreviateSpellName(data[1])),
-            Level = byte.Parse(data[2], CultureInfo.InvariantCulture),
+            Level = level,
             Duration = (ushort)duration,
             IsBeneficial = beneficial != 0,
             Target = target,

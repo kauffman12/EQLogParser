@@ -27,7 +27,7 @@ ROMAN_REGEX = re.compile(r"""
     (CM|CD|D?C{0,3})     # hundreds
     (XC|XL|L?X{0,3})     # tens
     (IX|IV|V?I{0,3})$    # ones
-""", re.VERBOSE)
+""", re.VERBOSE | re.IGNORECASE)
 
 RANK_WORDS = {"Azia", "Beza", "Caza", "Third", "Fifth", "Octave"}
 
@@ -84,10 +84,10 @@ def abbreviate(name):
     parts = name.split()
 
     # Handle "Rk. II"
-    if len(parts) >= 3 and parts[-2] == "Rk." and is_roman(parts[-1]):
-        return " ".join(parts[:-2])
+    if len(parts) >= 3 and parts[-2].lower() == "Rk." and is_roman(parts[-1]):
+        parts = parts[:-2]
 
-    # Otherwise strip trailing rank indicators
+    # strip other trailing rank indicators
     while parts:
         last = parts[-1]
 
@@ -95,6 +95,9 @@ def abbreviate(name):
             parts.pop()
             continue
         if is_roman(last):
+            parts.pop()
+            continue
+        if last.isdigit():
             parts.pop()
             continue
         break
@@ -282,6 +285,9 @@ if os.path.isfile(DBSpellsFile):
 
     #if groupId in [126120010, 126120330, 126120480]:
     #if 'New Beam' in name or groupId in [126130220]:
+    #if spellLine == 100120270:
+    #  print(name)
+      #print("%s and %d" % (name, minLevel))
     #  print(name)
     #  print(spellLine)
     #  print(groupId)
