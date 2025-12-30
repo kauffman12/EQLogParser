@@ -105,7 +105,7 @@ namespace EQLogParser
                 PlayerManager.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
                 if (!string.IsNullOrEmpty(className))
                 {
-                  PlayerManager.Instance.SetPlayerClass(player, className, "Class chosen from /who list.");
+                  PlayerManager.Instance.SetPlayerClassByName(player, className, "Class chosen from /who list.");
                 }
                 handled = true;
               }
