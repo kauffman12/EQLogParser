@@ -107,14 +107,14 @@ namespace EQLogParser
       }
     }
 
-    internal async Task StopTriggersAsync()
+    internal async Task StopTriggersAsync(bool remove = false)
     {
       if (_isDisposed) return;
       await _activeTriggerSemaphore.WaitAsync();
 
       try
       {
-        AudioManager.Instance.Stop(CurrentCharacterId);
+        AudioManager.Instance.Stop(CurrentCharacterId, remove);
 
         foreach (var kv in _timerLists)
         {
@@ -224,10 +224,6 @@ namespace EQLogParser
         catch (Exception)
         {
           // ignore (should only be cancel requests)
-        }
-        finally
-        {
-          AudioManager.Instance.Stop(CurrentCharacterId, true);
         }
       }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
@@ -1034,7 +1030,6 @@ namespace EQLogParser
           if (wrapper.TriggerData.TimerType == 4 && wrapper.TriggerData.TimesToLoop > data2.TimesToLoopCount)
           {
             if (_isDisposed) return;
-
             await _activeTriggerSemaphore.WaitAsync().ConfigureAwait(false);
 
             try
@@ -1681,7 +1676,7 @@ namespace EQLogParser
     {
       if (!_isDisposed)
       {
-        StopTriggersAsync().GetAwaiter().GetResult();
+        StopTriggersAsync(true).GetAwaiter().GetResult();
         _isDisposed = true;
         _ready = false;
 
