@@ -27,7 +27,7 @@ namespace EQLogParser
           if (action.IndexOf(' ', 29) is var end and > -1)
           {
             var className = action[29..end];
-            PlayerManager.Instance.SetPlayerClass(ConfigUtil.PlayerName, className, "Class chosen from persona change.");
+            PlayerManager.Instance.SetPlayerClassByName(ConfigUtil.PlayerName, className, "Class chosen from persona change.");
             found = true;
           }
         }

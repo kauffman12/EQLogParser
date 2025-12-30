@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
@@ -81,24 +82,17 @@ namespace EQLogParser
         {
           foreach (var voice in voices)
           {
-            try
+            if (await IsVoicePlayableAsync(synth, voice))
             {
-              synth.Voice = voice;
-              using IRandomAccessStream stream = await synth.SynthesizeTextToStreamAsync("test");
-            }
-            catch
-            {
-              continue;
-            }
-
-            // prefer default first
-            if (SpeechSynthesizer.DefaultVoice?.Id == voice?.Id)
-            {
-              _validVoices.Insert(0, voice);
-            }
-            else
-            {
-              _validVoices.Add(voice);
+              // prefer default first
+              if (SpeechSynthesizer.DefaultVoice?.Id == voice?.Id)
+              {
+                _validVoices.Insert(0, voice);
+              }
+              else
+              {
+                _validVoices.Add(voice);
+              }
             }
           }
         }
@@ -1262,6 +1256,33 @@ namespace EQLogParser
     private static bool IsLegacyVoice(string voice)
     {
       return !string.IsNullOrEmpty(voice) && voice.StartsWith("(Legacy) ", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static async Task<bool> IsVoicePlayableAsync(SpeechSynthesizer synth, VoiceInformation voice)
+    {
+      if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+      {
+        return false;
+      }
+
+      try
+      {
+        synth.Voice = voice;
+        using IRandomAccessStream stream = await synth.SynthesizeTextToStreamAsync("test");
+        return true;
+      }
+      catch (FileNotFoundException)
+      {
+        return false;
+      }
+      catch (COMException)
+      {
+        return false;
+      }
+      catch (InvalidOperationException)
+      {
+        return false;
+      }
     }
 
     public void Dispose()

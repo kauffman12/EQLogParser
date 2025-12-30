@@ -426,7 +426,7 @@ namespace EQLogParser
 
             if (className != null)
             {
-              SetPlayerClass(name, className, reason, true);
+              SetPlayerClassByName(name, className, reason, true);
             }
           }
         });
@@ -498,7 +498,7 @@ namespace EQLogParser
       _saveTimer.Start();
     }
 
-    internal void SetPlayerClass(string player, string className, string reason, bool init = false)
+    internal void SetPlayerClassByName(string player, string className, string reason, bool init = false)
     {
       if (_classesByName.TryGetValue(className, out var value))
       {
