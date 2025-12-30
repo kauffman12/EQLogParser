@@ -8,6 +8,7 @@ using SoundTouch.Net.NAudioSupport;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -1258,6 +1259,7 @@ namespace EQLogParser
       return !string.IsNullOrEmpty(voice) && voice.StartsWith("(Legacy) ", StringComparison.OrdinalIgnoreCase);
     }
 
+    [DebuggerNonUserCode]
     private static async Task<bool> IsVoicePlayableAsync(SpeechSynthesizer synth, VoiceInformation voice)
     {
       if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))

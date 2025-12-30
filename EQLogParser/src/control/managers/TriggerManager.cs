@@ -103,11 +103,14 @@ namespace EQLogParser
         character.VoiceRate, character.CustomVolume, character.ActiveColor, character.FontColor, collection);
     }
 
-    internal Task StopTestProcessor()
+    internal async Task StopTestProcessor()
     {
-      _testProcessor?.Dispose();
-      _testProcessor = null;
-      return Task.CompletedTask;
+      // i think this was causing deadlocks on UI thread
+      await Task.Run(() =>
+      {
+        _testProcessor?.Dispose();
+        _testProcessor = null;
+      });
     }
 
     // refresh styles
