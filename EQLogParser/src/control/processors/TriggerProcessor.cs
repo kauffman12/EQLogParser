@@ -1476,34 +1476,62 @@ namespace EQLogParser
     private static string UpdatePattern(bool useRegex, string pattern, out List<NumberOptions> numberOptions)
     {
       numberOptions = [];
+      if (!useRegex) return pattern;
 
-      if (useRegex)
+      // {S} / {S1}
+      foreach (Match m in ReplaceStringRegex().Matches(pattern))
       {
-        if (ReplaceStringRegex().Matches(pattern) is { Count: > 0 } matches)
+        var key = m.Groups[1].Value;
+        pattern = pattern.Replace(m.Value, $"(?<{key}>.+)");
+      }
+
+      // {N}, {N>=50}, {N<123}  (single constraint only)
+      foreach (Match m in ReplaceNumberRegex().Matches(pattern))
+      {
+        var key = m.Groups[1].Value;
+        pattern = pattern.Replace(m.Value, $@"(?<{key}>\d+)");
+
+        if (m.Groups[2].Success && m.Groups[3].Success && uint.TryParse(m.Groups[3].Value, out var v))
         {
-          foreach (var match in matches.Cast<Match>())
+          numberOptions.Add(new NumberOptions { Key = key, Op = m.Groups[2].Value, Value = v });
+        }
+      }
+
+      // {50<N<100}, {50<=N<=100}, etc.
+      foreach (Match m in ReplaceNumberChainedRegex().Matches(pattern))
+      {
+        var leftVal = m.Groups[1].Value;
+        var leftOp = m.Groups[2].Value;
+        var key = m.Groups[3].Value;
+        var rightOp = m.Groups[4].Value;
+        var rightVal = m.Groups[5].Value;
+
+        pattern = pattern.Replace(m.Value, $@"(?<{key}>\d+)");
+
+        // Flip "50 < N" into "N > 50"
+        static string Flip(string op) => op switch
+        {
+          "<" => ">",
+          "<=" => ">=",
+          ">" => "<",
+          ">=" => "<=",
+          "=" => "==",
+          "==" => "==",
+          _ => null
+        };
+
+        if (uint.TryParse(leftVal, out var lv))
+        {
+          var flipped = Flip(leftOp);
+          if (!string.IsNullOrEmpty(flipped))
           {
-            if (match.Groups.Count == 2)
-            {
-              pattern = pattern.Replace(match.Value, "(?<" + match.Groups[1].Value + ">.+)");
-            }
+            numberOptions.Add(new NumberOptions { Key = key, Op = flipped, Value = lv });
           }
         }
 
-        if (ReplaceNumberRegex().Matches(pattern) is { Count: > 0 } matches2)
+        if (uint.TryParse(rightVal, out var rv))
         {
-          foreach (var match in matches2.Cast<Match>())
-          {
-            if (match.Groups.Count == 4)
-            {
-              pattern = pattern.Replace(match.Value, "(?<" + match.Groups[1].Value + @">\d+)");
-              if (!string.IsNullOrEmpty(match.Groups[2].Value) && !string.IsNullOrEmpty(match.Groups[3].Value) &&
-                uint.TryParse(match.Groups[3].Value, out var value))
-              {
-                numberOptions.Add(new NumberOptions { Key = match.Groups[1].Value, Op = match.Groups[2].Value, Value = value });
-              }
-            }
-          }
+          numberOptions.Add(new NumberOptions { Key = key, Op = rightOp, Value = rv });
         }
       }
 
@@ -1771,8 +1799,10 @@ namespace EQLogParser
 
     [GeneratedRegex(@"{(s\d?)}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ReplaceStringRegex();
-    [GeneratedRegex(@"{(n\d?)(<=|>=|>|<|=|==)?(\d+)?}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"{\s*(n\d?)\s*(<=|>=|>|<|==|=)?\s*(\d+)?\s*}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ReplaceNumberRegex();
+    [GeneratedRegex(@"{\s*(\d+)\s*(<=|>=|>|<|==|=)\s*(n\d?)\s*(<=|>=|>|<|==|=)\s*(\d+)\s*}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex ReplaceNumberChainedRegex();
     [GeneratedRegex(@"{(ts)}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ReplaceTsRegex();
     [GeneratedRegex(@"[^a-zA-Z0-9 .,!?;:'""-()]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
