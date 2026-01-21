@@ -872,7 +872,7 @@ namespace EQLogParser
       if (sender is SfDataGrid dataGrid && e.RowColumnIndex.RowIndex > 0 && dataGrid.View.GetRecordAt(e.RowColumnIndex.RowIndex - 1).Data is ExpandoObject obj)
       {
         dataGrid.SelectionController.CurrentCellManager.EndEdit();
-        PlayerManager.Instance.SetPlayerClass(((dynamic)obj).Name, ((dynamic)obj).PlayerClass, "Class selected by user.");
+        PlayerManager.Instance.SetDefaultPlayerClass(((dynamic)obj).Name, ((dynamic)obj).PlayerClass);
       }
     }
 
@@ -1069,17 +1069,6 @@ namespace EQLogParser
           icon.Visibility = MainActions.CurrentTheme == "MaterialLight" ? Visibility.Visible : Visibility.Hidden;
         }
       }
-    }
-
-    private void PlayerCellToolTipOpening(object sender, GridCellToolTipOpeningEventArgs e)
-    {
-      if (e.Record is ExpandoObject)
-      {
-        var data = (dynamic)e.Record;
-        e.ToolTip.Content = PlayerManager.Instance.GetPlayerClassReason(data.Name);
-      }
-
-      e.ToolTip.FontSize = 13;
     }
 
     private void RemovePetMouseDown(object sender, MouseButtonEventArgs e)

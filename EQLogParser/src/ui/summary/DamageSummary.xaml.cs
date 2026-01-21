@@ -107,7 +107,7 @@ namespace EQLogParser
         }
 
         menuItemSetAsPet.Header = $"Assign {selectedName} as Pet of";
-        menuItemSetPlayerClass.Header = $"Assign {selectedName} to Class";
+        menuItemSetPlayerClass.Header = $"Assign Default Class for {selectedName}";
       });
     }
 
@@ -311,11 +311,6 @@ namespace EQLogParser
           {
             name = playerStats.Name;
             className = playerStats.ClassName;
-          }
-          else if (stats is string playerName)
-          {
-            name = playerName;
-            className = PlayerManager.Instance.GetPlayerClass(name);
           }
 
           bool result;

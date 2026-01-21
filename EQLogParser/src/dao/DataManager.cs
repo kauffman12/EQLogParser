@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Windows.Media;
 
 namespace EQLogParser
 {
@@ -102,12 +103,17 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<long, Fight> _overlayFights = new();
     private readonly ConcurrentDictionary<string, byte> _allNpcs = new();
     private readonly ConcurrentDictionary<string, SpellData> _spellsAbbrvDb = new();
-    private readonly ConcurrentDictionary<string, SpellClass> _spellsToClass = new();
+    private readonly ConcurrentDictionary<string, string> _spellsToClass = new();
     private readonly ConcurrentDictionary<string, Fight> _activeFights = new();
     private readonly ConcurrentDictionary<string, byte> _lifetimeFights = new();
     private readonly ConcurrentDictionary<string, string> _spellAbbrvCache = new();
     private readonly ConcurrentDictionary<string, List<SpellData>> _spellsNameDb = new();
     private readonly ConcurrentDictionary<string, SpellData> _unknownSpellDb = new();
+    private readonly ConcurrentDictionary<string, SolidColorBrush> _classBrushes = new();
+    private readonly ConcurrentDictionary<SpellClass, string> _classNames = new();
+    private readonly ConcurrentDictionary<string, SpellClass> _classesByName = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<string> _sortedClassList = [];
+    private readonly int _classListCount;
 
     // rank abbreviation
     private readonly HashSet<string> RankWords;
@@ -122,6 +128,37 @@ namespace EQLogParser
       {
         "Azia", "Beza", "Caza", "Third", "Fifth", "Octave"
       };
+
+      // populate ClassNames from SpellClass enum and resource table
+      foreach (var item in Enum.GetValues<SpellClass>())
+      {
+        if (Enum.GetName(item)?.ToUpperInvariant() is string { } resourceName)
+        {
+          var name = Resource.ResourceManager.GetString(resourceName, CultureInfo.InvariantCulture);
+          if (!string.IsNullOrEmpty(name))
+          {
+            _classNames[item] = string.Intern(name);
+            _classesByName[name] = item;
+          }
+
+          var color = Resource.ResourceManager.GetString($"{resourceName}_COLOR", CultureInfo.InvariantCulture);
+          if (!string.IsNullOrEmpty(color))
+          {
+            try
+            {
+              _classBrushes[name] = UiUtil.GetBrush(color);
+            }
+            catch (FormatException ex)
+            {
+              Log.Error($"Failed to parse color for class {item}: {ex.Message}");
+            }
+          }
+        }
+      }
+
+      _sortedClassList.AddRange(_classNames.Values);
+      _sortedClassList.Sort();
+      _classListCount = _sortedClassList.Count;
 
       // Player title mapping for /who queries
       ConfigUtil.ReadList(@"data\titles.txt").ForEach(line =>
@@ -199,22 +236,30 @@ namespace EQLogParser
       }
 
       var keepOut = new Dictionary<string, byte>();
-      var classEnums = Enum.GetValues(typeof(SpellClass)).Cast<SpellClass>().ToList();
+
+      var itemSpellsCache = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+      foreach (var line in ConfigUtil.ReadList(@"data\itemspells.txt").Where(line => line.Length > 0 && line[0] != '#'))
+      {
+        itemSpellsCache[string.Intern(line)] = true;
+      }
 
       foreach (ref var spell in CollectionsMarshal.AsSpan(spellList))
       {
         _allSpellData.Add(spell);
-        // exact match meaning class-only spell that are of certain target types
-        var tgt = (SpellTarget)spell.Target;
-        if (spell.Level <= 254 && spell.Proc == 0 && (tgt == SpellTarget.Self || tgt == SpellTarget.Singletarget || tgt == SpellTarget.Los || spell.Rank > 1) &&
-          classEnums.Contains((SpellClass)spell.ClassMask))
+
+        // ignore spells tied to items for building spell class cache
+        if (itemSpellsCache.ContainsKey(spell.Name)) continue;
+
+        // exact class match
+        if (spell.Level < 255 && _classNames.TryGetValue((SpellClass)spell.ClassMask, out var theClassName))
         {
           // Obviously illusions are bad to look for
           // Call of Fire is Ranger only and self target but VT clickie lets warriors use it
-          if (!spell.Name.Contains("Illusion", StringComparison.OrdinalIgnoreCase) &&
-            !spell.Name.EndsWith(" gate", StringComparison.OrdinalIgnoreCase) &&
-            !spell.Name.Contains(" Synergy", StringComparison.OrdinalIgnoreCase) &&
-            !spell.Name.Contains("Call of Fire", StringComparison.OrdinalIgnoreCase))
+          if (!spell.NameAbbrv.Contains("Illusion", StringComparison.OrdinalIgnoreCase) &&
+            !spell.NameAbbrv.Contains("Mount", StringComparison.OrdinalIgnoreCase) &&
+            !spell.NameAbbrv.EndsWith(" gate", StringComparison.OrdinalIgnoreCase) &&
+            !spell.NameAbbrv.Contains(" Synergy", StringComparison.OrdinalIgnoreCase) &&
+            !spell.NameAbbrv.Contains("Call of Fire", StringComparison.OrdinalIgnoreCase))
           {
             // these need to be unique and keep track if a conflict is found
             if (_spellsToClass.ContainsKey(spell.Name))
@@ -224,8 +269,17 @@ namespace EQLogParser
             }
             else if (!keepOut.ContainsKey(spell.Name))
             {
-              _spellsToClass[spell.Name] = (SpellClass)spell.ClassMask;
+              _spellsToClass[spell.Name] = theClassName;
             }
+          }
+        }
+        else
+        {
+          // these need to be unique and keep track if a conflict is found
+          if (_spellsToClass.ContainsKey(spell.Name))
+          {
+            _spellsToClass.TryRemove(spell.Name, out _);
+            keepOut[spell.Name] = 1;
           }
         }
       }
@@ -235,7 +289,7 @@ namespace EQLogParser
       {
         if (line?.Trim() is string trimmed && trimmed.Length > 0)
         {
-          _allNpcs[trimmed] = 1;
+          _allNpcs[string.Intern(trimmed)] = 1;
         }
       }
 
@@ -310,6 +364,9 @@ namespace EQLogParser
     internal void RemoveOverlayFight(long id) => _overlayFights.Remove(id, out _);
     internal bool HasOverlayFights() => !_overlayFights.IsEmpty;
     internal string GetClassFromTitle(string title) => _titleToClass.GetValueOrDefault(title);
+    internal List<string> GetClassList() => [.. _sortedClassList];
+    internal int GetClassListCount() => _classListCount;
+    internal bool IsValidClassName(string className) => !string.IsNullOrEmpty(className) && _classesByName.ContainsKey(className);
 
     internal string AbbreviateSpellName(string spell)
     {
@@ -380,7 +437,8 @@ namespace EQLogParser
         {
           Id = string.Intern(spellName),
           Name = string.Intern(spellName),
-          NameAbbrv = string.Intern(AbbreviateSpellName(spellName))
+          NameAbbrv = string.Intern(AbbreviateSpellName(spellName)),
+          IsUnknown = true
         };
         _unknownSpellDb[spellName] = spellData;
         result = spellData;
@@ -409,9 +467,27 @@ namespace EQLogParser
       removeActiveKeys.ForEach(RemoveActiveFight);
     }
 
-    internal SpellClass? GetSpellClass(string spell)
+    internal SolidColorBrush GetClassBrush(string className)
     {
-      if (spell != null && _spellsToClass.TryGetValue(spell, out var result))
+      if (!string.IsNullOrEmpty(className) && _classBrushes.TryGetValue(className, out var brush))
+      {
+        return brush;
+      }
+      return UiUtil.DefaultBrush;
+    }
+
+    internal SpellClass? GetClassEnum(string className)
+    {
+      if (!string.IsNullOrEmpty(className) && _classesByName.TryGetValue(className, out var theClass))
+      {
+        return theClass;
+      }
+      return 0;
+    }
+
+    internal string GetSpellClass(string name)
+    {
+      if (!string.IsNullOrEmpty(name) && _spellsToClass.TryGetValue(name, out var result))
       {
         return result;
       }
@@ -857,11 +933,12 @@ namespace EQLogParser
       }
     }
 
-    internal static bool ResolveSpellAmbiguity(ReceivedSpell spell, out SpellData replaced)
+    internal static bool ResolveSpellAmbiguity(ReceivedSpell spell, double currentTime, out SpellData replaced)
     {
       replaced = null;
 
-      var spellClass = (int)PlayerManager.Instance.GetPlayerClassEnum(spell.Receiver);
+      var className = PlayerManager.Instance.GetPlayerClass(spell.Receiver, currentTime);
+      var spellClass = (int)Instance.GetClassEnum(className);
       var subset = spell.Ambiguity.FindAll(test => test.Target == (int)SpellTarget.Self && spellClass != 0 && (test.ClassMask & spellClass) == spellClass);
       var distinct = subset.Distinct(AbbrvComparer).ToList();
       if (distinct.Count == 1)

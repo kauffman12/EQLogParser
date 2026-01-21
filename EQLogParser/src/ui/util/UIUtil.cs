@@ -77,7 +77,7 @@ namespace EQLogParser
 
       if (isPlayer)
       {
-        entry.PlayerClass = PlayerManager.Instance.GetPlayerClass(name);
+        entry.PlayerClass = PlayerManager.Instance.GetDefaultPlayerClass(name);
       }
 
       return entry;

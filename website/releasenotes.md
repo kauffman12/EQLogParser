@@ -1,6 +1,12 @@
-# 2.3.41 | 12/14/25
-**!!NOTICE!!** Text Overlays were changed to use **Normal** Font Weight in v2.3.0. You may need to change yours back to **Bold** manually.
+# 2.3.42 | 01/21/26
+1. Implemented a more precise way to identify player class.
+2. Manually setting player class is used as last resort/default.
+3. Updated trigger variable to specify number range. New format: **{20<N<100}**
+4. Updated how spells are determined from messages to be more accurate?
+5. Upgraded to latest Synfusion library to fix some UI bugs.
+6. Updates to try and lower memory usage.
 
+# 2.3.41 | 12/14/25
 1. Fixed abbreviated spell names for comparing spell counts.
 2. Made check to fix off-screen window position more forgiving.
 

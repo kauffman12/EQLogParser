@@ -171,7 +171,7 @@ namespace EQLogParser
               Dps = (long)Math.Round(total.Damage / time, 2),
               TotalSeconds = time,
               Rank = (ushort)rank++,
-              ClassName = PlayerManager.Instance.GetPlayerClass(total.Name),
+              ClassName = PlayerManager.Instance.GetLastKnownPlayerClass(total.Name),
               OrigName = total.Name
             };
 
@@ -198,9 +198,12 @@ namespace EQLogParser
           list = [.. list.Take(maxRows)];
         }
 
-        combined = new CombinedStats();
+        combined = new CombinedStats
+        {
+          RaidStats = new PlayerStats { Total = allDamage, Dps = totalDps, TotalSeconds = totalSeconds }
+        };
+
         combined.StatsList.AddRange(list);
-        combined.RaidStats = new PlayerStats { Total = allDamage, Dps = totalDps, TotalSeconds = totalSeconds };
         combined.TargetTitle = (fightCount > 1 ? "C(" + fightCount + "): " : "") + data.FightName;
 
         // these are here to support copy/paste of the parse

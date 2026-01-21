@@ -112,13 +112,13 @@ namespace EQLogParser
 
       UpdateDamageMode(_savedDamageMode);
 
-      var list = PlayerManager.Instance.GetClassList();
+      var list = DataManager.Instance.GetClassList();
       list.Insert(0, Resource.ANY_CLASS);
       classList.ItemsSource = list;
 
       // selected class
       var selectedClass = ConfigUtil.GetSetting("OverlaySelectedClass");
-      if (selectedClass == null || !PlayerManager.Instance.GetClassList().Contains(selectedClass))
+      if (selectedClass == null || !list.Contains(selectedClass))
       {
         selectedClass = Resource.ANY_CLASS;
       }
@@ -324,16 +324,16 @@ namespace EQLogParser
             (playerName.Length >= stat.Name.Length || stat.Name[playerName.Length] == ' ');
 
           string name;
-          string origName;
+          string className;
           if (_currentHideOthers && !isMe)
           {
             name = $"{stat.Rank}. Hidden Player";
-            origName = "";
+            className = "";
           }
           else
           {
             name = $"{stat.Rank}. {stat.Name}";
-            origName = stat.OrigName;
+            className = stat.ClassName;
           }
 
           var overrideColor = isMe ? "DamageOverlayHighlightBrush" : null;
@@ -358,7 +358,7 @@ namespace EQLogParser
           }
 
           var percent = (float)Math.Round((float)stat.Total / localStats.RaidStats.Total * 100, 1);
-          damageBar?.Update(origName, name, $"{percent}%", StatsUtil.FormatTotals(stat.Total),
+          damageBar?.Update(name, className, $"{percent}%", StatsUtil.FormatTotals(stat.Total),
           StatsUtil.FormatTotals(stat.Dps, 1), stat.TotalSeconds.ToString(CultureInfo.InvariantCulture), barPercent, overrideColor);
 
           if (damageBar?.Visibility == Visibility.Collapsed)
@@ -377,7 +377,7 @@ namespace EQLogParser
       }
 
       var titleBar = children[^1] as DamageBar;
-      titleBar?.Update("", localStats.TargetTitle, "", StatsUtil.FormatTotals(localStats.RaidStats.Total),
+      titleBar?.Update(localStats.TargetTitle, "", "", StatsUtil.FormatTotals(localStats.RaidStats.Total),
         StatsUtil.FormatTotals(localStats.RaidStats.Dps, 1), localStats.RaidStats.TotalSeconds.ToString(CultureInfo.InvariantCulture), 0);
 
       if (titleBar?.Visibility == Visibility.Collapsed)
@@ -394,22 +394,23 @@ namespace EQLogParser
 
     private void LoadTestData()
     {
+      var classList = DataManager.Instance.GetClassList();
       for (var i = 0; i < damageContent.Children.Count - 1; i++)
       {
         if (damageContent.Children[i] is DamageBar { } bar)
         {
           if (i == 0)
           {
-            bar.Update(ConfigUtil.PlayerName, "Your Player Name", "5.2%", "120.5M", "100.1K", "123", 120 - (i * 10), "DamageOverlayHighlightBrush");
+            bar.Update("Your Player Name", classList[i], "5.2%", "120.5M", "100.1K", "123", 120 - (i * 10), "DamageOverlayHighlightBrush");
           }
           else
           {
-            bar.Update(ConfigUtil.PlayerName, i + 1 + ". Example Player " + i, "3.1%", "120.5M", "100.1K", "123", 120 - (i * 10));
+            bar.Update(i + 1 + ". Example Player " + i, classList[i], "3.1%", "120.5M", "100.1K", "123", 120 - (i * 10));
           }
         }
       }
 
-      (damageContent.Children[^1] as DamageBar)?.Update("", "Example NPC", "", "500.2M", "490.5K", "456", 0);
+      (damageContent.Children[^1] as DamageBar)?.Update("Example NPC", "", "", "500.2M", "490.5K", "456", 0);
     }
 
     private void CloseClick(object sender, RoutedEventArgs e) => MainActions.CloseDamageOverlay(false);

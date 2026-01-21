@@ -1,0 +1,812 @@
+Abolish Disease
+Abolish Poison
+Abundant Drink
+Abundant Food
+Abyssal Steed
+Acquire Journeyman's Speed
+Activate Antiquity Analyzer
+Activate Contract
+Aegolism
+Affliction
+Agility of the Wrulan
+Alacrity
+Alliance
+Allure
+Allure of Death
+Alter Plane: Sky
+Alter Plane: Theater of Blood
+Anarchy
+Ancient: Touch of Orshilak
+Annul Magic
+Arch Shielding
+Aria of Absolution Rk. III
+Armor of Faith
+Aspect of Zomm Rk. II
+Atol's Spectral Shackles
+Atone
+Augment Death
+Azure Harvest I
+Azure Harvest III
+Azure Harvest IV
+Azure Harvest V
+Azure Harvest VII
+Azure Harvest VIII
+Banish Summoned
+Banish Undead
+Banishment of Shadows
+Befriend Animal
+Beguile Plants
+Beguile Undead
+Bellow
+Berserker Spirit
+Berserker Strength
+Bind Affinity
+Bind Sight
+Black Shroud
+Blade Strike
+Blanket of Forgetfulness
+Blast of Cold
+Blast of Poison
+Blazing Jet
+Blazing Jet II
+Blazing Jet III
+Blessing of Faith
+Blessing of Replenishment
+Blessing of Resurrection
+Blessing of Reverence
+Blinding Luminance
+Blizzard Blast
+Blood Claw
+Bobbing Corpse
+Boil Blood
+Bonds of Force
+Bramblecoat
+Bravery
+Breath of the Dead
+Brell's Rest Gate
+Brilliance
+Bristlebane's Bundle
+Burn
+Burnout III
+Burnout V
+Burst of Fire
+Burst of Flame
+Cajoling Whispers
+Call of Bones
+Call of Earth
+Call of Fire
+Call of Karana
+Call of Sky
+Calm
+Camouflage
+Cancel Magic
+Careless Lightning
+Cascading Darkness
+Cast Force
+Cazic Gate
+Cazic Portal
+Celerity
+Celestial Elixir
+Celestial Healing
+Celestial Remedy
+Chant of Battle
+Chant of Chaos
+Chaotic Feedback
+Charisma
+Chill Sight
+Chloroplast
+Chlorotrope
+Choke
+Circle of Karana
+Circle of Misty
+Circle of the Combines
+Clarity
+Clinging Darkness
+Cloak of the Akheva
+Cloud
+Color Shift
+Color Skew
+Column of Fire
+Combine Gate
+Combust
+Companion Spirit
+Complete Heal
+Concussion
+Conjure Corpse
+Cornucopia
+Corona Flare
+Coronal Blast
+Counteract Disease
+Counteract Poison
+Courage
+Creeping Vision
+Cripple
+Crusader's Touch
+Cure Disease
+Cure Poison
+Dance of the Fireflies
+Daring
+Dead Man Floating
+Deadeye
+Death Charger
+Decession
+Deftness
+Deliriously Nimble
+Denon's Disruptive Discord
+Desolate Summoned
+Diamondskin
+Dirge of Metala
+Disease Cloud
+Disempower
+Divine Steed
+Dooming Darkness
+Drain Soul
+Drain Spirit
+Draught of Ro
+Drink the Potion
+Drones of Doom
+Drowsy
+Dustdevil
+Eagle Eye
+Earth Shiver
+Earthen Roots
+Earthquake
+Echo of Tashan
+Elemental Armor
+Elemental Shield
+Elemental: Fire
+Embracing Darkness
+Enable Ability
+Enchant Silver
+Endurance of the Boar
+Endure Cold
+Endure Disease
+Endure Fire
+Endure Magic
+Endure Poison
+Enduring Breath
+Engulfing Darkness
+Engulfing Roots
+Ensnare
+Ensnaring Roots
+Enticement of Flame
+Enveloping Roots
+Envenomed Breath
+Eradicate Poison
+Erollisi's Cantata Rk. III
+Ervaj's Defensive Refrain Rk. III
+Ether Shard Strike
+Ethereal Remedy
+Ethereal Rune
+Euphoria
+Evacuate
+Evacuate: West
+Everfount
+Everlasting Breath
+Exoblast
+Eye of Zomm
+Fade
+Fang of Death
+Fay Gate
+Fear
+Feckless Might
+Feedback
+Feet like Cat
+Feign Death
+Fermata of Preservation Rk. III
+Festering Darkness
+Fill form
+Fingers of Fire
+Fire Bolt
+Fire Spiral of Al`Kabor
+Firefist
+Firestorm
+Flame Arc
+Flame Bolt
+Flame Flux
+Flame of Light
+Flameshield of Ro
+Flaming Sword of Xuzl
+Flare
+Flash of Light
+Fleeting Fury
+Flight
+Flight of Eagles
+Force
+Force Shield
+Forlorn Deeds
+Form of Rotting Flesh
+Form of the Bear
+Form of the Great Wolf
+Fortitude
+Frenzy
+Frost Rift
+Frost Shock
+Frost Strike
+Furious Strength
+Fury
+Gale of Poison
+Gasping Embrace
+Gate
+Gather Shadows
+Gaze
+Gelid Claw I
+Gelidin Comet
+Gift of Xev
+Glacier Spear
+Glamour
+Glimpse
+Glitterfrost
+Grant Scarecrow
+Grasping Roots
+Gravity Flux
+Greater Conjuration: Air
+Greater Conjuration: Earth
+Greater Conjuration: Fire
+Greater Healing
+Greater Immobilize
+Greater Shielding
+Greater Wolf Form
+Grim Aura
+Group Resist Magic
+Guard
+Guard of Calliav
+Guardian Spirit
+Guise of the Gunthak Pirate
+Hammer of Wrath
+Harmony of Sound
+Hatch Chrysalis
+Healing
+Health
+Heart Flutter
+Heat Blood
+Holy Might
+Holy Steed
+Howl of Tashan
+Hungry Earth
+Ice Comet
+Ice Shock
+Iceflame of E`ci
+Identify
+Igneous Embers
+Ignite
+Ignite Bones
+Illusion: Air Elemental
+Illusion: Akheva
+Illusion: Ancient Sarnak Warrior
+Illusion: Ancient Yeti
+Illusion: Aqua Goblin
+Illusion: Arc Worker
+Illusion: Armored Shiliskin
+Illusion: Barbarian
+Illusion: Bixie Drone
+Illusion: Bixie Soldier
+Illusion: Blood Red Bellikos
+Illusion: Bokon
+Illusion: Burning Nekhon
+Illusion: Capricious Drakkin
+Illusion: Centaur Warrior
+Illusion: Chetari
+Illusion: Combine Tactician
+Illusion: Corrupt Akhevan
+Illusion: Dark Bellikos
+Illusion: Dark Elf
+Illusion: Dark Elf Pirate Female
+Illusion: Dark Elf Pirate Male
+Illusion: Dark Minotaur
+Illusion: Dragorn
+Illusion: Drakkin of Osh`vir
+Illusion: Drakkin of Venesh
+Illusion: Dry Bone
+Illusion: Dusty Iksar Skeleton
+Illusion: Dwarf
+Illusion: Earth Elemental
+Illusion: Elddar
+Illusion: Erudite
+Illusion: Erudite Pirate Female
+Illusion: Erudite Pirate Male
+Illusion: Fallen Knight
+Illusion: Fallen Soldier
+Illusion: Fire Elemental
+Illusion: Flame Telmira
+Illusion: Flood Telmira
+Illusion: Forest Fairy
+Illusion: Froglok
+Illusion: Frost Bone
+Illusion: Gelatinous Cube
+Illusion: Geonid
+Illusion: Gingerbread Man
+Illusion: Girplan
+Illusion: Gnome
+Illusion: Greater Jann
+Illusion: Grimling
+Illusion: Guktan
+Illusion: Gunthak Pirate
+Illusion: Hadal
+Illusion: Hadal Templar
+Illusion: Half-Elf
+Illusion: Halfling
+Illusion: High Elf
+Illusion: Human
+Illusion: Human Pirate Female
+Illusion: Human Pirate Male
+Illusion: Iksar
+Illusion: Imp
+Illusion: Iron-Toothed Earthdigger
+Illusion: Izon
+Illusion: Junkyard Gnomework
+Illusion: Kedge
+Illusion: Lightning Warrior
+Illusion: Mastruq
+Illusion: Ogre
+Illusion: Orc
+Illusion: Othmir Gentleman
+Illusion: Phantom Froglok
+Illusion: Plaguebringer
+Illusion: Plains Wyvern
+Illusion: Polar Bear
+Illusion: Putrid Swinetor
+Illusion: Queen Velazul Di`Zok
+Illusion: Rallosian Goblin
+Illusion: Regal Vampire Female
+Illusion: Regal Vampire Male
+Illusion: Relife
+Illusion: Restless Coldain
+Illusion: Robed Scrykin
+Illusion: Runic Tattoo Nihil Female
+Illusion: Runic Tattoo Nihil Male
+Illusion: Sarnak Skeleton
+Illusion: Sarnak Warrior
+Illusion: Scaled Wolf
+Illusion: Scarecrow
+Illusion: Shadow Nekhon
+Illusion: Shiny Steam Suit
+Illusion: Shissar
+Illusion: Silver Gnomework
+Illusion: Simple Gnoll
+Illusion: Simple Gnomework
+Illusion: Siren Sorceress
+Illusion: Skeleton
+Illusion: Spirit Wolf
+Illusion: Steam Suit
+Illusion: Stonegrabber
+Illusion: Tree
+Illusion: Troll
+Illusion: Twisted Gnomework
+Illusion: Undead Gnoll
+Illusion: Vah Shir
+Illusion: Warped Chetari
+Illusion: Water Elemental
+Illusion: Werewolf
+Illusion: Wood Elf
+Immobilize
+Imprecation
+Improved Invisibility
+Improved Superior Camouflage
+Incapacitate
+Infectious Cloud
+Inferno Shield
+Insanity
+Insidious Fever
+Insidious Malady
+Insight
+Insipid Weakness
+Instill
+Intensify Death
+Invisibility
+Invisibility Versus Animals
+Invisibility Versus Undead
+Invoke Death
+Invoke Fear
+Invoke Shadow
+Island Disguise
+Item Benefit: Doben's Spry Sonata Rk. II
+Item Benefit: Niv's Melody of Preservation
+Item Benefit: Wind of Marr
+Jolt
+Knowledge Gate
+Koadic's Endless Intellect
+Kragg's Mending
+LRK Bolt
+Leech
+Legacy of Bracken
+Legendary Norrathian Standard
+Lesser Evacuate
+Lesser Shielding
+Lesser Succor
+Levitate
+Levitation
+Lich
+Lick the Gumdrop
+Lifespike
+Lifetap
+Light Healing
+Lightning Storm
+Lightning Strike
+Listless Power
+Locate Corpse
+Look Into the Eyeball
+Lull
+Lure of Flame
+Lure of Frost
+Lure of Ice
+Lure of Ro
+Lure of Thunder
+Magma Blaze
+Major Shielding
+Malaise
+Malaisement
+Malosini
+Malosinia
+Mana Sieve
+Manasink
+Manaskin
+Manifest Elements
+Mark of Karn
+Mark of Kings
+Mark of the Martyr
+Mark of the Predator
+Mark of the Righteous
+Melody of Mischief
+Memory Blur
+Memory Flux
+Minor Healing
+Minor Illusion
+Nature's Entropy
+Nature's Infusion
+Nature's Touch
+Nek Portal
+Nightmare Steed
+Nimble
+Nullify Magic
+O`Keil's Embers
+O`Keil's Flickering Flame
+O`Keil's Radiation
+Obscure
+Occlusion of Sound
+Open the Bag
+Pacify
+Pack Spirit
+Pact of Shadow
+Panic Animal
+Paralyzing Earth
+Pests of the Piper
+Phantasmic Reflex I
+Phantom Chain
+Phantom Plate
+Pillage Enchantment
+Pillar of Fire
+Pious Elixir
+Pious Light
+Pious Might
+Plague
+Poison Bolt
+Pouch of Quellious
+Pox of Bertoxxulous
+Primal Essence
+Primary Anchor Gate
+Project Lightning
+Protection of the Wild
+Purified Blood
+Pyrocruor
+Quickness
+Rain of Fire
+Rain of Swords
+Rampage
+Reckless Strength
+Reclaim Energy
+Reflect
+Regeneration
+Regrowth of the Grove
+Remove Curse
+Remove Greater Curse
+Rend
+Resist Cold
+Resist Disease
+Resist Magic
+Resurrection
+Resuscitate
+Reverent Light
+Reviviscence
+Ring of Commons
+Ring of Misty
+Ring of the Landing
+Riotous Health
+Rod of Mystical Transvergence
+Root
+Rune I
+Rune II
+Rune III
+Rune IV
+Rune V
+Rune of Death
+Sanguine Harvest III
+Sanguine Harvest IV
+Sanguine Harvest V
+Sanguine Harvest VII
+Sanguine Harvest VIII
+Sanity Warp
+Savage Roots
+Savage Spirit
+Scale of Wolf
+Scent of Darkness
+Scourge
+Scribe Glyph
+Secondary Anchor Gate
+See Invisible
+Selo's Accelerando
+Selo's Accelerating Chorus
+Sentinel
+Serpent Sight
+Sha's Ferocity
+Shade
+Shadow
+Shadow Step
+Shadow Vortex
+Shallow Breath
+Share Wolf Form
+Shield of Brambles
+Shield of Flame
+Shield of Lava
+Shield of Maelin
+Shield of Thistles
+Shield of Thorns
+Shield of Words
+Shield of the Arcane
+Shield of the Magi
+Shielding
+Shieldskin
+Shifting Shield
+Shifting Sight
+Shiftless Deeds
+Shock of Blades
+Shock of Fire
+Shock of Ice
+Shock of Spikes
+Shock of Swords
+Shrink
+Shroud of Chaos
+Shroud of Hate
+Sicken
+Siphon Life
+Siphon Strength
+Skin like Diamond
+Skin like Nature
+Skin like Rock
+Skin like Steel
+Sleep
+Slide Gears
+Smite
+Snare
+Soothe
+Soulspike
+Spark of Fire
+Spark of Ice
+Speed of Vallon
+Spellshield
+Spikecoat
+Spinecoat
+Spirit Armor
+Spirit Strength
+Spirit Strike
+Spirit Tap
+Spirit of Bear
+Spirit of Cat
+Spirit of Eagle
+Spirit of Ox
+Spirit of Rellic
+Spirit of Snake
+Spirit of Wolf
+Spirit of the Steadfast Rk. III
+Spiritual Serenity
+Splurt
+Spook the Dead
+Stamina
+Star Strike
+Starfire
+Steed of Souls
+Steelskin
+Stinging Swarm
+Storm Strength
+Stormbound Keeper
+Stormbound Keeper Rk. III
+Strength of Earth
+Strength of Stone
+Strengthen
+Strike
+Strike of Solusek
+Strip Enchantment
+Stun
+Suffocate
+Summon Arrows
+Summon Bandages
+Summon Companion
+Summon Corpse
+Summon Defiant Armor
+Summon Drink
+Summon Food
+Summon Holy Steed
+Summon Jewelry Bag
+Summon Minion
+Summon Minion II
+Summon Minion III
+Summon Minion IV Beza
+Summon Minion V Beza
+Summon Minion V Caza
+Summon Minion VI Azia
+Summon Minion VI Caza
+Summon Minion VII Azia
+Summon Minion VII Beza
+Summon Minion VII Caza
+Summon Servant
+Summon Servant II
+Summon Servant III
+Summon Servant IV Azia
+Summon Servant IV Caza
+Summon Servant V Caza
+Summon Servant VI Azia
+Summon Servant VI Caza
+Summon Servant VII Azia
+Summon Servant VII Beza
+Summon Servant VII Caza
+Summon Throwing Dagger
+Summon Twisted Ring
+Sun Vortex
+Sunbeam
+Sunskin
+Superior Camouflage
+Superior Healing
+Supernal Remedy
+Supernova
+Swarming Death
+Swift Like the Wind
+Sword of Runes
+Symbol of Naltron
+Symbol of Pinzarn
+Tagar's Insects
+Tainted Breath
+Talisman of Tnarg
+Tashani
+Tashania
+Tashina
+Tepid Deeds
+Terror of Darkness
+Terrorize Animal
+The Nexus
+Theft of Hate
+Theft of Pain
+Theft of Thought
+Thunder Strike
+Thunderous Barrier Rk. II
+Tiny Companion
+Tishan's Clash
+Title Pack: Animal Lover
+Title Pack: Colors
+Title Pack: Creatures
+Title Pack: Creatures II
+Title Pack: Creatures III
+Title Pack: Disasters
+Title Pack: Failure
+Title Pack: Failure II
+Title Pack: Fame & Infamy
+Title Pack: Fame & Infamy II
+Title Pack: Fame & Infamy III
+Title Pack: Festival
+Title Pack: Flowers
+Title Pack: Fright
+Title Pack: Gemstones
+Title Pack: Gemstones II
+Title Pack: Gnomes!
+Title Pack: Guards
+Title Pack: Heroes & Villains
+Title Pack: Heroes & Villains II
+Title Pack: Heroes & Villains III
+Title Pack: Heroes & Villains IV
+Title Pack: Heroes & Villains V
+Title Pack: Joyful
+Title Pack: Metals
+Title Pack: Military
+Title Pack: Military II
+Title Pack: Monsters
+Title Pack: Monsters II
+Title Pack: Monsters III
+Title Pack: Musicial
+Title Pack: Mystical
+Title Pack: Outcast
+Title Pack: Pirate
+Title Pack: Planes Traveler
+Title Pack: Professions
+Title Pack: Professions II
+Title Pack: Professions III
+Title Pack: Professions IV
+Title Pack: Rage
+Title Pack: Sick
+Title Pack: Spells
+Title Pack: Spells II
+Title Pack: Trickster
+Title Pack: Weaponry
+Title Pack: Weaponry II
+Title Pack: Weather
+Title: , Army of Light Regular
+Title: , Obliteration Army Regular
+Title: Champion of Norrath
+Title: Hero of the Inquisition
+Title: Hero of the Oathbound
+Title: Legend of Norrath
+Title: Scoundrel of the Oathbreakers
+Title: The Lucky
+Title: The Timeless
+Title: The Void Seeker
+Title: of the Hunt
+Title: the Dreamer
+Title: the Eagle Eye
+Title: the Earth Warden
+Title: the Friendly
+Title: the Frozen
+Title: the Glutton
+Title: the Green Thumb
+Title: the Haunted
+Title: the Lion Tamer
+Title: the Memorializer
+Title: the Relaxed
+Title: the Sated
+Title: the Soused
+Title: the Stone Breaker
+Title: the Truthkeeper
+Tnarg's Mending
+Togor's Insects
+Touch of the Devourer
+Track Corpse
+Tranquility
+Translocate
+Treeform
+Tremor
+Trepidation
+True North
+Turgur's Insects
+Turtle Skin
+Tuyen's Chant of Ice
+Tuyen's Chant of the Plague
+Ultravision
+Unsheath Weapon
+Unswerving Hammer of Faith
+Valiant Steed
+Valor
+Vampiric Curse
+Vampiric Embrace
+Venom of the Snake
+Verse of Vesagran
+Visage of the Daft Trickster
+Visions of Grandeur
+Vitiate Corruption
+Voice Graft
+Vulka's Chant of Disease
+Vulka's Chant of Flame
+Walking Sleep
+Wandering Mind
+War March of the Mastruq
+Ward Summoned
+Ward Undead
+Ward of Gallantry
+Ward of Nife
+Warsong of Zek
+Wave of Forgiveness
+Wave of Piety
+Weaken
+Whirling Wind
+Wind of Tashanian
+Winter Squash Scarecrow Costume
+Winter's Roar
+Word of Healing
+Word of Health
+Word of Pain
+Word of Shadow
+Word of Souls
+Wrath
+Wuggan's Lesser Appraisal
+Yaulp
+Yaulp II
+Yaulp III
+Yaulp IV
+Yaulp XIV Rk. II
+Yoppa's Mending

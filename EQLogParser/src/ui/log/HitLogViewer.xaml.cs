@@ -23,6 +23,7 @@ namespace EQLogParser
     private string _actedOption = Labels.Unk;
     private List<List<ActionGroup>> _currentGroups;
     private bool _defending;
+    private Dictionary<string, string> _playerClasses;
     private PlayerStats _playerStats;
     private string _currentActedFilter;
     private string _currentActionFilter;
@@ -158,6 +159,7 @@ namespace EQLogParser
       _defending = defending;
       _playerStats = playerStats;
       _title = currentStats?.ShortTitle;
+      _playerClasses = currentStats?.PlayerClasses;
 
       IAction firstAction = null;
       foreach (var group in groups)
@@ -351,7 +353,7 @@ namespace EQLogParser
       }
     }
 
-    private HitLogRow CreateRow(IDictionary<string, HitLogRow> rowCache, PlayerStats playerStats, IAction action,
+    private HitLogRow CreateRow(Dictionary<string, HitLogRow> rowCache, PlayerStats playerStats, IAction action,
       double currentTime, bool defending = false)
     {
       HitLogRow row = null;
@@ -368,7 +370,7 @@ namespace EQLogParser
             row = new HitLogRow
             {
               Actor = damage.Attacker,
-              ActorClass = PlayerManager.Instance.GetPlayerClass(damage.Attacker),
+              ActorClass = ReadPlayerClass(damage.Attacker),
               Acted = damage.Defender,
               IsPet = isPet,
               TimeSince = "-"
@@ -382,7 +384,7 @@ namespace EQLogParser
             row = new HitLogRow
             {
               Actor = damage.Defender,
-              ActorClass = PlayerManager.Instance.GetPlayerClass(damage.Defender),
+              ActorClass = ReadPlayerClass(damage.Defender),
               Acted = damage.Attacker,
               IsPet = false,
               TimeSince = "-"
@@ -397,7 +399,7 @@ namespace EQLogParser
           row = new HitLogRow
           {
             Actor = heal.Healer,
-            ActorClass = PlayerManager.Instance.GetPlayerClass(heal.Healer),
+            ActorClass = ReadPlayerClass(heal.Healer),
             Acted = heal.Healed,
             IsPet = false,
             TimeSince = "-"
@@ -442,6 +444,15 @@ namespace EQLogParser
       }
 
       return row;
+    }
+
+    private string ReadPlayerClass(string playerName)
+    {
+      if (!string.IsNullOrEmpty(playerName) && _playerClasses?.TryGetValue(playerName, out var className) == true)
+      {
+        return className;
+      }
+      return string.Empty;
     }
 
     private static string GetRowKey(HitLogRow row, bool useActedKey = false)

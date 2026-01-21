@@ -1028,8 +1028,8 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(slain) && killer != null && !InIgnoreList(slain)) // killer may not be known so empty string is OK
       {
-        killer = killer.Length > 2 ? PlayerManager.Instance.ReplacePlayer(killer, killer) : killer;
-        slain = PlayerManager.Instance.ReplacePlayer(slain, slain);
+        killer = killer.Length > 2 ? PlayerManager.ReplacePlayer(killer, killer) : killer;
+        slain = PlayerManager.ReplacePlayer(slain, slain);
 
         // clear your ADPS if you died
         if (slain == ConfigUtil.PlayerName)
@@ -1119,7 +1119,7 @@ namespace EQLogParser
       else
       {
         // Needed to replace 'You' and 'you', etc
-        attacker = PlayerManager.Instance.ReplacePlayer(attacker, attacker);
+        attacker = PlayerManager.ReplacePlayer(attacker, attacker);
       }
 
       attacker = ToUpper(attacker);
@@ -1129,7 +1129,7 @@ namespace EQLogParser
     private static string UpdateDefender(string defender, string attacker)
     {
       // Needed to replace 'You' and 'you', etc
-      var updated = PlayerManager.Instance.ReplacePlayer(defender, attacker);
+      var updated = PlayerManager.ReplacePlayer(defender, attacker);
       return ToUpper(updated);
     }
 

@@ -403,6 +403,7 @@ namespace EQLogParser
         {
           // always start over
           _raidTotals.Total = 0;
+          var lastTime = double.NaN;
 
           try
           {
@@ -427,12 +428,16 @@ namespace EQLogParser
                     StatsUtil.UpdateStats(healedStats, record);
                   }
                 }
+
+                lastTime = block.BeginTime;
               }
             }
 
             _raidTotals.Dps = (long)Math.Round(_raidTotals.Total / _raidTotals.TotalSeconds, 2);
             StatsUtil.PopulateSpecials(_raidTotals);
 
+            var uniqueClasses = new ConcurrentDictionary<string, byte>();
+            var playerClasses = new ConcurrentDictionary<string, string>();
             Parallel.ForEach(individualStats.Values, stats =>
             {
               if (_raidTotals.Specials.TryGetValue(stats.OrigName, out var special2))
@@ -441,6 +446,14 @@ namespace EQLogParser
               }
 
               UpdateStats(_raidTotals, stats, _healerSpellTimeRanges, _healerHealedTimeRanges);
+              var playerClass = PlayerManager.Instance.GetPlayerClass(stats.OrigName, lastTime);
+              stats.ClassName = playerClass;
+              playerClasses.TryAdd(stats.OrigName, playerClass);
+
+              if (!string.IsNullOrEmpty(playerClass))
+              {
+                uniqueClasses.TryAdd(playerClass, 1);
+              }
             });
 
             var combined = new CombinedStats
@@ -448,17 +461,19 @@ namespace EQLogParser
               RaidStats = _raidTotals,
               TargetTitle = (_selected.Count > 1 ? "Combined (" + _selected.Count + "): " : "") + _title,
               TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TimeFormat, _raidTotals.TotalSeconds),
-              TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TotalFormat, StatsUtil.FormatTotals(_raidTotals.Total), " Heals ", StatsUtil.FormatTotals(_raidTotals.Dps))
+              TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TotalFormat, StatsUtil.FormatTotals(_raidTotals.Total),
+                " Heals ", StatsUtil.FormatTotals(_raidTotals.Dps)),
+              PlayerClasses = playerClasses.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
             };
 
             combined.StatsList.AddRange(individualStats.Values.OrderByDescending(item => item.Total));
             combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
             combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle);
+            combined.UniqueClasses.AddRange(uniqueClasses.Keys.OrderBy(c => c));
 
             for (var i = 0; i < combined.StatsList.Count; i++)
             {
               combined.StatsList[i].Rank = Convert.ToUInt16(i + 1);
-              combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
             }
 
             // generating new stats

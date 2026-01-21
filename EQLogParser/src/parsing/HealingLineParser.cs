@@ -24,8 +24,8 @@ namespace EQLogParser
           var record = HandleHealed(action, index, lineData.BeginTime);
           if (record != null)
           {
-            record.Healer = PlayerManager.Instance.ReplacePlayer(record.Healer, record.Healed);
-            record.Healed = PlayerManager.Instance.ReplacePlayer(record.Healed, record.Healer);
+            record.Healer = PlayerManager.ReplacePlayer(record.Healer, record.Healed);
+            record.Healed = PlayerManager.ReplacePlayer(record.Healed, record.Healer);
             RecordManager.Instance.Add(record, lineData.BeginTime);
             return true;
           }
@@ -253,10 +253,6 @@ namespace EQLogParser
               if (firstParen > -1)
               {
                 record.ModifiersMask = LineModifiersParser.Parse(record.Healer, part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1), beginTime);
-                if (LineModifiersParser.IsTwincast(record.ModifiersMask))
-                {
-                  PlayerManager.Instance.AddVerifiedPlayer(record.Healer, beginTime);
-                }
               }
             }
           }

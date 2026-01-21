@@ -1,12 +1,12 @@
 ﻿using log4net;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
@@ -21,7 +21,7 @@ namespace EQLogParser
     internal event EventHandler<string> EventsNewVerifiedPlayer;
     internal event EventHandler<string> EventsRemoveVerifiedPet;
     internal event EventHandler<string> EventsRemoveVerifiedPlayer;
-    internal event EventHandler<string> EventsUpdatePlayerClass;
+    internal event EventHandler<PlayerClassMapping> EventsUpdateDefaultPlayerClass;
 
     internal static PlayerManager Instance = new();
     internal static readonly BitmapImage BerIcon = new(new Uri(@"pack://application:,,,/icons/Ber.png"));
@@ -43,72 +43,34 @@ namespace EQLogParser
     internal static readonly BitmapImage WizIcon = new(new Uri(@"pack://application:,,,/icons/Wiz.png"));
 
     // static data
-    private readonly ConcurrentDictionary<string, SolidColorBrush> _classBrushes = new();
-    private readonly ConcurrentDictionary<SpellClass, string> _classNames = new();
-    private readonly ConcurrentDictionary<string, SpellClass> _classesByName = new();
+    private const int LowConfidenceThreshold = 8;
+    private static readonly FrozenSet<string> SecondPerson = new[] { "you", "yourself", "your" }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+    private static readonly FrozenSet<string> ThirdPerson = new[] { "himself", "herself", "itself" }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+
+    private readonly ConcurrentDictionary<string, string> _defaultPlayerClass = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, byte> _gameGeneratedPets = new();
-    private readonly ConcurrentDictionary<string, byte> _secondPerson = new();
-    private readonly ConcurrentDictionary<string, byte> _thirdPerson = new();
     private readonly ConcurrentDictionary<string, string> _petToPlayer = new();
-    private readonly ConcurrentDictionary<string, SpellClassCounter> _playerToClass = new();
+    private readonly ConcurrentDictionary<string, ActivePlayerClass> _activePlayerClass = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, byte> _takenPetOrPlayerAction = new();
     private readonly ConcurrentDictionary<string, byte> _verifiedPets = new();
     private readonly ConcurrentDictionary<string, double> _verifiedPlayers = new();
     private readonly ConcurrentDictionary<string, byte> _mercs = new();
     private readonly DispatcherTimer _saveTimer;
-    private readonly List<string> _sortedClassList = [];
-    private readonly List<string> _sortedClassListWithNull = [];
     private static readonly object LockObject = new();
     private volatile bool _petMappingUpdated;
     private volatile bool _playersUpdated;
 
     private PlayerManager()
     {
-      AddMultiCase(["you", "your", "yourself"], _secondPerson);
-      AddMultiCase(["himself", "herself", "itself"], _thirdPerson);
-
-      // populate ClassNames from SpellClass enum and resource table
-      foreach (var item in Enum.GetValues<SpellClass>())
-      {
-        if (Enum.GetName(item)?.ToUpperInvariant() is string { } resourceName)
-        {
-          var name = Resource.ResourceManager.GetString(resourceName, CultureInfo.InvariantCulture);
-          if (!string.IsNullOrEmpty(name))
-          {
-            _classNames[item] = name;
-            _classesByName[name] = item;
-          }
-
-          var color = Resource.ResourceManager.GetString($"{resourceName}_COLOR", CultureInfo.InvariantCulture);
-          if (!string.IsNullOrEmpty(color))
-          {
-            try
-            {
-              _classBrushes[name] = UiUtil.GetBrush(color);
-            }
-            catch (FormatException ex)
-            {
-              Log.Error($"Failed to parse color for class {item}: {ex.Message}");
-            }
-          }
-        }
-      }
-
-      _sortedClassList.AddRange(_classNames.Values);
-      _sortedClassList.Sort();
-      _sortedClassListWithNull.AddRange(_sortedClassList);
-      _sortedClassListWithNull.Insert(0, "");
-
       // Populate generated pets
       ConfigUtil.ReadList(@"data\petnames.txt").ForEach(line => _gameGeneratedPets[line.TrimEnd()] = 1);
       _saveTimer = UiUtil.CreateTimer(SaveTimerTick, 30000, true, DispatcherPriority.Background);
     }
 
-    internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.Unassigned || _secondPerson.ContainsKey(name)
-      || _thirdPerson.ContainsKey(name) || _verifiedPlayers.ContainsKey(name));
+    internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.Unassigned || SecondPerson.Contains(name)
+      || ThirdPerson.Contains(name) || _verifiedPlayers.ContainsKey(name));
     internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name));
     internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || DataManager.Instance.IsPlayerSpell(name);
-    internal List<string> GetClassList(bool withNull = false) => withNull ? [.. _sortedClassListWithNull] : [.. _sortedClassList];
     internal bool IsMerc(string name) => _mercs.TryGetValue(TextUtils.ToUpper(name), out _);
     internal List<string> GetVerifiedPlayers() => [.. _verifiedPlayers.Keys];
     internal List<string> GetVerifiedPets() => [.. _verifiedPets.Keys];
@@ -205,78 +167,53 @@ namespace EQLogParser
       }
     }
 
-    internal SolidColorBrush GetClassBrush(string className)
+    internal string GetDefaultPlayerClass(string name)
     {
-      if (!string.IsNullOrEmpty(className) && _classBrushes.TryGetValue(className, out var brush))
+      if (!string.IsNullOrEmpty(name) && _defaultPlayerClass.TryGetValue(name, out var className))
       {
-        return brush;
+        return className;
       }
-      return UiUtil.DefaultBrush;
+
+      return string.Empty;
     }
 
-    internal string GetPlayerClass(string name)
+    internal string GetLastKnownPlayerClass(string name)
     {
-      var className = "";
+      if (string.IsNullOrEmpty(name) || !_activePlayerClass.TryGetValue(name, out var active))
+        return GetDefaultPlayerClass(name);
 
-      if (!string.IsNullOrEmpty(name) && _playerToClass.TryGetValue(name, out var counter))
+      lock (active)
       {
-        if (_classNames.TryGetValue(counter.CurrentClass, out var found))
+        var records = active.Records;
+        return records.Count > 0 ? records[^1].ClassName : GetDefaultPlayerClass(name);
+      }
+    }
+
+    internal string GetPlayerClass(string name, double t)
+    {
+      if (string.IsNullOrEmpty(name) || !_activePlayerClass.TryGetValue(name, out var active))
+        return GetDefaultPlayerClass(name);
+
+      ClassRecord[] snapshot;
+      lock (active)
+      {
+        if (active.Records.Count == 0)
         {
-          className = found;
+          return GetDefaultPlayerClass(name);
         }
+
+        snapshot = [.. active.Records];
       }
 
-      return className;
-    }
+      // first index where BeginTime > t
+      var idx = UpperBoundByBeginTime(snapshot, t);
 
-    internal BitmapImage GetPlayerIcon(string name)
-    {
-      var icon = GetPlayerClassEnum(name) switch
+      if (idx == 0)
       {
-        SpellClass.Ber => BerIcon,
-        SpellClass.Brd => BrdIcon,
-        SpellClass.Bst => BstIcon,
-        SpellClass.Clr => ClrIcon,
-        SpellClass.Dru => DruIcon,
-        SpellClass.Enc => EncIcon,
-        SpellClass.Mag => MagIcon,
-        SpellClass.Mnk => MnkIcon,
-        SpellClass.Nec => NecIcon,
-        SpellClass.Pal => PalIcon,
-        SpellClass.Rng => RngIcon,
-        SpellClass.Rog => RogIcon,
-        SpellClass.Shd => ShdIcon,
-        SpellClass.Shm => ShmIcon,
-        SpellClass.War => WarIcon,
-        SpellClass.Wiz => WizIcon,
-        _ => UnkIcon
-      };
-
-      return icon;
-    }
-
-    internal SpellClass GetPlayerClassEnum(string name)
-    {
-      SpellClass spellClass = 0;
-
-      if (!string.IsNullOrEmpty(name) && _playerToClass.TryGetValue(name, out var counter))
-      {
-        spellClass = counter.CurrentClass;
+        return snapshot[0].ClassName;  // no <= t, so use next after t
       }
 
-      return spellClass;
-    }
-
-    internal string GetPlayerClassReason(string name)
-    {
-      var result = "";
-
-      if (!string.IsNullOrEmpty(name) && _playerToClass.TryGetValue(name, out var counter))
-      {
-        result = counter.Reason;
-      }
-
-      return result;
+      return snapshot[idx - 1].ClassName; // last <= t
     }
 
     internal string GetPlayerFromPet(string pet)
@@ -339,16 +276,18 @@ namespace EQLogParser
         {
           if (_verifiedPlayers.TryRemove(name, out _))
           {
-            string found = null;
-
+            var toRemove = new List<string>();
             foreach (var kv in _petToPlayer)
             {
               if (kv.Value.Equals(name, StringComparison.OrdinalIgnoreCase))
               {
-                found = kv.Key;
+                toRemove.Add(kv.Key);
               }
+            }
 
-              TryRemovePetMapping(found);
+            foreach (var pet in toRemove)
+            {
+              TryRemovePetMapping(pet);
             }
 
             _playersUpdated = true;
@@ -359,28 +298,13 @@ namespace EQLogParser
       }
     }
 
-    internal string ReplacePlayer(string name, string alternative)
-    {
-      var result = name;
-
-      if (_thirdPerson.ContainsKey(name))
-      {
-        result = alternative;
-      }
-      else if (_secondPerson.ContainsKey(name))
-      {
-        result = ConfigUtil.PlayerName;
-      }
-
-      return result;
-    }
-
     internal void Init()
     {
       lock (LockObject)
       {
+        _defaultPlayerClass.Clear();
         _petToPlayer.Clear();
-        _playerToClass.Clear();
+        _activePlayerClass.Clear();
         _takenPetOrPlayerAction.Clear();
         _verifiedPets.Clear();
         _verifiedPlayers.Clear();
@@ -395,19 +319,12 @@ namespace EQLogParser
             var parsed = 0d;
             string name;
             string className = null;
-            var reason = "";
             var split = player.Split('=');
             if (split.Length == 2)
             {
               name = split[0];
               var split2 = split[1].Split(',');
-              if (split2.Length > 2)
-              {
-                double.TryParse(split2[0], NumberStyles.Any, CultureInfo.InvariantCulture, out parsed);
-                className = split2[1];
-                reason = split2[2];
-              }
-              else if (split2.Length == 2)
+              if (split2.Length >= 2)
               {
                 double.TryParse(split2[0], NumberStyles.Any, CultureInfo.InvariantCulture, out parsed);
                 className = split2[1];
@@ -423,11 +340,7 @@ namespace EQLogParser
             }
 
             AddVerifiedPlayer(name, parsed, true);
-
-            if (className != null)
-            {
-              SetPlayerClassByName(name, className, reason, true);
-            }
+            SetDefaultPlayerClass(name, className, true);
           }
         });
 
@@ -449,19 +362,6 @@ namespace EQLogParser
 
     internal void Save()
     {
-      if (_petMappingUpdated)
-      {
-        lock (_petToPlayer)
-        {
-          // no generated or unassigned pets but allow for warders
-          var filtered = _petToPlayer.Where(kv => !_gameGeneratedPets.ContainsKey(kv.Key) && kv.Value != Labels.Unassigned &&
-            (IsPossiblePlayerName(kv.Key) || kv.Key.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase)));
-          ConfigUtil.SavePetMapping(filtered);
-        }
-
-        _petMappingUpdated = false;
-      }
-
       if (_playersUpdated)
       {
         lock (_verifiedPlayers)
@@ -475,14 +375,16 @@ namespace EQLogParser
               if (kv.Value != 0 && (now - DateUtil.FromDouble(kv.Value)).TotalDays < 200)
               {
                 var output = kv.Key + "=" + Math.Round(kv.Value);
-                if (_playerToClass.TryGetValue(kv.Key, out var value) && value.CurrentMax == long.MaxValue &&
-                  _classNames.TryGetValue(value.CurrentClass, out var className))
+                if (_defaultPlayerClass.TryGetValue(kv.Key, out var className))
                 {
                   output += "," + className;
-                  output += "," + value.Reason;
                 }
 
                 list.Add(output);
+              }
+              else
+              {
+                _petToPlayer.TryRemove(kv.Key, out _);
               }
             }
           }
@@ -493,111 +395,180 @@ namespace EQLogParser
         _playersUpdated = false;
       }
 
+      if (_petMappingUpdated)
+      {
+        lock (_petToPlayer)
+        {
+          // no generated or unassigned pets but allow for warders
+          var filtered = _petToPlayer.Where(kv => !_gameGeneratedPets.ContainsKey(kv.Key) && kv.Value != Labels.Unassigned &&
+            (IsPossiblePlayerName(kv.Key) || kv.Key.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase)));
+          ConfigUtil.SavePetMapping(filtered);
+        }
+
+        _petMappingUpdated = false;
+      }
+
       // if method is called manually then restart the timer
       _saveTimer?.Stop();
       _saveTimer.Start();
     }
 
-    internal void SetPlayerClassByName(string player, string className, string reason, bool init = false)
+    internal void SetActivePlayerClass(string name, string className, byte confidence, double beginTime)
     {
-      if (_classesByName.TryGetValue(className, out var value))
+      if (string.IsNullOrEmpty(name) || !DataManager.Instance.IsValidClassName(className) || confidence is < 1 or > 2)
+        return;
+
+      var active = _activePlayerClass.GetOrAdd(name, _ => new ActivePlayerClass());
+
+      lock (active)
       {
-        SetPlayerClass(player, value, reason, init);
-      }
-      else
-      {
-        _playerToClass.TryRemove(player, out _);
+        // If multiple threads could call this concurrently, consider: lock (active) { ...whole method... }
+        var records = active.Records;
+
+        // Detect “new stream in the past” (someone opened an older log)
+        if (beginTime < active.LastSeenBeginTime)
+        {
+          active.AltClassCounts.Clear();
+        }
+
+        active.LastSeenBeginTime = beginTime;
+
+        if (records.Count == 0)
+        {
+          CommitClassRecordSorted(active, className, confidence, beginTime);
+          active.AltClassCounts.Clear();
+          return;
+        }
+
+        // Find where this beginTime belongs (records kept sorted)
+        var insertAt = LowerBoundByBeginTime(records, beginTime);
+
+        // Determine the "current" record that applies at beginTime
+        var exactAtTime = insertAt < records.Count && records[insertAt].BeginTime == beginTime;
+        var currentIndex = exactAtTime ? insertAt : insertAt - 1;
+
+        var currentClass = currentIndex >= 0 ? records[currentIndex].ClassName : null;
+        var currentConf = currentIndex >= 0 ? records[currentIndex].Confidence : (byte)0;
+
+        // If class is the same do nothing
+        if (className.Equals(currentClass, StringComparison.OrdinalIgnoreCase) && (currentConf == 1 || confidence == 2))
+        {
+          active.AltClassCounts.Clear();
+          return;
+        }
+
+        // Upgrade to High Confidence
+        if (confidence == 1)
+        {
+          if (currentIndex < 0 &&
+              records.Count > 0 &&
+              string.Equals(records[0].ClassName, className, StringComparison.OrdinalIgnoreCase))
+          {
+            if (records[0].Confidence == 2)
+              records[0].Confidence = 1;
+
+            active.AltClassCounts.Clear();
+            return;
+          }
+
+          if (currentIndex >= 0 &&
+              string.Equals(records[currentIndex].ClassName, className, StringComparison.OrdinalIgnoreCase))
+          {
+            if (records[currentIndex].Confidence == 2)
+              records[currentIndex].Confidence = 1;
+
+            active.AltClassCounts.Clear();
+            return;
+          }
+
+          CommitClassRecordSorted(active, className, confidence, beginTime);
+          active.AltClassCounts.Clear();
+          return;
+        }
+        else
+        {
+          // alternative hypothesis -> count it.
+          if (!active.AltClassCounts.TryGetValue(className, out var pending))
+          {
+            active.AltClassCounts.Clear();
+            active.AltClassCounts[className] = new PendingClass { Count = 1, FirstTime = beginTime };
+            return;
+          }
+
+          pending.Count++;
+          active.AltClassCounts[className] = pending;
+
+          if (pending.Count >= LowConfidenceThreshold)
+          {
+            CommitClassRecordSorted(active, className, confidence, pending.FirstTime);
+            active.AltClassCounts.Clear();
+          }
+        }
       }
     }
 
-    internal void SetPlayerClass(string player, SpellClass theClass, string reason, bool init = false)
-    {
-      if (!_playerToClass.TryGetValue(player, out var counter))
-      {
-        lock (_playerToClass)
-        {
-          counter = new SpellClassCounter { ClassCounts = [] };
-          _playerToClass.TryAdd(player, counter);
-        }
-      }
 
-      lock (counter)
+    // only do this from user interaction
+    internal void SetDefaultPlayerClass(string name, string className, bool init = false)
+    {
+      if (!string.IsNullOrEmpty(name) && DataManager.Instance.IsValidClassName(className))
       {
-        if (!theClass.Equals(counter.CurrentClass) || counter.CurrentMax != long.MaxValue || !string.Equals(reason, counter.Reason, StringComparison.OrdinalIgnoreCase))
+        _defaultPlayerClass[name] = className;
+
+        if (!init)
         {
-          lock (LockObject)
-          {
-            counter.CurrentClass = theClass;
-            counter.Reason = reason;
-            counter.ClassCounts[theClass] = long.MaxValue;
-            counter.CurrentMax = long.MaxValue;
-            if (!init) EventsUpdatePlayerClass?.Invoke(player, _classNames[theClass]);
-            Log.Debug("Assigning " + player + " as " + theClass + ". " + reason);
-            _playersUpdated = true;
-          }
+          // make sure player data is saved
+          _verifiedPlayers[name] = DateUtil.ToDouble(DateTime.Now);
+          EventsUpdateDefaultPlayerClass?.Invoke(this, new PlayerClassMapping { Player = name, ClassName = className });
         }
       }
     }
 
-    internal void UpdatePlayerClassFromSpell(SpellCast cast, SpellClass theClass)
+    internal static bool IsPossiblePlayerName(string part, int stop = -1) => FindPossiblePlayerName(part, out var _, 0, stop) > -1;
+
+    internal static BitmapImage GetPlayerIcon(string className)
     {
-      if (!_playerToClass.TryGetValue(cast.Caster, out var counter))
+      var icon = UnkIcon;
+      if (DataManager.Instance.GetClassEnum(className) is { } theClass)
       {
-        lock (_playerToClass)
+        icon = theClass switch
         {
-          counter = new SpellClassCounter { ClassCounts = [] };
-          _playerToClass.TryAdd(cast.Caster, counter);
-        }
+          SpellClass.Ber => BerIcon,
+          SpellClass.Brd => BrdIcon,
+          SpellClass.Bst => BstIcon,
+          SpellClass.Clr => ClrIcon,
+          SpellClass.Dru => DruIcon,
+          SpellClass.Enc => EncIcon,
+          SpellClass.Mag => MagIcon,
+          SpellClass.Mnk => MnkIcon,
+          SpellClass.Nec => NecIcon,
+          SpellClass.Pal => PalIcon,
+          SpellClass.Rng => RngIcon,
+          SpellClass.Rog => RogIcon,
+          SpellClass.Shd => ShdIcon,
+          SpellClass.Shm => ShmIcon,
+          SpellClass.War => WarIcon,
+          SpellClass.Wiz => WizIcon,
+          _ => UnkIcon
+        };
       }
-
-      lock (counter)
-      {
-        if (counter.CurrentMax != long.MaxValue)
-        {
-          long newValue = 1;
-          if (cast.SpellData?.Rank > 1)
-          {
-            newValue = 10;
-          }
-
-          if (counter.ClassCounts.TryGetValue(theClass, out var value))
-          {
-            newValue += value;
-          }
-
-          counter.ClassCounts[theClass] = newValue;
-
-          if (newValue > counter.CurrentMax)
-          {
-            counter.CurrentMax = newValue;
-            if (!theClass.Equals(counter.CurrentClass))
-            {
-              lock (LockObject)
-              {
-                counter.CurrentClass = theClass;
-                counter.Reason = "Class chosen based on " + cast.Spell + ".";
-                EventsUpdatePlayerClass?.Invoke(cast.Caster, _classNames[theClass]);
-                Log.Debug("Assigning " + cast.Caster + " as " + theClass + " from " + cast.Spell);
-                _playersUpdated = true;
-              }
-            }
-          }
-        }
-      }
+      return icon;
     }
 
-    private void TryRemovePetMapping(string name)
+    internal static string ReplacePlayer(string name, string alternative)
     {
-      if (!string.IsNullOrEmpty(name))
+      var result = name;
+
+      if (ThirdPerson.Contains(name))
       {
-        lock (LockObject)
-        {
-          if (_petToPlayer.TryRemove(name, out _))
-          {
-            _petMappingUpdated = true;
-          }
-        }
+        result = alternative;
       }
+      else if (SecondPerson.Contains(name))
+      {
+        result = ConfigUtil.PlayerName;
+      }
+
+      return result;
     }
 
     internal static int FindPossiblePlayerName(string part, out bool isCrossServer, int start = 0, int stop = -1, char end = char.MaxValue)
@@ -645,32 +616,127 @@ namespace EQLogParser
       return -1;
     }
 
-    internal static bool IsPossiblePlayerName(string part, int stop = -1) => FindPossiblePlayerName(part, out var _, 0, stop) > -1;
-
     private void SaveTimerTick(object sender, EventArgs e) => Save();
 
-    private static void AddMultiCase(IReadOnlyCollection<string> values, ConcurrentDictionary<string, byte> dict)
+    private void TryRemovePetMapping(string name)
     {
-      if (values.Count != 0)
+      if (!string.IsNullOrEmpty(name))
       {
-        foreach (var value in values)
+        lock (LockObject)
         {
-          if (!string.IsNullOrEmpty(value) && value.Length >= 2)
+          if (_petToPlayer.TryRemove(name, out _))
           {
-            dict[value] = 1;
-            dict[value.ToUpper(CultureInfo.CurrentCulture)] = 1;
-            dict[char.ToUpper(value[0], CultureInfo.CurrentCulture) + value[1..]] = 1;
+            _petMappingUpdated = true;
           }
         }
       }
     }
 
-    private class SpellClassCounter
+    private static int LowerBoundByBeginTime(List<ClassRecord> records, double time)
     {
-      internal long CurrentMax { get; set; }
-      internal SpellClass CurrentClass { get; set; }
-      internal Dictionary<SpellClass, long> ClassCounts { get; init; }
-      internal string Reason { get; set; } = "";
+      int lo = 0, hi = records.Count;
+      while (lo < hi)
+      {
+        var mid = lo + ((hi - lo) >> 1);
+        if (records[mid].BeginTime < time)
+          lo = mid + 1;
+        else
+          hi = mid;
+      }
+      return lo; // first index with BeginTime >= time
+    }
+
+    private static int UpperBoundByBeginTime(ClassRecord[] records, double t)
+    {
+      int lo = 0, hi = records.Length;
+      while (lo < hi)
+      {
+        var mid = lo + ((hi - lo) >> 1);
+        if (records[mid].BeginTime <= t) lo = mid + 1;
+        else hi = mid;
+      }
+      return lo;
+    }
+
+    private static void CommitClassRecordSorted(ActivePlayerClass active, string className, byte confidence, double beginTime)
+    {
+      var records = active.Records;
+      var idx = LowerBoundByBeginTime(records, beginTime);
+
+      // Exact-time record exists
+      if (idx < records.Count && records[idx].BeginTime == beginTime)
+      {
+        var existing = records[idx];
+
+        // Same class at same time: only upgrade confidence (never downgrade)
+        if (string.Equals(existing.ClassName, className, StringComparison.OrdinalIgnoreCase))
+        {
+          if (existing.Confidence == 2 && confidence == 1)
+            existing.Confidence = 1;
+
+          return; // nothing else to do
+        }
+
+        // Different class at same time: replace the boundary record
+        records[idx] = new ClassRecord
+        {
+          ClassName = className,
+          Confidence = confidence,
+          BeginTime = beginTime
+        };
+
+        CoalesceAround(records, idx);
+        return;
+      }
+
+      // No exact-time record: insert new boundary
+      records.Insert(idx, new ClassRecord
+      {
+        ClassName = className,
+        Confidence = confidence,
+        BeginTime = beginTime
+      });
+
+      CoalesceAround(records, idx);
+    }
+
+    private static void CoalesceAround(List<ClassRecord> records, int idx)
+    {
+      if (records.Count == 0 || idx < 0 || idx >= records.Count)
+        return;
+
+      // Merge with previous if same class (current record becomes redundant)
+      if (idx > 0 && string.Equals(records[idx - 1].ClassName, records[idx].ClassName, StringComparison.OrdinalIgnoreCase))
+      {
+        records.RemoveAt(idx);
+        idx--;
+        if (idx < 0) return;
+      }
+
+      // Merge with next if same class (next record becomes redundant)
+      if (idx + 1 < records.Count && string.Equals(records[idx + 1].ClassName, records[idx].ClassName, StringComparison.OrdinalIgnoreCase))
+      {
+        records.RemoveAt(idx + 1);
+      }
+    }
+
+    private struct PendingClass
+    {
+      public int Count;
+      public double FirstTime;
+    }
+
+    private class ClassRecord : TimedAction
+    {
+      internal string ClassName { get; init; }
+      internal byte Confidence { get; set; }
+    }
+
+    private sealed class ActivePlayerClass
+    {
+      internal List<ClassRecord> Records { get; } = [];
+      internal Dictionary<string, PendingClass> AltClassCounts { get; } = new(StringComparer.OrdinalIgnoreCase);
+      internal double LastSeenBeginTime { get; set; } = double.NegativeInfinity;
     }
   }
 }

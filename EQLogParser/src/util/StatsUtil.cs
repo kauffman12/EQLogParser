@@ -51,12 +51,10 @@ namespace EQLogParser
     internal static PlayerStats CreatePlayerStats(string name, string origName = null)
     {
       origName ??= name;
-      var className = PlayerManager.Instance.GetPlayerClass(origName);
 
       return new PlayerStats
       {
         Name = string.Intern(name),
-        ClassName = string.Intern(className),
         OrigName = string.Intern(origName),
         Percent = 100, // until something says otherwise
       };

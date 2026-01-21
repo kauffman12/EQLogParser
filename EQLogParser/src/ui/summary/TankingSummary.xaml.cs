@@ -40,7 +40,7 @@ namespace EQLogParser
       }
 
       DamageType = damageTypes.SelectedIndex;
-      var list = PlayerManager.Instance.GetClassList();
+      var list = DataManager.Instance.GetClassList();
       list.Insert(0, Resource.ANY_CLASS);
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
@@ -146,7 +146,7 @@ namespace EQLogParser
         }
 
         menuItemSetAsPet.Header = $"Assign {selectedName} as Pet of";
-        menuItemSetPlayerClass.Header = $"Assign {selectedName} to Class";
+        menuItemSetPlayerClass.Header = $"Assign Default Class for {selectedName}";
       });
     }
 
@@ -337,11 +337,6 @@ namespace EQLogParser
           {
             name = playerStats.Name;
             className = playerStats.ClassName;
-          }
-          else if (stats is string dataPointName)
-          {
-            name = dataPointName;
-            className = PlayerManager.Instance.GetPlayerClass(name);
           }
 
           var isPet = PlayerManager.Instance.IsVerifiedPet(name);

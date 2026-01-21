@@ -91,7 +91,7 @@ namespace EQLogParser
         parent.Items.Add(selected);
       }
 
-      PlayerManager.Instance.GetClassList().ForEach(name =>
+      DataManager.Instance.GetClassList().ForEach(name =>
       {
         var item = new MenuItem { IsEnabled = enabled, Header = name };
         item.Click += new RoutedEventHandler(classHandler);
@@ -130,14 +130,14 @@ namespace EQLogParser
         var selected = GetSelectedStats().FirstOrDefault();
         if (selected != null && !string.IsNullOrEmpty(selected.OrigName))
         {
-          PlayerManager.Instance.SetPlayerClassByName(selected.OrigName, className, "User assigned the class.");
+          PlayerManager.Instance.SetDefaultPlayerClass(selected.OrigName, className);
           selected.ClassName = className;
           DataGridUtil.RefreshTable(TheDataGrid);
         }
       }
     }
 
-    internal static void EnableClassMenuItems(MenuItem menu, SfGridBase gridBase, Dictionary<string, byte> uniqueClasses)
+    internal static void EnableClassMenuItems(MenuItem menu, SfGridBase gridBase, List<string> uniqueClasses)
     {
       foreach (var item in menu.Items)
       {
@@ -149,7 +149,7 @@ namespace EQLogParser
           }
           else if (headerValue != "All Players")
           {
-            menuItem.IsEnabled = uniqueClasses != null && uniqueClasses.ContainsKey(headerValue);
+            menuItem.IsEnabled = uniqueClasses != null && uniqueClasses.Contains(headerValue);
           }
         }
       }

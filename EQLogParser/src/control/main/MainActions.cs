@@ -491,7 +491,9 @@ namespace EQLogParser
     {
       // verified player table
       playersGrid.ItemsSource = VerifiedPlayersView;
-      classList.ItemsSource = PlayerManager.Instance.GetClassList(true);
+      var list = DataManager.Instance.GetClassList();
+      list.Insert(0, ""); // insert null case
+      classList.ItemsSource = list;
       PlayerManager.Instance.EventsNewVerifiedPlayer += async (_, name) =>
       {
         await UiUtil.InvokeAsync(() =>
@@ -501,16 +503,16 @@ namespace EQLogParser
         }, DispatcherPriority.DataBind);
       };
 
-      PlayerManager.Instance.EventsUpdatePlayerClass += async (name, playerClass) =>
+      PlayerManager.Instance.EventsUpdateDefaultPlayerClass += async (_, mapping) =>
       {
         await UiUtil.InvokeAsync(() =>
         {
           var entry = new ExpandoObject() as dynamic;
-          entry.Name = name;
+          entry.Name = mapping.Player;
           int index = VerifiedPlayersView.ToList().BinarySearch(entry, UiUtil.TheSortableNameComparer);
           if (index >= 0)
           {
-            VerifiedPlayersView[index].PlayerClass = playerClass;
+            VerifiedPlayersView[index].PlayerClass = mapping.ClassName;
           }
         }, DispatcherPriority.DataBind);
       };
