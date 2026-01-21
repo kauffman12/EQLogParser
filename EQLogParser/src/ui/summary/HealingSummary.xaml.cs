@@ -19,7 +19,7 @@ namespace EQLogParser
     {
       InitializeComponent();
 
-      var list = PlayerManager.Instance.GetClassList();
+      var list = DataManager.Instance.GetClassList();
       list.Insert(0, Resource.ANY_CLASS);
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
@@ -100,7 +100,7 @@ namespace EQLogParser
             menuItemSetPlayerClass.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowHealingTimeline.IsEnabled = false;
         }
 
-        menuItemSetPlayerClass.Header = $"Assign {selectedName} to Class";
+        menuItemSetPlayerClass.Header = $"Assign Default Class for {selectedName}";
       });
     }
 
@@ -228,10 +228,6 @@ namespace EQLogParser
           if (stats is PlayerStats playerStats)
           {
             className = playerStats.ClassName;
-          }
-          else if (stats is string name)
-          {
-            className = PlayerManager.Instance.GetPlayerClass(name);
           }
 
           return SelectedClasses.Count == 16 || SelectedClasses.Contains(className);

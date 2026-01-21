@@ -230,25 +230,34 @@ namespace EQLogParser
           MaskCache[modifiers] = result;
         }
 
+        string classAbility = null;
+        string className = null;
         if (IsAssassinate(result))
         {
           PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-          PlayerManager.Instance.SetPlayerClass(player, SpellClass.Rog, "Class chosen from use of Assassinate.");
+          classAbility = "Assassinate";
+          className = Resource.ROG;
         }
-        else if (IsDoubleBowShot(result))
+        else if (IsHeadshot(result) || IsDoubleBowShot(result))
         {
           PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-          PlayerManager.Instance.SetPlayerClass(player, SpellClass.Rng, "Class chosen from use of Double Bow Shot.");
-        }
-        else if (IsHeadshot(result))
-        {
-          PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-          PlayerManager.Instance.SetPlayerClass(player, SpellClass.Rng, "Class chosen from use of Headshot.");
+          classAbility = IsHeadshot(result) ? "Headshot" : "Double Bow Shot";
+          className = Resource.RNG;
         }
         else if (IsSlayUndead(result))
         {
           PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-          PlayerManager.Instance.SetPlayerClass(player, SpellClass.Pal, "Class chosen from use of Slay Undead.");
+          classAbility = "Slay Undead";
+          className = Resource.PAL;
+        }
+        else if (IsTwincast(result))
+        {
+          PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
+        }
+
+        if (!string.IsNullOrEmpty(classAbility) && !string.IsNullOrEmpty(className))
+        {
+          PlayerManager.Instance.SetActivePlayerClass(player, className, 1, currentTime);
         }
       }
 

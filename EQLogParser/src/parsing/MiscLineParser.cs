@@ -69,46 +69,17 @@ namespace EQLogParser
             // [Thu Jan 27 16:32:01 2022] [1 Warrior] Spasiba(Gnome)  ZONE: The Bazaar(bazaar)
             // [Thu Jan 27 16:32:01 2022] [120 Shadowblade (Rogue)] Bloodydagger(Iksar) < Realm of Insanity> ZONE: Realm of Insanity Village III, 200 Terminus Heights, Palatial Guild Hall
             // [Wed Jan 26 22:41:48 2022] [65 Overlord (Warrior)] Jenfo (Halfling)
-            else if (i == 0 && split[0].StartsWith('[') && split[0].Length > 1 && split.Length > 4)
+            // [Mon Jan 05 10:03:10 2026]  AFK [67 Dread Lord (Shadow Knight)] Matrim (Iksar) <Realm of Insanity> ZONE: Realm of Insanity Village III, 200 Terminus Heights, Palatial Guild Hall  
+            else if (i == 0 &&
+              ((split[0] == "" && split[1] == "AFK" && ParseWho(split, 2, out var who, out var whoClass)) ||
+               (split[0].StartsWith('[') && ParseWho(split, 0, out who, out whoClass))))
             {
-              string player = null;
-              string className = null;
-              if (split[0] == "[ANONYMOUS]")
+              PlayerManager.Instance.AddVerifiedPlayer(who, lineData.BeginTime);
+              if (DataManager.Instance.IsValidClassName(whoClass))
               {
-                player = split[1];
+                PlayerManager.Instance.SetActivePlayerClass(who, whoClass, 1, lineData.BeginTime);
               }
-              else
-              {
-                var level = split[0][1..];
-                if (int.TryParse(level, out _))
-                {
-                  if (split[1].EndsWith(']') && split[1].Length > 2)
-                  {
-                    className = DataManager.Instance.GetClassFromTitle(split[1][..^1]);
-                    player = split[2];
-                  }
-                  else if (split[2].EndsWith(']') && split[2].Length > 2)
-                  {
-                    className = DataManager.Instance.GetClassFromTitle(split[1] + " " + split[2][..^1]);
-                    player = split[3];
-                  }
-                  else if (split[3].EndsWith(']') && split[3].Length > 2)
-                  {
-                    className = DataManager.Instance.GetClassFromTitle(split[1] + " " + split[2] + " " + split[3][..^1]);
-                    player = split[4];
-                  }
-                }
-              }
-
-              if (!string.IsNullOrEmpty(player))
-              {
-                PlayerManager.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
-                if (!string.IsNullOrEmpty(className))
-                {
-                  PlayerManager.Instance.SetPlayerClassByName(player, className, "Class chosen from /who list.");
-                }
-                handled = true;
-              }
+              handled = true;
             }
             else
             {
@@ -124,8 +95,8 @@ namespace EQLogParser
                       var rolled = split[24][..^1];
                       if (int.TryParse(split[14], out var fromNumber) && int.TryParse(to, out var toNumber) && int.TryParse(rolled, out var rolledNumber))
                       {
-                        RecordManager.Instance.Add(new RandomRecord { Player = player, Rolled = rolledNumber, To = toNumber, From = fromNumber },
-                          lineData.BeginTime);
+                        var record = new RandomRecord { Player = player, Rolled = rolledNumber, To = toNumber, From = fromNumber };
+                        RecordManager.Instance.Add(record, lineData.BeginTime);
                         handled = true;
                       }
                     }
@@ -145,8 +116,8 @@ namespace EQLogParser
                     var rolled = split[17][..^1];
                     if (int.TryParse(split[7], out var fromNumber) && int.TryParse(to, out var toNumber) && int.TryParse(rolled, out var rolledNumber))
                     {
-                      RecordManager.Instance.Add(new RandomRecord { Player = _randomPlayer, Rolled = rolledNumber, To = toNumber, From = fromNumber },
-                        lineData.BeginTime);
+                      var record = new RandomRecord { Player = _randomPlayer, Rolled = rolledNumber, To = toNumber, From = fromNumber };
+                      RecordManager.Instance.Add(record, lineData.BeginTime);
                       handled = true;
                     }
                   }
@@ -203,6 +174,18 @@ namespace EQLogParser
                   if (split.Length > 9 && split[1] == "won" && split[4] == "roll")
                   {
                     itemsIndex = i;
+                  }
+                  break;
+                // persona change
+                case "loaded":
+                  if (split.Length >= 7 && i == 2 && split[^1] == "set." && split[3] == "your" && split[1] == "successfully" && split[0] == "You")
+                  {
+                    var className = string.Join(" ", split, 4, 1 + (split.Length - 7));
+                    if (DataManager.Instance.IsValidClassName(className))
+                    {
+                      PlayerManager.Instance.SetActivePlayerClass(ConfigUtil.PlayerName, className, 1, lineData.BeginTime);
+                    }
+                    handled = true;
                   }
                   break;
                 case "looter,":
@@ -423,6 +406,50 @@ namespace EQLogParser
       }
 
       return parsed;
+    }
+
+    private static bool ParseWho(string[] split, int start, out string player, out string className)
+    {
+      player = null;
+      className = null;
+
+      if (split[start].StartsWith('[') && split[start].Length > 1 && split.Length > 4)
+      {
+        if (split[start] == "[ANONYMOUS]")
+        {
+          player = split[start + 1];
+          return true;
+        }
+        else
+        {
+          var level = split[start][1..];
+          if (int.TryParse(level, out _))
+          {
+            var classStart = -1;
+            for (var i = start + 1; i < split.Length; i++)
+            {
+              if (split[i].StartsWith('('))
+              {
+                classStart = i;
+              }
+
+              if (classStart > -1 && split[i].EndsWith(")]", StringComparison.OrdinalIgnoreCase))
+              {
+                className = string.Join(" ", split, classStart, i - classStart + 1);
+                if (className.Length > 4)
+                {
+                  className = className[1..^2];
+                }
+
+                player = split[i + 1];
+                return true;
+              }
+            }
+          }
+        }
+      }
+
+      return false;
     }
   }
 }

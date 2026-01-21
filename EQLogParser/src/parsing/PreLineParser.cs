@@ -22,15 +22,6 @@ namespace EQLogParser
           PlayerManager.Instance.AddVerifiedPlayer(action[19..], lineData.BeginTime);
           found = true; // ignore anything that starts with Targeted
         }
-        else if (action.Length > 45 && action.StartsWith("You successfully loaded your ", StringComparison.OrdinalIgnoreCase))
-        {
-          if (action.IndexOf(' ', 29) is var end and > -1)
-          {
-            var className = action[29..end];
-            PlayerManager.Instance.SetPlayerClassByName(ConfigUtil.PlayerName, className, "Class chosen from persona change.");
-            found = true;
-          }
-        }
         else if (action.EndsWith(" joined the raid.", StringComparison.OrdinalIgnoreCase) && !action.StartsWith("You have", StringComparison.OrdinalIgnoreCase))
         {
           if (PlayerManager.IsPossiblePlayerName(action, action.Length - 17))

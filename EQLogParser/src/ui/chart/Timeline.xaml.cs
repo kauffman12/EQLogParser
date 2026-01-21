@@ -125,7 +125,7 @@ namespace EQLogParser
               {
                 if (!received.IsWearOff)
                 {
-                  if (DataManager.ResolveSpellAmbiguity(received, out var replaced))
+                  if (DataManager.ResolveSpellAmbiguity(received, endTime, out var replaced))
                   {
                     castSpells.Add(replaced);
                     spellData = replaced;
@@ -135,8 +135,8 @@ namespace EQLogParser
                 {
                   foreach (var possible in received.Ambiguity)
                   {
-                    if (castSpells.Find(spell => spell.WearOff == possible.WearOff || spell.LandsOnYou == possible.LandsOnYou
-                          || spell.LandsOnOther == possible.LandsOnOther) is { } found)
+                    if (castSpells.Find(spell => spell.WearOff == possible.WearOff ||
+                      spell.LandsOnYou == possible.LandsOnYou || spell.LandsOnOther == possible.LandsOnOther) is { } found)
                     {
                       spellData = found;
                     }

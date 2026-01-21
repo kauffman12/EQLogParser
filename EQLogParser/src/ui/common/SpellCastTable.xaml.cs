@@ -103,7 +103,7 @@ namespace EQLogParser
           }
 
           if (action is ReceivedSpell received && !string.IsNullOrEmpty(received.Receiver) && _uniqueNames.ContainsKey(received.Receiver) &&
-            IsValid(received, true, out var replaced) && replaced != null)
+            IsValid(received, true, lastTime, out var replaced) && replaced != null)
           {
             size = AddToList(playerSpells, received.Receiver, "Received " + replaced.NameAbbrv);
           }
@@ -141,7 +141,7 @@ namespace EQLogParser
       return dict[key].Count;
     }
 
-    private bool IsValid(ReceivedSpell spell, bool received, out SpellData replaced)
+    private bool IsValid(ReceivedSpell spell, bool received, double lastTime, out SpellData replaced)
     {
       var valid = false;
       replaced = spell.SpellData;
@@ -150,7 +150,7 @@ namespace EQLogParser
       {
         var spellData = spell.SpellData;
 
-        if (spellData == null && spell.Ambiguity.Count > 0 && DataManager.ResolveSpellAmbiguity(spell, out replaced))
+        if (spellData == null && spell.Ambiguity.Count > 0 && DataManager.ResolveSpellAmbiguity(spell, lastTime, out replaced))
         {
           spellData = replaced;
         }

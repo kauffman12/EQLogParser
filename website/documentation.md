@@ -91,9 +91,9 @@ Acts as a wildcard to capture values in `Pattern` fields. It will capture anythi
 
 Like `{S}` but captures numbers (no spaces or multiple numbers are allowed). Also, allows the value to be used later in any fields that displays, speaks, or shares information.
 
-## `{N>y}`, `{N<y|N>z}`
+## `{N>y}`, `{y<N<z}`
 
-Works like `{N}` but allows additional checks on the range of numbers that will match the trigger. Use operators like `>`, `<`, `>=`, `<=`, or `==`. Use `|` to combine. Example: `{N>100|N<200}` to match numbers between `100` and `200`.
+Works like `{N}` but allows additional checks on the range of numbers that will match the trigger. Use operators like `>`, `<`, `>=`, `<=`, or `==`. Use `|` to combine. Example: `{100<=N<200}` to match numbers between `100` and `200`.
 
 ## `{L}`
 

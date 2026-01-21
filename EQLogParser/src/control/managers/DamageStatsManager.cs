@@ -225,6 +225,7 @@ namespace EQLogParser
               _raidTotals.TotalSeconds = _raidTotals.MaxTime;
             }
 
+            var lastTime = double.NaN;
             var prevPlayerTimes = new Dictionary<string, double>();
             foreach (var group in CollectionsMarshal.AsSpan(_damageGroups))
             {
@@ -292,13 +293,17 @@ namespace EQLogParser
                     }
                   }
                 }
+
+                lastTime = block.BeginTime;
               }
             }
 
             _raidTotals.Dps = (long)Math.Round(_raidTotals.Total / _raidTotals.TotalSeconds, 2);
             StatsUtil.PopulateSpecials(_raidTotals, true);
-            var expandedStats = new ConcurrentBag<PlayerStats>();
 
+            var expandedStats = new ConcurrentBag<PlayerStats>();
+            var uniqueClasses = new ConcurrentDictionary<string, byte>();
+            var playerClasses = new ConcurrentDictionary<string, string>();
             Parallel.ForEach(individualStats.Values, stats =>
             {
               if (topLevelStats.ContainsKey(stats.Name))
@@ -349,6 +354,15 @@ namespace EQLogParser
                   stats.Special = special2;
                 }
               }
+
+              var playerClass = PlayerManager.Instance.GetPlayerClass(stats.OrigName, lastTime);
+              stats.ClassName = playerClass;
+              playerClasses.TryAdd(stats.OrigName, playerClass);
+
+              if (!string.IsNullOrEmpty(playerClass))
+              {
+                uniqueClasses.TryAdd(playerClass, 1);
+              }
             });
 
             var combined = new CombinedStats
@@ -356,25 +370,28 @@ namespace EQLogParser
               RaidStats = _raidTotals,
               TargetTitle = (_selected.Count > 1 ? "Combined (" + _selected.Count + "): " : "") + _title,
               TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TimeFormat, _raidTotals.TotalSeconds),
-              TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TotalFormat, StatsUtil.FormatTotals(_raidTotals.Total), " Damage ", StatsUtil.FormatTotals(_raidTotals.Dps))
+              TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TotalFormat, StatsUtil.FormatTotals(_raidTotals.Total),
+                " Damage ", StatsUtil.FormatTotals(_raidTotals.Dps)),
+              PlayerClasses = playerClasses.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
             };
 
             combined.StatsList.AddRange(topLevelStats.Values.AsParallel().OrderByDescending(item => item.Total));
             combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
             combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle);
             combined.ExpandedStatsList.AddRange(expandedStats.AsParallel().OrderByDescending(item => item.Total));
+            combined.UniqueClasses.AddRange(uniqueClasses.Keys.OrderBy(c => c));
 
             for (var i = 0; i < combined.ExpandedStatsList.Count; i++)
             {
               combined.ExpandedStatsList[i].Rank = Convert.ToUInt16(i + 1);
               if (combined.StatsList.Count > i)
               {
-                combined.StatsList[i].Rank = Convert.ToUInt16(i + 1);
-                combined.UniqueClasses[combined.StatsList[i].ClassName] = 1;
+                var stats = combined.StatsList[i];
+                stats.Rank = Convert.ToUInt16(i + 1);
 
-                if (childrenStats.TryGetValue(combined.StatsList[i].Name, out var children))
+                if (childrenStats.TryGetValue(stats.Name, out var children))
                 {
-                  combined.Children.Add(combined.StatsList[i].Name, [.. children.Values.OrderByDescending(stats => stats.Total)]);
+                  combined.Children.Add(stats.Name, [.. children.Values.OrderByDescending(stats => stats.Total)]);
                 }
               }
             }

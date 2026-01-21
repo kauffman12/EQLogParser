@@ -51,7 +51,9 @@ namespace EQLogParser
       var maxTime = raidStats.MaxBeginTime;
       var minTime = raidStats.MinBeginTime;
       var startTime = double.NaN;
-      foreach (var segment in CollectionsMarshal.AsSpan(raidStats.AllRanges.TimeSegments))
+      var timeSegments = CollectionsMarshal.AsSpan(raidStats.AllRanges.TimeSegments);
+      var endTime = timeSegments.Length > 0 ? timeSegments[^1].EndTime : 0d;
+      foreach (var segment in timeSegments)
       {
         var damageAfter = segment.BeginTime - DmgOffset;
         var damageBefore = segment.EndTime;
@@ -66,11 +68,11 @@ namespace EQLogParser
           var result = double.NaN;
           if (spell is ReceivedSpell)
           {
-            result = AddSpell(raidStats, spell, beginTime, minTime, maxTime, receivedDuring, damageAfter, damageBefore);
+            result = AddSpell(raidStats, spell, beginTime, endTime, minTime, maxTime, receivedDuring, damageAfter, damageBefore);
           }
           else
           {
-            result = AddSpell(raidStats, spell, beginTime, minTime, maxTime, castsDuring, damageAfter, damageBefore);
+            result = AddSpell(raidStats, spell, beginTime, endTime, minTime, maxTime, castsDuring, damageAfter, damageBefore);
           }
 
           if (!double.IsNaN(result))
@@ -86,7 +88,7 @@ namespace EQLogParser
       return startTime;
     }
 
-    private static double AddSpell(PlayerStats raidStats, IAction action, double beginTime, double minTime, double maxTime,
+    private static double AddSpell(PlayerStats raidStats, IAction action, double beginTime, double endTime, double minTime, double maxTime,
       HashSet<IAction> actions, double damageAfter, double damageBefore)
     {
       if ((!double.IsNaN(minTime) && beginTime < minTime) || (!double.IsNaN(maxTime) && beginTime > maxTime))
@@ -101,7 +103,7 @@ namespace EQLogParser
       else if (action is ReceivedSpell { IsWearOff: false } received)
       {
         if (received.SpellData == null && received.Ambiguity.Count > 0 &&
-            DataManager.ResolveSpellAmbiguity(received, out var replaced))
+            DataManager.ResolveSpellAmbiguity(received, endTime, out var replaced))
         {
           received.SpellData = replaced;
         }

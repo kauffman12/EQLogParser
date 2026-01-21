@@ -177,7 +177,6 @@ if os.path.isfile(DBSpellsFile):
   print('Loading Spells DB from %s' % DBSpellsFile)
 
   spells = dict()
-  test = dict()
   recourses = dict()
   spa339s = dict()
   spa340s = dict()
@@ -434,43 +433,10 @@ if os.path.isfile(DBSpellsFile):
           if proc in spells and spells[proc]['classMask'] == 0:
             spells[proc]['classMask'] |= spells[id]['classMask']
 
-  for id in spells:
-    name = spells[id]['name']
-    if name in test:
-      if test[name][0]['origDuration'] != spells[id]['origDuration'] or test[name][0]['focusable'] != spells[id]['focusable']:
-        test[name].append(spells[id])
-    else:
-      test[name] = [spells[id]]
-
-  final = dict()
-  for k in test:
-    newest = None
-    for info in test[k]:
-      unique = False
-      if newest == None:
-        newest = info
-      if info['classMask'] > 0 or info['rank'] > 0:
-        unique = True
-      if info['hateOver'] > 0 or info['hateMod'] > 0:
-        unique = True
-      if info['spellTarget'] == 6 and info['beneficial'] != 0 and info['origDuration'] == 600 and info['blockable'] == 0:
-        unique = True
-      if info['beneficial'] != 0 and info['spellTarget'] == 14:
-        unique = True
-      if 'landsOnOther' in info and info['landsOnOther'] != "":
-        unique = True
-
-      if unique:
-        if newest['intId'] < info['intId']:
-          newest = info
-        continue
-
-      final[info['intId']] = info
-    final[newest['intId']] = newest
-
   output = open('output.txt', 'w')
-  for key in sorted(final):
-    data = '%s^%s^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%s^%s^%s' % (final[key]['intId'], final[key]['name'], final[key]['level'], final[key]['maxDuration'], final[key]['beneficial'], final[key]['maxHits'], final[key]['spellTarget'], final[key]['classMask'], final[key]['damaging'], final[key]['combatSkill'], final[key]['resist'], final[key]['songWindow'], final[key]['adps'], final[key]['mgb'], final[key]['rank'], final[key]['landsOnYouAmbiguity'], final[key]['landsOnOtherAmbiguity'], final[key]['landsOnYou'], final[key]['landsOnOther'], final[key]['wearOff'])
+  for key in sorted(spells):
+    sp = spells[key]
+    data = '%s^%s^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%s^%s^%s' % (sp['intId'], sp['name'], sp['level'], sp['maxDuration'], sp['beneficial'], sp['maxHits'], sp['spellTarget'], sp['classMask'], sp['damaging'], sp['combatSkill'], sp['resist'], sp['songWindow'], sp['adps'], sp['mgb'], sp['rank'], sp['landsOnYouAmbiguity'], sp['landsOnOtherAmbiguity'], sp['landsOnYou'], sp['landsOnOther'], sp['wearOff'])
     output.write(data)
     output.write('\n')
   output.write('900001^Glyph of Destruction I^254^20^1^0^6^65407^0^0^0^0^3^0^1^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.')

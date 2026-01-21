@@ -524,7 +524,6 @@
           <syncfusion:SfDataGrid x:Name="verifiedPlayersGrid"
                                AllowResizingColumns="False"
                                AutoGenerateColumns="False"
-                               CellToolTipOpening="PlayerCellToolTipOpening"
                                ColumnSizer="Star"
                                CurrentCellBorderThickness="0"
                                CurrentCellDropDownSelectionChanged="PlayerClassDropDownSelectionChanged"
@@ -553,7 +552,7 @@
             </syncfusion:SfDataGrid.Resources>
             <syncfusion:SfDataGrid.Columns>
               <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name"/>
-              <syncfusion:GridComboBoxColumn x:Name="classList" HeaderText="Class" AllowEditing="True" ShowToolTip="True" IsReadOnly="False" MappingName="PlayerClass" />
+              <syncfusion:GridComboBoxColumn x:Name="classList" HeaderText="Default Class" AllowEditing="True" IsReadOnly="False" MappingName="PlayerClass" />
             </syncfusion:SfDataGrid.Columns>
           </syncfusion:SfDataGrid>
         </ContentControl>

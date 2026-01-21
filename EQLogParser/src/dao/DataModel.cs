@@ -596,6 +596,12 @@ namespace EQLogParser
     public string Awakened { get; set; }
   }
 
+  internal class PlayerClassMapping
+  {
+    public string Player { get; set; }
+    public string ClassName { get; set; }
+  }
+
   internal class ZoneRecord : IAction
   {
     public string Zone { get; set; }
@@ -784,6 +790,7 @@ namespace EQLogParser
     public byte Rank { get; set; }
     public bool Mgb { get; set; }
     public bool SeenRecently { get; set; }
+    public bool IsUnknown { get; set; }
   }
 
   internal class SpellCountData
@@ -814,8 +821,9 @@ namespace EQLogParser
     public string ShortTitle { get; set; }
     public List<PlayerStats> StatsList { get; } = [];
     public List<PlayerStats> ExpandedStatsList { get; } = [];
-    public PlayerStats RaidStats { get; set; }
-    public Dictionary<string, byte> UniqueClasses { get; } = [];
+    public PlayerStats RaidStats { get; init; }
+    public Dictionary<string, string> PlayerClasses { get; init; }
+    public List<string> UniqueClasses { get; } = [];
     public Dictionary<string, List<PlayerStats>> Children { get; } = [];
   }
 

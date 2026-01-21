@@ -82,7 +82,7 @@ namespace EQLogParser
 
         if (PreLineParser.NeedProcessing(lineData))
         {
-          // may as split once if most things use it
+          // may as well split once if most things use it
           lineData.Split = lineData.Action.Split(' ');
           if (!DamageLineParser.Process(lineData))
           {

@@ -51,7 +51,7 @@ namespace EQLogParser
       }
     }
 
-    internal void Update(string origName, string playerName, string percentValue, string damageValue, string dpsValue,
+    internal void Update(string playerName, string className, string percentValue, string damageValue, string dpsValue,
       string timeValue, double barPercent, string colorOverride = null)
     {
       if (colorOverride != null && _lastColor != colorOverride)
@@ -70,7 +70,7 @@ namespace EQLogParser
         Visibility = Visibility.Visible;
       }
 
-      classImage.Source = PlayerManager.Instance.GetPlayerIcon(origName);
+      classImage.Source = PlayerManager.GetPlayerIcon(className);
       player.Text = playerName;
       damage.Text = damageValue;
       dps.Text = dpsValue;

@@ -31,7 +31,7 @@ namespace EQLogParser
         {
           string player = null;
           string spellName = null;
-          var isSpell = false;
+          var isCasting = false;
           var isInterrupted = false;
           var isYou = false;
 
@@ -61,7 +61,7 @@ namespace EQLogParser
               if (split[2] == "casting")
               {
                 spellName = TextUtils.ParseSpellOrNpc([.. split], 3);
-                isSpell = true;
+                isCasting = true;
               }
               else if (split[2] == "singing")
               {
@@ -80,7 +80,7 @@ namespace EQLogParser
             {
               player = string.Join(" ", [.. split], 0, bIndex);
               spellName = TextUtils.ParseSpellOrNpc([.. split], bIndex + 2);
-              isSpell = true;
+              isCasting = true;
             }
             else if (split[bIndex + 1] == "singing")
             {
@@ -93,7 +93,7 @@ namespace EQLogParser
               {
                 player = split[0];
                 spellName = ParseOldSpellName(split, 6);
-                isSpell = true;
+                isCasting = true;
               }
               else if (split[3] == "sing" && split[5] == "song.")
               {
@@ -125,7 +125,7 @@ namespace EQLogParser
             {
               string specialKey = null;
 
-              if (isSpell)
+              if (isCasting)
               {
                 // For some reason Glyphs don't show up for current player so this special case should limit the checks
                 // and allow glyph to work
@@ -150,9 +150,9 @@ namespace EQLogParser
               var cast = new SpellCast { Caster = string.Intern(player), Spell = string.Intern(spellName), SpellData = spellData };
               RecordManager.Instance.Add(cast, currentTime);
 
-              if (DataManager.Instance.GetSpellClass(cast.Spell) is { } theClass)
+              if (!spellData.IsUnknown && DataManager.Instance.GetSpellClass(spellData.Name) is { } theClass)
               {
-                PlayerManager.Instance.UpdatePlayerClassFromSpell(cast, theClass);
+                PlayerManager.Instance.SetActivePlayerClass(player, theClass, 2, currentTime);
               }
 
               if (specialKey != null && spellData != null)
