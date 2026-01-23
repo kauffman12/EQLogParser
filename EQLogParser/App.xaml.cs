@@ -37,7 +37,8 @@ namespace EQLogParser
 
     public App()
     {
-      SyncfusionLicenseProvider.RegisterLicense("");
+      // 32.x
+      SyncfusionLicenseProvider.RegisterLicense("set key here");
     }
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -71,7 +72,6 @@ namespace EQLogParser
         }
         else
         {
-          // hardware acceleration setting
           var hardwareAccel = ConfigUtil.GetSetting("HardwareAcceleration");
           if (hardwareAccel == null)
           {
@@ -83,7 +83,6 @@ namespace EQLogParser
 
         if (!ConfigUtil.IfSet("HideSplashScreen"))
         {
-          // show splash screen
           _splash.Show();
         }
 
@@ -95,14 +94,11 @@ namespace EQLogParser
         Version = ResourceAssembly.GetName().Version!.ToString()[..^2];
         Log.Info($"EQLogParser: {Version}, OS: {osVersion.VersionString}, DotNet: {Environment.Version}, RenderMode: {RenderOptions.ProcessRenderMode}");
 
-        // update for release notes URL
         var urlVersion = Version.Replace(".", "-");
         ReleaseNotesUrl = $"{ParserHome}/releasenotes.html#{urlVersion}";
 
-        // show render mode
         ConfigUtil.UpdateStatus($"RenderMode: {RenderOptions.ProcessRenderMode}");
 
-        // load audio voices before window is created
         ConfigUtil.UpdateStatus("Validating Installed Voices");
         await LoadVoicesSafe();
 
@@ -142,7 +138,6 @@ namespace EQLogParser
       var appDataRoamingPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
       var logsFolderPath = Path.Combine(appDataRoamingPath, "EQLogParser", "logs");
 
-      // Create a new file appender and set its properties
       var fileAppender = new RollingFileAppender
       {
         Name = "FileAppender",
@@ -158,10 +153,7 @@ namespace EQLogParser
         CountDirection = -1
       };
 
-      // Activate the options on the file appender
       fileAppender.ActivateOptions();
-
-      // Set the repository configuration
       BasicConfigurator.Configure(LogManager.GetRepository(), fileAppender);
     }
 
@@ -178,28 +170,47 @@ namespace EQLogParser
       ((Hierarchy)LogManager.GetRepository()).RaiseConfigurationChanged(EventArgs.Empty);
     }
 
+    // WPF ValidateTopLeft rejects values outside Int32 range.
+    private static bool IsValidTopLeft(double v) => !double.IsNaN(v) && !double.IsInfinity(v) && v >= int.MinValue && v <= int.MaxValue;
+
+    private static (double top, double left) SanitizePosition(double savedTop, double savedLeft)
+    {
+      var top = IsValidTopLeft(savedTop) ? savedTop : double.NaN;
+      var left = IsValidTopLeft(savedLeft) ? savedLeft : double.NaN;
+      return (top, left);
+    }
+
     private async Task ShowMain()
     {
+      // Read saved values (including possibly-corrupt ones)
+      var savedHeight = ConfigUtil.GetSettingAsDouble("WindowHeight", DefaultHeight);
+      var savedWidth = ConfigUtil.GetSettingAsDouble("WindowWidth", DefaultWidth);
+      var savedTop = ConfigUtil.GetSettingAsDouble("WindowTop", double.NaN);
+      var savedLeft = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN);
+
+      // Sanitize Top/Left BEFORE assigning them to a Window (prevents WPF ArgumentException)
+      var (top, left) = SanitizePosition(savedTop, savedLeft);
+
       var main = new MainWindow
       {
-        // DPI and sizing
-        Height = ConfigUtil.GetSettingAsDouble("WindowHeight", DefaultHeight),
-        Width = ConfigUtil.GetSettingAsDouble("WindowWidth", DefaultWidth),
-        Top = ConfigUtil.GetSettingAsDouble("WindowTop", double.NaN),
-        Left = ConfigUtil.GetSettingAsDouble("WindowLeft", double.NaN)
+        Height = savedHeight,
+        Width = savedWidth
+        // DO NOT set Top/Left here
       };
+
+      // Only assign if safe (otherwise leave as NaN and let CheckWindowPosition reset/center)
+      if (!double.IsNaN(top)) main.Top = top;
+      if (!double.IsNaN(left)) main.Left = left;
 
       ConfigUtil.UpdateStatus("Checking Window Position");
       CheckWindowPosition(main);
 
       Log.Info($"Window Pos ({main.Top}, {main.Left}) | Window Size ({main.Width}, {main.Height})");
 
-      // allow time fow window creation
       await Task.Delay(350);
 
       try
       {
-        // Init Trigger Manager
         ConfigUtil.UpdateStatus("Starting Trigger Manager");
         await TriggerManager.Instance.StartAsync();
 
@@ -215,7 +226,6 @@ namespace EQLogParser
           main.Show();
         }
 
-        // if start minimized if requested do nothing but update the last state
         if (ConfigUtil.IfSet("StartWithWindowMinimized"))
         {
           if (savedState != WindowState.Minimized)
@@ -227,28 +237,23 @@ namespace EQLogParser
         }
         else
         {
-          // use last saved state
           main.WindowState = savedState;
         }
 
-        // window state change event may or may not be
-        // received in main window at this point
         main.UpdateWindowBorder();
 
-        // allow time for state change
         await Task.Delay(350);
         MainActions.FireWindowStateChanged(main.WindowState);
         main.ConnectLocationChanged();
-        // start archive schedule if configured
+
+        // Start archive schedule if configured
         FileUtil.SetArchiveSchedule();
         ConfigUtil.UpdateStatus("Done");
 
-        // complete rest in a new thread
         await Task.Run(async () =>
         {
-          // cleanup downloads
+          // Cleanup downloads
           MainActions.Cleanup();
-
           await MainActions.CheckVersionAsync();
         });
       }
@@ -261,13 +266,23 @@ namespace EQLogParser
       }
     }
 
+    private static bool IsUsablePositiveFinite(double v) =>
+      !double.IsNaN(v) && !double.IsInfinity(v) && v > 0;
+
     private static void CheckWindowPosition(MainWindow main)
     {
-      // Allow small drift due to DPI rounding / taskbar / monitor changes
-      const double wiggle = 20; // pixels
+      // If position or size are not usable, skip intersection math and just reset/center.
+      if (!IsUsablePositiveFinite(main.Width) ||
+          !IsUsablePositiveFinite(main.Height) ||
+          double.IsNaN(main.Left) || double.IsInfinity(main.Left) ||
+          double.IsNaN(main.Top) || double.IsInfinity(main.Top))
+      {
+        ResetAndCenter(main, "Window had invalid position/size (NaN/Infinity/<=0). Resetting.");
+        return;
+      }
 
-      // Require at least this much of the window to be visible
-      const double minVisiblePercent = 0.25; // 25% of window area
+      const double wiggle = 20;            // pixels
+      const double minVisiblePercent = 0.25;
 
       var windowRect = new Rect(
         main.Left - wiggle,
@@ -296,14 +311,17 @@ namespace EQLogParser
 
           if (visiblePercent >= minVisiblePercent)
           {
-            // Enough of the window is visible — do NOT reset
-            return;
+            return; // enough visible
           }
         }
       }
 
-      // If we get here, the window is effectively off-screen
-      Log.Info("Window is mostly off-screen? Resetting position and size.");
+      ResetAndCenter(main, "Window is mostly off-screen? Resetting position and size.");
+    }
+
+    private static void ResetAndCenter(MainWindow main, string reason)
+    {
+      Log.Info(reason);
 
       main.Width = App.DefaultWidth;
       main.Height = App.DefaultHeight;
@@ -314,7 +332,6 @@ namespace EQLogParser
       main.Top = primary.Top + ((primary.Height - main.Height) / 2);
     }
 
-
     private void DomainUnhandledException(object sender, UnhandledExceptionEventArgs ex)
     {
       if (ex.ExceptionObject is Exception exception)
@@ -322,7 +339,6 @@ namespace EQLogParser
         Log.Error($"DomainUnhandledException: {exception.Message}");
         LogDetails(exception);
       }
-
       _splash?.SetErrorState();
     }
 
@@ -330,7 +346,8 @@ namespace EQLogParser
     {
       Log.Error($"AppDispatcherUnhandledException: {ex.Exception.Message}");
       LogDetails(ex.Exception);
-      ex.Handled = true; // Prevents application from closing
+      // Prevents application from closing
+      ex.Handled = true;
       _splash?.SetErrorState();
     }
 
@@ -341,6 +358,7 @@ namespace EQLogParser
         if (inner.StackTrace?.Contains("EditControl") == true && inner.Message?.StartsWith("Index", StringComparison.OrdinalIgnoreCase) == true)
         {
           // Ignore EditControl index out of range exceptions
+          // May be fixed in Syncfusion updates
           return;
         }
       }
