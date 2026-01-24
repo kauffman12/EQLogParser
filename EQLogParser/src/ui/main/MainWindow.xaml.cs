@@ -622,6 +622,27 @@ namespace EQLogParser
       }
     }
 
+    private void MenuItemExportNpcNamesClick(object sender, RoutedEventArgs e)
+    {
+      var saveFileDialog = new SaveFileDialog
+      {
+        // get file name
+        Filter = "Text Files (*.txt)|*.txt"
+      };
+
+      if (saveFileDialog.ShowDialog() == true)
+      {
+        try
+        {
+          File.WriteAllLines(saveFileDialog.FileName, GetFights(true).Select(f => f.Name).Distinct().OrderBy(n => n));
+        }
+        catch (Exception ex)
+        {
+          new MessageWindow("Save NPC Names", "Error saving NPC names: " + ex.Message).ShowDialog();
+        }
+      }
+    }
+
     private void ResetWindowStateClick(object sender, RoutedEventArgs e)
     {
       try
