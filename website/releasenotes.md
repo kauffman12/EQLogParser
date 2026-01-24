@@ -1,3 +1,9 @@
+# 2.3.43 | 01/24/26
+1. Added Player Benchmark chart for healing.
+2. Updated NPC list.
+3. Fix for reflected spells causing npcs to be added as players.
+4. Fix for initial bad window position causing a crash.
+
 # 2.3.42 | 01/21/26
 1. Implemented a more precise way to identify player class.
 2. Manually setting player class is used as last resort/default.

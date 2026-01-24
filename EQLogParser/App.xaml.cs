@@ -38,7 +38,7 @@ namespace EQLogParser
     public App()
     {
       // 32.x
-      SyncfusionLicenseProvider.RegisterLicense("set key here");
+      SyncfusionLicenseProvider.RegisterLicense("license");
     }
 
     protected override async void OnStartup(StartupEventArgs e)

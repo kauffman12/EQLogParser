@@ -100,6 +100,11 @@
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="healingViewIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Heart" />
             </MenuItem.Icon>
+            <MenuItem x:Name="healingBarChartMenuItem" Click="MenuItemWindowClick" Header="_Player Benchmark">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="healingBarChartIcon" Tag="healingBarChartWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              </MenuItem.Icon>
+            </MenuItem>
             <MenuItem x:Name="healingChartMenuItem" Click="MenuItemWindowClick" Header="_Trends Chart">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="healingChartIcon" Tag="healingChartWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Icon="Solid_Check" />

@@ -113,8 +113,9 @@ namespace EQLogParser
       SyncFusionUtil.AddDocument(dockSite, typeof(HealingSummary), "healingSummaryWindow", "Healing Summary");
       SyncFusionUtil.AddDocument(dockSite, typeof(TankingSummary), "tankingSummaryWindow", "Tanking Summary");
       SyncFusionUtil.AddDocument(dockSite, typeof(DamageChart), "damageChartWindow", "DPS Trends");
-      SyncFusionUtil.AddDocument(dockSite, typeof(ColumnChart), "damageBarChartWindow", "DPS Benchmark");
+      SyncFusionUtil.AddDocument(dockSite, typeof(DamageColumnChart), "damageBarChartWindow", "DPS Benchmark");
       SyncFusionUtil.AddDocument(dockSite, typeof(HealingChart), "healingChartWindow", "Healing Trends");
+      SyncFusionUtil.AddDocument(dockSite, typeof(HealingColumnChart), "healingBarChartWindow", "HPS Benchmark");
       SyncFusionUtil.AddDocument(dockSite, typeof(TankingChart), "tankingChartWindow", "Tanking Trends");
       SyncFusionUtil.AddDocument(dockSite, typeof(ChatViewer), "chatWindow", "Chat Archive");
       SyncFusionUtil.AddDocument(dockSite, typeof(EventViewer), "specialEventsWindow", "Misc Events");

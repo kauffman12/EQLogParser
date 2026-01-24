@@ -28,6 +28,7 @@ namespace EQLogParser
     private PlayerStats _raidTotals;
     private List<Fight> _selected;
     private TimeRange _allRanges;
+    private StatsGenerationEvent _lastStatsEvent;
     private string _title;
     private bool _isLimited;
     internal static readonly string[] Separator = [" @"];
@@ -41,6 +42,14 @@ namespace EQLogParser
           Reset(true);
         }
       };
+    }
+
+    internal StatsGenerationEvent GetLastStats()
+    {
+      lock (_healingGroups)
+      {
+        return _lastStatsEvent;
+      }
     }
 
     internal void RebuildTotalStats(GenerateStatsOptions options)
@@ -65,6 +74,7 @@ namespace EQLogParser
           FireNewStatsEvent();
           Reset();
 
+          _lastStatsEvent = null;
           _selected = [.. options.Npcs.OrderBy(sel => sel.Id)];
           _title = options.Npcs?.FirstOrDefault()?.Name;
           var healingValidator = new HealingValidator();
@@ -397,10 +407,10 @@ namespace EQLogParser
     {
       lock (_healingGroups)
       {
-        var individualStats = new Dictionary<string, PlayerStats>();
-
+        _lastStatsEvent = null;
         if (_raidTotals != null)
         {
+          var individualStats = new Dictionary<string, PlayerStats>();
           // always start over
           _raidTotals.Total = 0;
           var lastTime = double.NaN;
@@ -487,6 +497,7 @@ namespace EQLogParser
 
             genEvent.Groups.AddRange(_healingGroups);
             EventsGenerationStatus?.Invoke(genEvent);
+            _lastStatsEvent = genEvent;
             FireChartEvent("UPDATE");
           }
           catch (Exception ex)

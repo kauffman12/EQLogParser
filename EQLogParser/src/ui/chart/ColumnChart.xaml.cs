@@ -21,6 +21,11 @@ namespace EQLogParser
     private readonly DispatcherTimer _refresh;
     private bool _ready;
 
+    // ✅ Derived types override these:
+    protected virtual IStatsManager StatsManager => DamageStatsManagerAdapter.Instance;
+
+    protected virtual string ChartTitle => "Players vs Top Performer (Percent of Total Damage)";
+
     public ColumnChart()
     {
       InitializeComponent();
@@ -73,7 +78,7 @@ namespace EQLogParser
             if (e.CombinedStats != null)
             {
               await LoadDataAsync(e.CombinedStats.StatsList);
-              titleLabel.Content = "Players vs Top Performer (Percent of Total Damage)";
+              titleLabel.Content = ChartTitle;
             }
             else
             {
@@ -333,16 +338,16 @@ namespace EQLogParser
         SizeChanged += ContentSizeChanged;
         MainActions.EventsThemeChanged += EventsThemeChanged;
         DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
-        DamageStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
+        StatsManager.EventsGenerationStatus += EventsGenerationStatus;
 
         // use existing or generate data
-        if (DamageStatsManager.Instance.GetLastStats() is { } stats)
+        if (StatsManager.GetLastStats() is { } stats)
         {
           EventsGenerationStatus(stats);
         }
         else
         {
-          Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(new GenerateStatsOptions()));
+          Task.Run(() => StatsManager.RebuildTotalStats(new GenerateStatsOptions()));
         }
 
         _ready = true;
@@ -354,7 +359,7 @@ namespace EQLogParser
       SizeChanged -= ContentSizeChanged;
       MainActions.EventsThemeChanged -= EventsThemeChanged;
       DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
-      DamageStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+      StatsManager.EventsGenerationStatus -= EventsGenerationStatus;
       _ready = false;
     }
 
