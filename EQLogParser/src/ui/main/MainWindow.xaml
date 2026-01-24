@@ -64,6 +64,13 @@
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_File" />
               </MenuItem.Icon>
             </MenuItem>
+            <!--
+            <MenuItem Header="Npc Names" Click="MenuItemExportNpcNamesClick" ToolTip="Save Npc Names.">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_File" />
+              </MenuItem.Icon>
+            </MenuItem>
+           -->
           </MenuItem>
           <Separator/>
           <MenuItem Header="E_xit" Click="WindowClose" InputGestureText="Alt+F4" />

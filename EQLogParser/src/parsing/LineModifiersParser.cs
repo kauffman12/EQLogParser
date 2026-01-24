@@ -218,18 +218,12 @@ namespace EQLogParser
       }
     }
 
-    internal static short Parse(string player, string modifiers, double currentTime)
+    internal static short ParseDamage(string player, string modifiers, double currentTime, bool isPlayer)
     {
-      short result = -1;
+      var result = Parse(player, modifiers, currentTime);
 
-      if (!string.IsNullOrEmpty(modifiers))
+      if (isPlayer)
       {
-        if (!MaskCache.TryGetValue(modifiers, out result))
-        {
-          result = BuildVector(player, modifiers, currentTime);
-          MaskCache[modifiers] = result;
-        }
-
         string classAbility = null;
         string className = null;
         if (IsAssassinate(result))
@@ -250,10 +244,6 @@ namespace EQLogParser
           classAbility = "Slay Undead";
           className = Resource.PAL;
         }
-        else if (IsTwincast(result))
-        {
-          PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
-        }
 
         if (!string.IsNullOrEmpty(classAbility) && !string.IsNullOrEmpty(className))
         {
@@ -262,6 +252,30 @@ namespace EQLogParser
       }
 
       return result;
+    }
+
+    internal static short ParseHeal(string player, string modifiers, double currentTime)
+    {
+      var result = Parse(player, modifiers, currentTime);
+
+      if (IsTwincast(result))
+      {
+        PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
+      }
+
+      return result;
+    }
+
+    private static short Parse(string player, string modifiers, double currentTime)
+    {
+      if (!string.IsNullOrEmpty(modifiers) && !MaskCache.TryGetValue(modifiers, out _))
+      {
+        var result = BuildVector(player, modifiers, currentTime);
+        MaskCache[modifiers] = result;
+        return result;
+      }
+
+      return -1;
     }
 
     private static short BuildVector(string player, string modifiers, double currentTime)

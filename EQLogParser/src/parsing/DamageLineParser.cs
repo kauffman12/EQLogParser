@@ -1079,7 +1079,7 @@ namespace EQLogParser
         {
           // improve this later so maybe the string doesn't have to be re-joined
           var modifiers = string.Join(" ", split, stop + 1, split.Length - stop - 1);
-          modifiersMask = LineModifiersParser.Parse(attacker, modifiers[1..^1], currentTime);
+          modifiersMask = LineModifiersParser.ParseDamage(attacker, modifiers[1..^1], currentTime, !attackerIsSpell);
         }
 
         // check for pets

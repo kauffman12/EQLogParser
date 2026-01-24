@@ -1,8 +1,64 @@
+A bedeviled scrykin
+A bloated foodstuff
+A bomb
+A chaotic earth pile
+A cold spiritlight
+A constituent
+A corrupted egg
+A crazed scrykin
+A cursed deathspeaker
+A cursed swindler
+A fungoid charger
+A fungoid fanatic
+A fungoid savage
+A greedling
+A grudgeling
+A hateful spiter
+A healthy foodstuff
+A killer moth
+A knight of loathing
+A lava blob
+A linen songspinner
+A living storm
+A lost shade
+A mage of loathing
+A malicious husk
+A malicious vessel
+A malignant thief
+A manifestation of Okahn
+A payload specialist
+A rageling
+A runic worker
+A rusher
+A silk moth
+A spite forgatherer
+A spite golem
+A spiteling
+A sprouting root
+A stony worker
+A strangle root crawler
+A strengthening foodstuff
+A suispider
+A swarmer
+A tainted egg
+A tangled strongbox
+A thief of loathing
+A trapper
+A twisted strongbox
+A waxwork ambusher
+A waxwork soldier
+A waxwork zealot
+A young spiter
 Adalaide Galerider
 Alleza
+An ashenback blob
+An echo
+An inferior spite
+An unyielding edifice
 Anguillifor
 Aqua Castroll
 Arcanist Aunrae V`Len
+Ashenback
 Atathus, the Red Lord
 Ballafore
 Brood Architect Hazuri
@@ -16,6 +72,7 @@ Councilmember Lizzrel
 Councilmember Myjinn
 Diabollis
 Efiiren Solitai
+Elder Monolith
 Elewisa the Oathbound
 Ephialtes
 Eye of Mother
@@ -23,6 +80,7 @@ First Raider
 First Scout
 First Soldier
 First Stormer
+Glarubaran, the Great Storm
 Harla Dar
 Keikolin the Enlightened
 Kellis the Young
@@ -33,12 +91,29 @@ Muji
 Norlan Prellmoss
 Queseris Trisleth
 Riptide
+Shar`Drahn
 Silverwing
+Spitetangle
+Stonetangle Prison
+Tallongast, The Egg
 Tamlin Wrathbone
 Tatanami
+Teknaz, Bringer of Flames
 Tha`k Rustae, the Butcher
+The Colossus of Skylance
+The Loathing Lord
+Twisted egg sacs
 Unigami
 Venesh the Greenblood
+Vengecoil
+Vengeskein
+Waxwork Abolishion
+Waxwork Burster
+Waxwork Combustor
+Waxwork Igniter
+Waxwork Lancer
+Waxwork Trapper
+Xanzerok
 Zarek
 a babbling muck
 a baby oashim
