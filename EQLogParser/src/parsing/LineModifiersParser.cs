@@ -220,7 +220,7 @@ namespace EQLogParser
 
     internal static short ParseDamage(string player, string modifiers, double currentTime, bool isPlayer)
     {
-      var result = Parse(player, modifiers, currentTime);
+      var result = Parse(player, modifiers);
 
       if (isPlayer)
       {
@@ -256,7 +256,7 @@ namespace EQLogParser
 
     internal static short ParseHeal(string player, string modifiers, double currentTime)
     {
-      var result = Parse(player, modifiers, currentTime);
+      var result = Parse(player, modifiers);
 
       if (IsTwincast(result))
       {
@@ -266,19 +266,22 @@ namespace EQLogParser
       return result;
     }
 
-    private static short Parse(string player, string modifiers, double currentTime)
+    private static short Parse(string player, string modifiers)
     {
-      if (!string.IsNullOrEmpty(modifiers) && !MaskCache.TryGetValue(modifiers, out _))
+      short result = -1;
+      if (!string.IsNullOrEmpty(modifiers))
       {
-        var result = BuildVector(player, modifiers, currentTime);
-        MaskCache[modifiers] = result;
-        return result;
+        if (!MaskCache.TryGetValue(modifiers, out result))
+        {
+          result = BuildVector(player, modifiers);
+          MaskCache[modifiers] = result;
+        }
       }
 
-      return -1;
+      return result;
     }
 
-    private static short BuildVector(string player, string modifiers, double currentTime)
+    private static short BuildVector(string player, string modifiers)
     {
       short result = 0;
 

@@ -409,7 +409,6 @@ namespace EQLogParser
             genEvent.UniqueGroupCount = _damageGroupIds.Count;
             EventsGenerationStatus?.Invoke(genEvent);
             _lastStatsEvent = genEvent;
-
             FireChartEvent("UPDATE");
           }
           catch (Exception ex)
