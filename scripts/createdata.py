@@ -144,6 +144,9 @@ def intToRoman(number):
     result += roman * factor
   return result
 
+def isSingleClass(n: int):
+  return n > 0 and n <= 32768 and (n & (n - 1)) == 0
+
 # DB strings for lands on messages
 if os.path.isfile(DBSpellsStrFile):
   print('Loading Spell Strings from %s' % DBSpellsStrFile)
@@ -178,6 +181,7 @@ if os.path.isfile(DBSpellsFile):
 
   spells = dict()
   recourses = dict()
+  spa85s = dict()
   spa339s = dict()
   spa340s = dict()
   spa373s = dict()
@@ -325,6 +329,9 @@ if os.path.isfile(DBSpellsFile):
           elif int(float(base1)) >= 0:
             adps = getAdpsValueFromSpa(adps, spa, requireDet)
             
+        if spa == 85 and int(float(base1)) > 0:
+          # testing
+          spa85s[base1] = base1
         if spa == 339 and int(float(base2)) > 0:
           spa339s[base2] = id
           procs.append(base2)
