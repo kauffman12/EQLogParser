@@ -1,3 +1,7 @@
+# 2.3.44 | 01/27/26
+1. Limited some of the procs being counted to detect player class.
+2. Note that the /who command can be used to help if class isn't shown.
+
 # 2.3.43 | 01/24/26
 1. Added Player Benchmark chart for healing.
 2. Updated NPC list.
