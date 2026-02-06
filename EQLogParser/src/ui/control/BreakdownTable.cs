@@ -11,7 +11,7 @@ namespace EQLogParser
 {
   public abstract class BreakdownTable : UserControl, IDisposable
   {
-    private protected DataGridTextColumn CurrentColumn = null;
+    private protected DataGridTextColumn CurrentColumn;
     private SfTreeGrid _theDataGrid;
     private ComboBox _theColumnsCombo;
     internal Label TheTitle;

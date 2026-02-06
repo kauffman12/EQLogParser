@@ -260,9 +260,9 @@ namespace EQLogParser
             !spell.NameAbbrv.EndsWith(" gate", StringComparison.OrdinalIgnoreCase) &&
             !spell.NameAbbrv.Contains(" Synergy", StringComparison.OrdinalIgnoreCase) &&
             !spell.NameAbbrv.Contains("Call of Fire", StringComparison.OrdinalIgnoreCase) &&
-            ((spell.ClassMask != (int)SpellClass.Clr && spell.ClassMask != (int)SpellClass.Brd && spell.ClassMask != (int)SpellClass.Bst) ||
-              spell.Level <= 250 || spell.Name.Contains("Gelid Claw") || spell.Name.Contains("Gorilla Smash") || spell.Name.Contains("Raven's Claw") ||
-              spell.Name.Contains("Roar of Thunder") || spell.Name.Contains("Taste of Blood")))
+            !spell.NameAbbrv.Contains("Pet Heal", StringComparison.OrdinalIgnoreCase) &&
+            !(spell.ClassMask == (int)SpellClass.Clr && spell.NameAbbrv.Contains("Effect")) &&
+            !(spell.ClassMask == (int)SpellClass.Brd && spell.Level >= 250))
           {
             // these need to be unique and keep track if a conflict is found
             if (_spellsToClass.ContainsKey(spell.Name))

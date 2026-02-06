@@ -21,8 +21,8 @@
       <Label x:Name="titleLabel" Content="Loading..." Style="{StaticResource EQTitleStyle}" />
     </StackPanel>
     <StackPanel x:Name="controlPanel" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <ComboBox Margin="0,0,8,2" x:Name="choicesList" SelectionChanged="ListSelectionChanged" />
-      <ComboBox Margin="0,0,8,2" x:Name="optionsList" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="choicesList" SelectionChanged="ListSelectionChanged1" />
+      <ComboBox Margin="0,0,8,2" x:Name="optionsList" SelectionChanged="ListSelectionChanged2" />
       <ComboBox x:Name="selectedColumns" Tag="HealingBreakdownColumns" Margin="0,0,8,2" 
                 DropDownClosed="SelectDataGridColumns" ItemTemplateSelector="{StaticResource ComboBoxSelector}"/>
     </StackPanel>
@@ -32,7 +32,7 @@
                            AllowResizingColumns="True"
                            AllowSelectionOnPointerPressed="True"
                            AllowSorting="True"
-                           AutoExpandMode="AllNodesExpanded"
+                           AutoExpandMode="RootNodesExpanded"
                            AutoGenerateColumns="False"
                            ColumnSizer="Auto"
                            CurrentCellBorderThickness="0"

@@ -17,7 +17,6 @@ namespace EQLogParser
     private int _currentShowTop;
     private List<PlayerStats> _playerStats;
     private string _setting;
-    private string _title;
 
     public HealBreakdown()
     {
@@ -29,7 +28,7 @@ namespace EQLogParser
     {
       _received = received;
       _playerStats = selectedStats;
-      _title = currentStats?.ShortTitle;
+      titleLabel.Content = currentStats?.ShortTitle;
       _setting = (received ? "Received" : "") + "HealingBreakdownShowSpells";
       _currentShowSpellsChoice = ConfigUtil.IfSet(_setting);
       choicesList.ItemsSource = received ? _receivedChoicesList : _choicesList;
@@ -37,18 +36,19 @@ namespace EQLogParser
       UpdateOptionsList();
     }
 
-    private void ListSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    private void ListSelectionChanged1(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => ListSelectionChanged();
+    private void ListSelectionChanged2(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => ListSelectionChanged();
+
+    private void ListSelectionChanged()
     {
       if (_playerStats != null && dataGrid?.View != null)
       {
         _currentShowSpellsChoice = choicesList.SelectedIndex == 0;
-        titleLabel.Content = "Loading...";
         ConfigUtil.SetSetting(_setting, _currentShowSpellsChoice);
         UpdateOptionsList();
         dataGrid.View.Refresh();
-        dataGrid.ExpandAllNodes();
+        dataGrid.ExpandAllNodes(0);
         dataGrid.SortColumnDescriptions.Clear();
-        titleLabel.Content = _title;
       }
     }
 
@@ -80,9 +80,9 @@ namespace EQLogParser
           e.ChildItems = sorted;
         }
       }
-      else
+      else if (e.ParentItem is PlayerSubStats { } subStats)
       {
-        e.ChildItems = new List<PlayerStats>();
+        e.ChildItems = subStats.SubSubStats.OrderByDescending(stats => stats.Total);
       }
     }
 
