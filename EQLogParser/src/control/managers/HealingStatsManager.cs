@@ -315,6 +315,9 @@ namespace EQLogParser
                   var spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
                   StatsUtil.UpdateStats(spellStats, record);
 
+                  var subStats3 = StatsUtil.CreatePlayerSubStats(subStats2.SubSubStats, spellStatName, record.Healer + "|" + record.Healed);
+                  StatsUtil.UpdateStats(subStats3, record);
+
                   long value = 0;
                   if (totals.TryGetValue(record.Healed, out var total))
                   {
@@ -349,6 +352,11 @@ namespace EQLogParser
             foreach (var subStat2 in CollectionsMarshal.AsSpan(indStats.SubStats2))
             {
               StatsUtil.UpdateCalculations(subStat2, indStats);
+
+              foreach (var subSubStats in CollectionsMarshal.AsSpan(subStat2.SubSubStats))
+              {
+                StatsUtil.UpdateCalculations(subSubStats, indStats);
+              }
             }
           }
         }
@@ -436,6 +444,9 @@ namespace EQLogParser
                     var healedStatName = record.Healed;
                     var healedStats = StatsUtil.CreatePlayerSubStats(stats.SubStats2, healedStatName, record.Type);
                     StatsUtil.UpdateStats(healedStats, record);
+
+                    var subStats3 = StatsUtil.CreatePlayerSubStats(healedStats.SubSubStats, spellStatName, record.Healer + "|" + record.Healed);
+                    StatsUtil.UpdateStats(subStats3, record);
                   }
                 }
 

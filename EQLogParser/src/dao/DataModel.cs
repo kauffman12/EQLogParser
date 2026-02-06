@@ -880,6 +880,7 @@ namespace EQLogParser
     public string Key { get; set; }
     public TimeRange Ranges { get; } = new();
     public TimeRange AllRanges { get; set; } = new();
+    public List<PlayerSubStats> SubSubStats { get; } = [];
   }
 
   internal class SubStatsBreakdown : PlayerSubStats

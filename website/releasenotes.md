@@ -1,3 +1,8 @@
+# 2.3.45 | 02/05/26
+1. Updated Healing Breakdown to show additional spells info when viewing by the Healer/Healed option.
+2. More updates to player class selection.
+3. Updated spell data.
+
 # 2.3.44 | 01/27/26
 1. Limited some of the procs being counted to detect player class.
 2. Note that the /who command can be used to help if class isn't shown.
