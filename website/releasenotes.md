@@ -1,3 +1,7 @@
+# 2.3.46 | 02/08/26
+1. Fixed missing data in the Healing Breakdown for the new spell info.
+2. Updated Healing Breakdown to remember the top 3, 5, etc setting.
+
 # 2.3.45 | 02/05/26
 1. Updated Healing Breakdown to show additional spells info when viewing by the Healer/Healed option.
 2. More updates to player class selection.

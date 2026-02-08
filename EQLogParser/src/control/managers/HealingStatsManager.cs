@@ -19,11 +19,14 @@ namespace EQLogParser
     internal event Action<StatsGenerationEvent> EventsGenerationStatus;
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _healedByHealerTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _healedBySpellTimeRanges = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _healedByHealerSpellTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _healerHealedTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _healerSpellTimeRanges = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _healerHealedSpellTimeRanges = new();
     private readonly List<List<ActionGroup>> _healingGroups = [];
     private ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _allHealedByHealerTimeRanges;
     private ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _allHealedBySpellTimeRanges;
+    private ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _allHealedByHealerSpellTimeRanges;
     private List<List<ActionGroup>> _allHealingGroups;
     private PlayerStats _raidTotals;
     private List<Fight> _selected;
@@ -138,8 +141,10 @@ namespace EQLogParser
               var updatedHeals = new List<ActionGroup>();
               var healedByHealerTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
               var healedBySpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
+              var healedByHealerSpellsTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
               var healerHealedTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
               var healerSpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
+              var healerHealedSpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
 
               var currentTime = double.NaN;
               var currentSpellCounts = new Dictionary<string, HashSet<string>>();
@@ -206,11 +211,13 @@ namespace EQLogParser
                     {
                       updatedHeal.Actions.Add(record);
                       // store substats and substats2 which is based on the player that was healed
-                      var key = StatsUtil.CreateRecordKey(record.Type, record.SubType);
+                      var spellNameKey = StatsUtil.CreateRecordKey(record.Type, record.SubType);
                       StatsUtil.UpdateTimeSegments(null, healedByHealerTimeSegments, record.Healer, record.Healed, heal.BeginTime);
-                      StatsUtil.UpdateTimeSegments(null, healedBySpellTimeSegments, key, record.Healed, heal.BeginTime);
+                      StatsUtil.UpdateTimeSegments(null, healedBySpellTimeSegments, spellNameKey, record.Healed, heal.BeginTime);
+                      StatsUtil.UpdateTimeSegments(null, healedByHealerSpellsTimeSegments, spellNameKey, record.Healer + "|" + record.Healed, heal.BeginTime);
                       StatsUtil.UpdateTimeSegments(null, healerHealedTimeSegments, record.Healed, record.Healer, heal.BeginTime);
-                      StatsUtil.UpdateTimeSegments(null, healerSpellTimeSegments, key, record.Healer, heal.BeginTime);
+                      StatsUtil.UpdateTimeSegments(null, healerSpellTimeSegments, spellNameKey, record.Healer, heal.BeginTime);
+                      StatsUtil.UpdateTimeSegments(null, healerHealedSpellTimeSegments, spellNameKey, record.Healer + "|" + record.Healed, heal.BeginTime);
                     }
                   }
                 }
@@ -221,10 +228,14 @@ namespace EQLogParser
                 }
               }
 
+              // healedBy handled in populate healing for tank received healing
               Parallel.ForEach(healedByHealerTimeSegments, kv => StatsUtil.AddSubTimeEntry(_healedByHealerTimeRanges, kv));
               Parallel.ForEach(healedBySpellTimeSegments, kv => StatsUtil.AddSubTimeEntry(_healedBySpellTimeRanges, kv));
+              Parallel.ForEach(healedByHealerSpellsTimeSegments, kv => StatsUtil.AddSubTimeEntry(_healedByHealerSpellTimeRanges, kv));
+              // healer handled in compute for regular healing breakdown
               Parallel.ForEach(healerHealedTimeSegments, kv => StatsUtil.AddSubTimeEntry(_healerHealedTimeRanges, kv));
               Parallel.ForEach(healerSpellTimeSegments, kv => StatsUtil.AddSubTimeEntry(_healerSpellTimeRanges, kv));
+              Parallel.ForEach(healerHealedSpellTimeSegments, kv => StatsUtil.AddSubTimeEntry(_healerHealedSpellTimeRanges, kv));
 
               if (updatedHeals.Count > 0)
               {
@@ -238,6 +249,7 @@ namespace EQLogParser
               _allHealingGroups = _healingGroups;
               _allHealedByHealerTimeRanges = _healedByHealerTimeRanges;
               _allHealedBySpellTimeRanges = _healedBySpellTimeRanges;
+              _allHealedByHealerSpellTimeRanges = _healedByHealerSpellTimeRanges;
             }
 
             ComputeHealingStats(options);
@@ -250,6 +262,7 @@ namespace EQLogParser
               _allHealingGroups = null;
               _allHealedByHealerTimeRanges = null;
               _allHealedBySpellTimeRanges = null;
+              _allHealedByHealerSpellTimeRanges = null;
             }
             FireNoDataEvent(options, "NONPC");
           }
@@ -261,6 +274,7 @@ namespace EQLogParser
               _allHealingGroups = null;
               _allHealedByHealerTimeRanges = null;
               _allHealedBySpellTimeRanges = null;
+              _allHealedByHealerSpellTimeRanges = null;
             }
             FireNoDataEvent(options, "NODATA");
           }
@@ -342,7 +356,7 @@ namespace EQLogParser
 
             stat.MoreStats = indStats;
             UpdateStats(combined.RaidStats, indStats, _allHealedBySpellTimeRanges, _allHealedByHealerTimeRanges,
-              raidTotals.MinBeginTime, raidTotals.MaxBeginTime);
+              _allHealedByHealerSpellTimeRanges, true, raidTotals.MinBeginTime, raidTotals.MaxBeginTime);
 
             foreach (var subStat in CollectionsMarshal.AsSpan(indStats.SubStats))
             {
@@ -365,20 +379,38 @@ namespace EQLogParser
       return _isLimited;
     }
 
-    private static void UpdateStats(PlayerStats raidTotals, PlayerStats stats, ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> calc,
-      ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> secondary, double minTime = double.NaN, double maxTime = double.NaN)
+    private static void UpdateStats(PlayerStats raidTotals, PlayerStats stats,
+      ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> healedBySpell,
+      ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> healedByHealer,
+      ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> healedByHealerSpells,
+      bool populate,
+      double minTime = double.NaN, double maxTime = double.NaN)
     {
-      if (calc.TryGetValue(stats.Name, out var ranges))
+      if (healedBySpell.TryGetValue(stats.Name, out var ranges))
       {
         // base the total time range off the sub times ranges since healing doesn't have good Fight segments to work with
         var totalRange = new TimeRange();
-        ranges.Values.ToList().ForEach(range => totalRange.Add(range.TimeSegments));
+        foreach (var kv in ranges)
+        {
+          totalRange.Add(kv.Value.TimeSegments);
+        }
+
         var filteredRange = StatsUtil.FilterTimeRange(totalRange, minTime, maxTime);
         stats.TotalSeconds = filteredRange.GetTotal();
       }
 
-      StatsUtil.UpdateSubStatsTimeRanges(stats, calc, minTime, maxTime);
-      StatsUtil.UpdateSubStatsTimeRanges(stats, secondary, minTime, maxTime);
+      StatsUtil.UpdateSubStatsTimeRanges(stats, healedBySpell, minTime, maxTime);
+      StatsUtil.UpdateSubStatsTimeRanges(stats, healedByHealer, minTime, maxTime);
+
+      foreach (var subStat2 in stats.SubStats2)
+      {
+        var subSubStatKey = populate ? subStat2.Key + "|" + stats.Name : stats.Name + "|" + subStat2.Key;
+        if (healedByHealerSpells.TryGetValue(subSubStatKey, out ranges))
+        {
+          StatsUtil.UpdateSubStat(subStat2.SubSubStats, ranges, minTime, maxTime);
+        }
+      }
+
       StatsUtil.UpdateCalculations(stats, raidTotals);
     }
 
@@ -459,14 +491,14 @@ namespace EQLogParser
 
             var uniqueClasses = new ConcurrentDictionary<string, byte>();
             var playerClasses = new ConcurrentDictionary<string, string>();
-            Parallel.ForEach(individualStats.Values, stats =>
+            foreach (var stats in individualStats.Values)
             {
               if (_raidTotals.Specials.TryGetValue(stats.OrigName, out var special2))
               {
                 stats.Special = special2;
               }
 
-              UpdateStats(_raidTotals, stats, _healerSpellTimeRanges, _healerHealedTimeRanges);
+              UpdateStats(_raidTotals, stats, _healerSpellTimeRanges, _healerHealedTimeRanges, _healerHealedSpellTimeRanges, false);
               var playerClass = PlayerManager.Instance.GetPlayerClass(stats.OrigName, lastTime);
               stats.ClassName = playerClass;
               playerClasses.TryAdd(stats.OrigName, playerClass);
@@ -475,7 +507,7 @@ namespace EQLogParser
               {
                 uniqueClasses.TryAdd(playerClass, 1);
               }
-            });
+            }
 
             var combined = new CombinedStats
             {
@@ -526,12 +558,15 @@ namespace EQLogParser
         _allHealingGroups = null;
         _allHealedByHealerTimeRanges = null;
         _allHealedBySpellTimeRanges = null;
+        _allHealedByHealerSpellTimeRanges = null;
       }
 
       _healedByHealerTimeRanges.Clear();
       _healedBySpellTimeRanges.Clear();
+      _healedByHealerSpellTimeRanges.Clear();
       _healerHealedTimeRanges.Clear();
       _healerSpellTimeRanges.Clear();
+      _healerHealedSpellTimeRanges.Clear();
       _healingGroups.Clear();
       _raidTotals = StatsUtil.CreatePlayerStats(Labels.RaidTotals);
       _selected = null;
