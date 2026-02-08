@@ -16,7 +16,8 @@ namespace EQLogParser
     private bool _currentShowSpellsChoice = true;
     private int _currentShowTop;
     private List<PlayerStats> _playerStats;
-    private string _setting;
+    private string _settingShowType;
+    private string _settingShowTop;
 
     public HealBreakdown()
     {
@@ -29,11 +30,18 @@ namespace EQLogParser
       _received = received;
       _playerStats = selectedStats;
       titleLabel.Content = currentStats?.ShortTitle;
-      _setting = (received ? "Received" : "") + "HealingBreakdownShowSpells";
-      _currentShowSpellsChoice = ConfigUtil.IfSet(_setting);
+      _settingShowType = (received ? "Received" : "") + "HealingBreakdownShowSpells";
+      _currentShowSpellsChoice = ConfigUtil.IfSet(_settingShowType);
+      _settingShowTop = (received ? "Received" : "") + "HealingBreakdownShowTop";
+      var showTopIndex = ConfigUtil.GetSettingAsInteger(_settingShowTop);
+      if (showTopIndex > 0 && showTopIndex < _topSpellsList.Count)
+      {
+        _currentShowTop = showTopIndex;
+      }
       choicesList.ItemsSource = received ? _receivedChoicesList : _choicesList;
       choicesList.SelectedIndex = _currentShowSpellsChoice ? 0 : 1;
-      UpdateOptionsList();
+      optionsList.ItemsSource = GetOptionsList();
+      optionsList.SelectedIndex = _currentShowTop;
     }
 
     private void ListSelectionChanged1(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => ListSelectionChanged();
@@ -44,7 +52,8 @@ namespace EQLogParser
       if (_playerStats != null && dataGrid?.View != null)
       {
         _currentShowSpellsChoice = choicesList.SelectedIndex == 0;
-        ConfigUtil.SetSetting(_setting, _currentShowSpellsChoice);
+        ConfigUtil.SetSetting(_settingShowType, _currentShowSpellsChoice);
+        ConfigUtil.SetSetting(_settingShowTop, optionsList.SelectedIndex);
         UpdateOptionsList();
         dataGrid.View.Refresh();
         dataGrid.ExpandAllNodes(0);
@@ -88,17 +97,8 @@ namespace EQLogParser
 
     private void UpdateOptionsList()
     {
-      List<string> options;
       var previousIndex = optionsList.SelectedIndex >= 0 ? optionsList.SelectedIndex : 0;
-
-      if (_received)
-      {
-        options = _currentShowSpellsChoice ? _topSpellsList : _topHealerList;
-      }
-      else
-      {
-        options = _currentShowSpellsChoice ? _topSpellsList : _topHealedList;
-      }
+      var options = GetOptionsList();
 
       if (options != null && options != optionsList.ItemsSource)
       {
@@ -107,6 +107,18 @@ namespace EQLogParser
       }
 
       _currentShowTop = optionsList.SelectedIndex;
+    }
+
+    private List<string> GetOptionsList()
+    {
+      if (_received)
+      {
+        return _currentShowSpellsChoice ? _topSpellsList : _topHealerList;
+      }
+      else
+      {
+        return _currentShowSpellsChoice ? _topSpellsList : _topHealedList;
+      }
     }
   }
 }

@@ -6,7 +6,6 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 
 namespace EQLogParser
 {
@@ -304,7 +303,7 @@ namespace EQLogParser
             var expandedStats = new ConcurrentBag<PlayerStats>();
             var uniqueClasses = new ConcurrentDictionary<string, byte>();
             var playerClasses = new ConcurrentDictionary<string, string>();
-            Parallel.ForEach(individualStats.Values, stats =>
+            foreach (var stats in individualStats.Values)
             {
               if (topLevelStats.ContainsKey(stats.Name))
               {
@@ -363,7 +362,7 @@ namespace EQLogParser
               {
                 uniqueClasses.TryAdd(playerClass, 1);
               }
-            });
+            }
 
             var combined = new CombinedStats
             {

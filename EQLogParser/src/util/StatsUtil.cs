@@ -252,7 +252,7 @@ namespace EQLogParser
       }
     }
 
-    private static void UpdateSubStat(List<PlayerSubStats> subStats, ConcurrentDictionary<string, TimeRange> subRanges, double minTime, double maxTime)
+    internal static void UpdateSubStat(List<PlayerSubStats> subStats, ConcurrentDictionary<string, TimeRange> subRanges, double minTime, double maxTime)
     {
       foreach (var subStat in CollectionsMarshal.AsSpan(subStats))
       {
@@ -281,7 +281,7 @@ namespace EQLogParser
 
       if (!subSegments.TryGetValue(player, out var typeSegments))
       {
-        typeSegments = new Dictionary<string, TimeSegment>();
+        typeSegments = [];
         subSegments[player] = typeSegments;
       }
 
@@ -573,7 +573,6 @@ namespace EQLogParser
       // handle sub stats
       if (stats is PlayerStats playerStats)
       {
-
         foreach (var subStat in CollectionsMarshal.AsSpan(playerStats.SubStats))
         {
           UpdateCalculations(subStat, raidTotals, resistCounts, playerStats);
@@ -583,6 +582,11 @@ namespace EQLogParser
         foreach (var subStat2 in CollectionsMarshal.AsSpan(playerStats.SubStats2))
         {
           UpdateCalculations(subStat2, raidTotals, resistCounts, playerStats);
+
+          foreach (var subSubStats in CollectionsMarshal.AsSpan(subStat2.SubSubStats))
+          {
+            UpdateCalculations(subSubStats, raidTotals, resistCounts, playerStats);
+          }
         }
       }
     }

@@ -247,7 +247,7 @@ namespace EQLogParser
       }
       else if (selected == null || selected.Count == 0)
       {
-        sortedValues = workingData.Values.OrderByDescending(values => values.Last().Total).Take(5).ToList();
+        sortedValues = [.. workingData.Values.OrderByDescending(values => values.Last().Total).Take(5)];
         label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + nonSelectedLabel : Labels.NoData;
       }
       else
