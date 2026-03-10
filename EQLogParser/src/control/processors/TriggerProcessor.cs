@@ -32,10 +32,10 @@ namespace EQLogParser
     private static readonly Regex TokenRegex = MatchesTokenRegex();
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly string _currentPlayer;
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> _counterTimes = [];
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> _repeatedTextTimes = [];
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> _repeatedTimerTimes = [];
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> _repeatedSpeakTimes = [];
+    private readonly Dictionary<string, ConcurrentDictionary<string, RepeatedData>> _counterTimes = [];
+    private readonly Dictionary<string, ConcurrentDictionary<string, RepeatedData>> _repeatedTextTimes = [];
+    private readonly Dictionary<string, ConcurrentDictionary<string, RepeatedData>> _repeatedTimerTimes = [];
+    private readonly Dictionary<string, ConcurrentDictionary<string, RepeatedData>> _repeatedSpeakTimes = [];
     private readonly ConcurrentDictionary<string, bool> _requiredOverlays = [];
     private readonly ConcurrentDictionary<string, List<TimerData>> _timerLists = [];
     private readonly BlockingCollection<TriggerLogItem> _triggerLogCollection = [];
@@ -265,14 +265,16 @@ namespace EQLogParser
 
     private async Task DoProcessAsync(string line, double dateTime)
     {
-      var localTime = FastTime.Now();
+      if (string.IsNullOrEmpty(line) || line.Length < 28) return;
+
+      var (Seconds, Ticks) = FastTime.Now();
       // ignore anything older than 120 seconds in case a log file is replaced/reloaded but allow for bad lag
-      if (!_isTesting && localTime.Seconds - dateTime > 120)
+      if (!_isTesting && Seconds - dateTime > 120)
       {
         return;
       }
 
-      Interlocked.Exchange(ref _activityLastTicks, localTime.Ticks);
+      Interlocked.Exchange(ref _activityLastTicks, Ticks);
       var lineData = new LineData { Action = line[27..], BeginTime = dateTime };
 
       if (_isDisposed) return;
@@ -291,12 +293,16 @@ namespace EQLogParser
           }
         }
 
-        foreach (var kv in _timerLists)
+        foreach (var (triggerId, timerList) in _timerLists)
         {
-          if (kv.Value.Count > 0 && _activeTriggersById.TryGetValue(kv.Key, out var wrapper))
+          bool hasAny;
+          lock (timerList)
           {
-            await CheckTimersAsync(wrapper, kv.Value, lineData);
+            hasAny = timerList.Count > 0;
           }
+
+          if (hasAny && _activeTriggersById.TryGetValue(triggerId, out var wrapper))
+            await CheckTimersAsync(wrapper, timerList, lineData);
         }
 
         // check overlays that need to close
@@ -626,7 +632,7 @@ namespace EQLogParser
         }
 
         // update lockout time
-        wrapper.LockedOutTicks = beginTicks + (wrapper.TriggerData.LockoutTime * TimeSpan.TicksPerSecond);
+        wrapper.LockedOutTicks = beginTicks + (long)(wrapper.TriggerData.LockoutTime * TimeSpan.TicksPerSecond);
       }
 
       // GINA {counter} that is based on trigger firing regardless of whether the
@@ -1334,7 +1340,7 @@ namespace EQLogParser
 
     private static string ProcessMatchesText(string text, Dictionary<string, string> matches)
     {
-      if (matches == null || string.IsNullOrEmpty(text)) return text;
+      if (matches == null || string.IsNullOrEmpty(text) || text.IndexOf('{') < 0) return text;
 
       var matchCollection = TokenRegex.Matches(text);
       if (matchCollection.Count == 0) return text;
@@ -1396,7 +1402,7 @@ namespace EQLogParser
       return tts;
     }
 
-    private long GetRepeatedCount(ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> times, TriggerWrapper wrapper, string displayValue)
+    private long GetRepeatedCount(Dictionary<string, ConcurrentDictionary<string, RepeatedData>> times, TriggerWrapper wrapper, string displayValue)
     {
       if (!string.IsNullOrEmpty(wrapper.Id))
       {
@@ -1414,7 +1420,7 @@ namespace EQLogParser
       return -1;
     }
 
-    private void RemoveRepeatedTimes(ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> times, TriggerWrapper wrapper, string displayValue)
+    private void RemoveRepeatedTimes(Dictionary<string, ConcurrentDictionary<string, RepeatedData>> times, TriggerWrapper wrapper, string displayValue)
     {
       if (!string.IsNullOrEmpty(wrapper.Id) && !string.IsNullOrEmpty(displayValue))
       {
@@ -1428,7 +1434,7 @@ namespace EQLogParser
       }
     }
 
-    private long UpdateRepeatedTimes(ConcurrentDictionary<string, ConcurrentDictionary<string, RepeatedData>> times, TriggerWrapper wrapper,
+    private long UpdateRepeatedTimes(Dictionary<string, ConcurrentDictionary<string, RepeatedData>> times, TriggerWrapper wrapper,
       string displayValue, long beginTicks)
     {
       long repeatedCount = -1;
@@ -1660,10 +1666,13 @@ namespace EQLogParser
             _timerLists.TryRemove(old.Id, out _);
 
             // purge repeated counters for this trigger id
-            _counterTimes.TryRemove(old.Id, out _);
-            _repeatedTextTimes.TryRemove(old.Id, out _);
-            _repeatedTimerTimes.TryRemove(old.Id, out _);
-            _repeatedSpeakTimes.TryRemove(old.Id, out _);
+            lock (_repeatedLock)
+            {
+              _counterTimes.Remove(old.Id, out _);
+              _repeatedTextTimes.Remove(old.Id, out _);
+              _repeatedTimerTimes.Remove(old.Id, out _);
+              _repeatedSpeakTimes.Remove(old.Id, out _);
+            }
           }
         }
       }
@@ -1700,32 +1709,41 @@ namespace EQLogParser
       return -1;
     }
 
+    // avoid using
     public void Dispose()
     {
-      if (!_isDisposed)
+      DisposeAsync().AsTask().GetAwaiter().GetResult();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+      if (_isDisposed) return;
+      _isDisposed = true;
+      _ready = false;
+      await StopTriggersAsync(true).ConfigureAwait(false);
+
+      TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
+      TriggerStateManager.Instance.TrustedPlayersUpdateEvent -= TrustedPlayersUpdateEvent;
+      _triggerLogCollection.CompleteAdding();
+      _chatCollection.CompleteAdding();
+      _speakCollection.CompleteAdding();
+
+      try
       {
-        StopTriggersAsync(true).GetAwaiter().GetResult();
-        _isDisposed = true;
-        _ready = false;
-
-        TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
-        TriggerStateManager.Instance.TrustedPlayersUpdateEvent -= TrustedPlayersUpdateEvent;
-        _triggerLogCollection.CompleteAdding();
-        _chatCollection.CompleteAdding();
-        _speakCollection.CompleteAdding();
-
+        var tasks = new[] { _speakTask, _chatTask, _triggerLogTask, _mainTask };
+        await Task.WhenAll(tasks.Where(t => t != null)).ConfigureAwait(false);
+      }
+      finally
+      {
         try
-        {
-          foreach (var task in new Task[] { _speakTask, _chatTask, _triggerLogTask, _mainTask })
-          {
-            task?.Wait();
-          }
-        }
-        finally
         {
           _triggerLogCollection.Dispose();
           _chatCollection.Dispose();
           _speakCollection.Dispose();
+        }
+        catch (Exception)
+        {
+          // ignore
         }
       }
     }
@@ -1794,7 +1812,7 @@ namespace EQLogParser
       public string PreviousContainsText { get; set; }
       public string StartText { get; set; }
       public string PreviousStartText { get; set; }
-      public double LockedOutTicks { get; set; }
+      public long LockedOutTicks { get; set; }
     }
 
     [GeneratedRegex(@"{(s\d?)}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]

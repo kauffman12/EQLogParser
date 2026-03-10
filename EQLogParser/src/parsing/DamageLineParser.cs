@@ -858,7 +858,19 @@ namespace EQLogParser
           }
         }
       }
+      // [Mon Mar 09 22:26:05 2026] Kizante`s pet was slain by a rockborn!
+      // New slain message for npcs
+      else if (!checkLineType && slainIndex > -1 && byIndex == (slainIndex + 1) && isIndex > 0 && stop > (slainIndex + 1) && split[isIndex] == "was")
+      {
+        var killer = string.Join(" ", split, byIndex + 1, stop - byIndex);
+        killer = killer.Length > 1 && killer[^1] == '!' ? killer[..^1] : killer;
+        var slain = string.Join(" ", split, 0, isIndex);
+        UpdateSlain(slain, killer, lineData);
+        CheckOwner(slain, out _);
+        CheckOwner(killer, out _);
+      }
       // [Sun Apr 18 21:26:20 2021] Strangle`s pet has been slain by Kzerk!
+      // Older slain message for npcs
       else if (!checkLineType && slainIndex > -1 && byIndex == (slainIndex + 1) && hasIndex > 0 && stop > (slainIndex + 1) && split[hasIndex + 1] == "been")
       {
         var killer = string.Join(" ", split, byIndex + 1, stop - byIndex);

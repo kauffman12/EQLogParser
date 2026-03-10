@@ -129,14 +129,14 @@ namespace EQLogParser
     {
       await UiUtil.InvokeAsync(async () =>
       {
-        foreach (var kv in _textWindows)
+        foreach (var key in _textWindows.Keys.ToArray())
         {
-          await RemoveWindowAsync(kv.Key);
+          await RemoveWindowAsync(key);
         }
 
-        foreach (var kv in _timerWindows)
+        foreach (var key in _timerWindows.Keys.ToArray())
         {
-          await RemoveWindowAsync(kv.Key);
+          await RemoveWindowAsync(key);
         }
       });
     }

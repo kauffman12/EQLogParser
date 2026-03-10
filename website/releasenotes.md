@@ -1,3 +1,10 @@
+# 2.3.47 | 03/10/26
+1. Added **Daily** option to **Log Management** scheduler.
+2. Updated parsing to handle new **NPC death message** format.
+3. Bug fixes for **Trigger Tester** displaying random errors in the log.
+5. Updated to new minor **Syncfusion** version.
+6. Digitally signed all DLLs/EXEs to work better with Win11 security updates.
+
 # 2.3.46 | 02/08/26
 1. Fixed missing data in the Healing Breakdown for the new spell info.
 2. Updated Healing Breakdown to remember the top 3, 5, etc setting.

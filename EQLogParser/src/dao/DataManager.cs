@@ -1036,18 +1036,48 @@ namespace EQLogParser
 
     private static int DurationCompare(SpellData a, SpellData b)
     {
-      var result = b.Duration.CompareTo(a.Duration);
-      if (result == 0 && int.TryParse(a.Id, out var aInt) && int.TryParse(b.Id, out var bInt))
+      if (ReferenceEquals(a, b))
       {
-        // Check if the durations are equal
-        if (aInt != bInt)
+        return 0;
+      }
+
+      if (a is null)
+      {
+        return 1;
+      }
+
+      if (b is null)
+      {
+        return -1;
+      }
+
+      var result = b.Duration.CompareTo(a.Duration);
+
+      if (result == 0)
+      {
+        var aHasId = int.TryParse(a.Id, out var aInt);
+        var bHasId = int.TryParse(b.Id, out var bInt);
+
+        if (aHasId && bHasId)
         {
-          result = aInt > bInt ? -1 : 1;
+          result = bInt.CompareTo(aInt);
+        }
+        else if (aHasId && !bHasId)
+        {
+          result = -1;
+        }
+        else if (!aHasId && bHasId)
+        {
+          result = 1;
+        }
+        else
+        {
+          result = string.Compare(a.Id, b.Id, StringComparison.Ordinal);
         }
       }
+
       return result;
     }
-
 
     private class SpellAbbrvComparer : IEqualityComparer<SpellData>
     {

@@ -66,6 +66,7 @@
               </ComboBox>
               <StackPanel x:Name="dayPicker" Grid.Column="1" Orientation="Horizontal" Margin="15,8,0,0" Visibility="Collapsed">
                 <ComboBox x:Name="day" Margin="0,0,4,0" Padding="5" SelectedIndex="0" SelectionChanged="OptionsChanged">
+                  <ComboBoxItem>Daily</ComboBoxItem>
                   <ComboBoxItem>Sunday</ComboBoxItem>
                   <ComboBoxItem>Monday</ComboBoxItem>
                   <ComboBoxItem>Tuesday</ComboBoxItem>

@@ -38,7 +38,7 @@ namespace EQLogParser
     public App()
     {
       // 32.x
-      SyncfusionLicenseProvider.RegisterLicense("license");
+      SyncfusionLicenseProvider.RegisterLicense("");
     }
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -254,7 +254,11 @@ namespace EQLogParser
         {
           // Cleanup downloads
           MainActions.Cleanup();
-          await MainActions.CheckVersionAsync();
+
+          if (ConfigUtil.IfSet("CheckUpdatesAtStartup"))
+          {
+            await MainActions.CheckVersionAsync();
+          }
         });
       }
       catch (Exception ex)
