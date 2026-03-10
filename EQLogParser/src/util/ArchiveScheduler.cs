@@ -12,17 +12,55 @@ namespace EQLogParser
     private Timer _timer;
     private readonly object _lock = new();
     private bool _enabled;
-
+    private readonly bool _isDaily;
     private readonly DayOfWeek _day;
     private readonly TimeSpan _timeOfDay;
 
     public ArchiveScheduler(string dayName, int hour12, int minute, string ampm)
     {
-      if (!Enum.TryParse(dayName, true, out DayOfWeek parsedDay))
+      if (string.IsNullOrWhiteSpace(dayName))
+      {
+        Log.Error("Day name is required.");
+        _enabled = false;
+        return;
+      }
+
+      if (hour12 < 1 || hour12 > 12)
+      {
+        Log.Error($"Invalid hour: {hour12}");
+        _enabled = false;
+        return;
+      }
+
+      if (minute < 0 || minute > 59)
+      {
+        Log.Error($"Invalid minute: {minute}");
+        _enabled = false;
+        return;
+      }
+
+      if (!string.Equals(ampm, "AM", StringComparison.OrdinalIgnoreCase) &&
+          !string.Equals(ampm, "PM", StringComparison.OrdinalIgnoreCase))
+      {
+        Log.Error($"Invalid AM/PM value: {ampm}");
+        _enabled = false;
+        return;
+      }
+
+      // Support special value: "Daily"
+      if (dayName.Equals("Daily", StringComparison.OrdinalIgnoreCase))
+      {
+        _isDaily = true;
+      }
+      else if (!Enum.TryParse(dayName, true, out DayOfWeek parsedDay))
       {
         Log.Error($"Invalid day name: {dayName}");
         _enabled = false;
         return;
+      }
+      else
+      {
+        _day = parsedDay;
       }
 
       // Normalize hour to 24h
@@ -36,7 +74,6 @@ namespace EQLogParser
 
       lock (_lock)
       {
-        _day = parsedDay;
         _timeOfDay = newTime;
         _enabled = true;
 
@@ -50,7 +87,10 @@ namespace EQLogParser
       var next = GetNextOccurrence(now);
 
       var delay = next - now;
-      if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
+      if (delay < TimeSpan.Zero)
+      {
+        delay = TimeSpan.Zero;
+      }
 
       Log.Info("Log Archive Schedule created for " + next);
       _timer ??= new Timer(OnTimerElapsed);
@@ -59,7 +99,6 @@ namespace EQLogParser
 
     private void OnTimerElapsed(object state)
     {
-      // Run async to not block timer thread
       Task.Run(async () =>
       {
         try
@@ -76,7 +115,7 @@ namespace EQLogParser
           {
             if (_enabled)
             {
-              ScheduleNextRun(); // Reschedule for next week
+              ScheduleNextRun(); // Reschedule for next occurrence
             }
           }
         }
@@ -85,17 +124,28 @@ namespace EQLogParser
 
     private DateTime GetNextOccurrence(DateTime now)
     {
-      // Start from today at the target time
-      var next = DateTime.Today.Add(_timeOfDay);
+      var next = now.Date.Add(_timeOfDay);
 
-      // If it's not the correct day yet, or the time already passed today
-      var daysUntil = (_day - now.DayOfWeek + 7) % 7;
-      if (daysUntil == 0 && next <= now)
+      if (_isDaily)
       {
-        daysUntil = 7;
+        // If today's time has already passed, schedule for tomorrow
+        if (next <= now)
+        {
+          next = next.AddDays(1);
+        }
+
+        return next;
       }
 
+      var daysUntil = (_day - now.DayOfWeek + 7) % 7;
       next = next.AddDays(daysUntil);
+
+      // If it's the target day but time has already passed, go to next week
+      if (next <= now)
+      {
+        next = next.AddDays(7);
+      }
+
       return next;
     }
 
@@ -103,9 +153,10 @@ namespace EQLogParser
     {
       lock (_lock)
       {
-        _timer?.Change(Timeout.Infinite, Timeout.Infinite);
-        _timer?.Dispose();
         _enabled = false;
+        _timer?.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        _timer?.Dispose();
+        _timer = null;
       }
     }
   }

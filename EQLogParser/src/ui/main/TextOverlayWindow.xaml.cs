@@ -108,48 +108,55 @@ namespace EQLogParser
 
     private void CloseClick(object sender, RoutedEventArgs e) => Close();
 
-    private void DoTick(object state)
+    private async void DoTick(object state)
     {
       if (Interlocked.Exchange(ref _isTicking, 1) == 1)
         return;
 
-      Dispatcher.InvokeAsync(() =>
+      try
       {
-        try
+        await Dispatcher.InvokeAsync(() =>
         {
-          var now = MonoTime.NowStamp();
-          if (Visibility == Visibility.Visible && _windowHndl != 0 && (now - _lastTopTimeStamp) >= TopIntervalTimeStamp)
+          try
           {
-            NativeMethods.SetWindowTopMost(_windowHndl);
-            _lastTopTimeStamp = now;
-          }
-
-          // if nothing rendered then stop and hide window
-          if (Render(now) == false)
-          {
-            // defer visibility change so layout can settle
-            Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+            var now = MonoTime.NowStamp();
+            if (Visibility == Visibility.Visible && _windowHndl != 0 && (now - _lastTopTimeStamp) >= TopIntervalTimeStamp)
             {
-              var doHide = false;
-              lock (_bufferLock)
-              {
-                doHide = _buffer.Count == 0;
-              }
+              NativeMethods.SetWindowTopMost(_windowHndl);
+              _lastTopTimeStamp = now;
+            }
 
-              // check if still empty
-              if (doHide)
+            // if nothing rendered then stop and hide window
+            if (Render(now) == false)
+            {
+              // defer visibility change so layout can settle
+              Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
               {
-                EnsureVisible(false);
-                content.UpdateLayout();
-              }
-            }));
+                var doHide = false;
+                lock (_bufferLock)
+                {
+                  doHide = _buffer.Count == 0;
+                }
+
+                // check if still empty
+                if (doHide)
+                {
+                  EnsureVisible(false);
+                  content.UpdateLayout();
+                }
+              }));
+            }
           }
-        }
-        finally
-        {
-          Interlocked.Exchange(ref _isTicking, 0);
-        }
-      });
+          catch (Exception ex)
+          {
+            Log.Debug("TextOverlay failed to render.", ex);
+          }
+        });
+      }
+      finally
+      {
+        Interlocked.Exchange(ref _isTicking, 0);
+      }
     }
 
     // Keep on UI thread

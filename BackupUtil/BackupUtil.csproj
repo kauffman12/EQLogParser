@@ -15,8 +15,4 @@
   <ItemGroup>
     <ProjectReference Include="..\EQLogParser\EQLogParser.csproj" />
   </ItemGroup>
-
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="cd $(SolutionDir)&#xD;&#xA;$(SolutionDir)\sign.cmd" />
-  </Target>
 </Project>

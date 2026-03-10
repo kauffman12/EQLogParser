@@ -106,9 +106,10 @@ namespace EQLogParser
     internal async Task StopTestProcessor()
     {
       // i think this was causing deadlocks on UI thread
-      await Task.Run(() =>
+      await Task.Run(async () =>
       {
-        _testProcessor?.Dispose();
+        if (_testProcessor == null) return;
+        await _testProcessor.DisposeAsync();
         _testProcessor = null;
       });
     }
@@ -144,7 +145,11 @@ namespace EQLogParser
     private async Task InitTestProcessor(string id, string name, string playerName, string voice, int voiceRate,
       int customVolume, string activeColor, string fontColor, BlockingCollection<LogReaderItem> collection)
     {
-      _testProcessor?.Dispose();
+      if (_testProcessor != null)
+      {
+        await _testProcessor.DisposeAsync();
+      }
+
       _testProcessor = new TriggerProcessor(id, name, playerName, voice, voiceRate, customVolume, activeColor, fontColor);
       _testProcessor.SetTesting(true);
       await _testProcessor.StartAsync();
@@ -202,7 +207,7 @@ namespace EQLogParser
           {
             reader.Dispose();
             toRemove.Add(reader);
-            processor.Dispose();
+            await processor.DisposeAsync();
           }
           else
           {
