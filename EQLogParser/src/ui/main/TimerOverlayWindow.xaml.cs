@@ -500,8 +500,66 @@ namespace EQLogParser
         0 => x.TimerData.BeginTicks.CompareTo(y.TimerData.BeginTicks),
         1 => x.RemainingTicks.CompareTo(y.RemainingTicks),
         2 => string.Compare(x.DisplayName, y.DisplayName, StringComparison.Ordinal),
+        3 => CompareNatural(x.DisplayName, y.DisplayName),
         _ => 0
       };
+    }
+
+    // Add the natural sorting method
+    private static int CompareNatural(string x, string y)
+    {
+      if (x == null && y == null) return 0;
+      if (x == null) return 1;
+      if (y == null) return -1;
+
+      var xIndex = 0;
+      var yIndex = 0;
+
+      while (xIndex < x.Length && yIndex < y.Length)
+      {
+        var xChar = x[xIndex];
+        var yChar = y[yIndex];
+
+        if (char.IsDigit(xChar) && char.IsDigit(yChar))
+        {
+          // Extract complete numbers
+          var xNumStart = xIndex;
+          while (xIndex < x.Length && char.IsDigit(x[xIndex]))
+            xIndex++;
+
+          var yNumStart = yIndex;
+          while (yIndex < y.Length && char.IsDigit(y[yIndex]))
+            yIndex++;
+
+          var xNum = x.Substring(xNumStart, xIndex - xNumStart);
+          var yNum = y.Substring(yNumStart, yIndex - yNumStart);
+
+          // Compare numerically
+          var numCompare = xNum.Length.CompareTo(yNum.Length);
+          if (numCompare != 0)
+            return numCompare;
+
+          // If same length, compare digit by digit
+          for (var i = 0; i < xNum.Length; i++)
+          {
+            if (xNum[i] != yNum[i])
+              return xNum[i].CompareTo(yNum[i]);
+          }
+        }
+        else
+        {
+          // Compare characters
+          var charCompare = xChar.CompareTo(yChar);
+          if (charCompare != 0)
+            return charCompare;
+
+          xIndex++;
+          yIndex++;
+        }
+      }
+
+      // If we've reached the end of one string, the shorter one comes first
+      return x.Length.CompareTo(y.Length);
     }
 
     private async Task RenderTimerBarsAsync(List<TimerBarModel> models)

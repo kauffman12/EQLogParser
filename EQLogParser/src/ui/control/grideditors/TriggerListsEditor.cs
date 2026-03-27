@@ -30,7 +30,7 @@ namespace EQLogParser
           "138pt", "146pt", "154pt", "162pt", "170pt", "178pt", "186pt", "194pt", "202pt"
         ]
       },
-      { "SortBy", ["Trigger Time", "Remaining Time", "Timer Name"] },
+      { "SortBy", ["Trigger Time", "Remaining Time", "Timer Name (Alphabetical)", "Timer Name (Natural)"] },
       { "TimerMode", ["Standard", "Cooldown"] },
       { "TimerType", ["No Timer", "Countdown", "Fast Countdown", "Progress", "Looping"] },
       { "FontFamily", UiElementUtil.GetSystemFontFamilies().Select(font => font.Source).ToList() },
