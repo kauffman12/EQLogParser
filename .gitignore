@@ -3,3 +3,4 @@ bin/
 tmp/
 .vscode/
 sign.cmd
+.aider*
