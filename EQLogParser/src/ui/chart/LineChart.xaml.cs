@@ -31,6 +31,7 @@ namespace EQLogParser
     private readonly Dictionary<string, Dictionary<string, byte>> _hasPets = [];
     private string _currentChoice;
     private string _currentPetOrPlayerOption;
+    private int _currentTopCount = 5;
     private List<PlayerStats> _lastSelected;
 
     public LineChart(IEnumerable<string> choices, bool includePets = false)
@@ -55,6 +56,11 @@ namespace EQLogParser
 
       petOrPlayerList.SelectedIndex = 0;
       _currentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
+
+      // Load saved top count setting or default to 5
+      _currentTopCount = ConfigUtil.GetSettingAsInteger("LineChartTopCount", 5);
+      topCountList.SelectedIndex = _currentTopCount == 5 ? 0 : 1;
+
       Reset();
     }
 
@@ -247,7 +253,7 @@ namespace EQLogParser
       }
       else if (selected == null || selected.Count == 0)
       {
-        sortedValues = [.. workingData.Values.OrderByDescending(values => values.Last().Total).Take(5)];
+        sortedValues = [.. workingData.Values.OrderByDescending(values => values.Last().Total).Take(_currentTopCount)];
         label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + nonSelectedLabel : Labels.NoData;
       }
       else
@@ -280,6 +286,9 @@ namespace EQLogParser
       {
         label += " " + _currentChoice;
       }
+
+      // Show/hide the top count dropdown based on whether data is selected
+      topCountList.Visibility = (selected == null || selected.Count == 0) ? Visibility.Visible : Visibility.Collapsed;
 
       Reset();
       titleLabel.Content = label;
@@ -391,6 +400,21 @@ namespace EQLogParser
         _currentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
         Plot(_lastSelected);
       }
+    }
+
+    private void TopCountSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (topCountList.SelectedIndex == 0)
+      {
+        _currentTopCount = 5;
+      }
+      else
+      {
+        _currentTopCount = 10;
+      }
+
+      ConfigUtil.SetSetting("LineChartTopCount", _currentTopCount);
+      Plot(_lastSelected);
     }
 
     private void CopyCsvClick(object sender, RoutedEventArgs e)
