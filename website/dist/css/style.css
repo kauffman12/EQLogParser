@@ -108,6 +108,13 @@ code {
   overflow: hidden;
 }
 
+.layout.toc-collapsed main.container {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
 .logo {
   border: 2px solid black;
 }
