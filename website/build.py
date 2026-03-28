@@ -62,6 +62,9 @@ def build_toc(toc_title: str, toc_items: str) -> str:
 <ul>{toc_items}</ul>
 </nav>"""
 
+def build_empty_toc() -> str:
+    return f"""<nav class="toc"></nav>"""
+
 def build_nav_header(home_page: bool = False) -> str:
     nav = f"""<nav class="topbar">
 <div class="nav-container">
@@ -103,6 +106,8 @@ def process_markdown_to_html(version: str, url: str, input_path: Path, output_pa
     toc = ''
     if toc_title != None and toc_items != '':
       toc = build_toc(toc_title, toc_items)
+    else:
+      toc = build_empty_toc()
 
     final_html = wrap_docs_html(version, url, title, header, toc, str(soup))
     output_path.write_text(final_html, encoding='utf-8')
@@ -161,7 +166,7 @@ def main():
 
     DIST_DIR.mkdir(exist_ok=True)
 
-    process_markdown_to_html(version, url, Path('releasenotes.md'), DIST_DIR / 'releasenotes.html', 'Release Notes', 'Versions', header_html)
+    process_markdown_to_html(version, url, Path('releasenotes.md'), DIST_DIR / 'releasenotes.html', 'Release Notes', None, header_html)
     process_markdown_to_html(version, url, Path('documentation.md'), DIST_DIR / 'documentation.html', 'Documentation', 'Contents', header_html, decorate_h2=True)
     process_markdown_to_html(version, url, Path('policy.md'), DIST_DIR / 'policy.html', 'Privacy Policy', 'Contents', header_html)
 
