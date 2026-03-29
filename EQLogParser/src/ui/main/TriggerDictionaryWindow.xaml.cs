@@ -1,3 +1,4 @@
+using log4net;
 using Microsoft.Win32;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.Grid.Helpers;
@@ -6,12 +7,14 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Windows;
 
 namespace EQLogParser
 {
   public partial class TriggerDictionaryWindow
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly ObservableCollection<LexiconItem> _items = [];
     private TriggersTreeView _treeView;
     private bool _addInProgress;
@@ -159,7 +162,7 @@ namespace EQLogParser
       }
     }
 
-    private async void Import()
+    private void Import()
     {
       var openFileDialog = new OpenFileDialog
       {
@@ -174,8 +177,14 @@ namespace EQLogParser
           var lines = File.ReadAllLines(openFileDialog.FileName);
           var initialCount = _items.Count;
 
-          foreach (var line in lines)
+          for (var i = 0; i < lines.Length; i++)
           {
+            var line = lines[i];
+            if (string.IsNullOrWhiteSpace(line) || (i == 0 && line.Trim().StartsWith("Word to Replace", StringComparison.OrdinalIgnoreCase)))
+            {
+              continue; // Skip header and empty lines
+            }
+
             var parts = line.Split(',');
             if (parts.Length >= 2 && !string.IsNullOrWhiteSpace(parts[0]) && !string.IsNullOrWhiteSpace(parts[1]))
             {
@@ -198,22 +207,11 @@ namespace EQLogParser
               }
             }
           }
-
-          var importedCount = _items.Count - initialCount;
-          if (importedCount > 0)
-          {
-            // Save the imported items automatically
-            await TriggerStateManager.Instance.SaveLexicon([.. _items]);
-            new MessageWindow($"Imported {importedCount} items successfully.", "Import Complete").ShowDialog();
-          }
-          else
-          {
-            new MessageWindow("No valid items found in the import file.", "Import Failed").ShowDialog();
-          }
         }
         catch (Exception ex)
         {
-          new MessageWindow($"Error importing file: {ex.Message}", "Import Error").ShowDialog();
+          new MessageWindow($"Error Importing: {ex.Message}", "Import Error").ShowDialog();
+          Log.Error("Error Importing", ex);
         }
       }
     }
@@ -224,7 +222,7 @@ namespace EQLogParser
       {
         Filter = "CSV Files (*.csv)|*.csv|Text Files (*.txt)|*.txt",
         Title = "Export Phonetic Dictionary",
-        FileName = "phonetic.dictionary.csv"
+        FileName = "eqlp-phonetic-dictionary.csv"
       };
 
       if (saveFileDialog.ShowDialog() == true)
@@ -245,12 +243,11 @@ namespace EQLogParser
               }
             }
           }
-
-          new MessageWindow($"Dictionary exported to {saveFileDialog.FileName}", "Export Complete").ShowDialog();
         }
         catch (Exception ex)
         {
-          new MessageWindow($"Error exporting file: {ex.Message}", "Export Error").ShowDialog();
+          new MessageWindow($"Error Exporting: {ex.Message}", "Export Error").ShowDialog();
+          Log.Error("Error Exporting", ex);
         }
       }
     }

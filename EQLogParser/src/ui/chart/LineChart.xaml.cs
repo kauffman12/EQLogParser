@@ -58,7 +58,7 @@ namespace EQLogParser
       _currentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
 
       // Load saved top count setting or default to 5
-      _currentTopCount = ConfigUtil.GetSettingAsInteger("LineChartTopCount", 5);
+      _currentTopCount = ConfigUtil.GetSettingAsInteger($"Line{this.GetType().Name}TopCount", 5);
       topCountList.SelectedIndex = _currentTopCount == 5 ? 0 : 1;
 
       Reset();
@@ -413,7 +413,7 @@ namespace EQLogParser
         _currentTopCount = 10;
       }
 
-      ConfigUtil.SetSetting("LineChartTopCount", _currentTopCount);
+      ConfigUtil.SetSetting($"Line{this.GetType().Name}TopCount", _currentTopCount);
       Plot(_lastSelected);
     }
 
