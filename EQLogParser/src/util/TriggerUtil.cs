@@ -188,6 +188,7 @@ namespace EQLogParser
         toOverlay.OverlayComments = fromOverlay.OverlayComments;
         toOverlay.ResetColor = fromOverlay.ResetColor;
         toOverlay.SortBy = fromOverlay.SortBy;
+        toOverlay.ShowMillis = fromOverlay.ShowMillis;
         toOverlay.TimerMode = fromOverlay.TimerMode;
         toOverlay.Top = fromOverlay.Top;
         toOverlay.UseStandardTime = fromOverlay.UseStandardTime;

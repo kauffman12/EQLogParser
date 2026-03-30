@@ -42,6 +42,7 @@ namespace EQLogParser
     private volatile int _idleTimeoutSeconds;
     private volatile bool _showActive;
     private volatile bool _showIdle;
+    private volatile bool _showMillis;
     private volatile bool _showReset;
     private readonly bool _streamerMode;
 
@@ -70,8 +71,7 @@ namespace EQLogParser
         contentBorder.Visibility = Visibility.Visible;
         mainPanel.IsHitTestVisible = true;
         buttonContent.IsHitTestVisible = true;
-        CreatePreviewTimer("Example Trigger Name", "03:00", 90.0);
-        CreatePreviewTimer("Example Trigger Name #2", "01:00", 30.0);
+        DoPreview();
       }
       else
       {
@@ -80,6 +80,13 @@ namespace EQLogParser
       }
 
       TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
+    }
+
+    internal void DoPreview()
+    {
+      content.Children.Clear();
+      CreatePreviewTimer("Example Trigger Name", _showMillis ? "03:00.140" : "03:00", 90.0);
+      CreatePreviewTimer("Example Trigger Name #2", _showMillis ? "01:00:344" : "01:00", 30.0);
     }
 
     internal async Task StartTimerAsync(TimerData timerData)
@@ -384,7 +391,7 @@ namespace EQLogParser
             models.Add(new TimerBarModel
             {
               DisplayName = GetDisplayName(timerData),
-              TimeText = FormatTimeWithMillis(remainingTicks),
+              TimeText = FormatTime(remainingTicks),
               Progress = CalcProgress(type, timerData.DurationTicks, remainingTicks, maxDurationTicks),
               TimerData = timerData,
               State = TimerBar.State.Active,
@@ -406,8 +413,8 @@ namespace EQLogParser
             {
               DisplayName = GetDisplayName(timerData),
               TimeText = remainingResetTicks > 0
-                    ? DateUtil.FormatTicks(remainingResetTicks, TimeFormat.SecondsMs)
-                    : DateUtil.FormatTicks(timerData.DurationTicks, TimeFormat.FullHMS),
+                    ? DateUtil.FormatTicks(remainingResetTicks, DateUtil.TimeFormat.SecondsMs)
+                    : FormatTime(timerData.DurationTicks),
               Progress = remainingResetTicks > 0 ? 100.0 - CalcProgress(type, timerData.ResetDurationTicks, remainingResetTicks, long.MinValue) : 100.0,
               TimerData = timerData,
               State = state,
@@ -436,9 +443,9 @@ namespace EQLogParser
             DisplayName = GetDisplayName(timerData),
             TimeText = timerData.TimerType switch
             {
-                2 => DateUtil.FormatTicks(remainingTicks, TimeFormat.SecondsMs),
-                3 => DateUtil.FormatTicks(timerData.DurationTicks - remainingTicks, TimeFormat.FullHMS),
-                _ => DateUtil.FormatTicks(remainingTicks, TimeFormat.FullHMSMS)
+              2 => DateUtil.FormatTicks(remainingTicks, DateUtil.TimeFormat.SecondsMs),
+              3 => FormatTime(timerData.DurationTicks - remainingTicks),
+              _ => FormatTime(remainingTicks)
             },
             Progress = CalcProgress(type, timerData.DurationTicks, remainingTicks, maxDurationTicks),
             TimerData = timerData,
@@ -696,7 +703,7 @@ namespace EQLogParser
 
                 timerBar.Update(
                   model.DisplayName,
-                  DateUtil.FormatTicks(remainingTicks, TimeFormat.SecondsMs),
+                  DateUtil.FormatTicks(remainingTicks, DateUtil.TimeFormat.SecondsMs),
                   CalcProgress(type, timerData.DurationTicks, remainingTicks, maxDurationTicks),
                   timerData
                 );
@@ -712,9 +719,9 @@ namespace EQLogParser
 
                 timerBar.Update(
                   model.DisplayName,
-                  remainingResetTicks > 0 ? DateUtil.FormatTicks(remainingResetTicks, TimeFormat.SecondsMs) : DateUtil.FormatTicks(timerData.DurationTicks, TimeFormat.FullHMS),
-                  remainingResetTicks > 0 ? 100.0 - CalcProgress(type, timerData.ResetDurationTicks, remainingResetTicks, long.MinValue) : 100.0,
-                  timerData
+                  remainingResetTicks > 0 ? FormatTime(remainingResetTicks) : FormatTime(timerData.DurationTicks),
+                  remainingResetTicks > 0 ? 100.0 - CalcProgress(type, timerData.ResetDurationTicks, remainingResetTicks, long.MinValue) :
+                  100.0, timerData
                 );
               }
             }
@@ -725,9 +732,9 @@ namespace EQLogParser
                 model.DisplayName,
                 timerData.TimerType switch
                 {
-                    2 => DateUtil.FormatTicks(remainingTicks, TimeFormat.SecondsMs),
-                    3 => DateUtil.FormatTicks(timerData.DurationTicks - remainingTicks, TimeFormat.FullHMS),
-                    _ => DateUtil.FormatTicks(remainingTicks, TimeFormat.FullHMSMS)
+                  2 => DateUtil.FormatTicks(remainingTicks, DateUtil.TimeFormat.SecondsMs),
+                  3 => FormatTime(timerData.DurationTicks - remainingTicks),
+                  _ => FormatTime(remainingTicks)
                 },
                 CalcProgress(type, timerData.DurationTicks, remainingTicks, maxDurationTicks),
                 timerData
@@ -798,6 +805,11 @@ namespace EQLogParser
         saveButton.IsEnabled = false;
         cancelButton.IsEnabled = false;
         closeButton.IsEnabled = true;
+
+        if (_preview)
+        {
+          DoPreview();
+        }
       }
     }
 
@@ -857,6 +869,7 @@ namespace EQLogParser
       _idleTimeoutSeconds = (int)_node.OverlayData.IdleTimeoutSeconds;
       _showActive = _node.OverlayData.ShowActive;
       _showIdle = _node.OverlayData.ShowIdle;
+      _showMillis = _node.OverlayData.ShowMillis;
       _showReset = _node.OverlayData.ShowReset;
 
       if (_streamerMode != _node.OverlayData.StreamerMode && !_preview)
@@ -921,9 +934,9 @@ namespace EQLogParser
       return result;
     }
 
-    private string FormatTimeWithMillis(long ticks)
+    private string FormatTime(long ticks)
     {
-      TimeFormat format = _node.OverlayData.ShowMillis ? TimeFormat.FullHMSMS : TimeFormat.HMSCompact;
+      var format = _showMillis ? DateUtil.TimeFormat.HMSMsCompact : DateUtil.TimeFormat.HMSCompact;
       return DateUtil.FormatTicks(ticks, format);
     }
 

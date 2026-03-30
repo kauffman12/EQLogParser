@@ -196,7 +196,7 @@ namespace EQLogParser
         var duration = DateUtil.ToDouble(DateTime.Now) - section.BeginTime;
         if (duration < _currentTimeLimit)
         {
-          section.Duration = DateUtil.FormatTicks((long)(_currentTimeLimit - duration) * TimeSpan.TicksPerSecond, TimeFormat.HMSCompact);
+          section.Duration = DateUtil.FormatTicks((long)(_currentTimeLimit - duration) * TimeSpan.TicksPerSecond, DateUtil.TimeFormat.HMSCompact);
           remaining = true;
         }
         else

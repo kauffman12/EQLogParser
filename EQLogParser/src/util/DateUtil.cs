@@ -25,56 +25,47 @@ namespace EQLogParser
 
     internal enum TimeFormat
     {
-        SecondsMs,   // ss.mmm (seconds and milliseconds)
-        HMSCompact,  // mm:ss or hh:mm:ss (omits hours if zero)
-        FullHMSMS,   // hh:mm:ss.mmm (always includes all units + milliseconds)
-        FullHMS      // HH:mm:ss (always includes hours, minutes, seconds)
+      SecondsMs,     // ss.mmm (seconds and milliseconds)
+      HMSCompact,    // mm:ss or hh:mm:ss (omits hours if zero)
+      HMSMsCompact  // mm:ss.mmm or hh:mm:ss.mmm (omits hours if zero)
     }
 
-    internal static string FormatTicks(long ticks, TimeFormat format = TimeFormat.FullHMS)
+    internal static string FormatTicks(long ticks, TimeFormat format)
     {
       if (ticks < 0) ticks = 0;
 
-      switch(format)
+      switch (format)
       {
-          case TimeFormat.SecondsMs:
-              var totalMillisecondsPrecise = (long)Math.Round((double)ticks / TimeSpan.TicksPerMillisecond);
-              var secondsPrecise = totalMillisecondsPrecise / 1000 % 60;
-              var millisecondsPrecise = totalMillisecondsPrecise % 1000;
-              return $"{secondsPrecise:D2}.{millisecondsPrecise:D3}";
-              
-          case TimeFormat.HMSCompact:
-              var totalSecondsElapsed = (long)Math.Round((double)ticks / TimeSpan.TicksPerSecond);
-              var hoursElapsed = totalSecondsElapsed / 3600;
-              var minutesElapsed = totalSecondsElapsed % 3600 / 60;
-              var secondsElapsed = totalSecondsElapsed % 60;
+        case TimeFormat.SecondsMs:
+          var totalMillisecondsPrecise = (long)Math.Round((double)ticks / TimeSpan.TicksPerMillisecond);
+          var secondsPrecise = totalMillisecondsPrecise / 1000 % 60;
+          var millisecondsPrecise = totalMillisecondsPrecise % 1000;
+          return $"{secondsPrecise:D2}.{millisecondsPrecise:D3}";
 
-              if (hoursElapsed > 0)
-                  return $"{hoursElapsed:D2}:{minutesElapsed:D2}:{secondsElapsed:D2}";
-              else
-                  return $"{minutesElapsed:D2}:{secondsElapsed:D2}";
+        case TimeFormat.HMSCompact:
+          var totalSecondsElapsed = (long)Math.Round((double)ticks / TimeSpan.TicksPerSecond);
+          var hoursElapsed = totalSecondsElapsed / 3600;
+          var minutesElapsed = totalSecondsElapsed % 3600 / 60;
+          var secondsElapsed = totalSecondsElapsed % 60;
 
-          case TimeFormat.FullHMSMS:
-              var totalMillisecondsComplete = (long)Math.Round((double)ticks / TimeSpan.TicksPerMillisecond);
-              var hoursComplete = totalMillisecondsComplete / (3600 * 1000);
-              var minutesComplete = (totalMillisecondsComplete % (3600 * 1000)) / (60 * 1000);
-              var secondsComplete = (totalMillisecondsComplete % (60 * 1000)) / 1000;
-              var millisecondsComplete = totalMillisecondsComplete % 1000;
+          if (hoursElapsed > 0)
+            return $"{hoursElapsed:D2}:{minutesElapsed:D2}:{secondsElapsed:D2}";
+          else
+            return $"{minutesElapsed:D2}:{secondsElapsed:D2}";
 
-              if (hoursComplete > 0)
-                  return $"{hoursComplete:D2}:{minutesComplete:D2}:{secondsComplete:D2}.{millisecondsComplete:D3}";
-              else if (minutesComplete > 0)
-                  return $"{minutesComplete:D2}:{secondsComplete:D2}.{millisecondsComplete:D3}";
-              else
-                  return $"{secondsComplete:D2}.{millisecondsComplete:D3}";
+        case TimeFormat.HMSMsCompact:
+          var totalMillisecondsComplete = (long)Math.Round((double)ticks / TimeSpan.TicksPerMillisecond);
+          var hoursComplete = totalMillisecondsComplete / (3600 * 1000);
+          var minutesComplete = totalMillisecondsComplete % (3600 * 1000) / (60 * 1000);
+          var secondsComplete = totalMillisecondsComplete % (60 * 1000) / 1000;
+          var millisecondsComplete = totalMillisecondsComplete % 1000;
 
-          case TimeFormat.FullHMS:
-              var totalSecondsHms = (long)Math.Round((double)ticks / TimeSpan.TicksPerSecond);
-              var hoursHms = totalSecondsHms / 3600;
-              var minutesHms = totalSecondsHms % 3600 / 60;
-              var secondsHms = totalSecondsHms % 60;
-              return $"{hoursHms:D2}:{minutesHms:D2}:{secondsHms:D2}";
+          if (hoursComplete > 0)
+            return $"{hoursComplete:D2}:{minutesComplete:D2}:{secondsComplete:D2}.{millisecondsComplete:D3}";
+          else
+            return $"{minutesComplete:D2}:{secondsComplete:D2}.{millisecondsComplete:D3}";
       }
+
       return string.Empty; // Unreachable due to exhaustive enum cases
     }
 

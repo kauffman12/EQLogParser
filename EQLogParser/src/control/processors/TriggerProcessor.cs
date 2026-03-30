@@ -844,7 +844,7 @@ namespace EQLogParser
 
       if (wrapper.HasLogTimeTimer)
       {
-        newTimerData.LogTime = DateUtil.FormatSimpleHms(lineData.BeginTime);
+        newTimerData.LogTime = DateUtil.FormatSeconds(lineData.BeginTime);
       }
 
       // save line data if repeating timer
