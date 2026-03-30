@@ -12,7 +12,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Media.Imaging;
 
 namespace EQLogParser
 {
@@ -120,7 +119,7 @@ namespace EQLogParser
         {
           if (_activeTriggersById.TryGetValue(kv.Key, out var wrapper))
           {
-            await CleanupTimersAsync(kv.Value, wrapper);
+            await TimerDataUtil.CleanupTimersAsync(kv.Value, wrapper.TriggerData);
           }
         }
       }
@@ -471,12 +470,12 @@ namespace EQLogParser
         List<TimerData> toRemove = null;
         foreach (var timerData in timerList)
         {
-          var endEarly = CheckEndEarly(timerData.EndEarlyRegex, timerData.EndEarlyRegexNOptions, timerData.EndEarlyPattern,
+          var endEarly = TimerDataUtil.CheckEndEarly(timerData.EndEarlyRegex, timerData.EndEarlyRegexNOptions, timerData.EndEarlyPattern,
             lineData.Action, out var earlyMatches);
 
           if (!endEarly)
           {
-            endEarly = CheckEndEarly(timerData.EndEarlyRegex2, timerData.EndEarlyRegex2NOptions, timerData.EndEarlyPattern2, lineData.Action, out earlyMatches);
+            endEarly = TimerDataUtil.CheckEndEarly(timerData.EndEarlyRegex2, timerData.EndEarlyRegex2NOptions, timerData.EndEarlyPattern2, lineData.Action, out earlyMatches);
           }
 
           // Repeated threshold option
@@ -550,7 +549,7 @@ namespace EQLogParser
           // --- Remove/cancel timer *under the lock*, but DO NOT call UpdateTimer(...) here ---
           toRemove ??= new List<TimerData>(2);
           toRemove.Add(timerData);
-          CleanupTimerData(timerData);
+          TimerDataUtil.CleanupTimerData(timerData);
           timersToStopUi ??= new List<TimerData>(2);
           timersToStopUi.Add(timerData);
         }
@@ -752,7 +751,7 @@ namespace EQLogParser
         // Restart Timer Option so clear out everything
         case 1:
           {
-            await CleanupTimersAsync(timerList, wrapper);
+            await TimerDataUtil.CleanupTimersAsync(timerList, wrapper.TriggerData);
           }
           break;
         // Restart Timer only if it is already running
@@ -761,10 +760,10 @@ namespace EQLogParser
             TimerData removed = null;
             lock (timerList)
             {
-              if (FindTimerDataByDisplayName(timerList, displayName) is var dataIndex and > -1)
+              if (TimerDataUtil.FindTimerDataByDisplayName(timerList, displayName) is var dataIndex and > -1)
               {
                 removed = timerList[dataIndex];
-                CleanupTimerData(removed);
+                TimerDataUtil.CleanupTimerData(removed);
                 // remove from list
                 timerList.RemoveAt(dataIndex);
               }
@@ -793,7 +792,7 @@ namespace EQLogParser
           {
             lock (timerList)
             {
-              if (FindTimerDataByDisplayName(timerList, displayName) > -1)
+              if (TimerDataUtil.FindTimerDataByDisplayName(timerList, displayName) > -1)
               {
                 return;
               }
@@ -984,7 +983,7 @@ namespace EQLogParser
         lock (timerList)
         {
           proceed = !data2.Canceled;
-          CleanupTimerData(data2);
+          TimerDataUtil.CleanupTimerData(data2);
           timerList.Remove(data2);
         }
 
@@ -1293,37 +1292,6 @@ namespace EQLogParser
       _ready = true;
     }
 
-    private static bool CheckEndEarly(Regex endEarlyRegex, List<NumberOptions> options, string endEarlyPattern,
-      string action, out Dictionary<string, string> earlyMatches)
-    {
-      earlyMatches = null;
-      var endEarly = false;
-
-      if (endEarlyRegex != null)
-      {
-        try
-        {
-          if (TextUtils.SnapshotMatches(endEarlyRegex.Matches(action), out earlyMatches) && TriggerUtil.CheckOptions(options, earlyMatches, out _))
-          {
-            endEarly = true;
-          }
-        }
-        catch (RegexMatchTimeoutException)
-        {
-          // ignore
-        }
-      }
-      else if (!string.IsNullOrEmpty(endEarlyPattern))
-      {
-        if (action.Contains(endEarlyPattern, StringComparison.OrdinalIgnoreCase))
-        {
-          endEarly = true;
-        }
-      }
-
-      return endEarly;
-    }
-
     private static string ProcessDisplayText(string text, string action, Dictionary<string, string> matches,
       Dictionary<string, string> originalMatches, Dictionary<string, string> previousMatches)
     {
@@ -1608,48 +1576,6 @@ namespace EQLogParser
       TriggerLog.AddRange(entries);
     }
 
-
-    // make sure each call is from within lock of TimerList
-    private static void CleanupTimerData(TimerData timerData)
-    {
-      timerData.CancelSource?.Cancel();
-      timerData.CancelSource?.Dispose();
-      timerData.CancelSource = null;
-      timerData.Canceled = true;
-      timerData.WarningSource?.Cancel();
-      timerData.WarningSource?.Dispose();
-      timerData.WarningSource = null;
-      timerData.Warned = true;
-    }
-
-    // make sure each call is from within lock of TimerList
-    private static async Task CleanupTimersAsync(List<TimerData> timerList, TriggerWrapper wrapper)
-    {
-      if (timerList.Count == 0)
-      {
-        return;
-      }
-
-      TimerData[] toRemove;
-
-      lock (timerList)
-      {
-        foreach (var timerData in timerList)
-        {
-          CleanupTimerData(timerData);
-        }
-
-        toRemove = [.. timerList];
-        timerList.Clear();
-      }
-
-      // stop timer
-      foreach (var timerData in toRemove)
-      {
-        await TriggerOverlayManager.Instance.UpdateTimerAsync(wrapper.TriggerData, timerData, TriggerOverlayManager.TimerStateChange.Stop);
-      }
-    }
-
     private async Task SetActiveTriggersAsync(Dictionary<string, TriggerWrapper> activeTriggersById, HashSet<string> requiredOverlayIds)
     {
       if (_isDisposed) return;
@@ -1662,7 +1588,7 @@ namespace EQLogParser
           // if timerlist exists and the trigger is no longer active then cleanup
           if (old.Id != null && _timerLists.TryGetValue(old.Id, out var timerList) && !activeTriggersById.ContainsKey(old.Id))
           {
-            await CleanupTimersAsync(timerList, old);
+            await TimerDataUtil.CleanupTimersAsync(timerList, old.TriggerData);
             _timerLists.TryRemove(old.Id, out _);
 
             // purge repeated counters for this trigger id
@@ -1693,20 +1619,6 @@ namespace EQLogParser
 
         _activeTriggerSemaphore.Release();
       }
-    }
-
-    // avoid LINQ for performance
-    private static int FindTimerDataByDisplayName(List<TimerData> list, string name)
-    {
-      for (var i = 0; i < list.Count; i++)
-      {
-        if (string.Equals(list[i].DisplayName, name, StringComparison.OrdinalIgnoreCase))
-        {
-          return i;
-        }
-      }
-
-      return -1;
     }
 
     // avoid using
@@ -1746,73 +1658,6 @@ namespace EQLogParser
           // ignore
         }
       }
-    }
-
-    private readonly record struct TriggerLogItem(LineData LineData, TriggerWrapper Wrapper, string Type, double Eval);
-
-    private class Speak
-    {
-      public bool IsPrimary { get; init; }
-      public TriggerWrapper Wrapper { get; init; }
-      public string TtsOrSound { get; init; }
-      public bool IsSound { get; init; }
-      public string Action { get; init; }
-      public Dictionary<string, string> Matches { get; init; }
-      public Dictionary<string, string> Previous { get; init; }
-      public Dictionary<string, string> Original { get; init; }
-      public long CounterCount { get; init; }
-      public double BeginTime { get; init; }
-      public long BeginTicks { get; init; }
-    }
-
-    private class RepeatedData
-    {
-      public long Count { get; set; }
-      public long CountTicks { get; set; }
-    }
-
-    private class TriggerWrapper
-    {
-      public string Id { get; init; }
-      public string Name { get; init; }
-      public string ModifiedEndEarlyPattern { get; init; }
-      public string ModifiedEndEarlyPattern2 { get; init; }
-      public string ModifiedPattern { get; init; }
-      public string ModifiedSpeak { get; init; }
-      public string ModifiedEndSpeak { get; init; }
-      public string ModifiedEndEarlySpeak { get; init; }
-      public string ModifiedWarningSpeak { get; init; }
-      public string ModifiedDisplay { get; init; }
-      public string ModifiedShare { get; init; }
-      public string ModifiedSendToChat { get; init; }
-      public string ModifiedEndDisplay { get; init; }
-      public string ModifiedEndEarlyDisplay { get; init; }
-      public string ModifiedWarningDisplay { get; init; }
-      public string ModifiedTimerName { get; init; }
-      public bool HasCounterTimer { get; init; }
-      public bool HasCounterText { get; init; }
-      public bool HasCounterSpeak { get; init; }
-      public bool HasRepeatedTimer { get; init; }
-      public bool HasRepeatedText { get; init; }
-      public bool HasRepeatedSpeak { get; init; }
-      public bool HasLogTimeTimer { get; init; }
-      public bool HasLogTimeText { get; init; }
-      public bool HasLogTimeSpeak { get; init; }
-      public bool HasLogTimeSendToChat { get; init; }
-      public BitmapImage TimerIcon { get; init; }
-      public Trigger TriggerData { get; init; }
-      // only the main thread modifies these values
-      public string ModifiedPreviousPattern { get; set; }
-      public Regex Regex { get; set; }
-      public Regex PreviousRegex { get; set; }
-      public List<NumberOptions> RegexNOptions { get; set; }
-      public List<NumberOptions> PreviousRegexNOptions { get; set; }
-      public bool IsDisabled { get; set; }
-      public string ContainsText { get; set; }
-      public string PreviousContainsText { get; set; }
-      public string StartText { get; set; }
-      public string PreviousStartText { get; set; }
-      public long LockedOutTicks { get; set; }
     }
 
     [GeneratedRegex(@"{(s\d?)}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
