@@ -413,7 +413,7 @@ namespace EQLogParser
             {
               DisplayName = GetDisplayName(timerData),
               TimeText = remainingResetTicks > 0
-                    ? DateUtil.FormatTicks(remainingResetTicks, DateUtil.TimeFormat.SecondsMs)
+                    ? FormatTime(remainingResetTicks)
                     : FormatTime(timerData.DurationTicks),
               Progress = remainingResetTicks > 0 ? 100.0 - CalcProgress(type, timerData.ResetDurationTicks, remainingResetTicks, long.MinValue) : 100.0,
               TimerData = timerData,
@@ -703,7 +703,7 @@ namespace EQLogParser
 
                 timerBar.Update(
                   model.DisplayName,
-                  DateUtil.FormatTicks(remainingTicks, DateUtil.TimeFormat.SecondsMs),
+                  FormatTime(remainingTicks),
                   CalcProgress(type, timerData.DurationTicks, remainingTicks, maxDurationTicks),
                   timerData
                 );
