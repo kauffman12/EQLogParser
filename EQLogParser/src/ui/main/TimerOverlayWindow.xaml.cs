@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -384,7 +384,7 @@ namespace EQLogParser
             models.Add(new TimerBarModel
             {
               DisplayName = GetDisplayName(timerData),
-              TimeText = DateUtil.FormatSimpleMs(remainingTicks),
+              TimeText = FormatTimeWithMillis(remainingTicks),
               Progress = CalcProgress(type, timerData.DurationTicks, remainingTicks, maxDurationTicks),
               TimerData = timerData,
               State = TimerBar.State.Active,
@@ -406,8 +406,8 @@ namespace EQLogParser
             {
               DisplayName = GetDisplayName(timerData),
               TimeText = remainingResetTicks > 0
-                    ? DateUtil.FormatSimpleMs(remainingResetTicks)
-                    : DateUtil.FormatSimpleMs(timerData.DurationTicks),
+                    ? DateUtil.FormatTicks(remainingResetTicks, TimeFormat.SecondsMs)
+                    : DateUtil.FormatTicks(timerData.DurationTicks, TimeFormat.FullHMS),
               Progress = remainingResetTicks > 0 ? 100.0 - CalcProgress(type, timerData.ResetDurationTicks, remainingResetTicks, long.MinValue) : 100.0,
               TimerData = timerData,
               State = state,
@@ -436,9 +436,9 @@ namespace EQLogParser
             DisplayName = GetDisplayName(timerData),
             TimeText = timerData.TimerType switch
             {
-              2 => DateUtil.FormatSimpleMillis(remainingTicks),
-              3 => DateUtil.FormatSimpleMs(timerData.DurationTicks - remainingTicks),
-              _ => DateUtil.FormatSimpleMs(remainingTicks)
+                2 => DateUtil.FormatTicks(remainingTicks, TimeFormat.SecondsMs),
+                3 => DateUtil.FormatTicks(timerData.DurationTicks - remainingTicks, TimeFormat.FullHMS),
+                _ => DateUtil.FormatTicks(remainingTicks, TimeFormat.FullHMSMS)
             },
             Progress = CalcProgress(type, timerData.DurationTicks, remainingTicks, maxDurationTicks),
             TimerData = timerData,
@@ -696,7 +696,7 @@ namespace EQLogParser
 
                 timerBar.Update(
                   model.DisplayName,
-                  DateUtil.FormatSimpleMs(remainingTicks),
+                  DateUtil.FormatTicks(remainingTicks, TimeFormat.SecondsMs),
                   CalcProgress(type, timerData.DurationTicks, remainingTicks, maxDurationTicks),
                   timerData
                 );
@@ -712,7 +712,7 @@ namespace EQLogParser
 
                 timerBar.Update(
                   model.DisplayName,
-                  remainingResetTicks > 0 ? DateUtil.FormatSimpleMs(remainingResetTicks) : DateUtil.FormatSimpleMs(timerData.DurationTicks),
+                  remainingResetTicks > 0 ? DateUtil.FormatTicks(remainingResetTicks, TimeFormat.SecondsMs) : DateUtil.FormatTicks(timerData.DurationTicks, TimeFormat.FullHMS),
                   remainingResetTicks > 0 ? 100.0 - CalcProgress(type, timerData.ResetDurationTicks, remainingResetTicks, long.MinValue) : 100.0,
                   timerData
                 );
@@ -725,9 +725,9 @@ namespace EQLogParser
                 model.DisplayName,
                 timerData.TimerType switch
                 {
-                  2 => DateUtil.FormatSimpleMillis(remainingTicks),
-                  3 => DateUtil.FormatSimpleMs(timerData.DurationTicks - remainingTicks),
-                  _ => DateUtil.FormatSimpleMs(remainingTicks)
+                    2 => DateUtil.FormatTicks(remainingTicks, TimeFormat.SecondsMs),
+                    3 => DateUtil.FormatTicks(timerData.DurationTicks - remainingTicks, TimeFormat.FullHMS),
+                    _ => DateUtil.FormatTicks(remainingTicks, TimeFormat.FullHMSMS)
                 },
                 CalcProgress(type, timerData.DurationTicks, remainingTicks, maxDurationTicks),
                 timerData
@@ -919,6 +919,12 @@ namespace EQLogParser
       }
 
       return result;
+    }
+
+    private string FormatTimeWithMillis(long ticks)
+    {
+      TimeFormat format = _node.OverlayData.ShowMillis ? TimeFormat.FullHMSMS : TimeFormat.HMSCompact;
+      return DateUtil.FormatTicks(ticks, format);
     }
 
     private static void UpdateTimerBarState(TimerBar.State state, TimerData timerData, TimerBar timerBar)

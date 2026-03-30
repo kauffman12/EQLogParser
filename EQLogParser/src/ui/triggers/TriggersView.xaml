@@ -164,6 +164,7 @@
             <syncfusion:PropertyGridItem CategoryName="Cooldown Overlay" PropertyName="ShowActive" DisplayName="Show Active" Visibility="Collapsed" Description="Show Cooldown Timer when in Active state." />
             <syncfusion:PropertyGridItem CategoryName="Cooldown Overlay" PropertyName="ShowIdle" DisplayName="Show Idle" Visibility="Collapsed" Description="Show Cooldown Timer when in Idle state." />
             <syncfusion:PropertyGridItem CategoryName="Cooldown Overlay" PropertyName="ShowReset" DisplayName="Show Reset" Visibility="Collapsed" Description="Show Cooldown Timer when in Reset state." />
+            <syncfusion:PropertyGridItem CategoryName="Timer Overlay" PropertyName="ShowMillis" DisplayName="Show Milliseconds" Visibility="Collapsed" Description="Display timer values with milliseconds (e.g., 00:30.500 for 30.5 seconds)." />
           </syncfusion:PropertyGrid.Items>
         </syncfusion:PropertyGrid>
           <Grid>

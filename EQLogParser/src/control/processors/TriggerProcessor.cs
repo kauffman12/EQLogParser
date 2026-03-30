@@ -699,7 +699,7 @@ namespace EQLogParser
 
         if (wrapper.HasLogTimeText)
         {
-          updatedDisplayText = updatedDisplayText.Replace(LogTimeCode, DateUtil.FormatSimpleHms(lineData.BeginTime), StringComparison.OrdinalIgnoreCase);
+          updatedDisplayText = updatedDisplayText.Replace(LogTimeCode, DateUtil.FormatSeconds(lineData.BeginTime), StringComparison.OrdinalIgnoreCase);
         }
 
         await AddTextAsync(wrapper.TriggerData, updatedDisplayText);
@@ -722,7 +722,7 @@ namespace EQLogParser
         {
           if (wrapper.HasLogTimeSendToChat)
           {
-            updatedSendToChatText = updatedSendToChatText.Replace(LogTimeCode, DateUtil.FormatSimpleHms(lineData.BeginTime), StringComparison.OrdinalIgnoreCase);
+            updatedSendToChatText = updatedSendToChatText.Replace(LogTimeCode, DateUtil.FormatSeconds(lineData.BeginTime), StringComparison.OrdinalIgnoreCase);
           }
           _ = MainActions.SendDiscordMessage(updatedSendToChatText, wrapper.TriggerData.ChatWebhook);
         }
@@ -1093,7 +1093,7 @@ namespace EQLogParser
 
             if (speak.Wrapper.HasLogTimeSpeak && speak.BeginTime > 0)
             {
-              tts = tts.Replace(LogTimeCode, DateUtil.FormatSimpleHms(speak.BeginTime), StringComparison.OrdinalIgnoreCase);
+              tts = tts.Replace(LogTimeCode, DateUtil.FormatSeconds(speak.BeginTime), StringComparison.OrdinalIgnoreCase);
             }
           }
 

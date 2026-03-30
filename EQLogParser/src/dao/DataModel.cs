@@ -176,6 +176,7 @@ namespace EQLogParser
     public double IdleTimeoutSeconds { get; set; }
     public long FadeDelay { get; set; } = 10;
     public bool UseStandardTime { get; set; }
+    public bool ShowMillis { get; set; } = false;
     public bool IsTimerOverlay { get; set; }
     public bool IsTextOverlay { get; set; }
     public bool IsDefault { get; set; }

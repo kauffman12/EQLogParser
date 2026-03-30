@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Globalization;
 using System.Reflection;
@@ -19,35 +19,63 @@ namespace EQLogParser
     internal static DateTime FromDouble(double value) => new((long)value * TimeSpan.TicksPerSecond);
     internal static string GetCurrentDate(string format) => DateTime.Now.ToString(format, CultureInfo.InvariantCulture);
     internal static string FormatSimpleDate(double seconds) => new DateTime().AddSeconds(seconds).ToString("MMM dd HH:mm:ss", CultureInfo.InvariantCulture);
-    internal static string FormatSimpleHms(double seconds) => new DateTime().AddSeconds(seconds).ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+    internal static string FormatSeconds(double seconds) => new DateTime().AddSeconds(seconds).ToString("HH:mm:ss", CultureInfo.InvariantCulture);
     internal static double StandardDateToDouble(string source) => ToDouble(ParseStandardDate(source));
     internal static DateTime ParseStandardDate(string source) => CustomDateTimeParser("MMM dd HH:mm:ss yyyy", source, 5);
 
-    internal static string FormatSimpleMs(long ticks)
+    internal enum TimeFormat
     {
-      if (ticks < 0) ticks = 0; // Ensure non-negative ticks.
-
-      // Convert ticks to total seconds and round to the nearest second.
-      var totalSeconds = (long)Math.Round((double)ticks / TimeSpan.TicksPerSecond);
-
-      var hours = totalSeconds / 3600; // Find total hours.
-      var minutes = totalSeconds % 3600 / 60; // Find remaining minutes.
-      var seconds = totalSeconds % 60; // Find remaining seconds.
-      return (hours > 0)
-          ? $"{hours:D2}:{minutes:D2}:{seconds:D2}"
-          : $"{minutes:D2}:{seconds:D2}";
+        SecondsMs,   // ss.mmm (seconds and milliseconds)
+        HMSCompact,  // mm:ss or hh:mm:ss (omits hours if zero)
+        FullHMSMS,   // hh:mm:ss.mmm (always includes all units + milliseconds)
+        FullHMS      // HH:mm:ss (always includes hours, minutes, seconds)
     }
 
-    internal static string FormatSimpleMillis(long ticks)
+    internal static string FormatTicks(long ticks, TimeFormat format = TimeFormat.FullHMS)
     {
-      if (ticks < 0) ticks = 0; // Ensure non-negative ticks.
+      if (ticks < 0) ticks = 0;
 
-      // Convert ticks to total milliseconds and round to the nearest millisecond.
-      var totalMilliseconds = (long)Math.Round((double)ticks / TimeSpan.TicksPerMillisecond);
+      switch(format)
+      {
+          case TimeFormat.SecondsMs:
+              var totalMillisecondsPrecise = (long)Math.Round((double)ticks / TimeSpan.TicksPerMillisecond);
+              var secondsPrecise = totalMillisecondsPrecise / 1000 % 60;
+              var millisecondsPrecise = totalMillisecondsPrecise % 1000;
+              return $"{secondsPrecise:D2}.{millisecondsPrecise:D3}";
+              
+          case TimeFormat.HMSCompact:
+              var totalSecondsElapsed = (long)Math.Round((double)ticks / TimeSpan.TicksPerSecond);
+              var hoursElapsed = totalSecondsElapsed / 3600;
+              var minutesElapsed = totalSecondsElapsed % 3600 / 60;
+              var secondsElapsed = totalSecondsElapsed % 60;
 
-      var seconds = totalMilliseconds / 1000 % 60; // Find total seconds, capped at 60.
-      var milliseconds = totalMilliseconds % 1000; // Find remaining milliseconds.
-      return $"{seconds:D2}.{milliseconds:D3}";
+              if (hoursElapsed > 0)
+                  return $"{hoursElapsed:D2}:{minutesElapsed:D2}:{secondsElapsed:D2}";
+              else
+                  return $"{minutesElapsed:D2}:{secondsElapsed:D2}";
+
+          case TimeFormat.FullHMSMS:
+              var totalMillisecondsComplete = (long)Math.Round((double)ticks / TimeSpan.TicksPerMillisecond);
+              var hoursComplete = totalMillisecondsComplete / (3600 * 1000);
+              var minutesComplete = (totalMillisecondsComplete % (3600 * 1000)) / (60 * 1000);
+              var secondsComplete = (totalMillisecondsComplete % (60 * 1000)) / 1000;
+              var millisecondsComplete = totalMillisecondsComplete % 1000;
+
+              if (hoursComplete > 0)
+                  return $"{hoursComplete:D2}:{minutesComplete:D2}:{secondsComplete:D2}.{millisecondsComplete:D3}";
+              else if (minutesComplete > 0)
+                  return $"{minutesComplete:D2}:{secondsComplete:D2}.{millisecondsComplete:D3}";
+              else
+                  return $"{secondsComplete:D2}.{millisecondsComplete:D3}";
+
+          case TimeFormat.FullHMS:
+              var totalSecondsHms = (long)Math.Round((double)ticks / TimeSpan.TicksPerSecond);
+              var hoursHms = totalSecondsHms / 3600;
+              var minutesHms = totalSecondsHms % 3600 / 60;
+              var secondsHms = totalSecondsHms % 60;
+              return $"{hoursHms:D2}:{minutesHms:D2}:{secondsHms:D2}";
+      }
+      return string.Empty; // Unreachable due to exhaustive enum cases
     }
 
     internal static string FormatGeneralTime(double seconds, bool showSeconds = false)
