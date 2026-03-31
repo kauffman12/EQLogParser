@@ -1,10 +1,13 @@
 ﻿using DotLiquid;
+using log4net;
+using Microsoft.VisualBasic.FileIO;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -12,6 +15,7 @@ namespace EQLogParser
 {
   internal static class TextUtils
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private const string BbCellHeader = "  [td]{0}    [/td]";
     private const string BbCellBody = "[td][right]{0}   [/right][/td]";
     private const string BbCellFirst = "[td]{0}[/td]";
@@ -20,8 +24,6 @@ namespace EQLogParser
     private const string BbTableStart = "[table]\r\n";
     private const string BbTableEnd = "[/table]\r\n";
     private const string BbTitle = "[b]{0}[/b]\r\n";
-    private const string CsvStringCell = "\"{0}\"\t";
-    private const string CsvNumberCell = "{0}\t";
 
     private const string BbGamparseSpellCount = "   --- {0} - {1}";
 
@@ -62,16 +64,31 @@ namespace EQLogParser
     internal static List<string[]> ReadTsv(string data)
     {
       var rows = new List<string[]>();
-      using var reader = new StringReader(data);
 
-      while (reader.ReadLine() is { } line)
+      if (string.IsNullOrEmpty(data))
       {
-        var fields = line
-          .Split('\t')
-          .Select(field => field.Trim().Trim('"'))
-          .ToArray();
+        return rows;
+      }
 
-        rows.Add(fields);
+      using var reader = new StringReader(data);
+      using var parser = new TextFieldParser(reader)
+      {
+        HasFieldsEnclosedInQuotes = true,
+        TrimWhiteSpace = false
+      };
+
+      parser.SetDelimiters("\t");
+
+      try
+      {
+        while (!parser.EndOfData)
+        {
+          rows.Add(parser.ReadFields() ?? []);
+        }
+      }
+      catch (MalformedLineException ex)
+      {
+        Log.Error($"Invalid TSV data at line {parser.ErrorLineNumber}: {parser.ErrorLine}", ex);
       }
 
       return rows;

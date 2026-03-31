@@ -394,16 +394,18 @@ namespace EQLogParser
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (_playerPetValues.Count > 0)
-      {
-        _currentChoice = choicesList.SelectedValue as string;
-        _currentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
-        Plot(_lastSelected);
-      }
+      _currentChoice = choicesList.SelectedValue as string;
+      _currentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
+
+      if (_playerPetValues.Count == 0)
+        return;
+
+      Plot(_lastSelected);
     }
 
     private void TopCountSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+      var current = _currentTopCount;
       if (topCountList.SelectedIndex == 0)
       {
         _currentTopCount = 5;
@@ -413,7 +415,15 @@ namespace EQLogParser
         _currentTopCount = 10;
       }
 
-      ConfigUtil.SetSetting($"Line{this.GetType().Name}TopCount", _currentTopCount);
+      // save if changed
+      if (current != _currentTopCount && _currentTopCount > 0)
+      {
+        ConfigUtil.SetSetting($"Line{GetType().Name}TopCount", _currentTopCount);
+      }
+
+      if (_playerPetValues.Count == 0)
+        return;
+
       Plot(_lastSelected);
     }
 
