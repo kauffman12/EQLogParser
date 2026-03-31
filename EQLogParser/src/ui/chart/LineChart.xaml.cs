@@ -486,7 +486,7 @@ namespace EQLogParser
             }
           }
 
-          Clipboard.SetDataObject(TextUtils.BuildCsv(header, data, titleLabel.Content as string));
+          Clipboard.SetDataObject(TextUtils.BuildTsv(header, data, titleLabel.Content as string));
         }
         catch (ExternalException ex)
         {

@@ -86,7 +86,7 @@ namespace EQLogParser
     {
       content.Children.Clear();
       CreatePreviewTimer("Example Trigger Name", _showMillis ? "03:00.140" : "03:00", 90.0);
-      CreatePreviewTimer("Example Trigger Name #2", _showMillis ? "01:00:344" : "01:00", 30.0);
+      CreatePreviewTimer("Example Trigger Name #2", _showMillis ? "01:00.344" : "01:00", 30.0);
     }
 
     internal async Task StartTimerAsync(TimerData timerData)

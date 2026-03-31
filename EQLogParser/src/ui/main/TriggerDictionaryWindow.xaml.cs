@@ -166,7 +166,7 @@ namespace EQLogParser
     {
       var openFileDialog = new OpenFileDialog
       {
-        Filter = "CSV Files (*.csv)|*.csv|Text Files (*.txt)|*.txt|All Files (*.*)|*.*",
+        Filter = "TSV Files (*.tsv)|*.tsv|Text Files (*.txt)|*.txt|All Files (*.*)|*.*",
         Title = "Import Phonetic Dictionary"
       };
 
@@ -174,38 +174,54 @@ namespace EQLogParser
       {
         try
         {
-          var lines = File.ReadAllLines(openFileDialog.FileName);
-          var initialCount = _items.Count;
+          var data = File.ReadAllText(openFileDialog.FileName);
+          var rows = TextUtils.ReadTsv(data);
 
-          for (var i = 0; i < lines.Length; i++)
+          var updated = false;
+
+          for (var i = 0; i < rows.Count; i++)
           {
-            var line = lines[i];
-            if (string.IsNullOrWhiteSpace(line) || (i == 0 && line.Trim().StartsWith("Word to Replace", StringComparison.OrdinalIgnoreCase)))
+            var parts = rows[i];
+
+            if (parts == null || parts.Length == 0 || parts.All(string.IsNullOrWhiteSpace))
             {
-              continue; // Skip header and empty lines
+              continue;
             }
 
-            var parts = line.Split(',');
-            if (parts.Length >= 2 && !string.IsNullOrWhiteSpace(parts[0]) && !string.IsNullOrWhiteSpace(parts[1]))
+            if (i == 0 && parts.Length > 0 &&
+                parts[0].Trim().StartsWith("Word to Replace", StringComparison.OrdinalIgnoreCase))
+            {
+              continue;
+            }
+
+            if (parts.Length >= 2 &&
+                !string.IsNullOrWhiteSpace(parts[0]) &&
+                !string.IsNullOrWhiteSpace(parts[1]))
             {
               var replace = parts[0].Trim();
               var with = parts[1].Trim();
 
-              // Check for duplicates
               if (!_items.Any(item => item.Replace == replace && item.With == with))
               {
                 _items.Add(new LexiconItem { Replace = replace, With = with });
+                updated = true;
               }
             }
-            else if (parts.Length == 1 && !string.IsNullOrWhiteSpace(parts[0]))
+            else if (parts.Length >= 1 && !string.IsNullOrWhiteSpace(parts[0]))
             {
-              // Handle single column entries (word to replace without replacement)
               var replace = parts[0].Trim();
+
               if (!_items.Any(item => item.Replace == replace))
               {
                 _items.Add(new LexiconItem { Replace = replace, With = replace });
+                updated = true;
               }
             }
+          }
+
+          if (updated)
+          {
+            EnableSave();
           }
         }
         catch (Exception ex)
@@ -220,28 +236,20 @@ namespace EQLogParser
     {
       var saveFileDialog = new SaveFileDialog
       {
-        Filter = "CSV Files (*.csv)|*.csv|Text Files (*.txt)|*.txt",
+        Filter = "TSV Files (*.tsv)|*.tsv|Text Files (*.txt)|*.txt",
         Title = "Export Phonetic Dictionary",
-        FileName = "eqlp-phonetic-dictionary.csv"
+        FileName = "eqlp-phonetic-dictionary.tsv"
       };
 
       if (saveFileDialog.ShowDialog() == true)
       {
         try
         {
+          var export = DataGridUtil.BuildExportData(dataGrid);
+          var result = TextUtils.BuildTsv(export.Item1, export.Item2);
           using (var writer = new StreamWriter(saveFileDialog.FileName))
           {
-            // Write header
-            writer.WriteLine("Word to Replace,Say As");
-
-            // Write data
-            foreach (var item in _items)
-            {
-              if (!string.IsNullOrEmpty(item.Replace) && !string.IsNullOrEmpty(item.With))
-              {
-                writer.WriteLine($"{item.Replace},{item.With}");
-              }
-            }
+            writer.Write(result);
           }
         }
         catch (Exception ex)

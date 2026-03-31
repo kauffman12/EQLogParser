@@ -101,7 +101,7 @@ namespace EQLogParser
       try
       {
         var export = BuildExportData(gridBase);
-        var result = TextUtils.BuildCsv(export.Item1, export.Item2, title);
+        var result = TextUtils.BuildTsv(export.Item1, export.Item2, title);
         Clipboard.SetDataObject(result);
       }
       catch (ArgumentNullException ane)

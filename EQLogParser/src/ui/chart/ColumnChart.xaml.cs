@@ -323,7 +323,7 @@ namespace EQLogParser
           data.Add([column.ClassName, column.Y, name]);
         }
 
-        Clipboard.SetDataObject(TextUtils.BuildCsv(header, data, titleLabel.Content as string));
+        Clipboard.SetDataObject(TextUtils.BuildTsv(header, data, titleLabel.Content as string));
       }
       catch (ExternalException ex)
       {

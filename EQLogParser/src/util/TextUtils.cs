@@ -40,31 +40,41 @@ namespace EQLogParser
       return string.IsNullOrEmpty(name) ? "" : (char.ToUpper(name[0], culture) + (name.Length > 1 ? name[1..] : ""));
     }
 
-    internal static string BuildCsv(List<string> header, List<List<object>> data, string title = null)
+    internal static string BuildTsv(List<string> header, List<List<object>> data, string title = null)
     {
       var sb = new StringBuilder();
 
       if (title != null)
       {
-        sb.Append('"').Append(title).Append('"').AppendLine();
+        sb.Append('"').Append(EscapeTsv(title)).Append('"').AppendLine();
       }
 
-      // header
-      header.ForEach(item => sb.AppendFormat(CultureInfo.CurrentCulture, CsvStringCell, item));
-      sb.AppendLine();
+      sb.AppendLine(string.Join('\t', header.Select(item => $"\"{EscapeTsv(item)}\"")));
 
-      // data
-      data.ForEach(row =>
+      foreach (var row in data)
       {
-        row.ToList().ForEach(item =>
-        {
-          sb.AppendFormat(CultureInfo.CurrentCulture, item is string ? CsvStringCell : CsvNumberCell, item);
-        });
-
-        sb.AppendLine();
-      });
+        sb.AppendLine(string.Join('\t', row.Select(FormatTsvCell)));
+      }
 
       return sb.ToString();
+    }
+
+    internal static List<string[]> ReadTsv(string data)
+    {
+      var rows = new List<string[]>();
+      using var reader = new StringReader(data);
+
+      while (reader.ReadLine() is { } line)
+      {
+        var fields = line
+          .Split('\t')
+          .Select(field => field.Trim().Trim('"'))
+          .ToArray();
+
+        rows.Add(fields);
+      }
+
+      return rows;
     }
 
     internal static string BuildBbCodeTable(List<string> header, List<List<object>> data, string title = null)
@@ -342,6 +352,18 @@ namespace EQLogParser
       }
 
       return sb.ToString();
+    }
+
+    private static string FormatTsvCell(object item)
+    {
+      return item is string s
+        ? $"\"{EscapeTsv(s)}\""
+        : Convert.ToString(item, CultureInfo.CurrentCulture) ?? "";
+    }
+
+    private static string EscapeTsv(string value)
+    {
+      return value.Replace("\"", "\"\"");
     }
   }
 }

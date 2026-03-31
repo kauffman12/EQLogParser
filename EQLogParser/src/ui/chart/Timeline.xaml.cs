@@ -821,7 +821,7 @@ namespace EQLogParser
         }
 
         var header = new List<string> { "Adps", "Player", "Start", "End" };
-        Clipboard.SetDataObject(TextUtils.BuildCsv(header, playerData, title));
+        Clipboard.SetDataObject(TextUtils.BuildTsv(header, playerData, title));
       }
       catch (ExternalException ex)
       {
