@@ -18,14 +18,16 @@ namespace EQLogParser
       _theTimerBar.Visibility = Visibility.Visible;
     }
 
-    public object Create(PropertyInfo propertyInfo) => Create();
-    public object Create(PropertyDescriptor descriotor) => Create();
+    public object Create(PropertyInfo _) => Create();
+    public object Create(PropertyDescriptor _) => Create();
 
     private object Create()
     {
-      var timerBar = new TimerBar { Margin = new Thickness(5) };
-      _theTimerBar = timerBar;
-      return timerBar;
+      if (_theTimerBar != null)
+        return _theTimerBar;
+
+      _theTimerBar = new TimerBar { Margin = new Thickness(5) };
+      return _theTimerBar;
     }
 
     public void Detach(PropertyViewItem property)

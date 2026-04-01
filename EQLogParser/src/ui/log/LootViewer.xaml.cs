@@ -250,7 +250,7 @@ namespace EQLogParser
 
     private static void UpdateTotals(List<LootRow> totalRecords, LootRecord looted)
     {
-      if (App.AutoMap.Map(looted, new LootRecord()) is { } copied)
+      if (looted.Clone() is { } copied)
       {
         var row = new LootRow { BeginTime = 0, Record = copied };
         if (totalRecords.FirstOrDefault(item =>

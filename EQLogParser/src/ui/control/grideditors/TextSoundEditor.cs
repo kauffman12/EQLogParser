@@ -44,12 +44,14 @@ namespace EQLogParser
       BindingOperations.SetBinding(_theRealTextBox, TextBox.TextProperty, binding);
     }
 
-    public override object Create(PropertyInfo propertyInfo) => Create();
-
-    public override object Create(PropertyDescriptor descriptor) => Create();
+    public override object Create(PropertyInfo _) => Create();
+    public override object Create(PropertyDescriptor _) => Create();
 
     private object Create()
     {
+      if (_grid != null)
+        return _grid;
+
       _grid = new Grid();
       _grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
       _grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100, GridUnitType.Auto) });
@@ -321,7 +323,11 @@ namespace EQLogParser
         _buttonContainer = null;
       }
 
-      _grid.Children.Clear();
+      if (_grid != null)
+      {
+        _grid.Children.Clear();
+        _grid = null;
+      }
     }
   }
 }

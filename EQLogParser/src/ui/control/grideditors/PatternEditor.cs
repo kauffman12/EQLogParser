@@ -13,6 +13,7 @@ namespace EQLogParser
   {
     private TextBox _theTextBox;
     private CheckBox _theCheckBox;
+    private Grid _grid;
     private bool _userTurnedOff;
 
     public void SetForeground(string foreground)
@@ -59,15 +60,18 @@ namespace EQLogParser
       }
     }
 
-    public override object Create(PropertyInfo propertyInfo) => Create();
-    public override object Create(PropertyDescriptor descriotor) => Create();
+    public override object Create(PropertyInfo _) => Create();
+    public override object Create(PropertyDescriptor _) => Create();
 
     private object Create()
     {
+      if (_grid != null)
+        return _grid;
+
       _userTurnedOff = false;
-      var grid = new Grid();
-      grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
-      grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+      _grid = new Grid();
+      _grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
+      _grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
 
       _theTextBox = new TextBox
       {
@@ -91,9 +95,9 @@ namespace EQLogParser
       _theCheckBox.SetValue(Grid.ColumnProperty, 1);
       _theCheckBox.Checked += TheCheckBoxChecked;
       _theCheckBox.Unchecked += TheCheckBoxChecked;
-      grid.Children.Add(_theTextBox);
-      grid.Children.Add(_theCheckBox);
-      return grid;
+      _grid.Children.Add(_theTextBox);
+      _grid.Children.Add(_theCheckBox);
+      return _grid;
     }
 
     private void TheTextChanged(object sender, TextChangedEventArgs e)
@@ -163,6 +167,12 @@ namespace EQLogParser
         _theCheckBox.Unchecked -= TheCheckBoxChecked;
         BindingOperations.ClearAllBindings(_theCheckBox);
         _theCheckBox = null;
+      }
+
+      if (_grid != null)
+      {
+        _grid.Children.Clear();
+        _grid = null;
       }
     }
   }

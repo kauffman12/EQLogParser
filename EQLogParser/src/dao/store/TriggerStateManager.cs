@@ -234,7 +234,7 @@ namespace EQLogParser
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        if (dst?.Id is { } parentId && App.AutoMap.Map(src, new TriggerNode()) is { } copied)
+        if (dst?.Id is { } parentId && src.Clone() is { } copied)
         {
           if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
           {
@@ -463,8 +463,9 @@ namespace EQLogParser
           {
             if (node.Id is { } id && state.Enabled.TryGetValue(id, out var value) && value == true)
             {
-              var trigCopy = App.AutoMap.Map(node.TriggerData, new Trigger());
-              var ovlCopy = node.OverlayData != null ? App.AutoMap.Map(node.OverlayData, new Overlay()) : null;
+              // test - now real copies
+              var trigCopy = node.TriggerData.Clone();
+              var ovlCopy = node.OverlayData?.Clone();
               result.Add(new OtData { Id = node.Id, Name = node.Name, Trigger = trigCopy, OverlayData = ovlCopy });
             }
           }
@@ -968,7 +969,7 @@ namespace EQLogParser
             var index = GetNextIndex(tree, parentId);
 
             // new trigger and replace the exported version
-            if (newNode.TriggerData != null && App.AutoMap.Map(newNode, new TriggerNode()) is { } node)
+            if (newNode.TriggerData != null && newNode.ToTriggerNode() is { } node)
             {
               node.TriggerData.SelectedOverlays = ValidateOverlays(newNode.TriggerData.SelectedOverlays);
               Insert(node, index);
@@ -976,7 +977,7 @@ namespace EQLogParser
               hasMissingMedia = CheckMissingMedia(tree, newNode, node);
             }
             // make sure it's a new directory and replace the exported version
-            else if (newNode.OverlayData == null && newNode.TriggerData == null && App.AutoMap.Map(newNode, new TriggerNode()) is { } node2)
+            else if (newNode.OverlayData == null && newNode.TriggerData == null && newNode.ToTriggerNode() is { } node2)
             {
               Insert(node2, index);
 
@@ -1022,7 +1023,7 @@ namespace EQLogParser
               Insert(newNode, index, newNode.Id);
             }
             // make sure it's a new directory
-            else if (newNode.OverlayData == null && newNode.TriggerData == null && App.AutoMap.Map(newNode, new TriggerNode()) is { } node)
+            else if (newNode.OverlayData == null && newNode.TriggerData == null && newNode.ToTriggerNode() is { } node)
             {
               Insert(node, index);
               Import(tree, node.Id, newNode.Nodes, type, characterStates);
@@ -1408,7 +1409,7 @@ namespace EQLogParser
       }
       else if (old.OverlayData != null)
       {
-        newNode.OverlayData = App.AutoMap.Map(old.OverlayData, new Overlay());
+        newNode.OverlayData = old.OverlayData.ToOverlay();
         newNode.OverlayData.OverlayColor = FixColor(newNode.OverlayData.OverlayColor);
         newNode.OverlayData.FontColor = FixColor(newNode.OverlayData.FontColor);
         newNode.OverlayData.ActiveColor = FixColor(newNode.OverlayData.ActiveColor);

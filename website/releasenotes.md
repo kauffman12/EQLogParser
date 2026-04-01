@@ -1,3 +1,11 @@
+# 2.3.48 | 03/31/26
+1. Added option to **Trends Chart** for viewing **Top 5** or **Top 10** when no players are selected.
+2. Added **Import** and **Export** buttons to the **Dictionary** window in Trigger Manager. It uses a simple TSV file format.
+3. Updated **Timer Overlays** sorting options to include **Timer Name (Natural)**. This will allow numbers in the **Timer Name** to be sorted numerically.
+4. Added **Show Milliseconds** option to **Timer Overlays**.
+5. Fixed order of **Timer Overlay** options.
+6. Included latest Syncfusion and replaced some old libraries.
+
 # 2.3.47 | 03/10/26
 1. Added **Daily** option to **Log Management** scheduler.
 2. Updated parsing to handle new **NPC death message** format.

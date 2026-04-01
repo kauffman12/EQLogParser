@@ -15,6 +15,7 @@ namespace EQLogParser
     private TextBox _theTextBox;
     private Button _theButton;
     private ColorPicker _theColorPicker;
+    private Grid _grid;
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
     {
@@ -29,14 +30,17 @@ namespace EQLogParser
       BindingOperations.SetBinding(_theColorPicker, ColorPicker.BrushProperty, binding);
     }
 
-    public override object Create(PropertyInfo propertyInfo) => Create();
-    public override object Create(PropertyDescriptor descriotor) => Create();
+    public override object Create(PropertyInfo _) => Create();
+    public override object Create(PropertyDescriptor _) => Create();
 
     private object Create()
     {
-      var grid = new Grid();
-      grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
-      grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(65, GridUnitType.Auto) });
+      if (_grid != null)
+        return _grid;
+
+      _grid = new Grid();
+      _grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
+      _grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(65, GridUnitType.Auto) });
 
       _theTextBox = new TextBox
       {
@@ -75,10 +79,10 @@ namespace EQLogParser
       _theColorPicker.SetValue(Grid.ColumnProperty, 0);
       _theColorPicker.SelectedBrushChanged += TheColorPickerBrushChanged;
 
-      grid.Children.Add(_theColorPicker);
-      grid.Children.Add(_theTextBox);
-      grid.Children.Add(_theButton);
-      return grid;
+      _grid.Children.Add(_theColorPicker);
+      _grid.Children.Add(_theTextBox);
+      _grid.Children.Add(_theButton);
+      return _grid;
     }
 
     private void TheColorPickerBrushChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -144,7 +148,11 @@ namespace EQLogParser
         _theColorPicker = null;
       }
 
-      ;
+      if (_grid != null)
+      {
+        _grid.Children.Clear();
+        _grid = null;
+      }
     }
   }
 }

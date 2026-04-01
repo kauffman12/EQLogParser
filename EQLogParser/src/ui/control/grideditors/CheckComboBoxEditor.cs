@@ -28,23 +28,24 @@ namespace EQLogParser
       BindingOperations.SetBinding(_theComboBox, ItemsControl.ItemsSourceProperty, binding);
     }
 
-    public override object Create(PropertyInfo propertyInfo) => Create();
+    public override object Create(PropertyInfo _) => Create();
     public override object Create(PropertyDescriptor _) => Create();
 
     private object Create()
     {
-      var comboBox = new ComboBox
+      if (_theComboBox != null)
+        return _theComboBox;
+
+      _theComboBox = new ComboBox
       {
         ItemTemplateSelector = new ComboBoxItemTemplateSelector(),
         Padding = new Thickness(0),
         Margin = new Thickness(0)
       };
 
-      comboBox.DropDownClosed += TheComboBoxDropDownClosed;
-      comboBox.DataContextChanged += TheComboBoxDataContextChanged;
-
-      _theComboBox = comboBox;
-      return comboBox;
+      _theComboBox.DropDownClosed += TheComboBoxDropDownClosed;
+      _theComboBox.DataContextChanged += TheComboBoxDataContextChanged;
+      return _theComboBox;
     }
 
     private void TheComboBoxDataContextChanged(object sender, DependencyPropertyChangedEventArgs e) => UpdateTitle(sender);

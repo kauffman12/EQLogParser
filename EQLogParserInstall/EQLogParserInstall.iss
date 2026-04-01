@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "EQLogParser"
-#define MyAppVersion "2.3.47"
+#define MyAppVersion "2.3.48"
 #define MyAppPublisher "Kizant"
 #define MyAppURL "https://github.com/kauffman12/EQLogParser"
 #define MyAppExeName "EQLogParser.exe"
@@ -49,7 +49,6 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "{#MyReleaseDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyReleaseDir}\AutoMapper.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\DotLiquid.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\EQLogParser.deps.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\EQLogParser.dll"; DestDir: "{app}"; Flags: ignoreversion
@@ -62,6 +61,7 @@ Source: "{#MyReleaseDir}\log4net.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Microsoft.WindowsAPICodePack.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Microsoft.WindowsAPICodePack.Shell.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Microsoft.Windows.SDK.NET.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\Riok.Mapperly.Abstractions.dll"; DestDir: "{app}"; Flags: ignoreversion
 
 ; .NET Memory Caching and Dependency Injection
 Source: "{#MyReleaseDir}\Microsoft.Extensions.Caching.Abstractions.dll"; DestDir: "{app}"; Flags: ignoreversion

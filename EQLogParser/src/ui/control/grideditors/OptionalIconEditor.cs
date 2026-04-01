@@ -18,6 +18,7 @@ namespace EQLogParser
     private ComboBoxAdv _theImageTypeBox;
     private Button _theButton;
     private Image _theImage;
+    private Grid _grid;
 
     public override void Attach(PropertyViewItem property, PropertyItem info)
     {
@@ -34,47 +35,20 @@ namespace EQLogParser
       BindingOperations.SetBinding(_theImagePath, TextBox.TextProperty, binding);
     }
 
-    public override object Create(PropertyInfo propertyInfo) => Create();
-    public override object Create(PropertyDescriptor descriotor) => Create();
-    public override bool ShouldPropertyGridTryToHandleKeyDown(Key key) => false;
-
-    public override void Detach(PropertyViewItem property)
-    {
-      if (_theImageTypeBox != null)
-      {
-        BindingOperations.ClearAllBindings(_theImageTypeBox);
-        _theImageTypeBox.SelectionChanged -= ImageTypeBoxSelectionChanged;
-        _theImageTypeBox = null;
-      }
-
-      if (_theButton != null)
-      {
-        BindingOperations.ClearAllBindings(_theButton);
-        _theButton = null;
-      }
-
-      if (_theImage != null)
-      {
-        BindingOperations.ClearAllBindings(_theImage);
-        _theImage.PreviewMouseLeftButtonDown -= TheImagePreviewMouseLeftButtonDown;
-        _theImage = null;
-      }
-
-      if (_theImagePath != null)
-      {
-        BindingOperations.ClearAllBindings(_theImagePath);
-        _theImagePath.TextChanged -= TheImagePathTextChanged;
-        _theImagePath = null;
-      }
-    }
+    public override object Create(PropertyInfo _) => Create();
+    public override object Create(PropertyDescriptor _) => Create();
+    public override bool ShouldPropertyGridTryToHandleKeyDown(Key _) => false;
 
     private void TheButtonClick(object sender, RoutedEventArgs e) => ShowDefaultText();
 
     private object Create()
     {
-      var grid = new Grid();
-      grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
-      grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(65, GridUnitType.Auto) });
+      if (_grid != null)
+        return _grid;
+
+      _grid = new Grid();
+      _grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200, GridUnitType.Star) });
+      _grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(65, GridUnitType.Auto) });
 
       _theImageTypeBox = new ComboBoxAdv
       {
@@ -127,11 +101,11 @@ namespace EQLogParser
       _theImagePath.SetResourceReference(TextBox.ForegroundProperty, "EQWarnForegroundBrush");
       _theImagePath.TextChanged += TheImagePathTextChanged;
 
-      grid.Children.Add(_theImage);
-      grid.Children.Add(_theImageTypeBox);
-      grid.Children.Add(_theImagePath);
-      grid.Children.Add(_theButton);
-      return grid;
+      _grid.Children.Add(_theImage);
+      _grid.Children.Add(_theImageTypeBox);
+      _grid.Children.Add(_theImagePath);
+      _grid.Children.Add(_theButton);
+      return _grid;
     }
 
     private void TheImagePreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -276,6 +250,42 @@ namespace EQLogParser
       }
 
       return TriggerStateManager.DefaultUser;
+    }
+
+    public override void Detach(PropertyViewItem property)
+    {
+      if (_theImageTypeBox != null)
+      {
+        BindingOperations.ClearAllBindings(_theImageTypeBox);
+        _theImageTypeBox.SelectionChanged -= ImageTypeBoxSelectionChanged;
+        _theImageTypeBox = null;
+      }
+
+      if (_theButton != null)
+      {
+        BindingOperations.ClearAllBindings(_theButton);
+        _theButton = null;
+      }
+
+      if (_theImage != null)
+      {
+        BindingOperations.ClearAllBindings(_theImage);
+        _theImage.PreviewMouseLeftButtonDown -= TheImagePreviewMouseLeftButtonDown;
+        _theImage = null;
+      }
+
+      if (_theImagePath != null)
+      {
+        BindingOperations.ClearAllBindings(_theImagePath);
+        _theImagePath.TextChanged -= TheImagePathTextChanged;
+        _theImagePath = null;
+      }
+
+      if (_grid != null)
+      {
+        _grid.Children.Clear();
+        _grid = null;
+      }
     }
   }
 }

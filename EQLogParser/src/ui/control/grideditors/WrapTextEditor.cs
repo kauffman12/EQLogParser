@@ -1,6 +1,5 @@
 ﻿using Syncfusion.Windows.PropertyGrid;
 using System.ComponentModel;
-using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -12,28 +11,19 @@ namespace EQLogParser
   {
     private TextBox _theTextBox;
 
-    public override object Create(PropertyInfo propertyInfo)
-    {
-      var textBox = base.Create(propertyInfo) as TextBox;
-      if (textBox != null)
-      {
-        textBox.TextWrapping = TextWrapping.Wrap;
-        textBox.Padding = new Thickness(0, 2, 0, 2);
-        _theTextBox = textBox;
-      }
-      return textBox;
-    }
-
     public override object Create(PropertyDescriptor descriptor)
     {
-      var textBox = base.Create(descriptor) as TextBox;
-      if (textBox != null)
+      if (_theTextBox != null)
+        return _theTextBox;
+
+      _theTextBox = base.Create(descriptor) as TextBox;
+      if (_theTextBox != null)
       {
-        textBox.TextWrapping = TextWrapping.Wrap;
-        textBox.Padding = new Thickness(2);
-        _theTextBox = textBox;
+        _theTextBox.TextWrapping = TextWrapping.Wrap;
+        _theTextBox.Padding = new Thickness(2);
       }
-      return textBox;
+
+      return _theTextBox;
     }
 
     public override bool ShouldPropertyGridTryToHandleKeyDown(Key key)

@@ -79,13 +79,15 @@ namespace EQLogParser
     }
 
     // Create a custom editor for a normal property
-    public override object Create(PropertyInfo info) => Create(info.Name);
-
+    public override object Create(PropertyInfo info) => Create(info?.Name);
     // Create a custom editor for a dynamic property
-    public override object Create(PropertyDescriptor desc) => Create(desc.Name);
+    public override object Create(PropertyDescriptor desc) => Create(desc?.Name);
 
     private object Create(string name)
     {
+      if (_theComboBox != null)
+        return _theComboBox;
+
       var comboBox = new ComboBox
       {
         Padding = new Thickness(0),
@@ -93,7 +95,7 @@ namespace EQLogParser
         Margin = new Thickness(2, 0, 0, 0)
       };
 
-      if (Options.TryGetValue(name, out var option))
+      if (!string.IsNullOrEmpty(name) && Options.TryGetValue(name, out var option))
       {
         option.ForEach(item => comboBox.Items.Add(item));
       }

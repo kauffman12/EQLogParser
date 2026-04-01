@@ -53,15 +53,20 @@ namespace EQLogParser
       }
     }
 
-    public override object Create(PropertyDescriptor propertyDescriptor) => Create();
-    public override object Create(PropertyInfo propertyInfo) => Create();
+    public override object Create(PropertyDescriptor _) => Create();
+    public override object Create(PropertyInfo _) => Create();
 
     public object Create()
     {
-      object result;
+      if (_theIntTextBox != null)
+        return _theIntTextBox;
+
+      if (_theDoubleTextBox != null)
+        return _theDoubleTextBox;
+
       if (_type == typeof(long))
       {
-        var intTextBox = new IntegerTextBox
+        _theIntTextBox = new IntegerTextBox
         {
           ApplyZeroColor = false,
           ShowSpinButton = true,
@@ -70,17 +75,16 @@ namespace EQLogParser
 
         if (!_min.Equals(_max))
         {
-          intTextBox.MinValue = (long)_min;
-          intTextBox.MaxValue = (long)_max;
+          _theIntTextBox.MinValue = (long)_min;
+          _theIntTextBox.MaxValue = (long)_max;
         }
 
-        intTextBox.SetResourceReference(EditorBase.PositiveForegroundProperty, "ContentForeground");
-        _theIntTextBox = intTextBox;
-        result = intTextBox;
+        _theIntTextBox.SetResourceReference(EditorBase.PositiveForegroundProperty, "ContentForeground");
+        return _theIntTextBox;
       }
       else
       {
-        var doubleTextBox = new DoubleTextBox
+        _theDoubleTextBox = new DoubleTextBox
         {
           ApplyZeroColor = false,
           ShowSpinButton = true,
@@ -90,16 +94,13 @@ namespace EQLogParser
 
         if (!_min.Equals(_max))
         {
-          doubleTextBox.MinValue = _min;
-          doubleTextBox.MaxValue = _max;
+          _theDoubleTextBox.MinValue = _min;
+          _theDoubleTextBox.MaxValue = _max;
         }
 
-        doubleTextBox.SetResourceReference(EditorBase.PositiveForegroundProperty, "ContentForeground");
-        _theDoubleTextBox = doubleTextBox;
-        result = doubleTextBox;
+        _theDoubleTextBox.SetResourceReference(EditorBase.PositiveForegroundProperty, "ContentForeground");
+        return _theDoubleTextBox;
       }
-
-      return result;
     }
 
     public override bool ShouldPropertyGridTryToHandleKeyDown(Key key)

@@ -37,12 +37,15 @@ namespace EQLogParser
       BindingOperations.SetBinding(_theTimeSpan, TimeSpanEdit.ValueProperty, binding);
     }
 
-    public override object Create(PropertyInfo propertyInfo) => Create();
-    public override object Create(PropertyDescriptor descriotor) => Create();
+    public override object Create(PropertyInfo _) => Create();
+    public override object Create(PropertyDescriptor _) => Create();
 
     private object Create()
     {
-      var timeSpan = new TimeSpanEdit
+      if (_theTimeSpan != null)
+        return _theTimeSpan;
+
+      _theTimeSpan = new TimeSpanEdit
       {
         IncrementOnScrolling = false,
         MinValue = new TimeSpan(0, 0, _min),
@@ -52,11 +55,10 @@ namespace EQLogParser
         BorderThickness = new Thickness(0)
       };
 
-      _theTimeSpan = timeSpan;
-      timeSpan.GotFocus += TimeSpanGotFocus;
-      timeSpan.LostFocus += TimeSpanLostFocus;
-      timeSpan.PreviewMouseWheel += TimeSpanPreviewMouseWheel;
-      return timeSpan;
+      _theTimeSpan.GotFocus += TimeSpanGotFocus;
+      _theTimeSpan.LostFocus += TimeSpanLostFocus;
+      _theTimeSpan.PreviewMouseWheel += TimeSpanPreviewMouseWheel;
+      return _theTimeSpan;
     }
 
     private void TimeSpanPreviewMouseWheel(object sender, MouseWheelEventArgs e)

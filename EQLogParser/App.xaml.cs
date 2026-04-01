@@ -1,4 +1,3 @@
-using AutoMapper;
 using log4net;
 using log4net.Appender;
 using log4net.Config;
@@ -25,7 +24,6 @@ namespace EQLogParser
       SizeLimit = 1024 * 1024 * 100 // 100 MB
     });
 
-    internal static IMapper AutoMap;
     internal const string ParserHome = "https://eqlogparser.kizant.net";
     internal static double DefaultHeight = SystemParameters.PrimaryScreenHeight * 0.75;
     internal static double DefaultWidth = SystemParameters.PrimaryScreenWidth * 0.85;
@@ -37,7 +35,7 @@ namespace EQLogParser
 
     public App()
     {
-      // 32.x
+      // 33.x
       SyncfusionLicenseProvider.RegisterLicense("");
     }
 
@@ -89,7 +87,6 @@ namespace EQLogParser
         // Set Debug level
         SetLoggingLevel();
 
-        AutoMap = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
         var osVersion = Environment.OSVersion;
         Version = ResourceAssembly.GetName().Version!.ToString()[..^2];
         Log.Info($"EQLogParser: {Version}, OS: {osVersion.VersionString}, DotNet: {Environment.Version}, RenderMode: {RenderOptions.ProcessRenderMode}");

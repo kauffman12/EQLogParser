@@ -25,19 +25,22 @@ namespace EQLogParser
       BindingOperations.SetBinding(_theColorPicker, ColorPicker.BrushProperty, binding);
     }
 
-    public override object Create(PropertyInfo propertyInfo) => Create();
-    public override object Create(PropertyDescriptor descriotor) => Create();
+    public override object Create(PropertyInfo _) => Create();
+    public override object Create(PropertyDescriptor _) => Create();
 
     private object Create()
     {
-      var colorPicker = new ColorPicker
+      if (_theColorPicker != null)
+        return _theColorPicker;
+
+      _theColorPicker = new ColorPicker
       {
         EnableSolidToGradientSwitch = false,
         Margin = new Thickness(0, 0, 2, 0),
         BorderThickness = new Thickness(0, 0, 0, 0)
       };
-      _theColorPicker = colorPicker;
-      return colorPicker;
+
+      return _theColorPicker;
     }
 
     public override bool ShouldPropertyGridTryToHandleKeyDown(Key key)

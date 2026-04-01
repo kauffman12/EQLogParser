@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using LiteDB;
+﻿using LiteDB;
 using Syncfusion.UI.Xaml.TreeView.Engine;
 using Syncfusion.Windows.Shared;
 using System;
@@ -18,17 +17,6 @@ using System.Windows.Media.Imaging;
 
 namespace EQLogParser
 {
-  internal class MappingProfile : Profile
-  {
-    public MappingProfile()
-    {
-      CreateMap<TriggerNode, TriggerNode>();
-      CreateMap<ExportTriggerNode, TriggerNode>();
-      CreateMap<LegacyOverlay, Overlay>();
-      CreateMap<LootRecord, LootRecord>();
-    }
-  }
-
   internal interface IDocumentContent
   {
     public void HideContent();
