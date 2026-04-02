@@ -1,3 +1,6 @@
+# 2.3.49 | 04/01/26
+1. Bug fix for some missing Overlay options.
+
 # 2.3.48 | 03/31/26
 1. Added option to **Trends Chart** for viewing **Top 5** or **Top 10** when no players are selected.
 2. Added **Import** and **Export** buttons to the **Dictionary** window in Trigger Manager. It uses a simple TSV file format.

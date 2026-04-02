@@ -88,7 +88,10 @@ namespace EQLogParser
       if (_theComboBox != null)
         return _theComboBox;
 
-      var comboBox = new ComboBox
+      if (string.IsNullOrEmpty(name))
+        return null;
+
+      _theComboBox = new ComboBox
       {
         Padding = new Thickness(0),
         BorderThickness = new Thickness(0),
@@ -97,12 +100,11 @@ namespace EQLogParser
 
       if (!string.IsNullOrEmpty(name) && Options.TryGetValue(name, out var option))
       {
-        option.ForEach(item => comboBox.Items.Add(item));
+        option.ForEach(item => _theComboBox.Items.Add(item));
       }
 
-      comboBox.SelectedIndex = 0;
-      _theComboBox = comboBox;
-      return comboBox;
+      _theComboBox.SelectedIndex = 0;
+      return _theComboBox;
     }
 
     public override bool ShouldPropertyGridTryToHandleKeyDown(Key key)

@@ -47,14 +47,14 @@ namespace EQLogParser
       var outStride = width * 4;
       var outPixels = new byte[height * outStride];
 
-      for (int y = 0; y < height; y++)
+      for (var y = 0; y < height; y++)
       {
         var srcRow = y * stride;
         var dstRow = (height - 1 - y) * outStride; // flip vertically
-        for (int x = 0; x < width; x++)
+        for (var x = 0; x < width; x++)
         {
-          var src = srcRow + x * bytesPerPixel;
-          var dst = dstRow + x * 4;
+          var src = srcRow + (x * bytesPerPixel);
+          var dst = dstRow + (x * 4);
           // B
           outPixels[dst + 0] = pixelData[src + 0];
           // G
