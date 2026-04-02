@@ -131,15 +131,12 @@ Not a trigger variable. You send this text as a say, to the group, raid, another
 
 EQLogParser has been officially supporting Linux since version 2.2.66 with only minor issues. Note that the 64bit version of WINE is required. First download **EQLogParser** and the **.Net 8.0 Desktop Runtime x64** found [here](index.html) and continue below.
 
-## Installation Steps
-1. install wine-10.0-rc3
-2. install winetricks-20240105
-3. run: winetricks corefonts
-4. run: winetricks win10
-5. run: winetricks videomemorysize=1024
-6. run: winetricks renderer=gdi
-7. run: wine windowsdesktop-runtime-8.0.17-win-x64.exe (or latest)
-8. run: wine EQLogParser-install-2.3.0.exe (or latest)
+## Installation Steps Tested on Ubuntu 25
+1. apt install wine (version 10)
+2. apt install winetricks (version 20250102-1)
+3. winetricks allfonts
+4. wine windowsdesktop-runtime-8.0.25-win-x64.exe (or latest)
+5. wine EQLogParser-install-2.3.49.exe (or latest)
 
 ## Known Issues
 1. WPF applications are unstable with WINE so hardware acceleration is disabled 
