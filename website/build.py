@@ -162,7 +162,7 @@ def main():
     version = get_version_from_inno(INNO_FILE)
     home_header_html = build_nav_header(True)
     header_html = build_nav_header()
-    url = f'https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-install-{version}.exe'
+    url = f'https://github.com/kauffman12/EQLogParser/releases/download/{version}/EQLogParser-install-{version}.exe'
 
     DIST_DIR.mkdir(exist_ok=True)
 
