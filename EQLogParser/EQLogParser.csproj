@@ -163,6 +163,11 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <None Include="piper-tts\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
     <None Remove="..\Dependencies\Hardcodet.Wpf.TaskbarNotification.dll" />
     <None Remove="icons\Active.gif" />
     <None Remove="icons\idle.gif" />

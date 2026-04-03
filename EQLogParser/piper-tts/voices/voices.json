@@ -1,0 +1,11 @@
+{
+  "Voices":
+  [ 
+    {
+      "Name": "HFC Male",
+      "Config": "hfc_male/en_US-hfc_male-medium.onnx.json",
+      "Model": "hfc_male/en_US-hfc_male-medium.onnx",
+      "Sample": 22050
+    } 
+  ]
+}
