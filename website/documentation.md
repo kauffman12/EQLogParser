@@ -129,9 +129,65 @@ Not a trigger variable. You send this text as a say, to the group, raid, another
 
 # Linux Support
 
-EQLogParser has been officially supporting Linux since version 2.2.66 with only minor issues. Note that the 64bit version of WINE is required. First download **EQLogParser** and the **.Net 8.0 Desktop Runtime x64** found [here](index.html) and continue below.
+EQLogParser has been officially supporting Linux since version 2.2.66 with only minor issues. Note that the 64bit version of WINE is required.
 
-## Installation Steps Tested on Ubuntu 25
+## Simplest Install: Flatpak + Bottles
+
+The easiest way to get EQLogParser running on Linux is using **Flatpak** and **Bottles**. Bottles is a Wine management app that handles all the setup for you, and Flatpak is the recommended way to install it.
+
+### Step 1 — Install Flatpak and Bottles
+
+Open a terminal and run the following commands:
+
+```bash
+# Install Flatpak
+sudo apt install flatpak
+
+# Add the Flathub repository (where Bottles is hosted)
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+# Install Bottles
+flatpak install flathub com.usebottles.bottles
+```
+
+### Step 2 — Launch Bottles
+
+Start Bottles using the following command. The `PERSONAL_INSTALLERS` variable tells it where to find the EQLogParser installer:
+
+```bash
+PERSONAL_INSTALLERS=https://raw.githubusercontent.com/kauffman12/programs/refs/heads/main flatpak run com.usebottles.bottles
+```
+
+> **Tip:** You can save this as a shell script or desktop shortcut so you don't have to type it every time.
+
+### Step 3 — Create a New Bottle
+
+Once Bottles is open:
+
+1. Click **Create a New Bottle**
+2. When prompted for the bottle type, select **Custom**
+3. Make sure the architecture is set to **64-bit**
+4. Change the **Runner** to **Wine**
+5. Click **Create** and wait for Bottles to finish setting up the environment
+
+### Step 4 — Install EQLogParser
+
+After the bottle is created:
+
+1. Click the **Install App** button inside your new bottle
+2. Find and select **EQLogParser** from the list of available apps
+3. Follow any on-screen prompts to complete the installation
+
+### Step 5 — Run EQLogParser
+
+Once installation is finished, simply click the **Run App** button to launch EQLogParser. That's it — no manual Wine configuration required!
+
+---
+
+## Manual Installation Steps Tested on Ubuntu 25
+
+If you prefer to install manually without Flatpak/Bottles, first download **EQLogParser** and the **.Net 8.0 Desktop Runtime x64** found [here](index.html) and continue below.
+
 1. apt install wine (version 10)
 2. apt install winetricks (version 20250102-1)
 3. winetricks allfonts
@@ -147,7 +203,8 @@ EQLogParser has been officially supporting Linux since version 2.2.66 with only 
     - Log file location: ~/.wine/drive_c/users/username/AppData/Roaming/EQLogParser/logs
 2. WINE x64 does not work with any windows text-to-speech engine
     - Piper TTS is provided as an alternative but requires manual Installation
-    - Follow steps below
+    - The bottles install comes with 1 voice pre-loaded
+    - Follow steps below for all voices
     
 ## Piper TTS
 Piper TTS is an Open Source **text-to-speech engine** and a custom build is provided for EQLogParser. It is hosted on google drive and may be subject to a limited number of downloads per day/month.
