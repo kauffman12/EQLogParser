@@ -135,8 +135,9 @@ EQLogParser has been officially supporting Linux since version 2.2.66 with only 
 1. apt install wine (version 10)
 2. apt install winetricks (version 20250102-1)
 3. winetricks allfonts
-4. wine windowsdesktop-runtime-8.0.25-win-x64.exe (or latest)
-5. wine EQLogParser-install-2.3.49.exe (or latest)
+4. winetricks renderer=gdi
+5. wine windowsdesktop-runtime-8.0.25-win-x64.exe (or latest)
+6. wine EQLogParser-install-2.3.49.exe (or latest)
 
 ## Known Issues
 1. WPF applications are unstable with WINE so hardware acceleration is disabled 
