@@ -34,6 +34,18 @@ namespace EQLogParser
 {
   internal static partial class MainActions
   {
+    private class GitHubRelease
+    {
+      public string? TagName { get; set; }
+      public List<GitHubAsset>? Assets { get; set; }
+    }
+
+    private class GitHubAsset
+    {
+      public string? Name { get; set; }
+      public string? BrowserDownloadUrl { get; set; }
+    }
+
     internal static event Action<string, bool> EventsLogLoadingComplete;
     internal static event Action<string> EventsThemeChanged;
     internal static event Action<List<Fight>> EventsFightSelectionChanged;
@@ -160,14 +172,16 @@ namespace EQLogParser
 
       try
       {
-        var request = TheHttpClient.GetStringAsync("https://github.com/kauffman12/EQLogParser/blob/master/README.md");
+        var request = TheHttpClient.GetStringAsync("https://api.github.com/repos/kauffman12/EQLogParser/releases/latest");
         request.Wait();
 
-        var matches = InstallerName().Match(request.Result);
-        if (version != null && matches.Success && matches.Groups.Count == 5 && int.TryParse(matches.Groups[2].Value, out var v1) &&
-            int.TryParse(matches.Groups[3].Value, out var v2) && int.TryParse(matches.Groups[4].Value, out var v3)
-            && (v1 > version.Major || (v1 == version.Major && v2 > version.Minor) ||
-                (v1 == version.Major && v2 == version.Minor && v3 > version.Build)))
+        var release = JsonSerializer.Deserialize<GitHubRelease>(request.Result, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        if (version != null && release != null && !string.IsNullOrEmpty(release.TagName) &&
+            Version.TryParse(release.TagName, out var latestVersion) &&
+            (latestVersion.Major > version.Major ||
+             (latestVersion.Major == version.Major && latestVersion.Minor > version.Minor) ||
+             (latestVersion.Major == version.Major && latestVersion.Minor == version.Minor && latestVersion.Build > version.Build)))
         {
           async void Action()
           {
@@ -178,13 +192,22 @@ namespace EQLogParser
               _mainWindow?.Show();
             }
 
-            var msg = new MessageWindow($"Version {matches.Groups[1].Value} is Available. Download and Install?", Resource.CHECK_VERSION,
+            var msg = new MessageWindow($"Version {release.TagName} is Available. Download and Install?", Resource.CHECK_VERSION,
               MessageWindow.IconType.Question, "Yes");
             msg.ShowDialog();
 
             if (msg.IsYes1Clicked)
             {
-              var url = "https://github.com/kauffman12/EQLogParser/raw/master/Release/EQLogParser-install-" + matches.Groups[1].Value + ".exe";
+              var installerAsset = release.Assets?.FirstOrDefault(a =>
+                a.Name?.StartsWith("EQLogParser-install") == true && !a.Name?.Contains("pipertts") == true);
+
+              if (installerAsset == null || string.IsNullOrEmpty(installerAsset.BrowserDownloadUrl))
+              {
+                new MessageWindow("Unable to Find Installer URL. Can Not Download Update.", Resource.CHECK_VERSION).ShowDialog();
+                return;
+              }
+
+              var url = installerAsset.BrowserDownloadUrl;
 
               try
               {
@@ -201,7 +224,7 @@ namespace EQLogParser
                   Directory.CreateDirectory(path);
                 }
 
-                var fullPath = $"{path}\\EQLogParser-install-{matches.Groups[1].Value}.exe";
+                var fullPath = $"{path}\\EQLogParser-install-{release.TagName}.exe";
                 await using (var fs = new FileStream(fullPath, FileMode.Create))
                 {
                   await download.CopyToAsync(fs);
@@ -1146,8 +1169,5 @@ namespace EQLogParser
 
       Application.Current.Resources.MergedDictionaries.Add(dict);
     }
-
-    [GeneratedRegex(@"EQLogParser-install-((\d)\.(\d)\.(\d?\d?\d))\.exe")]
-    private static partial Regex InstallerName();
   }
 }
