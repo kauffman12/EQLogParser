@@ -90,7 +90,7 @@ namespace EQLogParser
       AddEditor<ColorEditor>("OverlayBrush", "FontBrush", "ActiveBrush", "IdleBrush", "ResetBrush", "BackgroundBrush");
       AddEditor<DurationEditor>("ResetDurationTimeSpan", "IdleTimeoutTimeSpan");
       AddEditor<ExampleTimerBar>("TimerBarPreview");
-      AddEditor<OptionalColorEditor>("TriggerActiveBrush", "TriggerFontBrush");
+      AddEditor<OptionalColorEditor>("TriggerActiveBrush", "TriggerFontBrush", "TriggerIdleBrush", "TriggerResetBrush");
       AddEditor<OptionalIconEditor>("IconSource");
       AddEditor<TriggerListsEditor>("TriggerAgainOption", "FontSize", "FontFamily", "FontWeight", "SortBy", "TimerMode",
         "TimerType", "HorizontalAlignment", "VerticalAlignment", "VoiceRate", "Volume");
@@ -527,6 +527,7 @@ namespace EQLogParser
         new { Name = fontSizeItem.CategoryName, IsEnabled =!trigger },
         new { Name = activeBrushItem.CategoryName, IsEnabled = isTimerOverlay },
         new { Name = idleBrushItem.CategoryName, IsEnabled = cooldownTimer },
+        new { Name = resetBrushItem.CategoryName, IsEnabled = cooldownTimer },
         new { Name = assignedOverlaysItem.CategoryName, IsEnabled = trigger },
         new { Name = fadeDelayItem.CategoryName, IsEnabled = isTextOverlay }
       ]);
@@ -589,6 +590,34 @@ namespace EQLogParser
             triggerChange = (trigger.TriggerFontBrush == null && original.FontColor != null) ||
               (trigger.TriggerFontBrush != null && original.FontColor == null) ||
               (trigger.TriggerFontBrush?.Color.ToHexString() != original.FontColor);
+          }
+        }
+        else if (args.Property.Name == triggerIdleBrushItem.PropertyName)
+        {
+          var original = trigger.Node.TriggerData;
+          if (trigger.TriggerIdleBrush == null && original.IdleColor == null)
+          {
+            triggerChange = false;
+          }
+          else
+          {
+            triggerChange = (trigger.TriggerIdleBrush == null && original.IdleColor != null) ||
+              (trigger.TriggerIdleBrush != null && original.IdleColor == null) ||
+              (trigger.TriggerIdleBrush?.Color.ToHexString() != original.IdleColor);
+          }
+        }
+        else if (args.Property.Name == triggerResetBrushItem.PropertyName)
+        {
+          var original = trigger.Node.TriggerData;
+          if (trigger.TriggerResetBrush == null && original.ResetColor == null)
+          {
+            triggerChange = false;
+          }
+          else
+          {
+            triggerChange = (trigger.TriggerResetBrush == null && original.ResetColor != null) ||
+              (trigger.TriggerResetBrush != null && original.ResetColor == null) ||
+              (trigger.TriggerResetBrush?.Color.ToHexString() != original.ResetColor);
           }
         }
         else if (args.Property.Name == "DurationTimeSpan" && timerDurationItem.Visibility == Visibility.Collapsed)

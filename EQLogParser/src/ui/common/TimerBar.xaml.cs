@@ -106,18 +106,36 @@ namespace EQLogParser
       }
     }
 
-    internal void SetReset()
+    internal void SetReset(TimerData timerData)
     {
-      if (_theState != State.Reset)
+      if (timerData?.ResetColor != null && UiUtil.GetBrush(timerData.ResetColor, false) is { } brush && brush.Color.A > 0)
+      {
+        if (progress.ProgressColor != brush)
+        {
+          progress.ProgressColor = brush;
+        }
+
+        _theState = State.None;
+      }
+      else if (_theState != State.Reset)
       {
         progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarResetColor-" + _overlayId);
         _theState = State.Reset;
       }
     }
 
-    internal void SetIdle()
+    internal void SetIdle(TimerData timerData)
     {
-      if (_theState != State.Idle)
+      if (timerData?.IdleColor != null && UiUtil.GetBrush(timerData.IdleColor, false) is { } brush && brush.Color.A > 0)
+      {
+        if (progress.ProgressColor != brush)
+        {
+          progress.ProgressColor = brush;
+        }
+
+        _theState = State.None;
+      }
+      else if (_theState != State.Idle)
       {
         progress.SetResourceReference(ProgressBarBase.ProgressColorProperty, "TimerBarIdleColor-" + _overlayId);
         _theState = State.Idle;

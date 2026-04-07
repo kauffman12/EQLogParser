@@ -93,14 +93,14 @@ namespace EQLogParser
     internal async Task SetTestProcessor(TriggerConfig config, BlockingCollection<LogReaderItem> collection)
     {
       await InitTestProcessor(TriggerStateManager.DefaultUser, $"Trigger Tester ({TriggerStateManager.DefaultUser})", ConfigUtil.PlayerName,
-        config.Voice, config.VoiceRate, -1, null, null, collection);
+        config.Voice, config.VoiceRate, -1, null, null, null, null, collection);
     }
 
     internal async Task SetTestProcessor(TriggerCharacter character, BlockingCollection<LogReaderItem> collection)
     {
       var playerName = !FileUtil.ParseFileName(character.FilePath, out var parsedPlayerName, out _) ? character.Name : parsedPlayerName;
       await InitTestProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, character.Voice,
-        character.VoiceRate, character.CustomVolume, character.ActiveColor, character.FontColor, collection);
+        character.VoiceRate, character.CustomVolume, character.ActiveColor, character.IdleColor, character.ResetColor, character.FontColor, collection);
     }
 
     internal async Task StopTestProcessor()
@@ -143,14 +143,14 @@ namespace EQLogParser
     }
 
     private async Task InitTestProcessor(string id, string name, string playerName, string voice, int voiceRate,
-      int customVolume, string activeColor, string fontColor, BlockingCollection<LogReaderItem> collection)
+      int customVolume, string activeColor, string idleColor, string resetColor, string fontColor, BlockingCollection<LogReaderItem> collection)
     {
       if (_testProcessor != null)
       {
         await _testProcessor.DisposeAsync();
       }
 
-      _testProcessor = new TriggerProcessor(id, name, playerName, voice, voiceRate, customVolume, activeColor, fontColor);
+      _testProcessor = new TriggerProcessor(id, name, playerName, voice, voiceRate, customVolume, activeColor, idleColor, resetColor, fontColor);
       _testProcessor.SetTesting(true);
       await _testProcessor.StartAsync();
       _testProcessor.LinkTo(collection);
@@ -212,6 +212,8 @@ namespace EQLogParser
           else
           {
             processor.SetActiveColor(found.ActiveColor);
+            processor.SetIdleColor(found.IdleColor);
+            processor.SetResetColor(found.ResetColor);
             processor.SetFontColor(found.FontColor);
             processor.SetVoice(found.Voice);
             processor.SetVoiceRate(found.VoiceRate);
@@ -231,7 +233,7 @@ namespace EQLogParser
           {
             var playerName = !FileUtil.ParseFileName(character.FilePath, out var parsedPlayerName, out _) ? character.Name : parsedPlayerName;
             var processor = new TriggerProcessor(character.Id, character.Name, playerName, character.Voice, character.VoiceRate,
-              character.CustomVolume, character.ActiveColor, character.FontColor);
+              character.CustomVolume, character.ActiveColor, character.IdleColor, character.ResetColor, character.FontColor);
             await processor.StartAsync();
             var reader = new LogReader(processor, character.FilePath);
             _logReaders.Add(reader);
@@ -269,7 +271,7 @@ namespace EQLogParser
         if (defReader == null || defProcessor == null)
         {
           var processor = new TriggerProcessor(TriggerStateManager.DefaultUser, TriggerStateManager.DefaultUser, ConfigUtil.PlayerName, config.Voice,
-            config.VoiceRate, -1, null, null);
+            config.VoiceRate, -1, null, null, null, null);
           await processor.StartAsync();
           var reader = new LogReader(processor, currentFile);
           _logReaders.Add(reader);

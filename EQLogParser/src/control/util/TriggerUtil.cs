@@ -117,6 +117,8 @@ namespace EQLogParser
         if (toTrigger is TriggerPropertyModel toModel)
         {
           toModel.TriggerActiveBrush = UiUtil.GetBrush(fromTrigger.ActiveColor, false);
+          toModel.TriggerIdleBrush = UiUtil.GetBrush(fromTrigger.IdleColor, false);
+          toModel.TriggerResetBrush = UiUtil.GetBrush(fromTrigger.ResetColor, false);
           toModel.TriggerFontBrush = UiUtil.GetBrush(fromTrigger.FontColor, false);
 
           var (textItems, timerItems) = await GetOverlayItems(toModel.SelectedOverlays);
@@ -143,6 +145,8 @@ namespace EQLogParser
         else if (fromTrigger is TriggerPropertyModel fromModel)
         {
           toTrigger.ActiveColor = fromModel.TriggerActiveBrush?.Color.ToHexString();
+          toTrigger.IdleColor = fromModel.TriggerIdleBrush?.Color.ToHexString();
+          toTrigger.ResetColor = fromModel.TriggerResetBrush?.Color.ToHexString();
           toTrigger.FontColor = fromModel.TriggerFontBrush?.Color.ToHexString();
 
           var selectedOverlays = fromModel.SelectedTextOverlays.Where(item => item.IsChecked).Select(item => item.Value).ToList();

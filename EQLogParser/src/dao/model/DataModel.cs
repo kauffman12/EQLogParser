@@ -136,6 +136,8 @@ namespace EQLogParser
     public long RepeatedCount { get; set; } = -1;
     public string LogTime { get; set; }
     public string ActiveColor { get; set; }
+    public string IdleColor { get; set; }
+    public string ResetColor { get; set; }
     public string FontColor { get; set; }
     public LineData RepeatingTimerLineData { get; set; }
     public int TimesToLoopCount { get; set; }
@@ -224,6 +226,8 @@ namespace EQLogParser
     public bool UseRegex { get; set; }
     public bool PreviousUseRegex { get; set; }
     public string ActiveColor { get; set; }
+    public string IdleColor { get; set; }
+    public string ResetColor { get; set; }
     public string FontColor { get; set; }
     public string IconSource { get; set; }
     public List<string> SelectedOverlays { get; set; } = [];
@@ -278,6 +282,8 @@ namespace EQLogParser
   internal class TriggerPropertyModel : Trigger
   {
     public SolidColorBrush TriggerActiveBrush { get; set; }
+    public SolidColorBrush TriggerIdleBrush { get; set; }
+    public SolidColorBrush TriggerResetBrush { get; set; }
     public SolidColorBrush TriggerFontBrush { get; set; }
     public ObservableCollection<ComboBoxItemDetails> SelectedTextOverlays { get; set; }
     public ObservableCollection<ComboBoxItemDetails> SelectedTimerOverlays { get; set; }
@@ -320,6 +326,8 @@ namespace EQLogParser
     public int VoiceRate { get; set; }
     public int CustomVolume { get; set; } = -1;
     public string ActiveColor { get; set; }
+    public string IdleColor { get; set; }
+    public string ResetColor { get; set; }
     public string FontColor { get; set; }
     [BsonIgnore] public bool? IsWaiting { get; set; } = true;
   }

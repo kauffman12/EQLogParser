@@ -47,6 +47,8 @@ namespace EQLogParser
     private IReadOnlyDictionary<string, string> _lexicon;
     private List<TrustedPlayer> _trustedPlayers;
     private volatile string _characterActiveColor;
+    private volatile string _characterIdleColor;
+    private volatile string _characterResetColor;
     private volatile string _characterFontColor;
     private volatile bool _isDisposed;
     private volatile bool _ready;
@@ -61,13 +63,15 @@ namespace EQLogParser
     private bool _isTesting;
 
     internal TriggerProcessor(string id, string name, string playerName, string voice, int voiceRate,
-      int playerVolume, string activeColor, string fontColor)
+      int playerVolume, string activeColor, string idleColor, string resetColor, string fontColor)
     {
       CurrentCharacterId = id;
       CurrentProcessorName = name;
       TriggerLog = new TriggerLogStore(name);
       _currentPlayer = playerName;
       _characterActiveColor = activeColor;
+      _characterIdleColor = idleColor;
+      _characterResetColor = resetColor;
       _characterFontColor = fontColor;
       _voiceRate = voiceRate;
       _playerVolume = playerVolume;
@@ -79,6 +83,8 @@ namespace EQLogParser
     internal long GetActivityLastTicks() => Interlocked.Read(ref _activityLastTicks);
     internal List<string> GetRequiredOverlayIds() => [.. _requiredOverlays.Keys];
     internal void SetActiveColor(string color) => _characterActiveColor = color;
+    internal void SetIdleColor(string color) => _characterIdleColor = color;
+    internal void SetResetColor(string color) => _characterResetColor = color;
     internal void SetFontColor(string color) => _characterFontColor = color;
     internal void SetPlayerVolume(int volume) => _playerVolume = volume;
     internal void SetVoice(string voice) => AudioManager.Instance.SetVoice(CurrentCharacterId, voice);
@@ -812,9 +818,11 @@ namespace EQLogParser
         CharacterId = CurrentCharacterId,
         DisplayName = displayName,
         FontColor = _characterFontColor ?? trigger.FontColor,
+        IdleColor = _characterIdleColor ?? trigger.IdleColor,
         Key = wrapper.Id + "-" + displayName,
         OriginalMatches = matches,
         PreviousMatches = previousMatches,
+        ResetColor = _characterResetColor ?? trigger.ResetColor,
         TimerOverlayIds = new ReadOnlyCollection<string>(trigger.SelectedOverlays),
         TimerIcon = wrapper.TimerIcon,
         TimerType = trigger.TimerType,
