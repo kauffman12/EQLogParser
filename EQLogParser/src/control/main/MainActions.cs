@@ -16,12 +16,12 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Security;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -36,14 +36,14 @@ namespace EQLogParser
   {
     private class GitHubRelease
     {
-      public string? TagName { get; set; }
-      public List<GitHubAsset>? Assets { get; set; }
+      public string? Tag_name { get; set; }
+      public List<GitHubAsset> Assets { get; set; }
     }
 
     private class GitHubAsset
     {
-      public string? Name { get; set; }
-      public string? BrowserDownloadUrl { get; set; }
+      public string Name { get; set; }
+      public string Browser_download_url { get; set; }
     }
 
     internal static event Action<string, bool> EventsLogLoadingComplete;
@@ -77,7 +77,8 @@ namespace EQLogParser
     private static readonly ObservableCollection<dynamic> VerifiedPetsView = [];
     private static readonly ObservableCollection<PetMapping> PetPlayersView = [];
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly JsonSerializerOptions DiscordSerializationOptions = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+    private static readonly JsonSerializerOptions DiscordSerializationOptions = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+    private static readonly JsonSerializerOptions VersionCheckSerializationOptions = new() { PropertyNameCaseInsensitive = true };
     private static MainWindow _mainWindow;
 
     internal static void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected) => _mainWindow?.AddAndCopyDamageParse(combined, selected);
@@ -172,13 +173,18 @@ namespace EQLogParser
 
       try
       {
-        var request = TheHttpClient.GetStringAsync("https://api.github.com/repos/kauffman12/EQLogParser/releases/latest");
-        request.Wait();
+        var request = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/repos/kauffman12/EQLogParser/releases/latest");
+        request.Headers.UserAgent.Add(new ProductInfoHeaderValue("EQLogParser", "1.0"));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+        var response = await TheHttpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
 
-        var release = JsonSerializer.Deserialize<GitHubRelease>(request.Result, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        // parse json
+        var json = await response.Content.ReadAsStringAsync();
+        var release = JsonSerializer.Deserialize<GitHubRelease>(json, VersionCheckSerializationOptions);
 
-        if (version != null && release != null && !string.IsNullOrEmpty(release.TagName) &&
-            Version.TryParse(release.TagName, out var latestVersion) &&
+        if (version != null && release != null && !string.IsNullOrEmpty(release.Tag_name) &&
+            Version.TryParse(release.Tag_name, out var latestVersion) &&
             (latestVersion.Major > version.Major ||
              (latestVersion.Major == version.Major && latestVersion.Minor > version.Minor) ||
              (latestVersion.Major == version.Major && latestVersion.Minor == version.Minor && latestVersion.Build > version.Build)))
@@ -192,22 +198,22 @@ namespace EQLogParser
               _mainWindow?.Show();
             }
 
-            var msg = new MessageWindow($"Version {release.TagName} is Available. Download and Install?", Resource.CHECK_VERSION,
+            var msg = new MessageWindow($"Version {release.Tag_name} is Available. Download and Install?", Resource.CHECK_VERSION,
               MessageWindow.IconType.Question, "Yes");
             msg.ShowDialog();
 
             if (msg.IsYes1Clicked)
             {
               var installerAsset = release.Assets?.FirstOrDefault(a =>
-                a.Name?.StartsWith("EQLogParser-install") == true && !a.Name?.Contains("pipertts") == true);
+                a.Name?.StartsWith("EQLogParser-install", StringComparison.OrdinalIgnoreCase) == true && !a.Name?.Contains("pipertts") == true);
 
-              if (installerAsset == null || string.IsNullOrEmpty(installerAsset.BrowserDownloadUrl))
+              if (installerAsset == null || string.IsNullOrEmpty(installerAsset.Browser_download_url))
               {
                 new MessageWindow("Unable to Find Installer URL. Can Not Download Update.", Resource.CHECK_VERSION).ShowDialog();
                 return;
               }
 
-              var url = installerAsset.BrowserDownloadUrl;
+              var url = installerAsset.Browser_download_url;
 
               try
               {
@@ -224,7 +230,7 @@ namespace EQLogParser
                   Directory.CreateDirectory(path);
                 }
 
-                var fullPath = $"{path}\\EQLogParser-install-{release.TagName}.exe";
+                var fullPath = $"{path}\\EQLogParser-install-{release.Tag_name}.exe";
                 await using (var fs = new FileStream(fullPath, FileMode.Create))
                 {
                   await download.CopyToAsync(fs);
