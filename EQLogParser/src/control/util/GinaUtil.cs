@@ -509,6 +509,15 @@ namespace EQLogParser
                           trigger.EndUseRegex2 = regex2;
                         }
                       }
+
+                      if (enderNodes.Count > 2)
+                      {
+                        trigger.EndEarlyPattern3 = GetText(enderNodes[2], "EarlyEndText");
+                        if (bool.TryParse(GetText(enderNodes[2], "EnableRegex"), out var regex3))
+                        {
+                          trigger.EndUseRegex3 = regex3;
+                        }
+                      }
                     }
                   }
                 }
@@ -518,7 +527,7 @@ namespace EQLogParser
                   triggers.Add(new ExportTriggerNode { Name = triggerName, TriggerData = trigger, HasMissingMedia = missingMedia });
                 }
               }
-            }
+           }
 
             var moreGroups = node.SelectNodes("TriggerGroups");
             ParseGinaTriggerGroups(moreGroups, data.Nodes);

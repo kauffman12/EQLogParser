@@ -33,6 +33,7 @@ namespace EQLogParser
     public string Name { get; init; }
     public string ModifiedEndEarlyPattern { get; init; }
     public string ModifiedEndEarlyPattern2 { get; init; }
+    public string ModifiedEndEarlyPattern3 { get; init; }
     public string ModifiedPattern { get; init; }
     public string ModifiedSpeak { get; init; }
     public string ModifiedEndSpeak { get; init; }

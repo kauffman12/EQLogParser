@@ -183,8 +183,7 @@ namespace EQLogParser
 
               // Phase 2:  handle stragglers with timeout
               var sw = Stopwatch.StartNew();
-              while (_triggerLogBuffer.Count < TRIGGER_LOG_BUFFER_SIZE && sw.ElapsedMilliseconds < TRIGGER_LOG_DELAY &&
-                     _triggerLogCollection.TryTake(out var delayed, 50))
+              while (_triggerLogBuffer.Count < TRIGGER_LOG_BUFFER_SIZE && sw.ElapsedMilliseconds < TRIGGER_LOG_DELAY && _triggerLogCollection.TryTake(out var delayed, 50))
               {
                 _triggerLogBuffer.Add(delayed);
               }
@@ -470,12 +469,16 @@ namespace EQLogParser
         List<TimerData> toRemove = null;
         foreach (var timerData in timerList)
         {
-          var endEarly = TimerDataUtil.CheckEndEarly(timerData.EndEarlyRegex, timerData.EndEarlyRegexNOptions, timerData.EndEarlyPattern,
-            lineData.Action, out var earlyMatches);
+          var endEarly = TimerDataUtil.CheckEndEarly(timerData.EndEarlyRegex, timerData.EndEarlyRegexNOptions, timerData.EndEarlyPattern, lineData.Action, out var earlyMatches);
 
           if (!endEarly)
           {
             endEarly = TimerDataUtil.CheckEndEarly(timerData.EndEarlyRegex2, timerData.EndEarlyRegex2NOptions, timerData.EndEarlyPattern2, lineData.Action, out earlyMatches);
+          }
+
+          if (!endEarly)
+          {
+            endEarly = TimerDataUtil.CheckEndEarly(timerData.EndEarlyRegex3, timerData.EndEarlyRegex3NOptions, timerData.EndEarlyPattern3, lineData.Action, out earlyMatches);
           }
 
           // Repeated threshold option
@@ -652,7 +655,7 @@ namespace EQLogParser
         }
 
         if (wrapper.TriggerData.TimerType > 0 && (wrapper.TriggerData.DurationSeconds > 0 ||
-             (wrapper.TriggerData.TimerType is 1 or 3 && !double.IsNaN(dynamicDuration) && dynamicDuration > 0)))
+           (wrapper.TriggerData.TimerType is 1 or 3 && !double.IsNaN(dynamicDuration) && dynamicDuration > 0)))
         {
           await StartTimerAsync(wrapper, altTimerName, beginTicks, dynamicDuration, lineData, matches, previousMatches, loopCount);
         }
@@ -945,13 +948,29 @@ namespace EQLogParser
 
         if (trigger.EndUseRegex2)
         {
-          newTimerData.EndEarlyRegex2 = new Regex(endEarlyPattern2, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant |
-            RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
+          newTimerData.EndEarlyRegex2 = new Regex(endEarlyPattern2, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
           newTimerData.EndEarlyRegex2NOptions = numberOptions3;
         }
         else
         {
           newTimerData.EndEarlyPattern2 = endEarlyPattern2;
+        }
+      }
+
+      if (!string.IsNullOrEmpty(wrapper.ModifiedEndEarlyPattern3))
+      {
+        var endEarlyPattern3 = ProcessMatchesText(wrapper.ModifiedEndEarlyPattern3, matches);
+        endEarlyPattern3 = ProcessMatchesText(endEarlyPattern3, previousMatches);
+        endEarlyPattern3 = UpdatePattern(trigger.EndUseRegex3, endEarlyPattern3, out var numberOptions4);
+
+        if (trigger.EndUseRegex3)
+        {
+          newTimerData.EndEarlyRegex3 = new Regex(endEarlyPattern3, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
+          newTimerData.EndEarlyRegex3NOptions = numberOptions4;
+        }
+        else
+        {
+          newTimerData.EndEarlyPattern3 = endEarlyPattern3;
         }
       }
 
@@ -1185,7 +1204,8 @@ namespace EQLogParser
               HasLogTimeText = modifiedDisplay?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) == true,
               HasLogTimeTimer = modifiedTimerName?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) == true,
               HasLogTimeSendToChat = modifiedSendToChat?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) == true,
-              TimerIcon = UiElementUtil.CreateBitmap(trigger.IconSource)
+              TimerIcon = UiElementUtil.CreateBitmap(trigger.IconSource),
+              ModifiedEndEarlyPattern3 = PreProcessCodes(trigger.EndEarlyPattern3, trigger)
             };
 
             // temp
@@ -1322,7 +1342,7 @@ namespace EQLogParser
 
         var name = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[3].Value;
         var modifier = m.Groups[2].Success ? m.Groups[2].Value :
-                       (m.Groups[4].Success ? m.Groups[4].Value : null);
+                      (m.Groups[4].Success ? m.Groups[4].Value : null);
 
         if (!matches.TryGetValue(name, out var value))
         {

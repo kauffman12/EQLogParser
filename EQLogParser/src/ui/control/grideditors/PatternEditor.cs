@@ -36,14 +36,15 @@ namespace EQLogParser
 
       BindingOperations.SetBinding(_theTextBox, TextBox.TextProperty, binding);
 
-      var bindName = info.Name switch
-      {
-        "Pattern" => "UseRegex",
-        "PreviousPattern" => "PreviousUseRegex",
-        "EndEarlyPattern" => "EndUseRegex",
-        "EndEarlyPattern2" => "EndUseRegex2",
-        "ClosePattern" => "UseCloseRegex",
-        _ => null
+     var bindName = info.Name switch
+     {
+       "Pattern" => "UseRegex",
+       "PreviousPattern" => "PreviousUseRegex",
+       "EndEarlyPattern" => "EndUseRegex",
+       "EndEarlyPattern2" => "EndUseRegex2",
+       "EndEarlyPattern3" => "EndUseRegex3",
+       "ClosePattern" => "UseCloseRegex",
+       _ => null
       };
 
       if (bindName != null)

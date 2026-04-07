@@ -123,10 +123,13 @@ namespace EQLogParser
     public string TriggerId { get; set; }
     public string EndEarlyPattern { get; set; }
     public string EndEarlyPattern2 { get; set; }
+    public string EndEarlyPattern3 { get; set; }
     public Regex EndEarlyRegex { get; set; }
     public Regex EndEarlyRegex2 { get; set; }
+    public Regex EndEarlyRegex3 { get; set; }
     public List<NumberOptions> EndEarlyRegexNOptions { get; set; }
     public List<NumberOptions> EndEarlyRegex2NOptions { get; set; }
+    public List<NumberOptions> EndEarlyRegex3NOptions { get; set; }
     public Dictionary<string, string> OriginalMatches { get; set; }
     public Dictionary<string, string> PreviousMatches { get; set; }
     public long CounterCount { get; set; } = -1;
@@ -208,8 +211,10 @@ namespace EQLogParser
     public int TimerType { get; set; }
     public string EndEarlyPattern { get; set; }
     public string EndEarlyPattern2 { get; set; }
+    public string EndEarlyPattern3 { get; set; }
     public bool EndUseRegex { get; set; }
     public bool EndUseRegex2 { get; set; }
+    public bool EndUseRegex3 { get; set; }
     public long EndEarlyRepeatedCount { get; set; }
     public long WorstEvalTime { get; set; } = -1;
     public string Pattern { get; set; }
