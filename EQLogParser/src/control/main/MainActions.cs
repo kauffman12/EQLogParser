@@ -36,7 +36,7 @@ namespace EQLogParser
   {
     private class GitHubRelease
     {
-      public string? Tag_name { get; set; }
+      public string Tag_name { get; set; }
       public List<GitHubAsset> Assets { get; set; }
     }
 
