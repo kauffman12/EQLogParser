@@ -493,7 +493,7 @@ namespace EQLogParser
     }
 
     private void EnableCategories(bool trigger, int timerType, bool timerOverlay,
-      bool overlayAssigned, bool cooldownTimer)
+      bool cooldownTimer)
     {
       var isTimerOverlay = !trigger && timerOverlay;
       var isTextOverlay = !trigger && !timerOverlay;
@@ -525,7 +525,7 @@ namespace EQLogParser
         new { Name = fontSizeItem.CategoryName, IsEnabled =!trigger },
         new { Name = activeBrushItem.CategoryName, IsEnabled = isTimerOverlay },
         new { Name = idleBrushItem.CategoryName, IsEnabled = cooldownTimer },
-        new { Name = assignedOverlaysItem.CategoryName, IsEnabled = overlayAssigned },
+        new { Name = assignedOverlaysItem.CategoryName, IsEnabled = trigger },
         new { Name = fadeDelayItem.CategoryName, IsEnabled = isTextOverlay }
       ]);
 
@@ -558,7 +558,7 @@ namespace EQLogParser
         }
         else if (args.Property.Name == timerTypeItem.PropertyName && args.Property.Value is int timerType)
         {
-          EnableCategories(true, timerType, false, true, false);
+          EnableCategories(true, timerType, false, false);
         }
         else if (args.Property.Name == triggerActiveBrushItem.PropertyName)
         {
@@ -724,7 +724,7 @@ namespace EQLogParser
         else if (args.Property.Name == timerModeItem.PropertyName)
         {
           var isCooldownOverlay = (int)args.Property.Value == 1;
-          EnableCategories(false, 0, true, false, isCooldownOverlay);
+          EnableCategories(false, 0, true, isCooldownOverlay);
         }
         else if (args.Property.Name == horizontalAlignmentItem.PropertyName)
         {
@@ -836,18 +836,18 @@ namespace EQLogParser
       {
         await TriggerUtil.Copy(model, triggerModel.Node.TriggerData);
         var timerType = triggerModel.Node.TriggerData.TimerType;
-        EnableCategories(true, timerType, false, true, false);
+        EnableCategories(true, timerType, false, false);
       }
       else if (model is TimerOverlayPropertyModel timerModel)
       {
         await TriggerUtil.Copy(model, timerModel.Node.OverlayData);
         var isCooldownOverlay = timerModel.TimerMode == 1;
-        EnableCategories(false, 0, true, false, isCooldownOverlay);
+        EnableCategories(false, 0, true, isCooldownOverlay);
       }
       else if (model is TextOverlayPropertyModel textModel)
       {
         await TriggerUtil.Copy(model, textModel.Node.OverlayData);
-        EnableCategories(false, 0, false, false, false);
+        EnableCategories(false, 0, false, false);
       }
 
       generalPropertyGrid?.RefreshPropertygrid();
@@ -897,17 +897,17 @@ namespace EQLogParser
       if (data.Item1?.IsTrigger() == true)
       {
         var timerType = data.Item1.SerializedData?.TriggerData.TimerType ?? 0;
-        EnableCategories(true, timerType, false, true, false);
+        EnableCategories(true, timerType, false, false);
       }
       else if (data.Item1?.IsOverlay() == true)
       {
         if (isTimerOverlay)
         {
-          EnableCategories(false, 0, true, false, isCooldownOverlay);
+          EnableCategories(false, 0, true, isCooldownOverlay);
         }
         else
         {
-          EnableCategories(false, 0, false, false, false);
+          EnableCategories(false, 0, false, false);
         }
       }
     }
