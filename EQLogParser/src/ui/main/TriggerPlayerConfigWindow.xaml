@@ -135,7 +135,8 @@
             <StackPanel Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left">
               <Label Content="Overlay Font Color:" Padding="5,5,0,0" FontSize="{DynamicResource EQTitleSize}" />
               <Label Content="*Overrides overlay setting" FontWeight="Thin" Foreground="{DynamicResource EQWarnForegroundBrush}" FontSize="{DynamicResource EQDescriptionSize}" Padding="0" Margin="14,0,0,-10"/>
-            </StackPanel>            <Grid Grid.Column="1">
+            </StackPanel>
+            <Grid Grid.Column="1">
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="280" />
                 <ColumnDefinition Width="70*" />
