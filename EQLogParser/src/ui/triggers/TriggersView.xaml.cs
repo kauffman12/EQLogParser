@@ -494,8 +494,7 @@ namespace EQLogParser
       secondaryPropertyGrid.IsEnabled = false;
     }
 
-    private void EnableCategories(bool trigger, int timerType, bool timerOverlay,
-      bool cooldownTimer)
+    private void EnableCategories(bool trigger, int timerType, bool timerOverlay, bool cooldownTimer)
     {
       var isTimerOverlay = !trigger && timerOverlay;
       var isTextOverlay = !trigger && !timerOverlay;
@@ -504,6 +503,8 @@ namespace EQLogParser
       // Tab 2 visibility
       if (trigger)
       {
+        generalPropertyGrid.EnableGrouping = true;
+        secondaryPropertyGrid.EnableGrouping = true;
         if (timerType == 0 && secondaryPropertyGridTab.Visibility == Visibility.Visible)
         {
           secondaryPropertyGridTab.Visibility = Visibility.Collapsed;
@@ -516,8 +517,10 @@ namespace EQLogParser
       }
       else
       {
+        generalPropertyGrid.EnableGrouping = false;
+        secondaryPropertyGrid.EnableGrouping = false;
         // Always show Tab 2 for overlays
-        secondaryPropertyGridTab.Visibility = Visibility.Visible;
+        secondaryPropertyGridTab.Visibility = cooldownTimer ? Visibility.Visible : Visibility.Collapsed;
       }
 
       // Tab 1 header
@@ -525,23 +528,23 @@ namespace EQLogParser
       {
         generalPropertyGridTab.Header = "Trigger Properties";
       }
-      else
+      else if (isTimerOverlay)
       {
-        generalPropertyGridTab.Header = "Overlay Properties";
+        generalPropertyGridTab.Header = "Timer Overlay Properties";
+      }
+      else if (isTextOverlay)
+      {
+        generalPropertyGridTab.Header = "Text Overlay Properties";
       }
 
       // Tab 2 header
       if (trigger)
       {
-        secondaryPropertyGridTab.Header = "Trigger Timer Properties";
-      }
-      else if (isTimerOverlay)
-      {
-        secondaryPropertyGridTab.Header = "Timer Overlay Properties";
+        secondaryPropertyGridTab.Header = $"{TriggerListOptionLabels.TimerTypes[timerType]} Timer";
       }
       else
       {
-        secondaryPropertyGridTab.Header = "Text Overlay Properties";
+        secondaryPropertyGridTab.Header = "Cooldown Mode";
       }
 
       PropertyGridUtil.EnableCategories(generalPropertyGrid,
@@ -550,7 +553,9 @@ namespace EQLogParser
         new { Name = triggerVolumeItem.CategoryName, IsEnabled = trigger },
         new { Name = triggerTextToShareItem.CategoryName, IsEnabled = trigger },
         new { Name = fontSizeItem.CategoryName, IsEnabled = isOverlay },
-        new { Name = assignedOverlaysItem.CategoryName, IsEnabled = trigger }
+        new { Name = assignedOverlaysItem.CategoryName, IsEnabled = trigger },
+        new { Name = activeBrushItem.CategoryName, IsEnabled = isTimerOverlay },
+        new { Name = fadeDelayItem.CategoryName, IsEnabled = isTextOverlay }
       ]);
 
       PropertyGridUtil.EnableCategories(secondaryPropertyGrid,
@@ -560,10 +565,7 @@ namespace EQLogParser
         new { Name = endEarlyPatternItem.CategoryName, IsEnabled = trigger && timerType > 0 && timerType != 2 },
         new { Name = warningSecondsItem.CategoryName, IsEnabled = trigger && timerType > 0 && timerType != 2 },
         // Overlay categories
-        new { Name = activeBrushItem.CategoryName, IsEnabled = isTimerOverlay },
-        new { Name = idleBrushItem.CategoryName, IsEnabled = isTimerOverlay && cooldownTimer },
-        new { Name = resetBrushItem.CategoryName, IsEnabled = isTimerOverlay && cooldownTimer },
-        new { Name = fadeDelayItem.CategoryName, IsEnabled = isTextOverlay }
+        new { Name = idleBrushItem.CategoryName, IsEnabled = isTimerOverlay && cooldownTimer }
       ]);
 
       resetDurationItem.Visibility = (timerType > 0 && timerType != 2 && timerType != 4) ? Visibility.Visible : Visibility.Collapsed;
