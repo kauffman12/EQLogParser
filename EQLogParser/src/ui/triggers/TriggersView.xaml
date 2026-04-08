@@ -150,7 +150,6 @@
                 <syncfusion:PropertyGridItem CategoryName="Primary Overlay Options" PropertyName="StreamerMode" DisplayName="Streamer Mode" IsReadOnly="False" Visibility="Collapsed" Description="Enabling Streamer Mode allows the Overlay window to be visible to streaming software. Note that changing this value will cause the Overlay window to clear everything and restart and it may require Windows 10 Capture Method to work in applications such as OBS." />
                 <syncfusion:PropertyGridItem CategoryName="Primary Overlay Options" x:Name="textDropShadowItem" PropertyName="UseTextDropShadow" DisplayName="Text Drop Shadow" IsReadOnly="False" Visibility="Collapsed" Description="Enable drop shadow effect for text in Overlay Windows." />
                 <syncfusion:PropertyGridItem CategoryName="Primary Overlay Options" x:Name="verticalAlignmentItem" PropertyName="VerticalAlignment" DisplayName="Vertical Alignment" IsReadOnly="False" Visibility="Collapsed" Description="Display Overlay contents starting from the Top of the window, Center, or Bottom." />
-                <syncfusion:PropertyGridItem CategoryName="Primary Overlay Options" x:Name="horizontalAlignmentItem" PropertyName="HorizontalAlignment" DisplayName="Horizontal Alignment" IsReadOnly="False" Visibility="Collapsed" Description="Display Text Overlay contents on the Left side of the window, Center, or Right." />
               </syncfusion:PropertyGrid.Items>
             </syncfusion:PropertyGrid>
           </syncfusion:TabItemExt>
@@ -178,6 +177,8 @@
                 <!-- Overlay Specific Options -->
                 <syncfusion:PropertyGridItem CategoryName="Text Options" x:Name="closePatternItem" PropertyName="ClosePattern" DisplayName="Close Pattern" Description="Text to match on to make this Overlay close. It is not case-sensitive and does not support any special trigger variables."/>
                 <syncfusion:PropertyGridItem CategoryName="Text Options" x:Name="fadeDelayItem" PropertyName="FadeDelay" DisplayName="Fade Delay (s)" Visibility="Collapsed" Description="Seconds before Text fades from screen."/>
+                <syncfusion:PropertyGridItem CategoryName="Text Options" x:Name="horizontalAlignmentItem" PropertyName="HorizontalAlignment" DisplayName="Horizontal Alignment" IsReadOnly="False" Visibility="Collapsed" Description="Display Text Overlay contents on the Left side of the window, Center, or Right." />
+
                 <syncfusion:PropertyGridItem CategoryName="Timer Options" x:Name="activeBrushItem" PropertyName="ActiveBrush" DisplayName="Active Color" Visibility="Collapsed" Description="Color used for the Timer countdown bars representing the time left." />
                 <syncfusion:PropertyGridItem CategoryName="Timer Options" x:Name="backgroundBrushItem" PropertyName="BackgroundBrush" DisplayName="Background Color" Visibility="Collapsed" Description="Color used for the Timer Bars representing the time used." />
                 <syncfusion:PropertyGridItem CategoryName="Timer Options" PropertyName="HideDuplicates" DisplayName="Hide Dupes (multi-character)" Visibility="Collapsed" Description="Attempt to hide duplicate Timers when multiple characters respond to the same Trigger."/>
@@ -195,7 +196,6 @@
                 
                 <!-- Trigger Timer Options -->
                 <syncfusion:PropertyGridItem CategoryName="Primary Timer Options" PropertyName="AltTimerName" DisplayName="Alternate Timer Name"  Visibility="Collapsed" Description="The Name of the Timer defaults to the name of the Trigger. Set this property if an Alternate Name is required. See the documentation on Using Trigger Variables for additional information."/>
-
                 <syncfusion:PropertyGridItem CategoryName="Primary Timer Options" x:Name="timerDurationItem" PropertyName="DurationTimeSpan" DisplayName="Duration (hh:mm:ss)" Visibility="Collapsed" Description="Number of Minutes/Seconds after the Trigger has been executed before the Timer completes." />
                 <syncfusion:PropertyGridItem CategoryName="Primary Timer Options" x:Name="timerShortDurationItem" PropertyName="DurationSeconds" DisplayName="Duration (0.2s -> 2.0s)" Visibility="Collapsed" Description="Number of Milliseconds after the Trigger has been executed before the Timer completes." />
                 <syncfusion:PropertyGridItem CategoryName="Primary Timer Options" PropertyName="EndSoundOrText" DisplayName="End Sound/Text to Speak"  Visibility="Collapsed" Description="The Phrase to be spoken or sound file to play at completion of the Timer. For additional wav files, copy them to Program Files\EQLogParser\data\sounds. Also, see the documentation on Using Trigger Variables for additional information."/>
