@@ -126,7 +126,7 @@ namespace EQLogParser
         var editor = new CustomEditor { Editor = typeEditor };
         editor.Properties.Add(propName);
         generalPropertyGrid.CustomEditorCollection.Add(editor);
-        timerPropertyGrid.CustomEditorCollection?.Add(editor);
+        secondaryPropertyGrid.CustomEditorCollection?.Add(editor);
         return editor.Editor;
       }
 
@@ -137,7 +137,7 @@ namespace EQLogParser
           var editor = new CustomEditor { Editor = (ITypeEditor)new T() };
           editor.Properties.Add(name);
           generalPropertyGrid.CustomEditorCollection.Add(editor);
-          timerPropertyGrid.CustomEditorCollection.Add(editor);
+          secondaryPropertyGrid.CustomEditorCollection.Add(editor);
         }
       }
     }
@@ -171,7 +171,7 @@ namespace EQLogParser
     private void EventsThemeChanged(string _)
     {
       generalPropertyGrid.PropertyNameColumnDefinition = new GridLength(200 + ((MainActions.CurrentFontSize - 12) * 10));
-      timerPropertyGrid.PropertyNameColumnDefinition = new GridLength(200 + ((MainActions.CurrentFontSize - 12) * 10));
+      secondaryPropertyGrid.PropertyNameColumnDefinition = new GridLength(200 + ((MainActions.CurrentFontSize - 12) * 10));
     }
 
     private async void TriggersViewOnInitialized(object sender, EventArgs e)
@@ -215,7 +215,7 @@ namespace EQLogParser
       await Dispatcher.InvokeAsync(async () =>
       {
         generalPropertyGrid.SelectedObject = null;
-        timerPropertyGrid.SelectedObject = null;
+        secondaryPropertyGrid.SelectedObject = null;
         await theTreeView.RefreshOverlays();
       });
     }
@@ -225,7 +225,7 @@ namespace EQLogParser
       await Dispatcher.InvokeAsync(async () =>
       {
         generalPropertyGrid.SelectedObject = null;
-        timerPropertyGrid.SelectedObject = null;
+        secondaryPropertyGrid.SelectedObject = null;
         await theTreeView.RefreshTriggers();
       });
     }
@@ -260,7 +260,7 @@ namespace EQLogParser
 
     internal bool IsCancelSelection()
     {
-      var model = generalPropertyGrid?.SelectedObject ?? timerPropertyGrid?.SelectedObject;
+      var model = generalPropertyGrid?.SelectedObject ?? secondaryPropertyGrid?.SelectedObject;
       var cancel = false;
 
       if (saveButton.IsEnabled)
@@ -321,10 +321,10 @@ namespace EQLogParser
           _currentCharacterId = null;
           var current = generalPropertyGrid.SelectedObject;
           generalPropertyGrid.SelectedObject = null;
-          timerPropertyGrid.SelectedObject = null;
+          secondaryPropertyGrid.SelectedObject = null;
           await theTreeView.EnableAndRefreshTriggers(false, _currentCharacterId);
           generalPropertyGrid.SelectedObject = current;
-          timerPropertyGrid.SelectedObject = current;
+          secondaryPropertyGrid.SelectedObject = current;
         }
       }
       else
@@ -334,10 +334,10 @@ namespace EQLogParser
           _currentCharacterId = characters[0].Id;
           var current = generalPropertyGrid.SelectedObject;
           generalPropertyGrid.SelectedObject = null;
-          timerPropertyGrid.SelectedObject = null;
+          secondaryPropertyGrid.SelectedObject = null;
           await theTreeView.EnableAndRefreshTriggers(true, _currentCharacterId, characters);
           generalPropertyGrid.SelectedObject = current;
-          timerPropertyGrid.SelectedObject = current;
+          secondaryPropertyGrid.SelectedObject = current;
         }
       }
     }
@@ -407,7 +407,7 @@ namespace EQLogParser
         {
           _currentCharacterId = TriggerStateManager.DefaultUser;
           generalPropertyGrid.SelectedObject = null;
-          timerPropertyGrid.SelectedObject = null;
+          secondaryPropertyGrid.SelectedObject = null;
           await theTreeView.EnableAndRefreshTriggers(true, _currentCharacterId);
         }
 
@@ -490,8 +490,8 @@ namespace EQLogParser
 
       generalPropertyGrid.SelectedObject = null;
       generalPropertyGrid.IsEnabled = false;
-      timerPropertyGrid.SelectedObject = null;
-      timerPropertyGrid.IsEnabled = false;
+      secondaryPropertyGrid.SelectedObject = null;
+      secondaryPropertyGrid.IsEnabled = false;
     }
 
     private void EnableCategories(bool trigger, int timerType, bool timerOverlay,
@@ -499,24 +499,49 @@ namespace EQLogParser
     {
       var isTimerOverlay = !trigger && timerOverlay;
       var isTextOverlay = !trigger && !timerOverlay;
+      var isOverlay = !trigger;
 
-      if (timerType == 0 && timerPropertyGridTab.Visibility == Visibility.Visible)
+      // Tab 2 visibility
+      if (trigger)
       {
-        timerPropertyGridTab.Visibility = Visibility.Collapsed;
-        propertyTabControl.SelectedIndex = 0;
+        if (timerType == 0 && secondaryPropertyGridTab.Visibility == Visibility.Visible)
+        {
+          secondaryPropertyGridTab.Visibility = Visibility.Collapsed;
+          propertyTabControl.SelectedIndex = 0;
+        }
+        else if (timerType != 0 && secondaryPropertyGridTab.Visibility != Visibility.Visible)
+        {
+          secondaryPropertyGridTab.Visibility = Visibility.Visible;
+        }
       }
-      else if (timerType != 0 && timerPropertyGridTab.Visibility != Visibility.Visible)
+      else
       {
-        timerPropertyGridTab.Visibility = Visibility.Visible;
+        // Always show Tab 2 for overlays
+        secondaryPropertyGridTab.Visibility = Visibility.Visible;
       }
 
+      // Tab 1 header
       if (trigger)
       {
         generalPropertyGridTab.Header = "Trigger Properties";
       }
       else
       {
-        generalPropertyGridTab.Header = timerOverlay ? "Timer Overlay Properties" : "Text Overlay Properties";
+        generalPropertyGridTab.Header = "Overlay Properties";
+      }
+
+      // Tab 2 header
+      if (trigger)
+      {
+        secondaryPropertyGridTab.Header = "Trigger Timer Properties";
+      }
+      else if (isTimerOverlay)
+      {
+        secondaryPropertyGridTab.Header = "Timer Overlay Properties";
+      }
+      else
+      {
+        secondaryPropertyGridTab.Header = "Text Overlay Properties";
       }
 
       PropertyGridUtil.EnableCategories(generalPropertyGrid,
@@ -524,19 +549,21 @@ namespace EQLogParser
         new { Name = patternItem.CategoryName, IsEnabled = trigger },
         new { Name = triggerVolumeItem.CategoryName, IsEnabled = trigger },
         new { Name = triggerTextToShareItem.CategoryName, IsEnabled = trigger },
-        new { Name = fontSizeItem.CategoryName, IsEnabled =!trigger },
-        new { Name = activeBrushItem.CategoryName, IsEnabled = isTimerOverlay },
-        new { Name = idleBrushItem.CategoryName, IsEnabled = cooldownTimer },
-        new { Name = resetBrushItem.CategoryName, IsEnabled = cooldownTimer },
-        new { Name = assignedOverlaysItem.CategoryName, IsEnabled = trigger },
-        new { Name = fadeDelayItem.CategoryName, IsEnabled = isTextOverlay }
+        new { Name = fontSizeItem.CategoryName, IsEnabled = isOverlay },
+        new { Name = assignedOverlaysItem.CategoryName, IsEnabled = trigger }
       ]);
 
-      PropertyGridUtil.EnableCategories(timerPropertyGrid,
+      PropertyGridUtil.EnableCategories(secondaryPropertyGrid,
       [
-        new { Name = timerDurationItem.CategoryName, IsEnabled = timerType > 0 },
-        new { Name = endEarlyPatternItem.CategoryName, IsEnabled = timerType > 0 && timerType != 2 },
-        new { Name = warningSecondsItem.CategoryName, IsEnabled = timerType > 0 && timerType != 2 }
+        // Trigger timer categories
+        new { Name = timerDurationItem.CategoryName, IsEnabled = trigger && timerType > 0 },
+        new { Name = endEarlyPatternItem.CategoryName, IsEnabled = trigger && timerType > 0 && timerType != 2 },
+        new { Name = warningSecondsItem.CategoryName, IsEnabled = trigger && timerType > 0 && timerType != 2 },
+        // Overlay categories
+        new { Name = activeBrushItem.CategoryName, IsEnabled = isTimerOverlay },
+        new { Name = idleBrushItem.CategoryName, IsEnabled = isTimerOverlay && cooldownTimer },
+        new { Name = resetBrushItem.CategoryName, IsEnabled = isTimerOverlay && cooldownTimer },
+        new { Name = fadeDelayItem.CategoryName, IsEnabled = isTextOverlay }
       ]);
 
       resetDurationItem.Visibility = (timerType > 0 && timerType != 2 && timerType != 4) ? Visibility.Visible : Visibility.Collapsed;
@@ -786,7 +813,7 @@ namespace EQLogParser
     private void ShowClick(object sender, RoutedEventArgs e)
     {
       TriggerNode node = null;
-      var model = generalPropertyGrid?.SelectedObject ?? timerPropertyGrid?.SelectedObject;
+      var model = generalPropertyGrid?.SelectedObject ?? secondaryPropertyGrid?.SelectedObject;
       var isTimer = false;
       if (model is TimerOverlayPropertyModel timerModel)
       {
@@ -816,7 +843,7 @@ namespace EQLogParser
 
     private async void SaveClick(object sender, RoutedEventArgs e)
     {
-      var model = generalPropertyGrid?.SelectedObject ?? timerPropertyGrid?.SelectedObject;
+      var model = generalPropertyGrid?.SelectedObject ?? secondaryPropertyGrid?.SelectedObject;
       if (model is TriggerPropertyModel triggerModel)
       {
         await TriggerUtil.Copy(triggerModel.Node.TriggerData, model);
@@ -863,7 +890,7 @@ namespace EQLogParser
 
     private async void CancelClick(object sender, RoutedEventArgs e)
     {
-      var model = generalPropertyGrid?.SelectedObject ?? timerPropertyGrid?.SelectedObject;
+      var model = generalPropertyGrid?.SelectedObject ?? secondaryPropertyGrid?.SelectedObject;
       if (model is TriggerPropertyModel triggerModel)
       {
         await TriggerUtil.Copy(model, triggerModel.Node.TriggerData);
@@ -883,7 +910,7 @@ namespace EQLogParser
       }
 
       generalPropertyGrid?.RefreshPropertygrid();
-      timerPropertyGrid?.RefreshPropertygrid();
+      secondaryPropertyGrid?.RefreshPropertygrid();
       Dispatcher.Invoke(() => cancelButton.IsEnabled = saveButton.IsEnabled = false, DispatcherPriority.DataBind);
     }
 
@@ -922,9 +949,9 @@ namespace EQLogParser
       generalPropertyGrid.DescriptionPanelVisibility = (data.Item1?.IsTrigger() == true || data.Item1?.IsOverlay() == true) ? Visibility.Visible : Visibility.Collapsed;
       showButton.Visibility = data.Item1?.IsOverlay() == true ? Visibility.Visible : Visibility.Collapsed;
 
-      timerPropertyGrid.SelectedObject = data.Item2;
-      timerPropertyGrid.IsEnabled = timerPropertyGrid.SelectedObject != null;
-      timerPropertyGrid.DescriptionPanelVisibility = (data.Item1?.IsTrigger() == true || data.Item1?.IsOverlay() == true) ? Visibility.Visible : Visibility.Collapsed;
+      secondaryPropertyGrid.SelectedObject = data.Item2;
+      secondaryPropertyGrid.IsEnabled = secondaryPropertyGrid.SelectedObject != null;
+      secondaryPropertyGrid.DescriptionPanelVisibility = (data.Item1?.IsTrigger() == true || data.Item1?.IsOverlay() == true) ? Visibility.Visible : Visibility.Collapsed;
 
       if (data.Item1?.IsTrigger() == true)
       {
