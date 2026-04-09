@@ -187,9 +187,9 @@
     </PackageReference>
     <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.14" />
     <PackageReference Include="Microsoft.Windows.Compatibility" Version="8.0.11" />
-    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="NAudio" Version="2.3.0" />
     <PackageReference Include="Riok.Mapperly" Version="4.3.1" />
     <PackageReference Include="SoundTouch.Net" Version="2.3.2" />
     <PackageReference Include="SoundTouch.Net.NAudioSupport.Core" Version="2.3.2" />
@@ -209,7 +209,6 @@
     <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="33.1.46" />
     <PackageReference Include="Syncfusion.Tools.WPF" Version="33.1.46" />
     <PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="22.2.5" />
-    <PackageReference Include="System.Formats.Asn1" Version="8.0.1" />
     <PackageReference Include="WpfAnimatedGif" Version="2.0.2" />
   </ItemGroup>
   <ItemGroup>
