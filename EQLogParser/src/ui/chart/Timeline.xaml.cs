@@ -4,6 +4,7 @@ using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -43,6 +44,8 @@ namespace EQLogParser
     private bool _currentHideSelfOnly = true;
     private bool _currentShowCasterAdps = true;
     private bool _currentShowMeleeAdps = true;
+    private bool _isApplyingLayout;
+    private List<string> _availableLayouts;
 
     public Timeline()
     {
@@ -160,6 +163,169 @@ namespace EQLogParser
 
       showCasterAdps.IsEnabled = showMeleeAdps.IsEnabled = _spellRanges.Count > 0;
       hideSelfOnly.IsEnabled = _spellRanges.Count > 0 && _selectedStats.Find(stats => stats.OrigName == ConfigUtil.PlayerName) != null;
+      Display();
+      LoadLayoutsIntoSelector();
+    }
+
+    private void LoadLayoutsIntoSelector()
+    {
+      _availableLayouts = TimelineLayoutManager.GetLayoutNames();
+      layoutSelector.Items.Clear();
+
+      if (_availableLayouts.Count == 0)
+      {
+        layoutSelector.Items.Add("No Layouts");
+        layoutSelector.IsEnabled = false;
+      }
+      else
+      {
+        layoutSelector.Items.Add("Select Layout");
+        foreach (var layoutName in _availableLayouts)
+        {
+          layoutSelector.Items.Add(layoutName);
+        }
+        layoutSelector.IsEnabled = true;
+        layoutSelector.SelectedIndex = 0;
+      }
+    }
+
+    private void SaveLayoutClick(object sender, RoutedEventArgs e)
+    {
+      var dialog = new TimelineLayoutDialog();
+      dialog.Owner = MainActions.GetOwner();
+      dialog.ShowDialog();
+
+      if (dialog.IsSaveClicked && !string.IsNullOrEmpty(dialog.LayoutName))
+      {
+        try
+        {
+          var layout = new TimelineLayout
+          {
+            Name = dialog.LayoutName,
+            SpellOrder = new List<string>(_keyOrder),
+            HiddenSpells = new HashSet<string>(),
+            HideSelfOnly = _currentHideSelfOnly,
+            ShowCasterAdps = _currentShowCasterAdps,
+            ShowMeleeAdps = _currentShowMeleeAdps,
+            PixelsPerSecond = _pixelsPerSecond,
+            LastModified = DateTime.Now
+          };
+
+          foreach (var key in _selfOnly.Keys)
+          {
+            layout.HiddenSpells.Add(key);
+          }
+
+          TimelineLayoutManager.SaveLayout(layout.Name, layout);
+          LoadLayoutsIntoSelector();
+        }
+        catch (IOException)
+        {
+          var msgDialog = new MessageWindow("Problem saving layout. Check error log for details.", "Save Layout", MessageWindow.IconType.Warn);
+          msgDialog.ShowDialog();
+        }
+        catch (UnauthorizedAccessException)
+        {
+          var msgDialog = new MessageWindow("Problem saving layout. Check error log for details.", "Save Layout", MessageWindow.IconType.Warn);
+          msgDialog.ShowDialog();
+        }
+      }
+    }
+
+    private void DeleteLayoutClick(object sender, RoutedEventArgs e)
+    {
+      if (layoutSelector.SelectedItem is string selected && selected != "Select Layout" && selected != "Reset Layout" && selected != "No Layouts")
+      {
+        var msgDialog = new MessageWindow($"Are you sure you want to delete {selected}?", "Delete Layout",
+          MessageWindow.IconType.Question, "Delete");
+        msgDialog.ShowDialog();
+
+        if (msgDialog.IsYes1Clicked)
+        {
+          try
+          {
+            TimelineLayoutManager.DeleteLayout(selected);
+            LoadLayoutsIntoSelector();
+          }
+          catch (IOException)
+          {
+            var msgDialog2 = new MessageWindow("Problem deleting layout. Check error log for details.", "Delete Layout", MessageWindow.IconType.Warn);
+            msgDialog2.ShowDialog();
+          }
+          catch (UnauthorizedAccessException)
+          {
+            var msgDialog2 = new MessageWindow("Problem deleting layout. Check error log for details.", "Delete Layout", MessageWindow.IconType.Warn);
+            msgDialog2.ShowDialog();
+          }
+        }
+      }
+    }
+
+    private void LayoutSelectorSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (_isApplyingLayout || layoutSelector.SelectedItem == null)
+      {
+        return;
+      }
+
+      var selected = layoutSelector.SelectedItem.ToString();
+
+      if (selected == "Select Layout" || selected == "No Layouts")
+      {
+        return;
+      }
+
+      if (selected == "Reset Layout")
+      {
+        ResetLayout();
+        return;
+      }
+
+      if (_availableLayouts.Contains(selected))
+      {
+        _isApplyingLayout = true;
+        var layout = TimelineLayoutManager.LoadLayout(selected);
+        if (layout != null)
+        {
+          ApplyLayout(layout);
+          layoutSelector.Items[0] = "Reset Layout";
+          layoutSelector.SelectedIndex = 0;
+        }
+        _isApplyingLayout = false;
+      }
+    }
+
+    private void ResetLayout()
+    {
+      _keyOrder.Clear();
+      _currentHideSelfOnly = true;
+      _currentShowCasterAdps = true;
+      _currentShowMeleeAdps = true;
+      _pixelsPerSecond = 1;
+      hideSelfOnly.IsChecked = true;
+      showCasterAdps.IsChecked = true;
+      showMeleeAdps.IsChecked = true;
+      Display();
+      layoutSelector.Items[0] = "Select Layout";
+    }
+
+    private void ApplyLayout(TimelineLayout layout)
+    {
+      _keyOrder.Clear();
+      if (layout.SpellOrder != null)
+      {
+        _keyOrder.AddRange(layout.SpellOrder);
+      }
+
+      _currentHideSelfOnly = layout.HideSelfOnly;
+      _currentShowCasterAdps = layout.ShowCasterAdps;
+      _currentShowMeleeAdps = layout.ShowMeleeAdps;
+      _pixelsPerSecond = layout.PixelsPerSecond;
+
+      hideSelfOnly.IsChecked = layout.HideSelfOnly;
+      showCasterAdps.IsChecked = layout.ShowCasterAdps;
+      showMeleeAdps.IsChecked = layout.ShowMeleeAdps;
+
       Display();
     }
 
@@ -321,6 +487,7 @@ namespace EQLogParser
     private void RefreshClick(object sender, RoutedEventArgs e)
     {
       _keyOrder.Clear();
+      layoutSelector.Items[0] = "Select Layout";
       Display();
     }
 

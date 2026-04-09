@@ -33,6 +33,7 @@ namespace EQLogParser
     internal static string GetArchiveDir() => _archiveDir;
     internal static string GetTriggersDbFile() => _triggersDbFile;
     internal static string GetTriggersLastDbFile() => _triggersLastDbFile;
+    internal static string GetTimelineLayoutsDir() => Environment.ExpandEnvironmentVariables(AppData + @"\features\savedTimelines\");
     internal static void SetSetting(string key, bool value) => SetSetting(key, value.ToString());
     internal static void SetSetting(string key, double value) => SetSetting(key, value.ToString(CultureInfo.InvariantCulture));
     internal static void SetSetting(string key, int value) => SetSetting(key, value.ToString(CultureInfo.InvariantCulture));

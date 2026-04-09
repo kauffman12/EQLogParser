@@ -17,6 +17,13 @@
       <Label x:Name="titleLabel3" Style="{StaticResource EQTitleStyle}" Padding="0,5,5,5"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+      <ComboBox x:Name="layoutSelector" Width="150" Margin="0,0,8,2" SelectionChanged="LayoutSelectorSelectionChanged"/>
+      <Button x:Name="saveLayoutButton" Margin="0,0,4,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="SaveLayoutClick" ToolTip="Save Current Layout">
+        <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Save" />
+      </Button>
+      <Button x:Name="deleteLayoutButton" Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="DeleteLayoutClick" ToolTip="Delete Selected Layout">
+        <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Trash" />
+      </Button>
       <CheckBox x:Name="showCasterAdps" IsChecked="True" Template="{StaticResource CustomCheckBoxTemplate}" Margin="0,0,8,2" Content="Caster ADPS" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange" />
       <CheckBox x:Name="showMeleeAdps" IsChecked="True" Template="{StaticResource CustomCheckBoxTemplate}" Margin="0,0,8,2" Content="Melee ADPS" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange" />
       <CheckBox x:Name="hideSelfOnly" IsChecked="True" Template="{StaticResource CustomCheckBoxTemplate}" Margin="0,0,8,2" Content="Hide Spells Only You See" IsEnabled="False" ToolTip="{StaticResource AdpsHideMineToolTipTemplate}"
