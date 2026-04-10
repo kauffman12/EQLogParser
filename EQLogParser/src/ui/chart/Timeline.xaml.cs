@@ -47,6 +47,13 @@ namespace EQLogParser
     private bool _isApplyingLayout;
     private List<string> _availableLayouts;
 
+    public class LayoutItem
+    {
+      public string Name { get; set; } = string.Empty;
+      public bool IsDeletable { get; set; }
+      public override string ToString() => Name;
+    }
+
     public Timeline()
     {
       InitializeComponent();
@@ -171,7 +178,7 @@ namespace EQLogParser
     {
       if (layoutSelector.Items.Count > 0)
       {
-        layoutSelector.Items[0] = text;
+        layoutSelector.Items[0] = new LayoutItem { Name = text, IsDeletable = false };
       }
     }
 
@@ -182,15 +189,15 @@ namespace EQLogParser
 
       if (_availableLayouts.Count == 0)
       {
-        layoutSelector.Items.Add("No Layouts");
+        layoutSelector.Items.Add(new LayoutItem { Name = "No Layouts", IsDeletable = false });
         layoutSelector.IsEnabled = false;
       }
       else
       {
-        layoutSelector.Items.Add("Select Layout");
+        layoutSelector.Items.Add(new LayoutItem { Name = "Select Layout", IsDeletable = false });
         foreach (var layoutName in _availableLayouts)
         {
-          layoutSelector.Items.Add(layoutName);
+          layoutSelector.Items.Add(new LayoutItem { Name = layoutName, IsDeletable = true });
         }
         layoutSelector.IsEnabled = true;
         layoutSelector.SelectedIndex = 0;
@@ -276,7 +283,9 @@ namespace EQLogParser
         return;
       }
 
-      var selected = layoutSelector.SelectedItem.ToString();
+      var selectedItem = layoutSelector.SelectedItem as LayoutItem;
+      if (selectedItem == null) return;
+      var selected = selectedItem.Name;
 
       if (selected == "Select Layout" || selected == "No Layouts")
       {
@@ -301,10 +310,50 @@ namespace EQLogParser
         }
         else
         {
-          var msgDialog = new MessageWindow("Problem loading layout. The file may be corrupted.", "Load Layout", MessageWindow.IconType.Error);
+          var msgDialog = new MessageWindow("Problem loading layout. The file may be corrupted.", "Load Layout", MessageWindow.IconType.Warn);
           msgDialog.ShowDialog();
         }
         _isApplyingLayout = false;
+      }
+    }
+
+    private void LayoutSelectorPreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+      var element = e.OriginalSource as FrameworkElement;
+      if (element == null) return;
+
+      // Check if the clicked element or its parent is the delete button
+      var button = element;
+      while (button != null && !(button is Button))
+      {
+        button = VisualTreeHelper.GetParent(button) as FrameworkElement;
+      }
+
+      if (button is Button deleteButton && deleteButton.Tag?.ToString() == "DeleteLayout")
+      {
+        var layoutItem = deleteButton.DataContext as LayoutItem;
+        if (layoutItem != null && layoutItem.IsDeletable)
+        {
+          var msgDialog = new MessageWindow($"Are you sure you want to delete {layoutItem.Name}?", "Delete Layout",
+            MessageWindow.IconType.Question, "Delete");
+          msgDialog.ShowDialog();
+
+          if (msgDialog.IsYes1Clicked)
+          {
+            try
+            {
+              TimelineLayoutManager.DeleteLayout(layoutItem.Name);
+              LoadLayoutsIntoSelector();
+            }
+            catch (Exception ex)
+            {
+              Log.Error(ex);
+              var msgDialog2 = new MessageWindow("Problem deleting layout. Check error log for details.", "Delete Layout", MessageWindow.IconType.Warn);
+              msgDialog2.ShowDialog();
+            }
+          }
+          e.Handled = true;
+        }
       }
     }
 
