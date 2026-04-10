@@ -226,12 +226,12 @@ namespace EQLogParser
       }
       catch (IOException)
       {
-        var msgDialog = new MessageWindow("Problem saving layout. Check error log for details.", "Save Layout", MessageWindow.IconType.Warn);
+        var msgDialog = new MessageWindow("Problem saving layout. Check Error Log for details.", "Save Layout", MessageWindow.IconType.Warn);
         msgDialog.ShowDialog();
       }
       catch (UnauthorizedAccessException)
       {
-        var msgDialog = new MessageWindow("Problem saving layout. Check error log for details.", "Save Layout", MessageWindow.IconType.Warn);
+        var msgDialog = new MessageWindow("Problem saving layout. Check Error Log for details.", "Save Layout", MessageWindow.IconType.Warn);
         msgDialog.ShowDialog();
       }
     }
@@ -275,12 +275,12 @@ namespace EQLogParser
           }
           catch (IOException)
           {
-            var msgDialog2 = new MessageWindow("Problem Deleting Layout. Check Error Log for Details.", "Delete Layout", MessageWindow.IconType.Warn);
+            var msgDialog2 = new MessageWindow("Problem deleting layout. Check Error Log for details.", "Delete Layout", MessageWindow.IconType.Warn);
             msgDialog2.ShowDialog();
           }
           catch (UnauthorizedAccessException)
           {
-            var msgDialog2 = new MessageWindow("Problem Deleting Layout. Check Error Log for Details.", "Delete Layout", MessageWindow.IconType.Warn);
+            var msgDialog2 = new MessageWindow("Problem deleting layout. Check Error Log for details.", "Delete Layout", MessageWindow.IconType.Warn);
             msgDialog2.ShowDialog();
           }
         }
@@ -306,22 +306,27 @@ namespace EQLogParser
         if (_availableLayouts.Contains(selected))
         {
           _isApplyingLayout = true;
-          var layout = TimelineLayoutManager.LoadLayout(selected);
-          if (layout != null)
+          try
           {
-            ApplyLayout(layout);
+            var layout = TimelineLayoutManager.LoadLayout(selected);
+            if (layout != null)
+            {
+              ApplyLayout(layout);
+              saveLayoutButton.IsEnabled = true;
+              saveLayoutButton.Header = $"Save ({layout.Name})";
+              deleteLayoutButton.IsEnabled = true;
+              deleteLayoutButton.Header = $"Delete ({layout.Name})";
+            }
+            else
+            {
+              var msgDialog = new MessageWindow("Problem loading layout. Check Error Log for details.", "Load Layout", MessageWindow.IconType.Warn);
+              msgDialog.ShowDialog();
+            }
           }
-          else
+          finally
           {
-            var msgDialog = new MessageWindow("Problem loading layout. The file may be corrupted.", "Load Layout", MessageWindow.IconType.Warn);
-            msgDialog.ShowDialog();
+            _isApplyingLayout = false;
           }
-
-          _isApplyingLayout = false;
-          saveLayoutButton.IsEnabled = true;
-          saveLayoutButton.Header = $"Save ({layout.Name})";
-          deleteLayoutButton.IsEnabled = true;
-          deleteLayoutButton.Header = $"Delete ({layout.Name})";
           return;
         }
       }
@@ -358,7 +363,7 @@ namespace EQLogParser
             catch (Exception ex)
             {
               Log.Error(ex);
-              var msgDialog2 = new MessageWindow("Problem deleting layout. Check error log for details.", "Delete Layout", MessageWindow.IconType.Warn);
+              var msgDialog2 = new MessageWindow("Problem deleting layout. Check Error Log for details.", "Delete Layout", MessageWindow.IconType.Warn);
               msgDialog2.ShowDialog();
             }
           }
