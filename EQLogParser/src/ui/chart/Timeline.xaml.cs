@@ -174,33 +174,27 @@ namespace EQLogParser
       LoadLayoutsIntoSelector();
     }
 
-    private void UpdateSelectorControlText(string text)
-    {
-      if (layoutSelector.Items.Count > 0)
-      {
-        layoutSelector.Items[0] = new LayoutItem { Name = text, IsDeletable = false };
-      }
-    }
+    // Method removed as it is no longer needed with the simplified ComboBox logic
+    // private void UpdateSelectorControlText(string text)
+    // {
+    // }
 
     private void LoadLayoutsIntoSelector()
     {
       _availableLayouts = TimelineLayoutManager.GetLayoutNames();
       layoutSelector.Items.Clear();
 
-      if (_availableLayouts.Count == 0)
+      if (_availableLayouts.Count > 0)
       {
-        layoutSelector.Items.Add(new LayoutItem { Name = "No Layouts", IsDeletable = false });
-        layoutSelector.IsEnabled = false;
-      }
-      else
-      {
-        layoutSelector.Items.Add(new LayoutItem { Name = "Select Layout", IsDeletable = false });
         foreach (var layoutName in _availableLayouts)
         {
           layoutSelector.Items.Add(new LayoutItem { Name = layoutName, IsDeletable = true });
         }
         layoutSelector.IsEnabled = true;
-        layoutSelector.SelectedIndex = 0;
+      }
+      else
+      {
+        layoutSelector.IsEnabled = false;
       }
     }
 
@@ -287,17 +281,6 @@ namespace EQLogParser
       if (selectedItem == null) return;
       var selected = selectedItem.Name;
 
-      if (selected == "Select Layout" || selected == "No Layouts")
-      {
-        return;
-      }
-
-      if (selected == "Reset Layout")
-      {
-        ResetLayout();
-        return;
-      }
-
       if (_availableLayouts.Contains(selected))
       {
         _isApplyingLayout = true;
@@ -305,8 +288,6 @@ namespace EQLogParser
         if (layout != null)
         {
           ApplyLayout(layout);
-          UpdateSelectorControlText("Reset Layout");
-          layoutSelector.SelectedIndex = 0;
         }
         else
         {
@@ -368,7 +349,7 @@ namespace EQLogParser
       showCasterAdps.IsChecked = true;
       showMeleeAdps.IsChecked = true;
       Display();
-      UpdateSelectorControlText("Select Layout");
+      layoutSelector.SelectedIndex = -1;
     }
 
     private void ApplyLayout(TimelineLayout layout)
@@ -552,8 +533,7 @@ namespace EQLogParser
     private void RefreshClick(object sender, RoutedEventArgs e)
     {
       _keyOrder.Clear();
-      UpdateSelectorControlText("Select Layout");
-      Display();
+      ResetLayout();
     }
 
     private void UpdateSpellRange(SpellData spellData, double time, double startTime, double endTime,
