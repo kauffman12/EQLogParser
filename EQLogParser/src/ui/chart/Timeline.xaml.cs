@@ -174,16 +174,26 @@ namespace EQLogParser
       LoadLayoutsIntoSelector();
     }
 
-    private void LoadLayoutsIntoSelector()
+    private void LoadLayoutsIntoSelector(string selected = null)
     {
       _availableLayouts = TimelineLayoutManager.GetLayoutNames();
       layoutSelector.Items.Clear();
 
       if (_availableLayouts.Count > 0)
       {
+        var index = -1;
         foreach (var layoutName in _availableLayouts)
         {
           layoutSelector.Items.Add(new LayoutItem { Name = layoutName, IsDeletable = true });
+          if (layoutName == selected)
+          {
+            index = layoutSelector.Items.Count - 1;
+          }
+        }
+
+        if (index >= 0)
+        {
+          layoutSelector.SelectedIndex = index;
         }
 
         layoutSelector.IsEnabled = true;
@@ -221,7 +231,7 @@ namespace EQLogParser
 
         if (updateList)
         {
-          LoadLayoutsIntoSelector();
+          LoadLayoutsIntoSelector(layout.Name);
         }
       }
       catch (IOException)
@@ -328,46 +338,6 @@ namespace EQLogParser
             _isApplyingLayout = false;
           }
           return;
-        }
-      }
-    }
-
-    private void LayoutSelectorPreviewMouseDown(object sender, MouseButtonEventArgs e)
-    {
-      var element = e.OriginalSource as FrameworkElement;
-      if (element == null) return;
-
-      // Check if the clicked element or its parent is the delete button
-      var button = element;
-      while (button != null && !(button is Button))
-      {
-        button = VisualTreeHelper.GetParent(button) as FrameworkElement;
-      }
-
-      if (button is Button deleteButton && deleteButton.Tag?.ToString() == "DeleteLayout")
-      {
-        var layoutItem = deleteButton.DataContext as LayoutItem;
-        if (layoutItem != null && layoutItem.IsDeletable)
-        {
-          var msgDialog = new MessageWindow($"Are you sure you want to delete {layoutItem.Name}?", "Delete Layout",
-            MessageWindow.IconType.Question, "Delete");
-          msgDialog.ShowDialog();
-
-          if (msgDialog.IsYes1Clicked)
-          {
-            try
-            {
-              TimelineLayoutManager.DeleteLayout(layoutItem.Name);
-              LoadLayoutsIntoSelector();
-            }
-            catch (Exception ex)
-            {
-              Log.Error(ex);
-              var msgDialog2 = new MessageWindow("Problem deleting layout. Check Error Log for details.", "Delete Layout", MessageWindow.IconType.Warn);
-              msgDialog2.ShowDialog();
-            }
-          }
-          e.Handled = true;
         }
       }
     }

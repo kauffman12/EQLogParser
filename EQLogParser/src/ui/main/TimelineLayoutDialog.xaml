@@ -18,8 +18,8 @@
         UseLayoutRounding="True"
         WindowStartupLocation="CenterOwner"
         SizeToContent="WidthAndHeight"
-        MinWidth="400"
-        Title="Save Timeline Layout">
+        MinWidth="350"
+        Title="Create Layout">
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
@@ -43,7 +43,7 @@
     <!-- Error message (hidden by default) -->
     <TextBlock x:Name="errorMessage" 
                Grid.Row="1"
-               Visibility="Collapsed"
+               Visibility="Hidden"
                Margin="20,0,20,10"
                Foreground="{DynamicResource EQWarnForegroundBrush}"
                FontSize="{DynamicResource EQContentSize}" />

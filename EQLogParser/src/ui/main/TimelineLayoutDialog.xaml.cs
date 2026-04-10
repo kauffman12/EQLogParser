@@ -1,5 +1,3 @@
-using FontAwesome5;
-using System;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -36,7 +34,7 @@ namespace EQLogParser
 
     private void layoutNameTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-      errorMessage.Visibility = Visibility.Collapsed;
+      errorMessage.Visibility = Visibility.Hidden;
       ValidateAndEnableSave();
     }
 
@@ -74,7 +72,7 @@ namespace EQLogParser
 
       if (!ValidNamePattern.IsMatch(name))
       {
-        ShowError("Invalid characters. Use letters, numbers, spaces, hyphens, or underscores only");
+        ShowError("Invalid characters. Use simple names.");
         return false;
       }
 
