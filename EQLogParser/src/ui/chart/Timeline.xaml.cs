@@ -174,11 +174,6 @@ namespace EQLogParser
       LoadLayoutsIntoSelector();
     }
 
-    // Method removed as it is no longer needed with the simplified ComboBox logic
-    // private void UpdateSelectorControlText(string text)
-    // {
-    // }
-
     private void LoadLayoutsIntoSelector()
     {
       _availableLayouts = TimelineLayoutManager.GetLayoutNames();
@@ -190,80 +185,102 @@ namespace EQLogParser
         {
           layoutSelector.Items.Add(new LayoutItem { Name = layoutName, IsDeletable = true });
         }
+
         layoutSelector.IsEnabled = true;
+        layoutStatus.Text = "Select a Layout";
       }
       else
       {
         layoutSelector.IsEnabled = false;
+        layoutStatus.Text = "No Layouts Available";
+      }
+    }
+
+    private void SaveLayout(string layoutName, bool updateList = false)
+    {
+      try
+      {
+        var layout = new TimelineLayout
+        {
+          Name = layoutName,
+          SpellOrder = [.. _keyOrder],
+          HiddenSpells = [],
+          HideSelfOnly = _currentHideSelfOnly,
+          ShowCasterAdps = _currentShowCasterAdps,
+          ShowMeleeAdps = _currentShowMeleeAdps,
+          PixelsPerSecond = _pixelsPerSecond,
+          LastModified = DateTime.Now
+        };
+
+        foreach (var key in _selfOnly.Keys)
+        {
+          layout.HiddenSpells.Add(key);
+        }
+
+        TimelineLayoutManager.SaveLayout(layout.Name, layout);
+
+        if (updateList)
+        {
+          LoadLayoutsIntoSelector();
+        }
+      }
+      catch (IOException)
+      {
+        var msgDialog = new MessageWindow("Problem saving layout. Check error log for details.", "Save Layout", MessageWindow.IconType.Warn);
+        msgDialog.ShowDialog();
+      }
+      catch (UnauthorizedAccessException)
+      {
+        var msgDialog = new MessageWindow("Problem saving layout. Check error log for details.", "Save Layout", MessageWindow.IconType.Warn);
+        msgDialog.ShowDialog();
+      }
+    }
+
+    private void CreateLayoutClick(object sender, RoutedEventArgs e)
+    {
+      var dialog = new TimelineLayoutDialog
+      {
+        Owner = MainActions.GetOwner()
+      };
+
+      dialog.ShowDialog();
+
+      if (dialog.IsSaveClicked && !string.IsNullOrEmpty(dialog.LayoutName))
+      {
+        SaveLayout(dialog.LayoutName, true);
       }
     }
 
     private void SaveLayoutClick(object sender, RoutedEventArgs e)
     {
-      var dialog = new TimelineLayoutDialog();
-      dialog.Owner = MainActions.GetOwner();
-      dialog.ShowDialog();
-
-      if (dialog.IsSaveClicked && !string.IsNullOrEmpty(dialog.LayoutName))
+      if (layoutSelector.SelectedItem is LayoutItem { } selectedItem)
       {
-        try
-        {
-          var layout = new TimelineLayout
-          {
-            Name = dialog.LayoutName,
-            SpellOrder = new List<string>(_keyOrder),
-            HiddenSpells = new HashSet<string>(),
-            HideSelfOnly = _currentHideSelfOnly,
-            ShowCasterAdps = _currentShowCasterAdps,
-            ShowMeleeAdps = _currentShowMeleeAdps,
-            PixelsPerSecond = _pixelsPerSecond,
-            LastModified = DateTime.Now
-          };
-
-          foreach (var key in _selfOnly.Keys)
-          {
-            layout.HiddenSpells.Add(key);
-          }
-
-          TimelineLayoutManager.SaveLayout(layout.Name, layout);
-          LoadLayoutsIntoSelector();
-        }
-        catch (IOException)
-        {
-          var msgDialog = new MessageWindow("Problem saving layout. Check error log for details.", "Save Layout", MessageWindow.IconType.Warn);
-          msgDialog.ShowDialog();
-        }
-        catch (UnauthorizedAccessException)
-        {
-          var msgDialog = new MessageWindow("Problem saving layout. Check error log for details.", "Save Layout", MessageWindow.IconType.Warn);
-          msgDialog.ShowDialog();
-        }
+        SaveLayout(selectedItem.Name);
       }
     }
 
     private void DeleteLayoutClick(object sender, RoutedEventArgs e)
     {
-      if (layoutSelector.SelectedItem is string selected && selected != "Select Layout" && selected != "Reset Layout" && selected != "No Layouts")
+      if (layoutSelector.SelectedItem is LayoutItem { } selectedItem)
       {
-        var msgDialog = new MessageWindow($"Are you sure you want to delete {selected}?", "Delete Layout",
-          MessageWindow.IconType.Question, "Delete");
+        var msgDialog = new MessageWindow($"Are you sure you want to delete {selectedItem.Name}?", "Delete Layout", MessageWindow.IconType.Question, "Delete");
         msgDialog.ShowDialog();
 
         if (msgDialog.IsYes1Clicked)
         {
           try
           {
-            TimelineLayoutManager.DeleteLayout(selected);
+            TimelineLayoutManager.DeleteLayout(selectedItem.Name);
             LoadLayoutsIntoSelector();
           }
           catch (IOException)
           {
-            var msgDialog2 = new MessageWindow("Problem deleting layout. Check error log for details.", "Delete Layout", MessageWindow.IconType.Warn);
+            var msgDialog2 = new MessageWindow("Problem Deleting Layout. Check Error Log for Details.", "Delete Layout", MessageWindow.IconType.Warn);
             msgDialog2.ShowDialog();
           }
           catch (UnauthorizedAccessException)
           {
-            var msgDialog2 = new MessageWindow("Problem deleting layout. Check error log for details.", "Delete Layout", MessageWindow.IconType.Warn);
+            var msgDialog2 = new MessageWindow("Problem Deleting Layout. Check Error Log for Details.", "Delete Layout", MessageWindow.IconType.Warn);
             msgDialog2.ShowDialog();
           }
         }
@@ -272,29 +289,41 @@ namespace EQLogParser
 
     private void LayoutSelectorSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+      saveLayoutButton.IsEnabled = false;
+      saveLayoutButton.Header = "Save Layout";
+      deleteLayoutButton.IsEnabled = false;
+      deleteLayoutButton.Header = "Delete Layout";
+
       if (_isApplyingLayout || layoutSelector.SelectedItem == null)
       {
         return;
       }
 
-      var selectedItem = layoutSelector.SelectedItem as LayoutItem;
-      if (selectedItem == null) return;
-      var selected = selectedItem.Name;
-
-      if (_availableLayouts.Contains(selected))
+      if (layoutSelector.SelectedItem is LayoutItem { } selectedItem)
       {
-        _isApplyingLayout = true;
-        var layout = TimelineLayoutManager.LoadLayout(selected);
-        if (layout != null)
+        var selected = selectedItem.Name;
+
+        if (_availableLayouts.Contains(selected))
         {
-          ApplyLayout(layout);
+          _isApplyingLayout = true;
+          var layout = TimelineLayoutManager.LoadLayout(selected);
+          if (layout != null)
+          {
+            ApplyLayout(layout);
+          }
+          else
+          {
+            var msgDialog = new MessageWindow("Problem loading layout. The file may be corrupted.", "Load Layout", MessageWindow.IconType.Warn);
+            msgDialog.ShowDialog();
+          }
+
+          _isApplyingLayout = false;
+          saveLayoutButton.IsEnabled = true;
+          saveLayoutButton.Header = $"Save ({layout.Name})";
+          deleteLayoutButton.IsEnabled = true;
+          deleteLayoutButton.Header = $"Delete ({layout.Name})";
+          return;
         }
-        else
-        {
-          var msgDialog = new MessageWindow("Problem loading layout. The file may be corrupted.", "Load Layout", MessageWindow.IconType.Warn);
-          msgDialog.ShowDialog();
-        }
-        _isApplyingLayout = false;
       }
     }
 
