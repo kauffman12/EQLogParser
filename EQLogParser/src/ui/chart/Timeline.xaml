@@ -21,10 +21,31 @@
       <CheckBox x:Name="showMeleeAdps" IsChecked="True" Template="{StaticResource CustomCheckBoxTemplate}" Margin="0,0,8,2" Content="Melee ADPS" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange" />
       <CheckBox x:Name="hideSelfOnly" IsChecked="True" Template="{StaticResource CustomCheckBoxTemplate}" Margin="0,0,8,2" Content="Hide Spells Only You See" IsEnabled="False" ToolTip="{StaticResource AdpsHideMineToolTipTemplate}"
                 Checked="OptionsChange" Unchecked="OptionsChange" />
-      <ComboBox x:Name="layoutSelector" Width="150" Margin="0,0,8,2" 
+      <Grid Width="150" Margin="0,0,8,2">
+        <ComboBox x:Name="layoutSelector" Width="150" 
                 SelectionChanged="LayoutSelectorSelectionChanged" 
                 ItemTemplate="{StaticResource TimelineLayoutItemTemplate}"
                 PreviewMouseDown="LayoutSelectorPreviewMouseDown"/>
+        <TextBlock Text="Select Layout" 
+                   FontStyle="Italic" 
+                   Foreground="{DynamicResource EQMenuIconBrush}" 
+                   FontSize="{DynamicResource EQContentSize}" 
+                   VerticalAlignment="Center" 
+                   HorizontalAlignment="Left" 
+                   Margin="10,0,0,0" 
+                   IsHitTestVisible="False">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Setter Property="Visibility" Value="Collapsed" />
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding SelectedItem, ElementName=layoutSelector}" Value="{x:Null}">
+                  <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+      </Grid>
       <Button x:Name="saveLayoutButton" Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="SaveLayoutClick" ToolTip="Save Current Layout">Save Layout</Button>
       <Button Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Reset Layout</Button>
     </StackPanel>
