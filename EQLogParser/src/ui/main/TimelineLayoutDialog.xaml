@@ -36,7 +36,9 @@
              BorderBrush="{DynamicResource PrimaryDarken}"
              BorderThickness="1"
              Background="{DynamicResource ContentBackground}"
-             Foreground="{DynamicResource ContentForeground}" />
+             Foreground="{DynamicResource ContentForeground}" 
+             TextChanged="layoutNameTextBox_TextChanged"
+             KeyDown="layoutNameTextBox_KeyDown" />
     
     <!-- Error message (hidden by default) -->
     <TextBlock x:Name="errorMessage" 

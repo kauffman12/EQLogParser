@@ -167,6 +167,14 @@ namespace EQLogParser
       LoadLayoutsIntoSelector();
     }
 
+    private void UpdateSelectorControlText(string text)
+    {
+      if (layoutSelector.Items.Count > 0)
+      {
+        layoutSelector.Items[0] = text;
+      }
+    }
+
     private void LoadLayoutsIntoSelector()
     {
       _availableLayouts = TimelineLayoutManager.GetLayoutNames();
@@ -288,8 +296,13 @@ namespace EQLogParser
         if (layout != null)
         {
           ApplyLayout(layout);
-          layoutSelector.Items[0] = "Reset Layout";
+          UpdateSelectorControlText("Reset Layout");
           layoutSelector.SelectedIndex = 0;
+        }
+        else
+        {
+          var msgDialog = new MessageWindow("Problem loading layout. The file may be corrupted.", "Load Layout", MessageWindow.IconType.Error);
+          msgDialog.ShowDialog();
         }
         _isApplyingLayout = false;
       }
@@ -306,7 +319,7 @@ namespace EQLogParser
       showCasterAdps.IsChecked = true;
       showMeleeAdps.IsChecked = true;
       Display();
-      layoutSelector.Items[0] = "Select Layout";
+      UpdateSelectorControlText("Select Layout");
     }
 
     private void ApplyLayout(TimelineLayout layout)
@@ -384,7 +397,10 @@ namespace EQLogParser
 
       foreach (var key in _keyOrder)
       {
-        var spellRange = _spellRanges[key];
+        if (!_spellRanges.TryGetValue(key, out var spellRange))
+        {
+          continue;
+        }
 
         if (key == "Player Death")
         {
@@ -487,7 +503,7 @@ namespace EQLogParser
     private void RefreshClick(object sender, RoutedEventArgs e)
     {
       _keyOrder.Clear();
-      layoutSelector.Items[0] = "Select Layout";
+      UpdateSelectorControlText("Select Layout");
       Display();
     }
 

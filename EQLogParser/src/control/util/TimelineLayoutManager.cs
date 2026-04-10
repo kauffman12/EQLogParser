@@ -13,6 +13,11 @@ namespace EQLogParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private const string Extension = ".json";
+    private static readonly JsonSerializerOptions SerializerOptions = new JsonSerializerOptions
+    {
+      WriteIndented = true,
+      DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
 
     internal static string GetLayoutsDirectory() => ConfigUtil.GetTimelineLayoutsDir();
 
@@ -69,11 +74,7 @@ namespace EQLogParser
       {
         EnsureDirectoryExists();
         var filePath = Path.Combine(GetLayoutsDirectory(), $"{name}{Extension}");
-        var json = JsonSerializer.Serialize(layout, new JsonSerializerOptions
-        {
-          WriteIndented = true,
-          DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        });
+        var json = JsonSerializer.Serialize(layout, SerializerOptions);
         File.WriteAllText(filePath, json);
       }
       catch (IOException ex)
