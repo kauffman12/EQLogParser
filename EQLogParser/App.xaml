@@ -4,6 +4,7 @@
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf">
   <Application.Resources>
+    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     <Style x:Key="EQIconStyle" TargetType="fa:ImageAwesome">
       <Setter Property="Foreground" Value="{DynamicResource EQMenuIconBrush}" />
       <Setter Property="Height" Value="{DynamicResource EQContentSize}"/>
@@ -309,8 +310,28 @@
     <DataTemplate x:Key="HeaderAvgNonTwincastCritTemplateToolTip">
       <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Average Crit Damage for all Hits that were not a Twincast" />
     </DataTemplate>
-    <DataTemplate x:Key="HeaderAvgNonTwincastLuckyTemplateToolTip">
-      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Average Lucky Damage for all Hits that were not a Twincast" />
+    <DataTemplate x:Key="TimelineLayoutItemTemplate">
+      <Grid Width="150">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Button Grid.Column="0" 
+                Background="Transparent" 
+                BorderBrush="Transparent" 
+                BorderThickness="0" 
+                Cursor="Hand" 
+                Padding="0" 
+                Margin="0,0,5,0"
+                Visibility="{Binding IsDeletable, Converter={StaticResource BooleanToVisibilityConverter}}"
+                Tag="DeleteLayout">
+          <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Times" />
+        </Button>
+        <TextBlock Grid.Column="1" 
+                   Text="{Binding Name}" 
+                   FontSize="{DynamicResource EQContentSize}" 
+                   VerticalAlignment="Center" />
+      </Grid>
     </DataTemplate>
   </Application.Resources>
 </Application>
