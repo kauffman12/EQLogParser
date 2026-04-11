@@ -85,7 +85,7 @@ Replaced by your character name. Use it in any `Pattern` field as well as all ot
 
 ## `{S}`, `{Sx}`
 
-Acts as a wildcard to capture values in `Pattern` fields. It will capture anything, including multiple words, and allow the value to be used later in any fields that displays, speaks, or shares information. Requires `Regex` to be enabled and internally to the parser when you use `{s1}` it will be replaced with `(?<s1>.+)`.
+Acts as a wildcard to capture values in `Pattern` fields. It will capture anything, including multiple words, and allow the value to be used later in any fields that displays, speaks, or shares information. Requires `Regex` to be enabled; internally, the parser replaces `{s1}` with `(?<s1>.+)`.
 
 ## `{N}`, `{Nx}`
 
@@ -105,7 +105,7 @@ Replaced by the time from the line that triggered the event in the `hh:mm:ss` fo
 
 ## `{REPEATED}`
 
-This variable is replaced with the number of times the trigger has been repeated and has captured the same values that have been used to display or speak information. Available only in `Text to Display`, `Text to Speak`, and `Alternate Timer Name`. Example Text to Display: `{s1} {repeated}`. This will print the count of how many times the trigger is fired with the same value caputed by `{s1}`. The count resets after `750ms` and this reset time can be configured by setting the `Repeated Reset Time` of the trigger.
+This variable is replaced with the number of times the trigger has been repeated and has captured the same values that have been used to display or speak information. Available only in `Text to Display`, `Text to Speak`, and `Alternate Timer Name`. Example Text to Display: `{s1} {repeated}`. This will print the count of how many times the trigger is fired with the same value captured by `{s1}`. The count resets after `750ms` and this reset time can be configured by setting the `Repeated Reset Time` of the trigger.
 
 ## `{COUNTER}`
 
@@ -126,6 +126,10 @@ Replaced by the `Timer` setting for `Warn With Time Remaining`. This allows your
 ## `{EQLP:STOP}`
 
 Not a trigger variable. You send this text as a say, to the group, raid, another player, or custom channel if you want your triggers to reload, overlays to close, and audio to stop. The chat you send needs to start with this code and it's limited to ensure that it came from you.
+
+## {EQLP:STOP}
+Not a trigger variable. You send this text as a say, to the group, raid, another player, or custom channel if you want your triggers to reload, overlays to close, and audio to stop. The chat you send needs to start with this code and it's limited to ensure that it came from you.
+
 
 # Linux Support
 
@@ -184,18 +188,20 @@ Once installation is finished, simply click the **Run App** button to launch EQL
 
 ---
 
-## Manual Installation Steps Tested on Ubuntu 25
+## Manually installing without Flatpak/Bottles
 
-If you prefer to install manually without Flatpak/Bottles, first download **EQLogParser** and the **.Net 8.0 Desktop Runtime x64** found [here](index.html) and continue below.
+### Download **EQLogParser** and the **.Net 8.0 Desktop Runtime x64** found [here](index.html).
+Use the following steps to install under Linx (tested on Ubuntu/Debian-based systems):
+```
+sudo apt install wine  # (version 10)
+sudo apt install winetricks  # (version 20250102-1)
+winetricks allfonts
+winetricks renderer=gdi
+wine windowsdesktop-runtime-8.0.25-win-x64.exe  # (or latest)
+wine EQLogParser-install-2.3.49.exe  # (or latest)
+```
 
-1. apt install wine (version 10)
-2. apt install winetricks (version 20250102-1)
-3. winetricks allfonts
-4. winetricks renderer=gdi
-5. wine windowsdesktop-runtime-8.0.25-win-x64.exe (or latest)
-6. wine EQLogParser-install-2.3.49.exe (or latest)
-
-## Known Issues
+## Known Issues with Linux
 1. WPF applications are unstable with WINE so hardware acceleration is disabled 
     - Note the WINELOADER environment variable is used to detect WINE
     - Make sure that variable exists if you notice problems
@@ -230,7 +236,7 @@ Piper TTS is an Open Source **text-to-speech engine** and a custom build is prov
 
 ## Why does unknown or spell names show in the DPS Summary?
 1. If a **DoT** is on an **NPC** and the player dies or zones it may stop reporting the player and say unknown instead
-    - Check the damage breakdown for the **Unkown** player to get a better idea of the cause
+    - Check the damage breakdown for the **Unknown** player to get a better idea of the cause
     - Unknown is also included to make sure all damage is counted for the group or raid
 2. If a name of a spell is listed in the **DPS Summary** it may be for a similar reason
     - Sometimes if the spell is a proc or other effect related to a **DoT** where the player has left the zone it may now create an older style entry in the log file where the spell name is in the position of where the player name usually is and the player name is absent. This case should be fairly rare.

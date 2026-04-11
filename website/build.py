@@ -91,10 +91,10 @@ def process_markdown_to_html(version: str, url: str, input_path: Path, output_pa
 
     toc_items = ''
     for h1 in soup.find_all('h1'):
-        first, _, rest = h1.get_text().partition(" ")
-        anchor_id = slugify(first)
+        item = h1.get_text()
+        anchor_id = slugify(item)
         h1['id'] = anchor_id   
-        toc_items += f'<li><a href="#{anchor_id}">{first}</a></li>'
+        toc_items += f'<li><a href="#{anchor_id}">{item}</a></li>'
 
     if decorate_h2:
         for h2 in soup.find_all('h2'):
