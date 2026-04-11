@@ -331,7 +331,8 @@ if os.path.isfile(DBSpellsFile):
             
         if spa == 85 and int(float(base1)) > 0:
           # testing
-          spa85s[base1] = base1
+          if spellTarget != 6:
+            spa85s[base1] = base1
         if spa == 339 and int(float(base2)) > 0:
           spa339s[base2] = id
           procs.append(base2)
