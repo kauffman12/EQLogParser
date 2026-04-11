@@ -7,16 +7,16 @@ namespace EQLogParser
 {
   internal class DamageOverlayStatsBuilder
   {
-    private readonly DamageOverlayData OverlayDamageData = new();
-    private readonly DamageOverlayData OverlayTankData = new();
+    private readonly DamageOverlayData _overlayDamageData = new();
+    private readonly DamageOverlayData _overlayTankData = new();
 
     internal DamageOverlayStatsBuilder() { }
 
     internal DamageOverlayStats Build(bool reset, int mode, int maxRows, string selectedClass)
     {
       var deadFights = new HashSet<long>();
-      var damage = ComputeOverlayDamageStats(OverlayDamageData, true, reset, mode, maxRows, selectedClass, deadFights);
-      var tank = ComputeOverlayDamageStats(OverlayTankData, false, reset, mode, maxRows, selectedClass, deadFights);
+      var damage = ComputeOverlayDamageStats(_overlayDamageData, true, reset, mode, maxRows, selectedClass, deadFights);
+      var tank = ComputeOverlayDamageStats(_overlayTankData, false, reset, mode, maxRows, selectedClass, deadFights);
 
       foreach (var id in deadFights)
       {

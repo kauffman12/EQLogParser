@@ -12,6 +12,9 @@ namespace EQLogParser
 
     // save this up front. we work with a constant state for their values
 
+    /// <summary>
+    /// Validates if the damage record should be processed based on current settings.
+    /// </summary>
     public bool IsValid(DamageRecord record)
     {
       if (LineModifiersParser.IsAssassinate(record.ModifiersMask) && !_assassinateEnabled)
@@ -47,6 +50,9 @@ namespace EQLogParser
       return true;
     }
 
+    /// <summary>
+    /// Checks if any damage types are currently filtered out.
+    /// </summary>
     public bool IsDamageLimited()
     {
       return !_dsEnabled || !_assassinateEnabled || !_baneEnabled || !_finishingBlowEnabled || !_headshotEnabled || !_slayUndeadEnabled;

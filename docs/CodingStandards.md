@@ -105,7 +105,9 @@ To maintain a consistent tone and professional feel, all messages in `MessageWin
 ### Efficient Data Processing
 - Use `StringBuilder` for repeated string concatenation in loops.
 - Use `ReadOnlySpan<char>` for high-performance string slicing and parsing to reduce memory allocations.
+- Use `CollectionsMarshal.AsSpan()` when iterating over `List<T>` in performance-critical loops to avoid overhead and enable better compiler optimizations.
 - Use `StringComparison.OrdinalIgnoreCase` for case-insensitive comparisons to avoid culture-related performance overhead.
+- Use `string.Intern()` for strings that are repeated frequently across many objects (e.g., spell names, NPC names) to reduce memory footprint and allow for faster reference equality checks.
 
 ### Threading and Responsiveness
 - **The Golden Rule**: Perform heavy processing (log parsing, file I/O) on a background thread to keep the UI responsive.
